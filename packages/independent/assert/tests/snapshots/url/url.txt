@@ -64,3 +64,83 @@ expect: {
 actual: 'http://example.com/?name="dam"'
 expect: 'http://example.com/?name="seb"'
 
+# url hash modified
+actual: URL("http://example.com/#foo")
+expect: URL("http://example.com/#bar")
+
+# url hash removed
+actual: URL("http://example.com/")
+expect: URL("http://example.com/#bar")
+
+# url and url string
+actual: URL("http://example.com/")
+expect: "http://example.com:8000/"
+
+# url string and url string
+actual: "http://example.com/"
+expect: "http://example.com:8000/"
+
+# url and non url string
+actual: URL("http://example.com/")
+expect: "totoabcexample.com"
+
+# non url string and url
+actual: "totoabcexample.com"
+expect: URL("http://example.com/")
+
+# url and boolean
+actual: URL("http://example.com/")
+expect: true
+
+# url string inside a prop
+actual: {
+  a: "http://example.com/",
+  b: true,
+}
+expect: {
+  a: "http://example.com/",
+  b: false,
+}
+
+# url string and object with href
+actual: "http://example.com/"
+expect: {
+  href: "http://example.com/",
+}
+
+# url object port and object with port
+actual: URL("http://example.com:45/") {}
+expect: {
+  port: 45,
+}
+
+# file protocol vs http protocol
+actual: "http://example/file.txt"
+expect: "file://example/file.js"
+
+# quote test
+actual: "http://example.com/"
+expect: 'test"quotes'
+
+# double quote in url string
+actual: 'http://a.com"/'
+expect: 'http://b.com"/'
+
+# url origin is case insensitive
+actual: {
+  a: "http://example.com/page",
+  b: true,
+}
+expect: {
+  a: "http://example.com/PAGE",
+  b: false,
+}
+
+# internal string vs url object
+actual: Signal("toto")
+expect: URL("http://toto.com/")
+
+# internal url string vs url string
+actual: Signal("http://a.com/")
+expect: "http://b.com/"
+

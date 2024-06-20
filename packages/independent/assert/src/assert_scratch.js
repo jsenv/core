@@ -1237,367 +1237,377 @@ let createRootNode;
     if (typeofResult === "string") {
       node.category = "primitive";
       node.isString = true;
+      // some strings are rendered as is
+      // - no quote escaping
+      // - no line splitting
       if (group === "grammar") {
-        // no quote around grammar
-      } else if (group === "url_internal_prop") {
-        // no quote around url internal properties
-      } else if (subgroup === "url_search_entry_key") {
-        // no quote around key in "?key=value"
-      } else if (subgroup === "url_search_entry_value") {
-        // no quote around value in "?key=value"
-      } else if (isSourceCode) {
-        // no need for quote or split lines on source code
-      } else {
-        let bestQuote;
-        best_quote: {
-          let canUseBacktick = false;
-          if (subgroup === "property_entry_key") {
-            if (isValidPropertyIdentifier(value)) {
-              // no quote around valid property identifier
-              break best_quote;
-            }
-          } else {
-            canUseBacktick = true;
+        return node;
+      }
+      if (group === "url_internal_prop") {
+        return node;
+      }
+      if (subgroup === "url_search_entry_key") {
+        // key in "?key=value" is rendered as is
+        return node;
+      }
+      if (subgroup === "url_search_entry_value") {
+        // value in "?key=value" is rendered as is
+        return node;
+      }
+      if (isSourceCode) {
+        return node;
+      }
+      let bestQuote;
+      best_quote: {
+        let canUseBacktick = false;
+        if (subgroup === "property_entry_key") {
+          if (isValidPropertyIdentifier(value)) {
+            // no quote around valid property identifier
+            break best_quote;
           }
-          let backslashCount = 0;
-          let doubleQuoteCount = 0;
-          let singleQuoteCount = 0;
-          let backtickCount = 0;
-          for (const char of value) {
-            if (char === "\\") {
-              backslashCount++;
-            } else {
-              if (backslashCount % 2 > 0) {
-                // it's escaped
-              } else if (char === DOUBLE_QUOTE) {
-                doubleQuoteCount++;
-              } else if (char === SINGLE_QUOTE) {
-                singleQuoteCount++;
-              } else if (char === BACKTICK) {
-                backtickCount++;
-              }
-              backslashCount = 0;
-            }
-          }
-          bestQuote = (() => {
-            if (doubleQuoteCount === 0) {
-              return DOUBLE_QUOTE;
-            }
-            if (singleQuoteCount === 0) {
-              return SINGLE_QUOTE;
-            }
-            if (canUseBacktick && backtickCount === 0) {
-              return BACKTICK;
-            }
-            if (singleQuoteCount > doubleQuoteCount) {
-              return DOUBLE_QUOTE;
-            }
-            if (doubleQuoteCount > singleQuoteCount) {
-              return SINGLE_QUOTE;
-            }
-            return DOUBLE_QUOTE;
-          })();
+        } else {
+          canUseBacktick = true;
         }
-        const quoteMarkerRef = { current: bestQuote };
+        let backslashCount = 0;
+        let doubleQuoteCount = 0;
+        let singleQuoteCount = 0;
+        let backtickCount = 0;
+        for (const char of value) {
+          if (char === "\\") {
+            backslashCount++;
+          } else {
+            if (backslashCount % 2 > 0) {
+              // it's escaped
+            } else if (char === DOUBLE_QUOTE) {
+              doubleQuoteCount++;
+            } else if (char === SINGLE_QUOTE) {
+              singleQuoteCount++;
+            } else if (char === BACKTICK) {
+              backtickCount++;
+            }
+            backslashCount = 0;
+          }
+        }
+        bestQuote = (() => {
+          if (doubleQuoteCount === 0) {
+            return DOUBLE_QUOTE;
+          }
+          if (singleQuoteCount === 0) {
+            return SINGLE_QUOTE;
+          }
+          if (canUseBacktick && backtickCount === 0) {
+            return BACKTICK;
+          }
+          if (singleQuoteCount > doubleQuoteCount) {
+            return DOUBLE_QUOTE;
+          }
+          if (doubleQuoteCount > singleQuoteCount) {
+            return SINGLE_QUOTE;
+          }
+          return DOUBLE_QUOTE;
+        })();
+      }
+      const quoteMarkerRef = { current: bestQuote };
 
-        if (canParseUrl(value)) {
-          node.isStringForUrl = true;
-          node.childGenerator = () => {
-            const urlObject = new URL(value);
-            const urlInternalPropertiesNode = node.appendChild(
-              "url_internal_properties",
-              {
+      if (canParseUrl(value)) {
+        node.isStringForUrl = true;
+        node.childGenerator = () => {
+          const urlObject = new URL(value);
+          const urlInternalPropertiesNode = node.appendChild(
+            "url_internal_properties",
+            {
+              render: renderChildrenOneLiner,
+              onelineDiff: {
+                hasSeparatorBetweenEachChild: true,
+                hasTrailingSeparator: true,
+              },
+              startMarker: bestQuote,
+              endMarker: bestQuote,
+              quoteMarkerRef,
+              separatorMarkerRef: node.separatorMarkerRef,
+              childGenerator() {
+                const {
+                  protocol,
+                  username,
+                  password,
+                  hostname,
+                  port,
+                  pathname,
+                  search,
+                  hash,
+                } = urlObject;
+                urlInternalPropertiesNode.appendChild("protocol", {
+                  value: protocol,
+                  render: renderValue,
+                  endMarker: "//",
+                  group: "url_internal_prop",
+                  subgroup: "url_protocol",
+                });
+                if (username) {
+                  urlInternalPropertiesNode.appendChild("username", {
+                    value: username,
+                    render: renderValue,
+                    endMarker: password ? ":" : "@",
+                    group: "url_internal_prop",
+                    subgroup: "url_username",
+                  });
+                  if (password) {
+                    urlInternalPropertiesNode.appendChild("password", {
+                      value: password,
+                      render: renderValue,
+                      endMarker: "@",
+                      group: "url_internal_prop",
+                      subgroup: "url_password",
+                    });
+                  }
+                }
+                urlInternalPropertiesNode.appendChild("hostname", {
+                  value: hostname,
+                  render: renderValue,
+                  group: "url_internal_prop",
+                  subgroup: "url_hostname",
+                });
+                if (port) {
+                  urlInternalPropertiesNode.appendChild("port", {
+                    value: parseInt(port),
+                    render: renderValue,
+                    startMarker: ":",
+                    group: "url_internal_prop",
+                    subgroup: "url_port",
+                  });
+                }
+                if (pathname) {
+                  urlInternalPropertiesNode.appendChild("pathname", {
+                    value: pathname,
+                    render: renderValue,
+                    group: "url_internal_prop",
+                    subgroup: "url_pathname",
+                  });
+                }
+                if (search) {
+                  const urlSearchNode = urlInternalPropertiesNode.appendChild(
+                    "search",
+                    {
+                      value: null,
+                      render: renderChildrenOneLiner,
+                      startMarker: "?",
+                      onelineDiff: {
+                        hasSeparatorBetweenEachChild: true,
+                        hasTrailingSeparator: true,
+                      },
+                      group: "entries",
+                      subgroup: "url_search",
+                      childGenerator() {
+                        const searchParamsMap = tokenizeUrlSearch(search);
+                        let searchEntryIndex = 0;
+                        for (const [key, values] of searchParamsMap) {
+                          const urlSearchEntryNode = urlSearchNode.appendChild(
+                            key,
+                            {
+                              key: searchEntryIndex,
+                              render: renderChildrenOneLiner,
+                              onelineDiff: {
+                                hasSeparatorBetweenEachChild: true,
+                                hasTrailingSeparator: true,
+                              },
+                              path: node.path.append(key),
+                              group: "entries",
+                              subgroup: "url_search_entry",
+                              childGenerator() {
+                                let valueIndex = 0;
+                                const isMultiValue = values.length > 1;
+                                while (valueIndex < values.length) {
+                                  const entryNode =
+                                    urlSearchEntryNode.appendChild(valueIndex, {
+                                      render: renderChildrenOneLiner,
+                                      onelineDiff: {
+                                        hasSeparatorBetweenEachChild: true,
+                                        hasTrailingSeparator: true,
+                                      },
+                                      group: "entry",
+                                      subgroup: "url_search_value_entry",
+                                      path: isMultiValue
+                                        ? urlSearchEntryNode.path.append(
+                                            valueIndex,
+                                            { isIndexedEntry: true },
+                                          )
+                                        : undefined,
+                                    });
+                                  entryNode.appendChild("entry_key", {
+                                    value: key,
+                                    render: renderValue,
+                                    startMarker:
+                                      urlSearchEntryNode.key === 0 &&
+                                      valueIndex === 0
+                                        ? ""
+                                        : "&",
+                                    separatorMarkerRef: { current: "=" },
+                                    quoteMarkerRef,
+                                    group: "entry_key",
+                                    subgroup: "url_search_entry_key",
+                                  });
+                                  entryNode.appendChild("entry_value", {
+                                    value: values[valueIndex],
+                                    render: renderValue,
+                                    quoteMarkerRef,
+                                    group: "entry_value",
+                                    subgroup: "url_search_entry_value",
+                                  });
+                                  valueIndex++;
+                                }
+                              },
+                            },
+                          );
+                          searchEntryIndex++;
+                        }
+                      },
+                    },
+                  );
+                }
+                if (hash) {
+                  urlInternalPropertiesNode.appendChild("hash", {
+                    value: hash,
+                    render: renderValue,
+                    group: "url_internal_prop",
+                    subgroup: "url_hash",
+                  });
+                }
+              },
+              group: "entries",
+              subgroup: "url_internal_properties",
+            },
+          );
+          // because the string might differ but
+          // after comparing all url props it's still the same url
+          // under the hood (see spaces in search params)
+          urlInternalPropertiesNode.separatorMarkerOwner =
+            urlInternalPropertiesNode;
+        };
+        return node;
+      }
+      node.childGenerator = () => {
+        const lineEntriesNode = node.appendChild("line_entries", {
+          render: renderChildren,
+          multilineDiff: {
+            hasSeparatorBetweenEachChild: true,
+            hasTrailingSeparator: true,
+            skippedSummary: {
+              skippedNames: ["line", "lines"],
+            },
+            maxDiff: 1,
+          },
+          quoteMarkerRef,
+          group: "entries",
+          subgroup: "line_entries",
+          childGenerator: () => {
+            const appendLineEntry = (lineIndex) => {
+              const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
+                key: lineIndex,
                 render: renderChildrenOneLiner,
                 onelineDiff: {
                   hasSeparatorBetweenEachChild: true,
-                  hasTrailingSeparator: true,
+                  focusedChildWhenSame: "last",
+                  overflowStartMarker: "…",
+                  overflowEndMarker: "…",
+                  overflowMarkersPlacement: "outside",
                 },
-                startMarker: bestQuote,
-                endMarker: bestQuote,
-                quoteMarkerRef,
-                separatorMarkerRef: node.separatorMarkerRef,
-                childGenerator() {
-                  const {
-                    protocol,
-                    username,
-                    password,
-                    hostname,
-                    port,
-                    pathname,
-                    search,
-                    hash,
-                  } = urlObject;
-                  urlInternalPropertiesNode.appendChild("protocol", {
-                    value: protocol,
-                    render: renderValue,
-                    endMarker: "//",
-                    group: "url_internal_prop",
-                    subgroup: "url_protocol",
-                  });
-                  if (username) {
-                    urlInternalPropertiesNode.appendChild("username", {
-                      value: username,
-                      render: renderValue,
-                      endMarker: password ? ":" : "@",
-                      group: "url_internal_prop",
-                      subgroup: "url_username",
-                    });
-                    if (password) {
-                      urlInternalPropertiesNode.appendChild("password", {
-                        value: password,
-                        render: renderValue,
-                        endMarker: "@",
-                        group: "url_internal_prop",
-                        subgroup: "url_password",
-                      });
-                    }
-                  }
-                  urlInternalPropertiesNode.appendChild("hostname", {
-                    value: hostname,
-                    render: renderValue,
-                    group: "url_internal_prop",
-                    subgroup: "url_hostname",
-                  });
-                  if (port) {
-                    urlInternalPropertiesNode.appendChild("port", {
-                      value: parseInt(port),
-                      render: renderValue,
-                      startMarker: ":",
-                      group: "url_internal_prop",
-                      subgroup: "url_port",
-                    });
-                  }
-                  if (pathname) {
-                    urlInternalPropertiesNode.appendChild("pathname", {
-                      value: pathname,
-                      render: renderValue,
-                      group: "url_internal_prop",
-                      subgroup: "url_pathname",
-                    });
-                  }
-                  if (search) {
-                    const urlSearchNode = urlInternalPropertiesNode.appendChild(
-                      "search",
-                      {
-                        value: null,
-                        render: renderChildrenOneLiner,
-                        startMarker: "?",
-                        onelineDiff: {
-                          hasSeparatorBetweenEachChild: true,
-                          hasTrailingSeparator: true,
-                        },
-                        group: "entries",
-                        subgroup: "url_search",
-                        childGenerator() {
-                          const searchParamsMap = tokenizeUrlSearch(search);
-                          let searchEntryIndex = 0;
-                          for (const [key, values] of searchParamsMap) {
-                            const urlSearchEntryNode =
-                              urlSearchNode.appendChild(key, {
-                                key: searchEntryIndex,
-                                render: renderChildrenOneLiner,
-                                onelineDiff: {
-                                  hasSeparatorBetweenEachChild: true,
-                                  hasTrailingSeparator: true,
-                                },
-                                path: node.path.append(key),
-                                group: "entries",
-                                subgroup: "url_search_entry",
-                                childGenerator() {
-                                  let valueIndex = 0;
-                                  const isMultiValue = values.length > 1;
-                                  while (valueIndex < values.length) {
-                                    const entryNode =
-                                      urlSearchEntryNode.appendChild(
-                                        valueIndex,
-                                        {
-                                          render: renderChildrenOneLiner,
-                                          onelineDiff: {
-                                            hasSeparatorBetweenEachChild: true,
-                                            hasTrailingSeparator: true,
-                                          },
-                                          group: "entry",
-                                          subgroup: "url_search_value_entry",
-                                          path: isMultiValue
-                                            ? urlSearchEntryNode.path.append(
-                                                valueIndex,
-                                                { isIndexedEntry: true },
-                                              )
-                                            : undefined,
-                                        },
-                                      );
-                                    entryNode.appendChild("entry_key", {
-                                      value: key,
-                                      render: renderValue,
-                                      startMarker:
-                                        urlSearchEntryNode.key === 0 &&
-                                        valueIndex === 0
-                                          ? ""
-                                          : "&",
-                                      separatorMarkerRef: { current: "=" },
-                                      quoteMarkerRef,
-                                      group: "entry_key",
-                                      subgroup: "url_search_entry_key",
-                                    });
-                                    entryNode.appendChild("entry_value", {
-                                      value: values[valueIndex],
-                                      render: renderValue,
-                                      quoteMarkerRef,
-                                      group: "entry_value",
-                                      subgroup: "url_search_entry_value",
-                                    });
-                                    valueIndex++;
-                                  }
-                                },
-                              });
-                            searchEntryIndex++;
-                          }
-                        },
-                      },
-                    );
-                  }
-                  if (hash) {
-                    urlInternalPropertiesNode.appendChild("hash", {
-                      value: hash,
-                      render: renderValue,
-                      group: "url_internal_prop",
-                      subgroup: "url_hash",
-                    });
-                  }
-                },
+                // When multiline string appear as property value
+                // 1. It becomes hard to see if "," is part of the string or the separator
+                // 2. "," would appear twice if multiline string ends with ","
+                // {
+                //   foo: 1| line 1
+                //        2| line 2,,
+                //   bar: true,
+                // }
+                // Fortunately the line break already helps to split properties (foo and bar)
+                // so the following is readable
+                // {
+                //   foo: 1| line 1
+                //        2| line 2,
+                //   bar: true,
+                // }
+                // -> The separator is not present for multiline
                 group: "entries",
-                subgroup: "url_internal_properties",
-              },
-            );
-            // because the string might differ but
-            // after comparing all url props it's still the same url
-            // under the hood (see spaces in search params)
-            urlInternalPropertiesNode.separatorMarkerOwner =
-              urlInternalPropertiesNode;
-          };
-        } else {
-          node.childGenerator = () => {
-            const lineEntriesNode = node.appendChild("line_entries", {
-              render: renderChildren,
-              multilineDiff: {
-                hasSeparatorBetweenEachChild: true,
-                hasTrailingSeparator: true,
-                skippedSummary: {
-                  skippedNames: ["line", "lines"],
-                },
-                maxDiff: 1,
-              },
-              quoteMarkerRef,
-              group: "entries",
-              subgroup: "line_entries",
-              childGenerator: () => {
-                const appendLineEntry = (lineIndex) => {
-                  const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
-                    key: lineIndex,
-                    render: renderChildrenOneLiner,
-                    onelineDiff: {
-                      hasSeparatorBetweenEachChild: true,
-                      focusedChildWhenSame: "last",
-                      overflowMarkersPlacement: "outside",
-                    },
-                    // When multiline string appear as property value
-                    // 1. It becomes hard to see if "," is part of the string or the separator
-                    // 2. "," would appear twice if multiline string ends with ","
-                    // {
-                    //   foo: 1| line 1
-                    //        2| line 2,,
-                    //   bar: true,
-                    // }
-                    // Fortunately the line break already helps to split properties (foo and bar)
-                    // so the following is readable
-                    // {
-                    //   foo: 1| line 1
-                    //        2| line 2,
-                    //   bar: true,
-                    // }
-                    // -> The separator is not present for multiline
-                    group: "entries",
-                    subgroup: "line_entry_value",
-                  });
-                  const appendCharEntry = (charIndex, char) => {
-                    lineEntryNode.appendChild(charIndex, {
-                      value: char,
-                      render: renderChar,
-                      quoteMarkerRef,
-                      group: "entry_value",
-                      subgroup: "char_entry_value",
-                    });
-                  };
-                  return {
-                    lineEntryNode,
-                    appendCharEntry,
-                  };
-                };
+                subgroup: "line_entry_value",
+              });
+              const appendCharEntry = (charIndex, char) => {
+                lineEntryNode.appendChild(charIndex, {
+                  value: char,
+                  render: renderChar,
+                  quoteMarkerRef,
+                  group: "entry_value",
+                  subgroup: "char_entry_value",
+                });
+              };
+              return {
+                lineEntryNode,
+                appendCharEntry,
+              };
+            };
 
-                let isDone = false;
-                let firstLineCharIndex = 0;
-                const chars = tokenizeString(node.value);
-                const charIterator = chars[Symbol.iterator]();
-                function* charGeneratorUntilNewLine() {
-                  // eslint-disable-next-line no-constant-condition
-                  while (true) {
-                    const charIteratorResult = charIterator.next();
-                    if (charIteratorResult.done) {
-                      isDone = true;
-                      return;
-                    }
-                    const char = charIteratorResult.value;
-                    if (char === "\n") {
-                      break;
-                    }
-                    yield char;
-                  }
-                }
-
-                // first line
-                const {
-                  lineEntryNode: firstLineEntryNode,
-                  appendCharEntry: appendFirstLineCharEntry,
-                } = appendLineEntry(0);
-                for (const char of charGeneratorUntilNewLine()) {
-                  appendFirstLineCharEntry(firstLineCharIndex, char);
-                  firstLineCharIndex++;
-                }
-
-                if (isDone) {
-                  // single line
-                  Object.assign(
-                    firstLineEntryNode,
-                    getInheritedSeparatorParams(node),
-                  );
-                  if (bestQuote) {
-                    firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = true;
-                    firstLineEntryNode.startMarker =
-                      firstLineEntryNode.endMarker = bestQuote;
-                  }
+            let isDone = false;
+            let firstLineCharIndex = 0;
+            const chars = tokenizeString(node.value);
+            const charIterator = chars[Symbol.iterator]();
+            function* charGeneratorUntilNewLine() {
+              // eslint-disable-next-line no-constant-condition
+              while (true) {
+                const charIteratorResult = charIterator.next();
+                if (charIteratorResult.done) {
+                  isDone = true;
                   return;
                 }
-                enableMultilineDiff(lineEntriesNode);
-                // remaining lines
-                let lineIndex = 1;
-                // eslint-disable-next-line no-constant-condition
-                while (true) {
-                  const { appendCharEntry } = appendLineEntry(lineIndex);
-                  let columnIndex = 0;
-                  for (const char of charGeneratorUntilNewLine()) {
-                    appendCharEntry(columnIndex, char);
-                    columnIndex++;
-                  }
-                  if (isDone) {
-                    break;
-                  }
-                  lineIndex++;
+                const char = charIteratorResult.value;
+                if (char === "\n") {
+                  break;
                 }
-              },
-            });
-          };
-        }
-      }
+                yield char;
+              }
+            }
+
+            // first line
+            const {
+              lineEntryNode: firstLineEntryNode,
+              appendCharEntry: appendFirstLineCharEntry,
+            } = appendLineEntry(0);
+            for (const char of charGeneratorUntilNewLine()) {
+              appendFirstLineCharEntry(firstLineCharIndex, char);
+              firstLineCharIndex++;
+            }
+
+            if (isDone) {
+              // single line
+              Object.assign(
+                firstLineEntryNode,
+                getInheritedSeparatorParams(node),
+              );
+              if (bestQuote) {
+                firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = true;
+                firstLineEntryNode.startMarker = firstLineEntryNode.endMarker =
+                  bestQuote;
+              }
+              return;
+            }
+            enableMultilineDiff(lineEntriesNode);
+            // remaining lines
+            let lineIndex = 1;
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+              const { appendCharEntry } = appendLineEntry(lineIndex);
+              let columnIndex = 0;
+              for (const char of charGeneratorUntilNewLine()) {
+                appendCharEntry(columnIndex, char);
+                columnIndex++;
+              }
+              if (isDone) {
+                break;
+              }
+              lineIndex++;
+            }
+          },
+        });
+      };
+      return node;
     }
     if (typeofResult === "symbol") {
       node.category = "primitive";
@@ -2484,13 +2494,12 @@ const renderGrammar = (node, props) => {
 };
 const truncateAndApplyColor = (valueDiff, node, props) => {
   const { columnsRemaining } = props;
-  const { separatorMarkerRef } = node;
-  const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
   if (columnsRemaining < 1) {
     return setColor("…", node.color);
   }
   let columnsRemainingForValue = columnsRemaining;
-  const { startMarker, endMarker } = node;
+  const { startMarker, endMarker, separatorMarkerRef } = node;
+  const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
   if (startMarker) {
     columnsRemainingForValue -= startMarker.length;
   }
@@ -2722,8 +2731,8 @@ const renderChildrenOneLiner = (node, props) => {
     focusedChildWhenSame = "first",
     hasSeparatorBetweenEachChild,
     hasTrailingSeparator,
-    overflowStartMarker = "…",
-    overflowEndMarker = "…",
+    overflowStartMarker = "",
+    overflowEndMarker = "",
     overflowMarkersPlacement = "inside",
     hasMarkersWhenEmpty,
     hasSpacingAroundChildren,
