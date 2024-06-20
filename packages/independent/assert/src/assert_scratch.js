@@ -2775,10 +2775,10 @@ const renderChildrenOneLiner = (node, props) => {
             : Math.floor(childrenKeys.length / 2);
     }
   }
-  let hasStartOverflow = focusedChildIndex > 0;
-  let hasEndOverflow = focusedChildIndex < childrenKeys.length - 1;
-  const overflowStartWidth = startSkippedMarker.length;
-  const overflowEndWidth = endSkippedMarker.length;
+  let hasPreviousSibling = focusedChildIndex > 0;
+  let hasNextSibling = focusedChildIndex < childrenKeys.length - 1;
+  const startSkippedMarkerWidth = startSkippedMarker.length;
+  const endSkippedMarkerWidth = endSkippedMarker.length;
   const { separatorMarkerRef, separatorMarkerWhenTruncatedRef } = node;
   const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
   const separatorMarkerWhenTruncated = separatorMarkerWhenTruncatedRef
@@ -2786,7 +2786,7 @@ const renderChildrenOneLiner = (node, props) => {
     : "";
 
   let boilerplate = "";
-  if (hasStartOverflow) {
+  if (hasPreviousSibling) {
     if (skippedMarkersPlacement === "inside") {
       if (hasSpacingAroundChildren) {
         boilerplate = `${startMarker} ${startSkippedMarker}`;
@@ -2799,7 +2799,7 @@ const renderChildrenOneLiner = (node, props) => {
   } else {
     boilerplate = startMarker;
   }
-  if (hasEndOverflow) {
+  if (hasNextSibling) {
     if (skippedMarkersPlacement === "inside") {
       if (hasSpacingAroundChildren) {
         boilerplate += `${endSkippedMarker} ${endMarker}`;
@@ -2869,18 +2869,28 @@ const renderChildrenOneLiner = (node, props) => {
     const previousChildIndex = focusedChildIndex - previousChildAttempt - 1;
     const nextChildIndex = focusedChildIndex + nextChildAttempt + 1;
     let hasPreviousChild = previousChildIndex >= 0;
-    const hasNextChild = nextChildIndex < childrenKeys.length;
+    let hasNextChild = nextChildIndex !== childrenKeys.length;
     if (!hasPreviousChild && !hasNextChild) {
       break;
     }
-    if (!tryBeforeFirst && hasNextChild) {
-      hasPreviousChild = false;
-    }
     let childIndex;
-    if (hasPreviousChild) {
+    let isPrevious = false;
+    if (hasPreviousChild && hasNextChild) {
+      if (tryBeforeFirst) {
+        isPrevious = true;
+        previousChildAttempt++;
+        childIndex = previousChildIndex;
+      } else {
+        isPrevious = false;
+        nextChildAttempt++;
+        childIndex = nextChildIndex;
+      }
+    } else if (hasPreviousChild) {
+      isPrevious = true;
       previousChildAttempt++;
       childIndex = previousChildIndex;
-    } else if (hasNextChild) {
+    } else {
+      isPrevious = false;
       nextChildAttempt++;
       childIndex = nextChildIndex;
     }
@@ -2891,23 +2901,23 @@ const renderChildrenOneLiner = (node, props) => {
       // if not remove it
       continue;
     }
-    if (tryBeforeFirst && hasPreviousChild) {
+    if (tryBeforeFirst && isPrevious) {
       tryBeforeFirst = false;
     }
     const childDiff = renderChildDiff(childNode, childIndex);
     const childDiffWidth = measureRemainingColumnsImpact(childDiff);
     let nextWidth = childDiffWidth;
-    hasStartOverflow = focusedChildIndex - previousChildAttempt > 0;
-    hasEndOverflow =
+    hasPreviousSibling = focusedChildIndex - previousChildAttempt > 0;
+    hasNextSibling =
       focusedChildIndex + nextChildAttempt < childrenKeys.length - 1;
-    if (hasStartOverflow) {
-      nextWidth += overflowStartWidth;
+    if (hasPreviousSibling) {
+      nextWidth += startSkippedMarkerWidth;
     }
-    if (hasEndOverflow) {
-      nextWidth += overflowEndWidth;
+    if (hasNextSibling) {
+      nextWidth += endSkippedMarkerWidth;
     }
     if (nextWidth > columnsRemainingForChildren) {
-      if (hasPreviousChild) {
+      if (isPrevious) {
         previousChildAttempt--;
       } else {
         nextChildAttempt--;
@@ -2942,7 +2952,7 @@ const renderChildrenOneLiner = (node, props) => {
     childrenDiff = childDiff;
   }
   let diff = "";
-  if (hasStartOverflow) {
+  if (hasPreviousSibling) {
     if (skippedMarkersPlacement === "inside") {
       if (startMarker) {
         diff += setColor(startMarker, node.color);
@@ -2964,7 +2974,7 @@ const renderChildrenOneLiner = (node, props) => {
   if (hasSpacingAroundChildren) {
     diff += " ";
   }
-  if (hasEndOverflow) {
+  if (hasNextSibling) {
     if (skippedMarkersPlacement === "inside") {
       diff += setColor(endSkippedMarker, node.color);
       if (endMarker) {
