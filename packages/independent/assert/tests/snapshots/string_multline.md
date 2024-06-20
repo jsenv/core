@@ -172,3 +172,54 @@ assert({
 
 ![img](<./string_multline/multiline without diff.svg>)
 
+# many lines around
+
+```js
+assert({
+  actual: `1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
+Hello world
+3abcdefghijklmnopqrstuvwxy
+4abcdefghijklmnopqrstuvwxy`,
+  expect: `1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
+Hello europa
+3abcdefghijklmnopqrstuvwxy
+4abcdefghijklmnopqrstuvwxy`,
+});
+```
+
+![img](<./string_multline/many lines around.svg>)
+
+# many lines before
+
+```js
+assert({
+  actual: `1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
+3abcdefghijklmnopqrstuvwx
+4abcdefghijklmnopqrstuvwxy
+5abcdefghijklmnopqrstuvwxy
+[Hello world]abcdefghijklmnopqrstuvwxyz`,
+  expect: `1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
+3abcdefghijklmnopqrstuvwx
+4abcdefghijklmnopqrstuvwxy
+5abcdefghijklmnopqrstuvwxy
+[Hello france]abcdefghijklmnopqrstuvwxyz`,
+});
+```
+
+![img](<./string_multline/many lines before.svg>)
+
+# exactly on line break
+
+```js
+assert({
+  actual: `abc`,
+  expect: `ab\nc`,
+});
+```
+
+![img](<./string_multline/exactly on line break.svg>)
+

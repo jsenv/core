@@ -95,3 +95,30 @@ expect: {
   b: false,
 }
 
+# many lines around
+actual: 1| 1abcdefghijklmnopqrstuvwx
+        2| 2abcdefghijklmnopqrstuvwxy
+        3| Hello world
+        4| 3abcdefghijklmnopqrstuvwxy
+        5| 4abcdefghijklmnopqrstuvwxy
+expect: 1| 1abcdefghijklmnopqrstuvwx
+        2| 2abcdefghijklmnopqrstuvwxy
+        3| Hello europa
+        4| 3abcdefghijklmnopqrstuvwxy
+        5| 4abcdefghijklmnopqrstuvwxy
+
+# many lines before
+actual: ↑ 3 lines ↑
+        4| 4abcdefghijklmnopqrstuvwxy
+        5| 5abcdefghijklmnopqrstuvwxy
+        6| [Hello world]abcdefghijklmnopqrstuvwxyz
+expect: ↑ 3 lines ↑
+        4| 4abcdefghijklmnopqrstuvwxy
+        5| 5abcdefghijklmnopqrstuvwxy
+        6| [Hello france]abcdefghijklmnopqrstuvwxyz
+
+# exactly on line break
+actual: 1| abc
+expect: 1| ab
+        2| c
+

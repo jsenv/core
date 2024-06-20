@@ -251,4 +251,40 @@ five six`,
       },
     });
   },
+  ["many lines around"]: () => {
+    assert({
+      actual: `1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
+Hello world
+3abcdefghijklmnopqrstuvwxy
+4abcdefghijklmnopqrstuvwxy`,
+      expect: `1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
+Hello europa
+3abcdefghijklmnopqrstuvwxy
+4abcdefghijklmnopqrstuvwxy`,
+    });
+  },
+  ["many lines before"]: () => {
+    assert({
+      actual: `1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
+3abcdefghijklmnopqrstuvwx
+4abcdefghijklmnopqrstuvwxy
+5abcdefghijklmnopqrstuvwxy
+[Hello world]abcdefghijklmnopqrstuvwxyz`,
+      expect: `1abcdefghijklmnopqrstuvwx
+2abcdefghijklmnopqrstuvwxy
+3abcdefghijklmnopqrstuvwx
+4abcdefghijklmnopqrstuvwxy
+5abcdefghijklmnopqrstuvwxy
+[Hello france]abcdefghijklmnopqrstuvwxyz`,
+    });
+  },
+  "exactly on line break": () => {
+    assert({
+      actual: `abc`,
+      expect: `ab\nc`,
+    });
+  },
 });

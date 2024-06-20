@@ -1,6 +1,12 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
+ * - fix max columns for double slash truncated
+ *   it does not work as expected
+ * - test for diff in the middle of multiline
+ *   on veut que les lignes avant/apres
+ *   prenne le bon focusedChildIndex qui donne en gros le point de focus
+ *   pour les lignes autours
  * - lots of test on max columns
  * - array typed
  * - property descriptors
@@ -2867,7 +2873,7 @@ const renderChildrenOneLiner = (node, props) => {
   let hasNextSibling = focusedChildIndex < childrenKeys.length - 1;
   let hasPreviousSibling =
     focusedChildIndex === maxLeftIndex
-      ? true
+      ? focusedChildIndex > 0
       : focusedChildIndex < childrenKeys.length - 1 && focusedChildIndex > 0;
   const startSkippedMarkerWidth = startSkippedMarker.length;
   const endSkippedMarkerWidth = endSkippedMarker.length;

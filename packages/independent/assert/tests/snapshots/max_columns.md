@@ -1,3 +1,15 @@
+# double slash and truncate line
+
+```js
+assert({
+  actual: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js`,
+  expect: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`,
+  MAX_COLUMNS: 50,
+});
+```
+
+![img](<./max_columns/double slash and truncate line.svg>)
+
 # at removed char
 
 ```js

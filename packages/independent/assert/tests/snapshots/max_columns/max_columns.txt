@@ -1,3 +1,7 @@
+# double slash and truncate line
+actual: "/dmail/documents/dev/jsenv-core/node_mo…"
+expect: "/dmail/documents/dev/jsenv-core/node_mo…"
+
 # at removed char
 actual: …"r"
 expect: …"r_1234"…

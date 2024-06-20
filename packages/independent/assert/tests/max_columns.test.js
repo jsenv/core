@@ -3,6 +3,13 @@ import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 // TODO: at property when rendered on single line
 await startSnapshotTesting("max_columns", {
+  ["double slash and truncate line"]: () => {
+    assert({
+      actual: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js`,
+      expect: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`,
+      MAX_COLUMNS: 50,
+    });
+  },
   ["at removed char"]: () => {
     assert({
       actual: "str",
