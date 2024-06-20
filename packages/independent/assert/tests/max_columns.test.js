@@ -151,6 +151,42 @@ await startSnapshotTesting("max_columns", {
       MAX_COLUMNS: 15,
     });
   },
+  // on URLS
+  ["url search param modified, middle of long params"]: () => {
+    assert({
+      actual: "http://example_that_is_long.com?this_is_relatively_long=1&foo=a",
+      expect: "http://example_that_is_long.com?this_is_relatively_long=1&foo=b",
+      MAX_COLUMNS: 30,
+    });
+  },
+  ["long url diff at end"]: () => {
+    assert({
+      actual: "http://example_that_is_quite_long.com/dir/file.txt",
+      expect: "http://example_that_is_quite_long.com/dir/file.css",
+      MAX_COLUMNS: 40,
+    });
+  },
+  ["long url diff at start"]: () => {
+    assert({
+      actual: "http://example_that_is_quite_long.com/dir/file.txt",
+      expect: "file://example_that_is_quite_long.com/dir/file.txt",
+      MAX_COLUMNS: 40,
+    });
+  },
+  ["long url diff in the middle"]: () => {
+    assert({
+      actual: "http://example_that_is_quite_long.com/dir/file.txt",
+      expect: "http://example_that_AA_quite_long.com/dir/file.txt",
+      MAX_COLUMNS: 40,
+    });
+  },
+  ["long url diff start middle end"]: () => {
+    assert({
+      actual: "http://example_that_is_quite_long.com/dir/file.txt",
+      expect: "file://example_that_AA_quite_long.com/dir/file.css",
+      MAX_COLUMNS: 40,
+    });
+  },
 });
 
 // await startSnapshotTesting("max_columns", {

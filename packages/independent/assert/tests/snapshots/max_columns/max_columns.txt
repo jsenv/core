@@ -98,3 +98,23 @@ expect: {
   abcdefgh: f…,
 }
 
+# url search param modified, middle of long params
+actual: "?this_is_rel…=&foo=a"
+expect: "?this_is_rel…=&foo=b"
+
+# long url diff at end
+actual: "example_that_is_…/dir/file.txt"
+expect: "example_that_is_…/dir/file.css"
+
+# long url diff at start
+actual: "http://example_that_is_quite_…"
+expect: "file://example_that_is_quite_…"
+
+# long url diff in the middle
+actual: "example_that_is_quite_long.com"
+expect: "example_that_aa_quite_long.com"
+
+# long url diff start middle end
+actual: "http://example_that_is_quite_…"
+expect: "file://example_that_aa_quite_…"
+

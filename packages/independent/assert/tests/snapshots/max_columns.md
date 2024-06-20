@@ -226,3 +226,63 @@ assert({
 
 ![img](<./max_columns/at property value third char.svg>)
 
+# url search param modified, middle of long params
+
+```js
+assert({
+  actual: "http://example_that_is_long.com?this_is_relatively_long=1&foo=a",
+  expect: "http://example_that_is_long.com?this_is_relatively_long=1&foo=b",
+  MAX_COLUMNS: 30,
+});
+```
+
+![img](<./max_columns/url search param modified, middle of long params.svg>)
+
+# long url diff at end
+
+```js
+assert({
+  actual: "http://example_that_is_quite_long.com/dir/file.txt",
+  expect: "http://example_that_is_quite_long.com/dir/file.css",
+  MAX_COLUMNS: 40,
+});
+```
+
+![img](<./max_columns/long url diff at end.svg>)
+
+# long url diff at start
+
+```js
+assert({
+  actual: "http://example_that_is_quite_long.com/dir/file.txt",
+  expect: "file://example_that_is_quite_long.com/dir/file.txt",
+  MAX_COLUMNS: 40,
+});
+```
+
+![img](<./max_columns/long url diff at start.svg>)
+
+# long url diff in the middle
+
+```js
+assert({
+  actual: "http://example_that_is_quite_long.com/dir/file.txt",
+  expect: "http://example_that_AA_quite_long.com/dir/file.txt",
+  MAX_COLUMNS: 40,
+});
+```
+
+![img](<./max_columns/long url diff in the middle.svg>)
+
+# long url diff start middle end
+
+```js
+assert({
+  actual: "http://example_that_is_quite_long.com/dir/file.txt",
+  expect: "file://example_that_AA_quite_long.com/dir/file.css",
+  MAX_COLUMNS: 40,
+});
+```
+
+![img](<./max_columns/long url diff start middle end.svg>)
+
