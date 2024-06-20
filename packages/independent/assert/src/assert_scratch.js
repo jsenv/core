@@ -102,13 +102,21 @@ const setColor = (text, color) => {
   // }
   return textColored;
 };
-const measureLastLineColumns = (string) => {
-  if (string.includes("\n")) {
-    const lines = string.split("\n");
-    const lastLine = lines[lines.length - 1];
-    return stringWidth(lastLine);
+const updateRemainingColumns = (columnsRemaining, string) => {
+  const newLineLastIndex = string.lastIndexOf("\n");
+  if (newLineLastIndex === -1) {
+    return columnsRemaining - stringWidth(string);
   }
-  return stringWidth(string);
+  const lastLine = string.slice(newLineLastIndex + "\n".length);
+  return stringWidth(lastLine);
+};
+const measureRemainingColumnsImpact = (string) => {
+  const newLineLastIndex = string.lastIndexOf("\n");
+  if (newLineLastIndex === -1) {
+    return stringWidth(string);
+  }
+  const lastLine = string.slice(newLineLastIndex + "\n".length);
+  return stringWidth(lastLine);
 };
 
 const defaultOptions = {
@@ -1373,11 +1381,11 @@ let createRootNode;
                       {
                         value: null,
                         render: renderChildrenOneLiner,
+                        startMarker: "?",
                         onelineDiff: {
                           hasSeparatorBetweenEachChild: true,
                           hasTrailingSeparator: true,
                         },
-                        startMarker: "?",
                         group: "entries",
                         subgroup: "url_search",
                         childGenerator() {
@@ -1490,8 +1498,6 @@ let createRootNode;
                     onelineDiff: {
                       hasSeparatorBetweenEachChild: true,
                       focusedChildWhenSame: "last",
-                      overflowStartMarker: "…",
-                      overflowEndMarker: "…",
                       overflowMarkersPlacement: "outside",
                     },
                     // When multiline string appear as property value
@@ -2572,7 +2578,7 @@ const renderComposite = (node, props) => {
   }
   if (constructNode) {
     const constructDiff = constructNode.render(childProps);
-    columnsRemaining -= measureLastLineColumns(constructDiff);
+    columnsRemaining = updateRemainingColumns(columnsRemaining, constructDiff);
     diff += constructDiff;
   }
   if (internalEntriesNode) {
@@ -2580,7 +2586,10 @@ const renderComposite = (node, props) => {
       ...childProps,
       columnsRemaining,
     });
-    columnsRemaining -= measureLastLineColumns(internalEntriesDiff);
+    columnsRemaining = updateRemainingColumns(
+      columnsRemaining,
+      internalEntriesDiff,
+    );
     diff += internalEntriesDiff;
   }
   if (indexedEntriesNode) {
@@ -2592,7 +2601,10 @@ const renderComposite = (node, props) => {
       ...childProps,
       columnsRemaining,
     });
-    columnsRemaining -= measureLastLineColumns(indexedEntriesDiff);
+    columnsRemaining = updateRemainingColumns(
+      columnsRemaining,
+      indexedEntriesDiff,
+    );
     diff += indexedEntriesDiff;
   }
   if (ownPropertiesNode) {
@@ -2710,8 +2722,8 @@ const renderChildrenOneLiner = (node, props) => {
     focusedChildWhenSame = "first",
     hasSeparatorBetweenEachChild,
     hasTrailingSeparator,
-    overflowStartMarker = "",
-    overflowEndMarker = "",
+    overflowStartMarker = "…",
+    overflowEndMarker = "…",
     overflowMarkersPlacement = "inside",
     hasMarkersWhenEmpty,
     hasSpacingAroundChildren,
@@ -2871,7 +2883,7 @@ const renderChildrenOneLiner = (node, props) => {
       tryBeforeFirst = false;
     }
     const childDiff = renderChildDiff(childNode, childIndex);
-    const childDiffWidth = measureLastLineColumns(childDiff);
+    const childDiffWidth = measureRemainingColumnsImpact(childDiff);
     let nextWidth = childDiffWidth;
     hasStartOverflow = focusedChildIndex - previousChildAttempt > 0;
     hasEndOverflow =
