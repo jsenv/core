@@ -1433,6 +1433,9 @@ let createRootNode;
                                         ? ""
                                         : "&",
                                     separatorMarkerRef: { current: "=" },
+                                    separatorMarkerWhenTruncatedRef: {
+                                      current: "",
+                                    },
                                     quoteMarkerRef,
                                     group: "entry_key",
                                     subgroup: "url_search_entry_key",
@@ -2496,7 +2499,7 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
   }
   let columnsRemainingForValue = columnsRemaining;
   const { startMarker, endMarker, separatorMarkerRef } = node;
-  const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
+  let separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
   if (startMarker) {
     columnsRemainingForValue -= startMarker.length;
   }
@@ -2509,7 +2512,17 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
   if (columnsRemainingForValue < 1) {
     return setColor("…", node.color);
   }
+  let truncated = false;
   if (valueDiff.length > columnsRemainingForValue) {
+    truncated = true;
+    const { separatorMarkerWhenTruncatedRef } = node;
+    if (separatorMarkerWhenTruncatedRef) {
+      const separatorMarkerWhenTruncated =
+        separatorMarkerWhenTruncatedRef.current;
+      columnsRemainingForValue +=
+        separatorMarker.length - separatorMarkerWhenTruncated.length;
+      separatorMarker = separatorMarkerWhenTruncated;
+    }
     if (props.endSkippedMarkerDisabled) {
       valueDiff = valueDiff.slice(0, columnsRemainingForValue);
     } else {
@@ -2527,7 +2540,7 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
   }
   diff = setColor(diff, node.color);
   if (separatorMarker) {
-    diff += renderSeparatorMarker(node, props);
+    diff += renderSeparatorMarker(node, props, { truncated });
   }
   return diff;
 };
@@ -3257,9 +3270,10 @@ const renderSeparatorMarker = (node, props, { truncated } = {}) => {
     separatorMarkerWhenTruncatedRef,
     separatorMarkerOwner,
   } = node;
-  const separatorMarker = truncated
-    ? separatorMarkerWhenTruncatedRef.current
-    : separatorMarkerRef.current;
+  const separatorMarker =
+    truncated && separatorMarkerWhenTruncatedRef
+      ? separatorMarkerWhenTruncatedRef.current
+      : separatorMarkerRef.current;
   if (node.diffType === "solo") {
     return setColor(separatorMarker, node.color);
   }
