@@ -1,8 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - fix max columns for double slash truncated
- *   it does not work as expected (is related to urls because when regular string it works)
  * - test for diff in the middle of multiline
  *   on veut que les lignes avant/apres
  *   prenne le bon focusedChildIndex qui donne en gros le point de focus
@@ -34,6 +32,8 @@
  * il faudra un test ou on affiche rien
  * et un cas ou on peut afficher juste une lettre par exemple
  *
+ * - fix max columns for double slash truncated
+ *   it does not work as expected (is related to urls because when regular string it works)
  * - lots of test on max columns
  * - array typed
  * - property descriptors

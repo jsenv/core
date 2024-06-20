@@ -287,4 +287,44 @@ Hello europa
       expect: `ab\nc`,
     });
   },
+  ["lines around start fully truncated"]: () => {
+    assert({
+      actual: `
+Z
+abcd
+Z`,
+      expect: `
+Z
+abcD
+Z`,
+      MAX_COLUMNS: 12,
+    });
+  },
+  // TODO: line around start partially truncated
+  //   ["lines around end is truncated"]: () => {
+  //     assert({
+  //       actual: `
+  // 1234567
+  // abcd
+  // 1234567`,
+  //       expect: `
+  // 1234567
+  // Abcd
+  // 1234567`,
+  //       MAX_COLUMNS: 30,
+  //     });
+  //   },
+  //   ["lines around truncated in the middle"]: () => {
+  //     assert({
+  //       actual: `
+  // 123456789
+  // abcdefghi
+  // 123456789`,
+  //       expect: `
+  // 123456789
+  // abcdEfghi
+  // 123456789`,
+  //       MAX_COLUMNS: 30,
+  //     });
+  //   },
 });

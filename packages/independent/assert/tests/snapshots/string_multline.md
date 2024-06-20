@@ -223,3 +223,21 @@ assert({
 
 ![img](<./string_multline/exactly on line break.svg>)
 
+# lines around start fully truncated
+
+```js
+assert({
+  actual: `
+Z
+abcd
+Z`,
+  expect: `
+Z
+abcD
+Z`,
+  MAX_COLUMNS: 12,
+});
+```
+
+![img](<./string_multline/lines around start fully truncated.svg>)
+
