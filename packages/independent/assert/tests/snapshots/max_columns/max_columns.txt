@@ -99,22 +99,22 @@ expect: {
 }
 
 # url search param modified, middle of long params
-actual: "…?this_is_rel…=&foo=a"
-expect: "…?this_is_rel…=&foo=b"
+actual: "…?this_is_re…=&foo=a"
+expect: "…?this_is_re…=&foo=b"
 
 # long url diff at end
-actual: "…/dir/file.txt"
-expect: "…/dir/file.css"
+actual: "…example_that_is…/dir/file.txt"
+expect: "…example_that_is…/dir/file.css"
 
 # long url diff at start
-actual: "http://…"
-expect: "file://…"
+actual: "http://example_that_is_quite_…"
+expect: "file://example_that_is_quite_…"
 
 # long url diff in the middle
-actual: "…example_that_is_quite_long.com…"
-expect: "…example_that_aa_quite_long.com…"
+actual: "…example_that_is_quite_long.c…"
+expect: "…example_that_aa_quite_long.c…"
 
 # long url diff start middle end
-actual: "http://…"
-expect: "file://…"
+actual: "http://example_that_is_quite_…"
+expect: "file://example_that_aa_quite_…"
 

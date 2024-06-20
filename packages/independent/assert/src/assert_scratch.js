@@ -2510,8 +2510,12 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
     return setColor("…", node.color);
   }
   if (valueDiff.length > columnsRemainingForValue) {
-    valueDiff = valueDiff.slice(0, columnsRemainingForValue - "…".length);
-    valueDiff += "…";
+    if (props.endSkippedMarkerDisabled) {
+      valueDiff = valueDiff.slice(0, columnsRemainingForValue);
+    } else {
+      valueDiff = valueDiff.slice(0, columnsRemainingForValue - "…".length);
+      valueDiff += "…";
+    }
   }
   let diff = "";
   if (startMarker) {
@@ -2738,8 +2742,10 @@ const renderChildrenOneLiner = (node, props) => {
   let startSkippedMarker = "";
   let endSkippedMarker = "";
   if (skippedMarkers) {
-    startSkippedMarker = skippedMarkers.start;
-    endSkippedMarker = skippedMarkers.end;
+    startSkippedMarker = props.startSkippedMarkerDisabled
+      ? ""
+      : skippedMarkers.start;
+    endSkippedMarker = props.endSkippedMarkerDisabled ? "" : skippedMarkers.end;
   }
 
   let columnsRemainingForChildren = props.columnsRemaining;
@@ -2834,9 +2840,18 @@ const renderChildrenOneLiner = (node, props) => {
       childIndex,
       childrenKeys,
     });
+    let columnsRemainingForThisChild = columnsRemainingForChildren;
+    if (hasPreviousSibling) {
+      columnsRemainingForThisChild -= startSkippedMarkerWidth;
+    }
+    if (hasNextSibling) {
+      columnsRemainingForThisChild -= endSkippedMarkerWidth;
+    }
     const childDiff = childNode.render({
       ...props,
-      columnsRemaining: columnsRemainingForChildren,
+      startSkippedMarkerDisabled: hasPreviousSibling && startSkippedMarkerWidth,
+      endSkippedMarkerDisabled: hasNextSibling && endSkippedMarkerWidth,
+      columnsRemaining: columnsRemainingForThisChild,
       onTruncatedNotationUsed: () => {
         columnsRemainingForChildren = 0;
       },
@@ -2904,12 +2919,12 @@ const renderChildrenOneLiner = (node, props) => {
     if (tryBeforeFirst && isPrevious) {
       tryBeforeFirst = false;
     }
-    const childDiff = renderChildDiff(childNode, childIndex);
-    const childDiffWidth = measureRemainingColumnsImpact(childDiff);
-    let nextWidth = childDiffWidth;
     hasPreviousSibling = focusedChildIndex - previousChildAttempt > 0;
     hasNextSibling =
       focusedChildIndex + nextChildAttempt < childrenKeys.length - 1;
+    const childDiff = renderChildDiff(childNode, childIndex);
+    const childDiffWidth = measureRemainingColumnsImpact(childDiff);
+    let nextWidth = childDiffWidth;
     if (hasPreviousSibling) {
       nextWidth += startSkippedMarkerWidth;
     }
