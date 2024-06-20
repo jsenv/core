@@ -1,3 +1,27 @@
+# good truncate on removed chars
+
+```js
+assert({
+  actual: "str",
+  expect: "str_123456789",
+  MAX_COLUMNS: 18,
+});
+```
+
+![img](<./max_columns/good truncate on removed chars.svg>)
+
+# good truncate on added char
+
+```js
+assert({
+  actual: "str_123456789",
+  expect: "str",
+  MAX_COLUMNS: 25,
+});
+```
+
+![img](<./max_columns/good truncate on added char.svg>)
+
 # string open quote
 
 ```js

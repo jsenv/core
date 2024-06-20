@@ -1,3 +1,11 @@
+# good truncate on removed chars
+actual: "str"
+expect: …"r_1234"…
+
+# good truncate on added char
+actual: "str_123456789"
+expect: "str"
+
 # string open quote
 actual: …
 expect: …
@@ -99,8 +107,8 @@ expect: {
 }
 
 # url search param modified, middle of long params
-actual: "…?this_is_rel…&foo=a"
-expect: "…?this_is_rel…&foo=b"
+actual: "?this_is_rela…&foo=a"
+expect: "?this_is_rela…&foo=b"
 
 # long url diff at end
 actual: "…example_that_is…/dir/file.txt"

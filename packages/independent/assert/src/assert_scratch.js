@@ -2780,10 +2780,21 @@ const renderChildrenOneLiner = (node, props) => {
         const childIndex = childrenKeys.indexOf(childKey);
         if (childIndex === -1) {
           // happens when removed/added
+          // we we want the last one in that case?
+          // focusedChildIndex = childrenKeys.length - 1;
+          // columnsRemainingForChildren =
+          //   startSkippedMarker.length +
+          //   startMarker.length +
+          //   endMarker.length +
+          //   1;
+          // break;
         } else {
           focusedChildIndex = childIndex;
           break;
         }
+      }
+      if (focusedChildIndex === -1) {
+        focusedChildIndex = childrenKeys.length - 1;
       }
     } else {
       focusedChildIndex =
@@ -2794,8 +2805,8 @@ const renderChildrenOneLiner = (node, props) => {
             : Math.floor(childrenKeys.length / 2);
     }
   }
-  let hasPreviousSibling = focusedChildIndex > 0;
   let hasNextSibling = focusedChildIndex < childrenKeys.length - 1;
+  let hasPreviousSibling = hasNextSibling && focusedChildIndex > 0;
   const startSkippedMarkerWidth = startSkippedMarker.length;
   const endSkippedMarkerWidth = endSkippedMarker.length;
   const { separatorMarkerRef, separatorMarkerWhenTruncatedRef } = node;
@@ -2897,7 +2908,7 @@ const renderChildrenOneLiner = (node, props) => {
     const previousChildIndex = focusedChildIndex - previousChildAttempt - 1;
     const nextChildIndex = focusedChildIndex + nextChildAttempt + 1;
     let hasPreviousChild = previousChildIndex >= 0;
-    let hasNextChild = nextChildIndex !== childrenKeys.length;
+    let hasNextChild = nextChildIndex < childrenKeys.length;
     if (!hasPreviousChild && !hasNextChild) {
       break;
     }
@@ -2927,6 +2938,7 @@ const renderChildrenOneLiner = (node, props) => {
     if (!childNode) {
       debugger; // to keep to see if that is hit while running all of string.test.js
       // if not remove it
+      columnsRemainingForChildren--;
       continue;
     }
     if (tryBeforeFirst && isPrevious) {
