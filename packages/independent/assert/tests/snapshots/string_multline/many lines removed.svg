@@ -71,10 +71,9 @@
         <text x="110.82" y="90.55" fill="#DAA520">o</text>
         <text x="119.22" y="90.55" fill="#DAA520">u</text>
         <text x="127.62" y="90.55" fill="#DAA520">r</text>
-        <text x="77.21" y="109.55" fill="#7f7f7f">&#x2193;</text>
-        <text x="94.01" y="109.55" fill="#7f7f7f">1</text>
-        <text x="110.82" y="109.55" fill="#7f7f7f">line</text>
-        <text x="152.82" y="109.55" fill="#7f7f7f">&#x2193;</text>
+        <text x="77.21" y="109.55" fill="#7f7f7f"
+          >&#x2193; 1 line &#x2193;</text
+        >
       </g>
     </svg>
   </foreignObject>

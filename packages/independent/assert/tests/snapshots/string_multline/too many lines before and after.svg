@@ -42,10 +42,9 @@
     >
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
-        <text x="77.21" y="14.55" fill="#7f7f7f">&#x2191;</text>
-        <text x="94.01" y="14.55" fill="#7f7f7f">2</text>
-        <text x="110.82" y="14.55" fill="#7f7f7f">lines</text>
-        <text x="161.22" y="14.55" fill="#7f7f7f">&#x2191;</text>
+        <text x="77.21" y="14.55" fill="#7f7f7f"
+          >&#x2191; 2 lines &#x2191;</text
+        >
         <text x="77.21" y="33.55" fill="#7f7f7f">3</text>
         <text x="85.61" y="33.55" fill="#7f7f7f">|</text>
         <text x="102.42" y="33.55" fill="#7f7f7f">t</text>
@@ -70,15 +69,13 @@
         <text x="110.82" y="71.55" fill="#7f7f7f">i</text>
         <text x="119.22" y="71.55" fill="#7f7f7f">v</text>
         <text x="127.62" y="71.55" fill="#7f7f7f">e</text>
-        <text x="77.21" y="90.55" fill="#7f7f7f">&#x2193;</text>
-        <text x="94.01" y="90.55" fill="#7f7f7f">2</text>
-        <text x="110.82" y="90.55" fill="#7f7f7f">lines</text>
-        <text x="161.22" y="90.55" fill="#7f7f7f">&#x2193;</text>
+        <text x="77.21" y="90.55" fill="#7f7f7f"
+          >&#x2193; 2 lines &#x2193;</text
+        >
         <text x="10" y="109.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="109.55" fill="#7f7f7f">&#x2191;</text>
-        <text x="94.01" y="109.55" fill="#7f7f7f">2</text>
-        <text x="110.82" y="109.55" fill="#7f7f7f">lines</text>
-        <text x="161.22" y="109.55" fill="#7f7f7f">&#x2191;</text>
+        <text x="77.21" y="109.55" fill="#7f7f7f"
+          >&#x2191; 2 lines &#x2191;</text
+        >
         <text x="77.21" y="128.55" fill="#7f7f7f">3</text>
         <text x="85.61" y="128.55" fill="#7f7f7f">|</text>
         <text x="102.42" y="128.55" fill="#7f7f7f">t</text>
@@ -104,10 +101,9 @@
         <text x="110.82" y="166.55" fill="#7f7f7f">i</text>
         <text x="119.22" y="166.55" fill="#7f7f7f">v</text>
         <text x="127.62" y="166.55" fill="#7f7f7f">e</text>
-        <text x="77.21" y="185.55" fill="#7f7f7f">&#x2193;</text>
-        <text x="94.01" y="185.55" fill="#7f7f7f">2</text>
-        <text x="110.82" y="185.55" fill="#7f7f7f">lines</text>
-        <text x="161.22" y="185.55" fill="#7f7f7f">&#x2193;</text>
+        <text x="77.21" y="185.55" fill="#7f7f7f"
+          >&#x2193; 2 lines &#x2193;</text
+        >
       </g>
     </svg>
   </foreignObject>

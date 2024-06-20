@@ -1474,8 +1474,10 @@ let createRootNode;
           multilineDiff: {
             hasSeparatorBetweenEachChild: true,
             hasTrailingSeparator: true,
-            skippedSummary: {
-              skippedNames: ["line", "lines"],
+            skippedMarkers: {
+              start: ["↑ 1 line ↑", "↑ {x} lines ↑"],
+              middle: ["↕ 1 line ↕", "↕ {x} lines ↕"],
+              end: ["↓ 1 line ↓", "↓ {x} lines ↓"],
             },
             maxDiff: 1,
           },
@@ -1903,8 +1905,10 @@ let createRootNode;
               hasTrailingSeparator: true,
               hasNewLineAroundChildren: true,
               hasIndentBeforeEachChild: true,
-              skippedSummary: {
-                skippedNames: ["value", "values"],
+              skippedMarkers: {
+                start: ["↑ 1 value ↑", "↑ {x} values ↑"],
+                middle: ["↕ 1 value ↕", "↕ {x} values ↕"],
+                end: ["↓ 1 value ↓", "↓ {x} values ↓"],
               },
               maxDiff: "MAX_DIFF_PER_OBJECT",
             },
@@ -2011,8 +2015,10 @@ let createRootNode;
                 hasTrailingSeparator: true,
                 hasNewLineAroundChildren: true,
                 hasIndentBeforeEachChild: true,
-                skippedSummary: {
-                  skippedNames: ["value", "values"],
+                skippedMarkers: {
+                  start: ["↑ 1 value ↑", "↑ {x} values ↑"],
+                  middle: ["↕ 1 value ↕", "↕ {x} values ↕"],
+                  end: ["↓ 1 value ↓", "↓ {x} values ↓"],
                 },
                 maxDiff: "MAX_DIFF_PER_OBJECT",
               },
@@ -2143,8 +2149,10 @@ let createRootNode;
                     hasTrailingSeparator: true,
                     hasNewLineAroundChildren: true,
                     hasIndentBeforeEachChild: true,
-                    skippedSummary: {
-                      skippedNames: ["prop", "props"],
+                    skippedMarkers: {
+                      start: ["↑ 1 prop ↑", "↑ {x} props ↑"],
+                      middle: ["↕ 1 prop ↕", "↕ {x} props ↕"],
+                      end: ["↓ 1 prop ↓", "↓ {x} props ↓"],
                     },
                     maxDiff: "MAX_DIFF_PER_OBJECT",
                   },
@@ -2980,7 +2988,7 @@ const renderChildrenMultiline = (node, props) => {
     hasIndentBeforeEachChild,
     hasIndentBetweenEachChild,
     hasMarkersWhenEmpty,
-    skippedSummary,
+    skippedMarkers,
   } = node.multilineDiff;
 
   if (node.beforeRender) {
@@ -3020,17 +3028,19 @@ const renderChildrenMultiline = (node, props) => {
     if (hasIndentBetweenEachChild && skipPosition !== "start") {
       skippedDiff += " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
     }
-    const { skippedNames } = skippedSummary || {
-      skippedNames: ["value", "values"],
-    };
-    const sign = { start: "↑", between: "↕", end: `↓` }[skipPosition];
-    skippedDiff += setColor(sign, node.color);
-    skippedDiff += " ";
-    skippedDiff += setColor(String(skipCount), node.color);
-    skippedDiff += " ";
-    skippedDiff += setColor(skippedNames[skipCount === 1 ? 0 : 1], node.color);
-    skippedDiff += " ";
-    skippedDiff += setColor(sign, node.color);
+    const skippedMarker = (skippedMarkers || {
+      start: ["↑ 1 value ↑", "↑ {x} values ↑"],
+      middle: ["↕ 1 value ↕", "↕ {x} values ↕"],
+      end: ["↓ 1 value ↓", "↓ {x} values ↓"],
+    })[skipPosition];
+    if (skipCount === 1) {
+      skippedDiff += setColor(skippedMarker[0], node.color);
+    } else {
+      skippedDiff += setColor(
+        skippedMarker[1].replace("{x}", skipCount),
+        node.color,
+      );
+    }
     appendChildDiff(skippedDiff);
   };
   let previousIndexDisplayed = -1;
@@ -3045,7 +3055,7 @@ const renderChildrenMultiline = (node, props) => {
     } else {
       const intermediateSkippedCount = childIndex - previousIndexDisplayed - 1;
       if (intermediateSkippedCount) {
-        appendSkippedSection(intermediateSkippedCount, "between");
+        appendSkippedSection(intermediateSkippedCount, "middle");
       }
     }
     const childKey = childrenKeys[childIndex];

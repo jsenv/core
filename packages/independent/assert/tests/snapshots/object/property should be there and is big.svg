@@ -86,10 +86,9 @@
         <text x="77.21" y="166.55" fill="#DAA520">: </text>
         <text x="94.01" y="166.55" fill="#DAA520">Object(3)</text>
         <text x="169.63" y="166.55" fill="#DAA520">,</text>
-        <text x="43.61" y="185.55" fill="#DAA520">&#x2193;</text>
-        <text x="60.41" y="185.55" fill="#DAA520">5</text>
-        <text x="77.21" y="185.55" fill="#DAA520">props</text>
-        <text x="127.62" y="185.55" fill="#DAA520">&#x2193;</text>
+        <text x="43.61" y="185.55" fill="#DAA520"
+          >&#x2193; 5 props &#x2193;</text
+        >
         <text x="26.8" y="204.55" fill="#DAA520">}</text>
         <text x="35.2" y="204.55" fill="#DAA520">,</text>
         <text x="10" y="223.55" fill="#7f7f7f">}</text>
