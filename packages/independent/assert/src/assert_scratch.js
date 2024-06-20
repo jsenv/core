@@ -1338,53 +1338,39 @@ let createRootNode;
                   search,
                   hash,
                 } = urlObject;
-                urlInternalPropertiesNode.appendChild("protocol", {
-                  value: protocol,
-                  render: renderValue,
-                  endMarker: "//",
-                  group: "url_internal_prop",
-                  subgroup: "url_protocol",
-                });
-                if (username) {
-                  urlInternalPropertiesNode.appendChild("username", {
-                    value: username,
+                const appendUrlInternalProp = (name, value, params) => {
+                  urlInternalPropertiesNode.appendChild(name, {
+                    value,
                     render: renderValue,
-                    endMarker: password ? ":" : "@",
                     group: "url_internal_prop",
-                    subgroup: "url_username",
+                    subgroup: `url_${name}`,
+                    ...params,
+                  });
+                };
+
+                appendUrlInternalProp("protocol", protocol, {
+                  endMarker: "//",
+                });
+
+                if (username) {
+                  appendUrlInternalProp("username", username, {
+                    endMarker: password ? ":" : "@",
                   });
                   if (password) {
-                    urlInternalPropertiesNode.appendChild("password", {
-                      value: password,
-                      render: renderValue,
+                    appendUrlInternalProp("password", password, {
                       endMarker: "@",
-                      group: "url_internal_prop",
-                      subgroup: "url_password",
                     });
                   }
                 }
-                urlInternalPropertiesNode.appendChild("hostname", {
-                  value: hostname,
-                  render: renderValue,
-                  group: "url_internal_prop",
-                  subgroup: "url_hostname",
-                });
+                appendUrlInternalProp("hostname", hostname);
+
                 if (port) {
-                  urlInternalPropertiesNode.appendChild("port", {
-                    value: parseInt(port),
-                    render: renderValue,
+                  appendUrlInternalProp("port", parseInt(port), {
                     startMarker: ":",
-                    group: "url_internal_prop",
-                    subgroup: "url_port",
                   });
                 }
                 if (pathname) {
-                  urlInternalPropertiesNode.appendChild("pathname", {
-                    value: pathname,
-                    render: renderValue,
-                    group: "url_internal_prop",
-                    subgroup: "url_pathname",
-                  });
+                  appendUrlInternalProp("pathname", pathname);
                 }
                 if (search) {
                   const urlSearchNode = urlInternalPropertiesNode.appendChild(
@@ -1467,12 +1453,7 @@ let createRootNode;
                   );
                 }
                 if (hash) {
-                  urlInternalPropertiesNode.appendChild("hash", {
-                    value: hash,
-                    render: renderValue,
-                    group: "url_internal_prop",
-                    subgroup: "url_hash",
-                  });
+                  appendUrlInternalProp("hash", hash);
                 }
               },
               group: "entries",
