@@ -267,71 +267,132 @@ export const assert = (firstArg) => {
         expectNode.subgroup === "set_entries";
       const comparisonResultMap = new Map();
       const comparisonDiffMap = new Map();
-      for (let [childName, actualChildNode] of actualNode.childNodeMap) {
-        let expectChildNode;
-        if (isSetEntriesComparison) {
-          const actualSetValueNode = actualChildNode;
-          for (const [, expectSetValueNode] of expectNode.childNodeMap) {
-            if (expectSetValueNode.value === actualSetValueNode.value) {
-              expectChildNode = expectSetValueNode;
-              break;
+      actual_children_comparisons: {
+        const actualChildrenKeys = [];
+        let actualFirstChildWithDiffKey;
+        for (let [childKey, actualChildNode] of actualNode.childNodeMap) {
+          let expectChildNode;
+          if (isSetEntriesComparison) {
+            const actualSetValueNode = actualChildNode;
+            for (const [, expectSetValueNode] of expectNode.childNodeMap) {
+              if (expectSetValueNode.value === actualSetValueNode.value) {
+                expectChildNode = expectSetValueNode;
+                break;
+              }
             }
+          } else {
+            expectChildNode = expectNode.childNodeMap.get(childKey);
           }
-        } else {
-          expectChildNode = expectNode.childNodeMap.get(childName);
-        }
-        if (actualChildNode && expectChildNode) {
-          const childComparison = subcompareDuo(
-            actualChildNode,
-            expectChildNode,
-          );
-          comparisonResultMap.set(childName, childComparison);
-          if (childComparison.hasAnyDiff) {
-            comparisonDiffMap.set(childName, childComparison);
+          if (actualChildNode && expectChildNode) {
+            const childComparison = subcompareDuo(
+              actualChildNode,
+              expectChildNode,
+            );
+            comparisonResultMap.set(childKey, childComparison);
+            if (childComparison.hasAnyDiff) {
+              comparisonDiffMap.set(childKey, childComparison);
+            }
+            if (!actualChildNode.isHidden) {
+              actualChildrenKeys.push(childKey);
+              if (
+                childComparison.hasAnyDiff &&
+                actualFirstChildWithDiffKey === undefined
+              ) {
+                actualFirstChildWithDiffKey = childKey;
+              }
+            }
+            continue;
           }
-        } else {
           const addedChildComparison = subcompareSolo(
             actualChildNode,
             PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
           );
-          comparisonResultMap.set(childName, addedChildComparison);
-          comparisonDiffMap.set(childName, addedChildComparison);
-        }
-      }
-      for (let [childName, expectChildNode] of expectNode.childNodeMap) {
-        if (isSetEntriesComparison) {
-          const expectSetValueNode = expectChildNode;
-          let hasEntry;
-          for (const [, actualSetValueNode] of actualNode.childNodeMap) {
-            if (actualSetValueNode.value === expectSetValueNode.value) {
-              hasEntry = true;
-              break;
+          comparisonResultMap.set(childKey, addedChildComparison);
+          comparisonDiffMap.set(childKey, addedChildComparison);
+          if (!actualChildNode.isHidden) {
+            actualChildrenKeys.push(childKey);
+            if (actualFirstChildWithDiffKey === undefined) {
+              actualFirstChildWithDiffKey = childKey;
             }
           }
-          if (hasEntry) {
-            continue;
-          }
-        } else if (comparisonResultMap.has(childName)) {
-          continue;
         }
-        const removedChildComparison = subcompareSolo(
-          expectChildNode,
-          PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
-        );
-        comparisonResultMap.set(childName, removedChildComparison);
-        comparisonDiffMap.set(childName, removedChildComparison);
+        actualNode.childrenKeys = actualChildrenKeys;
+        actualNode.firstChildWithDiffKey = actualFirstChildWithDiffKey;
+      }
+      expect_children_comparisons: {
+        const expectChildrenKeys = [];
+        let expectFirstChildWithDiffKey;
+        for (let [childKey, expectChildNode] of expectNode.childNodeMap) {
+          if (isSetEntriesComparison) {
+            const expectSetValueNode = expectChildNode;
+            let hasEntry;
+            for (const [, actualSetValueNode] of actualNode.childNodeMap) {
+              if (actualSetValueNode.value === expectSetValueNode.value) {
+                hasEntry = true;
+                break;
+              }
+            }
+            if (hasEntry) {
+              if (!expectChildNode.isHidden) {
+                expectChildrenKeys.push(childKey);
+              }
+              continue;
+            }
+          } else {
+            const comparisonResult = comparisonResultMap.get(childKey);
+            if (comparisonResult) {
+              if (!expectChildNode.isHidden) {
+                expectChildrenKeys.push(childKey);
+                if (
+                  comparisonResult.hasAnyDiff &&
+                  expectFirstChildWithDiffKey === undefined
+                ) {
+                  expectFirstChildWithDiffKey = childKey;
+                }
+              }
+              continue;
+            }
+          }
+          const removedChildComparison = subcompareSolo(
+            expectChildNode,
+            PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+          );
+          comparisonResultMap.set(childKey, removedChildComparison);
+          comparisonDiffMap.set(childKey, removedChildComparison);
+          if (!expectChildNode.isHidden) {
+            expectChildrenKeys.push(childKey);
+            if (expectFirstChildWithDiffKey === undefined) {
+              expectFirstChildWithDiffKey = childKey;
+            }
+          }
+        }
+        expectNode.childrenKeys = expectChildrenKeys;
+        expectNode.firstChildWithDiffKey = expectFirstChildWithDiffKey;
       }
       actualNode.comparisonDiffMap = comparisonDiffMap;
       expectNode.comparisonDiffMap = comparisonDiffMap;
     };
     const subcompareChildNodesSolo = (node, placeholderNode) => {
       const comparisonDiffMap = new Map();
-      for (const [childName, childNode] of node.childNodeMap) {
+      const childrenKeys = [];
+      let firstChildWithDiffKey;
+      for (const [childKey, childNode] of node.childNodeMap) {
         const soloChildComparison = subcompareSolo(childNode, placeholderNode);
         if (placeholderNode !== PLACEHOLDER_FOR_SAME) {
-          comparisonDiffMap.set(childName, soloChildComparison);
+          comparisonDiffMap.set(childKey, soloChildComparison);
+        }
+        if (!childNode.isHidden) {
+          childrenKeys.push(childKey);
+          if (
+            placeholderNode !== PLACEHOLDER_FOR_SAME &&
+            firstChildWithDiffKey === undefined
+          ) {
+            firstChildWithDiffKey = childKey;
+          }
         }
       }
+      node.childrenKeys = childrenKeys;
+      node.firstChildWithDiffKey = firstChildWithDiffKey;
       node.comparisonDiffMap = comparisonDiffMap;
     };
 
@@ -1119,13 +1180,14 @@ let createRootNode;
       isHiddenWhenSame,
       focusedChildIndex,
       beforeRender: null,
-      childrenKeys: null,
-      indexToDisplayArray: null,
       // START will be set by comparison
       customCompare,
       ignore: false,
       comparison: null,
       comparisonDiffMap: null,
+      childrenKeys: null,
+      firstChildWithDiffKey: undefined,
+      indexToDisplayArray: null,
       diffType: "",
       otherNode: null,
       // END will be set by comparison
@@ -2658,7 +2720,7 @@ const renderChildren = (node, props) => {
       ? multilineDiff.maxDiff
       : props[multilineDiff.maxDiff];
   if (node.diffType === "solo") {
-    const childrenKeys = getChildrenKeys(node);
+    const childrenKeys = node.childrenKeys;
     const indexToDisplayArray = [];
     for (const [childKey] of node.comparisonDiffMap) {
       if (indexToDisplayArray.length >= maxDiff) {
@@ -2673,7 +2735,7 @@ const renderChildren = (node, props) => {
     return renderChildrenMultiline(node, props);
   }
   if (node.comparisonDiffMap.size > 0) {
-    const childrenKeys = getChildrenKeys(node);
+    const childrenKeys = node.childrenKeys;
     const indexToDisplayArray = [];
     index_to_display: {
       if (childrenKeys.length === 0) {
@@ -2736,7 +2798,6 @@ const renderChildren = (node, props) => {
   if (onelineDiff) {
     return renderChildrenOneLiner(node, props);
   }
-  node.childrenKeys = getChildrenKeys(node);
   node.indexToDisplayArray = [0];
   return renderChildrenMultiline(node, props);
 };
@@ -2765,7 +2826,7 @@ const renderChildrenOneLiner = (node, props) => {
   if (columnsRemainingForChildren < 1) {
     return setColor("…", node.color);
   }
-  const childrenKeys = getChildrenKeys(node);
+  const childrenKeys = node.childrenKeys;
   const { startMarker, endMarker } = node;
   if (childrenKeys.length === 0) {
     if (!hasMarkersWhenEmpty) {
@@ -2775,34 +2836,16 @@ const renderChildrenOneLiner = (node, props) => {
   }
   let focusedChildIndex = node.focusedChildIndex;
   if (focusedChildIndex === -1) {
-    if (node.comparisonDiffMap.size > 0) {
-      for (const [childKey] of node.comparisonDiffMap) {
-        const childIndex = childrenKeys.indexOf(childKey);
-        if (childIndex === -1) {
-          // happens when removed/added
-          // we we want the last one in that case?
-          // focusedChildIndex = childrenKeys.length - 1;
-          // columnsRemainingForChildren =
-          //   startSkippedMarker.length +
-          //   startMarker.length +
-          //   endMarker.length +
-          //   1;
-          // break;
-        } else {
-          focusedChildIndex = childIndex;
-          break;
-        }
-      }
-      if (focusedChildIndex === -1) {
+    if (node.firstChildWithDiffKey === undefined) {
+      if (focusedChildWhenSame === "first") {
+        focusedChildIndex = 0;
+      } else if (focusedChildWhenSame === "last") {
         focusedChildIndex = childrenKeys.length - 1;
+      } else {
+        focusedChildIndex = Math.floor(childrenKeys.length / 2);
       }
     } else {
-      focusedChildIndex =
-        focusedChildWhenSame === "first"
-          ? 0
-          : focusedChildWhenSame === "last"
-            ? childrenKeys.length - 1
-            : Math.floor(childrenKeys.length / 2);
+      focusedChildIndex = childrenKeys.indexOf(node.firstChildWithDiffKey);
     }
   }
   let hasNextSibling = focusedChildIndex < childrenKeys.length - 1;
@@ -3212,16 +3255,6 @@ const updateChildSeparatorMarkerRef = (
     selfOrNestedSeparatorMarkerRef.current = "";
     return;
   }
-};
-const getChildrenKeys = (node) => {
-  const childrenKeys = [];
-  for (const [childKey, childNode] of node.childNodeMap) {
-    if (childNode.isHidden) {
-      continue;
-    }
-    childrenKeys.push(childKey);
-  }
-  return childrenKeys;
 };
 const getNodeDepth = (node, props) => {
   return node.depth - props.startNode.depth;
