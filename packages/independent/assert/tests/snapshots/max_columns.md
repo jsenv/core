@@ -1,4 +1,4 @@
-# good truncate on removed chars
+# at removed char
 
 ```js
 assert({
@@ -8,19 +8,67 @@ assert({
 });
 ```
 
-![img](<./max_columns/good truncate on removed chars.svg>)
+![img](<./max_columns/at removed char.svg>)
 
-# good truncate on added char
+# at added char
 
 ```js
 assert({
   actual: "str_123456789",
   expect: "str",
+  MAX_COLUMNS: 20,
+});
+```
+
+![img](<./max_columns/at added char.svg>)
+
+# at removed char 2
+
+```js
+assert({
+  actual: "a_long_string",
+  expect: "a_long_string_123456789",
   MAX_COLUMNS: 25,
 });
 ```
 
-![img](<./max_columns/good truncate on added char.svg>)
+![img](<./max_columns/at removed char 2.svg>)
+
+# at added char 2
+
+```js
+assert({
+  actual: "a_long_string_123456789",
+  expect: "a_long_string",
+  MAX_COLUMNS: 25,
+});
+```
+
+![img](<./max_columns/at added char 2.svg>)
+
+# at removed char 3
+
+```js
+assert({
+  actual: "a_long_string",
+  expect: "a_long_string_123456789",
+  MAX_COLUMNS: 20,
+});
+```
+
+![img](<./max_columns/at removed char 3.svg>)
+
+# at added char 3
+
+```js
+assert({
+  actual: "a_long_string_123456789",
+  expect: "a_long_string",
+  MAX_COLUMNS: 20,
+});
+```
+
+![img](<./max_columns/at added char 3.svg>)
 
 # string open quote
 

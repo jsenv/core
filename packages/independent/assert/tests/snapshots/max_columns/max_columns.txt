@@ -1,10 +1,26 @@
-# good truncate on removed chars
-actual: "str"
+# at removed char
+actual: …"r"
 expect: …"r_1234"…
 
-# good truncate on added char
-actual: "str_123456789"
-expect: "str"
+# at added char
+actual: …"r_123456"…
+expect: …"r"
+
+# at removed char 2
+actual: …"ring"
+expect: …"ring_123456789"
+
+# at added char 2
+actual: …"ring_123456789"
+expect: …"ring"
+
+# at removed char 3
+actual: …"g"
+expect: …"g_123456"…
+
+# at added char 3
+actual: …"g_123456"…
+expect: …"g"
 
 # string open quote
 actual: …

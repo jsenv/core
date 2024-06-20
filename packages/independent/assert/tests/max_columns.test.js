@@ -3,18 +3,46 @@ import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 // TODO: at property when rendered on single line
 await startSnapshotTesting("max_columns", {
-  ["good truncate on removed chars"]: () => {
+  ["at removed char"]: () => {
     assert({
       actual: "str",
       expect: "str_123456789",
       MAX_COLUMNS: 18,
     });
   },
-  ["good truncate on added char"]: () => {
+  ["at added char"]: () => {
     assert({
       actual: "str_123456789",
       expect: "str",
+      MAX_COLUMNS: 20,
+    });
+  },
+  ["at removed char 2"]: () => {
+    assert({
+      actual: "a_long_string",
+      expect: "a_long_string_123456789",
       MAX_COLUMNS: 25,
+    });
+  },
+  ["at added char 2"]: () => {
+    assert({
+      actual: "a_long_string_123456789",
+      expect: "a_long_string",
+      MAX_COLUMNS: 25,
+    });
+  },
+  ["at removed char 3"]: () => {
+    assert({
+      actual: "a_long_string",
+      expect: "a_long_string_123456789",
+      MAX_COLUMNS: 20,
+    });
+  },
+  ["at added char 3"]: () => {
+    assert({
+      actual: "a_long_string_123456789",
+      expect: "a_long_string",
+      MAX_COLUMNS: 20,
     });
   },
   ["string open quote"]: () => {

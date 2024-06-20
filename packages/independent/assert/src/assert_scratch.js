@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - url breakable diff tests
  * - lots of test on max columns
  * - array typed
  * - property descriptors
@@ -1555,6 +1554,7 @@ let createRootNode;
           childGenerator: () => {
             const appendLineEntry = (lineIndex) => {
               const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
+                value: "",
                 key: lineIndex,
                 render: renderChildrenOneLiner,
                 onelineDiff: {
@@ -1587,6 +1587,7 @@ let createRootNode;
                 subgroup: "line_entry_value",
               });
               const appendCharEntry = (charIndex, char) => {
+                lineEntryNode.value += char; // just for debug purposes
                 lineEntryNode.appendChild(charIndex, {
                   value: char,
                   render: renderChar,
@@ -2834,10 +2835,25 @@ const renderChildrenOneLiner = (node, props) => {
     }
     return truncateAndApplyColor("", node, props);
   }
-  let focusedChildIndex = node.focusedChildIndex;
+  let { focusedChildIndex } = node;
+  let maxLeftIndex = -1;
   if (focusedChildIndex === -1) {
-    if (node.firstChildWithDiffKey === undefined) {
-      if (focusedChildWhenSame === "first") {
+    const { firstChildWithDiffKey } = node;
+    if (firstChildWithDiffKey === undefined) {
+      // added/removed
+      if (node.comparisonDiffMap.size > 0) {
+        focusedChildIndex = childrenKeys.length - 1;
+        let otherRenderedRange;
+        node.otherNode.render({
+          ...props,
+          onRange: (range) => {
+            otherRenderedRange = range;
+          },
+        });
+        maxLeftIndex = otherRenderedRange.start;
+      }
+      // same
+      else if (focusedChildWhenSame === "first") {
         focusedChildIndex = 0;
       } else if (focusedChildWhenSame === "last") {
         focusedChildIndex = childrenKeys.length - 1;
@@ -2845,11 +2861,14 @@ const renderChildrenOneLiner = (node, props) => {
         focusedChildIndex = Math.floor(childrenKeys.length / 2);
       }
     } else {
-      focusedChildIndex = childrenKeys.indexOf(node.firstChildWithDiffKey);
+      focusedChildIndex = childrenKeys.indexOf(firstChildWithDiffKey);
     }
   }
   let hasNextSibling = focusedChildIndex < childrenKeys.length - 1;
-  let hasPreviousSibling = hasNextSibling && focusedChildIndex > 0;
+  let hasPreviousSibling =
+    focusedChildIndex === maxLeftIndex
+      ? true
+      : focusedChildIndex < childrenKeys.length - 1 && focusedChildIndex > 0;
   const startSkippedMarkerWidth = startSkippedMarker.length;
   const endSkippedMarkerWidth = endSkippedMarker.length;
   const { separatorMarkerRef, separatorMarkerWhenTruncatedRef } = node;
@@ -2936,6 +2955,7 @@ const renderChildrenOneLiner = (node, props) => {
   }
   const focusedChildKey = childrenKeys[focusedChildIndex];
   const focusedChildNode = node.childNodeMap.get(focusedChildKey);
+  const renderedRange = { start: 0, end: 0 };
   if (focusedChildNode) {
     const focusedChildDiff = renderChildDiff(
       focusedChildNode,
@@ -2943,6 +2963,10 @@ const renderChildrenOneLiner = (node, props) => {
     );
     columnsRemainingForChildren -= stringWidth(focusedChildDiff);
     childrenDiff = focusedChildDiff;
+    renderedRange.start = focusedChildIndex;
+    if (focusedChildIndex === maxLeftIndex) {
+      columnsRemainingForChildren = 0;
+    }
   }
   let tryBeforeFirst = true;
   let previousChildAttempt = 0;
@@ -2950,7 +2974,8 @@ const renderChildrenOneLiner = (node, props) => {
   while (columnsRemainingForChildren) {
     const previousChildIndex = focusedChildIndex - previousChildAttempt - 1;
     const nextChildIndex = focusedChildIndex + nextChildAttempt + 1;
-    let hasPreviousChild = previousChildIndex >= 0;
+    let hasPreviousChild =
+      previousChildIndex === maxLeftIndex - 1 ? false : previousChildIndex >= 0;
     let hasNextChild = nextChildIndex < childrenKeys.length;
     if (!hasPreviousChild && !hasNextChild) {
       break;
@@ -2981,7 +3006,6 @@ const renderChildrenOneLiner = (node, props) => {
     if (!childNode) {
       debugger; // to keep to see if that is hit while running all of string.test.js
       // if not remove it
-      columnsRemainingForChildren--;
       continue;
     }
     if (tryBeforeFirst && isPrevious) {
@@ -3009,6 +3033,7 @@ const renderChildrenOneLiner = (node, props) => {
     }
     columnsRemainingForChildren -= childDiffWidth;
     if (childIndex < focusedChildIndex) {
+      renderedRange.start = childIndex;
       const shouldInjectSpacing =
         hasSpacingBetweenEachChild && (childIndex > 0 || focusedChildIndex > 0);
       if (shouldInjectSpacing) {
@@ -3023,6 +3048,7 @@ const renderChildrenOneLiner = (node, props) => {
       childrenDiff = childDiff;
       continue;
     }
+    renderedRange.end = childIndex;
     if (hasSpacingBetweenEachChild && childrenDiff) {
       columnsRemainingForChildren -= " ".length;
       childrenDiff = `${childrenDiff} ${childDiff}`;
@@ -3082,6 +3108,9 @@ const renderChildrenOneLiner = (node, props) => {
     } else {
       diff += renderSeparatorMarker(node, props);
     }
+  }
+  if (props.onRange) {
+    props.onRange(renderedRange);
   }
   return diff;
 };
