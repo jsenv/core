@@ -1320,8 +1320,11 @@ let createRootNode;
               onelineDiff: {
                 hasSeparatorBetweenEachChild: true,
                 hasTrailingSeparator: true,
-                overflowStartMarker: "…",
-                overflowEndMarker: "…",
+                skippedMarkers: {
+                  start: "…",
+                  middle: "…",
+                  end: "…",
+                },
               },
               startMarker: bestQuote,
               endMarker: bestQuote,
@@ -1492,9 +1495,12 @@ let createRootNode;
                 onelineDiff: {
                   hasSeparatorBetweenEachChild: true,
                   focusedChildWhenSame: "last",
-                  overflowStartMarker: "…",
-                  overflowEndMarker: "…",
-                  overflowMarkersPlacement: "outside",
+                  skippedMarkers: {
+                    start: "…",
+                    middle: "…",
+                    end: "…",
+                  },
+                  skippedMarkersPlacement: "outside",
                 },
                 // When multiline string appear as property value
                 // 1. It becomes hard to see if "," is part of the string or the separator
@@ -2722,17 +2728,23 @@ const renderChildrenOneLiner = (node, props) => {
     focusedChildWhenSame = "first",
     hasSeparatorBetweenEachChild,
     hasTrailingSeparator,
-    overflowStartMarker = "",
-    overflowEndMarker = "",
-    overflowMarkersPlacement = "inside",
+    skippedMarkers,
+    skippedMarkersPlacement = "inside",
     hasMarkersWhenEmpty,
     hasSpacingAroundChildren,
     hasSpacingBetweenEachChild,
   } = node.onelineDiff;
 
+  let startSkippedMarker = "";
+  let endSkippedMarker = "";
+  if (skippedMarkers) {
+    startSkippedMarker = skippedMarkers.start;
+    endSkippedMarker = skippedMarkers.end;
+  }
+
   let columnsRemainingForChildren = props.columnsRemaining;
   if (columnsRemainingForChildren < 1) {
-    return overflowStartMarker ? setColor(overflowStartMarker, node.color) : "";
+    return setColor("…", node.color);
   }
   const childrenKeys = getChildrenKeys(node);
   const { startMarker, endMarker } = node;
@@ -2765,8 +2777,8 @@ const renderChildrenOneLiner = (node, props) => {
   }
   let hasStartOverflow = focusedChildIndex > 0;
   let hasEndOverflow = focusedChildIndex < childrenKeys.length - 1;
-  const overflowStartWidth = overflowStartMarker.length;
-  const overflowEndWidth = overflowEndMarker.length;
+  const overflowStartWidth = startSkippedMarker.length;
+  const overflowEndWidth = endSkippedMarker.length;
   const { separatorMarkerRef, separatorMarkerWhenTruncatedRef } = node;
   const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
   const separatorMarkerWhenTruncated = separatorMarkerWhenTruncatedRef
@@ -2775,27 +2787,27 @@ const renderChildrenOneLiner = (node, props) => {
 
   let boilerplate = "";
   if (hasStartOverflow) {
-    if (overflowMarkersPlacement === "inside") {
+    if (skippedMarkersPlacement === "inside") {
       if (hasSpacingAroundChildren) {
-        boilerplate = `${startMarker} ${overflowStartMarker}`;
+        boilerplate = `${startMarker} ${startSkippedMarker}`;
       } else {
-        boilerplate = `${startMarker}${overflowStartMarker}`;
+        boilerplate = `${startMarker}${startSkippedMarker}`;
       }
     } else {
-      boilerplate = `${overflowStartMarker}${startMarker}`;
+      boilerplate = `${startSkippedMarker}${startMarker}`;
     }
   } else {
     boilerplate = startMarker;
   }
   if (hasEndOverflow) {
-    if (overflowMarkersPlacement === "inside") {
+    if (skippedMarkersPlacement === "inside") {
       if (hasSpacingAroundChildren) {
-        boilerplate += `${overflowEndMarker} ${endMarker}`;
+        boilerplate += `${endSkippedMarker} ${endMarker}`;
       } else {
-        boilerplate += `${overflowEndMarker}${endMarker}`;
+        boilerplate += `${endSkippedMarker}${endMarker}`;
       }
     } else {
-      boilerplate += `${endMarker}${overflowEndMarker}`;
+      boilerplate += `${endMarker}${endSkippedMarker}`;
     }
   } else {
     boilerplate += endMarker;
@@ -2809,7 +2821,7 @@ const renderChildrenOneLiner = (node, props) => {
     return setColor("…", node.color);
   }
   if (columnsRemainingForChildrenConsideringBoilerplate === 0) {
-    return overflowMarkersPlacement === "inside"
+    return skippedMarkersPlacement === "inside"
       ? setColor(boilerplate, node.color)
       : setColor("…", node.color);
   }
@@ -2931,13 +2943,13 @@ const renderChildrenOneLiner = (node, props) => {
   }
   let diff = "";
   if (hasStartOverflow) {
-    if (overflowMarkersPlacement === "inside") {
+    if (skippedMarkersPlacement === "inside") {
       if (startMarker) {
         diff += setColor(startMarker, node.color);
       }
-      diff += setColor(overflowStartMarker, node.color);
+      diff += setColor(startSkippedMarker, node.color);
     } else {
-      diff += setColor(overflowStartMarker, node.color);
+      diff += setColor(startSkippedMarker, node.color);
       if (startMarker) {
         diff += setColor(startMarker, node.color);
       }
@@ -2953,8 +2965,8 @@ const renderChildrenOneLiner = (node, props) => {
     diff += " ";
   }
   if (hasEndOverflow) {
-    if (overflowMarkersPlacement === "inside") {
-      diff += setColor(overflowEndMarker, node.color);
+    if (skippedMarkersPlacement === "inside") {
+      diff += setColor(endSkippedMarker, node.color);
       if (endMarker) {
         diff += setColor(endMarker, node.color);
       }
@@ -2962,7 +2974,7 @@ const renderChildrenOneLiner = (node, props) => {
       if (endMarker) {
         diff += setColor(endMarker, node.color);
       }
-      diff += setColor(overflowEndMarker, node.color);
+      diff += setColor(endSkippedMarker, node.color);
     }
   } else if (endMarker) {
     diff += setColor(endMarker, node.color);
