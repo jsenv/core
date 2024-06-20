@@ -2,11 +2,38 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - fix max columns for double slash truncated
- *   it does not work as expected
+ *   it does not work as expected (is related to urls because when regular string it works)
  * - test for diff in the middle of multiline
  *   on veut que les lignes avant/apres
  *   prenne le bon focusedChildIndex qui donne en gros le point de focus
  *   pour les lignes autours
+ *   En gros le cas suivant:
+ *
+ * `
+ * abc
+ * abcdefghijklmnopqrstuvwxyz
+ * abc
+ * `
+ * vs
+ * `
+ * abc
+ * abcdefghijKLMNOPQQRSTVWXYZ
+ * abc
+ * `
+ * on veut un diff comme celui la:
+ * 2 | …
+ * 3 | …ijklm…
+ * 4 | …
+ * and
+ * 2 | …
+ * 3 | …ijKLM…
+ * 4 | …
+ * il faut donc configurer max columns pour s'approcher du K puis que l'algo
+ * pioche autour
+ * sauf que pour les lignes au dessus et en dessous bah on aura rien a afficher
+ * il faudra un test ou on affiche rien
+ * et un cas ou on peut afficher juste une lettre par exemple
+ *
  * - lots of test on max columns
  * - array typed
  * - property descriptors
