@@ -3357,19 +3357,14 @@ const forceSameQuotes = (actualNode, expectNode) => {
   }
 };
 const renderLineStartMarker = (lineNode, biggestDisplayedLineIndex) => {
-  let lineStartMarker = "";
   const lineNumberString = String(lineNode.key + 1);
   const biggestDisplayedLineNumberString = String(
     biggestDisplayedLineIndex + 1,
   );
   if (biggestDisplayedLineNumberString.length > lineNumberString.length) {
-    lineStartMarker += " ";
+    return ` ${lineNumberString}| `;
   }
-  lineStartMarker += ANSI.color(lineNumberString, lineNode.color);
-  // lineDiff += " ";
-  lineStartMarker += ANSI.color("|", lineNode.color);
-  lineStartMarker += " ";
-  return lineStartMarker;
+  return `${lineNumberString}| `;
 };
 const renderSeparatorMarker = (node, props, { truncated } = {}) => {
   const {

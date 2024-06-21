@@ -42,8 +42,7 @@
     >
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
-        <text x="77.21" y="14.55" fill="#7f7f7f">1</text>
-        <text x="85.61" y="14.55" fill="#7f7f7f">|</text>
+        <text x="77.21" y="14.55" fill="#7f7f7f">1| </text>
         <text x="102.42" y="14.55" fill="#7f7f7f">1</text>
         <text x="110.82" y="14.55" fill="#7f7f7f">a</text>
         <text x="119.22" y="14.55" fill="#7f7f7f">b</text>
@@ -69,8 +68,7 @@
         <text x="287.25" y="14.55" fill="#7f7f7f">v</text>
         <text x="295.65" y="14.55" fill="#7f7f7f">w</text>
         <text x="304.05" y="14.55" fill="#7f7f7f">x</text>
-        <text x="77.21" y="33.55" fill="#7f7f7f">2</text>
-        <text x="85.61" y="33.55" fill="#7f7f7f">|</text>
+        <text x="77.21" y="33.55" fill="#7f7f7f">2| </text>
         <text x="102.42" y="33.55" fill="#7f7f7f">2</text>
         <text x="110.82" y="33.55" fill="#7f7f7f">a</text>
         <text x="119.22" y="33.55" fill="#7f7f7f">b</text>
@@ -97,8 +95,7 @@
         <text x="295.65" y="33.55" fill="#7f7f7f">w</text>
         <text x="304.05" y="33.55" fill="#7f7f7f">x</text>
         <text x="312.45" y="33.55" fill="#7f7f7f">y</text>
-        <text x="77.21" y="52.55" fill="#7f7f7f">3</text>
-        <text x="85.61" y="52.55" fill="#7f7f7f">|</text>
+        <text x="77.21" y="52.55" fill="#7f7f7f">3| </text>
         <text x="102.42" y="52.55" fill="#7f7f7f">H</text>
         <text x="110.82" y="52.55" fill="#7f7f7f">e</text>
         <text x="119.22" y="52.55" fill="#7f7f7f">l</text>
@@ -109,8 +106,7 @@
         <text x="169.63" y="52.55" fill="#7f7f7f">r</text>
         <text x="178.03" y="52.55" fill="#cd5555">l</text>
         <text x="186.43" y="52.55" fill="#cd5555">d</text>
-        <text x="77.21" y="71.55" fill="#7f7f7f">4</text>
-        <text x="85.61" y="71.55" fill="#7f7f7f">|</text>
+        <text x="77.21" y="71.55" fill="#7f7f7f">4| </text>
         <text x="102.42" y="71.55" fill="#7f7f7f">3</text>
         <text x="110.82" y="71.55" fill="#7f7f7f">a</text>
         <text x="119.22" y="71.55" fill="#7f7f7f">b</text>
@@ -137,8 +133,7 @@
         <text x="295.65" y="71.55" fill="#7f7f7f">w</text>
         <text x="304.05" y="71.55" fill="#7f7f7f">x</text>
         <text x="312.45" y="71.55" fill="#7f7f7f">y</text>
-        <text x="77.21" y="90.55" fill="#7f7f7f">5</text>
-        <text x="85.61" y="90.55" fill="#7f7f7f">|</text>
+        <text x="77.21" y="90.55" fill="#7f7f7f">5| </text>
         <text x="102.42" y="90.55" fill="#7f7f7f">4</text>
         <text x="110.82" y="90.55" fill="#7f7f7f">a</text>
         <text x="119.22" y="90.55" fill="#7f7f7f">b</text>
@@ -166,8 +161,7 @@
         <text x="304.05" y="90.55" fill="#7f7f7f">x</text>
         <text x="312.45" y="90.55" fill="#7f7f7f">y</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="109.55" fill="#7f7f7f">1</text>
-        <text x="85.61" y="109.55" fill="#7f7f7f">|</text>
+        <text x="77.21" y="109.55" fill="#7f7f7f">1| </text>
         <text x="102.42" y="109.55" fill="#7f7f7f">1</text>
         <text x="110.82" y="109.55" fill="#7f7f7f">a</text>
         <text x="119.22" y="109.55" fill="#7f7f7f">b</text>
@@ -193,8 +187,7 @@
         <text x="287.25" y="109.55" fill="#7f7f7f">v</text>
         <text x="295.65" y="109.55" fill="#7f7f7f">w</text>
         <text x="304.05" y="109.55" fill="#7f7f7f">x</text>
-        <text x="77.21" y="128.55" fill="#7f7f7f">2</text>
-        <text x="85.61" y="128.55" fill="#7f7f7f">|</text>
+        <text x="77.21" y="128.55" fill="#7f7f7f">2| </text>
         <text x="102.42" y="128.55" fill="#7f7f7f">2</text>
         <text x="110.82" y="128.55" fill="#7f7f7f">a</text>
         <text x="119.22" y="128.55" fill="#7f7f7f">b</text>
@@ -221,8 +214,7 @@
         <text x="295.65" y="128.55" fill="#7f7f7f">w</text>
         <text x="304.05" y="128.55" fill="#7f7f7f">x</text>
         <text x="312.45" y="128.55" fill="#7f7f7f">y</text>
-        <text x="77.21" y="147.55" fill="#7f7f7f">3</text>
-        <text x="85.61" y="147.55" fill="#7f7f7f">|</text>
+        <text x="77.21" y="147.55" fill="#7f7f7f">3| </text>
         <text x="102.42" y="147.55" fill="#7f7f7f">H</text>
         <text x="110.82" y="147.55" fill="#7f7f7f">e</text>
         <text x="119.22" y="147.55" fill="#7f7f7f">l</text>
@@ -234,8 +226,7 @@
         <text x="178.03" y="147.55" fill="#11bc79">o</text>
         <text x="186.43" y="147.55" fill="#11bc79">p</text>
         <text x="194.83" y="147.55" fill="#DAA520">a</text>
-        <text x="77.21" y="166.55" fill="#7f7f7f">4</text>
-        <text x="85.61" y="166.55" fill="#7f7f7f">|</text>
+        <text x="77.21" y="166.55" fill="#7f7f7f">4| </text>
         <text x="102.42" y="166.55" fill="#7f7f7f">3</text>
         <text x="110.82" y="166.55" fill="#7f7f7f">a</text>
         <text x="119.22" y="166.55" fill="#7f7f7f">b</text>
@@ -262,8 +253,7 @@
         <text x="295.65" y="166.55" fill="#7f7f7f">w</text>
         <text x="304.05" y="166.55" fill="#7f7f7f">x</text>
         <text x="312.45" y="166.55" fill="#7f7f7f">y</text>
-        <text x="77.21" y="185.55" fill="#7f7f7f">5</text>
-        <text x="85.61" y="185.55" fill="#7f7f7f">|</text>
+        <text x="77.21" y="185.55" fill="#7f7f7f">5| </text>
         <text x="102.42" y="185.55" fill="#7f7f7f">4</text>
         <text x="110.82" y="185.55" fill="#7f7f7f">a</text>
         <text x="119.22" y="185.55" fill="#7f7f7f">b</text>
