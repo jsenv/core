@@ -2722,90 +2722,15 @@ const renderChildren = (node, props) => {
   if (!multilineDiff) {
     return renderChildrenOneLiner(node, props);
   }
-  const maxDiff =
-    typeof multilineDiff.maxDiff === "number"
-      ? multilineDiff.maxDiff
-      : props[multilineDiff.maxDiff];
   if (node.diffType === "solo") {
-    const childrenKeys = node.childrenKeys;
-    const indexToDisplayArray = [];
-    for (const [childKey] of node.childComparisonDiffMap) {
-      if (indexToDisplayArray.length >= maxDiff) {
-        break;
-      }
-      const childIndex = childrenKeys.indexOf(childKey);
-      indexToDisplayArray.push(childIndex);
-    }
-    indexToDisplayArray.sort();
-    node.childrenKeys = childrenKeys;
-    node.indexToDisplayArray = indexToDisplayArray;
     return renderChildrenMultiline(node, props);
   }
   if (node.childComparisonDiffMap.size > 0) {
-    const childrenKeys = node.childrenKeys;
-    const indexToDisplayArray = [];
-    index_to_display: {
-      if (childrenKeys.length === 0) {
-        break index_to_display;
-      }
-      const diffIndexArray = [];
-      for (const [childKey] of node.childComparisonDiffMap) {
-        const childIndex = childrenKeys.indexOf(childKey);
-        if (childIndex === -1) {
-          // happens when removed/added
-        } else {
-          diffIndexArray.push(childIndex);
-        }
-      }
-      if (diffIndexArray.length === 0) {
-        // happens when one node got no diff in itself
-        // it's the other that has a diff (added or removed)
-        indexToDisplayArray.push(0);
-        break index_to_display;
-      }
-      diffIndexArray.sort();
-      const indexToDisplaySet = new Set();
-      let diffCount = 0;
-      for (const diffIndex of diffIndexArray) {
-        if (diffCount >= maxDiff) {
-          break;
-        }
-        diffCount++;
-        let beforeDiffIndex = diffIndex - 1;
-        let beforeCount = 0;
-        while (beforeDiffIndex > -1) {
-          if (beforeCount === props.MAX_ENTRY_BEFORE_MULTILINE_DIFF) {
-            break;
-          }
-          indexToDisplaySet.add(beforeDiffIndex);
-          beforeCount++;
-          beforeDiffIndex--;
-        }
-        indexToDisplaySet.add(diffIndex);
-        let afterDiffIndex = diffIndex + 1;
-        let afterCount = 0;
-        while (afterDiffIndex < childrenKeys.length) {
-          if (afterCount === props.MAX_ENTRY_AFTER_MULTILINE_DIFF) {
-            break;
-          }
-          indexToDisplaySet.add(afterDiffIndex);
-          afterCount++;
-          afterDiffIndex++;
-        }
-      }
-      for (const indexToDisplay of indexToDisplaySet) {
-        indexToDisplayArray.push(indexToDisplay);
-      }
-      indexToDisplayArray.sort();
-    }
-    node.childrenKeys = childrenKeys;
-    node.indexToDisplayArray = indexToDisplayArray;
     return renderChildrenMultiline(node, props);
   }
   if (onelineDiff) {
     return renderChildrenOneLiner(node, props);
   }
-  node.indexToDisplayArray = [0];
   return renderChildrenMultiline(node, props);
 };
 const renderChildrenOneLiner = (node, props) => {
@@ -3143,7 +3068,84 @@ function* generateChildIndexes(childrenKeys, startIndex, minIndex) {
     }
   }
 }
+// TODO:
 const renderChildrenMultiline = (node, props) => {
+  const childrenKeys = node.childrenKeys;
+  const indexToDisplayArray = [];
+  index_to_display: {
+    const maxDiff =
+      typeof node.multilineDiff.maxDiff === "number"
+        ? node.multilineDiff.maxDiff
+        : props[node.multilineDiff.maxDiff];
+    if (node.diffType === "solo") {
+      for (const [childKey] of node.childComparisonDiffMap) {
+        if (indexToDisplayArray.length >= maxDiff) {
+          break;
+        }
+        const childIndex = childrenKeys.indexOf(childKey);
+        indexToDisplayArray.push(childIndex);
+      }
+      indexToDisplayArray.sort();
+      break index_to_display;
+    }
+    if (node.childComparisonDiffMap.size === 0) {
+      indexToDisplayArray.push(0);
+      break index_to_display;
+    }
+    if (childrenKeys.length === 0) {
+      break index_to_display;
+    }
+    const diffIndexArray = [];
+    for (const [childKey] of node.childComparisonDiffMap) {
+      const childIndex = childrenKeys.indexOf(childKey);
+      if (childIndex === -1) {
+        // happens when removed/added
+      } else {
+        diffIndexArray.push(childIndex);
+      }
+    }
+    if (diffIndexArray.length === 0) {
+      // happens when one node got no diff in itself
+      // it's the other that has a diff (added or removed)
+      indexToDisplayArray.push(0);
+      break index_to_display;
+    }
+    diffIndexArray.sort();
+    const indexToDisplaySet = new Set();
+    let diffCount = 0;
+    for (const diffIndex of diffIndexArray) {
+      if (diffCount >= maxDiff) {
+        break;
+      }
+      diffCount++;
+      let beforeDiffIndex = diffIndex - 1;
+      let beforeCount = 0;
+      while (beforeDiffIndex > -1) {
+        if (beforeCount === props.MAX_ENTRY_BEFORE_MULTILINE_DIFF) {
+          break;
+        }
+        indexToDisplaySet.add(beforeDiffIndex);
+        beforeCount++;
+        beforeDiffIndex--;
+      }
+      indexToDisplaySet.add(diffIndex);
+      let afterDiffIndex = diffIndex + 1;
+      let afterCount = 0;
+      while (afterDiffIndex < childrenKeys.length) {
+        if (afterCount === props.MAX_ENTRY_AFTER_MULTILINE_DIFF) {
+          break;
+        }
+        indexToDisplaySet.add(afterDiffIndex);
+        afterCount++;
+        afterDiffIndex++;
+      }
+    }
+    for (const indexToDisplay of indexToDisplaySet) {
+      indexToDisplayArray.push(indexToDisplay);
+    }
+    indexToDisplayArray.sort();
+  }
+  node.indexToDisplayArray = indexToDisplayArray;
   const {
     hasSeparatorBetweenEachChild,
     hasTrailingSeparator,
@@ -3157,13 +3159,7 @@ const renderChildrenMultiline = (node, props) => {
   if (node.beforeRender) {
     node.beforeRender(props);
   }
-  const {
-    childrenKeys,
-    indexToDisplayArray,
-    startMarker,
-    endMarker,
-    separatorMarkerRef,
-  } = node;
+  const { startMarker, endMarker, separatorMarkerRef } = node;
   const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
   if (childrenKeys.length === 0) {
     if (!hasMarkersWhenEmpty) {
