@@ -2,106 +2,106 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 // TODO: at property when rendered on single line
-await startSnapshotTesting("max_columns", {
-  ["double slash and truncate line"]: () => {
+await startSnapshotTesting("max_columns", ({ test }) => {
+  test("double slash and truncate line", () => {
     assert({
       actual: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js`,
       expect: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`,
       MAX_COLUMNS: 50,
     });
-  },
-  ["at removed char"]: () => {
+  });
+  test("at removed char", () => {
     assert({
       actual: "str",
       expect: "str_123456789",
-      MAX_COLUMNS: 18,
+      MAX_COLUMNS: 15,
     });
-  },
-  ["at added char"]: () => {
+  });
+  test("at added char", () => {
     assert({
       actual: "str_123456789",
       expect: "str",
-      MAX_COLUMNS: 20,
+      MAX_COLUMNS: 15,
     });
-  },
-  ["at removed char 2"]: () => {
+  });
+  test("at removed char 2", () => {
     assert({
       actual: "a_long_string",
       expect: "a_long_string_123456789",
-      MAX_COLUMNS: 25,
+      MAX_COLUMNS: 30,
     });
-  },
-  ["at added char 2"]: () => {
+  });
+  test("at added char 2", () => {
     assert({
       actual: "a_long_string_123456789",
       expect: "a_long_string",
-      MAX_COLUMNS: 25,
+      MAX_COLUMNS: 30,
     });
-  },
-  ["at removed char 3"]: () => {
+  });
+  test("at removed char 3", () => {
     assert({
       actual: "a_long_string",
       expect: "a_long_string_123456789",
-      MAX_COLUMNS: 20,
+      MAX_COLUMNS: 22,
     });
-  },
-  ["at added char 3"]: () => {
+  });
+  test("at added char 3", () => {
     assert({
       actual: "a_long_string_123456789",
       expect: "a_long_string",
-      MAX_COLUMNS: 20,
+      MAX_COLUMNS: 22,
     });
-  },
-  ["string open quote"]: () => {
+  });
+  test("string open quote", () => {
     assert({
       actual: "abcdefghij",
       expect: "ABCDEFGHIJ",
       MAX_COLUMNS: 9,
     });
-  },
-  ["string first char"]: () => {
+  });
+  test("string first char", () => {
     assert({
       actual: "abcdefghij",
       expect: "ABCDEFGHIJ",
       MAX_COLUMNS: 10,
     });
-  },
-  ["string second char"]: () => {
+  });
+  test("string second char", () => {
     assert({
       actual: "abcdefghij",
       expect: "ABCDEFGHIJ",
       MAX_COLUMNS: 11,
     });
-  },
-  ["string third char"]: () => {
+  });
+  test("string third char", () => {
     assert({
       actual: "abcdefghij",
       expect: "ABCDEFGHIJ",
       MAX_COLUMNS: 12,
     });
-  },
-  ["string fourth char"]: () => {
+  });
+  test("string fourth char", () => {
     assert({
       actual: "abcdefghij",
       expect: "ABCDEFGHIJ",
       MAX_COLUMNS: 13,
     });
-  },
-  ["string last char"]: () => {
+  });
+  test("string last char", () => {
     assert({
       actual: "abcdefghij",
       expect: "ABCDEFGHIJ",
       MAX_COLUMNS: 19,
     });
-  },
-  ["string close quote"]: () => {
+  });
+  test("string close quote", () => {
     assert({
       actual: "abcdefghij",
       expect: "ABCDEFGHIJ",
       MAX_COLUMNS: 20,
     });
-  },
-  ["at property value"]: () => {
+  });
+  test("at property value", () => {
     assert({
       actual: {
         zzz: "abcdefghijklmn",
@@ -111,8 +111,8 @@ await startSnapshotTesting("max_columns", {
       },
       MAX_COLUMNS: 20,
     });
-  },
-  ["at property key"]: () => {
+  });
+  test("at property key", () => {
     assert({
       actual: {
         "a quite long property key that will be truncated": true,
@@ -122,8 +122,8 @@ await startSnapshotTesting("max_columns", {
       },
       MAX_COLUMNS: 40,
     });
-  },
-  ["at property name last char"]: () => {
+  });
+  test("at property name last char", () => {
     assert({
       actual: {
         abcdefgh: true,
@@ -133,8 +133,8 @@ await startSnapshotTesting("max_columns", {
       },
       MAX_COLUMNS: 10,
     });
-  },
-  ["at property name separator"]: () => {
+  });
+  test("at property name separator", () => {
     assert({
       actual: {
         abcdefgh: true,
@@ -144,8 +144,8 @@ await startSnapshotTesting("max_columns", {
       },
       MAX_COLUMNS: 11,
     });
-  },
-  ["at space after property name separator"]: () => {
+  });
+  test("at space after property name separator", () => {
     assert({
       actual: {
         abcdefgh: true,
@@ -155,8 +155,8 @@ await startSnapshotTesting("max_columns", {
       },
       MAX_COLUMNS: 12,
     });
-  },
-  ["at property value first char"]: () => {
+  });
+  test("at property value first char", () => {
     assert({
       actual: {
         abcdefgh: true,
@@ -166,8 +166,8 @@ await startSnapshotTesting("max_columns", {
       },
       MAX_COLUMNS: 13,
     });
-  },
-  ["at property value second char"]: () => {
+  });
+  test("at property value second char", () => {
     assert({
       actual: {
         abcdefgh: true,
@@ -177,8 +177,8 @@ await startSnapshotTesting("max_columns", {
       },
       MAX_COLUMNS: 14,
     });
-  },
-  ["at property value second char (and value width is 1)"]: () => {
+  });
+  test("at property value second char (and value width is 1)", () => {
     assert({
       actual: {
         abcdefgh: 0,
@@ -188,8 +188,8 @@ await startSnapshotTesting("max_columns", {
       },
       MAX_COLUMNS: 14,
     });
-  },
-  ["at property value third char"]: () => {
+  });
+  test("at property value third char", () => {
     assert({
       actual: {
         abcdefgh: true,
@@ -199,41 +199,48 @@ await startSnapshotTesting("max_columns", {
       },
       MAX_COLUMNS: 15,
     });
-  },
+  });
   // on URLS
-  ["url search param modified, middle of long params"]: () => {
+  test("url search param modified, middle of long params", () => {
     assert({
       actual: "http://example_that_is_long.com?this_is_relatively_long=1&foo=a",
       expect: "http://example_that_is_long.com?this_is_relatively_long=1&foo=b",
       MAX_COLUMNS: 30,
     });
-  },
-  ["long url diff at end"]: () => {
+  });
+  test("long url diff at end", () => {
     assert({
       actual: "http://example_that_is_quite_long.com/dir/file.txt",
       expect: "http://example_that_is_quite_long.com/dir/file.css",
       MAX_COLUMNS: 40,
     });
-  },
-  ["long url diff at start"]: () => {
+  });
+  test("long url diff at start", () => {
     assert({
       actual: "http://example_that_is_quite_long.com/dir/file.txt",
       expect: "file://example_that_is_quite_long.com/dir/file.txt",
       MAX_COLUMNS: 40,
     });
-  },
-  ["long url diff in the middle"]: () => {
+  });
+  test("long url diff in the middle", () => {
     assert({
       actual: "http://example_that_is_quite_long.com/dir/file.txt",
       expect: "http://example_that_AA_quite_long.com/dir/file.txt",
       MAX_COLUMNS: 40,
     });
-  },
-  ["long url diff start middle end"]: () => {
+  });
+  test("long url diff start middle end", () => {
     assert({
       actual: "http://example_that_is_quite_long.com/dir/file.txt",
       expect: "file://example_that_AA_quite_long.com/dir/file.css",
       MAX_COLUMNS: 40,
     });
-  },
+  });
+  test("max column exactly on diff", () => {
+    assert({
+      actual: `abc`,
+      expect: `abC`,
+      MAX_COLUMNS: 12,
+    });
+  });
 });

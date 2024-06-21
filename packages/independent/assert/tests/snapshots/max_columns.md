@@ -16,7 +16,7 @@ assert({
 assert({
   actual: "str",
   expect: "str_123456789",
-  MAX_COLUMNS: 18,
+  MAX_COLUMNS: 15,
 });
 ```
 
@@ -28,7 +28,7 @@ assert({
 assert({
   actual: "str_123456789",
   expect: "str",
-  MAX_COLUMNS: 20,
+  MAX_COLUMNS: 15,
 });
 ```
 
@@ -40,7 +40,7 @@ assert({
 assert({
   actual: "a_long_string",
   expect: "a_long_string_123456789",
-  MAX_COLUMNS: 25,
+  MAX_COLUMNS: 30,
 });
 ```
 
@@ -52,7 +52,7 @@ assert({
 assert({
   actual: "a_long_string_123456789",
   expect: "a_long_string",
-  MAX_COLUMNS: 25,
+  MAX_COLUMNS: 30,
 });
 ```
 
@@ -64,7 +64,7 @@ assert({
 assert({
   actual: "a_long_string",
   expect: "a_long_string_123456789",
-  MAX_COLUMNS: 20,
+  MAX_COLUMNS: 22,
 });
 ```
 
@@ -76,7 +76,7 @@ assert({
 assert({
   actual: "a_long_string_123456789",
   expect: "a_long_string",
-  MAX_COLUMNS: 20,
+  MAX_COLUMNS: 22,
 });
 ```
 
@@ -369,4 +369,16 @@ assert({
 ```
 
 ![img](<./max_columns/long url diff start middle end.svg>)
+
+# max column exactly on diff
+
+```js
+assert({
+  actual: `abc`,
+  expect: `abC`,
+  MAX_COLUMNS: 12,
+});
+```
+
+![img](<./max_columns/max column exactly on diff.svg>)
 

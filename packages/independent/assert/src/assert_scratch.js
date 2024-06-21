@@ -2,36 +2,6 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - test for diff in the middle of multiline
- *   on veut que les lignes avant/apres
- *   prenne le bon focusedChildIndex qui donne en gros le point de focus
- *   pour les lignes autours
- *   En gros le cas suivant:
- *
- * `
- * abc
- * abcdefghijklmnopqrstuvwxyz
- * abc
- * `
- * vs
- * `
- * abc
- * abcdefghijKLMNOPQQRSTVWXYZ
- * abc
- * `
- * on veut un diff comme celui la:
- * 2 | …
- * 3 | …ijklm…
- * 4 | …
- * and
- * 2 | …
- * 3 | …ijKLM…
- * 4 | …
- * il faut donc configurer max columns pour s'approcher du K puis que l'algo
- * pioche autour
- * sauf que pour les lignes au dessus et en dessous bah on aura rien a afficher
- * il faudra un test ou on affiche rien
- * et un cas ou on peut afficher juste une lettre par exemple
- *
  * - fix max columns for double slash truncated
  *   it does not work as expected (is related to urls because when regular string it works)
  * - lots of test on max columns
@@ -293,12 +263,12 @@ export const assert = (firstArg) => {
       }
       return subcompareDuo(placeholderNode, childNode, compareOptions);
     };
-    const subcompareChildNodesDuo = (actualNode, expectNode) => {
+    const subcompareChildrenDuo = (actualNode, expectNode) => {
       const isSetEntriesComparison =
         actualNode.subgroup === "set_entries" &&
         expectNode.subgroup === "set_entries";
-      const comparisonResultMap = new Map();
-      const comparisonDiffMap = new Map();
+      const childComparisonMap = new Map();
+      const childComparisonDiffMap = new Map();
       actual_children_comparisons: {
         const actualChildrenKeys = [];
         let actualFirstChildWithDiffKey;
@@ -320,9 +290,9 @@ export const assert = (firstArg) => {
               actualChildNode,
               expectChildNode,
             );
-            comparisonResultMap.set(childKey, childComparison);
+            childComparisonMap.set(childKey, childComparison);
             if (childComparison.hasAnyDiff) {
-              comparisonDiffMap.set(childKey, childComparison);
+              childComparisonDiffMap.set(childKey, childComparison);
             }
             if (!actualChildNode.isHidden) {
               actualChildrenKeys.push(childKey);
@@ -339,8 +309,8 @@ export const assert = (firstArg) => {
             actualChildNode,
             PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
           );
-          comparisonResultMap.set(childKey, addedChildComparison);
-          comparisonDiffMap.set(childKey, addedChildComparison);
+          childComparisonMap.set(childKey, addedChildComparison);
+          childComparisonDiffMap.set(childKey, addedChildComparison);
           if (!actualChildNode.isHidden) {
             actualChildrenKeys.push(childKey);
             if (actualFirstChildWithDiffKey === undefined) {
@@ -371,12 +341,12 @@ export const assert = (firstArg) => {
               continue;
             }
           } else {
-            const comparisonResult = comparisonResultMap.get(childKey);
-            if (comparisonResult) {
+            const childComparison = childComparisonMap.get(childKey);
+            if (childComparison) {
               if (!expectChildNode.isHidden) {
                 expectChildrenKeys.push(childKey);
                 if (
-                  comparisonResult.hasAnyDiff &&
+                  childComparison.hasAnyDiff &&
                   expectFirstChildWithDiffKey === undefined
                 ) {
                   expectFirstChildWithDiffKey = childKey;
@@ -389,8 +359,8 @@ export const assert = (firstArg) => {
             expectChildNode,
             PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
           );
-          comparisonResultMap.set(childKey, removedChildComparison);
-          comparisonDiffMap.set(childKey, removedChildComparison);
+          childComparisonMap.set(childKey, removedChildComparison);
+          childComparisonDiffMap.set(childKey, removedChildComparison);
           if (!expectChildNode.isHidden) {
             expectChildrenKeys.push(childKey);
             if (expectFirstChildWithDiffKey === undefined) {
@@ -401,17 +371,17 @@ export const assert = (firstArg) => {
         expectNode.childrenKeys = expectChildrenKeys;
         expectNode.firstChildWithDiffKey = expectFirstChildWithDiffKey;
       }
-      actualNode.comparisonDiffMap = comparisonDiffMap;
-      expectNode.comparisonDiffMap = comparisonDiffMap;
+      actualNode.childComparisonDiffMap = childComparisonDiffMap;
+      expectNode.childComparisonDiffMap = childComparisonDiffMap;
     };
-    const subcompareChildNodesSolo = (node, placeholderNode) => {
-      const comparisonDiffMap = new Map();
+    const subcompareChildrenSolo = (node, placeholderNode) => {
+      const childComparisonDiffMap = new Map();
       const childrenKeys = [];
       let firstChildWithDiffKey;
       for (const [childKey, childNode] of node.childNodeMap) {
         const soloChildComparison = subcompareSolo(childNode, placeholderNode);
         if (placeholderNode !== PLACEHOLDER_FOR_SAME) {
-          comparisonDiffMap.set(childKey, soloChildComparison);
+          childComparisonDiffMap.set(childKey, soloChildComparison);
         }
         if (!childNode.isHidden) {
           childrenKeys.push(childKey);
@@ -425,7 +395,7 @@ export const assert = (firstArg) => {
       }
       node.childrenKeys = childrenKeys;
       node.firstChildWithDiffKey = firstChildWithDiffKey;
-      node.comparisonDiffMap = comparisonDiffMap;
+      node.childComparisonDiffMap = childComparisonDiffMap;
     };
 
     const visitDuo = (actualNode, expectNode) => {
@@ -444,11 +414,11 @@ export const assert = (firstArg) => {
       if (result === "failure") {
         onSelfDiff(reason);
         if (propagate) {
-          subcompareChildNodesSolo(actualNode, propagate);
-          subcompareChildNodesSolo(expectNode, propagate);
+          subcompareChildrenSolo(actualNode, propagate);
+          subcompareChildrenSolo(expectNode, propagate);
           return;
         }
-        subcompareChildNodesDuo(actualNode, expectNode);
+        subcompareChildrenDuo(actualNode, expectNode);
         return;
       }
       if (result === "success") {
@@ -458,13 +428,13 @@ export const assert = (firstArg) => {
           actualNode.render = (props) => {
             actualNode.render = actualRender;
             // expectNode.render = expectRender;
-            subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_SAME);
+            subcompareChildrenSolo(actualNode, PLACEHOLDER_FOR_SAME);
             return actualRender(props);
           };
           expectNode.render = (props) => {
             // actualNode.render = actualRender;
             expectNode.render = expectRender;
-            subcompareChildNodesSolo(expectNode, PLACEHOLDER_FOR_SAME);
+            subcompareChildrenSolo(expectNode, PLACEHOLDER_FOR_SAME);
             return expectRender(props);
           };
           if (actualNode.isHiddenWhenSame) {
@@ -475,17 +445,17 @@ export const assert = (firstArg) => {
           }
           return;
         }
-        subcompareChildNodesDuo(actualNode, expectNode);
+        subcompareChildrenDuo(actualNode, expectNode);
         return;
       }
-      subcompareChildNodesDuo(actualNode, expectNode);
+      subcompareChildrenDuo(actualNode, expectNode);
     };
     const visitSolo = (node, placeholderNode) => {
       if (node.comparison) {
         throw new Error(`node (${node.subgroup}) already compared`);
       }
       node.comparison = comparison;
-      subcompareChildNodesSolo(node, placeholderNode);
+      subcompareChildrenSolo(node, placeholderNode);
     };
 
     visit: {
@@ -534,8 +504,8 @@ export const assert = (firstArg) => {
       ) {
         if (expectNode.customCompare) {
           expectNode.customCompare(actualNode, expectNode, {
-            subcompareChildNodesDuo,
-            subcompareChildNodesSolo,
+            subcompareChildrenDuo,
+            subcompareChildrenSolo,
             subcompareDuo,
             subcompareSolo,
             onSelfDiff,
@@ -823,14 +793,14 @@ const createAssertMethodCustomExpectation = (
   });
 };
 const createValueCustomCompare = (customComparer) => {
-  return (actualNode, expectNode, { onSelfDiff, subcompareChildNodesSolo }) => {
+  return (actualNode, expectNode, { onSelfDiff, subcompareChildrenSolo }) => {
     const selfDiff = customComparer(actualNode, expectNode);
     if (selfDiff) {
       onSelfDiff(selfDiff);
-      subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_MODIFIED);
+      subcompareChildrenSolo(actualNode, PLACEHOLDER_FOR_MODIFIED);
       return;
     }
-    subcompareChildNodesSolo(actualNode, PLACEHOLDER_FOR_SAME);
+    subcompareChildrenSolo(actualNode, PLACEHOLDER_FOR_SAME);
   };
 };
 const createAssertMethodCustomCompare = (
@@ -1153,7 +1123,7 @@ let createRootNode;
     render,
     isHidden = false,
     isHiddenWhenSame = false,
-    focusedChildIndex = -1,
+    focusedChildIndex,
     startMarker = "",
     endMarker = "",
     quoteMarkerRef,
@@ -1216,8 +1186,9 @@ let createRootNode;
       customCompare,
       ignore: false,
       comparison: null,
-      comparisonDiffMap: null,
+      childComparisonDiffMap: null,
       childrenKeys: null,
+      childrenRenderRange: null,
       firstChildWithDiffKey: undefined,
       indexToDisplayArray: null,
       diffType: "",
@@ -1585,6 +1556,7 @@ let createRootNode;
           group: "entries",
           subgroup: "line_entries",
           childGenerator: () => {
+            let isMultiline = false;
             const appendLineEntry = (lineIndex) => {
               const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
                 value: "",
@@ -1598,7 +1570,7 @@ let createRootNode;
                     middle: "…",
                     end: "…",
                   },
-                  skippedMarkersPlacement: "outside",
+                  skippedMarkersPlacement: isMultiline ? "inside" : "outside",
                 },
                 // When multiline string appear as property value
                 // 1. It becomes hard to see if "," is part of the string or the separator
@@ -1678,6 +1650,7 @@ let createRootNode;
               }
               return;
             }
+            isMultiline = true;
             enableMultilineDiff(lineEntriesNode);
             // remaining lines
             let lineIndex = 1;
@@ -2756,7 +2729,7 @@ const renderChildren = (node, props) => {
   if (node.diffType === "solo") {
     const childrenKeys = node.childrenKeys;
     const indexToDisplayArray = [];
-    for (const [childKey] of node.comparisonDiffMap) {
+    for (const [childKey] of node.childComparisonDiffMap) {
       if (indexToDisplayArray.length >= maxDiff) {
         break;
       }
@@ -2768,7 +2741,7 @@ const renderChildren = (node, props) => {
     node.indexToDisplayArray = indexToDisplayArray;
     return renderChildrenMultiline(node, props);
   }
-  if (node.comparisonDiffMap.size > 0) {
+  if (node.childComparisonDiffMap.size > 0) {
     const childrenKeys = node.childrenKeys;
     const indexToDisplayArray = [];
     index_to_display: {
@@ -2776,7 +2749,7 @@ const renderChildren = (node, props) => {
         break index_to_display;
       }
       const diffIndexArray = [];
-      for (const [childKey] of node.comparisonDiffMap) {
+      for (const [childKey] of node.childComparisonDiffMap) {
         const childIndex = childrenKeys.indexOf(childKey);
         if (childIndex === -1) {
           // happens when removed/added
@@ -2869,12 +2842,12 @@ const renderChildrenOneLiner = (node, props) => {
     return truncateAndApplyColor("", node, props);
   }
   let { focusedChildIndex } = node;
-  let maxLeftIndex = -1;
-  if (focusedChildIndex === -1) {
+  let minIndex = -1;
+  if (focusedChildIndex === undefined) {
     const { firstChildWithDiffKey } = node;
     if (firstChildWithDiffKey === undefined) {
       // added/removed
-      if (node.comparisonDiffMap.size > 0) {
+      if (node.childComparisonDiffMap.size > 0) {
         focusedChildIndex = childrenKeys.length - 1;
         let otherRenderedRange;
         node.otherNode.render({
@@ -2883,7 +2856,7 @@ const renderChildrenOneLiner = (node, props) => {
             otherRenderedRange = range;
           },
         });
-        maxLeftIndex = otherRenderedRange.start;
+        minIndex = otherRenderedRange.start;
       }
       // same
       else if (focusedChildWhenSame === "first") {
@@ -2899,9 +2872,9 @@ const renderChildrenOneLiner = (node, props) => {
   }
   let hasNextSibling = focusedChildIndex < childrenKeys.length - 1;
   let hasPreviousSibling =
-    focusedChildIndex === maxLeftIndex
+    focusedChildIndex === minIndex
       ? focusedChildIndex > 0
-      : focusedChildIndex < childrenKeys.length - 1 && focusedChildIndex > 0;
+      : focusedChildIndex < childrenKeys.length && focusedChildIndex > 0;
   const startSkippedMarkerWidth = startSkippedMarker.length;
   const endSkippedMarkerWidth = endSkippedMarker.length;
   const { separatorMarkerRef, separatorMarkerWhenTruncatedRef } = node;
@@ -2996,102 +2969,92 @@ const renderChildrenOneLiner = (node, props) => {
     );
     columnsRemainingForChildren -= stringWidth(focusedChildDiff);
     childrenDiff = focusedChildDiff;
-    renderedRange.start = focusedChildIndex;
-    if (focusedChildIndex === maxLeftIndex) {
+    renderedRange.start = renderedRange.end = focusedChildIndex;
+    if (focusedChildIndex === minIndex) {
       columnsRemainingForChildren = 0;
     }
   }
-  let tryBeforeFirst = true;
-  let previousChildAttempt = 0;
-  let nextChildAttempt = 0;
-  while (columnsRemainingForChildren) {
-    const previousChildIndex = focusedChildIndex - previousChildAttempt - 1;
-    const nextChildIndex = focusedChildIndex + nextChildAttempt + 1;
-    let hasPreviousChild =
-      previousChildIndex === maxLeftIndex - 1 ? false : previousChildIndex >= 0;
-    let hasNextChild = nextChildIndex < childrenKeys.length;
-    if (!hasPreviousChild && !hasNextChild) {
-      break;
-    }
-    let childIndex;
-    let isPrevious = false;
-    if (hasPreviousChild && hasNextChild) {
-      if (tryBeforeFirst) {
-        isPrevious = true;
-        previousChildAttempt++;
-        childIndex = previousChildIndex;
-      } else {
-        isPrevious = false;
-        nextChildAttempt++;
-        childIndex = nextChildIndex;
+  if (columnsRemainingForChildren) {
+    for (const childIndex of generateChildIndexes(
+      childrenKeys,
+      focusedChildIndex,
+      minIndex,
+    )) {
+      if (columnsRemainingForChildren <= 0) {
+        break;
       }
-    } else if (hasPreviousChild) {
-      isPrevious = true;
-      previousChildAttempt++;
-      childIndex = previousChildIndex;
-    } else {
-      isPrevious = false;
-      nextChildAttempt++;
-      childIndex = nextChildIndex;
-    }
-    const childKey = childrenKeys[childIndex];
-    const childNode = node.childNodeMap.get(childKey);
-    if (!childNode) {
-      debugger; // to keep to see if that is hit while running all of string.test.js
-      // if not remove it
-      continue;
-    }
-    if (tryBeforeFirst && isPrevious) {
-      tryBeforeFirst = false;
-    }
-    hasPreviousSibling = focusedChildIndex - previousChildAttempt > 0;
-    hasNextSibling =
-      focusedChildIndex + nextChildAttempt < childrenKeys.length - 1;
-    const childDiff = renderChildDiff(childNode, childIndex);
-    const childDiffWidth = measureRemainingColumnsImpact(childDiff);
-    let nextWidth = childDiffWidth;
-    if (hasPreviousSibling) {
-      nextWidth += startSkippedMarkerWidth;
-    }
-    if (hasNextSibling) {
-      nextWidth += endSkippedMarkerWidth;
-    }
-    if (nextWidth > columnsRemainingForChildren) {
+      const isPrevious = childIndex < focusedChildIndex;
       if (isPrevious) {
-        previousChildAttempt--;
+        hasPreviousSibling = childIndex > 0;
       } else {
-        nextChildAttempt--;
+        hasNextSibling = childIndex < childrenKeys.length - 1;
       }
-      break;
-    }
-    columnsRemainingForChildren -= childDiffWidth;
-    if (childIndex < focusedChildIndex) {
-      renderedRange.start = childIndex;
-      const shouldInjectSpacing =
-        hasSpacingBetweenEachChild && (childIndex > 0 || focusedChildIndex > 0);
-      if (shouldInjectSpacing) {
-        childrenDiff = `${childDiff} ${childrenDiff}`;
+      const childKey = childrenKeys[childIndex];
+      const childNode = node.childNodeMap.get(childKey);
+      if (!childNode) {
+        debugger; // to keep to see if that is hit while running all of string.test.js
+        // if not remove it
+        continue;
+      }
+      const childDiff = renderChildDiff(childNode, childIndex);
+      const childDiffWidth = measureRemainingColumnsImpact(childDiff);
+      let nextWidth = childDiffWidth;
+      if (hasPreviousSibling) {
+        nextWidth += startSkippedMarkerWidth;
+      }
+      if (hasNextSibling) {
+        nextWidth += endSkippedMarkerWidth;
+      }
+      if (nextWidth > columnsRemainingForChildren) {
+        break;
+      }
+      columnsRemainingForChildren -= childDiffWidth;
+      if (childIndex < renderedRange.start) {
+        renderedRange.start = childIndex;
+      } else {
+        renderedRange.end = childIndex;
+      }
+      if (isPrevious) {
+        const shouldInjectSpacing =
+          hasSpacingBetweenEachChild &&
+          (childIndex > 0 || focusedChildIndex > 0);
+        if (shouldInjectSpacing) {
+          childrenDiff = `${childDiff} ${childrenDiff}`;
+          columnsRemainingForChildren -= " ".length;
+          continue;
+        }
+        if (childrenDiff) {
+          childrenDiff = `${childDiff}${childrenDiff}`;
+          continue;
+        }
+        childrenDiff = childDiff;
+        continue;
+      }
+
+      if (hasSpacingBetweenEachChild && childrenDiff) {
         columnsRemainingForChildren -= " ".length;
+        childrenDiff = `${childrenDiff} ${childDiff}`;
         continue;
       }
       if (childrenDiff) {
-        childrenDiff = `${childDiff}${childrenDiff}`;
+        childrenDiff = `${childrenDiff}${childDiff}`;
         continue;
       }
       childrenDiff = childDiff;
-      continue;
     }
-    renderedRange.end = childIndex;
-    if (hasSpacingBetweenEachChild && childrenDiff) {
-      columnsRemainingForChildren -= " ".length;
-      childrenDiff = `${childrenDiff} ${childDiff}`;
-      continue;
-    }
-    if (childrenDiff) {
-      childrenDiff = `${childrenDiff}${childDiff}`;
-      continue;
-    }
-    childrenDiff = childDiff;
+  }
+
+  // if (node.subgroup === 'line_entry_value' && node.firstChildWithDiffKey) {
+  //   for (const [, lineNode] of node.parent.childNodeMap) {
+  //     if (lineNode === node) continue;
+  //     // dis bien aux autre noeuds
+  //     // de se render dans ce range
+  //     lineNode.childrenRenderRange = renderedRange;
+  //     // debugger;
+  //   }
+  // }
+  if (props.onRange) {
+    props.onRange(renderedRange);
   }
   let diff = "";
   if (hasPreviousSibling) {
@@ -3142,11 +3105,44 @@ const renderChildrenOneLiner = (node, props) => {
       diff += renderSeparatorMarker(node, props);
     }
   }
-  if (props.onRange) {
-    props.onRange(renderedRange);
-  }
   return diff;
 };
+function* generateChildIndexes(childrenKeys, startIndex, minIndex) {
+  let previousAttempt = 0;
+  let nextAttempt = 0;
+  let tryBeforeFirst = true;
+  while (true) {
+    const previousChildIndex = startIndex - previousAttempt - 1;
+    const nextChildIndex = startIndex + nextAttempt + 1;
+    const hasPreviousChild =
+      previousChildIndex === minIndex - 1 ? false : previousChildIndex >= 0;
+    const hasNextChild = nextChildIndex < childrenKeys.length;
+    if (!hasPreviousChild && !hasNextChild) {
+      break;
+    }
+    if (hasPreviousChild && hasNextChild) {
+      if (tryBeforeFirst) {
+        previousAttempt++;
+        yield previousChildIndex;
+        nextAttempt++;
+        yield nextChildIndex;
+      } else {
+        nextAttempt++;
+        yield nextChildIndex;
+        previousAttempt++;
+        yield previousChildIndex;
+      }
+    } else if (hasPreviousChild) {
+      previousAttempt++;
+      yield previousChildIndex;
+      tryBeforeFirst = false;
+    } else {
+      nextAttempt++;
+      yield nextChildIndex;
+      tryBeforeFirst = true;
+    }
+  }
+}
 const renderChildrenMultiline = (node, props) => {
   const {
     hasSeparatorBetweenEachChild,
@@ -3324,6 +3320,7 @@ const getNodeDepth = (node, props) => {
 const enableMultilineDiff = (lineEntriesNode) => {
   const firstLineEntryNode = lineEntriesNode.childNodeMap.get(0);
   firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = false;
+  firstLineEntryNode.onelineDiff.skippedMarkersPlacement = "inside";
   firstLineEntryNode.startMarker = firstLineEntryNode.endMarker = "";
   lineEntriesNode.multilineDiff.hasIndentBetweenEachChild = true;
   lineEntriesNode.beforeRender = () => {

@@ -1,30 +1,30 @@
 # double slash and truncate line
-actual: "/dmail/documents/dev/jsenv-core/node_mo…"
-expect: "/dmail/documents/dev/jsenv-core/node_mo…"
+actual: "…/dmail/documents/dev/jsenv-core/node_m…"
+expect: "…/dmail/documents/dev/jsenv-core/node_m…"
 
 # at removed char
 actual: …"r"
-expect: …"r_1234"…
+expect: …"r_1"…
 
 # at added char
-actual: …"r_123456"…
+actual: …"r_1"…
 expect: …"r"
 
 # at removed char 2
-actual: …"ring"
-expect: …"ring_123456789"
+actual: …"ng_string"
+expect: …"ng_string_123456789"
 
 # at added char 2
-actual: …"ring_123456789"
-expect: …"ring"
+actual: …"ng_string_123456789"
+expect: …"ng_string"
 
 # at removed char 3
-actual: …"g"
-expect: …"g_123456"…
+actual: …"tring"
+expect: …"tring_1234"…
 
 # at added char 3
-actual: …"g_123456"…
-expect: …"g"
+actual: …"tring_1234"…
+expect: …"tring"
 
 # string open quote
 actual: …
@@ -127,8 +127,8 @@ expect: {
 }
 
 # url search param modified, middle of long params
-actual: "?this_is_rela…&foo=a"
-expect: "?this_is_rela…&foo=b"
+actual: "…?this_is_rel…&foo=a"
+expect: "…?this_is_rel…&foo=b"
 
 # long url diff at end
 actual: "…example_that_is…/dir/file.txt"
@@ -145,4 +145,8 @@ expect: "…example_that_aa_quite_long.c…"
 # long url diff start middle end
 actual: "http://example_that_is_quite_…"
 expect: "file://example_that_aa_quite_…"
+
+# max column exactly on diff
+actual: …"c"
+expect: …"C"
 

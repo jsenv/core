@@ -123,12 +123,8 @@ expect: 1| ab
         2| c
 
 # lines around start fully truncated
-actual: 1| 
-        2| Z
-        3| d
-        4| Z
-expect: 1| 
-        2| Z
-        3| D
-        4| Z
+actual: 1| Z
+        2| …cd
+expect: 1| Z
+        2| …cD
 

@@ -227,15 +227,11 @@ assert({
 
 ```js
 assert({
-  actual: `
-Z
-abcd
-Z`,
-  expect: `
-Z
-abcD
-Z`,
-  MAX_COLUMNS: 12,
+  actual: `Z
+abcd`,
+  expect: `Z
+abcD`,
+  MAX_COLUMNS: 14,
 });
 ```
 

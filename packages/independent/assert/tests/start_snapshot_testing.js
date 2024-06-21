@@ -20,6 +20,27 @@ export const startSnapshotTesting = async (name, scenarios) => {
   if (generateMarkdown) {
     clearDirectorySync(new URL(`./snapshots/${name}/`, import.meta.url));
   }
+
+  if (typeof scenarios === "function") {
+    const scenarioMap = new Map();
+    const onlyScenarioMap = new Map();
+    const test = (name, callback) => {
+      scenarioMap.set(name, callback);
+    };
+    test.only = (name, callback) => {
+      onlyScenarioMap.set(name, callback);
+    };
+    test.todo = () => {};
+    scenarios({
+      test,
+    });
+    if (onlyScenarioMap.size) {
+      scenarios = Object.fromEntries(onlyScenarioMap);
+    } else {
+      scenarios = Object.fromEntries(scenarioMap);
+    }
+  }
+
   for (const key of Object.keys(scenarios)) {
     const scenarioCallback = scenarios[key];
     try {
