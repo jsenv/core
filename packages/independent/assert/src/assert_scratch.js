@@ -2724,25 +2724,16 @@ const renderComposite = (node, props) => {
   }
   return diff;
 };
-const renderChildrenMaybeMultiline = (node, props) => {
-  if (node.diffType === "solo") {
-    return renderChildrenMultiline(node, props);
-  }
-  if (node.childComparisonDiffMap.size > 0) {
-    return renderChildrenMultiline(node, props);
-  }
-  return renderChildren(node, props);
-};
 const renderChildren = (node, props) => {
   const {
+    hasMarkersWhenEmpty,
     focusedChildWhenSame = "first",
     hasSeparatorBetweenEachChild,
     hasTrailingSeparator,
-    skippedMarkers,
-    skippedMarkersPlacement = "inside",
-    hasMarkersWhenEmpty,
     hasSpacingAroundChildren,
     hasSpacingBetweenEachChild,
+    skippedMarkers,
+    skippedMarkersPlacement = "inside",
   } = node.onelineDiff;
 
   let startSkippedMarker = "";
@@ -2886,7 +2877,7 @@ const renderChildren = (node, props) => {
   }
   const focusedChildKey = childrenKeys[focusedChildIndex];
   const focusedChildNode = node.childNodeMap.get(focusedChildKey);
-  const renderedRange = { start: 0, end: 0 };
+  const renderedRange = { start: Infinity, end: -1 };
   if (focusedChildNode) {
     const focusedChildDiff = renderChildDiff(
       focusedChildNode,
@@ -2936,7 +2927,8 @@ const renderChildren = (node, props) => {
       columnsRemainingForChildren -= childDiffWidth;
       if (childIndex < renderedRange.start) {
         renderedRange.start = childIndex;
-      } else {
+      }
+      if (childIndex > renderedRange.end) {
         renderedRange.end = childIndex;
       }
       if (isPrevious) {
@@ -3068,6 +3060,15 @@ function* generateChildIndexes(childrenKeys, startIndex, minIndex) {
     }
   }
 }
+const renderChildrenMaybeMultiline = (node, props) => {
+  if (node.diffType === "solo") {
+    return renderChildrenMultiline(node, props);
+  }
+  if (node.childComparisonDiffMap.size > 0) {
+    return renderChildrenMultiline(node, props);
+  }
+  return renderChildren(node, props);
+};
 /*
 Rewrite "renderChildrenMultiline" so that:
 - We start to render from the first child with a diff
