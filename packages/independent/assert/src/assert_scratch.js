@@ -2866,6 +2866,45 @@ const renderChildren = (node, props) => {
     });
     return childDiff;
   };
+  const appendChildDiff = (childDiff, childIndex) => {
+    if (childrenDiff === "") {
+      childrenDiff = childDiff;
+      renderedRange.start = renderedRange.end = childIndex;
+      return;
+    }
+    if (childIndex < renderedRange.start) {
+      renderedRange.start = childIndex;
+    } else {
+      renderedRange.end = childIndex;
+    }
+
+    const isPrevious = childIndex < focusedChildIndex;
+    if (isPrevious) {
+      const shouldInjectSpacing =
+        hasSpacingBetweenEachChild && (childIndex > 0 || focusedChildIndex > 0);
+      if (shouldInjectSpacing) {
+        childrenDiff = `${childDiff} ${childrenDiff}`;
+        columnsRemainingForChildren -= " ".length;
+        return;
+      }
+      if (childrenDiff) {
+        childrenDiff = `${childDiff}${childrenDiff}`;
+        return;
+      }
+      childrenDiff = childDiff;
+      return;
+    }
+    if (hasSpacingBetweenEachChild && childrenDiff) {
+      columnsRemainingForChildren -= " ".length;
+      childrenDiff = `${childrenDiff} ${childDiff}`;
+      return;
+    }
+    if (childrenDiff) {
+      childrenDiff = `${childrenDiff}${childDiff}`;
+      return;
+    }
+    childrenDiff = childDiff;
+  };
   if (hasSpacingAroundChildren) {
     columnsRemainingForChildren -=
       `${startMarker}  ${endMarker}${separatorMarkerWhenTruncated || separatorMarker}`
@@ -2884,8 +2923,7 @@ const renderChildren = (node, props) => {
       focusedChildIndex,
     );
     columnsRemainingForChildren -= stringWidth(focusedChildDiff);
-    childrenDiff = focusedChildDiff;
-    renderedRange.start = renderedRange.end = focusedChildIndex;
+    appendChildDiff(focusedChildDiff, focusedChildIndex);
     if (focusedChildIndex === minIndex) {
       columnsRemainingForChildren = 0;
     }
@@ -2925,39 +2963,7 @@ const renderChildren = (node, props) => {
         break;
       }
       columnsRemainingForChildren -= childDiffWidth;
-      if (childIndex < renderedRange.start) {
-        renderedRange.start = childIndex;
-      }
-      if (childIndex > renderedRange.end) {
-        renderedRange.end = childIndex;
-      }
-      if (isPrevious) {
-        const shouldInjectSpacing =
-          hasSpacingBetweenEachChild &&
-          (childIndex > 0 || focusedChildIndex > 0);
-        if (shouldInjectSpacing) {
-          childrenDiff = `${childDiff} ${childrenDiff}`;
-          columnsRemainingForChildren -= " ".length;
-          continue;
-        }
-        if (childrenDiff) {
-          childrenDiff = `${childDiff}${childrenDiff}`;
-          continue;
-        }
-        childrenDiff = childDiff;
-        continue;
-      }
-
-      if (hasSpacingBetweenEachChild && childrenDiff) {
-        columnsRemainingForChildren -= " ".length;
-        childrenDiff = `${childrenDiff} ${childDiff}`;
-        continue;
-      }
-      if (childrenDiff) {
-        childrenDiff = `${childrenDiff}${childDiff}`;
-        continue;
-      }
-      childrenDiff = childDiff;
+      appendChildDiff(childDiff, childIndex);
     }
   }
 
