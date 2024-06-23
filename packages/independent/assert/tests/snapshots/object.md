@@ -165,12 +165,142 @@ assert({
     b: false,
     a: true,
   },
-  MAX_ENTRY_BEFORE_MULTILINE_DIFF: 0,
-  MAX_ENTRY_AFTER_MULTILINE_DIFF: 0,
+  MAX_PROP_BEFORE_DIFF: 0,
+  MAX_PROP_AFTER_DIFF: 0,
 });
 ```
 
 ![img](<./object/max prop around diff.svg>)
+
+# max 2 props above prop diff
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+  },
+  expect: {
+    a: true,
+    b: true,
+    c: true,
+    d: false,
+  },
+});
+```
+
+![img](<./object/max 2 props above prop diff.svg>)
+
+# max 2 props above prop diff and there is exactly 2
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+  },
+  expect: {
+    a: true,
+    b: true,
+    c: false,
+    d: true,
+  },
+});
+```
+
+![img](<./object/max 2 props above prop diff and there is exactly 2.svg>)
+
+# max 2 props after prop diff
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+  },
+  expect: {
+    a: false,
+    b: true,
+    c: true,
+    d: true,
+  },
+});
+```
+
+![img](<./object/max 2 props after prop diff.svg>)
+
+# max 2 props above after diff and there is exactly 2
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+  },
+  expect: {
+    a: true,
+    b: false,
+    c: true,
+    d: true,
+  },
+});
+```
+
+![img](<./object/max 2 props above after diff and there is exactly 2.svg>)
+
+# max 2 props around prop diff
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+    e: true,
+    f: true,
+    g: true,
+    h: true,
+    i: true,
+    j: true,
+    k: true,
+    l: true,
+    m: true,
+    n: true,
+    o: true,
+    p: true,
+  },
+  expect: {
+    a: true,
+    b: true,
+    c: true,
+    d: false,
+    e: true,
+    f: true,
+    g: true,
+    h: false,
+    i: true,
+    j: true,
+    k: true,
+    l: true,
+    m: false,
+    n: true,
+    o: true,
+    p: true,
+  },
+  MAX_DIFF_PER_OBJECT: 3,
+});
+```
+
+![img](<./object/max 2 props around prop diff.svg>)
 
 # property should be there and is big
 

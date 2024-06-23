@@ -122,8 +122,113 @@ await startSnapshotTesting("object", ({ test }) => {
         b: false,
         a: true,
       },
-      MAX_ENTRY_BEFORE_MULTILINE_DIFF: 0,
-      MAX_ENTRY_AFTER_MULTILINE_DIFF: 0,
+      MAX_PROP_BEFORE_DIFF: 0,
+      MAX_PROP_AFTER_DIFF: 0,
+    });
+  });
+  test("max 2 props above prop diff", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+      },
+      expect: {
+        a: true,
+        b: true,
+        c: true,
+        d: false,
+      },
+    });
+  });
+  test("max 2 props above prop diff and there is exactly 2", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+      },
+      expect: {
+        a: true,
+        b: true,
+        c: false,
+        d: true,
+      },
+    });
+  });
+  test("max 2 props after prop diff", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+      },
+      expect: {
+        a: false,
+        b: true,
+        c: true,
+        d: true,
+      },
+    });
+  });
+  test("max 2 props above after diff and there is exactly 2", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+      },
+      expect: {
+        a: true,
+        b: false,
+        c: true,
+        d: true,
+      },
+    });
+  });
+  test("max 2 props around prop diff", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+        e: true,
+        f: true,
+        g: true,
+        h: true,
+        i: true,
+        j: true,
+        k: true,
+        l: true,
+        m: true,
+        n: true,
+        o: true,
+        p: true,
+      },
+      expect: {
+        a: true,
+        b: true,
+        c: true,
+        d: false,
+        e: true,
+        f: true,
+        g: true,
+        h: false,
+        i: true,
+        j: true,
+        k: true,
+        l: true,
+        m: false,
+        n: true,
+        o: true,
+        p: true,
+      },
+      MAX_DIFF_PER_OBJECT: 3,
     });
   });
   test("property should be there and is big", () => {
@@ -190,56 +295,6 @@ await startSnapshotTesting("object", ({ test }) => {
 });
 
 // await startSnapshotTesting("object", {
-//   ["property are different"]: () => {
-//     assert({
-//       actual: {
-//         a: true,
-//       },
-//       expect: {
-//         a: {
-//           b: true,
-//         },
-//       },
-//     });
-//   },
-//   ["property should be there"]: () => {
-//     assert({
-//       actual: {
-//         a: true,
-//       },
-//       expect: {
-//         a: true,
-//         should_be_there: true,
-//       },
-//     });
-//   },
-//   ["property should not be there"]: () => {
-//     assert({
-//       actual: {
-//         a: true,
-//         should_not_be_there: true,
-//       },
-//       expect: {
-//         a: true,
-//       },
-//     });
-//   },
-//   ["false should be an object"]: () => {
-//     assert({
-//       actual: false,
-//       expect: { foo: true },
-//     });
-//   },
-//   ["object should be false"]: () => {
-//     assert({
-//       actual: {
-//         foo: {
-//           a: {},
-//         },
-//       },
-//       expect: false,
-//     });
-//   },
 //   ["false should be an object at property"]: () => {
 //     assert({
 //       actual: {
@@ -331,108 +386,6 @@ await startSnapshotTesting("object", ({ test }) => {
 //         },
 //       },
 //       maxDepth: 5,
-//     });
-//   },
-//   ["max 2 props above prop diff"]: () => {
-//     assert({
-//       actual: {
-//         a: true,
-//         b: true,
-//         c: true,
-//         d: true,
-//       },
-//       expect: {
-//         a: true,
-//         b: true,
-//         c: true,
-//         d: false,
-//       },
-//     });
-//   },
-//   ["max 2 props above prop diff and there is exactly 2"]: () => {
-//     assert({
-//       actual: {
-//         a: true,
-//         b: true,
-//         c: true,
-//         d: true,
-//       },
-//       expect: {
-//         a: true,
-//         b: true,
-//         c: false,
-//         d: true,
-//       },
-//     });
-//   },
-//   ["max 2 props after prop diff"]: () => {
-//     assert({
-//       actual: {
-//         a: true,
-//         b: true,
-//         c: true,
-//         d: true,
-//       },
-//       expect: {
-//         a: false,
-//         b: true,
-//         c: true,
-//         d: true,
-//       },
-//     });
-//   },
-//   ["max 2 props above after diff and there is exactly 2"]: () => {
-//     assert({
-//       actual: {
-//         a: true,
-//         b: true,
-//         c: true,
-//         d: true,
-//       },
-//       expect: {
-//         a: true,
-//         b: false,
-//         c: true,
-//         d: true,
-//       },
-//     });
-//   },
-//   ["max 2 props around prop diff"]: () => {
-//     assert({
-//       actual: {
-//         a: true,
-//         b: true,
-//         c: true,
-//         d: true,
-//         e: true,
-//         f: true,
-//         g: true,
-//         h: true,
-//         i: true,
-//         j: true,
-//         k: true,
-//         l: true,
-//         m: true,
-//         n: true,
-//         o: true,
-//       },
-//       expect: {
-//         a: true,
-//         b: true,
-//         c: true,
-//         d: false,
-//         e: true,
-//         f: true,
-//         g: true,
-//         h: false,
-//         i: true,
-//         j: true,
-//         k: true,
-//         l: false,
-//         m: true,
-//         n: true,
-//         o: true,
-//       },
 //     });
 //   },
 //   ["max X diff per object"]: () => {

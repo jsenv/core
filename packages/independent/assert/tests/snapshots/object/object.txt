@@ -100,6 +100,90 @@ expect: {
   ↓ 1 prop ↓
 }
 
+# max 2 props above prop diff
+actual: {
+  ↑ 2 props ↑
+  c: true,
+  d: true,
+}
+expect: {
+  ↑ 2 props ↑
+  c: true,
+  d: false,
+}
+
+# max 2 props above prop diff and there is exactly 2
+actual: {
+  a: true,
+  b: true,
+  c: true,
+  d: true,
+}
+expect: {
+  a: true,
+  b: true,
+  c: false,
+  d: true,
+}
+
+# max 2 props after prop diff
+actual: {
+  a: true,
+  b: true,
+  ↓ 2 props ↓
+}
+expect: {
+  a: false,
+  b: true,
+  ↓ 2 props ↓
+}
+
+# max 2 props above after diff and there is exactly 2
+actual: {
+  a: true,
+  b: true,
+  c: true,
+  d: true,
+}
+expect: {
+  a: true,
+  b: false,
+  c: true,
+  d: true,
+}
+
+# max 2 props around prop diff
+actual: {
+  ↑ 2 props ↑
+  c: true,
+  d: true,
+  e: true,
+  f: true,
+  g: true,
+  h: true,
+  i: true,
+  ↕ 2 props ↕
+  l: true,
+  m: true,
+  n: true,
+  ↓ 2 props ↓
+}
+expect: {
+  ↑ 2 props ↑
+  c: true,
+  d: false,
+  e: true,
+  f: true,
+  g: true,
+  h: false,
+  i: true,
+  ↕ 2 props ↕
+  l: true,
+  m: false,
+  n: true,
+  ↓ 2 props ↓
+}
+
 # property should be there and is big
 actual: {
   a: true,
@@ -110,7 +194,8 @@ expect: {
     a: true,
     b: true,
     item: Object(3),
-    ↓ 5 props ↓
+    c: true,
+    ↓ 4 props ↓
   },
 }
 
@@ -123,7 +208,8 @@ actual: {
     and: true,
   },
   d: true,
-  ↓ 4 props ↓
+  e: true,
+  ↓ 3 props ↓
 }
 expect: {
   a: true,

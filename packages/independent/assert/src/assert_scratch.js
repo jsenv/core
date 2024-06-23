@@ -1,9 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - rajouter des tests skipped props pour object
- *   pour voir qu'on skip correctement
- *   en particulier le cas ou on skip au milieu
  * - attempt to force a range on surrounding lines
  *   il suffit de partir de la ligne ayant un diff dans le before render (on a l'info)
  *   et d'appliquer a toutes les autres lignes un range donné
@@ -136,11 +133,14 @@ const measureRemainingColumnsImpact = (string) => {
 const defaultOptions = {
   actual: undefined,
   expect: undefined,
-  MAX_ENTRY_BEFORE_MULTILINE_DIFF: 2,
-  MAX_ENTRY_AFTER_MULTILINE_DIFF: 2,
   MAX_DEPTH: 5,
   MAX_DEPTH_INSIDE_DIFF: 1,
   MAX_DIFF_PER_OBJECT: 2,
+  MAX_PROP_BEFORE_DIFF: 2,
+  MAX_PROP_AFTER_DIFF: 2,
+  MAX_DIFF_PER_STRING: 2,
+  MAX_LINE_BEFORE_DIFF: 3,
+  MAX_LINE_AFTER_DIFF: 3,
   MAX_COLUMNS: 100,
 };
 
@@ -156,11 +156,14 @@ export const assert = (firstArg) => {
   const {
     actual,
     expect,
-    MAX_ENTRY_BEFORE_MULTILINE_DIFF,
-    MAX_ENTRY_AFTER_MULTILINE_DIFF,
     MAX_DEPTH,
     MAX_DEPTH_INSIDE_DIFF,
     MAX_DIFF_PER_OBJECT,
+    MAX_PROP_BEFORE_DIFF,
+    MAX_PROP_AFTER_DIFF,
+    MAX_DIFF_PER_STRING,
+    MAX_LINE_BEFORE_DIFF,
+    MAX_LINE_AFTER_DIFF,
     MAX_COLUMNS,
   } = {
     ...defaultOptions,
@@ -721,11 +724,14 @@ export const assert = (firstArg) => {
   diff += ANSI.color("actual:", sameColor);
   diff += " ";
   diff += actualStartNode.render({
-    MAX_ENTRY_BEFORE_MULTILINE_DIFF,
-    MAX_ENTRY_AFTER_MULTILINE_DIFF,
     MAX_DEPTH,
     MAX_DEPTH_INSIDE_DIFF,
     MAX_DIFF_PER_OBJECT,
+    MAX_PROP_BEFORE_DIFF,
+    MAX_PROP_AFTER_DIFF,
+    MAX_DIFF_PER_STRING,
+    MAX_LINE_BEFORE_DIFF,
+    MAX_LINE_AFTER_DIFF,
     MAX_COLUMNS,
     columnsRemaining: MAX_COLUMNS - "actual: ".length,
     startNode: actualStartNode,
@@ -734,11 +740,14 @@ export const assert = (firstArg) => {
   diff += ANSI.color("expect:", sameColor);
   diff += " ";
   diff += expectStartNode.render({
-    MAX_ENTRY_BEFORE_MULTILINE_DIFF,
-    MAX_ENTRY_AFTER_MULTILINE_DIFF,
     MAX_DEPTH,
     MAX_DEPTH_INSIDE_DIFF,
     MAX_DIFF_PER_OBJECT,
+    MAX_PROP_BEFORE_DIFF,
+    MAX_PROP_AFTER_DIFF,
+    MAX_DIFF_PER_STRING,
+    MAX_LINE_BEFORE_DIFF,
+    MAX_LINE_AFTER_DIFF,
     MAX_COLUMNS,
     columnsRemaining: MAX_COLUMNS - "expect: ".length,
     startNode: expectStartNode,
@@ -1561,7 +1570,9 @@ let createRootNode;
               between: ["↕ 1 line ↕", "↕ {x} lines ↕"],
               end: ["↓ 1 line ↓", "↓ {x} lines ↓"],
             },
-            maxDiff: 2,
+            maxDiff: "MAX_DIFF_PER_STRING",
+            maxChildBeforeDiff: "MAX_LINE_BEFORE_DIFF",
+            maxChildAfterDiff: "MAX_LINE_AFTER_DIFF",
           },
           quoteMarkerRef,
           group: "entries",
@@ -2000,6 +2011,8 @@ let createRootNode;
                 end: ["↓ 1 value ↓", "↓ {x} values ↓"],
               },
               maxDiff: "MAX_DIFF_PER_OBJECT",
+              maxChildBeforeDiff: "MAX_PROP_BEFORE_DIFF",
+              maxChildAfterDiff: "MAX_PROP_AFTER_DIFF",
             },
             group: "entries",
           };
@@ -2109,7 +2122,9 @@ let createRootNode;
                   between: ["↕ 1 value ↕", "↕ {x} values ↕"],
                   end: ["↓ 1 value ↓", "↓ {x} values ↓"],
                 },
-                maxDiff: "MAX_DIFF_PER_OBJECT",
+                maxDiff: "MAX_DIFF_PER_STRING",
+                maxChildBeforeDiff: "MAX_LINE_BEFORE_DIFF",
+                maxChildAfterDiff: "MAX_LINE_AFTER_DIFF",
               },
               group: "entries",
               subgroup: "array_entries",
@@ -2244,6 +2259,8 @@ let createRootNode;
                       end: ["↓ 1 prop ↓", "↓ {x} props ↓"],
                     },
                     maxDiff: "MAX_DIFF_PER_OBJECT",
+                    maxChildBeforeDiff: "MAX_PROP_BEFORE_DIFF",
+                    maxChildAfterDiff: "MAX_PROP_AFTER_DIFF",
                   },
                 }),
             childGenerator: () => {
@@ -3114,95 +3131,117 @@ const renderChildrenMultiline = (node, props) => {
     hasIndentBetweenEachChild,
     hasMarkersWhenEmpty,
   } = node.multilineDiff;
-  let { maxDiff } = node.multilineDiff;
+  let { maxDiff, maxChildBeforeDiff, maxChildAfterDiff } = node.multilineDiff;
   if (typeof maxDiff === "number") {
   } else if (typeof maxDiff === "string") {
     maxDiff = props[maxDiff];
   } else {
     maxDiff = Infinity;
   }
-  let firstChildIndex;
-  if (node.firstChildWithDiffKey === undefined) {
-    firstChildIndex = 0;
-  } else {
-    firstChildIndex = childrenKeys.indexOf(node.firstChildWithDiffKey);
-  }
+  maxChildBeforeDiff = props[maxChildBeforeDiff];
+  maxChildAfterDiff = props[maxChildAfterDiff];
+
+  let firstChildIndex = 0;
   const childIndexToDisplayArray = [];
   index_to_display: {
     if (childrenKeys.length === 0) {
       break index_to_display;
     }
+    if (maxDiff === Infinity) {
+      let index = 0;
+      // eslint-disable-next-line no-unused-vars
+      for (const key of childrenKeys) {
+        childIndexToDisplayArray.push(index);
+        index++;
+      }
+      break index_to_display;
+    }
     let diffCount = 0;
-    let currentChildHasDiff;
-    const addToDisplayArray = (childIndexToDisplay) => {
-      if (childIndexToDisplay < firstChildIndex) {
-        childIndexToDisplayArray.unshift(childIndexToDisplay);
-      } else {
-        childIndexToDisplayArray.push(childIndexToDisplay);
+    const visitChild = (childIndex) => {
+      const childKey = childrenKeys[childIndex];
+      const childNode = node.childNodeMap.get(childKey);
+      if (!childNode.comparison.hasAnyDiff) {
+        return false;
       }
-      const childKeyToDisplay = childrenKeys[childIndexToDisplay];
-      const childNodeToDisplay = node.childNodeMap.get(childKeyToDisplay);
-      if (childNodeToDisplay.comparison.hasAnyDiff) {
-        currentChildHasDiff = true;
-        if (
-          childNodeToDisplay.subgroup === "property_entry" &&
-          childNodeToDisplay.childNodeMap.get("entry_value").isSourceCode
-        ) {
-        } else {
-          diffCount++;
-        }
+      if (
+        childNode.subgroup === "property_entry" &&
+        childNode.childNodeMap.get("entry_value").isSourceCode
+      ) {
       } else {
-        currentChildHasDiff = false;
+        diffCount++;
       }
+      return true;
     };
-    addToDisplayArray(firstChildIndex);
+    if (node.firstChildWithDiffKey === undefined) {
+      firstChildIndex = 0;
+      childIndexToDisplayArray.push(0);
+    } else {
+      firstChildIndex = childrenKeys.indexOf(node.firstChildWithDiffKey);
+    }
     let childIndex = firstChildIndex;
     while (
       // eslint-disable-next-line no-unmodified-loop-condition
       diffCount < maxDiff
     ) {
+      let currentChildHasDiff = visitChild(childIndex);
       if (currentChildHasDiff) {
-        const childSavedIndex = childIndex;
         before: {
-          let beforeDiffCount = 0;
-          while (
-            beforeDiffCount < props.MAX_ENTRY_BEFORE_MULTILINE_DIFF &&
-            // eslint-disable-next-line no-unmodified-loop-condition
-            diffCount < maxDiff
-          ) {
-            const previousChildIndex = childSavedIndex - beforeDiffCount - 1;
-            if (previousChildIndex >= 0) {
-              beforeDiffCount++;
-              if (childIndexToDisplayArray.includes(previousChildIndex)) {
-                // already rendered
-              } else {
-                addToDisplayArray(previousChildIndex);
+          const beforeDiffRemainingCount = maxChildBeforeDiff;
+          if (beforeDiffRemainingCount === 0) {
+            break before;
+          }
+          let fromIndex = childIndex - beforeDiffRemainingCount;
+          let toIndex = childIndex;
+          if (fromIndex < 0) {
+            fromIndex = 0;
+          } else {
+            if (childIndexToDisplayArray.length) {
+              const previousChildIndexToDisplay =
+                childIndexToDisplayArray[childIndexToDisplayArray.length - 1];
+              if (previousChildIndexToDisplay + 1 === fromIndex) {
+                // prevent skip length of 1
+                childIndexToDisplayArray.push(previousChildIndexToDisplay + 1);
               }
-              continue;
-            } else {
-              break;
+            }
+            if (fromIndex > 0) {
+              fromIndex++;
             }
           }
-        }
-        after: {
-          let afterDiffCount = 0;
-          while (
-            afterDiffCount < props.MAX_ENTRY_AFTER_MULTILINE_DIFF &&
-            // eslint-disable-next-line no-unmodified-loop-condition
-            diffCount < maxDiff
-          ) {
-            const nextChildIndex = childSavedIndex + afterDiffCount + 1;
-            if (nextChildIndex < childrenKeys.length) {
-              afterDiffCount++;
-              if (childIndexToDisplayArray.includes(nextChildIndex)) {
-                // already rendered
-              } else {
-                addToDisplayArray(nextChildIndex);
-              }
-              continue;
+          let index = fromIndex;
+          while (index !== toIndex) {
+            if (childIndexToDisplayArray.includes(index)) {
+              // already rendered
             } else {
-              break;
+              visitChild(index);
+              childIndexToDisplayArray.push(index);
             }
+            index++;
+          }
+        }
+        childIndexToDisplayArray.push(childIndex);
+        after: {
+          const afterDiffRemainingCount = maxChildAfterDiff;
+          if (afterDiffRemainingCount === 0) {
+            break after;
+          }
+          let fromIndex = childIndex + 1;
+          let toIndex = childIndex + 1 + afterDiffRemainingCount;
+          if (toIndex > childrenKeys.length) {
+            toIndex = childrenKeys.length;
+          } else if (toIndex !== childrenKeys.length) {
+            toIndex--;
+          }
+
+          let index = fromIndex;
+          while (index !== toIndex) {
+            if (childIndexToDisplayArray.includes(index)) {
+              // already rendered
+            } else {
+              currentChildHasDiff = visitChild(index);
+              childIndexToDisplayArray.push(index);
+              childIndex = index;
+            }
+            index++;
           }
         }
       }

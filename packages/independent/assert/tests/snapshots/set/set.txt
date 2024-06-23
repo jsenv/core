@@ -1,13 +1,11 @@
 # set value added
 actual: Set(
-  ↑ 2 values ↑
-  "c",
+  ↑ 3 values ↑
   "d",
   "Y",
 )
 expect: Set(
-  ↑ 2 values ↑
-  "d",
+  ↑ 3 values ↑
   "c",
   "Z",
 )
