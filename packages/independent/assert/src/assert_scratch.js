@@ -1,6 +1,13 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
+ * - make multiline use an approach similar to one line (prev/next iterative)
+ * - make one line use an approach similar to multiline for skipped part
+ *   (not just a marker appended, it's a "fake" child with spaces and so on)
+ * - attempt to force a range on surrounding lines
+ *   when the first line with a diff is rendered
+ *   (prepare for implementing next part where multiline diff
+ *   impact surrounding lines rendering)
  * - test for diff in the middle of multiline
  * - fix max columns for double slash truncated
  *   it does not work as expected (is related to urls because when regular string it works)
@@ -1381,7 +1388,7 @@ let createRootNode;
           const urlInternalPropertiesNode = node.appendChild(
             "url_internal_properties",
             {
-              render: renderChildrenOneLiner,
+              render: renderChildren,
               onelineDiff: {
                 hasSeparatorBetweenEachChild: true,
                 hasTrailingSeparator: true,
@@ -1445,7 +1452,7 @@ let createRootNode;
                     "search",
                     {
                       value: null,
-                      render: renderChildrenOneLiner,
+                      render: renderChildren,
                       startMarker: "?",
                       onelineDiff: {
                         hasSeparatorBetweenEachChild: true,
@@ -1461,7 +1468,7 @@ let createRootNode;
                             key,
                             {
                               key: searchEntryIndex,
-                              render: renderChildrenOneLiner,
+                              render: renderChildren,
                               onelineDiff: {
                                 hasSeparatorBetweenEachChild: true,
                                 hasTrailingSeparator: true,
@@ -1475,7 +1482,7 @@ let createRootNode;
                                 while (valueIndex < values.length) {
                                   const entryNode =
                                     urlSearchEntryNode.appendChild(valueIndex, {
-                                      render: renderChildrenOneLiner,
+                                      render: renderChildren,
                                       onelineDiff: {
                                         hasSeparatorBetweenEachChild: true,
                                         hasTrailingSeparator: true,
@@ -1541,7 +1548,7 @@ let createRootNode;
       }
       node.childGenerator = () => {
         const lineEntriesNode = node.appendChild("line_entries", {
-          render: renderChildren,
+          render: renderChildrenMultiline,
           multilineDiff: {
             hasSeparatorBetweenEachChild: true,
             hasTrailingSeparator: true,
@@ -1561,7 +1568,7 @@ let createRootNode;
               const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
                 value: "",
                 key: lineIndex,
-                render: renderChildrenOneLiner,
+                render: renderChildren,
                 onelineDiff: {
                   hasSeparatorBetweenEachChild: true,
                   focusedChildWhenSame: "last",
@@ -1840,7 +1847,7 @@ let createRootNode;
         if (node.isFunction) {
           const functionConstructNode = node.appendChild("construct", {
             value: null,
-            render: renderChildrenOneLiner,
+            render: renderChildren,
             onelineDiff: {
               hasSpacingBetweenEachChild: true,
             },
@@ -1938,7 +1945,7 @@ let createRootNode;
           if (objectTag && objectTag !== "Object" && objectTag !== "Array") {
             objectConstructNode = node.appendChild("construct", {
               value: null,
-              render: renderChildrenOneLiner,
+              render: renderChildren,
               onelineDiff: {
                 hasSpacingBetweenEachChild: true,
               },
@@ -1969,7 +1976,7 @@ let createRootNode;
         let canHaveInternalEntries = false;
         internal_entries: {
           const internalEntriesParams = {
-            render: renderChildren,
+            render: renderChildrenMaybeMultiline,
             startMarker: "(",
             endMarker: ")",
             onelineDiff: {
@@ -2018,7 +2025,7 @@ let createRootNode;
                   }
 
                   const mapEntryNode = mapEntriesNode.appendChild(mapEntryKey, {
-                    render: renderChildrenOneLiner,
+                    render: renderChildren,
                     onelineDiff: {
                       hasSeparatorBetweenEachChild: true,
                       hasTrailingSeparator: true,
@@ -2077,7 +2084,7 @@ let createRootNode;
           if (node.isArray) {
             canHaveIndexedEntries = true;
             const arrayEntriesNode = node.appendChild("indexed_entries", {
-              render: renderChildren,
+              render: renderChildrenMaybeMultiline,
               startMarker: "[",
               endMarker: "]",
               ...getInheritedSeparatorParams(node),
@@ -2204,7 +2211,7 @@ let createRootNode;
             !canHaveInternalEntries &&
             !canHaveIndexedEntries;
           const ownPropertiesNode = node.appendChild("own_properties", {
-            render: renderChildren,
+            render: renderChildrenMaybeMultiline,
             group: "entries",
             subgroup: "own_properties",
             ...(node.isClassPrototype
@@ -2250,7 +2257,7 @@ let createRootNode;
                   current: node.functionAnalysis.type === "class" ? ";" : ",",
                 };
                 const ownPropertyNode = ownPropertiesNode.appendChild(key, {
-                  render: renderChildrenOneLiner,
+                  render: renderChildren,
                   onelineDiff: {
                     hasSeparatorBetweenEachChild: true,
                     hasTrailingSeparator: true,
@@ -2717,23 +2724,16 @@ const renderComposite = (node, props) => {
   }
   return diff;
 };
-const renderChildren = (node, props) => {
-  const { onelineDiff, multilineDiff } = node;
-  if (!multilineDiff) {
-    return renderChildrenOneLiner(node, props);
-  }
+const renderChildrenMaybeMultiline = (node, props) => {
   if (node.diffType === "solo") {
     return renderChildrenMultiline(node, props);
   }
   if (node.childComparisonDiffMap.size > 0) {
     return renderChildrenMultiline(node, props);
   }
-  if (onelineDiff) {
-    return renderChildrenOneLiner(node, props);
-  }
-  return renderChildrenMultiline(node, props);
+  return renderChildren(node, props);
 };
-const renderChildrenOneLiner = (node, props) => {
+const renderChildren = (node, props) => {
   const {
     focusedChildWhenSame = "first",
     hasSeparatorBetweenEachChild,
@@ -3068,7 +3068,15 @@ function* generateChildIndexes(childrenKeys, startIndex, minIndex) {
     }
   }
 }
-// TODO:
+/*
+Rewrite "renderChildrenMultiline" so that:
+- We start to render from the first child with a diff
+and we discover around
+then if we need to skip we append skipp stuff
+
+the goal is that for lines we will first render the first line with a diff
+as this line will impose to the surrounding lines where the focus will be
+*/
 const renderChildrenMultiline = (node, props) => {
   const childrenKeys = node.childrenKeys;
   const indexToDisplayArray = [];
@@ -3380,7 +3388,7 @@ const createMethodCallNode = (
   { objectName, methodName, args, renderOnlyArgs },
 ) => {
   return {
-    render: renderChildrenOneLiner,
+    render: renderChildren,
     onelineDiff: {
       hasSeparatorBetweenEachChild: true,
       hasTrailingSeparator: true,
@@ -3431,7 +3439,7 @@ const getInheritedSeparatorParams = (node) => {
 
 const createArgEntriesNode = (node, { args, renderOnlyArgs }) => {
   return {
-    render: renderChildrenOneLiner,
+    render: renderChildren,
     startMarker: "(",
     endMarker: ")",
     onelineDiff: {
