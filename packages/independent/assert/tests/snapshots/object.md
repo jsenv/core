@@ -217,6 +217,7 @@ assert({
     a: true,
     c: {},
   },
+  MAX_DIFF_PER_OBJECT: 3,
 });
 ```
 

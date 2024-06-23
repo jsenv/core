@@ -123,8 +123,7 @@ actual: {
     and: true,
   },
   d: true,
-  e: true,
-  ↓ 3 props ↓
+  ↓ 4 props ↓
 }
 expect: {
   a: true,

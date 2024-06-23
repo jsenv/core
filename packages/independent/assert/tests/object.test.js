@@ -1,8 +1,8 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-await startSnapshotTesting("object", {
-  ["property are different"]: () => {
+await startSnapshotTesting("object", ({ test }) => {
+  test("property are different", () => {
     assert({
       actual: {
         a: true,
@@ -13,8 +13,8 @@ await startSnapshotTesting("object", {
         },
       },
     });
-  },
-  ["property removed"]: () => {
+  });
+  test("property removed", () => {
     assert({
       actual: {
         a: true,
@@ -24,8 +24,8 @@ await startSnapshotTesting("object", {
         should_be_there: true,
       },
     });
-  },
-  ["property added"]: () => {
+  });
+  test("property added", () => {
     assert({
       actual: {
         a: true,
@@ -35,22 +35,22 @@ await startSnapshotTesting("object", {
         a: true,
       },
     });
-  },
-  ["false should be an object"]: () => {
+  });
+  test("false should be an object", () => {
     assert({
       actual: false,
       expect: { foo: true },
     });
-  },
-  ["object should be false"]: () => {
+  });
+  test("object should be false", () => {
     assert({
       actual: {
         foo: { a: {} },
       },
       expect: false,
     });
-  },
-  ["false should be an object at property"]: () => {
+  });
+  test("false should be an object at property", () => {
     assert({
       actual: {
         foo: false,
@@ -59,8 +59,8 @@ await startSnapshotTesting("object", {
         foo: { a: true },
       },
     });
-  },
-  ["object should be false at property"]: () => {
+  });
+  test("object should be false at property", () => {
     assert({
       actual: {
         foo: { a: true },
@@ -69,8 +69,8 @@ await startSnapshotTesting("object", {
         foo: false,
       },
     });
-  },
-  ["max depth inside diff"]: () => {
+  });
+  test("max depth inside diff", () => {
     assert({
       actual: {
         foo: {
@@ -89,8 +89,8 @@ await startSnapshotTesting("object", {
       MAX_DEPTH: 2,
       MAX_DEPTH_INSIDE_DIFF: 1,
     });
-  },
-  ["max diff per object"]: () => {
+  });
+  test("max diff per object", () => {
     assert({
       actual: {
         a: true,
@@ -109,8 +109,8 @@ await startSnapshotTesting("object", {
       },
       MAX_DIFF_PER_OBJECT: 2,
     });
-  },
-  ["max prop around diff"]: () => {
+  });
+  test("max prop around diff", () => {
     assert({
       actual: {
         a: true,
@@ -125,8 +125,8 @@ await startSnapshotTesting("object", {
       MAX_ENTRY_BEFORE_MULTILINE_DIFF: 0,
       MAX_ENTRY_AFTER_MULTILINE_DIFF: 0,
     });
-  },
-  ["property should be there and is big"]: () => {
+  });
+  test("property should be there and is big", () => {
     assert({
       actual: {
         a: true,
@@ -147,8 +147,8 @@ await startSnapshotTesting("object", {
       MAX_COLUMNS: 100,
       MAX_DIFF_PER_OBJECT: 3,
     });
-  },
-  ["many props should not be there"]: () => {
+  });
+  test("many props should not be there", () => {
     assert({
       actual: {
         a: true,
@@ -164,17 +164,18 @@ await startSnapshotTesting("object", {
         a: true,
         c: {},
       },
+      MAX_DIFF_PER_OBJECT: 3,
     });
-  },
-  ["object vs user"]: () => {
+  });
+  test("object vs user", () => {
     assert({
       actual: {},
       expect: {
         [Symbol.toStringTag]: "User",
       },
     });
-  },
-  ["collapsed with overview when no diff"]: () => {
+  });
+  test("collapsed with overview when no diff", () => {
     assert({
       actual: {
         a: { foo: true, bar: true, baz: { t: 1 } },
@@ -185,7 +186,7 @@ await startSnapshotTesting("object", {
         b: false,
       },
     });
-  },
+  });
 });
 
 // await startSnapshotTesting("object", {

@@ -1,11 +1,18 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - make multiline use an approach similar to one line (prev/next iterative)
+ * - rajouter des tests skipped props pour object
+ *   pour voir qu'on skip correctement
+ *   en particulier le cas ou on skip au milieu
  * - attempt to force a range on surrounding lines
- *   when the first line with a diff is rendered
- *   (prepare for implementing next part where multiline diff
- *   impact surrounding lines rendering)
+ *   il suffit de partir de la ligne ayant un diff dans le before render (on a l'info)
+ *   et d'appliquer a toutes les autres lignes un range donné
+ *
+ *   -> on pourra surement s'en sortir en forcant le render de la premiere ligne
+ *   en premier
+ *   il y a juste un truc relou c'est que ce range on ne le connais pas a ce moment la
+ *   il faudrait donc limite faire un render
+ *   donc il faudra réfléchir un poil a cela?
  * - test for diff in the middle of multiline
  * - fix max columns for double slash truncated
  *   it does not work as expected (is related to urls because when regular string it works)
@@ -1195,7 +1202,6 @@ let createRootNode;
       childrenKeys: null,
       childrenRenderRange: null,
       firstChildWithDiffKey: undefined,
-      indexToDisplayArray: null,
       diffType: "",
       otherNode: null,
       // END will be set by comparison
@@ -1555,7 +1561,7 @@ let createRootNode;
               between: ["↕ 1 line ↕", "↕ {x} lines ↕"],
               end: ["↓ 1 line ↓", "↓ {x} lines ↓"],
             },
-            maxDiff: 1,
+            maxDiff: 2,
           },
           quoteMarkerRef,
           group: "entries",
@@ -2784,14 +2790,14 @@ const renderChildren = (node, props) => {
       // added/removed
       if (node.childComparisonDiffMap.size > 0) {
         focusedChildIndex = childrenKeys.length - 1;
-        let otherRenderedRange;
+        let otherDisplayedRange;
         node.otherNode.render({
           ...props,
           onRange: (range) => {
-            otherRenderedRange = range;
+            otherDisplayedRange = range;
           },
         });
-        minIndex = otherRenderedRange.start;
+        minIndex = otherDisplayedRange.start;
       }
       // same
       else if (focusedChildWhenSame === "first") {
@@ -2885,44 +2891,39 @@ const renderChildren = (node, props) => {
     });
     return childDiff;
   };
+  let firstAppend = true;
   const appendChildDiff = (childDiff, childIndex) => {
-    if (childrenDiff === "") {
-      childrenDiff = childDiff;
-      renderedRange.start = renderedRange.end = childIndex;
-      return;
+    if (firstAppend) {
+      firstAppend = false;
+      displayedRange.start = displayedRange.end = childIndex;
+      return childDiff;
     }
-    if (childIndex < renderedRange.start) {
-      renderedRange.start = childIndex;
+    if (childIndex < displayedRange.start) {
+      displayedRange.start = childIndex;
     } else {
-      renderedRange.end = childIndex;
+      displayedRange.end = childIndex;
     }
-
     const isPrevious = childIndex < focusedChildIndex;
     if (isPrevious) {
       const shouldInjectSpacing =
         hasSpacingBetweenEachChild && (childIndex > 0 || focusedChildIndex > 0);
       if (shouldInjectSpacing) {
-        childrenDiff = `${childDiff} ${childrenDiff}`;
         columnsRemainingForChildren -= " ".length;
-        return;
+        return `${childDiff} ${childrenDiff}`;
       }
       if (childrenDiff) {
-        childrenDiff = `${childDiff}${childrenDiff}`;
-        return;
+        return `${childDiff}${childrenDiff}`;
       }
-      childrenDiff = childDiff;
-      return;
+      return childDiff;
     }
     if (hasSpacingBetweenEachChild && childrenDiff) {
       columnsRemainingForChildren -= " ".length;
-      childrenDiff = `${childrenDiff} ${childDiff}`;
-      return;
+      return `${childrenDiff} ${childDiff}`;
     }
     if (childrenDiff) {
-      childrenDiff = `${childrenDiff}${childDiff}`;
-      return;
+      return `${childrenDiff}${childDiff}`;
     }
-    childrenDiff = childDiff;
+    return childDiff;
   };
   if (hasSpacingAroundChildren) {
     columnsRemainingForChildren -=
@@ -2935,14 +2936,14 @@ const renderChildren = (node, props) => {
   }
   const focusedChildKey = childrenKeys[focusedChildIndex];
   const focusedChildNode = node.childNodeMap.get(focusedChildKey);
-  const renderedRange = { start: Infinity, end: -1 };
+  const displayedRange = { start: Infinity, end: -1 };
   if (focusedChildNode) {
     const focusedChildDiff = renderChildDiff(
       focusedChildNode,
       focusedChildIndex,
     );
     columnsRemainingForChildren -= stringWidth(focusedChildDiff);
-    appendChildDiff(focusedChildDiff, focusedChildIndex);
+    childrenDiff = appendChildDiff(focusedChildDiff, focusedChildIndex);
     if (focusedChildIndex === minIndex) {
       columnsRemainingForChildren = 0;
     }
@@ -2982,7 +2983,7 @@ const renderChildren = (node, props) => {
         break;
       }
       columnsRemainingForChildren -= childDiffWidth;
-      appendChildDiff(childDiff, childIndex);
+      childrenDiff = appendChildDiff(childDiff, childIndex);
     }
   }
 
@@ -2996,7 +2997,7 @@ const renderChildren = (node, props) => {
   //   }
   // }
   if (props.onRange) {
-    props.onRange(renderedRange);
+    props.onRange(displayedRange);
   }
   let diff = "";
   if (hasPreviousSibling) {
@@ -3004,9 +3005,9 @@ const renderChildren = (node, props) => {
       if (startMarker) {
         diff += setColor(startMarker, node.color);
       }
-      diff += renderSkippedSection(0, renderedRange.start);
+      diff += renderSkippedSection(0, displayedRange.start);
     } else {
-      diff += renderSkippedSection(0, renderedRange.start);
+      diff += renderSkippedSection(0, displayedRange.start);
       if (startMarker) {
         diff += setColor(startMarker, node.color);
       }
@@ -3023,7 +3024,7 @@ const renderChildren = (node, props) => {
   }
   if (hasNextSibling) {
     if (skippedMarkersPlacement === "inside") {
-      diff += renderSkippedSection(renderedRange.end, childrenKeys.length - 1);
+      diff += renderSkippedSection(displayedRange.end, childrenKeys.length - 1);
       if (endMarker) {
         diff += setColor(endMarker, node.color);
       }
@@ -3031,7 +3032,7 @@ const renderChildren = (node, props) => {
       if (endMarker) {
         diff += setColor(endMarker, node.color);
       }
-      diff += renderSkippedSection(renderedRange.end, childrenKeys.length - 1);
+      diff += renderSkippedSection(displayedRange.end, childrenKeys.length - 1);
     }
   } else if (endMarker) {
     diff += setColor(endMarker, node.color);
@@ -3105,81 +3106,6 @@ as this line will impose to the surrounding lines where the focus will be
 */
 const renderChildrenMultiline = (node, props) => {
   const childrenKeys = node.childrenKeys;
-  const indexToDisplayArray = [];
-  index_to_display: {
-    const maxDiff =
-      typeof node.multilineDiff.maxDiff === "number"
-        ? node.multilineDiff.maxDiff
-        : props[node.multilineDiff.maxDiff];
-    if (node.diffType === "solo") {
-      for (const [childKey] of node.childComparisonDiffMap) {
-        if (indexToDisplayArray.length >= maxDiff) {
-          break;
-        }
-        const childIndex = childrenKeys.indexOf(childKey);
-        indexToDisplayArray.push(childIndex);
-      }
-      indexToDisplayArray.sort();
-      break index_to_display;
-    }
-    if (node.childComparisonDiffMap.size === 0) {
-      indexToDisplayArray.push(0);
-      break index_to_display;
-    }
-    if (childrenKeys.length === 0) {
-      break index_to_display;
-    }
-    const diffIndexArray = [];
-    for (const [childKey] of node.childComparisonDiffMap) {
-      const childIndex = childrenKeys.indexOf(childKey);
-      if (childIndex === -1) {
-        // happens when removed/added
-      } else {
-        diffIndexArray.push(childIndex);
-      }
-    }
-    if (diffIndexArray.length === 0) {
-      // happens when one node got no diff in itself
-      // it's the other that has a diff (added or removed)
-      indexToDisplayArray.push(0);
-      break index_to_display;
-    }
-    diffIndexArray.sort();
-    const indexToDisplaySet = new Set();
-    let diffCount = 0;
-    for (const diffIndex of diffIndexArray) {
-      if (diffCount >= maxDiff) {
-        break;
-      }
-      diffCount++;
-      let beforeDiffIndex = diffIndex - 1;
-      let beforeCount = 0;
-      while (beforeDiffIndex > -1) {
-        if (beforeCount === props.MAX_ENTRY_BEFORE_MULTILINE_DIFF) {
-          break;
-        }
-        indexToDisplaySet.add(beforeDiffIndex);
-        beforeCount++;
-        beforeDiffIndex--;
-      }
-      indexToDisplaySet.add(diffIndex);
-      let afterDiffIndex = diffIndex + 1;
-      let afterCount = 0;
-      while (afterDiffIndex < childrenKeys.length) {
-        if (afterCount === props.MAX_ENTRY_AFTER_MULTILINE_DIFF) {
-          break;
-        }
-        indexToDisplaySet.add(afterDiffIndex);
-        afterCount++;
-        afterDiffIndex++;
-      }
-    }
-    for (const indexToDisplay of indexToDisplaySet) {
-      indexToDisplayArray.push(indexToDisplay);
-    }
-    indexToDisplayArray.sort();
-  }
-  node.indexToDisplayArray = indexToDisplayArray;
   const {
     hasSeparatorBetweenEachChild,
     hasTrailingSeparator,
@@ -3188,9 +3114,107 @@ const renderChildrenMultiline = (node, props) => {
     hasIndentBetweenEachChild,
     hasMarkersWhenEmpty,
   } = node.multilineDiff;
-
+  let { maxDiff } = node.multilineDiff;
+  if (typeof maxDiff === "number") {
+  } else if (typeof maxDiff === "string") {
+    maxDiff = props[maxDiff];
+  } else {
+    maxDiff = Infinity;
+  }
+  let firstChildIndex;
+  if (node.firstChildWithDiffKey === undefined) {
+    firstChildIndex = 0;
+  } else {
+    firstChildIndex = childrenKeys.indexOf(node.firstChildWithDiffKey);
+  }
+  const childIndexToDisplayArray = [];
+  index_to_display: {
+    if (childrenKeys.length === 0) {
+      break index_to_display;
+    }
+    let diffCount = 0;
+    let currentChildHasDiff;
+    const addToDisplayArray = (childIndexToDisplay) => {
+      if (childIndexToDisplay < firstChildIndex) {
+        childIndexToDisplayArray.unshift(childIndexToDisplay);
+      } else {
+        childIndexToDisplayArray.push(childIndexToDisplay);
+      }
+      const childKeyToDisplay = childrenKeys[childIndexToDisplay];
+      const childNodeToDisplay = node.childNodeMap.get(childKeyToDisplay);
+      if (childNodeToDisplay.comparison.hasAnyDiff) {
+        currentChildHasDiff = true;
+        if (
+          childNodeToDisplay.subgroup === "property_entry" &&
+          childNodeToDisplay.childNodeMap.get("entry_value").isSourceCode
+        ) {
+        } else {
+          diffCount++;
+        }
+      } else {
+        currentChildHasDiff = false;
+      }
+    };
+    addToDisplayArray(firstChildIndex);
+    let childIndex = firstChildIndex;
+    while (
+      // eslint-disable-next-line no-unmodified-loop-condition
+      diffCount < maxDiff
+    ) {
+      if (currentChildHasDiff) {
+        const childSavedIndex = childIndex;
+        before: {
+          let beforeDiffCount = 0;
+          while (
+            beforeDiffCount < props.MAX_ENTRY_BEFORE_MULTILINE_DIFF &&
+            // eslint-disable-next-line no-unmodified-loop-condition
+            diffCount < maxDiff
+          ) {
+            const previousChildIndex = childSavedIndex - beforeDiffCount - 1;
+            if (previousChildIndex >= 0) {
+              beforeDiffCount++;
+              if (childIndexToDisplayArray.includes(previousChildIndex)) {
+                // already rendered
+              } else {
+                addToDisplayArray(previousChildIndex);
+              }
+              continue;
+            } else {
+              break;
+            }
+          }
+        }
+        after: {
+          let afterDiffCount = 0;
+          while (
+            afterDiffCount < props.MAX_ENTRY_AFTER_MULTILINE_DIFF &&
+            // eslint-disable-next-line no-unmodified-loop-condition
+            diffCount < maxDiff
+          ) {
+            const nextChildIndex = childSavedIndex + afterDiffCount + 1;
+            if (nextChildIndex < childrenKeys.length) {
+              afterDiffCount++;
+              if (childIndexToDisplayArray.includes(nextChildIndex)) {
+                // already rendered
+              } else {
+                addToDisplayArray(nextChildIndex);
+              }
+              continue;
+            } else {
+              break;
+            }
+          }
+        }
+      }
+      if (childIndex === childrenKeys.length - 1) {
+        break;
+      }
+      childIndex++;
+      continue;
+    }
+  }
   if (node.beforeRender) {
-    node.beforeRender(props);
+    node.beforeRender(props, { firstChildIndex, childIndexToDisplayArray });
   }
   const { startMarker, endMarker, separatorMarkerRef } = node;
   const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
@@ -3200,17 +3224,54 @@ const renderChildrenMultiline = (node, props) => {
     }
     return truncateAndApplyColor("", node, props);
   }
-  let atLeastOneEntryDisplayed = null;
-  let diff = "";
   let childrenDiff = "";
-  const appendChildDiff = (childDiff) => {
-    if (atLeastOneEntryDisplayed) {
-      childrenDiff += "\n";
-      childrenDiff += childDiff;
-    } else {
-      childrenDiff += childDiff;
-      atLeastOneEntryDisplayed = true;
+  let canResetMaxColumns = hasNewLineAroundChildren;
+
+  const renderChildDiff = (childNode, childIndex) => {
+    let childDiff = "";
+    let columnsRemainingForChild = canResetMaxColumns
+      ? props.MAX_COLUMNS
+      : props.columnsRemaining;
+    if (hasIndentBeforeEachChild) {
+      const indent = "  ".repeat(getNodeDepth(node, props) + 1);
+      columnsRemainingForChild -= stringWidth(indent);
+      childDiff += indent;
     }
+    if (hasIndentBetweenEachChild && childIndex !== 0) {
+      const indent = " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
+      columnsRemainingForChild -= stringWidth(indent);
+      childDiff += indent;
+    }
+    if (separatorMarker) {
+      columnsRemainingForChild -= separatorMarker.length;
+    }
+    updateChildSeparatorMarkerRef(childNode, {
+      hasSeparatorBetweenEachChild,
+      hasTrailingSeparator,
+      childIndex,
+      childrenKeys,
+    });
+    childDiff += childNode.render({
+      ...props,
+      columnsRemaining: columnsRemainingForChild,
+    });
+    canResetMaxColumns = true; // because we'll append \n on next entry
+    return childDiff;
+  };
+  const renderedRange = { start: Infinity, end: -1 };
+  let firstAppend = true;
+  const appendChildDiff = (childDiff, childIndex) => {
+    if (firstAppend) {
+      firstAppend = false;
+      renderedRange.start = renderedRange.end = childIndex;
+      return childDiff;
+    }
+    if (childIndex < renderedRange.start) {
+      renderedRange.start = childIndex;
+      return `${childDiff}\n${childrenDiff}`;
+    }
+    renderedRange.end = childIndex;
+    return `${childrenDiff}\n${childDiff}`;
   };
   const appendSkippedSection = (fromIndex, toIndex) => {
     const skippedMarkers = node.multilineDiff.skippedMarkers || {
@@ -3244,7 +3305,7 @@ const renderChildrenMultiline = (node, props) => {
       skippedDiff += "  ".repeat(getNodeDepth(node, props) + 1);
     }
     let skippedMarker;
-    if (fromIndex === 0) {
+    if (fromIndex < renderedRange.start) {
       skippedMarker = skippedMarkers.start;
     } else {
       if (hasIndentBetweenEachChild) {
@@ -3284,63 +3345,39 @@ const renderChildrenMultiline = (node, props) => {
       skippedDiff += details.join(", ");
       skippedDiff += setColor(`)`, node.color);
     }
-    appendChildDiff(skippedDiff);
+    childrenDiff = appendChildDiff(
+      skippedDiff,
+      toIndex === childrenKeys.length - 1 ? toIndex : fromIndex,
+    );
   };
-  let previousIndexDisplayed = -1;
-  let canResetMaxColumns = hasNewLineAroundChildren;
-  let somethingDisplayed = false;
-  for (const childIndex of indexToDisplayArray) {
-    if (previousIndexDisplayed === -1) {
-      if (childIndex > 0) {
-        appendSkippedSection(0, childIndex);
-        somethingDisplayed = true;
-      }
-    } else if (childIndex - 1 !== previousIndexDisplayed) {
-      appendSkippedSection(previousIndexDisplayed, childIndex);
-    }
-    const childKey = childrenKeys[childIndex];
-    const childNode = node.childNodeMap.get(childKey);
-
-    let childDiff = "";
-    let columnsRemainingForChild = canResetMaxColumns
-      ? props.MAX_COLUMNS
-      : props.columnsRemaining;
-    if (hasIndentBeforeEachChild) {
-      const indent = "  ".repeat(getNodeDepth(node, props) + 1);
-      columnsRemainingForChild -= stringWidth(indent);
-      childDiff += indent;
-    }
-    if (hasIndentBetweenEachChild && somethingDisplayed) {
-      const indent = " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
-      columnsRemainingForChild -= stringWidth(indent);
-      childDiff += indent;
-    }
-    if (separatorMarker) {
-      columnsRemainingForChild -= separatorMarker.length;
-    }
-    updateChildSeparatorMarkerRef(childNode, {
-      hasSeparatorBetweenEachChild,
-      hasTrailingSeparator,
-      childIndex,
-      childrenKeys,
-    });
-    childDiff += childNode.render({
-      ...props,
-      columnsRemaining: columnsRemainingForChild,
-      indexToDisplayArray,
-    });
-    canResetMaxColumns = true; // because we'll append \n on next entry
-    appendChildDiff(childDiff);
-    previousIndexDisplayed = childIndex;
-    somethingDisplayed = true;
+  const [firstChildIndexToDisplay] = childIndexToDisplayArray;
+  if (firstChildIndexToDisplay > 0) {
+    appendSkippedSection(0, firstChildIndexToDisplay);
   }
-  const lastIndexDisplayed = previousIndexDisplayed;
-  if (lastIndexDisplayed > -1) {
-    const lastSkippedCount = childrenKeys.length - 1 - lastIndexDisplayed;
-    if (lastSkippedCount) {
-      appendSkippedSection(lastIndexDisplayed, childrenKeys.length - 1);
+  let previousChildIndexDisplayed;
+  for (const childIndexToDisplay of childIndexToDisplayArray) {
+    if (
+      previousChildIndexDisplayed !== undefined &&
+      childIndexToDisplay !== previousChildIndexDisplayed + 1
+    ) {
+      appendSkippedSection(
+        previousChildIndexDisplayed,
+        childIndexToDisplay - 1,
+      );
     }
+    const childToDisplayKey = childrenKeys[childIndexToDisplay];
+    const childToDisplayNode = node.childNodeMap.get(childToDisplayKey);
+    const childDiff = renderChildDiff(childToDisplayNode, childIndexToDisplay);
+    childrenDiff = appendChildDiff(childDiff, childIndexToDisplay);
+    previousChildIndexDisplayed = childIndexToDisplay;
   }
+  if (
+    childrenKeys.length > 1 &&
+    previousChildIndexDisplayed !== childrenKeys.length - 1
+  ) {
+    appendSkippedSection(previousChildIndexDisplayed, childrenKeys.length - 1);
+  }
+  let diff = "";
   diff += setColor(startMarker, node.color);
   if (hasNewLineAroundChildren) {
     diff += "\n";
@@ -3400,15 +3437,11 @@ const enableMultilineDiff = (lineEntriesNode) => {
   firstLineEntryNode.onelineDiff.skippedMarkersPlacement = "inside";
   firstLineEntryNode.startMarker = firstLineEntryNode.endMarker = "";
   lineEntriesNode.multilineDiff.hasIndentBetweenEachChild = true;
-  lineEntriesNode.beforeRender = () => {
-    let biggestDisplayedLineIndex = 0;
-    for (const index of lineEntriesNode.indexToDisplayArray) {
-      if (index > biggestDisplayedLineIndex) {
-        biggestDisplayedLineIndex = index;
-      }
-    }
-    for (const index of lineEntriesNode.indexToDisplayArray) {
-      const lineNode = lineEntriesNode.childNodeMap.get(index);
+  lineEntriesNode.beforeRender = (props, { childIndexToDisplayArray }) => {
+    const biggestDisplayedLineIndex =
+      childIndexToDisplayArray[childIndexToDisplayArray.length - 1];
+    for (const lineIndexToDisplay of childIndexToDisplayArray) {
+      const lineNode = lineEntriesNode.childNodeMap.get(lineIndexToDisplay);
       lineNode.onelineDiff.hasMarkersWhenEmpty = true;
       lineNode.startMarker = renderLineStartMarker(
         lineNode,

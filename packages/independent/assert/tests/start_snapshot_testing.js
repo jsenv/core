@@ -44,6 +44,7 @@ export const startSnapshotTesting = async (name, scenarios) => {
   for (const key of Object.keys(scenarios)) {
     const scenarioCallback = scenarios[key];
     try {
+      // console.log(`run ${key}`);
       await scenarioCallback();
     } catch (e) {
       fileContent += `# ${key}\n`;
