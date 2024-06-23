@@ -2905,6 +2905,27 @@ const renderChildren = (node, props) => {
     }
     childrenDiff = childDiff;
   };
+  const renderSkippedSection = (fromIndex, toIndex) => {
+    // to pick the color we'll check each child
+    let skippedChildIndex = fromIndex;
+    let color = node.color;
+    while (skippedChildIndex !== toIndex) {
+      skippedChildIndex++;
+      const skippedChildKey = childrenKeys[skippedChildIndex];
+      const skippedChild = node.childNodeMap.get(skippedChildKey);
+      if (skippedChild.diffType === "modified") {
+        color = skippedChild.color;
+        break;
+      }
+      if (skippedChild.diffType === "solo") {
+        color = skippedChild.color;
+      }
+    }
+    if (fromIndex === 0) {
+      return setColor(startSkippedMarker, color);
+    }
+    return setColor(endSkippedMarker, color);
+  };
   if (hasSpacingAroundChildren) {
     columnsRemainingForChildren -=
       `${startMarker}  ${endMarker}${separatorMarkerWhenTruncated || separatorMarker}`
@@ -2985,9 +3006,9 @@ const renderChildren = (node, props) => {
       if (startMarker) {
         diff += setColor(startMarker, node.color);
       }
-      diff += setColor(startSkippedMarker, node.color);
+      diff += renderSkippedSection(0, renderedRange.start);
     } else {
-      diff += setColor(startSkippedMarker, node.color);
+      diff += renderSkippedSection(0, renderedRange.start);
       if (startMarker) {
         diff += setColor(startMarker, node.color);
       }
@@ -3004,7 +3025,7 @@ const renderChildren = (node, props) => {
   }
   if (hasNextSibling) {
     if (skippedMarkersPlacement === "inside") {
-      diff += setColor(endSkippedMarker, node.color);
+      diff += renderSkippedSection(renderedRange.end, childrenKeys.length - 1);
       if (endMarker) {
         diff += setColor(endMarker, node.color);
       }
@@ -3012,7 +3033,7 @@ const renderChildren = (node, props) => {
       if (endMarker) {
         diff += setColor(endMarker, node.color);
       }
-      diff += setColor(endSkippedMarker, node.color);
+      diff += renderSkippedSection(renderedRange.end, childrenKeys.length - 1);
     }
   } else if (endMarker) {
     diff += setColor(endMarker, node.color);

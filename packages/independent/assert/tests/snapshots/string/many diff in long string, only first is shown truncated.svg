@@ -45,7 +45,7 @@
         <text x="127.62" y="14.55" fill="#7f7f7f">f</text>
         <text x="136.02" y="14.55" fill="#cd5555">Z</text>
         <text x="144.42" y="14.55" fill="#7f7f7f">&#x22;</text>
-        <text x="152.82" y="14.55" fill="#7f7f7f">&#x2026;</text>
+        <text x="152.82" y="14.55" fill="#cd5555">&#x2026;</text>
         <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="33.55" fill="#7f7f7f">&#x22;</text>
         <text x="85.61" y="33.55" fill="#7f7f7f">a</text>
@@ -56,7 +56,7 @@
         <text x="127.62" y="33.55" fill="#7f7f7f">f</text>
         <text x="136.02" y="33.55" fill="#11bc79">Y</text>
         <text x="144.42" y="33.55" fill="#7f7f7f">&#x22;</text>
-        <text x="152.82" y="33.55" fill="#7f7f7f">&#x2026;</text>
+        <text x="152.82" y="33.55" fill="#11bc79">&#x2026;</text>
       </g>
     </svg>
   </foreignObject>

@@ -40,13 +40,13 @@
         <text x="85.61" y="14.55" fill="#cd5555">a</text>
         <text x="94.01" y="14.55" fill="#cd5555">b</text>
         <text x="102.42" y="14.55" fill="#7f7f7f">&#x22;</text>
-        <text x="110.82" y="14.55" fill="#7f7f7f">&#x2026;</text>
+        <text x="110.82" y="14.55" fill="#cd5555">&#x2026;</text>
         <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="33.55" fill="#7f7f7f">&#x22;</text>
         <text x="85.61" y="33.55" fill="#11bc79">A</text>
         <text x="94.01" y="33.55" fill="#11bc79">B</text>
         <text x="102.42" y="33.55" fill="#7f7f7f">&#x22;</text>
-        <text x="110.82" y="33.55" fill="#7f7f7f">&#x2026;</text>
+        <text x="110.82" y="33.55" fill="#11bc79">&#x2026;</text>
       </g>
     </svg>
   </foreignObject>
