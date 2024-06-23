@@ -145,13 +145,13 @@ assert({
     b: { a: false },
     a: true,
   },
-  MAX_DIFF_PER_OBJECT: 2,
+  MAX_DIFF: 2,
 });
 ```
 
 ![img](<./object/max diff per object.svg>)
 
-# max prop around diff
+# max 2 context after diff (there is 2)
 
 ```js
 assert({
@@ -161,18 +161,79 @@ assert({
     c: true,
   },
   expect: {
+    a: false,
+    b: true,
     c: true,
-    b: false,
-    a: true,
   },
-  MAX_PROP_BEFORE_DIFF: 0,
-  MAX_PROP_AFTER_DIFF: 0,
 });
 ```
 
-![img](<./object/max prop around diff.svg>)
+![img](<./object/max 2 context after diff (there is 2).svg>)
 
-# max 2 props above prop diff
+# max 2 context after diff (there is 3)
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    e: true,
+  },
+  expect: {
+    a: false,
+    b: true,
+    c: true,
+    d: true,
+  },
+});
+```
+
+![img](<./object/max 2 context after diff (there is 3).svg>)
+
+# max 2 context after diff (there is 4)
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+    d: true,
+    e: true,
+  },
+  expect: {
+    a: false,
+    b: true,
+    c: true,
+    d: true,
+    e: true,
+  },
+});
+```
+
+![img](<./object/max 2 context after diff (there is 4).svg>)
+
+# max 2 context before diff (there is 2)
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+  },
+  expect: {
+    a: true,
+    b: true,
+    c: false,
+  },
+});
+```
+
+![img](<./object/max 2 context before diff (there is 2).svg>)
+
+# max 2 context before diff (there is 3)
 
 ```js
 assert({
@@ -191,30 +252,9 @@ assert({
 });
 ```
 
-![img](<./object/max 2 props above prop diff.svg>)
+![img](<./object/max 2 context before diff (there is 3).svg>)
 
-# max 2 props above prop diff and there is exactly 2
-
-```js
-assert({
-  actual: {
-    a: true,
-    b: true,
-    c: true,
-    d: true,
-  },
-  expect: {
-    a: true,
-    b: true,
-    c: false,
-    d: true,
-  },
-});
-```
-
-![img](<./object/max 2 props above prop diff and there is exactly 2.svg>)
-
-# max 2 props after prop diff
+# max 2 context before diff (there is 4)
 
 ```js
 assert({
@@ -223,40 +263,21 @@ assert({
     b: true,
     c: true,
     d: true,
+    e: true,
   },
   expect: {
-    a: false,
-    b: true,
-    c: true,
-    d: true,
-  },
-});
-```
-
-![img](<./object/max 2 props after prop diff.svg>)
-
-# max 2 props above after diff and there is exactly 2
-
-```js
-assert({
-  actual: {
     a: true,
     b: true,
     c: true,
     d: true,
-  },
-  expect: {
-    a: true,
-    b: false,
-    c: true,
-    d: true,
+    e: false,
   },
 });
 ```
 
-![img](<./object/max 2 props above after diff and there is exactly 2.svg>)
+![img](<./object/max 2 context before diff (there is 4).svg>)
 
-# max 2 props around prop diff
+# max 2 context around diff
 
 ```js
 assert({
@@ -296,11 +317,53 @@ assert({
     o: true,
     p: true,
   },
-  MAX_DIFF_PER_OBJECT: 3,
+  MAX_DIFF: 3,
 });
 ```
 
-![img](<./object/max 2 props around prop diff.svg>)
+![img](<./object/max 2 context around diff.svg>)
+
+# max 1 context around diff
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+  },
+  expect: {
+    c: true,
+    b: false,
+    a: true,
+  },
+  MAX_CONTEXT_BEFORE_DIFF: 1,
+  MAX_CONTEXT_AFTER_DIFF: 1,
+});
+```
+
+![img](<./object/max 1 context around diff.svg>)
+
+# max 0 context around diff
+
+```js
+assert({
+  actual: {
+    a: true,
+    b: true,
+    c: true,
+  },
+  expect: {
+    c: true,
+    b: false,
+    a: true,
+  },
+  MAX_CONTEXT_BEFORE_DIFF: 0,
+  MAX_CONTEXT_AFTER_DIFF: 0,
+});
+```
+
+![img](<./object/max 0 context around diff.svg>)
 
 # property should be there and is big
 
@@ -323,7 +386,7 @@ assert({
     },
   },
   MAX_COLUMNS: 100,
-  MAX_DIFF_PER_OBJECT: 3,
+  MAX_DIFF: 3,
 });
 ```
 
@@ -347,7 +410,7 @@ assert({
     a: true,
     c: {},
   },
-  MAX_DIFF_PER_OBJECT: 3,
+  MAX_DIFF: 3,
 });
 ```
 

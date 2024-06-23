@@ -59,8 +59,8 @@ four/false
 five
 six
 seven/1`,
-      MAX_LINE_BEFORE_DIFF: 2,
-      MAX_LINE_AFTER_DIFF: 2,
+      MAX_CONTEXT_BEFORE_DIFF: 2,
+      MAX_CONTEXT_AFTER_DIFF: 2,
     });
   });
   test("many lines added", () => {

@@ -51,7 +51,7 @@
         <text x="35.2" y="52.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="52.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="52.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="71.55" fill="#7f7f7f">&#x2193; 2 props &#x2193;</text>
+        <text x="26.8" y="71.55" fill="#7f7f7f">&#x2193; 3 props &#x2193;</text>
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="109.55" fill="#7f7f7f">{</text>
@@ -64,7 +64,7 @@
         <text x="52.01" y="147.55" fill="#7f7f7f">true</text>
         <text x="85.61" y="147.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="166.55" fill="#7f7f7f"
-          >&#x2193; 2 props &#x2193;</text
+          >&#x2193; 3 props &#x2193;</text
         >
         <text x="10" y="185.55" fill="#7f7f7f">}</text>
       </g>

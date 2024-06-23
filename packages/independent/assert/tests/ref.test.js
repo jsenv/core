@@ -1,8 +1,8 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-await startSnapshotTesting("ref", {
-  "reference removed": () => {
+await startSnapshotTesting("ref", ({ test }) => {
+  test("reference removed", () => {
     const actual = {};
     const expect = {
       self: null,
@@ -12,8 +12,8 @@ await startSnapshotTesting("ref", {
       actual,
       expect,
     });
-  },
-  "reference added": () => {
+  });
+  test("reference added", () => {
     const actual = {
       self: null,
     };
@@ -23,8 +23,8 @@ await startSnapshotTesting("ref", {
       actual,
       expect,
     });
-  },
-  "same ref to self": () => {
+  });
+  test("same ref to self", () => {
     const actual = {
       a: true,
       self: null,
@@ -39,8 +39,8 @@ await startSnapshotTesting("ref", {
       actual,
       expect,
     });
-  },
-  "same ref to self 2": () => {
+  });
+  test("same ref to self 2", () => {
     const actual = {
       a: true,
       object: {
@@ -60,8 +60,8 @@ await startSnapshotTesting("ref", {
     expect.object.self = expect;
     expect.object.self2 = expect;
     assert({ actual, expect });
-  },
-  "same ref to parent": () => {
+  });
+  test("same ref to parent", () => {
     const actual = {
       a: true,
       object: {
@@ -77,8 +77,8 @@ await startSnapshotTesting("ref", {
     };
     expect.object.parent = expect;
     assert({ actual, expect });
-  },
-  "same ref to value after": () => {
+  });
+  test("same ref to value after", () => {
     const toto = {};
     const actual = {
       a: true,
@@ -93,10 +93,10 @@ await startSnapshotTesting("ref", {
     assert({
       actual,
       expect,
-      MAX_PROP_AFTER_DIFF: 4,
+      MAX_CONTEXT_AFTER_DIFF: 4,
     });
-  },
-  "same ref to value before": () => {
+  });
+  test("same ref to value before", () => {
     const toto = {};
     const actual = {
       a: true,
@@ -111,10 +111,10 @@ await startSnapshotTesting("ref", {
     assert({
       actual,
       expect,
-      MAX_PROP_AFTER_DIFF: 4,
+      MAX_CONTEXT_AFTER_DIFF: 4,
     });
-  },
-  "ref changed": () => {
+  });
+  test("ref changed", () => {
     const actual = {
       object: {
         self: null,
@@ -128,8 +128,8 @@ await startSnapshotTesting("ref", {
     };
     expect.object.self = expect.object;
     assert({ actual, expect });
-  },
-  "true should be a ref to self": () => {
+  });
+  test("true should be a ref to self", () => {
     const actual = {
       self: true,
     };
@@ -141,8 +141,8 @@ await startSnapshotTesting("ref", {
       actual,
       expect,
     });
-  },
-  "ref to self should be true": () => {
+  });
+  test("ref to self should be true", () => {
     const actual = {
       self: null,
     };
@@ -154,8 +154,8 @@ await startSnapshotTesting("ref", {
       actual,
       expect,
     });
-  },
-  ["true should be object using ref"]: () => {
+  });
+  test("true should be object using ref", () => {
     const item = { id: "a" };
     assert({
       actual: true,
@@ -164,5 +164,5 @@ await startSnapshotTesting("ref", {
         bar: item,
       },
     });
-  },
+  });
 });

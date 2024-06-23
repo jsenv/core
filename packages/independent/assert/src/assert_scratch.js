@@ -135,12 +135,9 @@ const defaultOptions = {
   expect: undefined,
   MAX_DEPTH: 5,
   MAX_DEPTH_INSIDE_DIFF: 1,
-  MAX_DIFF_PER_OBJECT: 2,
-  MAX_PROP_BEFORE_DIFF: 2,
-  MAX_PROP_AFTER_DIFF: 2,
-  MAX_DIFF_PER_STRING: 2,
-  MAX_LINE_BEFORE_DIFF: 3,
-  MAX_LINE_AFTER_DIFF: 3,
+  MAX_DIFF: { prop: 2, line: 2 },
+  MAX_CONTEXT_BEFORE_DIFF: { prop: 2, line: 3 },
+  MAX_CONTEXT_AFTER_DIFF: { prop: 2, line: 3 },
   MAX_COLUMNS: 100,
 };
 
@@ -158,12 +155,9 @@ export const assert = (firstArg) => {
     expect,
     MAX_DEPTH,
     MAX_DEPTH_INSIDE_DIFF,
-    MAX_DIFF_PER_OBJECT,
-    MAX_PROP_BEFORE_DIFF,
-    MAX_PROP_AFTER_DIFF,
-    MAX_DIFF_PER_STRING,
-    MAX_LINE_BEFORE_DIFF,
-    MAX_LINE_AFTER_DIFF,
+    MAX_DIFF,
+    MAX_CONTEXT_BEFORE_DIFF,
+    MAX_CONTEXT_AFTER_DIFF,
     MAX_COLUMNS,
   } = {
     ...defaultOptions,
@@ -726,12 +720,9 @@ export const assert = (firstArg) => {
   diff += actualStartNode.render({
     MAX_DEPTH,
     MAX_DEPTH_INSIDE_DIFF,
-    MAX_DIFF_PER_OBJECT,
-    MAX_PROP_BEFORE_DIFF,
-    MAX_PROP_AFTER_DIFF,
-    MAX_DIFF_PER_STRING,
-    MAX_LINE_BEFORE_DIFF,
-    MAX_LINE_AFTER_DIFF,
+    MAX_DIFF,
+    MAX_CONTEXT_BEFORE_DIFF,
+    MAX_CONTEXT_AFTER_DIFF,
     MAX_COLUMNS,
     columnsRemaining: MAX_COLUMNS - "actual: ".length,
     startNode: actualStartNode,
@@ -742,12 +733,9 @@ export const assert = (firstArg) => {
   diff += expectStartNode.render({
     MAX_DEPTH,
     MAX_DEPTH_INSIDE_DIFF,
-    MAX_DIFF_PER_OBJECT,
-    MAX_PROP_BEFORE_DIFF,
-    MAX_PROP_AFTER_DIFF,
-    MAX_DIFF_PER_STRING,
-    MAX_LINE_BEFORE_DIFF,
-    MAX_LINE_AFTER_DIFF,
+    MAX_DIFF,
+    MAX_CONTEXT_BEFORE_DIFF,
+    MAX_CONTEXT_AFTER_DIFF,
     MAX_COLUMNS,
     columnsRemaining: MAX_COLUMNS - "expect: ".length,
     startNode: expectStartNode,
@@ -1570,9 +1558,7 @@ let createRootNode;
               between: ["↕ 1 line ↕", "↕ {x} lines ↕"],
               end: ["↓ 1 line ↓", "↓ {x} lines ↓"],
             },
-            maxDiff: "MAX_DIFF_PER_STRING",
-            maxChildBeforeDiff: "MAX_LINE_BEFORE_DIFF",
-            maxChildAfterDiff: "MAX_LINE_AFTER_DIFF",
+            maxDiffType: "line",
           },
           quoteMarkerRef,
           group: "entries",
@@ -2010,9 +1996,7 @@ let createRootNode;
                 between: ["↕ 1 value ↕", "↕ {x} values ↕"],
                 end: ["↓ 1 value ↓", "↓ {x} values ↓"],
               },
-              maxDiff: "MAX_DIFF_PER_OBJECT",
-              maxChildBeforeDiff: "MAX_PROP_BEFORE_DIFF",
-              maxChildAfterDiff: "MAX_PROP_AFTER_DIFF",
+              maxDiffType: "prop",
             },
             group: "entries",
           };
@@ -2122,9 +2106,7 @@ let createRootNode;
                   between: ["↕ 1 value ↕", "↕ {x} values ↕"],
                   end: ["↓ 1 value ↓", "↓ {x} values ↓"],
                 },
-                maxDiff: "MAX_DIFF_PER_STRING",
-                maxChildBeforeDiff: "MAX_LINE_BEFORE_DIFF",
-                maxChildAfterDiff: "MAX_LINE_AFTER_DIFF",
+                maxDiffType: "line",
               },
               group: "entries",
               subgroup: "array_entries",
@@ -2258,9 +2240,7 @@ let createRootNode;
                       between: ["↕ 1 prop ↕", "↕ {x} props ↕"],
                       end: ["↓ 1 prop ↓", "↓ {x} props ↓"],
                     },
-                    maxDiff: "MAX_DIFF_PER_OBJECT",
-                    maxChildBeforeDiff: "MAX_PROP_BEFORE_DIFF",
-                    maxChildAfterDiff: "MAX_PROP_AFTER_DIFF",
+                    maxDiffType: "prop",
                   },
                 }),
             childGenerator: () => {
@@ -3130,16 +3110,19 @@ const renderChildrenMultiline = (node, props) => {
     hasIndentBeforeEachChild,
     hasIndentBetweenEachChild,
     hasMarkersWhenEmpty,
+    maxDiffType = "prop",
   } = node.multilineDiff;
-  let { maxDiff, maxChildBeforeDiff, maxChildAfterDiff } = node.multilineDiff;
-  if (typeof maxDiff === "number") {
-  } else if (typeof maxDiff === "string") {
-    maxDiff = props[maxDiff];
-  } else {
-    maxDiff = Infinity;
-  }
-  maxChildBeforeDiff = props[maxChildBeforeDiff];
-  maxChildAfterDiff = props[maxChildAfterDiff];
+  const { MAX_DIFF, MAX_CONTEXT_BEFORE_DIFF, MAX_CONTEXT_AFTER_DIFF } = props;
+  const maxDiff =
+    typeof MAX_DIFF === "number" ? MAX_DIFF : MAX_DIFF[maxDiffType];
+  const maxChildBeforeDiff =
+    typeof MAX_CONTEXT_BEFORE_DIFF === "number"
+      ? MAX_CONTEXT_BEFORE_DIFF
+      : MAX_CONTEXT_BEFORE_DIFF[maxDiffType];
+  const maxChildAfterDiff =
+    typeof MAX_CONTEXT_AFTER_DIFF === "number"
+      ? MAX_CONTEXT_AFTER_DIFF
+      : MAX_CONTEXT_AFTER_DIFF[maxDiffType];
 
   let firstChildIndex = 0;
   const childIndexToDisplayArray = [];
@@ -3187,7 +3170,7 @@ const renderChildrenMultiline = (node, props) => {
       if (currentChildHasDiff) {
         before: {
           const beforeDiffRemainingCount = maxChildBeforeDiff;
-          if (beforeDiffRemainingCount === 0) {
+          if (beforeDiffRemainingCount < 1) {
             break before;
           }
           let fromIndex = childIndex - beforeDiffRemainingCount;
@@ -3200,7 +3183,7 @@ const renderChildrenMultiline = (node, props) => {
                 childIndexToDisplayArray[childIndexToDisplayArray.length - 1];
               if (previousChildIndexToDisplay + 1 === fromIndex) {
                 // prevent skip length of 1
-                childIndexToDisplayArray.push(previousChildIndexToDisplay + 1);
+                // childIndexToDisplayArray.push(previousChildIndexToDisplay + 1);
               }
             }
             if (fromIndex > 0) {
@@ -3221,7 +3204,7 @@ const renderChildrenMultiline = (node, props) => {
         childIndexToDisplayArray.push(childIndex);
         after: {
           const afterDiffRemainingCount = maxChildAfterDiff;
-          if (afterDiffRemainingCount === 0) {
+          if (afterDiffRemainingCount < 1) {
             break after;
           }
           let fromIndex = childIndex + 1;

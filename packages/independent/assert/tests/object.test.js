@@ -107,10 +107,10 @@ await startSnapshotTesting("object", ({ test }) => {
         b: { a: false },
         a: true,
       },
-      MAX_DIFF_PER_OBJECT: 2,
+      MAX_DIFF: 2,
     });
   });
-  test("max prop around diff", () => {
+  test("max 2 context after diff (there is 2)", () => {
     assert({
       actual: {
         a: true,
@@ -118,15 +118,61 @@ await startSnapshotTesting("object", ({ test }) => {
         c: true,
       },
       expect: {
+        a: false,
+        b: true,
         c: true,
-        b: false,
-        a: true,
       },
-      MAX_PROP_BEFORE_DIFF: 0,
-      MAX_PROP_AFTER_DIFF: 0,
     });
   });
-  test("max 2 props above prop diff", () => {
+  test("max 2 context after diff (there is 3)", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        e: true,
+      },
+      expect: {
+        a: false,
+        b: true,
+        c: true,
+        d: true,
+      },
+    });
+  });
+  test("max 2 context after diff (there is 4)", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+        d: true,
+        e: true,
+      },
+      expect: {
+        a: false,
+        b: true,
+        c: true,
+        d: true,
+        e: true,
+      },
+    });
+  });
+  test("max 2 context before diff (there is 2)", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+      },
+      expect: {
+        a: true,
+        b: true,
+        c: false,
+      },
+    });
+  });
+  test("max 2 context before diff (there is 3)", () => {
     assert({
       actual: {
         a: true,
@@ -142,55 +188,25 @@ await startSnapshotTesting("object", ({ test }) => {
       },
     });
   });
-  test("max 2 props above prop diff and there is exactly 2", () => {
+  test("max 2 context before diff (there is 4)", () => {
     assert({
       actual: {
         a: true,
         b: true,
         c: true,
         d: true,
+        e: true,
       },
       expect: {
         a: true,
         b: true,
-        c: false,
+        c: true,
         d: true,
+        e: false,
       },
     });
   });
-  test("max 2 props after prop diff", () => {
-    assert({
-      actual: {
-        a: true,
-        b: true,
-        c: true,
-        d: true,
-      },
-      expect: {
-        a: false,
-        b: true,
-        c: true,
-        d: true,
-      },
-    });
-  });
-  test("max 2 props above after diff and there is exactly 2", () => {
-    assert({
-      actual: {
-        a: true,
-        b: true,
-        c: true,
-        d: true,
-      },
-      expect: {
-        a: true,
-        b: false,
-        c: true,
-        d: true,
-      },
-    });
-  });
-  test("max 2 props around prop diff", () => {
+  test("max 2 context around diff", () => {
     assert({
       actual: {
         a: true,
@@ -228,7 +244,39 @@ await startSnapshotTesting("object", ({ test }) => {
         o: true,
         p: true,
       },
-      MAX_DIFF_PER_OBJECT: 3,
+      MAX_DIFF: 3,
+    });
+  });
+  test("max 1 context around diff", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+      },
+      expect: {
+        c: true,
+        b: false,
+        a: true,
+      },
+      MAX_CONTEXT_BEFORE_DIFF: 1,
+      MAX_CONTEXT_AFTER_DIFF: 1,
+    });
+  });
+  test("max 0 context around diff", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+        c: true,
+      },
+      expect: {
+        c: true,
+        b: false,
+        a: true,
+      },
+      MAX_CONTEXT_BEFORE_DIFF: 0,
+      MAX_CONTEXT_AFTER_DIFF: 0,
     });
   });
   test("property should be there and is big", () => {
@@ -250,7 +298,7 @@ await startSnapshotTesting("object", ({ test }) => {
         },
       },
       MAX_COLUMNS: 100,
-      MAX_DIFF_PER_OBJECT: 3,
+      MAX_DIFF: 3,
     });
   });
   test("many props should not be there", () => {
@@ -269,7 +317,7 @@ await startSnapshotTesting("object", ({ test }) => {
         a: true,
         c: {},
       },
-      MAX_DIFF_PER_OBJECT: 3,
+      MAX_DIFF: 3,
     });
   });
   test("object vs user", () => {

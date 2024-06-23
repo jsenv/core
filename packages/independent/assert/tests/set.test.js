@@ -20,8 +20,8 @@ await startSnapshotTesting("set", {
         // new
         "Z",
       ]),
-      MAX_DIFF_PER_OBJECT: 4,
-      MAX_PROP_BEFORE_DIFF: 2,
+      MAX_DIFF: 4,
+      MAX_CONTEXT_BEFORE_DIFF: 2,
     });
   },
   ["compare set and map"]: () => {

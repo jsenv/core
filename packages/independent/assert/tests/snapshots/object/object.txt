@@ -88,19 +88,57 @@ expect: {
   a: true,
 }
 
-# max prop around diff
+# max 2 context after diff (there is 2)
 actual: {
-  ↑ 1 prop ↑
+  a: true,
   b: true,
-  ↓ 1 prop ↓
+  c: true,
 }
 expect: {
-  ↑ 1 prop ↑
-  b: false,
-  ↓ 1 prop ↓
+  a: false,
+  b: true,
+  c: true,
 }
 
-# max 2 props above prop diff
+# max 2 context after diff (there is 3)
+actual: {
+  a: true,
+  b: true,
+  c: true,
+  e: true,
+}
+expect: {
+  a: false,
+  b: true,
+  c: true,
+  d: true,
+}
+
+# max 2 context after diff (there is 4)
+actual: {
+  a: true,
+  b: true,
+  ↓ 3 props ↓
+}
+expect: {
+  a: false,
+  b: true,
+  ↓ 3 props ↓
+}
+
+# max 2 context before diff (there is 2)
+actual: {
+  a: true,
+  b: true,
+  c: true,
+}
+expect: {
+  a: true,
+  b: true,
+  c: false,
+}
+
+# max 2 context before diff (there is 3)
 actual: {
   ↑ 2 props ↑
   c: true,
@@ -112,53 +150,25 @@ expect: {
   d: false,
 }
 
-# max 2 props above prop diff and there is exactly 2
+# max 2 context before diff (there is 4)
 actual: {
-  a: true,
-  b: true,
-  c: true,
+  ↑ 3 props ↑
   d: true,
+  e: true,
 }
 expect: {
-  a: true,
-  b: true,
-  c: false,
+  ↑ 3 props ↑
   d: true,
+  e: false,
 }
 
-# max 2 props after prop diff
-actual: {
-  a: true,
-  b: true,
-  ↓ 2 props ↓
-}
-expect: {
-  a: false,
-  b: true,
-  ↓ 2 props ↓
-}
-
-# max 2 props above after diff and there is exactly 2
-actual: {
-  a: true,
-  b: true,
-  c: true,
-  d: true,
-}
-expect: {
-  a: true,
-  b: false,
-  c: true,
-  d: true,
-}
-
-# max 2 props around prop diff
+# max 2 context around diff
 actual: {
   ↑ 2 props ↑
   c: true,
   d: true,
   e: true,
-  f: true,
+  ↕ 1 prop ↕
   g: true,
   h: true,
   i: true,
@@ -173,7 +183,7 @@ expect: {
   c: true,
   d: false,
   e: true,
-  f: true,
+  ↕ 1 prop ↕
   g: true,
   h: false,
   i: true,
@@ -182,6 +192,30 @@ expect: {
   m: false,
   n: true,
   ↓ 2 props ↓
+}
+
+# max 1 context around diff
+actual: {
+  a: true,
+  b: true,
+  c: true,
+}
+expect: {
+  c: true,
+  b: false,
+  a: true,
+}
+
+# max 0 context around diff
+actual: {
+  ↑ 1 prop ↑
+  b: true,
+  ↓ 1 prop ↓
+}
+expect: {
+  ↑ 1 prop ↑
+  b: false,
+  ↓ 1 prop ↓
 }
 
 # property should be there and is big

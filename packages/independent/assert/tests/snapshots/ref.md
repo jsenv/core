@@ -116,7 +116,7 @@ const expect = {
 assert({
   actual,
   expect,
-  MAX_PROP_AFTER_DIFF: 4,
+  MAX_CONTEXT_AFTER_DIFF: 4,
 });
 ```
 
@@ -139,7 +139,7 @@ const expect = {
 assert({
   actual,
   expect,
-  MAX_PROP_AFTER_DIFF: 4,
+  MAX_CONTEXT_AFTER_DIFF: 4,
 });
 ```
 
