@@ -2,8 +2,6 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - make multiline use an approach similar to one line (prev/next iterative)
- * - make one line use an approach similar to multiline for skipped part
- *   (not just a marker appended, it's a "fake" child with spaces and so on)
  * - attempt to force a range on surrounding lines
  *   when the first line with a diff is rendered
  *   (prepare for implementing next part where multiline diff
@@ -1976,7 +1974,7 @@ let createRootNode;
         let canHaveInternalEntries = false;
         internal_entries: {
           const internalEntriesParams = {
-            render: renderChildrenMaybeMultiline,
+            render: renderChildrenMultilineWhenDiff,
             startMarker: "(",
             endMarker: ")",
             onelineDiff: {
@@ -2084,7 +2082,7 @@ let createRootNode;
           if (node.isArray) {
             canHaveIndexedEntries = true;
             const arrayEntriesNode = node.appendChild("indexed_entries", {
-              render: renderChildrenMaybeMultiline,
+              render: renderChildrenMultilineWhenDiff,
               startMarker: "[",
               endMarker: "]",
               ...getInheritedSeparatorParams(node),
@@ -2211,7 +2209,7 @@ let createRootNode;
             !canHaveInternalEntries &&
             !canHaveIndexedEntries;
           const ownPropertiesNode = node.appendChild("own_properties", {
-            render: renderChildrenMaybeMultiline,
+            render: renderChildrenMultilineWhenDiff,
             group: "entries",
             subgroup: "own_properties",
             ...(node.isClassPrototype
@@ -3087,7 +3085,7 @@ function* generateChildIndexes(childrenKeys, startIndex, minIndex) {
     }
   }
 }
-const renderChildrenMaybeMultiline = (node, props) => {
+const renderChildrenMultilineWhenDiff = (node, props) => {
   if (node.diffType === "solo") {
     return renderChildrenMultiline(node, props);
   }
