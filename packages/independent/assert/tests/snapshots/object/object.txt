@@ -168,7 +168,7 @@ actual: {
   c: true,
   d: true,
   e: true,
-  ↕ 1 prop ↕
+  f: true,
   g: true,
   h: true,
   i: true,
@@ -183,7 +183,7 @@ expect: {
   c: true,
   d: false,
   e: true,
-  ↕ 1 prop ↕
+  f: true,
   g: true,
   h: false,
   i: true,

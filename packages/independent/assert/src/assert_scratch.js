@@ -4,7 +4,6 @@
  * - attempt to force a range on surrounding lines
  *   il suffit de partir de la ligne ayant un diff dans le before render (on a l'info)
  *   et d'appliquer a toutes les autres lignes un range donné
- *
  *   -> on pourra surement s'en sortir en forcant le render de la premiere ligne
  *   en premier
  *   il y a juste un truc relou c'est que ce range on ne le connais pas a ce moment la
@@ -3183,7 +3182,7 @@ const renderChildrenMultiline = (node, props) => {
                 childIndexToDisplayArray[childIndexToDisplayArray.length - 1];
               if (previousChildIndexToDisplay + 1 === fromIndex) {
                 // prevent skip length of 1
-                // childIndexToDisplayArray.push(previousChildIndexToDisplay + 1);
+                childIndexToDisplayArray.push(previousChildIndexToDisplay + 1);
               }
             }
             if (fromIndex > 0) {
