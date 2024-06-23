@@ -2744,12 +2744,33 @@ const renderChildren = (node, props) => {
       : skippedMarkers.start;
     endSkippedMarker = props.endSkippedMarkerDisabled ? "" : skippedMarkers.end;
   }
+  const renderSkippedSection = (fromIndex, toIndex) => {
+    // to pick the color we'll check each child
+    let skippedChildIndex = fromIndex;
+    let color = node.color;
+    while (skippedChildIndex !== toIndex) {
+      skippedChildIndex++;
+      const skippedChildKey = childrenKeys[skippedChildIndex];
+      const skippedChild = node.childNodeMap.get(skippedChildKey);
+      if (skippedChild.diffType === "modified") {
+        color = skippedChild.color;
+        break;
+      }
+      if (skippedChild.diffType === "solo") {
+        color = skippedChild.color;
+      }
+    }
+    if (fromIndex === 0) {
+      return setColor(startSkippedMarker, color);
+    }
+    return setColor(endSkippedMarker, color);
+  };
 
+  const childrenKeys = node.childrenKeys;
   let columnsRemainingForChildren = props.columnsRemaining;
   if (columnsRemainingForChildren < 1) {
-    return setColor("…", node.color);
+    return renderSkippedSection(0, childrenKeys.length - 1);
   }
-  const childrenKeys = node.childrenKeys;
   const { startMarker, endMarker } = node;
   if (childrenKeys.length === 0) {
     if (!hasMarkersWhenEmpty) {
@@ -2832,12 +2853,12 @@ const renderChildren = (node, props) => {
   const columnsRemainingForChildrenConsideringBoilerplate =
     columnsRemainingForChildren - boilerplate.length;
   if (columnsRemainingForChildrenConsideringBoilerplate < 0) {
-    return setColor("…", node.color);
+    return renderSkippedSection(0, childrenKeys.length - 1);
   }
   if (columnsRemainingForChildrenConsideringBoilerplate === 0) {
     return skippedMarkersPlacement === "inside"
       ? setColor(boilerplate, node.color)
-      : setColor("…", node.color);
+      : renderSkippedSection(0, childrenKeys.length - 1);
   }
 
   let childrenDiff = "";
@@ -2904,27 +2925,6 @@ const renderChildren = (node, props) => {
       return;
     }
     childrenDiff = childDiff;
-  };
-  const renderSkippedSection = (fromIndex, toIndex) => {
-    // to pick the color we'll check each child
-    let skippedChildIndex = fromIndex;
-    let color = node.color;
-    while (skippedChildIndex !== toIndex) {
-      skippedChildIndex++;
-      const skippedChildKey = childrenKeys[skippedChildIndex];
-      const skippedChild = node.childNodeMap.get(skippedChildKey);
-      if (skippedChild.diffType === "modified") {
-        color = skippedChild.color;
-        break;
-      }
-      if (skippedChild.diffType === "solo") {
-        color = skippedChild.color;
-      }
-    }
-    if (fromIndex === 0) {
-      return setColor(startSkippedMarker, color);
-    }
-    return setColor(endSkippedMarker, color);
   };
   if (hasSpacingAroundChildren) {
     columnsRemainingForChildren -=
