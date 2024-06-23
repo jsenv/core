@@ -1394,7 +1394,7 @@ let createRootNode;
                 hasTrailingSeparator: true,
                 skippedMarkers: {
                   start: "…",
-                  middle: "…",
+                  between: "…",
                   end: "…",
                 },
               },
@@ -1554,7 +1554,7 @@ let createRootNode;
             hasTrailingSeparator: true,
             skippedMarkers: {
               start: ["↑ 1 line ↑", "↑ {x} lines ↑"],
-              middle: ["↕ 1 line ↕", "↕ {x} lines ↕"],
+              between: ["↕ 1 line ↕", "↕ {x} lines ↕"],
               end: ["↓ 1 line ↓", "↓ {x} lines ↓"],
             },
             maxDiff: 1,
@@ -1574,7 +1574,7 @@ let createRootNode;
                   focusedChildWhenSame: "last",
                   skippedMarkers: {
                     start: "…",
-                    middle: "…",
+                    between: "…",
                     end: "…",
                   },
                   skippedMarkersPlacement: isMultiline ? "inside" : "outside",
@@ -1992,7 +1992,7 @@ let createRootNode;
               hasIndentBeforeEachChild: true,
               skippedMarkers: {
                 start: ["↑ 1 value ↑", "↑ {x} values ↑"],
-                middle: ["↕ 1 value ↕", "↕ {x} values ↕"],
+                between: ["↕ 1 value ↕", "↕ {x} values ↕"],
                 end: ["↓ 1 value ↓", "↓ {x} values ↓"],
               },
               maxDiff: "MAX_DIFF_PER_OBJECT",
@@ -2102,7 +2102,7 @@ let createRootNode;
                 hasIndentBeforeEachChild: true,
                 skippedMarkers: {
                   start: ["↑ 1 value ↑", "↑ {x} values ↑"],
-                  middle: ["↕ 1 value ↕", "↕ {x} values ↕"],
+                  between: ["↕ 1 value ↕", "↕ {x} values ↕"],
                   end: ["↓ 1 value ↓", "↓ {x} values ↓"],
                 },
                 maxDiff: "MAX_DIFF_PER_OBJECT",
@@ -2236,7 +2236,7 @@ let createRootNode;
                     hasIndentBeforeEachChild: true,
                     skippedMarkers: {
                       start: ["↑ 1 prop ↑", "↑ {x} props ↑"],
-                      middle: ["↕ 1 prop ↕", "↕ {x} props ↕"],
+                      between: ["↕ 1 prop ↕", "↕ {x} props ↕"],
                       end: ["↓ 1 prop ↓", "↓ {x} props ↓"],
                     },
                     maxDiff: "MAX_DIFF_PER_OBJECT",
@@ -3189,7 +3189,6 @@ const renderChildrenMultiline = (node, props) => {
     hasIndentBeforeEachChild,
     hasIndentBetweenEachChild,
     hasMarkersWhenEmpty,
-    skippedMarkers,
   } = node.multilineDiff;
 
   if (node.beforeRender) {
@@ -3215,24 +3214,36 @@ const renderChildrenMultiline = (node, props) => {
       atLeastOneEntryDisplayed = true;
     }
   };
-  const appendSkippedSection = (skipCount, skipPosition) => {
+  const appendSkippedSection = (fromIndex, toIndex) => {
+    const skippedMarkers = node.multilineDiff.skippedMarkers || {
+      start: ["↑ 1 value ↑", "↑ {x} values ↑"],
+      between: ["↕ 1 value ↕", "↕ {x} values ↕"],
+      end: ["↓ 1 value ↓", "↓ {x} values ↓"],
+    };
+
     let skippedDiff = "";
     if (hasIndentBeforeEachChild) {
       skippedDiff += "  ".repeat(getNodeDepth(node, props) + 1);
     }
-    if (hasIndentBetweenEachChild && skipPosition !== "start") {
-      skippedDiff += " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
+    const skippedCount = toIndex - fromIndex;
+    let skippedMarker;
+    if (fromIndex === 0) {
+      skippedMarker = skippedMarkers.start;
+    } else {
+      if (hasIndentBetweenEachChild) {
+        skippedDiff += " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
+      }
+      if (toIndex < childrenKeys.length - 1) {
+        skippedMarker = skippedMarkers.between;
+      } else {
+        skippedMarker = skippedMarkers.end;
+      }
     }
-    const skippedMarker = (skippedMarkers || {
-      start: ["↑ 1 value ↑", "↑ {x} values ↑"],
-      middle: ["↕ 1 value ↕", "↕ {x} values ↕"],
-      end: ["↓ 1 value ↓", "↓ {x} values ↓"],
-    })[skipPosition];
-    if (skipCount === 1) {
+    if (skippedCount === 1) {
       skippedDiff += setColor(skippedMarker[0], node.color);
     } else {
       skippedDiff += setColor(
-        skippedMarker[1].replace("{x}", skipCount),
+        skippedMarker[1].replace("{x}", skippedCount),
         node.color,
       );
     }
@@ -3244,14 +3255,11 @@ const renderChildrenMultiline = (node, props) => {
   for (const childIndex of indexToDisplayArray) {
     if (previousIndexDisplayed === -1) {
       if (childIndex > 0) {
-        appendSkippedSection(childIndex, "start");
+        appendSkippedSection(0, childIndex);
         somethingDisplayed = true;
       }
-    } else {
-      const intermediateSkippedCount = childIndex - previousIndexDisplayed - 1;
-      if (intermediateSkippedCount) {
-        appendSkippedSection(intermediateSkippedCount, "middle");
-      }
+    } else if (childIndex - 1 !== previousIndexDisplayed) {
+      appendSkippedSection(previousIndexDisplayed, childIndex);
     }
     const childKey = childrenKeys[childIndex];
     const childNode = node.childNodeMap.get(childKey);
@@ -3293,7 +3301,7 @@ const renderChildrenMultiline = (node, props) => {
   if (lastIndexDisplayed > -1) {
     const lastSkippedCount = childrenKeys.length - 1 - lastIndexDisplayed;
     if (lastSkippedCount) {
-      appendSkippedSection(lastSkippedCount, "end");
+      appendSkippedSection(lastIndexDisplayed, childrenKeys.length - 1);
     }
   }
   diff += setColor(startMarker, node.color);
