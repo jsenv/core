@@ -3220,12 +3220,31 @@ const renderChildrenMultiline = (node, props) => {
       between: ["↕ 1 value ↕", "↕ {x} values ↕"],
       end: ["↓ 1 value ↓", "↓ {x} values ↓"],
     };
-
+    const skippedCount = toIndex - fromIndex;
+    let skippedChildIndex = fromIndex;
+    let modifiedCount = 0;
+    let soloCount = 0;
+    let modifiedColor;
+    let soloColor;
+    while (skippedChildIndex !== toIndex) {
+      skippedChildIndex++;
+      const skippedChildKey = childrenKeys[skippedChildIndex];
+      const skippedChild = node.childNodeMap.get(skippedChildKey);
+      if (skippedChild.diffType === "modified") {
+        modifiedCount++;
+        modifiedColor = skippedChild.color;
+      }
+      if (skippedChild.diffType === "solo") {
+        soloCount++;
+        soloColor = skippedChild.color;
+      }
+    }
+    const allModified = modifiedCount === skippedCount;
+    const allSolo = soloCount === skippedCount;
     let skippedDiff = "";
     if (hasIndentBeforeEachChild) {
       skippedDiff += "  ".repeat(getNodeDepth(node, props) + 1);
     }
-    const skippedCount = toIndex - fromIndex;
     let skippedMarker;
     if (fromIndex === 0) {
       skippedMarker = skippedMarkers.start;
@@ -3240,12 +3259,32 @@ const renderChildrenMultiline = (node, props) => {
       }
     }
     if (skippedCount === 1) {
-      skippedDiff += setColor(skippedMarker[0], node.color);
+      skippedDiff += setColor(
+        skippedMarker[0],
+        allModified ? modifiedColor : allSolo ? soloColor : node.color,
+      );
     } else {
       skippedDiff += setColor(
         skippedMarker[1].replace("{x}", skippedCount),
-        node.color,
+        allModified ? modifiedColor : allSolo ? soloColor : node.color,
       );
+    }
+    const details = [];
+    if (modifiedCount && modifiedCount !== skippedCount) {
+      details.push(setColor(`${modifiedCount} modified`, modifiedColor));
+    }
+    if (soloCount && soloCount !== skippedCount) {
+      details.push(
+        node.name === "actual"
+          ? setColor(`${soloCount} added`, soloColor)
+          : setColor(`${soloCount} removed`, soloColor),
+      );
+    }
+    if (details.length) {
+      skippedDiff += " ";
+      skippedDiff += setColor(`(`, node.color);
+      skippedDiff += details.join(", ");
+      skippedDiff += setColor(`)`, node.color);
     }
     appendChildDiff(skippedDiff);
   };
