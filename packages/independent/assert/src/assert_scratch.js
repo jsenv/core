@@ -2776,8 +2776,10 @@ const renderChildren = (node, props) => {
   let { focusedChildIndex } = node;
   const { rangeToDisplay } = node;
   if (rangeToDisplay) {
-    minIndex = rangeToDisplay.start - 2;
-    // maxIndex = rangeToDisplay.end + 2;
+    if (rangeToDisplay.start !== 0) {
+      minIndex = rangeToDisplay.start;
+    }
+    // maxIndex = rangeToDisplay.end;
     focusedChildIndex = rangeToDisplay.focused;
   } else if (focusedChildIndex === undefined) {
     const { firstChildWithDiffKey } = node;

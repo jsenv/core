@@ -223,43 +223,65 @@ assert({
 
 ![img](<./string_multline/exactly on line break.svg>)
 
-# lines around start truncated
+# lines around start partially truncated
 
 ```js
 assert({
-  actual: `Z
-abcd`,
-  expect: `Z
-abcD`,
-  MAX_COLUMNS: 14,
+  actual: `
+123456789
+abcdefghijkl`,
+  expect: `
+123456789
+abcdefghZjkl`,
+  MAX_COLUMNS: 16,
 });
 ```
 
-![img](<./string_multline/lines around start truncated.svg>)
+![img](<./string_multline/lines around start partially truncated.svg>)
 
 # lines around start fully truncated
 
 ```js
 assert({
-  actual: `Z
-abcdefgh`,
-  expect: `Z
-abcdeFgh`,
-  MAX_COLUMNS: 16,
+  actual: `
+1
+abcd`,
+  expect: `
+1
+abcZ`,
+  MAX_COLUMNS: 14,
 });
 ```
 
 ![img](<./string_multline/lines around start fully truncated.svg>)
 
+# lines around start fully truncated 2
+
+```js
+assert({
+  actual: `
+1
+abcdefgh`,
+  expect: `
+1
+abcdeZgh`,
+  MAX_COLUMNS: 16,
+});
+```
+
+![img](<./string_multline/lines around start fully truncated 2.svg>)
+
 # lines around end is truncated
 
 ```js
 assert({
-  actual: `123456789
+  actual: `
+123456789
 abcdef
 1234567`,
-  expect: `123456789
-Abcdef
+  expect: `
+123456789
+Zbcdef
 123456789`,
   MAX_COLUMNS: 15,
 });
@@ -271,11 +293,13 @@ Abcdef
 
 ```js
 assert({
-  actual: `123456789
+  actual: `
+123456789
 abcdefghi
 123456789`,
-  expect: `123456789
-abcdEfghi
+  expect: `
+123456789
+abcdZfghi
 123456789`,
   MAX_COLUMNS: 18,
 });
