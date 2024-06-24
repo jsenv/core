@@ -158,7 +158,7 @@ Hello europa
       expect: `ab\nc`,
     });
   });
-  test("lines around start fully truncated", () => {
+  test("lines around start truncated", () => {
     assert({
       actual: `Z
 abcd`,
@@ -167,30 +167,28 @@ abcD`,
       MAX_COLUMNS: 14,
     });
   });
-  test.todo("lines around end is truncated", () => {
+  test.todo("lines around start fully truncated", () => {});
+  // maybe also a truncated second test case with more than 1 letter
+  test("lines around end is truncated", () => {
     assert({
-      actual: `
-1234567
-abcd
+      actual: `123456789
+abcdef
 1234567`,
-      expect: `
-1234567
-Abcd
-1234567`,
-      MAX_COLUMNS: 30,
+      expect: `123456789
+Abcdef
+123456789`,
+      MAX_COLUMNS: 15,
     });
   });
-  test.todo("lines around truncated in the middle", () => {
+  test("lines around truncated in the middle", () => {
     assert({
-      actual: `
-123456789
+      actual: `123456789
 abcdefghi
 123456789`,
-      expect: `
-123456789
+      expect: `123456789
 abcdEfghi
 123456789`,
-      MAX_COLUMNS: 30,
+      MAX_COLUMNS: 18,
     });
   });
 });

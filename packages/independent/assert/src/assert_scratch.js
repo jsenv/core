@@ -3,12 +3,9 @@
  *
  * - attempt to force a range on surrounding lines
  *   il suffit de partir de la ligne ayant un diff dans le before render (on a l'info)
- *   et d'appliquer a toutes les autres lignes un range donné
- *   -> on pourra surement s'en sortir en forcant le render de la premiere ligne
- *   en premier
- *   il y a juste un truc relou c'est que ce range on ne le connais pas a ce moment la
- *   il faudrait donc limite faire un render
- *   donc il faudra réfléchir un poil a cela?
+ * - rename test.TODO, test.ONLY test.SKIP to better see it
+ * - take into account onRange can be not called
+ *   and can be Infinity
  * - test for diff in the middle of multiline
  * - fix max columns for double slash truncated
  *   it does not work as expected (is related to urls because when regular string it works)
@@ -1198,6 +1195,7 @@ let createRootNode;
       childrenKeys: null,
       childrenRenderRange: null,
       firstChildWithDiffKey: undefined,
+      rangeToDisplay: null,
       diffType: "",
       otherNode: null,
       // END will be set by comparison
@@ -2778,9 +2776,15 @@ const renderChildren = (node, props) => {
     }
     return truncateAndApplyColor("", node, props);
   }
-  let { focusedChildIndex } = node;
   let minIndex = -1;
-  if (focusedChildIndex === undefined) {
+  let maxIndex = Infinity;
+  let { focusedChildIndex } = node;
+  const { rangeToDisplay } = node;
+  if (rangeToDisplay) {
+    minIndex = rangeToDisplay.start - 2;
+    // maxIndex = rangeToDisplay.end + 2;
+    focusedChildIndex = rangeToDisplay.focused;
+  } else if (focusedChildIndex === undefined) {
     const { firstChildWithDiffKey } = node;
     if (firstChildWithDiffKey === undefined) {
       // added/removed
@@ -2932,7 +2936,11 @@ const renderChildren = (node, props) => {
   }
   const focusedChildKey = childrenKeys[focusedChildIndex];
   const focusedChildNode = node.childNodeMap.get(focusedChildKey);
-  const displayedRange = { start: Infinity, end: -1 };
+  const displayedRange = {
+    start: Infinity,
+    focused: focusedChildIndex,
+    end: -1,
+  };
   if (focusedChildNode) {
     const focusedChildDiff = renderChildDiff(
       focusedChildNode,
@@ -2949,6 +2957,7 @@ const renderChildren = (node, props) => {
       childrenKeys,
       focusedChildIndex,
       minIndex,
+      maxIndex,
     )) {
       if (columnsRemainingForChildren <= 0) {
         break;
@@ -2962,8 +2971,7 @@ const renderChildren = (node, props) => {
       const childKey = childrenKeys[childIndex];
       const childNode = node.childNodeMap.get(childKey);
       if (!childNode) {
-        debugger; // to keep to see if that is hit while running all of string.test.js
-        // if not remove it
+        // happens when forcing a specific range to be rendered
         continue;
       }
       const childDiff = renderChildDiff(childNode, childIndex);
@@ -3046,7 +3054,7 @@ const renderChildren = (node, props) => {
   }
   return diff;
 };
-function* generateChildIndexes(childrenKeys, startIndex, minIndex) {
+function* generateChildIndexes(childrenKeys, startIndex, minIndex, maxIndex) {
   let previousAttempt = 0;
   let nextAttempt = 0;
   let tryBeforeFirst = true;
@@ -3055,7 +3063,10 @@ function* generateChildIndexes(childrenKeys, startIndex, minIndex) {
     const nextChildIndex = startIndex + nextAttempt + 1;
     const hasPreviousChild =
       previousChildIndex === minIndex - 1 ? false : previousChildIndex >= 0;
-    const hasNextChild = nextChildIndex < childrenKeys.length;
+    const hasNextChild =
+      nextChildIndex === maxIndex - 1
+        ? false
+        : nextChildIndex < childrenKeys.length;
     if (!hasPreviousChild && !hasNextChild) {
       break;
     }
@@ -3252,39 +3263,6 @@ const renderChildrenMultiline = (node, props) => {
     return truncateAndApplyColor("", node, props);
   }
   let childrenDiff = "";
-  let canResetMaxColumns = hasNewLineAroundChildren;
-
-  const renderChildDiff = (childNode, childIndex) => {
-    let childDiff = "";
-    let columnsRemainingForChild = canResetMaxColumns
-      ? props.MAX_COLUMNS
-      : props.columnsRemaining;
-    if (hasIndentBeforeEachChild) {
-      const indent = "  ".repeat(getNodeDepth(node, props) + 1);
-      columnsRemainingForChild -= stringWidth(indent);
-      childDiff += indent;
-    }
-    if (hasIndentBetweenEachChild && childIndex !== 0) {
-      const indent = " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
-      columnsRemainingForChild -= stringWidth(indent);
-      childDiff += indent;
-    }
-    if (separatorMarker) {
-      columnsRemainingForChild -= separatorMarker.length;
-    }
-    updateChildSeparatorMarkerRef(childNode, {
-      hasSeparatorBetweenEachChild,
-      hasTrailingSeparator,
-      childIndex,
-      childrenKeys,
-    });
-    childDiff += childNode.render({
-      ...props,
-      columnsRemaining: columnsRemainingForChild,
-    });
-    canResetMaxColumns = true; // because we'll append \n on next entry
-    return childDiff;
-  };
   const renderedRange = { start: Infinity, end: -1 };
   let firstAppend = true;
   const appendChildDiff = (childDiff, childIndex) => {
@@ -3377,6 +3355,59 @@ const renderChildrenMultiline = (node, props) => {
       toIndex === childrenKeys.length - 1 ? toIndex : fromIndex,
     );
   };
+  let firstChilDisplayedRange = null;
+  const renderChildDiff = (childNode, childIndex) => {
+    let childDiff = "";
+    let columnsRemainingForChild =
+      childIndex > 0 || hasNewLineAroundChildren
+        ? props.MAX_COLUMNS
+        : props.columnsRemaining;
+    if (hasIndentBeforeEachChild) {
+      const indent = "  ".repeat(getNodeDepth(node, props) + 1);
+      columnsRemainingForChild -= stringWidth(indent);
+      childDiff += indent;
+    }
+    if (hasIndentBetweenEachChild && childIndex !== 0) {
+      const indent = " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
+      columnsRemainingForChild -= stringWidth(indent);
+      childDiff += indent;
+    }
+    if (separatorMarker) {
+      columnsRemainingForChild -= separatorMarker.length;
+    }
+    updateChildSeparatorMarkerRef(childNode, {
+      hasSeparatorBetweenEachChild,
+      hasTrailingSeparator,
+      childIndex,
+      childrenKeys,
+    });
+    if (childNode.subgroup === "line_entry_value") {
+      if (childIndex === firstChildIndex) {
+        childDiff += childNode.render({
+          ...props,
+          columnsRemaining: columnsRemainingForChild,
+          onRange: (range) => {
+            firstChilDisplayedRange = range;
+          },
+        });
+      } else {
+        childNode.rangeToDisplay = firstChilDisplayedRange;
+        childDiff += childNode.render({
+          ...props,
+          columnsRemaining: columnsRemainingForChild,
+        });
+      }
+    } else {
+      childDiff += childNode.render({
+        ...props,
+        columnsRemaining: columnsRemainingForChild,
+      });
+    }
+    return childDiff;
+  };
+  const firstChildKey = childrenKeys[firstChildIndex];
+  const firstChildNode = node.childNodeMap.get(firstChildKey);
+  const firstChildDiff = renderChildDiff(firstChildNode, firstChildIndex);
   const [firstChildIndexToDisplay] = childIndexToDisplayArray;
   if (firstChildIndexToDisplay > 0) {
     appendSkippedSection(0, firstChildIndexToDisplay);
@@ -3392,10 +3423,14 @@ const renderChildrenMultiline = (node, props) => {
         childIndexToDisplay - 1,
       );
     }
-    const childToDisplayKey = childrenKeys[childIndexToDisplay];
-    const childToDisplayNode = node.childNodeMap.get(childToDisplayKey);
-    const childDiff = renderChildDiff(childToDisplayNode, childIndexToDisplay);
-    childrenDiff = appendChildDiff(childDiff, childIndexToDisplay);
+    if (childIndexToDisplay === firstChildIndex) {
+      childrenDiff = appendChildDiff(firstChildDiff, childIndexToDisplay);
+    } else {
+      const childKey = childrenKeys[childIndexToDisplay];
+      const childNode = node.childNodeMap.get(childKey);
+      const childDiff = renderChildDiff(childNode, childIndexToDisplay);
+      childrenDiff = appendChildDiff(childDiff, childIndexToDisplay);
+    }
     previousChildIndexDisplayed = childIndexToDisplay;
   }
   if (

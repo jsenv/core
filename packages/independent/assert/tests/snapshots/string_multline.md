@@ -223,7 +223,7 @@ assert({
 
 ![img](<./string_multline/exactly on line break.svg>)
 
-# lines around start fully truncated
+# lines around start truncated
 
 ```js
 assert({
@@ -235,5 +235,37 @@ abcD`,
 });
 ```
 
-![img](<./string_multline/lines around start fully truncated.svg>)
+![img](<./string_multline/lines around start truncated.svg>)
+
+# lines around end is truncated
+
+```js
+assert({
+  actual: `123456789
+abcdef
+1234567`,
+  expect: `123456789
+Abcdef
+123456789`,
+  MAX_COLUMNS: 15,
+});
+```
+
+![img](<./string_multline/lines around end is truncated.svg>)
+
+# lines around truncated in the middle
+
+```js
+assert({
+  actual: `123456789
+abcdefghi
+123456789`,
+  expect: `123456789
+abcdEfghi
+123456789`,
+  MAX_COLUMNS: 18,
+});
+```
+
+![img](<./string_multline/lines around truncated in the middle.svg>)
 
