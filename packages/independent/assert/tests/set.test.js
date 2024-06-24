@@ -20,7 +20,7 @@ await startSnapshotTesting("set", {
         // new
         "Z",
       ]),
-      MAX_DIFF: 4,
+      MAX_DIFF_INSIDE_VALUE: 4,
       MAX_CONTEXT_BEFORE_DIFF: 2,
     });
   },

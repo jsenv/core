@@ -36,14 +36,12 @@ actual: ↑ 2 lines ↑
         3| three
         4| four/true
         5| five
-        6| six
-        7| seven/0
+        ↓ 2 lines ↓
 expect: ↑ 2 lines ↑
         3| three
         4| four/false
         5| five
-        6| six
-        7| seven/1
+        ↓ 2 lines ↓
 
 # many lines added
 actual: 1| one

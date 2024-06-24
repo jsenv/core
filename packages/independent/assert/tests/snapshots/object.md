@@ -145,7 +145,7 @@ assert({
     b: { a: false },
     a: true,
   },
-  MAX_DIFF: 2,
+  MAX_DIFF_INSIDE_VALUE: 2,
 });
 ```
 
@@ -317,7 +317,7 @@ assert({
     o: true,
     p: true,
   },
-  MAX_DIFF: 3,
+  MAX_DIFF_INSIDE_VALUE: 3,
 });
 ```
 
@@ -386,7 +386,7 @@ assert({
     },
   },
   MAX_COLUMNS: 100,
-  MAX_DIFF: 3,
+  MAX_DIFF_INSIDE_VALUE: 3,
 });
 ```
 
@@ -410,7 +410,7 @@ assert({
     a: true,
     c: {},
   },
-  MAX_DIFF: 3,
+  MAX_DIFF_INSIDE_VALUE: 3,
 });
 ```
 

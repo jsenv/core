@@ -134,7 +134,7 @@ const defaultOptions = {
   expect: undefined,
   MAX_DEPTH: 5,
   MAX_DEPTH_INSIDE_DIFF: 1,
-  MAX_DIFF: { prop: 2, line: 2 },
+  MAX_DIFF_INSIDE_VALUE: { prop: 2, line: 1 },
   MAX_CONTEXT_BEFORE_DIFF: { prop: 2, line: 3 },
   MAX_CONTEXT_AFTER_DIFF: { prop: 2, line: 3 },
   MAX_COLUMNS: 100,
@@ -154,7 +154,7 @@ export const assert = (firstArg) => {
     expect,
     MAX_DEPTH,
     MAX_DEPTH_INSIDE_DIFF,
-    MAX_DIFF,
+    MAX_DIFF_INSIDE_VALUE,
     MAX_CONTEXT_BEFORE_DIFF,
     MAX_CONTEXT_AFTER_DIFF,
     MAX_COLUMNS,
@@ -719,7 +719,7 @@ export const assert = (firstArg) => {
   diff += actualStartNode.render({
     MAX_DEPTH,
     MAX_DEPTH_INSIDE_DIFF,
-    MAX_DIFF,
+    MAX_DIFF_INSIDE_VALUE,
     MAX_CONTEXT_BEFORE_DIFF,
     MAX_CONTEXT_AFTER_DIFF,
     MAX_COLUMNS,
@@ -732,7 +732,7 @@ export const assert = (firstArg) => {
   diff += expectStartNode.render({
     MAX_DEPTH,
     MAX_DEPTH_INSIDE_DIFF,
-    MAX_DIFF,
+    MAX_DIFF_INSIDE_VALUE,
     MAX_CONTEXT_BEFORE_DIFF,
     MAX_CONTEXT_AFTER_DIFF,
     MAX_COLUMNS,
@@ -3111,9 +3111,15 @@ const renderChildrenMultiline = (node, props) => {
     hasMarkersWhenEmpty,
     maxDiffType = "prop",
   } = node.multilineDiff;
-  const { MAX_DIFF, MAX_CONTEXT_BEFORE_DIFF, MAX_CONTEXT_AFTER_DIFF } = props;
+  const {
+    MAX_DIFF_INSIDE_VALUE,
+    MAX_CONTEXT_BEFORE_DIFF,
+    MAX_CONTEXT_AFTER_DIFF,
+  } = props;
   const maxDiff =
-    typeof MAX_DIFF === "number" ? MAX_DIFF : MAX_DIFF[maxDiffType];
+    typeof MAX_DIFF_INSIDE_VALUE === "number"
+      ? MAX_DIFF_INSIDE_VALUE
+      : MAX_DIFF_INSIDE_VALUE[maxDiffType];
   const maxChildBeforeDiff =
     typeof MAX_CONTEXT_BEFORE_DIFF === "number"
       ? MAX_CONTEXT_BEFORE_DIFF
