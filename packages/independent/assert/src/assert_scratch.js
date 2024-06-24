@@ -1,12 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - attempt to force a range on surrounding lines
- *   il suffit de partir de la ligne ayant un diff dans le before render (on a l'info)
- * - rename test.TODO, test.ONLY test.SKIP to better see it
- * - take into account onRange can be not called
- *   and can be Infinity
- * - test for diff in the middle of multiline
  * - fix max columns for double slash truncated
  *   it does not work as expected (is related to urls because when regular string it works)
  * - lots of test on max columns
@@ -1196,6 +1190,7 @@ let createRootNode;
       childrenRenderRange: null,
       firstChildWithDiffKey: undefined,
       rangeToDisplay: null,
+      displayedRange: null,
       diffType: "",
       otherNode: null,
       // END will be set by comparison
@@ -2790,14 +2785,13 @@ const renderChildren = (node, props) => {
       // added/removed
       if (node.childComparisonDiffMap.size > 0) {
         focusedChildIndex = childrenKeys.length - 1;
-        let otherDisplayedRange;
-        node.otherNode.render({
-          ...props,
-          onRange: (range) => {
-            otherDisplayedRange = range;
-          },
-        });
-        minIndex = otherDisplayedRange.start;
+        const { otherNode } = node;
+        if (otherNode.displayedRange) {
+          minIndex = otherNode.displayedRange.start;
+        } else {
+          otherNode.render(props);
+          minIndex = otherNode.displayedRange.start;
+        }
       }
       // same
       else if (focusedChildWhenSame === "first") {
@@ -2815,7 +2809,7 @@ const renderChildren = (node, props) => {
   let hasPreviousSibling =
     focusedChildIndex === minIndex
       ? focusedChildIndex > 0
-      : focusedChildIndex < childrenKeys.length && focusedChildIndex > 0;
+      : focusedChildIndex > 0;
   const startSkippedMarkerWidth = startSkippedMarker.length;
   const endSkippedMarkerWidth = endSkippedMarker.length;
   const { separatorMarkerRef, separatorMarkerWhenTruncatedRef } = node;
@@ -2941,6 +2935,7 @@ const renderChildren = (node, props) => {
     focused: focusedChildIndex,
     end: -1,
   };
+  node.displayedRange = displayedRange;
   if (focusedChildNode) {
     const focusedChildDiff = renderChildDiff(
       focusedChildNode,
@@ -2990,18 +2985,10 @@ const renderChildren = (node, props) => {
       childrenDiff = appendChildDiff(childDiff, childIndex);
     }
   }
-
-  // if (node.subgroup === 'line_entry_value' && node.firstChildWithDiffKey) {
-  //   for (const [, lineNode] of node.parent.childNodeMap) {
-  //     if (lineNode === node) continue;
-  //     // dis bien aux autre noeuds
-  //     // de se render dans ce range
-  //     lineNode.childrenRenderRange = renderedRange;
-  //     // debugger;
-  //   }
-  // }
-  if (props.onRange) {
-    props.onRange(displayedRange);
+  if (displayedRange.start === Infinity) {
+    return skippedMarkersPlacement === "inside"
+      ? setColor(boilerplate, node.color)
+      : renderSkippedSection(0, childrenKeys.length - 1);
   }
   let diff = "";
   if (hasPreviousSibling) {
@@ -3355,7 +3342,6 @@ const renderChildrenMultiline = (node, props) => {
       toIndex === childrenKeys.length - 1 ? toIndex : fromIndex,
     );
   };
-  let firstChilDisplayedRange = null;
   const renderChildDiff = (childNode, childIndex) => {
     let childDiff = "";
     let columnsRemainingForChild =
@@ -3386,12 +3372,9 @@ const renderChildrenMultiline = (node, props) => {
         childDiff += childNode.render({
           ...props,
           columnsRemaining: columnsRemainingForChild,
-          onRange: (range) => {
-            firstChilDisplayedRange = range;
-          },
         });
       } else {
-        childNode.rangeToDisplay = firstChilDisplayedRange;
+        childNode.rangeToDisplay = firstChildNode.displayedRange;
         childDiff += childNode.render({
           ...props,
           columnsRemaining: columnsRemainingForChild,

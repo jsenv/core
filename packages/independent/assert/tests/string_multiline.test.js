@@ -167,7 +167,15 @@ abcD`,
       MAX_COLUMNS: 14,
     });
   });
-  test.todo("lines around start fully truncated", () => {});
+  test("lines around start fully truncated", () => {
+    assert({
+      actual: `Z
+abcdefgh`,
+      expect: `Z
+abcdeFgh`,
+      MAX_COLUMNS: 16,
+    });
+  });
   // maybe also a truncated second test case with more than 1 letter
   test("lines around end is truncated", () => {
     assert({

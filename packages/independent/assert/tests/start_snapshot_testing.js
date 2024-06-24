@@ -27,10 +27,10 @@ export const startSnapshotTesting = async (name, scenarios) => {
     const test = (name, callback) => {
       scenarioMap.set(name, callback);
     };
-    test.only = (name, callback) => {
+    test.ONLY = (name, callback) => {
       onlyScenarioMap.set(name, callback);
     };
-    test.todo = () => {};
+    test.TODO = () => {};
     scenarios({
       test,
     });

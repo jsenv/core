@@ -237,6 +237,20 @@ abcD`,
 
 ![img](<./string_multline/lines around start truncated.svg>)
 
+# lines around start fully truncated
+
+```js
+assert({
+  actual: `Z
+abcdefgh`,
+  expect: `Z
+abcdeFgh`,
+  MAX_COLUMNS: 16,
+});
+```
+
+![img](<./string_multline/lines around start fully truncated.svg>)
+
 # lines around end is truncated
 
 ```js
