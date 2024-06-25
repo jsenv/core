@@ -2740,37 +2740,39 @@ const renderChildren = (node, props) => {
   let minIndex = -1;
   let maxIndex = Infinity;
   let { focusedChildIndex } = node;
-  const { rangeToDisplay } = node;
-  if (rangeToDisplay) {
-    if (rangeToDisplay.min !== 0) {
-      minIndex = rangeToDisplay.min;
-    }
-    // maxIndex = rangeToDisplay.end;
-    focusedChildIndex = rangeToDisplay.start;
-  } else if (focusedChildIndex === undefined) {
-    const { firstChildWithDiffKey } = node;
-    if (firstChildWithDiffKey === undefined) {
-      // added/removed
-      if (node.childComparisonDiffMap.size > 0) {
-        focusedChildIndex = childrenKeys.length - 1;
-        const { otherNode } = node;
-        if (otherNode.displayedRange) {
-          minIndex = otherNode.displayedRange.min;
-        } else {
-          otherNode.render(props);
-          minIndex = otherNode.displayedRange.min;
+  focused_child_index: {
+    const { rangeToDisplay } = node;
+    if (rangeToDisplay) {
+      if (rangeToDisplay.min !== 0) {
+        minIndex = rangeToDisplay.min;
+      }
+      // maxIndex = rangeToDisplay.end;
+      focusedChildIndex = rangeToDisplay.start;
+    } else if (focusedChildIndex === undefined) {
+      const { firstChildWithDiffKey } = node;
+      if (firstChildWithDiffKey === undefined) {
+        // added/removed
+        if (node.childComparisonDiffMap.size > 0) {
+          focusedChildIndex = childrenKeys.length - 1;
+          const { otherNode } = node;
+          if (otherNode.displayedRange) {
+            minIndex = otherNode.displayedRange.min;
+          } else {
+            otherNode.render(props);
+            minIndex = otherNode.displayedRange.min;
+          }
         }
-      }
-      // same
-      else if (focusedChildWhenSame === "first") {
-        focusedChildIndex = 0;
-      } else if (focusedChildWhenSame === "last") {
-        focusedChildIndex = childrenKeys.length - 1;
+        // same
+        else if (focusedChildWhenSame === "first") {
+          focusedChildIndex = 0;
+        } else if (focusedChildWhenSame === "last") {
+          focusedChildIndex = childrenKeys.length - 1;
+        } else {
+          focusedChildIndex = Math.floor(childrenKeys.length / 2);
+        }
       } else {
-        focusedChildIndex = Math.floor(childrenKeys.length / 2);
+        focusedChildIndex = childrenKeys.indexOf(firstChildWithDiffKey);
       }
-    } else {
-      focusedChildIndex = childrenKeys.indexOf(firstChildWithDiffKey);
     }
   }
   let hasSomeChildSkippedAtStart = focusedChildIndex > 0;
@@ -2784,44 +2786,46 @@ const renderChildren = (node, props) => {
     : "";
 
   let boilerplate = "";
-  if (hasSomeChildSkippedAtStart) {
-    if (skippedMarkersPlacement === "inside") {
-      if (hasSpacingAroundChildren) {
-        boilerplate = `${startMarker} ${startSkippedMarker}`;
+  boilerplate_space: {
+    if (hasSomeChildSkippedAtStart) {
+      if (skippedMarkersPlacement === "inside") {
+        if (hasSpacingAroundChildren) {
+          boilerplate = `${startMarker} ${startSkippedMarker}`;
+        } else {
+          boilerplate = `${startMarker}${startSkippedMarker}`;
+        }
       } else {
-        boilerplate = `${startMarker}${startSkippedMarker}`;
+        boilerplate = `${startSkippedMarker}${startMarker}`;
       }
     } else {
-      boilerplate = `${startSkippedMarker}${startMarker}`;
+      boilerplate = startMarker;
     }
-  } else {
-    boilerplate = startMarker;
-  }
-  if (hasSomeChildSkippedAtEnd) {
-    if (skippedMarkersPlacement === "inside") {
-      if (hasSpacingAroundChildren) {
-        boilerplate += `${endSkippedMarker} ${endMarker}`;
+    if (hasSomeChildSkippedAtEnd) {
+      if (skippedMarkersPlacement === "inside") {
+        if (hasSpacingAroundChildren) {
+          boilerplate += `${endSkippedMarker} ${endMarker}`;
+        } else {
+          boilerplate += `${endSkippedMarker}${endMarker}`;
+        }
       } else {
-        boilerplate += `${endSkippedMarker}${endMarker}`;
+        boilerplate += `${endMarker}${endSkippedMarker}`;
       }
     } else {
-      boilerplate += `${endMarker}${endSkippedMarker}`;
+      boilerplate += endMarker;
     }
-  } else {
-    boilerplate += endMarker;
-  }
-  if (separatorMarker) {
-    boilerplate += separatorMarker;
-  }
-  const columnsRemainingForChildrenConsideringBoilerplate =
-    columnsRemainingForChildren - boilerplate.length;
-  if (columnsRemainingForChildrenConsideringBoilerplate < 0) {
-    return renderSkippedSection(0, childrenKeys.length - 1);
-  }
-  if (columnsRemainingForChildrenConsideringBoilerplate === 0) {
-    return skippedMarkersPlacement === "inside"
-      ? setColor(boilerplate, node.color)
-      : renderSkippedSection(0, childrenKeys.length - 1);
+    if (separatorMarker) {
+      boilerplate += separatorMarker;
+    }
+    const columnsRemainingForChildrenConsideringBoilerplate =
+      columnsRemainingForChildren - boilerplate.length;
+    if (columnsRemainingForChildrenConsideringBoilerplate < 0) {
+      return renderSkippedSection(0, childrenKeys.length - 1);
+    }
+    if (columnsRemainingForChildrenConsideringBoilerplate === 0) {
+      return skippedMarkersPlacement === "inside"
+        ? setColor(boilerplate, node.color)
+        : renderSkippedSection(0, childrenKeys.length - 1);
+    }
   }
 
   let childrenDiff = "";
@@ -2953,11 +2957,9 @@ const renderChildren = (node, props) => {
     // skip marker by the actual next/prev child
     // ONLY if it can replace the marker (it's the first/last child)
     // AND it does take less or same width as marker
-    if (
-      childDiffWidth + columnsNeededBySkipMarkers ===
-      columnsRemainingForChildren
-    ) {
+    if (columnsNeededBySkipMarkers === columnsRemainingForChildren) {
       if (tryToSwapSkipMarkerWithChild) {
+        // can we try again?
         break;
       }
       tryToSwapSkipMarkerWithChild = true;

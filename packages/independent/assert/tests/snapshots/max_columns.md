@@ -382,3 +382,87 @@ assert({
 
 ![img](<./max_columns/long url diff start middle end.svg>)
 
+# lines around start partially truncated
+
+```js
+assert({
+  actual: `
+123456789
+abcdefghijkl`,
+  expect: `
+123456789
+abcdefghZjkl`,
+  MAX_COLUMNS: 16,
+});
+```
+
+![img](<./max_columns/lines around start partially truncated.svg>)
+
+# lines around start fully truncated
+
+```js
+assert({
+  actual: `
+1
+abcd`,
+  expect: `
+1
+abcZ`,
+  MAX_COLUMNS: 14,
+});
+```
+
+![img](<./max_columns/lines around start fully truncated.svg>)
+
+# lines around start fully truncated 2
+
+```js
+assert({
+  actual: `
+1
+abcdefgh`,
+  expect: `
+1
+abcdeZgh`,
+  MAX_COLUMNS: 16,
+});
+```
+
+![img](<./max_columns/lines around start fully truncated 2.svg>)
+
+# lines around end is truncated
+
+```js
+assert({
+  actual: `
+123456789
+abcdef
+1234567`,
+  expect: `
+123456789
+Zbcdef
+123456789`,
+  MAX_COLUMNS: 15,
+});
+```
+
+![img](<./max_columns/lines around end is truncated.svg>)
+
+# lines around end is truncated 2
+
+```js
+assert({
+  actual: `
+123456789
+abcdefghi
+123456789`,
+  expect: `
+123456789
+abcdZfghi
+123456789`,
+  MAX_COLUMNS: 18,
+});
+```
+
+![img](<./max_columns/lines around end is truncated 2.svg>)
+
