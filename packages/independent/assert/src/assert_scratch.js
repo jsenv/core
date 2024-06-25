@@ -1,8 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - url max columns missing skipped marker
- * - url pathname split
  * - render composite with render children
  * - lots of test on max columns
  * - array typed
@@ -1374,7 +1372,6 @@ let createRootNode;
         })();
       }
       const quoteMarkerRef = { current: bestQuote };
-
       if (group !== "url_internal_prop" && canParseUrl(value)) {
         node.isStringForUrl = true;
         node.childGenerator = () => {
@@ -1561,7 +1558,7 @@ let createRootNode;
           childGenerator: () => {
             let isMultiline = false;
             const appendLineEntry = (lineIndex) => {
-              const lineEntryNode = lineEntriesNode.appendChild(lineIndex, {
+              const lineNode = lineEntriesNode.appendChild(lineIndex, {
                 value: "",
                 key: lineIndex,
                 render: renderChildren,
@@ -1595,9 +1592,9 @@ let createRootNode;
                 group: "entries",
                 subgroup: "line_entry_value",
               });
-              const appendCharEntry = (charIndex, char) => {
-                lineEntryNode.value += char; // just for debug purposes
-                lineEntryNode.appendChild(charIndex, {
+              const appendCharNode = (charIndex, char) => {
+                lineNode.value += char; // just for debug purposes
+                lineNode.appendChild(charIndex, {
                   value: char,
                   render: renderChar,
                   quoteMarkerRef,
@@ -1606,70 +1603,34 @@ let createRootNode;
                 });
               };
               return {
-                lineEntryNode,
-                appendCharEntry,
+                node: lineNode,
+                appendCharNode,
               };
             };
-
-            let isDone = false;
-            let firstLineCharIndex = 0;
-            const chars = tokenizeString(node.value);
-            const charIterator = chars[Symbol.iterator]();
-            function* charGeneratorUntilNewLine() {
-              // eslint-disable-next-line no-constant-condition
-              while (true) {
-                const charIteratorResult = charIterator.next();
-                if (charIteratorResult.done) {
-                  isDone = true;
-                  return;
-                }
-                const char = charIteratorResult.value;
-                if (char === "\n") {
-                  break;
-                }
-                yield char;
+            const chars = tokenizeString(value);
+            let currentLineEntry = appendLineEntry(0);
+            let lineIndex = 0;
+            let charIndex = 0;
+            for (const char of chars) {
+              if (char !== "\n") {
+                currentLineEntry.appendCharNode(charIndex, char);
+                charIndex++;
+                continue;
               }
-            }
-
-            // first line
-            const {
-              lineEntryNode: firstLineEntryNode,
-              appendCharEntry: appendFirstLineCharEntry,
-            } = appendLineEntry(0);
-            for (const char of charGeneratorUntilNewLine()) {
-              appendFirstLineCharEntry(firstLineCharIndex, char);
-              firstLineCharIndex++;
-            }
-
-            if (isDone) {
-              // single line
-              Object.assign(
-                firstLineEntryNode,
-                getInheritedSeparatorParams(node),
-              );
-              if (bestQuote) {
-                firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = true;
-                firstLineEntryNode.startMarker = firstLineEntryNode.endMarker =
-                  bestQuote;
-              }
-              return;
-            }
-            isMultiline = true;
-            enableMultilineDiff(lineEntriesNode);
-            // remaining lines
-            let lineIndex = 1;
-            // eslint-disable-next-line no-constant-condition
-            while (true) {
-              const { appendCharEntry } = appendLineEntry(lineIndex);
-              let columnIndex = 0;
-              for (const char of charGeneratorUntilNewLine()) {
-                appendCharEntry(columnIndex, char);
-                columnIndex++;
-              }
-              if (isDone) {
-                break;
-              }
+              isMultiline = true;
               lineIndex++;
+              charIndex = 0;
+              currentLineEntry = appendLineEntry(lineIndex);
+            }
+            if (isMultiline) {
+              enableMultilineDiff(lineEntriesNode);
+            } else {
+              const firstLineNode = currentLineEntry.node;
+              Object.assign(firstLineNode, getInheritedSeparatorParams(node));
+              if (bestQuote) {
+                firstLineNode.onelineDiff.hasMarkersWhenEmpty = true;
+                firstLineNode.startMarker = firstLineNode.endMarker = bestQuote;
+              }
             }
           },
         });
@@ -2523,7 +2484,6 @@ const renderString = (node, props) => {
   if (lineEntriesNode) {
     return lineEntriesNode.render(props);
   }
-
   const quoteToEscape = node.quoteMarkerRef?.current;
   if (quoteToEscape) {
     let diff = "";
@@ -2743,6 +2703,10 @@ const renderChildren = (node, props) => {
     endSkippedMarker = props.endSkippedMarkerDisabled ? "" : skippedMarkers.end;
   }
   const renderSkippedSection = (fromIndex, toIndex) => {
+    let skippedMarker = fromIndex === 0 ? startSkippedMarker : endSkippedMarker;
+    if (!skippedMarker) {
+      return "";
+    }
     // to pick the color we'll check each child
     let skippedChildIndex = fromIndex;
     let color = node.color;
@@ -2758,10 +2722,7 @@ const renderChildren = (node, props) => {
         color = skippedChild.color;
       }
     }
-    if (fromIndex === 0) {
-      return setColor(startSkippedMarker, color);
-    }
-    return setColor(endSkippedMarker, color);
+    return setColor(skippedMarker, color);
   };
 
   const childrenKeys = node.childrenKeys;
@@ -2879,9 +2840,13 @@ const renderChildren = (node, props) => {
     const childDiff = childNode.render({
       ...props,
       startSkippedMarkerDisabled:
-        hasSomeChildSkippedAtStart && startSkippedMarkerWidth,
+        node.subgroup === "url_internal_properties" &&
+        hasSomeChildSkippedAtStart &&
+        startSkippedMarkerWidth,
       endSkippedMarkerDisabled:
-        hasSomeChildSkippedAtEnd && endSkippedMarkerWidth,
+        node.subgroup === "url_internal_properties" &&
+        hasSomeChildSkippedAtEnd &&
+        endSkippedMarkerWidth,
       columnsRemaining: columnsRemainingForThisChild,
       onTruncatedNotationUsed: () => {
         truncateNotationUsed = true;
@@ -3003,7 +2968,7 @@ const renderChildren = (node, props) => {
     start: focusedChildIndex,
     max: maxIndexDisplayed,
   };
-  if (minIndexDisplayed === Infinity) {
+  if (minIndexDisplayed === Infinity || maxIndexDisplayed === -1) {
     return skippedMarkersPlacement === "inside"
       ? setColor(boilerplate, node.color)
       : renderSkippedSection(0, childrenKeys.length - 1);
@@ -3092,7 +3057,7 @@ function* generateChildIndexes(
       if (afterChildIndex === maxIndex - 1) {
         break;
       }
-      if (afterChildIndex === childrenKeys.length) {
+      if (afterChildIndex >= childrenKeys.length) {
         break;
       }
       afterAttempt++;
@@ -3107,7 +3072,7 @@ function* generateChildIndexes(
       if (afterChildIndex === maxIndex - 1) {
         break;
       }
-      if (afterChildIndex === childrenKeys.length) {
+      if (afterChildIndex >= childrenKeys.length) {
         break;
       }
       afterAttempt++;
@@ -3435,12 +3400,12 @@ const renderChildrenMultiline = (node, props) => {
         : props.columnsRemaining;
     if (hasIndentBeforeEachChild) {
       const indent = "  ".repeat(getNodeDepth(node, props) + 1);
-      columnsRemainingForChild -= stringWidth(indent);
+      columnsRemainingForChild -= indent.length;
       childDiff += indent;
     }
     if (hasIndentBetweenEachChild && childIndex !== 0) {
       const indent = " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
-      columnsRemainingForChild -= stringWidth(indent);
+      columnsRemainingForChild -= indent.length;
       childDiff += indent;
     }
     if (separatorMarker) {
@@ -3562,10 +3527,6 @@ const getNodeDepth = (node, props) => {
   return node.depth - props.startNode.depth;
 };
 const enableMultilineDiff = (lineEntriesNode) => {
-  const firstLineEntryNode = lineEntriesNode.childNodeMap.get(0);
-  firstLineEntryNode.onelineDiff.hasMarkersWhenEmpty = false;
-  firstLineEntryNode.onelineDiff.skippedMarkersPlacement = "inside";
-  firstLineEntryNode.startMarker = firstLineEntryNode.endMarker = "";
   lineEntriesNode.multilineDiff.hasIndentBetweenEachChild = true;
   lineEntriesNode.beforeRender = (props, { childIndexToDisplayArray }) => {
     const biggestDisplayedLineIndex =
@@ -3579,6 +3540,10 @@ const enableMultilineDiff = (lineEntriesNode) => {
       );
     }
   };
+  const firstLineNode = lineEntriesNode.childNodeMap.get(0);
+  firstLineNode.onelineDiff.hasMarkersWhenEmpty = false;
+  firstLineNode.onelineDiff.skippedMarkersPlacement = "inside";
+  firstLineNode.startMarker = firstLineNode.endMarker = "";
 };
 const forceSameQuotes = (actualNode, expectNode) => {
   const actualQuoteMarkerRef = actualNode.quoteMarkerRef;
