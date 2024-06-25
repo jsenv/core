@@ -1,15 +1,3 @@
-# double slash and truncate line
-
-```js
-assert({
-  actual: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js`,
-  expect: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`,
-  MAX_COLUMNS: 50,
-});
-```
-
-![img](<./max_columns/double slash and truncate line.svg>)
-
 # at removed char
 
 ```js
@@ -310,6 +298,30 @@ assert({
 
 ![img](<./max_columns/at property value third char.svg>)
 
+# max column exactly on diff
+
+```js
+assert({
+  actual: `abc`,
+  expect: `abC`,
+  MAX_COLUMNS: 12,
+});
+```
+
+![img](<./max_columns/max column exactly on diff.svg>)
+
+# double slash and truncate line
+
+```js
+assert({
+  actual: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js`,
+  expect: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`,
+  MAX_COLUMNS: 50,
+});
+```
+
+![img](<./max_columns/double slash and truncate line.svg>)
+
 # url search param modified, middle of long params
 
 ```js
@@ -369,16 +381,4 @@ assert({
 ```
 
 ![img](<./max_columns/long url diff start middle end.svg>)
-
-# max column exactly on diff
-
-```js
-assert({
-  actual: `abc`,
-  expect: `abC`,
-  MAX_COLUMNS: 12,
-});
-```
-
-![img](<./max_columns/max column exactly on diff.svg>)
 

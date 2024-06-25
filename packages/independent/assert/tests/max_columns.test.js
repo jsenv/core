@@ -3,13 +3,6 @@ import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 // TODO: at property when rendered on single line
 await startSnapshotTesting("max_columns", ({ test }) => {
-  test("double slash and truncate line", () => {
-    assert({
-      actual: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js`,
-      expect: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`,
-      MAX_COLUMNS: 50,
-    });
-  });
   test("at removed char", () => {
     assert({
       actual: "str",
@@ -200,7 +193,21 @@ await startSnapshotTesting("max_columns", ({ test }) => {
       MAX_COLUMNS: 15,
     });
   });
+  test("max column exactly on diff", () => {
+    assert({
+      actual: `abc`,
+      expect: `abC`,
+      MAX_COLUMNS: 12,
+    });
+  });
   // on URLS
+  test("double slash and truncate line", () => {
+    assert({
+      actual: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js`,
+      expect: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`,
+      MAX_COLUMNS: 50,
+    });
+  });
   test("url search param modified, middle of long params", () => {
     assert({
       actual: "http://example_that_is_long.com?this_is_relatively_long=1&foo=a",
@@ -234,13 +241,6 @@ await startSnapshotTesting("max_columns", ({ test }) => {
       actual: "http://example_that_is_quite_long.com/dir/file.txt",
       expect: "file://example_that_AA_quite_long.com/dir/file.css",
       MAX_COLUMNS: 40,
-    });
-  });
-  test("max column exactly on diff", () => {
-    assert({
-      actual: `abc`,
-      expect: `abC`,
-      MAX_COLUMNS: 12,
     });
   });
 });

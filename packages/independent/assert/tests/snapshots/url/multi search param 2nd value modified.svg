@@ -37,8 +37,23 @@
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="14.55" fill="#7f7f7f">http://</text>
-        <text x="144.42" y="14.55" fill="#7f7f7f">example.com</text>
+        <text x="85.61" y="14.55" fill="#7f7f7f">h</text>
+        <text x="94.01" y="14.55" fill="#7f7f7f">t</text>
+        <text x="102.42" y="14.55" fill="#7f7f7f">t</text>
+        <text x="110.82" y="14.55" fill="#7f7f7f">p</text>
+        <text x="119.22" y="14.55" fill="#7f7f7f">:</text>
+        <text x="127.62" y="14.55" fill="#7f7f7f">//</text>
+        <text x="144.42" y="14.55" fill="#7f7f7f">e</text>
+        <text x="152.82" y="14.55" fill="#7f7f7f">x</text>
+        <text x="161.22" y="14.55" fill="#7f7f7f">a</text>
+        <text x="169.63" y="14.55" fill="#7f7f7f">m</text>
+        <text x="178.03" y="14.55" fill="#7f7f7f">p</text>
+        <text x="186.43" y="14.55" fill="#7f7f7f">l</text>
+        <text x="194.83" y="14.55" fill="#7f7f7f">e</text>
+        <text x="203.23" y="14.55" fill="#7f7f7f">.</text>
+        <text x="211.63" y="14.55" fill="#7f7f7f">c</text>
+        <text x="220.03" y="14.55" fill="#7f7f7f">o</text>
+        <text x="228.44" y="14.55" fill="#7f7f7f">m</text>
         <text x="236.84" y="14.55" fill="#7f7f7f">/</text>
         <text x="245.24" y="14.55" fill="#7f7f7f">?</text>
         <text x="253.64" y="14.55" fill="#7f7f7f">foo</text>
@@ -53,8 +68,23 @@
         <text x="396.46" y="14.55" fill="#7f7f7f">&#x22;</text>
         <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="33.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="33.55" fill="#7f7f7f">http://</text>
-        <text x="144.42" y="33.55" fill="#7f7f7f">example.com</text>
+        <text x="85.61" y="33.55" fill="#7f7f7f">h</text>
+        <text x="94.01" y="33.55" fill="#7f7f7f">t</text>
+        <text x="102.42" y="33.55" fill="#7f7f7f">t</text>
+        <text x="110.82" y="33.55" fill="#7f7f7f">p</text>
+        <text x="119.22" y="33.55" fill="#7f7f7f">:</text>
+        <text x="127.62" y="33.55" fill="#7f7f7f">//</text>
+        <text x="144.42" y="33.55" fill="#7f7f7f">e</text>
+        <text x="152.82" y="33.55" fill="#7f7f7f">x</text>
+        <text x="161.22" y="33.55" fill="#7f7f7f">a</text>
+        <text x="169.63" y="33.55" fill="#7f7f7f">m</text>
+        <text x="178.03" y="33.55" fill="#7f7f7f">p</text>
+        <text x="186.43" y="33.55" fill="#7f7f7f">l</text>
+        <text x="194.83" y="33.55" fill="#7f7f7f">e</text>
+        <text x="203.23" y="33.55" fill="#7f7f7f">.</text>
+        <text x="211.63" y="33.55" fill="#7f7f7f">c</text>
+        <text x="220.03" y="33.55" fill="#7f7f7f">o</text>
+        <text x="228.44" y="33.55" fill="#7f7f7f">m</text>
         <text x="236.84" y="33.55" fill="#7f7f7f">/</text>
         <text x="245.24" y="33.55" fill="#7f7f7f">?</text>
         <text x="253.64" y="33.55" fill="#7f7f7f">foo</text>
