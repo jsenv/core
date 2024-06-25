@@ -2953,14 +2953,15 @@ const renderChildren = (node, props) => {
       childIndex < minIndexDisplayed ? childIndex : minIndexDisplayed;
     const maxIndexDisplayedCandidate =
       childIndex > maxIndexDisplayed ? childIndex : maxIndexDisplayed;
-    hasSomeChildSkippedAtStart = minIndexDisplayedCandidate !== 0;
-    hasSomeChildSkippedAtEnd =
+    const hasSomeChildSkippedAtStartCandidate =
+      minIndexDisplayedCandidate !== 0;
+    const hasSomeChildSkippedAtEndCandidate =
       maxIndexDisplayedCandidate !== childrenKeys.length - 1;
     columnsNeededBySkipMarkers = 0;
-    if (hasSomeChildSkippedAtStart) {
+    if (hasSomeChildSkippedAtStartCandidate) {
       columnsNeededBySkipMarkers += startSkippedMarkerWidth;
     }
-    if (hasSomeChildSkippedAtEnd) {
+    if (hasSomeChildSkippedAtEndCandidate) {
       columnsNeededBySkipMarkers += endSkippedMarkerWidth;
     }
     const childDiff = renderChildDiff(childNode, childIndex);
@@ -2968,18 +2969,18 @@ const renderChildren = (node, props) => {
     if (childDiffWidth > columnsRemainingForChildren) {
       break;
     }
-    if (truncateNotationUsed) {
-      columnsRemainingForChildren -= childDiffWidth;
-      childrenDiff = appendChildDiff(childDiff, childIndex);
-      break;
-    }
     if (
-      childDiffWidth + columnsNeededBySkipMarkers <
+      childDiffWidth + columnsNeededBySkipMarkers >
       columnsRemainingForChildren
     ) {
-      columnsRemainingForChildren -= childDiffWidth;
-      childrenDiff = appendChildDiff(childDiff, childIndex);
-      continue;
+      break;
+    }
+    hasSomeChildSkippedAtStart = hasSomeChildSkippedAtStartCandidate;
+    hasSomeChildSkippedAtEnd = hasSomeChildSkippedAtEndCandidate;
+    columnsRemainingForChildren -= childDiffWidth;
+    childrenDiff = appendChildDiff(childDiff, childIndex);
+    if (truncateNotationUsed) {
+      break;
     }
     // if I had to stop there, I would put some markers
     // so I need to reserve that space
@@ -2992,16 +2993,10 @@ const renderChildren = (node, props) => {
       columnsRemainingForChildren
     ) {
       if (tryToSwapSkipMarkerWithChild) {
-        columnsRemainingForChildren -= childDiffWidth;
-        childrenDiff = appendChildDiff(childDiff, childIndex);
         break;
       }
-      columnsRemainingForChildren -= childDiffWidth;
-      childrenDiff = appendChildDiff(childDiff, childIndex);
       tryToSwapSkipMarkerWithChild = true;
-      continue;
     }
-    break;
   }
   node.displayedRange = {
     min: minIndexDisplayed,
