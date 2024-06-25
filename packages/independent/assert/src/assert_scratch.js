@@ -2100,7 +2100,6 @@ let createRootNode;
                     onelineDiff: {
                       hasMarkersWhenEmpty: true,
                       hasSeparatorBetweenEachChild: true,
-                      hasTrailingSeparator: true,
                       hasSpacingBetweenEachChild: true,
                     },
                     multilineDiff: {
@@ -2154,7 +2153,6 @@ let createRootNode;
                     onelineDiff: {
                       hasMarkersWhenEmpty: true,
                       hasSeparatorBetweenEachChild: true,
-                      hasTrailingSeparator: true,
                       hasSpacingBetweenEachChild: true,
                     },
                     multilineDiff: {

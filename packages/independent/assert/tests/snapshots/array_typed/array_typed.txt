@@ -12,11 +12,11 @@ expect: Buffer []
 
 # buffer without diff are collapsed
 actual: {
-  a: Buffer [97,]
+  a: Buffer [97]
   b: true,
 }
 expect: {
-  a: Buffer [97,]
+  a: Buffer [97]
   b: false,
 }
 
@@ -88,21 +88,21 @@ expect: "a"
 
 # buffer vs array
 actual: {
-  a: Buffer [97,]
+  a: Buffer [97]
   b: Buffer [
     97,
   ]
 }
 expect: {
-  a: [97,]
+  a: [97]
   b: [
     61,
   ]
 }
 
 # buffer.from vs Uint8Array.from
-actual: Buffer [97,]
-expect: Uint8Array [97,]
+actual: Buffer [97]
+expect: Uint8Array [97]
 
 # Uint8Array vs Array
 actual: Uint8Array
