@@ -1,24 +1,24 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-await startSnapshotTesting("symbol", {
-  ["named Symbol() property added"]: () => {
+await startSnapshotTesting("symbol", ({ test }) => {
+  test("named Symbol() property added", () => {
     assert({
       actual: {
         [Symbol("foo")]: true,
       },
       expect: {},
     });
-  },
-  ["named Symbol() property removed"]: () => {
+  });
+  test("named Symbol() property removed", () => {
     assert({
       actual: {},
       expect: {
         [Symbol("foo")]: true,
       },
     });
-  },
-  ["Symbol.for() property value modified"]: () => {
+  });
+  test("Symbol.for() property value modified", () => {
     assert({
       actual: {
         [Symbol.for("foo")]: true,
@@ -27,8 +27,8 @@ await startSnapshotTesting("symbol", {
         [Symbol.for("foo")]: false,
       },
     });
-  },
-  ["Symbol.for() property no diff"]: () => {
+  });
+  test("Symbol.for() property no diff", () => {
     assert({
       actual: {
         a: true,
@@ -39,8 +39,8 @@ await startSnapshotTesting("symbol", {
         [Symbol.for("foo")]: true,
       },
     });
-  },
-  ["named Symbol() property value modified"]: () => {
+  });
+  test("named Symbol() property value modified", () => {
     assert({
       actual: {
         [Symbol("foo")]: true,
@@ -49,8 +49,8 @@ await startSnapshotTesting("symbol", {
         [Symbol("foo")]: false,
       },
     });
-  },
-  ["named Symbol() property no diff"]: () => {
+  });
+  test("named Symbol() property no diff", () => {
     assert({
       actual: {
         a: true,
@@ -61,8 +61,8 @@ await startSnapshotTesting("symbol", {
         [Symbol("foo")]: true,
       },
     });
-  },
-  ["anonymous Symbol() property value modified"]: () => {
+  });
+  test("anonymous Symbol() property value modified", () => {
     assert({
       actual: {
         [Symbol()]: true,
@@ -71,8 +71,8 @@ await startSnapshotTesting("symbol", {
         [Symbol()]: false,
       },
     });
-  },
-  ["Symbol.iterator property value modified"]: () => {
+  });
+  test("Symbol.iterator property value modified", () => {
     assert({
       actual: {
         [Symbol.iterator]: true,
@@ -81,8 +81,8 @@ await startSnapshotTesting("symbol", {
         [Symbol.iterator]: false,
       },
     });
-  },
-  ["Symbol.toStringTag property value modified"]: () => {
+  });
+  test("Symbol.toStringTag property value modified", () => {
     assert({
       actual: {
         [Symbol.toStringTag]: "a",
@@ -91,50 +91,50 @@ await startSnapshotTesting("symbol", {
         [Symbol.toStringTag]: "b",
       },
     });
-  },
-  ["well known symbol diff"]: () => {
+  });
+  test("well known symbol diff", () => {
     assert({
       actual: Symbol.iterator,
       expect: Symbol.toStringTag,
     });
-  },
-  ["Symbol() description modified"]: () => {
+  });
+  test("Symbol() description modified", () => {
     assert({
       actual: Symbol("a"),
       expect: Symbol("b"),
     });
-  },
-  ["Symbol.for() key modified"]: () => {
+  });
+  test("Symbol.for() key modified", () => {
     assert({
       actual: Symbol.for("a"),
       expect: Symbol.for("b"),
     });
-  },
-  ["named Symbol() vs anonymous symbol"]: () => {
+  });
+  test("named Symbol() vs anonymous symbol", () => {
     assert({
       actual: Symbol("a"),
       expect: Symbol(),
     });
-  },
-  ["anonymous symbol vs named Symbol()"]: () => {
+  });
+  test("anonymous symbol vs named Symbol()", () => {
     assert({
       actual: Symbol(""),
       expect: Symbol("b"),
     });
-  },
-  ["named Symbol() vs Symbol.for()"]: () => {
+  });
+  test("named Symbol() vs Symbol.for()", () => {
     assert({
       actual: Symbol("a"),
       expect: Symbol.for("a"),
     });
-  },
-  ["Symbol.for() vs named Symbol()"]: () => {
+  });
+  test("Symbol.for() vs named Symbol()", () => {
     assert({
       actual: Symbol.for("b"),
       expect: Symbol("a"),
     });
-  },
-  ["symbol diff comes first"]: () => {
+  });
+  test("symbol diff comes first", () => {
     assert({
       actual: {
         a: true,
@@ -145,5 +145,5 @@ await startSnapshotTesting("symbol", {
         [Symbol.for("a")]: false,
       },
     });
-  },
+  });
 });

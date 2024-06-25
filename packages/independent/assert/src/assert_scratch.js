@@ -1,8 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - render composite with render children
- * - lots of test on max columns
  * - array typed
  * - property descriptors
  * - errors
@@ -101,14 +99,6 @@ const setColor = (text, color) => {
   //   return ANSI.effect(textColored, ANSI.UNDERLINE);
   // }
   return textColored;
-};
-const updateRemainingColumns = (columnsRemaining, string) => {
-  const newLineLastIndex = string.lastIndexOf("\n");
-  if (newLineLastIndex === -1) {
-    return columnsRemaining - stringWidth(string);
-  }
-  const lastLine = string.slice(newLineLastIndex + "\n".length);
-  return stringWidth(lastLine);
 };
 const measureRemainingColumnsImpact = (string) => {
   const newLineLastIndex = string.lastIndexOf("\n");
@@ -1131,6 +1121,7 @@ let createRootNode;
       ? parent
       : parent?.separatorMarkerOwner,
     separatorMarkerInsideRef,
+    hasLeftSpacingDisabled = false,
     onelineDiff = null,
     multilineDiff = null,
   }) => {
@@ -1200,6 +1191,7 @@ let createRootNode;
       separatorMarkerWhenTruncatedRef,
       separatorMarkerOwner,
       separatorMarkerInsideRef,
+      hasLeftSpacingDisabled,
       onelineDiff,
       multilineDiff,
       color: "",
@@ -1799,526 +1791,608 @@ let createRootNode;
           });
           return;
         }
-        let objectConstructNode = null;
-        let objectConstructArgs = null;
-        // function child nodes
-        if (node.isFunction) {
-          const functionConstructNode = node.appendChild("construct", {
-            value: null,
-            render: renderChildren,
-            onelineDiff: {
-              hasSpacingBetweenEachChild: true,
-            },
-            group: "entries",
-            subgroup: "function_construct",
-            childGenerator() {
-              if (node.functionAnalysis.type === "class") {
-                functionConstructNode.appendChild("class_keyword", {
-                  value: "class",
-                  render: renderGrammar,
-                  group: "grammar",
-                  subgroup: "class_keyword",
-                });
-                if (node.functionAnalysis.name) {
-                  functionConstructNode.appendChild("function_name", {
-                    value: node.functionAnalysis.name,
-                    render: renderGrammar,
-                    group: "grammar",
-                    subgroup: "function_name",
-                  });
-                }
-                const extendedClassName =
-                  node.functionAnalysis.extendedClassName;
-                if (extendedClassName) {
-                  functionConstructNode.appendChild("class_extends_keyword", {
-                    value: "extends",
-                    render: renderGrammar,
-                    group: "grammar",
-                    subgroup: "class_extends_keyword",
-                  });
-                  functionConstructNode.appendChild("class_extended_name", {
-                    value: extendedClassName,
-                    render: renderGrammar,
-                    group: "grammar",
-                    subgroup: "class_extended_name",
-                  });
-                }
-                return;
-              }
-              if (node.functionAnalysis.isAsync) {
-                functionConstructNode.appendChild("function_async_keyword", {
-                  value: "async",
-                  render: renderGrammar,
-                  group: "grammar",
-                  subgroup: "function_async_keyword",
-                });
-              }
-              if (node.functionAnalysis.type === "classic") {
-                functionConstructNode.appendChild("function_keyword", {
-                  value: node.functionAnalysis.isGenerator
-                    ? "function*"
-                    : "function",
-                  render: renderGrammar,
-                  group: "grammar",
-                  subgroup: "function_keyword",
-                });
-              }
-              if (node.functionAnalysis.name) {
-                functionConstructNode.appendChild("function_name", {
-                  value: node.functionAnalysis.name,
-                  render: renderGrammar,
-                  group: "grammar",
-                  subgroup: "function_name",
-                });
-              }
-              function_body_prefix: {
-                const appendFunctionBodyPrefix = (prefix) => {
-                  functionConstructNode.appendChild("function_body_prefix", {
-                    value: prefix,
-                    render: renderGrammar,
-                    group: "grammar",
-                    subgroup: "function_body_prefix",
-                  });
-                };
-
-                if (node.functionAnalysis.type === "arrow") {
-                  appendFunctionBodyPrefix("() =>");
-                } else if (node.functionAnalysis.type === "method") {
-                  if (node.functionAnalysis.getterName) {
-                    appendFunctionBodyPrefix(`get ${key}()`);
-                  } else if (node.functionAnalysis.setterName) {
-                    appendFunctionBodyPrefix(`set ${key}()`);
-                  } else {
-                    appendFunctionBodyPrefix(`${key}()`);
-                  }
-                } else if (node.functionAnalysis.type === "classic") {
-                  appendFunctionBodyPrefix("()");
-                }
-              }
-            },
-          });
-        } else if (isFunctionPrototype) {
-        } else {
-          const objectTag = getObjectTag(value);
-          if (objectTag && objectTag !== "Object" && objectTag !== "Array") {
-            objectConstructNode = node.appendChild("construct", {
-              value: null,
-              render: renderChildren,
-              onelineDiff: {
-                hasSpacingBetweenEachChild: true,
-              },
-              group: "entries",
-              subgroup: "object_construct",
-              childGenerator() {
-                if (objectConstructArgs) {
-                  objectConstructNode.appendChild(
-                    "call",
-                    createMethodCallNode(objectConstructNode, {
-                      objectName: objectTag,
-                      args: objectConstructArgs,
-                    }),
-                  );
-                } else {
-                  objectConstructNode.appendChild("object_tag", {
-                    value: objectTag,
-                    render: renderGrammar,
-                    group: "grammar",
-                    subgroup: "object_tag",
-                    path: node.path.append("[[ObjectTag]]"),
-                  });
-                }
-              },
-            });
-          }
-        }
-        let canHaveInternalEntries = false;
-        internal_entries: {
-          const internalEntriesParams = {
-            render: renderChildrenMultilineWhenDiff,
-            startMarker: "(",
-            endMarker: ")",
-            onelineDiff: {
-              hasMarkersWhenEmpty: true,
-              hasSeparatorBetweenEachChild: true,
-              hasSpacingBetweenEachChild: true,
-            },
-            multilineDiff: {
-              hasMarkersWhenEmpty: true,
-              hasSeparatorBetweenEachChild: true,
-              hasTrailingSeparator: true,
-              hasNewLineAroundChildren: true,
-              hasIndentBeforeEachChild: true,
-              skippedMarkers: {
-                start: ["↑ 1 value ↑", "↑ {x} values ↑"],
-                between: ["↕ 1 value ↕", "↕ {x} values ↕"],
-                end: ["↓ 1 value ↓", "↓ {x} values ↓"],
-              },
-              maxDiffType: "prop",
-            },
-            group: "entries",
-          };
-
-          if (node.isMap) {
-            canHaveInternalEntries = true;
-            const mapEntriesNode = node.appendChild("internal_entries", {
-              ...internalEntriesParams,
-              subgroup: "map_entries",
-              childGenerator: () => {
-                const objectTagCounterMap = new Map();
-                for (const [mapEntryKey, mapEntryValue] of value) {
-                  let pathPart;
-                  if (isComposite(mapEntryKey)) {
-                    const keyObjectTag = getObjectTag(mapEntryKey);
-                    if (objectTagCounterMap.has(keyObjectTag)) {
-                      const objectTagCount =
-                        objectTagCounterMap.get(keyObjectTag) + 1;
-                      objectTagCounterMap.set(keyObjectTag, objectTagCount);
-                      pathPart = `${keyObjectTag}#${objectTagCount}`;
-                    } else {
-                      objectTagCounterMap.set(keyObjectTag, 1);
-                      pathPart = `${keyObjectTag}#1`;
-                    }
-                  } else {
-                    pathPart = String(mapEntryKey);
-                  }
-
-                  const mapEntryNode = mapEntriesNode.appendChild(mapEntryKey, {
-                    render: renderChildren,
-                    onelineDiff: {
-                      hasSeparatorBetweenEachChild: true,
-                      hasTrailingSeparator: true,
-                    },
-                    group: "entry",
-                    subgroup: "map_entry",
-                    path: node.path.append(pathPart),
-                  });
-                  mapEntryNode.appendChild("entry_key", {
-                    value: mapEntryKey,
-                    render: renderValue,
-                    separatorMarkerRef: { current: " => " },
-                    group: "entry_key",
-                    subgroup: "map_entry_key",
-                  });
-                  mapEntryNode.appendChild("entry_value", {
-                    value: mapEntryValue,
-                    render: renderValue,
-                    separatorMarkerRef: { current: "," },
-                    group: "entry_value",
-                    subgroup: "map_entry_value",
-                  });
-                }
-                objectTagCounterMap.clear();
-              },
-            });
-          }
-          if (node.isSet) {
-            canHaveInternalEntries = true;
-            const setEntriesNode = node.appendChild("internal_entries", {
-              ...internalEntriesParams,
-              subgroup: "set_entries",
-              childGenerator: () => {
-                let index = 0;
-                for (const [setValue] of value) {
-                  setEntriesNode.appendChild(index, {
-                    value: setValue,
-                    render: renderValue,
-                    separatorMarkerRef: { current: "," },
-                    group: "entry_value",
-                    subgroup: "set_entry",
-                    path: setEntriesNode.path.append(index, {
-                      isIndexedEntry: true,
-                    }),
-                  });
-                  index++;
-                }
-              },
-            });
-          }
-        }
-        const ownPropertyNameToIgnoreSet = new Set();
-        const ownPropertSymbolToIgnoreSet = new Set();
-        let canHaveIndexedEntries = false;
-        indexed_entries: {
-          if (node.isArray) {
-            canHaveIndexedEntries = true;
-            const arrayEntriesNode = node.appendChild("indexed_entries", {
-              render: renderChildrenMultilineWhenDiff,
-              startMarker: "[",
-              endMarker: "]",
-              ...getInheritedSeparatorParams(node),
-              onelineDiff: {
-                hasMarkersWhenEmpty: true,
-                hasSeparatorBetweenEachChild: true,
-                hasTrailingSeparator: true,
-                hasSpacingBetweenEachChild: true,
-              },
-              multilineDiff: {
-                hasMarkersWhenEmpty: true,
-                hasSeparatorBetweenEachChild: true,
-                hasTrailingSeparator: true,
-                hasNewLineAroundChildren: true,
-                hasIndentBeforeEachChild: true,
-                skippedMarkers: {
-                  start: ["↑ 1 value ↑", "↑ {x} values ↑"],
-                  between: ["↕ 1 value ↕", "↕ {x} values ↕"],
-                  end: ["↓ 1 value ↓", "↓ {x} values ↓"],
-                },
-                maxDiffType: "line",
-              },
-              group: "entries",
-              subgroup: "array_entries",
-            });
-            const arrayEntyGenerator = () => {
-              let index = 0;
-              while (index < value.length) {
-                ownPropertyNameToIgnoreSet.add(String(index));
-                arrayEntriesNode.appendChild(index, {
-                  value: Object.hasOwn(value, index)
-                    ? value[index]
-                    : ARRAY_EMPTY_VALUE,
-                  render: renderValue,
-                  separatorMarkerRef: { current: "," },
-                  group: "entry_value",
-                  subgroup: "array_entry_value",
-                  path: arrayEntriesNode.path.append(index, {
-                    isIndexedEntry: true,
-                  }),
-                });
-                index++;
-              }
-            };
-            arrayEntyGenerator();
-          }
-        }
-        const propertyLikeCallbackSet = new Set();
-        symbol_to_primitive: {
-          if (
-            Symbol.toPrimitive in value &&
-            typeof value[Symbol.toPrimitive] === "function"
-          ) {
-            ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
-            const toPrimitiveReturnValue = value[Symbol.toPrimitive]("string");
-            propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-              appendPropertyEntryNode(
-                SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+        const compositePartsNode = node.appendChild("parts", {
+          render: renderChildren,
+          onelineDiff: {
+            hasSpacingBetweenEachChild: true,
+          },
+          ...getInheritedSeparatorParams(node),
+          childGenerator: () => {
+            let objectConstructNode = null;
+            let objectConstructArgs = null;
+            // function child nodes
+            if (node.isFunction) {
+              const functionConstructNode = compositePartsNode.appendChild(
+                "construct",
                 {
-                  value: toPrimitiveReturnValue,
-                },
-              );
-            });
-          }
-        }
-        // toString()
-        if (node.isURL) {
-          objectConstructArgs = [
-            {
-              value: value.href,
-              key: "toString()",
-            },
-          ];
-        }
-        // valueOf()
-        else if (
-          typeof value.valueOf === "function" &&
-          value.valueOf !== Object.prototype.valueOf
-        ) {
-          ownPropertyNameToIgnoreSet.add("valueOf");
-          const valueOfReturnValue = value.valueOf();
-          if (objectConstructNode) {
-            objectConstructArgs = [
-              {
-                value: valueOfReturnValue,
-                key: "valueOf()",
-              },
-            ];
-          } else {
-            propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-              appendPropertyEntryNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
-                value: valueOfReturnValue,
-              });
-            });
-          }
-        }
-        own_properties: {
-          const ownPropertySymbols = Object.getOwnPropertySymbols(value).filter(
-            (ownPropertySymbol) => {
-              return (
-                !ownPropertSymbolToIgnoreSet.has(ownPropertySymbol) &&
-                !shouldIgnoreOwnPropertySymbol(node, ownPropertySymbol)
-              );
-            },
-          );
-          const ownPropertyNames = Object.getOwnPropertyNames(value).filter(
-            (ownPropertyName) => {
-              return (
-                !ownPropertyNameToIgnoreSet.has(ownPropertyName) &&
-                !shouldIgnoreOwnPropertyName(node, ownPropertyName)
-              );
-            },
-          );
-          const skipOwnProperties =
-            canHaveIndexedEntries &&
-            ownPropertySymbols.length === 0 &&
-            ownPropertyNames.length === 0 &&
-            propertyLikeCallbackSet.size === 0;
-          if (skipOwnProperties) {
-            break own_properties;
-          }
-          const hasMarkersWhenEmpty =
-            !objectConstructNode &&
-            !canHaveInternalEntries &&
-            !canHaveIndexedEntries;
-          const ownPropertiesNode = node.appendChild("own_properties", {
-            render: renderChildrenMultilineWhenDiff,
-            group: "entries",
-            subgroup: "own_properties",
-            ...(node.isClassPrototype
-              ? {
-                  onelineDiff: { hasMarkersWhenEmpty },
-                  multilineDiff: { hasMarkersWhenEmpty },
-                }
-              : {
-                  startMarker: "{",
-                  endMarker: "}",
-                  onelineDiff: {
-                    hasMarkersWhenEmpty,
-                    hasSeparatorBetweenEachChild: true,
-                    hasSpacingAroundChildren: true,
-                    hasSpacingBetweenEachChild: true,
-                  },
-                  multilineDiff: {
-                    hasMarkersWhenEmpty,
-                    hasSeparatorBetweenEachChild: true,
-                    hasTrailingSeparator: true,
-                    hasNewLineAroundChildren: true,
-                    hasIndentBeforeEachChild: true,
-                    skippedMarkers: {
-                      start: ["↑ 1 prop ↑", "↑ {x} props ↑"],
-                      between: ["↕ 1 prop ↕", "↕ {x} props ↕"],
-                      end: ["↓ 1 prop ↓", "↓ {x} props ↓"],
-                    },
-                    maxDiffType: "prop",
-                  },
-                }),
-            childGenerator: () => {
-              const appendPropertyEntryNode = (
-                key,
-                {
-                  value,
-                  isSourceCode,
-                  isFunctionPrototype,
-                  isClassPrototype,
-                  isHiddenWhenSame,
-                },
-              ) => {
-                const valueSeparatorMarkerRef = {
-                  current: node.functionAnalysis.type === "class" ? ";" : ",",
-                };
-                const ownPropertyNode = ownPropertiesNode.appendChild(key, {
+                  value: null,
                   render: renderChildren,
                   onelineDiff: {
-                    hasSeparatorBetweenEachChild: true,
-                    hasTrailingSeparator: true,
+                    hasSpacingBetweenEachChild: true,
                   },
-                  focusedChildIndex: 0,
-                  separatorMarkerInsideRef: valueSeparatorMarkerRef,
-                  isFunctionPrototype,
-                  isClassPrototype,
-                  isHiddenWhenSame,
-                  childGenerator: () => {
-                    const valueFunctionAnalysis = tokenizeFunction(value);
-                    if (
-                      node.functionAnalysis.type === "class" &&
-                      !isClassPrototype
-                    ) {
-                      ownPropertyNode.appendChild("static_keyword", {
+                  group: "entries",
+                  subgroup: "function_construct",
+                  childGenerator() {
+                    if (node.functionAnalysis.type === "class") {
+                      functionConstructNode.appendChild("class_keyword", {
+                        value: "class",
                         render: renderGrammar,
-                        separatorMarkerRef: { current: " " },
                         group: "grammar",
-                        subgroup: "static_keyword",
-                        value: "static",
-                        isHidden:
-                          isSourceCode ||
-                          valueFunctionAnalysis.type === "method",
+                        subgroup: "class_keyword",
+                      });
+                      if (node.functionAnalysis.name) {
+                        functionConstructNode.appendChild("function_name", {
+                          value: node.functionAnalysis.name,
+                          render: renderGrammar,
+                          group: "grammar",
+                          subgroup: "function_name",
+                        });
+                      }
+                      const extendedClassName =
+                        node.functionAnalysis.extendedClassName;
+                      if (extendedClassName) {
+                        functionConstructNode.appendChild(
+                          "class_extends_keyword",
+                          {
+                            value: "extends",
+                            render: renderGrammar,
+                            group: "grammar",
+                            subgroup: "class_extends_keyword",
+                          },
+                        );
+                        functionConstructNode.appendChild(
+                          "class_extended_name",
+                          {
+                            value: extendedClassName,
+                            render: renderGrammar,
+                            group: "grammar",
+                            subgroup: "class_extended_name",
+                          },
+                        );
+                      }
+                      return;
+                    }
+                    if (node.functionAnalysis.isAsync) {
+                      functionConstructNode.appendChild(
+                        "function_async_keyword",
+                        {
+                          value: "async",
+                          render: renderGrammar,
+                          group: "grammar",
+                          subgroup: "function_async_keyword",
+                        },
+                      );
+                    }
+                    if (node.functionAnalysis.type === "classic") {
+                      functionConstructNode.appendChild("function_keyword", {
+                        value: node.functionAnalysis.isGenerator
+                          ? "function*"
+                          : "function",
+                        render: renderGrammar,
+                        group: "grammar",
+                        subgroup: "function_keyword",
                       });
                     }
-                    ownPropertyNode.appendChild("entry_key", {
-                      render: renderPrimitive,
-                      separatorMarkerRef: {
-                        current: node.isClassPrototype
-                          ? ""
-                          : node.functionAnalysis.type === "class"
-                            ? " = "
-                            : ": ",
-                      },
-                      separatorMarkerWhenTruncatedRef: {
-                        current: node.isClassPrototype
-                          ? ""
-                          : node.functionAnalysis.type === "class"
-                            ? ";"
-                            : ",",
-                      },
-                      separatorMarkerInsideRef,
-                      group: "entry_key",
-                      subgroup: "property_entry_key",
-                      value: key,
-                      isHidden:
-                        isSourceCode ||
-                        valueFunctionAnalysis.type === "method" ||
-                        isClassPrototype,
-                    });
-                    ownPropertyNode.appendChild("entry_value", {
-                      key,
-                      value,
-                      render: renderValue,
-                      separatorMarkerRef: valueSeparatorMarkerRef,
-                      group: "entry_value",
-                      subgroup: "property_entry_value",
-                      isSourceCode,
-                      isFunctionPrototype,
-                      isClassPrototype,
-                    });
+                    if (node.functionAnalysis.name) {
+                      functionConstructNode.appendChild("function_name", {
+                        value: node.functionAnalysis.name,
+                        render: renderGrammar,
+                        group: "grammar",
+                        subgroup: "function_name",
+                      });
+                    }
+                    function_body_prefix: {
+                      const appendFunctionBodyPrefix = (prefix) => {
+                        functionConstructNode.appendChild(
+                          "function_body_prefix",
+                          {
+                            value: prefix,
+                            render: renderGrammar,
+                            group: "grammar",
+                            subgroup: "function_body_prefix",
+                          },
+                        );
+                      };
+
+                      if (node.functionAnalysis.type === "arrow") {
+                        appendFunctionBodyPrefix("() =>");
+                      } else if (node.functionAnalysis.type === "method") {
+                        if (node.functionAnalysis.getterName) {
+                          appendFunctionBodyPrefix(`get ${key}()`);
+                        } else if (node.functionAnalysis.setterName) {
+                          appendFunctionBodyPrefix(`set ${key}()`);
+                        } else {
+                          appendFunctionBodyPrefix(`${key}()`);
+                        }
+                      } else if (node.functionAnalysis.type === "classic") {
+                        appendFunctionBodyPrefix("()");
+                      }
+                    }
                   },
-                  group: "entry",
-                  subgroup: "property_entry",
-                  path: node.path.append(key),
-                });
-                return ownPropertyNode;
+                },
+              );
+            } else if (isFunctionPrototype) {
+            } else {
+              const objectTag = getObjectTag(value);
+              if (
+                objectTag &&
+                objectTag !== "Object" &&
+                objectTag !== "Array"
+              ) {
+                objectConstructNode = compositePartsNode.appendChild(
+                  "construct",
+                  {
+                    value: null,
+                    render: renderChildren,
+                    onelineDiff: {
+                      hasSpacingBetweenEachChild: true,
+                    },
+                    group: "entries",
+                    subgroup: "object_construct",
+                    childGenerator() {
+                      if (objectConstructArgs) {
+                        objectConstructNode.appendChild(
+                          "call",
+                          createMethodCallNode(objectConstructNode, {
+                            objectName: objectTag,
+                            args: objectConstructArgs,
+                          }),
+                        );
+                      } else {
+                        objectConstructNode.appendChild("object_tag", {
+                          value: objectTag,
+                          render: renderGrammar,
+                          group: "grammar",
+                          subgroup: "object_tag",
+                          path: node.path.append("[[ObjectTag]]"),
+                        });
+                      }
+                    },
+                  },
+                );
+              }
+            }
+            let canHaveInternalEntries = false;
+            internal_entries: {
+              const internalEntriesParams = {
+                render: renderChildrenMultilineWhenDiff,
+                startMarker: "(",
+                endMarker: ")",
+                onelineDiff: {
+                  hasMarkersWhenEmpty: true,
+                  hasSeparatorBetweenEachChild: true,
+                  hasSpacingBetweenEachChild: true,
+                },
+                multilineDiff: {
+                  hasMarkersWhenEmpty: true,
+                  hasSeparatorBetweenEachChild: true,
+                  hasTrailingSeparator: true,
+                  hasNewLineAroundChildren: true,
+                  hasIndentBeforeEachChild: true,
+                  skippedMarkers: {
+                    start: ["↑ 1 value ↑", "↑ {x} values ↑"],
+                    between: ["↕ 1 value ↕", "↕ {x} values ↕"],
+                    end: ["↓ 1 value ↓", "↓ {x} values ↓"],
+                  },
+                  maxDiffType: "prop",
+                },
+                hasLeftSpacingDisabled: true,
+                group: "entries",
               };
 
-              if (node.isFunction) {
-                appendPropertyEntryNode(SOURCE_CODE_ENTRY_KEY, {
-                  value: node.functionAnalysis.argsAndBodySource,
-                  isSourceCode: true,
+              if (node.isMap) {
+                canHaveInternalEntries = true;
+                const mapEntriesNode = compositePartsNode.appendChild(
+                  "internal_entries",
+                  {
+                    ...internalEntriesParams,
+                    subgroup: "map_entries",
+                    childGenerator: () => {
+                      const objectTagCounterMap = new Map();
+                      for (const [mapEntryKey, mapEntryValue] of value) {
+                        let pathPart;
+                        if (isComposite(mapEntryKey)) {
+                          const keyObjectTag = getObjectTag(mapEntryKey);
+                          if (objectTagCounterMap.has(keyObjectTag)) {
+                            const objectTagCount =
+                              objectTagCounterMap.get(keyObjectTag) + 1;
+                            objectTagCounterMap.set(
+                              keyObjectTag,
+                              objectTagCount,
+                            );
+                            pathPart = `${keyObjectTag}#${objectTagCount}`;
+                          } else {
+                            objectTagCounterMap.set(keyObjectTag, 1);
+                            pathPart = `${keyObjectTag}#1`;
+                          }
+                        } else {
+                          pathPart = String(mapEntryKey);
+                        }
+
+                        const mapEntryNode = mapEntriesNode.appendChild(
+                          mapEntryKey,
+                          {
+                            render: renderChildren,
+                            onelineDiff: {
+                              hasSeparatorBetweenEachChild: true,
+                              hasTrailingSeparator: true,
+                            },
+                            group: "entry",
+                            subgroup: "map_entry",
+                            path: node.path.append(pathPart),
+                          },
+                        );
+                        mapEntryNode.appendChild("entry_key", {
+                          value: mapEntryKey,
+                          render: renderValue,
+                          separatorMarkerRef: { current: " => " },
+                          group: "entry_key",
+                          subgroup: "map_entry_key",
+                        });
+                        mapEntryNode.appendChild("entry_value", {
+                          value: mapEntryValue,
+                          render: renderValue,
+                          separatorMarkerRef: { current: "," },
+                          group: "entry_value",
+                          subgroup: "map_entry_value",
+                        });
+                      }
+                      objectTagCounterMap.clear();
+                    },
+                  },
+                );
+              }
+              if (node.isSet) {
+                canHaveInternalEntries = true;
+                const setEntriesNode = compositePartsNode.appendChild(
+                  "internal_entries",
+                  {
+                    ...internalEntriesParams,
+                    subgroup: "set_entries",
+                    childGenerator: () => {
+                      let index = 0;
+                      for (const [setValue] of value) {
+                        setEntriesNode.appendChild(index, {
+                          value: setValue,
+                          render: renderValue,
+                          separatorMarkerRef: { current: "," },
+                          group: "entry_value",
+                          subgroup: "set_entry",
+                          path: setEntriesNode.path.append(index, {
+                            isIndexedEntry: true,
+                          }),
+                        });
+                        index++;
+                      }
+                    },
+                  },
+                );
+              }
+            }
+            const ownPropertyNameToIgnoreSet = new Set();
+            const ownPropertSymbolToIgnoreSet = new Set();
+            let canHaveIndexedEntries = false;
+            indexed_entries: {
+              if (node.isArray) {
+                canHaveIndexedEntries = true;
+                const arrayEntriesNode = compositePartsNode.appendChild(
+                  "indexed_entries",
+                  {
+                    render: renderChildrenMultilineWhenDiff,
+                    startMarker: "[",
+                    endMarker: "]",
+                    ...getInheritedSeparatorParams(node),
+                    onelineDiff: {
+                      hasMarkersWhenEmpty: true,
+                      hasSeparatorBetweenEachChild: true,
+                      hasTrailingSeparator: true,
+                      hasSpacingBetweenEachChild: true,
+                    },
+                    multilineDiff: {
+                      hasMarkersWhenEmpty: true,
+                      hasSeparatorBetweenEachChild: true,
+                      hasTrailingSeparator: true,
+                      hasNewLineAroundChildren: true,
+                      hasIndentBeforeEachChild: true,
+                      skippedMarkers: {
+                        start: ["↑ 1 value ↑", "↑ {x} values ↑"],
+                        between: ["↕ 1 value ↕", "↕ {x} values ↕"],
+                        end: ["↓ 1 value ↓", "↓ {x} values ↓"],
+                      },
+                      maxDiffType: "line",
+                    },
+                    group: "entries",
+                    subgroup: "array_entries",
+                  },
+                );
+                const arrayEntyGenerator = () => {
+                  let index = 0;
+                  while (index < value.length) {
+                    ownPropertyNameToIgnoreSet.add(String(index));
+                    arrayEntriesNode.appendChild(index, {
+                      value: Object.hasOwn(value, index)
+                        ? value[index]
+                        : ARRAY_EMPTY_VALUE,
+                      render: renderValue,
+                      separatorMarkerRef: { current: "," },
+                      group: "entry_value",
+                      subgroup: "array_entry_value",
+                      path: arrayEntriesNode.path.append(index, {
+                        isIndexedEntry: true,
+                      }),
+                    });
+                    index++;
+                  }
+                };
+                arrayEntyGenerator();
+              }
+            }
+            const propertyLikeCallbackSet = new Set();
+            symbol_to_primitive: {
+              if (
+                Symbol.toPrimitive in value &&
+                typeof value[Symbol.toPrimitive] === "function"
+              ) {
+                ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
+                const toPrimitiveReturnValue =
+                  value[Symbol.toPrimitive]("string");
+                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                  appendPropertyEntryNode(
+                    SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+                    {
+                      value: toPrimitiveReturnValue,
+                    },
+                  );
                 });
               }
-              for (const ownPropertySymbol of ownPropertySymbols) {
-                const ownPropertySymbolValue = node.value[ownPropertySymbol];
-                appendPropertyEntryNode(ownPropertySymbol, {
-                  value: ownPropertySymbolValue,
-                  isHiddenWhenSame: true,
+            }
+            // toString()
+            if (node.isURL) {
+              objectConstructArgs = [
+                {
+                  value: value.href,
+                  key: "toString()",
+                },
+              ];
+            }
+            // valueOf()
+            else if (
+              typeof value.valueOf === "function" &&
+              value.valueOf !== Object.prototype.valueOf
+            ) {
+              ownPropertyNameToIgnoreSet.add("valueOf");
+              const valueOfReturnValue = value.valueOf();
+              if (objectConstructNode) {
+                objectConstructArgs = [
+                  {
+                    value: valueOfReturnValue,
+                    key: "valueOf()",
+                  },
+                ];
+              } else {
+                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                  appendPropertyEntryNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
+                    value: valueOfReturnValue,
+                  });
                 });
               }
-              for (const ownPropertyName of ownPropertyNames) {
-                const ownPropertyValue = node.value[ownPropertyName];
-                appendPropertyEntryNode(ownPropertyName, {
-                  value: ownPropertyValue,
-                  isFunctionPrototype:
-                    ownPropertyName === "prototype" && node.isFunction,
-                  isClassPrototype:
-                    ownPropertyName === "prototype" &&
-                    node.functionAnalysis.type === "class",
-                });
+            }
+            own_properties: {
+              const ownPropertySymbols = Object.getOwnPropertySymbols(
+                value,
+              ).filter((ownPropertySymbol) => {
+                return (
+                  !ownPropertSymbolToIgnoreSet.has(ownPropertySymbol) &&
+                  !shouldIgnoreOwnPropertySymbol(node, ownPropertySymbol)
+                );
+              });
+              const ownPropertyNames = Object.getOwnPropertyNames(value).filter(
+                (ownPropertyName) => {
+                  return (
+                    !ownPropertyNameToIgnoreSet.has(ownPropertyName) &&
+                    !shouldIgnoreOwnPropertyName(node, ownPropertyName)
+                  );
+                },
+              );
+              // the idea here is that when an object does not have any property
+              // we skip entirely the creation of own_properties node so that
+              // if that value is compared to an object
+              // {} is not even displayed even if empty
+              // as a result an array without own property would be displayed as follow:
+              // "[]"
+              // and not
+              // "[] {}"
+              // the goal is to enable this for every well known object tag
+              // one of the easiest way to achieve this would be to added something like
+              // hasWellKnownPrototype: boolean
+              // -> to be added when comparing prototypes
+              const canSkipOwnProperties =
+                node.isArray ||
+                node.isMap ||
+                node.isSet ||
+                node.isURL ||
+                node.isError;
+              const skipOwnProperties =
+                canSkipOwnProperties &&
+                ownPropertySymbols.length === 0 &&
+                ownPropertyNames.length === 0 &&
+                propertyLikeCallbackSet.size === 0;
+              if (skipOwnProperties) {
+                break own_properties;
               }
-              for (const propertyLikeCallback of propertyLikeCallbackSet) {
-                propertyLikeCallback(appendPropertyEntryNode);
-              }
-            },
-          });
-        }
+              const hasMarkersWhenEmpty =
+                !objectConstructNode &&
+                !canHaveInternalEntries &&
+                !canHaveIndexedEntries;
+              const ownPropertiesNode = compositePartsNode.appendChild(
+                "own_properties",
+                {
+                  render: renderChildrenMultilineWhenDiff,
+                  group: "entries",
+                  subgroup: "own_properties",
+                  ...(node.isClassPrototype
+                    ? {
+                        onelineDiff: { hasMarkersWhenEmpty },
+                        multilineDiff: { hasMarkersWhenEmpty },
+                      }
+                    : {
+                        startMarker: "{",
+                        endMarker: "}",
+                        onelineDiff: {
+                          hasMarkersWhenEmpty,
+                          hasSeparatorBetweenEachChild: true,
+                          hasSpacingAroundChildren: true,
+                          hasSpacingBetweenEachChild: true,
+                        },
+                        multilineDiff: {
+                          hasMarkersWhenEmpty,
+                          hasSeparatorBetweenEachChild: true,
+                          hasTrailingSeparator: true,
+                          hasNewLineAroundChildren: true,
+                          hasIndentBeforeEachChild: true,
+                          skippedMarkers: {
+                            start: ["↑ 1 prop ↑", "↑ {x} props ↑"],
+                            between: ["↕ 1 prop ↕", "↕ {x} props ↕"],
+                            end: ["↓ 1 prop ↓", "↓ {x} props ↓"],
+                          },
+                          maxDiffType: "prop",
+                        },
+                      }),
+                  childGenerator: () => {
+                    const appendPropertyEntryNode = (
+                      key,
+                      {
+                        value,
+                        isSourceCode,
+                        isFunctionPrototype,
+                        isClassPrototype,
+                        isHiddenWhenSame,
+                      },
+                    ) => {
+                      const valueSeparatorMarkerRef = {
+                        current:
+                          node.functionAnalysis.type === "class" ? ";" : ",",
+                      };
+                      const ownPropertyNode = ownPropertiesNode.appendChild(
+                        key,
+                        {
+                          render: renderChildren,
+                          onelineDiff: {
+                            hasSeparatorBetweenEachChild: true,
+                            hasTrailingSeparator: true,
+                          },
+                          focusedChildIndex: 0,
+                          separatorMarkerInsideRef: valueSeparatorMarkerRef,
+                          isFunctionPrototype,
+                          isClassPrototype,
+                          isHiddenWhenSame,
+                          childGenerator: () => {
+                            const valueFunctionAnalysis =
+                              tokenizeFunction(value);
+                            if (
+                              node.functionAnalysis.type === "class" &&
+                              !isClassPrototype
+                            ) {
+                              ownPropertyNode.appendChild("static_keyword", {
+                                render: renderGrammar,
+                                separatorMarkerRef: { current: " " },
+                                group: "grammar",
+                                subgroup: "static_keyword",
+                                value: "static",
+                                isHidden:
+                                  isSourceCode ||
+                                  valueFunctionAnalysis.type === "method",
+                              });
+                            }
+                            ownPropertyNode.appendChild("entry_key", {
+                              render: renderPrimitive,
+                              separatorMarkerRef: {
+                                current: node.isClassPrototype
+                                  ? ""
+                                  : node.functionAnalysis.type === "class"
+                                    ? " = "
+                                    : ": ",
+                              },
+                              separatorMarkerWhenTruncatedRef: {
+                                current: node.isClassPrototype
+                                  ? ""
+                                  : node.functionAnalysis.type === "class"
+                                    ? ";"
+                                    : ",",
+                              },
+                              separatorMarkerInsideRef,
+                              group: "entry_key",
+                              subgroup: "property_entry_key",
+                              value: key,
+                              isHidden:
+                                isSourceCode ||
+                                valueFunctionAnalysis.type === "method" ||
+                                isClassPrototype,
+                            });
+                            ownPropertyNode.appendChild("entry_value", {
+                              key,
+                              value,
+                              render: renderValue,
+                              separatorMarkerRef: valueSeparatorMarkerRef,
+                              group: "entry_value",
+                              subgroup: "property_entry_value",
+                              isSourceCode,
+                              isFunctionPrototype,
+                              isClassPrototype,
+                            });
+                          },
+                          group: "entry",
+                          subgroup: "property_entry",
+                          path: node.path.append(key),
+                        },
+                      );
+                      return ownPropertyNode;
+                    };
+
+                    if (node.isFunction) {
+                      appendPropertyEntryNode(SOURCE_CODE_ENTRY_KEY, {
+                        value: node.functionAnalysis.argsAndBodySource,
+                        isSourceCode: true,
+                      });
+                    }
+                    for (const ownPropertySymbol of ownPropertySymbols) {
+                      const ownPropertySymbolValue =
+                        node.value[ownPropertySymbol];
+                      appendPropertyEntryNode(ownPropertySymbol, {
+                        value: ownPropertySymbolValue,
+                        isHiddenWhenSame: true,
+                      });
+                    }
+                    for (const ownPropertyName of ownPropertyNames) {
+                      const ownPropertyValue = node.value[ownPropertyName];
+                      appendPropertyEntryNode(ownPropertyName, {
+                        value: ownPropertyValue,
+                        isFunctionPrototype:
+                          ownPropertyName === "prototype" && node.isFunction,
+                        isClassPrototype:
+                          ownPropertyName === "prototype" &&
+                          node.functionAnalysis.type === "class",
+                      });
+                    }
+                    for (const propertyLikeCallback of propertyLikeCallbackSet) {
+                      propertyLikeCallback(appendPropertyEntryNode);
+                    }
+                  },
+                },
+              );
+            }
+          },
+          group: "entries",
+          subgroup: "composite_parts",
+        });
       };
       node.wrappedNodeGetter = () => {
-        const constructNode = node.childNodeMap.get("construct");
+        const compositePartsNode = node.childNodeMap.get("parts");
+        if (!compositePartsNode) {
+          return null;
+        }
+
+        const constructNode = compositePartsNode.childNodeMap.get("construct");
         if (constructNode) {
           const constructCallNode = constructNode.childNodeMap.get("call");
           if (constructCallNode) {
@@ -2327,7 +2401,8 @@ let createRootNode;
             return firstArgNode;
           }
         }
-        const ownPropertiesNode = node.childNodeMap.get("own_properties");
+        const ownPropertiesNode =
+          compositePartsNode.childNodeMap.get("own_properties");
         if (ownPropertiesNode) {
           const symbolToPrimitiveReturnValuePropertyNode =
             ownPropertiesNode.childNodeMap.get(
@@ -2595,7 +2670,6 @@ const renderComposite = (node, props) => {
   if (wellKnownNode) {
     return wellKnownNode.render(props);
   }
-
   let maxDepthReached = false;
   if (node.diffType === "same") {
     maxDepthReached = node.depth > props.MAX_DEPTH;
@@ -2606,80 +2680,25 @@ const renderComposite = (node, props) => {
     props.firstDiffDepth = node.depth;
     maxDepthReached = node.depth > props.MAX_DEPTH_INSIDE_DIFF;
   }
-  const constructNode = node.childNodeMap.get("construct");
-  const internalEntriesNode = node.childNodeMap.get("internal_entries");
-  const indexedEntriesNode = node.childNodeMap.get("indexed_entries");
-  const ownPropertiesNode = node.childNodeMap.get("own_properties");
-  const childProps = {
-    ...props,
-  };
+  const compositePartsNode = node.childNodeMap.get("parts");
   if (maxDepthReached) {
     node.startMarker = node.endMarker = "";
     // const { separatorMarkerRef } = node;
     // if (separatorMarkerRef) {
     //   separatorMarkerRef.current = "";
     // }
+    const indexedEntriesNode =
+      compositePartsNode.childNodeMap.get("indexed_entries");
     if (indexedEntriesNode) {
       const arrayLength = indexedEntriesNode.childNodeMap.size;
       return truncateAndApplyColor(`Array(${arrayLength})`, node, props);
     }
+    const ownPropertiesNode =
+      compositePartsNode.childNodeMap.get("own_properties");
     const ownPropertyCount = ownPropertiesNode.childNodeMap.size;
     return truncateAndApplyColor(`Object(${ownPropertyCount})`, node, props);
   }
-  let columnsRemaining = props.columnsRemaining;
-  const { separatorMarkerRef } = node;
-  const separatorMarker = separatorMarkerRef ? separatorMarkerRef.current : "";
-  if (separatorMarker) {
-    columnsRemaining -= separatorMarker.length;
-  }
-  if (constructNode) {
-    const constructDiff = constructNode.render(childProps);
-    columnsRemaining = updateRemainingColumns(columnsRemaining, constructDiff);
-    diff += constructDiff;
-  }
-  if (internalEntriesNode) {
-    const internalEntriesDiff = internalEntriesNode.render({
-      ...childProps,
-      columnsRemaining,
-    });
-    columnsRemaining = updateRemainingColumns(
-      columnsRemaining,
-      internalEntriesDiff,
-    );
-    diff += internalEntriesDiff;
-  }
-  if (indexedEntriesNode) {
-    if (diff) {
-      columnsRemaining -= " ".length;
-      diff += " ";
-    }
-    const indexedEntriesDiff = indexedEntriesNode.render({
-      ...childProps,
-      columnsRemaining,
-    });
-    columnsRemaining = updateRemainingColumns(
-      columnsRemaining,
-      indexedEntriesDiff,
-    );
-    diff += indexedEntriesDiff;
-  }
-  if (ownPropertiesNode) {
-    const ownPropertiesDiff = ownPropertiesNode.render({
-      ...childProps,
-      columnsRemaining,
-    });
-    if (ownPropertiesDiff) {
-      if (diff) {
-        columnsRemaining -= " ".length;
-        diff += " ";
-      }
-      diff += ownPropertiesDiff;
-    }
-  }
-  if (separatorMarker) {
-    diff += renderSeparatorMarker(node, props);
-  }
-  return diff;
+  return compositePartsNode.render(props);
 };
 const renderChildren = (node, props) => {
   const {
@@ -2872,8 +2891,20 @@ const renderChildren = (node, props) => {
     }
     const isPrevious = childIndex < focusedChildIndex;
     if (isPrevious) {
-      const shouldInjectSpacing =
-        hasSpacingBetweenEachChild && (childIndex > 0 || focusedChildIndex > 0);
+      let shouldInjectSpacing =
+        hasSpacingBetweenEachChild &&
+        (childIndex > 0 || focusedChildIndex > 0) &&
+        childrenDiff;
+      if (shouldInjectSpacing) {
+        const nextChildIndex = childIndex + 1;
+        const nextChildKey = childrenKeys[nextChildIndex];
+        if (nextChildKey !== undefined) {
+          const nextChildNode = node.childNodeMap.get(nextChildKey);
+          if (nextChildNode.hasLeftSpacingDisabled) {
+            shouldInjectSpacing = false;
+          }
+        }
+      }
       if (shouldInjectSpacing) {
         columnsRemainingForChildren -= " ".length;
         return `${childDiff} ${childrenDiff}`;
@@ -2883,7 +2914,15 @@ const renderChildren = (node, props) => {
       }
       return childDiff;
     }
-    if (hasSpacingBetweenEachChild && childrenDiff) {
+    let shouldInjectSpacing = hasSpacingBetweenEachChild && childDiff;
+    if (shouldInjectSpacing) {
+      const childKey = childrenKeys[childIndex];
+      const childNode = node.childNodeMap.get(childKey);
+      if (childNode.hasLeftSpacingDisabled) {
+        shouldInjectSpacing = false;
+      }
+    }
+    if (shouldInjectSpacing) {
       columnsRemainingForChildren -= " ".length;
       return `${childrenDiff} ${childDiff}`;
     }

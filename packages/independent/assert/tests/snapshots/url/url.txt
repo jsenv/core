@@ -109,7 +109,7 @@ expect: {
 }
 
 # url object port and object with port
-actual: URL("http://example.com:45/") {}
+actual: URL("http://example.com:45/")
 expect: {
   port: 45,
 }
