@@ -13,8 +13,13 @@
  *    - url search param value
  *    - url pathname
  *    - ensure backtick cannot be used for object property key
- *  - date
+ *  - regexp
  *  - object integrity
+ *  - url search params
+ *  - weakset/weakmap/promise
+ *  - date
+ *  - headers
+ *  - request/response
  */
 
 import stringWidth from "string-width";
@@ -1153,6 +1158,7 @@ let createRootNode;
       isFunction: false,
       functionAnalysis: defaultFunctionAnalysis,
       isArray: false,
+      isTypedArray: false,
       isMap: false,
       isSet: false,
       isURL: false,
@@ -1724,6 +1730,23 @@ let createRootNode;
           node.isURL = true;
           continue;
         }
+        if (
+          // "Int8Array",
+          // "Uint8Array",
+          // "Uint8ClampedArray",
+          // "Int16Array",
+          // "Uint16Array",
+          // "Int32Array",
+          // "Uint32Array",
+          // "Float32Array",
+          // "Float64Array",
+          // "BigInt64Array",
+          // "BigUint64Array",
+          parentConstructor.name === "TypedArray"
+        ) {
+          node.isTypedArray = true;
+          continue;
+        }
       }
       node.childGenerator = function () {
         if (node.reference) {
@@ -2091,13 +2114,13 @@ let createRootNode;
                         between: ["↕ 1 value ↕", "↕ {x} values ↕"],
                         end: ["↓ 1 value ↓", "↓ {x} values ↓"],
                       },
-                      maxDiffType: "line",
+                      maxDiffType: "prop",
                     },
                     group: "entries",
                     subgroup: "array_entries",
                   },
                 );
-                const arrayEntyGenerator = () => {
+                const arrayChildrenGenerator = () => {
                   let index = 0;
                   while (index < value.length) {
                     ownPropertyNameToIgnoreSet.add(String(index));
@@ -2116,7 +2139,59 @@ let createRootNode;
                     index++;
                   }
                 };
-                arrayEntyGenerator();
+                arrayChildrenGenerator();
+                break indexed_entries;
+              }
+              if (node.isTypedArray) {
+                canHaveIndexedEntries = true;
+                const typedEntriesNode = compositePartsNode.appendChild(
+                  "indexed_entries",
+                  {
+                    render: renderChildrenMultilineWhenDiff,
+                    startMarker: "[",
+                    endMarker: "]",
+                    ...getInheritedSeparatorParams(node),
+                    onelineDiff: {
+                      hasMarkersWhenEmpty: true,
+                      hasSeparatorBetweenEachChild: true,
+                      hasTrailingSeparator: true,
+                      hasSpacingBetweenEachChild: true,
+                    },
+                    multilineDiff: {
+                      hasMarkersWhenEmpty: true,
+                      hasSeparatorBetweenEachChild: true,
+                      hasTrailingSeparator: true,
+                      hasNewLineAroundChildren: true,
+                      hasIndentBeforeEachChild: true,
+                      skippedMarkers: {
+                        start: ["↑ 1 value ↑", "↑ {x} values ↑"],
+                        between: ["↕ 1 value ↕", "↕ {x} values ↕"],
+                        end: ["↓ 1 value ↓", "↓ {x} values ↓"],
+                      },
+                      maxDiffType: "prop",
+                    },
+                    group: "entries",
+                    subgroup: "typed_array_entries",
+                  },
+                );
+                const typedArrayChildrenGenerator = () => {
+                  let index = 0;
+                  while (index < value.length) {
+                    ownPropertyNameToIgnoreSet.add(String(index));
+                    typedEntriesNode.appendChild(index, {
+                      value: value[index],
+                      render: renderNumber,
+                      separatorMarkerRef: { current: "," },
+                      group: "entry_value",
+                      subgroup: "typed_array_entry_value",
+                      path: typedEntriesNode.path.append(index, {
+                        isIndexedEntry: true,
+                      }),
+                    });
+                    index++;
+                  }
+                };
+                typedArrayChildrenGenerator();
               }
             }
             const propertyLikeCallbackSet = new Set();
@@ -2200,6 +2275,7 @@ let createRootNode;
               // -> to be added when comparing prototypes
               const canSkipOwnProperties =
                 node.isArray ||
+                node.isTypedArray ||
                 node.isMap ||
                 node.isSet ||
                 node.isURL ||
@@ -2532,6 +2608,9 @@ const renderPrimitive = (node, props) => {
   if (node.isSymbol) {
     return renderSymbol(node, props);
   }
+  if (node.isNumber) {
+    return renderNumber(node, props);
+  }
   return truncateAndApplyColor(JSON.stringify(node.value), node, props);
 };
 const renderString = (node, props) => {
@@ -2576,6 +2655,9 @@ const renderChar = (node, props) => {
     return truncateAndApplyColor(CHAR_TO_ESCAPED_CHAR[point], node, props);
   }
   return truncateAndApplyColor(char, node, props);
+};
+const renderNumber = (node, props) => {
+  return truncateAndApplyColor(JSON.stringify(node.value), node, props);
 };
 // const renderInteger = (node, props) => {
 //   let diff = JSON.stringify(node.value);

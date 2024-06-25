@@ -1,4 +1,5 @@
 await import("./array.test.js");
+await import("./array_typed.test.js");
 await import("./assert_any.test.js");
 await import("./assert_between.test.js");
 await import("./assert_not.test.js");

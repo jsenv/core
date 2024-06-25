@@ -1,0 +1,6 @@
+# buffer.from("") vs buffer.from("a")
+actual: Buffer []
+expect: Buffer [
+  97,
+]
+
