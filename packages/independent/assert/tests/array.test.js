@@ -2,38 +2,38 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-await startSnapshotTesting("array", {
-  ["array first item diff"]: () => {
+await startSnapshotTesting("array", ({ test }) => {
+  test("array first item diff", () => {
     assert({
       actual: [true],
       expect: [false],
     });
-  },
-  ["array expect, object received"]: () => {
+  });
+  test("array expect, object received", () => {
     assert({
       actual: {},
       expect: [],
     });
-  },
-  // ["diff in the middle of big array"]: () => {
-  //   assert({
-  //     actual: ["a", "b", "c", "Z", "e", "f", "g", "h"],
-  //     expect: ["a", "b", "c", "d", "e", "f", "g", "h"],
-  //   });
-  // },
-  // ["big array collapsed because diff is elsewhere"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: ["a", "b", "c", "d", "e", "f", "g", "h"],
-  //       b: true,
-  //     },
-  //     expect: {
-  //       a: ["a", "b", "c", "d", "e", "f", "g", "h"],
-  //       b: false,
-  //     },
-  //     maxColumns: 35,
-  //   });
-  // },
+  });
+  test("diff in the middle of big array", () => {
+    assert({
+      actual: ["a", "b", "c", "Z", "e", "f", "g", "h"],
+      expect: ["a", "b", "c", "d", "e", "f", "g", "h"],
+    });
+  });
+  test.TODO("big array collapsed because diff is elsewhere", () => {
+    assert({
+      actual: {
+        a: ["a", "b", "c", "d", "e", "f", "g", "h"],
+        b: true,
+      },
+      expect: {
+        a: ["a", "b", "c", "d", "e", "f", "g", "h"],
+        b: false,
+      },
+      MAX_COLUMNS: 35,
+    });
+  });
   // ["undefined vs empty"]: () => {
   //   assert({
   //     actual: [,],

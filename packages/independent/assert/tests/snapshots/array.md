@@ -20,3 +20,14 @@ assert({
 
 ![img](<./array/array expect, object received.svg>)
 
+# diff in the middle of big array
+
+```js
+assert({
+  actual: ["a", "b", "c", "Z", "e", "f", "g", "h"],
+  expect: ["a", "b", "c", "d", "e", "f", "g", "h"],
+});
+```
+
+![img](<./array/diff in the middle of big array.svg>)
+

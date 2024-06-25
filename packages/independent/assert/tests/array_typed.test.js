@@ -2,7 +2,7 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 await startSnapshotTesting("array_typed", ({ test }) => {
-  test.ONLY(`buffer.from("") vs buffer.from("a")`, () => {
+  test(`buffer.from("") vs buffer.from("a")`, () => {
     assert({
       actual: Buffer.from(""),
       expect: Buffer.from("a"),

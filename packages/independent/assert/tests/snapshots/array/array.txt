@@ -10,3 +10,19 @@ expect: [
 actual: {}
 expect: []
 
+# diff in the middle of big array
+actual: [
+  ↑ 2 values ↑
+  "c",
+  "Z",
+  "e",
+  ↓ 3 values ↓
+]
+expect: [
+  ↑ 2 values ↑
+  "c",
+  "d",
+  "e",
+  ↓ 3 values ↓
+]
+
