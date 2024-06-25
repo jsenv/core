@@ -100,14 +100,6 @@ const setColor = (text, color) => {
   // }
   return textColored;
 };
-const measureRemainingColumnsImpact = (string) => {
-  const newLineLastIndex = string.lastIndexOf("\n");
-  if (newLineLastIndex === -1) {
-    return stringWidth(string);
-  }
-  const lastLine = string.slice(newLineLastIndex + "\n".length);
-  return stringWidth(lastLine);
-};
 
 const defaultOptions = {
   actual: undefined,
@@ -2973,7 +2965,20 @@ const renderChildren = (node, props) => {
       columnsNeededBySkipMarkers += endSkippedMarkerWidth;
     }
     const childDiff = renderChildDiff(childNode, childIndex);
-    const childDiffWidth = measureRemainingColumnsImpact(childDiff);
+    let childDiffWidth;
+    const newLineIndex = childDiff.indexOf("\n");
+    if (newLineIndex === -1) {
+      childDiffWidth = stringWidth(childDiff);
+    } else {
+      const newLineLastIndex = childDiff.lastIndexOf("\n");
+      if (newLineLastIndex === newLineIndex) {
+        const line = childDiff.slice(0, newLineIndex + "\n".length);
+        childDiffWidth = stringWidth(line);
+      } else {
+        const lastLine = childDiff.slice(newLineLastIndex + "\n".length);
+        childDiffWidth = stringWidth(lastLine);
+      }
+    }
     if (childDiffWidth > columnsRemainingForChildren) {
       break;
     }
