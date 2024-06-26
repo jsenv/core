@@ -3059,6 +3059,10 @@ const renderChildren = (node, props) => {
         canSkipMarkers && hasSomeChildSkippedAtStart && startSkippedMarkerWidth,
       endSkippedMarkerDisabled:
         canSkipMarkers && hasSomeChildSkippedAtEnd && endSkippedMarkerWidth,
+      separatorMarker,
+      forceDisableSeparatorMarker: () => {
+        separatorMarkerDisabled = true;
+      },
     });
     if (childDiff === "") {
       // child has been truncated (well we can't tell 100% this is the reason)
@@ -3697,6 +3701,10 @@ const getNodeDepth = (node, props) => {
 const enableMultilineDiff = (lineEntriesNode) => {
   lineEntriesNode.multilineDiff.hasIndentBetweenEachChild = true;
   lineEntriesNode.beforeRender = (props, { childIndexToDisplayArray }) => {
+    if (props.forceDisableSeparatorMarker) {
+      props.columnsRemaining += props.separatorMarker.length;
+      props.forceDisableSeparatorMarker();
+    }
     const biggestDisplayedLineIndex =
       childIndexToDisplayArray[childIndexToDisplayArray.length - 1];
     for (const lineIndexToDisplay of childIndexToDisplayArray) {
