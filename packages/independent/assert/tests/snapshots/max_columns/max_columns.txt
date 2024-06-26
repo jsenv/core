@@ -180,11 +180,11 @@ expect: {
 
 # array in property at 28
 actual: {
-  abcdefghijklmno: 
+  abcdefghijklmno: [0, …],
   z: true,
 }
 expect: {
-  abcdefghijklmno: 
+  abcdefghijklmno: [0, …],
   z: false,
 }
 

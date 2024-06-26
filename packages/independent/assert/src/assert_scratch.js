@@ -2,6 +2,8 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - max columns for array value
+ *   j'aimerais bien déplacer le spacing comme pour le separator
+ *   c'est a dire dans render, pas append
  * - restore array tests
  * - property descriptors
  * - errors
@@ -2899,10 +2901,10 @@ const renderChildren = (node, props) => {
   let truncateNotationUsed = false;
   let tryToSwapSkipMarkerWithChild = false;
   let columnsNeededBySkipMarkers = 0;
-  let firstAppend = true;
+  let isFirstAppend = true;
   const appendChildDiff = (childDiff, childIndex) => {
-    if (firstAppend) {
-      firstAppend = false;
+    if (isFirstAppend) {
+      isFirstAppend = false;
       minIndexDisplayed = maxIndexDisplayed = childIndex;
       return childDiff;
     }
@@ -2935,18 +2937,6 @@ const renderChildren = (node, props) => {
         return `${childDiff}${childrenDiff}`;
       }
       return childDiff;
-    }
-    let shouldInjectSpacing = hasSpacingBetweenEachChild && childDiff;
-    if (shouldInjectSpacing) {
-      const childKey = childrenKeys[childIndex];
-      const childNode = node.childNodeMap.get(childKey);
-      if (childNode.hasLeftSpacingDisabled) {
-        shouldInjectSpacing = false;
-      }
-    }
-    if (shouldInjectSpacing) {
-      columnsRemainingForChildren -= " ".length;
-      return `${childrenDiff} ${childDiff}`;
     }
     if (childrenDiff) {
       return `${childrenDiff}${childDiff}`;
@@ -3081,6 +3071,16 @@ const renderChildren = (node, props) => {
       } else {
         const lastLine = childDiff.slice(newLineLastIndex + "\n".length);
         childDiffWidth = stringWidth(lastLine);
+      }
+    }
+    if (
+      !isFirstAppend &&
+      hasSpacingBetweenEachChild &&
+      childIndex > focusedChildIndex
+    ) {
+      if (!childNode.hasLeftSpacingDisabled) {
+        childDiffWidth += " ".length;
+        childDiff = ` ${childDiff}`;
       }
     }
     let separatorMarkerToAppend;
