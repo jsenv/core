@@ -2,8 +2,6 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - max columns for array value
- *   j'aimerais bien déplacer le spacing comme pour le separator
- *   c'est a dire dans render, pas append
  * - restore array tests
  * - property descriptors
  * - errors
@@ -2915,24 +2913,6 @@ const renderChildren = (node, props) => {
     }
     const isPrevious = childIndex < focusedChildIndex;
     if (isPrevious) {
-      let shouldInjectSpacing =
-        hasSpacingBetweenEachChild &&
-        (childIndex > 0 || focusedChildIndex > 0) &&
-        childrenDiff;
-      if (shouldInjectSpacing) {
-        const nextChildIndex = childIndex + 1;
-        const nextChildKey = childrenKeys[nextChildIndex];
-        if (nextChildKey !== undefined) {
-          const nextChildNode = node.childNodeMap.get(nextChildKey);
-          if (nextChildNode.hasLeftSpacingDisabled) {
-            shouldInjectSpacing = false;
-          }
-        }
-      }
-      if (shouldInjectSpacing) {
-        columnsRemainingForChildren -= " ".length;
-        return `${childDiff} ${childrenDiff}`;
-      }
       if (childrenDiff) {
         return `${childDiff}${childrenDiff}`;
       }
@@ -3073,12 +3053,25 @@ const renderChildren = (node, props) => {
         childDiffWidth = stringWidth(lastLine);
       }
     }
-    if (
-      !isFirstAppend &&
-      hasSpacingBetweenEachChild &&
-      childIndex > focusedChildIndex
-    ) {
-      if (!childNode.hasLeftSpacingDisabled) {
+    if (!isFirstAppend && hasSpacingBetweenEachChild) {
+      if (childIndex < focusedChildIndex) {
+        if ((childIndex > 0 || focusedChildIndex > 0) && childrenDiff) {
+          let shouldInjectSpacing = true;
+          const nextChildIndex = childIndex + 1;
+          const nextChildKey = childrenKeys[nextChildIndex];
+          if (nextChildKey !== undefined) {
+            const nextChildNode = node.childNodeMap.get(nextChildKey);
+            if (nextChildNode.hasLeftSpacingDisabled) {
+              shouldInjectSpacing = false;
+            }
+          }
+          if (shouldInjectSpacing) {
+            childDiffWidth += " ".length;
+            childDiff = `${childDiff} `;
+          }
+        }
+      } else if (childNode.hasLeftSpacingDisabled) {
+      } else {
         childDiffWidth += " ".length;
         childDiff = ` ${childDiff}`;
       }
