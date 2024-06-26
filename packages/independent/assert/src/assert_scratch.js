@@ -1,7 +1,8 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - max columns for array value
+ * - max columns fixes
+ *   long url diff at start in max columns is missing end skip marker
  * - restore array tests
  * - property descriptors
  * - errors
@@ -1115,7 +1116,6 @@ let createRootNode;
     quoteMarkerRef,
     separatorMarker = "",
     separatorMarkerDisabled = false,
-    separatorMarkerForced = false,
     separatorMarkerWhenTruncated,
     hasLeftSpacingDisabled = false,
     onelineDiff = null,
@@ -1186,7 +1186,6 @@ let createRootNode;
       quoteMarkerRef,
       separatorMarker,
       separatorMarkerDisabled,
-      separatorMarkerForced,
       separatorMarkerWhenTruncated,
       hasLeftSpacingDisabled,
       onelineDiff,
@@ -2748,6 +2747,7 @@ const renderChildren = (node, props) => {
     hasMarkersWhenEmpty,
     focusedChildWhenSame = "first",
     hasSeparatorBetweenEachChild,
+    hasSeparatorOnSingleChild,
     hasTrailingSeparator,
     hasSpacingAroundChildren,
     hasSpacingBetweenEachChild,
@@ -2973,14 +2973,14 @@ const renderChildren = (node, props) => {
       separatorMarker,
       separatorMarkerWhenTruncated,
       separatorMarkerDisabled,
-      separatorMarkerForced,
     } = childNode;
-    if (separatorMarkerForced) {
-    } else if (separatorMarkerDisabled) {
+    if (separatorMarkerDisabled) {
     } else if (
       !hasSeparatorBetweenEachChild ||
-      childrenKeys.length === 1 ||
-      (!hasTrailingSeparator && childIndex === childrenKeys.length - 1)
+      shouldDisableSeparator(childIndex, childrenKeys, {
+        hasSeparatorOnSingleChild,
+        hasTrailingSeparator,
+      })
     ) {
       separatorMarkerDisabled = true;
       if (childNode.subgroup === "property_entry") {
@@ -3316,6 +3316,7 @@ const renderChildrenMultiline = (node, props) => {
   const childrenKeys = node.childrenKeys;
   const {
     hasSeparatorBetweenEachChild,
+    hasSeparatorOnSingleChild = true,
     hasTrailingSeparator,
     hasNewLineAroundChildren,
     hasIndentBeforeEachChild,
@@ -3577,12 +3578,13 @@ const renderChildrenMultiline = (node, props) => {
       separatorMarkerWhenTruncated,
       separatorMarkerDisabled,
     } = childNode;
-    if (
-      separatorMarkerDisabled ||
+    if (separatorMarkerDisabled) {
+    } else if (
       !hasSeparatorBetweenEachChild ||
-      (!hasTrailingSeparator &&
-        childIndex === childrenKeys.length - 1 &&
-        childrenKeys.length > 1)
+      shouldDisableSeparator(childIndex, childrenKeys, {
+        hasTrailingSeparator,
+        hasSeparatorOnSingleChild,
+      })
     ) {
       separatorMarkerDisabled = true;
       if (childNode.subgroup === "property_entry") {
@@ -3590,8 +3592,9 @@ const renderChildrenMultiline = (node, props) => {
         propertyValueNode.separatorMarkerDisabled = true;
       }
     } else if (childNode.subgroup === "property_entry") {
-      const propertyValueNode = childNode.childNodeMap.get("entry_value");
-      propertyValueNode.separatorMarkerForced = true;
+      if (childNode.onelineDiff) {
+        childNode.onelineDiff.hasSeparatorOnSingleChild = true;
+      }
     }
     if (separatorMarkerWhenTruncated === undefined) {
       columnsRemainingForThisChild -= separatorMarker.length;
@@ -4083,6 +4086,20 @@ const CHAR_TO_ESCAPED_CHAR = [
   '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
   '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
 ];
+
+const shouldDisableSeparator = (
+  childIndex,
+  childrenKeys,
+  { hasSeparatorOnSingleChild, hasTrailingSeparator },
+) => {
+  if (childrenKeys.length === 1) {
+    return !hasSeparatorOnSingleChild;
+  }
+  if (childIndex === childrenKeys.length - 1) {
+    return !hasTrailingSeparator;
+  }
+  return false;
+};
 
 const canParseUrl =
   URL.canParse ||
