@@ -40,7 +40,3 @@ if (
 ) {
   ANSI.supported = true;
 }
-
-if (global.ANSI_SUPPORTED === false) {
-  ANSI.supported = false;
-}

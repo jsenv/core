@@ -340,6 +340,18 @@ await startSnapshotTesting("object", ({ test }) => {
       },
     });
   });
+  test("one prop no diff", () => {
+    assert({
+      actual: {
+        a: { foo: true },
+        z: true,
+      },
+      expect: {
+        a: { foo: true },
+        z: false,
+      },
+    });
+  });
 });
 
 // await startSnapshotTesting("object", {

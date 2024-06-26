@@ -49,7 +49,7 @@ await startSnapshotTesting("max_columns", ({ test }) => {
   });
   // string
   for (const MAX_COLUMNS of [9, 10, 11, 12, 13, 19, 20]) {
-    test(`on string at ${MAX_COLUMNS}`, () => {
+    test(`string at ${MAX_COLUMNS}`, () => {
       assert({
         actual: "abcdefghij",
         expect: "ABCDEFGHIJ",
@@ -59,7 +59,7 @@ await startSnapshotTesting("max_columns", ({ test }) => {
   }
   // boolean in property
   for (const MAX_COLUMNS of [10, 11, 12, 13, 14, 15]) {
-    test(`on property at ${MAX_COLUMNS}`, () => {
+    test(`boolean in property at ${MAX_COLUMNS}`, () => {
       assert({
         actual: {
           abcdefgh: true,
@@ -73,7 +73,7 @@ await startSnapshotTesting("max_columns", ({ test }) => {
   }
   // array in property
   for (const MAX_COLUMNS of [20, 21, 22, 23, 24, 25, 26, 27, 28, 29]) {
-    test(`on array at ${MAX_COLUMNS}`, () => {
+    test(`array in property at ${MAX_COLUMNS}`, () => {
       // expecting to go through the following phases
       // but not as soon as columns+1 as some steps require 2 more chars to be displayed
       // 1. "abcdefghijklmno,"

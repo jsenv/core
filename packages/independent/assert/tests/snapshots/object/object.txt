@@ -264,3 +264,13 @@ expect: {
   b: false,
 }
 
+# one prop no diff
+actual: {
+  a: { foo: true },
+  z: true,
+}
+expect: {
+  a: { foo: true },
+  z: false,
+}
+

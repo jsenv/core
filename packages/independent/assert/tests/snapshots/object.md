@@ -446,3 +446,20 @@ assert({
 
 ![img](<./object/collapsed with overview when no diff.svg>)
 
+# one prop no diff
+
+```js
+assert({
+  actual: {
+    a: { foo: true },
+    z: true,
+  },
+  expect: {
+    a: { foo: true },
+    z: false,
+  },
+});
+```
+
+![img](<./object/one prop no diff.svg>)
+

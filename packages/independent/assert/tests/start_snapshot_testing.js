@@ -2,6 +2,7 @@ import stripAnsi from "strip-ansi";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
 import { clearDirectorySync, writeFileSync } from "@jsenv/filesystem";
+import { ANSI } from "@jsenv/humanize";
 
 import { parseFunction } from "@jsenv/assert/src/function_parser.js";
 
@@ -28,6 +29,7 @@ export const startSnapshotTesting = async (name, scenarios) => {
       scenarioMap.set(name, callback);
     };
     test.ONLY = (name, callback) => {
+      ANSI.supported = false;
       onlyScenarioMap.set(name, callback);
     };
     test.TODO = () => {};
