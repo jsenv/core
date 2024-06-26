@@ -10,6 +10,16 @@ expect: [
 actual: {}
 expect: []
 
+# array without diff
+actual: {
+  a: [0],
+  z: true,
+}
+expect: {
+  a: [0],
+  z: false,
+}
+
 # diff in the middle of big array
 actual: [
   ↑ 2 values ↑

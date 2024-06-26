@@ -15,6 +15,18 @@ await startSnapshotTesting("array", ({ test }) => {
       expect: [],
     });
   });
+  test("array without diff", () => {
+    assert({
+      actual: {
+        a: [0],
+        z: true,
+      },
+      expect: {
+        a: [0],
+        z: false,
+      },
+    });
+  });
   test("diff in the middle of big array", () => {
     assert({
       actual: ["a", "b", "c", "Z", "e", "f", "g", "h"],
