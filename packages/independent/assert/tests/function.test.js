@@ -20,8 +20,8 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-await startSnapshotTesting("function", {
-  ["async arrow function vs arrow function"]: () => {
+await startSnapshotTesting("function", ({ test }) => {
+  test("async arrow function vs arrow function", () => {
     const anonymousAsyncArrowFunction = (function () {
       return async () => {};
     })();
@@ -32,8 +32,8 @@ await startSnapshotTesting("function", {
       actual: anonymousAsyncArrowFunction,
       expect: anonymousArrowFunction,
     });
-  },
-  ["arrow function source modified, name same"]: () => {
+  });
+  test("arrow function source modified, name same", () => {
     const anonymousArrowReturningTrue = (function () {
       return () => true;
     })();
@@ -44,8 +44,8 @@ await startSnapshotTesting("function", {
       actual: anonymousArrowReturningTrue,
       expect: anonymousArrowReturningFalse,
     });
-  },
-  ["async function vs function"]: () => {
+  });
+  test("async function vs function", () => {
     const anonymousAsyncFunction = (function () {
       return async function () {};
     })();
@@ -56,8 +56,8 @@ await startSnapshotTesting("function", {
       actual: anonymousAsyncFunction,
       expect: anonymousFunction,
     });
-  },
-  ["function vs arrow function"]: () => {
+  });
+  test("function vs arrow function", () => {
     const anonymousFunction = (function () {
       return function () {};
     })();
@@ -68,8 +68,8 @@ await startSnapshotTesting("function", {
       actual: anonymousFunction,
       expect: anonymousArrowFunction,
     });
-  },
-  ["function source modified, name same"]: () => {
+  });
+  test("function source modified, name same", () => {
     const anonymousFunctionReturningTrue = (function () {
       return function () {
         return true;
@@ -84,14 +84,14 @@ await startSnapshotTesting("function", {
       actual: anonymousFunctionReturningTrue,
       expect: anonymousFunctionReturningFalse,
     });
-  },
-  ["function source same, name modified"]: () => {
+  });
+  test("function source same, name modified", () => {
     assert({
       actual: function foo() {},
       expect: function bar() {},
     });
-  },
-  ["anonymous function vs named function"]: () => {
+  });
+  test("anonymous function vs named function", () => {
     const anonymousFunction = (function () {
       return function () {};
     })();
@@ -100,8 +100,8 @@ await startSnapshotTesting("function", {
       actual: anonymousFunction,
       expect: foo,
     });
-  },
-  ["number of diff when comparing async function and function"]: () => {
+  });
+  test("number of diff when comparing async function and function", () => {
     const anonymousAsyncFunction = (function () {
       return async function () {};
     })();
@@ -118,8 +118,8 @@ await startSnapshotTesting("function", {
         b: false,
       },
     });
-  },
-  ["function prototype modified"]: () => {
+  });
+  test("function prototype modified", () => {
     function Foo() {}
     Foo.prototype.a = true;
     Foo.prototype.b = false;
@@ -130,8 +130,8 @@ await startSnapshotTesting("function", {
       actual: Foo,
       expect: Bar,
     });
-  },
-  ["function prototype added"]: () => {
+  });
+  test("function prototype added", () => {
     function Foo() {}
     function Bar() {}
     Bar.prototype.a = true;
@@ -139,20 +139,20 @@ await startSnapshotTesting("function", {
       actual: Foo,
       expect: Bar,
     });
-  },
-  ["class vs function"]: () => {
+  });
+  test("class vs function", () => {
     assert({
       actual: class {},
       expect: function () {},
     });
-  },
-  ["class Animal vs class Robot"]: () => {
+  });
+  test("class Animal vs class Robot", () => {
     assert({
       actual: class Animal {},
       expect: class Robot {},
     });
-  },
-  ["extends Animal vs extend Robot"]: () => {
+  });
+  test("extends Animal vs extend Robot", () => {
     class Animal {
       static type = "animal";
     }
@@ -167,8 +167,8 @@ await startSnapshotTesting("function", {
         static type = "human_expected";
       },
     });
-  },
-  ["class static property modified"]: () => {
+  });
+  test("class static property modified", () => {
     assert({
       actual: class A {
         static a = true;
@@ -177,24 +177,24 @@ await startSnapshotTesting("function", {
         static a = false;
       },
     });
-  },
-  ["class static property added"]: () => {
+  });
+  test("class static property added", () => {
     assert({
       actual: class A {
         static a = true;
       },
       expect: class A {},
     });
-  },
-  ["class static property removed"]: () => {
+  });
+  test("class static property removed", () => {
     assert({
       actual: class A {},
       expect: class A {
         static a = false;
       },
     });
-  },
-  ["class method diff source"]: () => {
+  });
+  test("class method diff source", () => {
     const anonymousActualClass = (function () {
       return class {
         a() {
@@ -213,24 +213,24 @@ await startSnapshotTesting("function", {
       actual: anonymousActualClass,
       expect: anonymousExpectClass,
     });
-  },
-  ["class method added"]: () => {
+  });
+  test("class method added", () => {
     assert({
       actual: class A {
         a() {}
       },
       expect: class A {},
     });
-  },
-  ["class method removed"]: () => {
+  });
+  test("class method removed", () => {
     assert({
       actual: class A {},
       expect: class A {
         a() {}
       },
     });
-  },
-  ["class constructor modified"]: () => {
+  });
+  test("class constructor modified", () => {
     assert({
       actual: class {
         constructor() {
@@ -243,11 +243,11 @@ await startSnapshotTesting("function", {
         }
       },
     });
-  },
+  });
   // arrow function name is infered and does not matter so it's ignored
   // by the diff inside "assert"
   // ->in the test below the name are different but will not be displayed in the diff
-  ["arrow function source same, name modified"]: () => {
+  test("arrow function source same, name modified", () => {
     const foo = () => {};
     const bar = () => {};
     assert({
@@ -260,8 +260,8 @@ await startSnapshotTesting("function", {
         b: false,
       },
     });
-  },
-  ["arrow function source same, name same"]: () => {
+  });
+  test("arrow function source same, name same", () => {
     const fn = () => {};
     assert({
       actual: {
@@ -273,10 +273,10 @@ await startSnapshotTesting("function", {
         b: false,
       },
     });
-  },
+  });
   // as shown in the diff class without constructor still got a constructor property
   // so the 2 tests below does not provide a very accurate diff
-  ["class constructor added"]: () => {
+  test("class constructor added", () => {
     assert({
       actual: class {
         constructor() {
@@ -285,8 +285,8 @@ await startSnapshotTesting("function", {
       },
       expect: class {},
     });
-  },
-  ["class constructor removed"]: () => {
+  });
+  test("class constructor removed", () => {
     assert({
       actual: class {},
       expect: class {
@@ -295,8 +295,8 @@ await startSnapshotTesting("function", {
         }
       },
     });
-  },
-  ["static property value modified"]: () => {
+  });
+  test("static property value modified", () => {
     const anonymousActualClass = (function () {
       return class {
         a = "a_prop"; // class properties cannot be listed so it won't be catched
@@ -313,8 +313,8 @@ await startSnapshotTesting("function", {
       actual: anonymousActualClass,
       expect: anonymousExpectClass,
     });
-  },
-  ["static method return value modified"]: () => {
+  });
+  test("static method return value modified", () => {
     const anonymousActualClass = (function () {
       return class {
         static a() {
@@ -333,8 +333,8 @@ await startSnapshotTesting("function", {
       actual: anonymousActualClass,
       expect: anonymousExpectClass,
     });
-  },
-  ["class static property and object property"]: () => {
+  });
+  test("class static property and object property", () => {
     assert({
       actual: class {
         static a = true;
@@ -345,8 +345,8 @@ await startSnapshotTesting("function", {
         b: false,
       },
     });
-  },
-  ["class static prop and function prop"]: () => {
+  });
+  test("class static prop and function prop", () => {
     assert({
       actual: class {
         static a = true;
@@ -355,8 +355,8 @@ await startSnapshotTesting("function", {
         a: true,
       }),
     });
-  },
-  ["class prototype method vs function prototype method"]: () => {
+  });
+  test("class prototype method vs function prototype method", () => {
     const toto = function () {};
     toto.a = true;
     toto.prototype.b = () => {};
@@ -367,8 +367,8 @@ await startSnapshotTesting("function", {
       },
       expect: toto,
     });
-  },
-  ["class constructor vs function"]: () => {
+  });
+  test("class constructor vs function", () => {
     assert({
       actual: class {
         constructor() {
@@ -379,5 +379,5 @@ await startSnapshotTesting("function", {
         console.log("expect");
       },
     });
-  },
+  });
 });

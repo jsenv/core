@@ -1115,6 +1115,7 @@ let createRootNode;
     quoteMarkerRef,
     separatorMarker = "",
     separatorMarkerDisabled = false,
+    separatorMarkerForced = false,
     separatorMarkerWhenTruncated,
     hasLeftSpacingDisabled = false,
     onelineDiff = null,
@@ -1185,6 +1186,7 @@ let createRootNode;
       quoteMarkerRef,
       separatorMarker,
       separatorMarkerDisabled,
+      separatorMarkerForced,
       separatorMarkerWhenTruncated,
       hasLeftSpacingDisabled,
       onelineDiff,
@@ -3001,9 +3003,11 @@ const renderChildren = (node, props) => {
       separatorMarker,
       separatorMarkerWhenTruncated,
       separatorMarkerDisabled,
+      separatorMarkerForced,
     } = childNode;
-    if (
-      separatorMarkerDisabled ||
+    if (separatorMarkerForced) {
+    } else if (separatorMarkerDisabled) {
+    } else if (
       !hasSeparatorBetweenEachChild ||
       childrenKeys.length === 1 ||
       (!hasTrailingSeparator && childIndex === childrenKeys.length - 1)
@@ -3015,7 +3019,9 @@ const renderChildren = (node, props) => {
       }
     }
     if (separatorMarkerWhenTruncated === undefined) {
-      columnsRemainingForThisChild -= separatorMarker.length;
+      columnsRemainingForThisChild -= separatorMarkerDisabled
+        ? 0
+        : separatorMarker.length;
     } else {
       columnsRemainingForThisChild -= separatorMarkerWhenTruncated.length;
     }
@@ -3075,7 +3081,7 @@ const renderChildren = (node, props) => {
     }
     let separatorMarkerToAppend;
     if (separatorMarkerWhenTruncated === undefined) {
-      separatorMarkerToAppend = separatorMarker;
+      separatorMarkerToAppend = separatorMarkerDisabled ? "" : separatorMarker;
     } else {
       const remainingColumns = columnsRemainingForChildren - childDiffWidth;
       if (remainingColumns > separatorMarker.length + 1) {
@@ -3312,8 +3318,8 @@ as this line will impose to the surrounding lines where the focus will be
 const renderChildrenMultiline = (node, props) => {
   const childrenKeys = node.childrenKeys;
   const {
-    // hasSeparatorBetweenEachChild,
-    // hasTrailingSeparator,
+    hasSeparatorBetweenEachChild,
+    hasTrailingSeparator,
     hasNewLineAroundChildren,
     hasIndentBeforeEachChild,
     hasIndentBetweenEachChild,
@@ -3452,7 +3458,7 @@ const renderChildrenMultiline = (node, props) => {
   if (node.beforeRender) {
     node.beforeRender(props, { focusedChildIndex, childIndexToDisplayArray });
   }
-  const { startMarker, endMarker, separatorMarker } = node;
+  const { startMarker, endMarker } = node;
   if (childrenKeys.length === 0) {
     if (!hasMarkersWhenEmpty) {
       node.startMarker = node.endMarker = "";
@@ -3554,41 +3560,86 @@ const renderChildrenMultiline = (node, props) => {
   };
   const renderChildDiff = (childNode, childIndex) => {
     let childDiff = "";
-    let columnsRemainingForChild =
+    let columnsRemainingForThisChild =
       childIndex > 0 || hasNewLineAroundChildren
         ? props.MAX_COLUMNS
         : props.columnsRemaining;
     if (hasIndentBeforeEachChild) {
       const indent = "  ".repeat(getNodeDepth(node, props) + 1);
-      columnsRemainingForChild -= indent.length;
+      columnsRemainingForThisChild -= indent.length;
       childDiff += indent;
     }
     if (hasIndentBetweenEachChild && childIndex !== 0) {
       const indent = " ".repeat(props.MAX_COLUMNS - props.columnsRemaining);
-      columnsRemainingForChild -= indent.length;
+      columnsRemainingForThisChild -= indent.length;
       childDiff += indent;
     }
-    if (separatorMarker) {
-      columnsRemainingForChild -= separatorMarker.length;
+
+    let {
+      separatorMarker,
+      separatorMarkerWhenTruncated,
+      separatorMarkerDisabled,
+    } = childNode;
+    if (
+      separatorMarkerDisabled ||
+      !hasSeparatorBetweenEachChild ||
+      (!hasTrailingSeparator &&
+        childIndex === childrenKeys.length - 1 &&
+        childrenKeys.length > 1)
+    ) {
+      separatorMarkerDisabled = true;
+      if (childNode.subgroup === "property_entry") {
+        const propertyValueNode = childNode.childNodeMap.get("entry_value");
+        propertyValueNode.separatorMarkerDisabled = true;
+      }
+    } else if (childNode.subgroup === "property_entry") {
+      const propertyValueNode = childNode.childNodeMap.get("entry_value");
+      propertyValueNode.separatorMarkerForced = true;
+    }
+    if (separatorMarkerWhenTruncated === undefined) {
+      columnsRemainingForThisChild -= separatorMarker.length;
+    } else {
+      columnsRemainingForThisChild -= separatorMarkerWhenTruncated.length;
     }
     if (childNode.subgroup === "line_entry_value") {
       if (childIndex === focusedChildIndex) {
         childDiff += childNode.render({
           ...props,
-          columnsRemaining: columnsRemainingForChild,
+          columnsRemaining: columnsRemainingForThisChild,
         });
       } else {
         childNode.rangeToDisplay = focusedChildNode.displayedRange;
         childDiff += childNode.render({
           ...props,
-          columnsRemaining: columnsRemainingForChild,
+          columnsRemaining: columnsRemainingForThisChild,
         });
       }
     } else {
       childDiff += childNode.render({
         ...props,
-        columnsRemaining: columnsRemainingForChild,
+        columnsRemaining: columnsRemainingForThisChild,
       });
+    }
+    let separatorMarkerToAppend;
+    if (separatorMarkerWhenTruncated === undefined) {
+      separatorMarkerToAppend = separatorMarker;
+    } else {
+      const remainingColumns =
+        columnsRemainingForThisChild - stringWidth(childDiff);
+      if (remainingColumns > separatorMarker.length + 1) {
+        separatorMarkerToAppend = separatorMarkerDisabled
+          ? ""
+          : separatorMarker;
+      } else {
+        separatorMarkerToAppend = separatorMarkerWhenTruncated;
+      }
+    }
+    if (separatorMarkerToAppend) {
+      if (childNode.diffType === "solo") {
+        childDiff += setColor(separatorMarkerToAppend, childNode.color);
+      } else {
+        childDiff += setColor(separatorMarkerToAppend, node.color);
+      }
     }
     return childDiff;
   };
