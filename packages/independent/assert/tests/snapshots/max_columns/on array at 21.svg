@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="179.63"
+      width="196.43"
       height="155.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -59,6 +59,8 @@
         <text x="136.02" y="33.55" fill="#7f7f7f">n</text>
         <text x="144.42" y="33.55" fill="#7f7f7f">o</text>
         <text x="152.82" y="33.55" fill="#7f7f7f">: </text>
+        <text x="169.63" y="33.55" fill="#7f7f7f">&#x2026;</text>
+        <text x="178.03" y="33.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="52.55" fill="#7f7f7f">z</text>
         <text x="35.2" y="52.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="52.55" fill="#cd5555">true</text>
@@ -82,6 +84,8 @@
         <text x="136.02" y="109.55" fill="#7f7f7f">n</text>
         <text x="144.42" y="109.55" fill="#7f7f7f">o</text>
         <text x="152.82" y="109.55" fill="#7f7f7f">: </text>
+        <text x="169.63" y="109.55" fill="#7f7f7f">&#x2026;</text>
+        <text x="178.03" y="109.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="128.55" fill="#7f7f7f">z</text>
         <text x="35.2" y="128.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="128.55" fill="#11bc79">false</text>

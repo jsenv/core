@@ -110,46 +110,76 @@ expect: {
 
 # on array at 21
 actual: {
-  abcdefghijklmno: 
+  abcdefghijklmno: …,
   z: true,
 }
 expect: {
-  abcdefghijklmno: 
+  abcdefghijklmno: …,
   z: false,
 }
 
 # on array at 22
 actual: {
-  abcdefghijklmno: []
+  abcdefghijklmno: …,
   z: true,
 }
 expect: {
-  abcdefghijklmno: []
+  abcdefghijklmno: …,
   z: false,
 }
 
 # on array at 23
 actual: {
-  abcdefghijklmno: […]
+  abcdefghijklmno: […],
   z: true,
 }
 expect: {
-  abcdefghijklmno: […]
+  abcdefghijklmno: […],
   z: false,
 }
 
 # on array at 24
 actual: {
-  abcdefghijklmno: [0,]
+  abcdefghijklmno: […],
   z: true,
 }
 expect: {
-  abcdefghijklmno: [0,]
+  abcdefghijklmno: […],
   z: false,
 }
 
 # on array at 25
 actual: {
+  abcdefghijklmno: […],
+  z: true,
+}
+expect: {
+  abcdefghijklmno: […],
+  z: false,
+}
+
+# on array at 26
+actual: {
+  abcdefghijklmno: [0, …],
+  z: true,
+}
+expect: {
+  abcdefghijklmno: [0, …],
+  z: false,
+}
+
+# on array at 27
+actual: {
+  abcdefghijklmno: [0, …],
+  z: true,
+}
+expect: {
+  abcdefghijklmno: [0, …],
+  z: false,
+}
+
+# on array at 28
+actual: {
   abcdefghijklmno: ,
   z: true,
 }
@@ -158,13 +188,13 @@ expect: {
   z: false,
 }
 
-# on array at 26
+# on array at 29
 actual: {
-  abcdefghijklmno: ,
+  abcdefghijklmno: [0, 1, 2],
   z: true,
 }
 expect: {
-  abcdefghijklmno: ,
+  abcdefghijklmno: [0, 1, 2],
   z: false,
 }
 
@@ -201,8 +231,8 @@ actual: "…example_that_is…/dir/file.txt"
 expect: "…example_that_is…/dir/file.css"
 
 # long url diff at start
-actual: "http://example_that_is_quite_…"
-expect: "file://example_that_is_quite_…"
+actual: "http://example_that_is_quite_/"
+expect: "file://example_that_is_quite_/"
 
 # long url diff in the middle
 actual: "…example_that_is_quite_long.c…"

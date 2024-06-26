@@ -1811,6 +1811,8 @@ let createRootNode;
           render: renderChildren,
           onelineDiff: {
             hasSpacingBetweenEachChild: true,
+            hasSeparatorBetweenEachChild: true,
+            hasTrailingSeparator: true,
           },
           ...getInheritedSeparatorParams(node),
           childGenerator: () => {
@@ -2097,11 +2099,15 @@ let createRootNode;
                     render: renderChildrenMultilineWhenDiff,
                     startMarker: "[",
                     endMarker: "]",
-                    ...getInheritedSeparatorParams(node),
                     onelineDiff: {
                       hasMarkersWhenEmpty: true,
                       hasSeparatorBetweenEachChild: true,
                       hasSpacingBetweenEachChild: true,
+                      skippedMarkers: {
+                        start: "…",
+                        between: "…",
+                        end: "…",
+                      },
                     },
                     multilineDiff: {
                       hasMarkersWhenEmpty: true,
@@ -2150,11 +2156,15 @@ let createRootNode;
                     render: renderChildrenMultilineWhenDiff,
                     startMarker: "[",
                     endMarker: "]",
-                    ...getInheritedSeparatorParams(node),
                     onelineDiff: {
                       hasMarkersWhenEmpty: true,
                       hasSeparatorBetweenEachChild: true,
                       hasSpacingBetweenEachChild: true,
+                      skippedMarkers: {
+                        start: "…",
+                        between: "…",
+                        end: "…",
+                      },
                     },
                     multilineDiff: {
                       hasMarkersWhenEmpty: true,
@@ -2676,7 +2686,7 @@ const renderGrammar = (node, props) => {
 const truncateAndApplyColor = (valueDiff, node, props) => {
   const { columnsRemaining } = props;
   if (columnsRemaining < 1) {
-    return setColor("…", node.color);
+    return props.endSkippedMarkerDisabled ? "" : setColor("…", node.color);
   }
   let columnsRemainingForValue = columnsRemaining;
   const { startMarker, endMarker, separatorMarkerRef } = node;
@@ -2691,7 +2701,7 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
     columnsRemainingForValue -= separatorMarker.length;
   }
   if (columnsRemainingForValue < 1) {
-    return setColor("…", node.color);
+    return props.endSkippedMarkerDisabled ? "" : setColor("…", node.color);
   }
   let truncated = false;
   if (valueDiff.length > columnsRemainingForValue) {
@@ -2814,7 +2824,12 @@ const renderChildren = (node, props) => {
         color = skippedChild.color;
       }
     }
-    return setColor(skippedMarker, color);
+    let diff = "";
+    if (fromIndex > 0 && hasSpacingBetweenEachChild) {
+      diff += " ";
+    }
+    diff += setColor(skippedMarker, color);
+    return diff;
   };
 
   const childrenKeys = node.childrenKeys;
@@ -2933,22 +2948,52 @@ const renderChildren = (node, props) => {
     });
     let columnsRemainingForThisChild = columnsRemainingForChildren;
     columnsRemainingForThisChild -= columnsNeededBySkipMarkers;
+    const canSkipMarkers =
+      node.subgroup === "url_internal_properties" ||
+      node.subgroup === "array_entries";
+    let diff = "";
+    // let shouldInjectSpacingAfter;
+    // if (hasSpacingBetweenEachChild && childrenKeys.length > 1) {
+    //   if (childIndex < focusedChildIndex) {
+    //     if (childIndex > 0 || focusedChildIndex > 0) {
+    //       const nextChildIndex = childIndex + 1;
+    //       const nextChildKey = childrenKeys[nextChildIndex];
+    //       if (nextChildKey !== undefined) {
+    //         const nextChildNode = node.childNodeMap.get(nextChildKey);
+    //         if (nextChildNode.hasLeftSpacingDisabled) {
+    //         } else if (childrenDiff) {
+    //           shouldInjectSpacingAfter = true;
+    //           columnsRemainingForThisChild -= " ".length;
+    //         }
+    //       }
+    //     }
+    //   } else {
+    //     // spacing avant, sauf si lui meme veut pas
+    //     if (childNode.hasLeftSpacingDisabled) {
+    //     } else {
+    //       diff += " ";
+    //       columnsRemainingForThisChild -= " ".length;
+    //     }
+    //   }
+    // }
     const childDiff = childNode.render({
       ...props,
       startSkippedMarkerDisabled:
-        node.subgroup === "url_internal_properties" &&
-        hasSomeChildSkippedAtStart &&
-        startSkippedMarkerWidth,
+        canSkipMarkers && hasSomeChildSkippedAtStart && startSkippedMarkerWidth,
       endSkippedMarkerDisabled:
-        node.subgroup === "url_internal_properties" &&
-        hasSomeChildSkippedAtEnd &&
-        endSkippedMarkerWidth,
+        canSkipMarkers && hasSomeChildSkippedAtEnd && endSkippedMarkerWidth,
       columnsRemaining: columnsRemainingForThisChild,
       onTruncatedNotationUsed: () => {
         truncateNotationUsed = true;
       },
     });
-    return childDiff;
+    diff += childDiff;
+    // if (shouldInjectSpacingAfter) {
+    //   if (childDiff) {
+    //     diff += " ";
+    //   }
+    // }
+    return diff;
   };
   let firstAppend = true;
   const appendChildDiff = (childDiff, childIndex) => {
@@ -3006,11 +3051,11 @@ const renderChildren = (node, props) => {
   };
   if (hasSpacingAroundChildren) {
     columnsRemainingForChildren -=
-      `${startMarker}  ${endMarker}${separatorMarkerWhenTruncated || separatorMarker}`
+      `${startMarker}  ${endMarker}${separatorMarkerWhenTruncated ? separatorMarkerWhenTruncated : separatorMarker}`
         .length;
   } else {
     columnsRemainingForChildren -=
-      `${startMarker}${endMarker}${separatorMarkerWhenTruncated || separatorMarker}`
+      `${startMarker}${endMarker}${separatorMarkerWhenTruncated ? separatorMarkerWhenTruncated : separatorMarker}`
         .length;
   }
   let minIndexDisplayed = Infinity;
@@ -3043,11 +3088,19 @@ const renderChildren = (node, props) => {
       columnsNeededBySkipMarkers += startSkippedMarkerWidth;
     }
     if (hasSomeChildSkippedAtEndCandidate) {
+      if (hasSpacingBetweenEachChild) {
+        columnsNeededBySkipMarkers += " ".length;
+      }
       columnsNeededBySkipMarkers += endSkippedMarkerWidth;
     }
-    const childDiff = renderChildDiff(childNode, childIndex);
     if (childNode.subgroup === "array_entries") {
       // debugger;
+    }
+    const childDiff = renderChildDiff(childNode, childIndex);
+    if (childDiff === "") {
+      // child has been truncated (well we can't tell 100% this is the reason)
+      // but for now let's consider this to be true
+      break;
     }
     let childDiffWidth;
     const newLineIndex = childDiff.indexOf("\n");
@@ -3085,7 +3138,10 @@ const renderChildren = (node, props) => {
     // skip marker by the actual next/prev child
     // ONLY if it can replace the marker (it's the first/last child)
     // AND it does take less or same width as marker
-    if (columnsNeededBySkipMarkers === columnsRemainingForChildren) {
+    if (
+      columnsNeededBySkipMarkers > 0 &&
+      columnsNeededBySkipMarkers === columnsRemainingForChildren
+    ) {
       if (tryToSwapSkipMarkerWithChild) {
         // can we try again?
         break;
@@ -3128,7 +3184,10 @@ const renderChildren = (node, props) => {
   }
   if (hasSomeChildSkippedAtEnd) {
     if (skippedMarkersPlacement === "inside") {
-      diff += renderSkippedSection(maxIndexDisplayed, childrenKeys.length - 1);
+      diff += renderSkippedSection(
+        maxIndexDisplayed + 1,
+        childrenKeys.length - 1,
+      );
       if (endMarker) {
         diff += setColor(endMarker, node.color);
       }
@@ -3136,7 +3195,10 @@ const renderChildren = (node, props) => {
       if (endMarker) {
         diff += setColor(endMarker, node.color);
       }
-      diff += renderSkippedSection(maxIndexDisplayed, childrenKeys.length - 1);
+      diff += renderSkippedSection(
+        maxIndexDisplayed + 1,
+        childrenKeys.length - 1,
+      );
     }
   } else if (endMarker) {
     diff += setColor(endMarker, node.color);

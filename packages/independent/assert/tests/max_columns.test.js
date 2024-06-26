@@ -1,6 +1,8 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
+// global.ANSI_SUPPORTED = false;
+
 // TODO: at property when rendered on single line
 await startSnapshotTesting("max_columns", ({ test }) => {
   test("at removed char", () => {
@@ -70,7 +72,7 @@ await startSnapshotTesting("max_columns", ({ test }) => {
     });
   }
   // array in property
-  for (const MAX_COLUMNS of [20, 21, 22, 23, 24, 25, 26]) {
+  for (const MAX_COLUMNS of [20, 21, 22, 23, 24, 25, 26, 27, 28, 29]) {
     test(`on array at ${MAX_COLUMNS}`, () => {
       // expecting to go through the following phases
       // but not as soon as columns+1 as some steps require 2 more chars to be displayed
