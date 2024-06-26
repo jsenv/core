@@ -250,6 +250,174 @@ assert({
 
 ![img](<./max_columns/on property at 15.svg>)
 
+# on array at 20
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/on array at 20.svg>)
+
+# on array at 21
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/on array at 21.svg>)
+
+# on array at 22
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/on array at 22.svg>)
+
+# on array at 23
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/on array at 23.svg>)
+
+# on array at 24
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/on array at 24.svg>)
+
+# on array at 25
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/on array at 25.svg>)
+
+# on array at 26
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/on array at 26.svg>)
+
 # on property at 15 and value width is 1
 
 ```js
@@ -449,172 +617,4 @@ abcdZfghi
 ```
 
 ![img](<./max_columns/lines around end is truncated 2.svg>)
-
-# on array at 20
-
-```js
-// expecting to go through the following phases
-// but not as soon as columns+1 as some steps require 2 more chars to be displayed
-// 1. "abcdefghijklmno,"
-// 2. "abcdefghijklmno: …,"
-// 3. "abcdefghijklmno: […],"
-// 4. "abcdefghijklmno: [0, …],"
-assert({
-  actual: {
-    abcdefghijklmno: [0, 1, 2],
-    z: true,
-  },
-  expect: {
-    abcdefghijklmno: [0, 1, 2],
-    z: false,
-  },
-  MAX_COLUMNS: maxColumnValue,
-});
-```
-
-![img](<./max_columns/on array at 20.svg>)
-
-# on array at 21
-
-```js
-// expecting to go through the following phases
-// but not as soon as columns+1 as some steps require 2 more chars to be displayed
-// 1. "abcdefghijklmno,"
-// 2. "abcdefghijklmno: …,"
-// 3. "abcdefghijklmno: […],"
-// 4. "abcdefghijklmno: [0, …],"
-assert({
-  actual: {
-    abcdefghijklmno: [0, 1, 2],
-    z: true,
-  },
-  expect: {
-    abcdefghijklmno: [0, 1, 2],
-    z: false,
-  },
-  MAX_COLUMNS: maxColumnValue,
-});
-```
-
-![img](<./max_columns/on array at 21.svg>)
-
-# on array at 22
-
-```js
-// expecting to go through the following phases
-// but not as soon as columns+1 as some steps require 2 more chars to be displayed
-// 1. "abcdefghijklmno,"
-// 2. "abcdefghijklmno: …,"
-// 3. "abcdefghijklmno: […],"
-// 4. "abcdefghijklmno: [0, …],"
-assert({
-  actual: {
-    abcdefghijklmno: [0, 1, 2],
-    z: true,
-  },
-  expect: {
-    abcdefghijklmno: [0, 1, 2],
-    z: false,
-  },
-  MAX_COLUMNS: maxColumnValue,
-});
-```
-
-![img](<./max_columns/on array at 22.svg>)
-
-# on array at 23
-
-```js
-// expecting to go through the following phases
-// but not as soon as columns+1 as some steps require 2 more chars to be displayed
-// 1. "abcdefghijklmno,"
-// 2. "abcdefghijklmno: …,"
-// 3. "abcdefghijklmno: […],"
-// 4. "abcdefghijklmno: [0, …],"
-assert({
-  actual: {
-    abcdefghijklmno: [0, 1, 2],
-    z: true,
-  },
-  expect: {
-    abcdefghijklmno: [0, 1, 2],
-    z: false,
-  },
-  MAX_COLUMNS: maxColumnValue,
-});
-```
-
-![img](<./max_columns/on array at 23.svg>)
-
-# on array at 24
-
-```js
-// expecting to go through the following phases
-// but not as soon as columns+1 as some steps require 2 more chars to be displayed
-// 1. "abcdefghijklmno,"
-// 2. "abcdefghijklmno: …,"
-// 3. "abcdefghijklmno: […],"
-// 4. "abcdefghijklmno: [0, …],"
-assert({
-  actual: {
-    abcdefghijklmno: [0, 1, 2],
-    z: true,
-  },
-  expect: {
-    abcdefghijklmno: [0, 1, 2],
-    z: false,
-  },
-  MAX_COLUMNS: maxColumnValue,
-});
-```
-
-![img](<./max_columns/on array at 24.svg>)
-
-# on array at 25
-
-```js
-// expecting to go through the following phases
-// but not as soon as columns+1 as some steps require 2 more chars to be displayed
-// 1. "abcdefghijklmno,"
-// 2. "abcdefghijklmno: …,"
-// 3. "abcdefghijklmno: […],"
-// 4. "abcdefghijklmno: [0, …],"
-assert({
-  actual: {
-    abcdefghijklmno: [0, 1, 2],
-    z: true,
-  },
-  expect: {
-    abcdefghijklmno: [0, 1, 2],
-    z: false,
-  },
-  MAX_COLUMNS: maxColumnValue,
-});
-```
-
-![img](<./max_columns/on array at 25.svg>)
-
-# on array at 26
-
-```js
-// expecting to go through the following phases
-// but not as soon as columns+1 as some steps require 2 more chars to be displayed
-// 1. "abcdefghijklmno,"
-// 2. "abcdefghijklmno: …,"
-// 3. "abcdefghijklmno: […],"
-// 4. "abcdefghijklmno: [0, …],"
-assert({
-  actual: {
-    abcdefghijklmno: [0, 1, 2],
-    z: true,
-  },
-  expect: {
-    abcdefghijklmno: [0, 1, 2],
-    z: false,
-  },
-  MAX_COLUMNS: maxColumnValue,
-});
-```
-
-![img](<./max_columns/on array at 26.svg>)
 

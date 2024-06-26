@@ -98,6 +98,76 @@ expect: {
   abcdefgh: f…,
 }
 
+# on array at 20
+actual: {
+  abcdefghijklmno,
+  z: true,
+}
+expect: {
+  abcdefghijklmno,
+  z: false,
+}
+
+# on array at 21
+actual: {
+  abcdefghijklmno: 
+  z: true,
+}
+expect: {
+  abcdefghijklmno: 
+  z: false,
+}
+
+# on array at 22
+actual: {
+  abcdefghijklmno: []
+  z: true,
+}
+expect: {
+  abcdefghijklmno: []
+  z: false,
+}
+
+# on array at 23
+actual: {
+  abcdefghijklmno: […]
+  z: true,
+}
+expect: {
+  abcdefghijklmno: […]
+  z: false,
+}
+
+# on array at 24
+actual: {
+  abcdefghijklmno: [0,]
+  z: true,
+}
+expect: {
+  abcdefghijklmno: [0,]
+  z: false,
+}
+
+# on array at 25
+actual: {
+  abcdefghijklmno: ,
+  z: true,
+}
+expect: {
+  abcdefghijklmno: ,
+  z: false,
+}
+
+# on array at 26
+actual: {
+  abcdefghijklmno: ,
+  z: true,
+}
+expect: {
+  abcdefghijklmno: ,
+  z: false,
+}
+
 # on property at 15 and value width is 1
 actual: {
   abcdefgh: 0,
@@ -185,74 +255,4 @@ expect: 1|
         2| 123456…
         3| abcdZf…
         4| 123456…
-
-# on array at 20
-actual: {
-  abcdefghijklmno,
-  z: true,
-}
-expect: {
-  abcdefghijklmno,
-  z: false,
-}
-
-# on array at 21
-actual: {
-  abcdefghijklmno: 
-  z: true,
-}
-expect: {
-  abcdefghijklmno: 
-  z: false,
-}
-
-# on array at 22
-actual: {
-  abcdefghijklmno: []
-  z: true,
-}
-expect: {
-  abcdefghijklmno: []
-  z: false,
-}
-
-# on array at 23
-actual: {
-  abcdefghijklmno: […]
-  z: true,
-}
-expect: {
-  abcdefghijklmno: […]
-  z: false,
-}
-
-# on array at 24
-actual: {
-  abcdefghijklmno: [0,]
-  z: true,
-}
-expect: {
-  abcdefghijklmno: [0,]
-  z: false,
-}
-
-# on array at 25
-actual: {
-  abcdefghijklmno: ,
-  z: true,
-}
-expect: {
-  abcdefghijklmno: ,
-  z: false,
-}
-
-# on array at 26
-actual: {
-  abcdefghijklmno: ,
-  z: true,
-}
-expect: {
-  abcdefghijklmno: ,
-  z: false,
-}
 

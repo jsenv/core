@@ -45,6 +45,7 @@ await startSnapshotTesting("max_columns", ({ test }) => {
       MAX_COLUMNS: 22,
     });
   });
+  // string
   for (const MAX_COLUMNS of [9, 10, 11, 12, 13, 19, 20]) {
     test(`on string at ${MAX_COLUMNS}`, () => {
       assert({
@@ -54,6 +55,7 @@ await startSnapshotTesting("max_columns", ({ test }) => {
       });
     });
   }
+  // boolean in property
   for (const MAX_COLUMNS of [10, 11, 12, 13, 14, 15]) {
     test(`on property at ${MAX_COLUMNS}`, () => {
       assert({
@@ -62,6 +64,28 @@ await startSnapshotTesting("max_columns", ({ test }) => {
         },
         expect: {
           abcdefgh: false,
+        },
+        MAX_COLUMNS,
+      });
+    });
+  }
+  // array in property
+  for (const MAX_COLUMNS of [20, 21, 22, 23, 24, 25, 26]) {
+    test(`on array at ${MAX_COLUMNS}`, () => {
+      // expecting to go through the following phases
+      // but not as soon as columns+1 as some steps require 2 more chars to be displayed
+      // 1. "abcdefghijklmno,"
+      // 2. "abcdefghijklmno: …,"
+      // 3. "abcdefghijklmno: […],"
+      // 4. "abcdefghijklmno: [0, …],"
+      assert({
+        actual: {
+          abcdefghijklmno: [0, 1, 2],
+          z: true,
+        },
+        expect: {
+          abcdefghijklmno: [0, 1, 2],
+          z: false,
         },
         MAX_COLUMNS,
       });
@@ -199,25 +223,4 @@ abcdZfghi
       MAX_COLUMNS: 18,
     });
   });
-  for (const MAX_COLUMNS of [20, 21, 22, 23, 24, 25, 26]) {
-    test(`on array at ${MAX_COLUMNS}`, () => {
-      // expecting to go through the following phases
-      // but not as soon as columns+1 as some steps require 2 more chars to be displayed
-      // 1. "abcdefghijklmno,"
-      // 2. "abcdefghijklmno: …,"
-      // 3. "abcdefghijklmno: […],"
-      // 4. "abcdefghijklmno: [0, …],"
-      assert({
-        actual: {
-          abcdefghijklmno: [0, 1, 2],
-          z: true,
-        },
-        expect: {
-          abcdefghijklmno: [0, 1, 2],
-          z: false,
-        },
-        MAX_COLUMNS,
-      });
-    });
-  }
 });
