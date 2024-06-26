@@ -45,133 +45,29 @@ await startSnapshotTesting("max_columns", ({ test }) => {
       MAX_COLUMNS: 22,
     });
   });
-  test("string open quote", () => {
-    assert({
-      actual: "abcdefghij",
-      expect: "ABCDEFGHIJ",
-      MAX_COLUMNS: 9,
+  for (const MAX_COLUMNS of [9, 10, 11, 12, 13, 19, 20]) {
+    test(`on string at ${MAX_COLUMNS}`, () => {
+      assert({
+        actual: "abcdefghij",
+        expect: "ABCDEFGHIJ",
+        MAX_COLUMNS,
+      });
     });
-  });
-  test("string first char", () => {
-    assert({
-      actual: "abcdefghij",
-      expect: "ABCDEFGHIJ",
-      MAX_COLUMNS: 10,
+  }
+  for (const MAX_COLUMNS of [10, 11, 12, 13, 14, 15]) {
+    test(`on property at ${MAX_COLUMNS}`, () => {
+      assert({
+        actual: {
+          abcdefgh: true,
+        },
+        expect: {
+          abcdefgh: false,
+        },
+        MAX_COLUMNS,
+      });
     });
-  });
-  test("string second char", () => {
-    assert({
-      actual: "abcdefghij",
-      expect: "ABCDEFGHIJ",
-      MAX_COLUMNS: 11,
-    });
-  });
-  test("string third char", () => {
-    assert({
-      actual: "abcdefghij",
-      expect: "ABCDEFGHIJ",
-      MAX_COLUMNS: 12,
-    });
-  });
-  test("string fourth char", () => {
-    assert({
-      actual: "abcdefghij",
-      expect: "ABCDEFGHIJ",
-      MAX_COLUMNS: 13,
-    });
-  });
-  test("string last char", () => {
-    assert({
-      actual: "abcdefghij",
-      expect: "ABCDEFGHIJ",
-      MAX_COLUMNS: 19,
-    });
-  });
-  test("string close quote", () => {
-    assert({
-      actual: "abcdefghij",
-      expect: "ABCDEFGHIJ",
-      MAX_COLUMNS: 20,
-    });
-  });
-  test("at property value", () => {
-    assert({
-      actual: {
-        zzz: "abcdefghijklmn",
-      },
-      expect: {
-        zzz: "ABCDEFGHIJKLMN",
-      },
-      MAX_COLUMNS: 20,
-    });
-  });
-  test("at property key", () => {
-    assert({
-      actual: {
-        "a quite long property key that will be truncated": true,
-      },
-      expect: {
-        "a quite long property key that will be truncated": false,
-      },
-      MAX_COLUMNS: 40,
-    });
-  });
-  test("at property name last char", () => {
-    assert({
-      actual: {
-        abcdefgh: true,
-      },
-      expect: {
-        abcdefgh: false,
-      },
-      MAX_COLUMNS: 10,
-    });
-  });
-  test("at property name separator", () => {
-    assert({
-      actual: {
-        abcdefgh: true,
-      },
-      expect: {
-        abcdefgh: false,
-      },
-      MAX_COLUMNS: 11,
-    });
-  });
-  test("at space after property name separator", () => {
-    assert({
-      actual: {
-        abcdefgh: true,
-      },
-      expect: {
-        abcdefgh: false,
-      },
-      MAX_COLUMNS: 12,
-    });
-  });
-  test("at property value first char", () => {
-    assert({
-      actual: {
-        abcdefgh: true,
-      },
-      expect: {
-        abcdefgh: false,
-      },
-      MAX_COLUMNS: 13,
-    });
-  });
-  test("at property value second char", () => {
-    assert({
-      actual: {
-        abcdefgh: true,
-      },
-      expect: {
-        abcdefgh: false,
-      },
-      MAX_COLUMNS: 14,
-    });
-  });
-  test("at property value second char (and value width is 1)", () => {
+  }
+  test("on property at 15 and value width is 1", () => {
     assert({
       actual: {
         abcdefgh: 0,
@@ -182,15 +78,15 @@ await startSnapshotTesting("max_columns", ({ test }) => {
       MAX_COLUMNS: 14,
     });
   });
-  test("at property value third char", () => {
+  test("on middle of property key", () => {
     assert({
       actual: {
-        abcdefgh: true,
+        "a quite long property key that will be truncated": true,
       },
       expect: {
-        abcdefgh: false,
+        "a quite long property key that will be truncated": false,
       },
-      MAX_COLUMNS: 15,
+      MAX_COLUMNS: 40,
     });
   });
   test("max column exactly on diff", () => {
@@ -303,4 +199,25 @@ abcdZfghi
       MAX_COLUMNS: 18,
     });
   });
+  for (const MAX_COLUMNS of [20, 21, 22, 23, 24, 25, 26]) {
+    test(`on array at ${MAX_COLUMNS}`, () => {
+      // expecting to go through the following phases
+      // but not as soon as columns+1 as some steps require 2 more chars to be displayed
+      // 1. "abcdefghijklmno,"
+      // 2. "abcdefghijklmno: …,"
+      // 3. "abcdefghijklmno: […],"
+      // 4. "abcdefghijklmno: [0, …],"
+      assert({
+        actual: {
+          abcdefghijklmno: [0, 1, 2],
+          z: true,
+        },
+        expect: {
+          abcdefghijklmno: [0, 1, 2],
+          z: false,
+        },
+        MAX_COLUMNS,
+      });
+    });
+  }
 });

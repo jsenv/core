@@ -1,7 +1,8 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - array typed
+ * - max columns for array value
+ * - restore array tests
  * - property descriptors
  * - errors
  * - prototype
@@ -3045,6 +3046,9 @@ const renderChildren = (node, props) => {
       columnsNeededBySkipMarkers += endSkippedMarkerWidth;
     }
     const childDiff = renderChildDiff(childNode, childIndex);
+    if (childNode.subgroup === "array_entries") {
+      // debugger;
+    }
     let childDiffWidth;
     const newLineIndex = childDiff.indexOf("\n");
     if (newLineIndex === -1) {

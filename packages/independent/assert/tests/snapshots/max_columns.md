@@ -70,123 +70,91 @@ assert({
 
 ![img](<./max_columns/at added char 3.svg>)
 
-# string open quote
+# on string at 9
 
 ```js
 assert({
   actual: "abcdefghij",
   expect: "ABCDEFGHIJ",
-  MAX_COLUMNS: 9,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/string open quote.svg>)
+![img](<./max_columns/on string at 9.svg>)
 
-# string first char
+# on string at 10
 
 ```js
 assert({
   actual: "abcdefghij",
   expect: "ABCDEFGHIJ",
-  MAX_COLUMNS: 10,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/string first char.svg>)
+![img](<./max_columns/on string at 10.svg>)
 
-# string second char
+# on string at 11
 
 ```js
 assert({
   actual: "abcdefghij",
   expect: "ABCDEFGHIJ",
-  MAX_COLUMNS: 11,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/string second char.svg>)
+![img](<./max_columns/on string at 11.svg>)
 
-# string third char
+# on string at 12
 
 ```js
 assert({
   actual: "abcdefghij",
   expect: "ABCDEFGHIJ",
-  MAX_COLUMNS: 12,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/string third char.svg>)
+![img](<./max_columns/on string at 12.svg>)
 
-# string fourth char
+# on string at 13
 
 ```js
 assert({
   actual: "abcdefghij",
   expect: "ABCDEFGHIJ",
-  MAX_COLUMNS: 13,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/string fourth char.svg>)
+![img](<./max_columns/on string at 13.svg>)
 
-# string last char
+# on string at 19
 
 ```js
 assert({
   actual: "abcdefghij",
   expect: "ABCDEFGHIJ",
-  MAX_COLUMNS: 19,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/string last char.svg>)
+![img](<./max_columns/on string at 19.svg>)
 
-# string close quote
+# on string at 20
 
 ```js
 assert({
   actual: "abcdefghij",
   expect: "ABCDEFGHIJ",
-  MAX_COLUMNS: 20,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/string close quote.svg>)
+![img](<./max_columns/on string at 20.svg>)
 
-# at property value
-
-```js
-assert({
-  actual: {
-    zzz: "abcdefghijklmn",
-  },
-  expect: {
-    zzz: "ABCDEFGHIJKLMN",
-  },
-  MAX_COLUMNS: 20,
-});
-```
-
-![img](<./max_columns/at property value.svg>)
-
-# at property key
-
-```js
-assert({
-  actual: {
-    "a quite long property key that will be truncated": true,
-  },
-  expect: {
-    "a quite long property key that will be truncated": false,
-  },
-  MAX_COLUMNS: 40,
-});
-```
-
-![img](<./max_columns/at property key.svg>)
-
-# at property name last char
+# on property at 10
 
 ```js
 assert({
@@ -196,13 +164,13 @@ assert({
   expect: {
     abcdefgh: false,
   },
-  MAX_COLUMNS: 10,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/at property name last char.svg>)
+![img](<./max_columns/on property at 10.svg>)
 
-# at property name separator
+# on property at 11
 
 ```js
 assert({
@@ -212,13 +180,13 @@ assert({
   expect: {
     abcdefgh: false,
   },
-  MAX_COLUMNS: 11,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/at property name separator.svg>)
+![img](<./max_columns/on property at 11.svg>)
 
-# at space after property name separator
+# on property at 12
 
 ```js
 assert({
@@ -228,13 +196,13 @@ assert({
   expect: {
     abcdefgh: false,
   },
-  MAX_COLUMNS: 12,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/at space after property name separator.svg>)
+![img](<./max_columns/on property at 12.svg>)
 
-# at property value first char
+# on property at 13
 
 ```js
 assert({
@@ -244,13 +212,13 @@ assert({
   expect: {
     abcdefgh: false,
   },
-  MAX_COLUMNS: 13,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/at property value first char.svg>)
+![img](<./max_columns/on property at 13.svg>)
 
-# at property value second char
+# on property at 14
 
 ```js
 assert({
@@ -260,13 +228,29 @@ assert({
   expect: {
     abcdefgh: false,
   },
-  MAX_COLUMNS: 14,
+  MAX_COLUMNS,
 });
 ```
 
-![img](<./max_columns/at property value second char.svg>)
+![img](<./max_columns/on property at 14.svg>)
 
-# at property value second char (and value width is 1)
+# on property at 15
+
+```js
+assert({
+  actual: {
+    abcdefgh: true,
+  },
+  expect: {
+    abcdefgh: false,
+  },
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/on property at 15.svg>)
+
+# on property at 15 and value width is 1
 
 ```js
 assert({
@@ -280,23 +264,23 @@ assert({
 });
 ```
 
-![img](<./max_columns/at property value second char (and value width is 1).svg>)
+![img](<./max_columns/on property at 15 and value width is 1.svg>)
 
-# at property value third char
+# on middle of property key
 
 ```js
 assert({
   actual: {
-    abcdefgh: true,
+    "a quite long property key that will be truncated": true,
   },
   expect: {
-    abcdefgh: false,
+    "a quite long property key that will be truncated": false,
   },
-  MAX_COLUMNS: 15,
+  MAX_COLUMNS: 40,
 });
 ```
 
-![img](<./max_columns/at property value third char.svg>)
+![img](<./max_columns/on middle of property key.svg>)
 
 # max column exactly on diff
 
@@ -465,4 +449,172 @@ abcdZfghi
 ```
 
 ![img](<./max_columns/lines around end is truncated 2.svg>)
+
+# on array at 20
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS: maxColumnValue,
+});
+```
+
+![img](<./max_columns/on array at 20.svg>)
+
+# on array at 21
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS: maxColumnValue,
+});
+```
+
+![img](<./max_columns/on array at 21.svg>)
+
+# on array at 22
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS: maxColumnValue,
+});
+```
+
+![img](<./max_columns/on array at 22.svg>)
+
+# on array at 23
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS: maxColumnValue,
+});
+```
+
+![img](<./max_columns/on array at 23.svg>)
+
+# on array at 24
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS: maxColumnValue,
+});
+```
+
+![img](<./max_columns/on array at 24.svg>)
+
+# on array at 25
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS: maxColumnValue,
+});
+```
+
+![img](<./max_columns/on array at 25.svg>)
+
+# on array at 26
+
+```js
+// expecting to go through the following phases
+// but not as soon as columns+1 as some steps require 2 more chars to be displayed
+// 1. "abcdefghijklmno,"
+// 2. "abcdefghijklmno: …,"
+// 3. "abcdefghijklmno: […],"
+// 4. "abcdefghijklmno: [0, …],"
+assert({
+  actual: {
+    abcdefghijklmno: [0, 1, 2],
+    z: true,
+  },
+  expect: {
+    abcdefghijklmno: [0, 1, 2],
+    z: false,
+  },
+  MAX_COLUMNS: maxColumnValue,
+});
+```
+
+![img](<./max_columns/on array at 26.svg>)
 

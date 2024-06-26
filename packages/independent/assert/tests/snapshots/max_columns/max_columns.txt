@@ -22,51 +22,35 @@ expect: …"ng_string_"…
 actual: …"ng_string_"…
 expect: …"ng_string"
 
-# string open quote
+# on string at 9
 actual: …
 expect: …
 
-# string first char
+# on string at 10
 actual: …
 expect: …
 
-# string second char
+# on string at 11
 actual: …
 expect: …
 
-# string third char
+# on string at 12
 actual: "a"…
 expect: "A"…
 
-# string fourth char
+# on string at 13
 actual: "ab"…
 expect: "AB"…
 
-# string last char
+# on string at 19
 actual: "abcdefgh"…
 expect: "ABCDEFGH"…
 
-# string close quote
+# on string at 20
 actual: "abcdefghij"
 expect: "ABCDEFGHIJ"
 
-# at property value
-actual: {
-  zzz: "abcdefghi"…,
-}
-expect: {
-  zzz: "ABCDEFGHI"…,
-}
-
-# at property key
-actual: {
-  "a quite long property key that wil"…,
-}
-expect: {
-  "a quite long property key that wil"…,
-}
-
-# at property name last char
+# on property at 10
 actual: {
   abcdef…,
 }
@@ -74,7 +58,7 @@ expect: {
   abcdef…,
 }
 
-# at property name separator
+# on property at 11
 actual: {
   abcdefgh,
 }
@@ -82,7 +66,7 @@ expect: {
   abcdefgh,
 }
 
-# at space after property name separator
+# on property at 12
 actual: {
   abcdefgh,
 }
@@ -90,7 +74,7 @@ expect: {
   abcdefgh,
 }
 
-# at property value first char
+# on property at 13
 actual: {
   abcdefgh,
 }
@@ -98,7 +82,7 @@ expect: {
   abcdefgh,
 }
 
-# at property value second char
+# on property at 14
 actual: {
   abcdefgh: …,
 }
@@ -106,7 +90,15 @@ expect: {
   abcdefgh: …,
 }
 
-# at property value second char (and value width is 1)
+# on property at 15
+actual: {
+  abcdefgh: t…,
+}
+expect: {
+  abcdefgh: f…,
+}
+
+# on property at 15 and value width is 1
 actual: {
   abcdefgh: 0,
 }
@@ -114,12 +106,12 @@ expect: {
   abcdefgh: 1,
 }
 
-# at property value third char
+# on middle of property key
 actual: {
-  abcdefgh: t…,
+  "a quite long property key that wil"…,
 }
 expect: {
-  abcdefgh: f…,
+  "a quite long property key that wil"…,
 }
 
 # max column exactly on diff
@@ -193,4 +185,74 @@ expect: 1|
         2| 123456…
         3| abcdZf…
         4| 123456…
+
+# on array at 20
+actual: {
+  abcdefghijklmno,
+  z: true,
+}
+expect: {
+  abcdefghijklmno,
+  z: false,
+}
+
+# on array at 21
+actual: {
+  abcdefghijklmno: 
+  z: true,
+}
+expect: {
+  abcdefghijklmno: 
+  z: false,
+}
+
+# on array at 22
+actual: {
+  abcdefghijklmno: []
+  z: true,
+}
+expect: {
+  abcdefghijklmno: []
+  z: false,
+}
+
+# on array at 23
+actual: {
+  abcdefghijklmno: […]
+  z: true,
+}
+expect: {
+  abcdefghijklmno: […]
+  z: false,
+}
+
+# on array at 24
+actual: {
+  abcdefghijklmno: [0,]
+  z: true,
+}
+expect: {
+  abcdefghijklmno: [0,]
+  z: false,
+}
+
+# on array at 25
+actual: {
+  abcdefghijklmno: ,
+  z: true,
+}
+expect: {
+  abcdefghijklmno: ,
+  z: false,
+}
+
+# on array at 26
+actual: {
+  abcdefghijklmno: ,
+  z: true,
+}
+expect: {
+  abcdefghijklmno: ,
+  z: false,
+}
 
