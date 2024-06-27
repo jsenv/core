@@ -108,66 +108,65 @@ await startSnapshotTesting("array", ({ test }) => {
       },
     });
   });
-  // ["diff on collapsed array"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: {
-  //         same: [true],
-  //         a: [false, false],
-  //         r: [],
-  //         ma: [false, true],
-  //         mr: [false],
-  //         m: [false, false],
-  //       },
-  //     },
-  //     expect: {
-  //       a: {
-  //         same: [true],
-  //         a: [],
-  //         r: [true, true, true],
-  //         ma: [true],
-  //         mr: [true],
-  //         m: [true, true],
-  //       },
-  //     },
-  //     maxDepthInsideDiff: 0,
-  //   });
-  // },
-  // ["string and array of chars"]: () => {
-  //   assert({
-  //     actual: "hello world",
-  //     expect: ["h", "e", "l", "l", "o", " ", "w", "o", "r", "l", "d"],
-  //   });
-  // },
-  // ["associative array with values"]: () => {
-  //   assert({
-  //     actual: Object.assign(["a", "b"], {
-  //       user: "bob",
-  //     }),
-  //     expect: Object.assign(["Z", "b"], {
-  //       user: "alice",
-  //     }),
-  //   });
-  // },
-  // ["array like and array"]: () => {
-  //   assert({
-  //     actual: {
-  //       0: "Z",
-  //       1: "b",
-  //       length: 2,
-  //     },
-  //     expect: [
-  //       "a", //
-  //       "b",
-  //     ],
-  //   });
-  // },
-  // ["array subclass"]: () => {
-  //   class MyArray extends Array {}
-  //   assert({
-  //     colors: false,
-  //     actual: [true],
-  //     expect: new MyArray(true),
-  //   });
-  // },
+  test("diff on collapsed array", () => {
+    assert({
+      actual: {
+        a: {
+          same: [true],
+          a: [false, false],
+          r: [],
+          ma: [false, true],
+          mr: [false],
+          m: [false, false],
+        },
+      },
+      expect: {
+        a: {
+          same: [true],
+          a: [],
+          r: [true, true, true],
+          ma: [true],
+          mr: [true],
+          m: [true, true],
+        },
+      },
+      MAX_DEPTH_INSIDE_DIFF: 0,
+    });
+  });
+  test("string and array of chars", () => {
+    assert({
+      actual: "hello world",
+      expect: ["h", "e", "l", "l", "o", " ", "w", "o", "r", "l", "d"],
+    });
+  });
+  test("associative array with values", () => {
+    assert({
+      actual: Object.assign(["a", "b"], {
+        user: "bob",
+      }),
+      expect: Object.assign(["Z", "b"], {
+        user: "alice",
+      }),
+    });
+  });
+  test("array like and array", () => {
+    assert({
+      actual: {
+        0: "Z",
+        1: "b",
+        length: 2,
+      },
+      expect: [
+        "a", //
+        "b",
+      ],
+    });
+  });
+  test("array subclass", () => {
+    class MyArray extends Array {}
+    assert({
+      actual: [true],
+      expect: new MyArray(true),
+    });
+  });
 });

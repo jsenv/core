@@ -98,3 +98,65 @@ expect: {
   },
 }
 
+# diff on collapsed array
+actual: {
+  a: {
+    same: [true],
+    a: [
+      false,
+      false,
+    ],
+    r: [],
+    ↓ 3 props ↓
+  },
+}
+expect: {
+  a: {
+    same: [true],
+    a: [],
+    r: [
+      true,
+      true,
+      true,
+    ],
+    ↓ 3 props ↓
+  },
+}
+
+# string and array of chars
+actual: "hello world"
+expect: [
+  "h",
+  "e",
+  ↓ 9 values ↓
+]
+
+# associative array with values
+actual: [
+  "a",
+  "b",
+] {
+  user: "bob",
+}
+expect: [
+  "Z",
+  "b",
+] {
+  user: "alice",
+}
+
+# array like and array
+actual: {
+  0: "Z",
+  1: "b",
+  length: 2,
+}
+expect: [
+  "a",
+  "b",
+]
+
+# array subclass
+actual: [true]
+expect: MyArray [true]
+

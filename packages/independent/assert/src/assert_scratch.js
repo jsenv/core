@@ -1,8 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - restore array tests
- * - property descriptors
  * - errors
  * - prototype
  * - more wrapped value tests (from internal_value.xtest.js)
@@ -17,6 +15,7 @@
  *  - object integrity
  *  - url search params
  *  - weakset/weakmap/promise
+ *  - property descriptors
  *  - date
  *  - headers
  *  - request/response

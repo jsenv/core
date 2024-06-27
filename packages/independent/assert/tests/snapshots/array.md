@@ -168,3 +168,89 @@ assert({
 
 ![img](<./array/diff on associate array deep property and object deep property.svg>)
 
+# diff on collapsed array
+
+```js
+assert({
+  actual: {
+    a: {
+      same: [true],
+      a: [false, false],
+      r: [],
+      ma: [false, true],
+      mr: [false],
+      m: [false, false],
+    },
+  },
+  expect: {
+    a: {
+      same: [true],
+      a: [],
+      r: [true, true, true],
+      ma: [true],
+      mr: [true],
+      m: [true, true],
+    },
+  },
+  MAX_DEPTH_INSIDE_DIFF: 0,
+});
+```
+
+![img](<./array/diff on collapsed array.svg>)
+
+# string and array of chars
+
+```js
+assert({
+  actual: "hello world",
+  expect: ["h", "e", "l", "l", "o", " ", "w", "o", "r", "l", "d"],
+});
+```
+
+![img](<./array/string and array of chars.svg>)
+
+# associative array with values
+
+```js
+assert({
+  actual: Object.assign(["a", "b"], {
+    user: "bob",
+  }),
+  expect: Object.assign(["Z", "b"], {
+    user: "alice",
+  }),
+});
+```
+
+![img](<./array/associative array with values.svg>)
+
+# array like and array
+
+```js
+assert({
+  actual: {
+    0: "Z",
+    1: "b",
+    length: 2,
+  },
+  expect: [
+    "a", //
+    "b",
+  ],
+});
+```
+
+![img](<./array/array like and array.svg>)
+
+# array subclass
+
+```js
+class MyArray extends Array {}
+assert({
+  actual: [true],
+  expect: new MyArray(true),
+});
+```
+
+![img](<./array/array subclass.svg>)
+
