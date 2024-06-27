@@ -1919,22 +1919,24 @@ let createRootNode;
                   Object.getOwnPropertyDescriptor(value, "message");
                 if (messageOwnPropertyDescriptor) {
                   ownPropertyNameToIgnoreSet.add("message");
-                  const errorConstructNode = compositePartsNode.appendChild(
-                    "construct",
-                    {
-                      value: null,
-                      render: renderChildren,
-                      onelineDiff: {
-                        hasSeparatorBetweenEachChild: true,
-                      },
-                      group: "entries",
-                      subgroup: "error_construct",
-                      childGenerator: () => {
-                        errorConstructNode.appendChild("error_constructor", {
-                          value: objectTag,
-                          render: renderGrammar,
-                          separatorMarker: ": ",
-                        });
+                }
+                const errorConstructNode = compositePartsNode.appendChild(
+                  "construct",
+                  {
+                    value: null,
+                    render: renderChildren,
+                    onelineDiff: {
+                      hasSeparatorBetweenEachChild: true,
+                    },
+                    group: "entries",
+                    subgroup: "error_construct",
+                    childGenerator: () => {
+                      errorConstructNode.appendChild("error_constructor", {
+                        value: objectTag,
+                        render: renderGrammar,
+                        separatorMarker: ": ",
+                      });
+                      if (messageOwnPropertyDescriptor) {
                         const errorMessage = messageOwnPropertyDescriptor.value;
                         errorConstructNode.appendChild("error_message", {
                           value: errorMessage,
@@ -1943,15 +1945,10 @@ let createRootNode;
                           quotesDisabled: true,
                           subgroup: "error_message",
                         });
-                      },
+                      }
                     },
-                  );
-                } else {
-                  compositePartsNode.appendChild("construct", {
-                    value: objectTag,
-                    render: renderGrammar,
-                  });
-                }
+                  },
+                );
               } else if (
                 objectTag &&
                 objectTag !== "Object" &&
