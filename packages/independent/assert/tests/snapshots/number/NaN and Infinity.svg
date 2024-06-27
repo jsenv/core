@@ -36,9 +36,9 @@
     >
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
-        <text x="77.21" y="14.55" fill="#cd5555">null</text>
+        <text x="77.21" y="14.55" fill="#cd5555">NaN</text>
         <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="33.55" fill="#DAA520">Infinity</text>
+        <text x="77.21" y="33.55" fill="#11bc79">Infinity</text>
       </g>
     </svg>
   </foreignObject>

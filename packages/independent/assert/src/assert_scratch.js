@@ -2,7 +2,6 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - numbers
- *   - padding number to ease comparison
  *   - bigint
  * - quote in
  *    - property name
@@ -1406,7 +1405,6 @@ let createRootNode;
       // eslint-disable-next-line no-self-compare
       if (value !== value) {
         node.isNaN = true;
-        return node;
       }
       if (value === Infinity || value === -Infinity) {
         node.isInfinity = true;
@@ -1421,6 +1419,15 @@ let createRootNode;
           group: "entries",
           subgroup: "number_composition",
           childGenerator: () => {
+            if (node.isNaN) {
+              numberCompositionNode.appendChild("integer", {
+                value: "NaN",
+                render: renderGrammar,
+                group: "grammar",
+                subgroup: "integer",
+              });
+              return;
+            }
             if (node.isNegativeZero || Math.sign(value) === -1) {
               numberCompositionNode.appendChild("sign", {
                 value: "-",

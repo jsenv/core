@@ -19,7 +19,7 @@ actual: -Infinity
 expect:  Infinity
 
 # NaN and Infinity
-actual: null
+actual: NaN
 expect: Infinity
 
 # decimals using exponent
