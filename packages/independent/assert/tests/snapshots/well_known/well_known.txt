@@ -3,8 +3,8 @@ actual: String
 expect: Object
 
 # Number.MAX_VALUE and Number.MIN_VALUE
-actual: 1.7976931348623157e+308
-expect: 5e-324
+actual: 1_797_693_134_862_315_730_800_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_0…
+expect: 0.0_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000…
 
 # Symbol.iterator and Symbol.toPrimitive
 actual: Symbol.iterator

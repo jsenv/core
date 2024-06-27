@@ -1,86 +1,86 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-await startSnapshotTesting("url", {
-  ["url object port"]: () => {
+await startSnapshotTesting("url", ({ test }) => {
+  test("url object port", () => {
     assert({
       actual: new URL("http://example.com"),
       expect: new URL("http://example.com:8000"),
     });
-  },
-  ["url string port"]: () => {
+  });
+  test("url string port", () => {
     assert({
       actual: "http://example.com",
       expect: "http://example.com:8000",
     });
-  },
-  ["url string vs url object port"]: () => {
+  });
+  test("url string vs url object port", () => {
     assert({
       actual: "http://example.com",
       expect: new URL("http://example.com:8000"),
     });
-  },
-  ["url search param modified"]: () => {
+  });
+  test("url search param modified", () => {
     assert({
       actual: new URL("http://example.com?foo=a"),
       expect: new URL("http://example.com?foo=b"),
     });
-  },
-  ["url search param added"]: () => {
+  });
+  test("url search param added", () => {
     assert({
       actual: new URL("http://example.com?foo=a"),
       expect: new URL("http://example.com"),
     });
-  },
-  ["url search param added 2"]: () => {
+  });
+  test("url search param added 2", () => {
     assert({
       actual: new URL("http://example.com?foo=a&bar=b"),
       expect: new URL("http://example.com?foo=a"),
     });
-  },
-  ["url search param removed"]: () => {
+  });
+  test("url search param removed", () => {
     assert({
       actual: new URL("http://example.com"),
       expect: new URL("http://example.com?foo=a"),
     });
-  },
-  ["url search param removed 2"]: () => {
+  });
+  test("url search param removed 2", () => {
     assert({
       actual: new URL("http://example.com?foo=a"),
       expect: new URL("http://example.com?foo=a&bar=b"),
     });
-  },
-  ["multi search param 2nd value modified"]: () => {
+  });
+  test("multi search param 2nd value modified", () => {
     assert({
       actual: "http://example.com?foo=a&foo=b&foo=a",
       expect: "http://example.com?foo=a&foo=a&foo=a",
     });
-  },
-  ["adding multi search"]: () => {
+  });
+  test("adding multi search", () => {
     assert({
       actual: "http://example.com?foo=a&foo=b",
       expect: "http://example.com?foo=a",
     });
-  },
-  ["multi search adding a 3rd param"]: () => {
+  });
+  test("multi search adding a 3rd param", () => {
     assert({
       actual: "http://example.com?foo=a&foo=a&foo=a",
       expect: "http://example.com?foo=a&foo=a",
     });
-  },
-  ["multi search removing a 3rd param"]: () => {
+  });
+  test("multi search removing a 3rd param", () => {
     assert({
       actual: "http://example.com?foo=a&foo=a",
       expect: "http://example.com?foo=a&foo=a&foo=a",
     });
-  },
-  ["removing multi search"]: () => {
+  });
+  test("removing multi search", () => {
     assert({
       actual: "http://example.com?foo=a",
       expect: "http://example.com?foo=a&foo=b",
     });
-  },
-  ["url search param + vs space"]: () => {
+  });
+  test("url search param + vs space", () => {
     assert({
       actual: {
         a: `http://example.com?a=+&b=1`,
@@ -91,56 +91,56 @@ await startSnapshotTesting("url", {
         b: false,
       },
     });
-  },
-  ["url search param quotes"]: () => {
+  });
+  test("url search param quotes", () => {
     assert({
       actual: `http://example.com?name="dam"`,
       expect: `http://example.com?name="seb"`,
     });
-  },
-  ["url hash modified"]: () => {
+  });
+  test("url hash modified", () => {
     assert({
       actual: new URL("http://example.com#foo"),
       expect: new URL("http://example.com#bar"),
     });
-  },
-  ["url hash removed"]: () => {
+  });
+  test("url hash removed", () => {
     assert({
       actual: new URL("http://example.com"),
       expect: new URL("http://example.com#bar"),
     });
-  },
-  ["url and url string"]: () => {
+  });
+  test("url and url string", () => {
     assert({
       actual: new URL("http://example.com"),
       expect: "http://example.com:8000",
     });
-  },
-  ["url string and url string"]: () => {
+  });
+  test("url string and url string", () => {
     assert({
       actual: "http://example.com",
       expect: "http://example.com:8000",
     });
-  },
-  ["url and non url string"]: () => {
+  });
+  test("url and non url string", () => {
     assert({
       actual: new URL("http://example.com"),
       expect: "totoabcexample.com",
     });
-  },
-  ["non url string and url"]: () => {
+  });
+  test("non url string and url", () => {
     assert({
       actual: "totoabcexample.com",
       expect: new URL("http://example.com"),
     });
-  },
-  ["url and boolean"]: () => {
+  });
+  test("url and boolean", () => {
     assert({
       actual: new URL("http://example.com"),
       expect: true,
     });
-  },
-  ["url string inside a prop"]: () => {
+  });
+  test("url string inside a prop", () => {
     assert({
       actual: {
         a: "http://example.com",
@@ -151,42 +151,42 @@ await startSnapshotTesting("url", {
         b: false,
       },
     });
-  },
-  ["url string and object with href"]: () => {
+  });
+  test("url string and object with href", () => {
     assert({
       actual: "http://example.com",
       expect: {
         href: "http://example.com",
       },
     });
-  },
-  ["url object port and object with port"]: () => {
+  });
+  test("url object port and object with port", () => {
     assert({
       actual: new URL("http://example.com:45"),
       expect: {
         port: 45,
       },
     });
-  },
-  ["file protocol vs http protocol"]: () => {
+  });
+  test("file protocol vs http protocol", () => {
     assert({
       actual: "http://example/file.txt",
       expect: "file://example/file.js",
     });
-  },
-  ["quote test"]: () => {
+  });
+  test("quote test", () => {
     assert({
       actual: "http://example.com",
       expect: `test"quotes`,
     });
-  },
-  ["double quote in url string"]: () => {
+  });
+  test("double quote in url string", () => {
     assert({
       actual: `http://a.com"`,
       expect: `http://b.com"`,
     });
-  },
-  ["url origin is case insensitive"]: () => {
+  });
+  test("url origin is case insensitive", () => {
     assert({
       actual: {
         a: `http://example.com/page`,
@@ -197,8 +197,8 @@ await startSnapshotTesting("url", {
         b: false,
       },
     });
-  },
-  ["internal string vs url object"]: () => {
+  });
+  test("internal string vs url object", () => {
     assert({
       actual: {
         [Symbol.toStringTag]: "Signal",
@@ -206,8 +206,8 @@ await startSnapshotTesting("url", {
       },
       expect: new URL("http://toto.com"),
     });
-  },
-  ["internal url string vs url string"]: () => {
+  });
+  test("internal url string vs url string", () => {
     assert({
       actual: {
         [Symbol.toStringTag]: "Signal",
@@ -215,5 +215,5 @@ await startSnapshotTesting("url", {
       },
       expect: "http://b.com",
     });
-  },
+  });
 });

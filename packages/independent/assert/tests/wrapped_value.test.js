@@ -1,8 +1,8 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-await startSnapshotTesting("wrapped_value", {
-  ["Symbol.toPrimitive added"]: () => {
+await startSnapshotTesting("wrapped_value", ({ test }) => {
+  test("Symbol.toPrimitive added", () => {
     assert({
       actual: {
         [Symbol.toPrimitive]: () => {
@@ -11,8 +11,8 @@ await startSnapshotTesting("wrapped_value", {
       },
       expect: {},
     });
-  },
-  ["Symbol.toPrimitive removed"]: () => {
+  });
+  test("Symbol.toPrimitive removed", () => {
     assert({
       actual: {},
       expect: {
@@ -21,8 +21,8 @@ await startSnapshotTesting("wrapped_value", {
         },
       },
     });
-  },
-  ["Symbol.toPrimitive vs primitive"]: () => {
+  });
+  test("Symbol.toPrimitive vs primitive", () => {
     assert({
       actual: {
         [Symbol.toPrimitive]: () => {
@@ -31,8 +31,8 @@ await startSnapshotTesting("wrapped_value", {
       },
       expect: 10,
     });
-  },
-  ["primitive vs Symbol.toPrimitive"]: () => {
+  });
+  test("primitive vs Symbol.toPrimitive", () => {
     assert({
       actual: "10",
       expect: {
@@ -41,8 +41,8 @@ await startSnapshotTesting("wrapped_value", {
         },
       },
     });
-  },
-  ["valueOf({ a: true }) vs { a: true }"]: () => {
+  });
+  test("valueOf({ a: true }) vs { a: true }", () => {
     assert({
       actual: {
         valueOf: () => {
@@ -51,24 +51,24 @@ await startSnapshotTesting("wrapped_value", {
       },
       expect: { a: false },
     });
-  },
-  ["10 vs valueOf(10)"]: () => {
+  });
+  test("10 vs valueOf(10)", () => {
     assert({
       actual: 10,
       expect: {
         valueOf: () => 10,
       },
     });
-  },
-  ["valueOf(10) vs 10"]: () => {
+  });
+  test("valueOf(10) vs 10", () => {
     assert({
       actual: {
         valueOf: () => 10,
       },
       expect: 10,
     });
-  },
-  ["valueOf(10) vs valueOf(11)"]: () => {
+  });
+  test("valueOf(10) vs valueOf(11)", () => {
     assert({
       actual: {
         valueOf: () => 10,
@@ -77,8 +77,8 @@ await startSnapshotTesting("wrapped_value", {
         valueOf: () => 11,
       },
     });
-  },
-  ["valueOf(10) vs valueOf(10)"]: () => {
+  });
+  test("valueOf(10) vs valueOf(10)", () => {
     assert({
       actual: {
         a: true,
@@ -89,8 +89,8 @@ await startSnapshotTesting("wrapped_value", {
         valueOf: () => 10,
       },
     });
-  },
-  ["valueOf with object tag vs primitive"]: () => {
+  });
+  test("valueOf with object tag vs primitive", () => {
     assert({
       actual: {
         [Symbol.toStringTag]: "Signal",
@@ -100,8 +100,8 @@ await startSnapshotTesting("wrapped_value", {
       },
       expect: false,
     });
-  },
-  ["valueOf with object tag "]: () => {
+  });
+  test("valueOf with object tag ", () => {
     assert({
       actual: {
         [Symbol.toStringTag]: "Signal",
@@ -116,8 +116,8 @@ await startSnapshotTesting("wrapped_value", {
         },
       },
     });
-  },
-  ["no diff on valueOf in constructor"]: () => {
+  });
+  test("no diff on valueOf in constructor", () => {
     assert({
       actual: {
         a: true,
@@ -134,5 +134,5 @@ await startSnapshotTesting("wrapped_value", {
         },
       },
     });
-  },
+  });
 });

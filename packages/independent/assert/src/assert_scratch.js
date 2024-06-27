@@ -2,6 +2,8 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - numbers
+ *   when we have enough space
+ *   it would be great to pad number to ease comparison no?
  * - quote in
  *    - property name
  *    - url search param name
@@ -442,6 +444,9 @@ export const assert = (firstArg) => {
       }
       node.comparison = comparison;
       subcompareChildrenSolo(node, placeholderNode);
+      if (node.isHiddenWhenSolo) {
+        node.isHidden = true;
+      }
     };
 
     visit: {
@@ -734,6 +739,15 @@ const comparerDefault = (actualNode, expectNode) => {
     return {
       result: "failure",
       reason: "primitive_value",
+      // Some primitive have children to render (like numbers)
+      // when comparison a boolean and a number for instance
+      // all number children will be colored in yellow because
+      // they have no counterparts as boolean node
+      // What we want instead is to color the number children in red/green
+      propagate:
+        typeof actualNode.value === typeof expectNode.value
+          ? null
+          : PLACEHOLDER_FOR_MODIFIED,
     };
   }
   if (actualNode.category === "composite") {
@@ -1172,6 +1186,7 @@ let createRootNode;
     render,
     isHidden = false,
     isHiddenWhenSame = false,
+    isHiddenWhenSolo = false,
     focusedChildIndex,
     startMarker = "",
     endMarker = "",
@@ -1182,6 +1197,7 @@ let createRootNode;
     hasLeftSpacingDisabled = false,
     quotesDisabled = false,
     quotesBacktickDisabled = false,
+    numericSeparatorsDisabled = false,
     lineNumbersDisabled = false,
     onelineDiff = null,
     multilineDiff = null,
@@ -1232,6 +1248,7 @@ let createRootNode;
       render: (props) => render(node, props),
       isHidden,
       isHiddenWhenSame,
+      isHiddenWhenSolo,
       focusedChildIndex,
       beforeRender: null,
       // START will be set by comparison
@@ -1353,11 +1370,19 @@ let createRootNode;
       if (getIsNegativeZero(value)) {
         node.isNegativeZero = true;
       }
+      // eslint-disable-next-line no-self-compare
+      if (value !== value) {
+        return node;
+      }
       node.childGenerator = () => {
-        const numberCompositionNode = node.appendChild("construct", {
+        const numberCompositionNode = node.appendChild("composition", {
           value: null,
           render: renderChildren,
           onelineDiff: {},
+          startMarker: node.startMarker,
+          endMarker: node.endMarker,
+          group: "entries",
+          subgroup: "number_composition",
           childGenerator: () => {
             let sign;
             if (node.isNegativeZero) {
@@ -1366,9 +1391,6 @@ let createRootNode;
               sign = "+";
             } else if (value === -Infinity) {
               sign = "-";
-            }
-            // eslint-disable-next-line no-self-compare
-            else if (value !== value) {
             } else if (Math.sign(value) === -1) {
               sign = "-";
             } else {
@@ -1378,6 +1400,9 @@ let createRootNode;
               value: sign,
               render: renderGrammar,
               isHiddenWhenSame: sign === "+",
+              isHiddenWhenSolo: sign === "+",
+              group: "grammar",
+              subgroup: "number_sign",
             });
             if (value === Infinity || value === -Infinity) {
               numberCompositionNode.appendChild("integer", {
@@ -1401,7 +1426,9 @@ let createRootNode;
             if (value % 1 === 0) {
               const { integer } = tokenizeInteger(Math.abs(value));
               numberCompositionNode.appendChild("integer", {
-                value: groupDigits(integer),
+                value: numericSeparatorsDisabled
+                  ? integer
+                  : groupDigits(integer),
                 render: renderGrammar,
                 group: "grammar",
                 subgroup: "integer",
@@ -1413,14 +1440,14 @@ let createRootNode;
               Math.abs(value),
             );
             numberCompositionNode.appendChild("integer", {
-              value: groupDigits(integer),
+              value: numericSeparatorsDisabled ? integer : groupDigits(integer),
               render: renderGrammar,
               separatorMarker: decimalSeparator,
               group: "grammar",
               subgroup: "integer",
             });
             numberCompositionNode.appendChild("decimal", {
-              value: groupDigits(decimal),
+              value: numericSeparatorsDisabled ? decimal : groupDigits(decimal),
               render: renderGrammar,
               group: "grammar",
               subgroup: "decimal",
@@ -1555,6 +1582,7 @@ let createRootNode;
                 if (port) {
                   appendUrlInternalProp("port", parseInt(port), {
                     startMarker: ":",
+                    numericSeparatorsDisabled: true,
                   });
                 }
                 if (pathname) {
@@ -2607,7 +2635,6 @@ let createRootNode;
         if (!compositePartsNode) {
           return null;
         }
-
         const constructNode = compositePartsNode.childNodeMap.get("construct");
         if (constructNode) {
           const constructCallNode = constructNode.childNodeMap.get("call");
@@ -3496,7 +3523,6 @@ const renderChildrenMultiline = (node, props) => {
     };
     if (node.firstChildWithDiffKey === undefined) {
       focusedChildIndex = 0;
-      childIndexToDisplayArray.push(0);
     } else {
       focusedChildIndex = childrenKeys.indexOf(node.firstChildWithDiffKey);
     }
@@ -3566,6 +3592,8 @@ const renderChildrenMultiline = (node, props) => {
             index++;
           }
         }
+      } else if (childIndex === focusedChildIndex) {
+        childIndexToDisplayArray.push(focusedChildIndex);
       }
       if (childIndex === childrenKeys.length - 1) {
         break;

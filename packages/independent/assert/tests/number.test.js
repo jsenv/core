@@ -2,7 +2,7 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 await startSnapshotTesting("number", ({ test }) => {
-  test.ONLY("-0 and 0", () => {
+  test("-0 and 0", () => {
     assert({
       actual: -0,
       expect: +0,
@@ -112,7 +112,7 @@ await startSnapshotTesting("number", ({ test }) => {
   });
   test("special notations", () => {
     assert({
-      maxDiffPerObject: 10,
+      MAX_DIFF_INSIDE_VALUE: 10,
       actual: {
         a: 3.65432e12,
         b: 0b10101010101010, // binary
@@ -127,22 +127,22 @@ await startSnapshotTesting("number", ({ test }) => {
       expect: {},
     });
   });
-  test("BigInt(1) and BigInt(2)", () => {
+  test(`10 and "10"`, () => {
+    assert({
+      actual: 10,
+      expect: "10",
+    });
+  });
+  test.TODO("BigInt(1) and BigInt(2)", () => {
     assert({
       actual: BigInt(1),
       expect: BigInt(2),
     });
   });
-  test(`BigInt(1) and "1n"`, () => {
+  test.TODO(`BigInt(1) and "1n"`, () => {
     assert({
       actual: BigInt(1),
       expect: "1n",
-    });
-  });
-  test(`10 and "10"`, () => {
-    assert({
-      actual: 10,
-      expect: "10",
     });
   });
 });

@@ -28,7 +28,7 @@
   </g>
   <foreignObject id="body" y="40" width="100%" height="41.45" overflow="hidden">
     <svg
-      width="104.01"
+      width="272.04"
       height="41.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -37,9 +37,10 @@
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="14.55" fill="#7f7f7f">-</text>
-        <text x="85.61" y="14.55" fill="#7f7f7f">0</text>
+        <text x="85.61" y="14.55" fill="#7f7f7f">1_234_560_000_000_000</text>
         <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="33.55" fill="#7f7f7f">0</text>
+        <text x="77.21" y="33.55" fill="#7f7f7f">-</text>
+        <text x="85.61" y="33.55" fill="#7f7f7f">120_000_000_000</text>
       </g>
     </svg>
   </foreignObject>
