@@ -231,8 +231,8 @@ actual: "…example_that_is…/dir/file.txt"
 expect: "…example_that_is…/dir/file.css"
 
 # long url diff at start
-actual: "http://example_that_is_quite_/"
-expect: "file://example_that_is_quite_/"
+actual: "http://example_that_is_quite_…"
+expect: "file://example_that_is_quite_…"
 
 # long url diff in the middle
 actual: "…example_that_is_quite_long.c…"

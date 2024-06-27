@@ -1,8 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - max columns fixes
- *   long url diff at start in max columns is missing end skip marker
  * - restore array tests
  * - property descriptors
  * - errors
@@ -2896,7 +2894,6 @@ const renderChildren = (node, props) => {
   }
 
   let childrenDiff = "";
-  let truncateNotationUsed = false;
   let tryToSwapSkipMarkerWithChild = false;
   let columnsNeededBySkipMarkers = 0;
   let isFirstAppend = true;
@@ -2967,7 +2964,19 @@ const renderChildren = (node, props) => {
       }
       columnsNeededBySkipMarkers += endSkippedMarkerWidth;
     }
-    let columnsRemainingForThisChild = columnsRemainingForChildren;
+    let columnsRemainingForThisChild;
+    if (tryToSwapSkipMarkerWithChild) {
+      // "ab" makes more sense than "a…"
+      // So if next child is the last and not too large
+      // it will be allowed to fully replace the skip marker
+      // But we must allow next child to take as much space as it needs
+      // (hence we reset columnsRemainingForThisChild)
+      // Otherwise it will be truncated and we'll think it take exactly the skip marker width
+      // (That would lead to "http://example.com/dir/file.js" becoming "http://example/" instead of "http://example…")
+      columnsRemainingForThisChild = props.columnsRemaining;
+    } else {
+      columnsRemainingForThisChild = columnsRemainingForChildren;
+    }
     columnsRemainingForThisChild -= columnsNeededBySkipMarkers;
     let {
       separatorMarker,
@@ -3077,6 +3086,7 @@ const renderChildren = (node, props) => {
       }
     }
     let separatorMarkerToAppend;
+    let separatorWhenTruncatedUsed = false;
     if (separatorMarkerWhenTruncated === undefined) {
       separatorMarkerToAppend = separatorMarkerDisabled ? "" : separatorMarker;
     } else {
@@ -3087,7 +3097,7 @@ const renderChildren = (node, props) => {
           : separatorMarker;
       } else {
         separatorMarkerToAppend = separatorMarkerWhenTruncated;
-        truncateNotationUsed = true;
+        separatorWhenTruncatedUsed = true;
       }
     }
     if (separatorMarkerToAppend) {
@@ -3112,7 +3122,7 @@ const renderChildren = (node, props) => {
     hasSomeChildSkippedAtEnd = hasSomeChildSkippedAtEndCandidate;
     columnsRemainingForChildren -= childDiffWidth;
     childrenDiff = appendChildDiff(childDiff, childIndex);
-    if (truncateNotationUsed) {
+    if (separatorWhenTruncatedUsed) {
       break;
     }
     // if I had to stop there, I would put some markers

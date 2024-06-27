@@ -65,7 +65,7 @@
         <text x="304.05" y="14.55" fill="#7f7f7f">t</text>
         <text x="312.45" y="14.55" fill="#7f7f7f">e</text>
         <text x="320.85" y="14.55" fill="#7f7f7f">_</text>
-        <text x="329.25" y="14.55" fill="#7f7f7f">/</text>
+        <text x="329.25" y="14.55" fill="#7f7f7f">&#x2026;</text>
         <text x="337.65" y="14.55" fill="#7f7f7f">&#x22;</text>
         <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="33.55" fill="#7f7f7f">&#x22;</text>
@@ -97,7 +97,7 @@
         <text x="304.05" y="33.55" fill="#7f7f7f">t</text>
         <text x="312.45" y="33.55" fill="#7f7f7f">e</text>
         <text x="320.85" y="33.55" fill="#7f7f7f">_</text>
-        <text x="329.25" y="33.55" fill="#7f7f7f">/</text>
+        <text x="329.25" y="33.55" fill="#7f7f7f">&#x2026;</text>
         <text x="337.65" y="33.55" fill="#7f7f7f">&#x22;</text>
       </g>
     </svg>
