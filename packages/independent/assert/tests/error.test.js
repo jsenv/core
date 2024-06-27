@@ -2,7 +2,7 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 await startSnapshotTesting("error", ({ test }) => {
-  test.ONLY("error message added", () => {
+  test("error message added", () => {
     assert({
       actual: new Error("foo"),
       expect: new Error(),

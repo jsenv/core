@@ -3749,7 +3749,8 @@ const getNodeDepth = (node, props) => {
   return node.depth - props.startNode.depth;
 };
 const enableMultilineDiff = (lineEntriesNode) => {
-  lineEntriesNode.multilineDiff.hasIndentBetweenEachChild = true;
+  lineEntriesNode.multilineDiff.hasIndentBetweenEachChild =
+    !lineEntriesNode.multilineDiff.lineNumbersDisabled;
   lineEntriesNode.beforeRender = (props, { childIndexToDisplayArray }) => {
     if (props.forceDisableSeparatorMarker) {
       props.columnsRemaining += props.separatorMarker.length;
