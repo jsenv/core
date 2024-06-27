@@ -2,3 +2,15 @@
 actual: true
 expect: false
 
+# false should be true
+actual: false
+expect: true
+
+# true should be 1
+actual: true
+expect: 1
+
+# false should be 0
+actual: false
+expect: 0
+
