@@ -1,119 +1,116 @@
+import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-import { createAssert } from "../src/assert.js";
-
-const assert = createAssert();
-
-await startSnapshotTesting("number", {
-  ["-0 and 0"]: () => {
+await startSnapshotTesting("number", ({ test }) => {
+  test.ONLY("-0 and 0", () => {
     assert({
       actual: -0,
       expect: +0,
     });
-  },
-  ["1 and -0"]: () => {
+  });
+  test("1 and -0", () => {
     assert({
       actual: 1,
       expect: -0,
     });
-  },
-  ["-1 and 1"]: () => {
+  });
+  test("-1 and 1", () => {
     assert({
       actual: -1,
       expect: 1,
     });
-  },
-  ["10.45 and 10.456"]: () => {
+  });
+  test("10.45 and 10.456", () => {
     assert({
       actual: 10.45,
       expect: 10.456,
     });
-  },
-  ["-Infinity and Infinity"]: () => {
+  });
+  test("-Infinity and Infinity", () => {
     assert({
       actual: -Infinity,
       expect: Infinity,
     });
-  },
-  ["NaN and Infinity"]: () => {
+  });
+  test("NaN and Infinity", () => {
     assert({
       actual: NaN,
       expect: Infinity,
     });
-  },
-  ["decimals using exponent"]: () => {
+  });
+  test("decimals using exponent", () => {
     assert({
       actual: 2e-6,
       expect: 2e-7,
     });
-  },
-  ["decimals using exponent v2"]: () => {
+  });
+  test("decimals using exponent v2", () => {
     assert({
       actual: 2e-7,
       expect: 2e-8,
     });
-  },
-  ["exponent integer"]: () => {
+  });
+  test("exponent integer", () => {
     assert({
       actual: 10e12,
       expect: 10e11,
     });
-  },
-  ["exponent negative integer"]: () => {
+  });
+  test("exponent negative integer", () => {
     assert({
       actual: 10e12,
       expect: -10e12,
     });
-  },
-  ["1235 and 67_000"]: () => {
+  });
+  test("1235 and 67_000", () => {
     assert({
       actual: 1235,
       expect: 67_000,
     });
-  },
-  ["149_600_000 and 1_464_301"]: () => {
+  });
+  test("149_600_000 and 1_464_301", () => {
     assert({
       actual: 149_600_000,
       expect: 1_464_301,
     });
-  },
-  ["1_001 and 2_002"]: () => {
+  });
+  test("1_001 and 2_002", () => {
     assert({
       actual: 1_001,
       expect: 2_002,
     });
-  },
-  ["2_200_002 and 1_100_001"]: () => {
+  });
+  test("2_200_002 and 1_100_001", () => {
     assert({
       actual: 2_200_002,
       expect: 1_100_001,
     });
-  },
-  ["1234.56 and 12_345.67"]: () => {
+  });
+  test("1234.56 and 12_345.67", () => {
     assert({
       actual: 1234.56,
       expect: 12_345.67,
     });
-  },
-  ["-0.120_123 and -1_000_001"]: () => {
+  });
+  test("-0.120_123 and -1_000_001", () => {
     assert({
       actual: -0.120_123,
       expect: -1_000_001,
     });
-  },
-  ["-1.23456e15 and -1200000e5"]: () => {
+  });
+  test("-1.23456e15 and -1200000e5", () => {
     assert({
       actual: -1.23456e15,
       expect: -1200000e5,
     });
-  },
-  ["1.8e307 and 1.8e308"]: () => {
+  });
+  test("1.8e307 and 1.8e308", () => {
     assert({
       actual: 1.8e307,
       expect: 1.8e308,
     });
-  },
-  ["special notations"]: () => {
+  });
+  test("special notations", () => {
     assert({
       maxDiffPerObject: 10,
       actual: {
@@ -129,23 +126,23 @@ await startSnapshotTesting("number", {
       },
       expect: {},
     });
-  },
-  ["BigInt(1) and BigInt(2)"]: () => {
+  });
+  test("BigInt(1) and BigInt(2)", () => {
     assert({
       actual: BigInt(1),
       expect: BigInt(2),
     });
-  },
-  [`BigInt(1) and "1n"`]: () => {
+  });
+  test(`BigInt(1) and "1n"`, () => {
     assert({
       actual: BigInt(1),
       expect: "1n",
     });
-  },
-  [`10 and "10"`]: () => {
+  });
+  test(`10 and "10"`, () => {
     assert({
       actual: 10,
       expect: "10",
     });
-  },
+  });
 });

@@ -1,9 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - errors
- * - prototype
- * - more wrapped value tests (from internal_value.xtest.js)
  * - numbers
  * - quote in
  *    - property name
@@ -15,6 +12,8 @@
  *  - object integrity
  *  - url search params
  *  - weakset/weakmap/promise
+ * - more wrapped value tests (from internal_value.xtest.js)
+ *  - prototype
  *  - property descriptors
  *  - date
  *  - headers
@@ -32,9 +31,12 @@ import {
   tokenizeFunction,
   defaultFunctionAnalysis,
 } from "./tokenize_function.js";
+import { tokenizeFloat, tokenizeInteger } from "./tokenize_number.js";
 import { tokenizeString } from "./tokenize_string.js";
 import { tokenizeUrlSearch } from "./tokenize_url_search.js";
 import { getWellKnownValuePath } from "./well_known_value.js";
+import { getIsNegativeZero } from "./utils/negative_zero.js";
+import { groupDigits } from "./utils/group_digits.js";
 
 // ANSI.supported = false;
 const sameColor = ANSI.GREY;
@@ -391,7 +393,7 @@ export const assert = (firstArg) => {
         throw new Error(`expectNode (${expectNode.subgroup}) already compared`);
       }
       expectNode.comparison = comparison;
-      const { result, reason, propagate } = expectNode.comparer(
+      const { result, reason, propagate } = comparerDefault(
         actualNode,
         expectNode,
       );
@@ -716,6 +718,70 @@ export const assert = (firstArg) => {
     startNode: expectStartNode,
   });
   throw diff;
+};
+
+const comparerDefault = (actualNode, expectNode) => {
+  if (actualNode.category === "primitive") {
+    if (
+      actualNode.value === expectNode.value &&
+      actualNode.isNegativeZero === expectNode.isNegativeZero
+    ) {
+      return {
+        result: "success",
+        propagate: PLACEHOLDER_FOR_SAME,
+      };
+    }
+    return {
+      result: "failure",
+      reason: "primitive_value",
+    };
+  }
+  if (actualNode.category === "composite") {
+    if (actualNode.value === expectNode.value) {
+      return {
+        result: "success",
+        propagate: PLACEHOLDER_FOR_SAME,
+      };
+    }
+    return { result: "" };
+  }
+  if (actualNode.category === "reference") {
+    const actualRefPathString = actualNode.value.pop().toString();
+    const expectRefPathString = expectNode.value.pop().toString();
+    if (actualRefPathString !== expectRefPathString) {
+      return {
+        result: "failure",
+        reason: "ref_path",
+        propagate: PLACEHOLDER_FOR_MODIFIED,
+      };
+    }
+    return {
+      result: "success",
+      propagate: PLACEHOLDER_FOR_SAME,
+    };
+  }
+  if (actualNode.category === "entries") {
+    if (
+      actualNode.multilineDiff &&
+      expectNode.multilineDiff &&
+      actualNode.multilineDiff.hasMarkersWhenEmpty !==
+        expectNode.multilineDiff.hasMarkersWhenEmpty
+    ) {
+      actualNode.multilineDiff.hasMarkersWhenEmpty =
+        expectNode.multilineDiff.hasMarkersWhenEmpty = true;
+    }
+    if (
+      actualNode.onelineDiff &&
+      expectNode.onelineDiff &&
+      actualNode.onelineDiff.hasMarkersWhenEmpty !==
+        expectNode.onelineDiff.hasMarkersWhenEmpty
+    ) {
+      actualNode.onelineDiff.hasMarkersWhenEmpty =
+        expectNode.onelineDiff.hasMarkersWhenEmpty = true;
+    }
+    return { result: "" };
+  }
+  return { result: "" };
 };
 
 const customExpectationSymbol = Symbol.for("jsenv_assert_custom_expectation");
@@ -1099,7 +1165,6 @@ let createRootNode;
     depth,
     path,
     childGenerator,
-    comparer = comparerDefault,
     isSourceCode = false,
     isFunctionPrototype = false,
     isClassPrototype = false,
@@ -1131,7 +1196,6 @@ let createRootNode;
       group,
       subgroup,
       category,
-      comparer,
       childGenerator,
       childNodeMap: null,
       appendChild: (childKey, params) =>
@@ -1152,6 +1216,7 @@ let createRootNode;
       isString: false,
       isStringForUrl: false,
       isNumber: false,
+      isNegativeZero: false,
       isSymbol: false,
       // info/composite
       isFunction: false,
@@ -1285,6 +1350,84 @@ let createRootNode;
     if (typeofResult === "number") {
       node.category = "primitive";
       node.isNumber = true;
+      if (getIsNegativeZero(value)) {
+        node.isNegativeZero = true;
+      }
+      node.childGenerator = () => {
+        const numberCompositionNode = node.appendChild("construct", {
+          value: null,
+          render: renderChildren,
+          onelineDiff: {},
+          childGenerator: () => {
+            let sign;
+            if (node.isNegativeZero) {
+              sign = "-";
+            } else if (value === Infinity) {
+              sign = "+";
+            } else if (value === -Infinity) {
+              sign = "-";
+            }
+            // eslint-disable-next-line no-self-compare
+            else if (value !== value) {
+            } else if (Math.sign(value) === -1) {
+              sign = "-";
+            } else {
+              sign = "+";
+            }
+            numberCompositionNode.appendChild("sign", {
+              value: sign,
+              render: renderGrammar,
+              isHiddenWhenSame: sign === "+",
+            });
+            if (value === Infinity || value === -Infinity) {
+              numberCompositionNode.appendChild("integer", {
+                value: "Infinity",
+                render: renderGrammar,
+                group: "grammar",
+                subgroup: "integer",
+              });
+              return;
+            }
+            if (node.isNegativeZero) {
+              numberCompositionNode.appendChild("integer", {
+                value: "0",
+                render: renderGrammar,
+                group: "grammar",
+                subgroup: "integer",
+              });
+              return;
+            }
+            // integer
+            if (value % 1 === 0) {
+              const { integer } = tokenizeInteger(Math.abs(value));
+              numberCompositionNode.appendChild("integer", {
+                value: groupDigits(integer),
+                render: renderGrammar,
+                group: "grammar",
+                subgroup: "integer",
+              });
+              return;
+            }
+            // float
+            const { integer, decimalSeparator, decimal } = tokenizeFloat(
+              Math.abs(value),
+            );
+            numberCompositionNode.appendChild("integer", {
+              value: groupDigits(integer),
+              render: renderGrammar,
+              separatorMarker: decimalSeparator,
+              group: "grammar",
+              subgroup: "integer",
+            });
+            numberCompositionNode.appendChild("decimal", {
+              value: groupDigits(decimal),
+              render: renderGrammar,
+              group: "grammar",
+              subgroup: "decimal",
+            });
+          },
+        });
+      };
       return node;
     }
     if (typeofResult === "string") {
@@ -2520,67 +2663,6 @@ let createRootNode;
 
   const referenceFromOthersSetDefault = new Set();
 
-  const comparerDefault = (actualNode, expectNode) => {
-    if (actualNode.category === "primitive") {
-      if (actualNode.value === expectNode.value) {
-        return {
-          result: "success",
-          propagate: PLACEHOLDER_FOR_SAME,
-        };
-      }
-      return {
-        result: "failure",
-        reason: "primitive_value",
-      };
-    }
-    if (actualNode.category === "composite") {
-      if (actualNode.value === expectNode.value) {
-        return {
-          result: "success",
-          propagate: PLACEHOLDER_FOR_SAME,
-        };
-      }
-      return { result: "" };
-    }
-    if (actualNode.category === "reference") {
-      const actualRefPathString = actualNode.value.pop().toString();
-      const expectRefPathString = expectNode.value.pop().toString();
-      if (actualRefPathString !== expectRefPathString) {
-        return {
-          result: "failure",
-          reason: "ref_path",
-          propagate: PLACEHOLDER_FOR_MODIFIED,
-        };
-      }
-      return {
-        result: "success",
-        propagate: PLACEHOLDER_FOR_SAME,
-      };
-    }
-    if (actualNode.category === "entries") {
-      if (
-        actualNode.multilineDiff &&
-        expectNode.multilineDiff &&
-        actualNode.multilineDiff.hasMarkersWhenEmpty !==
-          expectNode.multilineDiff.hasMarkersWhenEmpty
-      ) {
-        actualNode.multilineDiff.hasMarkersWhenEmpty =
-          expectNode.multilineDiff.hasMarkersWhenEmpty = true;
-      }
-      if (
-        actualNode.onelineDiff &&
-        expectNode.onelineDiff &&
-        actualNode.onelineDiff.hasMarkersWhenEmpty !==
-          expectNode.onelineDiff.hasMarkersWhenEmpty
-      ) {
-        actualNode.onelineDiff.hasMarkersWhenEmpty =
-          expectNode.onelineDiff.hasMarkersWhenEmpty = true;
-      }
-      return { result: "" };
-    }
-    return { result: "" };
-  };
-
   const appendChildNodeGeneric = (node, childKey, params) => {
     const childNode = createNode({
       id: node.nextId(),
@@ -2681,6 +2763,10 @@ const renderChar = (node, props) => {
   return truncateAndApplyColor(char, node, props);
 };
 const renderNumber = (node, props) => {
+  const numberCompositionNode = node.childNodeMap.get("composition");
+  if (numberCompositionNode) {
+    return numberCompositionNode.render(props);
+  }
   return truncateAndApplyColor(JSON.stringify(node.value), node, props);
 };
 // const renderInteger = (node, props) => {
