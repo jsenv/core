@@ -1,0 +1,6 @@
+# error message added
+actual: Error {
+  message: "foo",
+}
+expect: Error
+

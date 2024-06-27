@@ -1158,6 +1158,7 @@ let createRootNode;
       isMap: false,
       isSet: false,
       isURL: false,
+      isError: false,
       referenceFromOthersSet: referenceFromOthersSetDefault,
       // render info
       render: (props) => render(node, props),
@@ -1730,6 +1731,10 @@ let createRootNode;
           parentConstructor.name === "TypedArray"
         ) {
           node.isTypedArray = true;
+          continue;
+        }
+        if (parentConstructor.name === "Error") {
+          node.isError = true;
           continue;
         }
       }

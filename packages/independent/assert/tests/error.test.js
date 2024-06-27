@@ -1,77 +1,74 @@
+import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-import { createAssert } from "../src/assert.js";
-
-const assert = createAssert();
-
-await startSnapshotTesting("error", {
-  ["error message added"]: () => {
+await startSnapshotTesting("error", ({ test }) => {
+  test.ONLY("error message added", () => {
     assert({
       actual: new Error("foo"),
       expect: new Error(),
     });
-  },
-  ["error message removed"]: () => {
+  });
+  test("error message removed", () => {
     assert({
       actual: new Error(),
       expect: new Error("bar"),
     });
-  },
-  ["error message modified"]: () => {
+  });
+  test("error message modified", () => {
     assert({
       actual: new Error("foo"),
       expect: new Error("bar"),
     });
-  },
-  ["error message vs object with message"]: () => {
+  });
+  test("error message vs object with message", () => {
     assert({
       actual: new Error("foo"),
       expect: { message: "foo" },
     });
-  },
-  ["error stack vs object with stack"]: () => {
+  });
+  test("error stack vs object with stack", () => {
     assert({
       actual: new Error("message"),
       expect: { stack: "stack" },
     });
-  },
-  ["error message multiline"]: () => {
+  });
+  test("error message multiline", () => {
     assert({
       actual: new Error(`Hello
 world`),
       expect: new Error(`Hello
 france`),
     });
-  },
-  ["error prop added"]: () => {
+  });
+  test("error prop added", () => {
     assert({
       actual: Object.assign(new Error("message"), { a: true }),
       expect: new Error("message"),
     });
-  },
-  ["error prop removed"]: () => {
+  });
+  test("error prop removed", () => {
     assert({
       actual: new Error("message"),
       expect: Object.assign(new Error("message"), { a: true }),
     });
-  },
-  ["error prop modified"]: () => {
+  });
+  test("error prop modified", () => {
     assert({
       actual: Object.assign(new Error("message"), { a: true }),
       expect: Object.assign(new Error("message"), { a: false }),
     });
-  },
-  ["error vs typeError"]: () => {
+  });
+  test("error vs typeError", () => {
     assert({
       actual: new Error(),
       expect: new TypeError(),
     });
-  },
-  ["error vs CustomError"]: () => {
+  });
+  test("error vs CustomError", () => {
     class ValidationError extends Error {}
     assert({
       actual: new Error(),
       expect: new ValidationError(),
     });
-  },
+  });
 });
