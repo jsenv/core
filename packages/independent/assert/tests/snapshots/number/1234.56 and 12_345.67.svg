@@ -36,13 +36,13 @@
     >
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
-        <text x="77.21" y="14.55" fill="#7f7f7f">1_234</text>
-        <text x="119.22" y="14.55" fill="#7f7f7f">.</text>
-        <text x="127.62" y="14.55" fill="#7f7f7f">56</text>
+        <text x="85.61" y="14.55" fill="#cd5555">1_234</text>
+        <text x="127.62" y="14.55" fill="#7f7f7f">.</text>
+        <text x="136.02" y="14.55" fill="#cd5555">56</text>
         <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="33.55" fill="#7f7f7f">12_345</text>
+        <text x="77.21" y="33.55" fill="#11bc79">12_345</text>
         <text x="127.62" y="33.55" fill="#7f7f7f">.</text>
-        <text x="136.02" y="33.55" fill="#7f7f7f">67</text>
+        <text x="136.02" y="33.55" fill="#11bc79">67</text>
       </g>
     </svg>
   </foreignObject>

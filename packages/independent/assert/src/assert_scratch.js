@@ -2,8 +2,8 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - numbers
- *   when we have enough space
- *   it would be great to pad number to ease comparison no?
+ *   - padding number to ease comparison
+ *   - bigint
  * - quote in
  *    - property name
  *    - url search param name
@@ -437,6 +437,19 @@ export const assert = (firstArg) => {
         return;
       }
       subcompareChildrenDuo(actualNode, expectNode);
+      if (actualNode.subgroup === "number_composition") {
+        const actualIntegerNode = actualNode.childNodeMap.get("integer");
+        const expectIntegerNode = expectNode.childNodeMap.get("integer");
+        if (actualIntegerNode && expectIntegerNode) {
+          const actualWidth = actualIntegerNode.value.length;
+          const expectWidth = expectIntegerNode.value.length;
+          if (actualWidth < expectWidth) {
+            actualNode.startMarker = " ".repeat(expectWidth - actualWidth);
+          } else if (expectWidth > actualWidth) {
+            expectNode.startMarker = " ".render(actualWidth - expectWidth);
+          }
+        }
+      }
     };
     const visitSolo = (node, placeholderNode) => {
       if (node.comparison) {
@@ -1376,7 +1389,7 @@ let createRootNode;
       }
       node.childGenerator = () => {
         const numberCompositionNode = node.appendChild("composition", {
-          value: null,
+          value,
           render: renderChildren,
           onelineDiff: {},
           startMarker: node.startMarker,
@@ -1396,14 +1409,14 @@ let createRootNode;
             } else {
               sign = "+";
             }
-            numberCompositionNode.appendChild("sign", {
-              value: sign,
-              render: renderGrammar,
-              isHiddenWhenSame: sign === "+",
-              isHiddenWhenSolo: sign === "+",
-              group: "grammar",
-              subgroup: "number_sign",
-            });
+            if (sign === "-") {
+              numberCompositionNode.appendChild("sign", {
+                value: "-",
+                render: renderGrammar,
+                group: "grammar",
+                subgroup: "number_sign",
+              });
+            }
             if (value === Infinity || value === -Infinity) {
               numberCompositionNode.appendChild("integer", {
                 value: "Infinity",
@@ -2780,10 +2793,6 @@ const renderNumber = (node, props) => {
   }
   return truncateAndApplyColor(JSON.stringify(node.value), node, props);
 };
-// const renderInteger = (node, props) => {
-//   let diff = JSON.stringify(node.value);
-//   return truncateAndAppyColor(diff, node, props);
-// };
 const renderSymbol = (node, props) => {
   const wellKnownNode = node.childNodeMap.get("well_known");
   if (wellKnownNode) {
@@ -2891,7 +2900,6 @@ const renderChildren = (node, props) => {
     skippedMarkersPlacement = "inside",
     childrenVisitMethod = "pick_around_starting_before",
   } = node.onelineDiff;
-
   let startSkippedMarker = "";
   let endSkippedMarker = "";
   if (skippedMarkers) {
@@ -2962,7 +2970,8 @@ const renderChildren = (node, props) => {
         if (node.childComparisonDiffMap.size > 0) {
           focusedChildIndex = childrenKeys.length - 1;
           const { otherNode } = node;
-          if (otherNode.displayedRange) {
+          if (otherNode.placeholder) {
+          } else if (otherNode.displayedRange) {
             minIndex = otherNode.displayedRange.min;
           } else {
             otherNode.render(props);
