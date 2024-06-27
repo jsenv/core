@@ -36,3 +36,21 @@ expect: [
   ↓ 3 values ↓
 ]
 
+# big array collapsed because diff is elsewhere
+actual: {
+  a: ["a", "b", "c", "d", "e", …],
+  b: true,
+}
+expect: {
+  a: ["a", "b", "c", "d", "e", …],
+  b: false,
+}
+
+# undefined vs empty
+actual: [
+  empty,
+]
+expect: [
+  undefined,
+]
+

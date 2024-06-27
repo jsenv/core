@@ -33,7 +33,7 @@ await startSnapshotTesting("array", ({ test }) => {
       expect: ["a", "b", "c", "d", "e", "f", "g", "h"],
     });
   });
-  test.TODO("big array collapsed because diff is elsewhere", () => {
+  test("big array collapsed because diff is elsewhere", () => {
     assert({
       actual: {
         a: ["a", "b", "c", "d", "e", "f", "g", "h"],
@@ -46,12 +46,12 @@ await startSnapshotTesting("array", ({ test }) => {
       MAX_COLUMNS: 35,
     });
   });
-  // ["undefined vs empty"]: () => {
-  //   assert({
-  //     actual: [,],
-  //     expect: [undefined],
-  //   });
-  // },
+  test("undefined vs empty", () => {
+    assert({
+      actual: [,],
+      expect: [undefined],
+    });
+  });
   // ["empty added"]: () => {
   //   assert({
   //     actual: [,],

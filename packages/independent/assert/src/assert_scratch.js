@@ -2110,11 +2110,10 @@ let createRootNode;
                   let index = 0;
                   while (index < value.length) {
                     ownPropertyNameToIgnoreSet.add(String(index));
+                    const hasOwnIndex = Object.hasOwn(value, index);
                     arrayEntriesNode.appendChild(index, {
-                      value: Object.hasOwn(value, index)
-                        ? value[index]
-                        : ARRAY_EMPTY_VALUE,
-                      render: renderValue,
+                      value: hasOwnIndex ? value[index] : ARRAY_EMPTY_VALUE,
+                      render: hasOwnIndex ? renderValue : renderEmptyValue,
                       separatorMarker: ",",
                       group: "entry_value",
                       subgroup: "array_entry_value",
@@ -2626,6 +2625,9 @@ const renderString = (node, props) => {
     return truncateAndApplyColor(diff, node, props);
   }
   return truncateAndApplyColor(node.value, node, props);
+};
+const renderEmptyValue = (node, props) => {
+  return truncateAndApplyColor("empty", node, props);
 };
 const renderChar = (node, props) => {
   const char = node.value;

@@ -48,3 +48,32 @@ assert({
 
 ![img](<./array/diff in the middle of big array.svg>)
 
+# big array collapsed because diff is elsewhere
+
+```js
+assert({
+  actual: {
+    a: ["a", "b", "c", "d", "e", "f", "g", "h"],
+    b: true,
+  },
+  expect: {
+    a: ["a", "b", "c", "d", "e", "f", "g", "h"],
+    b: false,
+  },
+  MAX_COLUMNS: 35,
+});
+```
+
+![img](<./array/big array collapsed because diff is elsewhere.svg>)
+
+# undefined vs empty
+
+```js
+assert({
+  actual: [,],
+  expect: [undefined],
+});
+```
+
+![img](<./array/undefined vs empty.svg>)
+
