@@ -1,8 +1,6 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-// global.ANSI_SUPPORTED = false;
-
 // TODO: at property when rendered on single line
 await startSnapshotTesting("max_columns", ({ test }) => {
   test("at removed char", () => {
@@ -53,6 +51,16 @@ await startSnapshotTesting("max_columns", ({ test }) => {
       assert({
         actual: "abcdefghij",
         expect: "ABCDEFGHIJ",
+        MAX_COLUMNS,
+      });
+    });
+  }
+  // number
+  for (const MAX_COLUMNS of [9, 10, 12, 13, 14, 16, 18, 19]) {
+    test(`number at ${MAX_COLUMNS}`, () => {
+      assert({
+        actual: 123456789,
+        expect: 123450789,
         MAX_COLUMNS,
       });
     });

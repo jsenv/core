@@ -154,6 +154,102 @@ assert({
 
 ![img](<./max_columns/string at 20.svg>)
 
+# number at 9
+
+```js
+assert({
+  actual: 123456789,
+  expect: 123450789,
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/number at 9.svg>)
+
+# number at 10
+
+```js
+assert({
+  actual: 123456789,
+  expect: 123450789,
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/number at 10.svg>)
+
+# number at 12
+
+```js
+assert({
+  actual: 123456789,
+  expect: 123450789,
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/number at 12.svg>)
+
+# number at 13
+
+```js
+assert({
+  actual: 123456789,
+  expect: 123450789,
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/number at 13.svg>)
+
+# number at 14
+
+```js
+assert({
+  actual: 123456789,
+  expect: 123450789,
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/number at 14.svg>)
+
+# number at 16
+
+```js
+assert({
+  actual: 123456789,
+  expect: 123450789,
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/number at 16.svg>)
+
+# number at 18
+
+```js
+assert({
+  actual: 123456789,
+  expect: 123450789,
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/number at 18.svg>)
+
+# number at 19
+
+```js
+assert({
+  actual: 123456789,
+  expect: 123450789,
+  MAX_COLUMNS,
+});
+```
+
+![img](<./max_columns/number at 19.svg>)
+
 # boolean in property at 10
 
 ```js
