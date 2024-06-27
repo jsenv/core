@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="119.45"
+  height="81.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="117.45"
+      height="79.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -26,19 +26,17 @@
     </g>
     <text fill="#abb2bf" text-anchor="middle" x="320" y="20">Terminal</text>
   </g>
-  <foreignObject id="body" y="40" width="100%" height="79.45" overflow="hidden">
+  <foreignObject id="body" y="40" width="100%" height="41.45" overflow="hidden">
     <svg
-      width="162.82"
-      height="79.45"
+      width="171.22"
+      height="41.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
     >
       <g>
-        <text x="10" y="14.55">actual: Error {</text>
-        <text x="26.8" y="33.55"> message: &#x22;foo&#x22;,</text>
-        <text x="10" y="52.55">}</text>
-        <text x="10" y="71.55">expect: Error</text>
+        <text x="10" y="14.55">actual: Error&#x22;foo&#x22;</text>
+        <text x="10" y="33.55">expect: Error</text>
       </g>
     </svg>
   </foreignObject>

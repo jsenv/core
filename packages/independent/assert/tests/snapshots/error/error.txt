@@ -1,6 +1,4 @@
 # error message added
-actual: Error {
-  message: "foo",
-}
+actual: Error"foo"
 expect: Error
 

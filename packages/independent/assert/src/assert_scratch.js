@@ -1115,6 +1115,9 @@ let createRootNode;
     separatorMarkerDisabled = false,
     separatorMarkerWhenTruncated,
     hasLeftSpacingDisabled = false,
+    quotesDisabled = false,
+    quotesBacktickDisabled = false,
+    lineNumbersDisabled = false,
     onelineDiff = null,
     multilineDiff = null,
   }) => {
@@ -1306,17 +1309,8 @@ let createRootNode;
       }
       let bestQuote;
       best_quote: {
-        let canUseBacktick = false;
-        if (group === "url_internal_prop") {
+        if (quotesDisabled) {
           break best_quote;
-        }
-        if (subgroup === "property_entry_key") {
-          if (isValidPropertyIdentifier(value)) {
-            // no quote around valid property identifier
-            break best_quote;
-          }
-        } else {
-          canUseBacktick = true;
         }
         let backslashCount = 0;
         let doubleQuoteCount = 0;
@@ -1345,7 +1339,7 @@ let createRootNode;
           if (singleQuoteCount === 0) {
             return SINGLE_QUOTE;
           }
-          if (canUseBacktick && backtickCount === 0) {
+          if (backtickCount === 0 && !quotesBacktickDisabled) {
             return BACKTICK;
           }
           if (singleQuoteCount > doubleQuoteCount) {
@@ -1395,6 +1389,7 @@ let createRootNode;
                     render: renderValue,
                     group: "url_internal_prop",
                     subgroup: `url_${name}`,
+                    quotesDisabled: true,
                     ...params,
                   });
                 };
@@ -1527,6 +1522,7 @@ let createRootNode;
               end: ["↓ 1 line ↓", "↓ {x} lines ↓"],
             },
             maxDiffType: "line",
+            lineNumbersDisabled,
           },
           startMarker: node.startMarker,
           endMarker: node.endMarker,
@@ -1800,6 +1796,8 @@ let createRootNode;
             hasTrailingSeparator: true,
           },
           childGenerator: () => {
+            const ownPropertyNameToIgnoreSet = new Set();
+            const ownPropertSymbolToIgnoreSet = new Set();
             let objectConstructNode = null;
             let objectConstructArgs = null;
             // function child nodes
@@ -1916,7 +1914,42 @@ let createRootNode;
             } else if (isFunctionPrototype) {
             } else {
               const objectTag = getObjectTag(value);
-              if (
+              if (node.isError) {
+                const messageOwnPropertyDescriptor =
+                  Object.getOwnPropertyDescriptor(value, "message");
+                if (messageOwnPropertyDescriptor) {
+                  ownPropertyNameToIgnoreSet.add("message");
+                  const errorConstructNode = compositePartsNode.appendChild(
+                    "construct",
+                    {
+                      value: null,
+                      render: renderChildren,
+                      onelineDiff: {},
+                      group: "entries",
+                      subgroup: "error_construct",
+                      childGenerator: () => {
+                        errorConstructNode.appendChild("error_constructor", {
+                          value: objectTag,
+                          render: renderGrammar,
+                          separatorMarker: ": ",
+                        });
+                        const errorMessage = messageOwnPropertyDescriptor.value;
+                        errorConstructNode.appendChild("error_message", {
+                          value: errorMessage,
+                          render: renderString,
+                          lineNumbersDisabled: true,
+                          subgroup: "error_message",
+                        });
+                      },
+                    },
+                  );
+                } else {
+                  compositePartsNode.appendChild("construct", {
+                    value: objectTag,
+                    render: renderGrammar,
+                  });
+                }
+              } else if (
                 objectTag &&
                 objectTag !== "Object" &&
                 objectTag !== "Array"
@@ -2071,8 +2104,6 @@ let createRootNode;
                 );
               }
             }
-            const ownPropertyNameToIgnoreSet = new Set();
-            const ownPropertSymbolToIgnoreSet = new Set();
             let canHaveIndexedEntries = false;
             indexed_entries: {
               if (node.isArray) {
@@ -2360,7 +2391,12 @@ let createRootNode;
                               });
                             }
                             ownPropertyNode.appendChild("entry_key", {
+                              value: key,
                               render: renderPrimitive,
+                              quotesDisabled:
+                                typeof key === "string" &&
+                                isValidPropertyIdentifier(key),
+                              quotesBacktickDisabled: true,
                               separatorMarker: node.isClassPrototype
                                 ? ""
                                 : node.functionAnalysis.type === "class"
@@ -2374,7 +2410,6 @@ let createRootNode;
                                     : ",",
                               group: "entry_key",
                               subgroup: "property_entry_key",
-                              value: key,
                               isHidden:
                                 isSourceCode ||
                                 valueFunctionAnalysis.type === "method" ||
@@ -3722,10 +3757,12 @@ const enableMultilineDiff = (lineEntriesNode) => {
     for (const lineIndexToDisplay of childIndexToDisplayArray) {
       const lineNode = lineEntriesNode.childNodeMap.get(lineIndexToDisplay);
       lineNode.onelineDiff.hasMarkersWhenEmpty = true;
-      lineNode.startMarker = renderLineStartMarker(
-        lineNode,
-        biggestDisplayedLineIndex,
-      );
+      if (!lineEntriesNode.multilineDiff.lineNumbersDisabled) {
+        lineNode.startMarker = renderLineStartMarker(
+          lineNode,
+          biggestDisplayedLineIndex,
+        );
+      }
     }
   };
   const firstLineNode = lineEntriesNode.childNodeMap.get(0);
