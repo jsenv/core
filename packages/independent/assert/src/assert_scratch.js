@@ -1504,7 +1504,6 @@ let createRootNode;
             {
               render: renderChildren,
               onelineDiff: {
-                hasSeparatorBetweenEachChild: true,
                 hasTrailingSeparator: true,
                 skippedMarkers: {
                   start: "…",
@@ -1569,7 +1568,6 @@ let createRootNode;
                       render: renderChildren,
                       startMarker: "?",
                       onelineDiff: {
-                        hasSeparatorBetweenEachChild: true,
                         hasTrailingSeparator: true,
                       },
                       group: "entries",
@@ -1584,7 +1582,6 @@ let createRootNode;
                               key: searchEntryIndex,
                               render: renderChildren,
                               onelineDiff: {
-                                hasSeparatorBetweenEachChild: true,
                                 hasTrailingSeparator: true,
                               },
                               path: node.path.append(key),
@@ -1598,7 +1595,6 @@ let createRootNode;
                                     urlSearchEntryNode.appendChild(valueIndex, {
                                       render: renderChildren,
                                       onelineDiff: {
-                                        hasSeparatorBetweenEachChild: true,
                                         hasTrailingSeparator: true,
                                       },
                                       group: "entry",
@@ -1657,7 +1653,6 @@ let createRootNode;
         const lineEntriesNode = node.appendChild("line_entries", {
           render: renderChildrenMultiline,
           multilineDiff: {
-            hasSeparatorBetweenEachChild: true,
             hasTrailingSeparator: true,
             skippedMarkers: {
               start: ["↑ 1 line ↑", "↑ {x} lines ↑"],
@@ -1680,7 +1675,6 @@ let createRootNode;
                 key: lineIndex,
                 render: renderChildren,
                 onelineDiff: {
-                  hasSeparatorBetweenEachChild: true,
                   focusedChildWhenSame: "first",
                   skippedMarkers: {
                     start: "…",
@@ -1763,7 +1757,6 @@ let createRootNode;
             value: wellKnownPath,
             render: renderChildren,
             onelineDiff: {
-              hasSeparatorBetweenEachChild: true,
               hasTrailingSeparator: true,
             },
             category: "well_known",
@@ -1883,7 +1876,6 @@ let createRootNode;
             value: node.reference.path,
             render: renderChildren,
             onelineDiff: {
-              hasSeparatorBetweenEachChild: true,
               hasTrailingSeparator: true,
             },
             category: "reference",
@@ -1910,7 +1902,6 @@ let createRootNode;
             value: wellKnownPath,
             render: renderChildren,
             onelineDiff: {
-              hasSeparatorBetweenEachChild: true,
               hasTrailingSeparator: true,
             },
             category: "well_known",
@@ -1935,7 +1926,6 @@ let createRootNode;
           render: renderChildren,
           onelineDiff: {
             hasSpacingBetweenEachChild: true,
-            hasSeparatorBetweenEachChild: true,
             hasTrailingSeparator: true,
           },
           childGenerator: () => {
@@ -2068,9 +2058,7 @@ let createRootNode;
                   {
                     value: null,
                     render: renderChildren,
-                    onelineDiff: {
-                      hasSeparatorBetweenEachChild: true,
-                    },
+                    onelineDiff: {},
                     group: "entries",
                     subgroup: "error_construct",
                     childGenerator: () => {
@@ -2138,12 +2126,10 @@ let createRootNode;
                 endMarker: ")",
                 onelineDiff: {
                   hasMarkersWhenEmpty: true,
-                  hasSeparatorBetweenEachChild: true,
                   hasSpacingBetweenEachChild: true,
                 },
                 multilineDiff: {
                   hasMarkersWhenEmpty: true,
-                  hasSeparatorBetweenEachChild: true,
                   hasTrailingSeparator: true,
                   hasNewLineAroundChildren: true,
                   hasIndentBeforeEachChild: true,
@@ -2192,7 +2178,6 @@ let createRootNode;
                           {
                             render: renderChildren,
                             onelineDiff: {
-                              hasSeparatorBetweenEachChild: true,
                               hasTrailingSeparator: true,
                             },
                             group: "entry",
@@ -2259,7 +2244,6 @@ let createRootNode;
                     endMarker: "]",
                     onelineDiff: {
                       hasMarkersWhenEmpty: true,
-                      hasSeparatorBetweenEachChild: true,
                       hasSpacingBetweenEachChild: true,
                       skippedMarkers: {
                         start: "…",
@@ -2269,7 +2253,6 @@ let createRootNode;
                     },
                     multilineDiff: {
                       hasMarkersWhenEmpty: true,
-                      hasSeparatorBetweenEachChild: true,
                       hasTrailingSeparator: true,
                       hasNewLineAroundChildren: true,
                       hasIndentBeforeEachChild: true,
@@ -2315,7 +2298,6 @@ let createRootNode;
                     endMarker: "]",
                     onelineDiff: {
                       hasMarkersWhenEmpty: true,
-                      hasSeparatorBetweenEachChild: true,
                       hasSpacingBetweenEachChild: true,
                       skippedMarkers: {
                         start: "…",
@@ -2325,7 +2307,6 @@ let createRootNode;
                     },
                     multilineDiff: {
                       hasMarkersWhenEmpty: true,
-                      hasSeparatorBetweenEachChild: true,
                       hasTrailingSeparator: true,
                       hasNewLineAroundChildren: true,
                       hasIndentBeforeEachChild: true,
@@ -2466,21 +2447,25 @@ let createRootNode;
                   subgroup: "own_properties",
                   ...(node.isClassPrototype
                     ? {
-                        onelineDiff: { hasMarkersWhenEmpty },
-                        multilineDiff: { hasMarkersWhenEmpty },
+                        onelineDiff: {
+                          hasMarkersWhenEmpty,
+                          separatorBetweenEachChildDisabled: true,
+                        },
+                        multilineDiff: {
+                          hasMarkersWhenEmpty,
+                          separatorBetweenEachChildDisabled: true,
+                        },
                       }
                     : {
                         startMarker: "{",
                         endMarker: "}",
                         onelineDiff: {
                           hasMarkersWhenEmpty,
-                          hasSeparatorBetweenEachChild: true,
                           hasSpacingAroundChildren: true,
                           hasSpacingBetweenEachChild: true,
                         },
                         multilineDiff: {
                           hasMarkersWhenEmpty,
-                          hasSeparatorBetweenEachChild: true,
                           hasTrailingSeparator: true,
                           hasNewLineAroundChildren: true,
                           hasIndentBeforeEachChild: true,
@@ -2508,7 +2493,6 @@ let createRootNode;
                         {
                           render: renderChildren,
                           onelineDiff: {
-                            hasSeparatorBetweenEachChild: true,
                             hasTrailingSeparator: true,
                           },
                           focusedChildIndex: 0,
@@ -2871,7 +2855,7 @@ const renderChildren = (node, props) => {
   const {
     hasMarkersWhenEmpty,
     focusedChildWhenSame = "first",
-    hasSeparatorBetweenEachChild,
+    separatorBetweenEachChildDisabled,
     hasSeparatorOnSingleChild,
     hasTrailingSeparator,
     hasSpacingAroundChildren,
@@ -3112,7 +3096,7 @@ const renderChildren = (node, props) => {
     } = childNode;
     if (separatorMarkerDisabled) {
     } else if (
-      !hasSeparatorBetweenEachChild ||
+      separatorBetweenEachChildDisabled ||
       shouldDisableSeparator(childIndex, childrenKeys, {
         hasSeparatorOnSingleChild,
         hasTrailingSeparator,
@@ -3452,7 +3436,7 @@ as this line will impose to the surrounding lines where the focus will be
 const renderChildrenMultiline = (node, props) => {
   const childrenKeys = node.childrenKeys;
   const {
-    hasSeparatorBetweenEachChild,
+    separatorBetweenEachChildDisabled = false,
     hasSeparatorOnSingleChild = true,
     hasTrailingSeparator,
     hasNewLineAroundChildren,
@@ -3717,7 +3701,7 @@ const renderChildrenMultiline = (node, props) => {
     } = childNode;
     if (separatorMarkerDisabled) {
     } else if (
-      !hasSeparatorBetweenEachChild ||
+      separatorBetweenEachChildDisabled ||
       shouldDisableSeparator(childIndex, childrenKeys, {
         hasTrailingSeparator,
         hasSeparatorOnSingleChild,
@@ -3888,7 +3872,6 @@ const createMethodCallNode = (
   return {
     render: renderChildren,
     onelineDiff: {
-      hasSeparatorBetweenEachChild: true,
       hasTrailingSeparator: true,
     },
     group: "entries",
@@ -3934,7 +3917,6 @@ const createArgEntriesNode = (node, { args, renderOnlyArgs }) => {
     onelineDiff: {
       hasMarkersWhenEmpty: true,
       hasSpacingBetweenEachChild: true,
-      hasSeparatorBetweenEachChild: true,
     },
     ...(renderOnlyArgs ? {} : {}),
     group: "entries",
