@@ -231,3 +231,25 @@ assert({
 
 ![img](<./number/10 and "10".svg>)
 
+# BigInt(1) and BigInt(2)
+
+```js
+assert({
+  actual: BigInt(1),
+  expect: BigInt(2),
+});
+```
+
+![img](<./number/BigInt(1) and BigInt(2).svg>)
+
+# BigInt(1) and "1n"
+
+```js
+assert({
+  actual: BigInt(1),
+  expect: "1n",
+});
+```
+
+![img](<./number/BigInt(1) and "1n".svg>)
+

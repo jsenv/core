@@ -135,13 +135,13 @@ await startSnapshotTesting("number", ({ test }) => {
       expect: "10",
     });
   });
-  test.TODO("BigInt(1) and BigInt(2)", () => {
+  test("BigInt(1) and BigInt(2)", () => {
     assert({
       actual: BigInt(1),
       expect: BigInt(2),
     });
   });
-  test.TODO(`BigInt(1) and "1n"`, () => {
+  test(`BigInt(1) and "1n"`, () => {
     assert({
       actual: BigInt(1),
       expect: "1n",

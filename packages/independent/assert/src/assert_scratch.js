@@ -1,8 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - numbers
- *   - bigint
  * - quote in
  *    - property name
  *    - url search param name
@@ -1265,6 +1263,7 @@ let createRootNode;
       isNegativeZero: false,
       isInfinity: false,
       isNaN: false,
+      isBigInt: false,
       isSymbol: false,
       // info/composite
       isFunction: false,
@@ -1487,6 +1486,11 @@ let createRootNode;
           },
         });
       };
+      return node;
+    }
+    if (typeofResult === "bigint") {
+      node.category = "primitive";
+      node.isBigInt = true;
       return node;
     }
     if (typeofResult === "string") {
@@ -2756,6 +2760,9 @@ const renderPrimitive = (node, props) => {
   }
   if (node.isNumber) {
     return renderNumber(node, props);
+  }
+  if (node.isBigInt) {
+    return truncateAndApplyColor(`${node.value}n`, node, props);
   }
   return truncateAndApplyColor(JSON.stringify(node.value), node, props);
 };

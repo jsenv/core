@@ -88,3 +88,11 @@ expect: {
 actual: 10
 expect: "10"
 
+# BigInt(1) and BigInt(2)
+actual: 1n
+expect: 2n
+
+# BigInt(1) and "1n"
+actual: 1n
+expect: "1n"
+
