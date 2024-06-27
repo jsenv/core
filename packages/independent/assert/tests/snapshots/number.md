@@ -212,7 +212,9 @@ assert({
     // prettier-ignore
     g: 0O010101010101, // octal 2
   },
-  expect: {},
+  expect: {
+    a: 3.656732e8,
+  },
 });
 ```
 

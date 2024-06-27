@@ -437,24 +437,34 @@ export const assert = (firstArg) => {
         return;
       }
       subcompareChildrenDuo(actualNode, expectNode);
-      if (actualNode.subgroup === "number_composition") {
+      if (
+        // is root comparison between numbers?
+        actualNode.subgroup === "number_composition" &&
+        actualNode.parent.parent === null &&
+        expectNode.parent.parent === null
+      ) {
         const actualIntegerNode = actualNode.childNodeMap.get("integer");
         const expectIntegerNode = expectNode.childNodeMap.get("integer");
         if (actualIntegerNode && expectIntegerNode) {
-          const actualSignNode = actualNode.childNodeMap.get("sign");
-          const expectSignNode = expectNode.childNodeMap.get("sign");
-          let actualWidth = actualIntegerNode.value.length;
-          let expectWidth = expectIntegerNode.value.length;
-          if (actualSignNode) {
-            actualWidth += "-".length;
-          }
-          if (expectSignNode) {
-            expectWidth += "-".length;
-          }
-          if (actualWidth < expectWidth) {
-            actualNode.startMarker = " ".repeat(expectWidth - actualWidth);
-          } else if (actualWidth > expectWidth) {
-            expectNode.startMarker = " ".repeat(actualWidth - expectWidth);
+          if (actualNode.parent.isInfinity === expectNode.parent.isInfinity) {
+            const actualSignNode = actualNode.childNodeMap.get("sign");
+            const expectSignNode = expectNode.childNodeMap.get("sign");
+            let actualWidth = actualIntegerNode.value.length;
+            let expectWidth = expectIntegerNode.value.length;
+            if (actualSignNode) {
+              actualWidth += "-".length;
+            }
+            if (expectSignNode) {
+              expectWidth += "-".length;
+            }
+            const diff = Math.abs(expectWidth - actualWidth);
+            if (diff < 10) {
+              if (actualWidth < expectWidth) {
+                actualNode.startMarker = " ".repeat(expectWidth - actualWidth);
+              } else if (actualWidth > expectWidth) {
+                expectNode.startMarker = " ".repeat(actualWidth - expectWidth);
+              }
+            }
           }
         }
       }
@@ -1254,6 +1264,8 @@ let createRootNode;
       isStringForUrl: false,
       isNumber: false,
       isNegativeZero: false,
+      isInfinity: false,
+      isNaN: false,
       isSymbol: false,
       // info/composite
       isFunction: false,
@@ -1393,7 +1405,11 @@ let createRootNode;
       }
       // eslint-disable-next-line no-self-compare
       if (value !== value) {
+        node.isNaN = true;
         return node;
+      }
+      if (value === Infinity || value === -Infinity) {
+        node.isInfinity = true;
       }
       node.childGenerator = () => {
         const numberCompositionNode = node.appendChild("composition", {
@@ -1405,19 +1421,7 @@ let createRootNode;
           group: "entries",
           subgroup: "number_composition",
           childGenerator: () => {
-            let sign;
-            if (node.isNegativeZero) {
-              sign = "-";
-            } else if (value === Infinity) {
-              sign = "+";
-            } else if (value === -Infinity) {
-              sign = "-";
-            } else if (Math.sign(value) === -1) {
-              sign = "-";
-            } else {
-              sign = "+";
-            }
-            if (sign === "-") {
+            if (node.isNegativeZero || Math.sign(value) === -1) {
               numberCompositionNode.appendChild("sign", {
                 value: "-",
                 render: renderGrammar,
@@ -1425,18 +1429,18 @@ let createRootNode;
                 subgroup: "number_sign",
               });
             }
-            if (value === Infinity || value === -Infinity) {
+            if (node.isNegativeZero) {
               numberCompositionNode.appendChild("integer", {
-                value: "Infinity",
+                value: "0",
                 render: renderGrammar,
                 group: "grammar",
                 subgroup: "integer",
               });
               return;
             }
-            if (node.isNegativeZero) {
+            if (node.isInfinity) {
               numberCompositionNode.appendChild("integer", {
-                value: "0",
+                value: "Infinity",
                 render: renderGrammar,
                 group: "grammar",
                 subgroup: "integer",
