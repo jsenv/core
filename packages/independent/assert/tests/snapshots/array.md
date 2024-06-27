@@ -20,6 +20,17 @@ assert({
 
 ![img](<./array/array expect, object received.svg>)
 
+# object expect, array received
+
+```js
+assert({
+  actual: [],
+  expect: {},
+});
+```
+
+![img](<./array/object expect, array received.svg>)
+
 # array without diff
 
 ```js
@@ -76,4 +87,84 @@ assert({
 ```
 
 ![img](<./array/undefined vs empty.svg>)
+
+# empty added
+
+```js
+assert({
+  actual: [,],
+  expect: [],
+});
+```
+
+![img](<./array/empty added.svg>)
+
+# empty removed
+
+```js
+assert({
+  actual: [],
+  expect: [,],
+});
+```
+
+![img](<./array/empty removed.svg>)
+
+# false should be an array
+
+```js
+assert({
+  actual: false,
+  expect: [],
+});
+```
+
+![img](<./array/false should be an array.svg>)
+
+# associative array expect, object received
+
+```js
+assert({
+  actual: Object.assign([], {
+    foo: true,
+  }),
+  expect: {
+    foo: true,
+  },
+});
+```
+
+![img](<./array/associative array expect, object received.svg>)
+
+# diff on associate array.foo and object.foo
+
+```js
+assert({
+  actual: Object.assign([], {
+    foo: true,
+  }),
+  expect: {
+    foo: false,
+  },
+});
+```
+
+![img](<./array/diff on associate array.foo and object.foo.svg>)
+
+# diff on associate array deep property and object deep property
+
+```js
+assert({
+  actual: Object.assign([], {
+    user: { name: "bob" },
+  }),
+  expect: {
+    user: {
+      name: "alice",
+    },
+  },
+});
+```
+
+![img](<./array/diff on associate array deep property and object deep property.svg>)
 

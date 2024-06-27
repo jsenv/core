@@ -10,6 +10,10 @@ expect: [
 actual: {}
 expect: []
 
+# object expect, array received
+actual: []
+expect: {}
+
 # array without diff
 actual: {
   a: [0],
@@ -53,4 +57,44 @@ actual: [
 expect: [
   undefined,
 ]
+
+# empty added
+actual: [
+  empty,
+]
+expect: []
+
+# empty removed
+actual: []
+expect: [
+  empty,
+]
+
+# false should be an array
+actual: false
+expect: []
+
+# associative array expect, object received
+actual: [] { foo: true }
+expect: { foo: true }
+
+# diff on associate array.foo and object.foo
+actual: [] {
+  foo: true,
+}
+expect: {
+  foo: false,
+}
+
+# diff on associate array deep property and object deep property
+actual: [] {
+  user: {
+    name: "bob",
+  },
+}
+expect: {
+  user: {
+    name: "alice",
+  },
+}
 

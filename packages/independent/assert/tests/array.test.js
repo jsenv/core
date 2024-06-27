@@ -15,6 +15,12 @@ await startSnapshotTesting("array", ({ test }) => {
       expect: [],
     });
   });
+  test("object expect, array received", () => {
+    assert({
+      actual: [],
+      expect: {},
+    });
+  });
   test("array without diff", () => {
     assert({
       actual: {
@@ -52,62 +58,56 @@ await startSnapshotTesting("array", ({ test }) => {
       expect: [undefined],
     });
   });
-  // ["empty added"]: () => {
-  //   assert({
-  //     actual: [,],
-  //     expect: [],
-  //   });
-  // },
-  // ["empty removed"]: () => {
-  //   assert({
-  //     actual: [],
-  //     expect: [,],
-  //   });
-  // },
-  // ["object expect, array received"]: () => {
-  //   assert({
-  //     actual: [],
-  //     expect: {},
-  //   });
-  // },
-  // ["false should be an array"]: () => {
-  //   assert({
-  //     actual: false,
-  //     expect: [],
-  //   });
-  // },
-  // ["associative array expect, object received"]: () => {
-  //   assert({
-  //     actual: Object.assign([], {
-  //       foo: true,
-  //     }),
-  //     expect: {
-  //       foo: true,
-  //     },
-  //   });
-  // },
-  // ["diff on associate array.foo and object.foo"]: () => {
-  //   assert({
-  //     actual: Object.assign([], {
-  //       foo: true,
-  //     }),
-  //     expect: {
-  //       foo: false,
-  //     },
-  //   });
-  // },
-  // ["diff on associate array deep property and object deep property"]: () => {
-  //   assert({
-  //     actual: Object.assign([], {
-  //       user: { name: "bob" },
-  //     }),
-  //     expect: {
-  //       user: {
-  //         name: "alice",
-  //       },
-  //     },
-  //   });
-  // },
+  test("empty added", () => {
+    assert({
+      actual: [,],
+      expect: [],
+    });
+  });
+  test("empty removed", () => {
+    assert({
+      actual: [],
+      expect: [,],
+    });
+  });
+  test("false should be an array", () => {
+    assert({
+      actual: false,
+      expect: [],
+    });
+  });
+  test("associative array expect, object received", () => {
+    assert({
+      actual: Object.assign([], {
+        foo: true,
+      }),
+      expect: {
+        foo: true,
+      },
+    });
+  });
+  test("diff on associate array.foo and object.foo", () => {
+    assert({
+      actual: Object.assign([], {
+        foo: true,
+      }),
+      expect: {
+        foo: false,
+      },
+    });
+  });
+  test("diff on associate array deep property and object deep property", () => {
+    assert({
+      actual: Object.assign([], {
+        user: { name: "bob" },
+      }),
+      expect: {
+        user: {
+          name: "alice",
+        },
+      },
+    });
+  });
   // ["diff on collapsed array"]: () => {
   //   assert({
   //     actual: {
