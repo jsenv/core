@@ -1,14 +1,14 @@
 # -0 and 0
 actual: -0
-expect: 0
+expect:  0
 
 # 1 and -0
-actual: 1
+actual:  1
 expect: -0
 
 # -1 and 1
 actual: -1
-expect: 1
+expect:  1
 
 # 10.45 and 10.456
 actual: 10.45
@@ -16,7 +16,7 @@ expect: 10.456
 
 # -Infinity and Infinity
 actual: -Infinity
-expect: Infinity
+expect:  Infinity
 
 # NaN and Infinity
 actual: null
@@ -32,10 +32,10 @@ expect: 0.000_000_002
 
 # exponent integer
 actual: 10_000_000_000_000
-expect: 1_000_000_000_000
+expect:  1_000_000_000_000
 
 # exponent negative integer
-actual: 10_000_000_000_000
+actual:  10_000_000_000_000
 expect: -10_000_000_000_000
 
 # 1235 and 67_000
@@ -44,7 +44,7 @@ expect: 67_000
 
 # 149_600_000 and 1_464_301
 actual: 149_600_000
-expect: 1_464_301
+expect:   1_464_301
 
 # 1_001 and 2_002
 actual: 1_001
@@ -64,11 +64,11 @@ expect: -1_000_001
 
 # -1.23456e15 and -1200000e5
 actual: -1_234_560_000_000_000
-expect: -120_000_000_000
+expect:       -120_000_000_000
 
 # 1.8e307 and 1.8e308
 actual: 183_070_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000…
-expect: Infinity
+expect: 
 
 # special notations
 actual: {

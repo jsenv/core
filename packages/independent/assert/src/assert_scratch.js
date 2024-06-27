@@ -441,12 +441,20 @@ export const assert = (firstArg) => {
         const actualIntegerNode = actualNode.childNodeMap.get("integer");
         const expectIntegerNode = expectNode.childNodeMap.get("integer");
         if (actualIntegerNode && expectIntegerNode) {
-          const actualWidth = actualIntegerNode.value.length;
-          const expectWidth = expectIntegerNode.value.length;
+          const actualSignNode = actualNode.childNodeMap.get("sign");
+          const expectSignNode = expectNode.childNodeMap.get("sign");
+          let actualWidth = actualIntegerNode.value.length;
+          let expectWidth = expectIntegerNode.value.length;
+          if (actualSignNode) {
+            actualWidth += "-".length;
+          }
+          if (expectSignNode) {
+            expectWidth += "-".length;
+          }
           if (actualWidth < expectWidth) {
             actualNode.startMarker = " ".repeat(expectWidth - actualWidth);
-          } else if (expectWidth > actualWidth) {
-            expectNode.startMarker = " ".render(actualWidth - expectWidth);
+          } else if (actualWidth > expectWidth) {
+            expectNode.startMarker = " ".repeat(actualWidth - expectWidth);
           }
         }
       }
