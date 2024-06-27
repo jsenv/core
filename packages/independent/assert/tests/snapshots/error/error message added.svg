@@ -35,7 +35,7 @@
       fill="#cccccc"
     >
       <g>
-        <text x="10" y="14.55">actual: Error&#x22;foo&#x22;</text>
+        <text x="10" y="14.55">actual: Error: foo</text>
         <text x="10" y="33.55">expect: Error</text>
       </g>
     </svg>

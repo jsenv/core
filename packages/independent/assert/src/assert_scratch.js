@@ -1924,7 +1924,9 @@ let createRootNode;
                     {
                       value: null,
                       render: renderChildren,
-                      onelineDiff: {},
+                      onelineDiff: {
+                        hasSeparatorBetweenEachChild: true,
+                      },
                       group: "entries",
                       subgroup: "error_construct",
                       childGenerator: () => {
@@ -1938,6 +1940,7 @@ let createRootNode;
                           value: errorMessage,
                           render: renderString,
                           lineNumbersDisabled: true,
+                          quotesDisabled: true,
                           subgroup: "error_message",
                         });
                       },
