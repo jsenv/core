@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="305.65"
+      width="288.84"
       height="155.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -49,13 +49,13 @@
         <text x="102.42" y="33.55" fill="#7f7f7f">.</text>
         <text x="110.82" y="33.55" fill="#7f7f7f">freeze</text>
         <text x="161.22" y="33.55" fill="#7f7f7f">(</text>
-        <text x="178.03" y="33.55" fill="#7f7f7f">{</text>
-        <text x="194.83" y="33.55" fill="#7f7f7f">a</text>
-        <text x="203.23" y="33.55" fill="#7f7f7f">: </text>
-        <text x="220.03" y="33.55" fill="#7f7f7f">true</text>
-        <text x="262.04" y="33.55" fill="#7f7f7f">}</text>
-        <text x="278.84" y="33.55" fill="#7f7f7f">)</text>
-        <text x="287.25" y="33.55" fill="#7f7f7f">,</text>
+        <text x="169.63" y="33.55" fill="#7f7f7f">{</text>
+        <text x="186.43" y="33.55" fill="#7f7f7f">a</text>
+        <text x="194.83" y="33.55" fill="#7f7f7f">: </text>
+        <text x="211.63" y="33.55" fill="#7f7f7f">true</text>
+        <text x="253.64" y="33.55" fill="#7f7f7f">}</text>
+        <text x="262.04" y="33.55" fill="#7f7f7f">)</text>
+        <text x="270.44" y="33.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="52.55" fill="#7f7f7f">b</text>
         <text x="35.2" y="52.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="52.55" fill="#cd5555">true</text>
@@ -69,13 +69,13 @@
         <text x="102.42" y="109.55" fill="#7f7f7f">.</text>
         <text x="110.82" y="109.55" fill="#7f7f7f">freeze</text>
         <text x="161.22" y="109.55" fill="#7f7f7f">(</text>
-        <text x="178.03" y="109.55" fill="#7f7f7f">{</text>
-        <text x="194.83" y="109.55" fill="#7f7f7f">a</text>
-        <text x="203.23" y="109.55" fill="#7f7f7f">: </text>
-        <text x="220.03" y="109.55" fill="#7f7f7f">true</text>
-        <text x="262.04" y="109.55" fill="#7f7f7f">}</text>
-        <text x="278.84" y="109.55" fill="#7f7f7f">)</text>
-        <text x="287.25" y="109.55" fill="#7f7f7f">,</text>
+        <text x="169.63" y="109.55" fill="#7f7f7f">{</text>
+        <text x="186.43" y="109.55" fill="#7f7f7f">a</text>
+        <text x="194.83" y="109.55" fill="#7f7f7f">: </text>
+        <text x="211.63" y="109.55" fill="#7f7f7f">true</text>
+        <text x="253.64" y="109.55" fill="#7f7f7f">}</text>
+        <text x="262.04" y="109.55" fill="#7f7f7f">)</text>
+        <text x="270.44" y="109.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="128.55" fill="#7f7f7f">b</text>
         <text x="35.2" y="128.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="128.55" fill="#11bc79">false</text>

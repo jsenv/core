@@ -1217,6 +1217,7 @@ let createRootNode;
     separatorMarkerDisabled = false,
     separatorMarkerWhenTruncated,
     hasLeftSpacingDisabled = false,
+    hasRightSpacingDisabled = false,
     quotesDisabled = false,
     quotesBacktickDisabled = false,
     numericSeparatorsDisabled = false,
@@ -1299,6 +1300,7 @@ let createRootNode;
       separatorMarkerDisabled,
       separatorMarkerWhenTruncated,
       hasLeftSpacingDisabled,
+      hasRightSpacingDisabled,
       renderOptions,
       onelineDiff,
       multilineDiff,
@@ -2038,6 +2040,7 @@ let createRootNode;
                   onelineDiff: {
                     hasTrailingSeparator: true,
                   },
+                  hasRightSpacingDisabled: true,
                   group: "entries",
                   subgroup: "object_integrity",
                   childGenerator: () => {
@@ -2751,6 +2754,7 @@ let createRootNode;
                   value: ")",
                   render: renderGrammar,
                   group: "grammar",
+                  hasLeftSpacingDisabled: true,
                 },
               );
             }
@@ -3275,30 +3279,6 @@ const renderChildren = (node, props) => {
     } else {
       columnsRemainingForThisChild -= separatorMarkerWhenTruncated.length;
     }
-    // let shouldInjectSpacingAfter;
-    // if (hasSpacingBetweenEachChild && childrenKeys.length > 1) {
-    //   if (childIndex < focusedChildIndex) {
-    //     if (childIndex > 0 || focusedChildIndex > 0) {
-    //       const nextChildIndex = childIndex + 1;
-    //       const nextChildKey = childrenKeys[nextChildIndex];
-    //       if (nextChildKey !== undefined) {
-    //         const nextChildNode = node.childNodeMap.get(nextChildKey);
-    //         if (nextChildNode.hasLeftSpacingDisabled) {
-    //         } else if (childrenDiff) {
-    //           shouldInjectSpacingAfter = true;
-    //           columnsRemainingForThisChild -= " ".length;
-    //         }
-    //       }
-    //     }
-    //   } else {
-    //     // spacing avant, sauf si lui meme veut pas
-    //     if (childNode.hasLeftSpacingDisabled) {
-    //     } else {
-    //       diff += " ";
-    //       columnsRemainingForThisChild -= " ".length;
-    //     }
-    //   }
-    // }
     const canSkipMarkers =
       node.subgroup === "url_internal_properties" ||
       node.subgroup === "array_entries";
@@ -3335,7 +3315,11 @@ const renderChildren = (node, props) => {
     }
     if (!isFirstAppend && hasSpacingBetweenEachChild) {
       if (childIndex < focusedChildIndex) {
-        if ((childIndex > 0 || focusedChildIndex > 0) && childrenDiff) {
+        if (
+          (childIndex > 0 || focusedChildIndex > 0) &&
+          childrenDiff &&
+          !childNode.hasRightSpacingDisabled
+        ) {
           let shouldInjectSpacing = true;
           const nextChildIndex = childIndex + 1;
           const nextChildKey = childrenKeys[nextChildIndex];
@@ -3350,10 +3334,20 @@ const renderChildren = (node, props) => {
             childDiff = `${childDiff} `;
           }
         }
-      } else if (childNode.hasLeftSpacingDisabled) {
-      } else {
-        childDiffWidth += " ".length;
-        childDiff = ` ${childDiff}`;
+      } else if (!childNode.hasLeftSpacingDisabled) {
+        let shouldInjectSpacing = true;
+        const previousChildIndex = childIndex - 1;
+        const previousChildKey = childrenKeys[previousChildIndex];
+        if (previousChildKey !== undefined) {
+          const previousChildNode = node.childNodeMap.get(previousChildKey);
+          if (previousChildNode.hasRightSpacingDisabled) {
+            shouldInjectSpacing = false;
+          }
+        }
+        if (shouldInjectSpacing) {
+          childDiffWidth += " ".length;
+          childDiff = ` ${childDiff}`;
+        }
       }
     }
     let separatorMarkerToAppend;
