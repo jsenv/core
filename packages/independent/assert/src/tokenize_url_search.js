@@ -5,6 +5,7 @@ export const tokenizeUrlSearch = (search) => {
   const paramsMap = new Map();
   for (const param of params) {
     let [urlSearchParamKey, urlSearchParamValue] = param.split("=");
+    urlSearchParamKey = decodeURIComponent(urlSearchParamKey);
     urlSearchParamValue = decodeURIComponent(urlSearchParamValue);
     const existingUrlSearchParamValue = paramsMap.get(urlSearchParamKey);
     if (existingUrlSearchParamValue) {

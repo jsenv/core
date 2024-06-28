@@ -85,6 +85,21 @@ assert({
 
 ![img](<./quote/double quote.svg>)
 
+# single and double
+
+```js
+assert({
+  actual: {
+    [`You're "crazy"`]: true,
+  },
+  expect: {
+    [`You're "crazy"`]: false,
+  },
+});
+```
+
+![img](<./quote/single and double.svg>)
+
 # double quote in url string
 
 ```js
@@ -96,7 +111,18 @@ assert({
 
 ![img](<./quote/double quote in url string.svg>)
 
-# quote test
+# double quote in url search param key
+
+```js
+assert({
+  actual: `http://a.com?fo"=true`,
+  expect: `http://a.com?fo"=false`,
+});
+```
+
+![img](<./quote/double quote in url search param key.svg>)
+
+# url vs string
 
 ```js
 assert({
@@ -105,5 +131,5 @@ assert({
 });
 ```
 
-![img](<./quote/quote test.svg>)
+![img](<./quote/url vs string.svg>)
 

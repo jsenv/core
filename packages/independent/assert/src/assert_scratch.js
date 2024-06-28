@@ -2,9 +2,6 @@
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
  * - quotes
- *    - quote in property name
- *    - ensure backtick cannot be used for object property key
- *    - quote in url search param name
  *    - quote in url search param value
  *    - quote in url pathname
  *  - regexp

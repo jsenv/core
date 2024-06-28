@@ -56,6 +56,16 @@ await startSnapshotTesting("quote", ({ test }) => {
       },
     });
   });
+  test("single and double", () => {
+    assert({
+      actual: {
+        [`You're "crazy"`]: true,
+      },
+      expect: {
+        [`You're "crazy"`]: false,
+      },
+    });
+  });
   // url
   test("double quote in url string", () => {
     assert({
@@ -63,7 +73,13 @@ await startSnapshotTesting("quote", ({ test }) => {
       expect: `http://b.com"`,
     });
   });
-  test("quote test", () => {
+  test("double quote in url search param key", () => {
+    assert({
+      actual: `http://a.com?fo"=true`,
+      expect: `http://a.com?fo"=false`,
+    });
+  });
+  test("url vs string", () => {
     assert({
       actual: "http://example.com",
       expect: `test"quotes`,

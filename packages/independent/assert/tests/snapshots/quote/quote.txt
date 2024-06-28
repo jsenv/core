@@ -34,11 +34,23 @@ expect: {
   'He is "crazy"': false,
 }
 
+# single and double
+actual: {
+  'You\'re "crazy"': true,
+}
+expect: {
+  'You\'re "crazy"': false,
+}
+
 # double quote in url string
 actual: 'http://a.com"/'
 expect: 'http://b.com"/'
 
-# quote test
+# double quote in url search param key
+actual: 'http://a.com/?fo"=true'
+expect: 'http://a.com/?fo"=false'
+
+# url vs string
 actual: "http://example.com/"
 expect: 'test"quotes'
 
