@@ -1271,6 +1271,7 @@ let createRootNode;
       isError: false,
       isRegExp: false,
       isPromise: false,
+      isStringObject: false,
       referenceFromOthersSet: referenceFromOthersSetDefault,
       // render info
       render: (props) => render(node, props),
@@ -1937,6 +1938,10 @@ let createRootNode;
           node.isPromise = true;
           continue;
         }
+        if (parentConstructor.name === "String") {
+          node.isStringObject = true;
+          continue;
+        }
         if (
           // "Int8Array",
           // "Uint8Array",
@@ -2070,6 +2075,8 @@ let createRootNode;
             construct: {
               // function child nodes
               if (node.isFunction) {
+                ownPropertyNameToIgnoreSet.add("length");
+                ownPropertyNameToIgnoreSet.add("name");
                 const functionConstructNode = compositePartsNode.appendChild(
                   "construct",
                   {
@@ -2183,6 +2190,7 @@ let createRootNode;
               } else {
                 const objectTag = getObjectTag(value);
                 if (node.isError) {
+                  ownPropertyNameToIgnoreSet.add("stack");
                   const messageOwnPropertyDescriptor =
                     Object.getOwnPropertyDescriptor(value, "message");
                   if (messageOwnPropertyDescriptor) {
@@ -2435,6 +2443,7 @@ let createRootNode;
             }
             indexed_entries: {
               if (node.isArray) {
+                ownPropertyNameToIgnoreSet.add("length");
                 const arrayEntriesNode = compositePartsNode.appendChild(
                   "indexed_entries",
                   {
@@ -2488,6 +2497,7 @@ let createRootNode;
                 break indexed_entries;
               }
               if (node.isTypedArray) {
+                ownPropertyNameToIgnoreSet.add("length");
                 const typedEntriesNode = compositePartsNode.appendChild(
                   "indexed_entries",
                   {
@@ -2537,6 +2547,16 @@ let createRootNode;
                   }
                 };
                 typedArrayChildrenGenerator();
+                break indexed_entries;
+              }
+              if (node.isStringObject) {
+                ownPropertyNameToIgnoreSet.add("length");
+                let index = 0;
+                while (index < value.length) {
+                  ownPropertyNameToIgnoreSet.add(String(index));
+                  index++;
+                }
+                break indexed_entries;
               }
             }
             symbol_to_primitive: {
@@ -4267,15 +4287,6 @@ const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
     return true;
     //  }
     //  break ignore;
-  }
-  if (ownPropertyName === "length") {
-    return node.isArray || node.isFunction;
-  }
-  if (ownPropertyName === "name") {
-    return node.isFunction;
-  }
-  if (ownPropertyName === "stack") {
-    return node.isError;
   }
   return false;
 };

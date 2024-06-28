@@ -191,3 +191,14 @@ assert({
 
 ![img](<./wrapped_value/no diff on valueOf in constructor.svg>)
 
+# diff new String value
+
+```js
+assert({
+  actual: new String("a"),
+  expect: new String("b"),
+});
+```
+
+![img](<./wrapped_value/diff new String value.svg>)
+

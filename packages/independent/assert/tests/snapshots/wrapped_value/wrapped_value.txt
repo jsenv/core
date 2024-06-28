@@ -78,3 +78,7 @@ expect: Signal(10) {
   a: false,
 }
 
+# diff new String value
+actual: String("a")
+expect: String("b")
+
