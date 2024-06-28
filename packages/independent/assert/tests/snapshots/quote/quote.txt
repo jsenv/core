@@ -1,0 +1,28 @@
+# string contains escaped double quote
+actual: "I\\\"m dam"
+expect: "I\\\"m seb"
+
+# single quote best in actual
+actual: 'My name is "dam"'
+expect: '"My name is ZdamZ"'
+
+# single quote best in expect
+actual: '"My name is ZdamZ"'
+expect: 'My name is "dam"'
+
+# template quote best in expect
+actual: `I'm "zac"`
+expect: `I'm "dam"`
+
+# double best and must be escaped
+actual: "START \"dam\" `''' END"
+expect: "START \"zac\" `''' END"
+
+# double quote in url string
+actual: 'http://a.com"/'
+expect: 'http://b.com"/'
+
+# quote test
+actual: "http://example.com/"
+expect: 'test"quotes'
+

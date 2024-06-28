@@ -174,18 +174,6 @@ await startSnapshotTesting("url", ({ test }) => {
       expect: "file://example/file.js",
     });
   });
-  test("quote test", () => {
-    assert({
-      actual: "http://example.com",
-      expect: `test"quotes`,
-    });
-  });
-  test("double quote in url string", () => {
-    assert({
-      actual: `http://a.com"`,
-      expect: `http://b.com"`,
-    });
-  });
   test("url origin is case insensitive", () => {
     assert({
       actual: {

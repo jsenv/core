@@ -8,14 +8,6 @@ await startSnapshotTesting("string", ({ test }) => {
       expect: "b",
     });
   });
-  test("string contains escaped double quote", () => {
-    assert({
-      // prettier-ignore
-      actual: "I\\\"m dam",
-      // prettier-ignore
-      expect: "I\\\"m seb",
-    });
-  });
   test("diff end of string", () => {
     assert({
       actual: "hello world",
@@ -104,30 +96,6 @@ await startSnapshotTesting("string", ({ test }) => {
       actual: "abcdefgh5jklmnopqrstu",
       expect: "abcdefgh6jklmnopqrstu",
       MAX_COLUMNS: 15,
-    });
-  });
-  test("single quote best in actual", () => {
-    assert({
-      actual: `My name is "dam"`,
-      expect: `My name is ZdamZ`,
-    });
-  });
-  test("single quote best in expect", () => {
-    assert({
-      actual: `My name is ZdamZ`,
-      expect: `My name is "dam"`,
-    });
-  });
-  test("template quote best in expect", () => {
-    assert({
-      actual: `I'm "zac"`,
-      expect: `I'm "dam"`,
-    });
-  });
-  test("double best and must be escaped", () => {
-    assert({
-      actual: `START "dam" \`''' END`,
-      expect: `START "zac" \`''' END`,
     });
   });
 });

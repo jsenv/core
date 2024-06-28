@@ -1,17 +1,17 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - quote in
- *    - property name
- *    - url search param name
- *    - url search param value
- *    - url pathname
+ * - quotes
+ *    - quote in property name
  *    - ensure backtick cannot be used for object property key
+ *    - quote in url search param name
+ *    - quote in url search param value
+ *    - quote in url pathname
  *  - regexp
  *  - object integrity
  *  - url search params
  *  - weakset/weakmap/promise
- * - more wrapped value tests (from internal_value.xtest.js)
+ *  - more wrapped value tests (from internal_value.xtest.js)
  *  - prototype
  *  - property descriptors
  *  - date

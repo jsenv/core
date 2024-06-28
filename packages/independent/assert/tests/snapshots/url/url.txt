@@ -118,14 +118,6 @@ expect: {
 actual: "http://example/file.txt"
 expect: "file://example/file.js"
 
-# quote test
-actual: "http://example.com/"
-expect: 'test"quotes'
-
-# double quote in url string
-actual: 'http://a.com"/'
-expect: 'http://b.com"/'
-
 # url origin is case insensitive
 actual: {
   a: "http://example.com/page",

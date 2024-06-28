@@ -2,10 +2,6 @@
 actual: "a"
 expect: "b"
 
-# string contains escaped double quote
-actual: "I\\\"m dam"
-expect: "I\\\"m seb"
-
 # diff end of string
 actual: "hello world"
 expect: "hello france"
@@ -61,20 +57,4 @@ expect: "a3cdefY"…
 # diff at middle of long string, start + end truncated
 actual: …"gh5"…
 expect: …"gh6"…
-
-# single quote best in actual
-actual: 'My name is "dam"'
-expect: '"My name is ZdamZ"'
-
-# single quote best in expect
-actual: '"My name is ZdamZ"'
-expect: 'My name is "dam"'
-
-# template quote best in expect
-actual: `I'm "zac"`
-expect: `I'm "dam"`
-
-# double best and must be escaped
-actual: "START \"dam\" `''' END"
-expect: "START \"zac\" `''' END"
 

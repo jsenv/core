@@ -300,28 +300,6 @@ assert({
 
 ![img](<./url/file protocol vs http protocol.svg>)
 
-# quote test
-
-```js
-assert({
-  actual: "http://example.com",
-  expect: `test"quotes`,
-});
-```
-
-![img](<./url/quote test.svg>)
-
-# double quote in url string
-
-```js
-assert({
-  actual: `http://a.com"`,
-  expect: `http://b.com"`,
-});
-```
-
-![img](<./url/double quote in url string.svg>)
-
 # url origin is case insensitive
 
 ```js
