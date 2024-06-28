@@ -142,39 +142,39 @@ await startSnapshotTesting("wrapped_value", ({ test }) => {
       expect: new String("b"),
     });
   });
-  // ["diff String object vs literal"]: () => {
-  //   assert({
-  //     actual: new String("abc"),
-  //     expect: "a2",
-  //   });
-  // },
-  // ["new String collapsed with overview"]: () => {
-  //   assert({
-  //     actual: {
-  //       a: new String("toto"),
-  //       b: true,
-  //     },
-  //     expect: {
-  //       a: new String("toto"),
-  //       b: false,
-  //     },
-  //   });
-  // },
-  // ["new String collapsed"]: () => {
-  //   assert({
-  //     actual: {
-  //       foo: {
-  //         a: new String("toto"),
-  //       },
-  //     },
-  //     expect: {
-  //       bar: {
-  //         a: new String("toto"),
-  //       },
-  //     },
-  //     maxDepthInsideDiff: 0,
-  //   });
-  // },
+  test("diff String object vs literal", () => {
+    assert({
+      actual: new String("abc"),
+      expect: "a2",
+    });
+  });
+  test("new String collapsed with overview", () => {
+    assert({
+      actual: {
+        a: new String("toto"),
+        b: true,
+      },
+      expect: {
+        a: new String("toto"),
+        b: false,
+      },
+    });
+  });
+  test("new String collapsed", () => {
+    assert({
+      actual: {
+        foo: {
+          a: new String("toto"),
+        },
+      },
+      expect: {
+        bar: {
+          a: new String("toto"),
+        },
+      },
+      MAX_DEPTH_INSIDE_DIFF: 1,
+    });
+  });
   // ["new String prop"]: () => {
   //   assert({
   //     actual: Object.assign(new String("a"), { foo: true }),

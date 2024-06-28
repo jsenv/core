@@ -1262,6 +1262,7 @@ let createRootNode;
       // info/composite
       isFunction: false,
       functionAnalysis: defaultFunctionAnalysis,
+      objectTag: "",
       isArray: false,
       isTypedArray: false,
       isMap: false,
@@ -1974,6 +1975,17 @@ let createRootNode;
       } else if (!Object.isExtensible(value)) {
         isExtensible = false;
       }
+      const wellKnownPath = getWellKnownValuePath(value);
+      if (
+        node.reference ||
+        wellKnownPath ||
+        node.isFunction ||
+        isFunctionPrototype
+      ) {
+      } else {
+        node.objectTag = getObjectTag(value);
+      }
+
       node.childGenerator = function () {
         if (node.reference) {
           const referenceNode = node.appendChild("reference", {
@@ -2000,7 +2012,6 @@ let createRootNode;
           });
           return;
         }
-        const wellKnownPath = getWellKnownValuePath(value);
         if (wellKnownPath) {
           const wellKnownNode = node.appendChild("well_known", {
             value: wellKnownPath,
@@ -2187,94 +2198,90 @@ let createRootNode;
                   },
                 );
               } else if (isFunctionPrototype) {
-              } else {
-                const objectTag = getObjectTag(value);
-                if (node.isError) {
-                  ownPropertyNameToIgnoreSet.add("stack");
-                  const messageOwnPropertyDescriptor =
-                    Object.getOwnPropertyDescriptor(value, "message");
-                  if (messageOwnPropertyDescriptor) {
-                    ownPropertyNameToIgnoreSet.add("message");
-                  }
-                  const errorConstructNode = compositePartsNode.appendChild(
-                    "construct",
-                    {
-                      value: null,
-                      render: renderChildren,
-                      onelineDiff: {},
-                      group: "entries",
-                      subgroup: "error_construct",
-                      childGenerator: () => {
-                        errorConstructNode.appendChild("error_constructor", {
-                          value: objectTag,
-                          render: renderGrammar,
-                          separatorMarker: ": ",
-                        });
-                        if (messageOwnPropertyDescriptor) {
-                          const errorMessage =
-                            messageOwnPropertyDescriptor.value;
-                          errorConstructNode.appendChild("error_message", {
-                            value: errorMessage,
-                            render: renderString,
-                            lineNumbersDisabled: true,
-                            quotesDisabled: true,
-                            subgroup: "error_message",
-                          });
-                        }
-                      },
-                    },
-                  );
-                } else if (node.isRegExp) {
-                  let regexpSource = value.source;
-                  if (regexpSource === "(?:)") {
-                    regexpSource = "";
-                  }
-                  regexpSource = `/${regexpSource}/${value.flags}`;
-                  compositePartsNode.appendChild("construct", {
-                    value: regexpSource,
-                    render: renderValue,
-                    isRegexpSource: true,
-                    quotesDisabled: true,
-                    group: "regexp_source",
-                    subgroup: "regexp_source",
-                  });
-                } else if (
-                  objectTag &&
-                  objectTag !== "Object" &&
-                  objectTag !== "Array"
-                ) {
-                  objectConstructNode = compositePartsNode.appendChild(
-                    "construct",
-                    {
-                      value: null,
-                      render: renderChildren,
-                      onelineDiff: {
-                        hasSpacingBetweenEachChild: true,
-                      },
-                      group: "entries",
-                      subgroup: "object_construct",
-                      childGenerator() {
-                        if (objectConstructArgs) {
-                          objectConstructNode.appendChild(
-                            "call",
-                            createMethodCallNode(objectConstructNode, {
-                              objectName: objectTag,
-                              args: objectConstructArgs,
-                            }),
-                          );
-                        } else {
-                          objectConstructNode.appendChild("object_tag", {
-                            value: objectTag,
-                            render: renderGrammar,
-                            group: "grammar",
-                            subgroup: "object_tag",
-                            path: node.path.append("[[ObjectTag]]"),
-                          });
-                        }
-                      },
-                    },
-                  );
+              } else if (node.isError) {
+                ownPropertyNameToIgnoreSet.add("stack");
+                const messageOwnPropertyDescriptor =
+                  Object.getOwnPropertyDescriptor(value, "message");
+                if (messageOwnPropertyDescriptor) {
+                  ownPropertyNameToIgnoreSet.add("message");
                 }
+                const errorConstructNode = compositePartsNode.appendChild(
+                  "construct",
+                  {
+                    value: null,
+                    render: renderChildren,
+                    onelineDiff: {},
+                    group: "entries",
+                    subgroup: "error_construct",
+                    childGenerator: () => {
+                      errorConstructNode.appendChild("error_constructor", {
+                        value: node.objectTag,
+                        render: renderGrammar,
+                        separatorMarker: ": ",
+                      });
+                      if (messageOwnPropertyDescriptor) {
+                        const errorMessage = messageOwnPropertyDescriptor.value;
+                        errorConstructNode.appendChild("error_message", {
+                          value: errorMessage,
+                          render: renderString,
+                          lineNumbersDisabled: true,
+                          quotesDisabled: true,
+                          subgroup: "error_message",
+                        });
+                      }
+                    },
+                  },
+                );
+              } else if (node.isRegExp) {
+                let regexpSource = value.source;
+                if (regexpSource === "(?:)") {
+                  regexpSource = "";
+                }
+                regexpSource = `/${regexpSource}/${value.flags}`;
+                compositePartsNode.appendChild("construct", {
+                  value: regexpSource,
+                  render: renderValue,
+                  isRegexpSource: true,
+                  quotesDisabled: true,
+                  group: "regexp_source",
+                  subgroup: "regexp_source",
+                });
+              } else if (
+                node.objectTag &&
+                node.objectTag !== "Object" &&
+                node.objectTag !== "Array"
+              ) {
+                objectConstructNode = compositePartsNode.appendChild(
+                  "construct",
+                  {
+                    value: null,
+                    render: renderChildren,
+                    onelineDiff: {
+                      hasSpacingBetweenEachChild: true,
+                    },
+                    group: "entries",
+                    subgroup: "object_construct",
+                    childGenerator() {
+                      if (objectConstructArgs) {
+                        objectConstructNode.appendChild(
+                          "call",
+                          createMethodCallNode(objectConstructNode, {
+                            objectName: node.objectTag,
+                            args: objectConstructArgs,
+                          }),
+                        );
+                      } else {
+                        objectConstructNode.appendChild("object_tag", {
+                          value: node.objectTag,
+                          render: renderGrammar,
+                          group: "grammar",
+                          subgroup: "object_tag",
+                          path: node.path.append("[[ObjectTag]]"),
+                        });
+                      }
+                    },
+                  },
+                );
               }
             }
             internal_entries: {
@@ -3079,20 +3086,24 @@ const renderComposite = (node, props) => {
   const compositePartsNode = node.childNodeMap.get("parts");
   if (maxDepthReached) {
     node.startMarker = node.endMarker = "";
-    // const { separatorMarkerRef } = node;
-    // if (separatorMarkerRef) {
-    //   separatorMarkerRef.current = "";
-    // }
+    if (node.isStringObject) {
+      const length = node.value.length;
+      return truncateAndApplyColor(`${node.objectTag}(${length})`, node, props);
+    }
     const indexedEntriesNode =
       compositePartsNode.childNodeMap.get("indexed_entries");
     if (indexedEntriesNode) {
-      const arrayLength = indexedEntriesNode.childNodeMap.size;
-      return truncateAndApplyColor(`Array(${arrayLength})`, node, props);
+      const length = indexedEntriesNode.childNodeMap.size;
+      return truncateAndApplyColor(`${node.objectTag}(${length})`, node, props);
     }
     const ownPropertiesNode =
       compositePartsNode.childNodeMap.get("own_properties");
     const ownPropertyCount = ownPropertiesNode.childNodeMap.size;
-    return truncateAndApplyColor(`Object(${ownPropertyCount})`, node, props);
+    return truncateAndApplyColor(
+      `${node.objectTag}(${ownPropertyCount})`,
+      node,
+      props,
+    );
   }
   return compositePartsNode.render(props);
 };

@@ -202,3 +202,51 @@ assert({
 
 ![img](<./wrapped_value/diff new String value.svg>)
 
+# diff String object vs literal
+
+```js
+assert({
+  actual: new String("abc"),
+  expect: "a2",
+});
+```
+
+![img](<./wrapped_value/diff String object vs literal.svg>)
+
+# new String collapsed with overview
+
+```js
+assert({
+  actual: {
+    a: new String("toto"),
+    b: true,
+  },
+  expect: {
+    a: new String("toto"),
+    b: false,
+  },
+});
+```
+
+![img](<./wrapped_value/new String collapsed with overview.svg>)
+
+# new String collapsed
+
+```js
+assert({
+  actual: {
+    foo: {
+      a: new String("toto"),
+    },
+  },
+  expect: {
+    bar: {
+      a: new String("toto"),
+    },
+  },
+  MAX_DEPTH_INSIDE_DIFF: 1,
+});
+```
+
+![img](<./wrapped_value/new String collapsed.svg>)
+
