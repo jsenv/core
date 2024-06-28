@@ -1,0 +1,36 @@
+# a vs b
+actual: /a/
+expect: /b/
+
+# i flag vs no flag
+actual: /a/i
+expect: /a/
+
+# gi flag vs ig flag
+actual: {
+  a: /a/gi,
+  b: true,
+}
+expect: {
+  a: /a/gi,
+  b: false,
+}
+
+# special char: parenthesis vs dot
+actual: /^\($/g
+expect: /^\.$/g
+
+# last index
+actual: /a/ {
+  lastIndex: 0,
+}
+expect: /a/ {
+  lastIndex: 10,
+}
+
+# regex and string representing the same regex
+actual: /a/ {
+  lastIndex: 0,
+}
+expect: "/a/"
+

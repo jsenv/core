@@ -1,26 +1,23 @@
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#non-standard_date_strings
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format
 
+import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-import { createAssert } from "../src/assert.js";
-
-const assert = createAssert();
-
-await startSnapshotTesting("regexp", {
-  ["a vs b"]: () => {
+await startSnapshotTesting("regexp", ({ test }) => {
+  test("a vs b", () => {
     assert({
       actual: /a/,
       expect: /b/,
     });
-  },
-  ["i flag vs no flag"]: () => {
+  });
+  test("i flag vs no flag", () => {
     assert({
       actual: /a/i,
       expect: /a/,
     });
-  },
-  ["gi flag vs ig flag"]: () => {
+  });
+  test("gi flag vs ig flag", () => {
     assert({
       actual: {
         a: /a/gi,
@@ -32,14 +29,14 @@ await startSnapshotTesting("regexp", {
         b: false,
       },
     });
-  },
-  ["special char: parenthesis vs dot"]: () => {
+  });
+  test("special char: parenthesis vs dot", () => {
     assert({
       actual: /^\($/g,
       expect: /^\.$/g,
     });
-  },
-  ["last index"]: () => {
+  });
+  test("last index", () => {
     const actual = /a/;
     const expect = /a/;
     expect.lastIndex = 10;
@@ -47,11 +44,11 @@ await startSnapshotTesting("regexp", {
       actual,
       expect,
     });
-  },
-  ["regex and string representing the same regex"]: () => {
+  });
+  test("regex and string representing the same regex", () => {
     assert({
       actual: /a/,
       expect: "/a/",
     });
-  },
+  });
 });

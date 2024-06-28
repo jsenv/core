@@ -1204,6 +1204,7 @@ let createRootNode;
     isSourceCode = false,
     isFunctionPrototype = false,
     isClassPrototype = false,
+    isRegexpSource = false,
     customCompare,
     render,
     isHidden = false,
@@ -1221,6 +1222,7 @@ let createRootNode;
     quotesBacktickDisabled = false,
     numericSeparatorsDisabled = false,
     lineNumbersDisabled = false,
+    renderOptions = renderOptionsDefault,
     onelineDiff = null,
     multilineDiff = null,
   }) => {
@@ -1247,6 +1249,7 @@ let createRootNode;
       path,
       isSourceCode,
       isClassPrototype,
+      isRegexpSource,
       // info
       isCustomExpectation: false,
       // info/primitive
@@ -1268,6 +1271,7 @@ let createRootNode;
       isSet: false,
       isURL: false,
       isError: false,
+      isRegExp: false,
       referenceFromOthersSet: referenceFromOthersSetDefault,
       // render info
       render: (props) => render(node, props),
@@ -1296,6 +1300,7 @@ let createRootNode;
       separatorMarkerDisabled,
       separatorMarkerWhenTruncated,
       hasLeftSpacingDisabled,
+      renderOptions,
       onelineDiff,
       multilineDiff,
       color: "",
@@ -1777,6 +1782,9 @@ let createRootNode;
                 lineNode.appendChild(charIndex, {
                   value: char,
                   render: renderChar,
+                  renderOptions: isRegexpSource
+                    ? { specialCharSet: regExpSpecialCharSet }
+                    : undefined,
                   quoteMarkerRef,
                   group: "entry_value",
                   subgroup: "char_entry_value",
@@ -1915,6 +1923,10 @@ let createRootNode;
         }
         if (parentConstructor.name === "URL") {
           node.isURL = true;
+          continue;
+        }
+        if (parentConstructor.name === "RegExp") {
+          node.isRegExp = true;
           continue;
         }
         if (
@@ -2149,6 +2161,20 @@ let createRootNode;
                     },
                   },
                 );
+              } else if (node.isRegExp) {
+                let regexpSource = value.source;
+                if (regexpSource === "(?:)") {
+                  regexpSource = "";
+                }
+                regexpSource = `/${regexpSource}/${value.flags}`;
+                compositePartsNode.appendChild("construct", {
+                  value: regexpSource,
+                  render: renderValue,
+                  isRegexpSource: true,
+                  quotesDisabled: true,
+                  group: "regexp_source",
+                  subgroup: "regexp_source",
+                });
               } else if (
                 objectTag &&
                 objectTag !== "Object" &&
@@ -2187,7 +2213,7 @@ let createRootNode;
                 );
               }
             }
-            let canHaveInternalEntries = false;
+
             internal_entries: {
               const internalEntriesParams = {
                 render: renderChildrenMultilineWhenDiff,
@@ -2214,7 +2240,6 @@ let createRootNode;
               };
 
               if (node.isMap) {
-                canHaveInternalEntries = true;
                 const mapEntriesNode = compositePartsNode.appendChild(
                   "internal_entries",
                   {
@@ -2275,7 +2300,6 @@ let createRootNode;
                 );
               }
               if (node.isSet) {
-                canHaveInternalEntries = true;
                 const setEntriesNode = compositePartsNode.appendChild(
                   "internal_entries",
                   {
@@ -2301,10 +2325,9 @@ let createRootNode;
                 );
               }
             }
-            let canHaveIndexedEntries = false;
+
             indexed_entries: {
               if (node.isArray) {
-                canHaveIndexedEntries = true;
                 const arrayEntriesNode = compositePartsNode.appendChild(
                   "indexed_entries",
                   {
@@ -2358,7 +2381,6 @@ let createRootNode;
                 break indexed_entries;
               }
               if (node.isTypedArray) {
-                canHaveIndexedEntries = true;
                 const typedEntriesNode = compositePartsNode.appendChild(
                   "indexed_entries",
                   {
@@ -2495,7 +2517,8 @@ let createRootNode;
                 node.isMap ||
                 node.isSet ||
                 node.isURL ||
-                node.isError;
+                node.isError ||
+                node.isRegExp;
               const skipOwnProperties =
                 canSkipOwnProperties &&
                 ownPropertySymbols.length === 0 &&
@@ -2505,9 +2528,7 @@ let createRootNode;
                 break own_properties;
               }
               const hasMarkersWhenEmpty =
-                !objectConstructNode &&
-                !canHaveInternalEntries &&
-                !canHaveIndexedEntries;
+                !objectConstructNode && !canSkipOwnProperties;
               const ownPropertiesNode = compositePartsNode.appendChild(
                 "own_properties",
                 {
@@ -2657,6 +2678,10 @@ let createRootNode;
                         isClassPrototype:
                           ownPropertyName === "prototype" &&
                           node.functionAnalysis.type === "class",
+                        isHiddenWhenSame:
+                          ownPropertyName === "lastIndex" && node.isRegExp,
+                        isHiddenWhenSolo:
+                          ownPropertyName === "lastIndex" && node.isRegExp,
                       });
                     }
                     for (const propertyLikeCallback of propertyLikeCallbackSet) {
@@ -2713,6 +2738,7 @@ let createRootNode;
     return node;
   };
 
+  const renderOptionsDefault = {};
   const referenceFromOthersSetDefault = new Set();
 
   const appendChildNodeGeneric = (node, childKey, params) => {
@@ -2810,6 +2836,10 @@ const renderChar = (node, props) => {
   const { quoteMarkerRef } = node;
   if (quoteMarkerRef && char === quoteMarkerRef.current) {
     return truncateAndApplyColor(`\\${char}`, node, props);
+  }
+  const { specialCharSet } = node.renderOptions;
+  if (specialCharSet && specialCharSet.has(char)) {
+    return truncateAndApplyColor(char, node, props);
   }
   const point = char.charCodeAt(0);
   if (point === 92 || point < 32 || (point > 126 && point < 160)) {
@@ -4313,3 +4343,21 @@ const symbolToDescription = (symbol) => {
   );
   // return symbol.description // does not work on node
 };
+
+const regExpSpecialCharSet = new Set([
+  "/",
+  "^",
+  "\\",
+  "[",
+  "]",
+  "(",
+  ")",
+  "{",
+  "}",
+  "?",
+  "+",
+  "*",
+  ".",
+  "|",
+  "$",
+]);

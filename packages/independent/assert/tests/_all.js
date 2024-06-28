@@ -11,6 +11,7 @@ await import("./number.test.js");
 await import("./object.test.js");
 await import("./quote.test.js");
 await import("./ref.test.js");
+await import("./regexp.test.js");
 await import("./set.test.js");
 await import("./string.test.js");
 await import("./string_multiline.test.js");
