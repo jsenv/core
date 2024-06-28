@@ -1,0 +1,58 @@
+# frozen vs not frozen
+actual: Object.freeze( { a: true } )
+expect: { a: true }
+
+# not frozen vs frozen
+actual: { a: true }
+expect: Object.freeze( { a: true } )
+
+# sealed vs not sealed
+actual: Object.seal( { a: true } )
+expect: { a: true }
+
+# not sealed vs sealed
+actual: { a: true }
+expect: Object.seal( { a: true } )
+
+# frozen vs sealed
+actual: Object.freeze( { a: true } )
+expect: Object.seal( { a: true } )
+
+# sealed vs frozen
+actual: Object.seal( { a: true } )
+expect: Object.freeze( { a: true } )
+
+# extensible vs non extensible
+actual: { a: true }
+expect: Object.preventExtensions( { a: true } )
+
+# non extensible vs extensible
+actual: Object.preventExtensions( { a: true } )
+expect: { a: true }
+
+# sealed vs non extensible
+actual: Object.seal( { a: true } )
+expect: Object.preventExtensions( { a: true } )
+
+# non extensible vs frozen
+actual: Object.preventExtensions( { a: true } )
+expect: Object.freeze( { a: true } )
+
+# frozen array vs frozen function
+actual: Object.freeze( [
+  "a",
+] )
+expect: Object.freeze( () => {
+  [source code],
+} )
+
+# both sealed, diff is elsewhere
+actual: {
+  a: Object.freeze( { a: true } ),
+  b: true,
+}
+expect: {
+  a: Object.freeze( { a: true } ),
+  b: false,
+}
+

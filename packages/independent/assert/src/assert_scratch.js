@@ -1950,6 +1950,16 @@ let createRootNode;
           continue;
         }
       }
+      let isFrozen = false;
+      let isSealed = false;
+      let isExtensible = true;
+      if (Object.isFrozen(value)) {
+        isFrozen = true;
+      } else if (Object.isSealed(value)) {
+        isSealed = true;
+      } else if (!Object.isExtensible(value)) {
+        isExtensible = false;
+      }
       node.childGenerator = function () {
         if (node.reference) {
           const referenceNode = node.appendChild("reference", {
@@ -2011,175 +2021,46 @@ let createRootNode;
           childGenerator: () => {
             const ownPropertyNameToIgnoreSet = new Set();
             const ownPropertSymbolToIgnoreSet = new Set();
-            let objectConstructNode = null;
-            let objectConstructArgs = null;
-            // function child nodes
-            if (node.isFunction) {
-              const functionConstructNode = compositePartsNode.appendChild(
-                "construct",
+            const propertyLikeCallbackSet = new Set();
+            const objectIntegrityMethodName = isFrozen
+              ? "freeze"
+              : isSealed
+                ? "seal"
+                : isExtensible
+                  ? ""
+                  : "preventExtensions";
+            if (objectIntegrityMethodName) {
+              const objectIntegrityNode = compositePartsNode.appendChild(
+                "object_integrity",
                 {
                   value: null,
                   render: renderChildren,
                   onelineDiff: {
-                    hasSpacingBetweenEachChild: true,
+                    hasTrailingSeparator: true,
                   },
                   group: "entries",
-                  subgroup: "function_construct",
-                  childGenerator() {
-                    if (node.functionAnalysis.type === "class") {
-                      functionConstructNode.appendChild("class_keyword", {
-                        value: "class",
-                        render: renderGrammar,
-                        group: "grammar",
-                        subgroup: "class_keyword",
-                      });
-                      if (node.functionAnalysis.name) {
-                        functionConstructNode.appendChild("function_name", {
-                          value: node.functionAnalysis.name,
-                          render: renderGrammar,
-                          group: "grammar",
-                          subgroup: "function_name",
-                        });
-                      }
-                      const extendedClassName =
-                        node.functionAnalysis.extendedClassName;
-                      if (extendedClassName) {
-                        functionConstructNode.appendChild(
-                          "class_extends_keyword",
-                          {
-                            value: "extends",
-                            render: renderGrammar,
-                            group: "grammar",
-                            subgroup: "class_extends_keyword",
-                          },
-                        );
-                        functionConstructNode.appendChild(
-                          "class_extended_name",
-                          {
-                            value: extendedClassName,
-                            render: renderGrammar,
-                            group: "grammar",
-                            subgroup: "class_extended_name",
-                          },
-                        );
-                      }
-                      return;
-                    }
-                    if (node.functionAnalysis.isAsync) {
-                      functionConstructNode.appendChild(
-                        "function_async_keyword",
-                        {
-                          value: "async",
-                          render: renderGrammar,
-                          group: "grammar",
-                          subgroup: "function_async_keyword",
-                        },
-                      );
-                    }
-                    if (node.functionAnalysis.type === "classic") {
-                      functionConstructNode.appendChild("function_keyword", {
-                        value: node.functionAnalysis.isGenerator
-                          ? "function*"
-                          : "function",
-                        render: renderGrammar,
-                        group: "grammar",
-                        subgroup: "function_keyword",
-                      });
-                    }
-                    if (node.functionAnalysis.name) {
-                      functionConstructNode.appendChild("function_name", {
-                        value: node.functionAnalysis.name,
-                        render: renderGrammar,
-                        group: "grammar",
-                        subgroup: "function_name",
-                      });
-                    }
-                    function_body_prefix: {
-                      const appendFunctionBodyPrefix = (prefix) => {
-                        functionConstructNode.appendChild(
-                          "function_body_prefix",
-                          {
-                            value: prefix,
-                            render: renderGrammar,
-                            group: "grammar",
-                            subgroup: "function_body_prefix",
-                          },
-                        );
-                      };
-
-                      if (node.functionAnalysis.type === "arrow") {
-                        appendFunctionBodyPrefix("() =>");
-                      } else if (node.functionAnalysis.type === "method") {
-                        if (node.functionAnalysis.getterName) {
-                          appendFunctionBodyPrefix(`get ${key}()`);
-                        } else if (node.functionAnalysis.setterName) {
-                          appendFunctionBodyPrefix(`set ${key}()`);
-                        } else {
-                          appendFunctionBodyPrefix(`${key}()`);
-                        }
-                      } else if (node.functionAnalysis.type === "classic") {
-                        appendFunctionBodyPrefix("()");
-                      }
-                    }
+                  subgroup: "object_integrity",
+                  childGenerator: () => {
+                    objectIntegrityNode.appendChild("object_name", {
+                      value: "Object",
+                      render: renderGrammar,
+                      separatorMarker: ".",
+                    });
+                    objectIntegrityNode.appendChild("method_name", {
+                      value: objectIntegrityMethodName,
+                      render: renderGrammar,
+                      separatorMarker: "(",
+                    });
                   },
                 },
               );
-            } else if (isFunctionPrototype) {
-            } else {
-              const objectTag = getObjectTag(value);
-              if (node.isError) {
-                const messageOwnPropertyDescriptor =
-                  Object.getOwnPropertyDescriptor(value, "message");
-                if (messageOwnPropertyDescriptor) {
-                  ownPropertyNameToIgnoreSet.add("message");
-                }
-                const errorConstructNode = compositePartsNode.appendChild(
-                  "construct",
-                  {
-                    value: null,
-                    render: renderChildren,
-                    onelineDiff: {},
-                    group: "entries",
-                    subgroup: "error_construct",
-                    childGenerator: () => {
-                      errorConstructNode.appendChild("error_constructor", {
-                        value: objectTag,
-                        render: renderGrammar,
-                        separatorMarker: ": ",
-                      });
-                      if (messageOwnPropertyDescriptor) {
-                        const errorMessage = messageOwnPropertyDescriptor.value;
-                        errorConstructNode.appendChild("error_message", {
-                          value: errorMessage,
-                          render: renderString,
-                          lineNumbersDisabled: true,
-                          quotesDisabled: true,
-                          subgroup: "error_message",
-                        });
-                      }
-                    },
-                  },
-                );
-              } else if (node.isRegExp) {
-                let regexpSource = value.source;
-                if (regexpSource === "(?:)") {
-                  regexpSource = "";
-                }
-                regexpSource = `/${regexpSource}/${value.flags}`;
-                compositePartsNode.appendChild("construct", {
-                  value: regexpSource,
-                  render: renderValue,
-                  isRegexpSource: true,
-                  quotesDisabled: true,
-                  group: "regexp_source",
-                  subgroup: "regexp_source",
-                });
-              } else if (
-                objectTag &&
-                objectTag !== "Object" &&
-                objectTag !== "Array"
-              ) {
-                objectConstructNode = compositePartsNode.appendChild(
+            }
+            let objectConstructNode = null;
+            let objectConstructArgs = null;
+            construct: {
+              // function child nodes
+              if (node.isFunction) {
+                const functionConstructNode = compositePartsNode.appendChild(
                   "construct",
                   {
                     value: null,
@@ -2188,31 +2069,196 @@ let createRootNode;
                       hasSpacingBetweenEachChild: true,
                     },
                     group: "entries",
-                    subgroup: "object_construct",
+                    subgroup: "function_construct",
                     childGenerator() {
-                      if (objectConstructArgs) {
-                        objectConstructNode.appendChild(
-                          "call",
-                          createMethodCallNode(objectConstructNode, {
-                            objectName: objectTag,
-                            args: objectConstructArgs,
-                          }),
-                        );
-                      } else {
-                        objectConstructNode.appendChild("object_tag", {
-                          value: objectTag,
+                      if (node.functionAnalysis.type === "class") {
+                        functionConstructNode.appendChild("class_keyword", {
+                          value: "class",
                           render: renderGrammar,
                           group: "grammar",
-                          subgroup: "object_tag",
-                          path: node.path.append("[[ObjectTag]]"),
+                          subgroup: "class_keyword",
                         });
+                        if (node.functionAnalysis.name) {
+                          functionConstructNode.appendChild("function_name", {
+                            value: node.functionAnalysis.name,
+                            render: renderGrammar,
+                            group: "grammar",
+                            subgroup: "function_name",
+                          });
+                        }
+                        const extendedClassName =
+                          node.functionAnalysis.extendedClassName;
+                        if (extendedClassName) {
+                          functionConstructNode.appendChild(
+                            "class_extends_keyword",
+                            {
+                              value: "extends",
+                              render: renderGrammar,
+                              group: "grammar",
+                              subgroup: "class_extends_keyword",
+                            },
+                          );
+                          functionConstructNode.appendChild(
+                            "class_extended_name",
+                            {
+                              value: extendedClassName,
+                              render: renderGrammar,
+                              group: "grammar",
+                              subgroup: "class_extended_name",
+                            },
+                          );
+                        }
+                        return;
+                      }
+                      if (node.functionAnalysis.isAsync) {
+                        functionConstructNode.appendChild(
+                          "function_async_keyword",
+                          {
+                            value: "async",
+                            render: renderGrammar,
+                            group: "grammar",
+                            subgroup: "function_async_keyword",
+                          },
+                        );
+                      }
+                      if (node.functionAnalysis.type === "classic") {
+                        functionConstructNode.appendChild("function_keyword", {
+                          value: node.functionAnalysis.isGenerator
+                            ? "function*"
+                            : "function",
+                          render: renderGrammar,
+                          group: "grammar",
+                          subgroup: "function_keyword",
+                        });
+                      }
+                      if (node.functionAnalysis.name) {
+                        functionConstructNode.appendChild("function_name", {
+                          value: node.functionAnalysis.name,
+                          render: renderGrammar,
+                          group: "grammar",
+                          subgroup: "function_name",
+                        });
+                      }
+                      function_body_prefix: {
+                        const appendFunctionBodyPrefix = (prefix) => {
+                          functionConstructNode.appendChild(
+                            "function_body_prefix",
+                            {
+                              value: prefix,
+                              render: renderGrammar,
+                              group: "grammar",
+                              subgroup: "function_body_prefix",
+                            },
+                          );
+                        };
+
+                        if (node.functionAnalysis.type === "arrow") {
+                          appendFunctionBodyPrefix("() =>");
+                        } else if (node.functionAnalysis.type === "method") {
+                          if (node.functionAnalysis.getterName) {
+                            appendFunctionBodyPrefix(`get ${key}()`);
+                          } else if (node.functionAnalysis.setterName) {
+                            appendFunctionBodyPrefix(`set ${key}()`);
+                          } else {
+                            appendFunctionBodyPrefix(`${key}()`);
+                          }
+                        } else if (node.functionAnalysis.type === "classic") {
+                          appendFunctionBodyPrefix("()");
+                        }
                       }
                     },
                   },
                 );
+              } else if (isFunctionPrototype) {
+              } else {
+                const objectTag = getObjectTag(value);
+                if (node.isError) {
+                  const messageOwnPropertyDescriptor =
+                    Object.getOwnPropertyDescriptor(value, "message");
+                  if (messageOwnPropertyDescriptor) {
+                    ownPropertyNameToIgnoreSet.add("message");
+                  }
+                  const errorConstructNode = compositePartsNode.appendChild(
+                    "construct",
+                    {
+                      value: null,
+                      render: renderChildren,
+                      onelineDiff: {},
+                      group: "entries",
+                      subgroup: "error_construct",
+                      childGenerator: () => {
+                        errorConstructNode.appendChild("error_constructor", {
+                          value: objectTag,
+                          render: renderGrammar,
+                          separatorMarker: ": ",
+                        });
+                        if (messageOwnPropertyDescriptor) {
+                          const errorMessage =
+                            messageOwnPropertyDescriptor.value;
+                          errorConstructNode.appendChild("error_message", {
+                            value: errorMessage,
+                            render: renderString,
+                            lineNumbersDisabled: true,
+                            quotesDisabled: true,
+                            subgroup: "error_message",
+                          });
+                        }
+                      },
+                    },
+                  );
+                } else if (node.isRegExp) {
+                  let regexpSource = value.source;
+                  if (regexpSource === "(?:)") {
+                    regexpSource = "";
+                  }
+                  regexpSource = `/${regexpSource}/${value.flags}`;
+                  compositePartsNode.appendChild("construct", {
+                    value: regexpSource,
+                    render: renderValue,
+                    isRegexpSource: true,
+                    quotesDisabled: true,
+                    group: "regexp_source",
+                    subgroup: "regexp_source",
+                  });
+                } else if (
+                  objectTag &&
+                  objectTag !== "Object" &&
+                  objectTag !== "Array"
+                ) {
+                  objectConstructNode = compositePartsNode.appendChild(
+                    "construct",
+                    {
+                      value: null,
+                      render: renderChildren,
+                      onelineDiff: {
+                        hasSpacingBetweenEachChild: true,
+                      },
+                      group: "entries",
+                      subgroup: "object_construct",
+                      childGenerator() {
+                        if (objectConstructArgs) {
+                          objectConstructNode.appendChild(
+                            "call",
+                            createMethodCallNode(objectConstructNode, {
+                              objectName: objectTag,
+                              args: objectConstructArgs,
+                            }),
+                          );
+                        } else {
+                          objectConstructNode.appendChild("object_tag", {
+                            value: objectTag,
+                            render: renderGrammar,
+                            group: "grammar",
+                            subgroup: "object_tag",
+                            path: node.path.append("[[ObjectTag]]"),
+                          });
+                        }
+                      },
+                    },
+                  );
+                }
               }
             }
-
             internal_entries: {
               const internalEntriesParams = {
                 render: renderChildrenMultilineWhenDiff,
@@ -2324,7 +2370,6 @@ let createRootNode;
                 );
               }
             }
-
             indexed_entries: {
               if (node.isArray) {
                 const arrayEntriesNode = compositePartsNode.appendChild(
@@ -2431,7 +2476,6 @@ let createRootNode;
                 typedArrayChildrenGenerator();
               }
             }
-            const propertyLikeCallbackSet = new Set();
             symbol_to_primitive: {
               if (
                 Symbol.toPrimitive in value &&
@@ -2448,36 +2492,38 @@ let createRootNode;
                 });
               }
             }
-            // toString()
-            if (node.isURL) {
-              objectConstructArgs = [
-                {
-                  value: value.href,
-                  key: "toString()",
-                },
-              ];
-            }
-            // valueOf()
-            else if (
-              typeof value.valueOf === "function" &&
-              value.valueOf !== Object.prototype.valueOf
-            ) {
-              ownPropertyNameToIgnoreSet.add("valueOf");
-              const valueOfReturnValue = value.valueOf();
-              if (objectConstructNode) {
+            wrapped_value: {
+              // toString()
+              if (node.isURL) {
                 objectConstructArgs = [
                   {
-                    value: valueOfReturnValue,
-                    key: "valueOf()",
+                    value: value.href,
+                    key: "toString()",
                   },
                 ];
-              } else {
-                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                  appendPropertyEntryNode(
-                    VALUE_OF_RETURN_VALUE_ENTRY_KEY,
-                    valueOfReturnValue,
-                  );
-                });
+              }
+              // valueOf()
+              else if (
+                typeof value.valueOf === "function" &&
+                value.valueOf !== Object.prototype.valueOf
+              ) {
+                ownPropertyNameToIgnoreSet.add("valueOf");
+                const valueOfReturnValue = value.valueOf();
+                if (objectConstructNode) {
+                  objectConstructArgs = [
+                    {
+                      value: valueOfReturnValue,
+                      key: "valueOf()",
+                    },
+                  ];
+                } else {
+                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                    appendPropertyEntryNode(
+                      VALUE_OF_RETURN_VALUE_ENTRY_KEY,
+                      valueOfReturnValue,
+                    );
+                  });
+                }
               }
             }
             own_properties: {
@@ -2695,6 +2741,16 @@ let createRootNode;
                       propertyLikeCallback(appendPropertyEntryNode);
                     }
                   },
+                },
+              );
+            }
+            if (objectIntegrityMethodName) {
+              compositePartsNode.appendChild(
+                "object_integrity_call_close_parenthesis",
+                {
+                  value: ")",
+                  render: renderGrammar,
+                  group: "grammar",
                 },
               );
             }
