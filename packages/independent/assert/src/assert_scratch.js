@@ -2581,6 +2581,30 @@ let createRootNode;
                 });
               }
             }
+            prototype: {
+              if (node.objectTag) {
+                // prototype can be infered by object tag
+                // actual: User {}
+                // expect: Animal {}
+                break prototype;
+              }
+              if (node.isFunction) {
+                // prototype can be infered by construct notattion
+                // actual: () => {}
+                // expect: function () {}
+                break prototype;
+              }
+              if (node.isFunction && node.functionAnalysis.extendedClassName) {
+                // prototype property can be infered thanks to the usage of extends
+                break prototype;
+              }
+              const protoValue = Object.getPrototypeOf(value);
+              if (protoValue || protoValue === null) {
+                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                  appendPropertyEntryNode("__proto__", protoValue);
+                });
+              }
+            }
             wrapped_value: {
               // toString()
               if (node.isURL) {
@@ -2798,6 +2822,9 @@ let createRootNode;
                         },
                       );
                     }
+                    for (const propertyLikeCallback of propertyLikeCallbackSet) {
+                      propertyLikeCallback(appendPropertyEntryNode);
+                    }
                     for (const ownPropertySymbol of ownPropertySymbols) {
                       const ownPropertySymbolValue =
                         node.value[ownPropertySymbol];
@@ -2826,9 +2853,6 @@ let createRootNode;
                             ownPropertyName === "lastIndex" && node.isRegExp,
                         },
                       );
-                    }
-                    for (const propertyLikeCallback of propertyLikeCallbackSet) {
-                      propertyLikeCallback(appendPropertyEntryNode);
                     }
                   },
                 },

@@ -1,23 +1,20 @@
+import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-import { createAssert } from "../src/assert.js";
-
-const assert = createAssert();
-
-await startSnapshotTesting("prototype", {
-  ["object null proto vs object"]: () => {
+await startSnapshotTesting("prototype", ({ test }) => {
+  test("object null proto vs object", () => {
     assert({
       actual: Object.create(null),
       expect: {},
     });
-  },
-  ["object with different prototypes"]: () => {
+  });
+  test("object with different prototypes", () => {
     assert({
       actual: Object.create({ a: true }),
       expect: Object.create({ a: { b: true } }),
     });
-  },
-  ["object vs custom proto"]: () => {
+  });
+  test("object vs custom proto", () => {
     const User = {
       [Symbol.toStringTag]: "User",
     };
@@ -29,8 +26,8 @@ await startSnapshotTesting("prototype", {
       actual: dam,
       expect: bob,
     });
-  },
-  ["object vs instance"]: () => {
+  });
+  test("object vs instance", () => {
     class User {}
     const dam = new User();
     dam.name = "dam";
@@ -44,17 +41,17 @@ await startSnapshotTesting("prototype", {
         a: bob,
       },
     });
-  },
-  ["null and Array.prototype"]: () => {
+  });
+  test("null and Array.prototype", () => {
     assert({
       actual: null,
       expect: Array.prototype,
     });
-  },
-  ["Object.create(null) and []"]: () => {
+  });
+  test("Object.create(null) and []", () => {
     assert({
       actual: Object.create(null),
       expect: [],
     });
-  },
+  });
 });
