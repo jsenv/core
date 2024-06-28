@@ -135,52 +135,6 @@ await startSnapshotTesting("wrapped_value", ({ test }) => {
       },
     });
   });
-  /* eslint-disable no-new-wrappers */
-  test("diff new String value", () => {
-    assert({
-      actual: new String("a"),
-      expect: new String("b"),
-    });
-  });
-  test("diff String object vs literal", () => {
-    assert({
-      actual: new String("abc"),
-      expect: "a2",
-    });
-  });
-  test("new String collapsed with overview", () => {
-    assert({
-      actual: {
-        a: new String("toto"),
-        b: true,
-      },
-      expect: {
-        a: new String("toto"),
-        b: false,
-      },
-    });
-  });
-  test("new String collapsed", () => {
-    assert({
-      actual: {
-        foo: {
-          a: new String("toto"),
-        },
-      },
-      expect: {
-        bar: {
-          a: new String("toto"),
-        },
-      },
-      MAX_DEPTH_INSIDE_DIFF: 1,
-    });
-  });
-  // ["new String prop"]: () => {
-  //   assert({
-  //     actual: Object.assign(new String("a"), { foo: true }),
-  //     expect: Object.assign(new String("b"), { foo: false }),
-  //   });
-  // },
   // ["signal(true) and signal(false)"]: () => {
   //   assert({
   //     actual: {

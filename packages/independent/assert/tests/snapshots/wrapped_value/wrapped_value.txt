@@ -78,33 +78,3 @@ expect: Signal(10) {
   a: false,
 }
 
-# diff new String value
-actual: String("a")
-expect: String("b")
-
-# diff String object vs literal
-actual: String("abc")
-expect: "a2"
-
-# new String collapsed with overview
-actual: {
-  a: String("toto"),
-  b: true,
-}
-expect: {
-  a: String("toto"),
-  b: false,
-}
-
-# new String collapsed
-actual: {
-  foo: {
-    a: String(4),
-  },
-}
-expect: {
-  bar: {
-    a: String(4),
-  },
-}
-

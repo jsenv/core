@@ -167,3 +167,73 @@ assert({
 
 ![img](<./string/diff at middle of long string, start + end truncated.svg>)
 
+# diff new String value
+
+```js
+assert({
+  actual: new String("a"),
+  expect: new String("b"),
+});
+```
+
+![img](<./string/diff new String value.svg>)
+
+# diff String object vs literal
+
+```js
+assert({
+  actual: new String("abc"),
+  expect: "a2",
+});
+```
+
+![img](<./string/diff String object vs literal.svg>)
+
+# new String collapsed with overview
+
+```js
+assert({
+  actual: {
+    a: new String("toto"),
+    b: true,
+  },
+  expect: {
+    a: new String("toto"),
+    b: false,
+  },
+});
+```
+
+![img](<./string/new String collapsed with overview.svg>)
+
+# new String collapsed
+
+```js
+assert({
+  actual: {
+    foo: {
+      a: new String("toto"),
+    },
+  },
+  expect: {
+    bar: {
+      a: new String("toto"),
+    },
+  },
+  MAX_DEPTH_INSIDE_DIFF: 1,
+});
+```
+
+![img](<./string/new String collapsed.svg>)
+
+# new String prop
+
+```js
+assert({
+  actual: Object.assign(new String("a"), { foo: true }),
+  expect: Object.assign(new String("b"), { foo: false }),
+});
+```
+
+![img](<./string/new String prop.svg>)
+
