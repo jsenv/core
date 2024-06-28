@@ -14,3 +14,7 @@ expect: Symbol.toPrimitive
 actual: Symbol.for("a")
 expect: Symbol.for("b")
 
+# Object.prototype.toString vs Object.prototype.hasOwnProperty
+actual: Object.prototype.toString
+expect: Object.prototype.hasOwnProperty
+

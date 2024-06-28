@@ -42,3 +42,14 @@ assert({
 
 ![img](<./well_known/Symbol.for("a") and Symbol.for("b").svg>)
 
+# Object.prototype.toString vs Object.prototype.hasOwnProperty
+
+```js
+assert({
+  actual: Object.prototype.toString,
+  expect: Object.prototype.hasOwnProperty,
+});
+```
+
+![img](<./well_known/Object.prototype.toString vs Object.prototype.hasOwnProperty.svg>)
+
