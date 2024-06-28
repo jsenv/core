@@ -18,6 +18,22 @@ expect: `I'm "dam"`
 actual: "START \"dam\" `''' END"
 expect: "START \"zac\" `''' END"
 
+# single quote
+actual: {
+  "I'm": true,
+}
+expect: {
+  "I'm": false,
+}
+
+# double quote
+actual: {
+  'He is "crazy"': true,
+}
+expect: {
+  'He is "crazy"': false,
+}
+
 # double quote in url string
 actual: 'http://a.com"/'
 expect: 'http://b.com"/'

@@ -35,6 +35,27 @@ await startSnapshotTesting("quote", ({ test }) => {
       expect: `START "zac" \`''' END`,
     });
   });
+  // property name
+  test("single quote", () => {
+    assert({
+      actual: {
+        "I'm": true,
+      },
+      expect: {
+        "I'm": false,
+      },
+    });
+  });
+  test("double quote", () => {
+    assert({
+      actual: {
+        'He is "crazy"': true,
+      },
+      expect: {
+        'He is "crazy"': false,
+      },
+    });
+  });
   // url
   test("double quote in url string", () => {
     assert({

@@ -55,6 +55,36 @@ assert({
 
 ![img](<./quote/double best and must be escaped.svg>)
 
+# single quote
+
+```js
+assert({
+  actual: {
+    "I'm": true,
+  },
+  expect: {
+    "I'm": false,
+  },
+});
+```
+
+![img](<./quote/single quote.svg>)
+
+# double quote
+
+```js
+assert({
+  actual: {
+    'He is "crazy"': true,
+  },
+  expect: {
+    'He is "crazy"': false,
+  },
+});
+```
+
+![img](<./quote/double quote.svg>)
+
 # double quote in url string
 
 ```js
