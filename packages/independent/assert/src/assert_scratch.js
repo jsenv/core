@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- *  - regexp
  *  - object integrity
  *  - url search params
  *  - weakset/weakmap/promise
@@ -465,10 +464,10 @@ export const assert = (firstArg) => {
         throw new Error(`node (${node.subgroup}) already compared`);
       }
       node.comparison = comparison;
-      subcompareChildrenSolo(node, placeholderNode);
       if (node.isHiddenWhenSolo) {
         node.isHidden = true;
       }
+      subcompareChildrenSolo(node, placeholderNode);
     };
 
     visit: {
@@ -2444,9 +2443,7 @@ let createRootNode;
                 propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
                   appendPropertyEntryNode(
                     SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
-                    {
-                      value: toPrimitiveReturnValue,
-                    },
+                    toPrimitiveReturnValue,
                   );
                 });
               }
@@ -2476,9 +2473,10 @@ let createRootNode;
                 ];
               } else {
                 propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                  appendPropertyEntryNode(VALUE_OF_RETURN_VALUE_ENTRY_KEY, {
-                    value: valueOfReturnValue,
-                  });
+                  appendPropertyEntryNode(
+                    VALUE_OF_RETURN_VALUE_ENTRY_KEY,
+                    valueOfReturnValue,
+                  );
                 });
               }
             }
@@ -2570,25 +2568,25 @@ let createRootNode;
                   childGenerator: () => {
                     const appendPropertyEntryNode = (
                       key,
+                      value,
                       {
-                        value,
                         isSourceCode,
                         isFunctionPrototype,
                         isClassPrototype,
                         isHiddenWhenSame,
-                      },
+                        isHiddenWhenSolo,
+                      } = {},
                     ) => {
                       const ownPropertyNode = ownPropertiesNode.appendChild(
                         key,
                         {
                           render: renderChildren,
-                          onelineDiff: {
-                            hasTrailingSeparator: true,
-                          },
+                          onelineDiff: { hasTrailingSeparator: true },
                           focusedChildIndex: 0,
                           isFunctionPrototype,
                           isClassPrototype,
                           isHiddenWhenSame,
+                          isHiddenWhenSolo,
                           childGenerator: () => {
                             const valueFunctionAnalysis =
                               tokenizeFunction(value);
@@ -2656,33 +2654,42 @@ let createRootNode;
                     };
 
                     if (node.isFunction) {
-                      appendPropertyEntryNode(SOURCE_CODE_ENTRY_KEY, {
-                        value: node.functionAnalysis.argsAndBodySource,
-                        isSourceCode: true,
-                      });
+                      appendPropertyEntryNode(
+                        SOURCE_CODE_ENTRY_KEY,
+                        node.functionAnalysis.argsAndBodySource,
+                        {
+                          isSourceCode: true,
+                        },
+                      );
                     }
                     for (const ownPropertySymbol of ownPropertySymbols) {
                       const ownPropertySymbolValue =
                         node.value[ownPropertySymbol];
-                      appendPropertyEntryNode(ownPropertySymbol, {
-                        value: ownPropertySymbolValue,
-                        isHiddenWhenSame: true,
-                      });
+                      appendPropertyEntryNode(
+                        ownPropertySymbol,
+                        ownPropertySymbolValue,
+                        {
+                          isHiddenWhenSame: true,
+                        },
+                      );
                     }
                     for (const ownPropertyName of ownPropertyNames) {
-                      const ownPropertyValue = node.value[ownPropertyName];
-                      appendPropertyEntryNode(ownPropertyName, {
-                        value: ownPropertyValue,
-                        isFunctionPrototype:
-                          ownPropertyName === "prototype" && node.isFunction,
-                        isClassPrototype:
-                          ownPropertyName === "prototype" &&
-                          node.functionAnalysis.type === "class",
-                        isHiddenWhenSame:
-                          ownPropertyName === "lastIndex" && node.isRegExp,
-                        isHiddenWhenSolo:
-                          ownPropertyName === "lastIndex" && node.isRegExp,
-                      });
+                      const ownPropertyValue = value[ownPropertyName];
+                      appendPropertyEntryNode(
+                        ownPropertyName,
+                        ownPropertyValue,
+                        {
+                          isFunctionPrototype:
+                            ownPropertyName === "prototype" && node.isFunction,
+                          isClassPrototype:
+                            ownPropertyName === "prototype" &&
+                            node.functionAnalysis.type === "class",
+                          isHiddenWhenSame:
+                            ownPropertyName === "lastIndex" && node.isRegExp,
+                          isHiddenWhenSolo:
+                            ownPropertyName === "lastIndex" && node.isRegExp,
+                        },
+                      );
                     }
                     for (const propertyLikeCallback of propertyLikeCallbackSet) {
                       propertyLikeCallback(appendPropertyEntryNode);

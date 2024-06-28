@@ -29,8 +29,6 @@ expect: /a/ {
 }
 
 # regex and string representing the same regex
-actual: /a/ {
-  lastIndex: 0,
-}
+actual: /a/
 expect: "/a/"
 
