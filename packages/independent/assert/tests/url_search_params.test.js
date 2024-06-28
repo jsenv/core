@@ -1,44 +1,41 @@
+import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-import { createAssert } from "../src/assert.js";
-
-const assert = createAssert();
-
-await startSnapshotTesting("url_search_params", {
-  ["foo added"]: () => {
+await startSnapshotTesting("url_search_params", ({ test }) => {
+  test("foo added", () => {
     assert({
       actual: new URLSearchParams("foo=a"),
       expect: new URLSearchParams(),
     });
-  },
-  ["foo removed"]: () => {
+  });
+  test("foo removed", () => {
     assert({
       actual: new URLSearchParams(),
       expect: new URLSearchParams("foo=a"),
     });
-  },
-  ["foo modified"]: () => {
+  });
+  test("foo modified", () => {
     assert({
       actual: new URLSearchParams("foo=a"),
       expect: new URLSearchParams("foo=b"),
     });
-  },
-  ["foo second value added"]: () => {
+  });
+  test("foo second value added", () => {
     assert({
       actual: new URLSearchParams("foo=a&foo=a"),
       expect: new URLSearchParams("foo=a"),
     });
-  },
-  ["foo second value removed"]: () => {
+  });
+  test("foo second value removed", () => {
     assert({
       actual: new URLSearchParams("foo=a"),
       expect: new URLSearchParams("foo=a&foo=a"),
     });
-  },
-  ["foo second value modified"]: () => {
+  });
+  test("foo second value modified", () => {
     assert({
       actual: new URLSearchParams("foo=a&foo=b"),
       expect: new URLSearchParams("foo=a&foo=a"),
     });
-  },
+  });
 });

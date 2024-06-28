@@ -1,0 +1,68 @@
+# foo added
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+)
+expect: URLSearchParams()
+
+# foo removed
+actual: URLSearchParams()
+expect: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+)
+
+# foo modified
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+)
+expect: URLSearchParams(
+  "foo" => [
+    "b",
+  ],
+)
+
+# foo second value added
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+    "a",
+  ],
+)
+expect: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+)
+
+# foo second value removed
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+)
+expect: URLSearchParams(
+  "foo" => [
+    "a",
+    "a",
+  ],
+)
+
+# foo second value modified
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+    "b",
+  ],
+)
+expect: URLSearchParams(
+  "foo" => [
+    "a",
+    "a",
+  ],
+)
+

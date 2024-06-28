@@ -1,8 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- *  - object integrity
- *  - url search params
  *  - weakset/weakmap/promise
  *  - more wrapped value tests (from internal_value.xtest.js)
  *  - prototype
@@ -1270,6 +1268,7 @@ let createRootNode;
       isMap: false,
       isSet: false,
       isURL: false,
+      isURLSearchParams: false,
       isError: false,
       isRegExp: false,
       referenceFromOthersSet: referenceFromOthersSetDefault,
@@ -1926,6 +1925,10 @@ let createRootNode;
           node.isURL = true;
           continue;
         }
+        if (parentConstructor.name === "URLSearchParams") {
+          node.isURLSearchParams = true;
+          continue;
+        }
         if (parentConstructor.name === "RegExp") {
           node.isRegExp = true;
           continue;
@@ -2346,6 +2349,7 @@ let createRootNode;
                     },
                   },
                 );
+                break internal_entries;
               }
               if (node.isSet) {
                 const setEntriesNode = compositePartsNode.appendChild(
@@ -2371,6 +2375,58 @@ let createRootNode;
                     },
                   },
                 );
+                break internal_entries;
+              }
+              if (node.isURLSearchParams) {
+                const searchParamsMap = new Map();
+                for (let [urlSearchParamKey, urlSearchParamValue] of value) {
+                  const existingUrlSearchParamValue =
+                    searchParamsMap.get(urlSearchParamKey);
+                  if (existingUrlSearchParamValue) {
+                    urlSearchParamValue = [
+                      ...existingUrlSearchParamValue,
+                      urlSearchParamValue,
+                    ];
+                  } else {
+                    urlSearchParamValue = [urlSearchParamValue];
+                  }
+                  searchParamsMap.set(urlSearchParamKey, urlSearchParamValue);
+                }
+                const urlSearchParamEntries = compositePartsNode.appendChild(
+                  "internal_entries",
+                  {
+                    ...internalEntriesParams,
+                    subgroup: "url_search_params_entries",
+                    childGenerator: () => {
+                      for (const [key, values] of searchParamsMap) {
+                        const urlSearchParamEntryNode =
+                          urlSearchParamEntries.appendChild(key, {
+                            render: renderChildren,
+                            onelineDiff: { hasTrailingSeparator: true },
+                            group: "entry",
+                            subgroup: "url_search_param_entry",
+                            path: node.path.append(key),
+                          });
+                        urlSearchParamEntryNode.appendChild("entry_key", {
+                          value: key,
+                          render: renderValue,
+                          separatorMarker: " => ",
+                          group: "entry_key",
+                          subgroup: "url_search_param_entry_key",
+                        });
+                        urlSearchParamEntryNode.appendChild("entry_value", {
+                          value: values,
+                          render: renderValue,
+                          separatorMarker: ",",
+                          group: "entry_value",
+                          subgroup: "url_search_param_entry_value",
+                        });
+                      }
+                    },
+                  },
+                );
+
+                break internal_entries;
               }
             }
             indexed_entries: {
@@ -2564,6 +2620,7 @@ let createRootNode;
                 node.isMap ||
                 node.isSet ||
                 node.isURL ||
+                node.isURLSearchParams ||
                 node.isError ||
                 node.isRegExp;
               const skipOwnProperties =

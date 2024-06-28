@@ -18,5 +18,6 @@ await import("./string.test.js");
 await import("./string_multiline.test.js");
 await import("./symbol.test.js");
 await import("./url.test.js");
+await import("./url_search_params.test.js");
 await import("./well_known.test.js");
 await import("./wrapped_value.test.js");
