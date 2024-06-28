@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- *  - more wrapped value tests (from internal_value.xtest.js)
  *  - prototype
  *  - property descriptors
  *  - date

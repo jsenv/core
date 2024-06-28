@@ -1,0 +1,48 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
+  font-size="14"
+  width="640"
+  height="81.45"
+  backgroundColor="#282c34"
+>
+  <g id="background">
+    <rect
+      x="1"
+      y="1"
+      width="638"
+      height="79.45"
+      fill="#282c34"
+      stroke="rgba(255,255,255,0.35)"
+      stroke-width="1"
+      rx="8"
+    />
+  </g>
+  <g id="header">
+    <g transform="translate(20,20)">
+      <circle cx="0" cy="0" r="6" fill="#ff5f57" />
+      <circle cx="20" cy="0" r="6" fill="#febc2e" />
+      <circle cx="40" cy="0" r="6" fill="#28c840" />
+    </g>
+    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">Terminal</text>
+  </g>
+  <foreignObject id="body" y="40" width="100%" height="41.45" overflow="hidden">
+    <svg
+      width="188.03"
+      height="41.45"
+      font-family="monospace"
+      font-variant-east-asian="full-width"
+      fill="#cccccc"
+    >
+      <g>
+        <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
+        <text x="77.21" y="14.55" fill="#cd5555">Signal</text>
+        <text x="127.62" y="14.55" fill="#cd5555">(</text>
+        <text x="136.02" y="14.55" fill="#cd5555">true</text>
+        <text x="169.63" y="14.55" fill="#cd5555">)</text>
+        <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
+        <text x="77.21" y="33.55" fill="#11bc79">1</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>

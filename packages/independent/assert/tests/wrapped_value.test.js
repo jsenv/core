@@ -135,183 +135,183 @@ await startSnapshotTesting("wrapped_value", ({ test }) => {
       },
     });
   });
-  // ["signal(true) and signal(false)"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => true,
-  //     },
-  //     expect: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => false,
-  //     },
-  //   });
-  // },
-  // ["signal(true) and true"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => true,
-  //     },
-  //     expect: true,
-  //   });
-  // },
-  // ["true and signal(true)"]: () => {
-  //   assert({
-  //     actual: true,
-  //     expect: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => true,
-  //     },
-  //   });
-  // },
-  // ["true and signal(false)"]: () => {
-  //   assert({
-  //     actual: true,
-  //     expect: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => false,
-  //     },
-  //   });
-  // },
-  // ["signal(true) and false"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => true,
-  //     },
-  //     expect: false,
-  //   });
-  // },
-  // ["signal(true) and 1"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => true,
-  //     },
-  //     expect: 1,
-  //   });
-  // },
-  // ["signal({ foo: true }) and signal({ foo: false })"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => ({ foo: true }),
-  //     },
-  //     expect: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => ({ foo: false }),
-  //     },
-  //   });
-  // },
-  // ["signal([true]) and signal([false]) with props"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => [true],
-  //       a: true,
-  //     },
-  //     expect: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => [false],
-  //       a: false,
-  //     },
-  //   });
-  // },
-  // ["signal([true]) and [true]"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => [true],
-  //     },
-  //     expect: [true],
-  //   });
-  // },
-  // ["[true] and signal([true])"]: () => {
-  //   assert({
-  //     actual: [true],
-  //     expect: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => [true],
-  //     },
-  //   });
-  // },
-  // ["[true] and signal([false])"]: () => {
-  //   assert({
-  //     actual: [true],
-  //     expect: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => [false],
-  //     },
-  //   });
-  // },
-  // ["signal([true]) and [false]"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => [true],
-  //     },
-  //     expect: [false],
-  //   });
-  // },
-  // ["signal(string) and signal(string)"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => "ab",
-  //     },
-  //     expect: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => "a",
-  //     },
-  //   });
-  // },
-  // ["signal(string) and string"]: () => {
-  //   assert({
-  //     actual: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => "a",
-  //     },
-  //     expect: "a",
-  //   });
-  // },
-  // ["string and signal(string)"]: () => {
-  //   assert({
-  //     actual: "a",
-  //     expect: {
-  //       [Symbol.toStringTag]: "Signal",
-  //       valueOf: () => "a",
-  //     },
-  //   });
-  // },
-  // ["both valueOf return object itself"]: () => {
-  //   const actual = {
-  //     a: true,
-  //     valueOf: () => actual,
-  //   };
-  //   const expect = {
-  //     a: false,
-  //     valueOf: () => expect,
-  //   };
-  //   assert({
-  //     actual,
-  //     expect,
-  //   });
-  // },
-  // ["valueOf self and valueOf 10"]: () => {
-  //   const actual = { valueOf: () => actual };
-  //   const expect = { valueOf: () => 10 };
-  //   assert({
-  //     actual,
-  //     expect,
-  //   });
-  // },
-  // ["valueOf 10 and valueOf self"]: () => {
-  //   const actual = { valueOf: () => 10 };
-  //   const expect = { valueOf: () => expect };
-  //   assert({
-  //     actual,
-  //     expect,
-  //   });
-  // },
+  test("signal(true) and signal(false)", () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => true,
+      },
+      expect: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => false,
+      },
+    });
+  });
+  test("signal(true) and true", () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => true,
+      },
+      expect: true,
+    });
+  });
+  test("true and signal(true)", () => {
+    assert({
+      actual: true,
+      expect: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => true,
+      },
+    });
+  });
+  test("true and signal(false)", () => {
+    assert({
+      actual: true,
+      expect: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => false,
+      },
+    });
+  });
+  test("signal(true) and false", () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => true,
+      },
+      expect: false,
+    });
+  });
+  test("signal(true) and 1", () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => true,
+      },
+      expect: 1,
+    });
+  });
+  test("signal({ foo: true }) and signal({ foo: false })", () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => ({ foo: true }),
+      },
+      expect: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => ({ foo: false }),
+      },
+    });
+  });
+  test("signal([true]) and signal([false]) with props", () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [true],
+        a: true,
+      },
+      expect: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [false],
+        a: false,
+      },
+    });
+  });
+  test("signal([true]) and [true]", () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [true],
+      },
+      expect: [true],
+    });
+  });
+  test("[true] and signal([true])", () => {
+    assert({
+      actual: [true],
+      expect: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [true],
+      },
+    });
+  });
+  test("[true] and signal([false])", () => {
+    assert({
+      actual: [true],
+      expect: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [false],
+      },
+    });
+  });
+  test("signal([true]) and [false]", () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => [true],
+      },
+      expect: [false],
+    });
+  });
+  test("signal(string) and signal(string)", () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "ab",
+      },
+      expect: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "a",
+      },
+    });
+  });
+  test("signal(string) and string", () => {
+    assert({
+      actual: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "a",
+      },
+      expect: "a",
+    });
+  });
+  test("string and signal(string)", () => {
+    assert({
+      actual: "a",
+      expect: {
+        [Symbol.toStringTag]: "Signal",
+        valueOf: () => "a",
+      },
+    });
+  });
+  test("both valueOf return object itself", () => {
+    const actual = {
+      a: true,
+      valueOf: () => actual,
+    };
+    const expect = {
+      a: false,
+      valueOf: () => expect,
+    };
+    assert({
+      actual,
+      expect,
+    });
+  });
+  test("valueOf self and valueOf 10", () => {
+    const actual = { valueOf: () => actual };
+    const expect = { valueOf: () => 10 };
+    assert({
+      actual,
+      expect,
+    });
+  });
+  test("valueOf 10 and valueOf self", () => {
+    const actual = { valueOf: () => 10 };
+    const expect = { valueOf: () => expect };
+    assert({
+      actual,
+      expect,
+    });
+  });
 });
