@@ -122,6 +122,28 @@ assert({
 
 ![img](<./quote/double quote in url search param key.svg>)
 
+# double quote in url search param value
+
+```js
+assert({
+  actual: `http://a.com?foo="dam"`,
+  expect: `http://a.com?foo="seb"`,
+});
+```
+
+![img](<./quote/double quote in url search param value.svg>)
+
+# double quote in url pathname
+
+```js
+assert({
+  actual: `http://a.com/dir/"dam"`,
+  expect: `http://b.com/dir/"dam"`,
+});
+```
+
+![img](<./quote/double quote in url pathname.svg>)
+
 # url vs string
 
 ```js

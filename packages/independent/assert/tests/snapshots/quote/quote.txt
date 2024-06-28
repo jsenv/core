@@ -50,6 +50,14 @@ expect: 'http://b.com"/'
 actual: 'http://a.com/?fo"=true'
 expect: 'http://a.com/?fo"=false'
 
+# double quote in url search param value
+actual: 'http://a.com/?foo="dam"'
+expect: 'http://a.com/?foo="seb"'
+
+# double quote in url pathname
+actual: 'http://a.com/dir/"dam"'
+expect: 'http://b.com/dir/"dam"'
+
 # url vs string
 actual: "http://example.com/"
 expect: 'test"quotes'

@@ -1,9 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- * - quotes
- *    - quote in url search param value
- *    - quote in url pathname
  *  - regexp
  *  - object integrity
  *  - url search params
@@ -1601,16 +1598,24 @@ let createRootNode;
                 });
 
                 if (username) {
-                  appendUrlInternalProp("username", username, {
-                    endMarker: password ? ":" : "@",
-                  });
+                  appendUrlInternalProp(
+                    "username",
+                    decodeURIComponent(username),
+                    {
+                      endMarker: password ? ":" : "@",
+                    },
+                  );
                   if (password) {
-                    appendUrlInternalProp("password", password, {
-                      endMarker: "@",
-                    });
+                    appendUrlInternalProp(
+                      "password",
+                      decodeURIComponent(password),
+                      {
+                        endMarker: "@",
+                      },
+                    );
                   }
                 }
-                appendUrlInternalProp("hostname", hostname);
+                appendUrlInternalProp("hostname", decodeURIComponent(hostname));
 
                 if (port) {
                   appendUrlInternalProp("port", parseInt(port), {
@@ -1619,7 +1624,10 @@ let createRootNode;
                   });
                 }
                 if (pathname) {
-                  appendUrlInternalProp("pathname", pathname);
+                  appendUrlInternalProp(
+                    "pathname",
+                    decodeURIComponent(pathname),
+                  );
                 }
                 if (search) {
                   const urlSearchNode = urlInternalPropertiesNode.appendChild(
@@ -1700,7 +1708,7 @@ let createRootNode;
                   );
                 }
                 if (hash) {
-                  appendUrlInternalProp("hash", hash);
+                  appendUrlInternalProp("hash", decodeURIComponent(hash));
                 }
               },
               group: "entries",

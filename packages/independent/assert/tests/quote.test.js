@@ -79,6 +79,18 @@ await startSnapshotTesting("quote", ({ test }) => {
       expect: `http://a.com?fo"=false`,
     });
   });
+  test("double quote in url search param value", () => {
+    assert({
+      actual: `http://a.com?foo="dam"`,
+      expect: `http://a.com?foo="seb"`,
+    });
+  });
+  test("double quote in url pathname", () => {
+    assert({
+      actual: `http://a.com/dir/"dam"`,
+      expect: `http://b.com/dir/"dam"`,
+    });
+  });
   test("url vs string", () => {
     assert({
       actual: "http://example.com",
