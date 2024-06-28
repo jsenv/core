@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- *  - weakset/weakmap/promise
  *  - more wrapped value tests (from internal_value.xtest.js)
  *  - prototype
  *  - property descriptors
@@ -1271,6 +1270,7 @@ let createRootNode;
       isURLSearchParams: false,
       isError: false,
       isRegExp: false,
+      isPromise: false,
       referenceFromOthersSet: referenceFromOthersSetDefault,
       // render info
       render: (props) => render(node, props),
@@ -1931,6 +1931,10 @@ let createRootNode;
         }
         if (parentConstructor.name === "RegExp") {
           node.isRegExp = true;
+          continue;
+        }
+        if (parentConstructor.name === "Promise") {
+          node.isPromise = true;
           continue;
         }
         if (

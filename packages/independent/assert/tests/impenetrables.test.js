@@ -1,11 +1,20 @@
+import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-import { createAssert } from "../src/assert.js";
-
-const assert = createAssert();
-
-await startSnapshotTesting("weakset_and_weakmap", {
-  ["weakset"]: () => {
+await startSnapshotTesting("impenetrables", ({ test }) => {
+  test("promise", () => {
+    assert({
+      actual: {
+        a: true,
+        b: Promise.resolve(40),
+      },
+      expect: {
+        a: false,
+        b: Promise.resolve(42),
+      },
+    });
+  });
+  test("weakset", () => {
     assert({
       actual: {
         a: true,
@@ -16,8 +25,8 @@ await startSnapshotTesting("weakset_and_weakmap", {
         b: new WeakSet([Symbol.iterator]),
       },
     });
-  },
-  ["weakmap"]: () => {
+  });
+  test("weakmap", () => {
     assert({
       actual: {
         a: true,
@@ -32,5 +41,5 @@ await startSnapshotTesting("weakset_and_weakmap", {
         b: new WeakMap([[{}, "toto"]]),
       },
     });
-  },
+  });
 });
