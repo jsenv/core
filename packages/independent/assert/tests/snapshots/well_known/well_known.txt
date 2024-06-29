@@ -18,3 +18,7 @@ expect: Symbol.for("b")
 actual: Object.prototype.toString
 expect: Object.prototype.hasOwnProperty
 
+# null and Array.prototype
+actual: null
+expect: Array.prototype
+

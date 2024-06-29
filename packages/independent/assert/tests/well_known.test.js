@@ -32,4 +32,10 @@ await startSnapshotTesting("well_known", ({ test }) => {
       expect: Object.prototype.hasOwnProperty,
     });
   });
+  test("null and Array.prototype", () => {
+    assert({
+      actual: null,
+      expect: Array.prototype,
+    });
+  });
 });

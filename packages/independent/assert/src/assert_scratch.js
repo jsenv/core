@@ -2582,14 +2582,19 @@ let createRootNode;
               }
             }
             prototype: {
-              if (node.objectTag) {
-                // prototype can be infered by object tag
-                // actual: User {}
-                // expect: Animal {}
+              if (node.objectTag !== "Object") {
+                // - [] means Array.prototype
+                // - Map("a" => true) means Map.prototype
+                // - User {} means User.prototype (each application will "known" what "User" refers to)
+                //   This means if 2 proto got the same name
+                //   assert will consider they are equal even if that might not be the case
+                //   It's a known limitation that could be addressed later
+                //   as it's unlikely to happen or be important
                 break prototype;
               }
               if (node.isFunction) {
-                // prototype can be infered by construct notattion
+                // prototype can be infered by construct notation
+                // -> no need to display it
                 // actual: () => {}
                 // expect: function () {}
                 break prototype;
@@ -2599,11 +2604,16 @@ let createRootNode;
                 break prototype;
               }
               const protoValue = Object.getPrototypeOf(value);
-              if (protoValue || protoValue === null) {
-                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                  appendPropertyEntryNode("__proto__", protoValue);
-                });
+              if (protoValue === undefined) {
+                break prototype;
               }
+              if (protoValue === Object.prototype) {
+                // - {} means Object.prototype
+                break prototype;
+              }
+              propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                appendPropertyEntryNode("__proto__", protoValue);
+              });
             }
             wrapped_value: {
               // toString()

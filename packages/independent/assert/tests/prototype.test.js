@@ -2,16 +2,26 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 await startSnapshotTesting("prototype", ({ test }) => {
-  test("object null proto vs object", () => {
+  test("object with different prototypes", () => {
+    assert({
+      actual: Object.create({
+        a: true,
+      }),
+      expect: Object.create({
+        a: { b: true },
+      }),
+    });
+  });
+  test("Object.create(null) and {}", () => {
     assert({
       actual: Object.create(null),
       expect: {},
     });
   });
-  test("object with different prototypes", () => {
+  test("Object.create(null) and []", () => {
     assert({
-      actual: Object.create({ a: true }),
-      expect: Object.create({ a: { b: true } }),
+      actual: Object.create(null),
+      expect: [],
     });
   });
   test("object vs custom proto", () => {
@@ -40,18 +50,6 @@ await startSnapshotTesting("prototype", ({ test }) => {
       expect: {
         a: bob,
       },
-    });
-  });
-  test("null and Array.prototype", () => {
-    assert({
-      actual: null,
-      expect: Array.prototype,
-    });
-  });
-  test("Object.create(null) and []", () => {
-    assert({
-      actual: Object.create(null),
-      expect: [],
     });
   });
 });

@@ -53,3 +53,14 @@ assert({
 
 ![img](<./well_known/Object.prototype.toString vs Object.prototype.hasOwnProperty.svg>)
 
+# null and Array.prototype
+
+```js
+assert({
+  actual: null,
+  expect: Array.prototype,
+});
+```
+
+![img](<./well_known/null and Array.prototype.svg>)
+
