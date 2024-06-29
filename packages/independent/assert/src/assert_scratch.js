@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- *  - prototype
  *  - property descriptors
  *  - date
  *  - headers
@@ -2749,8 +2748,8 @@ let createRootNode;
                       }),
                   childGenerator: () => {
                     const appendPropertyEntryNode = (
-                      key,
-                      value,
+                      propertyKey,
+                      propertyValue,
                       {
                         isSourceCode,
                         isFunctionPrototype,
@@ -2760,7 +2759,7 @@ let createRootNode;
                       } = {},
                     ) => {
                       const ownPropertyNode = ownPropertiesNode.appendChild(
-                        key,
+                        propertyKey,
                         {
                           render: renderChildren,
                           onelineDiff: { hasTrailingSeparator: true },
@@ -2770,8 +2769,8 @@ let createRootNode;
                           isHiddenWhenSame,
                           isHiddenWhenSolo,
                           childGenerator: () => {
-                            const valueFunctionAnalysis =
-                              tokenizeFunction(value);
+                            const propertyValueFunctionAnalysis =
+                              tokenizeFunction(propertyValue);
                             if (
                               node.functionAnalysis.type === "class" &&
                               !isClassPrototype
@@ -2784,15 +2783,16 @@ let createRootNode;
                                 value: "static",
                                 isHidden:
                                   isSourceCode ||
-                                  valueFunctionAnalysis.type === "method",
+                                  propertyValueFunctionAnalysis.type ===
+                                    "method",
                               });
                             }
                             ownPropertyNode.appendChild("entry_key", {
-                              value: key,
+                              value: propertyKey,
                               render: renderPrimitive,
                               quotesDisabled:
-                                typeof key === "string" &&
-                                isValidPropertyIdentifier(key),
+                                typeof propertyKey === "string" &&
+                                isValidPropertyIdentifier(propertyKey),
                               quotesBacktickDisabled: true,
                               separatorMarker: node.isClassPrototype
                                 ? ""
@@ -2809,11 +2809,12 @@ let createRootNode;
                               subgroup: "property_entry_key",
                               isHidden:
                                 isSourceCode ||
-                                valueFunctionAnalysis.type === "method" ||
+                                propertyValueFunctionAnalysis.type ===
+                                  "method" ||
                                 isClassPrototype,
                             });
                             ownPropertyNode.appendChild("entry_value", {
-                              key,
+                              key: propertyKey,
                               value,
                               render: renderValue,
                               separatorMarker:
@@ -2829,7 +2830,7 @@ let createRootNode;
                           },
                           group: "entry",
                           subgroup: "property_entry",
-                          path: node.path.append(key),
+                          path: node.path.append(propertyKey),
                         },
                       );
                       return ownPropertyNode;

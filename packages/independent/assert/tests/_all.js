@@ -11,6 +11,7 @@ await import("./max_columns.test.js");
 await import("./number.test.js");
 await import("./object.test.js");
 await import("./object_integrity.test.js");
+await import("./property_descriptor.test.js");
 await import("./prototype.test.js");
 await import("./quote.test.js");
 await import("./ref.test.js");

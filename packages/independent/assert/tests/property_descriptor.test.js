@@ -1,28 +1,35 @@
 /* eslint-disable accessor-pairs */
+import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
-import { createAssert } from "../src/assert.js";
-
-const assert = createAssert();
-
-await startSnapshotTesting("property_descriptor", {
-  ["non enumerable hidden when value same"]: () => {
-    const actual = { a: true };
-    const expect = { a: false };
-    Object.defineProperty(actual, "b", {
-      enumerable: false,
-      value: "b",
-    });
-    Object.defineProperty(expect, "b", {
-      enumerable: false,
-      value: "b",
-    });
+await startSnapshotTesting("property_descriptor", ({ test }) => {
+  test.ONLY("enumerable and configurable and value diff", () => {
     assert({
-      actual,
-      expect,
+      actual: Object.defineProperty({}, "a", {
+        enumerable: true,
+        configurable: true,
+        value: "a",
+      }),
+      expect: Object.defineProperty({}, "a", {
+        enumerable: false,
+        configurable: false,
+        value: "b",
+      }),
     });
-  },
-  ["non enumerable displayed when value modified"]: () => {
+  });
+  test("non enumerable hidden when value same", () => {
+    assert({
+      actual: Object.defineProperty({ a: true }, "b", {
+        enumerable: false,
+        value: "b",
+      }),
+      expect: Object.defineProperty({ a: false }, "b", {
+        enumerable: false,
+        value: "b",
+      }),
+    });
+  });
+  test("non enumerable displayed when value modified", () => {
     const actual = {};
     const expect = {};
     Object.defineProperty(actual, "b", {
@@ -37,8 +44,8 @@ await startSnapshotTesting("property_descriptor", {
       actual,
       expect,
     });
-  },
-  ["enumerable diff"]: () => {
+  });
+  test("enumerable diff", () => {
     const actual = {};
     const expect = {};
     Object.defineProperty(actual, "a", {
@@ -53,8 +60,8 @@ await startSnapshotTesting("property_descriptor", {
       actual,
       expect,
     });
-  },
-  ["enumerable and value diff"]: () => {
+  });
+  test("enumerable and value diff", () => {
     const actual = {};
     const expect = {};
     Object.defineProperty(actual, "a", {
@@ -69,26 +76,8 @@ await startSnapshotTesting("property_descriptor", {
       actual,
       expect,
     });
-  },
-  ["enumerable and configurable and value diff"]: () => {
-    const actual = {};
-    const expect = {};
-    Object.defineProperty(actual, "a", {
-      enumerable: true,
-      configurable: true,
-      value: "a",
-    });
-    Object.defineProperty(expect, "a", {
-      enumerable: false,
-      configurable: false,
-      value: "b",
-    });
-    assert({
-      actual,
-      expect,
-    });
-  },
-  ["getter and value"]: () => {
+  });
+  test("getter and value", () => {
     assert({
       actual: {
         get a() {
@@ -99,8 +88,8 @@ await startSnapshotTesting("property_descriptor", {
         a: true,
       },
     });
-  },
-  ["getter/setter and value"]: () => {
+  });
+  test("getter/setter and value", () => {
     assert({
       actual: {
         get a() {
@@ -112,8 +101,8 @@ await startSnapshotTesting("property_descriptor", {
         a: true,
       },
     });
-  },
-  ["getter only and setter only"]: () => {
+  });
+  test("getter only and setter only", () => {
     assert({
       actual: {
         get a() {
@@ -124,8 +113,8 @@ await startSnapshotTesting("property_descriptor", {
         set a(v) {},
       },
     });
-  },
-  ["setter only and getter only"]: () => {
+  });
+  test("setter only and getter only", () => {
     assert({
       actual: {
         set a(v) {},
@@ -136,8 +125,8 @@ await startSnapshotTesting("property_descriptor", {
         },
       },
     });
-  },
-  ["getter source code same"]: () => {
+  });
+  test("getter source code same", () => {
     assert({
       actual: {
         get a() {
@@ -152,8 +141,8 @@ await startSnapshotTesting("property_descriptor", {
         b: false,
       },
     });
-  },
-  ["getter source code diff"]: () => {
+  });
+  test("getter source code diff", () => {
     assert({
       actual: {
         get a() {
@@ -166,5 +155,5 @@ await startSnapshotTesting("property_descriptor", {
         },
       },
     });
-  },
+  });
 });
