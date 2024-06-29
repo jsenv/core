@@ -20,9 +20,9 @@ expect: Headers(
 
 # content-type multi diff
 actual: Headers(
-  "content-type" => "text/xml, text/css",
+  "content-type" => "text/xml", "text/css",
 )
 expect: Headers(
-  "content-type" => "text/xml, text/html",
+  "content-type" => "text/xml", "text/html",
 )
 

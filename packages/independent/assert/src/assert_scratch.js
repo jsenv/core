@@ -19,6 +19,7 @@ import {
 import { tokenizeFloat, tokenizeInteger } from "./tokenize_number.js";
 import { tokenizeString } from "./tokenize_string.js";
 import { tokenizeUrlSearch } from "./tokenize_url_search.js";
+import { tokenizeHeaderValue } from "./tokenize_header_value.js";
 import { getWellKnownValuePath } from "./well_known_value.js";
 import { getIsNegativeZero } from "./utils/negative_zero.js";
 import { groupDigits } from "./utils/group_digits.js";
@@ -2701,13 +2702,49 @@ let createRootNode;
                           group: "entry_key",
                           subgroup: "header_entry_key",
                         });
-                        headerNode.appendChild("entry_value", {
-                          value: headerValue,
-                          render: renderValue,
-                          separatorMarker: ",",
-                          group: "entry_value",
-                          subgroup: "header_entry_value",
-                        });
+                        const headerValueParsed =
+                          tokenizeHeaderValue(headerValue);
+                        if (Array.isArray(headerValueParsed)) {
+                          const multiValueNode = headerNode.appendChild(
+                            "entry_value",
+                            {
+                              value: headerValueParsed,
+                              render: renderChildren,
+                              onelineDiff: {
+                                skippedMarkers: {
+                                  start: "…",
+                                  between: "…",
+                                  end: "…",
+                                },
+                              },
+                              group: "entries",
+                              subgroup: "header_entry_value",
+                              separatorMarker: ",",
+                              childGenerator: () => {
+                                if (headerValueParsed.length === 1) {
+                                  multiValueNode.appendChild(0, {
+                                    value: headerValueParsed[0],
+                                    render: renderValue,
+                                    group: "header_single_value",
+                                    separatorMarker: ", ",
+                                  });
+                                } else {
+                                  for (const singleValue of headerValueParsed) {
+                                    multiValueNode.appendChild(singleValue, {
+                                      value: singleValue,
+                                      render: renderValue,
+                                      group: "header_single_value",
+                                      separatorMarker: ", ",
+                                    });
+                                  }
+                                }
+                              },
+                            },
+                          );
+
+                          return;
+                        }
+                        // TODO
                       }
                     },
                   },
@@ -3465,9 +3502,6 @@ const renderChildren = (node, props) => {
     skippedMarkersPlacement = "inside",
     childrenVisitMethod = "pick_around_starting_before",
   } = node.onelineDiff;
-  if (node.subgroup === "property_entry" && node.childrenKeys.length === 0) {
-    debugger;
-  }
   let startSkippedMarker = "";
   let endSkippedMarker = "";
   if (skippedMarkers) {

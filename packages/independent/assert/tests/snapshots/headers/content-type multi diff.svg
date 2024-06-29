@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="372.86"
+      width="389.66"
       height="117.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -68,17 +68,19 @@
         <text x="228.44" y="33.55" fill="#7f7f7f">x</text>
         <text x="236.84" y="33.55" fill="#7f7f7f">m</text>
         <text x="245.24" y="33.55" fill="#7f7f7f">l</text>
-        <text x="253.64" y="33.55" fill="#7f7f7f">,</text>
-        <text x="270.44" y="33.55" fill="#7f7f7f">t</text>
-        <text x="278.84" y="33.55" fill="#7f7f7f">e</text>
-        <text x="287.25" y="33.55" fill="#7f7f7f">x</text>
-        <text x="295.65" y="33.55" fill="#7f7f7f">t</text>
-        <text x="304.05" y="33.55" fill="#7f7f7f">/</text>
-        <text x="312.45" y="33.55" fill="#cd5555">c</text>
-        <text x="320.85" y="33.55" fill="#cd5555">s</text>
-        <text x="329.25" y="33.55" fill="#cd5555">s</text>
-        <text x="337.65" y="33.55" fill="#7f7f7f">&#x22;</text>
-        <text x="346.05" y="33.55" fill="#7f7f7f">,</text>
+        <text x="253.64" y="33.55" fill="#7f7f7f">&#x22;</text>
+        <text x="262.04" y="33.55" fill="#7f7f7f">, </text>
+        <text x="278.84" y="33.55" fill="#DAA520">&#x22;</text>
+        <text x="287.25" y="33.55" fill="#DAA520">t</text>
+        <text x="295.65" y="33.55" fill="#DAA520">e</text>
+        <text x="304.05" y="33.55" fill="#DAA520">x</text>
+        <text x="312.45" y="33.55" fill="#DAA520">t</text>
+        <text x="320.85" y="33.55" fill="#DAA520">/</text>
+        <text x="329.25" y="33.55" fill="#DAA520">c</text>
+        <text x="337.65" y="33.55" fill="#DAA520">s</text>
+        <text x="346.05" y="33.55" fill="#DAA520">s</text>
+        <text x="354.46" y="33.55" fill="#DAA520">&#x22;</text>
+        <text x="362.86" y="33.55" fill="#7f7f7f">,</text>
         <text x="10" y="52.55" fill="#7f7f7f">)</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">Headers</text>
@@ -107,18 +109,20 @@
         <text x="228.44" y="90.55" fill="#7f7f7f">x</text>
         <text x="236.84" y="90.55" fill="#7f7f7f">m</text>
         <text x="245.24" y="90.55" fill="#7f7f7f">l</text>
-        <text x="253.64" y="90.55" fill="#7f7f7f">,</text>
-        <text x="270.44" y="90.55" fill="#7f7f7f">t</text>
-        <text x="278.84" y="90.55" fill="#7f7f7f">e</text>
-        <text x="287.25" y="90.55" fill="#7f7f7f">x</text>
-        <text x="295.65" y="90.55" fill="#7f7f7f">t</text>
-        <text x="304.05" y="90.55" fill="#7f7f7f">/</text>
-        <text x="312.45" y="90.55" fill="#11bc79">h</text>
-        <text x="320.85" y="90.55" fill="#11bc79">t</text>
-        <text x="329.25" y="90.55" fill="#11bc79">m</text>
-        <text x="337.65" y="90.55" fill="#DAA520">l</text>
-        <text x="346.05" y="90.55" fill="#7f7f7f">&#x22;</text>
-        <text x="354.46" y="90.55" fill="#7f7f7f">,</text>
+        <text x="253.64" y="90.55" fill="#7f7f7f">&#x22;</text>
+        <text x="262.04" y="90.55" fill="#7f7f7f">, </text>
+        <text x="278.84" y="90.55" fill="#DAA520">&#x22;</text>
+        <text x="287.25" y="90.55" fill="#DAA520">t</text>
+        <text x="295.65" y="90.55" fill="#DAA520">e</text>
+        <text x="304.05" y="90.55" fill="#DAA520">x</text>
+        <text x="312.45" y="90.55" fill="#DAA520">t</text>
+        <text x="320.85" y="90.55" fill="#DAA520">/</text>
+        <text x="329.25" y="90.55" fill="#DAA520">h</text>
+        <text x="337.65" y="90.55" fill="#DAA520">t</text>
+        <text x="346.05" y="90.55" fill="#DAA520">m</text>
+        <text x="354.46" y="90.55" fill="#DAA520">l</text>
+        <text x="362.86" y="90.55" fill="#DAA520">&#x22;</text>
+        <text x="371.26" y="90.55" fill="#7f7f7f">,</text>
         <text x="10" y="109.55" fill="#7f7f7f">)</text>
       </g>
     </svg>
