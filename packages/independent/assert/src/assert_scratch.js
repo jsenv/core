@@ -2083,7 +2083,6 @@ let createRootNode;
             let objectConstructNode = null;
             let objectConstructArgs = null;
             construct: {
-              // function child nodes
               if (node.isFunction) {
                 ownPropertyNameToIgnoreSet.add("length");
                 ownPropertyNameToIgnoreSet.add("name");
@@ -2196,8 +2195,12 @@ let createRootNode;
                     },
                   },
                 );
-              } else if (isFunctionPrototype) {
-              } else if (node.isError) {
+                break construct;
+              }
+              if (isFunctionPrototype) {
+                break construct;
+              }
+              if (node.isError) {
                 ownPropertyNameToIgnoreSet.add("stack");
                 const messageOwnPropertyDescriptor =
                   Object.getOwnPropertyDescriptor(value, "message");
@@ -2231,7 +2234,9 @@ let createRootNode;
                     },
                   },
                 );
-              } else if (node.isRegExp) {
+                break construct;
+              }
+              if (node.isRegExp) {
                 let regexpSource = value.source;
                 if (regexpSource === "(?:)") {
                   regexpSource = "";
@@ -2245,7 +2250,9 @@ let createRootNode;
                   group: "regexp_source",
                   subgroup: "regexp_source",
                 });
-              } else if (
+                break construct;
+              }
+              if (
                 node.objectTag &&
                 node.objectTag !== "Object" &&
                 node.objectTag !== "Array"
@@ -2281,6 +2288,45 @@ let createRootNode;
                     },
                   },
                 );
+                break construct;
+              }
+            }
+            wrapped_value: {
+              // toString()
+              if (node.isURL) {
+                objectConstructArgs = [
+                  {
+                    value: value.href,
+                    key: "toString()",
+                  },
+                ];
+                break wrapped_value;
+              }
+              // valueOf()
+              if (
+                typeof value.valueOf === "function" &&
+                value.valueOf !== Object.prototype.valueOf
+              ) {
+                if (objectConstructNode) {
+                  ownPropertyNameToIgnoreSet.add("valueOf");
+                  objectConstructArgs = [
+                    {
+                      value: value.valueOf(),
+                      key: "valueOf()",
+                    },
+                  ];
+                  break wrapped_value;
+                }
+                if (Object.hasOwn(value, "valueOf")) {
+                  break wrapped_value;
+                }
+                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                  appendPropertyEntryNode(
+                    VALUE_OF_RETURN_VALUE_ENTRY_KEY,
+                    value.valueOf(),
+                  );
+                });
+                break wrapped_value;
               }
             }
             internal_entries: {
@@ -2615,40 +2661,6 @@ let createRootNode;
                 appendPropertyEntryNode("__proto__", protoValue);
               });
             }
-            wrapped_value: {
-              // toString()
-              if (node.isURL) {
-                objectConstructArgs = [
-                  {
-                    value: value.href,
-                    key: "toString()",
-                  },
-                ];
-              }
-              // valueOf()
-              else if (
-                typeof value.valueOf === "function" &&
-                value.valueOf !== Object.prototype.valueOf
-              ) {
-                ownPropertyNameToIgnoreSet.add("valueOf");
-                const valueOfReturnValue = value.valueOf();
-                if (objectConstructNode) {
-                  objectConstructArgs = [
-                    {
-                      value: valueOfReturnValue,
-                      key: "valueOf()",
-                    },
-                  ];
-                } else {
-                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                    appendPropertyEntryNode(
-                      VALUE_OF_RETURN_VALUE_ENTRY_KEY,
-                      valueOfReturnValue,
-                    );
-                  });
-                }
-              }
-            }
             own_properties: {
               const ownPropertySymbols = Object.getOwnPropertySymbols(
                 value,
@@ -2846,8 +2858,15 @@ let createRootNode;
                         },
                       );
                     }
-                    for (const ownPropertyName of ownPropertyNames) {
-                      const ownPropertyValue = value[ownPropertyName];
+                    for (let ownPropertyName of ownPropertyNames) {
+                      let ownPropertyValue = value[ownPropertyName];
+                      if (
+                        ownPropertyName === "valueOf" &&
+                        typeof ownPropertyValue === "function"
+                      ) {
+                        ownPropertyName = VALUE_OF_RETURN_VALUE_ENTRY_KEY;
+                        ownPropertyValue = ownPropertyValue();
+                      }
                       appendPropertyEntryNode(
                         ownPropertyName,
                         ownPropertyValue,

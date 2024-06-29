@@ -192,3 +192,23 @@ expect: {
   valueOf(): expect,
 }
 
+# own valueOf order respected
+actual: {
+  a: true,
+  valueOf(): 0,
+  b: true,
+}
+expect: {
+  a: true,
+  valueOf(): 1,
+  b: true,
+}
+
+# valueOf inherited
+actual: Signal("a") {
+  foo: true,
+}
+expect: Signal("b") {
+  foo: false,
+}
+

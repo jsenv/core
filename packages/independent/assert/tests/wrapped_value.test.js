@@ -314,4 +314,34 @@ await startSnapshotTesting("wrapped_value", ({ test }) => {
       expect,
     });
   });
+  // (valueOf stays between a and b in the diff)
+  test("own valueOf order respected", () => {
+    assert({
+      actual: {
+        a: true,
+        valueOf: () => 0,
+        b: true,
+      },
+      expect: {
+        a: true,
+        valueOf: () => 1,
+        b: true,
+      },
+    });
+  });
+  test("valueOf inherited", () => {
+    class Signal {
+      #value;
+      constructor(value) {
+        this.#value = value;
+      }
+      valueOf() {
+        return this.#value;
+      }
+    }
+    assert({
+      actual: Object.assign(new Signal("a"), { foo: true }),
+      expect: Object.assign(new Signal("b"), { foo: false }),
+    });
+  });
 });

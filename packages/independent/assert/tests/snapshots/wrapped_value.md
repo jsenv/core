@@ -460,3 +460,42 @@ assert({
 
 ![img](<./wrapped_value/valueOf 10 and valueOf self.svg>)
 
+# own valueOf order respected
+
+```js
+assert({
+  actual: {
+    a: true,
+    valueOf: () => 0,
+    b: true,
+  },
+  expect: {
+    a: true,
+    valueOf: () => 1,
+    b: true,
+  },
+});
+```
+
+![img](<./wrapped_value/own valueOf order respected.svg>)
+
+# valueOf inherited
+
+```js
+class Signal {
+  #value;
+  constructor(value) {
+    this.#value = value;
+  }
+  valueOf() {
+    return this.#value;
+  }
+}
+assert({
+  actual: Object.assign(new Signal("a"), { foo: true }),
+  expect: Object.assign(new Signal("b"), { foo: false }),
+});
+```
+
+![img](<./wrapped_value/valueOf inherited.svg>)
+
