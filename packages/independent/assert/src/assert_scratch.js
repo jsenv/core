@@ -23,6 +23,7 @@ import { tokenizeUrlSearch } from "./tokenize_url_search.js";
 import { getWellKnownValuePath } from "./well_known_value.js";
 import { getIsNegativeZero } from "./utils/negative_zero.js";
 import { groupDigits } from "./utils/group_digits.js";
+import { canParseDate } from "./utils/can_parse_date.js";
 
 // ANSI.supported = false;
 const sameColor = ANSI.GREY;
@@ -1198,6 +1199,8 @@ let createRootNode;
     isFunctionPrototype = false,
     isClassPrototype = false,
     isRegexpSource = false,
+    isStringForUrl = false,
+    isStringForDate = false,
     customCompare,
     render,
     isHidden = false,
@@ -1244,12 +1247,13 @@ let createRootNode;
       isSourceCode,
       isClassPrototype,
       isRegexpSource,
+      isStringForUrl,
+      isStringForDate,
       // info
       isCustomExpectation: false,
       // info/primitive
       isUndefined: false,
       isString: false,
-      isStringForUrl: false,
       isNumber: false,
       isNegativeZero: false,
       isInfinity: false,
@@ -1266,6 +1270,7 @@ let createRootNode;
       isSet: false,
       isURL: false,
       isURLSearchParams: false,
+      isDate: false,
       isError: false,
       isRegExp: false,
       isPromise: false,
@@ -1556,8 +1561,14 @@ let createRootNode;
         })();
       }
       const quoteMarkerRef = { current: bestQuote };
-      if (group !== "url_internal_prop" && canParseUrl(value)) {
-        node.isStringForUrl = true;
+      if (
+        !isStringForUrl &&
+        group !== "url_internal_prop" &&
+        canParseUrl(value)
+      ) {
+        node.isStringForUrl = isStringForUrl = true;
+      }
+      if (isStringForUrl) {
         node.childGenerator = () => {
           const urlObject = new URL(value);
           const urlInternalPropertiesNode = node.appendChild(
@@ -1718,6 +1729,113 @@ let createRootNode;
               },
               group: "entries",
               subgroup: "url_internal_properties",
+            },
+          );
+        };
+        return node;
+      }
+      if (
+        !isStringForDate &&
+        group !== "date_internal_prop" &&
+        group !== "time_prop" &&
+        canParseDate(value)
+      ) {
+        node.isStringForDate = isStringForDate = true;
+      }
+      if (isStringForDate) {
+        node.childGenerator = () => {
+          const localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000;
+          const dateString = value;
+          const dateTimestamp = Date.parse(dateString);
+          const dateObject = new Date(dateTimestamp + localTimezoneOffset);
+          const dateInternalPropertiesNode = node.appendChild(
+            "date_internal_properties",
+            {
+              render: renderChildren,
+              onelineDiff: {
+                hasTrailingSeparator: true,
+                skippedMarkers: {
+                  start: "…",
+                  between: "…",
+                  end: "…",
+                },
+              },
+              startMarker: bestQuote,
+              endMarker: bestQuote,
+              quoteMarkerRef,
+              childGenerator: () => {
+                const appendDateInternalNode = (name, value, params) => {
+                  dateInternalPropertiesNode.appendChild(name, {
+                    value,
+                    render: renderValue,
+                    group: "date_internal_prop",
+                    subgroup: `date_${name}`,
+                    quotesDisabled: true,
+                    numericSeparatorsDisabled: true,
+                    ...params,
+                  });
+                };
+                appendDateInternalNode("year", dateObject.getFullYear());
+                appendDateInternalNode(
+                  "month",
+                  String(dateObject.getMonth() + 1).padStart(2, "0"),
+                  { startMarker: "-" },
+                );
+                appendDateInternalNode(
+                  "day",
+                  String(dateObject.getDate()).padStart(2, "0"),
+                  { startMarker: "-" },
+                );
+                const timeNode = dateInternalPropertiesNode.appendChild(
+                  "time",
+                  {
+                    render: renderChildren,
+                    onelineDiff: {},
+                    group: "entries",
+                    subgroup: "date_time",
+                    isHiddenWhenSame: true,
+                    childGenerator: () => {
+                      const appendTimePropNode = (name, value, params) => {
+                        timeNode.appendChild(name, {
+                          value,
+                          render: renderGrammar,
+                          group: "time_prop",
+                          subgroup: `time_${name}`,
+                          quotesDisabled: true,
+                          numericSeparatorsDisabled: true,
+                          ...params,
+                        });
+                      };
+                      appendTimePropNode(
+                        "hours",
+                        String(dateObject.getHours()).padStart(2, "0"),
+                        { startMarker: " " },
+                      );
+                      appendTimePropNode(
+                        "minutes",
+                        String(dateObject.getMinutes()).padStart(2, "0"),
+                        { startMarker: ":" },
+                      );
+                      appendTimePropNode(
+                        "seconds",
+                        String(dateObject.getSeconds()).padStart(2, "0"),
+                        { startMarker: ":" },
+                      );
+                      appendTimePropNode(
+                        "milliseconds",
+                        String(dateObject.getMilliseconds()).padStart(3, "0"),
+                        {
+                          startMarker: ".",
+                          endMarker: "Z",
+                          isHiddenWhenSame: true,
+                        },
+                      );
+                    },
+                  },
+                );
+              },
+              group: "entries",
+              subgroup: "date_internal_properties",
             },
           );
         };
@@ -1929,6 +2047,10 @@ let createRootNode;
           node.isURLSearchParams = true;
           continue;
         }
+        if (parentConstructor.name === "Date") {
+          node.isDate = true;
+          continue;
+        }
         if (parentConstructor.name === "RegExp") {
           node.isRegExp = true;
           continue;
@@ -2045,6 +2167,7 @@ let createRootNode;
             const ownPropertyNameToIgnoreSet = new Set();
             const ownPropertSymbolToIgnoreSet = new Set();
             const propertyLikeCallbackSet = new Set();
+            const propertyConverterMap = new Map();
             const objectIntegrityMethodName = isFrozen
               ? "freeze"
               : isSealed
@@ -2303,35 +2426,88 @@ let createRootNode;
                   {
                     value: value.href,
                     key: "toString()",
+                    isStringForUrl: true,
+                  },
+                ];
+                break wrapped_value;
+              }
+              if (node.isDate) {
+                objectConstructArgs = [
+                  {
+                    value: value.toString(),
+                    key: "toString()",
+                    isStringForDate: true,
                   },
                 ];
                 break wrapped_value;
               }
               // valueOf()
+              const valueOf = value.valueOf;
               if (
-                typeof value.valueOf === "function" &&
-                value.valueOf !== Object.prototype.valueOf
+                typeof valueOf === "function" &&
+                valueOf !== Object.prototype.valueOf
               ) {
                 if (objectConstructNode) {
                   ownPropertyNameToIgnoreSet.add("valueOf");
                   objectConstructArgs = [
                     {
-                      value: value.valueOf(),
+                      value: valueOf.call(value),
                       key: "valueOf()",
                     },
                   ];
                   break wrapped_value;
                 }
                 if (Object.hasOwn(value, "valueOf")) {
-                  break wrapped_value;
+                  propertyConverterMap.set("valueOf", () => {
+                    return [
+                      VALUE_OF_RETURN_VALUE_ENTRY_KEY,
+                      valueOf.call(value),
+                    ];
+                  });
+                } else {
+                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                    appendPropertyEntryNode(
+                      VALUE_OF_RETURN_VALUE_ENTRY_KEY,
+                      valueOf.call(value),
+                    );
+                  });
                 }
+                break wrapped_value;
+              }
+            }
+            symbol_to_primitive: {
+              const toPrimitive = value[Symbol.toPrimitive];
+              if (typeof toPrimitive !== "function") {
+                break symbol_to_primitive;
+              }
+              if (
+                node.isDate &&
+                toPrimitive === Date.prototype[Symbol.toPrimitive]
+              ) {
+                break symbol_to_primitive;
+              }
+              if (objectConstructNode && !objectConstructArgs) {
+                ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
+                objectConstructArgs = [
+                  {
+                    value: toPrimitive.call(value, "string"),
+                    key: "toPrimitive()",
+                  },
+                ];
+              } else if (Object.hasOwn(value, Symbol.toPrimitive)) {
+                propertyConverterMap.set(Symbol.toPrimitive, () => {
+                  return [
+                    SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+                    toPrimitive.call(value, "string"),
+                  ];
+                });
+              } else {
                 propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
                   appendPropertyEntryNode(
-                    VALUE_OF_RETURN_VALUE_ENTRY_KEY,
-                    value.valueOf(),
+                    SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+                    toPrimitive.call(value, "string"),
                   );
                 });
-                break wrapped_value;
               }
             }
             internal_entries: {
@@ -2358,7 +2534,6 @@ let createRootNode;
                 hasLeftSpacingDisabled: true,
                 group: "entries",
               };
-
               if (node.isMap) {
                 const mapEntriesNode = compositePartsNode.appendChild(
                   "internal_entries",
@@ -2618,22 +2793,6 @@ let createRootNode;
                 break indexed_entries;
               }
             }
-            symbol_to_primitive: {
-              if (
-                Symbol.toPrimitive in value &&
-                typeof value[Symbol.toPrimitive] === "function"
-              ) {
-                ownPropertSymbolToIgnoreSet.add(Symbol.toPrimitive);
-                const toPrimitiveReturnValue =
-                  value[Symbol.toPrimitive]("string");
-                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                  appendPropertyEntryNode(
-                    SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
-                    toPrimitiveReturnValue,
-                  );
-                });
-              }
-            }
             prototype: {
               if (node.objectTag !== "Object") {
                 // - [] means Array.prototype
@@ -2766,6 +2925,13 @@ let createRootNode;
                         isHiddenWhenSolo,
                       },
                     ) => {
+                      const propertyConverter =
+                        propertyConverterMap.get(propertyKey);
+                      if (propertyConverter) {
+                        const converterResult = propertyConverter();
+                        propertyKey = converterResult[0];
+                        propertyDescriptor = { value: converterResult[1] };
+                      }
                       const ownPropertyNode = ownPropertiesNode.appendChild(
                         propertyKey,
                         {
@@ -2950,14 +3116,6 @@ let createRootNode;
                     for (let ownPropertyName of ownPropertyNames) {
                       const ownPropertyNameDescriptor =
                         Object.getOwnPropertyDescriptor(value, ownPropertyName);
-                      if (
-                        ownPropertyName === "valueOf" &&
-                        typeof ownPropertyNameDescriptor.value === "function"
-                      ) {
-                        ownPropertyName = VALUE_OF_RETURN_VALUE_ENTRY_KEY;
-                        ownPropertyNameDescriptor.value =
-                          ownPropertyNameDescriptor.value();
-                      }
                       appendPropertyNode(
                         ownPropertyName,
                         ownPropertyNameDescriptor,
@@ -3105,6 +3263,12 @@ const renderString = (node, props) => {
       "url_internal_properties",
     );
     return urlInternalPropertiesNode.render(props);
+  }
+  if (node.isStringForDate) {
+    const dateInternalPropertiesNode = node.childNodeMap.get(
+      "date_internal_properties",
+    );
+    return dateInternalPropertiesNode.render(props);
   }
   const lineEntriesNode = node.childNodeMap.get("line_entries");
   if (lineEntriesNode) {
@@ -3516,6 +3680,7 @@ const renderChildren = (node, props) => {
     }
     const canSkipMarkers =
       node.subgroup === "url_internal_properties" ||
+      node.subgroup === "date_internal_properties" ||
       node.subgroup === "array_entries";
     let childDiff = childNode.render({
       ...props,
@@ -4338,6 +4503,12 @@ const getAddedOrRemovedReason = (node) => {
   if (node.group === "url_internal_prop") {
     return node.subgroup;
   }
+  if (node.group === "date_internal_prop") {
+    return node.subgroup;
+  }
+  if (node.group === "time_prop") {
+    return node.subgroup;
+  }
   if (node.category === "entry") {
     return node.key;
   }
@@ -4468,15 +4639,6 @@ const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
   return false;
 };
 const shouldIgnoreOwnPropertySymbol = (node, ownPropertySymbol) => {
-  if (ownPropertySymbol === Symbol.toPrimitive) {
-    if (
-      node.childNodes.wrappedValue &&
-      node.childNodes.wrappedValue.key === "Symbol.toPrimitive()"
-    ) {
-      return true;
-    }
-    return false;
-  }
   if (ownPropertySymbol === Symbol.toStringTag) {
     const propertySymbolDescriptor = Object.getOwnPropertyDescriptor(
       node.value,
