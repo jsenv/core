@@ -3,7 +3,7 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 await startSnapshotTesting("property_descriptor", ({ test }) => {
-  test.ONLY("enumerable and configurable and value diff", () => {
+  test("enumerable and configurable and value diff", () => {
     assert({
       actual: Object.defineProperty({}, "a", {
         enumerable: true,

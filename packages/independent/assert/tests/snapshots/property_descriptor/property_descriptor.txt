@@ -1,0 +1,115 @@
+# enumerable and configurable and value diff
+actual: {
+  a: "a",
+}
+expect: {
+  a: "b",
+  enumerable a: false,
+  configurable a: false,
+}
+
+# non enumerable hidden when value same
+actual: {
+  a: true,
+  b: "b",
+}
+expect: {
+  a: false,
+  b: "b",
+}
+
+# non enumerable displayed when value modified
+actual: {
+  b: "b",
+}
+expect: {
+  b: "c",
+}
+
+# enumerable diff
+actual: {
+  a: "a",
+}
+expect: {
+  a: "a",
+  enumerable a: false,
+}
+
+# enumerable and value diff
+actual: {
+  a: "a",
+  enumerable a: false,
+}
+expect: {
+  a: "b",
+}
+
+# getter and value
+actual: {
+  get a() {
+    [source code]
+  }
+}
+expect: {
+  a: true,
+}
+
+# getter/setter and value
+actual: {
+  get a() {
+    [source code]
+  }
+  set a() {
+    [source code]
+  }
+}
+expect: {
+  a: true,
+}
+
+# getter only and setter only
+actual: {
+  get a() {
+    [source code]
+  }
+}
+expect: {
+  set a() {
+    [source code]
+  }
+}
+
+# setter only and getter only
+actual: {
+  set a() {
+    [source code]
+  }
+}
+expect: {
+  get a() {
+    [source code]
+  }
+}
+
+# getter source code same
+actual: {
+  get a() { [source code] }
+  b: true,
+}
+expect: {
+  get a() { [source code] }
+  b: false,
+}
+
+# getter source code diff
+actual: {
+  get a() {
+    [source code]
+  }
+}
+expect: {
+  get a() {
+    [source code]
+  }
+}
+

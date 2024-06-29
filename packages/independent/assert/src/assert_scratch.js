@@ -1667,6 +1667,7 @@ let createRootNode;
                                 while (valueIndex < values.length) {
                                   const entryNode =
                                     urlSearchEntryNode.appendChild(valueIndex, {
+                                      key,
                                       render: renderChildren,
                                       onelineDiff: {
                                         hasTrailingSeparator: true,
@@ -2180,12 +2181,18 @@ let createRootNode;
                         if (node.functionAnalysis.type === "arrow") {
                           appendFunctionBodyPrefix("() =>");
                         } else if (node.functionAnalysis.type === "method") {
-                          if (node.functionAnalysis.getterName) {
-                            appendFunctionBodyPrefix(`get ${key}()`);
-                          } else if (node.functionAnalysis.setterName) {
-                            appendFunctionBodyPrefix(`set ${key}()`);
+                          let methodName;
+                          if (node.subgroup === "property_descriptor_value") {
+                            methodName = node.parent.parent.key;
                           } else {
-                            appendFunctionBodyPrefix(`${key}()`);
+                            methodName = key;
+                          }
+                          if (node.functionAnalysis.getterName) {
+                            appendFunctionBodyPrefix(`get ${methodName}()`);
+                          } else if (node.functionAnalysis.setterName) {
+                            appendFunctionBodyPrefix(`set ${methodName}()`);
+                          } else {
+                            appendFunctionBodyPrefix(`${methodName}()`);
                           }
                         } else if (node.functionAnalysis.type === "classic") {
                           appendFunctionBodyPrefix("()");
@@ -2384,6 +2391,7 @@ let createRootNode;
                         const mapEntryNode = mapEntriesNode.appendChild(
                           mapEntryKey,
                           {
+                            key: mapEntryKey,
                             render: renderChildren,
                             onelineDiff: {
                               hasTrailingSeparator: true,
@@ -2464,6 +2472,7 @@ let createRootNode;
                       for (const [key, values] of searchParamsMap) {
                         const urlSearchParamEntryNode =
                           urlSearchParamEntries.appendChild(key, {
+                            key,
                             render: renderChildren,
                             onelineDiff: { hasTrailingSeparator: true },
                             group: "entry",
@@ -2747,86 +2756,144 @@ let createRootNode;
                         },
                       }),
                   childGenerator: () => {
-                    const appendPropertyEntryNode = (
+                    const appendPropertyNode = (
                       propertyKey,
-                      propertyValue,
+                      propertyDescriptor,
                       {
                         isSourceCode,
                         isFunctionPrototype,
                         isClassPrototype,
                         isHiddenWhenSame,
                         isHiddenWhenSolo,
-                      } = {},
+                      },
                     ) => {
                       const ownPropertyNode = ownPropertiesNode.appendChild(
                         propertyKey,
                         {
-                          render: renderChildren,
-                          onelineDiff: { hasTrailingSeparator: true },
+                          key: propertyKey,
+                          render: renderChildrenMultilineWhenDiff,
+                          multilineDiff: {
+                            hasIndentBetweenEachChild: true,
+                          },
+                          onelineDiff: {
+                            hasTrailingSeparator: true,
+                            hasSpacingBetweenEachChild: true,
+                          },
                           focusedChildIndex: 0,
                           isFunctionPrototype,
                           isClassPrototype,
                           isHiddenWhenSame,
                           isHiddenWhenSolo,
                           childGenerator: () => {
-                            const propertyValueFunctionAnalysis =
-                              tokenizeFunction(propertyValue);
-                            if (
-                              node.functionAnalysis.type === "class" &&
-                              !isClassPrototype
-                            ) {
-                              ownPropertyNode.appendChild("static_keyword", {
-                                render: renderGrammar,
-                                separatorMarker: " ",
-                                group: "grammar",
-                                subgroup: "static_keyword",
-                                value: "static",
-                                isHidden:
-                                  isSourceCode ||
-                                  propertyValueFunctionAnalysis.type ===
-                                    "method",
-                              });
+                            let isMethod = false;
+                            if ("value" in propertyDescriptor) {
+                              isMethod =
+                                tokenizeFunction(propertyDescriptor.value)
+                                  .type === "method";
                             }
-                            ownPropertyNode.appendChild("entry_key", {
-                              value: propertyKey,
-                              render: renderPrimitive,
-                              quotesDisabled:
-                                typeof propertyKey === "string" &&
-                                isValidPropertyIdentifier(propertyKey),
-                              quotesBacktickDisabled: true,
-                              separatorMarker: node.isClassPrototype
-                                ? ""
-                                : node.functionAnalysis.type === "class"
-                                  ? " = "
-                                  : ": ",
-                              separatorMarkerWhenTruncated:
-                                node.isClassPrototype
-                                  ? ""
-                                  : node.functionAnalysis.type === "class"
+                            for (const descriptorName of Object.keys(
+                              propertyDescriptor,
+                            )) {
+                              const descriptorValue =
+                                propertyDescriptor[descriptorName];
+                              if (
+                                shouldIgnoreOwnPropertyDescriptor(
+                                  node,
+                                  descriptorName,
+                                  descriptorValue,
+                                  {
+                                    isFrozen,
+                                    isSealed,
+                                    propertyKey,
+                                  },
+                                )
+                              ) {
+                                continue;
+                              }
+                              const descriptorNode =
+                                ownPropertyNode.appendChild(descriptorName, {
+                                  render: renderChildren,
+                                  onelineDiff: {
+                                    hasTrailingSeparator: true,
+                                  },
+                                  group: "entries",
+                                  subgroup: "property_descriptor",
+                                  isHiddenWhenSame:
+                                    descriptorName === "configurable" ||
+                                    descriptorName === "writable" ||
+                                    descriptorName === "enumerable",
+                                });
+                              if (
+                                descriptorName === "configurable" ||
+                                descriptorName === "writable" ||
+                                descriptorName === "enumerable"
+                              ) {
+                                descriptorNode.appendChild("descriptor_name", {
+                                  value: descriptorName,
+                                  render: renderGrammar,
+                                  separatorMarker: " ",
+                                  group: "grammar",
+                                  subgroup: "property_descriptor_name",
+                                });
+                              }
+                              if (
+                                node.functionAnalysis.type === "class" &&
+                                !isClassPrototype
+                              ) {
+                                descriptorNode.appendChild("static_keyword", {
+                                  value: "static",
+                                  render: renderGrammar,
+                                  separatorMarker: " ",
+                                  isHidden: isSourceCode || isMethod,
+                                  group: "grammar",
+                                  subgroup: "static_keyword",
+                                });
+                              }
+                              if (
+                                descriptorName !== "get" &&
+                                descriptorName !== "set"
+                              ) {
+                                descriptorNode.appendChild("entry_key", {
+                                  value: propertyKey,
+                                  render: renderPrimitive,
+                                  quotesDisabled:
+                                    typeof propertyKey === "string" &&
+                                    isValidPropertyIdentifier(propertyKey),
+                                  quotesBacktickDisabled: true,
+                                  separatorMarker: node.isClassPrototype
+                                    ? ""
+                                    : node.functionAnalysis.type === "class"
+                                      ? " = "
+                                      : ": ",
+                                  separatorMarkerWhenTruncated:
+                                    node.isClassPrototype
+                                      ? ""
+                                      : node.functionAnalysis.type === "class"
+                                        ? ";"
+                                        : ",",
+                                  group: "entry_key",
+                                  subgroup: "property_key",
+                                  isHidden:
+                                    isSourceCode ||
+                                    isMethod ||
+                                    isClassPrototype,
+                                });
+                              }
+                              descriptorNode.appendChild("entry_value", {
+                                key: descriptorName,
+                                value: descriptorValue,
+                                render: renderValue,
+                                separatorMarker:
+                                  node.functionAnalysis.type === "class"
                                     ? ";"
                                     : ",",
-                              group: "entry_key",
-                              subgroup: "property_entry_key",
-                              isHidden:
-                                isSourceCode ||
-                                propertyValueFunctionAnalysis.type ===
-                                  "method" ||
+                                group: "entry_value",
+                                subgroup: "property_descriptor_value",
+                                isSourceCode,
+                                isFunctionPrototype,
                                 isClassPrototype,
-                            });
-                            ownPropertyNode.appendChild("entry_value", {
-                              key: propertyKey,
-                              value,
-                              render: renderValue,
-                              separatorMarker:
-                                node.functionAnalysis.type === "class"
-                                  ? ";"
-                                  : ",",
-                              group: "entry_value",
-                              subgroup: "property_entry_value",
-                              isSourceCode,
-                              isFunctionPrototype,
-                              isClassPrototype,
-                            });
+                              });
+                            }
                           },
                           group: "entry",
                           subgroup: "property_entry",
@@ -2835,9 +2902,27 @@ let createRootNode;
                       );
                       return ownPropertyNode;
                     };
+                    const appendPropertyNodeSimplified = (
+                      propertyKey,
+                      propertyValue,
+                      params = {},
+                    ) => {
+                      return appendPropertyNode(
+                        propertyKey,
+                        {
+                          // enumerable: true,
+                          // /* eslint-disable no-unneeded-ternary */
+                          // configurable: isFrozen || isSealed ? false : true,
+                          // writable: isFrozen ? false : true,
+                          // /* eslint-enable no-unneeded-ternary */
+                          value: propertyValue,
+                        },
+                        params,
+                      );
+                    };
 
                     if (node.isFunction) {
-                      appendPropertyEntryNode(
+                      appendPropertyNodeSimplified(
                         SOURCE_CODE_ENTRY_KEY,
                         node.functionAnalysis.argsAndBodySource,
                         {
@@ -2846,31 +2931,36 @@ let createRootNode;
                       );
                     }
                     for (const propertyLikeCallback of propertyLikeCallbackSet) {
-                      propertyLikeCallback(appendPropertyEntryNode);
+                      propertyLikeCallback(appendPropertyNodeSimplified);
                     }
                     for (const ownPropertySymbol of ownPropertySymbols) {
-                      const ownPropertySymbolValue =
-                        node.value[ownPropertySymbol];
-                      appendPropertyEntryNode(
+                      const ownPropertySymbolDescriptor =
+                        Object.getOwnPropertyDescriptor(
+                          value,
+                          ownPropertySymbol,
+                        );
+                      appendPropertyNode(
                         ownPropertySymbol,
-                        ownPropertySymbolValue,
+                        ownPropertySymbolDescriptor,
                         {
                           isHiddenWhenSame: true,
                         },
                       );
                     }
                     for (let ownPropertyName of ownPropertyNames) {
-                      let ownPropertyValue = value[ownPropertyName];
+                      const ownPropertyNameDescriptor =
+                        Object.getOwnPropertyDescriptor(value, ownPropertyName);
                       if (
                         ownPropertyName === "valueOf" &&
-                        typeof ownPropertyValue === "function"
+                        typeof ownPropertyNameDescriptor.value === "function"
                       ) {
                         ownPropertyName = VALUE_OF_RETURN_VALUE_ENTRY_KEY;
-                        ownPropertyValue = ownPropertyValue();
+                        ownPropertyNameDescriptor.value =
+                          ownPropertyNameDescriptor.value();
                       }
-                      appendPropertyEntryNode(
+                      appendPropertyNode(
                         ownPropertyName,
-                        ownPropertyValue,
+                        ownPropertyNameDescriptor,
                         {
                           isFunctionPrototype:
                             ownPropertyName === "prototype" && node.isFunction,
@@ -3173,6 +3263,9 @@ const renderChildren = (node, props) => {
     skippedMarkersPlacement = "inside",
     childrenVisitMethod = "pick_around_starting_before",
   } = node.onelineDiff;
+  if (node.subgroup === "property_entry" && node.childrenKeys.length === 0) {
+    debugger;
+  }
   let startSkippedMarker = "";
   let endSkippedMarker = "";
   if (skippedMarkers) {
@@ -3413,8 +3506,7 @@ const renderChildren = (node, props) => {
     ) {
       separatorMarkerDisabled = true;
       if (childNode.subgroup === "property_entry") {
-        const propertyValueNode = childNode.childNodeMap.get("entry_value");
-        propertyValueNode.separatorMarkerDisabled = true;
+        disableSeparatorOnProperty(childNode);
       }
     }
     if (separatorMarkerWhenTruncated === undefined) {
@@ -3784,10 +3876,7 @@ const renderChildrenMultiline = (node, props) => {
       if (!childNode.comparison.hasAnyDiff) {
         return false;
       }
-      if (
-        childNode.subgroup === "property_entry" &&
-        childNode.childNodeMap.get("entry_value").isSourceCode
-      ) {
+      if (isSourceCodeProperty(childNode)) {
       } else {
         diffCount++;
       }
@@ -3873,6 +3962,9 @@ const renderChildrenMultiline = (node, props) => {
       childIndex++;
       continue;
     }
+  }
+  if (node.parent === null) {
+    debugger;
   }
   if (node.beforeRender) {
     node.beforeRender(props, { focusedChildIndex, childIndexToDisplayArray });
@@ -4009,13 +4101,10 @@ const renderChildrenMultiline = (node, props) => {
     ) {
       separatorMarkerDisabled = true;
       if (childNode.subgroup === "property_entry") {
-        const propertyValueNode = childNode.childNodeMap.get("entry_value");
-        propertyValueNode.separatorMarkerDisabled = true;
+        disableSeparatorOnProperty(childNode);
       }
     } else if (childNode.subgroup === "property_entry") {
-      if (childNode.onelineDiff) {
-        childNode.onelineDiff.hasSeparatorOnSingleChild = true;
-      }
+      enableSeparatorOnSingleProperty(childNode);
     }
     if (separatorMarkerWhenTruncated === undefined) {
       columnsRemainingForThisChild -= separatorMarker.length;
@@ -4252,16 +4341,13 @@ const getAddedOrRemovedReason = (node) => {
     return node.subgroup;
   }
   if (node.category === "entry") {
-    return getAddedOrRemovedReason(node.childNodeMap.get("entry_key"));
+    return node.key;
   }
   if (node.category === "entry_key") {
     return node.value;
   }
   if (node.category === "entry_value") {
     return getAddedOrRemovedReason(node.parent);
-  }
-  if (node.subgroup === "value_of_return_value") {
-    return "value_of_own_method";
   }
   return "unknown";
 };
@@ -4294,6 +4380,29 @@ const asPrimitiveNode = (node) =>
     node,
     (wrappedNodeCandidate) => wrappedNodeCandidate.category === "primitive",
   );
+
+const isSourceCodeProperty = (node) => {
+  if (node.subgroup !== "property_entry") {
+    return false;
+  }
+  const valueDescriptorNode = node.childNodeMap.get("value");
+  if (!valueDescriptorNode) {
+    return false;
+  }
+  return valueDescriptorNode.isSourceCode;
+};
+const disableSeparatorOnProperty = (node) => {
+  for (const [, descriptorNode] of node.childNodeMap) {
+    const propertyDescriptorValueNode =
+      descriptorNode.childNodeMap.get("entry_value");
+    propertyDescriptorValueNode.separatorMarkerDisabled = true;
+  }
+};
+const enableSeparatorOnSingleProperty = (node) => {
+  if (node.onelineDiff) {
+    node.onelineDiff.hasSeparatorOnSingleChild = true;
+  }
+};
 
 const shouldIgnoreOwnPropertyName = (node, ownPropertyName) => {
   if (ownPropertyName === "prototype") {
@@ -4394,6 +4503,55 @@ const shouldIgnoreOwnPropertySymbol = (node, ownPropertySymbol) => {
       return true;
     }
     return false;
+  }
+  return false;
+};
+const shouldIgnoreOwnPropertyDescriptor = (
+  node,
+  descriptorName,
+  descriptorValue,
+  { isFrozen, isSealed, propertyKey },
+) => {
+  /* eslint-disable no-unneeded-ternary */
+  if (descriptorName === "writable") {
+    if (isFrozen) {
+      return true;
+    }
+    if (propertyKey === "prototype" && node.functionAnalysis.type === "class") {
+      return descriptorValue === false;
+    }
+    return descriptorValue === true;
+  }
+  if (descriptorName === "configurable") {
+    if (isFrozen) {
+      return true;
+    }
+    if (isSealed) {
+      return true;
+    }
+    if (propertyKey === "prototype" && node.isFunction) {
+      return descriptorValue === false;
+    }
+    return descriptorValue === true;
+  }
+  if (descriptorName === "enumerable") {
+    if (propertyKey === "prototype" && node.isFunction) {
+      return descriptorValue === false;
+    }
+    if (propertyKey === "message" && node.isError) {
+      return descriptorValue === false;
+    }
+    if (node.isClassPrototype) {
+      return descriptorValue === false;
+    }
+    return descriptorValue === true;
+  }
+  /* eslint-enable no-unneeded-ternary */
+  if (descriptorName === "get") {
+    return descriptorValue === undefined;
+  }
+  if (descriptorName === "set") {
+    return descriptorValue === undefined;
   }
   return false;
 };
