@@ -6,6 +6,7 @@ await import("./assert_not.test.js");
 await import("./date.test.js");
 await import("./error.test.js");
 await import("./function.test.js");
+await import("./headers.test.js");
 await import("./impenetrables.test.js");
 await import("./map.test.js");
 await import("./max_columns.test.js");

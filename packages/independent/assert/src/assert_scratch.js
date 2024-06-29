@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- *  - date
  *  - headers
  *  - request/response
  */
@@ -1270,6 +1269,7 @@ let createRootNode;
       isSet: false,
       isURL: false,
       isURLSearchParams: false,
+      isHeaders: false,
       isDate: false,
       isError: false,
       isRegExp: false,
@@ -2047,6 +2047,10 @@ let createRootNode;
           node.isURLSearchParams = true;
           continue;
         }
+        if (parentConstructor.name === "Headers") {
+          node.isHeaders = true;
+          continue;
+        }
         if (parentConstructor.name === "Date") {
           node.isDate = true;
           continue;
@@ -2672,6 +2676,42 @@ let createRootNode;
                   },
                 );
 
+                break internal_entries;
+              }
+              if (node.isHeaders) {
+                const headerEntriesNode = compositePartsNode.appendChild(
+                  "header_entries",
+                  {
+                    ...internalEntriesParams,
+                    subgroup: "header_entries",
+                    childGenerator: () => {
+                      for (const [headerKey, headerValue] of value) {
+                        const headerNode = headerEntriesNode.appendChild(key, {
+                          key: headerKey,
+                          render: renderChildren,
+                          onelineDiff: { hasTrailingSeparator: true },
+                          group: "entry",
+                          subgroup: "header_entry",
+                          path: node.path.append(headerKey),
+                        });
+                        headerNode.appendChild("entry_key", {
+                          value: headerKey,
+                          render: renderValue,
+                          separatorMarker: " => ",
+                          group: "entry_key",
+                          subgroup: "header_entry_key",
+                        });
+                        headerNode.appendChild("entry_value", {
+                          value: headerValue,
+                          render: renderValue,
+                          separatorMarker: ",",
+                          group: "entry_value",
+                          subgroup: "header_entry_value",
+                        });
+                      }
+                    },
+                  },
+                );
                 break internal_entries;
               }
             }

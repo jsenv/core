@@ -1,0 +1,28 @@
+# content-type added
+actual: Headers(
+  "content-type" => "text/xml",
+)
+expect: Headers()
+
+# content-type removed
+actual: Headers()
+expect: Headers(
+  "content-type" => "text/xml",
+)
+
+# content-type modified
+actual: Headers(
+  "content-type" => "text/css",
+)
+expect: Headers(
+  "content-type" => "text/xml",
+)
+
+# content-type multi diff
+actual: Headers(
+  "content-type" => "text/xml, text/css",
+)
+expect: Headers(
+  "content-type" => "text/xml, text/html",
+)
+
