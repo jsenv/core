@@ -1,7 +1,6 @@
 /*
  * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
  *
- *  - property descriptors
  *  - date
  *  - headers
  *  - request/response
@@ -2816,6 +2815,7 @@ let createRootNode;
                                   onelineDiff: {
                                     hasTrailingSeparator: true,
                                   },
+                                  focusedChildIndex: 0,
                                   group: "entries",
                                   subgroup: "property_descriptor",
                                   isHiddenWhenSame:
@@ -3016,16 +3016,14 @@ let createRootNode;
               SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
             );
           if (symbolToPrimitiveReturnValuePropertyNode) {
-            return symbolToPrimitiveReturnValuePropertyNode.childNodeMap.get(
-              "entry_value",
+            return getPropertyValueNode(
+              symbolToPrimitiveReturnValuePropertyNode,
             );
           }
           const valueOfReturnValuePropertyNode =
             ownPropertiesNode.childNodeMap.get(VALUE_OF_RETURN_VALUE_ENTRY_KEY);
           if (valueOfReturnValuePropertyNode) {
-            return valueOfReturnValuePropertyNode.childNodeMap.get(
-              "entry_value",
-            );
+            return getPropertyValueNode(valueOfReturnValuePropertyNode);
           }
         }
         return null;
@@ -4381,15 +4379,19 @@ const asPrimitiveNode = (node) =>
     (wrappedNodeCandidate) => wrappedNodeCandidate.category === "primitive",
   );
 
-const isSourceCodeProperty = (node) => {
+const getPropertyValueNode = (node) => {
   if (node.subgroup !== "property_entry") {
-    return false;
+    return null;
   }
   const valueDescriptorNode = node.childNodeMap.get("value");
   if (!valueDescriptorNode) {
-    return false;
+    return null;
   }
-  return valueDescriptorNode.isSourceCode;
+  return valueDescriptorNode.childNodeMap.get("entry_value");
+};
+const isSourceCodeProperty = (node) => {
+  const propertyValueNode = getPropertyValueNode(node);
+  return propertyValueNode && propertyValueNode.isSourceCode;
 };
 const disableSeparatorOnProperty = (node) => {
   for (const [, descriptorNode] of node.childNodeMap) {
@@ -4399,8 +4401,10 @@ const disableSeparatorOnProperty = (node) => {
   }
 };
 const enableSeparatorOnSingleProperty = (node) => {
-  if (node.onelineDiff) {
-    node.onelineDiff.hasSeparatorOnSingleChild = true;
+  for (const [, descriptorNode] of node.childNodeMap) {
+    if (descriptorNode.onelineDiff) {
+      descriptorNode.onelineDiff.hasSeparatorOnSingleChild = true;
+    }
   }
 };
 

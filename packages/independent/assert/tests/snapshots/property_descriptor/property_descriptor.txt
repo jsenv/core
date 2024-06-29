@@ -47,8 +47,8 @@ expect: {
 # getter and value
 actual: {
   get a() {
-    [source code]
-  }
+    [source code],
+  },
 }
 expect: {
   a: true,
@@ -57,11 +57,11 @@ expect: {
 # getter/setter and value
 actual: {
   get a() {
-    [source code]
-  }
+    [source code],
+  },
   set a() {
-    [source code]
-  }
+    [source code],
+  },
 }
 expect: {
   a: true,
@@ -70,46 +70,46 @@ expect: {
 # getter only and setter only
 actual: {
   get a() {
-    [source code]
-  }
+    [source code],
+  },
 }
 expect: {
   set a() {
-    [source code]
-  }
+    [source code],
+  },
 }
 
 # setter only and getter only
 actual: {
   set a() {
-    [source code]
-  }
+    [source code],
+  },
 }
 expect: {
   get a() {
-    [source code]
-  }
+    [source code],
+  },
 }
 
 # getter source code same
 actual: {
-  get a() { [source code] }
+  get a() { [source code] },
   b: true,
 }
 expect: {
-  get a() { [source code] }
+  get a() { [source code] },
   b: false,
 }
 
 # getter source code diff
 actual: {
   get a() {
-    [source code]
-  }
+    [source code],
+  },
 }
 expect: {
   get a() {
-    [source code]
-  }
+    [source code],
+  },
 }
 
