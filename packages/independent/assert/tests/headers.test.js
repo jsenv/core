@@ -79,13 +79,17 @@ await startSnapshotTesting("headers", ({ test }) => {
       }),
     });
   });
-  // TOOD: a cookie is removed
+  // TODO: a cookie is removed
+  // see https://stackoverflow.com/questions/4056306/how-to-handle-multiple-cookies-with-the-same-name
+  test.TODO("cookie name used several times", () => {
+    // se  we can't use the name when parsing and rendering but
+    // rather an index?
+  });
+  test.TODO("cookie order modified", () => {});
   // TODO: cookies header with a diff on some prop
-  // TODO: a cookie reuse same name twice (we should properly handle this scenario)
-  // I think for the browser it does not matter
-  // but we must support so we can't use the name when parsing and rendering but
-  // rather an index?
   // TODO: accept, header with a diff on q
   //       something new is accepted
   //       something is not accepted anymore
+  // TODO: server timings
+  // TODO: more accept-* and accept headers
 });

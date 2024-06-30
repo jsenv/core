@@ -1863,7 +1863,7 @@ let createRootNode;
                     value: char,
                     render: renderChar,
                     renderOptions: isRegexpSource
-                      ? { specialCharSet: regExpSpecialCharSet }
+                      ? { stringCharMapping: null }
                       : undefined,
                     quoteMarkerRef,
                     group: "entry_value",
@@ -3440,18 +3440,14 @@ const renderEmptyValue = (node, props) => {
   return truncateAndApplyColor("empty", node, props);
 };
 const renderChar = (node, props) => {
-  const char = node.value;
+  let char = node.value;
   const { quoteMarkerRef } = node;
   if (quoteMarkerRef && char === quoteMarkerRef.current) {
     return truncateAndApplyColor(`\\${char}`, node, props);
   }
-  const { specialCharSet } = node.renderOptions;
-  if (specialCharSet && specialCharSet.has(char)) {
-    return truncateAndApplyColor(char, node, props);
-  }
-  const point = char.charCodeAt(0);
-  if (point === 92 || point < 32 || (point > 126 && point < 160)) {
-    return truncateAndApplyColor(CHAR_TO_ESCAPED_CHAR[point], node, props);
+  const { stringCharMapping = stringCharMappingDefault } = node.renderOptions;
+  if (stringCharMapping && stringCharMapping.has(char)) {
+    char = stringCharMapping.get(char);
   }
   return truncateAndApplyColor(char, node, props);
 };
@@ -4949,12 +4945,12 @@ const appendReasonGroup = (reasonGroup, otherReasonGroup) => {
 };
 
 // prettier-ignore
-const CHAR_TO_ESCAPED_CHAR = [
+const CODE_POINT_TO_ESCAPED_CHAR = [
   '\\x00', '\\x01', '\\x02', '\\x03', '\\x04', '\\x05', '\\x06', '\\x07', // x07
   '\\b', '\\t', '\\n', '\\x0B', '\\f', '\\r', '\\x0E', '\\x0F',           // x0F
   '\\x10', '\\x11', '\\x12', '\\x13', '\\x14', '\\x15', '\\x16', '\\x17', // x17
   '\\x18', '\\x19', '\\x1A', '\\x1B', '\\x1C', '\\x1D', '\\x1E', '\\x1F', // x1F
-  '', '', '', '', '', '', '', "\\'", '', '', '', '', '', '', '', '',      // x2F
+  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',      // x2F
   '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x3F
   '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x4F
   '', '', '', '', '', '', '', '', '', '', '', '', '\\\\', '', '', '',     // x5F
@@ -4965,6 +4961,14 @@ const CHAR_TO_ESCAPED_CHAR = [
   '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
   '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
 ];
+const stringCharMappingDefault = new Map();
+let index = 0;
+for (const charEscaped of CODE_POINT_TO_ESCAPED_CHAR) {
+  if (charEscaped) {
+    stringCharMappingDefault.set(String.fromCodePoint(index), charEscaped);
+  }
+  index++;
+}
 
 const shouldDisableSeparator = (
   childIndex,
@@ -5003,23 +5007,23 @@ const symbolToDescription = (symbol) => {
   // return symbol.description // does not work on node
 };
 
-const regExpSpecialCharSet = new Set([
-  "/",
-  "^",
-  "\\",
-  "[",
-  "]",
-  "(",
-  ")",
-  "{",
-  "}",
-  "?",
-  "+",
-  "*",
-  ".",
-  "|",
-  "$",
-]);
+// const regExpSpecialCharSet = new Set([
+//   "/",
+//   "^",
+//   "\\",
+//   "[",
+//   "]",
+//   "(",
+//   ")",
+//   "{",
+//   "}",
+//   "?",
+//   "+",
+//   "*",
+//   ".",
+//   "|",
+//   "$",
+// ]);
 
 const pickBestQuote = (string, { quotesBacktickDisabled } = {}) => {
   let backslashCount = 0;
