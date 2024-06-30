@@ -1224,7 +1224,7 @@ let createRootNode;
     renderOptions = renderOptionsDefault,
     onelineDiff = null,
     multilineDiff = null,
-    stringBreak = "anywhere", // to rename stringDiffSensitivity
+    stringDiffPrecision = "per_line_and_per_char",
   }) => {
     const node = {
       colorWhenSolo,
@@ -1639,7 +1639,7 @@ let createRootNode;
                               urlSearchEntryPartNode.appendChild("entry_key", {
                                 value: key,
                                 render: renderString,
-                                stringBreak: "none",
+                                stringDiffPrecision: "none",
                                 startMarker:
                                   urlSearchEntryNode.key === 0 &&
                                   valueIndex === 0
@@ -1660,7 +1660,7 @@ let createRootNode;
                                 {
                                   value: values[valueIndex],
                                   render: renderString,
-                                  stringBreak: "none",
+                                  stringDiffPrecision: "none",
                                   quoteMarkerRef,
                                   quotesDisabled: true,
                                   urlStringDetectionDisabled: true,
@@ -1754,7 +1754,7 @@ let createRootNode;
                     timePartsNode.appendChild(name, {
                       value,
                       render: renderString,
-                      stringBreak: "none",
+                      stringDiffPrecision: "none",
                       quoteMarkerRef,
                       quotesDisabled: true,
                       dateStringDetectionDisabled: true,
@@ -1798,7 +1798,7 @@ let createRootNode;
         };
         return node;
       }
-      if (stringBreak === "anywhere") {
+      if (stringDiffPrecision === "per_line_and_per_char") {
         node.childGenerator = () => {
           const lineEntriesNode = node.appendChild("parts", {
             category: "lines",
@@ -2725,7 +2725,7 @@ let createRootNode;
                                                 {
                                                   value: attributeName,
                                                   render: renderString,
-                                                  stringBreak: "none",
+                                                  stringDiffPrecision: "none",
                                                   quoteMarkerRef,
                                                   endMarker:
                                                     hasRemainingAttributes
@@ -2740,7 +2740,7 @@ let createRootNode;
                                               {
                                                 value: attributeName,
                                                 render: renderString,
-                                                stringBreak: "none",
+                                                stringDiffPrecision: "none",
                                                 quoteMarkerRef,
                                                 endMarker: "=",
                                               },
@@ -2751,7 +2751,7 @@ let createRootNode;
                                                 key: attributeName,
                                                 value: attributeValue,
                                                 render: renderString,
-                                                stringBreak: "none",
+                                                stringDiffPrecision: "none",
                                                 quoteMarkerRef,
                                                 endMarker:
                                                   hasRemainingAttributes
