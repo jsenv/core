@@ -1,7 +1,7 @@
 /*
  *  - headers
  *  - one space vs two space test for string
- *  - request/response
+ *  - request/response/AbortController
  */
 
 import stringWidth from "string-width";
@@ -620,8 +620,8 @@ export const assert = (firstArg) => {
       }
     }
     if (
-      actualNode.subgroup === "url_internal_properties" &&
-      expectNode.subgroup === "url_internal_properties"
+      actualNode.subgroup === "url_parts" &&
+      expectNode.subgroup === "url_parts"
     ) {
       forceSameQuotes(actualNode, expectNode);
     }
@@ -1527,185 +1527,165 @@ let createRootNode;
       if (isStringForUrl) {
         node.childGenerator = () => {
           const urlObject = new URL(value);
-          const urlInternalPropertiesNode = node.appendChild(
-            "url_internal_properties",
-            {
-              render: renderChildren,
-              onelineDiff: {
-                hasTrailingSeparator: true,
-                skippedMarkers: {
-                  start: "…",
-                  between: "…",
-                  end: "…",
-                },
+          const urlPartsNode = node.appendChild("url_parts", {
+            render: renderChildren,
+            onelineDiff: {
+              hasTrailingSeparator: true,
+              skippedMarkers: {
+                start: "…",
+                between: "…",
+                end: "…",
               },
-              startMarker: quoteMarkerRef.current,
-              endMarker: quoteMarkerRef.current,
-              quoteMarkerRef,
-              childGenerator() {
-                const {
-                  protocol,
-                  username,
-                  password,
-                  hostname,
-                  port,
-                  pathname,
-                  search,
-                  hash,
-                } = urlObject;
-                const appendUrlInternalProp = (name, value, params) => {
-                  urlInternalPropertiesNode.appendChild(name, {
-                    value,
-                    render: renderValue,
-                    urlStringDetectionDisabled: true,
-                    preserveLineBreaks: true,
-                    quoteMarkerRef,
-                    quotesDisabled: true,
-                    group: "url_internal_prop",
-                    subgroup: `url_${name}`,
-                    ...params,
-                  });
-                };
-
-                appendUrlInternalProp("protocol", protocol, {
-                  endMarker: "//",
-                });
-
-                if (username) {
-                  appendUrlInternalProp(
-                    "username",
-                    decodeURIComponent(username),
-                    {
-                      endMarker: password ? ":" : "@",
-                    },
-                  );
-                  if (password) {
-                    appendUrlInternalProp(
-                      "password",
-                      decodeURIComponent(password),
-                      {
-                        endMarker: "@",
-                      },
-                    );
-                  }
-                }
-                appendUrlInternalProp("hostname", decodeURIComponent(hostname));
-
-                if (port) {
-                  appendUrlInternalProp("port", parseInt(port), {
-                    startMarker: ":",
-                    numericSeparatorsDisabled: true,
-                  });
-                }
-                if (pathname) {
-                  appendUrlInternalProp(
-                    "pathname",
-                    decodeURIComponent(pathname),
-                  );
-                }
-                if (search) {
-                  const urlSearchNode = urlInternalPropertiesNode.appendChild(
-                    "search",
-                    {
-                      value: null,
-                      render: renderChildren,
-                      startMarker: "?",
-                      onelineDiff: {
-                        hasTrailingSeparator: true,
-                      },
-                      group: "entries",
-                      subgroup: "url_search",
-                      childGenerator() {
-                        const searchParamsMap = tokenizeUrlSearch(search);
-                        let searchEntryIndex = 0;
-                        for (const [key, values] of searchParamsMap) {
-                          const urlSearchEntryNode = urlSearchNode.appendChild(
-                            key,
-                            {
-                              key: searchEntryIndex,
-                              render: renderChildren,
-                              onelineDiff: {
-                                hasTrailingSeparator: true,
-                              },
-                              path: node.path.append(key),
-                              group: "entries",
-                              subgroup: "url_search_entry",
-                              childGenerator() {
-                                let valueIndex = 0;
-                                const isMultiValue = values.length > 1;
-                                while (valueIndex < values.length) {
-                                  const urlSearchEntryPartNode =
-                                    urlSearchEntryNode.appendChild(valueIndex, {
-                                      key,
-                                      render: renderChildren,
-                                      onelineDiff: {
-                                        hasTrailingSeparator: true,
-                                      },
-                                      group: "entry",
-                                      subgroup: "url_search_value_entry",
-                                      path: isMultiValue
-                                        ? urlSearchEntryNode.path.append(
-                                            valueIndex,
-                                            { isIndexedEntry: true },
-                                          )
-                                        : undefined,
-                                    });
-                                  urlSearchEntryPartNode.appendChild(
-                                    "entry_key",
-                                    {
-                                      value: key,
-                                      render: renderString,
-                                      stringBreak: "none",
-                                      startMarker:
-                                        urlSearchEntryNode.key === 0 &&
-                                        valueIndex === 0
-                                          ? ""
-                                          : "&",
-                                      separatorMarker: "=",
-                                      separatorMarkerWhenTruncated: "",
-                                      quoteMarkerRef,
-                                      quotesDisabled: true,
-                                      urlStringDetectionDisabled: true,
-                                      dateStringDetectionDisabled: true,
-                                      preserveLineBreaks: true,
-                                      group: "entry_key",
-                                      subgroup: "url_search_entry_key",
-                                    },
-                                  );
-                                  urlSearchEntryPartNode.appendChild(
-                                    "entry_value",
-                                    {
-                                      value: values[valueIndex],
-                                      render: renderString,
-                                      stringBreak: "none",
-                                      quoteMarkerRef,
-                                      quotesDisabled: true,
-                                      urlStringDetectionDisabled: true,
-                                      dateStringDetectionDisabled: true,
-                                      preserveLineBreaks: true,
-                                      group: "entry_value",
-                                      subgroup: "url_search_entry_value",
-                                    },
-                                  );
-                                  valueIndex++;
-                                }
-                              },
-                            },
-                          );
-                          searchEntryIndex++;
-                        }
-                      },
-                    },
-                  );
-                }
-                if (hash) {
-                  appendUrlInternalProp("hash", decodeURIComponent(hash));
-                }
-              },
-              group: "entries",
-              subgroup: "url_internal_properties",
             },
-          );
+            startMarker: quoteMarkerRef.current,
+            endMarker: quoteMarkerRef.current,
+            quoteMarkerRef,
+            childGenerator() {
+              const {
+                protocol,
+                username,
+                password,
+                hostname,
+                port,
+                pathname,
+                search,
+                hash,
+              } = urlObject;
+              const appendUrlPartNode = (name, value, params) => {
+                urlPartsNode.appendChild(name, {
+                  value,
+                  render: renderValue,
+                  urlStringDetectionDisabled: true,
+                  preserveLineBreaks: true,
+                  quoteMarkerRef,
+                  quotesDisabled: true,
+                  group: "url_part",
+                  subgroup: `url_${name}`,
+                  ...params,
+                });
+              };
+
+              appendUrlPartNode("protocol", protocol, {
+                endMarker: "//",
+              });
+
+              if (username) {
+                appendUrlPartNode("username", decodeURIComponent(username), {
+                  endMarker: password ? ":" : "@",
+                });
+                if (password) {
+                  appendUrlPartNode("password", decodeURIComponent(password), {
+                    endMarker: "@",
+                  });
+                }
+              }
+              appendUrlPartNode("hostname", decodeURIComponent(hostname));
+
+              if (port) {
+                appendUrlPartNode("port", parseInt(port), {
+                  startMarker: ":",
+                  numericSeparatorsDisabled: true,
+                });
+              }
+              if (pathname) {
+                appendUrlPartNode("pathname", decodeURIComponent(pathname));
+              }
+              if (search) {
+                const urlSearchNode = urlPartsNode.appendChild("search", {
+                  value: null,
+                  render: renderChildren,
+                  startMarker: "?",
+                  onelineDiff: {
+                    hasTrailingSeparator: true,
+                  },
+                  group: "entries",
+                  subgroup: "url_search",
+                  childGenerator() {
+                    const searchParamsMap = tokenizeUrlSearch(search);
+                    let searchEntryIndex = 0;
+                    for (const [key, values] of searchParamsMap) {
+                      const urlSearchEntryNode = urlSearchNode.appendChild(
+                        key,
+                        {
+                          key: searchEntryIndex,
+                          render: renderChildren,
+                          onelineDiff: {
+                            hasTrailingSeparator: true,
+                          },
+                          path: node.path.append(key),
+                          group: "entries",
+                          subgroup: "url_search_entry",
+                          childGenerator() {
+                            let valueIndex = 0;
+                            const isMultiValue = values.length > 1;
+                            while (valueIndex < values.length) {
+                              const urlSearchEntryPartNode =
+                                urlSearchEntryNode.appendChild(valueIndex, {
+                                  key,
+                                  render: renderChildren,
+                                  onelineDiff: {
+                                    hasTrailingSeparator: true,
+                                  },
+                                  group: "entry",
+                                  subgroup: "url_search_value_entry",
+                                  path: isMultiValue
+                                    ? urlSearchEntryNode.path.append(
+                                        valueIndex,
+                                        { isIndexedEntry: true },
+                                      )
+                                    : undefined,
+                                });
+                              urlSearchEntryPartNode.appendChild("entry_key", {
+                                value: key,
+                                render: renderString,
+                                stringBreak: "none",
+                                startMarker:
+                                  urlSearchEntryNode.key === 0 &&
+                                  valueIndex === 0
+                                    ? ""
+                                    : "&",
+                                separatorMarker: "=",
+                                separatorMarkerWhenTruncated: "",
+                                quoteMarkerRef,
+                                quotesDisabled: true,
+                                urlStringDetectionDisabled: true,
+                                dateStringDetectionDisabled: true,
+                                preserveLineBreaks: true,
+                                group: "entry_key",
+                                subgroup: "url_search_entry_key",
+                              });
+                              urlSearchEntryPartNode.appendChild(
+                                "entry_value",
+                                {
+                                  value: values[valueIndex],
+                                  render: renderString,
+                                  stringBreak: "none",
+                                  quoteMarkerRef,
+                                  quotesDisabled: true,
+                                  urlStringDetectionDisabled: true,
+                                  dateStringDetectionDisabled: true,
+                                  preserveLineBreaks: true,
+                                  group: "entry_value",
+                                  subgroup: "url_search_entry_value",
+                                },
+                              );
+                              valueIndex++;
+                            }
+                          },
+                        },
+                      );
+                      searchEntryIndex++;
+                    }
+                  },
+                });
+              }
+              if (hash) {
+                appendUrlPartNode("hash", decodeURIComponent(hash));
+              }
+            },
+            group: "entries",
+            subgroup: "url_parts",
+          });
         };
         return node;
       }
@@ -1722,103 +1702,97 @@ let createRootNode;
           const dateString = value;
           const dateTimestamp = Date.parse(dateString);
           const dateObject = new Date(dateTimestamp + localTimezoneOffset);
-          const dateInternalPropertiesNode = node.appendChild(
-            "date_internal_properties",
-            {
-              render: renderChildren,
-              onelineDiff: {
-                hasTrailingSeparator: true,
-                skippedMarkers: {
-                  start: "…",
-                  between: "…",
-                  end: "…",
-                },
+          const datePartsNode = node.appendChild("date_parts", {
+            render: renderChildren,
+            onelineDiff: {
+              hasTrailingSeparator: true,
+              skippedMarkers: {
+                start: "…",
+                between: "…",
+                end: "…",
               },
-              startMarker: quoteMarkerRef.current,
-              endMarker: quoteMarkerRef.current,
-              quoteMarkerRef,
-              childGenerator: () => {
-                const appendDateInternalNode = (name, value, params) => {
-                  dateInternalPropertiesNode.appendChild(name, {
-                    value,
-                    render: renderValue,
-                    quoteMarkerRef,
-                    quotesDisabled: true,
-                    dateStringDetectionDisabled: true,
-                    numericSeparatorsDisabled: true,
-                    preserveLineBreaks: true,
-                    group: "date_internal_prop",
-                    subgroup: `date_${name}`,
-                    ...params,
-                  });
-                };
-                appendDateInternalNode("year", dateObject.getFullYear());
-                appendDateInternalNode(
-                  "month",
-                  String(dateObject.getMonth() + 1).padStart(2, "0"),
-                  { startMarker: "-" },
-                );
-                appendDateInternalNode(
-                  "day",
-                  String(dateObject.getDate()).padStart(2, "0"),
-                  { startMarker: "-" },
-                );
-                const timeNode = dateInternalPropertiesNode.appendChild(
-                  "time",
-                  {
-                    render: renderChildren,
-                    onelineDiff: {},
-                    group: "entries",
-                    subgroup: "date_time",
-                    isHiddenWhenSame: true,
-                    childGenerator: () => {
-                      const appendTimePropNode = (name, value, params) => {
-                        timeNode.appendChild(name, {
-                          value,
-                          render: renderString,
-                          stringBreak: "none",
-                          quoteMarkerRef,
-                          quotesDisabled: true,
-                          dateStringDetectionDisabled: true,
-                          numericSeparatorsDisabled: true,
-                          preserveLineBreaks: true,
-                          group: "time_prop",
-                          subgroup: `time_${name}`,
-                          ...params,
-                        });
-                      };
-                      appendTimePropNode(
-                        "hours",
-                        String(dateObject.getHours()).padStart(2, "0"),
-                        { startMarker: " " },
-                      );
-                      appendTimePropNode(
-                        "minutes",
-                        String(dateObject.getMinutes()).padStart(2, "0"),
-                        { startMarker: ":" },
-                      );
-                      appendTimePropNode(
-                        "seconds",
-                        String(dateObject.getSeconds()).padStart(2, "0"),
-                        { startMarker: ":" },
-                      );
-                      appendTimePropNode(
-                        "milliseconds",
-                        String(dateObject.getMilliseconds()).padStart(3, "0"),
-                        {
-                          startMarker: ".",
-                          endMarker: "Z",
-                          isHiddenWhenSame: true,
-                        },
-                      );
-                    },
-                  },
-                );
-              },
-              group: "entries",
-              subgroup: "date_internal_properties",
             },
-          );
+            startMarker: quoteMarkerRef.current,
+            endMarker: quoteMarkerRef.current,
+            quoteMarkerRef,
+            childGenerator: () => {
+              const appendDateInternalNode = (name, value, params) => {
+                datePartsNode.appendChild(name, {
+                  value,
+                  render: renderValue,
+                  quoteMarkerRef,
+                  quotesDisabled: true,
+                  dateStringDetectionDisabled: true,
+                  numericSeparatorsDisabled: true,
+                  preserveLineBreaks: true,
+                  group: "date_part",
+                  subgroup: `date_${name}`,
+                  ...params,
+                });
+              };
+              appendDateInternalNode("year", dateObject.getFullYear());
+              appendDateInternalNode(
+                "month",
+                String(dateObject.getMonth() + 1).padStart(2, "0"),
+                { startMarker: "-" },
+              );
+              appendDateInternalNode(
+                "day",
+                String(dateObject.getDate()).padStart(2, "0"),
+                { startMarker: "-" },
+              );
+              const timePartsNode = datePartsNode.appendChild("time", {
+                render: renderChildren,
+                onelineDiff: {},
+                group: "entries",
+                subgroup: "date_time",
+                isHiddenWhenSame: true,
+                childGenerator: () => {
+                  const appendTimePartNode = (name, value, params) => {
+                    timePartsNode.appendChild(name, {
+                      value,
+                      render: renderString,
+                      stringBreak: "none",
+                      quoteMarkerRef,
+                      quotesDisabled: true,
+                      dateStringDetectionDisabled: true,
+                      numericSeparatorsDisabled: true,
+                      preserveLineBreaks: true,
+                      group: "time_prop",
+                      subgroup: `time_${name}`,
+                      ...params,
+                    });
+                  };
+                  appendTimePartNode(
+                    "hours",
+                    String(dateObject.getHours()).padStart(2, "0"),
+                    { startMarker: " " },
+                  );
+                  appendTimePartNode(
+                    "minutes",
+                    String(dateObject.getMinutes()).padStart(2, "0"),
+                    { startMarker: ":" },
+                  );
+                  appendTimePartNode(
+                    "seconds",
+                    String(dateObject.getSeconds()).padStart(2, "0"),
+                    { startMarker: ":" },
+                  );
+                  appendTimePartNode(
+                    "milliseconds",
+                    String(dateObject.getMilliseconds()).padStart(3, "0"),
+                    {
+                      startMarker: ".",
+                      endMarker: "Z",
+                      isHiddenWhenSame: true,
+                    },
+                  );
+                },
+              });
+            },
+            group: "entries",
+            subgroup: "date_parts",
+          });
         };
         return node;
       }
@@ -3435,16 +3409,12 @@ const renderString = (node, props) => {
     return truncateAndApplyColor("[Symbol.toPrimitive()]", node, props);
   }
   if (node.isStringForUrl) {
-    const urlInternalPropertiesNode = node.childNodeMap.get(
-      "url_internal_properties",
-    );
-    return urlInternalPropertiesNode.render(props);
+    const urlPartsNode = node.childNodeMap.get("url_parts");
+    return urlPartsNode.render(props);
   }
   if (node.isStringForDate) {
-    const dateInternalPropertiesNode = node.childNodeMap.get(
-      "date_internal_properties",
-    );
-    return dateInternalPropertiesNode.render(props);
+    const datePartsNode = node.childNodeMap.get("date_parts");
+    return datePartsNode.render(props);
   }
   const lineEntriesNode = node.childNodeMap.get("line_entries");
   if (lineEntriesNode) {
@@ -3852,8 +3822,8 @@ const renderChildren = (node, props) => {
       columnsRemainingForThisChild -= separatorMarkerWhenTruncated.length;
     }
     const canSkipMarkers =
-      node.subgroup === "url_internal_properties" ||
-      node.subgroup === "date_internal_properties" ||
+      node.subgroup === "url_parts" ||
+      node.subgroup === "date_parts" ||
       node.subgroup === "array_entries";
     let childDiff = childNode.render({
       ...props,
@@ -4670,13 +4640,13 @@ const SINGLE_QUOTE = `'`;
 const BACKTICK = "`";
 
 const getAddedOrRemovedReason = (node) => {
-  if (node.group === "url_internal_prop") {
+  if (node.group === "url_part") {
     return node.subgroup;
   }
-  if (node.group === "date_internal_prop") {
+  if (node.group === "date_part") {
     return node.subgroup;
   }
-  if (node.group === "time_prop") {
+  if (node.group === "time_part") {
     return node.subgroup;
   }
   if (node.category === "entry") {
