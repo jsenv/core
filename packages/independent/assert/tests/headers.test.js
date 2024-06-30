@@ -69,8 +69,16 @@ await startSnapshotTesting("headers", ({ test }) => {
       }),
     });
   });
-  // TODO: a test where the is no many space after "," (it must fail)
-  // even if browser would handle the same human would think sthing is wrong
+  test("cookie added", () => {
+    assert({
+      actual: new Headers({
+        "set-cookie": "foo=a,bar=b",
+      }),
+      expect: new Headers({
+        "set-cookie": "foo=a",
+      }),
+    });
+  });
   // TODO: accept, header with a diff on q
   //       something new is accepted
   //       something is not accepted anymore

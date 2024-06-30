@@ -11,3 +11,9 @@ test("foo=a,bar=b", {
   foo: { value: "a" },
   bar: { value: "b" },
 });
+test("foo=a", {
+  foo: { value: "a" },
+});
+test("name=value;", {
+  name: { value: "value" },
+});

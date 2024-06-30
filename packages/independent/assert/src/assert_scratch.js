@@ -2731,6 +2731,12 @@ let createRootNode;
                                                 subgroup: "header_attribute",
                                               },
                                             );
+                                          const { value, ...attributes } =
+                                            headerValueParsed[headerValueName];
+                                          const remainingAttributeKeys =
+                                            Object.keys(attributes);
+                                          const hasRemainingAttributes =
+                                            remainingAttributeKeys.length > 0;
                                           const appendAttributeNode = (
                                             attributeName,
                                             attributeValue,
@@ -2743,7 +2749,10 @@ let createRootNode;
                                                   render: renderString,
                                                   stringBreak: "none",
                                                   quoteMarkerRef,
-                                                  endMarker: ";",
+                                                  endMarker:
+                                                    hasRemainingAttributes
+                                                      ? ";"
+                                                      : "",
                                                 },
                                               );
                                               return;
@@ -2766,16 +2775,15 @@ let createRootNode;
                                                 render: renderString,
                                                 stringBreak: "none",
                                                 quoteMarkerRef,
-                                                endMarker: ";",
+                                                endMarker:
+                                                  hasRemainingAttributes
+                                                    ? ";"
+                                                    : "",
                                               },
                                             );
                                           };
-                                          const { value, ...attributes } =
-                                            headerValueParsed[headerValueName];
                                           appendAttributeNode("name", value);
-                                          for (const attributeName of Object.keys(
-                                            attributes,
-                                          )) {
+                                          for (const attributeName of remainingAttributeKeys) {
                                             appendAttributeNode(
                                               attributeName,
                                               attributes[attributeName],

@@ -39,6 +39,10 @@ const parseHeaderAttributes = (headerValue, attributeHandlers) => {
       attributes.value = true;
     }
     for (const attributeSource of attributeSources) {
+      const attributeSourceTrimmed = attributeSource.trim();
+      if (attributeSourceTrimmed === "") {
+        continue;
+      }
       let [attributeName, attributeValue] = attributeSource.split("=");
       const attributeNameNormalized = attributeName.trim();
       const attributeHandler =

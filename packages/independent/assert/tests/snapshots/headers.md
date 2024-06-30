@@ -95,3 +95,18 @@ assert({
 
 ![img](<./headers/set cookie removed.svg>)
 
+# cookie added
+
+```js
+assert({
+  actual: new Headers({
+    "set-cookie": "foo=a,bar=b",
+  }),
+  expect: new Headers({
+    "set-cookie": "foo=a",
+  }),
+});
+```
+
+![img](<./headers/cookie added.svg>)
+
