@@ -38,7 +38,7 @@ const parseHeaderAttributes = (headerValue, attributeHandlers) => {
       headerParseResult[nameValuePair] = attributes;
       attributes.value = true;
     }
-    for (const attributeSource of attributeSources.slice(1)) {
+    for (const attributeSource of attributeSources) {
       let [attributeName, attributeValue] = attributeSource.split("=");
       const attributeNameNormalized = attributeName.trim();
       const attributeHandler =
