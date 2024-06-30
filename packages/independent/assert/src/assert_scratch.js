@@ -1220,7 +1220,7 @@ let createRootNode;
     lineNumbersDisabled = false,
     urlStringDetectionDisabled = false,
     dateStringDetectionDisabled = false,
-    multilineStringDisabled = false,
+    preserveLineBreaks = false,
     renderOptions = renderOptionsDefault,
     onelineDiff = null,
     multilineDiff = null,
@@ -1557,9 +1557,11 @@ let createRootNode;
                     value,
                     render: renderValue,
                     urlStringDetectionDisabled: true,
+                    preserveLineBreaks: true,
+                    quoteMarkerRef,
+                    quotesDisabled: true,
                     group: "url_internal_prop",
                     subgroup: `url_${name}`,
-                    quoteMarkerRef,
                     ...params,
                   });
                 };
@@ -1631,7 +1633,7 @@ let createRootNode;
                                 let valueIndex = 0;
                                 const isMultiValue = values.length > 1;
                                 while (valueIndex < values.length) {
-                                  const entryNode =
+                                  const urlSearchEntryPartNode =
                                     urlSearchEntryNode.appendChild(valueIndex, {
                                       key,
                                       render: renderChildren,
@@ -1647,33 +1649,41 @@ let createRootNode;
                                           )
                                         : undefined,
                                     });
-                                  entryNode.appendChild("entry_key", {
-                                    value: key,
-                                    render: renderValue,
-                                    startMarker:
-                                      urlSearchEntryNode.key === 0 &&
-                                      valueIndex === 0
-                                        ? ""
-                                        : "&",
-                                    separatorMarker: "=",
-                                    separatorMarkerWhenTruncated: "",
-                                    quoteMarkerRef,
-                                    urlStringDetectionDisabled: true,
-                                    dateStringDetectionDisabled: true,
-                                    multilineStringDisabled: true,
-                                    group: "entry_key",
-                                    subgroup: "url_search_entry_key",
-                                  });
-                                  entryNode.appendChild("entry_value", {
-                                    value: values[valueIndex],
-                                    render: renderValue,
-                                    quoteMarkerRef,
-                                    urlStringDetectionDisabled: true,
-                                    dateStringDetectionDisabled: true,
-                                    multilineStringDisabled: true,
-                                    group: "entry_value",
-                                    subgroup: "url_search_entry_value",
-                                  });
+                                  urlSearchEntryPartNode.appendChild(
+                                    "entry_key",
+                                    {
+                                      value: key,
+                                      render: renderGrammar,
+                                      startMarker:
+                                        urlSearchEntryNode.key === 0 &&
+                                        valueIndex === 0
+                                          ? ""
+                                          : "&",
+                                      separatorMarker: "=",
+                                      separatorMarkerWhenTruncated: "",
+                                      quoteMarkerRef,
+                                      quotesDisabled: true,
+                                      urlStringDetectionDisabled: true,
+                                      dateStringDetectionDisabled: true,
+                                      preserveLineBreaks: true,
+                                      group: "entry_key",
+                                      subgroup: "url_search_entry_key",
+                                    },
+                                  );
+                                  urlSearchEntryPartNode.appendChild(
+                                    "entry_value",
+                                    {
+                                      value: values[valueIndex],
+                                      render: renderGrammar,
+                                      quoteMarkerRef,
+                                      quotesDisabled: true,
+                                      urlStringDetectionDisabled: true,
+                                      dateStringDetectionDisabled: true,
+                                      preserveLineBreaks: true,
+                                      group: "entry_value",
+                                      subgroup: "url_search_entry_value",
+                                    },
+                                  );
                                   valueIndex++;
                                 }
                               },
@@ -1730,8 +1740,10 @@ let createRootNode;
                     value,
                     render: renderValue,
                     quoteMarkerRef,
+                    quotesDisabled: true,
                     dateStringDetectionDisabled: true,
                     numericSeparatorsDisabled: true,
+                    preserveLineBreaks: true,
                     group: "date_internal_prop",
                     subgroup: `date_${name}`,
                     ...params,
@@ -1762,8 +1774,10 @@ let createRootNode;
                           value,
                           render: renderGrammar,
                           quoteMarkerRef,
+                          quotesDisabled: true,
                           dateStringDetectionDisabled: true,
                           numericSeparatorsDisabled: true,
+                          preserveLineBreaks: true,
                           group: "time_prop",
                           subgroup: `time_${name}`,
                           ...params,
@@ -1804,108 +1818,106 @@ let createRootNode;
         };
         return node;
       }
-      if (!multilineStringDisabled) {
-        node.childGenerator = () => {
-          const lineEntriesNode = node.appendChild("line_entries", {
-            render: renderChildrenMultiline,
-            multilineDiff: {
-              hasTrailingSeparator: true,
-              skippedMarkers: {
-                start: ["↑ 1 line ↑", "↑ {x} lines ↑"],
-                between: ["↕ 1 line ↕", "↕ {x} lines ↕"],
-                end: ["↓ 1 line ↓", "↓ {x} lines ↓"],
-              },
-              maxDiffType: "line",
-              lineNumbersDisabled,
+      node.childGenerator = () => {
+        const lineEntriesNode = node.appendChild("line_entries", {
+          render: renderChildrenMultiline,
+          multilineDiff: {
+            hasTrailingSeparator: true,
+            skippedMarkers: {
+              start: ["↑ 1 line ↑", "↑ {x} lines ↑"],
+              between: ["↕ 1 line ↕", "↕ {x} lines ↕"],
+              end: ["↓ 1 line ↓", "↓ {x} lines ↓"],
             },
-            startMarker: node.startMarker,
-            endMarker: node.endMarker,
-            quoteMarkerRef,
-            group: "entries",
-            subgroup: "line_entries",
-            childGenerator: () => {
-              let isMultiline = false;
-              const appendLineEntry = (lineIndex) => {
-                const lineNode = lineEntriesNode.appendChild(lineIndex, {
-                  value: "",
-                  key: lineIndex,
-                  render: renderChildren,
-                  onelineDiff: {
-                    focusedChildWhenSame: "first",
-                    skippedMarkers: {
-                      start: "…",
-                      between: "…",
-                      end: "…",
-                    },
-                    skippedMarkersPlacement: isMultiline ? "inside" : "outside",
-                    childrenVisitMethod: "all_before_then_all_after",
+            maxDiffType: "line",
+            lineNumbersDisabled,
+          },
+          startMarker: node.startMarker,
+          endMarker: node.endMarker,
+          quoteMarkerRef,
+          group: "entries",
+          subgroup: "line_entries",
+          childGenerator: () => {
+            let isMultiline = false;
+            const appendLineEntry = (lineIndex) => {
+              const lineNode = lineEntriesNode.appendChild(lineIndex, {
+                value: "",
+                key: lineIndex,
+                render: renderChildren,
+                onelineDiff: {
+                  focusedChildWhenSame: "first",
+                  skippedMarkers: {
+                    start: "…",
+                    between: "…",
+                    end: "…",
                   },
-                  // When multiline string appear as property value
-                  // 1. It becomes hard to see if "," is part of the string or the separator
-                  // 2. "," would appear twice if multiline string ends with ","
-                  // {
-                  //   foo: 1| line 1
-                  //        2| line 2,,
-                  //   bar: true,
-                  // }
-                  // Fortunately the line break already helps to split properties (foo and bar)
-                  // so the following is readable
-                  // {
-                  //   foo: 1| line 1
-                  //        2| line 2,
-                  //   bar: true,
-                  // }
-                  // -> The separator is not present for multiline
-                  group: "entries",
-                  subgroup: "line_entry_value",
+                  skippedMarkersPlacement: isMultiline ? "inside" : "outside",
+                  childrenVisitMethod: "all_before_then_all_after",
+                },
+                // When multiline string appear as property value
+                // 1. It becomes hard to see if "," is part of the string or the separator
+                // 2. "," would appear twice if multiline string ends with ","
+                // {
+                //   foo: 1| line 1
+                //        2| line 2,,
+                //   bar: true,
+                // }
+                // Fortunately the line break already helps to split properties (foo and bar)
+                // so the following is readable
+                // {
+                //   foo: 1| line 1
+                //        2| line 2,
+                //   bar: true,
+                // }
+                // -> The separator is not present for multiline
+                group: "entries",
+                subgroup: "line_entry_value",
+              });
+              const appendCharNode = (charIndex, char) => {
+                lineNode.value += char; // just for debug purposes
+                lineNode.appendChild(charIndex, {
+                  value: char,
+                  render: renderChar,
+                  renderOptions: isRegexpSource
+                    ? { specialCharSet: regExpSpecialCharSet }
+                    : undefined,
+                  quoteMarkerRef,
+                  group: "entry_value",
+                  subgroup: "char_entry_value",
                 });
-                const appendCharNode = (charIndex, char) => {
-                  lineNode.value += char; // just for debug purposes
-                  lineNode.appendChild(charIndex, {
-                    value: char,
-                    render: renderChar,
-                    renderOptions: isRegexpSource
-                      ? { specialCharSet: regExpSpecialCharSet }
-                      : undefined,
-                    quoteMarkerRef,
-                    group: "entry_value",
-                    subgroup: "char_entry_value",
-                  });
-                };
-                return {
-                  node: lineNode,
-                  appendCharNode,
-                };
               };
-              const chars = tokenizeString(value);
-              let currentLineEntry = appendLineEntry(0);
-              let lineIndex = 0;
-              let charIndex = 0;
-              for (const char of chars) {
-                if (char !== "\n") {
-                  currentLineEntry.appendCharNode(charIndex, char);
-                  charIndex++;
-                  continue;
-                }
-                isMultiline = true;
-                lineIndex++;
-                charIndex = 0;
-                currentLineEntry = appendLineEntry(lineIndex);
+              return {
+                node: lineNode,
+                appendCharNode,
+              };
+            };
+            const chars = tokenizeString(value);
+            let currentLineEntry = appendLineEntry(0);
+            let lineIndex = 0;
+            let charIndex = 0;
+            for (const char of chars) {
+              if (preserveLineBreaks || char !== "\n") {
+                currentLineEntry.appendCharNode(charIndex, char);
+                charIndex++;
+                continue;
               }
-              if (isMultiline) {
-                enableMultilineDiff(lineEntriesNode);
-              } else {
-                const firstLineNode = currentLineEntry.node;
-                if (quoteMarkerRef.current) {
-                  firstLineNode.onelineDiff.hasMarkersWhenEmpty = true;
-                  firstLineNode.startMarker = firstLineNode.endMarker =
-                    quoteMarkerRef.current;
-                }
+              isMultiline = true;
+              lineIndex++;
+              charIndex = 0;
+              currentLineEntry = appendLineEntry(lineIndex);
+            }
+            if (isMultiline) {
+              enableMultilineDiff(lineEntriesNode);
+            } else {
+              const firstLineNode = currentLineEntry.node;
+              if (!quotesDisabled && quoteMarkerRef.current) {
+                firstLineNode.onelineDiff.hasMarkersWhenEmpty = true;
+                firstLineNode.startMarker = firstLineNode.endMarker =
+                  quoteMarkerRef.current;
               }
-            },
-          });
-        };
-      }
+            }
+          },
+        });
+      };
       return node;
     }
     if (typeofResult === "symbol") {
@@ -2795,11 +2807,12 @@ let createRootNode;
                               for (const headerValue of headerValueArray) {
                                 headerValueNode.appendChild(index, {
                                   value: headerValue,
-                                  render: renderValue,
+                                  render: renderGrammar,
                                   quoteMarkerRef,
-                                  multilineStringDisabled: true,
+                                  quotesDisabled: true,
+                                  preserveLineBreaks: true,
                                   separatorMarker: ",",
-                                  group: "entry_value",
+                                  group: "grammar",
                                   subgroup: "header_value",
                                 });
                                 index++;
