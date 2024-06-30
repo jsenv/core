@@ -64,6 +64,17 @@ assert({
 
 ![img](<./string/blank char should be empty.svg>)
 
+# blank char should be empty 2
+
+```js
+assert({
+  actual: String.fromCharCode(0),
+  expect: "",
+});
+```
+
+![img](<./string/blank char should be empty 2.svg>)
+
 # diff unicode
 
 ```js
@@ -96,6 +107,50 @@ assert({
 ```
 
 ![img](<./string/diff special char.svg>)
+
+# special char diff
+
+```js
+assert({
+  actual: "",
+  expect: "",
+});
+```
+
+![img](<./string/special char diff.svg>)
+
+# more special char diff
+
+```js
+assert({
+  actual: "!'#$%&'()*+,-./:;<=>",
+  expect: "?@^[\\]_`{|}~",
+});
+```
+
+![img](<./string/more special char diff.svg>)
+
+# diff blackslash and ellipsis special chars
+
+```js
+assert({
+  actual: "\\",
+  expect: "",
+});
+```
+
+![img](<./string/diff blackslash and ellipsis special chars.svg>)
+
+# diff single space with 2 space
+
+```js
+assert({
+  actual: " ",
+  expect: "  ",
+});
+```
+
+![img](<./string/diff single space with 2 space.svg>)
 
 # added char
 

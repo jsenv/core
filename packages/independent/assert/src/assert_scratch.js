@@ -3,7 +3,6 @@
  *    - test header attribute diff
  *    - create node as parsing header so that
  *      the rendering does not alter spacing or ";" presence
- *  - one space vs two space test for string
  *  - request/response/AbortController
  */
 
@@ -4944,31 +4943,72 @@ const appendReasonGroup = (reasonGroup, otherReasonGroup) => {
   appendReasons(reasonGroup.modified, otherReasonGroup.modified);
 };
 
-// prettier-ignore
-const CODE_POINT_TO_ESCAPED_CHAR = [
-  '\\x00', '\\x01', '\\x02', '\\x03', '\\x04', '\\x05', '\\x06', '\\x07', // x07
-  '\\b', '\\t', '\\n', '\\x0B', '\\f', '\\r', '\\x0E', '\\x0F',           // x0F
-  '\\x10', '\\x11', '\\x12', '\\x13', '\\x14', '\\x15', '\\x16', '\\x17', // x17
-  '\\x18', '\\x19', '\\x1A', '\\x1B', '\\x1C', '\\x1D', '\\x1E', '\\x1F', // x1F
-  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',      // x2F
-  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x3F
-  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x4F
-  '', '', '', '', '', '', '', '', '', '', '', '', '\\\\', '', '', '',     // x5F
-  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '',         // x6F
-  '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '\\x7F',    // x7F
-  '\\x80', '\\x81', '\\x82', '\\x83', '\\x84', '\\x85', '\\x86', '\\x87', // x87
-  '\\x88', '\\x89', '\\x8A', '\\x8B', '\\x8C', '\\x8D', '\\x8E', '\\x8F', // x8F
-  '\\x90', '\\x91', '\\x92', '\\x93', '\\x94', '\\x95', '\\x96', '\\x97', // x97
-  '\\x98', '\\x99', '\\x9A', '\\x9B', '\\x9C', '\\x9D', '\\x9E', '\\x9F', // x9F
-];
-const stringCharMappingDefault = new Map();
-let index = 0;
-for (const charEscaped of CODE_POINT_TO_ESCAPED_CHAR) {
-  if (charEscaped) {
-    stringCharMappingDefault.set(String.fromCodePoint(index), charEscaped);
-  }
-  index++;
-}
+const CHAR_TO_ESCAPE = {
+  "\b": "\\b",
+  "\t": "\\t",
+  "\n": "\\n",
+  "\f": "\\f",
+  "\r": "\\r",
+  "\\": "\\\\",
+  "\x00": "\\x00",
+  "\x01": "\\x01",
+  "\x02": "\\x02",
+  "\x03": "\\x03",
+  "\x04": "\\x04",
+  "\x05": "\\x05",
+  "\x06": "\\x06",
+  "\x07": "\\x07",
+  "\x0B": "\\x0B",
+  "\x0E": "\\x0E",
+  "\x0F": "\\x0F",
+  "\x10": "\\x10",
+  "\x11": "\\x11",
+  "\x12": "\\x12",
+  "\x13": "\\x13",
+  "\x14": "\\x14",
+  "\x15": "\\x15",
+  "\x16": "\\x16",
+  "\x17": "\\x17",
+  "\x18": "\\x18",
+  "\x19": "\\x19",
+  "\x1A": "\\x1A",
+  "\x1B": "\\x1B",
+  "\x1C": "\\x1C",
+  "\x1D": "\\x1D",
+  "\x1E": "\\x1E",
+  "\x1F": "\\x1F",
+  "\x7F": "\\x7F",
+  "\x83": "\\x83",
+  "\x85": "\\x85",
+  "\x86": "\\x86",
+  "\x87": "\\x87",
+  "\x88": "\\x88",
+  "\x89": "\\x89",
+  "\x8A": "\\x8A",
+  "\x8B": "\\x8B",
+  "\x8C": "\\x8C",
+  "\x8D": "\\x8D",
+  "\x8E": "\\x8E",
+  "\x8F": "\\x8F",
+  "\x90": "\\x90",
+  "\x91": "\\x91",
+  "\x92": "\\x92",
+  "\x93": "\\x93",
+  "\x94": "\\x94",
+  "\x95": "\\x95",
+  "\x96": "\\x96",
+  "\x97": "\\x97",
+  "\x98": "\\x98",
+  "\x99": "\\x99",
+  "\x9A": "\\x9A",
+  "\x9B": "\\x9B",
+  "\x9C": "\\x9C",
+  "\x9D": "\\x9D",
+  "\x9E": "\\x9E",
+  "\x9F": "\\x9F",
+};
+
+const stringCharMappingDefault = new Map(Object.entries(CHAR_TO_ESCAPE));
 
 const shouldDisableSeparator = (
   childIndex,

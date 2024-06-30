@@ -20,14 +20,12 @@ await startSnapshotTesting("string", ({ test }) => {
       expect: "",
     });
   });
-
   test("empty should be one char", () => {
     assert({
       actual: "",
       expect: "a",
     });
   });
-
   test("tab vs space", () => {
     assert({
       actual: "	",
@@ -37,6 +35,12 @@ await startSnapshotTesting("string", ({ test }) => {
   test("blank char should be empty", () => {
     assert({
       actual: String.fromCharCode(127),
+      expect: "",
+    });
+  });
+  test("blank char should be empty 2", () => {
+    assert({
+      actual: String.fromCharCode(0),
       expect: "",
     });
   });
@@ -56,6 +60,30 @@ await startSnapshotTesting("string", ({ test }) => {
     assert({
       actual: "ñ",
       expect: "n",
+    });
+  });
+  test("special char diff", () => {
+    assert({
+      actual: "",
+      expect: "",
+    });
+  });
+  test("more special char diff", () => {
+    assert({
+      actual: "!'#$%&'()*+,-./:;<=>",
+      expect: "?@^[\\]_`{|}~",
+    });
+  });
+  test("diff blackslash and ellipsis special chars", () => {
+    assert({
+      actual: "\\",
+      expect: "",
+    });
+  });
+  test("diff single space with 2 space", () => {
+    assert({
+      actual: " ",
+      expect: "  ",
     });
   });
   test("added char", () => {
@@ -98,50 +126,52 @@ await startSnapshotTesting("string", ({ test }) => {
       MAX_COLUMNS: 15,
     });
   });
-  /* eslint-disable no-new-wrappers */
-  test("diff new String value", () => {
-    assert({
-      actual: new String("a"),
-      expect: new String("b"),
+  string_object: {
+    /* eslint-disable no-new-wrappers */
+    test("diff new String value", () => {
+      assert({
+        actual: new String("a"),
+        expect: new String("b"),
+      });
     });
-  });
-  test("diff String object vs literal", () => {
-    assert({
-      actual: new String("abc"),
-      expect: "a2",
+    test("diff String object vs literal", () => {
+      assert({
+        actual: new String("abc"),
+        expect: "a2",
+      });
     });
-  });
-  test("new String collapsed with overview", () => {
-    assert({
-      actual: {
-        a: new String("toto"),
-        b: true,
-      },
-      expect: {
-        a: new String("toto"),
-        b: false,
-      },
-    });
-  });
-  test("new String collapsed", () => {
-    assert({
-      actual: {
-        foo: {
+    test("new String collapsed with overview", () => {
+      assert({
+        actual: {
           a: new String("toto"),
+          b: true,
         },
-      },
-      expect: {
-        bar: {
+        expect: {
           a: new String("toto"),
+          b: false,
         },
-      },
-      MAX_DEPTH_INSIDE_DIFF: 1,
+      });
     });
-  });
-  test("new String prop", () => {
-    assert({
-      actual: Object.assign(new String("a"), { foo: true }),
-      expect: Object.assign(new String("b"), { foo: false }),
+    test("new String collapsed", () => {
+      assert({
+        actual: {
+          foo: {
+            a: new String("toto"),
+          },
+        },
+        expect: {
+          bar: {
+            a: new String("toto"),
+          },
+        },
+        MAX_DEPTH_INSIDE_DIFF: 1,
+      });
     });
-  });
+    test("new String prop", () => {
+      assert({
+        actual: Object.assign(new String("a"), { foo: true }),
+        expect: Object.assign(new String("b"), { foo: false }),
+      });
+    });
+  }
 });

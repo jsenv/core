@@ -22,6 +22,10 @@ expect: "  "
 actual: "\x7F"
 expect: ""
 
+# blank char should be empty 2
+actual: "\x00"
+expect: ""
+
 # diff unicode
 actual: "⚫️"
 expect: "⚪️"
@@ -33,6 +37,22 @@ expect: "😍"
 # diff special char
 actual: "ñ"
 expect: "n"
+
+# special char diff
+actual: ""
+expect: ""
+
+# more special char diff
+actual: "!'#$%&'()*+,-./:;<=>"
+expect: "?@^[\\]_`{|}~"
+
+# diff blackslash and ellipsis special chars
+actual: "\\"
+expect: ""
+
+# diff single space with 2 space
+actual: " "
+expect: "  "
 
 # added char
 actual: "ab"
