@@ -1224,7 +1224,7 @@ let createRootNode;
     renderOptions = renderOptionsDefault,
     onelineDiff = null,
     multilineDiff = null,
-    stringBreak = "anywhere",
+    stringBreak = "anywhere", // to rename stringDiffSensitivity
   }) => {
     const node = {
       colorWhenSolo,
@@ -1527,7 +1527,8 @@ let createRootNode;
       if (isStringForUrl) {
         node.childGenerator = () => {
           const urlObject = new URL(value);
-          const urlPartsNode = node.appendChild("url_parts", {
+          const urlPartsNode = node.appendChild("parts", {
+            category: "url_parts",
             render: renderChildren,
             onelineDiff: {
               hasTrailingSeparator: true,
@@ -1702,7 +1703,8 @@ let createRootNode;
           const dateString = value;
           const dateTimestamp = Date.parse(dateString);
           const dateObject = new Date(dateTimestamp + localTimezoneOffset);
-          const datePartsNode = node.appendChild("date_parts", {
+          const datePartsNode = node.appendChild("parts", {
+            category: "date_parts",
             render: renderChildren,
             onelineDiff: {
               hasTrailingSeparator: true,
@@ -1716,7 +1718,7 @@ let createRootNode;
             endMarker: quoteMarkerRef.current,
             quoteMarkerRef,
             childGenerator: () => {
-              const appendDateInternalNode = (name, value, params) => {
+              const appendDatePartNode = (name, value, params) => {
                 datePartsNode.appendChild(name, {
                   value,
                   render: renderValue,
@@ -1730,13 +1732,13 @@ let createRootNode;
                   ...params,
                 });
               };
-              appendDateInternalNode("year", dateObject.getFullYear());
-              appendDateInternalNode(
+              appendDatePartNode("year", dateObject.getFullYear());
+              appendDatePartNode(
                 "month",
                 String(dateObject.getMonth() + 1).padStart(2, "0"),
                 { startMarker: "-" },
               );
-              appendDateInternalNode(
+              appendDatePartNode(
                 "day",
                 String(dateObject.getDate()).padStart(2, "0"),
                 { startMarker: "-" },
@@ -1798,7 +1800,8 @@ let createRootNode;
       }
       if (stringBreak === "anywhere") {
         node.childGenerator = () => {
-          const lineEntriesNode = node.appendChild("line_entries", {
+          const lineEntriesNode = node.appendChild("parts", {
+            category: "lines",
             render: renderChildrenMultiline,
             multilineDiff: {
               hasTrailingSeparator: true,
@@ -2120,6 +2123,7 @@ let createRootNode;
           return;
         }
         const compositePartsNode = node.appendChild("parts", {
+          category: "composite_parts",
           render: renderChildren,
           onelineDiff: {
             hasSpacingBetweenEachChild: true,
@@ -3408,17 +3412,9 @@ const renderString = (node, props) => {
   if (node.value === SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY) {
     return truncateAndApplyColor("[Symbol.toPrimitive()]", node, props);
   }
-  if (node.isStringForUrl) {
-    const urlPartsNode = node.childNodeMap.get("url_parts");
-    return urlPartsNode.render(props);
-  }
-  if (node.isStringForDate) {
-    const datePartsNode = node.childNodeMap.get("date_parts");
-    return datePartsNode.render(props);
-  }
-  const lineEntriesNode = node.childNodeMap.get("line_entries");
-  if (lineEntriesNode) {
-    return lineEntriesNode.render(props);
+  const stringPartsNode = node.childNodeMap.get("parts");
+  if (stringPartsNode) {
+    return stringPartsNode.render(props);
   }
   const quoteToEscape = node.quoteMarkerRef?.current;
   if (quoteToEscape) {
