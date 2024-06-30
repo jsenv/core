@@ -4,7 +4,8 @@ import { ANSI, UNICODE } from "@jsenv/humanize";
 import { isAssertionError, createAssertionError } from "./assertion_error.js";
 import { tokenizeFunction } from "./tokenize_function.js";
 import { tokenizeFloat, tokenizeInteger } from "./tokenize_number.js";
-import { tokenizeHeaderValue } from "./tokenize_header_value.js";
+
+const tokenizeHeaderValue = () => {};
 
 const removedSign = UNICODE.FAILURE_RAW;
 const addedSign = UNICODE.FAILURE_RAW;

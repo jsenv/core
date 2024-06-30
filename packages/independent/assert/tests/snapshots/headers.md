@@ -54,3 +54,18 @@ assert({
 
 ![img](<./headers/content-type multi diff.svg>)
 
+# content-type spacing diff
+
+```js
+assert({
+  actual: new Headers({
+    "content-type": "text/xml,text/css",
+  }),
+  expect: new Headers({
+    "content-type": "text/xml, text/css",
+  }),
+});
+```
+
+![img](<./headers/content-type spacing diff.svg>)
+

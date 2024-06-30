@@ -1,59 +1,56 @@
-// "accept-encoding": "br;q=1.0, gzip;q=0.8, *;q=0.1"
-// I want to get: {br: {q: 1.0}, gzip: {q: 0.8}}
+/*
+ * "cookies" example
+ * name=test; Secure; SameSite=None;, b=b_value; Secure;
+ * see https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie
+ * "accept-encoding" example
+ * br;q=1.0, gzip;q=0.8, *;q=0.1
+ * -> {br: {q: 1.0}, gzip: {q: 0.8}}
+ */
 
 // see also multiple-header.js
 
-export const tokenizeHeaderValue = (headerValue, headerName) => {
-  if (headerName === "set-cookie") {
-    return tokenizeCookieHeader(headerValue);
-  }
-  if (headerName === "accept-encoding") {
-    return tokenizeAcceptHeader(headerValue);
-  }
-  return tokenizeOtherHeader(headerValue);
+export const tokenizeSetCookieHeader = (headerValue) => {
+  return parseHeaderAttributes(headerValue);
 };
+export const tokenizeAcceptEncodingHeader = (headerValue) => {
+  return parseHeaderAttributes(headerValue, {
+    q: (attributeValue) => {
+      return isNaN(attributeValue)
+        ? attributeValue
+        : parseFloat(attributeValue);
+    },
+  });
+};
+// TODO: more headers here (server timings?)
 
-const tokenizeCookieHeader = (headerValue) => {
+const parseHeaderAttributes = (headerValue, attributeHandlers) => {
   const values = headerValue.split(",");
-  const cookies = {};
+  const headerParseResult = {};
   for (const value of values) {
     const valueTrimmed = value.trim();
-    const [cookieNameValuePair, ...attributeSources] = valueTrimmed
-      .split(";")
-      .map((v) => v.trim());
-    const [cookieName, cookieValue] = cookieNameValuePair.split("=");
-    const attributes = {
-      value: cookieValue,
-    };
-    for (const attributeSource of attributeSources.slice(1)) {
-      let [attributeName, attributeValue] = attributeSource.split("=");
-      attributes[attributeName] = attributeValue;
-    }
-    cookies[cookieName] = attributes;
-  }
-  return cookies;
-};
-const tokenizeAcceptHeader = (headerValue) => {
-  const values = headerValue.split(",");
-  const accepted = {};
-  for (const value of values) {
-    const valueTrimmed = value.trim();
-    const [directiveName, ...attributeSources] = valueTrimmed.split(";");
+    const [nameValuePair, ...attributeSources] = valueTrimmed.split(";");
     const attributes = {};
+    if (nameValuePair.includes("=")) {
+      const [name, value] = nameValuePair.split("=");
+      headerParseResult[name] = attributes;
+      attributes.value = value;
+    } else {
+      headerParseResult[nameValuePair] = attributes;
+      attributes.value = true;
+    }
     for (const attributeSource of attributeSources.slice(1)) {
       let [attributeName, attributeValue] = attributeSource.split("=");
-      if (attributeName === "q") {
-        attributeValue = isNaN(attributeValue)
-          ? attributeValue
-          : parseFloat(attributeValue);
+      const attributeNameNormalized = attributeName.trim();
+      const attributeHandler =
+        attributeHandlers &&
+        Object.hasOwn(attributeHandlers, attributeNameNormalized)
+          ? attributeHandlers[attributeNameNormalized]
+          : null;
+      if (attributeHandler) {
+        attributeHandler(attributeValue);
       }
       attributes[attributeName] = attributeValue;
     }
-    accepted[directiveName] = attributes;
   }
-  return accepted;
-};
-const tokenizeOtherHeader = (headerValue) => {
-  const values = headerValue.split(",");
-  return values.map((v) => v.trim());
+  return headerParseResult;
 };

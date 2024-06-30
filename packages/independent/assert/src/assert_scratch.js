@@ -1,7 +1,6 @@
 /*
- * LE PLUS DUR QU'IL FAUT FAIRE AVANT TOUT:
- *
  *  - headers
+ *  - one space vs two space test for string
  *  - request/response
  */
 
@@ -19,7 +18,7 @@ import {
 import { tokenizeFloat, tokenizeInteger } from "./tokenize_number.js";
 import { tokenizeString } from "./tokenize_string.js";
 import { tokenizeUrlSearch } from "./tokenize_url_search.js";
-import { tokenizeHeaderValue } from "./tokenize_header_value.js";
+import { tokenizeSetCookieHeader } from "./tokenize_header_value.js";
 import { getWellKnownValuePath } from "./well_known_value.js";
 import { getIsNegativeZero } from "./utils/negative_zero.js";
 import { groupDigits } from "./utils/group_digits.js";
@@ -1219,6 +1218,9 @@ let createRootNode;
     quotesBacktickDisabled = false,
     numericSeparatorsDisabled = false,
     lineNumbersDisabled = false,
+    urlStringDetectionDisabled = false,
+    dateStringDetectionDisabled = false,
+    multilineStringDisabled = false,
     renderOptions = renderOptionsDefault,
     onelineDiff = null,
     multilineDiff = null,
@@ -1506,65 +1508,17 @@ let createRootNode;
       if (group === "grammar") {
         return node;
       }
-      if (subgroup === "url_search_entry_key") {
-        // key in "?key=value" is rendered as is
-        return node;
-      }
-      if (subgroup === "url_search_entry_value") {
-        // value in "?key=value" is rendered as is
-        return node;
-      }
       if (isSourceCode) {
         return node;
       }
-      let bestQuote;
-      best_quote: {
-        if (quotesDisabled) {
-          break best_quote;
-        }
-        let backslashCount = 0;
-        let doubleQuoteCount = 0;
-        let singleQuoteCount = 0;
-        let backtickCount = 0;
-        for (const char of value) {
-          if (char === "\\") {
-            backslashCount++;
-          } else {
-            if (backslashCount % 2 > 0) {
-              // it's escaped
-            } else if (char === DOUBLE_QUOTE) {
-              doubleQuoteCount++;
-            } else if (char === SINGLE_QUOTE) {
-              singleQuoteCount++;
-            } else if (char === BACKTICK) {
-              backtickCount++;
-            }
-            backslashCount = 0;
-          }
-        }
-        bestQuote = (() => {
-          if (doubleQuoteCount === 0) {
-            return DOUBLE_QUOTE;
-          }
-          if (singleQuoteCount === 0) {
-            return SINGLE_QUOTE;
-          }
-          if (backtickCount === 0 && !quotesBacktickDisabled) {
-            return BACKTICK;
-          }
-          if (singleQuoteCount > doubleQuoteCount) {
-            return DOUBLE_QUOTE;
-          }
-          if (doubleQuoteCount > singleQuoteCount) {
-            return SINGLE_QUOTE;
-          }
-          return DOUBLE_QUOTE;
-        })();
+      if (!quoteMarkerRef && !quotesDisabled) {
+        node.quoteMarkerRef = quoteMarkerRef = {
+          current: pickBestQuote(value, { quotesBacktickDisabled }),
+        };
       }
-      const quoteMarkerRef = { current: bestQuote };
       if (
         !isStringForUrl &&
-        group !== "url_internal_prop" &&
+        !urlStringDetectionDisabled &&
         canParseUrl(value)
       ) {
         node.isStringForUrl = isStringForUrl = true;
@@ -1584,8 +1538,8 @@ let createRootNode;
                   end: "…",
                 },
               },
-              startMarker: bestQuote,
-              endMarker: bestQuote,
+              startMarker: quoteMarkerRef.current,
+              endMarker: quoteMarkerRef.current,
               quoteMarkerRef,
               childGenerator() {
                 const {
@@ -1602,9 +1556,10 @@ let createRootNode;
                   urlInternalPropertiesNode.appendChild(name, {
                     value,
                     render: renderValue,
+                    urlStringDetectionDisabled: true,
                     group: "url_internal_prop",
                     subgroup: `url_${name}`,
-                    quotesDisabled: true,
+                    quoteMarkerRef,
                     ...params,
                   });
                 };
@@ -1703,6 +1658,9 @@ let createRootNode;
                                     separatorMarker: "=",
                                     separatorMarkerWhenTruncated: "",
                                     quoteMarkerRef,
+                                    urlStringDetectionDisabled: true,
+                                    dateStringDetectionDisabled: true,
+                                    multilineStringDisabled: true,
                                     group: "entry_key",
                                     subgroup: "url_search_entry_key",
                                   });
@@ -1710,6 +1668,9 @@ let createRootNode;
                                     value: values[valueIndex],
                                     render: renderValue,
                                     quoteMarkerRef,
+                                    urlStringDetectionDisabled: true,
+                                    dateStringDetectionDisabled: true,
+                                    multilineStringDisabled: true,
                                     group: "entry_value",
                                     subgroup: "url_search_entry_value",
                                   });
@@ -1737,8 +1698,7 @@ let createRootNode;
       }
       if (
         !isStringForDate &&
-        group !== "date_internal_prop" &&
-        group !== "time_prop" &&
+        !dateStringDetectionDisabled &&
         canParseDate(value)
       ) {
         node.isStringForDate = isStringForDate = true;
@@ -1761,18 +1721,19 @@ let createRootNode;
                   end: "…",
                 },
               },
-              startMarker: bestQuote,
-              endMarker: bestQuote,
+              startMarker: quoteMarkerRef.current,
+              endMarker: quoteMarkerRef.current,
               quoteMarkerRef,
               childGenerator: () => {
                 const appendDateInternalNode = (name, value, params) => {
                   dateInternalPropertiesNode.appendChild(name, {
                     value,
                     render: renderValue,
+                    quoteMarkerRef,
+                    dateStringDetectionDisabled: true,
+                    numericSeparatorsDisabled: true,
                     group: "date_internal_prop",
                     subgroup: `date_${name}`,
-                    quotesDisabled: true,
-                    numericSeparatorsDisabled: true,
                     ...params,
                   });
                 };
@@ -1800,10 +1761,11 @@ let createRootNode;
                         timeNode.appendChild(name, {
                           value,
                           render: renderGrammar,
+                          quoteMarkerRef,
+                          dateStringDetectionDisabled: true,
+                          numericSeparatorsDisabled: true,
                           group: "time_prop",
                           subgroup: `time_${name}`,
-                          quotesDisabled: true,
-                          numericSeparatorsDisabled: true,
                           ...params,
                         });
                       };
@@ -1842,105 +1804,108 @@ let createRootNode;
         };
         return node;
       }
-      node.childGenerator = () => {
-        const lineEntriesNode = node.appendChild("line_entries", {
-          render: renderChildrenMultiline,
-          multilineDiff: {
-            hasTrailingSeparator: true,
-            skippedMarkers: {
-              start: ["↑ 1 line ↑", "↑ {x} lines ↑"],
-              between: ["↕ 1 line ↕", "↕ {x} lines ↕"],
-              end: ["↓ 1 line ↓", "↓ {x} lines ↓"],
+      if (!multilineStringDisabled) {
+        node.childGenerator = () => {
+          const lineEntriesNode = node.appendChild("line_entries", {
+            render: renderChildrenMultiline,
+            multilineDiff: {
+              hasTrailingSeparator: true,
+              skippedMarkers: {
+                start: ["↑ 1 line ↑", "↑ {x} lines ↑"],
+                between: ["↕ 1 line ↕", "↕ {x} lines ↕"],
+                end: ["↓ 1 line ↓", "↓ {x} lines ↓"],
+              },
+              maxDiffType: "line",
+              lineNumbersDisabled,
             },
-            maxDiffType: "line",
-            lineNumbersDisabled,
-          },
-          startMarker: node.startMarker,
-          endMarker: node.endMarker,
-          quoteMarkerRef,
-          group: "entries",
-          subgroup: "line_entries",
-          childGenerator: () => {
-            let isMultiline = false;
-            const appendLineEntry = (lineIndex) => {
-              const lineNode = lineEntriesNode.appendChild(lineIndex, {
-                value: "",
-                key: lineIndex,
-                render: renderChildren,
-                onelineDiff: {
-                  focusedChildWhenSame: "first",
-                  skippedMarkers: {
-                    start: "…",
-                    between: "…",
-                    end: "…",
+            startMarker: node.startMarker,
+            endMarker: node.endMarker,
+            quoteMarkerRef,
+            group: "entries",
+            subgroup: "line_entries",
+            childGenerator: () => {
+              let isMultiline = false;
+              const appendLineEntry = (lineIndex) => {
+                const lineNode = lineEntriesNode.appendChild(lineIndex, {
+                  value: "",
+                  key: lineIndex,
+                  render: renderChildren,
+                  onelineDiff: {
+                    focusedChildWhenSame: "first",
+                    skippedMarkers: {
+                      start: "…",
+                      between: "…",
+                      end: "…",
+                    },
+                    skippedMarkersPlacement: isMultiline ? "inside" : "outside",
+                    childrenVisitMethod: "all_before_then_all_after",
                   },
-                  skippedMarkersPlacement: isMultiline ? "inside" : "outside",
-                  childrenVisitMethod: "all_before_then_all_after",
-                },
-                // When multiline string appear as property value
-                // 1. It becomes hard to see if "," is part of the string or the separator
-                // 2. "," would appear twice if multiline string ends with ","
-                // {
-                //   foo: 1| line 1
-                //        2| line 2,,
-                //   bar: true,
-                // }
-                // Fortunately the line break already helps to split properties (foo and bar)
-                // so the following is readable
-                // {
-                //   foo: 1| line 1
-                //        2| line 2,
-                //   bar: true,
-                // }
-                // -> The separator is not present for multiline
-                group: "entries",
-                subgroup: "line_entry_value",
-              });
-              const appendCharNode = (charIndex, char) => {
-                lineNode.value += char; // just for debug purposes
-                lineNode.appendChild(charIndex, {
-                  value: char,
-                  render: renderChar,
-                  renderOptions: isRegexpSource
-                    ? { specialCharSet: regExpSpecialCharSet }
-                    : undefined,
-                  quoteMarkerRef,
-                  group: "entry_value",
-                  subgroup: "char_entry_value",
+                  // When multiline string appear as property value
+                  // 1. It becomes hard to see if "," is part of the string or the separator
+                  // 2. "," would appear twice if multiline string ends with ","
+                  // {
+                  //   foo: 1| line 1
+                  //        2| line 2,,
+                  //   bar: true,
+                  // }
+                  // Fortunately the line break already helps to split properties (foo and bar)
+                  // so the following is readable
+                  // {
+                  //   foo: 1| line 1
+                  //        2| line 2,
+                  //   bar: true,
+                  // }
+                  // -> The separator is not present for multiline
+                  group: "entries",
+                  subgroup: "line_entry_value",
                 });
+                const appendCharNode = (charIndex, char) => {
+                  lineNode.value += char; // just for debug purposes
+                  lineNode.appendChild(charIndex, {
+                    value: char,
+                    render: renderChar,
+                    renderOptions: isRegexpSource
+                      ? { specialCharSet: regExpSpecialCharSet }
+                      : undefined,
+                    quoteMarkerRef,
+                    group: "entry_value",
+                    subgroup: "char_entry_value",
+                  });
+                };
+                return {
+                  node: lineNode,
+                  appendCharNode,
+                };
               };
-              return {
-                node: lineNode,
-                appendCharNode,
-              };
-            };
-            const chars = tokenizeString(value);
-            let currentLineEntry = appendLineEntry(0);
-            let lineIndex = 0;
-            let charIndex = 0;
-            for (const char of chars) {
-              if (char !== "\n") {
-                currentLineEntry.appendCharNode(charIndex, char);
-                charIndex++;
-                continue;
+              const chars = tokenizeString(value);
+              let currentLineEntry = appendLineEntry(0);
+              let lineIndex = 0;
+              let charIndex = 0;
+              for (const char of chars) {
+                if (char !== "\n") {
+                  currentLineEntry.appendCharNode(charIndex, char);
+                  charIndex++;
+                  continue;
+                }
+                isMultiline = true;
+                lineIndex++;
+                charIndex = 0;
+                currentLineEntry = appendLineEntry(lineIndex);
               }
-              isMultiline = true;
-              lineIndex++;
-              charIndex = 0;
-              currentLineEntry = appendLineEntry(lineIndex);
-            }
-            if (isMultiline) {
-              enableMultilineDiff(lineEntriesNode);
-            } else {
-              const firstLineNode = currentLineEntry.node;
-              if (bestQuote) {
-                firstLineNode.onelineDiff.hasMarkersWhenEmpty = true;
-                firstLineNode.startMarker = firstLineNode.endMarker = bestQuote;
+              if (isMultiline) {
+                enableMultilineDiff(lineEntriesNode);
+              } else {
+                const firstLineNode = currentLineEntry.node;
+                if (quoteMarkerRef.current) {
+                  firstLineNode.onelineDiff.hasMarkersWhenEmpty = true;
+                  firstLineNode.startMarker = firstLineNode.endMarker =
+                    quoteMarkerRef.current;
+                }
               }
-            }
-          },
-        });
-      };
+            },
+          });
+        };
+      }
       return node;
     }
     if (typeofResult === "symbol") {
@@ -2686,29 +2651,29 @@ let createRootNode;
                     ...internalEntriesParams,
                     subgroup: "header_entries",
                     childGenerator: () => {
-                      for (const [headerKey, headerValue] of value) {
+                      for (const [headerName, headerRawValue] of value) {
                         const headerNode = headerEntriesNode.appendChild(key, {
-                          key: headerKey,
+                          key: headerName,
                           render: renderChildren,
                           onelineDiff: { hasTrailingSeparator: true },
                           group: "entry",
                           subgroup: "header_entry",
-                          path: node.path.append(headerKey),
+                          path: node.path.append(headerName),
                         });
                         headerNode.appendChild("entry_key", {
-                          value: headerKey,
-                          render: renderValue,
+                          value: headerName,
+                          render: renderString,
                           separatorMarker: " => ",
                           group: "entry_key",
                           subgroup: "header_entry_key",
                         });
-                        const headerValueParsed =
-                          tokenizeHeaderValue(headerValue);
-                        if (Array.isArray(headerValueParsed)) {
-                          const multiValueNode = headerNode.appendChild(
+                        const appendMultipleNamedHeadersNode = (
+                          headerValueParsed,
+                        ) => {
+                          const multilpleNamedHeaders = headerNode.appendChild(
                             "entry_value",
                             {
-                              value: headerValueParsed,
+                              value: null,
                               render: renderChildren,
                               onelineDiff: {
                                 skippedMarkers: {
@@ -2718,33 +2683,132 @@ let createRootNode;
                                 },
                               },
                               group: "entries",
-                              subgroup: "header_entry_value",
-                              separatorMarker: ",",
+                              subgroup: "multilple_named_headers",
                               childGenerator: () => {
-                                if (headerValueParsed.length === 1) {
-                                  multiValueNode.appendChild(0, {
-                                    value: headerValueParsed[0],
-                                    render: renderValue,
-                                    group: "header_single_value",
-                                    separatorMarker: ", ",
+                                const headerAttributesNode =
+                                  multilpleNamedHeaders.appendChild({
+                                    value: null,
+                                    render: renderChildren,
+                                    group: "entries",
+                                    subgroup: "header_attributes",
+                                    childGenerator: () => {
+                                      for (const key of Object.keys(
+                                        headerValueParsed,
+                                      )) {
+                                        const headerAttributeNode =
+                                          headerAttributesNode.appendChild(
+                                            "attribute",
+                                            {
+                                              value: null,
+                                              render: renderChildren,
+                                              group: "entry",
+                                              subgroup: "header_attribute",
+                                            },
+                                          );
+                                        const appendAttributeNode = (
+                                          attributeName,
+                                          attributeValue,
+                                        ) => {
+                                          if (attributeValue === true) {
+                                            headerAttributeNode.appendChild(
+                                              "entry_key",
+                                              {
+                                                value: attributeName,
+                                                render: renderGrammar,
+                                                quoteMarkerRef,
+                                                endMarker: ";",
+                                              },
+                                            );
+                                            return;
+                                          }
+                                          headerAttributeNode.appendChild(
+                                            "entry_key",
+                                            {
+                                              value: attributeName,
+                                              render: renderGrammar,
+                                              quoteMarkerRef,
+                                              endMarker: "=",
+                                            },
+                                          );
+                                          headerAttributeNode.appendChild(
+                                            "entry_value",
+                                            {
+                                              key: attributeName,
+                                              value: attributeValue,
+                                              render: renderGrammar,
+                                              quoteMarkerRef,
+                                              endMarker: ";",
+                                            },
+                                          );
+                                        };
+                                        const { value, ...attributes } =
+                                          headerValueParsed[key];
+                                        appendAttributeNode("name", value);
+                                        for (const attributeName of Object.keys(
+                                          attributes,
+                                        )) {
+                                          appendAttributeNode(
+                                            attributeName,
+                                            attributes[attributeName],
+                                          );
+                                        }
+                                      }
+                                    },
                                   });
-                                } else {
-                                  for (const singleValue of headerValueParsed) {
-                                    multiValueNode.appendChild(singleValue, {
-                                      value: singleValue,
-                                      render: renderValue,
-                                      group: "header_single_value",
-                                      separatorMarker: ", ",
-                                    });
-                                  }
-                                }
                               },
                             },
                           );
-
+                        };
+                        if (headerName === "set-cookie") {
+                          appendMultipleNamedHeadersNode(
+                            tokenizeSetCookieHeader(headerRawValue),
+                          );
                           return;
                         }
-                        // TODO
+                        if (headerName === "accept-encoding") {
+                          appendMultipleNamedHeadersNode(
+                            tokenizeSetCookieHeader(headerRawValue),
+                          );
+                          return;
+                        }
+                        const quoteMarkerRef = {
+                          current: pickBestQuote(headerRawValue),
+                        };
+                        const headerValueArray = headerRawValue.split(",");
+                        const headerValueNode = headerNode.appendChild(
+                          "entry_value",
+                          {
+                            value: headerValueArray,
+                            render: renderChildren,
+                            onelineDiff: {
+                              skippedMarkers: {
+                                start: "…",
+                                between: "…",
+                                end: "…",
+                              },
+                            },
+                            startMarker: quoteMarkerRef.current,
+                            endMarker: quoteMarkerRef.current,
+                            separatorMarker: ",",
+                            childGenerator: () => {
+                              let index = 0;
+                              for (const headerValue of headerValueArray) {
+                                headerValueNode.appendChild(index, {
+                                  value: headerValue,
+                                  render: renderValue,
+                                  quoteMarkerRef,
+                                  multilineStringDisabled: true,
+                                  separatorMarker: ",",
+                                  group: "entry_value",
+                                  subgroup: "header_value",
+                                });
+                                index++;
+                              }
+                            },
+                            group: "entries",
+                            subgroup: "header_value_entries",
+                          },
+                        );
                       }
                     },
                   },
@@ -4200,9 +4264,6 @@ const renderChildrenMultiline = (node, props) => {
       continue;
     }
   }
-  if (node.parent === null) {
-    debugger;
-  }
   if (node.beforeRender) {
     node.beforeRender(props, { focusedChildIndex, childIndexToDisplayArray });
   }
@@ -4952,3 +5013,43 @@ const regExpSpecialCharSet = new Set([
   "|",
   "$",
 ]);
+
+const pickBestQuote = (string, { quotesBacktickDisabled } = {}) => {
+  let backslashCount = 0;
+  let doubleQuoteCount = 0;
+  let singleQuoteCount = 0;
+  let backtickCount = 0;
+  for (const char of string) {
+    if (char === "\\") {
+      backslashCount++;
+    } else {
+      if (backslashCount % 2 > 0) {
+        // it's escaped
+      } else if (char === DOUBLE_QUOTE) {
+        doubleQuoteCount++;
+      } else if (char === SINGLE_QUOTE) {
+        singleQuoteCount++;
+      } else if (char === BACKTICK) {
+        backtickCount++;
+      }
+      backslashCount = 0;
+    }
+  }
+
+  if (doubleQuoteCount === 0) {
+    return DOUBLE_QUOTE;
+  }
+  if (singleQuoteCount === 0) {
+    return SINGLE_QUOTE;
+  }
+  if (backtickCount === 0 && !quotesBacktickDisabled) {
+    return BACKTICK;
+  }
+  if (singleQuoteCount > doubleQuoteCount) {
+    return DOUBLE_QUOTE;
+  }
+  if (doubleQuoteCount > singleQuoteCount) {
+    return SINGLE_QUOTE;
+  }
+  return DOUBLE_QUOTE;
+};
