@@ -69,3 +69,29 @@ assert({
 
 ![img](<./headers/content-type spacing diff.svg>)
 
+# set cookie added
+
+```js
+assert({
+  actual: new Headers({
+    "set-cookie": "name=value",
+  }),
+  expect: new Headers({}),
+});
+```
+
+![img](<./headers/set cookie added.svg>)
+
+# set cookie removed
+
+```js
+assert({
+  actual: new Headers({}),
+  expect: new Headers({
+    "set-cookie": "name=value;",
+  }),
+});
+```
+
+![img](<./headers/set cookie removed.svg>)
+

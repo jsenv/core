@@ -53,6 +53,22 @@ await startSnapshotTesting("headers", ({ test }) => {
       }),
     });
   });
+  test("set cookie added", () => {
+    assert({
+      actual: new Headers({
+        "set-cookie": "name=value",
+      }),
+      expect: new Headers({}),
+    });
+  });
+  test("set cookie removed", () => {
+    assert({
+      actual: new Headers({}),
+      expect: new Headers({
+        "set-cookie": "name=value;",
+      }),
+    });
+  });
   // TODO: a test where the is no many space after "," (it must fail)
   // even if browser would handle the same human would think sthing is wrong
   // TODO: accept, header with a diff on q

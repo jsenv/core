@@ -34,3 +34,15 @@ expect: Headers(
   "content-type" => "text/xml, text/css",
 )
 
+# set cookie added
+actual: Headers(
+  "set-cookie" => "name=value;"
+)
+expect: Headers()
+
+# set cookie removed
+actual: Headers()
+expect: Headers(
+  "set-cookie" => "name=value;"
+)
+
