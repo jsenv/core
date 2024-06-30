@@ -66,3 +66,21 @@ expect: URLSearchParams(
   ],
 )
 
+# param order modified and value modified
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+  "bar" => [
+    "a",
+  ],
+)
+expect: URLSearchParams(
+  "bar" => [
+    "b",
+  ],
+  "foo" => [
+    "b",
+  ],
+)
+

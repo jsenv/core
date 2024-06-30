@@ -1,5 +1,8 @@
 /*
  *  - headers
+ *    - test header attribute diff
+ *    - create node as parsing header so that
+ *      the rendering does not alter spacing or ";" presence
  *  - one space vs two space test for string
  *  - request/response/AbortController
  */
@@ -2669,8 +2672,9 @@ let createRootNode;
                         const appendMultipleNamedHeadersNode = (
                           headerValueParsed,
                         ) => {
-                          const multipleNamedHeadersNode =
-                            headerNode.appendChild("entry_value", {
+                          const headerValueNode = headerNode.appendChild(
+                            "entry_value",
+                            {
                               value: null,
                               render: renderChildren,
                               onelineDiff: {
@@ -2683,73 +2687,46 @@ let createRootNode;
                               startMarker: quoteMarkerRef.current,
                               endMarker: quoteMarkerRef.current,
                               group: "entries",
-                              subgroup: "multilple_named_headers",
+                              subgroup: "header_value",
                               childGenerator: () => {
-                                const headerAttributesNode =
-                                  multipleNamedHeadersNode.appendChild(
-                                    "attibutes",
-                                    {
-                                      value: null,
-                                      render: renderChildren,
-                                      onelineDiff: {},
-                                      group: "entries",
-                                      subgroup: "header_attributes",
-                                      childGenerator: () => {
-                                        for (const headerValueName of Object.keys(
-                                          headerValueParsed,
-                                        )) {
-                                          const headerAttributeNode =
-                                            headerAttributesNode.appendChild(
-                                              "attribute",
-                                              {
-                                                value: null,
-                                                render: renderChildren,
-                                                onelineDiff: {},
-                                                group: "entry",
-                                                subgroup: "header_attribute",
-                                              },
-                                            );
-                                          const { value, ...attributes } =
-                                            headerValueParsed[headerValueName];
-                                          const remainingAttributeKeys =
-                                            Object.keys(attributes);
-                                          const hasRemainingAttributes =
-                                            remainingAttributeKeys.length > 0;
-                                          const appendAttributeNode = (
-                                            attributeName,
-                                            attributeValue,
-                                          ) => {
-                                            if (attributeValue === true) {
-                                              headerAttributeNode.appendChild(
-                                                "entry_key",
-                                                {
-                                                  value: attributeName,
-                                                  render: renderString,
-                                                  stringDiffPrecision: "none",
-                                                  quoteMarkerRef,
-                                                  endMarker:
-                                                    hasRemainingAttributes
-                                                      ? ";"
-                                                      : "",
-                                                },
-                                              );
-                                              return;
-                                            }
-                                            headerAttributeNode.appendChild(
+                                const headerPartsNode =
+                                  headerValueNode.appendChild("parts", {
+                                    value: null,
+                                    render: renderChildren,
+                                    onelineDiff: {},
+                                    group: "entries",
+                                    subgroup: "header_parts",
+                                    childGenerator: () => {
+                                      for (const headerValueName of Object.keys(
+                                        headerValueParsed,
+                                      )) {
+                                        const headerPartNode =
+                                          headerPartsNode.appendChild(
+                                            headerValueName,
+                                            {
+                                              value: null,
+                                              render: renderChildren,
+                                              onelineDiff: {},
+                                              separatorMarker: ",",
+                                              group: "part",
+                                              subgroup: "header_part",
+                                            },
+                                          );
+                                        const { value, ...attributes } =
+                                          headerValueParsed[headerValueName];
+                                        const remainingAttributeKeys =
+                                          Object.keys(attributes);
+                                        const hasRemainingAttributes =
+                                          remainingAttributeKeys.length > 0;
+                                        const appendAttributeNode = (
+                                          attributeName,
+                                          attributeValue,
+                                        ) => {
+                                          if (attributeValue === true) {
+                                            headerPartNode.appendChild(
                                               "entry_key",
                                               {
                                                 value: attributeName,
-                                                render: renderString,
-                                                stringDiffPrecision: "none",
-                                                quoteMarkerRef,
-                                                endMarker: "=",
-                                              },
-                                            );
-                                            headerAttributeNode.appendChild(
-                                              "entry_value",
-                                              {
-                                                key: attributeName,
-                                                value: attributeValue,
                                                 render: renderString,
                                                 stringDiffPrecision: "none",
                                                 quoteMarkerRef,
@@ -2759,20 +2736,48 @@ let createRootNode;
                                                     : "",
                                               },
                                             );
-                                          };
-                                          appendAttributeNode("name", value);
-                                          for (const attributeName of remainingAttributeKeys) {
-                                            appendAttributeNode(
-                                              attributeName,
-                                              attributes[attributeName],
-                                            );
+                                            return;
                                           }
+                                          headerPartNode.appendChild(
+                                            "entry_key",
+                                            {
+                                              value: attributeName,
+                                              render: renderString,
+                                              stringDiffPrecision: "none",
+                                              quoteMarkerRef,
+                                              endMarker: "=",
+                                            },
+                                          );
+                                          headerPartNode.appendChild(
+                                            "entry_value",
+                                            {
+                                              key: attributeName,
+                                              value: attributeValue,
+                                              render: renderString,
+                                              stringDiffPrecision: "none",
+                                              quoteMarkerRef,
+                                              endMarker: hasRemainingAttributes
+                                                ? ";"
+                                                : "",
+                                            },
+                                          );
+                                        };
+                                        appendAttributeNode(
+                                          headerValueName,
+                                          value,
+                                        );
+                                        for (const attributeName of remainingAttributeKeys) {
+                                          appendAttributeNode(
+                                            attributeName,
+                                            attributes[attributeName],
+                                          );
                                         }
-                                      },
+                                      }
                                     },
-                                  );
+                                  });
                               },
-                            });
+                            },
+                          );
                         };
                         if (headerName === "set-cookie") {
                           appendMultipleNamedHeadersNode(
@@ -2808,12 +2813,13 @@ let createRootNode;
                                 headerValueNode.appendChild(index, {
                                   value: headerValue,
                                   render: renderString,
+                                  stringDiffPrecision: "none",
                                   quoteMarkerRef,
                                   quotesDisabled: true,
                                   preserveLineBreaks: true,
                                   separatorMarker: ",",
-                                  group: "grammar",
-                                  subgroup: "header_value",
+                                  group: "part",
+                                  subgroup: "header_value_part",
                                 });
                                 index++;
                               }

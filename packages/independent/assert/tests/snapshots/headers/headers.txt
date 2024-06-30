@@ -48,9 +48,9 @@ expect: Headers(
 
 # cookie added
 actual: Headers(
-  "set-cookie" => "name=b"
+  "set-cookie" => "foo=a,bar=b"
 )
 expect: Headers(
-  "set-cookie" => "name=a"
+  "set-cookie" => "foo=a"
 )
 

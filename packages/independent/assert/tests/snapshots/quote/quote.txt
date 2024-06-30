@@ -62,3 +62,7 @@ expect: 'http://b.com/dir/"dam"'
 actual: "http://example.com/"
 expect: 'test"quotes'
 
+# url search param quotes
+actual: 'http://example.com/?name="dam"'
+expect: 'http://example.com/?name="seb"'
+

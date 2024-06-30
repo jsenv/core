@@ -79,10 +79,13 @@ await startSnapshotTesting("headers", ({ test }) => {
       }),
     });
   });
+  // TOOD: a cookie is removed
+  // TODO: cookies header with a diff on some prop
+  // TODO: a cookie reuse same name twice (we should properly handle this scenario)
+  // I think for the browser it does not matter
+  // but we must support so we can't use the name when parsing and rendering but
+  // rather an index?
   // TODO: accept, header with a diff on q
   //       something new is accepted
   //       something is not accepted anymore
-  // TODO: cookies header with a diff on some prop
-  //       a cookie is added
-  //       a cookie is removed
 });

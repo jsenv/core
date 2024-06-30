@@ -97,4 +97,10 @@ await startSnapshotTesting("quote", ({ test }) => {
       expect: `test"quotes`,
     });
   });
+  test("url search param quotes", () => {
+    assert({
+      actual: `http://example.com?name="dam"`,
+      expect: `http://example.com?name="seb"`,
+    });
+  });
 });

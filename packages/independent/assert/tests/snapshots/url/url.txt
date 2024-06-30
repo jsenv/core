@@ -60,9 +60,9 @@ expect: {
   b: false,
 }
 
-# url search param quotes
-actual: 'http://example.com/?name="dam"'
-expect: 'http://example.com/?name="seb"'
+# param order modified and value modified
+actual: "http://example.com/?foo=a&bar=a"
+expect: "http://example.com/?bar=b&foo=b"
 
 # url hash modified
 actual: URL("http://example.com/#foo")

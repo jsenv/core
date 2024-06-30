@@ -38,4 +38,10 @@ await startSnapshotTesting("url_search_params", ({ test }) => {
       expect: new URLSearchParams("foo=a&foo=a"),
     });
   });
+  test("param order modified and value modified", () => {
+    assert({
+      actual: new URLSearchParams("foo=a&bar=a"),
+      expect: new URLSearchParams("bar=b&foo=b"),
+    });
+  });
 });

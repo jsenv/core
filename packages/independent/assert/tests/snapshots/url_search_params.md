@@ -64,3 +64,14 @@ assert({
 
 ![img](<./url_search_params/foo second value modified.svg>)
 
+# param order modified and value modified
+
+```js
+assert({
+  actual: new URLSearchParams("foo=a&bar=a"),
+  expect: new URLSearchParams("bar=b&foo=b"),
+});
+```
+
+![img](<./url_search_params/param order modified and value modified.svg>)
+

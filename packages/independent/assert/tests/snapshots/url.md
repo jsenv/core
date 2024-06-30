@@ -158,16 +158,16 @@ assert({
 
 ![img](<./url/url search param + vs space.svg>)
 
-# url search param quotes
+# param order modified and value modified
 
 ```js
 assert({
-  actual: `http://example.com?name="dam"`,
-  expect: `http://example.com?name="seb"`,
+  actual: "http://example.com?foo=a&bar=a",
+  expect: "http://example.com?bar=b&foo=b",
 });
 ```
 
-![img](<./url/url search param quotes.svg>)
+![img](<./url/param order modified and value modified.svg>)
 
 # url hash modified
 

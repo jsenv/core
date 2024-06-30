@@ -155,3 +155,14 @@ assert({
 
 ![img](<./quote/url vs string.svg>)
 
+# url search param quotes
+
+```js
+assert({
+  actual: `http://example.com?name="dam"`,
+  expect: `http://example.com?name="seb"`,
+});
+```
+
+![img](<./quote/url search param quotes.svg>)
+

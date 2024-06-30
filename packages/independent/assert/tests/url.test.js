@@ -20,84 +20,86 @@ await startSnapshotTesting("url", ({ test }) => {
       expect: new URL("http://example.com:8000"),
     });
   });
-  test("url search param modified", () => {
-    assert({
-      actual: new URL("http://example.com?foo=a"),
-      expect: new URL("http://example.com?foo=b"),
+  url_search: {
+    test("url search param modified", () => {
+      assert({
+        actual: new URL("http://example.com?foo=a"),
+        expect: new URL("http://example.com?foo=b"),
+      });
     });
-  });
-  test("url search param added", () => {
-    assert({
-      actual: new URL("http://example.com?foo=a"),
-      expect: new URL("http://example.com"),
+    test("url search param added", () => {
+      assert({
+        actual: new URL("http://example.com?foo=a"),
+        expect: new URL("http://example.com"),
+      });
     });
-  });
-  test("url search param added 2", () => {
-    assert({
-      actual: new URL("http://example.com?foo=a&bar=b"),
-      expect: new URL("http://example.com?foo=a"),
+    test("url search param added 2", () => {
+      assert({
+        actual: new URL("http://example.com?foo=a&bar=b"),
+        expect: new URL("http://example.com?foo=a"),
+      });
     });
-  });
-  test("url search param removed", () => {
-    assert({
-      actual: new URL("http://example.com"),
-      expect: new URL("http://example.com?foo=a"),
+    test("url search param removed", () => {
+      assert({
+        actual: new URL("http://example.com"),
+        expect: new URL("http://example.com?foo=a"),
+      });
     });
-  });
-  test("url search param removed 2", () => {
-    assert({
-      actual: new URL("http://example.com?foo=a"),
-      expect: new URL("http://example.com?foo=a&bar=b"),
+    test("url search param removed 2", () => {
+      assert({
+        actual: new URL("http://example.com?foo=a"),
+        expect: new URL("http://example.com?foo=a&bar=b"),
+      });
     });
-  });
-  test("multi search param 2nd value modified", () => {
-    assert({
-      actual: "http://example.com?foo=a&foo=b&foo=a",
-      expect: "http://example.com?foo=a&foo=a&foo=a",
+    test("multi search param 2nd value modified", () => {
+      assert({
+        actual: "http://example.com?foo=a&foo=b&foo=a",
+        expect: "http://example.com?foo=a&foo=a&foo=a",
+      });
     });
-  });
-  test("adding multi search", () => {
-    assert({
-      actual: "http://example.com?foo=a&foo=b",
-      expect: "http://example.com?foo=a",
+    test("adding multi search", () => {
+      assert({
+        actual: "http://example.com?foo=a&foo=b",
+        expect: "http://example.com?foo=a",
+      });
     });
-  });
-  test("multi search adding a 3rd param", () => {
-    assert({
-      actual: "http://example.com?foo=a&foo=a&foo=a",
-      expect: "http://example.com?foo=a&foo=a",
+    test("multi search adding a 3rd param", () => {
+      assert({
+        actual: "http://example.com?foo=a&foo=a&foo=a",
+        expect: "http://example.com?foo=a&foo=a",
+      });
     });
-  });
-  test("multi search removing a 3rd param", () => {
-    assert({
-      actual: "http://example.com?foo=a&foo=a",
-      expect: "http://example.com?foo=a&foo=a&foo=a",
+    test("multi search removing a 3rd param", () => {
+      assert({
+        actual: "http://example.com?foo=a&foo=a",
+        expect: "http://example.com?foo=a&foo=a&foo=a",
+      });
     });
-  });
-  test("removing multi search", () => {
-    assert({
-      actual: "http://example.com?foo=a",
-      expect: "http://example.com?foo=a&foo=b",
+    test("removing multi search", () => {
+      assert({
+        actual: "http://example.com?foo=a",
+        expect: "http://example.com?foo=a&foo=b",
+      });
     });
-  });
-  test("url search param + vs space", () => {
-    assert({
-      actual: {
-        a: `http://example.com?a=+&b=1`,
-        b: true,
-      },
-      expect: {
-        a: `http://example.com?a= &b=1`,
-        b: false,
-      },
+    test("url search param + vs space", () => {
+      assert({
+        actual: {
+          a: `http://example.com?a=+&b=1`,
+          b: true,
+        },
+        expect: {
+          a: `http://example.com?a= &b=1`,
+          b: false,
+        },
+      });
     });
-  });
-  test("url search param quotes", () => {
-    assert({
-      actual: `http://example.com?name="dam"`,
-      expect: `http://example.com?name="seb"`,
+    test("param order modified and value modified", () => {
+      assert({
+        actual: "http://example.com?foo=a&bar=a",
+        expect: "http://example.com?bar=b&foo=b",
+      });
     });
-  });
+  }
   test("url hash modified", () => {
     assert({
       actual: new URL("http://example.com#foo"),
