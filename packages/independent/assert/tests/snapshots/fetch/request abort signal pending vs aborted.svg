@@ -88,8 +88,8 @@
         <text x="295.65" y="33.55" fill="#7f7f7f">m</text>
         <text x="304.05" y="33.55" fill="#7f7f7f">/</text>
         <text x="312.45" y="33.55" fill="#7f7f7f">&#x22;</text>
-        <text x="320.85" y="33.55" fill="#7f7f7f">)</text>
-        <text x="337.65" y="33.55" fill="#7f7f7f">{</text>
+        <text x="320.85" y="33.55" fill="#7f7f7f">,</text>
+        <text x="337.65" y="33.55" fill="#DAA520">{</text>
         <text x="26.8" y="52.55" fill="#DAA520">s</text>
         <text x="35.2" y="52.55" fill="#DAA520">i</text>
         <text x="43.61" y="52.55" fill="#DAA520">g</text>
@@ -125,7 +125,8 @@
         <text x="161.22" y="90.55" fill="#DAA520">,</text>
         <text x="26.8" y="109.55" fill="#DAA520">}</text>
         <text x="35.2" y="109.55" fill="#DAA520">,</text>
-        <text x="10" y="128.55" fill="#7f7f7f">}</text>
+        <text x="10" y="128.55" fill="#DAA520">}</text>
+        <text x="18.4" y="128.55" fill="#7f7f7f">)</text>
       </g>
     </svg>
   </foreignObject>

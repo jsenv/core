@@ -1,6 +1,4 @@
 /*
- * - response
- * - try to put request internal prop into the constructor
  * - Blob, FormData, DataView, ArrayBuffer
  */
 
@@ -2421,21 +2419,110 @@ let createRootNode;
                 break wrapped_value;
               }
               if (node.isRequest) {
+                const requestDefaultValues = {
+                  body: null,
+                  bodyUsed: false,
+                  cache: "default",
+                  credentials: "same-origin",
+                  destination: "",
+                  headers: undefined,
+                  method: "GET",
+                  mode: "cors",
+                  priority: undefined,
+                  redirect: "follow",
+                  referrerPolicy: "",
+                  referrer: "about:client",
+                  signal: null,
+                };
+                const requestInitOptions = {};
+                let hasCustomInit = false;
+                for (const requestInternalPropertyName of Object.keys(
+                  requestDefaultValues,
+                )) {
+                  const requestInternalPropertyValue =
+                    value[requestInternalPropertyName];
+                  if (requestInternalPropertyName === "headers") {
+                    let headersAreEmpty = true;
+                    // eslint-disable-next-line no-unused-vars
+                    for (const entry of requestInternalPropertyValue) {
+                      headersAreEmpty = false;
+                      break;
+                    }
+                    if (headersAreEmpty) {
+                      continue;
+                    }
+                  } else if (requestInternalPropertyName === "signal") {
+                    if (!requestInternalPropertyValue.aborted) {
+                      continue;
+                    }
+                  } else {
+                    const requestInternalPropertyDefaultValue =
+                      requestDefaultValues[requestInternalPropertyName];
+                    if (
+                      requestInternalPropertyValue ===
+                      requestInternalPropertyDefaultValue
+                    ) {
+                      continue;
+                    }
+                  }
+                  hasCustomInit = true;
+                  requestInitOptions[requestInternalPropertyName] =
+                    requestInternalPropertyValue;
+                }
+
                 objectConstructArgs = [
                   {
                     value: value.url,
                     key: "url",
                   },
+                  ...(hasCustomInit ? [{ value: requestInitOptions }] : []),
                 ];
+
                 break wrapped_value;
               }
               if (node.isResponse) {
+                const responseInitOptions = {};
+                const bodyUsed = value.bodyUsed;
+                if (bodyUsed) {
+                  responseInitOptions.bodyUsed = true;
+                }
+                const headers = value.headers;
+                let headersAreEmpty = true;
+                // eslint-disable-next-line no-unused-vars
+                for (const entry of headers) {
+                  headersAreEmpty = false;
+                  break;
+                }
+                if (!headersAreEmpty) {
+                  responseInitOptions.headers = headers;
+                }
+                const status = value.status;
+                responseInitOptions.status = status;
+                const statusText = value.statusText;
+                if (statusText !== "") {
+                  responseInitOptions.statusText = statusText;
+                }
+                const url = value.url;
+                if (url) {
+                  responseInitOptions.url = url;
+                }
+                const type = value.type;
+                if (type !== "default") {
+                  responseInitOptions.type = type;
+                }
+                const redirected = value.redirected;
+                if (redirected) {
+                  responseInitOptions.redirected = redirected;
+                }
                 objectConstructArgs = [
                   {
                     value: value.body,
                     key: "body",
                     isBody: true,
                   },
+                  ...(Object.keys(responseInitOptions).length
+                    ? [{ value: responseInitOptions }]
+                    : []),
                 ];
                 break wrapped_value;
               }
@@ -2989,112 +3076,6 @@ let createRootNode;
                 }
                 ownPropertyNames.push(ownPropertyName);
               }
-              if (node.isRequest) {
-                const requestDefaultValues = {
-                  body: null,
-                  bodyUsed: false,
-                  cache: "default",
-                  credentials: "same-origin",
-                  destination: "",
-                  headers: undefined,
-                  method: "GET",
-                  mode: "cors",
-                  priority: undefined,
-                  redirect: "follow",
-                  referrerPolicy: "",
-                  referrer: "about:client",
-                  signal: null,
-                };
-                for (const requestInternalPropertyName of Object.keys(
-                  requestDefaultValues,
-                )) {
-                  const requestInternalPropertyValue =
-                    value[requestInternalPropertyName];
-                  if (requestInternalPropertyName === "headers") {
-                    let headersAreEmpty = true;
-                    // eslint-disable-next-line no-unused-vars
-                    for (const entry of requestInternalPropertyValue) {
-                      headersAreEmpty = false;
-                      break;
-                    }
-                    if (headersAreEmpty) {
-                      continue;
-                    }
-                  } else if (requestInternalPropertyName === "signal") {
-                    if (!requestInternalPropertyValue.aborted) {
-                      continue;
-                    }
-                  } else {
-                    const requestInternalPropertyDefaultValue =
-                      requestDefaultValues[requestInternalPropertyName];
-                    if (
-                      requestInternalPropertyValue ===
-                      requestInternalPropertyDefaultValue
-                    ) {
-                      continue;
-                    }
-                  }
-                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                    appendPropertyEntryNode(
-                      requestInternalPropertyName,
-                      requestInternalPropertyValue,
-                      {
-                        isBody: requestInternalPropertyName === "body",
-                      },
-                    );
-                  });
-                }
-              }
-              if (node.isResponse) {
-                const bodyUsed = value.bodyUsed;
-                if (bodyUsed) {
-                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                    appendPropertyEntryNode("bodyUsed", true);
-                  });
-                }
-                const headers = value.headers;
-                let headersAreEmpty = true;
-                // eslint-disable-next-line no-unused-vars
-                for (const entry of headers) {
-                  headersAreEmpty = false;
-                  break;
-                }
-                if (!headersAreEmpty) {
-                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                    appendPropertyEntryNode("headers", headers, {
-                      isHiddenWhenSame: true,
-                    });
-                  });
-                }
-                const status = value.status;
-                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                  appendPropertyEntryNode("status", status);
-                });
-                const statusText = value.statusText;
-                if (statusText !== "") {
-                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                    appendPropertyEntryNode("statusText", statusText);
-                  });
-                }
-                const url = value.url;
-                if (url) {
-                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                    appendPropertyEntryNode("url", url);
-                  });
-                }
-                const type = value.type;
-                if (type !== "default") {
-                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                    appendPropertyEntryNode("type", type);
-                  });
-                }
-                const redirected = value.redirected;
-                if (redirected) {
-                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                    appendPropertyEntryNode("redirected", true);
-                  });
-                }
-              }
               if (node.isAbortSignal) {
                 const aborted = value.aborted;
                 if (aborted) {
@@ -3397,7 +3378,10 @@ let createRootNode;
                             ownPropertyName === "prototype" &&
                             node.functionAnalysis.type === "class",
                           isHiddenWhenSame:
-                            ownPropertyName === "lastIndex" && node.isRegExp,
+                            (ownPropertyName === "lastIndex" &&
+                              node.isRegExp) ||
+                            (ownPropertyName === "headers" &&
+                              node.subgroup === "arg_entry_value"),
                           isHiddenWhenSolo:
                             ownPropertyName === "lastIndex" && node.isRegExp,
                         },
@@ -3974,6 +3958,30 @@ const renderChildren = (node, props) => {
         childDiffWidth = stringWidth(lastLine);
       }
     }
+    let separatorMarkerToAppend;
+    let separatorWhenTruncatedUsed = false;
+    if (separatorMarkerWhenTruncated === undefined) {
+      separatorMarkerToAppend = separatorMarkerDisabled ? "" : separatorMarker;
+    } else {
+      const remainingColumns = columnsRemainingForChildren - childDiffWidth;
+      if (remainingColumns > separatorMarker.length + 1) {
+        separatorMarkerToAppend = separatorMarkerDisabled
+          ? ""
+          : separatorMarker;
+      } else {
+        separatorMarkerToAppend = separatorMarkerWhenTruncated;
+        separatorWhenTruncatedUsed = true;
+      }
+    }
+    if (separatorMarkerToAppend) {
+      if (childNode.diffType === "solo") {
+        childDiffWidth += separatorMarkerToAppend.length;
+        childDiff += setColor(separatorMarkerToAppend, childNode.color);
+      } else {
+        childDiffWidth += separatorMarkerToAppend.length;
+        childDiff += setColor(separatorMarkerToAppend, node.color);
+      }
+    }
     if (!isFirstAppend && hasSpacingBetweenEachChild && childDiff) {
       if (childIndex < focusedChildIndex) {
         if (
@@ -4009,30 +4017,6 @@ const renderChildren = (node, props) => {
           childDiffWidth += " ".length;
           childDiff = ` ${childDiff}`;
         }
-      }
-    }
-    let separatorMarkerToAppend;
-    let separatorWhenTruncatedUsed = false;
-    if (separatorMarkerWhenTruncated === undefined) {
-      separatorMarkerToAppend = separatorMarkerDisabled ? "" : separatorMarker;
-    } else {
-      const remainingColumns = columnsRemainingForChildren - childDiffWidth;
-      if (remainingColumns > separatorMarker.length + 1) {
-        separatorMarkerToAppend = separatorMarkerDisabled
-          ? ""
-          : separatorMarker;
-      } else {
-        separatorMarkerToAppend = separatorMarkerWhenTruncated;
-        separatorWhenTruncatedUsed = true;
-      }
-    }
-    if (separatorMarkerToAppend) {
-      if (childNode.diffType === "solo") {
-        childDiffWidth += separatorMarkerToAppend.length;
-        childDiff += setColor(separatorMarkerToAppend, childNode.color);
-      } else {
-        childDiffWidth += separatorMarkerToAppend.length;
-        childDiff += setColor(separatorMarkerToAppend, node.color);
       }
     }
     if (childDiffWidth > columnsRemainingForChildren) {
@@ -4730,11 +4714,11 @@ const createArgEntriesNode = (node, { args, renderOnlyArgs }) => {
     childGenerator: (callNode) => {
       const appendArgEntry = (argIndex, argValue, { key, ...valueParams }) => {
         callNode.appendChild(argIndex, {
+          group: "entry_value",
+          subgroup: "arg_entry_value",
           value: argValue,
           render: renderValue,
           separatorMarker: ",",
-          group: "entry_value",
-          subgroup: "arg_entry_value",
           path: node.path.append(key || argIndex),
           depth: node.depth,
           ...valueParams,
@@ -4966,7 +4950,7 @@ const shouldIgnoreOwnPropertySymbol = (node, ownPropertySymbol) => {
       return true;
     }
   }
-  if (node.isBody) {
+  if (node.objectTag === "ReadableStream") {
     const keyForSymbol = Symbol.keyFor(ownPropertySymbol);
     if (keyForSymbol && keyForSymbol.startsWith("nodejs.webstream.")) {
       return true;
