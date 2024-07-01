@@ -1208,6 +1208,7 @@ let createRootNode;
     isRegexpSource = false,
     isStringForUrl = false,
     isStringForDate = false,
+    isBody = false,
     customCompare,
     render,
     isHidden = false,
@@ -1260,6 +1261,7 @@ let createRootNode;
       isRegexpSource,
       isStringForUrl,
       isStringForDate,
+      isBody,
       // info
       isCustomExpectation: false,
       // info/primitive
@@ -1286,6 +1288,10 @@ let createRootNode;
       isError: false,
       isRegExp: false,
       isPromise: false,
+      isRequest: false,
+      isResponse: false,
+      isAbortController: false,
+      isAbortSignal: false,
       isStringObject: false,
       referenceFromOthersSet: referenceFromOthersSetDefault,
       // render info
@@ -2026,6 +2032,22 @@ let createRootNode;
           node.isPromise = true;
           continue;
         }
+        if (parentConstructor.name === "Request") {
+          node.isRequest = true;
+          continue;
+        }
+        if (parentConstructor.name === "Response") {
+          node.isResponse = true;
+          continue;
+        }
+        if (parentConstructor.name === "AbortController") {
+          node.isAbortController = true;
+          continue;
+        }
+        if (parentConstructor.name === "AbortSignal") {
+          node.isAbortSignal = true;
+          continue;
+        }
         if (parentConstructor.name === "String") {
           node.isStringObject = true;
           continue;
@@ -2394,6 +2416,15 @@ let createRootNode;
                     value: value.toString(),
                     key: "toString()",
                     isStringForDate: true,
+                  },
+                ];
+                break wrapped_value;
+              }
+              if (node.isRequest) {
+                objectConstructArgs = [
+                  {
+                    value: value.url,
+                    key: "toString()",
                   },
                 ];
                 break wrapped_value;
@@ -2926,22 +2957,100 @@ let createRootNode;
               });
             }
             own_properties: {
-              const ownPropertySymbols = Object.getOwnPropertySymbols(
-                value,
-              ).filter((ownPropertySymbol) => {
-                return (
-                  !ownPropertSymbolToIgnoreSet.has(ownPropertySymbol) &&
-                  !shouldIgnoreOwnPropertySymbol(node, ownPropertySymbol)
-                );
-              });
-              const ownPropertyNames = Object.getOwnPropertyNames(value).filter(
-                (ownPropertyName) => {
-                  return (
-                    !ownPropertyNameToIgnoreSet.has(ownPropertyName) &&
-                    !shouldIgnoreOwnPropertyName(node, ownPropertyName)
-                  );
-                },
-              );
+              const allOwnPropertySymbols = Object.getOwnPropertySymbols(value);
+              const allOwnPropertyNames = Object.getOwnPropertyNames(value);
+              const ownPropertySymbols = [];
+              const ownPropertyNames = [];
+              for (const ownPropertySymbol of allOwnPropertySymbols) {
+                if (ownPropertSymbolToIgnoreSet.has(ownPropertySymbol)) {
+                  continue;
+                }
+                if (shouldIgnoreOwnPropertySymbol(node, ownPropertySymbol)) {
+                  continue;
+                }
+                if (node.isAbortSignal) {
+                  if (!Symbol.keyFor(ownPropertySymbol)) {
+                    const desc = symbolToDescription(ownPropertySymbol);
+                    if (desc === "kAborted") {
+                      continue;
+                    }
+                    if (desc === "kReason") {
+                      continue;
+                    }
+                  }
+                }
+                ownPropertySymbols.push(ownPropertySymbol);
+              }
+              for (const ownPropertyName of allOwnPropertyNames) {
+                if (ownPropertyNameToIgnoreSet.has(ownPropertyName)) {
+                  continue;
+                }
+                if (shouldIgnoreOwnPropertyName(node, ownPropertyName)) {
+                  continue;
+                }
+                ownPropertyNames.push(ownPropertyName);
+              }
+              if (node.isRequest) {
+                const requestDefaultValues = {
+                  body: null,
+                  cache: "default",
+                  credentials: "same-origin",
+                  destination: "",
+                  headers: undefined,
+                  method: "GET",
+                  mode: "cors",
+                  priority: undefined,
+                  redirect: "follow",
+                  referrerPolicy: "",
+                  referrer: "about:client",
+                };
+                for (const requestInternalPropertyName of Object.keys(
+                  requestDefaultValues,
+                )) {
+                  const requestInternalPropertyValue =
+                    value[requestInternalPropertyName];
+                  if (requestInternalPropertyName === "headers") {
+                    let headersAreEmpty = true;
+                    // eslint-disable-next-line no-unused-vars
+                    for (const entry of requestInternalPropertyValue) {
+                      headersAreEmpty = false;
+                      break;
+                    }
+                    if (headersAreEmpty) {
+                      continue;
+                    }
+                  } else {
+                    const requestInternalPropertyDefaultValue =
+                      requestDefaultValues[requestInternalPropertyName];
+                    if (
+                      requestInternalPropertyValue ===
+                      requestInternalPropertyDefaultValue
+                    ) {
+                      continue;
+                    }
+                  }
+                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                    appendPropertyEntryNode(
+                      requestInternalPropertyName,
+                      requestInternalPropertyValue,
+                      {
+                        isBody: true,
+                      },
+                    );
+                  });
+                }
+              }
+              if (node.isAbortSignal) {
+                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                  appendPropertyEntryNode("aborted", value.aborted);
+                });
+                const reason = value.reason;
+                if (reason !== undefined) {
+                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                    appendPropertyEntryNode("reason", value.reason);
+                  });
+                }
+              }
               // the idea here is that when an object does not have any property
               // we skip entirely the creation of own_properties node so that
               // if that value is compared to an object
@@ -2961,6 +3070,10 @@ let createRootNode;
                 node.isSet ||
                 node.isURL ||
                 node.isURLSearchParams ||
+                node.isRequest ||
+                node.isResponse ||
+                node.isAbortController ||
+                node.isAbortSignal ||
                 node.isError ||
                 node.isRegExp;
               const skipOwnProperties =
@@ -3021,6 +3134,7 @@ let createRootNode;
                         isClassPrototype,
                         isHiddenWhenSame,
                         isHiddenWhenSolo,
+                        isBody,
                       },
                     ) => {
                       const propertyConverter =
@@ -3049,8 +3163,10 @@ let createRootNode;
                           isHiddenWhenSolo,
                           childGenerator: () => {
                             let isMethod = false;
-                            if ("value" in propertyDescriptor) {
+                            if (propertyDescriptor.value) {
                               isMethod =
+                                typeof propertyDescriptor.value ===
+                                  "function" &&
                                 tokenizeFunction(propertyDescriptor.value)
                                   .type === "method";
                             }
@@ -3152,6 +3268,7 @@ let createRootNode;
                                 group: "entry_value",
                                 subgroup: "property_descriptor_value",
                                 isSourceCode,
+                                isBody,
                                 isFunctionPrototype,
                                 isClassPrototype,
                               });
@@ -4729,25 +4846,45 @@ const shouldIgnoreOwnPropertySymbol = (node, ownPropertySymbol) => {
     }
     return false;
   }
+
+  const symbolDescription = symbolToDescription(ownPropertySymbol);
   if (node.isPromise) {
-    if (
-      !Symbol.keyFor(ownPropertySymbol) &&
-      symbolToDescription(ownPropertySymbol) === "async_id_symbol"
-    ) {
+    if (Symbol.keyFor(ownPropertySymbol)) {
+      return false;
+    }
+    if (symbolDescription === "async_id_symbol") {
       // nodejs runtime puts a custom Symbol on promise
       return true;
     }
     return false;
   }
   if (node.isHeaders) {
-    if (
-      !Symbol.keyFor(ownPropertySymbol) &&
-      ["guard", "headers list"].includes(symbolToDescription(ownPropertySymbol))
-    ) {
-      // nodejs runtime put custom symbols on Headers
+    if (Symbol.keyFor(ownPropertySymbol)) {
+      return false;
+    }
+    // nodejs runtime put custom symbols on Headers
+    if (["guard", "headers list", "realm"].includes(symbolDescription)) {
       return true;
     }
-    return false;
+  }
+  if (node.isRequest) {
+    if (Symbol.keyFor(ownPropertySymbol)) {
+      return false;
+    }
+    // nodejs runtime put custom symbols on Request
+    if (
+      ["state", "signal", "abortController", "headers"].includes(
+        symbolDescription,
+      )
+    ) {
+      return true;
+    }
+  }
+  if (node.isBody) {
+    const keyForSymbol = Symbol.keyFor(ownPropertySymbol);
+    if (keyForSymbol && keyForSymbol.startsWith("nodejs.webstream.")) {
+      return true;
+    }
   }
   return false;
 };

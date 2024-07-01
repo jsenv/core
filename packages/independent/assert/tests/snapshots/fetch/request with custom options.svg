@@ -1,0 +1,109 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
+  font-size="14"
+  width="640"
+  height="898.45"
+  backgroundColor="#282c34"
+>
+  <g id="background">
+    <rect
+      x="1"
+      y="1"
+      width="638"
+      height="896.45"
+      fill="#282c34"
+      stroke="rgba(255,255,255,0.35)"
+      stroke-width="1"
+      rx="8"
+    />
+  </g>
+  <g id="header">
+    <g transform="translate(20,20)">
+      <circle cx="0" cy="0" r="6" fill="#ff5f57" />
+      <circle cx="20" cy="0" r="6" fill="#febc2e" />
+      <circle cx="40" cy="0" r="6" fill="#28c840" />
+    </g>
+    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">Terminal</text>
+  </g>
+  <foreignObject
+    id="body"
+    y="40"
+    width="100%"
+    height="858.45"
+    overflow="hidden"
+  >
+    <svg
+      width="515.68"
+      height="858.45"
+      font-family="monospace"
+      font-variant-east-asian="full-width"
+      fill="#cccccc"
+    >
+      <g>
+        <text x="10" y="14.55"
+          >actual: Request(&#x22;http://example.com/&#x22;) {</text
+        >
+        <text x="26.8" y="33.55"> method: &#x22;PUT&#x22;,</text>
+        <text x="10" y="52.55">}</text>
+        <text x="10" y="71.55"
+          >expect: Request(&#x22;http://example.com/&#x22;) {</text
+        >
+        <text x="26.8" y="90.55"> body: ReadableStream {</text>
+        <text x="43.61" y="109.55">
+          Symbol(&#x22;kType&#x22;): &#x22;ReadableStream&#x22;,</text
+        >
+        <text x="43.61" y="128.55"> Symbol(&#x22;kState&#x22;): {</text>
+        <text x="60.41" y="147.55"> disturbed: false,</text>
+        <text x="60.41" y="166.55"> reader: undefined,</text>
+        <text x="60.41" y="185.55"> state: &#x22;readable&#x22;,</text>
+        <text x="60.41" y="204.55"> storedError: undefined,</text>
+        <text x="60.41" y="223.55"> stream: undefined,</text>
+        <text x="60.41" y="242.55"> transfer: {</text>
+        <text x="77.21" y="261.55"> writable: undefined,</text>
+        <text x="77.21" y="280.55"> port1: undefined,</text>
+        <text x="77.21" y="299.55"> port2: undefined,</text>
+        <text x="77.21" y="318.55"> promise: undefined,</text>
+        <text x="60.41" y="337.55"> },</text>
+        <text x="60.41" y="356.55">
+          controller: ReadableStreamDefaultController {</text
+        >
+        <text x="77.21" y="375.55">
+          Symbol(&#x22;kType&#x22;):
+          &#x22;ReadableStreamDefaultController&#x22;,</text
+        >
+        <text x="77.21" y="394.55"> Symbol(&#x22;kState&#x22;): {</text>
+        <text x="94.01" y="413.55"> cancelAlgorithm: (1),</text>
+        <text x="94.01" y="432.55"> closeRequested: false,</text>
+        <text x="94.01" y="451.55"> highWaterMark: 1,</text>
+        <text x="94.01" y="470.55"> pullAgain: false,</text>
+        <text x="94.01" y="489.55"> pullAlgorithm: (1),</text>
+        <text x="94.01" y="508.55"> pulling: false,</text>
+        <text x="94.01" y="527.55"> queue: Array(0),</text>
+        <text x="94.01" y="546.55"> queueTotalSize: 0,</text>
+        <text x="94.01" y="565.55"> &#x2193; 3 props &#x2193;</text>
+        <text x="77.21" y="584.55"> },</text>
+        <text x="60.41" y="603.55"> },</text>
+        <text x="43.61" y="622.55"> },</text>
+        <text x="26.8" y="641.55"> },</text>
+        <text x="26.8" y="660.55"> cache: &#x22;no-store&#x22;,</text>
+        <text x="26.8" y="679.55"> credentials: &#x22;omit&#x22;,</text>
+        <text x="26.8" y="698.55"> headers: Headers(</text>
+        <text x="43.61" y="717.55">
+          &#x22;from&#x22; =&#x3E; &#x22;developer@example.org&#x22;,</text
+        >
+        <text x="26.8" y="736.55"> ),</text>
+        <text x="26.8" y="755.55"> method: &#x22;POST&#x22;,</text>
+        <text x="26.8" y="774.55"> mode: &#x22;same-origin&#x22;,</text>
+        <text x="26.8" y="793.55"> redirect: &#x22;manual&#x22;,</text>
+        <text x="26.8" y="812.55">
+          referrerPolicy: &#x22;strict-origin&#x22;,</text
+        >
+        <text x="26.8" y="831.55">
+          referrer: &#x22;http://google.com/&#x22;,</text
+        >
+        <text x="10" y="850.55">}</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>

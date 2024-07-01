@@ -1,0 +1,47 @@
+# request with custom options
+actual: Request("http://example.com/") {
+  method: "PUT",
+}
+expect: Request("http://example.com/") {
+  body: ReadableStream {
+    Symbol("kType"): "ReadableStream",
+    Symbol("kState"): {
+      disturbed: false,
+      reader: undefined,
+      state: "readable",
+      storedError: undefined,
+      stream: undefined,
+      transfer: {
+        writable: undefined,
+        port1: undefined,
+        port2: undefined,
+        promise: undefined,
+      },
+      controller: ReadableStreamDefaultController {
+        Symbol("kType"): "ReadableStreamDefaultController",
+        Symbol("kState"): {
+          cancelAlgorithm: (1),
+          closeRequested: false,
+          highWaterMark: 1,
+          pullAgain: false,
+          pullAlgorithm: (1),
+          pulling: false,
+          queue: Array(0),
+          queueTotalSize: 0,
+          ↓ 3 props ↓
+        },
+      },
+    },
+  },
+  cache: "no-store",
+  credentials: "omit",
+  headers: Headers(
+    "from" => "developer@example.org",
+  ),
+  method: "POST",
+  mode: "same-origin",
+  redirect: "manual",
+  referrerPolicy: "strict-origin",
+  referrer: "http://google.com/",
+}
+
