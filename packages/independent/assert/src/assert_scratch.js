@@ -1,5 +1,4 @@
 /*
- *  - renderGrammar -> renderString with quotesDisabled (and other things disabled too)
  *  - headers
  *    - test header attribute diff
  *    - create node as parsing header so that
@@ -2160,13 +2159,13 @@ let createRootNode;
                   subgroup: "object_integrity",
                   childGenerator: () => {
                     objectIntegrityNode.appendChild("object_name", {
+                      ...getGrammarProps(),
                       value: "Object",
-                      render: renderGrammar,
                       separatorMarker: ".",
                     });
                     objectIntegrityNode.appendChild("method_name", {
+                      ...getGrammarProps(),
                       value: objectIntegrityMethodName,
-                      render: renderGrammar,
                       separatorMarker: "(",
                     });
                   },
@@ -2308,18 +2307,18 @@ let createRootNode;
                     subgroup: "error_construct",
                     childGenerator: () => {
                       errorConstructNode.appendChild("error_constructor", {
+                        ...getGrammarProps(),
                         value: node.objectTag,
-                        render: renderGrammar,
                         separatorMarker: ": ",
                       });
                       if (messageOwnPropertyDescriptor) {
                         const errorMessage = messageOwnPropertyDescriptor.value;
                         errorConstructNode.appendChild("error_message", {
-                          value: errorMessage,
                           render: renderString,
+                          group: "error_message",
+                          value: errorMessage,
                           lineNumbersDisabled: true,
                           quotesDisabled: true,
-                          subgroup: "error_message",
                         });
                       }
                     },
@@ -3354,7 +3353,7 @@ const getGrammarProps = () => {
     urlStringDetectionDisabled: false,
     dateStringDetectionDisabled: false,
     stringDiffPrecision: "none",
-    render: renderGrammar,
+    render: renderString,
   };
 };
 const renderEmptyValue = (node, props) => {
@@ -3386,9 +3385,6 @@ const renderSymbol = (node, props) => {
   }
   const symbolConstructNode = node.childNodeMap.get("symbol_construct");
   return symbolConstructNode.render(props);
-};
-const renderGrammar = (node, props) => {
-  return truncateAndApplyColor(node.value, node, props);
 };
 const truncateAndApplyColor = (valueDiff, node, props) => {
   const { columnsRemaining } = props;
