@@ -99,6 +99,12 @@ await startSnapshotTesting("url", ({ test }) => {
         expect: "http://example.com?bar=b&foo=b",
       });
     });
+    test("param order modified and value modified 2", () => {
+      assert({
+        actual: "http://example.com?foo=foo_1&bar=bar_1&foo=foo_2&bar=bar_2",
+        expect: "http://example.com?bar=BAR_1&foo=FOO_1&bar=BAR_2&foo=FOO_2",
+      });
+    });
   }
   test("url hash modified", () => {
     assert({
