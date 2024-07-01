@@ -74,7 +74,7 @@ assert({
 ```js
 assert({
   actual: new Headers({
-    "set-cookie": "name=value",
+    "set-cookie": "a=1",
   }),
   expect: new Headers({}),
 });
@@ -88,7 +88,7 @@ assert({
 assert({
   actual: new Headers({}),
   expect: new Headers({
-    "set-cookie": "name=value;",
+    "set-cookie": "a=1;",
   }),
 });
 ```
@@ -100,10 +100,10 @@ assert({
 ```js
 assert({
   actual: new Headers({
-    "set-cookie": "foo=a,bar=b",
+    "set-cookie": "a=1,b=2",
   }),
   expect: new Headers({
-    "set-cookie": "foo=a",
+    "set-cookie": "a=9",
   }),
 });
 ```

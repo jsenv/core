@@ -56,7 +56,7 @@ await startSnapshotTesting("headers", ({ test }) => {
   test("set cookie added", () => {
     assert({
       actual: new Headers({
-        "set-cookie": "name=value",
+        "set-cookie": "a=1",
       }),
       expect: new Headers({}),
     });
@@ -65,17 +65,17 @@ await startSnapshotTesting("headers", ({ test }) => {
     assert({
       actual: new Headers({}),
       expect: new Headers({
-        "set-cookie": "name=value;",
+        "set-cookie": "a=1;",
       }),
     });
   });
   test("cookie added", () => {
     assert({
       actual: new Headers({
-        "set-cookie": "foo=a,bar=b",
+        "set-cookie": "a=1,b=2",
       }),
       expect: new Headers({
-        "set-cookie": "foo=a",
+        "set-cookie": "a=9",
       }),
     });
   });

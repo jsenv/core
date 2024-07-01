@@ -169,6 +169,17 @@ assert({
 
 ![img](<./url/param order modified and value modified.svg>)
 
+# param order modified and value modified 2
+
+```js
+assert({
+  actual: "http://example.com?foo=foo_1&bar=bar_1&foo=foo_2&bar=bar_2",
+  expect: "http://example.com?bar=BAR_1&foo=FOO_1&bar=BAR_2&foo=FOO_2",
+});
+```
+
+![img](<./url/param order modified and value modified 2.svg>)
+
 # url hash modified
 
 ```js

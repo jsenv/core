@@ -6,31 +6,38 @@
 // A date like 1980/10/05 won't even be considered as a date
 
 export const canParseDate = (value) => {
-  if (/^[0-9]$/.test(value)) {
-    return false;
-  }
-  if (/^[0-9]{2}$/.test(value)) {
-    return false;
-  }
-  if (/^[0-9]{2}\//.test(value)) {
-    return false;
-  }
-  if (/^.*\/[\d]+$/.test(value)) {
-    return false;
-  }
-  if (/^.*\-[\d]+$/.test(value)) {
-    return false;
-  }
-  if (value.includes("\n")) {
-    return false;
-  }
-  if (!isNaN(value)) {
-    return false;
-  }
-  const returnValue = Date.parse(value);
+  const dateParseResult = Date.parse(value);
   // eslint-disable-next-line no-self-compare
-  if (returnValue !== returnValue) {
+  if (dateParseResult !== dateParseResult) {
     return false;
   }
-  return true;
+  // Iso format
+  // "1995-12-04 00:12:00.000Z"
+  if (
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3})?([\+\-]\d{2}\:\d{2}|Z)?$/.test(
+      value,
+    )
+  ) {
+    return true;
+  }
+
+  // GMT format
+  // "Tue May 07 2024 11:27:04 GMT+0200 (Central European Summer Time)",
+  if (
+    /^[a-zA-Z]{0,4} [a-z-A-Z]{0,4} [0-9]{2} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT([\+\-][0-9]{0,4})?( \((.*)\))?$/.test(
+      value,
+    )
+  ) {
+    return true;
+  }
+  // other format
+  // "Thu, 01 Jan 1970 00:00:00"
+  if (
+    /^[a-zA-Z]{3}, [0-9]{2} [a-zA-Z]{3} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}$/.test(
+      value,
+    )
+  ) {
+    return true;
+  }
+  return false;
 };

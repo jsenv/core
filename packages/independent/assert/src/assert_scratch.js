@@ -3,6 +3,7 @@
  *    - test header attribute diff
  *    - create node as parsing header so that
  *      the rendering does not alter spacing or ";" presence
+ *  - renderGrammar -> renderString with quotesDisabled (and other things disabled too)
  *  - request/response/AbortController
  */
 
@@ -20,7 +21,6 @@ import {
 import { tokenizeFloat, tokenizeInteger } from "./tokenize_number.js";
 import { tokenizeString } from "./tokenize_string.js";
 import { tokenizeUrlSearch } from "./tokenize_url_search.js";
-import { tokenizeSetCookieHeader } from "./tokenize_header_value.js";
 import { getWellKnownValuePath } from "./well_known_value.js";
 import { getIsNegativeZero } from "./utils/negative_zero.js";
 import { groupDigits } from "./utils/group_digits.js";
@@ -743,7 +743,14 @@ export const assert = (firstArg) => {
 };
 
 const comparerDefault = (actualNode, expectNode) => {
-  if (actualNode.category === "primitive") {
+  if (
+    actualNode.category === "primitive"
+    // ||
+    // actualNode.category === "line_parts" ||
+    // actualNode.category === "date_parts" ||
+    // actualNode.category === "url_parts" ||
+    // actualNode.category === "header_value_parts"
+  ) {
     if (
       actualNode.value === expectNode.value &&
       actualNode.isNegativeZero === expectNode.isNegativeZero
@@ -1380,6 +1387,9 @@ let createRootNode;
     if (group === "entry") {
       return node;
     }
+    // if (group === "part") {
+    //   return node;
+    // }
     if (subgroup === "array_entry_key" || subgroup === "arg_entry_key") {
       node.category = "primitive";
       node.isNumber = true;
@@ -1530,7 +1540,10 @@ let createRootNode;
         node.childGenerator = () => {
           const urlObject = new URL(value);
           const urlPartsNode = node.appendChild("parts", {
+            value,
             category: "url_parts",
+            group: "entries",
+            subgroup: "url_parts",
             render: renderChildren,
             onelineDiff: {
               hasTrailingSeparator: true,
@@ -1686,8 +1699,6 @@ let createRootNode;
                 appendUrlPartNode("hash", decodeURIComponent(hash));
               }
             },
-            group: "entries",
-            subgroup: "url_parts",
           });
         };
         return node;
@@ -1706,7 +1717,10 @@ let createRootNode;
           const dateTimestamp = Date.parse(dateString);
           const dateObject = new Date(dateTimestamp + localTimezoneOffset);
           const datePartsNode = node.appendChild("parts", {
+            // value,
             category: "date_parts",
+            group: "entries",
+            subgroup: "date_parts",
             render: renderChildren,
             onelineDiff: {
               hasTrailingSeparator: true,
@@ -1794,8 +1808,6 @@ let createRootNode;
                 },
               });
             },
-            group: "entries",
-            subgroup: "date_parts",
           });
         };
         return node;
@@ -1803,7 +1815,10 @@ let createRootNode;
       if (stringDiffPrecision === "per_line_and_per_char") {
         node.childGenerator = () => {
           const lineEntriesNode = node.appendChild("parts", {
-            category: "lines",
+            value,
+            category: "line_parts",
+            group: "entries",
+            subgroup: "line_entries",
             render: renderChildrenMultiline,
             multilineDiff: {
               hasTrailingSeparator: true,
@@ -1818,8 +1833,6 @@ let createRootNode;
             startMarker: node.startMarker,
             endMarker: node.endMarker,
             quoteMarkerRef,
-            group: "entries",
-            subgroup: "line_entries",
             childGenerator: () => {
               let isMultiline = false;
               const appendLineEntry = (lineIndex) => {
@@ -2649,7 +2662,7 @@ let createRootNode;
                     ...internalEntriesParams,
                     subgroup: "header_entries",
                     childGenerator: () => {
-                      for (const [headerName, headerRawValue] of value) {
+                      for (const [headerName, headerValueRaw] of value) {
                         const headerNode = headerEntriesNode.appendChild(key, {
                           key: headerName,
                           render: renderChildren,
@@ -2666,15 +2679,28 @@ let createRootNode;
                           subgroup: "header_entry_key",
                         });
                         const quoteMarkerRef = {
-                          current: pickBestQuote(headerRawValue),
+                          current: pickBestQuote(headerValueRaw),
                         };
-                        const appendMultipleNamedHeadersNode = (
-                          headerValueParsed,
-                        ) => {
+                        let attributeHandlers = null;
+                        if (headerName === "set-cookie") {
+                          attributeHandlers = {};
+                        } else if (headerName === "accept-encoding") {
+                          attributeHandlers = {
+                            q: (attributeValue) => {
+                              return isNaN(attributeValue)
+                                ? attributeValue
+                                : parseFloat(attributeValue);
+                            },
+                          };
+                        }
+                        if (attributeHandlers) {
                           const headerValueNode = headerNode.appendChild(
                             "entry_value",
                             {
-                              value: null,
+                              category: "header_value_parts",
+                              group: "entries",
+                              subgroup: "header_value",
+                              value: headerValueRaw,
                               render: renderChildren,
                               onelineDiff: {
                                 skippedMarkers: {
@@ -2685,112 +2711,17 @@ let createRootNode;
                               },
                               startMarker: quoteMarkerRef.current,
                               endMarker: quoteMarkerRef.current,
-                              group: "entries",
-                              subgroup: "header_value",
                               childGenerator: () => {
-                                const headerPartsNode =
-                                  headerValueNode.appendChild("parts", {
-                                    value: null,
-                                    render: renderChildren,
-                                    onelineDiff: {},
-                                    group: "entries",
-                                    subgroup: "header_parts",
-                                    childGenerator: () => {
-                                      for (const headerValueName of Object.keys(
-                                        headerValueParsed,
-                                      )) {
-                                        const headerPartNode =
-                                          headerPartsNode.appendChild(
-                                            headerValueName,
-                                            {
-                                              value: null,
-                                              render: renderChildren,
-                                              onelineDiff: {},
-                                              separatorMarker: ",",
-                                              group: "part",
-                                              subgroup: "header_part",
-                                            },
-                                          );
-                                        const { value, ...attributes } =
-                                          headerValueParsed[headerValueName];
-                                        const remainingAttributeKeys =
-                                          Object.keys(attributes);
-                                        const hasRemainingAttributes =
-                                          remainingAttributeKeys.length > 0;
-                                        const appendAttributeNode = (
-                                          attributeName,
-                                          attributeValue,
-                                        ) => {
-                                          if (attributeValue === true) {
-                                            headerPartNode.appendChild(
-                                              "entry_key",
-                                              {
-                                                value: attributeName,
-                                                render: renderString,
-                                                stringDiffPrecision: "none",
-                                                quoteMarkerRef,
-                                                endMarker:
-                                                  hasRemainingAttributes
-                                                    ? ";"
-                                                    : "",
-                                              },
-                                            );
-                                            return;
-                                          }
-                                          headerPartNode.appendChild(
-                                            "entry_key",
-                                            {
-                                              value: attributeName,
-                                              render: renderString,
-                                              stringDiffPrecision: "none",
-                                              quoteMarkerRef,
-                                              endMarker: "=",
-                                            },
-                                          );
-                                          headerPartNode.appendChild(
-                                            "entry_value",
-                                            {
-                                              key: attributeName,
-                                              value: attributeValue,
-                                              render: renderString,
-                                              stringDiffPrecision: "none",
-                                              quoteMarkerRef,
-                                              endMarker: hasRemainingAttributes
-                                                ? ";"
-                                                : "",
-                                            },
-                                          );
-                                        };
-                                        appendAttributeNode(
-                                          headerValueName,
-                                          value,
-                                        );
-                                        for (const attributeName of remainingAttributeKeys) {
-                                          appendAttributeNode(
-                                            attributeName,
-                                            attributes[attributeName],
-                                          );
-                                        }
-                                      }
-                                    },
-                                  });
+                                generateHeaderValueParts(headerValueRaw, {
+                                  headerValueNode,
+                                  quoteMarkerRef,
+                                });
                               },
                             },
                           );
-                        };
-                        if (headerName === "set-cookie") {
-                          appendMultipleNamedHeadersNode(
-                            tokenizeSetCookieHeader(headerRawValue),
-                          );
                           return;
                         }
-                        if (headerName === "accept-encoding") {
-                          appendMultipleNamedHeadersNode(
-                            tokenizeSetCookieHeader(headerRawValue),
-                          );
-                          return;
-                        }
-                        const headerValueArray = headerRawValue.split(",");
+                        const headerValueArray = headerValueRaw.split(",");
                         const headerValueNode = headerNode.appendChild(
                           "entry_value",
                           {
@@ -5103,4 +5034,147 @@ const pickBestQuote = (string, { quotesBacktickDisabled } = {}) => {
     return SINGLE_QUOTE;
   }
   return DOUBLE_QUOTE;
+};
+
+const generateHeaderValueParts = (
+  headerValue,
+  { headerValueNode, quoteMarkerRef },
+) => {
+  let partIndex = 0;
+  let partRaw;
+  let part;
+  let attribute;
+  let attributeMap = null;
+  let attributeNameStarted = false;
+  let attributeValueStarted = false;
+  let attributeName = "";
+  let attributeValue = "";
+  const startHeaderValuePart = () => {
+    if (part) {
+      part.end();
+      part = null;
+    }
+    part = {
+      end: () => {
+        if (!attributeMap) {
+          return;
+        }
+        if (attribute) {
+          attribute.end();
+          attribute = null;
+        }
+        const headerValuePartNode = headerValueNode.appendChild(partIndex, {
+          value: partRaw,
+          render: renderChildren,
+          onelineDiff: {},
+          startMarker: partIndex === 0 ? "" : ",",
+          group: "entries",
+          subgroup: "header_part",
+        });
+        let isFirstAttribute = true;
+        for (const [attributeName, attributeValue] of attributeMap) {
+          if (attributeValue === true) {
+            headerValuePartNode.appendChild("entry_key", {
+              value: attributeName,
+              render: renderString,
+              stringDiffPrecision: "none",
+              quoteMarkerRef,
+              startMarker: isFirstAttribute ? "" : ";",
+            });
+          } else {
+            headerValuePartNode.appendChild("entry_key", {
+              value: attributeName,
+              render: renderString,
+              stringDiffPrecision: "none",
+              quoteMarkerRef,
+              startMarker: isFirstAttribute ? "" : ";",
+              endMarker: "=",
+            });
+            headerValuePartNode.appendChild("entry_value", {
+              key: attributeName,
+              value: attributeValue,
+              render: renderString,
+              stringDiffPrecision: "none",
+              quoteMarkerRef,
+            });
+          }
+          isFirstAttribute = false;
+        }
+        partIndex++;
+        attributeMap = null;
+        part = null;
+      },
+    };
+    partRaw = "";
+    attributeMap = new Map();
+    startAttributeName();
+  };
+  const startAttributeName = () => {
+    if (attribute) {
+      attribute.end();
+      attribute = null;
+    }
+    attributeNameStarted = true;
+    attribute = {
+      end: () => {
+        if (!attributeNameStarted && !attributeValueStarted) {
+          return;
+        }
+        if (!attributeValue) {
+          if (!attributeName) {
+            // trailing ";"
+            attributeNameStarted = false;
+            return;
+          }
+          attributeMap.set(attributeName, true);
+          attributeNameStarted = false;
+          attributeName = "";
+          attributeValueStarted = false;
+          return;
+        }
+        attributeMap.set(attributeName, attributeValue);
+        attributeNameStarted = false;
+        attributeName = "";
+        attributeValueStarted = false;
+        attributeValue = "";
+      },
+    };
+  };
+  const startAttributeValue = () => {
+    attributeNameStarted = false;
+    attributeValueStarted = true;
+  };
+  startHeaderValuePart();
+  let charIndex = 0;
+  while (charIndex < headerValue.length) {
+    const char = headerValue[charIndex];
+    partRaw += char;
+    if (char === ",") {
+      startHeaderValuePart();
+      charIndex++;
+      continue;
+    }
+    if (char === ";") {
+      startAttributeName();
+      charIndex++;
+      continue;
+    }
+    if (char === "=") {
+      startAttributeValue();
+      charIndex++;
+      continue;
+    }
+    if (attributeValueStarted) {
+      attributeValue += char;
+      charIndex++;
+      continue;
+    }
+    if (attributeNameStarted) {
+      attributeName += char;
+      charIndex++;
+      continue;
+    }
+    throw new Error("wtf");
+  }
+  part.end();
 };

@@ -28,7 +28,7 @@
   </g>
   <foreignObject id="body" y="40" width="100%" height="79.45" overflow="hidden">
     <svg
-      width="272.04"
+      width="213.23"
       height="79.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -52,9 +52,9 @@
         <text x="119.22" y="33.55" fill="#DAA520">&#x22;</text>
         <text x="136.02" y="33.55" fill="#DAA520"> =&#x3E; </text>
         <text x="161.22" y="33.55" fill="#DAA520">&#x22;</text>
-        <text x="169.63" y="33.55" fill="#DAA520">name=</text>
-        <text x="211.63" y="33.55" fill="#DAA520">value</text>
-        <text x="253.64" y="33.55" fill="#DAA520">&#x22;</text>
+        <text x="169.63" y="33.55" fill="#DAA520">a=</text>
+        <text x="186.43" y="33.55" fill="#DAA520">1</text>
+        <text x="194.83" y="33.55" fill="#DAA520">&#x22;</text>
         <text x="10" y="52.55" fill="#7f7f7f">)</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">Headers</text>
