@@ -1,3 +1,27 @@
+# abort signal pending vs aborted
+
+```js
+const expectAbortController = new AbortController();
+expectAbortController.abort("toto");
+assert({
+  actual: new AbortController().signal,
+  expect: expectAbortController.signal,
+});
+```
+
+![img](<./fetch/abort signal pending vs aborted.svg>)
+
+# Request url diff
+
+```js
+assert({
+  actual: new Request("https://foo.com"),
+  expect: new Request("https://bar.com"),
+});
+```
+
+![img](<./fetch/Request url diff.svg>)
+
 # request with custom options
 
 ```js
@@ -6,7 +30,7 @@ assert({
     cache: "default",
     credentials: "same-origin",
     destination: "",
-    method: "PUT",
+    method: "GET",
     mode: "cors",
     priority: "auto",
     redirect: "follow",
@@ -26,11 +50,28 @@ assert({
     referrerPolicy: "strict-origin",
     referrer: "http://google.com",
   }),
-  MAX_CONTEXT_AFTER_DIFF: 8,
-  MAX_CONTEXT_BEFORE_DIFF: 8,
+  MAX_CONTEXT_AFTER_DIFF: 10,
+  MAX_CONTEXT_BEFORE_DIFF: 10,
   MAX_DEPTH_INSIDE_DIFF: 5,
 });
 ```
 
 ![img](<./fetch/request with custom options.svg>)
+
+# request abort signal pending vs aborted
+
+```js
+const expectAbortController = new AbortController();
+expectAbortController.abort("toto");
+assert({
+  actual: new Request("http://example.com", {
+    signal: new AbortController().signal,
+  }),
+  expect: new Request("http://example.com", {
+    signal: expectAbortController.signal,
+  }),
+});
+```
+
+![img](<./fetch/request abort signal pending vs aborted.svg>)
 

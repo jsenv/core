@@ -4,13 +4,21 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./start_snapshot_testing.js";
 
 await startSnapshotTesting("fetch", ({ test }) => {
-  test("Request rul diff", () => {
+  test("abort signal pending vs aborted", () => {
+    const expectAbortController = new AbortController();
+    expectAbortController.abort("toto");
+    assert({
+      actual: new AbortController().signal,
+      expect: expectAbortController.signal,
+    });
+  });
+  test("Request url diff", () => {
     assert({
       actual: new Request("https://foo.com"),
       expect: new Request("https://bar.com"),
     });
   });
-  test.ONLY("request with custom options", () => {
+  test("request with custom options", () => {
     assert({
       actual: new Request("http://example.com", {
         cache: "default",
@@ -36,8 +44,8 @@ await startSnapshotTesting("fetch", ({ test }) => {
         referrerPolicy: "strict-origin",
         referrer: "http://google.com",
       }),
-      MAX_CONTEXT_AFTER_DIFF: 8,
-      MAX_CONTEXT_BEFORE_DIFF: 8,
+      MAX_CONTEXT_AFTER_DIFF: 10,
+      MAX_CONTEXT_BEFORE_DIFF: 10,
       MAX_DEPTH_INSIDE_DIFF: 5,
     });
   });

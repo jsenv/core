@@ -1,5 +1,6 @@
 /*
- *  - request/response/AbortController
+ * - response
+ *
  */
 
 import stringWidth from "string-width";
@@ -2368,13 +2369,11 @@ let createRootNode;
                 objectConstructNode = compositePartsNode.appendChild(
                   "construct",
                   {
-                    value: null,
-                    render: renderChildren,
-                    onelineDiff: {
-                      hasSpacingBetweenEachChild: true,
-                    },
                     group: "entries",
                     subgroup: "object_construct",
+                    value: null,
+                    render: renderChildren,
+                    onelineDiff: { hasSpacingBetweenEachChild: true },
                     childGenerator() {
                       if (objectConstructArgs) {
                         objectConstructNode.appendChild(
@@ -2968,17 +2967,6 @@ let createRootNode;
                 if (shouldIgnoreOwnPropertySymbol(node, ownPropertySymbol)) {
                   continue;
                 }
-                if (node.isAbortSignal) {
-                  if (!Symbol.keyFor(ownPropertySymbol)) {
-                    const desc = symbolToDescription(ownPropertySymbol);
-                    if (desc === "kAborted") {
-                      continue;
-                    }
-                    if (desc === "kReason") {
-                      continue;
-                    }
-                  }
-                }
                 ownPropertySymbols.push(ownPropertySymbol);
               }
               for (const ownPropertyName of allOwnPropertyNames) {
@@ -2993,6 +2981,7 @@ let createRootNode;
               if (node.isRequest) {
                 const requestDefaultValues = {
                   body: null,
+                  bodyUsed: false,
                   cache: "default",
                   credentials: "same-origin",
                   destination: "",
@@ -3003,6 +2992,7 @@ let createRootNode;
                   redirect: "follow",
                   referrerPolicy: "",
                   referrer: "about:client",
+                  signal: null,
                 };
                 for (const requestInternalPropertyName of Object.keys(
                   requestDefaultValues,
@@ -3017,6 +3007,10 @@ let createRootNode;
                       break;
                     }
                     if (headersAreEmpty) {
+                      continue;
+                    }
+                  } else if (requestInternalPropertyName === "signal") {
+                    if (!requestInternalPropertyValue.aborted) {
                       continue;
                     }
                   } else {
@@ -3041,14 +3035,17 @@ let createRootNode;
                 }
               }
               if (node.isAbortSignal) {
-                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                  appendPropertyEntryNode("aborted", value.aborted);
-                });
-                const reason = value.reason;
-                if (reason !== undefined) {
+                const aborted = value.aborted;
+                if (aborted) {
                   propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
-                    appendPropertyEntryNode("reason", value.reason);
+                    appendPropertyEntryNode("aborted", true);
                   });
+                  const reason = value.reason;
+                  if (reason !== undefined) {
+                    propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                      appendPropertyEntryNode("reason", reason);
+                    });
+                  }
                 }
               }
               // the idea here is that when an object does not have any property
@@ -3897,7 +3894,7 @@ const renderChildren = (node, props) => {
         separatorMarkerDisabled = true;
       },
     });
-    if (childDiff === "") {
+    if (childDiff === "" && childNode.subgroup !== "own_properties") {
       // child has been truncated (well we can't tell 100% this is the reason)
       // but for now let's consider this to be true
       break;
@@ -3916,7 +3913,7 @@ const renderChildren = (node, props) => {
         childDiffWidth = stringWidth(lastLine);
       }
     }
-    if (!isFirstAppend && hasSpacingBetweenEachChild) {
+    if (!isFirstAppend && hasSpacingBetweenEachChild && childDiff) {
       if (childIndex < focusedChildIndex) {
         if (
           (childIndex > 0 || focusedChildIndex > 0) &&
@@ -4847,9 +4844,10 @@ const shouldIgnoreOwnPropertySymbol = (node, ownPropertySymbol) => {
     return false;
   }
 
+  const keyForSymbol = Symbol.keyFor(ownPropertySymbol);
   const symbolDescription = symbolToDescription(ownPropertySymbol);
   if (node.isPromise) {
-    if (Symbol.keyFor(ownPropertySymbol)) {
+    if (keyForSymbol) {
       return false;
     }
     if (symbolDescription === "async_id_symbol") {
@@ -4859,11 +4857,30 @@ const shouldIgnoreOwnPropertySymbol = (node, ownPropertySymbol) => {
     return false;
   }
   if (node.isHeaders) {
-    if (Symbol.keyFor(ownPropertySymbol)) {
+    if (keyForSymbol) {
       return false;
     }
     // nodejs runtime put custom symbols on Headers
     if (["guard", "headers list", "realm"].includes(symbolDescription)) {
+      return true;
+    }
+  }
+  if (node.isAbortSignal) {
+    if (keyForSymbol) {
+      return false;
+    }
+    if (
+      [
+        "realm",
+        "kAborted",
+        "kReason",
+        "kEvents",
+        "events.maxEventTargetListeners",
+        "events.maxEventTargetListenersWarned",
+        "kHandlers",
+        "kComposite",
+      ].includes(symbolDescription)
+    ) {
       return true;
     }
   }
@@ -4883,6 +4900,9 @@ const shouldIgnoreOwnPropertySymbol = (node, ownPropertySymbol) => {
   if (node.isBody) {
     const keyForSymbol = Symbol.keyFor(ownPropertySymbol);
     if (keyForSymbol && keyForSymbol.startsWith("nodejs.webstream.")) {
+      return true;
+    }
+    if (["kType", "kState"].includes(symbolDescription)) {
       return true;
     }
   }

@@ -5,6 +5,7 @@ await import("./assert_between.test.js");
 await import("./assert_not.test.js");
 await import("./date.test.js");
 await import("./error.test.js");
+await import("./fetch.test.js");
 await import("./function.test.js");
 await import("./headers.test.js");
 await import("./impenetrables.test.js");
