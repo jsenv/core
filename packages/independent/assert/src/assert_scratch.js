@@ -2661,12 +2661,41 @@ let createRootNode;
                         const quoteMarkerRef = {
                           current: pickBestQuote(headerValueRaw),
                         };
+                        if (
+                          [
+                            "access-control-max-age",
+                            "age",
+                            "content-length",
+                          ].includes(headerName)
+                        ) {
+                          headerNode.appendChild("entry_value", {
+                            value: isNaN(headerValueRaw)
+                              ? headerValueRaw
+                              : parseInt(headerValueRaw),
+                            render: renderValue,
+                            group: "entry_value",
+                            subgroup: "header_entry_value",
+                          });
+                          return;
+                        }
                         let attributeHandlers = null;
                         if (headerName === "set-cookie") {
                           attributeHandlers = {};
-                        } else if (headerName === "accept-encoding") {
+                        } else if (
+                          headerName === "accept" ||
+                          headerName === "accept-encoding" ||
+                          headerName === "accept-language"
+                        ) {
                           attributeHandlers = {
                             q: (attributeValue) => {
+                              return isNaN(attributeValue)
+                                ? attributeValue
+                                : parseFloat(attributeValue);
+                            },
+                          };
+                        } else if (headerName === "server-timing") {
+                          attributeHandlers = {
+                            dur: (attributeValue) => {
                               return isNaN(attributeValue)
                                 ? attributeValue
                                 : parseFloat(attributeValue);

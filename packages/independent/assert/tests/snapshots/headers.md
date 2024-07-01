@@ -170,3 +170,123 @@ assert({
 
 ![img](<./headers/cookie becomes secure.svg>)
 
+# accept
+
+```js
+assert({
+  actual: new Headers({
+    accept: "text/html, application/xml;q=0.9, */*;q=0.8",
+  }),
+  expect: new Headers({
+    accept: "text/html, application/xml;q=0.8, */*;q=0.7, text/css",
+  }),
+});
+```
+
+![img](<./headers/accept.svg>)
+
+# add accepted encoding
+
+```js
+assert({
+  actual: new Headers({
+    "accept-encoding": "deflate, gzip, br",
+  }),
+  expect: new Headers({
+    "accept-encoding": "deflate, gzip",
+  }),
+});
+```
+
+![img](<./headers/add accepted encoding.svg>)
+
+# remove accepted encoding
+
+```js
+assert({
+  actual: new Headers({
+    "accept-encoding": "deflate, gzip",
+  }),
+  expect: new Headers({
+    "accept-encoding": "deflate, gzip, br",
+  }),
+});
+```
+
+![img](<./headers/remove accepted encoding.svg>)
+
+# accept-encoding diff on q
+
+```js
+assert({
+  actual: new Headers({
+    "accept-encoding": "deflate, gzip;q=1.0, *;q=0.5",
+  }),
+  expect: new Headers({
+    "accept-encoding": "deflate, gzip;q=0.9, *;q=0.4",
+  }),
+});
+```
+
+![img](<./headers/accept-encoding diff on q.svg>)
+
+# accept-language
+
+```js
+assert({
+  actual: new Headers({
+    "accept-language": "fr-CH, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5",
+  }),
+  expect: new Headers({
+    "accept-language": "en-US,en;q=0.5",
+  }),
+});
+```
+
+![img](<./headers/accept-language.svg>)
+
+# add metric in server timing
+
+```js
+assert({
+  actual: new Headers({
+    "server-timing": `cpu;dur=2.4, app;dur=47.2`,
+  }),
+  expect: new Headers({
+    "server-timing": `cpu;dur=2.4`,
+  }),
+});
+```
+
+![img](<./headers/add metric in server timing.svg>)
+
+# remove metric in server timing
+
+```js
+assert({
+  actual: new Headers({
+    "server-timing": `cpu;dur=2.4`,
+  }),
+  expect: new Headers({
+    "server-timing": `cpu;dur=2.4, app;dur=47.2`,
+  }),
+});
+```
+
+![img](<./headers/remove metric in server timing.svg>)
+
+# add description to a metric
+
+```js
+assert({
+  actual: new Headers({
+    "server-timing": `cache;dur=23.2`,
+  }),
+  expect: new Headers({
+    "server-timing": `cache;desc="Cache Read";dur=23.2`,
+  }),
+});
+```
+
+![img](<./headers/add description to a metric.svg>)
+
