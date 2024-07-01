@@ -185,6 +185,21 @@ assert({
 
 ![img](<./headers/accept.svg>)
 
+# accept diff on non standard attribute
+
+```js
+assert({
+  actual: new Headers({
+    accept: "text/html; a=1; b=2",
+  }),
+  expect: new Headers({
+    accept: "text/html; a=9; b=9",
+  }),
+});
+```
+
+![img](<./headers/accept diff on non standard attribute.svg>)
+
 # add accepted encoding
 
 ```js
@@ -289,4 +304,19 @@ assert({
 ```
 
 ![img](<./headers/add description to a metric.svg>)
+
+# content length diff
+
+```js
+assert({
+  actual: new Headers({
+    "content-length": "1456",
+  }),
+  expect: new Headers({
+    "content-length": "1356",
+  }),
+});
+```
+
+![img](<./headers/content length diff.svg>)
 

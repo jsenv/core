@@ -133,6 +133,16 @@ await startSnapshotTesting("headers", ({ test }) => {
         }),
       });
     });
+    test("accept diff on non standard attribute", () => {
+      assert({
+        actual: new Headers({
+          accept: "text/html; a=1; b=2",
+        }),
+        expect: new Headers({
+          accept: "text/html; a=9; b=9",
+        }),
+      });
+    });
   }
   accept_encoding: {
     test("add accepted encoding", () => {
@@ -199,13 +209,25 @@ await startSnapshotTesting("headers", ({ test }) => {
         }),
       });
     });
-    test.ONLY("add description to a metric", () => {
+    test("add description to a metric", () => {
       assert({
         actual: new Headers({
           "server-timing": `cache;dur=23.2`,
         }),
         expect: new Headers({
           "server-timing": `cache;desc="Cache Read";dur=23.2`,
+        }),
+      });
+    });
+  }
+  content_length: {
+    test("content length diff", () => {
+      assert({
+        actual: new Headers({
+          "content-length": "1456",
+        }),
+        expect: new Headers({
+          "content-length": "1356",
         }),
       });
     });

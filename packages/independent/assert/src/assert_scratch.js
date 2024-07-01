@@ -1,8 +1,4 @@
 /*
- *  - headers
- *    - test header attribute diff
- *    - create node as parsing header so that
- *      the rendering does not alter spacing or ";" presence
  *  - request/response/AbortController
  */
 
@@ -2669,12 +2665,15 @@ let createRootNode;
                           ].includes(headerName)
                         ) {
                           headerNode.appendChild("entry_value", {
+                            group: "entry_value",
+                            subgroup: "header_entry_value",
                             value: isNaN(headerValueRaw)
                               ? headerValueRaw
                               : parseInt(headerValueRaw),
                             render: renderValue,
-                            group: "entry_value",
-                            subgroup: "header_entry_value",
+                            startMarker: `"`,
+                            endMarker: '"',
+                            numericSeparatorsDisabled: true,
                           });
                           return;
                         }
@@ -5097,7 +5096,8 @@ const generateHeaderValueParts = (
           const headerAttributeNode = headerValuePartNode.appendChild(
             attributeNameNormalized,
             {
-              group: "entries",
+              group: "entry",
+              subgroup: "header_attribute",
               render: renderChildren,
               onelineDiff: {},
               path: headerValuePartNode.path.append(attributeNameNormalized),
@@ -5105,6 +5105,7 @@ const generateHeaderValueParts = (
           );
           if (attributeValue === true) {
             headerAttributeNode.appendChild("entry_key", {
+              subgroup: "header_attribute_name",
               value: attributeName,
               render: renderString,
               stringDiffPrecision: "none",
@@ -5114,6 +5115,7 @@ const generateHeaderValueParts = (
             });
           } else {
             headerAttributeNode.appendChild("entry_key", {
+              subgroup: "header_attribute_name",
               value: attributeName,
               render: renderString,
               stringDiffPrecision: "none",
@@ -5122,7 +5124,8 @@ const generateHeaderValueParts = (
               startMarker: isFirstAttribute ? "" : ";",
               endMarker: "=",
             });
-            headerValuePartNode.appendChild("entry_value", {
+            headerAttributeNode.appendChild("entry_value", {
+              subgroup: "header_attribute_value",
               key: attributeName,
               value: attributeValue,
               render: renderString,
