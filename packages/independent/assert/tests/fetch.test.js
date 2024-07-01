@@ -12,7 +12,7 @@ await startSnapshotTesting("fetch", ({ test }) => {
       expect: expectAbortController.signal,
     });
   });
-  test("Request url diff", () => {
+  test("request url diff", () => {
     assert({
       actual: new Request("https://foo.com"),
       expect: new Request("https://bar.com"),
@@ -59,6 +59,53 @@ await startSnapshotTesting("fetch", ({ test }) => {
       expect: new Request("http://example.com", {
         signal: expectAbortController.signal,
       }),
+    });
+  });
+  test("response body diff", () => {
+    assert({
+      actual: {
+        a: new Response("foo"),
+        b: true,
+      },
+      expect: {
+        a: new Response("bar"),
+        b: false,
+      },
+    });
+  });
+  test("response status diff", () => {
+    assert({
+      actual: new Response("", {
+        status: 200,
+      }),
+      expect: new Response("", {
+        status: 400,
+      }),
+    });
+  });
+  test("response prop diff", () => {
+    assert({
+      actual: new Response("", {
+        status: 200,
+        statusText: "",
+        type: "basic",
+      }),
+      expect: new Response("", {
+        status: 400,
+        statusText: "Bad request",
+        headers: {
+          "content-length": "0",
+        },
+        type: "opaque",
+      }),
+      MAX_CONTEXT_BEFORE_DIFF: 8,
+      MAX_CONTEXT_AFTER_DIFF: 8,
+    });
+  });
+  test("redirected response", () => {
+    assert({
+      actual: new Response("", { status: 200 }),
+      expect: Response.redirect("http://example.com"),
     });
   });
 });

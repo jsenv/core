@@ -1,6 +1,7 @@
 /*
  * - response
- *
+ * - try to put request internal prop into the constructor
+ * - Blob, FormData, DataView, ArrayBuffer
  */
 
 import stringWidth from "string-width";
@@ -1543,8 +1544,8 @@ let createRootNode;
                 end: "…",
               },
             },
-            startMarker: quoteMarkerRef.current,
-            endMarker: quoteMarkerRef.current,
+            startMarker: quotesDisabled ? "" : quoteMarkerRef.current,
+            endMarker: quotesDisabled ? "" : quoteMarkerRef.current,
             quoteMarkerRef,
             childGenerator() {
               const {
@@ -1720,8 +1721,8 @@ let createRootNode;
                 end: "…",
               },
             },
-            startMarker: quoteMarkerRef.current,
-            endMarker: quoteMarkerRef.current,
+            startMarker: quotesDisabled ? "" : quoteMarkerRef.current,
+            endMarker: quotesDisabled ? "" : quoteMarkerRef.current,
             quoteMarkerRef,
             childGenerator: () => {
               const appendDatePartNode = (name, value, params) => {
@@ -2423,7 +2424,17 @@ let createRootNode;
                 objectConstructArgs = [
                   {
                     value: value.url,
-                    key: "toString()",
+                    key: "url",
+                  },
+                ];
+                break wrapped_value;
+              }
+              if (node.isResponse) {
+                objectConstructArgs = [
+                  {
+                    value: value.body,
+                    key: "body",
+                    isBody: true,
                   },
                 ];
                 break wrapped_value;
@@ -3028,9 +3039,59 @@ let createRootNode;
                       requestInternalPropertyName,
                       requestInternalPropertyValue,
                       {
-                        isBody: true,
+                        isBody: requestInternalPropertyName === "body",
                       },
                     );
+                  });
+                }
+              }
+              if (node.isResponse) {
+                const bodyUsed = value.bodyUsed;
+                if (bodyUsed) {
+                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                    appendPropertyEntryNode("bodyUsed", true);
+                  });
+                }
+                const headers = value.headers;
+                let headersAreEmpty = true;
+                // eslint-disable-next-line no-unused-vars
+                for (const entry of headers) {
+                  headersAreEmpty = false;
+                  break;
+                }
+                if (!headersAreEmpty) {
+                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                    appendPropertyEntryNode("headers", headers, {
+                      isHiddenWhenSame: true,
+                    });
+                  });
+                }
+                const status = value.status;
+                propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                  appendPropertyEntryNode("status", status);
+                });
+                const statusText = value.statusText;
+                if (statusText !== "") {
+                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                    appendPropertyEntryNode("statusText", statusText);
+                  });
+                }
+                const url = value.url;
+                if (url) {
+                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                    appendPropertyEntryNode("url", url);
+                  });
+                }
+                const type = value.type;
+                if (type !== "default") {
+                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                    appendPropertyEntryNode("type", type);
+                  });
+                }
+                const redirected = value.redirected;
+                if (redirected) {
+                  propertyLikeCallbackSet.add((appendPropertyEntryNode) => {
+                    appendPropertyEntryNode("redirected", true);
                   });
                 }
               }
@@ -4894,6 +4955,14 @@ const shouldIgnoreOwnPropertySymbol = (node, ownPropertySymbol) => {
         symbolDescription,
       )
     ) {
+      return true;
+    }
+  }
+  if (node.isResponse) {
+    if (Symbol.keyFor(ownPropertySymbol)) {
+      return false;
+    }
+    if (["state", "headers"].includes(symbolDescription)) {
       return true;
     }
   }

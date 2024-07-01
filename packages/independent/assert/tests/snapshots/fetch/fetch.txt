@@ -5,7 +5,7 @@ expect: AbortSignal {
   reason: "toto",
 }
 
-# Request url diff
+# request url diff
 actual: Request("https://foo.com/")
 expect: Request("https://bar.com/")
 
@@ -32,5 +32,52 @@ expect: Request("http://example.com/") {
     aborted: true,
     reason: "toto",
   },
+}
+
+# response body diff
+actual: {
+  a: Response(ReadableStream) { status: 200 },
+  b: true,
+}
+expect: {
+  a: Response(ReadableStream) { status: 200 },
+  b: false,
+}
+
+# response status diff
+actual: Response(ReadableStream) {
+  status: 200,
+}
+expect: Response(ReadableStream) {
+  status: 400,
+}
+
+# response prop diff
+actual: Response(ReadableStream) {
+  headers: Headers(
+    "content-type" => "text/plain;charset=UTF-8",
+  ),
+  status: 200,
+}
+expect: Response(ReadableStream) {
+  headers: Headers(
+    "content-length" => "0"
+  ),
+  status: 400,
+  statusText: "Bad request",
+}
+
+# redirected response
+actual: Response(ReadableStream) {
+  headers: Headers(
+    "content-type" => "text/plain;charset=UTF-8",
+  ),
+  status: 200,
+}
+expect: Response(null) {
+  headers: Headers(
+    "location" => "http://example.com/",
+  ),
+  status: 302,
 }
 

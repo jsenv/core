@@ -11,7 +11,7 @@ assert({
 
 ![img](<./fetch/abort signal pending vs aborted.svg>)
 
-# Request url diff
+# request url diff
 
 ```js
 assert({
@@ -20,7 +20,7 @@ assert({
 });
 ```
 
-![img](<./fetch/Request url diff.svg>)
+![img](<./fetch/request url diff.svg>)
 
 # request with custom options
 
@@ -74,4 +74,71 @@ assert({
 ```
 
 ![img](<./fetch/request abort signal pending vs aborted.svg>)
+
+# response body diff
+
+```js
+assert({
+  actual: {
+    a: new Response("foo"),
+    b: true,
+  },
+  expect: {
+    a: new Response("bar"),
+    b: false,
+  },
+});
+```
+
+![img](<./fetch/response body diff.svg>)
+
+# response status diff
+
+```js
+assert({
+  actual: new Response("", {
+    status: 200,
+  }),
+  expect: new Response("", {
+    status: 400,
+  }),
+});
+```
+
+![img](<./fetch/response status diff.svg>)
+
+# response prop diff
+
+```js
+assert({
+  actual: new Response("", {
+    status: 200,
+    statusText: "",
+    type: "basic",
+  }),
+  expect: new Response("", {
+    status: 400,
+    statusText: "Bad request",
+    headers: {
+      "content-length": "0",
+    },
+    type: "opaque",
+  }),
+  MAX_CONTEXT_BEFORE_DIFF: 8,
+  MAX_CONTEXT_AFTER_DIFF: 8,
+});
+```
+
+![img](<./fetch/response prop diff.svg>)
+
+# redirected response
+
+```js
+assert({
+  actual: new Response("", { status: 200 }),
+  expect: Response.redirect("http://example.com"),
+});
+```
+
+![img](<./fetch/redirected response.svg>)
 
