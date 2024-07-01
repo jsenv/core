@@ -1,9 +1,9 @@
 /*
+ *  - renderGrammar -> renderString with quotesDisabled (and other things disabled too)
  *  - headers
  *    - test header attribute diff
  *    - create node as parsing header so that
  *      the rendering does not alter spacing or ";" presence
- *  - renderGrammar -> renderString with quotesDisabled (and other things disabled too)
  *  - request/response/AbortController
  */
 
@@ -744,12 +744,11 @@ export const assert = (firstArg) => {
 
 const comparerDefault = (actualNode, expectNode) => {
   if (
-    actualNode.category === "primitive"
-    // ||
-    // actualNode.category === "line_parts" ||
-    // actualNode.category === "date_parts" ||
-    // actualNode.category === "url_parts" ||
-    // actualNode.category === "header_value_parts"
+    actualNode.category === "primitive" ||
+    actualNode.category === "line_parts" ||
+    actualNode.category === "date_parts" ||
+    actualNode.category === "url_parts" ||
+    actualNode.category === "header_value_parts"
   ) {
     if (
       actualNode.value === expectNode.value &&
@@ -760,18 +759,23 @@ const comparerDefault = (actualNode, expectNode) => {
         propagate: PLACEHOLDER_FOR_SAME,
       };
     }
+    if (actualNode.category === "primitive") {
+      return {
+        result: "failure",
+        reason: "primitive_value",
+        // Some primitive have children to render (like numbers)
+        // when comparison a boolean and a number for instance
+        // all number children will be colored in yellow because
+        // they have no counterparts as boolean node
+        // What we want instead is to color the number children in red/green
+        propagate:
+          typeof actualNode.value === typeof expectNode.value
+            ? null
+            : PLACEHOLDER_FOR_MODIFIED,
+      };
+    }
     return {
-      result: "failure",
-      reason: "primitive_value",
-      // Some primitive have children to render (like numbers)
-      // when comparison a boolean and a number for instance
-      // all number children will be colored in yellow because
-      // they have no counterparts as boolean node
-      // What we want instead is to color the number children in red/green
-      propagate:
-        typeof actualNode.value === typeof expectNode.value
-          ? null
-          : PLACEHOLDER_FOR_MODIFIED,
+      result: "",
     };
   }
   if (actualNode.category === "composite") {
@@ -1717,7 +1721,7 @@ let createRootNode;
           const dateTimestamp = Date.parse(dateString);
           const dateObject = new Date(dateTimestamp + localTimezoneOffset);
           const datePartsNode = node.appendChild("parts", {
-            // value,
+            value,
             category: "date_parts",
             group: "entries",
             subgroup: "date_parts",
@@ -5064,12 +5068,12 @@ const generateHeaderValueParts = (
           attribute = null;
         }
         const headerValuePartNode = headerValueNode.appendChild(partIndex, {
+          group: "entries",
+          subgroup: "header_part",
           value: partRaw,
           render: renderChildren,
           onelineDiff: {},
           startMarker: partIndex === 0 ? "" : ",",
-          group: "entries",
-          subgroup: "header_part",
         });
         let isFirstAttribute = true;
         for (const [attributeName, attributeValue] of attributeMap) {
