@@ -1443,36 +1443,32 @@ let createRootNode;
           childGenerator: () => {
             if (node.isNaN) {
               numberCompositionNode.appendChild("integer", {
+                ...getGrammarProps(),
+                group: "integer",
                 value: "NaN",
-                render: renderGrammar,
-                group: "grammar",
-                subgroup: "integer",
               });
               return;
             }
             if (node.isNegativeZero || Math.sign(value) === -1) {
               numberCompositionNode.appendChild("sign", {
+                ...getGrammarProps(),
+                group: "number_sign",
                 value: "-",
-                render: renderGrammar,
-                group: "grammar",
-                subgroup: "number_sign",
               });
             }
             if (node.isNegativeZero) {
               numberCompositionNode.appendChild("integer", {
+                ...getGrammarProps(),
+                group: "integer",
                 value: "0",
-                render: renderGrammar,
-                group: "grammar",
-                subgroup: "integer",
               });
               return;
             }
             if (node.isInfinity) {
               numberCompositionNode.appendChild("integer", {
+                ...getGrammarProps(),
+                group: "integer",
                 value: "Infinity",
-                render: renderGrammar,
-                group: "grammar",
-                subgroup: "integer",
               });
               return;
             }
@@ -1480,12 +1476,11 @@ let createRootNode;
             if (value % 1 === 0) {
               const { integer } = tokenizeInteger(Math.abs(value));
               numberCompositionNode.appendChild("integer", {
+                ...getGrammarProps(),
+                group: "integer",
                 value: numericSeparatorsDisabled
                   ? integer
                   : groupDigits(integer),
-                render: renderGrammar,
-                group: "grammar",
-                subgroup: "integer",
               });
               return;
             }
@@ -1494,17 +1489,15 @@ let createRootNode;
               Math.abs(value),
             );
             numberCompositionNode.appendChild("integer", {
+              ...getGrammarProps(),
+              group: "integer",
               value: numericSeparatorsDisabled ? integer : groupDigits(integer),
-              render: renderGrammar,
               separatorMarker: decimalSeparator,
-              group: "grammar",
-              subgroup: "integer",
             });
             numberCompositionNode.appendChild("decimal", {
+              ...getGrammarProps(),
+              group: "decimal",
               value: numericSeparatorsDisabled ? decimal : groupDigits(decimal),
-              render: renderGrammar,
-              group: "grammar",
-              subgroup: "decimal",
             });
           },
         });
@@ -1519,15 +1512,6 @@ let createRootNode;
     if (typeofResult === "string") {
       node.category = "primitive";
       node.isString = true;
-      // some strings are rendered as is
-      // - no quote escaping
-      // - no line splitting
-      if (group === "grammar") {
-        return node;
-      }
-      if (isSourceCode) {
-        return node;
-      }
       if (!quoteMarkerRef && !quotesDisabled) {
         node.quoteMarkerRef = quoteMarkerRef = {
           current: pickBestQuote(value, { quotesBacktickDisabled }),
@@ -1946,10 +1930,9 @@ let createRootNode;
               let index = 0;
               for (const part of wellKnownPath) {
                 wellKnownNode.appendChild(index, {
+                  ...getGrammarProps(),
+                  group: "path",
                   value: part.value,
-                  render: renderGrammar,
-                  group: "grammar",
-                  subgroup: "path",
                 });
                 index++;
               }
@@ -2110,10 +2093,9 @@ let createRootNode;
               let index = 0;
               for (const path of node.reference.path) {
                 referenceNode.appendChild(index, {
+                  ...getGrammarProps(),
+                  group: "path",
                   value: path.value,
-                  render: renderGrammar,
-                  group: "grammar",
-                  subgroup: "path",
                 });
                 index++;
               }
@@ -2135,10 +2117,9 @@ let createRootNode;
               let index = 0;
               for (const part of wellKnownPath) {
                 wellKnownNode.appendChild(index, {
+                  ...getGrammarProps(),
+                  group: "path",
                   value: part.value,
-                  render: renderGrammar,
-                  group: "grammar",
-                  subgroup: "path",
                 });
                 index++;
               }
@@ -2211,17 +2192,15 @@ let createRootNode;
                     childGenerator() {
                       if (node.functionAnalysis.type === "class") {
                         functionConstructNode.appendChild("class_keyword", {
+                          ...getGrammarProps(),
+                          group: "class_keyword",
                           value: "class",
-                          render: renderGrammar,
-                          group: "grammar",
-                          subgroup: "class_keyword",
                         });
                         if (node.functionAnalysis.name) {
                           functionConstructNode.appendChild("function_name", {
+                            ...getGrammarProps(),
+                            group: "function_name",
                             value: node.functionAnalysis.name,
-                            render: renderGrammar,
-                            group: "grammar",
-                            subgroup: "function_name",
                           });
                         }
                         const extendedClassName =
@@ -2230,19 +2209,17 @@ let createRootNode;
                           functionConstructNode.appendChild(
                             "class_extends_keyword",
                             {
+                              ...getGrammarProps(),
+                              group: "class_extends_keyword",
                               value: "extends",
-                              render: renderGrammar,
-                              group: "grammar",
-                              subgroup: "class_extends_keyword",
                             },
                           );
                           functionConstructNode.appendChild(
                             "class_extended_name",
                             {
+                              ...getGrammarProps(),
+                              group: "class_extended_name",
                               value: extendedClassName,
-                              render: renderGrammar,
-                              group: "grammar",
-                              subgroup: "class_extended_name",
                             },
                           );
                         }
@@ -2252,29 +2229,26 @@ let createRootNode;
                         functionConstructNode.appendChild(
                           "function_async_keyword",
                           {
+                            ...getGrammarProps(),
+                            group: "function_async_keyword",
                             value: "async",
-                            render: renderGrammar,
-                            group: "grammar",
-                            subgroup: "function_async_keyword",
                           },
                         );
                       }
                       if (node.functionAnalysis.type === "classic") {
                         functionConstructNode.appendChild("function_keyword", {
+                          ...getGrammarProps(),
+                          group: "function_keyword",
                           value: node.functionAnalysis.isGenerator
                             ? "function*"
                             : "function",
-                          render: renderGrammar,
-                          group: "grammar",
-                          subgroup: "function_keyword",
                         });
                       }
                       if (node.functionAnalysis.name) {
                         functionConstructNode.appendChild("function_name", {
+                          ...getGrammarProps(),
+                          group: "function_name",
                           value: node.functionAnalysis.name,
-                          render: renderGrammar,
-                          group: "grammar",
-                          subgroup: "function_name",
                         });
                       }
                       function_body_prefix: {
@@ -2282,10 +2256,9 @@ let createRootNode;
                           functionConstructNode.appendChild(
                             "function_body_prefix",
                             {
+                              ...getGrammarProps(),
+                              group: "function_body_prefix",
                               value: prefix,
-                              render: renderGrammar,
-                              group: "grammar",
-                              subgroup: "function_body_prefix",
                             },
                           );
                         };
@@ -2396,11 +2369,10 @@ let createRootNode;
                         );
                       } else {
                         objectConstructNode.appendChild("object_tag", {
-                          value: node.objectTag,
-                          render: renderGrammar,
-                          group: "grammar",
-                          subgroup: "object_tag",
+                          ...getGrammarProps(),
+                          group: "object_tag",
                           path: node.path.append("[[ObjectTag]]"),
+                          value: node.objectTag,
                         });
                       }
                     },
@@ -3094,11 +3066,10 @@ let createRootNode;
                                 descriptorName === "enumerable"
                               ) {
                                 descriptorNode.appendChild("descriptor_name", {
+                                  ...getGrammarProps(),
+                                  group: "property_descriptor_name",
                                   value: descriptorName,
-                                  render: renderGrammar,
                                   separatorMarker: " ",
-                                  group: "grammar",
-                                  subgroup: "property_descriptor_name",
                                 });
                               }
                               if (
@@ -3106,12 +3077,11 @@ let createRootNode;
                                 !isClassPrototype
                               ) {
                                 descriptorNode.appendChild("static_keyword", {
+                                  ...getGrammarProps(),
+                                  group: "static_keyword",
                                   value: "static",
-                                  render: renderGrammar,
                                   separatorMarker: " ",
                                   isHidden: isSourceCode || isMethod,
-                                  group: "grammar",
-                                  subgroup: "static_keyword",
                                 });
                               }
                               if (
@@ -3239,9 +3209,9 @@ let createRootNode;
               compositePartsNode.appendChild(
                 "object_integrity_call_close_parenthesis",
                 {
-                  value: ")",
-                  render: renderGrammar,
+                  ...getGrammarProps(),
                   group: "grammar",
+                  value: ")",
                   hasLeftSpacingDisabled: true,
                 },
               );
@@ -3308,7 +3278,6 @@ let createRootNode;
       depth:
         params.group === "entries" ||
         params.group === "entry" ||
-        params.group === "grammar" ||
         params.isClassPrototype ||
         node.parent?.isClassPrototype
           ? node.depth
@@ -3376,6 +3345,17 @@ const renderString = (node, props) => {
     diff += value;
   }
   return truncateAndApplyColor(diff, node, props);
+};
+// - no quote escaping
+// - no line splitting
+const getGrammarProps = () => {
+  return {
+    quotesDisabled: true,
+    urlStringDetectionDisabled: false,
+    dateStringDetectionDisabled: false,
+    stringDiffPrecision: "none",
+    render: renderGrammar,
+  };
 };
 const renderEmptyValue = (node, props) => {
   return truncateAndApplyColor("empty", node, props);
@@ -4442,7 +4422,6 @@ const renderChildrenMultiline = (node, props) => {
   diff += setColor(endMarker, node.color);
   return diff;
 };
-
 const getNodeDepth = (node, props) => {
   return node.depth - props.startNode.depth;
 };
@@ -4509,23 +4488,20 @@ const createMethodCallNode = (
     subgroup: "method_call",
     childGenerator: (methodCallNode) => {
       methodCallNode.appendChild("object_name", {
+        ...getGrammarProps(),
+        group: "object_name",
         value: objectName,
-        render: renderGrammar,
-        group: "grammar",
-        subgroup: "object_name",
       });
       if (methodName) {
         methodCallNode.appendChild("method_dot", {
+          ...getGrammarProps(),
+          group: "method_dot",
           value: ".",
-          render: renderGrammar,
-          group: "grammar",
-          subgroup: "method_dot",
         });
         methodCallNode.appendChild("method_name", {
+          ...getGrammarProps(),
+          group: "method_name",
           value: methodName,
-          render: renderGrammar,
-          group: "grammar",
-          subgroup: "method_name",
         });
       }
 
