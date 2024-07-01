@@ -1919,6 +1919,11 @@ let createRootNode;
             },
           });
         };
+        return node;
+      }
+      if (!quotesDisabled) {
+        node.startMarker = quoteMarkerRef.current;
+        node.endMarker = quoteMarkerRef.current;
       }
       return node;
     }
@@ -3356,19 +3361,21 @@ const renderString = (node, props) => {
   if (stringPartsNode) {
     return stringPartsNode.render(props);
   }
-  const quoteToEscape = node.quoteMarkerRef?.current;
-  if (quoteToEscape) {
-    let diff = "";
-    for (const char of node.value) {
+  const { quoteMarkerRef, value } = node;
+  let diff = "";
+  if (quoteMarkerRef) {
+    const quoteToEscape = quoteMarkerRef.current;
+    for (const char of value) {
       if (char === quoteToEscape) {
         diff += `\\${char}`;
       } else {
         diff += char;
       }
     }
-    return truncateAndApplyColor(diff, node, props);
+  } else {
+    diff += value;
   }
-  return truncateAndApplyColor(node.value, node, props);
+  return truncateAndApplyColor(diff, node, props);
 };
 const renderEmptyValue = (node, props) => {
   return truncateAndApplyColor("empty", node, props);
@@ -5082,6 +5089,7 @@ const generateHeaderValueParts = (
               value: attributeName,
               render: renderString,
               stringDiffPrecision: "none",
+              quotesDisabled: true,
               quoteMarkerRef,
               startMarker: isFirstAttribute ? "" : ";",
             });
@@ -5090,6 +5098,7 @@ const generateHeaderValueParts = (
               value: attributeName,
               render: renderString,
               stringDiffPrecision: "none",
+              quotesDisabled: true,
               quoteMarkerRef,
               startMarker: isFirstAttribute ? "" : ";",
               endMarker: "=",
@@ -5099,6 +5108,7 @@ const generateHeaderValueParts = (
               value: attributeValue,
               render: renderString,
               stringDiffPrecision: "none",
+              quotesDisabled: true,
               quoteMarkerRef,
             });
           }
