@@ -75,18 +75,51 @@ await startSnapshotTesting("headers", ({ test }) => {
         "set-cookie": "a=1,b=2",
       }),
       expect: new Headers({
-        "set-cookie": "a=9",
+        "set-cookie": "a=1",
       }),
     });
   });
-  // TODO: a cookie is removed
-  // see https://stackoverflow.com/questions/4056306/how-to-handle-multiple-cookies-with-the-same-name
-  test.TODO("cookie name used several times", () => {
-    // se  we can't use the name when parsing and rendering but
-    // rather an index?
+  test("cookie removed", () => {
+    assert({
+      actual: new Headers({
+        "set-cookie": "a=1",
+      }),
+      expect: new Headers({
+        "set-cookie": "a=1,b=2,",
+      }),
+    });
   });
-  test.TODO("cookie order modified", () => {});
-  // TODO: cookies header with a diff on some prop
+  test("cookie order modified", () => {
+    assert({
+      actual: new Headers({
+        "set-cookie": "a=1,b=2",
+      }),
+      expect: new Headers({
+        "set-cookie": "b=2,a=1",
+      }),
+    });
+  });
+  // see https://stackoverflow.com/questions/4056306/how-to-handle-multiple-cookies-with-the-same-name
+  test("cookie name used several times", () => {
+    assert({
+      actual: new Headers({
+        "set-cookie": "a=1,a=2",
+      }),
+      expect: new Headers({
+        "set-cookie": "a=9,a=8",
+      }),
+    });
+  });
+  test("cookie becomes secure", () => {
+    assert({
+      actual: new Headers({
+        "set-cookie": "a=1; Secure",
+      }),
+      expect: new Headers({
+        "set-cookie": "a=1",
+      }),
+    });
+  });
   // TODO: accept, header with a diff on q
   //       something new is accepted
   //       something is not accepted anymore

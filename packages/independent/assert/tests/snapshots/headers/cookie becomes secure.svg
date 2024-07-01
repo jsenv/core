@@ -34,7 +34,7 @@
     overflow="hidden"
   >
     <svg
-      width="246.84"
+      width="280.44"
       height="117.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
@@ -60,10 +60,8 @@
         <text x="161.22" y="33.55" fill="#7f7f7f">&#x22;</text>
         <text x="169.63" y="33.55" fill="#7f7f7f">a=</text>
         <text x="186.43" y="33.55" fill="#7f7f7f">1</text>
-        <text x="194.83" y="33.55" fill="#DAA520">,</text>
-        <text x="203.23" y="33.55" fill="#DAA520">b=</text>
-        <text x="220.03" y="33.55" fill="#DAA520">2</text>
-        <text x="228.44" y="33.55" fill="#7f7f7f">&#x22;</text>
+        <text x="194.83" y="33.55" fill="#DAA520">; Secure</text>
+        <text x="262.04" y="33.55" fill="#7f7f7f">&#x22;</text>
         <text x="10" y="52.55" fill="#7f7f7f">)</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">Headers</text>

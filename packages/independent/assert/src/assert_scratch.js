@@ -5046,6 +5046,11 @@ const generateHeaderValueParts = (
           attribute.end();
           attribute = null;
         }
+        if (attributeMap.size === 0) {
+          attributeMap = null;
+          part = null;
+          return;
+        }
         const headerValuePartNode = headerValueNode.appendChild(partIndex, {
           group: "entries",
           subgroup: "header_part",
@@ -5053,11 +5058,24 @@ const generateHeaderValueParts = (
           render: renderChildren,
           onelineDiff: {},
           startMarker: partIndex === 0 ? "" : ",",
+          path: headerValueNode.path.append(partIndex, {
+            isIndexedEntry: true,
+          }),
         });
         let isFirstAttribute = true;
         for (const [attributeName, attributeValue] of attributeMap) {
+          const attributeNameNormalized = attributeName.trim();
+          const headerAttributeNode = headerValuePartNode.appendChild(
+            attributeNameNormalized,
+            {
+              group: "entries",
+              render: renderChildren,
+              onelineDiff: {},
+              path: headerValuePartNode.path.append(attributeNameNormalized),
+            },
+          );
           if (attributeValue === true) {
-            headerValuePartNode.appendChild("entry_key", {
+            headerAttributeNode.appendChild("entry_key", {
               value: attributeName,
               render: renderString,
               stringDiffPrecision: "none",
@@ -5066,7 +5084,7 @@ const generateHeaderValueParts = (
               startMarker: isFirstAttribute ? "" : ";",
             });
           } else {
-            headerValuePartNode.appendChild("entry_key", {
+            headerAttributeNode.appendChild("entry_key", {
               value: attributeName,
               render: renderString,
               stringDiffPrecision: "none",
@@ -5108,7 +5126,7 @@ const generateHeaderValueParts = (
         }
         if (!attributeValue) {
           if (!attributeName) {
-            // trailing ";"
+            // trailing ";" (or trailing ",")
             attributeNameStarted = false;
             return;
           }

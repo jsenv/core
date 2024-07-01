@@ -103,10 +103,70 @@ assert({
     "set-cookie": "a=1,b=2",
   }),
   expect: new Headers({
-    "set-cookie": "a=9",
+    "set-cookie": "a=1",
   }),
 });
 ```
 
 ![img](<./headers/cookie added.svg>)
+
+# cookie removed
+
+```js
+assert({
+  actual: new Headers({
+    "set-cookie": "a=1",
+  }),
+  expect: new Headers({
+    "set-cookie": "a=1,b=2,",
+  }),
+});
+```
+
+![img](<./headers/cookie removed.svg>)
+
+# cookie order modified
+
+```js
+assert({
+  actual: new Headers({
+    "set-cookie": "a=1,b=2",
+  }),
+  expect: new Headers({
+    "set-cookie": "b=2,a=1",
+  }),
+});
+```
+
+![img](<./headers/cookie order modified.svg>)
+
+# cookie name used several times
+
+```js
+assert({
+  actual: new Headers({
+    "set-cookie": "a=1,a=2",
+  }),
+  expect: new Headers({
+    "set-cookie": "a=9,a=8",
+  }),
+});
+```
+
+![img](<./headers/cookie name used several times.svg>)
+
+# cookie becomes secure
+
+```js
+assert({
+  actual: new Headers({
+    "set-cookie": "a=1; Secure",
+  }),
+  expect: new Headers({
+    "set-cookie": "a=1",
+  }),
+});
+```
+
+![img](<./headers/cookie becomes secure.svg>)
 
