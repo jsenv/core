@@ -5,6 +5,7 @@ import { assert } from "@jsenv/assert";
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("date", ({ test }) => {
+  assert.localTimezoneOffset = 60_000;
   test("year month day minutes diff on iso", () => {
     assert({
       actual: "1970-01-01 00:00:00.000Z",

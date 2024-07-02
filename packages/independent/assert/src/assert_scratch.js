@@ -2,13 +2,14 @@
  * This file is named "scratch" as a testimony of the fact it has been
  * recoded from scratch around april 2024
  *
- * Next steps:
+ * Nice to have:
  * - preact signals
  * - a DOM node should be converted to outerHTML right?
  * - ansi in browser
  * - Blob, FormData, DataView, ArrayBuffer
  * - count diff + displayed diff ( + display in message?)
  * - add or removed reason must be unique
+ * - maintenir le format de date lorsqu'il est le meme dans actual/expect et favoriser celui de actual
  */
 
 import stripAnsi from "strip-ansi";
@@ -176,6 +177,8 @@ export const createAssert = ({
       ...defaultOptions,
       ...firstArg,
     };
+    // for test
+    assert.localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000;
 
     const sharedContext = {
       forceMultilineDiff,
@@ -183,6 +186,7 @@ export const createAssert = ({
       tokenizeString,
       measureStringWidth,
       setColor,
+      assert,
     };
     const actualRootNode = createRootNode({
       context: {
@@ -1893,10 +1897,11 @@ let createRootNode;
       }
       if (isStringForDate) {
         node.childGenerator = () => {
-          const localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000;
           const dateString = value;
           const dateTimestamp = Date.parse(dateString);
-          const dateObject = new Date(dateTimestamp + localTimezoneOffset);
+          const dateObject = new Date(
+            dateTimestamp + node.context.assert.localTimezoneOffset,
+          );
           const datePartsNode = node.appendChild("parts", {
             value,
             category: "date_parts",
