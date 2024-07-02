@@ -344,20 +344,22 @@ const createDynamicLog = ({
     clearAttemptResult = undefined;
   };
 
-  const clearDuringFunctionCall = (callback) => {
+  const clearDuringFunctionCall = (
+    callback,
+    ouputAfterCallback = lastOutput,
+  ) => {
     // 1. Erase the current log
-    // 2. Call callback (expected to write something on stdout)
+    // 2. Call callback (expect to write something on stdout)
     // 3. Restore the current log
     // During step 2. we expect a "write from outside" so we uninstall
     // the stream spy during function call
-    const currentOutput = lastOutput;
     update("");
 
     writing = true;
     callback();
     writing = false;
 
-    update(currentOutput);
+    update(ouputAfterCallback);
   };
 
   const writeFromOutsideEffect = (value) => {
@@ -630,14 +632,19 @@ const ANSI = {
   YELLOW: "\x1b[33m",
   BLUE: "\x1b[34m",
   MAGENTA: "\x1b[35m",
+  CYAN: "\x1b[36m",
   GREY: "\x1b[90m",
   color: (text, ANSI_COLOR) => {
-    return ANSI.supported ? `${ANSI_COLOR}${text}${RESET}` : text;
+    return ANSI.supported && ANSI_COLOR ? `${ANSI_COLOR}${text}${RESET}` : text;
   },
 
   BOLD: "\x1b[1m",
+  UNDERLINE: "\x1b[4m",
+  STRIKE: "\x1b[9m",
   effect: (text, ANSI_EFFECT) => {
-    return ANSI.supported ? `${ANSI_EFFECT}${text}${RESET}` : text;
+    return ANSI.supported && ANSI_EFFECT
+      ? `${ANSI_EFFECT}${text}${RESET}`
+      : text;
   },
 };
 
@@ -1010,6 +1017,9 @@ const UNICODE = {
   },
   get CIRCLE_CROSS() {
     return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+  },
+  get ELLIPSIS() {
+    return UNICODE.supported ? `…` : `...`;
   },
 };
 
