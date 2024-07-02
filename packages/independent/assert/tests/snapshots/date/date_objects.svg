@@ -53,9 +53,9 @@
         <text x="203.23" y="52.55" fill="#7f7f7f">1</text>
         <text x="220.03" y="52.55" fill="#cd5555"> 10</text>
         <text x="236.84" y="52.55" fill="#7f7f7f">:00</text>
-        <text x="262.04" y="52.55" fill="#7f7f7f">:00</text>
-        <text x="287.25" y="52.55" fill="#7f7f7f">&#x22;</text>
-        <text x="295.65" y="52.55" fill="#7f7f7f">)</text>
+        <text x="262.04" y="52.55" fill="#7f7f7f">:00Z</text>
+        <text x="295.65" y="52.55" fill="#7f7f7f">&#x22;</text>
+        <text x="304.05" y="52.55" fill="#7f7f7f">)</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="71.55" fill="#7f7f7f">Date</text>
         <text x="110.82" y="71.55" fill="#7f7f7f">(</text>
@@ -69,9 +69,9 @@
         <text x="203.23" y="71.55" fill="#7f7f7f">1</text>
         <text x="220.03" y="71.55" fill="#11bc79"> 08</text>
         <text x="236.84" y="71.55" fill="#7f7f7f">:00</text>
-        <text x="262.04" y="71.55" fill="#7f7f7f">:00</text>
-        <text x="287.25" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="295.65" y="71.55" fill="#7f7f7f">)</text>
+        <text x="262.04" y="71.55" fill="#7f7f7f">:00Z</text>
+        <text x="295.65" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="304.05" y="71.55" fill="#7f7f7f">)</text>
       </g>
     </svg>
   </foreignObject>

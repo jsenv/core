@@ -109,8 +109,6 @@ const defaultOptions = {
   details: "",
 };
 
-const localTimezoneOffsetSystem = new Date(0).getTimezoneOffset() * 60_000;
-
 export const createAssert = ({
   colors = true,
   measureStringWidth = (string) => stripAnsi(string).length,
@@ -491,9 +489,15 @@ export const createAssert = ({
             };
             if (actualNode.isHiddenWhenSame) {
               actualNode.isHidden = true;
+              if (actualNode.onHide) {
+                actualNode.onHide();
+              }
             }
             if (expectNode.isHiddenWhenSame) {
               expectNode.isHidden = true;
+              if (expectNode.onHide) {
+                expectNode.onHide();
+              }
             }
             return;
           }
@@ -683,9 +687,15 @@ export const createAssert = ({
       if (comparison.reasons.overall.any.size === 0) {
         if (actualNode.isHiddenWhenSame) {
           actualNode.isHidden = true;
+          if (actualNode.onHide) {
+            actualNode.onHide();
+          }
         }
         if (expectNode.isHiddenWhenSame) {
           expectNode.isHidden = true;
+          if (expectNode.onHide) {
+            expectNode.onHide();
+          }
         }
       }
       if (
@@ -1417,6 +1427,7 @@ let createRootNode;
     isHidden = false,
     isHiddenWhenSame = false,
     isHiddenWhenSolo = false,
+    onHide = null,
     focusedChildIndex,
     startMarker = "",
     endMarker = "",
@@ -1499,6 +1510,7 @@ let createRootNode;
       isHidden,
       isHiddenWhenSame,
       isHiddenWhenSolo,
+      onHide,
       focusedChildIndex,
       beforeRender: null,
       // START will be set by comparison
@@ -1902,18 +1914,12 @@ let createRootNode;
       if (isStringForDate) {
         node.childGenerator = () => {
           const dateString = value;
-          let dateTimestamp = Date.parse(dateString);
-          const localTimezoneOffset = node.context.assert.localTimezoneOffset;
-          if (localTimezoneOffset) {
-            dateTimestamp += localTimezoneOffset;
-            const diff = localTimezoneOffsetSystem - localTimezoneOffset;
-            // happens when running code in an different timezone
-            // in that case we want to adapt the timestamp
-            dateTimestamp += diff;
-          } else {
-            dateTimestamp += localTimezoneOffsetSystem;
-          }
-          const dateObject = new Date(dateTimestamp);
+          const dateTimestamp = Date.parse(dateString);
+          const dateObjectUsingSystemTimezone = new Date(dateTimestamp);
+          const dateObject = new Date(
+            dateTimestamp +
+              dateObjectUsingSystemTimezone.getTimezoneOffset() * 60_000,
+          );
           const datePartsNode = node.appendChild("parts", {
             value,
             category: "date_parts",
@@ -1933,7 +1939,7 @@ let createRootNode;
             quoteMarkerRef,
             childGenerator: () => {
               const appendDatePartNode = (name, value, params) => {
-                datePartsNode.appendChild(name, {
+                return datePartsNode.appendChild(name, {
                   value,
                   render: renderValue,
                   quoteMarkerRef,
@@ -1965,7 +1971,7 @@ let createRootNode;
                 isHiddenWhenSame: true,
                 childGenerator: () => {
                   const appendTimePartNode = (name, value, params) => {
-                    timePartsNode.appendChild(name, {
+                    return timePartsNode.appendChild(name, {
                       value,
                       render: renderString,
                       stringDiffPrecision: "none",
@@ -1989,7 +1995,7 @@ let createRootNode;
                     String(dateObject.getMinutes()).padStart(2, "0"),
                     { startMarker: ":" },
                   );
-                  appendTimePartNode(
+                  const secondsPartNode = appendTimePartNode(
                     "seconds",
                     String(dateObject.getSeconds()).padStart(2, "0"),
                     { startMarker: ":" },
@@ -2001,6 +2007,9 @@ let createRootNode;
                       startMarker: ".",
                       endMarker: "Z",
                       isHiddenWhenSame: true,
+                      onHide: () => {
+                        secondsPartNode.endMarker = "Z";
+                      },
                     },
                   );
                 },
@@ -2621,7 +2630,7 @@ let createRootNode;
               if (node.isDate) {
                 objectConstructArgs = [
                   {
-                    value: value.toString(),
+                    value: value.toISOString(),
                     key: "toString()",
                     isStringForDate: true,
                   },

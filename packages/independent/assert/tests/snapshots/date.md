@@ -1,3 +1,25 @@
+# timezone stuff
+
+```js
+assert({
+  actual: "Thu Jan 01 1970 12:00:00 GMT+0500",
+  expect: "1970-01-01 00:00:00.000Z",
+});
+```
+
+![img](<./date/timezone_stuff.svg>)
+
+# GMT vs iso
+
+```js
+assert({
+  actual: "Tue May 07 2024 11:27:04 GMT+0200",
+  expect: "1970-01-01 00:00:00Z",
+});
+```
+
+![img](<./date/gmt_vs_iso.svg>)
+
 # year month day minutes diff on iso
 
 ```js
@@ -74,18 +96,6 @@ assert({
 ```
 
 ![img](<./date/+0h30_on_timezone.svg>)
-
-# GMT vs iso
-
-```js
-assert({
-  actual:
-    "Tue May 07 2024 11:27:04 GMT+0200 (Central European Summer Time)",
-  expect: "1970-01-01 00:00:00Z",
-});
-```
-
-![img](<./date/gmt_vs_iso.svg>)
 
 # simplified date
 
