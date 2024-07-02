@@ -210,6 +210,7 @@ export const assert = (firstArg, ...rest) => {
    *   descriptorValueNode
    */
   let isNot = false;
+  let allowRecompare = false;
   const compare = (actualNode, expectNode) => {
     if (actualNode.ignore && actualNode.comparison) {
       return actualNode.comparison;
@@ -247,11 +248,14 @@ export const assert = (firstArg, ...rest) => {
     const subcompareDuo = (
       actualChildNode,
       expectChildNode,
-      { revertNot } = {},
+      { revertNot, isRecomparison } = {},
     ) => {
       let isNotPrevious = isNot;
       if (revertNot) {
         isNot = !isNot;
+      }
+      if (isRecomparison) {
+        allowRecompare = true;
       }
       const childComparison = compare(actualChildNode, expectChildNode);
       isNot = isNotPrevious;
@@ -403,11 +407,11 @@ export const assert = (firstArg, ...rest) => {
     };
 
     const visitDuo = (actualNode, expectNode) => {
-      if (actualNode.comparison) {
+      if (actualNode.comparison && !allowRecompare) {
         throw new Error(`actualNode (${actualNode.subgroup}) already compared`);
       }
       actualNode.comparison = comparison;
-      if (expectNode.comparison) {
+      if (expectNode.comparison && !allowRecompare) {
         throw new Error(`expectNode (${expectNode.subgroup}) already compared`);
       }
       expectNode.comparison = comparison;
@@ -486,7 +490,7 @@ export const assert = (firstArg, ...rest) => {
       }
     };
     const visitSolo = (node, placeholderNode) => {
-      if (node.comparison) {
+      if (node.comparison && !allowRecompare) {
         throw new Error(`node (${node.subgroup}) already compared`);
       }
       node.comparison = comparison;
@@ -888,15 +892,20 @@ const createAssertMethodCustomExpectation = (
   methodName,
   args,
   {
+    isRecomparison,
     customCompare = createAssertMethodCustomCompare(
       (actualNode, expectArgValueNode, { subcompareDuo }) => {
         const expectArgComparison = subcompareDuo(
           actualNode,
           expectArgValueNode,
+          {
+            isRecomparison,
+          },
         );
-        return expectArgComparison.hasAnyDiff
-          ? PLACEHOLDER_FOR_MODIFIED
-          : PLACEHOLDER_FOR_SAME;
+        if (expectArgComparison.hasAnyDiff) {
+          return PLACEHOLDER_FOR_MODIFIED;
+        }
+        return PLACEHOLDER_FOR_SAME;
       },
     ),
     renderOnlyArgs,
@@ -1002,7 +1011,7 @@ const createAssertMethodCustomCompare = (
   };
 };
 
-assert.belowOrEquals = (value, { renderOnlyArgs } = {}) => {
+assert.belowOrEquals = (value, options) => {
   if (typeof value !== "number") {
     throw new TypeError(
       `assert.belowOrEquals 1st argument must be number, received ${value}`,
@@ -1024,12 +1033,10 @@ assert.belowOrEquals = (value, { renderOnlyArgs } = {}) => {
         }),
       },
     ],
-    {
-      renderOnlyArgs,
-    },
+    options,
   );
 };
-assert.aboveOrEquals = (value, { renderOnlyArgs } = {}) => {
+assert.aboveOrEquals = (value, options) => {
   if (typeof value !== "number") {
     throw new TypeError(
       `assert.aboveOrEquals 1st argument must be number, received ${value}`,
@@ -1051,9 +1058,7 @@ assert.aboveOrEquals = (value, { renderOnlyArgs } = {}) => {
         }),
       },
     ],
-    {
-      renderOnlyArgs,
-    },
+    options,
   );
 };
 assert.between = (minValue, maxValue) => {
@@ -1073,8 +1078,17 @@ assert.between = (minValue, maxValue) => {
     );
   }
   return createAssertMethodCustomExpectation("between", [
-    { value: assert.aboveOrEquals(minValue, { renderOnlyArgs: true }) },
-    { value: assert.belowOrEquals(maxValue, { renderOnlyArgs: true }) },
+    {
+      value: assert.aboveOrEquals(minValue, {
+        renderOnlyArgs: true,
+      }),
+    },
+    {
+      value: assert.belowOrEquals(maxValue, {
+        renderOnlyArgs: true,
+        isRecomparison: true,
+      }),
+    },
   ]);
 };
 assert.not = (value) => {

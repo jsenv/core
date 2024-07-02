@@ -1,22 +1,22 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
-await startSnapshotTesting("assert_between", {
-  "below or equals": () => {
+await startSnapshotTesting("assert_between", ({ test }) => {
+  test("below or equals", () => {
     assert({
       actual: 50,
       expect: assert.belowOrEquals(25),
     });
-  },
-  "below or equals when removed": () => {
+  });
+  test("below or equals when removed", () => {
     assert({
       actual: {},
       expect: {
         a: assert.belowOrEquals(25),
       },
     });
-  },
-  "below or equals ok": () => {
+  });
+  test("below or equals ok", () => {
     assert({
       actual: {
         a: true,
@@ -27,14 +27,14 @@ await startSnapshotTesting("assert_between", {
         b: assert.belowOrEquals(25),
       },
     });
-  },
-  "50 is too small": () => {
+  });
+  test("50 is too small", () => {
     assert({
       actual: 50,
       expect: assert.between(100, 200),
     });
-  },
-  "3500 is between 3000 and 5000": () => {
+  });
+  test("3500 is between 3000 and 5000", () => {
     assert({
       actual: {
         a: 3_500,
@@ -45,7 +45,7 @@ await startSnapshotTesting("assert_between", {
         b: false,
       },
     });
-  },
+  });
   // "250 is too big": () => {
   //   assert({
   //     actual: 42,

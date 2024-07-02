@@ -23,15 +23,12 @@ actual: 50
 expect: assert.between(100, 200)
 
 # 3500 is between 3000 and 5000
-Error: node (number_composition) already compared
-    at visitSolo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:490:15)
-    at compare (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:550:9)
-    at subcompareDuo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:256:31)
-    at subcompareSolo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:266:16)
-    at subcompareChildrenSolo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:386:37)
-    at Object.customCompare (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:943:5)
-    at compare (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:506:20)
-    at subcompareDuo (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:256:31)
-    at file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:893:37
-    at Object.customCompare (file:///Users/damien.maillard/dev/perso/jsenv-core/packages/independent/assert/src/assert_scratch.js:961:36)
+actual: {
+  a: 3_500,
+  b: true,
+}
+expect: {
+  a: assert.between(3_000, 5_000),
+  b: false,
+}
 
