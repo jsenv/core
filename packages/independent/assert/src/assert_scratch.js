@@ -779,7 +779,6 @@ export const createAssert = ({
       }
       diff += "\n";
     }
-    diff += "\n";
     diff += setColor("actual:", sameColor);
     diff += " ";
     diff += actualStartNode.render({
@@ -813,7 +812,8 @@ export const createAssert = ({
       diff += "\n";
       diff += `---------------`;
     }
-    const assertionError = assert.createAssertionError(diff);
+    const assertionError = assert.createAssertionError(`\n${diff}`);
+    assertionError.diff = diff;
     if (Error.captureStackTrace) {
       Error.captureStackTrace(assertionError, assert);
     }
