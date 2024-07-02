@@ -128,15 +128,13 @@ test(() => {
   } catch (e) {
     const actual = stripAnsi(e.message);
     const expect = `snapshot comparison failed for "b.js"
---- reason ---
-unexpected character in file content
+actual: 1| console.log("c");
+        2| 
+expect: 1| console.log("b");
+        2| 
 --- details ---
-1 | console.log("c");
-                 ^
-unexpected "c", expect to continue with 'b");'…
-2 | 
---- file ---
-${snapshotsDirectoryUrl}b.js`;
+"${snapshotsDirectoryUrl}b.js"
+---------------`;
     assert({ actual, expect });
   }
 });

@@ -97,6 +97,7 @@ const defaultOptions = {
   MAX_CONTEXT_BEFORE_DIFF: { prop: 2, line: 3 },
   MAX_CONTEXT_AFTER_DIFF: { prop: 2, line: 3 },
   MAX_COLUMNS: 100,
+  message: "",
   details: "",
 };
 
@@ -163,6 +164,7 @@ export const createAssert = ({
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
+      message,
       details,
     } = {
       ...defaultOptions,
@@ -812,8 +814,22 @@ export const createAssert = ({
       diff += "\n";
       diff += `---------------`;
     }
-    const assertionError = assert.createAssertionError(`\n${diff}`);
-    assertionError.diff = diff;
+
+    let errorMessage = "";
+    if (message) {
+      errorMessage += message;
+      errorMessage += "\n";
+      errorMessage += diff;
+    } else {
+      errorMessage += "\n";
+      errorMessage += diff;
+    }
+    const assertionError = assert.createAssertionError(errorMessage);
+    Object.defineProperty(assertionError, "diff", {
+      configurable: true,
+      writable: true,
+      value: diff,
+    });
     if (Error.captureStackTrace) {
       Error.captureStackTrace(assertionError, assert);
     }

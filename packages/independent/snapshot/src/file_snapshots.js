@@ -113,6 +113,7 @@ ${fileUrl}`);
     return;
   }
   assert({
+    message: failureMessage,
     details: fileUrl,
     actual: actualFileContent,
     expect: expectedFileContent,
