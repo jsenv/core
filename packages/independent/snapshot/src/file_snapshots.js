@@ -13,7 +13,6 @@ import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 import { assert } from "@jsenv/assert";
-import { getStringAssertionErrorInfo } from "@jsenv/assert/src/error_info/strings.js";
 
 export const takeFileSnapshot = (fileUrl) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);
@@ -113,20 +112,11 @@ ${fileUrl}`);
   if (actualFileContent === expectedFileContent) {
     return;
   }
-  const errorInfo = getStringAssertionErrorInfo({
+  assert({
+    message: fileUrl,
     actual: actualFileContent,
-    expected: expectedFileContent,
-    name: `file content`,
-    format: assert.format,
+    expect: expectedFileContent,
   });
-  const fileContentStringAssertionError =
-    assert.createAssertionError(`${failureMessage}
---- reason ---
-${errorInfo.message}
---- file ---
-${fileUrl}`);
-  fileContentStringAssertionError.name = errorInfo.type;
-  throw fileContentStringAssertionError;
 };
 
 export const takeDirectorySnapshot = (directoryUrl) => {

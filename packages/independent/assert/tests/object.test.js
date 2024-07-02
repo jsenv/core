@@ -2,6 +2,16 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("object", ({ test }) => {
+  test("basic", () => {
+    assert({
+      actual: {
+        foo: true,
+      },
+      expect: {
+        foo: false,
+      },
+    });
+  });
   test("property are different", () => {
     assert({
       actual: {

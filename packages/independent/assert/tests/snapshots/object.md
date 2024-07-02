@@ -1,3 +1,18 @@
+# basic
+
+```js
+assert({
+  actual: {
+    foo: true,
+  },
+  expect: {
+    foo: false,
+  },
+});
+```
+
+![img](<./object/basic.svg>)
+
 # property are different
 
 ```js

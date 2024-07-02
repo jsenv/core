@@ -1,3 +1,14 @@
+# Error vs TypeError
+
+```js
+assert({
+  actual: new Error(),
+  expect: new TypeError(),
+});
+```
+
+![img](<./prototype/Error vs TypeError.svg>)
+
 # object with different prototypes
 
 ```js

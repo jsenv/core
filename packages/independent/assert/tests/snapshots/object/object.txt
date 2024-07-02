@@ -1,3 +1,11 @@
+# basic
+actual: {
+  foo: true,
+}
+expect: {
+  foo: false,
+}
+
 # property are different
 actual: {
   a: true,

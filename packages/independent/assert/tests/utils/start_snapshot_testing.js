@@ -4,7 +4,7 @@ import { startTerminalRecording } from "@jsenv/terminal-recorder";
 import { clearDirectorySync, writeFileSync } from "@jsenv/filesystem";
 import { ANSI } from "@jsenv/humanize";
 
-import { parseFunction } from "@jsenv/assert/src/function_parser.js";
+import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
 
 const generateMarkdown =
   process.execArgv.includes("--conditions=development") && !process.env.CI;

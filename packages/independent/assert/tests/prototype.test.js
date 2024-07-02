@@ -2,6 +2,12 @@ import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("prototype", ({ test }) => {
+  test("Error vs TypeError", () => {
+    assert({
+      actual: new Error(),
+      expect: new TypeError(),
+    });
+  });
   test("object with different prototypes", () => {
     assert({
       actual: Object.create({

@@ -1,3 +1,7 @@
+# Error vs TypeError
+actual: Error
+expect: TypeError
+
 # object with different prototypes
 actual: {
   __proto__: {
