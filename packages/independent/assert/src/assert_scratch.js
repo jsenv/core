@@ -97,6 +97,7 @@ const defaultOptions = {
   MAX_CONTEXT_BEFORE_DIFF: { prop: 2, line: 3 },
   MAX_CONTEXT_AFTER_DIFF: { prop: 2, line: 3 },
   MAX_COLUMNS: 100,
+  forceMultilineDiff: false,
   message: "",
   details: "",
 };
@@ -164,6 +165,7 @@ export const createAssert = ({
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
+      forceMultilineDiff,
       message,
       details,
     } = {
@@ -172,6 +174,7 @@ export const createAssert = ({
     };
 
     const sharedContext = {
+      forceMultilineDiff,
       getWellKnownValuePath,
       tokenizeString,
       measureStringWidth,
@@ -2008,7 +2011,7 @@ let createRootNode;
             endMarker: node.endMarker,
             quoteMarkerRef,
             childGenerator: () => {
-              let isMultiline = false;
+              let isMultiline = node.context.forceMultilineDiff;
               const appendLineEntry = (lineIndex) => {
                 const lineNode = lineEntriesNode.appendChild(lineIndex, {
                   value: "",

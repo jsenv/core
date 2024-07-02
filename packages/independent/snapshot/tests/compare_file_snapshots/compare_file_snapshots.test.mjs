@@ -78,15 +78,16 @@ test(() => {
   } catch (e) {
     const actual = stripAnsi(e.message);
     const expect = `snapshot comparison failed for "file.txt"
---- reason ---
-unexpected character in file content
+actual: 1| coucou
+expect: 1| hello
 --- details ---
-coucou
-^
-unexpected "c", expect to continue with "hello"
---- file ---
-${fileUrl}`;
-    assert({ actual, expect });
+"${fileUrl}"
+---------------`;
+    assert({
+      actual,
+      expect,
+      forceMultilineDiff: true,
+    });
   }
 });
 

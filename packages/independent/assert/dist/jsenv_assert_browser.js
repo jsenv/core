@@ -219,7 +219,7 @@ const getObjectTag = obj => {
   return "";
 };
 function* objectPrototypeChainGenerator(obj) {
-  while (obj || isUndetectableObject(obj)) {
+  while (obj === 0 || obj || isUndetectableObject(obj)) {
     const proto = Object.getPrototypeOf(obj);
     if (!proto) {
       break;
@@ -655,6 +655,7 @@ const defaultOptions = {
     line: 3
   },
   MAX_COLUMNS: 100,
+  message: "",
   details: ""
 };
 const createAssert = ({
@@ -706,6 +707,7 @@ const createAssert = ({
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
+      message,
       details
     } = {
       ...defaultOptions,
@@ -1231,7 +1233,6 @@ const createAssert = ({
       }
       diff += "\n";
     }
-    diff += "\n";
     diff += setColor("actual:", sameColor);
     diff += " ";
     diff += actualStartNode.render({
@@ -1265,7 +1266,21 @@ const createAssert = ({
       diff += "\n";
       diff += "---------------";
     }
-    const assertionError = assert.createAssertionError(diff);
+    let errorMessage = "";
+    if (message) {
+      errorMessage += message;
+      errorMessage += "\n";
+      errorMessage += diff;
+    } else {
+      errorMessage += "\n";
+      errorMessage += diff;
+    }
+    const assertionError = assert.createAssertionError(errorMessage);
+    Object.defineProperty(assertionError, "diff", {
+      configurable: true,
+      writable: true,
+      value: diff
+    });
     if (Error.captureStackTrace) {
       Error.captureStackTrace(assertionError, assert);
     }
@@ -2560,30 +2575,6 @@ let createRootNode;
         node.objectTag = getObjectTag(value);
       }
       node.childGenerator = function () {
-        if (node.reference) {
-          const referenceNode = node.appendChild("reference", {
-            value: node.reference.path,
-            render: renderChildren,
-            onelineDiff: {
-              hasTrailingSeparator: true
-            },
-            category: "reference",
-            group: "entries",
-            subgroup: "reference",
-            childGenerator() {
-              let index = 0;
-              for (const path of node.reference.path) {
-                referenceNode.appendChild(index, {
-                  ...getGrammarProps(),
-                  group: "path",
-                  value: path.value
-                });
-                index++;
-              }
-            }
-          });
-          return;
-        }
         if (wellKnownPath) {
           const wellKnownNode = node.appendChild("well_known", {
             value: wellKnownPath,
@@ -2601,6 +2592,30 @@ let createRootNode;
                   ...getGrammarProps(),
                   group: "path",
                   value: part.value
+                });
+                index++;
+              }
+            }
+          });
+          return;
+        }
+        if (node.reference) {
+          const referenceNode = node.appendChild("reference", {
+            value: node.reference.path,
+            render: renderChildren,
+            onelineDiff: {
+              hasTrailingSeparator: true
+            },
+            category: "reference",
+            group: "entries",
+            subgroup: "reference",
+            childGenerator() {
+              let index = 0;
+              for (const path of node.reference.path) {
+                referenceNode.appendChild(index, {
+                  ...getGrammarProps(),
+                  group: "path",
+                  value: path.value
                 });
                 index++;
               }

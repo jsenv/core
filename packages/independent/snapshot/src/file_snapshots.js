@@ -117,6 +117,7 @@ ${fileUrl}`);
     details: fileUrl,
     actual: actualFileContent,
     expect: expectedFileContent,
+    forceMultilineDiff: true,
   });
 };
 
