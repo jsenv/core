@@ -43,7 +43,7 @@ const fakeFetch = async ({ signal }) => {
   const expect = [
     Object.assign(
       new Error(
-        `Possible EventTarget memory leak detected. 11 abort listeners added to [AbortSignal]. Use events.setMaxListeners() to increase limit`,
+        `Possible EventTarget memory leak detected. 11 abort listeners added to [AbortSignal]. MaxListeners is 10. Use events.setMaxListeners() to increase limit`,
       ),
       {
         name: "MaxListenersExceededWarning",

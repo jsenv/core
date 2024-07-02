@@ -28,7 +28,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
   const expect = {
     url,
     status: 200,
-    statusText: "OK",
+    statusText: "",
     headers: {
       "cache-control": "no-store",
       "content-length": `${fileContent.length}`,
@@ -55,7 +55,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
   const expect = {
     url,
     status: 200,
-    statusText: "OK",
+    statusText: "",
     headers: {
       "content-type": "text/javascript",
     },
@@ -129,10 +129,11 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     status: 201,
     statusText: "Created",
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "content-length": `${body.length}`,
       "content-type": "text/plain",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
     },
     body,
   };
