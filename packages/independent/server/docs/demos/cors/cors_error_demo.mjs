@@ -1,4 +1,3 @@
-import fetch from "node-fetch";
 import { startServer } from "@jsenv/server";
 
 const server = await startServer({
