@@ -29,7 +29,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
-        node: [20.11.0]
+        node: [22.3.0]
     runs-on: ${{ matrix.os }}
     name: test on ${{ matrix.os }} and node ${{ matrix.node }}
     steps:
