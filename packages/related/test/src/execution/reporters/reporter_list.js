@@ -494,7 +494,7 @@ const renderConsoleOutput = (consoleCalls) => {
     const textFormatted = prefixFirstAndIndentRemainingLines({
       prefix: CONSOLE_ICONS[regroupedCall.type],
       text,
-      trimLines: true,
+      trimLines: false,
       trimLastLine: index === regroupedCalls.length - 1,
     });
     consoleOutput += textFormatted;

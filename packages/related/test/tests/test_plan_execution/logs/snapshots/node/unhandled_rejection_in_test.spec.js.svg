@@ -55,14 +55,14 @@
         <text x="10" y="90.55" fill="#cd5555"
           >&#x2716; 1/2 unhandled_rejection_in_test.spec.js</text
         >
-        <text x="371.26" y="90.55" fill="#7f7f7f">[</text>
-        <text x="379.66" y="90.55" fill="#7f7f7f">worker_thread</text>
-        <text x="488.88" y="90.55" fill="#7f7f7f">/</text>
-        <text x="497.28" y="90.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
-        <text x="564.49" y="90.55" fill="#7f7f7f">]</text>
-        <text x="581.29" y="90.55"> (1 </text>
-        <text x="606.5" y="90.55" fill="#cd5555">failed</text>
-        <text x="656.91" y="90.55">)</text>
+        <text x="362.86" y="90.55" fill="#7f7f7f">[</text>
+        <text x="371.26" y="90.55" fill="#7f7f7f">worker_thread</text>
+        <text x="480.48" y="90.55" fill="#7f7f7f">/</text>
+        <text x="488.88" y="90.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
+        <text x="556.09" y="90.55" fill="#7f7f7f">]</text>
+        <text x="572.89" y="90.55"> (1 </text>
+        <text x="598.1" y="90.55" fill="#cd5555">failed</text>
+        <text x="648.5" y="90.55">)</text>
         <text x="10" y="109.55" fill="#7f7f7f">---------------</text>
         <text x="144.42" y="109.55"> error </text>
         <text x="194.83" y="109.55" fill="#7f7f7f">----------------</text>
@@ -83,14 +83,14 @@
         <text x="10" y="223.55" fill="#cd5555"
           >&#x2716; 2/2 unhandled_rejection_in_test.spec.js</text
         >
-        <text x="371.26" y="223.55" fill="#7f7f7f">[</text>
-        <text x="379.66" y="223.55" fill="#7f7f7f">child_process</text>
-        <text x="488.88" y="223.55" fill="#7f7f7f">/</text>
-        <text x="497.28" y="223.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
-        <text x="564.49" y="223.55" fill="#7f7f7f">]</text>
-        <text x="581.29" y="223.55"> (all </text>
-        <text x="623.3" y="223.55" fill="#cd5555">failed</text>
-        <text x="673.71" y="223.55">)</text>
+        <text x="362.86" y="223.55" fill="#7f7f7f">[</text>
+        <text x="371.26" y="223.55" fill="#7f7f7f">child_process</text>
+        <text x="480.48" y="223.55" fill="#7f7f7f">/</text>
+        <text x="488.88" y="223.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
+        <text x="556.09" y="223.55" fill="#7f7f7f">]</text>
+        <text x="572.89" y="223.55"> (all </text>
+        <text x="614.9" y="223.55" fill="#cd5555">failed</text>
+        <text x="665.31" y="223.55">)</text>
         <text x="10" y="242.55" fill="#7f7f7f">---------------</text>
         <text x="144.42" y="242.55"> error </text>
         <text x="194.83" y="242.55" fill="#7f7f7f">----------------</text>

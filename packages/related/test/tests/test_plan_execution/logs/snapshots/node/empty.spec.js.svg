@@ -53,23 +53,23 @@
           >---------------------------------------------</text
         >
         <text x="10" y="90.55" fill="#11bc79">&#x2714; 1/2 empty.spec.js</text>
-        <text x="186.43" y="90.55" fill="#7f7f7f">[</text>
-        <text x="194.83" y="90.55" fill="#7f7f7f">worker_thread</text>
-        <text x="304.05" y="90.55" fill="#7f7f7f">/</text>
-        <text x="312.45" y="90.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
-        <text x="379.66" y="90.55" fill="#7f7f7f">]</text>
-        <text x="396.46" y="90.55"> (1 </text>
-        <text x="421.67" y="90.55" fill="#11bc79">completed</text>
-        <text x="497.28" y="90.55">)</text>
+        <text x="178.03" y="90.55" fill="#7f7f7f">[</text>
+        <text x="186.43" y="90.55" fill="#7f7f7f">worker_thread</text>
+        <text x="295.65" y="90.55" fill="#7f7f7f">/</text>
+        <text x="304.05" y="90.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
+        <text x="371.26" y="90.55" fill="#7f7f7f">]</text>
+        <text x="388.06" y="90.55"> (1 </text>
+        <text x="413.27" y="90.55" fill="#11bc79">completed</text>
+        <text x="488.88" y="90.55">)</text>
         <text x="10" y="109.55" fill="#11bc79">&#x2714; 2/2 empty.spec.js</text>
-        <text x="186.43" y="109.55" fill="#7f7f7f">[</text>
-        <text x="194.83" y="109.55" fill="#7f7f7f">child_process</text>
-        <text x="304.05" y="109.55" fill="#7f7f7f">/</text>
-        <text x="312.45" y="109.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
-        <text x="379.66" y="109.55" fill="#7f7f7f">]</text>
-        <text x="396.46" y="109.55"> (all </text>
-        <text x="438.47" y="109.55" fill="#11bc79">completed</text>
-        <text x="514.08" y="109.55">)</text>
+        <text x="178.03" y="109.55" fill="#7f7f7f">[</text>
+        <text x="186.43" y="109.55" fill="#7f7f7f">child_process</text>
+        <text x="295.65" y="109.55" fill="#7f7f7f">/</text>
+        <text x="304.05" y="109.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
+        <text x="371.26" y="109.55" fill="#7f7f7f">]</text>
+        <text x="388.06" y="109.55"> (all </text>
+        <text x="430.07" y="109.55" fill="#11bc79">completed</text>
+        <text x="505.68" y="109.55">)</text>
         <text x="10" y="147.55" fill="#7f7f7f">---------------</text>
         <text x="144.42" y="147.55"> execution end </text>
         <text x="262.04" y="147.55" fill="#7f7f7f">---------------</text>
