@@ -1,361 +1,24 @@
-import stringWidth from "string-width";
 import process$1 from "node:process";
 import os from "node:os";
 import tty from "node:tty";
+import stringWidth from "string-width";
 
-const LOG_LEVEL_OFF = "off";
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
 
-const LOG_LEVEL_DEBUG = "debug";
-
-const LOG_LEVEL_INFO = "info";
-
-const LOG_LEVEL_WARN = "warn";
-
-const LOG_LEVEL_ERROR = "error";
-
-const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG) {
-    return {
-      level: "debug",
-      levels: { debug: true, info: true, warn: true, error: true },
-      debug,
-      info,
-      warn,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_INFO) {
-    return {
-      level: "info",
-      levels: { debug: false, info: true, warn: true, error: true },
-      debug: debugDisabled,
-      info,
-      warn,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_WARN) {
-    return {
-      level: "warn",
-      levels: { debug: false, info: false, warn: true, error: true },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_ERROR) {
-    return {
-      level: "error",
-      levels: { debug: false, info: false, warn: false, error: true },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_OFF) {
-    return {
-      level: "off",
-      levels: { debug: false, info: false, warn: false, error: false },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error: errorDisabled,
-    };
-  }
-  throw new Error(`unexpected logLevel.
---- logLevel ---
-${logLevel}
---- allowed log levels ---
-${LOG_LEVEL_OFF}
-${LOG_LEVEL_ERROR}
-${LOG_LEVEL_WARN}
-${LOG_LEVEL_INFO}
-${LOG_LEVEL_DEBUG}`);
-};
-
-const debug = (...args) => console.debug(...args);
-
-const debugDisabled = () => {};
-
-const info = (...args) => console.info(...args);
-
-const infoDisabled = () => {};
-
-const warn = (...args) => console.warn(...args);
-
-const warnDisabled = () => {};
-
-const error = (...args) => console.error(...args);
-
-const errorDisabled = () => {};
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
-
-platform === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-const ESC = '\u001B[';
-
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows = !isBrowser && process$1.platform === 'win32';
-
-isBrowser ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
-const cursorUp = (count = 1) => ESC + count + 'A';
-
-const cursorLeft = ESC + 'G';
-
-const eraseLines = count => {
-	let clear = '';
-
-	for (let i = 0; i < count; i++) {
-		clear += eraseLine + (i < count - 1 ? cursorUp() : '');
-	}
-
-	if (count) {
-		clear += cursorLeft;
-	}
-
-	return clear;
-};
-const eraseLine = ESC + '2K';
-const eraseScreen = ESC + '2J';
-
-const clearTerminal = isWindows
-	? `${eraseScreen}${ESC}0f`
-	// 1. Erases the screen (Only done in case `2` is not supported)
-	// 2. Erases the whole screen including scrollback buffer
-	// 3. Moves cursor to the top-left position
-	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	:	`${eraseScreen}${ESC}3J${ESC}H`;
-
-/*
- * see also https://github.com/vadimdemedes/ink
- */
-
-
-const createDynamicLog = ({
-  stream = process.stdout,
-  clearTerminalAllowed,
-  onVerticalOverflow = () => {},
-  onWriteFromOutside = () => {},
-} = {}) => {
-  const { columns = 80, rows = 24 } = stream;
-  const dynamicLog = {
-    destroyed: false,
-    onVerticalOverflow,
-    onWriteFromOutside,
-  };
-
-  let lastOutput = "";
-  let lastOutputFromOutside = "";
-  let clearAttemptResult;
-  let writing = false;
-
-  const getErasePreviousOutput = () => {
-    // nothing to clear
-    if (!lastOutput) {
-      return "";
-    }
-    if (clearAttemptResult !== undefined) {
-      return "";
-    }
-
-    const logLines = lastOutput.split(/\r\n|\r|\n/);
-    let visualLineCount = 0;
-    for (const logLine of logLines) {
-      const width = stringWidth(logLine);
-      if (width === 0) {
-        visualLineCount++;
-      } else {
-        visualLineCount += Math.ceil(width / columns);
-      }
-    }
-
-    if (visualLineCount > rows) {
-      if (clearTerminalAllowed) {
-        clearAttemptResult = true;
-        return clearTerminal;
-      }
-      // the whole log cannot be cleared because it's vertically to long
-      // (longer than terminal height)
-      // readline.moveCursor cannot move cursor higher than screen height
-      // it means we would only clear the visible part of the log
-      // better keep the log untouched
-      clearAttemptResult = false;
-      dynamicLog.onVerticalOverflow();
-      return "";
-    }
-
-    clearAttemptResult = true;
-    return eraseLines(visualLineCount);
-  };
-
-  const update = (string) => {
-    if (dynamicLog.destroyed) {
-      throw new Error("Cannot write log after destroy");
-    }
-    let stringToWrite = string;
-    if (lastOutput) {
-      if (lastOutputFromOutside) {
-        // We don't want to clear logs written by other code,
-        // it makes output unreadable and might erase precious information
-        // To detect this we put a spy on the stream.
-        // The spy is required only if we actually wrote something in the stream
-        // something else than this code has written in the stream
-        // so we just write without clearing (append instead of replacing)
-        lastOutput = "";
-        lastOutputFromOutside = "";
-      } else {
-        stringToWrite = `${getErasePreviousOutput()}${string}`;
-      }
-    }
-    writing = true;
-    stream.write(stringToWrite);
-    lastOutput = string;
-    writing = false;
-    clearAttemptResult = undefined;
-  };
-
-  const clearDuringFunctionCall = (
-    callback,
-    ouputAfterCallback = lastOutput,
-  ) => {
-    // 1. Erase the current log
-    // 2. Call callback (expect to write something on stdout)
-    // 3. Restore the current log
-    // During step 2. we expect a "write from outside" so we uninstall
-    // the stream spy during function call
-    update("");
-
-    writing = true;
-    callback();
-    writing = false;
-
-    update(ouputAfterCallback);
-  };
-
-  const writeFromOutsideEffect = (value) => {
-    if (!lastOutput) {
-      // we don't care if the log never wrote anything
-      // or if last update() wrote an empty string
-      return;
-    }
-    if (writing) {
-      return;
-    }
-    lastOutputFromOutside = value;
-    dynamicLog.onWriteFromOutside(value);
-  };
-
-  let removeStreamSpy;
-  if (stream === process.stdout) {
-    const removeStdoutSpy = spyStreamOutput(
-      process.stdout,
-      writeFromOutsideEffect,
-    );
-    const removeStderrSpy = spyStreamOutput(
-      process.stderr,
-      writeFromOutsideEffect,
-    );
-    removeStreamSpy = () => {
-      removeStdoutSpy();
-      removeStderrSpy();
-    };
-  } else {
-    removeStreamSpy = spyStreamOutput(stream, writeFromOutsideEffect);
-  }
-
-  const destroy = () => {
-    dynamicLog.destroyed = true;
-    if (removeStreamSpy) {
-      removeStreamSpy();
-      removeStreamSpy = null;
-      lastOutput = "";
-      lastOutputFromOutside = "";
-    }
-  };
-
-  Object.assign(dynamicLog, {
-    update,
-    destroy,
-    stream,
-    clearDuringFunctionCall,
+  Object.keys(details).forEach((key) => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
   });
-  return dynamicLog;
-};
 
-// maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
-// the problem with listening data on stdout
-// is that node.js will later throw error if stream gets closed
-// while something listening data on it
-const spyStreamOutput = (stream, callback) => {
-  const originalWrite = stream.write;
-
-  let output = "";
-  let installed = true;
-
-  stream.write = function (...args /* chunk, encoding, callback */) {
-    output += args;
-    callback(output);
-    return originalWrite.call(stream, ...args);
-  };
-
-  const uninstall = () => {
-    if (!installed) {
-      return;
-    }
-    stream.write = originalWrite;
-    installed = false;
-  };
-
-  return () => {
-    uninstall();
-    return output;
-  };
+  return string;
 };
 
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
@@ -535,341 +198,53 @@ function createSupportsColor(stream, options = {}) {
 	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
 });
 
-const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
 
-const ANSI = {
-  supported: processSupportsBasicColor,
+const createAnsi = ({ supported }) => {
+  const ANSI = {
+    supported,
 
-  RED: "\x1b[31m",
-  GREEN: "\x1b[32m",
-  YELLOW: "\x1b[33m",
-  BLUE: "\x1b[34m",
-  MAGENTA: "\x1b[35m",
-  CYAN: "\x1b[36m",
-  GREY: "\x1b[90m",
-  color: (text, ANSI_COLOR) => {
-    return ANSI.supported && ANSI_COLOR ? `${ANSI_COLOR}${text}${RESET}` : text;
-  },
-
-  BOLD: "\x1b[1m",
-  UNDERLINE: "\x1b[4m",
-  STRIKE: "\x1b[9m",
-  effect: (text, ANSI_EFFECT) => {
-    return ANSI.supported && ANSI_EFFECT
-      ? `${ANSI_EFFECT}${text}${RESET}`
-      : text;
-  },
-};
-
-// GitHub workflow does support ANSI but "supports-color" returns false
-// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-if (
-  process.env.GITHUB_WORKFLOW &&
-  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
-  // in unit test we use process.env.FORCE_COLOR = 'false' to fake
-  // that colors are not supported. Let it have priority
-  process.env.FORCE_COLOR !== "false"
-) {
-  ANSI.supported = true;
-}
-
-const startSpinner = ({
-  dynamicLog,
-  frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
-  fps = 20,
-  keepProcessAlive = false,
-  stopOnWriteFromOutside = true,
-  stopOnVerticalOverflow = true,
-  render = () => "",
-  effect = () => {},
-  animated = dynamicLog.stream.isTTY,
-}) => {
-  let frameIndex = 0;
-  let interval;
-  let running = true;
-
-  const spinner = {
-    message: undefined,
-  };
-
-  const update = (message) => {
-    spinner.message = running
-      ? `${frames[frameIndex]} ${message}\n`
-      : `${message}\n`;
-    return spinner.message;
-  };
-  spinner.update = update;
-
-  let cleanup;
-  if (animated && ANSI.supported) {
-    running = true;
-    cleanup = effect();
-    dynamicLog.update(update(render()));
-
-    interval = setInterval(() => {
-      frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
-      dynamicLog.update(update(render()));
-    }, 1000 / fps);
-    if (!keepProcessAlive) {
-      interval.unref();
-    }
-  } else {
-    dynamicLog.update(update(render()));
-  }
-
-  const stop = (message) => {
-    running = false;
-    if (interval) {
-      clearInterval(interval);
-      interval = null;
-    }
-    if (cleanup) {
-      cleanup();
-      cleanup = null;
-    }
-    if (dynamicLog && message) {
-      dynamicLog.update(update(message));
-      dynamicLog = null;
-    }
-  };
-  spinner.stop = stop;
-
-  if (stopOnVerticalOverflow) {
-    dynamicLog.onVerticalOverflow = stop;
-  }
-  if (stopOnWriteFromOutside) {
-    dynamicLog.onWriteFromOutside = stop;
-  }
-
-  return spinner;
-};
-
-const getPrecision = (number) => {
-  if (Math.floor(number) === number) return 0;
-  const [, decimals] = number.toString().split(".");
-  return decimals.length || 0;
-};
-
-const setRoundedPrecision = (
-  number,
-  { decimals = 1, decimalsWhenSmall = decimals } = {},
-) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: Math.round,
-  });
-};
-
-const setPrecision = (
-  number,
-  { decimals = 1, decimalsWhenSmall = decimals } = {},
-) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: parseInt,
-  });
-};
-
-const setDecimalsPrecision = (
-  number,
-  {
-    transform,
-    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
-    decimalsWhenSmall, // max decimals for number in [-1,1]
-  } = {},
-) => {
-  if (number === 0) {
-    return 0;
-  }
-  let numberCandidate = Math.abs(number);
-  if (numberCandidate < 1) {
-    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
-    let i = 1;
-    while (numberCandidate < integerGoal) {
-      numberCandidate *= 10;
-      i *= 10;
-    }
-    const asInteger = transform(numberCandidate);
-    const asFloat = asInteger / i;
-    return number < 0 ? -asFloat : asFloat;
-  }
-  const coef = Math.pow(10, decimals);
-  const numberMultiplied = (number + Number.EPSILON) * coef;
-  const asInteger = transform(numberMultiplied);
-  const asFloat = asInteger / coef;
-  return number < 0 ? -asFloat : asFloat;
-};
-
-// https://www.codingem.com/javascript-how-to-limit-decimal-places/
-// export const roundNumber = (number, maxDecimals) => {
-//   const decimalsExp = Math.pow(10, maxDecimals)
-//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
-//   const numberRoundFloat = numberRoundInt / decimalsExp
-//   return numberRoundFloat
-// }
-
-// export const setPrecision = (number, precision) => {
-//   if (Math.floor(number) === number) return number
-//   const [int, decimals] = number.toString().split(".")
-//   if (precision <= 0) return int
-//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
-//   return numberTruncated
-// }
-
-const humanizeEllapsedTime = (ms, { short } = {}) => {
-  if (ms < 1000) {
-    return short ? "0s" : "0 second";
-  }
-  const { primary, remaining } = parseMs(ms);
-  if (!remaining) {
-    return inspectEllapsedUnit(primary, short);
-  }
-  return `${inspectEllapsedUnit(primary, short)} and ${inspectEllapsedUnit(
-    remaining,
-    short,
-  )}`;
-};
-const inspectEllapsedUnit = (unit, short) => {
-  const count =
-    unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
-  let name = unit.name;
-  if (short) {
-    name = unitShort[name];
-    if (count <= 1) {
-      return `${count}${name}`;
-    }
-    return `${count}${name}s`;
-  }
-  if (count <= 1) {
-    return `${count} ${name}`;
-  }
-  return `${count} ${name}s`;
-};
-const unitShort = {
-  year: "y",
-  month: "m",
-  week: "w",
-  day: "d",
-  hour: "h",
-  minute: "m",
-  second: "s",
-};
-
-const humanizeDuration = (
-  ms,
-  { short, rounded = true, decimals } = {},
-) => {
-  // ignore ms below meaningfulMs so that:
-  // humanizeDuration(0.5) -> "0 second"
-  // humanizeDuration(1.1) -> "0.001 second" (and not "0.0011 second")
-  // This tool is meant to be read by humans and it would be barely readable to see
-  // "0.0001 second" (stands for 0.1 millisecond)
-  // yes we could return "0.1 millisecond" but we choosed consistency over precision
-  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
-  if (ms < 1) {
-    return short ? "0s" : "0 second";
-  }
-  const { primary, remaining } = parseMs(ms);
-  if (!remaining) {
-    return humanizeDurationUnit(primary, {
-      decimals:
-        decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
-      short,
-      rounded,
-    });
-  }
-  return `${humanizeDurationUnit(primary, {
-    decimals: decimals === undefined ? 0 : decimals,
-    short,
-    rounded,
-  })} and ${humanizeDurationUnit(remaining, {
-    decimals: decimals === undefined ? 0 : decimals,
-    short,
-    rounded,
-  })}`;
-};
-const humanizeDurationUnit = (unit, { decimals, short, rounded }) => {
-  const count = rounded
-    ? setRoundedPrecision(unit.count, { decimals })
-    : setPrecision(unit.count, { decimals });
-  let name = unit.name;
-  if (short) {
-    name = unitShort[name];
-    return `${count}${name}`;
-  }
-  if (count <= 1) {
-    return `${count} ${name}`;
-  }
-  return `${count} ${name}s`;
-};
-const MS_PER_UNITS = {
-  year: 31_557_600_000,
-  month: 2_629_000_000,
-  week: 604_800_000,
-  day: 86_400_000,
-  hour: 3_600_000,
-  minute: 60_000,
-  second: 1000,
-};
-
-const parseMs = (ms) => {
-  const unitNames = Object.keys(MS_PER_UNITS);
-  const smallestUnitName = unitNames[unitNames.length - 1];
-  let firstUnitName = smallestUnitName;
-  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
-  const firstUnitIndex = unitNames.findIndex((unitName) => {
-    if (unitName === smallestUnitName) {
-      return false;
-    }
-    const msPerUnit = MS_PER_UNITS[unitName];
-    const unitCount = Math.floor(ms / msPerUnit);
-    if (unitCount) {
-      firstUnitName = unitName;
-      firstUnitCount = unitCount;
-      return true;
-    }
-    return false;
-  });
-  if (firstUnitName === smallestUnitName) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
-  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
-  const remainingUnitName = unitNames[firstUnitIndex + 1];
-  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
-  // - 1 year and 1 second is too much information
-  //   so we don't check the remaining units
-  // - 1 year and 0.0001 week is awful
-  //   hence the if below
-  if (Math.round(remainingUnitCount) < 1) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
-  // - 1 year and 1 month is great
-  return {
-    primary: {
-      name: firstUnitName,
-      count: firstUnitCount,
+    RED: "\x1b[31m",
+    GREEN: "\x1b[32m",
+    YELLOW: "\x1b[33m",
+    BLUE: "\x1b[34m",
+    MAGENTA: "\x1b[35m",
+    CYAN: "\x1b[36m",
+    GREY: "\x1b[90m",
+    color: (text, ANSI_COLOR) => {
+      return ANSI.supported && ANSI_COLOR
+        ? `${ANSI_COLOR}${text}${RESET}`
+        : text;
     },
-    remaining: {
-      name: remainingUnitName,
-      count: remainingUnitCount,
+
+    BOLD: "\x1b[1m",
+    UNDERLINE: "\x1b[4m",
+    STRIKE: "\x1b[9m",
+    effect: (text, ANSI_EFFECT) => {
+      return ANSI.supported && ANSI_EFFECT
+        ? `${ANSI_EFFECT}${text}${RESET}`
+        : text;
     },
   };
+
+  return ANSI;
 };
+
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+
+const ANSI = createAnsi({
+  supported:
+    processSupportsBasicColor ||
+    // GitHub workflow does support ANSI but "supports-color" returns false
+    // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+    (process.env.GITHUB_WORKFLOW &&
+      // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
+      // in unit test we use process.env.FORCE_COLOR = 'false' to fake
+      // that colors are not supported. Let it have priority
+      process.env.FORCE_COLOR !== "false"),
+});
 
 function isUnicodeSupported() {
 	if (process$1.platform !== 'win32') {
@@ -888,116 +263,62 @@ function isUnicodeSupported() {
 
 // see also https://github.com/sindresorhus/figures
 
-
-const UNICODE = {
-  supported: isUnicodeSupported(),
-
-  get COMMAND_RAW() {
-    return UNICODE.supported ? `❯` : `>`;
-  },
-  get OK_RAW() {
-    return UNICODE.supported ? `✔` : `√`;
-  },
-  get FAILURE_RAW() {
-    return UNICODE.supported ? `✖` : `×`;
-  },
-  get DEBUG_RAW() {
-    return UNICODE.supported ? `◆` : `♦`;
-  },
-  get INFO_RAW() {
-    return UNICODE.supported ? `ℹ` : `i`;
-  },
-  get WARNING_RAW() {
-    return UNICODE.supported ? `⚠` : `‼`;
-  },
-  get CIRCLE_CROSS_RAW() {
-    return UNICODE.supported ? `ⓧ` : `(×)`;
-  },
-  get COMMAND() {
-    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
-  },
-  get OK() {
-    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
-  },
-  get FAILURE() {
-    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
-  },
-  get DEBUG() {
-    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
-  },
-  get INFO() {
-    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
-  },
-  get WARNING() {
-    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
-  },
-  get CIRCLE_CROSS() {
-    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
-  },
-  get ELLIPSIS() {
-    return UNICODE.supported ? `…` : `...`;
-  },
-};
-
-const createTaskLog = (
-  label,
-  { disabled = false, animated = true, stopOnWriteFromOutside } = {},
-) => {
-  if (disabled) {
-    return {
-      setRightText: () => {},
-      done: () => {},
-      happen: () => {},
-      fail: () => {},
-    };
-  }
-  const startMs = Date.now();
-  const dynamicLog = createDynamicLog();
-  let message = label;
-  const taskSpinner = startSpinner({
-    dynamicLog,
-    render: () => message,
-    stopOnWriteFromOutside,
-    animated,
-  });
-  return {
-    setRightText: (value) => {
-      message = `${label} ${value}`;
+const createUnicode = ({ supported, ANSI }) => {
+  const UNICODE = {
+    supported,
+    get COMMAND_RAW() {
+      return UNICODE.supported ? `❯` : `>`;
     },
-    done: () => {
-      const msEllapsed = Date.now() - startMs;
-      taskSpinner.stop(
-        `${UNICODE.OK} ${label} (done in ${humanizeDuration(msEllapsed)})`,
-      );
+    get OK_RAW() {
+      return UNICODE.supported ? `✔` : `√`;
     },
-    happen: (message) => {
-      taskSpinner.stop(
-        `${UNICODE.INFO} ${message} (at ${new Date().toLocaleTimeString()})`,
-      );
+    get FAILURE_RAW() {
+      return UNICODE.supported ? `✖` : `×`;
     },
-    fail: (message = `failed to ${label}`) => {
-      taskSpinner.stop(`${UNICODE.FAILURE} ${message}`);
+    get DEBUG_RAW() {
+      return UNICODE.supported ? `◆` : `♦`;
+    },
+    get INFO_RAW() {
+      return UNICODE.supported ? `ℹ` : `i`;
+    },
+    get WARNING_RAW() {
+      return UNICODE.supported ? `⚠` : `‼`;
+    },
+    get CIRCLE_CROSS_RAW() {
+      return UNICODE.supported ? `ⓧ` : `(×)`;
+    },
+    get COMMAND() {
+      return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+    },
+    get OK() {
+      return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+    },
+    get FAILURE() {
+      return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+    },
+    get DEBUG() {
+      return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+    },
+    get INFO() {
+      return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+    },
+    get WARNING() {
+      return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+    },
+    get CIRCLE_CROSS() {
+      return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+    },
+    get ELLIPSIS() {
+      return UNICODE.supported ? `…` : `...`;
     },
   };
+  return UNICODE;
 };
 
-const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`;
-
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
-${
-  Array.isArray(value)
-    ? value.join(`
-`)
-    : value
-}`;
-  });
-
-  return string;
-};
+const UNICODE = createUnicode({
+  supported: isUnicodeSupported(),
+  ANSI,
+});
 
 const inspectBoolean = (value) => value.toString();
 
@@ -1673,6 +994,230 @@ const compositeStringifiers = {
   String: inspectStringObject,
 };
 
+const getPrecision = (number) => {
+  if (Math.floor(number) === number) return 0;
+  const [, decimals] = number.toString().split(".");
+  return decimals.length || 0;
+};
+
+const setRoundedPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.round,
+  });
+};
+
+const setPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: parseInt,
+  });
+};
+
+const setDecimalsPrecision = (
+  number,
+  {
+    transform,
+    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
+    decimalsWhenSmall, // max decimals for number in [-1,1]
+  } = {},
+) => {
+  if (number === 0) {
+    return 0;
+  }
+  let numberCandidate = Math.abs(number);
+  if (numberCandidate < 1) {
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
+    let i = 1;
+    while (numberCandidate < integerGoal) {
+      numberCandidate *= 10;
+      i *= 10;
+    }
+    const asInteger = transform(numberCandidate);
+    const asFloat = asInteger / i;
+    return number < 0 ? -asFloat : asFloat;
+  }
+  const coef = Math.pow(10, decimals);
+  const numberMultiplied = (number + Number.EPSILON) * coef;
+  const asInteger = transform(numberMultiplied);
+  const asFloat = asInteger / coef;
+  return number < 0 ? -asFloat : asFloat;
+};
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
+const humanizeEllapsedTime = (ms, { short } = {}) => {
+  if (ms < 1000) {
+    return short ? "0s" : "0 second";
+  }
+  const { primary, remaining } = parseMs(ms);
+  if (!remaining) {
+    return inspectEllapsedUnit(primary, short);
+  }
+  return `${inspectEllapsedUnit(primary, short)} and ${inspectEllapsedUnit(
+    remaining,
+    short,
+  )}`;
+};
+const inspectEllapsedUnit = (unit, short) => {
+  const count =
+    unit.name === "second" ? Math.floor(unit.count) : Math.round(unit.count);
+  let name = unit.name;
+  if (short) {
+    name = unitShort[name];
+    if (count <= 1) {
+      return `${count}${name}`;
+    }
+    return `${count}${name}s`;
+  }
+  if (count <= 1) {
+    return `${count} ${name}`;
+  }
+  return `${count} ${name}s`;
+};
+const unitShort = {
+  year: "y",
+  month: "m",
+  week: "w",
+  day: "d",
+  hour: "h",
+  minute: "m",
+  second: "s",
+};
+
+const humanizeDuration = (
+  ms,
+  { short, rounded = true, decimals } = {},
+) => {
+  // ignore ms below meaningfulMs so that:
+  // humanizeDuration(0.5) -> "0 second"
+  // humanizeDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // This tool is meant to be read by humans and it would be barely readable to see
+  // "0.0001 second" (stands for 0.1 millisecond)
+  // yes we could return "0.1 millisecond" but we choosed consistency over precision
+  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+  if (ms < 1) {
+    return short ? "0s" : "0 second";
+  }
+  const { primary, remaining } = parseMs(ms);
+  if (!remaining) {
+    return humanizeDurationUnit(primary, {
+      decimals:
+        decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
+      short,
+      rounded,
+    });
+  }
+  return `${humanizeDurationUnit(primary, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })} and ${humanizeDurationUnit(remaining, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })}`;
+};
+const humanizeDurationUnit = (unit, { decimals, short, rounded }) => {
+  const count = rounded
+    ? setRoundedPrecision(unit.count, { decimals })
+    : setPrecision(unit.count, { decimals });
+  let name = unit.name;
+  if (short) {
+    name = unitShort[name];
+    return `${count}${name}`;
+  }
+  if (count <= 1) {
+    return `${count} ${name}`;
+  }
+  return `${count} ${name}s`;
+};
+const MS_PER_UNITS = {
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000,
+};
+
+const parseMs = (ms) => {
+  const unitNames = Object.keys(MS_PER_UNITS);
+  const smallestUnitName = unitNames[unitNames.length - 1];
+  let firstUnitName = smallestUnitName;
+  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
+  const firstUnitIndex = unitNames.findIndex((unitName) => {
+    if (unitName === smallestUnitName) {
+      return false;
+    }
+    const msPerUnit = MS_PER_UNITS[unitName];
+    const unitCount = Math.floor(ms / msPerUnit);
+    if (unitCount) {
+      firstUnitName = unitName;
+      firstUnitCount = unitCount;
+      return true;
+    }
+    return false;
+  });
+  if (firstUnitName === smallestUnitName) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
+  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
+  const remainingUnitName = unitNames[firstUnitIndex + 1];
+  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
+  // - 1 year and 1 second is too much information
+  //   so we don't check the remaining units
+  // - 1 year and 0.0001 week is awful
+  //   hence the if below
+  if (Math.round(remainingUnitCount) < 1) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
+  // - 1 year and 1 month is great
+  return {
+    primary: {
+      name: firstUnitName,
+      count: firstUnitCount,
+    },
+    remaining: {
+      name: remainingUnitName,
+      count: remainingUnitCount,
+    },
+  };
+};
+
 const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
   return inspectBytes(numberOfBytes, { decimals, short });
 };
@@ -1926,4 +1471,472 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
-export { ANSI, UNICODE, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, determineQuote, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, inspectChar, startSpinner };
+const LOG_LEVEL_OFF = "off";
+
+const LOG_LEVEL_DEBUG = "debug";
+
+const LOG_LEVEL_INFO = "info";
+
+const LOG_LEVEL_WARN = "warn";
+
+const LOG_LEVEL_ERROR = "error";
+
+const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG) {
+    return {
+      level: "debug",
+      levels: { debug: true, info: true, warn: true, error: true },
+      debug,
+      info,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_INFO) {
+    return {
+      level: "info",
+      levels: { debug: false, info: true, warn: true, error: true },
+      debug: debugDisabled,
+      info,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_WARN) {
+    return {
+      level: "warn",
+      levels: { debug: false, info: false, warn: true, error: true },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_ERROR) {
+    return {
+      level: "error",
+      levels: { debug: false, info: false, warn: false, error: true },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_OFF) {
+    return {
+      level: "off",
+      levels: { debug: false, info: false, warn: false, error: false },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled,
+    };
+  }
+  throw new Error(`unexpected logLevel.
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`);
+};
+
+const debug = (...args) => console.debug(...args);
+
+const debugDisabled = () => {};
+
+const info = (...args) => console.info(...args);
+
+const infoDisabled = () => {};
+
+const warn = (...args) => console.warn(...args);
+
+const warnDisabled = () => {};
+
+const error = (...args) => console.error(...args);
+
+const errorDisabled = () => {};
+
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+
+globalThis.process?.versions?.node !== undefined;
+
+globalThis.process?.versions?.bun !== undefined;
+
+globalThis.Deno?.version?.deno !== undefined;
+
+globalThis.process?.versions?.electron !== undefined;
+
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+
+platform === 'macOS'
+	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
+	|| globalThis.process?.platform === 'darwin';
+
+platform === 'Windows'
+	|| globalThis.navigator?.platform === 'Win32'
+	|| globalThis.process?.platform === 'win32';
+
+platform === 'Linux'
+	|| globalThis.navigator?.platform?.startsWith('Linux') === true
+	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
+	|| globalThis.process?.platform === 'linux';
+
+platform === 'Android'
+	|| globalThis.navigator?.platform === 'Android'
+	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
+	|| globalThis.process?.platform === 'android';
+
+const ESC = '\u001B[';
+
+!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+const isWindows = !isBrowser && process$1.platform === 'win32';
+
+isBrowser ? () => {
+	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
+
+const cursorUp = (count = 1) => ESC + count + 'A';
+
+const cursorLeft = ESC + 'G';
+
+const eraseLines = count => {
+	let clear = '';
+
+	for (let i = 0; i < count; i++) {
+		clear += eraseLine + (i < count - 1 ? cursorUp() : '');
+	}
+
+	if (count) {
+		clear += cursorLeft;
+	}
+
+	return clear;
+};
+const eraseLine = ESC + '2K';
+const eraseScreen = ESC + '2J';
+
+const clearTerminal = isWindows
+	? `${eraseScreen}${ESC}0f`
+	// 1. Erases the screen (Only done in case `2` is not supported)
+	// 2. Erases the whole screen including scrollback buffer
+	// 3. Moves cursor to the top-left position
+	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
+	:	`${eraseScreen}${ESC}3J${ESC}H`;
+
+/*
+ * see also https://github.com/vadimdemedes/ink
+ */
+
+
+const createDynamicLog = ({
+  stream = process.stdout,
+  clearTerminalAllowed,
+  onVerticalOverflow = () => {},
+  onWriteFromOutside = () => {},
+} = {}) => {
+  const { columns = 80, rows = 24 } = stream;
+  const dynamicLog = {
+    destroyed: false,
+    onVerticalOverflow,
+    onWriteFromOutside,
+  };
+
+  let lastOutput = "";
+  let lastOutputFromOutside = "";
+  let clearAttemptResult;
+  let writing = false;
+
+  const getErasePreviousOutput = () => {
+    // nothing to clear
+    if (!lastOutput) {
+      return "";
+    }
+    if (clearAttemptResult !== undefined) {
+      return "";
+    }
+
+    const logLines = lastOutput.split(/\r\n|\r|\n/);
+    let visualLineCount = 0;
+    for (const logLine of logLines) {
+      const width = stringWidth(logLine);
+      if (width === 0) {
+        visualLineCount++;
+      } else {
+        visualLineCount += Math.ceil(width / columns);
+      }
+    }
+
+    if (visualLineCount > rows) {
+      if (clearTerminalAllowed) {
+        clearAttemptResult = true;
+        return clearTerminal;
+      }
+      // the whole log cannot be cleared because it's vertically to long
+      // (longer than terminal height)
+      // readline.moveCursor cannot move cursor higher than screen height
+      // it means we would only clear the visible part of the log
+      // better keep the log untouched
+      clearAttemptResult = false;
+      dynamicLog.onVerticalOverflow();
+      return "";
+    }
+
+    clearAttemptResult = true;
+    return eraseLines(visualLineCount);
+  };
+
+  const update = (string) => {
+    if (dynamicLog.destroyed) {
+      throw new Error("Cannot write log after destroy");
+    }
+    let stringToWrite = string;
+    if (lastOutput) {
+      if (lastOutputFromOutside) {
+        // We don't want to clear logs written by other code,
+        // it makes output unreadable and might erase precious information
+        // To detect this we put a spy on the stream.
+        // The spy is required only if we actually wrote something in the stream
+        // something else than this code has written in the stream
+        // so we just write without clearing (append instead of replacing)
+        lastOutput = "";
+        lastOutputFromOutside = "";
+      } else {
+        stringToWrite = `${getErasePreviousOutput()}${string}`;
+      }
+    }
+    writing = true;
+    stream.write(stringToWrite);
+    lastOutput = string;
+    writing = false;
+    clearAttemptResult = undefined;
+  };
+
+  const clearDuringFunctionCall = (
+    callback,
+    ouputAfterCallback = lastOutput,
+  ) => {
+    // 1. Erase the current log
+    // 2. Call callback (expect to write something on stdout)
+    // 3. Restore the current log
+    // During step 2. we expect a "write from outside" so we uninstall
+    // the stream spy during function call
+    update("");
+
+    writing = true;
+    callback();
+    writing = false;
+
+    update(ouputAfterCallback);
+  };
+
+  const writeFromOutsideEffect = (value) => {
+    if (!lastOutput) {
+      // we don't care if the log never wrote anything
+      // or if last update() wrote an empty string
+      return;
+    }
+    if (writing) {
+      return;
+    }
+    lastOutputFromOutside = value;
+    dynamicLog.onWriteFromOutside(value);
+  };
+
+  let removeStreamSpy;
+  if (stream === process.stdout) {
+    const removeStdoutSpy = spyStreamOutput(
+      process.stdout,
+      writeFromOutsideEffect,
+    );
+    const removeStderrSpy = spyStreamOutput(
+      process.stderr,
+      writeFromOutsideEffect,
+    );
+    removeStreamSpy = () => {
+      removeStdoutSpy();
+      removeStderrSpy();
+    };
+  } else {
+    removeStreamSpy = spyStreamOutput(stream, writeFromOutsideEffect);
+  }
+
+  const destroy = () => {
+    dynamicLog.destroyed = true;
+    if (removeStreamSpy) {
+      removeStreamSpy();
+      removeStreamSpy = null;
+      lastOutput = "";
+      lastOutputFromOutside = "";
+    }
+  };
+
+  Object.assign(dynamicLog, {
+    update,
+    destroy,
+    stream,
+    clearDuringFunctionCall,
+  });
+  return dynamicLog;
+};
+
+// maybe https://github.com/gajus/output-interceptor/tree/v3.0.0 ?
+// the problem with listening data on stdout
+// is that node.js will later throw error if stream gets closed
+// while something listening data on it
+const spyStreamOutput = (stream, callback) => {
+  const originalWrite = stream.write;
+
+  let output = "";
+  let installed = true;
+
+  stream.write = function (...args /* chunk, encoding, callback */) {
+    output += args;
+    callback(output);
+    return originalWrite.call(stream, ...args);
+  };
+
+  const uninstall = () => {
+    if (!installed) {
+      return;
+    }
+    stream.write = originalWrite;
+    installed = false;
+  };
+
+  return () => {
+    uninstall();
+    return output;
+  };
+};
+
+const startSpinner = ({
+  dynamicLog,
+  frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+  fps = 20,
+  keepProcessAlive = false,
+  stopOnWriteFromOutside = true,
+  stopOnVerticalOverflow = true,
+  render = () => "",
+  effect = () => {},
+  animated = dynamicLog.stream.isTTY,
+}) => {
+  let frameIndex = 0;
+  let interval;
+  let running = true;
+
+  const spinner = {
+    message: undefined,
+  };
+
+  const update = (message) => {
+    spinner.message = running
+      ? `${frames[frameIndex]} ${message}\n`
+      : `${message}\n`;
+    return spinner.message;
+  };
+  spinner.update = update;
+
+  let cleanup;
+  if (animated && ANSI.supported) {
+    running = true;
+    cleanup = effect();
+    dynamicLog.update(update(render()));
+
+    interval = setInterval(() => {
+      frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
+      dynamicLog.update(update(render()));
+    }, 1000 / fps);
+    if (!keepProcessAlive) {
+      interval.unref();
+    }
+  } else {
+    dynamicLog.update(update(render()));
+  }
+
+  const stop = (message) => {
+    running = false;
+    if (interval) {
+      clearInterval(interval);
+      interval = null;
+    }
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
+    if (dynamicLog && message) {
+      dynamicLog.update(update(message));
+      dynamicLog = null;
+    }
+  };
+  spinner.stop = stop;
+
+  if (stopOnVerticalOverflow) {
+    dynamicLog.onVerticalOverflow = stop;
+  }
+  if (stopOnWriteFromOutside) {
+    dynamicLog.onWriteFromOutside = stop;
+  }
+
+  return spinner;
+};
+
+const createTaskLog = (
+  label,
+  { disabled = false, animated = true, stopOnWriteFromOutside } = {},
+) => {
+  if (disabled) {
+    return {
+      setRightText: () => {},
+      done: () => {},
+      happen: () => {},
+      fail: () => {},
+    };
+  }
+  const startMs = Date.now();
+  const dynamicLog = createDynamicLog();
+  let message = label;
+  const taskSpinner = startSpinner({
+    dynamicLog,
+    render: () => message,
+    stopOnWriteFromOutside,
+    animated,
+  });
+  return {
+    setRightText: (value) => {
+      message = `${label} ${value}`;
+    },
+    done: () => {
+      const msEllapsed = Date.now() - startMs;
+      taskSpinner.stop(
+        `${UNICODE.OK} ${label} (done in ${humanizeDuration(msEllapsed)})`,
+      );
+    },
+    happen: (message) => {
+      taskSpinner.stop(
+        `${UNICODE.INFO} ${message} (at ${new Date().toLocaleTimeString()})`,
+      );
+    },
+    fail: (message = `failed to ${label}`) => {
+      taskSpinner.stop(`${UNICODE.FAILURE} ${message}`);
+    },
+  };
+};
+
+export { ANSI, UNICODE, createDetailedMessage, createDynamicLog, createLogger, createTaskLog, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, startSpinner };

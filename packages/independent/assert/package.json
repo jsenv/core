@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/assert",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "One assertion to test everything",
   "license": "MIT",
   "repository": {
@@ -44,7 +44,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/humanize": "1.1.0",
+    "@jsenv/humanize": "1.1.1",
     "graphemer": "1.4.0",
     "string-width": "7.2.0"
   },

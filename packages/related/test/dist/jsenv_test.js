@@ -4,8 +4,8 @@ import { readdir, chmod, stat, lstat, promises, readFile as readFile$1, writeFil
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { URL_META, createException } from "./js/exception.js";
-import stringWidth from "string-width";
 import tty from "node:tty";
+import stringWidth from "string-width";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import crypto from "node:crypto";
@@ -530,6 +530,713 @@ const SIGINT_CALLBACK = {
   },
 };
 
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
+
+  Object.keys(details).forEach((key) => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
+  });
+
+  return string;
+};
+
+// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
+/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
+function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
+	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
+	const position = argv.indexOf(prefix + flag);
+	const terminatorPosition = argv.indexOf('--');
+	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+}
+
+const {env} = process$1;
+
+let flagForceColor;
+if (
+	hasFlag('no-color')
+	|| hasFlag('no-colors')
+	|| hasFlag('color=false')
+	|| hasFlag('color=never')
+) {
+	flagForceColor = 0;
+} else if (
+	hasFlag('color')
+	|| hasFlag('colors')
+	|| hasFlag('color=true')
+	|| hasFlag('color=always')
+) {
+	flagForceColor = 1;
+}
+
+function envForceColor() {
+	if ('FORCE_COLOR' in env) {
+		if (env.FORCE_COLOR === 'true') {
+			return 1;
+		}
+
+		if (env.FORCE_COLOR === 'false') {
+			return 0;
+		}
+
+		return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+	}
+}
+
+function translateLevel(level) {
+	if (level === 0) {
+		return false;
+	}
+
+	return {
+		level,
+		hasBasic: true,
+		has256: level >= 2,
+		has16m: level >= 3,
+	};
+}
+
+function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
+	const noFlagForceColor = envForceColor();
+	if (noFlagForceColor !== undefined) {
+		flagForceColor = noFlagForceColor;
+	}
+
+	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+
+	if (forceColor === 0) {
+		return 0;
+	}
+
+	if (sniffFlags) {
+		if (hasFlag('color=16m')
+			|| hasFlag('color=full')
+			|| hasFlag('color=truecolor')) {
+			return 3;
+		}
+
+		if (hasFlag('color=256')) {
+			return 2;
+		}
+	}
+
+	// Check for Azure DevOps pipelines.
+	// Has to be above the `!streamIsTTY` check.
+	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
+		return 1;
+	}
+
+	if (haveStream && !streamIsTTY && forceColor === undefined) {
+		return 0;
+	}
+
+	const min = forceColor || 0;
+
+	if (env.TERM === 'dumb') {
+		return min;
+	}
+
+	if (process$1.platform === 'win32') {
+		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
+		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+		const osRelease = os.release().split('.');
+		if (
+			Number(osRelease[0]) >= 10
+			&& Number(osRelease[2]) >= 10_586
+		) {
+			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
+		}
+
+		return 1;
+	}
+
+	if ('CI' in env) {
+		if ('GITHUB_ACTIONS' in env || 'GITEA_ACTIONS' in env) {
+			return 3;
+		}
+
+		if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
+			return 1;
+		}
+
+		return min;
+	}
+
+	if ('TEAMCITY_VERSION' in env) {
+		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+	}
+
+	if (env.COLORTERM === 'truecolor') {
+		return 3;
+	}
+
+	if (env.TERM === 'xterm-kitty') {
+		return 3;
+	}
+
+	if ('TERM_PROGRAM' in env) {
+		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+
+		switch (env.TERM_PROGRAM) {
+			case 'iTerm.app': {
+				return version >= 3 ? 3 : 2;
+			}
+
+			case 'Apple_Terminal': {
+				return 2;
+			}
+			// No default
+		}
+	}
+
+	if (/-256(color)?$/i.test(env.TERM)) {
+		return 2;
+	}
+
+	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+		return 1;
+	}
+
+	if ('COLORTERM' in env) {
+		return 1;
+	}
+
+	return min;
+}
+
+function createSupportsColor(stream, options = {}) {
+	const level = _supportsColor(stream, {
+		streamIsTTY: stream && stream.isTTY,
+		...options,
+	});
+
+	return translateLevel(level);
+}
+
+const supportsColor = {
+	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
+	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
+};
+
+// https://github.com/Marak/colors.js/blob/master/lib/styles.js
+// https://stackoverflow.com/a/75985833/2634179
+const RESET = "\x1b[0m";
+
+const createAnsi = ({ supported }) => {
+  const ANSI = {
+    supported,
+
+    RED: "\x1b[31m",
+    GREEN: "\x1b[32m",
+    YELLOW: "\x1b[33m",
+    BLUE: "\x1b[34m",
+    MAGENTA: "\x1b[35m",
+    CYAN: "\x1b[36m",
+    GREY: "\x1b[90m",
+    color: (text, ANSI_COLOR) => {
+      return ANSI.supported && ANSI_COLOR
+        ? `${ANSI_COLOR}${text}${RESET}`
+        : text;
+    },
+
+    BOLD: "\x1b[1m",
+    UNDERLINE: "\x1b[4m",
+    STRIKE: "\x1b[9m",
+    effect: (text, ANSI_EFFECT) => {
+      return ANSI.supported && ANSI_EFFECT
+        ? `${ANSI_EFFECT}${text}${RESET}`
+        : text;
+    },
+  };
+
+  return ANSI;
+};
+
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+
+const ANSI = createAnsi({
+  supported:
+    processSupportsBasicColor ||
+    // GitHub workflow does support ANSI but "supports-color" returns false
+    // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+    (process.env.GITHUB_WORKFLOW &&
+      // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
+      // in unit test we use process.env.FORCE_COLOR = 'false' to fake
+      // that colors are not supported. Let it have priority
+      process.env.FORCE_COLOR !== "false"),
+});
+
+function isUnicodeSupported() {
+	if (process$1.platform !== 'win32') {
+		return process$1.env.TERM !== 'linux'; // Linux console (kernel)
+	}
+
+	return Boolean(process$1.env.WT_SESSION) // Windows Terminal
+		|| Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+		|| process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+		|| process$1.env.TERM_PROGRAM === 'Terminus-Sublime'
+		|| process$1.env.TERM_PROGRAM === 'vscode'
+		|| process$1.env.TERM === 'xterm-256color'
+		|| process$1.env.TERM === 'alacritty'
+		|| process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
+
+// see also https://github.com/sindresorhus/figures
+
+const createUnicode = ({ supported, ANSI }) => {
+  const UNICODE = {
+    supported,
+    get COMMAND_RAW() {
+      return UNICODE.supported ? `❯` : `>`;
+    },
+    get OK_RAW() {
+      return UNICODE.supported ? `✔` : `√`;
+    },
+    get FAILURE_RAW() {
+      return UNICODE.supported ? `✖` : `×`;
+    },
+    get DEBUG_RAW() {
+      return UNICODE.supported ? `◆` : `♦`;
+    },
+    get INFO_RAW() {
+      return UNICODE.supported ? `ℹ` : `i`;
+    },
+    get WARNING_RAW() {
+      return UNICODE.supported ? `⚠` : `‼`;
+    },
+    get CIRCLE_CROSS_RAW() {
+      return UNICODE.supported ? `ⓧ` : `(×)`;
+    },
+    get COMMAND() {
+      return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+    },
+    get OK() {
+      return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+    },
+    get FAILURE() {
+      return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+    },
+    get DEBUG() {
+      return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+    },
+    get INFO() {
+      return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+    },
+    get WARNING() {
+      return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+    },
+    get CIRCLE_CROSS() {
+      return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+    },
+    get ELLIPSIS() {
+      return UNICODE.supported ? `…` : `...`;
+    },
+  };
+  return UNICODE;
+};
+
+const UNICODE = createUnicode({
+  supported: isUnicodeSupported(),
+  ANSI,
+});
+
+const setRoundedPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: Math.round,
+  });
+};
+
+const setPrecision = (
+  number,
+  { decimals = 1, decimalsWhenSmall = decimals } = {},
+) => {
+  return setDecimalsPrecision(number, {
+    decimals,
+    decimalsWhenSmall,
+    transform: parseInt,
+  });
+};
+
+const setDecimalsPrecision = (
+  number,
+  {
+    transform,
+    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
+    decimalsWhenSmall, // max decimals for number in [-1,1]
+  } = {},
+) => {
+  if (number === 0) {
+    return 0;
+  }
+  let numberCandidate = Math.abs(number);
+  if (numberCandidate < 1) {
+    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
+    let i = 1;
+    while (numberCandidate < integerGoal) {
+      numberCandidate *= 10;
+      i *= 10;
+    }
+    const asInteger = transform(numberCandidate);
+    const asFloat = asInteger / i;
+    return number < 0 ? -asFloat : asFloat;
+  }
+  const coef = Math.pow(10, decimals);
+  const numberMultiplied = (number + Number.EPSILON) * coef;
+  const asInteger = transform(numberMultiplied);
+  const asFloat = asInteger / coef;
+  return number < 0 ? -asFloat : asFloat;
+};
+
+// https://www.codingem.com/javascript-how-to-limit-decimal-places/
+// export const roundNumber = (number, maxDecimals) => {
+//   const decimalsExp = Math.pow(10, maxDecimals)
+//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
+//   const numberRoundFloat = numberRoundInt / decimalsExp
+//   return numberRoundFloat
+// }
+
+// export const setPrecision = (number, precision) => {
+//   if (Math.floor(number) === number) return number
+//   const [int, decimals] = number.toString().split(".")
+//   if (precision <= 0) return int
+//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
+//   return numberTruncated
+// }
+
+const unitShort = {
+  year: "y",
+  month: "m",
+  week: "w",
+  day: "d",
+  hour: "h",
+  minute: "m",
+  second: "s",
+};
+
+const humanizeDuration = (
+  ms,
+  { short, rounded = true, decimals } = {},
+) => {
+  // ignore ms below meaningfulMs so that:
+  // humanizeDuration(0.5) -> "0 second"
+  // humanizeDuration(1.1) -> "0.001 second" (and not "0.0011 second")
+  // This tool is meant to be read by humans and it would be barely readable to see
+  // "0.0001 second" (stands for 0.1 millisecond)
+  // yes we could return "0.1 millisecond" but we choosed consistency over precision
+  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
+  if (ms < 1) {
+    return short ? "0s" : "0 second";
+  }
+  const { primary, remaining } = parseMs(ms);
+  if (!remaining) {
+    return humanizeDurationUnit(primary, {
+      decimals:
+        decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
+      short,
+      rounded,
+    });
+  }
+  return `${humanizeDurationUnit(primary, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })} and ${humanizeDurationUnit(remaining, {
+    decimals: decimals === undefined ? 0 : decimals,
+    short,
+    rounded,
+  })}`;
+};
+const humanizeDurationUnit = (unit, { decimals, short, rounded }) => {
+  const count = rounded
+    ? setRoundedPrecision(unit.count, { decimals })
+    : setPrecision(unit.count, { decimals });
+  let name = unit.name;
+  if (short) {
+    name = unitShort[name];
+    return `${count}${name}`;
+  }
+  if (count <= 1) {
+    return `${count} ${name}`;
+  }
+  return `${count} ${name}s`;
+};
+const MS_PER_UNITS = {
+  year: 31_557_600_000,
+  month: 2_629_000_000,
+  week: 604_800_000,
+  day: 86_400_000,
+  hour: 3_600_000,
+  minute: 60_000,
+  second: 1000,
+};
+
+const parseMs = (ms) => {
+  const unitNames = Object.keys(MS_PER_UNITS);
+  const smallestUnitName = unitNames[unitNames.length - 1];
+  let firstUnitName = smallestUnitName;
+  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
+  const firstUnitIndex = unitNames.findIndex((unitName) => {
+    if (unitName === smallestUnitName) {
+      return false;
+    }
+    const msPerUnit = MS_PER_UNITS[unitName];
+    const unitCount = Math.floor(ms / msPerUnit);
+    if (unitCount) {
+      firstUnitName = unitName;
+      firstUnitCount = unitCount;
+      return true;
+    }
+    return false;
+  });
+  if (firstUnitName === smallestUnitName) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
+  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
+  const remainingUnitName = unitNames[firstUnitIndex + 1];
+  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
+  // - 1 year and 1 second is too much information
+  //   so we don't check the remaining units
+  // - 1 year and 0.0001 week is awful
+  //   hence the if below
+  if (Math.round(remainingUnitCount) < 1) {
+    return {
+      primary: {
+        name: firstUnitName,
+        count: firstUnitCount,
+      },
+    };
+  }
+  // - 1 year and 1 month is great
+  return {
+    primary: {
+      name: firstUnitName,
+      count: firstUnitCount,
+    },
+    remaining: {
+      name: remainingUnitName,
+      count: remainingUnitCount,
+    },
+  };
+};
+
+const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
+  return inspectBytes(numberOfBytes, { decimals, short });
+};
+
+const humanizeMemory = (metricValue, { decimals, short } = {}) => {
+  return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
+};
+
+const inspectBytes = (
+  number,
+  { fixedDecimals = false, decimals, short } = {},
+) => {
+  if (number === 0) {
+    return `0 B`;
+  }
+  const exponent = Math.min(
+    Math.floor(Math.log10(number) / 3),
+    BYTE_UNITS.length - 1,
+  );
+  const unitNumber = number / Math.pow(1000, exponent);
+  const unitName = BYTE_UNITS[exponent];
+  if (decimals === undefined) {
+    if (unitNumber < 100) {
+      decimals = 1;
+    } else {
+      decimals = 0;
+    }
+  }
+  const unitNumberRounded = setRoundedPrecision(unitNumber, {
+    decimals,
+    decimalsWhenSmall: 1,
+  });
+  const value = fixedDecimals
+    ? unitNumberRounded.toFixed(decimals)
+    : unitNumberRounded;
+  if (short) {
+    return `${value}${unitName}`;
+  }
+  return `${value} ${unitName}`;
+};
+
+const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+const formatDefault = (v) => v;
+
+const generateContentFrame = ({
+  content,
+  line,
+  column,
+
+  linesAbove = 3,
+  linesBelow = 0,
+  lineMaxWidth = 120,
+  lineNumbersOnTheLeft = true,
+  lineMarker = true,
+  columnMarker = true,
+  format = formatDefault,
+} = {}) => {
+  const lineStrings = content.split(/\r?\n/);
+  if (line === 0) line = 1;
+  if (column === undefined) {
+    columnMarker = false;
+    column = 1;
+  }
+  if (column === 0) column = 1;
+
+  let lineStartIndex = line - 1 - linesAbove;
+  if (lineStartIndex < 0) {
+    lineStartIndex = 0;
+  }
+  let lineEndIndex = line - 1 + linesBelow;
+  if (lineEndIndex > lineStrings.length - 1) {
+    lineEndIndex = lineStrings.length - 1;
+  }
+  if (columnMarker) {
+    // human reader deduce the line when there is a column marker
+    lineMarker = false;
+  }
+  if (line - 1 === lineEndIndex) {
+    lineMarker = false; // useless because last line
+  }
+  let lineIndex = lineStartIndex;
+
+  let columnsBefore;
+  let columnsAfter;
+  if (column > lineMaxWidth) {
+    columnsBefore = column - Math.ceil(lineMaxWidth / 2);
+    columnsAfter = column + Math.floor(lineMaxWidth / 2);
+  } else {
+    columnsBefore = 0;
+    columnsAfter = lineMaxWidth;
+  }
+  let columnMarkerIndex = column - 1 - columnsBefore;
+
+  let source = "";
+  while (lineIndex <= lineEndIndex) {
+    const lineString = lineStrings[lineIndex];
+    const lineNumber = lineIndex + 1;
+    const isLastLine = lineIndex === lineEndIndex;
+    const isMainLine = lineNumber === line;
+    lineIndex++;
+
+    {
+      if (lineMarker) {
+        if (isMainLine) {
+          source += `${format(">", "marker_line")} `;
+        } else {
+          source += "  ";
+        }
+      }
+      if (lineNumbersOnTheLeft) {
+        // fill with spaces to ensure if line moves from 7,8,9 to 10 the display is still great
+        const asideSource = `${fillLeft$1(lineNumber, lineEndIndex + 1)} |`;
+        source += `${format(asideSource, "line_number_aside")} `;
+      }
+    }
+    {
+      source += truncateLine(lineString, {
+        start: columnsBefore,
+        end: columnsAfter,
+        prefix: "…",
+        suffix: "…",
+        format,
+      });
+    }
+    {
+      if (columnMarker && isMainLine) {
+        source += `\n`;
+        if (lineMarker) {
+          source += "  ";
+        }
+        if (lineNumbersOnTheLeft) {
+          const asideSpaces = `${fillLeft$1(lineNumber, lineEndIndex + 1)} | `
+            .length;
+          source += " ".repeat(asideSpaces);
+        }
+        source += " ".repeat(columnMarkerIndex);
+        source += format("^", "marker_column");
+      }
+    }
+    if (!isLastLine) {
+      source += "\n";
+    }
+  }
+  return source;
+};
+
+const truncateLine = (line, { start, end, prefix, suffix, format }) => {
+  const lastIndex = line.length;
+
+  if (line.length === 0) {
+    // don't show any ellipsis if the line is empty
+    // because it's not truncated in that case
+    return "";
+  }
+
+  const startTruncated = start > 0;
+  const endTruncated = lastIndex > end;
+
+  let from = startTruncated ? start + prefix.length : start;
+  let to = endTruncated ? end - suffix.length : end;
+  if (to > lastIndex) to = lastIndex;
+
+  if (start >= lastIndex || from === to) {
+    return "";
+  }
+  let result = "";
+  while (from < to) {
+    result += format(line[from], "char");
+    from++;
+  }
+  if (result.length === 0) {
+    return "";
+  }
+  if (startTruncated && endTruncated) {
+    return `${format(prefix, "marker_overflow_left")}${result}${format(
+      suffix,
+      "marker_overflow_right",
+    )}`;
+  }
+  if (startTruncated) {
+    return `${format(prefix, "marker_overflow_left")}${result}`;
+  }
+  if (endTruncated) {
+    return `${result}${format(suffix, "marker_overflow_right")}`;
+  }
+  return result;
+};
+
+const fillLeft$1 = (value, biggestValue, char = " ") => {
+  const width = String(value).length;
+  const biggestWidth = String(biggestValue).length;
+  let missingWidth = biggestWidth - width;
+  let padded = "";
+  while (missingWidth--) {
+    padded += char;
+  }
+  padded += value;
+  return padded;
+};
+
 const LOG_LEVEL_OFF = "off";
 
 const LOG_LEVEL_DEBUG = "debug";
@@ -883,700 +1590,6 @@ const spyStreamOutput = (stream, callback) => {
     uninstall();
     return output;
   };
-};
-
-// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
-/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
-	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
-	const position = argv.indexOf(prefix + flag);
-	const terminatorPosition = argv.indexOf('--');
-	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
-}
-
-const {env} = process$1;
-
-let flagForceColor;
-if (
-	hasFlag('no-color')
-	|| hasFlag('no-colors')
-	|| hasFlag('color=false')
-	|| hasFlag('color=never')
-) {
-	flagForceColor = 0;
-} else if (
-	hasFlag('color')
-	|| hasFlag('colors')
-	|| hasFlag('color=true')
-	|| hasFlag('color=always')
-) {
-	flagForceColor = 1;
-}
-
-function envForceColor() {
-	if ('FORCE_COLOR' in env) {
-		if (env.FORCE_COLOR === 'true') {
-			return 1;
-		}
-
-		if (env.FORCE_COLOR === 'false') {
-			return 0;
-		}
-
-		return env.FORCE_COLOR.length === 0 ? 1 : Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
-	}
-}
-
-function translateLevel(level) {
-	if (level === 0) {
-		return false;
-	}
-
-	return {
-		level,
-		hasBasic: true,
-		has256: level >= 2,
-		has16m: level >= 3,
-	};
-}
-
-function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor();
-	if (noFlagForceColor !== undefined) {
-		flagForceColor = noFlagForceColor;
-	}
-
-	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
-
-	if (forceColor === 0) {
-		return 0;
-	}
-
-	if (sniffFlags) {
-		if (hasFlag('color=16m')
-			|| hasFlag('color=full')
-			|| hasFlag('color=truecolor')) {
-			return 3;
-		}
-
-		if (hasFlag('color=256')) {
-			return 2;
-		}
-	}
-
-	// Check for Azure DevOps pipelines.
-	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
-		return 1;
-	}
-
-	if (haveStream && !streamIsTTY && forceColor === undefined) {
-		return 0;
-	}
-
-	const min = forceColor || 0;
-
-	if (env.TERM === 'dumb') {
-		return min;
-	}
-
-	if (process$1.platform === 'win32') {
-		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
-		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = os.release().split('.');
-		if (
-			Number(osRelease[0]) >= 10
-			&& Number(osRelease[2]) >= 10_586
-		) {
-			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
-		}
-
-		return 1;
-	}
-
-	if ('CI' in env) {
-		if ('GITHUB_ACTIONS' in env || 'GITEA_ACTIONS' in env) {
-			return 3;
-		}
-
-		if (['TRAVIS', 'CIRCLECI', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
-			return 1;
-		}
-
-		return min;
-	}
-
-	if ('TEAMCITY_VERSION' in env) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
-	}
-
-	if (env.COLORTERM === 'truecolor') {
-		return 3;
-	}
-
-	if (env.TERM === 'xterm-kitty') {
-		return 3;
-	}
-
-	if ('TERM_PROGRAM' in env) {
-		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
-
-		switch (env.TERM_PROGRAM) {
-			case 'iTerm.app': {
-				return version >= 3 ? 3 : 2;
-			}
-
-			case 'Apple_Terminal': {
-				return 2;
-			}
-			// No default
-		}
-	}
-
-	if (/-256(color)?$/i.test(env.TERM)) {
-		return 2;
-	}
-
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
-		return 1;
-	}
-
-	if ('COLORTERM' in env) {
-		return 1;
-	}
-
-	return min;
-}
-
-function createSupportsColor(stream, options = {}) {
-	const level = _supportsColor(stream, {
-		streamIsTTY: stream && stream.isTTY,
-		...options,
-	});
-
-	return translateLevel(level);
-}
-
-const supportsColor = {
-	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
-};
-
-const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
-// https://github.com/Marak/colors.js/blob/master/lib/styles.js
-// https://stackoverflow.com/a/75985833/2634179
-const RESET = "\x1b[0m";
-
-const ANSI = {
-  supported: processSupportsBasicColor,
-
-  RED: "\x1b[31m",
-  GREEN: "\x1b[32m",
-  YELLOW: "\x1b[33m",
-  BLUE: "\x1b[34m",
-  MAGENTA: "\x1b[35m",
-  CYAN: "\x1b[36m",
-  GREY: "\x1b[90m",
-  color: (text, ANSI_COLOR) => {
-    return ANSI.supported && ANSI_COLOR ? `${ANSI_COLOR}${text}${RESET}` : text;
-  },
-
-  BOLD: "\x1b[1m",
-  UNDERLINE: "\x1b[4m",
-  STRIKE: "\x1b[9m",
-  effect: (text, ANSI_EFFECT) => {
-    return ANSI.supported && ANSI_EFFECT
-      ? `${ANSI_EFFECT}${text}${RESET}`
-      : text;
-  },
-};
-
-// GitHub workflow does support ANSI but "supports-color" returns false
-// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-if (
-  process.env.GITHUB_WORKFLOW &&
-  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
-  // in unit test we use process.env.FORCE_COLOR = 'false' to fake
-  // that colors are not supported. Let it have priority
-  process.env.FORCE_COLOR !== "false"
-) {
-  ANSI.supported = true;
-}
-
-const setRoundedPrecision = (
-  number,
-  { decimals = 1, decimalsWhenSmall = decimals } = {},
-) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: Math.round,
-  });
-};
-
-const setPrecision = (
-  number,
-  { decimals = 1, decimalsWhenSmall = decimals } = {},
-) => {
-  return setDecimalsPrecision(number, {
-    decimals,
-    decimalsWhenSmall,
-    transform: parseInt,
-  });
-};
-
-const setDecimalsPrecision = (
-  number,
-  {
-    transform,
-    decimals, // max decimals for number in [-Infinity, -1[]1, Infinity]
-    decimalsWhenSmall, // max decimals for number in [-1,1]
-  } = {},
-) => {
-  if (number === 0) {
-    return 0;
-  }
-  let numberCandidate = Math.abs(number);
-  if (numberCandidate < 1) {
-    const integerGoal = Math.pow(10, decimalsWhenSmall - 1);
-    let i = 1;
-    while (numberCandidate < integerGoal) {
-      numberCandidate *= 10;
-      i *= 10;
-    }
-    const asInteger = transform(numberCandidate);
-    const asFloat = asInteger / i;
-    return number < 0 ? -asFloat : asFloat;
-  }
-  const coef = Math.pow(10, decimals);
-  const numberMultiplied = (number + Number.EPSILON) * coef;
-  const asInteger = transform(numberMultiplied);
-  const asFloat = asInteger / coef;
-  return number < 0 ? -asFloat : asFloat;
-};
-
-// https://www.codingem.com/javascript-how-to-limit-decimal-places/
-// export const roundNumber = (number, maxDecimals) => {
-//   const decimalsExp = Math.pow(10, maxDecimals)
-//   const numberRoundInt = Math.round(decimalsExp * (number + Number.EPSILON))
-//   const numberRoundFloat = numberRoundInt / decimalsExp
-//   return numberRoundFloat
-// }
-
-// export const setPrecision = (number, precision) => {
-//   if (Math.floor(number) === number) return number
-//   const [int, decimals] = number.toString().split(".")
-//   if (precision <= 0) return int
-//   const numberTruncated = `${int}.${decimals.slice(0, precision)}`
-//   return numberTruncated
-// }
-
-const unitShort = {
-  year: "y",
-  month: "m",
-  week: "w",
-  day: "d",
-  hour: "h",
-  minute: "m",
-  second: "s",
-};
-
-const humanizeDuration = (
-  ms,
-  { short, rounded = true, decimals } = {},
-) => {
-  // ignore ms below meaningfulMs so that:
-  // humanizeDuration(0.5) -> "0 second"
-  // humanizeDuration(1.1) -> "0.001 second" (and not "0.0011 second")
-  // This tool is meant to be read by humans and it would be barely readable to see
-  // "0.0001 second" (stands for 0.1 millisecond)
-  // yes we could return "0.1 millisecond" but we choosed consistency over precision
-  // so that the prefered unit is "second" (and does not become millisecond when ms is super small)
-  if (ms < 1) {
-    return short ? "0s" : "0 second";
-  }
-  const { primary, remaining } = parseMs(ms);
-  if (!remaining) {
-    return humanizeDurationUnit(primary, {
-      decimals:
-        decimals === undefined ? (primary.name === "second" ? 1 : 0) : decimals,
-      short,
-      rounded,
-    });
-  }
-  return `${humanizeDurationUnit(primary, {
-    decimals: decimals === undefined ? 0 : decimals,
-    short,
-    rounded,
-  })} and ${humanizeDurationUnit(remaining, {
-    decimals: decimals === undefined ? 0 : decimals,
-    short,
-    rounded,
-  })}`;
-};
-const humanizeDurationUnit = (unit, { decimals, short, rounded }) => {
-  const count = rounded
-    ? setRoundedPrecision(unit.count, { decimals })
-    : setPrecision(unit.count, { decimals });
-  let name = unit.name;
-  if (short) {
-    name = unitShort[name];
-    return `${count}${name}`;
-  }
-  if (count <= 1) {
-    return `${count} ${name}`;
-  }
-  return `${count} ${name}s`;
-};
-const MS_PER_UNITS = {
-  year: 31_557_600_000,
-  month: 2_629_000_000,
-  week: 604_800_000,
-  day: 86_400_000,
-  hour: 3_600_000,
-  minute: 60_000,
-  second: 1000,
-};
-
-const parseMs = (ms) => {
-  const unitNames = Object.keys(MS_PER_UNITS);
-  const smallestUnitName = unitNames[unitNames.length - 1];
-  let firstUnitName = smallestUnitName;
-  let firstUnitCount = ms / MS_PER_UNITS[smallestUnitName];
-  const firstUnitIndex = unitNames.findIndex((unitName) => {
-    if (unitName === smallestUnitName) {
-      return false;
-    }
-    const msPerUnit = MS_PER_UNITS[unitName];
-    const unitCount = Math.floor(ms / msPerUnit);
-    if (unitCount) {
-      firstUnitName = unitName;
-      firstUnitCount = unitCount;
-      return true;
-    }
-    return false;
-  });
-  if (firstUnitName === smallestUnitName) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
-  const remainingMs = ms - firstUnitCount * MS_PER_UNITS[firstUnitName];
-  const remainingUnitName = unitNames[firstUnitIndex + 1];
-  const remainingUnitCount = remainingMs / MS_PER_UNITS[remainingUnitName];
-  // - 1 year and 1 second is too much information
-  //   so we don't check the remaining units
-  // - 1 year and 0.0001 week is awful
-  //   hence the if below
-  if (Math.round(remainingUnitCount) < 1) {
-    return {
-      primary: {
-        name: firstUnitName,
-        count: firstUnitCount,
-      },
-    };
-  }
-  // - 1 year and 1 month is great
-  return {
-    primary: {
-      name: firstUnitName,
-      count: firstUnitCount,
-    },
-    remaining: {
-      name: remainingUnitName,
-      count: remainingUnitCount,
-    },
-  };
-};
-
-function isUnicodeSupported() {
-	if (process$1.platform !== 'win32') {
-		return process$1.env.TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(process$1.env.WT_SESSION) // Windows Terminal
-		|| Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| process$1.env.TERM_PROGRAM === 'Terminus-Sublime'
-		|| process$1.env.TERM_PROGRAM === 'vscode'
-		|| process$1.env.TERM === 'xterm-256color'
-		|| process$1.env.TERM === 'alacritty'
-		|| process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
-
-// see also https://github.com/sindresorhus/figures
-
-
-const UNICODE = {
-  supported: isUnicodeSupported(),
-
-  get COMMAND_RAW() {
-    return UNICODE.supported ? `❯` : `>`;
-  },
-  get OK_RAW() {
-    return UNICODE.supported ? `✔` : `√`;
-  },
-  get FAILURE_RAW() {
-    return UNICODE.supported ? `✖` : `×`;
-  },
-  get DEBUG_RAW() {
-    return UNICODE.supported ? `◆` : `♦`;
-  },
-  get INFO_RAW() {
-    return UNICODE.supported ? `ℹ` : `i`;
-  },
-  get WARNING_RAW() {
-    return UNICODE.supported ? `⚠` : `‼`;
-  },
-  get CIRCLE_CROSS_RAW() {
-    return UNICODE.supported ? `ⓧ` : `(×)`;
-  },
-  get COMMAND() {
-    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
-  },
-  get OK() {
-    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
-  },
-  get FAILURE() {
-    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
-  },
-  get DEBUG() {
-    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
-  },
-  get INFO() {
-    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
-  },
-  get WARNING() {
-    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
-  },
-  get CIRCLE_CROSS() {
-    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
-  },
-  get ELLIPSIS() {
-    return UNICODE.supported ? `…` : `...`;
-  },
-};
-
-const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`;
-
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
-${
-  Array.isArray(value)
-    ? value.join(`
-`)
-    : value
-}`;
-  });
-
-  return string;
-};
-
-const humanizeFileSize = (numberOfBytes, { decimals, short } = {}) => {
-  return inspectBytes(numberOfBytes, { decimals, short });
-};
-
-const humanizeMemory = (metricValue, { decimals, short } = {}) => {
-  return inspectBytes(metricValue, { decimals, fixedDecimals: true, short });
-};
-
-const inspectBytes = (
-  number,
-  { fixedDecimals = false, decimals, short } = {},
-) => {
-  if (number === 0) {
-    return `0 B`;
-  }
-  const exponent = Math.min(
-    Math.floor(Math.log10(number) / 3),
-    BYTE_UNITS.length - 1,
-  );
-  const unitNumber = number / Math.pow(1000, exponent);
-  const unitName = BYTE_UNITS[exponent];
-  if (decimals === undefined) {
-    if (unitNumber < 100) {
-      decimals = 1;
-    } else {
-      decimals = 0;
-    }
-  }
-  const unitNumberRounded = setRoundedPrecision(unitNumber, {
-    decimals,
-    decimalsWhenSmall: 1,
-  });
-  const value = fixedDecimals
-    ? unitNumberRounded.toFixed(decimals)
-    : unitNumberRounded;
-  if (short) {
-    return `${value}${unitName}`;
-  }
-  return `${value} ${unitName}`;
-};
-
-const BYTE_UNITS = ["B", "kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-
-const formatDefault = (v) => v;
-
-const generateContentFrame = ({
-  content,
-  line,
-  column,
-
-  linesAbove = 3,
-  linesBelow = 0,
-  lineMaxWidth = 120,
-  lineNumbersOnTheLeft = true,
-  lineMarker = true,
-  columnMarker = true,
-  format = formatDefault,
-} = {}) => {
-  const lineStrings = content.split(/\r?\n/);
-  if (line === 0) line = 1;
-  if (column === undefined) {
-    columnMarker = false;
-    column = 1;
-  }
-  if (column === 0) column = 1;
-
-  let lineStartIndex = line - 1 - linesAbove;
-  if (lineStartIndex < 0) {
-    lineStartIndex = 0;
-  }
-  let lineEndIndex = line - 1 + linesBelow;
-  if (lineEndIndex > lineStrings.length - 1) {
-    lineEndIndex = lineStrings.length - 1;
-  }
-  if (columnMarker) {
-    // human reader deduce the line when there is a column marker
-    lineMarker = false;
-  }
-  if (line - 1 === lineEndIndex) {
-    lineMarker = false; // useless because last line
-  }
-  let lineIndex = lineStartIndex;
-
-  let columnsBefore;
-  let columnsAfter;
-  if (column > lineMaxWidth) {
-    columnsBefore = column - Math.ceil(lineMaxWidth / 2);
-    columnsAfter = column + Math.floor(lineMaxWidth / 2);
-  } else {
-    columnsBefore = 0;
-    columnsAfter = lineMaxWidth;
-  }
-  let columnMarkerIndex = column - 1 - columnsBefore;
-
-  let source = "";
-  while (lineIndex <= lineEndIndex) {
-    const lineString = lineStrings[lineIndex];
-    const lineNumber = lineIndex + 1;
-    const isLastLine = lineIndex === lineEndIndex;
-    const isMainLine = lineNumber === line;
-    lineIndex++;
-
-    {
-      if (lineMarker) {
-        if (isMainLine) {
-          source += `${format(">", "marker_line")} `;
-        } else {
-          source += "  ";
-        }
-      }
-      if (lineNumbersOnTheLeft) {
-        // fill with spaces to ensure if line moves from 7,8,9 to 10 the display is still great
-        const asideSource = `${fillLeft$1(lineNumber, lineEndIndex + 1)} |`;
-        source += `${format(asideSource, "line_number_aside")} `;
-      }
-    }
-    {
-      source += truncateLine(lineString, {
-        start: columnsBefore,
-        end: columnsAfter,
-        prefix: "…",
-        suffix: "…",
-        format,
-      });
-    }
-    {
-      if (columnMarker && isMainLine) {
-        source += `\n`;
-        if (lineMarker) {
-          source += "  ";
-        }
-        if (lineNumbersOnTheLeft) {
-          const asideSpaces = `${fillLeft$1(lineNumber, lineEndIndex + 1)} | `
-            .length;
-          source += " ".repeat(asideSpaces);
-        }
-        source += " ".repeat(columnMarkerIndex);
-        source += format("^", "marker_column");
-      }
-    }
-    if (!isLastLine) {
-      source += "\n";
-    }
-  }
-  return source;
-};
-
-const truncateLine = (line, { start, end, prefix, suffix, format }) => {
-  const lastIndex = line.length;
-
-  if (line.length === 0) {
-    // don't show any ellipsis if the line is empty
-    // because it's not truncated in that case
-    return "";
-  }
-
-  const startTruncated = start > 0;
-  const endTruncated = lastIndex > end;
-
-  let from = startTruncated ? start + prefix.length : start;
-  let to = endTruncated ? end - suffix.length : end;
-  if (to > lastIndex) to = lastIndex;
-
-  if (start >= lastIndex || from === to) {
-    return "";
-  }
-  let result = "";
-  while (from < to) {
-    result += format(line[from], "char");
-    from++;
-  }
-  if (result.length === 0) {
-    return "";
-  }
-  if (startTruncated && endTruncated) {
-    return `${format(prefix, "marker_overflow_left")}${result}${format(
-      suffix,
-      "marker_overflow_right",
-    )}`;
-  }
-  if (startTruncated) {
-    return `${format(prefix, "marker_overflow_left")}${result}`;
-  }
-  if (endTruncated) {
-    return `${result}${format(suffix, "marker_overflow_right")}`;
-  }
-  return result;
-};
-
-const fillLeft$1 = (value, biggestValue, char = " ") => {
-  const width = String(value).length;
-  const biggestWidth = String(biggestValue).length;
-  let missingWidth = biggestWidth - width;
-  let padded = "";
-  while (missingWidth--) {
-    padded += char;
-  }
-  padded += value;
-  return padded;
 };
 
 const urlToScheme = (url) => {

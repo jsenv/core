@@ -1,9 +1,9 @@
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import "string-width";
 import process$1 from "node:process";
 import os from "node:os";
 import tty from "node:tty";
+import "string-width";
 import { applyBabelPlugins, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
 
 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -47,32 +47,6 @@ const getOriginalPosition = ({
   });
   return originalPosition;
 };
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser = globalThis.window?.document !== undefined;
-globalThis.process?.versions?.node !== undefined;
-globalThis.process?.versions?.bun !== undefined;
-globalThis.Deno?.version?.deno !== undefined;
-globalThis.process?.versions?.electron !== undefined;
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
-platform === 'macOS' || globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-|| globalThis.navigator?.userAgent?.includes(' Mac ') === true || globalThis.process?.platform === 'darwin';
-platform === 'Windows' || globalThis.navigator?.platform === 'Win32' || globalThis.process?.platform === 'win32';
-platform === 'Linux' || globalThis.navigator?.platform?.startsWith('Linux') === true || globalThis.navigator?.userAgent?.includes(' Linux ') === true || globalThis.process?.platform === 'linux';
-platform === 'Android' || globalThis.navigator?.platform === 'Android' || globalThis.navigator?.userAgent?.includes(' Android ') === true || globalThis.process?.platform === 'android';
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-!isBrowser && process$1.platform === 'win32';
-isBrowser ? () => {
-  throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
 
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
@@ -213,39 +187,45 @@ function createSupportsColor(stream, options = {}) {
     isTTY: tty.isatty(2)
   })
 });
-const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
-const ANSI = {
-  supported: processSupportsBasicColor,
-  RED: "\x1b[31m",
-  GREEN: "\x1b[32m",
-  YELLOW: "\x1b[33m",
-  BLUE: "\x1b[34m",
-  MAGENTA: "\x1b[35m",
-  CYAN: "\x1b[36m",
-  GREY: "\x1b[90m",
-  color: (text, ANSI_COLOR) => {
-    return ANSI.supported && ANSI_COLOR ? "".concat(ANSI_COLOR).concat(text).concat(RESET) : text;
-  },
-  BOLD: "\x1b[1m",
-  UNDERLINE: "\x1b[4m",
-  STRIKE: "\x1b[9m",
-  effect: (text, ANSI_EFFECT) => {
-    return ANSI.supported && ANSI_EFFECT ? "".concat(ANSI_EFFECT).concat(text).concat(RESET) : text;
-  }
+const createAnsi = ({
+  supported
+}) => {
+  const ANSI = {
+    supported,
+    RED: "\x1b[31m",
+    GREEN: "\x1b[32m",
+    YELLOW: "\x1b[33m",
+    BLUE: "\x1b[34m",
+    MAGENTA: "\x1b[35m",
+    CYAN: "\x1b[36m",
+    GREY: "\x1b[90m",
+    color: (text, ANSI_COLOR) => {
+      return ANSI.supported && ANSI_COLOR ? "".concat(ANSI_COLOR).concat(text).concat(RESET) : text;
+    },
+    BOLD: "\x1b[1m",
+    UNDERLINE: "\x1b[4m",
+    STRIKE: "\x1b[9m",
+    effect: (text, ANSI_EFFECT) => {
+      return ANSI.supported && ANSI_EFFECT ? "".concat(ANSI_EFFECT).concat(text).concat(RESET) : text;
+    }
+  };
+  return ANSI;
 };
-
-// GitHub workflow does support ANSI but "supports-color" returns false
-// because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-if (process.env.GITHUB_WORKFLOW &&
-// Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
-// in unit test we use process.env.FORCE_COLOR = 'false' to fake
-// that colors are not supported. Let it have priority
-process.env.FORCE_COLOR !== "false") {
-  ANSI.supported = true;
-}
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+const ANSI = createAnsi({
+  supported: processSupportsBasicColor ||
+  // GitHub workflow does support ANSI but "supports-color" returns false
+  // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+  process.env.GITHUB_WORKFLOW &&
+  // Check on FORCE_COLOR is to ensure it is prio over GitHub workflow check
+  // in unit test we use process.env.FORCE_COLOR = 'false' to fake
+  // that colors are not supported. Let it have priority
+  process.env.FORCE_COLOR !== "false"
+});
 function isUnicodeSupported() {
   if (process$1.platform !== 'win32') {
     return process$1.env.TERM !== 'linux'; // Linux console (kernel)
@@ -258,54 +238,64 @@ function isUnicodeSupported() {
 
 // see also https://github.com/sindresorhus/figures
 
-const UNICODE = {
-  supported: isUnicodeSupported(),
-  get COMMAND_RAW() {
-    return UNICODE.supported ? "\u276F" : ">";
-  },
-  get OK_RAW() {
-    return UNICODE.supported ? "\u2714" : "\u221A";
-  },
-  get FAILURE_RAW() {
-    return UNICODE.supported ? "\u2716" : "\xD7";
-  },
-  get DEBUG_RAW() {
-    return UNICODE.supported ? "\u25C6" : "\u2666";
-  },
-  get INFO_RAW() {
-    return UNICODE.supported ? "\u2139" : "i";
-  },
-  get WARNING_RAW() {
-    return UNICODE.supported ? "\u26A0" : "\u203C";
-  },
-  get CIRCLE_CROSS_RAW() {
-    return UNICODE.supported ? "\u24E7" : "(\xD7)";
-  },
-  get COMMAND() {
-    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
-  },
-  get OK() {
-    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
-  },
-  get FAILURE() {
-    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
-  },
-  get DEBUG() {
-    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
-  },
-  get INFO() {
-    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
-  },
-  get WARNING() {
-    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
-  },
-  get CIRCLE_CROSS() {
-    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
-  },
-  get ELLIPSIS() {
-    return UNICODE.supported ? "\u2026" : "...";
-  }
+const createUnicode = ({
+  supported,
+  ANSI
+}) => {
+  const UNICODE = {
+    supported,
+    get COMMAND_RAW() {
+      return UNICODE.supported ? "\u276F" : ">";
+    },
+    get OK_RAW() {
+      return UNICODE.supported ? "\u2714" : "\u221A";
+    },
+    get FAILURE_RAW() {
+      return UNICODE.supported ? "\u2716" : "\xD7";
+    },
+    get DEBUG_RAW() {
+      return UNICODE.supported ? "\u25C6" : "\u2666";
+    },
+    get INFO_RAW() {
+      return UNICODE.supported ? "\u2139" : "i";
+    },
+    get WARNING_RAW() {
+      return UNICODE.supported ? "\u26A0" : "\u203C";
+    },
+    get CIRCLE_CROSS_RAW() {
+      return UNICODE.supported ? "\u24E7" : "(\xD7)";
+    },
+    get COMMAND() {
+      return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+    },
+    get OK() {
+      return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+    },
+    get FAILURE() {
+      return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+    },
+    get DEBUG() {
+      return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+    },
+    get INFO() {
+      return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+    },
+    get WARNING() {
+      return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+    },
+    get CIRCLE_CROSS() {
+      return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+    },
+    get ELLIPSIS() {
+      return UNICODE.supported ? "\u2026" : "...";
+    }
+  };
+  return UNICODE;
 };
+createUnicode({
+  supported: isUnicodeSupported(),
+  ANSI
+});
 const formatDefault = v => v;
 const generateContentFrame = ({
   content,
@@ -453,6 +443,32 @@ const fillLeft = (value, biggestValue, char = " ") => {
   padded += value;
   return padded;
 };
+
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+globalThis.process?.versions?.node !== undefined;
+globalThis.process?.versions?.bun !== undefined;
+globalThis.Deno?.version?.deno !== undefined;
+globalThis.process?.versions?.electron !== undefined;
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+platform === 'macOS' || globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+|| globalThis.navigator?.userAgent?.includes(' Mac ') === true || globalThis.process?.platform === 'darwin';
+platform === 'Windows' || globalThis.navigator?.platform === 'Win32' || globalThis.process?.platform === 'win32';
+platform === 'Linux' || globalThis.navigator?.platform?.startsWith('Linux') === true || globalThis.navigator?.userAgent?.includes(' Linux ') === true || globalThis.process?.platform === 'linux';
+platform === 'Android' || globalThis.navigator?.platform === 'Android' || globalThis.navigator?.userAgent?.includes(' Android ') === true || globalThis.process?.platform === 'android';
+!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+!isBrowser && process$1.platform === 'win32';
+isBrowser ? () => {
+  throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
 
 const getCommonPathname = (pathname, otherPathname) => {
   if (pathname === otherPathname) {
