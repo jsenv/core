@@ -1,14 +1,20 @@
 # below or equals
+AssertionError: actual and expect are different
+
 actual: 50
 expect: assert.belowOrEquals(25)
 
 # below or equals when removed
+AssertionError: actual and expect are different
+
 actual: {}
 expect: {
   a: assert.belowOrEquals(25),
 }
 
 # below or equals ok
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: 25,
@@ -19,10 +25,14 @@ expect: {
 }
 
 # 50 is too small
+AssertionError: actual and expect are different
+
 actual: 50
 expect: assert.between(100, 200)
 
 # 3500 is between 3000 and 5000
+AssertionError: actual and expect are different
+
 actual: {
   a: 3_500,
   b: true,

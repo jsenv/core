@@ -1,56 +1,84 @@
 # url object port
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/")
 expect: URL("http://example.com:8000/")
 
 # url string port
+AssertionError: actual and expect are different
+
 actual: "http://example.com/"
 expect: "http://example.com:8000/"
 
 # url string vs url object port
+AssertionError: actual and expect are different
+
 actual: "http://example.com/"
 expect: URL("http://example.com:8000/")
 
 # url search param modified
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/?foo=a")
 expect: URL("http://example.com/?foo=b")
 
 # url search param added
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/?foo=a")
 expect: URL("http://example.com/")
 
 # url search param added 2
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/?foo=a&bar=b")
 expect: URL("http://example.com/?foo=a")
 
 # url search param removed
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/")
 expect: URL("http://example.com/?foo=a")
 
 # url search param removed 2
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/?foo=a")
 expect: URL("http://example.com/?foo=a&bar=b")
 
 # multi search param 2nd value modified
+AssertionError: actual and expect are different
+
 actual: "http://example.com/?foo=a&foo=b&foo=a"
 expect: "http://example.com/?foo=a&foo=a&foo=a"
 
 # adding multi search
+AssertionError: actual and expect are different
+
 actual: "http://example.com/?foo=a&foo=b"
 expect: "http://example.com/?foo=a"
 
 # multi search adding a 3rd param
+AssertionError: actual and expect are different
+
 actual: "http://example.com/?foo=a&foo=a&foo=a"
 expect: "http://example.com/?foo=a&foo=a"
 
 # multi search removing a 3rd param
+AssertionError: actual and expect are different
+
 actual: "http://example.com/?foo=a&foo=a"
 expect: "http://example.com/?foo=a&foo=a&foo=a"
 
 # removing multi search
+AssertionError: actual and expect are different
+
 actual: "http://example.com/?foo=a"
 expect: "http://example.com/?foo=a&foo=b"
 
 # url search param + vs space
+AssertionError: actual and expect are different
+
 actual: {
   a: "http://example.com/?a=+&b=1",
   b: true,
@@ -61,42 +89,62 @@ expect: {
 }
 
 # param order modified and value modified
+AssertionError: actual and expect are different
+
 actual: "http://example.com/?foo=a&bar=a"
 expect: "http://example.com/?bar=b&foo=b"
 
 # param order modified and value modified 2
+AssertionError: actual and expect are different
+
 actual: "http://example.com/?foo=foo_1&foo=foo_2&bar=bar_1&bar=bar_2"
 expect: "http://example.com/?bar=BAR_1&bar=BAR_2&foo=FOO_1&foo=FOO_2"
 
 # url hash modified
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/#foo")
 expect: URL("http://example.com/#bar")
 
 # url hash removed
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/")
 expect: URL("http://example.com/#bar")
 
 # url and url string
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/")
 expect: "http://example.com:8000/"
 
 # url string and url string
+AssertionError: actual and expect are different
+
 actual: "http://example.com/"
 expect: "http://example.com:8000/"
 
 # url and non url string
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/")
 expect: "totoabcexample.com"
 
 # non url string and url
+AssertionError: actual and expect are different
+
 actual: "totoabcexample.com"
 expect: URL("http://example.com/")
 
 # url and boolean
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com/")
 expect: true
 
 # url string inside a prop
+AssertionError: actual and expect are different
+
 actual: {
   a: "http://example.com/",
   b: true,
@@ -107,22 +155,30 @@ expect: {
 }
 
 # url string and object with href
+AssertionError: actual and expect are different
+
 actual: "http://example.com/"
 expect: {
   href: "http://example.com/",
 }
 
 # url object port and object with port
+AssertionError: actual and expect are different
+
 actual: URL("http://example.com:45/")
 expect: {
   port: 45,
 }
 
 # file protocol vs http protocol
+AssertionError: actual and expect are different
+
 actual: "http://example/file.txt"
 expect: "file://example/file.js"
 
 # url origin is case insensitive
+AssertionError: actual and expect are different
+
 actual: {
   a: "http://example.com/page",
   b: true,
@@ -133,10 +189,14 @@ expect: {
 }
 
 # internal string vs url object
+AssertionError: actual and expect are different
+
 actual: Signal("toto")
 expect: URL("http://toto.com/")
 
 # internal url string vs url string
+AssertionError: actual and expect are different
+
 actual: Signal("http://a.com/")
 expect: "http://b.com/"
 

@@ -682,13 +682,14 @@ const defaultOptions = {
   message: "",
   details: ""
 };
+const localTimezoneOffsetSystem = new Date(0).getTimezoneOffset() * 60000;
 const createAssert = ({
   colors = true,
   measureStringWidth = string => stripAnsi(string).length,
   tokenizeString = string => string.split(""),
   getWellKnownValuePath,
   // for test
-  localTimezoneOffset = new Date(0).getTimezoneOffset() * 60000
+  localTimezoneOffset = localTimezoneOffsetSystem
 } = {}) => {
   const setColor = (text, color) => {
     if (!assert.colors) {
@@ -1298,10 +1299,11 @@ const createAssert = ({
     let errorMessage = "";
     if (message) {
       errorMessage += message;
-      errorMessage += "\n";
+      errorMessage += "\n\n";
       errorMessage += diff;
     } else {
-      errorMessage += "\n";
+      errorMessage += "".concat(setColor("actual", unexpectColor), " and ").concat(setColor("expect", expectColor), " are different");
+      errorMessage += "\n\n";
       errorMessage += diff;
     }
     const assertionError = assert.createAssertionError(errorMessage);
@@ -1318,16 +1320,16 @@ const createAssert = ({
   // for test
   assert.localTimezoneOffset = localTimezoneOffset;
   assert.colors = colors;
+  class AssertionError extends Error {}
   assert.createAssertionError = message => {
-    const error = new Error(message);
-    error.name = "AssertionError";
-    return error;
+    const assertionError = new AssertionError(message);
+    return assertionError;
   };
   assert.isAssertionError = value => {
     if (!value) return false;
     if (typeof value !== "object") return false;
-    if (value.name === "AssertionError") return true;
-    if (value.name.includes("AssertionError")) return true;
+    if (value.constructor.name === "AssertionError") return true;
+    if (value.constructor.name.includes("AssertionError")) return true;
     return false;
   };
   assert.belowOrEquals = (value, options) => {
@@ -2248,8 +2250,16 @@ let createRootNode;
       if (isStringForDate) {
         node.childGenerator = () => {
           const dateString = value;
-          const dateTimestamp = Date.parse(dateString);
-          const dateObject = new Date(dateTimestamp + node.context.assert.localTimezoneOffset);
+          let dateTimestamp = Date.parse(dateString);
+          const localTimezoneOffset = node.context.assert.localTimezoneOffset;
+          if (localTimezoneOffset === localTimezoneOffsetSystem) {
+            dateTimestamp += localTimezoneOffset;
+          } else {
+            // happens in CI when generating date diff snapshot
+            // and comparing with diff generated in an other timezone
+            dateTimestamp += Math.abs(localTimezoneOffsetSystem - localTimezoneOffset);
+          }
+          const dateObject = new Date(dateTimestamp);
           const datePartsNode = node.appendChild("parts", {
             value,
             category: "date_parts",

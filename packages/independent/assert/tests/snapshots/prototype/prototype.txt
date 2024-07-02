@@ -1,8 +1,12 @@
 # Error vs TypeError
+AssertionError: actual and expect are different
+
 actual: Error
 expect: TypeError
 
 # object with different prototypes
+AssertionError: actual and expect are different
+
 actual: {
   __proto__: {
     a: true,
@@ -15,18 +19,24 @@ expect: {
 }
 
 # Object.create(null) and {}
+AssertionError: actual and expect are different
+
 actual: {
   __proto__: null,
 }
 expect: {}
 
 # Object.create(null) and []
+AssertionError: actual and expect are different
+
 actual: {
   __proto__: null,
 }
 expect: []
 
 # object vs custom proto
+AssertionError: actual and expect are different
+
 actual: User {
   name: "dam",
 }
@@ -35,6 +45,8 @@ expect: {
 }
 
 # object vs instance
+AssertionError: actual and expect are different
+
 actual: {
   a: User {
     name: "dam",

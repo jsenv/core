@@ -93,6 +93,9 @@ const testAssertionErrorResult = ({ shouldPass, shouldFail }) => {
 };
 
 testAssertionErrorResult({
-  shouldPass: [assert.createAssertionError(), { name: "AssertionError" }],
-  shouldFail: [false, true, new Error()],
+  shouldPass: [
+    assert.createAssertionError(),
+    { constructor: { name: "AssertionError" } },
+  ],
+  shouldFail: [false, true, new Error(), { name: "AssertionError" }],
 });

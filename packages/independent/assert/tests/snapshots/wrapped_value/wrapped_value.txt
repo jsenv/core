@@ -1,28 +1,38 @@
 # Symbol.toPrimitive added
+AssertionError: actual and expect are different
+
 actual: {
   [Symbol.toPrimitive()]: "10",
 }
 expect: {}
 
 # Symbol.toPrimitive removed
+AssertionError: actual and expect are different
+
 actual: {}
 expect: {
   [Symbol.toPrimitive()]: "10",
 }
 
 # Symbol.toPrimitive vs primitive
+AssertionError: actual and expect are different
+
 actual: {
   [Symbol.toPrimitive()]: 10,
 }
 expect: 10
 
 # primitive vs Symbol.toPrimitive
+AssertionError: actual and expect are different
+
 actual: "10"
 expect: {
   [Symbol.toPrimitive()]: "10",
 }
 
 # valueOf({ a: true }) vs { a: true }
+AssertionError: actual and expect are different
+
 actual: {
   valueOf(): {
     a: true,
@@ -33,18 +43,24 @@ expect: {
 }
 
 # 10 vs valueOf(10)
+AssertionError: actual and expect are different
+
 actual: 10
 expect: {
   valueOf(): 10,
 }
 
 # valueOf(10) vs 10
+AssertionError: actual and expect are different
+
 actual: {
   valueOf(): 10,
 }
 expect: 10
 
 # valueOf(10) vs valueOf(11)
+AssertionError: actual and expect are different
+
 actual: {
   valueOf(): 10,
 }
@@ -53,6 +69,8 @@ expect: {
 }
 
 # valueOf(10) vs valueOf(10)
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   valueOf(): 10,
@@ -63,14 +81,20 @@ expect: {
 }
 
 # valueOf with object tag vs primitive
+AssertionError: actual and expect are different
+
 actual: Signal(10)
 expect: false
 
 # valueOf with object tag 
+AssertionError: actual and expect are different
+
 actual: Signal(10)
 expect: Signal(11)
 
 # no diff on valueOf in constructor
+AssertionError: actual and expect are different
+
 actual: Signal(10) {
   a: true,
 }
@@ -79,30 +103,44 @@ expect: Signal(10) {
 }
 
 # signal(true) and signal(false)
+AssertionError: actual and expect are different
+
 actual: Signal(true)
 expect: Signal(false)
 
 # signal(true) and true
+AssertionError: actual and expect are different
+
 actual: Signal(true)
 expect: true
 
 # true and signal(true)
+AssertionError: actual and expect are different
+
 actual: true
 expect: Signal(true)
 
 # true and signal(false)
+AssertionError: actual and expect are different
+
 actual: true
 expect: Signal(false)
 
 # signal(true) and false
+AssertionError: actual and expect are different
+
 actual: Signal(true)
 expect: false
 
 # signal(true) and 1
+AssertionError: actual and expect are different
+
 actual: Signal(true)
 expect: 1
 
 # signal({ foo: true }) and signal({ foo: false })
+AssertionError: actual and expect are different
+
 actual: Signal({
   foo: true,
 })
@@ -111,6 +149,8 @@ expect: Signal({
 })
 
 # signal([true]) and signal([false]) with props
+AssertionError: actual and expect are different
+
 actual: Signal([
   true,
 ]) {
@@ -123,6 +163,8 @@ expect: Signal([
 }
 
 # signal([true]) and [true]
+AssertionError: actual and expect are different
+
 actual: Signal([
   true,
 ])
@@ -131,6 +173,8 @@ expect: [
 ]
 
 # [true] and signal([true])
+AssertionError: actual and expect are different
+
 actual: [
   true,
 ]
@@ -139,6 +183,8 @@ expect: Signal([
 ])
 
 # [true] and signal([false])
+AssertionError: actual and expect are different
+
 actual: [
   true,
 ]
@@ -147,6 +193,8 @@ expect: Signal([
 ])
 
 # signal([true]) and [false]
+AssertionError: actual and expect are different
+
 actual: Signal([
   true,
 ])
@@ -155,18 +203,26 @@ expect: [
 ]
 
 # signal(string) and signal(string)
+AssertionError: actual and expect are different
+
 actual: Signal("ab")
 expect: Signal("a")
 
 # signal(string) and string
+AssertionError: actual and expect are different
+
 actual: Signal("a")
 expect: "a"
 
 # string and signal(string)
+AssertionError: actual and expect are different
+
 actual: "a"
 expect: Signal("a")
 
 # both valueOf return object itself
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   valueOf(): actual,
@@ -177,6 +233,8 @@ expect: {
 }
 
 # valueOf self and valueOf 10
+AssertionError: actual and expect are different
+
 actual: {
   valueOf(): actual,
 }
@@ -185,6 +243,8 @@ expect: {
 }
 
 # valueOf 10 and valueOf self
+AssertionError: actual and expect are different
+
 actual: {
   valueOf(): 10,
 }
@@ -193,6 +253,8 @@ expect: {
 }
 
 # own valueOf order respected
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   valueOf(): 0,
@@ -205,6 +267,8 @@ expect: {
 }
 
 # valueOf inherited
+AssertionError: actual and expect are different
+
 actual: Signal("a") {
   foo: true,
 }

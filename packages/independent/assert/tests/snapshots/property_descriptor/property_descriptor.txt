@@ -1,4 +1,6 @@
 # enumerable and configurable and value diff
+AssertionError: actual and expect are different
+
 actual: {
   a: "a",
 }
@@ -9,6 +11,8 @@ expect: {
 }
 
 # non enumerable hidden when value same
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: "b",
@@ -19,6 +23,8 @@ expect: {
 }
 
 # non enumerable displayed when value modified
+AssertionError: actual and expect are different
+
 actual: {
   b: "b",
 }
@@ -27,6 +33,8 @@ expect: {
 }
 
 # enumerable diff
+AssertionError: actual and expect are different
+
 actual: {
   a: "a",
 }
@@ -36,6 +44,8 @@ expect: {
 }
 
 # enumerable and value diff
+AssertionError: actual and expect are different
+
 actual: {
   a: "a",
   enumerable a: false,
@@ -45,6 +55,8 @@ expect: {
 }
 
 # getter and value
+AssertionError: actual and expect are different
+
 actual: {
   get a() {
     [source code],
@@ -55,6 +67,8 @@ expect: {
 }
 
 # getter/setter and value
+AssertionError: actual and expect are different
+
 actual: {
   get a() {
     [source code],
@@ -68,6 +82,8 @@ expect: {
 }
 
 # getter only and setter only
+AssertionError: actual and expect are different
+
 actual: {
   get a() {
     [source code],
@@ -80,6 +96,8 @@ expect: {
 }
 
 # setter only and getter only
+AssertionError: actual and expect are different
+
 actual: {
   set a() {
     [source code],
@@ -92,6 +110,8 @@ expect: {
 }
 
 # getter source code same
+AssertionError: actual and expect are different
+
 actual: {
   get a() { [source code] },
   b: true,
@@ -102,6 +122,8 @@ expect: {
 }
 
 # getter source code diff
+AssertionError: actual and expect are different
+
 actual: {
   get a() {
     [source code],

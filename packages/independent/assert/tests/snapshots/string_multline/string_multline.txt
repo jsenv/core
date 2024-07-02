@@ -1,19 +1,27 @@
 # add empty line
+AssertionError: actual and expect are different
+
 actual: 1| 
         2| 
 expect: 1| 
 
 # remove empty line
+AssertionError: actual and expect are different
+
 actual: 1| 
 expect: 1| 
         2| 
 
 # one line vs two lines
+AssertionError: actual and expect are different
+
 actual: 1| Hel
 expect: 1| Hello
         2| world
 
 # second line contains extra chars
+AssertionError: actual and expect are different
+
 actual: {
   foo: 1| Hello,
        2| my name is Benjamin
@@ -26,12 +34,16 @@ expect: {
 }
 
 # second line differs
+AssertionError: actual and expect are different
+
 actual: 1| Hello
         2| world
 expect: 1| Hello
         2| france
 
 # too many lines before and after
+AssertionError: actual and expect are different
+
 actual: ↑ 2 lines ↑
         3| three
         4| four/true
@@ -44,6 +56,8 @@ expect: ↑ 2 lines ↑
         ↓ 2 lines ↓
 
 # many lines added
+AssertionError: actual and expect are different
+
 actual: 1| one
         2| two
         3| three
@@ -52,6 +66,8 @@ actual: 1| one
 expect: 1| one
 
 # many lines removed
+AssertionError: actual and expect are different
+
 actual: 1| one
 expect: 1| one
         2| two
@@ -60,6 +76,8 @@ expect: 1| one
         5| five six
 
 # prop before and after
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: 1| a
@@ -74,6 +92,8 @@ expect: {
 }
 
 # new line escaped
+AssertionError: actual and expect are different
+
 actual: {
   a: "\\n",
   b: true,
@@ -84,6 +104,8 @@ expect: {
 }
 
 # multiline without diff
+AssertionError: actual and expect are different
+
 actual: {
   a: 1| a
      ↓ 1 line ↓
@@ -96,6 +118,8 @@ expect: {
 }
 
 # many lines around
+AssertionError: actual and expect are different
+
 actual: 1| 1abcdefghijklmnopqrstuvwx
         2| 2abcdefghijklmnopqrstuvwxy
         3| Hello world
@@ -108,6 +132,8 @@ expect: 1| 1abcdefghijklmnopqrstuvwx
         5| 4abcdefghijklmnopqrstuvwxy
 
 # many lines before
+AssertionError: actual and expect are different
+
 actual: ↑ 3 lines ↑
         4| 4abcdefghijklmnopqrstuvwxy
         5| 5abcdefghijklmnopqrstuvwxy
@@ -118,6 +144,8 @@ expect: ↑ 3 lines ↑
         6| [Hello france]abcdefghijklmnopqrstuvwxyz
 
 # exactly on line break
+AssertionError: actual and expect are different
+
 actual: 1| abc
 expect: 1| ab
         2| c

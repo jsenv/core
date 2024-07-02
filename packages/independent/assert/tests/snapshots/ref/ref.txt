@@ -1,16 +1,22 @@
 # reference removed
+AssertionError: actual and expect are different
+
 actual: {}
 expect: {
   self: expect,
 }
 
 # reference added
+AssertionError: actual and expect are different
+
 actual: {
   self: actual,
 }
 expect: {}
 
 # same ref to self
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   self: actual,
@@ -21,6 +27,8 @@ expect: {
 }
 
 # same ref to self 2
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   object: { self: actual, self2: actual },
@@ -31,6 +39,8 @@ expect: {
 }
 
 # same ref to parent
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   object: { parent: actual },
@@ -41,6 +51,8 @@ expect: {
 }
 
 # same ref to value after
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: {},
@@ -53,6 +65,8 @@ expect: {
 }
 
 # same ref to value before
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   toto: {},
@@ -65,6 +79,8 @@ expect: {
 }
 
 # ref changed
+AssertionError: actual and expect are different
+
 actual: {
   object: {
     self: actual,
@@ -77,6 +93,8 @@ expect: {
 }
 
 # true should be a ref to self
+AssertionError: actual and expect are different
+
 actual: {
   self: true,
 }
@@ -85,6 +103,8 @@ expect: {
 }
 
 # ref to self should be true
+AssertionError: actual and expect are different
+
 actual: {
   self: actual,
 }
@@ -93,6 +113,8 @@ expect: {
 }
 
 # true should be object using ref
+AssertionError: actual and expect are different
+
 actual: true
 expect: {
   foo: {

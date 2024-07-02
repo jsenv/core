@@ -1,16 +1,22 @@
 # buffer.from("") vs buffer.from("a")
+AssertionError: actual and expect are different
+
 actual: Buffer []
 expect: Buffer [
   97,
 ]
 
 # buffer.from("a") vs buffer.from("")
+AssertionError: actual and expect are different
+
 actual: Buffer [
   97,
 ]
 expect: Buffer []
 
 # buffer without diff are collapsed
+AssertionError: actual and expect are different
+
 actual: {
   a: Buffer [97],
   b: true,
@@ -21,6 +27,8 @@ expect: {
 }
 
 # same length buffer diff at the end
+AssertionError: actual and expect are different
+
 actual: Buffer [
   ↑ 19 values ↑
   97,
@@ -33,6 +41,8 @@ expect: Buffer [
 ]
 
 # same length buffer diff at start
+AssertionError: actual and expect are different
+
 actual: Buffer [
   104,
   101,
@@ -45,6 +55,8 @@ expect: Buffer [
 ]
 
 # same length buffer diff at middle
+AssertionError: actual and expect are different
+
 actual: Buffer [
   ↑ 10 values ↑
   110,
@@ -61,6 +73,8 @@ expect: Buffer [
 ]
 
 # same length buffer diff start, middle, end
+AssertionError: actual and expect are different
+
 actual: Buffer [
   104,
   101,
@@ -81,12 +95,16 @@ expect: Buffer [
 ]
 
 # buffer vs string
+AssertionError: actual and expect are different
+
 actual: Buffer [
   97,
 ]
 expect: "a"
 
 # buffer vs array
+AssertionError: actual and expect are different
+
 actual: {
   a: Buffer [97],
   b: Buffer [
@@ -101,10 +119,14 @@ expect: {
 }
 
 # buffer.from vs Uint8Array.from
+AssertionError: actual and expect are different
+
 actual: Buffer [97]
 expect: Uint8Array [97]
 
 # Uint8Array vs Array
+AssertionError: actual and expect are different
+
 actual: Uint8Array
 expect: Array
 

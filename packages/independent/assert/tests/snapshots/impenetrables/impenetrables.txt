@@ -1,4 +1,6 @@
 # promise
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: Promise,
@@ -9,6 +11,8 @@ expect: {
 }
 
 # weakset
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: WeakSet,
@@ -19,6 +23,8 @@ expect: {
 }
 
 # weakmap
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: WeakMap,

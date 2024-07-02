@@ -1,4 +1,6 @@
 # basic
+AssertionError: actual and expect are different
+
 actual: {
   foo: true,
 }
@@ -7,6 +9,8 @@ expect: {
 }
 
 # property are different
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
 }
@@ -17,6 +21,8 @@ expect: {
 }
 
 # property removed
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
 }
@@ -26,6 +32,8 @@ expect: {
 }
 
 # property added
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   should_not_be_there: true,
@@ -35,12 +43,16 @@ expect: {
 }
 
 # false should be an object
+AssertionError: actual and expect are different
+
 actual: false
 expect: {
   foo: true,
 }
 
 # object should be false
+AssertionError: actual and expect are different
+
 actual: {
   foo: {
     a: Object(0),
@@ -49,6 +61,8 @@ actual: {
 expect: false
 
 # false should be an object at property
+AssertionError: actual and expect are different
+
 actual: {
   foo: false,
 }
@@ -59,6 +73,8 @@ expect: {
 }
 
 # object should be false at property
+AssertionError: actual and expect are different
+
 actual: {
   foo: {
     a: true,
@@ -69,6 +85,8 @@ expect: {
 }
 
 # max depth inside diff
+AssertionError: actual and expect are different
+
 actual: {
   foo: { foo_a: { foo_a2: Object(1) }, foo_b: { foo_b2: Object(1) } },
   bar: true,
@@ -81,6 +99,8 @@ expect: {
 }
 
 # max diff per object
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: {
@@ -97,6 +117,8 @@ expect: {
 }
 
 # max 2 context after diff (there is 2)
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: true,
@@ -109,6 +131,8 @@ expect: {
 }
 
 # max 2 context after diff (there is 3)
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: true,
@@ -123,6 +147,8 @@ expect: {
 }
 
 # max 2 context after diff (there is 4)
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: true,
@@ -135,6 +161,8 @@ expect: {
 }
 
 # max 2 context before diff (there is 2)
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: true,
@@ -147,6 +175,8 @@ expect: {
 }
 
 # max 2 context before diff (there is 3)
+AssertionError: actual and expect are different
+
 actual: {
   ↑ 2 props ↑
   c: true,
@@ -159,6 +189,8 @@ expect: {
 }
 
 # max 2 context before diff (there is 4)
+AssertionError: actual and expect are different
+
 actual: {
   ↑ 3 props ↑
   d: true,
@@ -171,6 +203,8 @@ expect: {
 }
 
 # max 2 context around diff
+AssertionError: actual and expect are different
+
 actual: {
   ↑ 2 props ↑
   c: true,
@@ -203,6 +237,8 @@ expect: {
 }
 
 # max 1 context around diff
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: true,
@@ -215,6 +251,8 @@ expect: {
 }
 
 # max 0 context around diff
+AssertionError: actual and expect are different
+
 actual: {
   ↑ 1 prop ↑
   b: true,
@@ -227,6 +265,8 @@ expect: {
 }
 
 # property should be there and is big
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
 }
@@ -242,6 +282,8 @@ expect: {
 }
 
 # many props should not be there
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: true,
@@ -259,10 +301,14 @@ expect: {
 }
 
 # object vs user
+AssertionError: actual and expect are different
+
 actual: {}
 expect: User {}
 
 # collapsed with overview when no diff
+AssertionError: actual and expect are different
+
 actual: {
   a: { foo: true, bar: true, baz: { t: 1 } },
   b: true,
@@ -273,6 +319,8 @@ expect: {
 }
 
 # one prop no diff
+AssertionError: actual and expect are different
+
 actual: {
   a: { foo: true },
   z: true,

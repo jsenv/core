@@ -1,46 +1,64 @@
 # error message added
+AssertionError: actual and expect are different
+
 actual: Error: foo
 expect: Error
 
 # error message removed
+AssertionError: actual and expect are different
+
 actual: Error
 expect: Error: bar
 
 # error message modified
+AssertionError: actual and expect are different
+
 actual: Error: foo
 expect: Error: bar
 
 # error message vs object with message
+AssertionError: actual and expect are different
+
 actual: Error: foo
 expect: {
   message: "foo",
 }
 
 # error stack vs object with stack
+AssertionError: actual and expect are different
+
 actual: Error: message
 expect: {
   stack: "stack",
 }
 
 # error message multiline
+AssertionError: actual and expect are different
+
 actual: Error: Hello
 world
 expect: Error: Hello
 france
 
 # error prop added
+AssertionError: actual and expect are different
+
 actual: Error: message {
   a: true,
 }
 expect: Error: message
 
 # error prop removed
+AssertionError: actual and expect are different
+
 actual: Error: message
 expect: Error: message {
   a: true,
 }
 
 # error prop modified
+AssertionError: actual and expect are different
+
 actual: Error: message {
   a: true,
 }
@@ -49,10 +67,14 @@ expect: Error: message {
 }
 
 # error vs typeError
+AssertionError: actual and expect are different
+
 actual: Error
 expect: TypeError
 
 # error vs CustomError
+AssertionError: actual and expect are different
+
 actual: Error
 expect: ValidationError
 

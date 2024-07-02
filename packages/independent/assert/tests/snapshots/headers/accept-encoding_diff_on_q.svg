@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="157.45"
+  height="195.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="155.45"
+      height="193.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -30,83 +30,88 @@
     id="body"
     y="40"
     width="100%"
-    height="117.45"
+    height="155.45"
     overflow="hidden"
   >
     <svg
       width="465.27"
-      height="117.45"
+      height="155.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
     >
       <g>
-        <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
-        <text x="77.21" y="14.55" fill="#7f7f7f">Headers</text>
-        <text x="136.02" y="14.55" fill="#7f7f7f">(</text>
-        <text x="26.8" y="33.55" fill="#7f7f7f">&#x22;</text>
-        <text x="35.2" y="33.55" fill="#7f7f7f">a</text>
-        <text x="43.61" y="33.55" fill="#7f7f7f">c</text>
-        <text x="52.01" y="33.55" fill="#7f7f7f">c</text>
-        <text x="60.41" y="33.55" fill="#7f7f7f">e</text>
-        <text x="68.81" y="33.55" fill="#7f7f7f">p</text>
-        <text x="77.21" y="33.55" fill="#7f7f7f">t</text>
-        <text x="85.61" y="33.55" fill="#7f7f7f">-</text>
-        <text x="94.01" y="33.55" fill="#7f7f7f">e</text>
-        <text x="102.42" y="33.55" fill="#7f7f7f">n</text>
-        <text x="110.82" y="33.55" fill="#7f7f7f">c</text>
-        <text x="119.22" y="33.55" fill="#7f7f7f">o</text>
-        <text x="127.62" y="33.55" fill="#7f7f7f">d</text>
-        <text x="136.02" y="33.55" fill="#7f7f7f">i</text>
-        <text x="144.42" y="33.55" fill="#7f7f7f">n</text>
-        <text x="152.82" y="33.55" fill="#7f7f7f">g</text>
-        <text x="161.22" y="33.55" fill="#7f7f7f">&#x22;</text>
-        <text x="178.03" y="33.55" fill="#7f7f7f"> =&#x3E; </text>
-        <text x="203.23" y="33.55" fill="#7f7f7f">&#x22;</text>
-        <text x="211.63" y="33.55" fill="#7f7f7f">deflate</text>
-        <text x="270.44" y="33.55" fill="#7f7f7f">,</text>
-        <text x="287.25" y="33.55" fill="#7f7f7f"> gzip</text>
-        <text x="320.85" y="33.55" fill="#7f7f7f">;q=</text>
-        <text x="346.05" y="33.55" fill="#cd5555">1.0</text>
-        <text x="371.26" y="33.55" fill="#7f7f7f">,</text>
-        <text x="388.06" y="33.55" fill="#7f7f7f"> *</text>
-        <text x="396.46" y="33.55" fill="#7f7f7f">;q=</text>
-        <text x="421.67" y="33.55" fill="#cd5555">0.5</text>
-        <text x="446.87" y="33.55" fill="#7f7f7f">&#x22;</text>
-        <text x="10" y="52.55" fill="#7f7f7f">)</text>
-        <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="71.55" fill="#7f7f7f">Headers</text>
-        <text x="136.02" y="71.55" fill="#7f7f7f">(</text>
-        <text x="26.8" y="90.55" fill="#7f7f7f">&#x22;</text>
-        <text x="35.2" y="90.55" fill="#7f7f7f">a</text>
-        <text x="43.61" y="90.55" fill="#7f7f7f">c</text>
-        <text x="52.01" y="90.55" fill="#7f7f7f">c</text>
-        <text x="60.41" y="90.55" fill="#7f7f7f">e</text>
-        <text x="68.81" y="90.55" fill="#7f7f7f">p</text>
-        <text x="77.21" y="90.55" fill="#7f7f7f">t</text>
-        <text x="85.61" y="90.55" fill="#7f7f7f">-</text>
-        <text x="94.01" y="90.55" fill="#7f7f7f">e</text>
-        <text x="102.42" y="90.55" fill="#7f7f7f">n</text>
-        <text x="110.82" y="90.55" fill="#7f7f7f">c</text>
-        <text x="119.22" y="90.55" fill="#7f7f7f">o</text>
-        <text x="127.62" y="90.55" fill="#7f7f7f">d</text>
-        <text x="136.02" y="90.55" fill="#7f7f7f">i</text>
-        <text x="144.42" y="90.55" fill="#7f7f7f">n</text>
-        <text x="152.82" y="90.55" fill="#7f7f7f">g</text>
-        <text x="161.22" y="90.55" fill="#7f7f7f">&#x22;</text>
-        <text x="178.03" y="90.55" fill="#7f7f7f"> =&#x3E; </text>
-        <text x="203.23" y="90.55" fill="#7f7f7f">&#x22;</text>
-        <text x="211.63" y="90.55" fill="#7f7f7f">deflate</text>
-        <text x="270.44" y="90.55" fill="#7f7f7f">,</text>
-        <text x="287.25" y="90.55" fill="#7f7f7f"> gzip</text>
-        <text x="320.85" y="90.55" fill="#7f7f7f">;q=</text>
-        <text x="346.05" y="90.55" fill="#11bc79">0.9</text>
-        <text x="371.26" y="90.55" fill="#7f7f7f">,</text>
-        <text x="388.06" y="90.55" fill="#7f7f7f"> *</text>
-        <text x="396.46" y="90.55" fill="#7f7f7f">;q=</text>
-        <text x="421.67" y="90.55" fill="#11bc79">0.4</text>
-        <text x="446.87" y="90.55" fill="#7f7f7f">&#x22;</text>
-        <text x="10" y="109.55" fill="#7f7f7f">)</text>
+        <text x="10" y="14.55">AssertionError: </text>
+        <text x="144.42" y="14.55" fill="#cd5555">actual</text>
+        <text x="203.23" y="14.55"> and </text>
+        <text x="236.84" y="14.55" fill="#11bc79">expect</text>
+        <text x="295.65" y="14.55"> are different</text>
+        <text x="10" y="52.55" fill="#7f7f7f">actual:</text>
+        <text x="77.21" y="52.55" fill="#7f7f7f">Headers</text>
+        <text x="136.02" y="52.55" fill="#7f7f7f">(</text>
+        <text x="26.8" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="35.2" y="71.55" fill="#7f7f7f">a</text>
+        <text x="43.61" y="71.55" fill="#7f7f7f">c</text>
+        <text x="52.01" y="71.55" fill="#7f7f7f">c</text>
+        <text x="60.41" y="71.55" fill="#7f7f7f">e</text>
+        <text x="68.81" y="71.55" fill="#7f7f7f">p</text>
+        <text x="77.21" y="71.55" fill="#7f7f7f">t</text>
+        <text x="85.61" y="71.55" fill="#7f7f7f">-</text>
+        <text x="94.01" y="71.55" fill="#7f7f7f">e</text>
+        <text x="102.42" y="71.55" fill="#7f7f7f">n</text>
+        <text x="110.82" y="71.55" fill="#7f7f7f">c</text>
+        <text x="119.22" y="71.55" fill="#7f7f7f">o</text>
+        <text x="127.62" y="71.55" fill="#7f7f7f">d</text>
+        <text x="136.02" y="71.55" fill="#7f7f7f">i</text>
+        <text x="144.42" y="71.55" fill="#7f7f7f">n</text>
+        <text x="152.82" y="71.55" fill="#7f7f7f">g</text>
+        <text x="161.22" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="178.03" y="71.55" fill="#7f7f7f"> =&#x3E; </text>
+        <text x="203.23" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="211.63" y="71.55" fill="#7f7f7f">deflate</text>
+        <text x="270.44" y="71.55" fill="#7f7f7f">,</text>
+        <text x="287.25" y="71.55" fill="#7f7f7f"> gzip</text>
+        <text x="320.85" y="71.55" fill="#7f7f7f">;q=</text>
+        <text x="346.05" y="71.55" fill="#cd5555">1.0</text>
+        <text x="371.26" y="71.55" fill="#7f7f7f">,</text>
+        <text x="388.06" y="71.55" fill="#7f7f7f"> *</text>
+        <text x="396.46" y="71.55" fill="#7f7f7f">;q=</text>
+        <text x="421.67" y="71.55" fill="#cd5555">0.5</text>
+        <text x="446.87" y="71.55" fill="#7f7f7f">&#x22;</text>
+        <text x="10" y="90.55" fill="#7f7f7f">)</text>
+        <text x="10" y="109.55" fill="#7f7f7f">expect:</text>
+        <text x="77.21" y="109.55" fill="#7f7f7f">Headers</text>
+        <text x="136.02" y="109.55" fill="#7f7f7f">(</text>
+        <text x="26.8" y="128.55" fill="#7f7f7f">&#x22;</text>
+        <text x="35.2" y="128.55" fill="#7f7f7f">a</text>
+        <text x="43.61" y="128.55" fill="#7f7f7f">c</text>
+        <text x="52.01" y="128.55" fill="#7f7f7f">c</text>
+        <text x="60.41" y="128.55" fill="#7f7f7f">e</text>
+        <text x="68.81" y="128.55" fill="#7f7f7f">p</text>
+        <text x="77.21" y="128.55" fill="#7f7f7f">t</text>
+        <text x="85.61" y="128.55" fill="#7f7f7f">-</text>
+        <text x="94.01" y="128.55" fill="#7f7f7f">e</text>
+        <text x="102.42" y="128.55" fill="#7f7f7f">n</text>
+        <text x="110.82" y="128.55" fill="#7f7f7f">c</text>
+        <text x="119.22" y="128.55" fill="#7f7f7f">o</text>
+        <text x="127.62" y="128.55" fill="#7f7f7f">d</text>
+        <text x="136.02" y="128.55" fill="#7f7f7f">i</text>
+        <text x="144.42" y="128.55" fill="#7f7f7f">n</text>
+        <text x="152.82" y="128.55" fill="#7f7f7f">g</text>
+        <text x="161.22" y="128.55" fill="#7f7f7f">&#x22;</text>
+        <text x="178.03" y="128.55" fill="#7f7f7f"> =&#x3E; </text>
+        <text x="203.23" y="128.55" fill="#7f7f7f">&#x22;</text>
+        <text x="211.63" y="128.55" fill="#7f7f7f">deflate</text>
+        <text x="270.44" y="128.55" fill="#7f7f7f">,</text>
+        <text x="287.25" y="128.55" fill="#7f7f7f"> gzip</text>
+        <text x="320.85" y="128.55" fill="#7f7f7f">;q=</text>
+        <text x="346.05" y="128.55" fill="#11bc79">0.9</text>
+        <text x="371.26" y="128.55" fill="#7f7f7f">,</text>
+        <text x="388.06" y="128.55" fill="#7f7f7f"> *</text>
+        <text x="396.46" y="128.55" fill="#7f7f7f">;q=</text>
+        <text x="421.67" y="128.55" fill="#11bc79">0.4</text>
+        <text x="446.87" y="128.55" fill="#7f7f7f">&#x22;</text>
+        <text x="10" y="147.55" fill="#7f7f7f">)</text>
       </g>
     </svg>
   </foreignObject>

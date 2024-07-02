@@ -1,16 +1,22 @@
 # map entry added
+AssertionError: actual and expect are different
+
 actual: Map(
   "a" => true,
 )
 expect: Map()
 
 # map entry removed
+AssertionError: actual and expect are different
+
 actual: Map()
 expect: Map(
   "a" => true,
 )
 
 # map value modified
+AssertionError: actual and expect are different
+
 actual: Map(
   "a" => true,
 )

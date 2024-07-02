@@ -1,4 +1,6 @@
 # 0.1 + 0.2 is close to 0.3
+AssertionError: actual and expect are different
+
 actual: {
   a: 0.30_000_000_000_000_004,
   b: true,
@@ -9,10 +11,14 @@ expect: {
 }
 
 # on a string
+AssertionError: actual and expect are different
+
 actual: "toto"
 expect: assert.closeTo(0.4)
 
 # 0.3 and 0.4
+AssertionError: actual and expect are different
+
 actual: 0.30_000_000_000_000_004
 expect: assert.closeTo(0.4)
 

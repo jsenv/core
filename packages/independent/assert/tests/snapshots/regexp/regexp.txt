@@ -1,12 +1,18 @@
 # a vs b
+AssertionError: actual and expect are different
+
 actual: /a/
 expect: /b/
 
 # i flag vs no flag
+AssertionError: actual and expect are different
+
 actual: /a/i
 expect: /a/
 
 # gi flag vs ig flag
+AssertionError: actual and expect are different
+
 actual: {
   a: /a/gi,
   b: true,
@@ -17,10 +23,14 @@ expect: {
 }
 
 # special char: parenthesis vs dot
+AssertionError: actual and expect are different
+
 actual: /^\($/g
 expect: /^\.$/g
 
 # last index
+AssertionError: actual and expect are different
+
 actual: /a/ {
   lastIndex: 0,
 }
@@ -29,6 +39,8 @@ expect: /a/ {
 }
 
 # regex and string representing the same regex
+AssertionError: actual and expect are different
+
 actual: /a/
 expect: "/a/"
 

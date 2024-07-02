@@ -1,24 +1,36 @@
 # String and Object
+AssertionError: actual and expect are different
+
 actual: String
 expect: Object
 
 # Number.MAX_VALUE and Number.MIN_VALUE
+AssertionError: actual and expect are different
+
 actual: 1_797_693_134_862_315_730_800_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_0…
 expect: 0.0_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000…
 
 # Symbol.iterator and Symbol.toPrimitive
+AssertionError: actual and expect are different
+
 actual: Symbol.iterator
 expect: Symbol.toPrimitive
 
 # Symbol.for("a") and Symbol.for("b")
+AssertionError: actual and expect are different
+
 actual: Symbol.for("a")
 expect: Symbol.for("b")
 
 # Object.prototype.toString vs Object.prototype.hasOwnProperty
+AssertionError: actual and expect are different
+
 actual: Object.prototype.toString
 expect: Object.prototype.hasOwnProperty
 
 # null and Array.prototype
+AssertionError: actual and expect are different
+
 actual: null
 expect: Array.prototype
 

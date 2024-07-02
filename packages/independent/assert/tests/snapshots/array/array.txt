@@ -1,4 +1,6 @@
 # array first item diff
+AssertionError: actual and expect are different
+
 actual: [
   true,
 ]
@@ -7,14 +9,20 @@ expect: [
 ]
 
 # array expect, object received
+AssertionError: actual and expect are different
+
 actual: {}
 expect: []
 
 # object expect, array received
+AssertionError: actual and expect are different
+
 actual: []
 expect: {}
 
 # array without diff
+AssertionError: actual and expect are different
+
 actual: {
   a: [0],
   z: true,
@@ -25,6 +33,8 @@ expect: {
 }
 
 # diff in the middle of big array
+AssertionError: actual and expect are different
+
 actual: [
   ↑ 2 values ↑
   "c",
@@ -41,6 +51,8 @@ expect: [
 ]
 
 # big array collapsed because diff is elsewhere
+AssertionError: actual and expect are different
+
 actual: {
   a: ["a", "b", "c", "d", "e", …],
   b: true,
@@ -51,6 +63,8 @@ expect: {
 }
 
 # undefined vs empty
+AssertionError: actual and expect are different
+
 actual: [
   empty,
 ]
@@ -59,26 +73,36 @@ expect: [
 ]
 
 # empty added
+AssertionError: actual and expect are different
+
 actual: [
   empty,
 ]
 expect: []
 
 # empty removed
+AssertionError: actual and expect are different
+
 actual: []
 expect: [
   empty,
 ]
 
 # false should be an array
+AssertionError: actual and expect are different
+
 actual: false
 expect: []
 
 # associative array expect, object received
+AssertionError: actual and expect are different
+
 actual: [] { foo: true }
 expect: { foo: true }
 
 # diff on associate array.foo and object.foo
+AssertionError: actual and expect are different
+
 actual: [] {
   foo: true,
 }
@@ -87,6 +111,8 @@ expect: {
 }
 
 # diff on associate array deep property and object deep property
+AssertionError: actual and expect are different
+
 actual: [] {
   user: {
     name: "bob",
@@ -99,6 +125,8 @@ expect: {
 }
 
 # diff on collapsed array
+AssertionError: actual and expect are different
+
 actual: {
   a: {
     same: [true],
@@ -124,6 +152,8 @@ expect: {
 }
 
 # string and array of chars
+AssertionError: actual and expect are different
+
 actual: "hello world"
 expect: [
   "h",
@@ -132,6 +162,8 @@ expect: [
 ]
 
 # associative array with values
+AssertionError: actual and expect are different
+
 actual: [
   "a",
   "b",
@@ -146,6 +178,8 @@ expect: [
 }
 
 # array like and array
+AssertionError: actual and expect are different
+
 actual: {
   0: "Z",
   1: "b",
@@ -157,6 +191,8 @@ expect: [
 ]
 
 # array subclass
+AssertionError: actual and expect are different
+
 actual: [true]
 expect: MyArray [true]
 

@@ -1,92 +1,138 @@
 # string single char
+AssertionError: actual and expect are different
+
 actual: "a"
 expect: "b"
 
 # diff end of string
+AssertionError: actual and expect are different
+
 actual: "hello world"
 expect: "hello france"
 
 # one char should be empty
+AssertionError: actual and expect are different
+
 actual: "a"
 expect: ""
 
 # empty should be one char
+AssertionError: actual and expect are different
+
 actual: ""
 expect: "a"
 
 # tab vs space
+AssertionError: actual and expect are different
+
 actual: "\t"
 expect: "  "
 
 # blank char should be empty
+AssertionError: actual and expect are different
+
 actual: "\x7F"
 expect: ""
 
 # blank char should be empty 2
+AssertionError: actual and expect are different
+
 actual: "\x00"
 expect: ""
 
 # diff unicode
+AssertionError: actual and expect are different
+
 actual: "⚫️"
 expect: "⚪️"
 
 # diff emoticon
+AssertionError: actual and expect are different
+
 actual: "👨‍👩‍👧‍👧"
 expect: "😍"
 
 # diff special char
+AssertionError: actual and expect are different
+
 actual: "ñ"
 expect: "n"
 
 # special char diff
+AssertionError: actual and expect are different
+
 actual: ""
 expect: ""
 
 # more special char diff
+AssertionError: actual and expect are different
+
 actual: "!'#$%&'()*+,-./:;<=>"
 expect: "?@^[\\]_`{|}~"
 
 # diff blackslash and ellipsis special chars
+AssertionError: actual and expect are different
+
 actual: "\\"
 expect: ""
 
 # diff single space with 2 space
+AssertionError: actual and expect are different
+
 actual: " "
 expect: "  "
 
 # added char
+AssertionError: actual and expect are different
+
 actual: "ab"
 expect: "a"
 
 # removed char
+AssertionError: actual and expect are different
+
 actual: "a"
 expect: "ab"
 
 # diff at end of long string, start truncated
+AssertionError: actual and expect are different
+
 actual: …"efghijk"
 expect: …"efghijj"
 
 # diff at start of long string, end truncated
+AssertionError: actual and expect are different
+
 actual: "a2cdefg"…
 expect: "a3cdefg"…
 
 # many diff in long string, only first is shown truncated
+AssertionError: actual and expect are different
+
 actual: "a2cdefZ"…
 expect: "a3cdefY"…
 
 # diff at middle of long string, start + end truncated
+AssertionError: actual and expect are different
+
 actual: …"gh5"…
 expect: …"gh6"…
 
 # diff new String value
+AssertionError: actual and expect are different
+
 actual: String("a")
 expect: String("b")
 
 # diff String object vs literal
+AssertionError: actual and expect are different
+
 actual: String("abc")
 expect: "a2"
 
 # new String collapsed with overview
+AssertionError: actual and expect are different
+
 actual: {
   a: String("toto"),
   b: true,
@@ -97,6 +143,8 @@ expect: {
 }
 
 # new String collapsed
+AssertionError: actual and expect are different
+
 actual: {
   foo: {
     a: String(4),
@@ -109,6 +157,8 @@ expect: {
 }
 
 # new String prop
+AssertionError: actual and expect are different
+
 actual: String("a") {
   foo: true,
 }

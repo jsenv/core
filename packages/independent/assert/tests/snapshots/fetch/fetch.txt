@@ -1,4 +1,6 @@
 # abort signal pending vs aborted
+AssertionError: actual and expect are different
+
 actual: AbortSignal
 expect: AbortSignal {
   aborted: true,
@@ -6,10 +8,14 @@ expect: AbortSignal {
 }
 
 # request url diff
+AssertionError: actual and expect are different
+
 actual: Request("https://foo.com/")
 expect: Request("https://bar.com/")
 
 # request with custom options
+AssertionError: actual and expect are different
+
 actual: Request("http://example.com/")
 expect: Request("http://example.com/", {
   body: ReadableStream,
@@ -26,6 +32,8 @@ expect: Request("http://example.com/", {
 })
 
 # request abort signal pending vs aborted
+AssertionError: actual and expect are different
+
 actual: Request("http://example.com/")
 expect: Request("http://example.com/", {
   signal: AbortSignal {
@@ -35,6 +43,8 @@ expect: Request("http://example.com/", {
 })
 
 # response body diff
+AssertionError: actual and expect are different
+
 actual: {
   a: Response(ReadableStream, { status: 200 }),
   b: true,
@@ -45,6 +55,8 @@ expect: {
 }
 
 # response status diff
+AssertionError: actual and expect are different
+
 actual: Response(ReadableStream, {
   status: 200,
 })
@@ -53,6 +65,8 @@ expect: Response(ReadableStream, {
 })
 
 # response prop diff
+AssertionError: actual and expect are different
+
 actual: Response(ReadableStream, {
   headers: Headers(
     "content-type" => "text/plain;charset=UTF-8",
@@ -68,6 +82,8 @@ expect: Response(ReadableStream, {
 })
 
 # redirected response
+AssertionError: actual and expect are different
+
 actual: Response(ReadableStream, {
   headers: Headers(
     "content-type" => "text/plain;charset=UTF-8",

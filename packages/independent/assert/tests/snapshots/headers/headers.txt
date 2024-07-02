@@ -1,16 +1,22 @@
 # content-type added
+AssertionError: actual and expect are different
+
 actual: Headers(
   "content-type" => "text/xml",
 )
 expect: Headers()
 
 # content-type removed
+AssertionError: actual and expect are different
+
 actual: Headers()
 expect: Headers(
   "content-type" => "text/xml",
 )
 
 # content-type modified
+AssertionError: actual and expect are different
+
 actual: Headers(
   "content-type" => "text/css",
 )
@@ -19,6 +25,8 @@ expect: Headers(
 )
 
 # content-type multi diff
+AssertionError: actual and expect are different
+
 actual: Headers(
   "content-type" => "text/xml, text/css",
 )
@@ -27,6 +35,8 @@ expect: Headers(
 )
 
 # content-type spacing diff
+AssertionError: actual and expect are different
+
 actual: Headers(
   "content-type" => "text/xml,text/css",
 )
@@ -35,18 +45,24 @@ expect: Headers(
 )
 
 # set cookie added
+AssertionError: actual and expect are different
+
 actual: Headers(
   "set-cookie" => "a=1"
 )
 expect: Headers()
 
 # set cookie removed
+AssertionError: actual and expect are different
+
 actual: Headers()
 expect: Headers(
   "set-cookie" => "a=1"
 )
 
 # cookie added
+AssertionError: actual and expect are different
+
 actual: Headers(
   "set-cookie" => "a=1,b=2"
 )
@@ -55,6 +71,8 @@ expect: Headers(
 )
 
 # cookie removed
+AssertionError: actual and expect are different
+
 actual: Headers(
   "set-cookie" => "a=1"
 )
@@ -63,6 +81,8 @@ expect: Headers(
 )
 
 # cookie order modified
+AssertionError: actual and expect are different
+
 actual: Headers(
   "set-cookie" => "a=1,b=2"
 )
@@ -71,6 +91,8 @@ expect: Headers(
 )
 
 # cookie name used several times
+AssertionError: actual and expect are different
+
 actual: Headers(
   "set-cookie" => "a=1,a=2"
 )
@@ -79,6 +101,8 @@ expect: Headers(
 )
 
 # cookie becomes secure
+AssertionError: actual and expect are different
+
 actual: Headers(
   "set-cookie" => "a=1; Secure"
 )
@@ -87,6 +111,8 @@ expect: Headers(
 )
 
 # accept
+AssertionError: actual and expect are different
+
 actual: Headers(
   "accept" => "text/html, application/xml;q=0.9, */*;q=0.8"
 )
@@ -95,6 +121,8 @@ expect: Headers(
 )
 
 # accept diff on non standard attribute
+AssertionError: actual and expect are different
+
 actual: Headers(
   "accept" => "text/html; a=1; b=2"
 )
@@ -103,6 +131,8 @@ expect: Headers(
 )
 
 # add accepted encoding
+AssertionError: actual and expect are different
+
 actual: Headers(
   "accept-encoding" => "deflate, gzip, br"
 )
@@ -111,6 +141,8 @@ expect: Headers(
 )
 
 # remove accepted encoding
+AssertionError: actual and expect are different
+
 actual: Headers(
   "accept-encoding" => "deflate, gzip"
 )
@@ -119,6 +151,8 @@ expect: Headers(
 )
 
 # accept-encoding diff on q
+AssertionError: actual and expect are different
+
 actual: Headers(
   "accept-encoding" => "deflate, gzip;q=1.0, *;q=0.5"
 )
@@ -127,6 +161,8 @@ expect: Headers(
 )
 
 # accept-language
+AssertionError: actual and expect are different
+
 actual: Headers(
   "accept-language" => "fr-CH, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5"
 )
@@ -135,6 +171,8 @@ expect: Headers(
 )
 
 # add metric in server timing
+AssertionError: actual and expect are different
+
 actual: Headers(
   "server-timing" => "cpu;dur=2.4, app;dur=47.2"
 )
@@ -143,6 +181,8 @@ expect: Headers(
 )
 
 # remove metric in server timing
+AssertionError: actual and expect are different
+
 actual: Headers(
   "server-timing" => "cpu;dur=2.4"
 )
@@ -151,6 +191,8 @@ expect: Headers(
 )
 
 # add description to a metric
+AssertionError: actual and expect are different
+
 actual: Headers(
   "server-timing" => "cache;dur=23.2"
 )
@@ -159,6 +201,8 @@ expect: Headers(
 )
 
 # content length diff
+AssertionError: actual and expect are different
+
 actual: Headers(
   "content-length" => "1456"
 )

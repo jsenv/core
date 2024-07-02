@@ -1,4 +1,6 @@
 # no diff
+AssertionError: actual and expect are different
+
 actual: {
   a: "AABB",
   b: true,
@@ -9,6 +11,8 @@ expect: {
 }
 
 # does not start with
+AssertionError: actual and expect are different
+
 actual: "AABB"
 expect: assert.startsWith("AB")
 

@@ -1,4 +1,6 @@
 # works
+AssertionError: actual and expect are different
+
 actual: {
   a: "expired 3 seconds ago",
   b: true,
@@ -9,6 +11,8 @@ expect: {
 }
 
 # does not
+AssertionError: actual and expect are different
+
 actual: "expired n seconds ago"
 expect: assert.matches(/expired \d seconds ago/)
 

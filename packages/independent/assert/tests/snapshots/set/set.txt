@@ -1,4 +1,6 @@
 # set value added
+AssertionError: actual and expect are different
+
 actual: Set(
   ↑ 3 values ↑
   "d",
@@ -11,6 +13,8 @@ expect: Set(
 )
 
 # compare set and map
+AssertionError: actual and expect are different
+
 actual: Map(
   0 => "a",
 )
@@ -19,6 +23,8 @@ expect: Set(
 )
 
 # compare set and array
+AssertionError: actual and expect are different
+
 actual: [
   "a",
 ]
@@ -27,6 +33,8 @@ expect: Set(
 )
 
 # set collapsed various cases
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   set_without_diff: Set("a", "b"),
@@ -43,6 +51,8 @@ expect: {
 }
 
 # set collapsed deep
+AssertionError: actual and expect are different
+
 actual: {
   a: {
     set_without_diff: Set("a", "b"),

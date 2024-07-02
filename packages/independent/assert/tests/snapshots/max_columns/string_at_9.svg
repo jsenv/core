@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="81.45"
+  height="119.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="79.45"
+      height="117.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -26,19 +26,24 @@
     </g>
     <text fill="#abb2bf" text-anchor="middle" x="320" y="20">Terminal</text>
   </g>
-  <foreignObject id="body" y="40" width="100%" height="41.45" overflow="hidden">
+  <foreignObject id="body" y="40" width="100%" height="79.45" overflow="hidden">
     <svg
-      width="95.61"
-      height="41.45"
+      width="414.86"
+      height="79.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
     >
       <g>
-        <text x="10" y="14.55" fill="#7f7f7f">actual:</text>
-        <text x="77.21" y="14.55" fill="#cd5555">&#x2026;</text>
-        <text x="10" y="33.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="33.55" fill="#11bc79">&#x2026;</text>
+        <text x="10" y="14.55">AssertionError: </text>
+        <text x="144.42" y="14.55" fill="#cd5555">actual</text>
+        <text x="203.23" y="14.55"> and </text>
+        <text x="236.84" y="14.55" fill="#11bc79">expect</text>
+        <text x="295.65" y="14.55"> are different</text>
+        <text x="10" y="52.55" fill="#7f7f7f">actual:</text>
+        <text x="77.21" y="52.55" fill="#cd5555">&#x2026;</text>
+        <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
+        <text x="77.21" y="71.55" fill="#11bc79">&#x2026;</text>
       </g>
     </svg>
   </foreignObject>

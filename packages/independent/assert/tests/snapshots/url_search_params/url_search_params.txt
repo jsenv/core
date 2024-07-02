@@ -1,4 +1,6 @@
 # foo added
+AssertionError: actual and expect are different
+
 actual: URLSearchParams(
   "foo" => [
     "a",
@@ -7,6 +9,8 @@ actual: URLSearchParams(
 expect: URLSearchParams()
 
 # foo removed
+AssertionError: actual and expect are different
+
 actual: URLSearchParams()
 expect: URLSearchParams(
   "foo" => [
@@ -15,6 +19,8 @@ expect: URLSearchParams(
 )
 
 # foo modified
+AssertionError: actual and expect are different
+
 actual: URLSearchParams(
   "foo" => [
     "a",
@@ -27,6 +33,8 @@ expect: URLSearchParams(
 )
 
 # foo second value added
+AssertionError: actual and expect are different
+
 actual: URLSearchParams(
   "foo" => [
     "a",
@@ -40,6 +48,8 @@ expect: URLSearchParams(
 )
 
 # foo second value removed
+AssertionError: actual and expect are different
+
 actual: URLSearchParams(
   "foo" => [
     "a",
@@ -53,6 +63,8 @@ expect: URLSearchParams(
 )
 
 # foo second value modified
+AssertionError: actual and expect are different
+
 actual: URLSearchParams(
   "foo" => [
     "a",
@@ -67,6 +79,8 @@ expect: URLSearchParams(
 )
 
 # param order modified and value modified
+AssertionError: actual and expect are different
+
 actual: URLSearchParams(
   "foo" => [
     "a",

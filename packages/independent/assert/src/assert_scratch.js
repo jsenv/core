@@ -831,10 +831,11 @@ export const createAssert = ({
     let errorMessage = "";
     if (message) {
       errorMessage += message;
-      errorMessage += "\n";
+      errorMessage += "\n\n";
       errorMessage += diff;
     } else {
-      errorMessage += "\n";
+      errorMessage += `${setColor("actual", unexpectColor)} and ${setColor("expect", expectColor)} are different`;
+      errorMessage += "\n\n";
       errorMessage += diff;
     }
     const assertionError = assert.createAssertionError(errorMessage);
@@ -851,16 +852,16 @@ export const createAssert = ({
   // for test
   assert.localTimezoneOffset = localTimezoneOffset;
   assert.colors = colors;
+  class AssertionError extends Error {}
   assert.createAssertionError = (message) => {
-    const error = new Error(message);
-    error.name = "AssertionError";
-    return error;
+    const assertionError = new AssertionError(message);
+    return assertionError;
   };
   assert.isAssertionError = (value) => {
     if (!value) return false;
     if (typeof value !== "object") return false;
-    if (value.name === "AssertionError") return true;
-    if (value.name.includes("AssertionError")) return true;
+    if (value.constructor.name === "AssertionError") return true;
+    if (value.constructor.name.includes("AssertionError")) return true;
     return false;
   };
   assert.belowOrEquals = (value, options) => {

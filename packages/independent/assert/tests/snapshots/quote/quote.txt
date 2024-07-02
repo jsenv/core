@@ -1,24 +1,36 @@
 # string contains escaped double quote
+AssertionError: actual and expect are different
+
 actual: "I\\\"m dam"
 expect: "I\\\"m seb"
 
 # single quote best in actual
+AssertionError: actual and expect are different
+
 actual: 'My name is "dam"'
 expect: '"My name is ZdamZ"'
 
 # single quote best in expect
+AssertionError: actual and expect are different
+
 actual: '"My name is ZdamZ"'
 expect: 'My name is "dam"'
 
 # template quote best in expect
+AssertionError: actual and expect are different
+
 actual: `I'm "zac"`
 expect: `I'm "dam"`
 
 # double best and must be escaped
+AssertionError: actual and expect are different
+
 actual: "START \"dam\" `''' END"
 expect: "START \"zac\" `''' END"
 
 # single quote
+AssertionError: actual and expect are different
+
 actual: {
   "I'm": true,
 }
@@ -27,6 +39,8 @@ expect: {
 }
 
 # double quote
+AssertionError: actual and expect are different
+
 actual: {
   'He is "crazy"': true,
 }
@@ -35,6 +49,8 @@ expect: {
 }
 
 # single and double
+AssertionError: actual and expect are different
+
 actual: {
   'You\'re "crazy"': true,
 }
@@ -43,26 +59,38 @@ expect: {
 }
 
 # double quote in url string
+AssertionError: actual and expect are different
+
 actual: 'http://a.com"/'
 expect: 'http://b.com"/'
 
 # double quote in url search param key
+AssertionError: actual and expect are different
+
 actual: 'http://a.com/?fo"=true'
 expect: 'http://a.com/?fo"=false'
 
 # double quote in url search param value
+AssertionError: actual and expect are different
+
 actual: 'http://a.com/?foo="dam"'
 expect: 'http://a.com/?foo="seb"'
 
 # double quote in url pathname
+AssertionError: actual and expect are different
+
 actual: 'http://a.com/dir/"dam"'
 expect: 'http://b.com/dir/"dam"'
 
 # url vs string
+AssertionError: actual and expect are different
+
 actual: "http://example.com/"
 expect: 'test"quotes'
 
 # url search param quotes
+AssertionError: actual and expect are different
+
 actual: 'http://example.com/?name="dam"'
 expect: 'http://example.com/?name="seb"'
 

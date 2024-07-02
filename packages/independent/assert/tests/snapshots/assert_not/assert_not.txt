@@ -1,8 +1,12 @@
 # 42 and not(42)
+AssertionError: actual and expect are different
+
 actual: 42
 expect: assert.not(42)
 
 # 41 and not(42)
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: 41,
@@ -13,10 +17,14 @@ expect: {
 }
 
 # object and not (object)
+AssertionError: actual and expect are different
+
 actual: { a: true }
 expect: assert.not({ a: true })
 
 # object and not(object)
+AssertionError: actual and expect are different
+
 actual: {
   a: true,
   b: {
