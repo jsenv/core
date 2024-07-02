@@ -1,4 +1,7 @@
 /*
+ * This file is named "scratch" as a testimony of the fact it has been
+ * recoded from scratch around april 2024
+ * - ansi in browser
  * - Blob, FormData, DataView, ArrayBuffer
  * - count diff + displayed diff ( + display in message?)
  * - add or removed reason must be unique
@@ -1110,6 +1113,36 @@ assert.startsWith = (string) => {
         }
         if (!actualNode.value.startsWith(string)) {
           return `should_start_with_${string}`;
+        }
+        return null;
+      }),
+    },
+  ]);
+};
+assert.closeTo = (float, precision = 2) => {
+  if (typeof float !== "number") {
+    throw new TypeError(
+      `assert.closeTo 1st argument must be a number, received ${float}`,
+    );
+  }
+  return createAssertMethodCustomExpectation("closeTo", [
+    {
+      value: float,
+      customCompare: createValueCustomCompare((actualNode) => {
+        if (!actualNode.isNumber) {
+          return "should_be_a_number";
+        }
+        const actual = actualNode.value;
+        if (actual === Infinity && float === Infinity) {
+          return null;
+        }
+        if (actual === -Infinity && float === -Infinity) {
+          return null;
+        }
+        const expectedDiff = Math.pow(10, -precision) / 2;
+        const receivedDiff = Math.abs(float - actual);
+        if (receivedDiff > expectedDiff) {
+          return `should_be_close_to_${float}`;
         }
         return null;
       }),
