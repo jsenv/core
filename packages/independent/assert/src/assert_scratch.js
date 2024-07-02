@@ -106,7 +106,32 @@ const defaultOptions = {
   MAX_COLUMNS: 100,
 };
 
-export const assert = (firstArg) => {
+export const assert = (firstArg, ...rest) => {
+  if (firstArg === undefined) {
+    throw new TypeError(
+      `assert must be called with { actual, expect }, it was called without any argument`,
+    );
+  }
+  if (rest.length) {
+    throw new TypeError(
+      `assert must be called with { actual, expect }, it was called with too many arguments`,
+    );
+  }
+  if (firstArg === null || typeof firstArg !== "object") {
+    throw new TypeError(
+      `assert must be called with { actual, expect }, received ${firstArg} as first argument instead of object`,
+    );
+  }
+  if (!Object.hasOwn(firstArg, "actual")) {
+    throw new TypeError(
+      `assert must be called with { actual, expect }, actual is missing`,
+    );
+  }
+  if (!Object.hasOwn(firstArg, "expect")) {
+    throw new TypeError(
+      `assert must be called with { actual, expect }, expect is missing`,
+    );
+  }
   const unexpectedParamNames = Object.keys(firstArg).filter(
     (key) => !Object.hasOwn(defaultOptions, key),
   );
