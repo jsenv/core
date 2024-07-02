@@ -24,5 +24,5 @@ assert({
 });
 ```
 
-![img](<./assert_matches/does not.svg>)
+![img](<./assert_matches/does_not.svg>)
 

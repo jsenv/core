@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./number/-0 and 0.svg>)
+![img](<./number/-0_and_0.svg>)
 
 # 1 and -0
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./number/1 and -0.svg>)
+![img](<./number/1_and_-0.svg>)
 
 # -1 and 1
 
@@ -29,7 +29,7 @@ assert({
 });
 ```
 
-![img](<./number/-1 and 1.svg>)
+![img](<./number/-1_and_1.svg>)
 
 # 10.45 and 10.456
 
@@ -40,7 +40,7 @@ assert({
 });
 ```
 
-![img](<./number/10.45 and 10.456.svg>)
+![img](<./number/10_45_and_10_456.svg>)
 
 # -Infinity and Infinity
 
@@ -51,7 +51,7 @@ assert({
 });
 ```
 
-![img](<./number/-Infinity and Infinity.svg>)
+![img](<./number/-infinity_and_infinity.svg>)
 
 # NaN and Infinity
 
@@ -62,7 +62,7 @@ assert({
 });
 ```
 
-![img](<./number/NaN and Infinity.svg>)
+![img](<./number/nan_and_infinity.svg>)
 
 # decimals using exponent
 
@@ -73,7 +73,7 @@ assert({
 });
 ```
 
-![img](<./number/decimals using exponent.svg>)
+![img](<./number/decimals_using_exponent.svg>)
 
 # decimals using exponent v2
 
@@ -84,7 +84,7 @@ assert({
 });
 ```
 
-![img](<./number/decimals using exponent v2.svg>)
+![img](<./number/decimals_using_exponent_v2.svg>)
 
 # exponent integer
 
@@ -95,7 +95,7 @@ assert({
 });
 ```
 
-![img](<./number/exponent integer.svg>)
+![img](<./number/exponent_integer.svg>)
 
 # exponent negative integer
 
@@ -106,7 +106,7 @@ assert({
 });
 ```
 
-![img](<./number/exponent negative integer.svg>)
+![img](<./number/exponent_negative_integer.svg>)
 
 # 1235 and 67_000
 
@@ -117,7 +117,7 @@ assert({
 });
 ```
 
-![img](<./number/1235 and 67_000.svg>)
+![img](<./number/1235_and_67_000.svg>)
 
 # 149_600_000 and 1_464_301
 
@@ -128,7 +128,7 @@ assert({
 });
 ```
 
-![img](<./number/149_600_000 and 1_464_301.svg>)
+![img](<./number/149_600_000_and_1_464_301.svg>)
 
 # 1_001 and 2_002
 
@@ -139,7 +139,7 @@ assert({
 });
 ```
 
-![img](<./number/1_001 and 2_002.svg>)
+![img](<./number/1_001_and_2_002.svg>)
 
 # 2_200_002 and 1_100_001
 
@@ -150,7 +150,7 @@ assert({
 });
 ```
 
-![img](<./number/2_200_002 and 1_100_001.svg>)
+![img](<./number/2_200_002_and_1_100_001.svg>)
 
 # 1234.56 and 12_345.67
 
@@ -161,7 +161,7 @@ assert({
 });
 ```
 
-![img](<./number/1234.56 and 12_345.67.svg>)
+![img](<./number/1234_56_and_12_345_67.svg>)
 
 # -0.120_123 and -1_000_001
 
@@ -172,7 +172,7 @@ assert({
 });
 ```
 
-![img](<./number/-0.120_123 and -1_000_001.svg>)
+![img](<./number/-0_120_123_and_-1_000_001.svg>)
 
 # -1.23456e15 and -1200000e5
 
@@ -183,7 +183,7 @@ assert({
 });
 ```
 
-![img](<./number/-1.23456e15 and -1200000e5.svg>)
+![img](<./number/-1_23456e15_and_-1200000e5.svg>)
 
 # 1.8e307 and 1.8e308
 
@@ -194,7 +194,7 @@ assert({
 });
 ```
 
-![img](<./number/1.8e307 and 1.8e308.svg>)
+![img](<./number/1_8e307_and_1_8e308.svg>)
 
 # special notations
 
@@ -218,7 +218,7 @@ assert({
 });
 ```
 
-![img](<./number/special notations.svg>)
+![img](<./number/special_notations.svg>)
 
 # 10 and "10"
 
@@ -229,7 +229,7 @@ assert({
 });
 ```
 
-![img](<./number/10 and "10".svg>)
+![img](<./number/10_and_"10".svg>)
 
 # BigInt(1) and BigInt(2)
 
@@ -240,7 +240,7 @@ assert({
 });
 ```
 
-![img](<./number/BigInt(1) and BigInt(2).svg>)
+![img](<./number/bigint(1)_and_bigint(2).svg>)
 
 # BigInt(1) and "1n"
 
@@ -251,5 +251,5 @@ assert({
 });
 ```
 
-![img](<./number/BigInt(1) and "1n".svg>)
+![img](<./number/bigint(1)_and_"1n".svg>)
 

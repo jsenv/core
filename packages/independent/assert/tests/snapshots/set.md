@@ -23,7 +23,7 @@ assert({
 });
 ```
 
-![img](<./set/set value added.svg>)
+![img](<./set/set_value_added.svg>)
 
 # compare set and map
 
@@ -34,7 +34,7 @@ assert({
 });
 ```
 
-![img](<./set/compare set and map.svg>)
+![img](<./set/compare_set_and_map.svg>)
 
 # compare set and array
 
@@ -45,7 +45,7 @@ assert({
 });
 ```
 
-![img](<./set/compare set and array.svg>)
+![img](<./set/compare_set_and_array.svg>)
 
 # set collapsed various cases
 
@@ -64,7 +64,7 @@ assert({
 });
 ```
 
-![img](<./set/set collapsed various cases.svg>)
+![img](<./set/set_collapsed_various_cases.svg>)
 
 # set collapsed deep
 
@@ -85,5 +85,5 @@ assert({
 });
 ```
 
-![img](<./set/set collapsed deep.svg>)
+![img](<./set/set_collapsed_deep.svg>)
 

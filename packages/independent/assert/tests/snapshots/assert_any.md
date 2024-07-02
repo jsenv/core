@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./assert_any/10 and any(String).svg>)
+![img](<./assert_any/10_and_any(string).svg>)
 
 # "foo" and any(String)
 
@@ -24,7 +24,7 @@ assert({
 });
 ```
 
-![img](<./assert_any/"foo" and any(String).svg>)
+![img](<./assert_any/"foo"_and_any(string).svg>)
 
 # "foo" and not(any(String))
 
@@ -35,7 +35,7 @@ assert({
 });
 ```
 
-![img](<./assert_any/"foo" and not(any(String)).svg>)
+![img](<./assert_any/"foo"_and_not(any(string)).svg>)
 
 # 10 is any Number
 
@@ -52,7 +52,7 @@ assert({
 });
 ```
 
-![img](<./assert_any/10 is any Number.svg>)
+![img](<./assert_any/10_is_any_number.svg>)
 
 # 0 is any number
 
@@ -69,7 +69,7 @@ assert({
 });
 ```
 
-![img](<./assert_any/0 is any number.svg>)
+![img](<./assert_any/0_is_any_number.svg>)
 
 # any Error
 
@@ -86,5 +86,5 @@ assert({
 });
 ```
 
-![img](<./assert_any/any Error.svg>)
+![img](<./assert_any/any_error.svg>)
 

@@ -12,7 +12,7 @@ assert({
 });
 ```
 
-![img](<./ref/reference removed.svg>)
+![img](<./ref/reference_removed.svg>)
 
 # reference added
 
@@ -28,7 +28,7 @@ assert({
 });
 ```
 
-![img](<./ref/reference added.svg>)
+![img](<./ref/reference_added.svg>)
 
 # same ref to self
 
@@ -49,7 +49,7 @@ assert({
 });
 ```
 
-![img](<./ref/same ref to self.svg>)
+![img](<./ref/same_ref_to_self.svg>)
 
 # same ref to self 2
 
@@ -75,7 +75,7 @@ expect.object.self2 = expect;
 assert({ actual, expect });
 ```
 
-![img](<./ref/same ref to self 2.svg>)
+![img](<./ref/same_ref_to_self_2.svg>)
 
 # same ref to parent
 
@@ -97,7 +97,7 @@ expect.object.parent = expect;
 assert({ actual, expect });
 ```
 
-![img](<./ref/same ref to parent.svg>)
+![img](<./ref/same_ref_to_parent.svg>)
 
 # same ref to value after
 
@@ -120,7 +120,7 @@ assert({
 });
 ```
 
-![img](<./ref/same ref to value after.svg>)
+![img](<./ref/same_ref_to_value_after.svg>)
 
 # same ref to value before
 
@@ -143,7 +143,7 @@ assert({
 });
 ```
 
-![img](<./ref/same ref to value before.svg>)
+![img](<./ref/same_ref_to_value_before.svg>)
 
 # ref changed
 
@@ -163,7 +163,7 @@ expect.object.self = expect.object;
 assert({ actual, expect });
 ```
 
-![img](<./ref/ref changed.svg>)
+![img](<./ref/ref_changed.svg>)
 
 # true should be a ref to self
 
@@ -181,7 +181,7 @@ assert({
 });
 ```
 
-![img](<./ref/true should be a ref to self.svg>)
+![img](<./ref/true_should_be_a_ref_to_self.svg>)
 
 # ref to self should be true
 
@@ -199,7 +199,7 @@ assert({
 });
 ```
 
-![img](<./ref/ref to self should be true.svg>)
+![img](<./ref/ref_to_self_should_be_true.svg>)
 
 # true should be object using ref
 
@@ -214,5 +214,5 @@ assert({
 });
 ```
 
-![img](<./ref/true should be object using ref.svg>)
+![img](<./ref/true_should_be_object_using_ref.svg>)
 

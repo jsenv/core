@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./array/array first item diff.svg>)
+![img](<./array/array_first_item_diff.svg>)
 
 # array expect, object received
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./array/array expect, object received.svg>)
+![img](<./array/array_expect__object_received.svg>)
 
 # object expect, array received
 
@@ -29,7 +29,7 @@ assert({
 });
 ```
 
-![img](<./array/object expect, array received.svg>)
+![img](<./array/object_expect__array_received.svg>)
 
 # array without diff
 
@@ -46,7 +46,7 @@ assert({
 });
 ```
 
-![img](<./array/array without diff.svg>)
+![img](<./array/array_without_diff.svg>)
 
 # diff in the middle of big array
 
@@ -57,7 +57,7 @@ assert({
 });
 ```
 
-![img](<./array/diff in the middle of big array.svg>)
+![img](<./array/diff_in_the_middle_of_big_array.svg>)
 
 # big array collapsed because diff is elsewhere
 
@@ -75,7 +75,7 @@ assert({
 });
 ```
 
-![img](<./array/big array collapsed because diff is elsewhere.svg>)
+![img](<./array/big_array_collapsed_because_diff_is_elsewhere.svg>)
 
 # undefined vs empty
 
@@ -86,7 +86,7 @@ assert({
 });
 ```
 
-![img](<./array/undefined vs empty.svg>)
+![img](<./array/undefined_vs_empty.svg>)
 
 # empty added
 
@@ -97,7 +97,7 @@ assert({
 });
 ```
 
-![img](<./array/empty added.svg>)
+![img](<./array/empty_added.svg>)
 
 # empty removed
 
@@ -108,7 +108,7 @@ assert({
 });
 ```
 
-![img](<./array/empty removed.svg>)
+![img](<./array/empty_removed.svg>)
 
 # false should be an array
 
@@ -119,7 +119,7 @@ assert({
 });
 ```
 
-![img](<./array/false should be an array.svg>)
+![img](<./array/false_should_be_an_array.svg>)
 
 # associative array expect, object received
 
@@ -134,7 +134,7 @@ assert({
 });
 ```
 
-![img](<./array/associative array expect, object received.svg>)
+![img](<./array/associative_array_expect__object_received.svg>)
 
 # diff on associate array.foo and object.foo
 
@@ -149,7 +149,7 @@ assert({
 });
 ```
 
-![img](<./array/diff on associate array.foo and object.foo.svg>)
+![img](<./array/diff_on_associate_array_foo_and_object_foo.svg>)
 
 # diff on associate array deep property and object deep property
 
@@ -166,7 +166,7 @@ assert({
 });
 ```
 
-![img](<./array/diff on associate array deep property and object deep property.svg>)
+![img](<./array/diff_on_associate_array_deep_property_and_object_deep_property.svg>)
 
 # diff on collapsed array
 
@@ -196,7 +196,7 @@ assert({
 });
 ```
 
-![img](<./array/diff on collapsed array.svg>)
+![img](<./array/diff_on_collapsed_array.svg>)
 
 # string and array of chars
 
@@ -207,7 +207,7 @@ assert({
 });
 ```
 
-![img](<./array/string and array of chars.svg>)
+![img](<./array/string_and_array_of_chars.svg>)
 
 # associative array with values
 
@@ -222,7 +222,7 @@ assert({
 });
 ```
 
-![img](<./array/associative array with values.svg>)
+![img](<./array/associative_array_with_values.svg>)
 
 # array like and array
 
@@ -240,7 +240,7 @@ assert({
 });
 ```
 
-![img](<./array/array like and array.svg>)
+![img](<./array/array_like_and_array.svg>)
 
 # array subclass
 
@@ -252,5 +252,5 @@ assert({
 });
 ```
 
-![img](<./array/array subclass.svg>)
+![img](<./array/array_subclass.svg>)
 

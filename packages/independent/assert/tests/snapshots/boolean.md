@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./boolean/true should be false.svg>)
+![img](<./boolean/true_should_be_false.svg>)
 
 # false should be true
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./boolean/false should be true.svg>)
+![img](<./boolean/false_should_be_true.svg>)
 
 # true should be 1
 
@@ -29,7 +29,7 @@ assert({
 });
 ```
 
-![img](<./boolean/true should be 1.svg>)
+![img](<./boolean/true_should_be_1.svg>)
 
 # false should be 0
 
@@ -40,5 +40,5 @@ assert({
 });
 ```
 
-![img](<./boolean/false should be 0.svg>)
+![img](<./boolean/false_should_be_0.svg>)
 

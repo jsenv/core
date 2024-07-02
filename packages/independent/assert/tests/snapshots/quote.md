@@ -9,7 +9,7 @@ assert({
 });
 ```
 
-![img](<./quote/string contains escaped double quote.svg>)
+![img](<./quote/string_contains_escaped_double_quote.svg>)
 
 # single quote best in actual
 
@@ -20,7 +20,7 @@ assert({
 });
 ```
 
-![img](<./quote/single quote best in actual.svg>)
+![img](<./quote/single_quote_best_in_actual.svg>)
 
 # single quote best in expect
 
@@ -31,7 +31,7 @@ assert({
 });
 ```
 
-![img](<./quote/single quote best in expect.svg>)
+![img](<./quote/single_quote_best_in_expect.svg>)
 
 # template quote best in expect
 
@@ -42,7 +42,7 @@ assert({
 });
 ```
 
-![img](<./quote/template quote best in expect.svg>)
+![img](<./quote/template_quote_best_in_expect.svg>)
 
 # double best and must be escaped
 
@@ -53,7 +53,7 @@ assert({
 });
 ```
 
-![img](<./quote/double best and must be escaped.svg>)
+![img](<./quote/double_best_and_must_be_escaped.svg>)
 
 # single quote
 
@@ -68,7 +68,7 @@ assert({
 });
 ```
 
-![img](<./quote/single quote.svg>)
+![img](<./quote/single_quote.svg>)
 
 # double quote
 
@@ -83,7 +83,7 @@ assert({
 });
 ```
 
-![img](<./quote/double quote.svg>)
+![img](<./quote/double_quote.svg>)
 
 # single and double
 
@@ -98,7 +98,7 @@ assert({
 });
 ```
 
-![img](<./quote/single and double.svg>)
+![img](<./quote/single_and_double.svg>)
 
 # double quote in url string
 
@@ -109,7 +109,7 @@ assert({
 });
 ```
 
-![img](<./quote/double quote in url string.svg>)
+![img](<./quote/double_quote_in_url_string.svg>)
 
 # double quote in url search param key
 
@@ -120,7 +120,7 @@ assert({
 });
 ```
 
-![img](<./quote/double quote in url search param key.svg>)
+![img](<./quote/double_quote_in_url_search_param_key.svg>)
 
 # double quote in url search param value
 
@@ -131,7 +131,7 @@ assert({
 });
 ```
 
-![img](<./quote/double quote in url search param value.svg>)
+![img](<./quote/double_quote_in_url_search_param_value.svg>)
 
 # double quote in url pathname
 
@@ -142,7 +142,7 @@ assert({
 });
 ```
 
-![img](<./quote/double quote in url pathname.svg>)
+![img](<./quote/double_quote_in_url_pathname.svg>)
 
 # url vs string
 
@@ -153,7 +153,7 @@ assert({
 });
 ```
 
-![img](<./quote/url vs string.svg>)
+![img](<./quote/url_vs_string.svg>)
 
 # url search param quotes
 
@@ -164,5 +164,5 @@ assert({
 });
 ```
 
-![img](<./quote/url search param quotes.svg>)
+![img](<./quote/url_search_param_quotes.svg>)
 

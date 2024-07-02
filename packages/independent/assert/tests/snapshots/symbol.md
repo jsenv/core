@@ -9,7 +9,7 @@ assert({
 });
 ```
 
-![img](<./symbol/named Symbol() property added.svg>)
+![img](<./symbol/named_symbol()_property_added.svg>)
 
 # named Symbol() property removed
 
@@ -22,7 +22,7 @@ assert({
 });
 ```
 
-![img](<./symbol/named Symbol() property removed.svg>)
+![img](<./symbol/named_symbol()_property_removed.svg>)
 
 # Symbol.for() property value modified
 
@@ -37,7 +37,7 @@ assert({
 });
 ```
 
-![img](<./symbol/Symbol.for() property value modified.svg>)
+![img](<./symbol/symbol_for()_property_value_modified.svg>)
 
 # Symbol.for() property no diff
 
@@ -54,7 +54,7 @@ assert({
 });
 ```
 
-![img](<./symbol/Symbol.for() property no diff.svg>)
+![img](<./symbol/symbol_for()_property_no_diff.svg>)
 
 # named Symbol() property value modified
 
@@ -69,7 +69,7 @@ assert({
 });
 ```
 
-![img](<./symbol/named Symbol() property value modified.svg>)
+![img](<./symbol/named_symbol()_property_value_modified.svg>)
 
 # named Symbol() property no diff
 
@@ -86,7 +86,7 @@ assert({
 });
 ```
 
-![img](<./symbol/named Symbol() property no diff.svg>)
+![img](<./symbol/named_symbol()_property_no_diff.svg>)
 
 # anonymous Symbol() property value modified
 
@@ -101,7 +101,7 @@ assert({
 });
 ```
 
-![img](<./symbol/anonymous Symbol() property value modified.svg>)
+![img](<./symbol/anonymous_symbol()_property_value_modified.svg>)
 
 # Symbol.iterator property value modified
 
@@ -116,7 +116,7 @@ assert({
 });
 ```
 
-![img](<./symbol/Symbol.iterator property value modified.svg>)
+![img](<./symbol/symbol_iterator_property_value_modified.svg>)
 
 # Symbol.toStringTag property value modified
 
@@ -131,7 +131,7 @@ assert({
 });
 ```
 
-![img](<./symbol/Symbol.toStringTag property value modified.svg>)
+![img](<./symbol/symbol_tostringtag_property_value_modified.svg>)
 
 # well known symbol diff
 
@@ -142,7 +142,7 @@ assert({
 });
 ```
 
-![img](<./symbol/well known symbol diff.svg>)
+![img](<./symbol/well_known_symbol_diff.svg>)
 
 # Symbol() description modified
 
@@ -153,7 +153,7 @@ assert({
 });
 ```
 
-![img](<./symbol/Symbol() description modified.svg>)
+![img](<./symbol/symbol()_description_modified.svg>)
 
 # Symbol.for() key modified
 
@@ -164,7 +164,7 @@ assert({
 });
 ```
 
-![img](<./symbol/Symbol.for() key modified.svg>)
+![img](<./symbol/symbol_for()_key_modified.svg>)
 
 # named Symbol() vs anonymous symbol
 
@@ -175,7 +175,7 @@ assert({
 });
 ```
 
-![img](<./symbol/named Symbol() vs anonymous symbol.svg>)
+![img](<./symbol/named_symbol()_vs_anonymous_symbol.svg>)
 
 # anonymous symbol vs named Symbol()
 
@@ -186,7 +186,7 @@ assert({
 });
 ```
 
-![img](<./symbol/anonymous symbol vs named Symbol().svg>)
+![img](<./symbol/anonymous_symbol_vs_named_symbol().svg>)
 
 # named Symbol() vs Symbol.for()
 
@@ -197,7 +197,7 @@ assert({
 });
 ```
 
-![img](<./symbol/named Symbol() vs Symbol.for().svg>)
+![img](<./symbol/named_symbol()_vs_symbol_for().svg>)
 
 # Symbol.for() vs named Symbol()
 
@@ -208,7 +208,7 @@ assert({
 });
 ```
 
-![img](<./symbol/Symbol.for() vs named Symbol().svg>)
+![img](<./symbol/symbol_for()_vs_named_symbol().svg>)
 
 # symbol diff comes first
 
@@ -225,5 +225,5 @@ assert({
 });
 ```
 
-![img](<./symbol/symbol diff comes first.svg>)
+![img](<./symbol/symbol_diff_comes_first.svg>)
 

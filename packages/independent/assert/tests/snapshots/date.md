@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./date/year month day minutes diff on iso.svg>)
+![img](<./date/year_month_day_minutes_diff_on_iso.svg>)
 
 # millisecond only diff on iso
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./date/millisecond only diff on iso.svg>)
+![img](<./date/millisecond_only_diff_on_iso.svg>)
 
 # +2 hour on timezone
 
@@ -29,7 +29,7 @@ assert({
 });
 ```
 
-![img](<./date/+2 hour on timezone.svg>)
+![img](<./date/+2_hour_on_timezone.svg>)
 
 # -2 hour on timezone
 
@@ -40,7 +40,7 @@ assert({
 });
 ```
 
-![img](<./date/-2 hour on timezone.svg>)
+![img](<./date/-2_hour_on_timezone.svg>)
 
 # +1h30 on timezone
 
@@ -51,7 +51,7 @@ assert({
 });
 ```
 
-![img](<./date/+1h30 on timezone.svg>)
+![img](<./date/+1h30_on_timezone.svg>)
 
 # -1h30 on timezone
 
@@ -62,7 +62,7 @@ assert({
 });
 ```
 
-![img](<./date/-1h30 on timezone.svg>)
+![img](<./date/-1h30_on_timezone.svg>)
 
 # +0h30 on timezone
 
@@ -73,7 +73,7 @@ assert({
 });
 ```
 
-![img](<./date/+0h30 on timezone.svg>)
+![img](<./date/+0h30_on_timezone.svg>)
 
 # GMT vs iso
 
@@ -85,7 +85,7 @@ assert({
 });
 ```
 
-![img](<./date/GMT vs iso.svg>)
+![img](<./date/gmt_vs_iso.svg>)
 
 # simplified date
 
@@ -96,7 +96,7 @@ assert({
 });
 ```
 
-![img](<./date/simplified date.svg>)
+![img](<./date/simplified_date.svg>)
 
 # date objects
 
@@ -107,7 +107,7 @@ assert({
 });
 ```
 
-![img](<./date/date objects.svg>)
+![img](<./date/date_objects.svg>)
 
 # date object vs date string
 
@@ -118,7 +118,7 @@ assert({
 });
 ```
 
-![img](<./date/date object vs date string.svg>)
+![img](<./date/date_object_vs_date_string.svg>)
 
 # date object prop
 
@@ -129,7 +129,7 @@ assert({
 });
 ```
 
-![img](<./date/date object prop.svg>)
+![img](<./date/date_object_prop.svg>)
 
 # incorrect date string
 
@@ -140,5 +140,5 @@ assert({
 });
 ```
 
-![img](<./date/incorrect date string.svg>)
+![img](<./date/incorrect_date_string.svg>)
 

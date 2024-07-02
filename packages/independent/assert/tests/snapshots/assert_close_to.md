@@ -13,7 +13,7 @@ assert({
 });
 ```
 
-![img](<./assert_close_to/0.1 + 0.2 is close to 0.3.svg>)
+![img](<./assert_close_to/0_1_+_0_2_is_close_to_0_3.svg>)
 
 # on a string
 
@@ -24,7 +24,7 @@ assert({
 });
 ```
 
-![img](<./assert_close_to/on a string.svg>)
+![img](<./assert_close_to/on_a_string.svg>)
 
 # 0.3 and 0.4
 
@@ -35,5 +35,5 @@ assert({
 });
 ```
 
-![img](<./assert_close_to/0.3 and 0.4.svg>)
+![img](<./assert_close_to/0_3_and_0_4.svg>)
 

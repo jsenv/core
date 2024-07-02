@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./assert_not/42 and not(42).svg>)
+![img](<./assert_not/42_and_not(42).svg>)
 
 # 41 and not(42)
 
@@ -24,7 +24,7 @@ assert({
 });
 ```
 
-![img](<./assert_not/41 and not(42).svg>)
+![img](<./assert_not/41_and_not(42).svg>)
 
 # object and not (object)
 
@@ -35,7 +35,7 @@ assert({
 });
 ```
 
-![img](<./assert_not/object and not (object).svg>)
+![img](<./assert_not/object_and_not_(object).svg>)
 
 # object and not(object)
 
@@ -52,5 +52,5 @@ assert({
 });
 ```
 
-![img](<./assert_not/object and not(object).svg>)
+![img](<./assert_not/object_and_not(object).svg>)
 

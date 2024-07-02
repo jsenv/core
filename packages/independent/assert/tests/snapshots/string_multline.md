@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./string_multline/add empty line.svg>)
+![img](<./string_multline/add_empty_line.svg>)
 
 # remove empty line
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./string_multline/remove empty line.svg>)
+![img](<./string_multline/remove_empty_line.svg>)
 
 # one line vs two lines
 
@@ -30,7 +30,7 @@ world`,
 });
 ```
 
-![img](<./string_multline/one line vs two lines.svg>)
+![img](<./string_multline/one_line_vs_two_lines.svg>)
 
 # second line contains extra chars
 
@@ -49,7 +49,7 @@ and my brother is joe`,
 });
 ```
 
-![img](<./string_multline/second line contains extra chars.svg>)
+![img](<./string_multline/second_line_contains_extra_chars.svg>)
 
 # second line differs
 
@@ -62,7 +62,7 @@ france`,
 });
 ```
 
-![img](<./string_multline/second line differs.svg>)
+![img](<./string_multline/second_line_differs.svg>)
 
 # too many lines before and after
 
@@ -87,7 +87,7 @@ seven/1`,
 });
 ```
 
-![img](<./string_multline/too many lines before and after.svg>)
+![img](<./string_multline/too_many_lines_before_and_after.svg>)
 
 # many lines added
 
@@ -102,7 +102,7 @@ five six`,
 });
 ```
 
-![img](<./string_multline/many lines added.svg>)
+![img](<./string_multline/many_lines_added.svg>)
 
 # many lines removed
 
@@ -117,7 +117,7 @@ five six`,
 });
 ```
 
-![img](<./string_multline/many lines removed.svg>)
+![img](<./string_multline/many_lines_removed.svg>)
 
 # prop before and after
 
@@ -136,7 +136,7 @@ assert({
 });
 ```
 
-![img](<./string_multline/prop before and after.svg>)
+![img](<./string_multline/prop_before_and_after.svg>)
 
 # new line escaped
 
@@ -153,7 +153,7 @@ assert({
 });
 ```
 
-![img](<./string_multline/new line escaped.svg>)
+![img](<./string_multline/new_line_escaped.svg>)
 
 # multiline without diff
 
@@ -170,7 +170,7 @@ assert({
 });
 ```
 
-![img](<./string_multline/multiline without diff.svg>)
+![img](<./string_multline/multiline_without_diff.svg>)
 
 # many lines around
 
@@ -189,7 +189,7 @@ Hello europa
 });
 ```
 
-![img](<./string_multline/many lines around.svg>)
+![img](<./string_multline/many_lines_around.svg>)
 
 # many lines before
 
@@ -210,7 +210,7 @@ assert({
 });
 ```
 
-![img](<./string_multline/many lines before.svg>)
+![img](<./string_multline/many_lines_before.svg>)
 
 # exactly on line break
 
@@ -221,5 +221,5 @@ assert({
 });
 ```
 
-![img](<./string_multline/exactly on line break.svg>)
+![img](<./string_multline/exactly_on_line_break.svg>)
 

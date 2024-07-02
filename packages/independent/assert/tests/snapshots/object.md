@@ -28,7 +28,7 @@ assert({
 });
 ```
 
-![img](<./object/property are different.svg>)
+![img](<./object/property_are_different.svg>)
 
 # property removed
 
@@ -44,7 +44,7 @@ assert({
 });
 ```
 
-![img](<./object/property removed.svg>)
+![img](<./object/property_removed.svg>)
 
 # property added
 
@@ -60,7 +60,7 @@ assert({
 });
 ```
 
-![img](<./object/property added.svg>)
+![img](<./object/property_added.svg>)
 
 # false should be an object
 
@@ -71,7 +71,7 @@ assert({
 });
 ```
 
-![img](<./object/false should be an object.svg>)
+![img](<./object/false_should_be_an_object.svg>)
 
 # object should be false
 
@@ -84,7 +84,7 @@ assert({
 });
 ```
 
-![img](<./object/object should be false.svg>)
+![img](<./object/object_should_be_false.svg>)
 
 # false should be an object at property
 
@@ -99,7 +99,7 @@ assert({
 });
 ```
 
-![img](<./object/false should be an object at property.svg>)
+![img](<./object/false_should_be_an_object_at_property.svg>)
 
 # object should be false at property
 
@@ -114,7 +114,7 @@ assert({
 });
 ```
 
-![img](<./object/object should be false at property.svg>)
+![img](<./object/object_should_be_false_at_property.svg>)
 
 # max depth inside diff
 
@@ -139,7 +139,7 @@ assert({
 });
 ```
 
-![img](<./object/max depth inside diff.svg>)
+![img](<./object/max_depth_inside_diff.svg>)
 
 # max diff per object
 
@@ -164,7 +164,7 @@ assert({
 });
 ```
 
-![img](<./object/max diff per object.svg>)
+![img](<./object/max_diff_per_object.svg>)
 
 # max 2 context after diff (there is 2)
 
@@ -183,7 +183,7 @@ assert({
 });
 ```
 
-![img](<./object/max 2 context after diff (there is 2).svg>)
+![img](<./object/max_2_context_after_diff_(there_is_2).svg>)
 
 # max 2 context after diff (there is 3)
 
@@ -204,7 +204,7 @@ assert({
 });
 ```
 
-![img](<./object/max 2 context after diff (there is 3).svg>)
+![img](<./object/max_2_context_after_diff_(there_is_3).svg>)
 
 # max 2 context after diff (there is 4)
 
@@ -227,7 +227,7 @@ assert({
 });
 ```
 
-![img](<./object/max 2 context after diff (there is 4).svg>)
+![img](<./object/max_2_context_after_diff_(there_is_4).svg>)
 
 # max 2 context before diff (there is 2)
 
@@ -246,7 +246,7 @@ assert({
 });
 ```
 
-![img](<./object/max 2 context before diff (there is 2).svg>)
+![img](<./object/max_2_context_before_diff_(there_is_2).svg>)
 
 # max 2 context before diff (there is 3)
 
@@ -267,7 +267,7 @@ assert({
 });
 ```
 
-![img](<./object/max 2 context before diff (there is 3).svg>)
+![img](<./object/max_2_context_before_diff_(there_is_3).svg>)
 
 # max 2 context before diff (there is 4)
 
@@ -290,7 +290,7 @@ assert({
 });
 ```
 
-![img](<./object/max 2 context before diff (there is 4).svg>)
+![img](<./object/max_2_context_before_diff_(there_is_4).svg>)
 
 # max 2 context around diff
 
@@ -336,7 +336,7 @@ assert({
 });
 ```
 
-![img](<./object/max 2 context around diff.svg>)
+![img](<./object/max_2_context_around_diff.svg>)
 
 # max 1 context around diff
 
@@ -357,7 +357,7 @@ assert({
 });
 ```
 
-![img](<./object/max 1 context around diff.svg>)
+![img](<./object/max_1_context_around_diff.svg>)
 
 # max 0 context around diff
 
@@ -378,7 +378,7 @@ assert({
 });
 ```
 
-![img](<./object/max 0 context around diff.svg>)
+![img](<./object/max_0_context_around_diff.svg>)
 
 # property should be there and is big
 
@@ -405,7 +405,7 @@ assert({
 });
 ```
 
-![img](<./object/property should be there and is big.svg>)
+![img](<./object/property_should_be_there_and_is_big.svg>)
 
 # many props should not be there
 
@@ -429,7 +429,7 @@ assert({
 });
 ```
 
-![img](<./object/many props should not be there.svg>)
+![img](<./object/many_props_should_not_be_there.svg>)
 
 # object vs user
 
@@ -442,7 +442,7 @@ assert({
 });
 ```
 
-![img](<./object/object vs user.svg>)
+![img](<./object/object_vs_user.svg>)
 
 # collapsed with overview when no diff
 
@@ -459,7 +459,7 @@ assert({
 });
 ```
 
-![img](<./object/collapsed with overview when no diff.svg>)
+![img](<./object/collapsed_with_overview_when_no_diff.svg>)
 
 # one prop no diff
 
@@ -476,5 +476,5 @@ assert({
 });
 ```
 
-![img](<./object/one prop no diff.svg>)
+![img](<./object/one_prop_no_diff.svg>)
 

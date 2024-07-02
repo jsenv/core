@@ -15,7 +15,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/enumerable and configurable and value diff.svg>)
+![img](<./property_descriptor/enumerable_and_configurable_and_value_diff.svg>)
 
 # non enumerable hidden when value same
 
@@ -32,7 +32,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/non enumerable hidden when value same.svg>)
+![img](<./property_descriptor/non_enumerable_hidden_when_value_same.svg>)
 
 # non enumerable displayed when value modified
 
@@ -53,7 +53,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/non enumerable displayed when value modified.svg>)
+![img](<./property_descriptor/non_enumerable_displayed_when_value_modified.svg>)
 
 # enumerable diff
 
@@ -74,7 +74,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/enumerable diff.svg>)
+![img](<./property_descriptor/enumerable_diff.svg>)
 
 # enumerable and value diff
 
@@ -95,7 +95,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/enumerable and value diff.svg>)
+![img](<./property_descriptor/enumerable_and_value_diff.svg>)
 
 # getter and value
 
@@ -112,7 +112,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/getter and value.svg>)
+![img](<./property_descriptor/getter_and_value.svg>)
 
 # getter/setter and value
 
@@ -130,7 +130,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/getter/setter and value.svg>)
+![img](<./property_descriptor/getter/setter_and_value.svg>)
 
 # getter only and setter only
 
@@ -147,7 +147,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/getter only and setter only.svg>)
+![img](<./property_descriptor/getter_only_and_setter_only.svg>)
 
 # setter only and getter only
 
@@ -164,7 +164,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/setter only and getter only.svg>)
+![img](<./property_descriptor/setter_only_and_getter_only.svg>)
 
 # getter source code same
 
@@ -185,7 +185,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/getter source code same.svg>)
+![img](<./property_descriptor/getter_source_code_same.svg>)
 
 # getter source code diff
 
@@ -204,5 +204,5 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/getter source code diff.svg>)
+![img](<./property_descriptor/getter_source_code_diff.svg>)
 

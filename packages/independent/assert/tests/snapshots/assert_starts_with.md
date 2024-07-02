@@ -13,7 +13,7 @@ assert({
 });
 ```
 
-![img](<./assert_starts_with/no diff.svg>)
+![img](<./assert_starts_with/no_diff.svg>)
 
 # does not start with
 
@@ -24,5 +24,5 @@ assert({
 });
 ```
 
-![img](<./assert_starts_with/does not start with.svg>)
+![img](<./assert_starts_with/does_not_start_with.svg>)
 

@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./assert_between/below or equals.svg>)
+![img](<./assert_between/below_or_equals.svg>)
 
 # below or equals when removed
 
@@ -20,7 +20,7 @@ assert({
 });
 ```
 
-![img](<./assert_between/below or equals when removed.svg>)
+![img](<./assert_between/below_or_equals_when_removed.svg>)
 
 # below or equals ok
 
@@ -37,7 +37,7 @@ assert({
 });
 ```
 
-![img](<./assert_between/below or equals ok.svg>)
+![img](<./assert_between/below_or_equals_ok.svg>)
 
 # 50 is too small
 
@@ -48,7 +48,7 @@ assert({
 });
 ```
 
-![img](<./assert_between/50 is too small.svg>)
+![img](<./assert_between/50_is_too_small.svg>)
 
 # 3500 is between 3000 and 5000
 
@@ -65,5 +65,5 @@ assert({
 });
 ```
 
-![img](<./assert_between/3500 is between 3000 and 5000.svg>)
+![img](<./assert_between/3500_is_between_3000_and_5000.svg>)
 

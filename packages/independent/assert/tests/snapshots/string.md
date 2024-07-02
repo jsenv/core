@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./string/string single char.svg>)
+![img](<./string/string_single_char.svg>)
 
 # diff end of string
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./string/diff end of string.svg>)
+![img](<./string/diff_end_of_string.svg>)
 
 # one char should be empty
 
@@ -29,7 +29,7 @@ assert({
 });
 ```
 
-![img](<./string/one char should be empty.svg>)
+![img](<./string/one_char_should_be_empty.svg>)
 
 # empty should be one char
 
@@ -40,7 +40,7 @@ assert({
 });
 ```
 
-![img](<./string/empty should be one char.svg>)
+![img](<./string/empty_should_be_one_char.svg>)
 
 # tab vs space
 
@@ -51,7 +51,7 @@ assert({
 });
 ```
 
-![img](<./string/tab vs space.svg>)
+![img](<./string/tab_vs_space.svg>)
 
 # blank char should be empty
 
@@ -62,7 +62,7 @@ assert({
 });
 ```
 
-![img](<./string/blank char should be empty.svg>)
+![img](<./string/blank_char_should_be_empty.svg>)
 
 # blank char should be empty 2
 
@@ -73,7 +73,7 @@ assert({
 });
 ```
 
-![img](<./string/blank char should be empty 2.svg>)
+![img](<./string/blank_char_should_be_empty_2.svg>)
 
 # diff unicode
 
@@ -84,7 +84,7 @@ assert({
 });
 ```
 
-![img](<./string/diff unicode.svg>)
+![img](<./string/diff_unicode.svg>)
 
 # diff emoticon
 
@@ -95,7 +95,7 @@ assert({
 });
 ```
 
-![img](<./string/diff emoticon.svg>)
+![img](<./string/diff_emoticon.svg>)
 
 # diff special char
 
@@ -106,7 +106,7 @@ assert({
 });
 ```
 
-![img](<./string/diff special char.svg>)
+![img](<./string/diff_special_char.svg>)
 
 # special char diff
 
@@ -117,7 +117,7 @@ assert({
 });
 ```
 
-![img](<./string/special char diff.svg>)
+![img](<./string/special_char_diff.svg>)
 
 # more special char diff
 
@@ -128,7 +128,7 @@ assert({
 });
 ```
 
-![img](<./string/more special char diff.svg>)
+![img](<./string/more_special_char_diff.svg>)
 
 # diff blackslash and ellipsis special chars
 
@@ -139,7 +139,7 @@ assert({
 });
 ```
 
-![img](<./string/diff blackslash and ellipsis special chars.svg>)
+![img](<./string/diff_blackslash_and_ellipsis_special_chars.svg>)
 
 # diff single space with 2 space
 
@@ -150,7 +150,7 @@ assert({
 });
 ```
 
-![img](<./string/diff single space with 2 space.svg>)
+![img](<./string/diff_single_space_with_2_space.svg>)
 
 # added char
 
@@ -161,7 +161,7 @@ assert({
 });
 ```
 
-![img](<./string/added char.svg>)
+![img](<./string/added_char.svg>)
 
 # removed char
 
@@ -172,7 +172,7 @@ assert({
 });
 ```
 
-![img](<./string/removed char.svg>)
+![img](<./string/removed_char.svg>)
 
 # diff at end of long string, start truncated
 
@@ -184,7 +184,7 @@ assert({
 });
 ```
 
-![img](<./string/diff at end of long string, start truncated.svg>)
+![img](<./string/diff_at_end_of_long_string__start_truncated.svg>)
 
 # diff at start of long string, end truncated
 
@@ -196,7 +196,7 @@ assert({
 });
 ```
 
-![img](<./string/diff at start of long string, end truncated.svg>)
+![img](<./string/diff_at_start_of_long_string__end_truncated.svg>)
 
 # many diff in long string, only first is shown truncated
 
@@ -208,7 +208,7 @@ assert({
 });
 ```
 
-![img](<./string/many diff in long string, only first is shown truncated.svg>)
+![img](<./string/many_diff_in_long_string__only_first_is_shown_truncated.svg>)
 
 # diff at middle of long string, start + end truncated
 
@@ -220,7 +220,7 @@ assert({
 });
 ```
 
-![img](<./string/diff at middle of long string, start + end truncated.svg>)
+![img](<./string/diff_at_middle_of_long_string__start_+_end_truncated.svg>)
 
 # diff new String value
 
@@ -231,7 +231,7 @@ assert({
 });
 ```
 
-![img](<./string/diff new String value.svg>)
+![img](<./string/diff_new_string_value.svg>)
 
 # diff String object vs literal
 
@@ -242,7 +242,7 @@ assert({
 });
 ```
 
-![img](<./string/diff String object vs literal.svg>)
+![img](<./string/diff_string_object_vs_literal.svg>)
 
 # new String collapsed with overview
 
@@ -259,7 +259,7 @@ assert({
 });
 ```
 
-![img](<./string/new String collapsed with overview.svg>)
+![img](<./string/new_string_collapsed_with_overview.svg>)
 
 # new String collapsed
 
@@ -279,7 +279,7 @@ assert({
 });
 ```
 
-![img](<./string/new String collapsed.svg>)
+![img](<./string/new_string_collapsed.svg>)
 
 # new String prop
 
@@ -290,5 +290,5 @@ assert({
 });
 ```
 
-![img](<./string/new String prop.svg>)
+![img](<./string/new_string_prop.svg>)
 

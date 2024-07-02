@@ -11,7 +11,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/Symbol.toPrimitive added.svg>)
+![img](<./wrapped_value/symbol_toprimitive_added.svg>)
 
 # Symbol.toPrimitive removed
 
@@ -26,7 +26,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/Symbol.toPrimitive removed.svg>)
+![img](<./wrapped_value/symbol_toprimitive_removed.svg>)
 
 # Symbol.toPrimitive vs primitive
 
@@ -41,7 +41,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/Symbol.toPrimitive vs primitive.svg>)
+![img](<./wrapped_value/symbol_toprimitive_vs_primitive.svg>)
 
 # primitive vs Symbol.toPrimitive
 
@@ -56,7 +56,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/primitive vs Symbol.toPrimitive.svg>)
+![img](<./wrapped_value/primitive_vs_symbol_toprimitive.svg>)
 
 # valueOf({ a: true }) vs { a: true }
 
@@ -71,7 +71,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueOf({ a: true }) vs { a: true }.svg>)
+![img](<./wrapped_value/valueof({_a:_true_})_vs_{_a:_true_}.svg>)
 
 # 10 vs valueOf(10)
 
@@ -84,7 +84,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/10 vs valueOf(10).svg>)
+![img](<./wrapped_value/10_vs_valueof(10).svg>)
 
 # valueOf(10) vs 10
 
@@ -97,7 +97,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueOf(10) vs 10.svg>)
+![img](<./wrapped_value/valueof(10)_vs_10.svg>)
 
 # valueOf(10) vs valueOf(11)
 
@@ -112,7 +112,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueOf(10) vs valueOf(11).svg>)
+![img](<./wrapped_value/valueof(10)_vs_valueof(11).svg>)
 
 # valueOf(10) vs valueOf(10)
 
@@ -129,7 +129,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueOf(10) vs valueOf(10).svg>)
+![img](<./wrapped_value/valueof(10)_vs_valueof(10).svg>)
 
 # valueOf with object tag vs primitive
 
@@ -145,7 +145,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueOf with object tag vs primitive.svg>)
+![img](<./wrapped_value/valueof_with_object_tag_vs_primitive.svg>)
 
 # valueOf with object tag 
 
@@ -166,7 +166,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueOf with object tag .svg>)
+![img](<./wrapped_value/valueof_with_object_tag.svg>)
 
 # no diff on valueOf in constructor
 
@@ -189,7 +189,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/no diff on valueOf in constructor.svg>)
+![img](<./wrapped_value/no_diff_on_valueof_in_constructor.svg>)
 
 # signal(true) and signal(false)
 
@@ -206,7 +206,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal(true) and signal(false).svg>)
+![img](<./wrapped_value/signal(true)_and_signal(false).svg>)
 
 # signal(true) and true
 
@@ -220,7 +220,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal(true) and true.svg>)
+![img](<./wrapped_value/signal(true)_and_true.svg>)
 
 # true and signal(true)
 
@@ -234,7 +234,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/true and signal(true).svg>)
+![img](<./wrapped_value/true_and_signal(true).svg>)
 
 # true and signal(false)
 
@@ -248,7 +248,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/true and signal(false).svg>)
+![img](<./wrapped_value/true_and_signal(false).svg>)
 
 # signal(true) and false
 
@@ -262,7 +262,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal(true) and false.svg>)
+![img](<./wrapped_value/signal(true)_and_false.svg>)
 
 # signal(true) and 1
 
@@ -276,7 +276,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal(true) and 1.svg>)
+![img](<./wrapped_value/signal(true)_and_1.svg>)
 
 # signal({ foo: true }) and signal({ foo: false })
 
@@ -293,7 +293,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal({ foo: true }) and signal({ foo: false }).svg>)
+![img](<./wrapped_value/signal({_foo:_true_})_and_signal({_foo:_false_}).svg>)
 
 # signal([true]) and signal([false]) with props
 
@@ -312,7 +312,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal([true]) and signal([false]) with props.svg>)
+![img](<./wrapped_value/signal([true])_and_signal([false])_with_props.svg>)
 
 # signal([true]) and [true]
 
@@ -326,7 +326,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal([true]) and [true].svg>)
+![img](<./wrapped_value/signal([true])_and_[true].svg>)
 
 # [true] and signal([true])
 
@@ -340,7 +340,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/[true] and signal([true]).svg>)
+![img](<./wrapped_value/[true]_and_signal([true]).svg>)
 
 # [true] and signal([false])
 
@@ -354,7 +354,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/[true] and signal([false]).svg>)
+![img](<./wrapped_value/[true]_and_signal([false]).svg>)
 
 # signal([true]) and [false]
 
@@ -368,7 +368,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal([true]) and [false].svg>)
+![img](<./wrapped_value/signal([true])_and_[false].svg>)
 
 # signal(string) and signal(string)
 
@@ -385,7 +385,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal(string) and signal(string).svg>)
+![img](<./wrapped_value/signal(string)_and_signal(string).svg>)
 
 # signal(string) and string
 
@@ -399,7 +399,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal(string) and string.svg>)
+![img](<./wrapped_value/signal(string)_and_string.svg>)
 
 # string and signal(string)
 
@@ -413,7 +413,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/string and signal(string).svg>)
+![img](<./wrapped_value/string_and_signal(string).svg>)
 
 # both valueOf return object itself
 
@@ -432,7 +432,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/both valueOf return object itself.svg>)
+![img](<./wrapped_value/both_valueof_return_object_itself.svg>)
 
 # valueOf self and valueOf 10
 
@@ -445,7 +445,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueOf self and valueOf 10.svg>)
+![img](<./wrapped_value/valueof_self_and_valueof_10.svg>)
 
 # valueOf 10 and valueOf self
 
@@ -458,7 +458,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueOf 10 and valueOf self.svg>)
+![img](<./wrapped_value/valueof_10_and_valueof_self.svg>)
 
 # own valueOf order respected
 
@@ -477,7 +477,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/own valueOf order respected.svg>)
+![img](<./wrapped_value/own_valueof_order_respected.svg>)
 
 # valueOf inherited
 
@@ -497,5 +497,5 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueOf inherited.svg>)
+![img](<./wrapped_value/valueof_inherited.svg>)
 

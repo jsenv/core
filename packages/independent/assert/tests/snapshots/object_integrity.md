@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/frozen vs not frozen.svg>)
+![img](<./object_integrity/frozen_vs_not_frozen.svg>)
 
 # not frozen vs frozen
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/not frozen vs frozen.svg>)
+![img](<./object_integrity/not_frozen_vs_frozen.svg>)
 
 # sealed vs not sealed
 
@@ -29,7 +29,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/sealed vs not sealed.svg>)
+![img](<./object_integrity/sealed_vs_not_sealed.svg>)
 
 # not sealed vs sealed
 
@@ -40,7 +40,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/not sealed vs sealed.svg>)
+![img](<./object_integrity/not_sealed_vs_sealed.svg>)
 
 # frozen vs sealed
 
@@ -51,7 +51,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/frozen vs sealed.svg>)
+![img](<./object_integrity/frozen_vs_sealed.svg>)
 
 # sealed vs frozen
 
@@ -62,7 +62,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/sealed vs frozen.svg>)
+![img](<./object_integrity/sealed_vs_frozen.svg>)
 
 # extensible vs non extensible
 
@@ -73,7 +73,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/extensible vs non extensible.svg>)
+![img](<./object_integrity/extensible_vs_non_extensible.svg>)
 
 # non extensible vs extensible
 
@@ -84,7 +84,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/non extensible vs extensible.svg>)
+![img](<./object_integrity/non_extensible_vs_extensible.svg>)
 
 # sealed vs non extensible
 
@@ -95,7 +95,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/sealed vs non extensible.svg>)
+![img](<./object_integrity/sealed_vs_non_extensible.svg>)
 
 # non extensible vs frozen
 
@@ -106,7 +106,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/non extensible vs frozen.svg>)
+![img](<./object_integrity/non_extensible_vs_frozen.svg>)
 
 # frozen array vs frozen function
 
@@ -117,7 +117,7 @@ assert({
 });
 ```
 
-![img](<./object_integrity/frozen array vs frozen function.svg>)
+![img](<./object_integrity/frozen_array_vs_frozen_function.svg>)
 
 # both sealed, diff is elsewhere
 
@@ -134,5 +134,5 @@ assert({
 });
 ```
 
-![img](<./object_integrity/both sealed, diff is elsewhere.svg>)
+![img](<./object_integrity/both_sealed__diff_is_elsewhere.svg>)
 

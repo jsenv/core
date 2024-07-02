@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./well_known/String and Object.svg>)
+![img](<./well_known/string_and_object.svg>)
 
 # Number.MAX_VALUE and Number.MIN_VALUE
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./well_known/Number.MAX_VALUE and Number.MIN_VALUE.svg>)
+![img](<./well_known/number_max_value_and_number_min_value.svg>)
 
 # Symbol.iterator and Symbol.toPrimitive
 
@@ -29,7 +29,7 @@ assert({
 });
 ```
 
-![img](<./well_known/Symbol.iterator and Symbol.toPrimitive.svg>)
+![img](<./well_known/symbol_iterator_and_symbol_toprimitive.svg>)
 
 # Symbol.for("a") and Symbol.for("b")
 
@@ -40,7 +40,7 @@ assert({
 });
 ```
 
-![img](<./well_known/Symbol.for("a") and Symbol.for("b").svg>)
+![img](<./well_known/symbol_for("a")_and_symbol_for("b").svg>)
 
 # Object.prototype.toString vs Object.prototype.hasOwnProperty
 
@@ -51,7 +51,7 @@ assert({
 });
 ```
 
-![img](<./well_known/Object.prototype.toString vs Object.prototype.hasOwnProperty.svg>)
+![img](<./well_known/object_prototype_tostring_vs_object_prototype_hasownproperty.svg>)
 
 # null and Array.prototype
 
@@ -62,5 +62,5 @@ assert({
 });
 ```
 
-![img](<./well_known/null and Array.prototype.svg>)
+![img](<./well_known/null_and_array_prototype.svg>)
 

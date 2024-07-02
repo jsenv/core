@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./prototype/Error vs TypeError.svg>)
+![img](<./prototype/error_vs_typeerror.svg>)
 
 # object with different prototypes
 
@@ -22,7 +22,7 @@ assert({
 });
 ```
 
-![img](<./prototype/object with different prototypes.svg>)
+![img](<./prototype/object_with_different_prototypes.svg>)
 
 # Object.create(null) and {}
 
@@ -33,7 +33,7 @@ assert({
 });
 ```
 
-![img](<./prototype/Object.create(null) and {}.svg>)
+![img](<./prototype/object_create(null)_and_{}.svg>)
 
 # Object.create(null) and []
 
@@ -44,7 +44,7 @@ assert({
 });
 ```
 
-![img](<./prototype/Object.create(null) and [].svg>)
+![img](<./prototype/object_create(null)_and_[].svg>)
 
 # object vs custom proto
 
@@ -62,7 +62,7 @@ assert({
 });
 ```
 
-![img](<./prototype/object vs custom proto.svg>)
+![img](<./prototype/object_vs_custom_proto.svg>)
 
 # object vs instance
 
@@ -82,5 +82,5 @@ assert({
 });
 ```
 
-![img](<./prototype/object vs instance.svg>)
+![img](<./prototype/object_vs_instance.svg>)
 

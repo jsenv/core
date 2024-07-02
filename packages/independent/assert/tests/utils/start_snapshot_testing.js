@@ -77,14 +77,15 @@ export const startSnapshotTesting = async (name, scenarios) => {
         await terminalRecorder.write(errorSource);
         const result = await terminalRecorder.stop();
         const svg = await result.svg();
+        const keyAsFilename = keyAsValidFilename(key);
         const svgFileUrl = new URL(
-          `./${name}/${key}.svg`,
+          `./${name}/${keyAsFilename}.svg`,
           snapshotsDirectoryUrl,
         );
         writeFileSync(svgFileUrl, svg);
 
         markdown += `\n\n`;
-        markdown += `![img](<./${name}/${key}.svg>)`;
+        markdown += `![img](<./${name}/${keyAsFilename}.svg>)`;
         markdown += `\n\n`;
       }
     }
@@ -96,4 +97,13 @@ export const startSnapshotTesting = async (name, scenarios) => {
   if (!generateMarkdown) {
     fileSnapshot.compare();
   }
+};
+
+// see https://github.com/parshap/node-sanitize-filename/blob/master/index.js
+const keyAsValidFilename = (key) => {
+  return key
+    .trim()
+    .toLowerCase()
+    .replace(/[ ,\.]/g, "_")
+    .replace(/"[\/\?<>\\:\*\|]/g, "");
 };

@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./regexp/a vs b.svg>)
+![img](<./regexp/a_vs_b.svg>)
 
 # i flag vs no flag
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./regexp/i flag vs no flag.svg>)
+![img](<./regexp/i_flag_vs_no_flag.svg>)
 
 # gi flag vs ig flag
 
@@ -36,7 +36,7 @@ assert({
 });
 ```
 
-![img](<./regexp/gi flag vs ig flag.svg>)
+![img](<./regexp/gi_flag_vs_ig_flag.svg>)
 
 # special char: parenthesis vs dot
 
@@ -47,7 +47,7 @@ assert({
 });
 ```
 
-![img](<./regexp/special char: parenthesis vs dot.svg>)
+![img](<./regexp/special_char:_parenthesis_vs_dot.svg>)
 
 # last index
 
@@ -61,7 +61,7 @@ assert({
 });
 ```
 
-![img](<./regexp/last index.svg>)
+![img](<./regexp/last_index.svg>)
 
 # regex and string representing the same regex
 
@@ -72,5 +72,5 @@ assert({
 });
 ```
 
-![img](<./regexp/regex and string representing the same regex.svg>)
+![img](<./regexp/regex_and_string_representing_the_same_regex.svg>)
 

@@ -9,7 +9,7 @@ assert({
 });
 ```
 
-![img](<./headers/content-type added.svg>)
+![img](<./headers/content-type_added.svg>)
 
 # content-type removed
 
@@ -22,7 +22,7 @@ assert({
 });
 ```
 
-![img](<./headers/content-type removed.svg>)
+![img](<./headers/content-type_removed.svg>)
 
 # content-type modified
 
@@ -37,7 +37,7 @@ assert({
 });
 ```
 
-![img](<./headers/content-type modified.svg>)
+![img](<./headers/content-type_modified.svg>)
 
 # content-type multi diff
 
@@ -52,7 +52,7 @@ assert({
 });
 ```
 
-![img](<./headers/content-type multi diff.svg>)
+![img](<./headers/content-type_multi_diff.svg>)
 
 # content-type spacing diff
 
@@ -67,7 +67,7 @@ assert({
 });
 ```
 
-![img](<./headers/content-type spacing diff.svg>)
+![img](<./headers/content-type_spacing_diff.svg>)
 
 # set cookie added
 
@@ -80,7 +80,7 @@ assert({
 });
 ```
 
-![img](<./headers/set cookie added.svg>)
+![img](<./headers/set_cookie_added.svg>)
 
 # set cookie removed
 
@@ -93,7 +93,7 @@ assert({
 });
 ```
 
-![img](<./headers/set cookie removed.svg>)
+![img](<./headers/set_cookie_removed.svg>)
 
 # cookie added
 
@@ -108,7 +108,7 @@ assert({
 });
 ```
 
-![img](<./headers/cookie added.svg>)
+![img](<./headers/cookie_added.svg>)
 
 # cookie removed
 
@@ -123,7 +123,7 @@ assert({
 });
 ```
 
-![img](<./headers/cookie removed.svg>)
+![img](<./headers/cookie_removed.svg>)
 
 # cookie order modified
 
@@ -138,7 +138,7 @@ assert({
 });
 ```
 
-![img](<./headers/cookie order modified.svg>)
+![img](<./headers/cookie_order_modified.svg>)
 
 # cookie name used several times
 
@@ -153,7 +153,7 @@ assert({
 });
 ```
 
-![img](<./headers/cookie name used several times.svg>)
+![img](<./headers/cookie_name_used_several_times.svg>)
 
 # cookie becomes secure
 
@@ -168,7 +168,7 @@ assert({
 });
 ```
 
-![img](<./headers/cookie becomes secure.svg>)
+![img](<./headers/cookie_becomes_secure.svg>)
 
 # accept
 
@@ -198,7 +198,7 @@ assert({
 });
 ```
 
-![img](<./headers/accept diff on non standard attribute.svg>)
+![img](<./headers/accept_diff_on_non_standard_attribute.svg>)
 
 # add accepted encoding
 
@@ -213,7 +213,7 @@ assert({
 });
 ```
 
-![img](<./headers/add accepted encoding.svg>)
+![img](<./headers/add_accepted_encoding.svg>)
 
 # remove accepted encoding
 
@@ -228,7 +228,7 @@ assert({
 });
 ```
 
-![img](<./headers/remove accepted encoding.svg>)
+![img](<./headers/remove_accepted_encoding.svg>)
 
 # accept-encoding diff on q
 
@@ -243,7 +243,7 @@ assert({
 });
 ```
 
-![img](<./headers/accept-encoding diff on q.svg>)
+![img](<./headers/accept-encoding_diff_on_q.svg>)
 
 # accept-language
 
@@ -273,7 +273,7 @@ assert({
 });
 ```
 
-![img](<./headers/add metric in server timing.svg>)
+![img](<./headers/add_metric_in_server_timing.svg>)
 
 # remove metric in server timing
 
@@ -288,7 +288,7 @@ assert({
 });
 ```
 
-![img](<./headers/remove metric in server timing.svg>)
+![img](<./headers/remove_metric_in_server_timing.svg>)
 
 # add description to a metric
 
@@ -303,7 +303,7 @@ assert({
 });
 ```
 
-![img](<./headers/add description to a metric.svg>)
+![img](<./headers/add_description_to_a_metric.svg>)
 
 # content length diff
 
@@ -318,5 +318,5 @@ assert({
 });
 ```
 
-![img](<./headers/content length diff.svg>)
+![img](<./headers/content_length_diff.svg>)
 

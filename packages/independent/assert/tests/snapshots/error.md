@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./error/error message added.svg>)
+![img](<./error/error_message_added.svg>)
 
 # error message removed
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./error/error message removed.svg>)
+![img](<./error/error_message_removed.svg>)
 
 # error message modified
 
@@ -29,7 +29,7 @@ assert({
 });
 ```
 
-![img](<./error/error message modified.svg>)
+![img](<./error/error_message_modified.svg>)
 
 # error message vs object with message
 
@@ -40,7 +40,7 @@ assert({
 });
 ```
 
-![img](<./error/error message vs object with message.svg>)
+![img](<./error/error_message_vs_object_with_message.svg>)
 
 # error stack vs object with stack
 
@@ -51,7 +51,7 @@ assert({
 });
 ```
 
-![img](<./error/error stack vs object with stack.svg>)
+![img](<./error/error_stack_vs_object_with_stack.svg>)
 
 # error message multiline
 
@@ -64,7 +64,7 @@ france`),
 });
 ```
 
-![img](<./error/error message multiline.svg>)
+![img](<./error/error_message_multiline.svg>)
 
 # error prop added
 
@@ -75,7 +75,7 @@ assert({
 });
 ```
 
-![img](<./error/error prop added.svg>)
+![img](<./error/error_prop_added.svg>)
 
 # error prop removed
 
@@ -86,7 +86,7 @@ assert({
 });
 ```
 
-![img](<./error/error prop removed.svg>)
+![img](<./error/error_prop_removed.svg>)
 
 # error prop modified
 
@@ -97,7 +97,7 @@ assert({
 });
 ```
 
-![img](<./error/error prop modified.svg>)
+![img](<./error/error_prop_modified.svg>)
 
 # error vs typeError
 
@@ -108,7 +108,7 @@ assert({
 });
 ```
 
-![img](<./error/error vs typeError.svg>)
+![img](<./error/error_vs_typeerror.svg>)
 
 # error vs CustomError
 
@@ -120,5 +120,5 @@ assert({
 });
 ```
 
-![img](<./error/error vs CustomError.svg>)
+![img](<./error/error_vs_customerror.svg>)
 

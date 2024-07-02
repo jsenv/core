@@ -13,7 +13,7 @@ assert({
 });
 ```
 
-![img](<./function/async arrow function vs arrow function.svg>)
+![img](<./function/async_arrow_function_vs_arrow_function.svg>)
 
 # arrow function source modified, name same
 
@@ -30,7 +30,7 @@ assert({
 });
 ```
 
-![img](<./function/arrow function source modified, name same.svg>)
+![img](<./function/arrow_function_source_modified__name_same.svg>)
 
 # async function vs function
 
@@ -47,7 +47,7 @@ assert({
 });
 ```
 
-![img](<./function/async function vs function.svg>)
+![img](<./function/async_function_vs_function.svg>)
 
 # function vs arrow function
 
@@ -64,7 +64,7 @@ assert({
 });
 ```
 
-![img](<./function/function vs arrow function.svg>)
+![img](<./function/function_vs_arrow_function.svg>)
 
 # function source modified, name same
 
@@ -85,7 +85,7 @@ assert({
 });
 ```
 
-![img](<./function/function source modified, name same.svg>)
+![img](<./function/function_source_modified__name_same.svg>)
 
 # function source same, name modified
 
@@ -96,7 +96,7 @@ assert({
 });
 ```
 
-![img](<./function/function source same, name modified.svg>)
+![img](<./function/function_source_same__name_modified.svg>)
 
 # anonymous function vs named function
 
@@ -111,7 +111,7 @@ assert({
 });
 ```
 
-![img](<./function/anonymous function vs named function.svg>)
+![img](<./function/anonymous_function_vs_named_function.svg>)
 
 # number of diff when comparing async function and function
 
@@ -134,7 +134,7 @@ assert({
 });
 ```
 
-![img](<./function/number of diff when comparing async function and function.svg>)
+![img](<./function/number_of_diff_when_comparing_async_function_and_function.svg>)
 
 # function prototype modified
 
@@ -151,7 +151,7 @@ assert({
 });
 ```
 
-![img](<./function/function prototype modified.svg>)
+![img](<./function/function_prototype_modified.svg>)
 
 # function prototype added
 
@@ -165,7 +165,7 @@ assert({
 });
 ```
 
-![img](<./function/function prototype added.svg>)
+![img](<./function/function_prototype_added.svg>)
 
 # class vs function
 
@@ -176,7 +176,7 @@ assert({
 });
 ```
 
-![img](<./function/class vs function.svg>)
+![img](<./function/class_vs_function.svg>)
 
 # class Animal vs class Robot
 
@@ -187,7 +187,7 @@ assert({
 });
 ```
 
-![img](<./function/class Animal vs class Robot.svg>)
+![img](<./function/class_animal_vs_class_robot.svg>)
 
 # extends Animal vs extend Robot
 
@@ -208,7 +208,7 @@ assert({
 });
 ```
 
-![img](<./function/extends Animal vs extend Robot.svg>)
+![img](<./function/extends_animal_vs_extend_robot.svg>)
 
 # class static property modified
 
@@ -223,7 +223,7 @@ assert({
 });
 ```
 
-![img](<./function/class static property modified.svg>)
+![img](<./function/class_static_property_modified.svg>)
 
 # class static property added
 
@@ -236,7 +236,7 @@ assert({
 });
 ```
 
-![img](<./function/class static property added.svg>)
+![img](<./function/class_static_property_added.svg>)
 
 # class static property removed
 
@@ -249,7 +249,7 @@ assert({
 });
 ```
 
-![img](<./function/class static property removed.svg>)
+![img](<./function/class_static_property_removed.svg>)
 
 # class method diff source
 
@@ -274,7 +274,7 @@ assert({
 });
 ```
 
-![img](<./function/class method diff source.svg>)
+![img](<./function/class_method_diff_source.svg>)
 
 # class method added
 
@@ -287,7 +287,7 @@ assert({
 });
 ```
 
-![img](<./function/class method added.svg>)
+![img](<./function/class_method_added.svg>)
 
 # class method removed
 
@@ -300,7 +300,7 @@ assert({
 });
 ```
 
-![img](<./function/class method removed.svg>)
+![img](<./function/class_method_removed.svg>)
 
 # class constructor modified
 
@@ -319,7 +319,7 @@ assert({
 });
 ```
 
-![img](<./function/class constructor modified.svg>)
+![img](<./function/class_constructor_modified.svg>)
 
 # arrow function source same, name modified
 
@@ -338,7 +338,7 @@ assert({
 });
 ```
 
-![img](<./function/arrow function source same, name modified.svg>)
+![img](<./function/arrow_function_source_same__name_modified.svg>)
 
 # arrow function source same, name same
 
@@ -356,7 +356,7 @@ assert({
 });
 ```
 
-![img](<./function/arrow function source same, name same.svg>)
+![img](<./function/arrow_function_source_same__name_same.svg>)
 
 # class constructor added
 
@@ -371,7 +371,7 @@ assert({
 });
 ```
 
-![img](<./function/class constructor added.svg>)
+![img](<./function/class_constructor_added.svg>)
 
 # class constructor removed
 
@@ -386,7 +386,7 @@ assert({
 });
 ```
 
-![img](<./function/class constructor removed.svg>)
+![img](<./function/class_constructor_removed.svg>)
 
 # static property value modified
 
@@ -409,7 +409,7 @@ assert({
 });
 ```
 
-![img](<./function/static property value modified.svg>)
+![img](<./function/static_property_value_modified.svg>)
 
 # static method return value modified
 
@@ -434,7 +434,7 @@ assert({
 });
 ```
 
-![img](<./function/static method return value modified.svg>)
+![img](<./function/static_method_return_value_modified.svg>)
 
 # class static property and object property
 
@@ -451,7 +451,7 @@ assert({
 });
 ```
 
-![img](<./function/class static property and object property.svg>)
+![img](<./function/class_static_property_and_object_property.svg>)
 
 # class static prop and function prop
 
@@ -466,7 +466,7 @@ assert({
 });
 ```
 
-![img](<./function/class static prop and function prop.svg>)
+![img](<./function/class_static_prop_and_function_prop.svg>)
 
 # class prototype method vs function prototype method
 
@@ -483,7 +483,7 @@ assert({
 });
 ```
 
-![img](<./function/class prototype method vs function prototype method.svg>)
+![img](<./function/class_prototype_method_vs_function_prototype_method.svg>)
 
 # class constructor vs function
 
@@ -500,5 +500,5 @@ assert({
 });
 ```
 
-![img](<./function/class constructor vs function.svg>)
+![img](<./function/class_constructor_vs_function.svg>)
 

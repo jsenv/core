@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./array_typed/buffer.from("") vs buffer.from("a").svg>)
+![img](<./array_typed/buffer_from("")_vs_buffer_from("a").svg>)
 
 # buffer.from("a") vs buffer.from("")
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./array_typed/buffer.from("a") vs buffer.from("").svg>)
+![img](<./array_typed/buffer_from("a")_vs_buffer_from("").svg>)
 
 # buffer without diff are collapsed
 
@@ -35,7 +35,7 @@ assert({
 });
 ```
 
-![img](<./array_typed/buffer without diff are collapsed.svg>)
+![img](<./array_typed/buffer_without_diff_are_collapsed.svg>)
 
 # same length buffer diff at the end
 
@@ -46,7 +46,7 @@ assert({
 });
 ```
 
-![img](<./array_typed/same length buffer diff at the end.svg>)
+![img](<./array_typed/same_length_buffer_diff_at_the_end.svg>)
 
 # same length buffer diff at start
 
@@ -57,7 +57,7 @@ assert({
 });
 ```
 
-![img](<./array_typed/same length buffer diff at start.svg>)
+![img](<./array_typed/same_length_buffer_diff_at_start.svg>)
 
 # same length buffer diff at middle
 
@@ -68,7 +68,7 @@ assert({
 });
 ```
 
-![img](<./array_typed/same length buffer diff at middle.svg>)
+![img](<./array_typed/same_length_buffer_diff_at_middle.svg>)
 
 # same length buffer diff start, middle, end
 
@@ -79,7 +79,7 @@ assert({
 });
 ```
 
-![img](<./array_typed/same length buffer diff start, middle, end.svg>)
+![img](<./array_typed/same_length_buffer_diff_start__middle__end.svg>)
 
 # buffer vs string
 
@@ -90,7 +90,7 @@ assert({
 });
 ```
 
-![img](<./array_typed/buffer vs string.svg>)
+![img](<./array_typed/buffer_vs_string.svg>)
 
 # buffer vs array
 
@@ -107,7 +107,7 @@ assert({
 });
 ```
 
-![img](<./array_typed/buffer vs array.svg>)
+![img](<./array_typed/buffer_vs_array.svg>)
 
 # buffer.from vs Uint8Array.from
 
@@ -118,7 +118,7 @@ assert({
 });
 ```
 
-![img](<./array_typed/buffer.from vs Uint8Array.from.svg>)
+![img](<./array_typed/buffer_from_vs_uint8array_from.svg>)
 
 # Uint8Array vs Array
 
@@ -129,5 +129,5 @@ assert({
 });
 ```
 
-![img](<./array_typed/Uint8Array vs Array.svg>)
+![img](<./array_typed/uint8array_vs_array.svg>)
 

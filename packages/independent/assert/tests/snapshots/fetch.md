@@ -9,7 +9,7 @@ assert({
 });
 ```
 
-![img](<./fetch/abort signal pending vs aborted.svg>)
+![img](<./fetch/abort_signal_pending_vs_aborted.svg>)
 
 # request url diff
 
@@ -20,7 +20,7 @@ assert({
 });
 ```
 
-![img](<./fetch/request url diff.svg>)
+![img](<./fetch/request_url_diff.svg>)
 
 # request with custom options
 
@@ -56,7 +56,7 @@ assert({
 });
 ```
 
-![img](<./fetch/request with custom options.svg>)
+![img](<./fetch/request_with_custom_options.svg>)
 
 # request abort signal pending vs aborted
 
@@ -73,7 +73,7 @@ assert({
 });
 ```
 
-![img](<./fetch/request abort signal pending vs aborted.svg>)
+![img](<./fetch/request_abort_signal_pending_vs_aborted.svg>)
 
 # response body diff
 
@@ -90,7 +90,7 @@ assert({
 });
 ```
 
-![img](<./fetch/response body diff.svg>)
+![img](<./fetch/response_body_diff.svg>)
 
 # response status diff
 
@@ -105,7 +105,7 @@ assert({
 });
 ```
 
-![img](<./fetch/response status diff.svg>)
+![img](<./fetch/response_status_diff.svg>)
 
 # response prop diff
 
@@ -129,7 +129,7 @@ assert({
 });
 ```
 
-![img](<./fetch/response prop diff.svg>)
+![img](<./fetch/response_prop_diff.svg>)
 
 # redirected response
 
@@ -140,5 +140,5 @@ assert({
 });
 ```
 
-![img](<./fetch/redirected response.svg>)
+![img](<./fetch/redirected_response.svg>)
 

@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./url/url object port.svg>)
+![img](<./url/url_object_port.svg>)
 
 # url string port
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./url/url string port.svg>)
+![img](<./url/url_string_port.svg>)
 
 # url string vs url object port
 
@@ -29,7 +29,7 @@ assert({
 });
 ```
 
-![img](<./url/url string vs url object port.svg>)
+![img](<./url/url_string_vs_url_object_port.svg>)
 
 # url search param modified
 
@@ -40,7 +40,7 @@ assert({
 });
 ```
 
-![img](<./url/url search param modified.svg>)
+![img](<./url/url_search_param_modified.svg>)
 
 # url search param added
 
@@ -51,7 +51,7 @@ assert({
 });
 ```
 
-![img](<./url/url search param added.svg>)
+![img](<./url/url_search_param_added.svg>)
 
 # url search param added 2
 
@@ -62,7 +62,7 @@ assert({
 });
 ```
 
-![img](<./url/url search param added 2.svg>)
+![img](<./url/url_search_param_added_2.svg>)
 
 # url search param removed
 
@@ -73,7 +73,7 @@ assert({
 });
 ```
 
-![img](<./url/url search param removed.svg>)
+![img](<./url/url_search_param_removed.svg>)
 
 # url search param removed 2
 
@@ -84,7 +84,7 @@ assert({
 });
 ```
 
-![img](<./url/url search param removed 2.svg>)
+![img](<./url/url_search_param_removed_2.svg>)
 
 # multi search param 2nd value modified
 
@@ -95,7 +95,7 @@ assert({
 });
 ```
 
-![img](<./url/multi search param 2nd value modified.svg>)
+![img](<./url/multi_search_param_2nd_value_modified.svg>)
 
 # adding multi search
 
@@ -106,7 +106,7 @@ assert({
 });
 ```
 
-![img](<./url/adding multi search.svg>)
+![img](<./url/adding_multi_search.svg>)
 
 # multi search adding a 3rd param
 
@@ -117,7 +117,7 @@ assert({
 });
 ```
 
-![img](<./url/multi search adding a 3rd param.svg>)
+![img](<./url/multi_search_adding_a_3rd_param.svg>)
 
 # multi search removing a 3rd param
 
@@ -128,7 +128,7 @@ assert({
 });
 ```
 
-![img](<./url/multi search removing a 3rd param.svg>)
+![img](<./url/multi_search_removing_a_3rd_param.svg>)
 
 # removing multi search
 
@@ -139,7 +139,7 @@ assert({
 });
 ```
 
-![img](<./url/removing multi search.svg>)
+![img](<./url/removing_multi_search.svg>)
 
 # url search param + vs space
 
@@ -156,7 +156,7 @@ assert({
 });
 ```
 
-![img](<./url/url search param + vs space.svg>)
+![img](<./url/url_search_param_+_vs_space.svg>)
 
 # param order modified and value modified
 
@@ -167,7 +167,7 @@ assert({
 });
 ```
 
-![img](<./url/param order modified and value modified.svg>)
+![img](<./url/param_order_modified_and_value_modified.svg>)
 
 # param order modified and value modified 2
 
@@ -178,7 +178,7 @@ assert({
 });
 ```
 
-![img](<./url/param order modified and value modified 2.svg>)
+![img](<./url/param_order_modified_and_value_modified_2.svg>)
 
 # url hash modified
 
@@ -189,7 +189,7 @@ assert({
 });
 ```
 
-![img](<./url/url hash modified.svg>)
+![img](<./url/url_hash_modified.svg>)
 
 # url hash removed
 
@@ -200,7 +200,7 @@ assert({
 });
 ```
 
-![img](<./url/url hash removed.svg>)
+![img](<./url/url_hash_removed.svg>)
 
 # url and url string
 
@@ -211,7 +211,7 @@ assert({
 });
 ```
 
-![img](<./url/url and url string.svg>)
+![img](<./url/url_and_url_string.svg>)
 
 # url string and url string
 
@@ -222,7 +222,7 @@ assert({
 });
 ```
 
-![img](<./url/url string and url string.svg>)
+![img](<./url/url_string_and_url_string.svg>)
 
 # url and non url string
 
@@ -233,7 +233,7 @@ assert({
 });
 ```
 
-![img](<./url/url and non url string.svg>)
+![img](<./url/url_and_non_url_string.svg>)
 
 # non url string and url
 
@@ -244,7 +244,7 @@ assert({
 });
 ```
 
-![img](<./url/non url string and url.svg>)
+![img](<./url/non_url_string_and_url.svg>)
 
 # url and boolean
 
@@ -255,7 +255,7 @@ assert({
 });
 ```
 
-![img](<./url/url and boolean.svg>)
+![img](<./url/url_and_boolean.svg>)
 
 # url string inside a prop
 
@@ -272,7 +272,7 @@ assert({
 });
 ```
 
-![img](<./url/url string inside a prop.svg>)
+![img](<./url/url_string_inside_a_prop.svg>)
 
 # url string and object with href
 
@@ -285,7 +285,7 @@ assert({
 });
 ```
 
-![img](<./url/url string and object with href.svg>)
+![img](<./url/url_string_and_object_with_href.svg>)
 
 # url object port and object with port
 
@@ -298,7 +298,7 @@ assert({
 });
 ```
 
-![img](<./url/url object port and object with port.svg>)
+![img](<./url/url_object_port_and_object_with_port.svg>)
 
 # file protocol vs http protocol
 
@@ -309,7 +309,7 @@ assert({
 });
 ```
 
-![img](<./url/file protocol vs http protocol.svg>)
+![img](<./url/file_protocol_vs_http_protocol.svg>)
 
 # url origin is case insensitive
 
@@ -326,7 +326,7 @@ assert({
 });
 ```
 
-![img](<./url/url origin is case insensitive.svg>)
+![img](<./url/url_origin_is_case_insensitive.svg>)
 
 # internal string vs url object
 
@@ -340,7 +340,7 @@ assert({
 });
 ```
 
-![img](<./url/internal string vs url object.svg>)
+![img](<./url/internal_string_vs_url_object.svg>)
 
 # internal url string vs url string
 
@@ -354,5 +354,5 @@ assert({
 });
 ```
 
-![img](<./url/internal url string vs url string.svg>)
+![img](<./url/internal_url_string_vs_url_string.svg>)
 

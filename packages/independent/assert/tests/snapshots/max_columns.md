@@ -8,7 +8,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/at removed char.svg>)
+![img](<./max_columns/at_removed_char.svg>)
 
 # at added char
 
@@ -20,7 +20,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/at added char.svg>)
+![img](<./max_columns/at_added_char.svg>)
 
 # at removed char 2
 
@@ -32,7 +32,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/at removed char 2.svg>)
+![img](<./max_columns/at_removed_char_2.svg>)
 
 # at added char 2
 
@@ -44,7 +44,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/at added char 2.svg>)
+![img](<./max_columns/at_added_char_2.svg>)
 
 # at removed char 3
 
@@ -56,7 +56,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/at removed char 3.svg>)
+![img](<./max_columns/at_removed_char_3.svg>)
 
 # at added char 3
 
@@ -68,7 +68,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/at added char 3.svg>)
+![img](<./max_columns/at_added_char_3.svg>)
 
 # string at 9
 
@@ -80,7 +80,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/string at 9.svg>)
+![img](<./max_columns/string_at_9.svg>)
 
 # string at 10
 
@@ -92,7 +92,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/string at 10.svg>)
+![img](<./max_columns/string_at_10.svg>)
 
 # string at 11
 
@@ -104,7 +104,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/string at 11.svg>)
+![img](<./max_columns/string_at_11.svg>)
 
 # string at 12
 
@@ -116,7 +116,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/string at 12.svg>)
+![img](<./max_columns/string_at_12.svg>)
 
 # string at 13
 
@@ -128,7 +128,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/string at 13.svg>)
+![img](<./max_columns/string_at_13.svg>)
 
 # string at 19
 
@@ -140,7 +140,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/string at 19.svg>)
+![img](<./max_columns/string_at_19.svg>)
 
 # string at 20
 
@@ -152,7 +152,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/string at 20.svg>)
+![img](<./max_columns/string_at_20.svg>)
 
 # number at 9
 
@@ -164,7 +164,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/number at 9.svg>)
+![img](<./max_columns/number_at_9.svg>)
 
 # number at 10
 
@@ -176,7 +176,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/number at 10.svg>)
+![img](<./max_columns/number_at_10.svg>)
 
 # number at 12
 
@@ -188,7 +188,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/number at 12.svg>)
+![img](<./max_columns/number_at_12.svg>)
 
 # number at 13
 
@@ -200,7 +200,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/number at 13.svg>)
+![img](<./max_columns/number_at_13.svg>)
 
 # number at 14
 
@@ -212,7 +212,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/number at 14.svg>)
+![img](<./max_columns/number_at_14.svg>)
 
 # number at 16
 
@@ -224,7 +224,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/number at 16.svg>)
+![img](<./max_columns/number_at_16.svg>)
 
 # number at 18
 
@@ -236,7 +236,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/number at 18.svg>)
+![img](<./max_columns/number_at_18.svg>)
 
 # number at 19
 
@@ -248,7 +248,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/number at 19.svg>)
+![img](<./max_columns/number_at_19.svg>)
 
 # boolean in property at 10
 
@@ -264,7 +264,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/boolean in property at 10.svg>)
+![img](<./max_columns/boolean_in_property_at_10.svg>)
 
 # boolean in property at 11
 
@@ -280,7 +280,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/boolean in property at 11.svg>)
+![img](<./max_columns/boolean_in_property_at_11.svg>)
 
 # boolean in property at 12
 
@@ -296,7 +296,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/boolean in property at 12.svg>)
+![img](<./max_columns/boolean_in_property_at_12.svg>)
 
 # boolean in property at 13
 
@@ -312,7 +312,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/boolean in property at 13.svg>)
+![img](<./max_columns/boolean_in_property_at_13.svg>)
 
 # boolean in property at 14
 
@@ -328,7 +328,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/boolean in property at 14.svg>)
+![img](<./max_columns/boolean_in_property_at_14.svg>)
 
 # boolean in property at 15
 
@@ -344,7 +344,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/boolean in property at 15.svg>)
+![img](<./max_columns/boolean_in_property_at_15.svg>)
 
 # array in property at 20
 
@@ -368,7 +368,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/array in property at 20.svg>)
+![img](<./max_columns/array_in_property_at_20.svg>)
 
 # array in property at 21
 
@@ -392,7 +392,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/array in property at 21.svg>)
+![img](<./max_columns/array_in_property_at_21.svg>)
 
 # array in property at 22
 
@@ -416,7 +416,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/array in property at 22.svg>)
+![img](<./max_columns/array_in_property_at_22.svg>)
 
 # array in property at 23
 
@@ -440,7 +440,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/array in property at 23.svg>)
+![img](<./max_columns/array_in_property_at_23.svg>)
 
 # array in property at 24
 
@@ -464,7 +464,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/array in property at 24.svg>)
+![img](<./max_columns/array_in_property_at_24.svg>)
 
 # array in property at 25
 
@@ -488,7 +488,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/array in property at 25.svg>)
+![img](<./max_columns/array_in_property_at_25.svg>)
 
 # array in property at 26
 
@@ -512,7 +512,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/array in property at 26.svg>)
+![img](<./max_columns/array_in_property_at_26.svg>)
 
 # array in property at 27
 
@@ -536,7 +536,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/array in property at 27.svg>)
+![img](<./max_columns/array_in_property_at_27.svg>)
 
 # array in property at 28
 
@@ -560,7 +560,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/array in property at 28.svg>)
+![img](<./max_columns/array_in_property_at_28.svg>)
 
 # array in property at 29
 
@@ -584,7 +584,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/array in property at 29.svg>)
+![img](<./max_columns/array_in_property_at_29.svg>)
 
 # on property at 15 and value width is 1
 
@@ -600,7 +600,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/on property at 15 and value width is 1.svg>)
+![img](<./max_columns/on_property_at_15_and_value_width_is_1.svg>)
 
 # on middle of property key
 
@@ -616,7 +616,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/on middle of property key.svg>)
+![img](<./max_columns/on_middle_of_property_key.svg>)
 
 # max column exactly on diff
 
@@ -628,7 +628,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/max column exactly on diff.svg>)
+![img](<./max_columns/max_column_exactly_on_diff.svg>)
 
 # double slash and truncate line
 
@@ -640,7 +640,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/double slash and truncate line.svg>)
+![img](<./max_columns/double_slash_and_truncate_line.svg>)
 
 # url search param modified, middle of long params
 
@@ -652,7 +652,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/url search param modified, middle of long params.svg>)
+![img](<./max_columns/url_search_param_modified__middle_of_long_params.svg>)
 
 # long url diff at end
 
@@ -664,7 +664,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/long url diff at end.svg>)
+![img](<./max_columns/long_url_diff_at_end.svg>)
 
 # long url diff at start
 
@@ -676,7 +676,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/long url diff at start.svg>)
+![img](<./max_columns/long_url_diff_at_start.svg>)
 
 # long url diff in the middle
 
@@ -688,7 +688,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/long url diff in the middle.svg>)
+![img](<./max_columns/long_url_diff_in_the_middle.svg>)
 
 # long url diff start middle end
 
@@ -700,7 +700,7 @@ assert({
 });
 ```
 
-![img](<./max_columns/long url diff start middle end.svg>)
+![img](<./max_columns/long_url_diff_start_middle_end.svg>)
 
 # lines around start partially truncated
 
@@ -716,7 +716,7 @@ abcdefghZjkl`,
 });
 ```
 
-![img](<./max_columns/lines around start partially truncated.svg>)
+![img](<./max_columns/lines_around_start_partially_truncated.svg>)
 
 # lines around start fully truncated
 
@@ -732,7 +732,7 @@ abcZ`,
 });
 ```
 
-![img](<./max_columns/lines around start fully truncated.svg>)
+![img](<./max_columns/lines_around_start_fully_truncated.svg>)
 
 # lines around start fully truncated 2
 
@@ -748,7 +748,7 @@ abcdeZgh`,
 });
 ```
 
-![img](<./max_columns/lines around start fully truncated 2.svg>)
+![img](<./max_columns/lines_around_start_fully_truncated_2.svg>)
 
 # lines around end is truncated
 
@@ -766,7 +766,7 @@ Zbcdef
 });
 ```
 
-![img](<./max_columns/lines around end is truncated.svg>)
+![img](<./max_columns/lines_around_end_is_truncated.svg>)
 
 # lines around end is truncated 2
 
@@ -784,5 +784,5 @@ abcdZfghi
 });
 ```
 
-![img](<./max_columns/lines around end is truncated 2.svg>)
+![img](<./max_columns/lines_around_end_is_truncated_2.svg>)
 

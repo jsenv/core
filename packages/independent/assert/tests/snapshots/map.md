@@ -9,7 +9,7 @@ assert({
 });
 ```
 
-![img](<./map/map entry added.svg>)
+![img](<./map/map_entry_added.svg>)
 
 # map entry removed
 
@@ -22,7 +22,7 @@ assert({
 });
 ```
 
-![img](<./map/map entry removed.svg>)
+![img](<./map/map_entry_removed.svg>)
 
 # map value modified
 
@@ -37,5 +37,5 @@ assert({
 });
 ```
 
-![img](<./map/map value modified.svg>)
+![img](<./map/map_value_modified.svg>)
 

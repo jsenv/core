@@ -7,7 +7,7 @@ assert({
 });
 ```
 
-![img](<./url_search_params/foo added.svg>)
+![img](<./url_search_params/foo_added.svg>)
 
 # foo removed
 
@@ -18,7 +18,7 @@ assert({
 });
 ```
 
-![img](<./url_search_params/foo removed.svg>)
+![img](<./url_search_params/foo_removed.svg>)
 
 # foo modified
 
@@ -29,7 +29,7 @@ assert({
 });
 ```
 
-![img](<./url_search_params/foo modified.svg>)
+![img](<./url_search_params/foo_modified.svg>)
 
 # foo second value added
 
@@ -40,7 +40,7 @@ assert({
 });
 ```
 
-![img](<./url_search_params/foo second value added.svg>)
+![img](<./url_search_params/foo_second_value_added.svg>)
 
 # foo second value removed
 
@@ -51,7 +51,7 @@ assert({
 });
 ```
 
-![img](<./url_search_params/foo second value removed.svg>)
+![img](<./url_search_params/foo_second_value_removed.svg>)
 
 # foo second value modified
 
@@ -62,7 +62,7 @@ assert({
 });
 ```
 
-![img](<./url_search_params/foo second value modified.svg>)
+![img](<./url_search_params/foo_second_value_modified.svg>)
 
 # param order modified and value modified
 
@@ -73,5 +73,5 @@ assert({
 });
 ```
 
-![img](<./url_search_params/param order modified and value modified.svg>)
+![img](<./url_search_params/param_order_modified_and_value_modified.svg>)
 
