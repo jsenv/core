@@ -7,7 +7,7 @@ generateFunctionBody(() => {
 });
 ```
 
-![img](<./function_body/arrow function containing arrow function.svg>)
+![img](<./function_body/arrow_function_containing_arrow_function.svg>)
 
 # anonymous arrow default param arrow
 
@@ -17,7 +17,7 @@ generateFunctionBody((a = () => {}) => {
 });
 ```
 
-![img](<./function_body/anonymous arrow default param arrow.svg>)
+![img](<./function_body/anonymous_arrow_default_param_arrow.svg>)
 
 # anonymous arrow returning string
 
@@ -27,7 +27,7 @@ generateFunctionBody(() => {
 });
 ```
 
-![img](<./function_body/anonymous arrow returning string.svg>)
+![img](<./function_body/anonymous_arrow_returning_string.svg>)
 
 # anonymous arrow one liner object notation
 
@@ -35,7 +35,7 @@ generateFunctionBody(() => {
 generateFunctionBody(() => ({}));
 ```
 
-![img](<./function_body/anonymous arrow one liner object notation.svg>)
+![img](<./function_body/anonymous_arrow_one_liner_object_notation.svg>)
 
 # anonymous function returning a + b
 
@@ -45,7 +45,7 @@ generateFunctionBody(function (a, b) {
 });
 ```
 
-![img](<./function_body/anonymous function returning a + b.svg>)
+![img](<./function_body/anonymous_function_returning_a_+_b.svg>)
 
 # named arrow function
 
@@ -59,7 +59,7 @@ generateFunctionBody(
 );
 ```
 
-![img](<./function_body/named arrow function.svg>)
+![img](<./function_body/named_arrow_function.svg>)
 
 # named function returning a + b
 
@@ -72,7 +72,7 @@ generateFunctionBody(
 );
 ```
 
-![img](<./function_body/named function returning a + b.svg>)
+![img](<./function_body/named_function_returning_a_+_b.svg>)
 
 # getter returning 10
 
@@ -90,7 +90,7 @@ generateFunctionBody(
 );
 ```
 
-![img](<./function_body/getter returning 10.svg>)
+![img](<./function_body/getter_returning_10.svg>)
 
 # setter incrementing value
 
@@ -111,5 +111,5 @@ generateFunctionBody(
 );
 ```
 
-![img](<./function_body/setter incrementing value.svg>)
+![img](<./function_body/setter_incrementing_value.svg>)
 
