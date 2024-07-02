@@ -35,10 +35,10 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.6.5",
-    "@jsenv/urls": "2.2.3",
+    "@jsenv/filesystem": "4.6.6",
+    "@jsenv/urls": "2.2.4",
     "@jsenv/utils": "2.1.1",
-    "@jsenv/assert": "3.0.3",
+    "@jsenv/assert": "4.0.0",
     "prettier": "3.2.4"
   },
   "devDependencies": {
