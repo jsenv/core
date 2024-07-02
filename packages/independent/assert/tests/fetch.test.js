@@ -1,6 +1,6 @@
 // https://developer.mozilla.org/en-US/docs/Web/API/Request/Request
 
-import { assert } from "../src/assert_scratch.js";
+import { assert } from "@jsenv/assert";
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("fetch", ({ test }) => {

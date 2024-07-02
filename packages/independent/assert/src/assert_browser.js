@@ -1,3 +1,3 @@
-import { assert } from "./assert_scratch.js";
+import { createAssert } from "./assert_scratch.js";
 
-export { assert };
+export const assert = createAssert();

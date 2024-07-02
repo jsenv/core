@@ -17,7 +17,7 @@
  * - At runtime you cannot know if a class defines a constructor or not
  */
 
-import { assert } from "../src/assert_scratch.js";
+import { assert } from "@jsenv/assert";
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("function", ({ test }) => {

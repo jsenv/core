@@ -1,5 +1,5 @@
 /* eslint-disable accessor-pairs */
-import { assert } from "../src/assert_scratch.js";
+import { assert } from "@jsenv/assert";
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("property_descriptor", ({ test }) => {

@@ -22,7 +22,6 @@ import {
   defaultFunctionAnalysis,
 } from "./utils/tokenize_function.js";
 import { tokenizeFloat, tokenizeInteger } from "./utils/tokenize_number.js";
-import { tokenizeString } from "./utils/tokenize_string.js";
 import { tokenizeUrlSearch } from "./utils/tokenize_url_search.js";
 import { getWellKnownValuePath } from "./utils/well_known_value.js";
 import { getIsNegativeZero } from "./utils/negative_zero.js";
@@ -110,688 +109,932 @@ const defaultOptions = {
   details: "",
 };
 
-export const assert = (firstArg, ...rest) => {
-  if (firstArg === undefined) {
-    throw new TypeError(
-      `assert must be called with { actual, expect }, it was called without any argument`,
-    );
-  }
-  if (rest.length) {
-    throw new TypeError(
-      `assert must be called with { actual, expect }, it was called with too many arguments`,
-    );
-  }
-  if (firstArg === null || typeof firstArg !== "object") {
-    throw new TypeError(
-      `assert must be called with { actual, expect }, received ${firstArg} as first argument instead of object`,
-    );
-  }
-  if (!Object.hasOwn(firstArg, "actual")) {
-    throw new TypeError(
-      `assert must be called with { actual, expect }, actual is missing`,
-    );
-  }
-  if (!Object.hasOwn(firstArg, "expect")) {
-    throw new TypeError(
-      `assert must be called with { actual, expect }, expect is missing`,
-    );
-  }
-  const unexpectedParamNames = Object.keys(firstArg).filter(
-    (key) => !Object.hasOwn(defaultOptions, key),
-  );
-  if (unexpectedParamNames.length > 0) {
-    throw new TypeError(
-      `"${unexpectedParamNames.join(",")}": there is no such param`,
-    );
-  }
-  const {
-    actual,
-    expect,
-    MAX_DEPTH,
-    MAX_DEPTH_INSIDE_DIFF,
-    MAX_DIFF_INSIDE_VALUE,
-    MAX_CONTEXT_BEFORE_DIFF,
-    MAX_CONTEXT_AFTER_DIFF,
-    MAX_COLUMNS,
-    details,
-  } = {
-    ...defaultOptions,
-    ...firstArg,
-  };
-
-  const actualRootNode = createRootNode({
-    colorWhenSolo: addedColor,
-    colorWhenSame: sameColor,
-    colorWhenModified: unexpectColor,
-    name: "actual",
-    origin: "actual",
-    value: actual,
-    // otherValue: expect,
-    render: renderValue,
-  });
-  const expectRootNode = createRootNode({
-    colorWhenSolo: removedColor,
-    colorWhenSame: sameColor,
-    colorWhenModified: expectColor,
-    name: "expect",
-    origin: "expect",
-    value: expect,
-    // otherValue: actual,
-    render: renderValue,
-  });
-
-  const causeSet = new Set();
-
-  /*
-   * Comparison are objects used to compare actualNode and expectNode
-   * It is used to visit all the entry a js value can have
-   * and progressively create a tree of node and comparison
-   * as the visit progresses a diff is generated
-   * In the process an other type of object is used called *Entry
-   * The following entry exists:
-   * - ownPropertyDescriptorEntry
-   * - ownPropertySymbolEntry
-   * - indexedEntry
-   *   - array values
-   *   - typed array values
-   *   - string values
-   * - internalEntry
-   *   - url internal props
-   *   - valueOf()
-   *   - Symbol.toPrimitive()
-   *   - function body
-   *   - map keys and values
-   *   - ....
-   * Entry represent something that can be found in the js value
-   * and can be associated with one or many node (js_value)
-   * For example ownPropertyDescriptorEntry have 3 nodes:
-   *   ownPropertyNameNode
-   *   descriptorKeyNode
-   *   descriptorValueNode
-   */
-  let isNot = false;
-  let allowRecompare = false;
-  const compare = (actualNode, expectNode) => {
-    if (actualNode.ignore && actualNode.comparison) {
-      return actualNode.comparison;
-    }
-    if (expectNode.ignore && expectNode.comparison) {
-      return expectNode.comparison;
-    }
-    const reasons = createReasons();
-    const comparison = {
-      actualNode,
-      expectNode,
-      reasons,
-      done: false,
-    };
-    if (!actualNode.placeholder) {
-      actualNode.otherNode = expectNode;
-    }
-    if (!expectNode.placeholder) {
-      expectNode.otherNode = actualNode;
-    }
-
-    const onSelfDiff = (reason) => {
-      reasons.self.modified.add(reason);
-      causeSet.add(comparison);
-    };
-    const onAdded = (reason) => {
-      reasons.self.added.add(reason);
-      causeSet.add(comparison);
-    };
-    const onRemoved = (reason) => {
-      reasons.self.removed.add(reason);
-      causeSet.add(comparison);
-    };
-
-    const subcompareDuo = (
-      actualChildNode,
-      expectChildNode,
-      { revertNot, isRecomparison } = {},
-    ) => {
-      let isNotPrevious = isNot;
-      if (revertNot) {
-        isNot = !isNot;
-      }
-      if (isRecomparison) {
-        allowRecompare = true;
-      }
-      const childComparison = compare(actualChildNode, expectChildNode);
-      isNot = isNotPrevious;
-      appendReasonGroup(
-        comparison.reasons.inside,
-        childComparison.reasons.overall,
+export const createAssert = ({
+  tokenizeString = (string) => string.split(""),
+} = {}) => {
+  const assert = (firstArg, ...rest) => {
+    if (firstArg === undefined) {
+      throw new TypeError(
+        `assert must be called with { actual, expect }, it was called without any argument`,
       );
-      return childComparison;
+    }
+    if (rest.length) {
+      throw new TypeError(
+        `assert must be called with { actual, expect }, it was called with too many arguments`,
+      );
+    }
+    if (firstArg === null || typeof firstArg !== "object") {
+      throw new TypeError(
+        `assert must be called with { actual, expect }, received ${firstArg} as first argument instead of object`,
+      );
+    }
+    if (!Object.hasOwn(firstArg, "actual")) {
+      throw new TypeError(
+        `assert must be called with { actual, expect }, actual is missing`,
+      );
+    }
+    if (!Object.hasOwn(firstArg, "expect")) {
+      throw new TypeError(
+        `assert must be called with { actual, expect }, expect is missing`,
+      );
+    }
+    const unexpectedParamNames = Object.keys(firstArg).filter(
+      (key) => !Object.hasOwn(defaultOptions, key),
+    );
+    if (unexpectedParamNames.length > 0) {
+      throw new TypeError(
+        `"${unexpectedParamNames.join(",")}": there is no such param`,
+      );
+    }
+    const {
+      actual,
+      expect,
+      MAX_DEPTH,
+      MAX_DEPTH_INSIDE_DIFF,
+      MAX_DIFF_INSIDE_VALUE,
+      MAX_CONTEXT_BEFORE_DIFF,
+      MAX_CONTEXT_AFTER_DIFF,
+      MAX_COLUMNS,
+      details,
+    } = {
+      ...defaultOptions,
+      ...firstArg,
     };
-    const subcompareSolo = (childNode, placeholderNode, compareOptions) => {
-      if (childNode.name === "actual") {
-        return subcompareDuo(childNode, placeholderNode, compareOptions);
+
+    const actualRootNode = createRootNode({
+      tokenizeString,
+      colorWhenSolo: addedColor,
+      colorWhenSame: sameColor,
+      colorWhenModified: unexpectColor,
+      name: "actual",
+      origin: "actual",
+      value: actual,
+      // otherValue: expect,
+      render: renderValue,
+    });
+    const expectRootNode = createRootNode({
+      tokenizeString,
+      colorWhenSolo: removedColor,
+      colorWhenSame: sameColor,
+      colorWhenModified: expectColor,
+      name: "expect",
+      origin: "expect",
+      value: expect,
+      // otherValue: actual,
+      render: renderValue,
+    });
+
+    const causeSet = new Set();
+
+    /*
+     * Comparison are objects used to compare actualNode and expectNode
+     * It is used to visit all the entry a js value can have
+     * and progressively create a tree of node and comparison
+     * as the visit progresses a diff is generated
+     * In the process an other type of object is used called *Entry
+     * The following entry exists:
+     * - ownPropertyDescriptorEntry
+     * - ownPropertySymbolEntry
+     * - indexedEntry
+     *   - array values
+     *   - typed array values
+     *   - string values
+     * - internalEntry
+     *   - url internal props
+     *   - valueOf()
+     *   - Symbol.toPrimitive()
+     *   - function body
+     *   - map keys and values
+     *   - ....
+     * Entry represent something that can be found in the js value
+     * and can be associated with one or many node (js_value)
+     * For example ownPropertyDescriptorEntry have 3 nodes:
+     *   ownPropertyNameNode
+     *   descriptorKeyNode
+     *   descriptorValueNode
+     */
+    let isNot = false;
+    let allowRecompare = false;
+    const compare = (actualNode, expectNode) => {
+      if (actualNode.ignore && actualNode.comparison) {
+        return actualNode.comparison;
       }
-      return subcompareDuo(placeholderNode, childNode, compareOptions);
-    };
-    const subcompareChildrenDuo = (actualNode, expectNode) => {
-      const isSetEntriesComparison =
-        actualNode.subgroup === "set_entries" &&
-        expectNode.subgroup === "set_entries";
-      const childComparisonMap = new Map();
-      const childComparisonDiffMap = new Map();
-      actual_children_comparisons: {
-        const actualChildrenKeys = [];
-        let actualFirstChildWithDiffKey;
-        for (let [childKey, actualChildNode] of actualNode.childNodeMap) {
-          let expectChildNode;
-          if (isSetEntriesComparison) {
-            const actualSetValueNode = actualChildNode;
-            for (const [, expectSetValueNode] of expectNode.childNodeMap) {
-              if (expectSetValueNode.value === actualSetValueNode.value) {
-                expectChildNode = expectSetValueNode;
-                break;
-              }
-            }
-          } else {
-            expectChildNode = expectNode.childNodeMap.get(childKey);
-          }
-          if (actualChildNode && expectChildNode) {
-            const childComparison = subcompareDuo(
-              actualChildNode,
-              expectChildNode,
-            );
-            childComparisonMap.set(childKey, childComparison);
-            if (childComparison.hasAnyDiff) {
-              childComparisonDiffMap.set(childKey, childComparison);
-            }
-            if (!actualChildNode.isHidden) {
-              actualChildrenKeys.push(childKey);
-              if (
-                childComparison.hasAnyDiff &&
-                actualFirstChildWithDiffKey === undefined
-              ) {
-                actualFirstChildWithDiffKey = childKey;
-              }
-            }
-            continue;
-          }
-          const addedChildComparison = subcompareSolo(
-            actualChildNode,
-            PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
-          );
-          childComparisonMap.set(childKey, addedChildComparison);
-          childComparisonDiffMap.set(childKey, addedChildComparison);
-          if (!actualChildNode.isHidden) {
-            actualChildrenKeys.push(childKey);
-            if (actualFirstChildWithDiffKey === undefined) {
-              actualFirstChildWithDiffKey = childKey;
-            }
-          }
+      if (expectNode.ignore && expectNode.comparison) {
+        return expectNode.comparison;
+      }
+      const reasons = createReasons();
+      const comparison = {
+        actualNode,
+        expectNode,
+        reasons,
+        done: false,
+      };
+      if (!actualNode.placeholder) {
+        actualNode.otherNode = expectNode;
+      }
+      if (!expectNode.placeholder) {
+        expectNode.otherNode = actualNode;
+      }
+
+      const onSelfDiff = (reason) => {
+        reasons.self.modified.add(reason);
+        causeSet.add(comparison);
+      };
+      const onAdded = (reason) => {
+        reasons.self.added.add(reason);
+        causeSet.add(comparison);
+      };
+      const onRemoved = (reason) => {
+        reasons.self.removed.add(reason);
+        causeSet.add(comparison);
+      };
+
+      const subcompareDuo = (
+        actualChildNode,
+        expectChildNode,
+        { revertNot, isRecomparison } = {},
+      ) => {
+        let isNotPrevious = isNot;
+        if (revertNot) {
+          isNot = !isNot;
         }
-        actualNode.childrenKeys = actualChildrenKeys;
-        actualNode.firstChildWithDiffKey = actualFirstChildWithDiffKey;
-      }
-      expect_children_comparisons: {
-        const expectChildrenKeys = [];
-        let expectFirstChildWithDiffKey;
-        for (let [childKey, expectChildNode] of expectNode.childNodeMap) {
-          if (isSetEntriesComparison) {
-            const expectSetValueNode = expectChildNode;
-            let hasEntry;
-            for (const [, actualSetValueNode] of actualNode.childNodeMap) {
-              if (actualSetValueNode.value === expectSetValueNode.value) {
-                hasEntry = true;
-                break;
+        if (isRecomparison) {
+          allowRecompare = true;
+        }
+        const childComparison = compare(actualChildNode, expectChildNode);
+        isNot = isNotPrevious;
+        appendReasonGroup(
+          comparison.reasons.inside,
+          childComparison.reasons.overall,
+        );
+        return childComparison;
+      };
+      const subcompareSolo = (childNode, placeholderNode, compareOptions) => {
+        if (childNode.name === "actual") {
+          return subcompareDuo(childNode, placeholderNode, compareOptions);
+        }
+        return subcompareDuo(placeholderNode, childNode, compareOptions);
+      };
+      const subcompareChildrenDuo = (actualNode, expectNode) => {
+        const isSetEntriesComparison =
+          actualNode.subgroup === "set_entries" &&
+          expectNode.subgroup === "set_entries";
+        const childComparisonMap = new Map();
+        const childComparisonDiffMap = new Map();
+        actual_children_comparisons: {
+          const actualChildrenKeys = [];
+          let actualFirstChildWithDiffKey;
+          for (let [childKey, actualChildNode] of actualNode.childNodeMap) {
+            let expectChildNode;
+            if (isSetEntriesComparison) {
+              const actualSetValueNode = actualChildNode;
+              for (const [, expectSetValueNode] of expectNode.childNodeMap) {
+                if (expectSetValueNode.value === actualSetValueNode.value) {
+                  expectChildNode = expectSetValueNode;
+                  break;
+                }
               }
+            } else {
+              expectChildNode = expectNode.childNodeMap.get(childKey);
             }
-            if (hasEntry) {
-              if (!expectChildNode.isHidden) {
-                expectChildrenKeys.push(childKey);
+            if (actualChildNode && expectChildNode) {
+              const childComparison = subcompareDuo(
+                actualChildNode,
+                expectChildNode,
+              );
+              childComparisonMap.set(childKey, childComparison);
+              if (childComparison.hasAnyDiff) {
+                childComparisonDiffMap.set(childKey, childComparison);
               }
-              continue;
-            }
-          } else {
-            const childComparison = childComparisonMap.get(childKey);
-            if (childComparison) {
-              if (!expectChildNode.isHidden) {
-                expectChildrenKeys.push(childKey);
+              if (!actualChildNode.isHidden) {
+                actualChildrenKeys.push(childKey);
                 if (
                   childComparison.hasAnyDiff &&
-                  expectFirstChildWithDiffKey === undefined
+                  actualFirstChildWithDiffKey === undefined
                 ) {
-                  expectFirstChildWithDiffKey = childKey;
+                  actualFirstChildWithDiffKey = childKey;
                 }
               }
               continue;
             }
+            const addedChildComparison = subcompareSolo(
+              actualChildNode,
+              PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+            );
+            childComparisonMap.set(childKey, addedChildComparison);
+            childComparisonDiffMap.set(childKey, addedChildComparison);
+            if (!actualChildNode.isHidden) {
+              actualChildrenKeys.push(childKey);
+              if (actualFirstChildWithDiffKey === undefined) {
+                actualFirstChildWithDiffKey = childKey;
+              }
+            }
           }
-          const removedChildComparison = subcompareSolo(
-            expectChildNode,
-            PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+          actualNode.childrenKeys = actualChildrenKeys;
+          actualNode.firstChildWithDiffKey = actualFirstChildWithDiffKey;
+        }
+        expect_children_comparisons: {
+          const expectChildrenKeys = [];
+          let expectFirstChildWithDiffKey;
+          for (let [childKey, expectChildNode] of expectNode.childNodeMap) {
+            if (isSetEntriesComparison) {
+              const expectSetValueNode = expectChildNode;
+              let hasEntry;
+              for (const [, actualSetValueNode] of actualNode.childNodeMap) {
+                if (actualSetValueNode.value === expectSetValueNode.value) {
+                  hasEntry = true;
+                  break;
+                }
+              }
+              if (hasEntry) {
+                if (!expectChildNode.isHidden) {
+                  expectChildrenKeys.push(childKey);
+                }
+                continue;
+              }
+            } else {
+              const childComparison = childComparisonMap.get(childKey);
+              if (childComparison) {
+                if (!expectChildNode.isHidden) {
+                  expectChildrenKeys.push(childKey);
+                  if (
+                    childComparison.hasAnyDiff &&
+                    expectFirstChildWithDiffKey === undefined
+                  ) {
+                    expectFirstChildWithDiffKey = childKey;
+                  }
+                }
+                continue;
+              }
+            }
+            const removedChildComparison = subcompareSolo(
+              expectChildNode,
+              PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
+            );
+            childComparisonMap.set(childKey, removedChildComparison);
+            childComparisonDiffMap.set(childKey, removedChildComparison);
+            if (!expectChildNode.isHidden) {
+              expectChildrenKeys.push(childKey);
+              if (expectFirstChildWithDiffKey === undefined) {
+                expectFirstChildWithDiffKey = childKey;
+              }
+            }
+          }
+          expectNode.childrenKeys = expectChildrenKeys;
+          expectNode.firstChildWithDiffKey = expectFirstChildWithDiffKey;
+        }
+        actualNode.childComparisonDiffMap = childComparisonDiffMap;
+        expectNode.childComparisonDiffMap = childComparisonDiffMap;
+      };
+      const subcompareChildrenSolo = (node, placeholderNode) => {
+        const childComparisonDiffMap = new Map();
+        const childrenKeys = [];
+        let firstChildWithDiffKey;
+        for (const [childKey, childNode] of node.childNodeMap) {
+          const soloChildComparison = subcompareSolo(
+            childNode,
+            placeholderNode,
           );
-          childComparisonMap.set(childKey, removedChildComparison);
-          childComparisonDiffMap.set(childKey, removedChildComparison);
-          if (!expectChildNode.isHidden) {
-            expectChildrenKeys.push(childKey);
-            if (expectFirstChildWithDiffKey === undefined) {
-              expectFirstChildWithDiffKey = childKey;
+          if (placeholderNode !== PLACEHOLDER_FOR_SAME) {
+            childComparisonDiffMap.set(childKey, soloChildComparison);
+          }
+          if (!childNode.isHidden) {
+            childrenKeys.push(childKey);
+            if (
+              placeholderNode !== PLACEHOLDER_FOR_SAME &&
+              firstChildWithDiffKey === undefined
+            ) {
+              firstChildWithDiffKey = childKey;
             }
           }
         }
-        expectNode.childrenKeys = expectChildrenKeys;
-        expectNode.firstChildWithDiffKey = expectFirstChildWithDiffKey;
-      }
-      actualNode.childComparisonDiffMap = childComparisonDiffMap;
-      expectNode.childComparisonDiffMap = childComparisonDiffMap;
-    };
-    const subcompareChildrenSolo = (node, placeholderNode) => {
-      const childComparisonDiffMap = new Map();
-      const childrenKeys = [];
-      let firstChildWithDiffKey;
-      for (const [childKey, childNode] of node.childNodeMap) {
-        const soloChildComparison = subcompareSolo(childNode, placeholderNode);
-        if (placeholderNode !== PLACEHOLDER_FOR_SAME) {
-          childComparisonDiffMap.set(childKey, soloChildComparison);
-        }
-        if (!childNode.isHidden) {
-          childrenKeys.push(childKey);
-          if (
-            placeholderNode !== PLACEHOLDER_FOR_SAME &&
-            firstChildWithDiffKey === undefined
-          ) {
-            firstChildWithDiffKey = childKey;
-          }
-        }
-      }
-      node.childrenKeys = childrenKeys;
-      node.firstChildWithDiffKey = firstChildWithDiffKey;
-      node.childComparisonDiffMap = childComparisonDiffMap;
-    };
+        node.childrenKeys = childrenKeys;
+        node.firstChildWithDiffKey = firstChildWithDiffKey;
+        node.childComparisonDiffMap = childComparisonDiffMap;
+      };
 
-    const visitDuo = (actualNode, expectNode) => {
-      if (actualNode.comparison && !allowRecompare) {
-        throw new Error(`actualNode (${actualNode.subgroup}) already compared`);
-      }
-      actualNode.comparison = comparison;
-      if (expectNode.comparison && !allowRecompare) {
-        throw new Error(`expectNode (${expectNode.subgroup}) already compared`);
-      }
-      expectNode.comparison = comparison;
-      const { result, reason, propagate } = comparerDefault(
-        actualNode,
-        expectNode,
-      );
-      if (result === "failure") {
-        onSelfDiff(reason);
-        if (propagate) {
-          subcompareChildrenSolo(actualNode, propagate);
-          subcompareChildrenSolo(expectNode, propagate);
+      const visitDuo = (actualNode, expectNode) => {
+        if (actualNode.comparison && !allowRecompare) {
+          throw new Error(
+            `actualNode (${actualNode.subgroup}) already compared`,
+          );
+        }
+        actualNode.comparison = comparison;
+        if (expectNode.comparison && !allowRecompare) {
+          throw new Error(
+            `expectNode (${expectNode.subgroup}) already compared`,
+          );
+        }
+        expectNode.comparison = comparison;
+        const { result, reason, propagate } = comparerDefault(
+          actualNode,
+          expectNode,
+        );
+        if (result === "failure") {
+          onSelfDiff(reason);
+          if (propagate) {
+            subcompareChildrenSolo(actualNode, propagate);
+            subcompareChildrenSolo(expectNode, propagate);
+            return;
+          }
+          subcompareChildrenDuo(actualNode, expectNode);
+          return;
+        }
+        if (result === "success") {
+          if (propagate) {
+            const actualRender = actualNode.render;
+            const expectRender = expectNode.render;
+            actualNode.render = (props) => {
+              actualNode.render = actualRender;
+              // expectNode.render = expectRender;
+              subcompareChildrenSolo(actualNode, PLACEHOLDER_FOR_SAME);
+              return actualRender(props);
+            };
+            expectNode.render = (props) => {
+              // actualNode.render = actualRender;
+              expectNode.render = expectRender;
+              subcompareChildrenSolo(expectNode, PLACEHOLDER_FOR_SAME);
+              return expectRender(props);
+            };
+            if (actualNode.isHiddenWhenSame) {
+              actualNode.isHidden = true;
+            }
+            if (expectNode.isHiddenWhenSame) {
+              expectNode.isHidden = true;
+            }
+            return;
+          }
+          subcompareChildrenDuo(actualNode, expectNode);
           return;
         }
         subcompareChildrenDuo(actualNode, expectNode);
-        return;
-      }
-      if (result === "success") {
-        if (propagate) {
-          const actualRender = actualNode.render;
-          const expectRender = expectNode.render;
-          actualNode.render = (props) => {
-            actualNode.render = actualRender;
-            // expectNode.render = expectRender;
-            subcompareChildrenSolo(actualNode, PLACEHOLDER_FOR_SAME);
-            return actualRender(props);
-          };
-          expectNode.render = (props) => {
-            // actualNode.render = actualRender;
-            expectNode.render = expectRender;
-            subcompareChildrenSolo(expectNode, PLACEHOLDER_FOR_SAME);
-            return expectRender(props);
-          };
-          if (actualNode.isHiddenWhenSame) {
-            actualNode.isHidden = true;
-          }
-          if (expectNode.isHiddenWhenSame) {
-            expectNode.isHidden = true;
-          }
-          return;
-        }
-        subcompareChildrenDuo(actualNode, expectNode);
-        return;
-      }
-      subcompareChildrenDuo(actualNode, expectNode);
-      if (
-        // is root comparison between numbers?
-        actualNode.subgroup === "number_composition" &&
-        actualNode.parent.parent === null &&
-        expectNode.parent.parent === null
-      ) {
-        const actualIntegerNode = actualNode.childNodeMap.get("integer");
-        const expectIntegerNode = expectNode.childNodeMap.get("integer");
-        if (actualIntegerNode && expectIntegerNode) {
-          if (actualNode.parent.isInfinity === expectNode.parent.isInfinity) {
-            const actualSignNode = actualNode.childNodeMap.get("sign");
-            const expectSignNode = expectNode.childNodeMap.get("sign");
-            let actualWidth = actualIntegerNode.value.length;
-            let expectWidth = expectIntegerNode.value.length;
-            if (actualSignNode) {
-              actualWidth += "-".length;
-            }
-            if (expectSignNode) {
-              expectWidth += "-".length;
-            }
-            const diff = Math.abs(expectWidth - actualWidth);
-            if (diff < 10) {
-              if (actualWidth < expectWidth) {
-                actualNode.startMarker = " ".repeat(expectWidth - actualWidth);
-              } else if (actualWidth > expectWidth) {
-                expectNode.startMarker = " ".repeat(actualWidth - expectWidth);
+        if (
+          // is root comparison between numbers?
+          actualNode.subgroup === "number_composition" &&
+          actualNode.parent.parent === null &&
+          expectNode.parent.parent === null
+        ) {
+          const actualIntegerNode = actualNode.childNodeMap.get("integer");
+          const expectIntegerNode = expectNode.childNodeMap.get("integer");
+          if (actualIntegerNode && expectIntegerNode) {
+            if (actualNode.parent.isInfinity === expectNode.parent.isInfinity) {
+              const actualSignNode = actualNode.childNodeMap.get("sign");
+              const expectSignNode = expectNode.childNodeMap.get("sign");
+              let actualWidth = actualIntegerNode.value.length;
+              let expectWidth = expectIntegerNode.value.length;
+              if (actualSignNode) {
+                actualWidth += "-".length;
+              }
+              if (expectSignNode) {
+                expectWidth += "-".length;
+              }
+              const diff = Math.abs(expectWidth - actualWidth);
+              if (diff < 10) {
+                if (actualWidth < expectWidth) {
+                  actualNode.startMarker = " ".repeat(
+                    expectWidth - actualWidth,
+                  );
+                } else if (actualWidth > expectWidth) {
+                  expectNode.startMarker = " ".repeat(
+                    actualWidth - expectWidth,
+                  );
+                }
               }
             }
           }
         }
-      }
-    };
-    const visitSolo = (node, placeholderNode) => {
-      if (node.comparison && !allowRecompare) {
-        throw new Error(`node (${node.subgroup}) already compared`);
-      }
-      node.comparison = comparison;
-      if (node.isHiddenWhenSolo) {
-        node.isHidden = true;
-      }
-      subcompareChildrenSolo(node, placeholderNode);
-    };
+      };
+      const visitSolo = (node, placeholderNode) => {
+        if (node.comparison && !allowRecompare) {
+          throw new Error(`node (${node.subgroup}) already compared`);
+        }
+        node.comparison = comparison;
+        if (node.isHiddenWhenSolo) {
+          node.isHidden = true;
+        }
+        subcompareChildrenSolo(node, placeholderNode);
+      };
 
-    visit: {
-      // custom comparison
-      if (
-        expectNode.customCompare &&
-        (actualNode.category === "primitive" ||
-          actualNode.category === "composite")
-      ) {
-        expectNode.customCompare(actualNode, expectNode, {
-          subcompareChildrenDuo,
-          subcompareChildrenSolo,
-          subcompareDuo,
-          subcompareSolo,
-          onSelfDiff,
-        });
-        break visit;
-      }
-      if (actualNode.category === expectNode.category) {
-        visitDuo(actualNode, expectNode);
-        break visit;
-      }
-      // not found in expect (added or expect cannot have this type of value)
-      if (
-        actualNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
-        actualNode === PLACEHOLDER_FOR_NOTHING
-      ) {
-        visitSolo(expectNode, actualNode);
-        onRemoved(getAddedOrRemovedReason(expectNode));
-        break visit;
-      }
-      // not found in actual (removed or actual cannot have this type of value)
-      if (
-        expectNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
-        expectNode === PLACEHOLDER_FOR_NOTHING
-      ) {
-        visitSolo(actualNode, expectNode);
-        onAdded(getAddedOrRemovedReason(actualNode));
-        break visit;
-      }
-      // force actual to be same/modified
-      if (
-        actualNode === PLACEHOLDER_FOR_SAME ||
-        actualNode === PLACEHOLDER_FOR_MODIFIED
-      ) {
-        visitSolo(expectNode, actualNode);
-        break visit;
-      }
-      // force expect to be same/modified
-      if (
-        expectNode === PLACEHOLDER_FOR_SAME ||
-        expectNode === PLACEHOLDER_FOR_MODIFIED
-      ) {
-        visitSolo(actualNode, expectNode);
-        break visit;
-      }
-
-      // not same category
-      onSelfDiff(`should_be_${expect.category}`);
-      // primitive expect
-      if (
-        expectNode.category === "primitive" &&
-        actualNode.category === "composite"
-      ) {
-        const actualAsPrimitiveNode = asPrimitiveNode(actualNode);
-        if (actualAsPrimitiveNode) {
-          subcompareDuo(actualAsPrimitiveNode, expectNode);
-          actualAsPrimitiveNode.ignore = true;
-          visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
+      visit: {
+        // custom comparison
+        if (
+          expectNode.customCompare &&
+          (actualNode.category === "primitive" ||
+            actualNode.category === "composite")
+        ) {
+          expectNode.customCompare(actualNode, expectNode, {
+            subcompareChildrenDuo,
+            subcompareChildrenSolo,
+            subcompareDuo,
+            subcompareSolo,
+            onSelfDiff,
+          });
           break visit;
         }
-      }
-      // composite expect
-      else if (
-        expectNode.category === "composite" &&
-        actualNode.category === "primitive"
-      ) {
-        const expectAsPrimitiveNode = asPrimitiveNode(expectNode);
-        if (expectAsPrimitiveNode) {
-          subcompareDuo(actualNode, expectAsPrimitiveNode);
-          expectAsPrimitiveNode.ignore = true;
-          visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
+        if (actualNode.category === expectNode.category) {
+          visitDuo(actualNode, expectNode);
           break visit;
         }
-      }
-      visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
-      visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
-    }
+        // not found in expect (added or expect cannot have this type of value)
+        if (
+          actualNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
+          actualNode === PLACEHOLDER_FOR_NOTHING
+        ) {
+          visitSolo(expectNode, actualNode);
+          onRemoved(getAddedOrRemovedReason(expectNode));
+          break visit;
+        }
+        // not found in actual (removed or actual cannot have this type of value)
+        if (
+          expectNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
+          expectNode === PLACEHOLDER_FOR_NOTHING
+        ) {
+          visitSolo(actualNode, expectNode);
+          onAdded(getAddedOrRemovedReason(actualNode));
+          break visit;
+        }
+        // force actual to be same/modified
+        if (
+          actualNode === PLACEHOLDER_FOR_SAME ||
+          actualNode === PLACEHOLDER_FOR_MODIFIED
+        ) {
+          visitSolo(expectNode, actualNode);
+          break visit;
+        }
+        // force expect to be same/modified
+        if (
+          expectNode === PLACEHOLDER_FOR_SAME ||
+          expectNode === PLACEHOLDER_FOR_MODIFIED
+        ) {
+          visitSolo(actualNode, expectNode);
+          break visit;
+        }
 
-    const { self, inside, overall } = comparison.reasons;
-    appendReasons(self.any, self.modified, self.removed, self.added);
-    appendReasons(inside.any, inside.modified, inside.removed, inside.added);
-    appendReasons(overall.removed, self.removed, inside.removed);
-    appendReasons(overall.added, self.added, inside.added);
-    appendReasons(overall.modified, self.modified, inside.modified);
-    appendReasons(overall.any, self.any, inside.any);
-    comparison.selfHasRemoval = self.removed.size > 0;
-    comparison.selfHasAddition = self.added.size > 0;
-    comparison.selfHasModification = self.modified.size > 0;
-    comparison.hasAnyDiff = overall.any.size > 0;
-    comparison.done = true;
+        // not same category
+        onSelfDiff(`should_be_${expect.category}`);
+        // primitive expect
+        if (
+          expectNode.category === "primitive" &&
+          actualNode.category === "composite"
+        ) {
+          const actualAsPrimitiveNode = asPrimitiveNode(actualNode);
+          if (actualAsPrimitiveNode) {
+            subcompareDuo(actualAsPrimitiveNode, expectNode);
+            actualAsPrimitiveNode.ignore = true;
+            visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
+            break visit;
+          }
+        }
+        // composite expect
+        else if (
+          expectNode.category === "composite" &&
+          actualNode.category === "primitive"
+        ) {
+          const expectAsPrimitiveNode = asPrimitiveNode(expectNode);
+          if (expectAsPrimitiveNode) {
+            subcompareDuo(actualNode, expectAsPrimitiveNode);
+            expectAsPrimitiveNode.ignore = true;
+            visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
+            break visit;
+          }
+        }
+        visitSolo(actualNode, PLACEHOLDER_FOR_NOTHING);
+        visitSolo(expectNode, PLACEHOLDER_FOR_NOTHING);
+      }
 
-    const updateNodeDiffType = (node, otherNode) => {
-      if (node.diffType !== "") {
-        return;
-      }
-      let diffType = "";
-      if (otherNode === PLACEHOLDER_FOR_NOTHING) {
-        diffType = "modified";
-      } else if (otherNode === PLACEHOLDER_FOR_MODIFIED) {
-        diffType = "modified";
-      } else if (otherNode === PLACEHOLDER_FOR_SAME) {
-        diffType = "same";
-      } else if (otherNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
-        diffType = "solo";
-      } else if (comparison.selfHasModification) {
-        diffType = "modified";
-      } else {
-        diffType = "same";
-      }
-      node.diffType = diffType;
-      if (isNot) {
-        node.color = node.colorWhenSame;
-      } else {
-        node.color = {
-          solo: node.colorWhenSolo,
-          modified: node.colorWhenModified,
-          same: node.colorWhenSame,
-        }[diffType];
-      }
-    };
-    updateNodeDiffType(actualNode, expectNode);
-    updateNodeDiffType(expectNode, actualNode);
+      const { self, inside, overall } = comparison.reasons;
+      appendReasons(self.any, self.modified, self.removed, self.added);
+      appendReasons(inside.any, inside.modified, inside.removed, inside.added);
+      appendReasons(overall.removed, self.removed, inside.removed);
+      appendReasons(overall.added, self.added, inside.added);
+      appendReasons(overall.modified, self.modified, inside.modified);
+      appendReasons(overall.any, self.any, inside.any);
+      comparison.selfHasRemoval = self.removed.size > 0;
+      comparison.selfHasAddition = self.added.size > 0;
+      comparison.selfHasModification = self.modified.size > 0;
+      comparison.hasAnyDiff = overall.any.size > 0;
+      comparison.done = true;
 
-    if (comparison.reasons.overall.any.size === 0) {
-      if (actualNode.isHiddenWhenSame) {
-        actualNode.isHidden = true;
+      const updateNodeDiffType = (node, otherNode) => {
+        if (node.diffType !== "") {
+          return;
+        }
+        let diffType = "";
+        if (otherNode === PLACEHOLDER_FOR_NOTHING) {
+          diffType = "modified";
+        } else if (otherNode === PLACEHOLDER_FOR_MODIFIED) {
+          diffType = "modified";
+        } else if (otherNode === PLACEHOLDER_FOR_SAME) {
+          diffType = "same";
+        } else if (otherNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED) {
+          diffType = "solo";
+        } else if (comparison.selfHasModification) {
+          diffType = "modified";
+        } else {
+          diffType = "same";
+        }
+        node.diffType = diffType;
+        if (isNot) {
+          node.color = node.colorWhenSame;
+        } else {
+          node.color = {
+            solo: node.colorWhenSolo,
+            modified: node.colorWhenModified,
+            same: node.colorWhenSame,
+          }[diffType];
+        }
+      };
+      updateNodeDiffType(actualNode, expectNode);
+      updateNodeDiffType(expectNode, actualNode);
+
+      if (comparison.reasons.overall.any.size === 0) {
+        if (actualNode.isHiddenWhenSame) {
+          actualNode.isHidden = true;
+        }
+        if (expectNode.isHiddenWhenSame) {
+          expectNode.isHidden = true;
+        }
       }
-      if (expectNode.isHiddenWhenSame) {
-        expectNode.isHidden = true;
+      if (
+        actualNode.subgroup === "line_entries" &&
+        expectNode.subgroup === "line_entries"
+      ) {
+        const actualIsMultiline = actualNode.childNodeMap.size > 1;
+        const expectIsMultiline = expectNode.childNodeMap.size > 1;
+        if (actualIsMultiline && !expectIsMultiline) {
+          enableMultilineDiff(expectNode);
+        } else if (!actualIsMultiline && expectIsMultiline) {
+          enableMultilineDiff(actualNode);
+        } else if (!actualIsMultiline && !expectIsMultiline) {
+          forceSameQuotes(actualNode, expectNode);
+        }
       }
-    }
-    if (
-      actualNode.subgroup === "line_entries" &&
-      expectNode.subgroup === "line_entries"
-    ) {
-      const actualIsMultiline = actualNode.childNodeMap.size > 1;
-      const expectIsMultiline = expectNode.childNodeMap.size > 1;
-      if (actualIsMultiline && !expectIsMultiline) {
-        enableMultilineDiff(expectNode);
-      } else if (!actualIsMultiline && expectIsMultiline) {
-        enableMultilineDiff(actualNode);
-      } else if (!actualIsMultiline && !expectIsMultiline) {
+      if (
+        actualNode.subgroup === "url_parts" &&
+        expectNode.subgroup === "url_parts"
+      ) {
         forceSameQuotes(actualNode, expectNode);
       }
+
+      return comparison;
+    };
+
+    const rootComparison = compare(actualRootNode, expectRootNode);
+    if (!rootComparison.hasAnyDiff) {
+      return;
     }
-    if (
-      actualNode.subgroup === "url_parts" &&
-      expectNode.subgroup === "url_parts"
-    ) {
-      forceSameQuotes(actualNode, expectNode);
-    }
 
-    return comparison;
-  };
+    let diff = ``;
+    const infos = [];
 
-  const rootComparison = compare(actualRootNode, expectRootNode);
-  if (!rootComparison.hasAnyDiff) {
-    return;
-  }
-
-  let diff = ``;
-  const infos = [];
-
-  let actualStartNode;
-  let expectStartNode;
-  start_on_max_depth: {
-    if (rootComparison.selfHasModification) {
-      actualStartNode = actualRootNode;
-      expectStartNode = expectRootNode;
-      break start_on_max_depth;
-    }
-    const getStartNode = (rootNode) => {
-      let topMostNodeWithDiff = null;
-      for (const comparisonWithDiff of causeSet) {
-        const node =
-          comparisonWithDiff[
-            rootNode.name === "actual" ? "actualNode" : "expectNode"
-          ];
-        if (!topMostNodeWithDiff || node.depth < topMostNodeWithDiff.depth) {
-          topMostNodeWithDiff = node;
+    let actualStartNode;
+    let expectStartNode;
+    start_on_max_depth: {
+      if (rootComparison.selfHasModification) {
+        actualStartNode = actualRootNode;
+        expectStartNode = expectRootNode;
+        break start_on_max_depth;
+      }
+      const getStartNode = (rootNode) => {
+        let topMostNodeWithDiff = null;
+        for (const comparisonWithDiff of causeSet) {
+          const node =
+            comparisonWithDiff[
+              rootNode.name === "actual" ? "actualNode" : "expectNode"
+            ];
+          if (!topMostNodeWithDiff || node.depth < topMostNodeWithDiff.depth) {
+            topMostNodeWithDiff = node;
+          }
         }
-      }
-      if (topMostNodeWithDiff.depth < MAX_DEPTH) {
-        return rootNode;
-      }
-      let currentNode = topMostNodeWithDiff;
-      let startDepth = topMostNodeWithDiff.depth - MAX_DEPTH;
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const parentNode = currentNode.parent;
-        if (!parentNode) {
+        if (topMostNodeWithDiff.depth < MAX_DEPTH) {
           return rootNode;
         }
-        if (!parentNode.isContainer && parentNode.depth === startDepth) {
-          return parentNode;
+        let currentNode = topMostNodeWithDiff;
+        let startDepth = topMostNodeWithDiff.depth - MAX_DEPTH;
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const parentNode = currentNode.parent;
+          if (!parentNode) {
+            return rootNode;
+          }
+          if (!parentNode.isContainer && parentNode.depth === startDepth) {
+            return parentNode;
+          }
+          currentNode = parentNode;
         }
-        currentNode = parentNode;
+      };
+      actualStartNode = getStartNode(actualRootNode);
+      expectStartNode = getStartNode(expectRootNode);
+      if (
+        actualStartNode !== actualRootNode &&
+        expectStartNode !== expectRootNode
+      ) {
+        const actualStartNodePath = actualStartNode.path.toString();
+        const expectStartNodePath = expectStartNode.path.toString();
+        if (actualStartNodePath === expectStartNodePath) {
+          infos.push(
+            `diff starts at ${ANSI.color(actualStartNodePath, ANSI.YELLOW)}`,
+          );
+        } else {
+          infos.push(
+            `actual diff starts at ${ANSI.color(actualStartNodePath, ANSI.YELLOW)}`,
+          );
+          infos.push(
+            `expect diff starts at ${ANSI.color(expectStartNodePath, ANSI.YELLOW)}`,
+          );
+        }
+      } else if (actualStartNode !== actualRootNode) {
+        infos.push(
+          `actual diff starts at ${ANSI.color(actualStartNode.path, ANSI.YELLOW)}`,
+        );
+      } else if (expectStartNode !== expectRootNode) {
+        infos.push(
+          `expect diff starts at ${ANSI.color(expectStartNode.path, ANSI.YELLOW)}`,
+        );
       }
-    };
-    actualStartNode = getStartNode(actualRootNode);
-    expectStartNode = getStartNode(expectRootNode);
-    if (
-      actualStartNode !== actualRootNode &&
-      expectStartNode !== expectRootNode
-    ) {
-      const actualStartNodePath = actualStartNode.path.toString();
-      const expectStartNodePath = expectStartNode.path.toString();
-      if (actualStartNodePath === expectStartNodePath) {
-        infos.push(
-          `diff starts at ${ANSI.color(actualStartNodePath, ANSI.YELLOW)}`,
-        );
-      } else {
-        infos.push(
-          `actual diff starts at ${ANSI.color(actualStartNodePath, ANSI.YELLOW)}`,
-        );
-        infos.push(
-          `expect diff starts at ${ANSI.color(expectStartNodePath, ANSI.YELLOW)}`,
-        );
-      }
-    } else if (actualStartNode !== actualRootNode) {
-      infos.push(
-        `actual diff starts at ${ANSI.color(actualStartNode.path, ANSI.YELLOW)}`,
-      );
-    } else if (expectStartNode !== expectRootNode) {
-      infos.push(
-        `expect diff starts at ${ANSI.color(expectStartNode.path, ANSI.YELLOW)}`,
-      );
     }
-  }
 
-  if (infos.length) {
-    for (const info of infos) {
-      diff += `${UNICODE.INFO} ${info}`;
+    if (infos.length) {
+      for (const info of infos) {
+        diff += `${UNICODE.INFO} ${info}`;
+        diff += "\n";
+      }
       diff += "\n";
     }
     diff += "\n";
-  }
-  diff += "\n";
-  diff += ANSI.color("actual:", sameColor);
-  diff += " ";
-  diff += actualStartNode.render({
-    MAX_DEPTH,
-    MAX_DEPTH_INSIDE_DIFF,
-    MAX_DIFF_INSIDE_VALUE,
-    MAX_CONTEXT_BEFORE_DIFF,
-    MAX_CONTEXT_AFTER_DIFF,
-    MAX_COLUMNS,
-    columnsRemaining: MAX_COLUMNS - "actual: ".length,
-    startNode: actualStartNode,
-  });
-  diff += `\n`;
-  diff += ANSI.color("expect:", sameColor);
-  diff += " ";
-  diff += expectStartNode.render({
-    MAX_DEPTH,
-    MAX_DEPTH_INSIDE_DIFF,
-    MAX_DIFF_INSIDE_VALUE,
-    MAX_CONTEXT_BEFORE_DIFF,
-    MAX_CONTEXT_AFTER_DIFF,
-    MAX_COLUMNS,
-    columnsRemaining: MAX_COLUMNS - "expect: ".length,
-    startNode: expectStartNode,
-  });
-  if (details) {
-    diff += "\n";
-    diff += `--- details ---`;
-    diff += JSON.stringify(details);
-    diff += `---------------`;
-  }
-  throw assert.createAssertionError(diff);
-};
-
-assert.createAssertionError = (message) => {
-  const error = new Error(message);
-  error.name = "AssertionError";
-  return error;
-};
-assert.isAssertionError = (value) => {
-  if (!value) return false;
-  if (typeof value !== "object") return false;
-  if (value.name === "AssertionError") return true;
-  if (value.name.includes("AssertionError")) return true;
-  return false;
+    diff += ANSI.color("actual:", sameColor);
+    diff += " ";
+    diff += actualStartNode.render({
+      MAX_DEPTH,
+      MAX_DEPTH_INSIDE_DIFF,
+      MAX_DIFF_INSIDE_VALUE,
+      MAX_CONTEXT_BEFORE_DIFF,
+      MAX_CONTEXT_AFTER_DIFF,
+      MAX_COLUMNS,
+      columnsRemaining: MAX_COLUMNS - "actual: ".length,
+      startNode: actualStartNode,
+    });
+    diff += `\n`;
+    diff += ANSI.color("expect:", sameColor);
+    diff += " ";
+    diff += expectStartNode.render({
+      MAX_DEPTH,
+      MAX_DEPTH_INSIDE_DIFF,
+      MAX_DIFF_INSIDE_VALUE,
+      MAX_CONTEXT_BEFORE_DIFF,
+      MAX_CONTEXT_AFTER_DIFF,
+      MAX_COLUMNS,
+      columnsRemaining: MAX_COLUMNS - "expect: ".length,
+      startNode: expectStartNode,
+    });
+    if (details) {
+      diff += "\n";
+      diff += `--- details ---`;
+      diff += JSON.stringify(details);
+      diff += `---------------`;
+    }
+    throw assert.createAssertionError(diff);
+  };
+  assert.createAssertionError = (message) => {
+    const error = new Error(message);
+    error.name = "AssertionError";
+    return error;
+  };
+  assert.isAssertionError = (value) => {
+    if (!value) return false;
+    if (typeof value !== "object") return false;
+    if (value.name === "AssertionError") return true;
+    if (value.name.includes("AssertionError")) return true;
+    return false;
+  };
+  assert.belowOrEquals = (value, options) => {
+    if (typeof value !== "number") {
+      throw new TypeError(
+        `assert.belowOrEquals 1st argument must be number, received ${value}`,
+      );
+    }
+    return createAssertMethodCustomExpectation(
+      "belowOrEquals",
+      [
+        {
+          value,
+          customCompare: createValueCustomCompare((actualNode) => {
+            if (!actualNode.isNumber) {
+              return "should_be_a_number";
+            }
+            if (actualNode.value > value) {
+              return `should_be_below_or_equals_to_${value}`;
+            }
+            return null;
+          }),
+        },
+      ],
+      options,
+    );
+  };
+  assert.aboveOrEquals = (value, options) => {
+    if (typeof value !== "number") {
+      throw new TypeError(
+        `assert.aboveOrEquals 1st argument must be number, received ${value}`,
+      );
+    }
+    return createAssertMethodCustomExpectation(
+      "aboveOrEquals",
+      [
+        {
+          value,
+          customCompare: createValueCustomCompare((actualNode) => {
+            if (!actualNode.isNumber) {
+              return "should_be_a_number";
+            }
+            if (actualNode.value < value) {
+              return `should_be_greater_or_equals_to_${value}`;
+            }
+            return null;
+          }),
+        },
+      ],
+      options,
+    );
+  };
+  assert.between = (minValue, maxValue) => {
+    if (typeof minValue !== "number") {
+      throw new TypeError(
+        `assert.between 1st argument must be number, received ${minValue}`,
+      );
+    }
+    if (typeof maxValue !== "number") {
+      throw new TypeError(
+        `assert.between 2nd argument must be number, received ${maxValue}`,
+      );
+    }
+    if (minValue > maxValue) {
+      throw new Error(
+        `assert.between 1st argument is > 2nd argument, ${minValue} > ${maxValue}`,
+      );
+    }
+    return createAssertMethodCustomExpectation("between", [
+      {
+        value: assert.aboveOrEquals(minValue, {
+          renderOnlyArgs: true,
+        }),
+      },
+      {
+        value: assert.belowOrEquals(maxValue, {
+          renderOnlyArgs: true,
+          isRecomparison: true,
+        }),
+      },
+    ]);
+  };
+  assert.not = (value) => {
+    return createAssertMethodCustomExpectation(
+      "not",
+      [
+        {
+          value,
+        },
+      ],
+      {
+        customCompare: createAssertMethodCustomCompare(
+          (
+            actualNode,
+            expectFirsArgValueNode,
+            { subcompareDuo, onSelfDiff },
+          ) => {
+            const expectFirstArgComparison = subcompareDuo(
+              actualNode,
+              expectFirsArgValueNode,
+              {
+                revertNot: true,
+              },
+            );
+            if (expectFirstArgComparison.hasAnyDiff) {
+              // we should also "revert" side effects of all diff inside expectAsNode
+              // - adding to causeSet
+              // - colors (should be done during comparison)
+              return PLACEHOLDER_FOR_SAME;
+            }
+            onSelfDiff("sould_have_diff");
+            return PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
+          },
+        ),
+      },
+    );
+  };
+  assert.any = (constructor) => {
+    if (typeof constructor !== "function") {
+      throw new TypeError(
+        `assert.any 1st argument must be a function, received ${constructor}`,
+      );
+    }
+    const constructorName = constructor.name;
+    return createAssertMethodCustomExpectation("any", [
+      {
+        value: constructor,
+        customCompare: createValueCustomCompare(
+          constructorName
+            ? (actualNode) => {
+                for (const proto of objectPrototypeChainGenerator(
+                  actualNode.value,
+                )) {
+                  const protoConstructor = proto.constructor;
+                  if (protoConstructor.name === constructorName) {
+                    return null;
+                  }
+                }
+                return `should_have_constructor_${constructorName}`;
+              }
+            : (actualNode) => {
+                for (const proto of objectPrototypeChainGenerator(
+                  actualNode.value,
+                )) {
+                  const protoConstructor = proto.constructor;
+                  if (protoConstructor === constructor) {
+                    return null;
+                  }
+                }
+                return `should_have_constructor_${constructor.toString()}`;
+              },
+        ),
+      },
+    ]);
+  };
+  assert.startsWith = (string) => {
+    if (typeof string !== "string") {
+      throw new TypeError(
+        `assert.startsWith 1st argument must be a string, received ${string}`,
+      );
+    }
+    return createAssertMethodCustomExpectation("startsWith", [
+      {
+        value: string,
+        customCompare: createValueCustomCompare((actualNode) => {
+          if (!actualNode.isString) {
+            return "should_be_a_string";
+          }
+          const actual = actualNode.value;
+          if (!actual.startsWith(string)) {
+            return `should_start_with_${string}`;
+          }
+          return null;
+        }),
+      },
+    ]);
+  };
+  assert.closeTo = (float, precision = 2) => {
+    if (typeof float !== "number") {
+      throw new TypeError(
+        `assert.closeTo 1st argument must be a number, received ${float}`,
+      );
+    }
+    return createAssertMethodCustomExpectation("closeTo", [
+      {
+        value: float,
+        customCompare: createValueCustomCompare((actualNode) => {
+          if (!actualNode.isNumber) {
+            return "should_be_a_number";
+          }
+          const actual = actualNode.value;
+          if (actual === Infinity && float === Infinity) {
+            return null;
+          }
+          if (actual === -Infinity && float === -Infinity) {
+            return null;
+          }
+          const expectedDiff = Math.pow(10, -precision) / 2;
+          const receivedDiff = Math.abs(float - actual);
+          if (receivedDiff > expectedDiff) {
+            return `should_be_close_to_${float}`;
+          }
+          return null;
+        }),
+      },
+    ]);
+  };
+  assert.matches = (regexp) => {
+    if (typeof regexp !== "object") {
+      throw new TypeError(
+        `assert.matches 1st argument must be a regex, received ${regexp}`,
+      );
+    }
+    return createAssertMethodCustomExpectation("matches", [
+      {
+        value: regexp,
+        customCompare: createValueCustomCompare((actualNode) => {
+          if (!actualNode.isString) {
+            return "should_be_a_string";
+          }
+          const actual = actualNode.value;
+          if (!regexp.test(actual)) {
+            return `should_match_${regexp}`;
+          }
+          return null;
+        }),
+      },
+    ]);
+  };
+  return assert;
 };
 
 const comparerDefault = (actualNode, expectNode) => {
@@ -1011,230 +1254,6 @@ const createAssertMethodCustomCompare = (
   };
 };
 
-assert.belowOrEquals = (value, options) => {
-  if (typeof value !== "number") {
-    throw new TypeError(
-      `assert.belowOrEquals 1st argument must be number, received ${value}`,
-    );
-  }
-  return createAssertMethodCustomExpectation(
-    "belowOrEquals",
-    [
-      {
-        value,
-        customCompare: createValueCustomCompare((actualNode) => {
-          if (!actualNode.isNumber) {
-            return "should_be_a_number";
-          }
-          if (actualNode.value > value) {
-            return `should_be_below_or_equals_to_${value}`;
-          }
-          return null;
-        }),
-      },
-    ],
-    options,
-  );
-};
-assert.aboveOrEquals = (value, options) => {
-  if (typeof value !== "number") {
-    throw new TypeError(
-      `assert.aboveOrEquals 1st argument must be number, received ${value}`,
-    );
-  }
-  return createAssertMethodCustomExpectation(
-    "aboveOrEquals",
-    [
-      {
-        value,
-        customCompare: createValueCustomCompare((actualNode) => {
-          if (!actualNode.isNumber) {
-            return "should_be_a_number";
-          }
-          if (actualNode.value < value) {
-            return `should_be_greater_or_equals_to_${value}`;
-          }
-          return null;
-        }),
-      },
-    ],
-    options,
-  );
-};
-assert.between = (minValue, maxValue) => {
-  if (typeof minValue !== "number") {
-    throw new TypeError(
-      `assert.between 1st argument must be number, received ${minValue}`,
-    );
-  }
-  if (typeof maxValue !== "number") {
-    throw new TypeError(
-      `assert.between 2nd argument must be number, received ${maxValue}`,
-    );
-  }
-  if (minValue > maxValue) {
-    throw new Error(
-      `assert.between 1st argument is > 2nd argument, ${minValue} > ${maxValue}`,
-    );
-  }
-  return createAssertMethodCustomExpectation("between", [
-    {
-      value: assert.aboveOrEquals(minValue, {
-        renderOnlyArgs: true,
-      }),
-    },
-    {
-      value: assert.belowOrEquals(maxValue, {
-        renderOnlyArgs: true,
-        isRecomparison: true,
-      }),
-    },
-  ]);
-};
-assert.not = (value) => {
-  return createAssertMethodCustomExpectation(
-    "not",
-    [
-      {
-        value,
-      },
-    ],
-    {
-      customCompare: createAssertMethodCustomCompare(
-        (actualNode, expectFirsArgValueNode, { subcompareDuo, onSelfDiff }) => {
-          const expectFirstArgComparison = subcompareDuo(
-            actualNode,
-            expectFirsArgValueNode,
-            {
-              revertNot: true,
-            },
-          );
-          if (expectFirstArgComparison.hasAnyDiff) {
-            // we should also "revert" side effects of all diff inside expectAsNode
-            // - adding to causeSet
-            // - colors (should be done during comparison)
-            return PLACEHOLDER_FOR_SAME;
-          }
-          onSelfDiff("sould_have_diff");
-          return PLACEHOLDER_WHEN_ADDED_OR_REMOVED;
-        },
-      ),
-    },
-  );
-};
-assert.any = (constructor) => {
-  if (typeof constructor !== "function") {
-    throw new TypeError(
-      `assert.any 1st argument must be a function, received ${constructor}`,
-    );
-  }
-  const constructorName = constructor.name;
-  return createAssertMethodCustomExpectation("any", [
-    {
-      value: constructor,
-      customCompare: createValueCustomCompare(
-        constructorName
-          ? (actualNode) => {
-              for (const proto of objectPrototypeChainGenerator(
-                actualNode.value,
-              )) {
-                const protoConstructor = proto.constructor;
-                if (protoConstructor.name === constructorName) {
-                  return null;
-                }
-              }
-              return `should_have_constructor_${constructorName}`;
-            }
-          : (actualNode) => {
-              for (const proto of objectPrototypeChainGenerator(
-                actualNode.value,
-              )) {
-                const protoConstructor = proto.constructor;
-                if (protoConstructor === constructor) {
-                  return null;
-                }
-              }
-              return `should_have_constructor_${constructor.toString()}`;
-            },
-      ),
-    },
-  ]);
-};
-assert.startsWith = (string) => {
-  if (typeof string !== "string") {
-    throw new TypeError(
-      `assert.startsWith 1st argument must be a string, received ${string}`,
-    );
-  }
-  return createAssertMethodCustomExpectation("startsWith", [
-    {
-      value: string,
-      customCompare: createValueCustomCompare((actualNode) => {
-        if (!actualNode.isString) {
-          return "should_be_a_string";
-        }
-        const actual = actualNode.value;
-        if (!actual.startsWith(string)) {
-          return `should_start_with_${string}`;
-        }
-        return null;
-      }),
-    },
-  ]);
-};
-assert.closeTo = (float, precision = 2) => {
-  if (typeof float !== "number") {
-    throw new TypeError(
-      `assert.closeTo 1st argument must be a number, received ${float}`,
-    );
-  }
-  return createAssertMethodCustomExpectation("closeTo", [
-    {
-      value: float,
-      customCompare: createValueCustomCompare((actualNode) => {
-        if (!actualNode.isNumber) {
-          return "should_be_a_number";
-        }
-        const actual = actualNode.value;
-        if (actual === Infinity && float === Infinity) {
-          return null;
-        }
-        if (actual === -Infinity && float === -Infinity) {
-          return null;
-        }
-        const expectedDiff = Math.pow(10, -precision) / 2;
-        const receivedDiff = Math.abs(float - actual);
-        if (receivedDiff > expectedDiff) {
-          return `should_be_close_to_${float}`;
-        }
-        return null;
-      }),
-    },
-  ]);
-};
-assert.matches = (regexp) => {
-  if (typeof regexp !== "object") {
-    throw new TypeError(
-      `assert.matches 1st argument must be a regex, received ${regexp}`,
-    );
-  }
-  return createAssertMethodCustomExpectation("matches", [
-    {
-      value: regexp,
-      customCompare: createValueCustomCompare((actualNode) => {
-        if (!actualNode.isString) {
-          return "should_be_a_string";
-        }
-        const actual = actualNode.value;
-        if (!regexp.test(actual)) {
-          return `should_match_${regexp}`;
-        }
-        return null;
-      }),
-    },
-  ]);
-};
-
 let createRootNode;
 /*
  * Node represent any js value.
@@ -1251,6 +1270,7 @@ let createRootNode;
  */
 {
   createRootNode = ({
+    tokenizeString,
     colorWhenSolo,
     colorWhenSame,
     colorWhenModified,
@@ -1301,6 +1321,7 @@ let createRootNode;
     let nodeId = 1;
 
     const rootNode = createNode({
+      tokenizeString,
       id: nodeId,
       colorWhenSolo,
       colorWhenSame,
@@ -1328,6 +1349,7 @@ let createRootNode;
   };
 
   const createNode = ({
+    tokenizeString,
     colorWhenSolo,
     colorWhenSame,
     colorWhenModified,
@@ -1377,6 +1399,7 @@ let createRootNode;
     stringDiffPrecision = "per_line_and_per_char",
   }) => {
     const node = {
+      tokenizeString,
       colorWhenSolo,
       colorWhenSame,
       colorWhenModified,
@@ -3594,6 +3617,7 @@ let createRootNode;
   const appendChildNodeGeneric = (node, childKey, params) => {
     const childNode = createNode({
       id: node.nextId(),
+      tokenizeString: node.tokenizeString,
       colorWhenSolo: node.colorWhenSolo,
       colorWhenSame: node.colorWhenSame,
       colorWhenModified: node.colorWhenModified,

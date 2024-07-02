@@ -3,7 +3,7 @@
  * - Object.isFrozen(Object.seal({})) -> true
  * - Object.isFrozen(Object.preventExtensions({})) -> true
  */
-import { assert } from "../src/assert_scratch.js";
+import { assert } from "@jsenv/assert";
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("object_integrity", ({ test }) => {

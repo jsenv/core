@@ -1,3 +1,10 @@
-import { assert } from "./assert_scratch.js";
+import Graphemer from "graphemer";
+import { createAssert } from "./assert_scratch.js";
 
-export { assert };
+export const assert = createAssert({
+  tokenizeString: (string) => {
+    // eslint-disable-next-line new-cap
+    const splitter = new Graphemer.default();
+    return splitter.splitGraphemes(string);
+  },
+});

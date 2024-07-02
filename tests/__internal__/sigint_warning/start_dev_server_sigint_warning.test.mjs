@@ -11,6 +11,7 @@ const beforeDevServerStarts = countListeners();
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./", import.meta.url),
+  port: 4609,
 });
 const whileDevServerIsRunning = countListeners();
 devServer.stop();
