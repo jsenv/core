@@ -44,6 +44,7 @@ const createAnsi = ({
   };
   return ANSI;
 };
+
 const ANSI = createAnsi({
   supported: true
 });
@@ -104,6 +105,7 @@ const createUnicode = ({
   };
   return UNICODE;
 };
+
 const UNICODE = createUnicode({
   supported: true,
   ANSI
@@ -2256,10 +2258,13 @@ let createRootNode;
           const localTimezoneOffset = node.context.assert.localTimezoneOffset;
           if (localTimezoneOffset === localTimezoneOffsetSystem) {
             dateTimestamp += localTimezoneOffset;
+          }
+          // happens in CI when generating date diff snapshot
+          // and comparing with diff generated in an other timezone
+          else if (localTimezoneOffsetSystem > localTimezoneOffset) {
+            dateTimestamp += localTimezoneOffsetSystem - localTimezoneOffset;
           } else {
-            // happens in CI when generating date diff snapshot
-            // and comparing with diff generated in an other timezone
-            dateTimestamp += Math.abs(localTimezoneOffset - localTimezoneOffsetSystem);
+            dateTimestamp += localTimezoneOffset - localTimezoneOffsetSystem;
           }
           const dateObject = new Date(dateTimestamp);
           const datePartsNode = node.appendChild("parts", {

@@ -198,11 +198,10 @@ export const createException = (reason, { rootDirectoryUrl } = {}) => {
 
 const getErrorName = (value) => {
   const { constructor } = value;
-  if (constructor === "Object") {
-    return value.name || "Error";
-  }
   if (constructor) {
-    return constructor.name;
+    if (constructor.name !== "Object") {
+      return constructor.name;
+    }
   }
   return value.name || "Error";
 };
