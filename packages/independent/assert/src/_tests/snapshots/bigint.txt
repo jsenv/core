@@ -1,9 +1,0 @@
-# fail_bigint
-AssertionError: unequal values
---- found ---
-1n
---- expected ---
-2n
---- path ---
-actual
-

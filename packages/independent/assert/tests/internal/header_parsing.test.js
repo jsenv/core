@@ -1,4 +1,4 @@
-import { tokenizeSetCookieHeader } from "@jsenv/assert/src/tokenize_header_value.js";
+import { tokenizeSetCookieHeader } from "@jsenv/assert/src/utils/tokenize_header_value.js";
 
 const test = (value, expect) => {
   const actual = tokenizeSetCookieHeader(value);

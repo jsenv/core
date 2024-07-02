@@ -1,6 +1,6 @@
 /* eslint-disable accessor-pairs */
 
-import { tokenizeFunction } from "@jsenv/assert/src/tokenize_function.js";
+import { tokenizeFunction } from "@jsenv/assert/src/utils/tokenize_function.js";
 
 const test = (fn, expectedScan) => {
   const actual = tokenizeFunction(fn);

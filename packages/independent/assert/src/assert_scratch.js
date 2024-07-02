@@ -10,18 +10,21 @@
 import stringWidth from "string-width";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 
-import { isComposite } from "./is_composite.js";
-import { isValidPropertyIdentifier } from "./property_identifier.js";
-import { createValuePath } from "./value_path.js";
-import { getObjectTag, objectPrototypeChainGenerator } from "./object_tag.js";
+import { isComposite } from "./utils/is_composite.js";
+import { isValidPropertyIdentifier } from "./utils/property_identifier.js";
+import { createValuePath } from "./utils/value_path.js";
+import {
+  getObjectTag,
+  objectPrototypeChainGenerator,
+} from "./utils/object_tag.js";
 import {
   tokenizeFunction,
   defaultFunctionAnalysis,
-} from "./tokenize_function.js";
-import { tokenizeFloat, tokenizeInteger } from "./tokenize_number.js";
-import { tokenizeString } from "./tokenize_string.js";
-import { tokenizeUrlSearch } from "./tokenize_url_search.js";
-import { getWellKnownValuePath } from "./well_known_value.js";
+} from "./utils/tokenize_function.js";
+import { tokenizeFloat, tokenizeInteger } from "./utils/tokenize_number.js";
+import { tokenizeString } from "./utils/tokenize_string.js";
+import { tokenizeUrlSearch } from "./utils/tokenize_url_search.js";
+import { getWellKnownValuePath } from "./utils/well_known_value.js";
 import { getIsNegativeZero } from "./utils/negative_zero.js";
 import { groupDigits } from "./utils/group_digits.js";
 import { canParseDate } from "./utils/can_parse_date.js";
