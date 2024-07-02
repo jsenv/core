@@ -107,13 +107,15 @@ const defaultOptions = {
   details: "",
 };
 
+const localTimezoneOffsetSystem = new Date(0).getTimezoneOffset() * 60_000;
+
 export const createAssert = ({
   colors = true,
   measureStringWidth = (string) => stripAnsi(string).length,
   tokenizeString = (string) => string.split(""),
   getWellKnownValuePath,
   // for test
-  localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000,
+  localTimezoneOffset = localTimezoneOffsetSystem,
 } = {}) => {
   const setColor = (text, color) => {
     if (!assert.colors) {
@@ -1900,10 +1902,16 @@ let createRootNode;
       if (isStringForDate) {
         node.childGenerator = () => {
           const dateString = value;
-          const dateTimestamp = Date.parse(dateString);
-          const dateObject = new Date(
-            dateTimestamp + node.context.assert.localTimezoneOffset,
-          );
+          let dateTimestamp = Date.parse(dateString);
+          const localTimezoneOffset = node.context.assert.localTimezoneOffset;
+          if (localTimezoneOffset === localTimezoneOffsetSystem) {
+            dateTimestamp += localTimezoneOffset;
+          } else {
+            // happens in CI when generating date diff snapshot
+            // and comparing with diff generated in an other timezone
+            dateTimestamp += localTimezoneOffsetSystem - localTimezoneOffset;
+          }
+          const dateObject = new Date(dateTimestamp);
           const datePartsNode = node.appendChild("parts", {
             value,
             category: "date_parts",
