@@ -1,4 +1,4 @@
-import { assert } from "../../src/assert_scratch.js";
+import { assert } from "@jsenv/assert";
 
 const ensureTypeErrorWithMessage = (value, message) => {
   if (value.name !== "TypeError") {

@@ -1,4 +1,4 @@
-import { parseFunction } from "@jsenv/assert/src/function_parser.js";
+import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
 
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
