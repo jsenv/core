@@ -808,7 +808,9 @@ export const createAssert = ({
     if (details) {
       diff += "\n";
       diff += `--- details ---`;
+      diff += "\n";
       diff += JSON.stringify(details);
+      diff += "\n";
       diff += `---------------`;
     }
     const assertionError = assert.createAssertionError(diff);
