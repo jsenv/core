@@ -593,7 +593,7 @@ function default_1({ types, traverse, transformFromAst, version, }) {
         return false;
     }
     function voidExpression(arg) {
-        return types.unaryExpression("void", arg || types.numericLiteral(0));
+        return types.unaryExpression("void", types.numericLiteral(0));
     }
     function simplifyWithIdentifier(expression, identifier, truthy) {
         if (types.isCallExpression(expression)) {
@@ -1177,12 +1177,12 @@ function default_1({ types, traverse, transformFromAst, version, }) {
     }
     function checkPathValidity(path) {
         if (path.container === null) {
-            throw path.buildCodeFrameError(`Path was expected to have a container!`, TypeError);
+            throw path.buildCodeFrameError(`Path was expect to have a container!`, TypeError);
         }
         if ("resync" in path && typeof path.resync === "function") {
             path.resync();
             if (path.container === null) {
-                throw path.buildCodeFrameError(`Path was expected to have a container, and lost its container upon resync!`, TypeError);
+                throw path.buildCodeFrameError(`Path was expect to have a container, and lost its container upon resync!`, TypeError);
             }
         }
     }

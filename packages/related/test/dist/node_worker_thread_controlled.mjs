@@ -29,9 +29,9 @@ const ACTIONS_AVAILABLE = {
 };
 
 const sendToParent = (type, data) => {
-  // this can keep process alive longer than expected
+  // this can keep process alive longer than expect
   // when source is a long string.
-  // It means node process may stay alive longer than expected
+  // It means node process may stay alive longer than expect
   // the time to send the data to the parent.
   parentPort.postMessage({
     __jsenv__: type,

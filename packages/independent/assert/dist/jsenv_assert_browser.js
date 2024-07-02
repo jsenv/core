@@ -564,6 +564,10 @@ const canParseDate = value => {
 /*
  * This file is named "scratch" as a testimony of the fact it has been
  * recoded from scratch around april 2024
+ *
+ * Next steps:
+ * - preact signals
+ * - a DOM node should be converted to outerHTML right?
  * - ansi in browser
  * - Blob, FormData, DataView, ArrayBuffer
  * - count diff + displayed diff ( + display in message?)
@@ -655,6 +659,7 @@ const defaultOptions = {
     line: 3
   },
   MAX_COLUMNS: 100,
+  forceMultilineDiff: false,
   message: "",
   details: ""
 };
@@ -707,6 +712,7 @@ const createAssert = ({
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
+      forceMultilineDiff,
       message,
       details
     } = {
@@ -714,6 +720,7 @@ const createAssert = ({
       ...firstArg
     };
     const sharedContext = {
+      forceMultilineDiff,
       getWellKnownValuePath,
       tokenizeString,
       measureStringWidth,
@@ -2324,7 +2331,7 @@ let createRootNode;
             endMarker: node.endMarker,
             quoteMarkerRef,
             childGenerator: () => {
-              let isMultiline = false;
+              let isMultiline = node.context.forceMultilineDiff;
               const appendLineEntry = lineIndex => {
                 const lineNode = lineEntriesNode.appendChild(lineIndex, {
                   value: "",
@@ -5565,6 +5572,7 @@ const emojiRegex = (() => {
 });
 
 const segmenter = new Intl.Segmenter();
+const defaultIgnorableCodePointRegex = /^(?:[\xAD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8]|\uD82F[\uDCA0-\uDCA3]|\uD834[\uDD73-\uDD7A]|[\uDB40-\uDB43][\uDC00-\uDFFF])$/;
 function stringWidth(string, options = {}) {
   if (typeof string !== 'string' || string.length === 0) {
     return 0;
@@ -5593,10 +5601,39 @@ function stringWidth(string, options = {}) {
       continue;
     }
 
-    // Ignore combining characters
-    if (codePoint >= 0x300 && codePoint <= 0x36F) {
+    // Ignore zero-width characters
+    if (codePoint >= 0x200B && codePoint <= 0x200F // Zero-width space, non-joiner, joiner, left-to-right mark, right-to-left mark
+    || codePoint === 0xFEFF // Zero-width no-break space
+    ) {
       continue;
     }
+
+    // Ignore combining characters
+    if (codePoint >= 0x300 && codePoint <= 0x36F // Combining diacritical marks
+    || codePoint >= 0x1AB0 && codePoint <= 0x1AFF // Combining diacritical marks extended
+    || codePoint >= 0x1DC0 && codePoint <= 0x1DFF // Combining diacritical marks supplement
+    || codePoint >= 0x20D0 && codePoint <= 0x20FF // Combining diacritical marks for symbols
+    || codePoint >= 0xFE20 && codePoint <= 0xFE2F // Combining half marks
+    ) {
+      continue;
+    }
+
+    // Ignore surrogate pairs
+    if (codePoint >= 0xD800 && codePoint <= 0xDFFF) {
+      continue;
+    }
+
+    // Ignore variation selectors
+    if (codePoint >= 0xFE00 && codePoint <= 0xFE0F) {
+      continue;
+    }
+
+    // This covers some of the above cases, but we still keep them for performance reasons.
+    if (defaultIgnorableCodePointRegex.test(character)) {
+      continue;
+    }
+
+    // TODO: Use `/\p{RGI_Emoji}/v` when targeting Node.js 20.
     if (emojiRegex().test(character)) {
       width += 2;
       continue;
