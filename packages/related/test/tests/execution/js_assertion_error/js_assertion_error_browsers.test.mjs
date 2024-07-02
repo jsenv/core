@@ -1,3 +1,4 @@
+import stripAnsi from "strip-ansi";
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
@@ -38,7 +39,7 @@ const test = async (params) => {
   const actual = {
     status,
     consoleCalls,
-    errorMessage: error.message.trim(),
+    errorMessage: stripAnsi(error.message.trim()),
     site: error.site,
   };
   const expectedErrorMessage = {

@@ -54,6 +54,23 @@ assert({
 
 ![img](<./assert_any/10 is any Number.svg>)
 
+# 0 is any number
+
+```js
+assert({
+  actual: {
+    a: 0,
+    b: true,
+  },
+  expect: {
+    a: assert.any(Number),
+    b: false,
+  },
+});
+```
+
+![img](<./assert_any/0 is any number.svg>)
+
 # any Error
 
 ```js

@@ -27,7 +27,7 @@ const test = async (params) => {
   const [error] = errors;
   const expectedStack = {
     chromium: "SyntaxError: Unexpected end of input",
-    firefox: "SyntaxError: expect expression, got end of script",
+    firefox: "SyntaxError: expected expression, got end of script",
     webkit: "SyntaxError: Unexpected end of script",
   }[params.runtime.name];
   const actual = error.stack;

@@ -2281,30 +2281,6 @@ let createRootNode;
       }
 
       node.childGenerator = function () {
-        if (node.reference) {
-          const referenceNode = node.appendChild("reference", {
-            value: node.reference.path,
-            render: renderChildren,
-            onelineDiff: {
-              hasTrailingSeparator: true,
-            },
-            category: "reference",
-            group: "entries",
-            subgroup: "reference",
-            childGenerator() {
-              let index = 0;
-              for (const path of node.reference.path) {
-                referenceNode.appendChild(index, {
-                  ...getGrammarProps(),
-                  group: "path",
-                  value: path.value,
-                });
-                index++;
-              }
-            },
-          });
-          return;
-        }
         if (wellKnownPath) {
           const wellKnownNode = node.appendChild("well_known", {
             value: wellKnownPath,
@@ -2329,6 +2305,31 @@ let createRootNode;
           });
           return;
         }
+        if (node.reference) {
+          const referenceNode = node.appendChild("reference", {
+            value: node.reference.path,
+            render: renderChildren,
+            onelineDiff: {
+              hasTrailingSeparator: true,
+            },
+            category: "reference",
+            group: "entries",
+            subgroup: "reference",
+            childGenerator() {
+              let index = 0;
+              for (const path of node.reference.path) {
+                referenceNode.appendChild(index, {
+                  ...getGrammarProps(),
+                  group: "path",
+                  value: path.value,
+                });
+                index++;
+              }
+            },
+          });
+          return;
+        }
+
         const compositePartsNode = node.appendChild("parts", {
           category: "composite_parts",
           render: renderChildren,

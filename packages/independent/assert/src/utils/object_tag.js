@@ -32,7 +32,7 @@ export const getObjectTag = (obj) => {
 };
 
 export function* objectPrototypeChainGenerator(obj) {
-  while (obj || isUndetectableObject(obj)) {
+  while (obj === 0 || obj || isUndetectableObject(obj)) {
     const proto = Object.getPrototypeOf(obj);
     if (!proto) {
       break;

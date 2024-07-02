@@ -26,6 +26,16 @@ expect: {
   b: false,
 }
 
+# 0 is any number
+actual: {
+  a: 0,
+  b: true,
+}
+expect: {
+  a: assert.any(Number),
+  b: false,
+}
+
 # any Error
 actual: {
   a: Error,

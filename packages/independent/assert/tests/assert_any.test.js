@@ -38,6 +38,18 @@ await startSnapshotTesting("assert_any", ({ test }) => {
       },
     });
   });
+  test("0 is any number", () => {
+    assert({
+      actual: {
+        a: 0,
+        b: true,
+      },
+      expect: {
+        a: assert.any(Number),
+        b: false,
+      },
+    });
+  });
   test("any Error", () => {
     assert({
       actual: {

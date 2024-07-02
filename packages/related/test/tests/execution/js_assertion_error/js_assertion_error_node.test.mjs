@@ -26,22 +26,13 @@ const test = async (params) => {
   const expect = {
     isException: true,
     isError: true,
-    name: "CharacterAssertionError",
-    message: `unexpected character in string
---- details ---
-foo
-^
-unexpected "f", expect to continue with "bar"
---- path ---
-actual`,
-    stack:
-      assert.startsWith(`CharacterAssertionError: unexpected character in string
---- details ---
-foo
-^
-unexpected "f", expect to continue with "bar"
---- path ---
-actual
+    name: "AssertionError",
+    message: `
+actual: "foo"
+expect: "bar"`,
+    stack: assert.startsWith(`AssertionError: 
+actual: "foo"
+expect: "bar"
   at ${clientDirectoryUrl}/main.mjs:3:1`),
     site: {
       url: `${clientDirectoryUrl}/main.mjs`,
