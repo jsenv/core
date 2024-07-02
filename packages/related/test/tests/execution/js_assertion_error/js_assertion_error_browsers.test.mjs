@@ -51,7 +51,7 @@ expect: "bar"`,
 expect: "bar"`,
   }[params.runtime.name];
   const expectedLine = {
-    chromium: 14,
+    chromium: 13,
     firefox: 9,
     webkit: 9,
   }[params.runtime.name];
@@ -70,7 +70,7 @@ expect: "bar"`,
       url: `${clientDirectoryUrl}/main.html`,
       line: expectedLine,
       column: expectedColumn,
-      originalUrl: `${clientDirectoryUrl}/main.html@L10C5-L18C14.js`,
+      originalUrl: `${clientDirectoryUrl}/main.html@L10C5-L17C14.js`,
       serverUrl: `${devServer.origin}/main.html`,
     },
   };
