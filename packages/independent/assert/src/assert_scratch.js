@@ -1907,16 +1907,20 @@ let createRootNode;
           const dateString = value;
           let dateTimestamp = Date.parse(dateString);
           const localTimezoneOffset = node.context.assert.localTimezoneOffset;
-          dateTimestamp += localTimezoneOffset;
-          if (localTimezoneOffsetSystem !== localTimezoneOffset) {
+          if (localTimezoneOffsetSystem === localTimezoneOffset) {
+            dateTimestamp += localTimezoneOffset;
+          } else {
             // happens in CI when generating date diff snapshot
             // and comparing with diff generated in an other timezone
-            if (localTimezoneOffsetSystem > localTimezoneOffset) {
-              dateTimestamp += localTimezoneOffset - localTimezoneOffsetSystem;
-            } else {
-              dateTimestamp += localTimezoneOffsetSystem - localTimezoneOffset;
-            }
+            const diff = localTimezoneOffsetSystem - localTimezoneOffset;
+            console.log({
+              localTimezoneOffset,
+              localTimezoneOffsetSystem,
+              diff,
+            });
+            dateTimestamp += diff;
           }
+
           const dateObject = new Date(dateTimestamp);
           const datePartsNode = node.appendChild("parts", {
             value,
