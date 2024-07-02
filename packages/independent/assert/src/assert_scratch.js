@@ -1909,7 +1909,9 @@ let createRootNode;
           } else {
             // happens in CI when generating date diff snapshot
             // and comparing with diff generated in an other timezone
-            dateTimestamp += localTimezoneOffsetSystem - localTimezoneOffset;
+            dateTimestamp += Math.abs(
+              localTimezoneOffsetSystem - localTimezoneOffset,
+            );
           }
           const dateObject = new Date(dateTimestamp);
           const datePartsNode = node.appendChild("parts", {
