@@ -1149,6 +1149,28 @@ assert.closeTo = (float, precision = 2) => {
     },
   ]);
 };
+assert.matches = (regexp) => {
+  if (typeof regexp !== "object") {
+    throw new TypeError(
+      `assert.matches 1st argument must be a regex, received ${regexp}`,
+    );
+  }
+  return createAssertMethodCustomExpectation("matches", [
+    {
+      value: regexp,
+      customCompare: createValueCustomCompare((actualNode) => {
+        if (!actualNode.isString) {
+          return "should_be_a_string";
+        }
+        const actual = actualNode.value;
+        if (!regexp.test(actual)) {
+          return `should_match_${regexp}`;
+        }
+        return null;
+      }),
+    },
+  ]);
+};
 
 let createRootNode;
 /*
