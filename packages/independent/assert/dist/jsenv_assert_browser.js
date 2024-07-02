@@ -20,76 +20,94 @@ function stripAnsi(string) {
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
-const ANSI = {
-  supported: true,
-  RED: "\x1b[31m",
-  GREEN: "\x1b[32m",
-  YELLOW: "\x1b[33m",
-  BLUE: "\x1b[34m",
-  MAGENTA: "\x1b[35m",
-  CYAN: "\x1b[36m",
-  GREY: "\x1b[90m",
-  color: (text, ANSI_COLOR) => {
-    return ANSI_COLOR ? "".concat(ANSI_COLOR).concat(text).concat(RESET) : text;
-  },
-  BOLD: "\x1b[1m",
-  UNDERLINE: "\x1b[4m",
-  STRIKE: "\x1b[9m",
-  effect: (text, ANSI_EFFECT) => {
-    return ANSI_EFFECT ? "".concat(ANSI_EFFECT).concat(text).concat(RESET) : text;
-  }
+const createAnsi = ({
+  supported
+}) => {
+  const ANSI = {
+    supported,
+    RED: "\x1b[31m",
+    GREEN: "\x1b[32m",
+    YELLOW: "\x1b[33m",
+    BLUE: "\x1b[34m",
+    MAGENTA: "\x1b[35m",
+    CYAN: "\x1b[36m",
+    GREY: "\x1b[90m",
+    color: (text, ANSI_COLOR) => {
+      return ANSI.supported && ANSI_COLOR ? "".concat(ANSI_COLOR).concat(text).concat(RESET) : text;
+    },
+    BOLD: "\x1b[1m",
+    UNDERLINE: "\x1b[4m",
+    STRIKE: "\x1b[9m",
+    effect: (text, ANSI_EFFECT) => {
+      return ANSI.supported && ANSI_EFFECT ? "".concat(ANSI_EFFECT).concat(text).concat(RESET) : text;
+    }
+  };
+  return ANSI;
 };
+const ANSI = createAnsi({
+  supported: true
+});
 
 // see also https://github.com/sindresorhus/figures
 
-const UNICODE = {
-  supported: true,
-  get COMMAND_RAW() {
-    return "\u276F" ;
-  },
-  get OK_RAW() {
-    return "\u2714" ;
-  },
-  get FAILURE_RAW() {
-    return "\u2716" ;
-  },
-  get DEBUG_RAW() {
-    return "\u25C6" ;
-  },
-  get INFO_RAW() {
-    return "\u2139" ;
-  },
-  get WARNING_RAW() {
-    return "\u26A0" ;
-  },
-  get CIRCLE_CROSS_RAW() {
-    return "\u24E7" ;
-  },
-  get COMMAND() {
-    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
-  },
-  get OK() {
-    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
-  },
-  get FAILURE() {
-    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
-  },
-  get DEBUG() {
-    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
-  },
-  get INFO() {
-    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
-  },
-  get WARNING() {
-    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
-  },
-  get CIRCLE_CROSS() {
-    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
-  },
-  get ELLIPSIS() {
-    return "\u2026" ;
-  }
+const createUnicode = ({
+  supported,
+  ANSI
+}) => {
+  const UNICODE = {
+    supported,
+    get COMMAND_RAW() {
+      return UNICODE.supported ? "\u276F" : ">";
+    },
+    get OK_RAW() {
+      return UNICODE.supported ? "\u2714" : "\u221A";
+    },
+    get FAILURE_RAW() {
+      return UNICODE.supported ? "\u2716" : "\xD7";
+    },
+    get DEBUG_RAW() {
+      return UNICODE.supported ? "\u25C6" : "\u2666";
+    },
+    get INFO_RAW() {
+      return UNICODE.supported ? "\u2139" : "i";
+    },
+    get WARNING_RAW() {
+      return UNICODE.supported ? "\u26A0" : "\u203C";
+    },
+    get CIRCLE_CROSS_RAW() {
+      return UNICODE.supported ? "\u24E7" : "(\xD7)";
+    },
+    get COMMAND() {
+      return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+    },
+    get OK() {
+      return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+    },
+    get FAILURE() {
+      return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+    },
+    get DEBUG() {
+      return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+    },
+    get INFO() {
+      return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+    },
+    get WARNING() {
+      return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+    },
+    get CIRCLE_CROSS() {
+      return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+    },
+    get ELLIPSIS() {
+      return UNICODE.supported ? "\u2026" : "...";
+    }
+  };
+  return UNICODE;
 };
+const UNICODE = createUnicode({
+  supported: true,
+  ANSI
+});
 
 const isComposite = value => {
   if (value === null) return false;
@@ -668,7 +686,9 @@ const createAssert = ({
   colors = true,
   measureStringWidth = string => stripAnsi(string).length,
   tokenizeString = string => string.split(""),
-  getWellKnownValuePath
+  getWellKnownValuePath,
+  // for test
+  localTimezoneOffset = new Date(0).getTimezoneOffset() * 60000
 } = {}) => {
   const setColor = (text, color) => {
     if (!assert.colors) {
@@ -720,8 +740,6 @@ const createAssert = ({
       ...defaultOptions,
       ...firstArg
     };
-    // for test
-    assert.localTimezoneOffset = new Date(0).getTimezoneOffset() * 60000;
     const sharedContext = {
       forceMultilineDiff,
       getWellKnownValuePath,
@@ -1297,6 +1315,8 @@ const createAssert = ({
     }
     throw assertionError;
   };
+  // for test
+  assert.localTimezoneOffset = localTimezoneOffset;
   assert.colors = colors;
   assert.createAssertionError = message => {
     const error = new Error(message);

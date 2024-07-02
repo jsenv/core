@@ -112,6 +112,8 @@ export const createAssert = ({
   measureStringWidth = (string) => stripAnsi(string).length,
   tokenizeString = (string) => string.split(""),
   getWellKnownValuePath,
+  // for test
+  localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000,
 } = {}) => {
   const setColor = (text, color) => {
     if (!assert.colors) {
@@ -177,8 +179,6 @@ export const createAssert = ({
       ...defaultOptions,
       ...firstArg,
     };
-    // for test
-    assert.localTimezoneOffset = new Date(0).getTimezoneOffset() * 60_000;
 
     const sharedContext = {
       forceMultilineDiff,
@@ -846,6 +846,8 @@ export const createAssert = ({
     }
     throw assertionError;
   };
+  // for test
+  assert.localTimezoneOffset = localTimezoneOffset;
   assert.colors = colors;
   assert.createAssertionError = (message) => {
     const error = new Error(message);

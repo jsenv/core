@@ -2,8 +2,9 @@ import { assert } from "@jsenv/assert";
 import { ANSI } from "@jsenv/humanize";
 
 console.log({
-  env: process.env.GITHUB_WORKFLOW,
-  supported: ANSI.supported,
+  "process.env.GITHUB_WORKFLOW": process.env.GITHUB_WORKFLOW,
+  "supported": ANSI.supported,
+  "process.env.FORCE_COLOR": process.env.FORCE_COLOR,
 });
 
 assert({
