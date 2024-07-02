@@ -764,7 +764,20 @@ export const assert = (firstArg, ...rest) => {
     columnsRemaining: MAX_COLUMNS - "expect: ".length,
     startNode: expectStartNode,
   });
-  throw diff;
+  throw assert.createAssertionError(diff);
+};
+
+assert.createAssertionError = (message) => {
+  const error = new Error(message);
+  error.name = "AssertionError";
+  return error;
+};
+assert.isAssertionError = (value) => {
+  if (!value) return false;
+  if (typeof value !== "object") return false;
+  if (value.name === "AssertionError") return true;
+  if (value.name.includes("AssertionError")) return true;
+  return false;
 };
 
 const comparerDefault = (actualNode, expectNode) => {

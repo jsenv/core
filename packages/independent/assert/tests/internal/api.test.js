@@ -76,3 +76,23 @@ try {
     `assert must be called with { actual, expect }, expect is missing`,
   );
 }
+
+const testAssertionErrorResult = ({ shouldPass, shouldFail }) => {
+  for (const value of shouldPass) {
+    const result = assert.isAssertionError(value);
+    if (!result) {
+      throw new Error(`isAssertionError should return true for ${value}`);
+    }
+  }
+  for (const value of shouldFail) {
+    const result = assert.isAssertionError(value);
+    if (result) {
+      throw new Error(`isAssertionError should return false for ${value}`);
+    }
+  }
+};
+
+testAssertionErrorResult({
+  shouldPass: [assert.createAssertionError(), { name: "AssertionError" }],
+  shouldFail: [false, true, new Error()],
+});

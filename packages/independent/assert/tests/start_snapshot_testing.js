@@ -55,8 +55,8 @@ export const startSnapshotTesting = async (name, scenarios) => {
         fileContent += `${stripAnsi(e)}\n\n`;
         errorSource = e;
       } else if (e.name === "AssertionError") {
-        fileContent += `${e.name}: ${stripAnsi(e.message)}\n\n`;
-        errorSource = `${e.name}: ${e.message}\n\n`;
+        fileContent += `${stripAnsi(e.message)}\n\n`;
+        errorSource = `${e.message}`;
       } else {
         fileContent += `${e.stack}\n\n`;
         errorSource = `${e.stack}\n\n`;
