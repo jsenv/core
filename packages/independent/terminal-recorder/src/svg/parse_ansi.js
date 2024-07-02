@@ -220,7 +220,6 @@ export const parseAnsi = (ansi) => {
     if (word === "\n") {
       const chunk = bundle("newline", "\n");
       result.chunks.push(chunk);
-
       x = 0;
       y += 1;
       nAnsi += 1;
@@ -231,9 +230,7 @@ export const parseAnsi = (ansi) => {
     if (delimiters.includes(word) === false) {
       const chunk = bundle("text", word);
       result.chunks.push(chunk);
-
       const width = stringWidth(word);
-
       x += width;
       nAnsi += width;
       nPlain += width;
@@ -254,7 +251,6 @@ export const parseAnsi = (ansi) => {
       decorator,
     });
     result.chunks.push(chunk);
-
     nAnsi += word.length;
   }
 

@@ -1,0 +1,79 @@
+[
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "yellow",
+      "ansi": "\u001b[33m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 0
+    },
+    "style": {
+      "foregroundColor": "yellow"
+    }
+  },
+  {
+    "type": "text",
+    "value": "✖",
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 5
+    },
+    "style": {
+      "foregroundColor": "yellow"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "reset",
+      "ansi": "\u001b[0m",
+      "decorator": "reset"
+    },
+    "position": {
+      "x": 1,
+      "y": 0,
+      "n": 1,
+      "raw": 6
+    },
+    "style": {}
+  },
+  {
+    "type": "text",
+    "value": " hello",
+    "position": {
+      "x": 1,
+      "y": 0,
+      "n": 1,
+      "raw": 10
+    },
+    "style": {}
+  },
+  {
+    "type": "newline",
+    "value": "\n",
+    "position": {
+      "x": 7,
+      "y": 0,
+      "n": 7,
+      "raw": 16
+    }
+  },
+  {
+    "type": "text",
+    "value": "  world",
+    "position": {
+      "x": 0,
+      "y": 1,
+      "n": 8,
+      "raw": 17
+    },
+    "style": {}
+  }
+]

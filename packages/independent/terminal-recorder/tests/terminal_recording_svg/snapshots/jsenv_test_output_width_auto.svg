@@ -53,37 +53,37 @@
           >---------------------------------------------</text
         >
         <text x="10" y="128.55" fill="#11bc79">&#x2714; console.spec.html</text>
-        <text x="186.43" y="128.55"> [</text>
-        <text x="194.83" y="128.55" fill="#7f7f7f">chromium</text>
-        <text x="262.04" y="128.55" fill="#7f7f7f">/</text>
-        <text x="270.44" y="128.55" fill="#7f7f7f">&#x3C;mock&#x3E;</text>
-        <text x="320.85" y="128.55" fill="#7f7f7f">/</text>
-        <text x="329.25" y="128.55" fill="#7f7f7f">&#x3C;mock&#x3E;</text>
-        <text x="379.66" y="128.55">] 1/3 (1 </text>
-        <text x="455.27" y="128.55" fill="#11bc79">completed</text>
-        <text x="530.88" y="128.55">, 2 remaining)</text>
+        <text x="178.03" y="128.55"> [</text>
+        <text x="186.43" y="128.55" fill="#7f7f7f">chromium</text>
+        <text x="253.64" y="128.55" fill="#7f7f7f">/</text>
+        <text x="262.04" y="128.55" fill="#7f7f7f">&#x3C;mock&#x3E;</text>
+        <text x="312.45" y="128.55" fill="#7f7f7f">/</text>
+        <text x="320.85" y="128.55" fill="#7f7f7f">&#x3C;mock&#x3E;</text>
+        <text x="371.26" y="128.55">] 1/3 (1 </text>
+        <text x="446.87" y="128.55" fill="#11bc79">completed</text>
+        <text x="522.48" y="128.55">, 2 remaining)</text>
         <text x="10" y="147.55" fill="#7f7f7f">-----</text>
         <text x="60.41" y="147.55"> console (</text>
         <text x="136.02" y="147.55" fill="#cd5555">&#x2716;</text>
-        <text x="161.22" y="147.55"> 1 </text>
-        <text x="178.03" y="147.55" fill="#DAA520">&#x26A0;</text>
-        <text x="203.23" y="147.55"> 3 </text>
-        <text x="220.03" y="147.55" fill="#4169E1">&#x2139;</text>
-        <text x="245.24" y="147.55"> 1 </text>
-        <text x="262.04" y="147.55" fill="#7f7f7f">&#x25C6;</text>
-        <text x="278.84" y="147.55"> 1) </text>
-        <text x="304.05" y="147.55" fill="#7f7f7f">------</text>
+        <text x="152.82" y="147.55"> 1 </text>
+        <text x="169.63" y="147.55" fill="#DAA520">&#x26A0;</text>
+        <text x="186.43" y="147.55"> 3 </text>
+        <text x="203.23" y="147.55" fill="#4169E1">&#x2139;</text>
+        <text x="220.03" y="147.55"> 1 </text>
+        <text x="236.84" y="147.55" fill="#7f7f7f">&#x25C6;</text>
+        <text x="253.64" y="147.55"> 1) </text>
+        <text x="278.84" y="147.55" fill="#7f7f7f">------</text>
         <text x="10" y="166.55" fill="#DAA520">&#x26A0;</text>
-        <text x="35.2" y="166.55"> toto</text>
+        <text x="26.8" y="166.55"> toto</text>
         <text x="10" y="185.55" fill="#cd5555">&#x2716;</text>
-        <text x="35.2" y="185.55"> hey</text>
+        <text x="26.8" y="185.55"> hey</text>
         <text x="10" y="204.55" fill="#DAA520">&#x26A0;</text>
-        <text x="35.2" y="204.55"> hey</text>
+        <text x="26.8" y="204.55"> hey</text>
         <text x="26.8" y="223.55"> ho</text>
         <text x="10" y="242.55" fill="#4169E1">&#x2139;</text>
-        <text x="35.2" y="242.55"> info</text>
+        <text x="26.8" y="242.55"> info</text>
         <text x="10" y="261.55" fill="#DAA520">&#x26A0;</text>
-        <text x="35.2" y="261.55"> test</text>
+        <text x="26.8" y="261.55"> test</text>
         <text x="26.8" y="280.55"> multiline</text>
         <text x="10" y="299.55" fill="#7f7f7f">&#x25C6;</text>
         <text x="26.8" y="299.55"> verbose log</text>
@@ -92,35 +92,35 @@
           >--------------------------------------</text
         >
         <text x="10" y="356.55" fill="#11bc79">&#x2714; console.spec.html</text>
-        <text x="186.43" y="356.55"> [</text>
-        <text x="194.83" y="356.55" fill="#7f7f7f">firefox</text>
-        <text x="253.64" y="356.55" fill="#7f7f7f">/</text>
-        <text x="262.04" y="356.55" fill="#7f7f7f">&#x3C;mock&#x3E;</text>
-        <text x="312.45" y="356.55">] 2/3 (2 </text>
-        <text x="388.06" y="356.55" fill="#11bc79">completed</text>
-        <text x="463.67" y="356.55">, 1 remaining)</text>
+        <text x="178.03" y="356.55"> [</text>
+        <text x="186.43" y="356.55" fill="#7f7f7f">firefox</text>
+        <text x="245.24" y="356.55" fill="#7f7f7f">/</text>
+        <text x="253.64" y="356.55" fill="#7f7f7f">&#x3C;mock&#x3E;</text>
+        <text x="304.05" y="356.55">] 2/3 (2 </text>
+        <text x="379.66" y="356.55" fill="#11bc79">completed</text>
+        <text x="455.27" y="356.55">, 1 remaining)</text>
         <text x="10" y="375.55" fill="#7f7f7f">-----</text>
         <text x="60.41" y="375.55"> console (</text>
         <text x="136.02" y="375.55" fill="#cd5555">&#x2716;</text>
-        <text x="161.22" y="375.55"> 1 </text>
-        <text x="178.03" y="375.55" fill="#DAA520">&#x26A0;</text>
-        <text x="203.23" y="375.55"> 3 </text>
-        <text x="220.03" y="375.55" fill="#4169E1">&#x2139;</text>
-        <text x="245.24" y="375.55"> 1 </text>
-        <text x="262.04" y="375.55" fill="#7f7f7f">&#x25C6;</text>
-        <text x="278.84" y="375.55"> 1) </text>
-        <text x="304.05" y="375.55" fill="#7f7f7f">------</text>
+        <text x="152.82" y="375.55"> 1 </text>
+        <text x="169.63" y="375.55" fill="#DAA520">&#x26A0;</text>
+        <text x="186.43" y="375.55"> 3 </text>
+        <text x="203.23" y="375.55" fill="#4169E1">&#x2139;</text>
+        <text x="220.03" y="375.55"> 1 </text>
+        <text x="236.84" y="375.55" fill="#7f7f7f">&#x25C6;</text>
+        <text x="253.64" y="375.55"> 1) </text>
+        <text x="278.84" y="375.55" fill="#7f7f7f">------</text>
         <text x="10" y="394.55" fill="#DAA520">&#x26A0;</text>
-        <text x="35.2" y="394.55"> toto</text>
+        <text x="26.8" y="394.55"> toto</text>
         <text x="10" y="413.55" fill="#cd5555">&#x2716;</text>
-        <text x="35.2" y="413.55"> hey</text>
+        <text x="26.8" y="413.55"> hey</text>
         <text x="10" y="432.55" fill="#DAA520">&#x26A0;</text>
-        <text x="35.2" y="432.55"> hey</text>
+        <text x="26.8" y="432.55"> hey</text>
         <text x="26.8" y="451.55"> ho</text>
         <text x="10" y="470.55" fill="#4169E1">&#x2139;</text>
-        <text x="35.2" y="470.55"> info</text>
+        <text x="26.8" y="470.55"> info</text>
         <text x="10" y="489.55" fill="#DAA520">&#x26A0;</text>
-        <text x="35.2" y="489.55"> test</text>
+        <text x="26.8" y="489.55"> test</text>
         <text x="26.8" y="508.55"> multiline</text>
         <text x="10" y="527.55" fill="#7f7f7f">&#x25C6;</text>
         <text x="26.8" y="527.55"> verbose log</text>
@@ -129,35 +129,35 @@
           >--------------------------------------</text
         >
         <text x="10" y="584.55" fill="#11bc79">&#x2714; console.spec.html</text>
-        <text x="186.43" y="584.55"> [</text>
-        <text x="194.83" y="584.55" fill="#7f7f7f">webkit</text>
-        <text x="245.24" y="584.55" fill="#7f7f7f">/</text>
-        <text x="253.64" y="584.55" fill="#7f7f7f">&#x3C;mock&#x3E;</text>
-        <text x="304.05" y="584.55">] 3/3 (all </text>
-        <text x="396.46" y="584.55" fill="#11bc79">completed</text>
-        <text x="472.08" y="584.55">)</text>
+        <text x="178.03" y="584.55"> [</text>
+        <text x="186.43" y="584.55" fill="#7f7f7f">webkit</text>
+        <text x="236.84" y="584.55" fill="#7f7f7f">/</text>
+        <text x="245.24" y="584.55" fill="#7f7f7f">&#x3C;mock&#x3E;</text>
+        <text x="295.65" y="584.55">] 3/3 (all </text>
+        <text x="388.06" y="584.55" fill="#11bc79">completed</text>
+        <text x="463.67" y="584.55">)</text>
         <text x="10" y="603.55" fill="#7f7f7f">-----</text>
         <text x="60.41" y="603.55"> console (</text>
         <text x="136.02" y="603.55" fill="#cd5555">&#x2716;</text>
-        <text x="161.22" y="603.55"> 1 </text>
-        <text x="178.03" y="603.55" fill="#DAA520">&#x26A0;</text>
-        <text x="203.23" y="603.55"> 3 </text>
-        <text x="220.03" y="603.55" fill="#4169E1">&#x2139;</text>
-        <text x="245.24" y="603.55"> 1 </text>
-        <text x="262.04" y="603.55" fill="#7f7f7f">&#x25C6;</text>
-        <text x="278.84" y="603.55"> 1) </text>
-        <text x="304.05" y="603.55" fill="#7f7f7f">------</text>
+        <text x="152.82" y="603.55"> 1 </text>
+        <text x="169.63" y="603.55" fill="#DAA520">&#x26A0;</text>
+        <text x="186.43" y="603.55"> 3 </text>
+        <text x="203.23" y="603.55" fill="#4169E1">&#x2139;</text>
+        <text x="220.03" y="603.55"> 1 </text>
+        <text x="236.84" y="603.55" fill="#7f7f7f">&#x25C6;</text>
+        <text x="253.64" y="603.55"> 1) </text>
+        <text x="278.84" y="603.55" fill="#7f7f7f">------</text>
         <text x="10" y="622.55" fill="#DAA520">&#x26A0;</text>
-        <text x="35.2" y="622.55"> toto</text>
+        <text x="26.8" y="622.55"> toto</text>
         <text x="10" y="641.55" fill="#cd5555">&#x2716;</text>
-        <text x="35.2" y="641.55"> hey</text>
+        <text x="26.8" y="641.55"> hey</text>
         <text x="10" y="660.55" fill="#DAA520">&#x26A0;</text>
-        <text x="35.2" y="660.55"> hey</text>
+        <text x="26.8" y="660.55"> hey</text>
         <text x="26.8" y="679.55"> ho</text>
         <text x="10" y="698.55" fill="#4169E1">&#x2139;</text>
-        <text x="35.2" y="698.55"> info</text>
+        <text x="26.8" y="698.55"> info</text>
         <text x="10" y="717.55" fill="#DAA520">&#x26A0;</text>
-        <text x="35.2" y="717.55"> test</text>
+        <text x="26.8" y="717.55"> test</text>
         <text x="26.8" y="736.55"> multiline</text>
         <text x="10" y="755.55" fill="#7f7f7f">&#x25C6;</text>
         <text x="26.8" y="755.55"> verbose log</text>
