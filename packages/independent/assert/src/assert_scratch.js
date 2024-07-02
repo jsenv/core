@@ -1909,9 +1909,7 @@ let createRootNode;
             const diff = localTimezoneOffsetSystem - localTimezoneOffset;
             // happens when running code in an different timezone
             // in that case we want to adapt the timestamp
-            // but in theory we need to do that solely if the timestamp is not specified right?
-            // and comparing with diff generated in an other timezone
-            dateTimestamp -= diff;
+            dateTimestamp += diff;
           } else {
             dateTimestamp += localTimezoneOffsetSystem;
           }
