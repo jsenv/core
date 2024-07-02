@@ -1910,11 +1910,17 @@ let createRootNode;
           if (localTimezoneOffset === localTimezoneOffsetSystem) {
             dateTimestamp += localTimezoneOffset;
           } else {
-            // happens in CI when generating date diff snapshot
-            // and comparing with diff generated in an other timezone
-            dateTimestamp += Math.abs(
+            console.log(
+              "diff timezone:",
               localTimezoneOffset - localTimezoneOffsetSystem,
             );
+            // happens in CI when generating date diff snapshot
+            // and comparing with diff generated in an other timezone
+            if (localTimezoneOffsetSystem < localTimezoneOffset) {
+              dateTimestamp += localTimezoneOffsetSystem - localTimezoneOffset;
+            } else {
+              dateTimestamp += localTimezoneOffset - localTimezoneOffsetSystem;
+            }
           }
           const dateObject = new Date(dateTimestamp);
           const datePartsNode = node.appendChild("parts", {
