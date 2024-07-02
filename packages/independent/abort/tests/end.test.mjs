@@ -19,10 +19,10 @@ import { Abort } from "@jsenv/abort";
   const actual = {
     timeoutCleared,
   };
-  const expected = {
+  const expect = {
     timeoutCleared: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // operation.end() await end callbacks
@@ -43,10 +43,10 @@ import { Abort } from "@jsenv/abort";
   const actual = {
     endCallbackResolved,
   };
-  const expected = {
+  const expect = {
     endCallbackResolved: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // operation.end({ abortAfterEnd: true }) and was not aborted
@@ -72,9 +72,9 @@ import { Abort } from "@jsenv/abort";
     abortEventCallbackCallCount,
     abortCallbackCallCount,
   };
-  const expected = {
+  const expect = {
     abortEventCallbackCallCount: 1,
     abortCallbackCallCount: 1,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

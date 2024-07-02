@@ -21,10 +21,10 @@ import { raceCallbacks } from "@jsenv/abort";
   const actual = {
     cancelCallCount,
   };
-  const expected = {
+  const expect = {
     cancelCallCount: 1,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // callback called once race is cancelled do not call winner callback
@@ -51,9 +51,9 @@ import { raceCallbacks } from "@jsenv/abort";
     winnerCallbackCallCount,
     removeCallbackCallCount,
   };
-  const expected = {
+  const expect = {
     winnerCallbackCallCount: 0,
     removeCallbackCallCount: 1,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

@@ -44,7 +44,7 @@ const actual = {
   headers: headersToObject(response.headers),
   body: await response.text(),
 };
-const expected = {
+const expect = {
   url: `${server.origin}/`,
   status: 200,
   statusText: "OK",
@@ -61,4 +61,4 @@ const expected = {
   },
   body: "",
 };
-assert({ actual, expected });
+assert({ actual, expect });

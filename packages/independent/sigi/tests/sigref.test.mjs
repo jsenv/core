@@ -9,8 +9,8 @@ import { sigref } from "@jsenv/sigi";
   userSet("toto");
   values.push(userRef.value);
   const actual = values;
-  const expected = [null, "toto"];
-  assert({ actual, expected });
+  const expect = [null, "toto"];
+  assert({ actual, expect });
 }
 
 // ref.subscribe can be used to listen changes
@@ -27,9 +27,9 @@ import { sigref } from "@jsenv/sigi";
     callsBeforeSet,
     callsAfterSet,
   };
-  const expected = {
+  const expect = {
     callsBeforeSet: ["a"],
     callsAfterSet: ["a", "b"],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

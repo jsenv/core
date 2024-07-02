@@ -37,8 +37,8 @@ try {
 
   {
     const actual = await getResult();
-    const expected = 42;
-    assert({ actual, expected });
+    const expect = 42;
+    assert({ actual, expect });
   }
   const navigationPromise = page.waitForNavigation();
   htmlFileContent.update(
@@ -50,8 +50,8 @@ try {
   await navigationPromise; // full reload
   {
     const actual = await getResult();
-    const expected = 43;
-    assert({ actual, expected });
+    const expect = 43;
+    assert({ actual, expect });
   }
 } finally {
   htmlFileContent.restore();

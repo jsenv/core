@@ -4,8 +4,8 @@ import { resolveUrl } from "@jsenv/urls";
 
 {
   const actual = resolveUrl("./file.js", "file:///directory/");
-  const expected = "file:///directory/file.js";
-  assert({ actual, expected });
+  const expect = "file:///directory/file.js";
+  assert({ actual, expect });
 }
 
 {
@@ -15,7 +15,7 @@ import { resolveUrl } from "@jsenv/urls";
     resolveUrl(specifier);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new TypeError(`baseUrl missing to resolve ${specifier}`);
-    assert({ actual, expected });
+    const expect = new TypeError(`baseUrl missing to resolve ${specifier}`);
+    assert({ actual, expect });
   }
 }

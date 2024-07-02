@@ -31,8 +31,8 @@ const test = async (params) => {
   });
 
   const actual = returnValue;
-  const expected = `${server.origin}/js/main.nomodule.js?v=9798f172`;
-  assert({ actual, expected });
+  const expect = `${server.origin}/js/main.nomodule.js?v=9798f172`;
+  assert({ actual, expect });
 };
 
 // no support for <script type="module">

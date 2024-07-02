@@ -27,13 +27,13 @@ import { Abort } from "@jsenv/abort";
       timeoutCleared,
       operationSignalAborted: operation.signal.aborted,
     };
-    const expected = {
+    const expect = {
       isAbortError: true,
       timeoutAbortSourceSignalAborted: true,
       timeoutCleared: false,
       operationSignalAborted: true,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -58,12 +58,12 @@ import { Abort } from "@jsenv/abort";
     operationSignalAborted: operation.signal.aborted,
     timeoutSignalAborted: timeoutAbortSource.signal.aborted,
   };
-  const expected = {
+  const expect = {
     timeoutCleared: true,
     operationSignalAborted: true,
     timeoutSignalAborted: false,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // it's possible to remove abort source
@@ -84,10 +84,10 @@ import { Abort } from "@jsenv/abort";
   const actual = {
     timeoutCleared,
   };
-  const expected = {
+  const expect = {
     timeoutCleared: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // pre-aborted signal don't call the callback
@@ -103,8 +103,8 @@ import { Abort } from "@jsenv/abort";
   const actual = {
     callCount,
   };
-  const expected = {
+  const expect = {
     callCount: 0,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

@@ -15,11 +15,11 @@ export const getStringsErrorInfo = (comparison, { format }) => {
   if (comparison.type !== "identity" && !isStartsWithComparison) {
     return null;
   }
-  const { actual, expected } = comparison;
+  const { actual, expect } = comparison;
   if (typeof actual !== "string") {
     return null;
   }
-  if (typeof expected !== "string") {
+  if (typeof expect !== "string") {
     return null;
   }
 
@@ -27,7 +27,7 @@ export const getStringsErrorInfo = (comparison, { format }) => {
   const path = comparisonToPath(comparison);
   return getStringComparisonErrorInfo({
     actual,
-    expected,
+    expect,
     path,
     name,
     format,
@@ -36,7 +36,7 @@ export const getStringsErrorInfo = (comparison, { format }) => {
 
 const getStringComparisonErrorInfo = ({
   actual,
-  expected,
+  expect,
   path = "",
   name = "string",
   format,
@@ -45,7 +45,7 @@ const getStringComparisonErrorInfo = ({
   const formatActualChar = (char) => {
     return inspectChar(char, { quote: actualQuote, preserveLineBreaks: true });
   };
-  const expectedQuote = determineQuote(expected);
+  const expectedQuote = determineQuote(expect);
   const formatExpectedChar = (char) => {
     return inspectChar(char, {
       quote: expectedQuote,
@@ -54,7 +54,7 @@ const getStringComparisonErrorInfo = ({
   };
 
   const actualLength = actual.length;
-  const expectedLength = expected.length;
+  const expectedLength = expect.length;
   let i = 0;
   let lineIndex = 0;
   let columnIndex = 0;
@@ -65,7 +65,7 @@ const getStringComparisonErrorInfo = ({
     if (actual.includes(`${COLUMN_MARKER_CHAR} unexpected character`)) {
       return {
         actual: humanize(actual, { preserveLineBreaks: true }),
-        expected: humanize(expected, { preserveLineBreaks: true }),
+        expect: humanize(expect, { preserveLineBreaks: true }),
       };
     }
 
@@ -142,7 +142,7 @@ const getStringComparisonErrorInfo = ({
       details += `\n${annotationLabel}`;
       if (expectedOverview) {
         details += ` ${expectedQuote}`;
-        // put expected chars
+        // put expect chars
         let expectedIndex = i;
         let remainingCharsToDisplayOnExpected =
           EXPECTED_CONTINUES_WITH_MAX_LENGTH;
@@ -150,7 +150,7 @@ const getStringComparisonErrorInfo = ({
           remainingCharsToDisplayOnExpected-- &&
           expectedIndex < expectedLength
         ) {
-          const expectedChar = expected[expectedIndex];
+          const expectedChar = expect[expectedIndex];
           if (expectedIndex > i && isLineBreak(expectedChar)) {
             break;
           }
@@ -189,7 +189,7 @@ const getStringComparisonErrorInfo = ({
   mismatch: {
     while (i < actualLength && i < expectedLength) {
       const actualChar = actual[i];
-      const expectedChar = expected[i];
+      const expectedChar = expect[i];
       if (actualChar !== expectedChar) {
         let message = `unexpected character in ${name}`;
         return {
@@ -198,7 +198,7 @@ const getStringComparisonErrorInfo = ({
             ...formatDetails({
               annotationLabel: `unexpected ${humanize(
                 actualChar,
-              )}, expected to continue with`,
+              )}, expect to continue with`,
             }),
             ...(path ? { path } : {}),
           }),
@@ -226,7 +226,7 @@ const getStringComparisonErrorInfo = ({
         type: "MissingCharacterAssertionError",
         message: createDetailedMessage(message, {
           ...formatDetails({
-            annotationLabel: `expected to continue with`,
+            annotationLabel: `expect to continue with`,
           }),
           ...(path ? { path } : {}),
         }),
@@ -244,7 +244,7 @@ const getStringComparisonErrorInfo = ({
     }
     let annotationLabel;
     if (expectedLength === 0) {
-      annotationLabel = `an empty string was expected`;
+      annotationLabel = `an empty string was expect`;
     } else {
       if (columnIndex === 0) {
         lineIndex--;
@@ -252,8 +252,8 @@ const getStringComparisonErrorInfo = ({
       } else {
         columnIndex--;
       }
-      annotationLabel = `expected to end here, on ${humanize(
-        expected[expectedLength - 1],
+      annotationLabel = `expect to end here, on ${humanize(
+        expect[expectedLength - 1],
       )}`;
     }
 
@@ -273,14 +273,14 @@ const getStringComparisonErrorInfo = ({
 
 export const getStringAssertionErrorInfo = ({
   actual,
-  expected,
+  expect,
   path = "",
   name = "string",
   format,
 }) => {
   return getStringComparisonErrorInfo({
     actual,
-    expected,
+    expect,
     path,
     name,
     format,
@@ -363,7 +363,7 @@ const detectRegExpToStringComparison = (comparison) => {
   const grandParentComparison = parentComparison.parent;
   if (
     !isRegExp(grandParentComparison.actual) ||
-    !isRegExp(grandParentComparison.expected)
+    !isRegExp(grandParentComparison.expect)
   ) {
     return false;
   }
@@ -382,7 +382,7 @@ const detectErrorMessageComparison = (comparison) => {
   const grandParentComparison = parentComparison.parent;
   if (
     !isError(grandParentComparison.actual) ||
-    !isError(grandParentComparison.expected)
+    !isError(grandParentComparison.expect)
   ) {
     return false;
   }
@@ -401,7 +401,7 @@ const detectFunctionNameComparison = (comparison) => {
   const grandParentComparison = parentComparison.parent;
   if (
     typeof grandParentComparison.actual !== "function" ||
-    typeof grandParentComparison.expected !== "function"
+    typeof grandParentComparison.expect !== "function"
   ) {
     return false;
   }

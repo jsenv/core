@@ -59,11 +59,11 @@ const test = async ({ name, ...params }) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     spanContentAfterIncrement: "1",
     spanContentAfterDecrement: "0",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // support for <script type="module">

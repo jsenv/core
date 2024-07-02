@@ -23,16 +23,16 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await readEntryStat(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `ENOENT: no such file or directory, stat '${urlToFileSystemPath(
         sourceUrl,
       )}'`,
     );
-    expected.errno = actual.errno;
-    expected.code = "ENOENT";
-    expected.syscall = "stat";
-    expected.path = urlToFileSystemPath(sourceUrl);
-    assert({ actual, expected });
+    expect.errno = actual.errno;
+    expect.code = "ENOENT";
+    expect.syscall = "stat";
+    expect.path = urlToFileSystemPath(sourceUrl);
+    assert({ actual, expect });
   }
 }
 
@@ -43,8 +43,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const actual = await readEntryStat(sourceUrl, {
     nullIfNotFound: true,
   });
-  const expected = null;
-  assert({ actual, expected });
+  const expect = null;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -58,8 +58,8 @@ if (!isWindows) {
 
   const sourceStats = await readEntryStat(sourceUrl);
   const actual = typeof sourceStats;
-  const expected = "object";
-  assert({ actual, expected });
+  const expect = "object";
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -73,8 +73,8 @@ if (!isWindows) {
 
   const sourceStats = await readEntryStat(sourceUrl);
   const actual = typeof sourceStats;
-  const expected = "object";
-  assert({ actual, expected });
+  const expect = "object";
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -84,8 +84,8 @@ if (!isWindows) {
   await makeBusyFile(sourceUrl, async () => {
     const sourceStats = await readEntryStat(sourceUrl);
     const actual = typeof sourceStats;
-    const expected = "object";
-    assert({ actual, expected });
+    const expect = "object";
+    assert({ actual, expect });
   });
 }
 
@@ -103,14 +103,14 @@ if (!isWindows) {
     await readEntryStat(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `EACCES: permission denied, stat '${urlToFileSystemPath(sourceUrl)}'`,
     );
-    expected.errno = actual.errno;
-    expected.code = "EACCES";
-    expected.syscall = "stat";
-    expected.path = urlToFileSystemPath(sourceUrl);
-    assert({ actual, expected });
+    expect.errno = actual.errno;
+    expect.code = "EACCES";
+    expect.syscall = "stat";
+    expect.path = urlToFileSystemPath(sourceUrl);
+    assert({ actual, expect });
   } finally {
     await writeEntryPermissions(directoryUrl, {
       owner: { read: true, execute: true },
@@ -126,8 +126,8 @@ if (!isWindows) {
 
   const sourceStats = await readEntryStat(sourceUrl);
   const actual = typeof sourceStats;
-  const expected = "object";
-  assert({ actual, expected });
+  const expect = "object";
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -138,8 +138,8 @@ if (!isWindows) {
 
   const sourceStats = await readEntryStat(sourceUrl);
   const actual = typeof sourceStats;
-  const expected = "object";
-  assert({ actual, expected });
+  const expect = "object";
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -152,16 +152,16 @@ if (!isWindows) {
     await readEntryStat(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `ENOENT: no such file or directory, stat '${urlToFileSystemPath(
         sourceUrl,
       )}'`,
     );
-    expected.errno = actual.errno;
-    expected.code = "ENOENT";
-    expected.syscall = "stat";
-    expected.path = urlToFileSystemPath(sourceUrl);
-    assert({ actual, expected });
+    expect.errno = actual.errno;
+    expect.code = "ENOENT";
+    expect.syscall = "stat";
+    expect.path = urlToFileSystemPath(sourceUrl);
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -175,8 +175,8 @@ if (!isWindows) {
 
   const sourceStats = await readEntryStat(sourceUrl);
   const actual = sourceStats.isDirectory();
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -189,8 +189,8 @@ if (!isWindows) {
 
   const sourceStats = await readEntryStat(sourceUrl);
   const actual = sourceStats.isFile();
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -203,8 +203,8 @@ if (!isWindows) {
     followLink: false,
   });
   const actual = sourceStats.isSymbolicLink();
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -219,8 +219,8 @@ if (!isWindows) {
     followLink: false,
   });
   const actual = sourceStats.isSymbolicLink();
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -235,7 +235,7 @@ if (!isWindows) {
     followLink: false,
   });
   const actual = sourceStats.isSymbolicLink();
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }

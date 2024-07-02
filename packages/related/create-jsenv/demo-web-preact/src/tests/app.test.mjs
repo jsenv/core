@@ -14,12 +14,12 @@ try {
 
   assert({
     actual: await getCounterOutput(),
-    expected: "0",
+    expect: "0",
   });
   await page.locator("#counter_button").click();
   assert({
     actual: await getCounterOutput(),
-    expected: "1",
+    expect: "1",
   });
 } finally {
   browser.close();

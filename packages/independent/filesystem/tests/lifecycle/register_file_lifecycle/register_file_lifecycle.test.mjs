@@ -33,8 +33,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   });
 
   const actual = mutations;
-  const expected = [];
-  assert({ actual, expected });
+  const expect = [];
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -59,8 +59,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   });
 
   const actual = mutations;
-  const expected = [{ type: "added" }];
-  assert({ actual, expected });
+  const expect = [{ type: "added" }];
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -86,8 +86,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await wait(200);
 
   const actual = mutations;
-  const expected = [{ type: "added" }, { type: "added" }];
-  assert({ actual, expected });
+  const expect = [{ type: "added" }, { type: "added" }];
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -115,12 +115,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await removeEntry(fileUrl);
   await wait(200);
   const actual = mutations;
-  const expected = [
-    { type: "added" },
-    { type: "updated" },
-    { type: "removed" },
-  ];
-  assert({ actual, expected });
+  const expect = [{ type: "added" }, { type: "updated" }, { type: "removed" }];
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -147,8 +143,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await moveEntry({ from: fileUrl, to: destinationUrl });
   await wait(200);
   const actual = mutations;
-  const expected = [{ type: "added" }, { type: "removed" }];
-  assert({ actual, expected });
+  const expect = [{ type: "added" }, { type: "removed" }];
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -172,8 +168,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await wait(200);
 
   const actual = mutations;
-  const expected = [{ type: "removed" }, { type: "removed" }];
-  assert({ actual, expected });
+  const expect = [{ type: "removed" }, { type: "removed" }];
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -201,12 +197,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await wait(300);
 
   const actual = mutations;
-  const expected = [
+  const expect = [
     { type: "updated" },
     { type: "updated" },
     { type: "updated" },
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -226,8 +222,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await wait(200);
 
   const actual = mutations;
-  const expected = [];
-  assert({ actual, expected });
+  const expect = [];
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }

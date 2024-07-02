@@ -113,7 +113,7 @@ export function parse(str, { prefixes = "./", delimiter = "/#?" } = {}) {
     throw new TypeError(
       "Unexpected "
         .concat(nextType, " at ")
-        .concat(index, ", expected ")
+        .concat(index, ", expect ")
         .concat(type),
     );
   };

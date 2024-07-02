@@ -21,11 +21,11 @@ const test = async ({ browserLauncher }) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     importMetaResolveReturnValue: `${devServer.origin}/node_modules/foo/foo.js?js_classic&v=0.0.1`,
     __TEST__: `${devServer.origin}/node_modules/foo/foo.js?js_classic&v=0.0.1`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({ browserLauncher: chromium });

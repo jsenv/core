@@ -20,9 +20,9 @@ const actual = {
   whileDevServerIsRunning,
   afterDevServerStop,
 };
-const expected = {
+const expect = {
   beforeDevServerStarts: 0,
   whileDevServerIsRunning: 1,
   afterDevServerStop: 0,
 };
-assert({ actual, expected });
+assert({ actual, expect });

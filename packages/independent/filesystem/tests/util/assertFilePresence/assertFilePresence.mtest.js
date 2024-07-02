@@ -19,10 +19,10 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await assertFilePresence(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `file not found at ${urlToFileSystemPath(sourceUrl)}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -35,12 +35,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await assertFilePresence(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
-      `file expected at ${urlToFileSystemPath(
+    const expect = new Error(
+      `file expect at ${urlToFileSystemPath(
         sourceUrl,
       )} and found directory instead`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -51,8 +51,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await writeFile(sourceUrl);
 
   const actual = await assertFilePresence(sourceUrl);
-  const expected = undefined;
-  assert({ actual, expected });
+  const expect = undefined;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -65,10 +65,10 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await assertFilePresence(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `file not found at ${urlToFileSystemPath(sourceUrl)}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -81,7 +81,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await writeSymbolicLink({ from: sourceUrl, to: "./file" });
 
   const actual = await assertFilePresence(sourceUrl);
-  const expected = undefined;
-  assert({ actual, expected });
+  const expect = undefined;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }

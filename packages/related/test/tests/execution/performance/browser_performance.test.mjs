@@ -32,7 +32,7 @@ const test = async ({ runtime }) => {
     namespace,
     performance,
   };
-  const expected = {
+  const expect = {
     status: "completed",
     namespace: {
       "/main.js": {
@@ -57,7 +57,7 @@ const test = async ({ runtime }) => {
       },
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({ runtime: chromium() });

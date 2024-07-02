@@ -30,8 +30,8 @@ const test = async (params) => {
       /* eslint-disable no-undef */
     });
     const actual = consoleErrorMessages;
-    const expected = [];
-    assert({ actual, expected });
+    const expect = [];
+    assert({ actual, expect });
   } finally {
     console.error = consoleError;
   }

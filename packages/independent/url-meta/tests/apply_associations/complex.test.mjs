@@ -11,8 +11,8 @@ import { URL_META } from "@jsenv/url-meta";
       },
     },
   });
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 {
@@ -25,8 +25,8 @@ import { URL_META } from "@jsenv/url-meta";
       },
     },
   });
-  const expected = { js: false };
-  assert({ actual, expected });
+  const expect = { js: false };
+  assert({ actual, expect });
 }
 
 {
@@ -38,8 +38,8 @@ import { URL_META } from "@jsenv/url-meta";
       },
     },
   });
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 {
@@ -57,8 +57,8 @@ import { URL_META } from "@jsenv/url-meta";
       url: "file:///index.js",
       associations,
     });
-    const expected = { format: true };
-    assert({ actual, expected });
+    const expect = { format: true };
+    assert({ actual, expect });
   }
 
   {
@@ -66,8 +66,8 @@ import { URL_META } from "@jsenv/url-meta";
       url: "file:///src/file.js",
       associations,
     });
-    const expected = { format: true };
-    assert({ actual, expected });
+    const expect = { format: true };
+    assert({ actual, expect });
   }
 
   {
@@ -75,8 +75,8 @@ import { URL_META } from "@jsenv/url-meta";
       url: "file:///src/folder/file.js",
       associations,
     });
-    const expected = { format: true };
-    assert({ actual, expected });
+    const expect = { format: true };
+    assert({ actual, expect });
   }
 
   {
@@ -84,8 +84,8 @@ import { URL_META } from "@jsenv/url-meta";
       url: "file:///index.test.js",
       associations,
     });
-    const expected = { format: true };
-    assert({ actual, expected });
+    const expect = { format: true };
+    assert({ actual, expect });
   }
 
   {
@@ -93,8 +93,8 @@ import { URL_META } from "@jsenv/url-meta";
       url: "file:///src/file.test.js",
       associations,
     });
-    const expected = { format: true };
-    assert({ actual, expected });
+    const expect = { format: true };
+    assert({ actual, expect });
   }
 
   {
@@ -102,8 +102,8 @@ import { URL_META } from "@jsenv/url-meta";
       url: "file:///src/folder/file.test.js",
       associations,
     });
-    const expected = { format: true };
-    assert({ actual, expected });
+    const expect = { format: true };
+    assert({ actual, expect });
   }
 
   {
@@ -111,8 +111,8 @@ import { URL_META } from "@jsenv/url-meta";
       url: "file:///src/exception.js",
       associations,
     });
-    const expected = { format: false };
-    assert({ actual, expected });
+    const expect = { format: false };
+    assert({ actual, expect });
   }
 }
 
@@ -134,8 +134,8 @@ import { URL_META } from "@jsenv/url-meta";
       associations,
       url: "file:///index.js",
     });
-    const expected = { cover: true };
-    assert({ actual, expected });
+    const expect = { cover: true };
+    assert({ actual, expect });
   }
 
   {
@@ -143,8 +143,8 @@ import { URL_META } from "@jsenv/url-meta";
       associations,
       url: "file:///src/file.js",
     });
-    const expected = { cover: true };
-    assert({ actual, expected });
+    const expect = { cover: true };
+    assert({ actual, expect });
   }
 
   {
@@ -152,8 +152,8 @@ import { URL_META } from "@jsenv/url-meta";
       associations,
       url: "file:///src/folder/file.js",
     });
-    const expected = { cover: true };
-    assert({ actual, expected });
+    const expect = { cover: true };
+    assert({ actual, expect });
   }
 
   {
@@ -161,8 +161,8 @@ import { URL_META } from "@jsenv/url-meta";
       associations,
       url: "file:///index.test.js",
     });
-    const expected = { cover: false };
-    assert({ actual, expected });
+    const expect = { cover: false };
+    assert({ actual, expect });
   }
 
   {
@@ -170,8 +170,8 @@ import { URL_META } from "@jsenv/url-meta";
       associations,
       url: "file:///src/file.test.js",
     });
-    const expected = { cover: false };
-    assert({ actual, expected });
+    const expect = { cover: false };
+    assert({ actual, expect });
   }
 
   {
@@ -179,8 +179,8 @@ import { URL_META } from "@jsenv/url-meta";
       associations,
       url: "file:///src/folder/file.test.js",
     });
-    const expected = { cover: false };
-    assert({ actual, expected });
+    const expect = { cover: false };
+    assert({ actual, expect });
   }
 
   {
@@ -188,8 +188,8 @@ import { URL_META } from "@jsenv/url-meta";
       associations,
       url: "file:///build/index.js",
     });
-    const expected = { cover: false };
-    assert({ actual, expected });
+    const expect = { cover: false };
+    assert({ actual, expect });
   }
 
   {
@@ -197,7 +197,7 @@ import { URL_META } from "@jsenv/url-meta";
       associations,
       url: "file:///src/exception.js",
     });
-    const expected = { cover: false };
-    assert({ actual, expected });
+    const expect = { cover: false };
+    assert({ actual, expect });
   }
 }

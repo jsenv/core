@@ -11,10 +11,10 @@ const result = await execute({
   keepRunning: true, // node will naturally exit
 });
 const actual = result;
-const expected = {
+const expect = {
   status: "completed",
   errors: [],
   namespace: {},
   duration: assert.any(Number),
 };
-assert({ actual, expected });
+assert({ actual, expect });

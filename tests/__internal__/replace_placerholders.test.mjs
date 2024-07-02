@@ -15,7 +15,7 @@ const bar = __BAR__`,
   },
 );
 const actual = result.content;
-const expected = `const foo = "hello"
+const expect = `const foo = "hello"
 const t = "hello"
 const bar = "world"`;
-assert({ actual, expected });
+assert({ actual, expect });

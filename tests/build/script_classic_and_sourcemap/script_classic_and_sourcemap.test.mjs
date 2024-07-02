@@ -25,8 +25,8 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = undefined;
-  assert({ actual, expected });
+  const expect = undefined;
+  assert({ actual, expect });
 };
 
 await test({

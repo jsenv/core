@@ -33,10 +33,10 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await copyEntry({ from: sourceUrl, to: destinationUrl });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `nothing to copy at ${urlToFileSystemPath(sourceUrl)}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -54,12 +54,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `cannot copy ${urlToFileSystemPath(
         sourceUrl,
       )} because destination and source are the same`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -88,20 +88,20 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       await readEntryModificationTime(destinationUrl),
     ),
   };
-  const expected = {
+  const expect = {
     sourceContent,
     sourceMtime,
     destinationContent: sourceContent,
     destinationMtime: sourceMtime,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   // on windows permissions are not reliable
   if (!isWindows) {
     const actual = {
       sourcePermissions: await readEntryPermissions(sourceUrl),
       destinationPermissions: await readEntryPermissions(destinationUrl),
     };
-    const expected = {
+    const expect = {
       sourcePermissions: {
         owner: { ...sourcePermissions.owner },
         group: { ...sourcePermissions.group },
@@ -109,7 +109,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       },
       destinationPermissions: sourcePermissions,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -124,14 +124,14 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   try {
     await copyEntry({ from: sourceUrl, to: destinationUrl });
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `cannot copy file from ${urlToFileSystemPath(
         sourceUrl,
       )} to ${urlToFileSystemPath(
         destinationUrl,
       )} because destination exists and overwrite option is disabled`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -149,8 +149,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     overwrite: true,
   });
   const actual = await readFile(destinationUrl, { as: "string" });
-  const expected = "foo";
-  assert({ actual, expected });
+  const expect = "foo";
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -169,14 +169,14 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `cannot copy file from ${urlToFileSystemPath(
         sourceUrl,
       )} to ${urlToFileSystemPath(
         destinationUrl,
       )} because destination exists and is not a file (it's a directory)`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -192,14 +192,14 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await copyEntry({ from: sourceUrl, to: destinationUrl });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `cannot copy directory from ${urlToFileSystemPath(
         sourceUrl,
       )} to ${urlToFileSystemPath(
         destinationUrl,
       )} because destination exists and is not a directory (it's a file)`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -215,14 +215,14 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await copyEntry({ from: sourceUrl, to: destinationUrl });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `cannot copy directory from ${urlToFileSystemPath(
         sourceUrl,
       )} to ${urlToFileSystemPath(
         destinationUrl,
       )} because destination exists and overwrite option is disabled`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -243,11 +243,11 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     directoryAtSource: await testDirectoryPresence(sourceUrl),
     directoryAtDestination: await testDirectoryPresence(destinationUrl),
   };
-  const expected = {
+  const expect = {
     directoryAtSource: true,
     directoryAtDestination: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -265,11 +265,11 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     sourceContent: await readFile(fileSourceUrl, { as: "string" }),
     destinationContent: await readFile(fileDestinationUrl, { as: "string" }),
   };
-  const expected = {
+  const expect = {
     sourceContent: "foo",
     destinationContent: "foo",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -298,12 +298,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     }),
     fileBDestinationPresent: await testFilePresence(fileBDestinationUrl),
   };
-  const expected = {
+  const expect = {
     fileASourceContent: "sourceA",
     fileADestinationContent: "sourceA",
     fileBDestinationPresent: false,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -318,8 +318,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   await copyEntry({ from: sourceUrl, to: destinationUrl });
   const actual = await readSymbolicLink(linkDestinationUrl);
-  const expected = "./whatever";
-  assert({ actual, expected });
+  const expect = "./whatever";
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -334,8 +334,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   await copyEntry({ from: sourceUrl, to: destinationUrl });
   const actual = await readSymbolicLink(linkDestinationUrl);
-  const expected = "../whatever";
-  assert({ actual, expected });
+  const expect = "../whatever";
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -352,8 +352,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   await copyEntry({ from: sourceUrl, to: destinationUrl });
   const actual = await readSymbolicLink(linkDestinationUrl);
-  const expected = insideDestinationUrl;
-  assert({ actual, expected });
+  const expect = insideDestinationUrl;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -370,8 +370,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const actual = ensurePathnameTrailingSlash(
     await readSymbolicLink(linkDestinationUrl),
   );
-  const expected = tempDirectoryUrl;
-  assert({ actual, expected });
+  const expect = tempDirectoryUrl;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -386,11 +386,11 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     sourceTarget: await readSymbolicLink(sourceUrl),
     destinationTarget: await readSymbolicLink(destinationUrl),
   };
-  const expected = {
+  const expect = {
     sourceTarget: "./whatever",
     destinationTarget: "./whatever",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -408,12 +408,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     destinationLinkTarget: await readSymbolicLink(destinationUrl),
     linkTarget: await readSymbolicLink(fileUrl),
   };
-  const expected = {
+  const expect = {
     sourceLinkTarget: "./sourcetarget",
     destinationLinkTarget: "./desttarget",
     linkTarget: "./sourcetarget",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -432,14 +432,14 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `cannot copy symbolic-link from ${urlToFileSystemPath(
         sourceUrl,
       )} to ${urlToFileSystemPath(
         destinationUrl,
       )} because destination exists and overwrite option is disabled`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -463,11 +463,11 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     sourceLinkTarget: await readSymbolicLink(sourceUrl),
     destinationLinkTarget: await readSymbolicLink(destinationUrl),
   };
-  const expected = {
+  const expect = {
     sourceLinkTarget,
     destinationLinkTarget: sourceLinkTarget,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -485,12 +485,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     destinationLinkTarget: await readSymbolicLink(destinationUrl),
     fileContent: await readFile(fileUrl, { as: "string" }),
   };
-  const expected = {
+  const expect = {
     sourceContent: "foo",
     destinationLinkTarget: "./file",
     fileContent: "foo",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -509,12 +509,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `cannot copy ${urlToFileSystemPath(
         sourceUrl,
       )} because destination and source are the same`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }

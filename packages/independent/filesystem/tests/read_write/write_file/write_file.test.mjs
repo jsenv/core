@@ -11,7 +11,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const fileUrl = resolveUrl("file.txt", directoryUrl);
   await writeFile(fileUrl, "hello world");
   const actual = await readFile(fileUrl, { as: "string" });
-  const expected = "hello world";
-  assert({ actual, expected });
+  const expect = "hello world";
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }

@@ -3,5 +3,5 @@ import { assert } from "@jsenv/assert";
 import { throwSomething } from "./a.mjs";
 
 const actual = throwSomething();
-const expected = undefined;
-assert({ actual, expected });
+const expect = undefined;
+assert({ actual, expect });

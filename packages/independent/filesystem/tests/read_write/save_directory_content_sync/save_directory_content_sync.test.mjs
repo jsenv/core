@@ -28,8 +28,8 @@ test(() => {
   });
   tempDirectoryContentBackup.restore();
   const actual = readFileStructureSync(tempDirectoryUrl);
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 });
 
 // restore one file that got removed
@@ -41,10 +41,10 @@ test(() => {
   removeFileSync(new URL("./file.txt", tempDirectoryUrl));
   tempDirectoryContentBackup.restore();
   const actual = readFileStructureSync(tempDirectoryUrl);
-  const expected = {
+  const expect = {
     "file.txt": "hello",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // restore one file that got updated
@@ -56,8 +56,8 @@ test(() => {
   writeFileSync(new URL("./file.txt", tempDirectoryUrl), "coucou");
   tempDirectoryContentBackup.restore();
   const actual = readFileStructureSync(tempDirectoryUrl);
-  const expected = {
+  const expect = {
     "file.txt": "hello",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });

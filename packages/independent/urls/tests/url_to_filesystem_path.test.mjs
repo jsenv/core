@@ -7,8 +7,8 @@ const isWindows = process.platform === "win32";
 if (isWindows) {
   {
     const actual = urlToFileSystemPath("file:///C:/directory/file.js");
-    const expected = "C:\\directory\\file.js";
-    assert({ actual, expected });
+    const expect = "C:\\directory\\file.js";
+    assert({ actual, expect });
   }
 
   try {
@@ -16,16 +16,16 @@ if (isWindows) {
     throw new Error("should throw");
   } catch ({ code, message }) {
     const actual = { code, message };
-    const expected = {
+    const expect = {
       code: "ERR_INVALID_FILE_URL_PATH",
       message: "File URL path must be absolute",
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 } else {
   const actual = urlToFileSystemPath("file:///directory/file.js");
-  const expected = "/directory/file.js";
-  assert({ actual, expected });
+  const expect = "/directory/file.js";
+  assert({ actual, expect });
 }
 
 try {
@@ -33,10 +33,10 @@ try {
   throw new Error("should throw");
 } catch (error) {
   const actual = { code: error.code, name: error.name, message: error.message };
-  const expected = {
+  const expect = {
     code: "ERR_INVALID_URL_SCHEME",
     name: "TypeError",
     message: "The URL must be of scheme file",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

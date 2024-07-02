@@ -24,9 +24,9 @@ const actual = {
   whileBuilding,
   afterBuild,
 };
-const expected = {
+const expect = {
   beforeBuild: 0,
   whileBuilding: 1,
   afterBuild: 0,
 };
-assert({ actual, expected });
+assert({ actual, expect });

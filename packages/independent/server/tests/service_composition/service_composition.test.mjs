@@ -38,7 +38,7 @@ const { origin } = await startServer({
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url: `${origin}/`,
     status: 204,
     statusText: "No Content",
@@ -48,7 +48,7 @@ const { origin } = await startServer({
     },
     body: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -60,7 +60,7 @@ const { origin } = await startServer({
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url: `${origin}/whatever`,
     status: 200,
     statusText: "OK",
@@ -71,5 +71,5 @@ const { origin } = await startServer({
     },
     body: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

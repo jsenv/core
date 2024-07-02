@@ -2,13 +2,13 @@ import { assert } from "../../src/assert_scratch.js";
 
 const ensureTypeErrorWithMessage = (value, message) => {
   if (value.name !== "TypeError") {
-    throw new Error(`error expected, got ${value}`);
+    throw new Error(`error expect,got ${value}`);
   }
   if (value.message !== message) {
     throw new Error(`unequal error message.
 --- message ---
 ${value.message}
---- expected message ---
+--- expect message ---
 ${message}`);
   }
 };
@@ -35,7 +35,7 @@ try {
 
 try {
   // we could consider this call as valid
-  // but people might think assert() signature is (actual, expected)
+  // but people might think assert() signature is (actual, expect)
   // we have to throw in that case too to informe they are
   // doing something unexpected
   assert({ actual: true, expect: true }, false);

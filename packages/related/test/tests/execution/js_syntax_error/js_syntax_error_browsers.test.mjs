@@ -27,12 +27,12 @@ const test = async (params) => {
   const [error] = errors;
   const expectedStack = {
     chromium: "SyntaxError: Unexpected end of input",
-    firefox: "SyntaxError: expected expression, got end of script",
+    firefox: "SyntaxError: expect expression, got end of script",
     webkit: "SyntaxError: Unexpected end of script",
   }[params.runtime.name];
   const actual = error.stack;
-  const expected = expectedStack;
-  assert({ actual, expected });
+  const expect = expectedStack;
+  assert({ actual, expect });
 };
 
 await test({ runtime: chromium() });

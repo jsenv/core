@@ -28,13 +28,13 @@
         await createAnimationFramePromise();
         assert({
           actual: disconnectedValue,
-          expected: undefined,
+          expect: undefined,
         });
         document.body.innerHTML = "";
         await createAnimationFramePromise();
         assert({
           actual: disconnectedValue,
-          expected: "yay, it works",
+          expect: "yay, it works",
         });
       }
 
@@ -51,13 +51,13 @@
         await createAnimationFramePromise();
         assert({
           actual: disconnectedValue,
-          expected: undefined,
+          expect: undefined,
         });
         document.body.innerHTML = "";
         await createAnimationFramePromise();
         assert({
           actual: disconnectedValue,
-          expected: "yay, it works again",
+          expect: "yay, it works again",
         });
       }
 
@@ -70,13 +70,13 @@
         await createAnimationFramePromise();
         assert({
           actual: disconnectedValue,
-          expected: undefined,
+          expect: undefined,
         });
         document.body.innerHTML = "";
         await createAnimationFramePromise();
         assert({
           actual: disconnectedValue,
-          expected: undefined,
+          expect: undefined,
         });
       }
 
@@ -93,13 +93,13 @@
         await createAnimationFramePromise();
         assert({
           actual: disconnectedValue,
-          expected: undefined,
+          expect: undefined,
         });
         document.body.innerHTML = "";
         await createAnimationFramePromise();
         assert({
           actual: disconnectedValue,
-          expected: "restored",
+          expect: "restored",
         });
       }
     </script>

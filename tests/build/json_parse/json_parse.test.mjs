@@ -39,7 +39,7 @@ const test = async () => {
     returnValue,
     buildInlineContents,
   };
-  const expected = {
+  const expect = {
     returnValue: {
       data: { answer: 42 },
     },
@@ -48,7 +48,7 @@ const test = async () => {
       "js/main.js@L1C31-L3C2.json": '{"answer":42}',
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test();

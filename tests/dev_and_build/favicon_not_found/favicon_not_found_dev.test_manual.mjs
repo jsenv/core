@@ -34,13 +34,13 @@ try {
     warnCalls,
     consoleErrors: consoleOutput.errors,
   };
-  const expected = {
+  const expect = {
     warnCalls: [],
     consoleErrors: [
       `Failed to load resource: the server responded with a status of 404 (no entry on filesystem)`,
     ],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 } finally {
   console.warn = warn;
 }

@@ -46,21 +46,21 @@ const test = async (params) => {
 --- details ---
 foo
 ^
-unexpected "f", expected to continue with "bar"
+unexpected "f", expect to continue with "bar"
 --- path ---
 actual`),
     firefox: assert.startsWith(`unexpected character in string
 --- details ---
 foo
 ^
-unexpected "f", expected to continue with "bar"
+unexpected "f", expect to continue with "bar"
 --- path ---
 actual`),
     webkit: assert.startsWith(`unexpected character in string
 --- details ---
 foo
 ^
-unexpected "f", expected to continue with "bar"
+unexpected "f", expect to continue with "bar"
 --- path ---
 actual`),
   }[params.runtime.name];
@@ -75,7 +75,7 @@ actual`),
     webkit: 5,
   }[params.runtime.name];
 
-  const expected = {
+  const expect = {
     status: "failed",
     consoleCalls: [],
     errorMessage: expectedErrorMessage,
@@ -88,7 +88,7 @@ actual`),
       serverUrl: `${devServer.origin}/main.html`,
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({ runtime: chromium() });

@@ -642,7 +642,7 @@ await executeTestPlan({
   - "?as_css_module"
   - "?as_text_module"
   - "?as_js_classic_library"
-- Create a relationship with source file when a file is referenced with a query params from the list above (means hot reload and cache invalidation work as expected)
+- Create a relationship with source file when a file is referenced with a query params from the list above (means hot reload and cache invalidation work as expect)
 - preserve preload links when css becomes js
 - update @jsenv/log to add logger.level
 - improve build debug logs

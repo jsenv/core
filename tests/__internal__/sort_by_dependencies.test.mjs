@@ -15,9 +15,9 @@ import { sortByDependencies } from "@jsenv/core/src/kitchen/url_graph/sort_by_de
       referenceToOthersSet: new Set(),
     },
   });
-  const expected = ["img.png", "b.js", "a.js"];
-  expected.circular = [];
-  assert({ actual, expected });
+  const expect = ["img.png", "b.js", "a.js"];
+  expect.circular = [];
+  assert({ actual, expect });
 }
 
 {
@@ -32,7 +32,7 @@ import { sortByDependencies } from "@jsenv/core/src/kitchen/url_graph/sort_by_de
       referenceToOthersSet: new Set(),
     },
   });
-  const expected = ["img.png", "b.js", "a.js"];
-  expected.circular = [];
-  assert({ actual, expected });
+  const expect = ["img.png", "b.js", "a.js"];
+  expect.circular = [];
+  assert({ actual, expect });
 }

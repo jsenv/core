@@ -24,8 +24,8 @@ const integrity = `sha256-${helloWorldAsSha256AndBase64} sha512-${helloWorldAsSh
     dataRepresentation: Buffer.from("Hello world"),
   };
   const actual = await validateResponseIntegrity(response, integrity);
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }
 
 // validating "Hello"
@@ -35,8 +35,8 @@ const integrity = `sha256-${helloWorldAsSha256AndBase64} sha512-${helloWorldAsSh
     dataRepresentation: Buffer.from("Hello"),
   };
   const actual = await validateResponseIntegrity(response, integrity);
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }
 
 // validating "Hellow"
@@ -54,10 +54,10 @@ const integrity = `sha256-${helloWorldAsSha256AndBase64} sha512-${helloWorldAsSh
       code: e.code,
       message: e.message,
     };
-    const expected = {
+    const expect = {
       code: "EINTEGRITY",
       message: `Integrity validation failed for resource "http://example.com/file.txt". The integrity found for this resource is "sha512-E+RbhRojnWN6dkeUqrS8Fxl9hHR+5by21VwGtX/3sQtmItAdMtpv7G9Q8CEsoMx0fRuVp7zBqXfOhMl2yRFBuA=="`,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }

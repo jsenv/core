@@ -30,11 +30,11 @@ const test = async ({ name, expectedUrl, ...rest }) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     answer: 42,
     url: `${server.origin}${expectedUrl}`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // can use <script type="module">

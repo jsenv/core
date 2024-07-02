@@ -30,8 +30,8 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = { answer: 42 };
-  assert({ actual, expected });
+  const expect = { answer: 42 };
+  assert({ actual, expect });
 };
 
 // no support for <script type="modue">

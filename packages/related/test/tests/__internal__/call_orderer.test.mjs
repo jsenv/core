@@ -9,8 +9,8 @@ import { createCallOrderer } from "@jsenv/test/src/helpers/call_orderer.js";
   orderCall(1, () => calls.push("b"));
   orderCall(0, () => calls.push("a"));
   const actual = calls;
-  const expected = ["a", "b", "c"];
-  assert({ actual, expected });
+  const expect = ["a", "b", "c"];
+  assert({ actual, expect });
 }
 
 {
@@ -20,8 +20,8 @@ import { createCallOrderer } from "@jsenv/test/src/helpers/call_orderer.js";
   orderCall(0, () => calls.push("a"));
   orderCall(1, () => calls.push("b"));
   const actual = calls;
-  const expected = ["a", "b", "c"];
-  assert({ actual, expected });
+  const expect = ["a", "b", "c"];
+  assert({ actual, expect });
 }
 
 {
@@ -31,8 +31,8 @@ import { createCallOrderer } from "@jsenv/test/src/helpers/call_orderer.js";
   orderCall(2, () => calls.push("c"));
   orderCall(0, () => calls.push("a"));
   const actual = calls;
-  const expected = ["a", "b", "c"];
-  assert({ actual, expected });
+  const expect = ["a", "b", "c"];
+  assert({ actual, expect });
 }
 
 {
@@ -42,8 +42,8 @@ import { createCallOrderer } from "@jsenv/test/src/helpers/call_orderer.js";
   orderCall(0, () => calls.push("a"));
   orderCall(2, () => calls.push("c"));
   const actual = calls;
-  const expected = ["a", "b", "c"];
-  assert({ actual, expected });
+  const expect = ["a", "b", "c"];
+  assert({ actual, expect });
 }
 
 {
@@ -53,8 +53,8 @@ import { createCallOrderer } from "@jsenv/test/src/helpers/call_orderer.js";
   orderCall(1, () => calls.push("b"));
   orderCall(2, () => calls.push("c"));
   const actual = calls;
-  const expected = ["a", "b", "c"];
-  assert({ actual, expected });
+  const expect = ["a", "b", "c"];
+  assert({ actual, expect });
 }
 
 {
@@ -70,6 +70,6 @@ import { createCallOrderer } from "@jsenv/test/src/helpers/call_orderer.js";
   orderCall(8, () => calls.push("i"));
   orderCall(7, () => calls.push("h"));
   const actual = calls;
-  const expected = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
-  assert({ actual, expected });
+  const expect = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
+  assert({ actual, expect });
 }

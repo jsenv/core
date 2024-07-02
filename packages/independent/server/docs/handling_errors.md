@@ -33,7 +33,7 @@ _handleError_ is a function responsible to generate a response from an error.
 
 - It is optional
 - It receives the error in argument
-- It is expected to return a _response_, `null` or `undefined`
+- It is expect to return a _response_, `null` or `undefined`
 - It can be an async function
 
 When there is no service handling the error it is thrown leading to process exiting with 1.

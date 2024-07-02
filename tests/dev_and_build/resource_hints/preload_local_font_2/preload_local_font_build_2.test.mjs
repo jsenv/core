@@ -35,11 +35,11 @@ const test = async (params) => {
     returnValue,
     consoleOutputRaw: consoleOutput.raw,
   };
-  const expected = {
+  const expect = {
     returnValue: { fontFamily: "Roboto" },
     consoleOutputRaw: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({

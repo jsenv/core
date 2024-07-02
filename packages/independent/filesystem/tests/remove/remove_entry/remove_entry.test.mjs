@@ -27,10 +27,10 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   try {
     await removeEntry(sourceUrl);
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `nothing to remove at ${urlToFileSystemPath(sourceUrl)}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -39,8 +39,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const sourceUrl = resolveUrl("source", tempDirectoryUrl);
 
   const actual = await removeEntry(sourceUrl, { allowUseless: true });
-  const expected = undefined;
-  assert({ actual, expected });
+  const expect = undefined;
+  assert({ actual, expect });
 }
 
 // remove opened filed
@@ -50,8 +50,8 @@ if (!isWindows) {
   await makeBusyFile(sourceUrl, async () => {
     await removeEntry(sourceUrl);
     const actual = await testFilePresence(sourceUrl);
-    const expected = false;
-    assert({ actual, expected });
+    const expect = false;
+    assert({ actual, expect });
   });
 }
 
@@ -69,14 +69,14 @@ if (!isWindows) {
     await removeEntry(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `EACCES: permission denied, lstat '${urlToFileSystemPath(sourceUrl)}'`,
     );
-    expected.errno = actual.errno;
-    expected.code = "EACCES";
-    expected.syscall = "lstat";
-    expected.path = urlToFileSystemPath(sourceUrl);
-    assert({ actual, expected });
+    expect.errno = actual.errno;
+    expect.code = "EACCES";
+    expect.syscall = "lstat";
+    expect.path = urlToFileSystemPath(sourceUrl);
+    assert({ actual, expect });
   } finally {
     await writeEntryPermissions(directoryUrl, {
       owner: { read: true, write: true, execute: true },
@@ -95,8 +95,8 @@ if (!isWindows) {
 
   await removeEntry(sourceUrl);
   const actual = await testFilePresence(sourceUrl);
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // remove file
@@ -106,8 +106,8 @@ if (!isWindows) {
 
   await removeEntry(sourceUrl);
   const actual = await testFilePresence(sourceUrl);
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // remove destination with trailing slash being a file
@@ -118,8 +118,8 @@ if (!isWindows) {
 
   await removeEntry(sourceUrlWithTrailingSlash);
   const actual = await testFilePresence(sourceUrl);
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // remove directory
@@ -129,8 +129,8 @@ if (!isWindows) {
 
   await removeEntry(sourceUrl);
   const actual = await testFilePresence(sourceUrl);
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // remove directory without permission
@@ -143,8 +143,8 @@ if (!isWindows) {
 
   await removeEntry(sourceUrl);
   const actual = await testFilePresence(sourceUrl);
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // remove directory with a file
@@ -158,16 +158,16 @@ if (!isWindows) {
     await removeEntry(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `ENOTEMPTY: directory not empty, rmdir '${urlToFileSystemPath(
         sourceUrl,
       )}'`,
     );
-    expected.errno = actual.errno;
-    expected.code = "ENOTEMPTY";
-    expected.syscall = "rmdir";
-    expected.path = urlToFileSystemPath(sourceUrl);
-    assert({ actual, expected });
+    expect.errno = actual.errno;
+    expect.code = "ENOTEMPTY";
+    expect.syscall = "rmdir";
+    expect.path = urlToFileSystemPath(sourceUrl);
+    assert({ actual, expect });
   } finally {
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
@@ -182,8 +182,8 @@ if (!isWindows) {
 
   await removeEntry(sourceUrl, { recursive: true });
   const actual = await testDirectoryPresence(sourceUrl);
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // remove directory with content without permission and recursive enabled
@@ -200,14 +200,14 @@ if (!isWindows) {
     await removeEntry(sourceUrl, { recursive: true });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `EACCES: permission denied, lstat '${urlToFileSystemPath(fileUrl)}'`,
     );
-    expected.errno = -13;
-    expected.code = "EACCES";
-    expected.syscall = "lstat";
-    expected.path = urlToFileSystemPath(fileUrl);
-    assert({ actual, expected });
+    expect.errno = -13;
+    expect.code = "EACCES";
+    expect.syscall = "lstat";
+    expect.path = urlToFileSystemPath(fileUrl);
+    assert({ actual, expect });
   } finally {
     await writeEntryPermissions(sourceUrl, {
       owner: { read: true, write: true, execute: true },
@@ -226,8 +226,8 @@ if (!isWindows) {
   await makeBusyFile(fileUrl, async () => {
     await removeEntry(sourceUrl, { recursive: true });
     const actual = await testDirectoryPresence(sourceUrl);
-    const expected = false;
-    assert({ actual, expected });
+    const expect = false;
+    assert({ actual, expect });
   });
 }
 
@@ -242,8 +242,8 @@ if (!isWindows) {
 
   await removeEntry(sourceUrl, { recursive: true });
   const actual = await testDirectoryPresence(sourceUrl);
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // remove directory with file nested and recursive enabled
@@ -256,8 +256,8 @@ if (!isWindows) {
 
   await removeEntry(sourceUrl, { recursive: true });
   const actual = await testDirectoryPresence(sourceUrl);
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // remove directory with a link to nothing
@@ -268,8 +268,8 @@ if (!isWindows) {
 
   await removeEntry(sourceUrl, { recursive: true });
   const actual = await testDirectoryPresence(sourceUrl);
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // remove link to nothing
@@ -279,8 +279,8 @@ if (!isWindows) {
 
   await removeEntry(sourceUrl);
   const actual = await testSymbolicLinkPresence(sourceUrl);
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // remove link to file
@@ -295,11 +295,11 @@ if (!isWindows) {
     linkPresence: await testSymbolicLinkPresence(sourceUrl),
     filePresence: await testFilePresence(fileUrl),
   };
-  const expected = {
+  const expect = {
     linkPresence: false,
     filePresence: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -315,11 +315,11 @@ if (!isWindows) {
     linkPresence: await testSymbolicLinkPresence(sourceUrl),
     directoryPresence: await testDirectoryPresence(directoryUrl),
   };
-  const expected = {
+  const expect = {
     linkPresence: false,
     directoryPresence: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -337,14 +337,14 @@ if (!isWindows) {
     await removeEntry(sourceUrl, { recursive: true });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `EACCES: permission denied, lstat '${urlToFileSystemPath(linkUrl)}'`,
     );
-    expected.errno = -13;
-    expected.code = "EACCES";
-    expected.syscall = "lstat";
-    expected.path = urlToFileSystemPath(linkUrl);
-    assert({ actual, expected });
+    expect.errno = -13;
+    expect.code = "EACCES";
+    expect.syscall = "lstat";
+    expect.path = urlToFileSystemPath(linkUrl);
+    assert({ actual, expect });
   } finally {
     await writeEntryPermissions(sourceUrl, {
       owner: { read: true, write: true, execute: true },

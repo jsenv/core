@@ -19,11 +19,11 @@ const test = async (params) => {
     status: result.status,
     duration,
   };
-  const expected = {
+  const expect = {
     status: "timedout",
     duration: assert.between(2_000, 5_000),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({

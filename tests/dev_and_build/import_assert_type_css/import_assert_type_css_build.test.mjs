@@ -30,11 +30,11 @@ const test = async ({ name, ...params }) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     bodyBackgroundColor: "rgb(255, 0, 0)",
     bodyBackgroundImage: `url("${server.origin}/${buildManifest["other/jsenv.png"]}")`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // chrome 60 cannot use <script type="module"> nor constructable stylesheet

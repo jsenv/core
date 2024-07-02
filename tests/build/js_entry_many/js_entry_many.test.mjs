@@ -43,8 +43,8 @@ const actual = {
   aReturnValue: aExecution.returnValue,
   bReturnValue: bExecution.returnValue,
 };
-const expected = {
+const expect = {
   aReturnValue: "a-shared",
   bReturnValue: "b-shared",
 };
-assert({ actual, expected });
+assert({ actual, expect });

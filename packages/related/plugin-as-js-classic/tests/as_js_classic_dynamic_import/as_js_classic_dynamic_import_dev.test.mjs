@@ -26,8 +26,8 @@ try {
       () => window.askPromise,
       /* eslint-enable no-undef */
     );
-    const expected = 42;
-    assert({ actual, expected });
+    const expect = 42;
+    assert({ actual, expect });
   }
 } finally {
   if (!debug) {

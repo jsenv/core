@@ -10,8 +10,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///file.js",
     });
-    const expected = true;
-    assert({ actual, expected });
+    const expect = true;
+    assert({ actual, expect });
   }
 
   {
@@ -19,8 +19,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///dir/file.js",
     });
-    const expected = true;
-    assert({ actual, expected });
+    const expect = true;
+    assert({ actual, expect });
   }
 
   {
@@ -28,8 +28,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///.git/dir/file.js",
     });
-    const expected = true;
-    assert({ actual, expected });
+    const expect = true;
+    assert({ actual, expect });
   }
 }
 
@@ -41,8 +41,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///file.js",
     });
-    const expected = true;
-    assert({ actual, expected });
+    const expect = true;
+    assert({ actual, expect });
   }
 
   {
@@ -50,8 +50,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///dir/file.js",
     });
-    const expected = false;
-    assert({ actual, expected });
+    const expect = false;
+    assert({ actual, expect });
   }
 
   {
@@ -59,8 +59,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///dir/foo/file.js",
     });
-    const expected = false;
-    assert({ actual, expected });
+    const expect = false;
+    assert({ actual, expect });
   }
 }
 
@@ -72,8 +72,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///file.js",
     });
-    const expected = false;
-    assert({ actual, expected });
+    const expect = false;
+    assert({ actual, expect });
   }
 
   {
@@ -81,8 +81,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///dir/file.js",
     });
-    const expected = true;
-    assert({ actual, expected });
+    const expect = true;
+    assert({ actual, expect });
   }
 
   {
@@ -90,8 +90,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///dir/foo/file.js",
     });
-    const expected = true;
-    assert({ actual, expected });
+    const expect = true;
+    assert({ actual, expect });
   }
 }
 
@@ -103,8 +103,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///.git/file.js",
     });
-    const expected = true;
-    assert({ actual, expected });
+    const expect = true;
+    assert({ actual, expect });
   }
 
   {
@@ -112,8 +112,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///dir/.git/file.js",
     });
-    const expected = true;
-    assert({ actual, expected });
+    const expect = true;
+    assert({ actual, expect });
   }
 
   {
@@ -121,8 +121,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///file.js",
     });
-    const expected = false;
-    assert({ actual, expected });
+    const expect = false;
+    assert({ actual, expect });
   }
 
   {
@@ -130,8 +130,8 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///dir/file.js",
     });
-    const expected = false;
-    assert({ actual, expected });
+    const expect = false;
+    assert({ actual, expect });
   }
 
   {
@@ -139,7 +139,7 @@ import { URL_META } from "@jsenv/url-meta";
       pattern,
       url: "file:///.file.js",
     });
-    const expected = false;
-    assert({ actual, expected });
+    const expect = false;
+    assert({ actual, expect });
   }
 }

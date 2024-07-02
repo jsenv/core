@@ -31,14 +31,14 @@ const test = async (params) => {
     pageErrors,
     consoleOutputRaw: consoleOutput.raw,
   };
-  const expected = {
+  const expect = {
     errorStack: `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
   at triggerError (${sourceDirectoryUrl}trigger_error.js:2:9)
   at ${sourceDirectoryUrl}main.js:3:1`,
     pageErrors: [assert.any(Error)],
     consoleOutputRaw: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test();

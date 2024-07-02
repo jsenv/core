@@ -8,8 +8,8 @@ import { urlIsInsideOf } from "@jsenv/urls";
     "http://example.com/directory/file.js",
     "http://example.fr/directory/",
   );
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // same urls
@@ -18,8 +18,8 @@ import { urlIsInsideOf } from "@jsenv/urls";
     "file:///directory/file.js",
     "file:///directory/file.js",
   );
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // outside
@@ -28,8 +28,8 @@ import { urlIsInsideOf } from "@jsenv/urls";
     "file:///whatever/file.js",
     "file:///directory/",
   );
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 // inside
@@ -38,8 +38,8 @@ import { urlIsInsideOf } from "@jsenv/urls";
     "file:///directory/file.js",
     "file:///directory/",
   );
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }
 
 // deep inside
@@ -48,6 +48,6 @@ import { urlIsInsideOf } from "@jsenv/urls";
     "file:///directory/subdirectory/file.js",
     "file:///directory/",
   );
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }

@@ -30,7 +30,7 @@ const { origin } = await startServer({
 {
   const response = await fetchUrl(origin);
   const actual = parseServerTimingHeader(response.headers.get("server-timing"));
-  const expected = {
+  const expect = {
     a: {
       description: "toto.handleRequest",
       duration: actual.a.duration,
@@ -44,5 +44,5 @@ const { origin } = await startServer({
       duration: actual.c.duration,
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

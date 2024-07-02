@@ -90,11 +90,11 @@ try {
       serverRequestedForFoo: getServerRequestedForFoo(),
     };
     takeDevFilesSnapshot("1_first_run");
-    const expected = {
+    const expect = {
       result: 42,
       serverRequestedForFoo: true,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // reload page and expect node_modules/foo/index.js to be cached
@@ -106,11 +106,11 @@ try {
       result: await getResult(),
       serverRequestedForFoo: getServerRequestedForFoo(),
     };
-    const expected = {
+    const expect = {
       result: 42,
       serverRequestedForFoo: false,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // now update the package content + version and see if reloading the page updates the result
@@ -136,11 +136,11 @@ try {
       serverRequestedForFoo: getServerRequestedForFoo(),
     };
     takeDevFilesSnapshot("2_after_package_update");
-    const expected = {
+    const expect = {
       result: 43,
       serverRequestedForFoo: true,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 } finally {
   fooPackageFileContent.restore();

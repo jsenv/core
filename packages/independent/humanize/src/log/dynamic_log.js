@@ -93,7 +93,7 @@ export const createDynamicLog = ({
     ouputAfterCallback = lastOutput,
   ) => {
     // 1. Erase the current log
-    // 2. Call callback (expected to write something on stdout)
+    // 2. Call callback (expect to write something on stdout)
     // 3. Restore the current log
     // During step 2. we expect a "write from outside" so we uninstall
     // the stream spy during function call

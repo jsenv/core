@@ -39,13 +39,13 @@ const test = async (params) => {
       readFileSync(new URL("./snapshots/src/sub/file.js", import.meta.url)),
     ),
   };
-  const expected = {
+  const expect = {
     returnValue: {
       directoryUrl: `${server.origin}/${buildManifest["src/"]}`,
     },
     jsFileContent: `console.log("Hello");\n`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // by default referencing a directory throw an error
@@ -54,7 +54,7 @@ try {
   throw new Error("should throw");
 } catch (e) {
   const actual = e.message;
-  const expected = `Reference leads to a directory
+  const expect = `Reference leads to a directory
 --- reference trace ---
 ${new URL("./client/main.html", import.meta.url)}:15:40
 12 |       });
@@ -62,7 +62,7 @@ ${new URL("./client/main.html", import.meta.url)}:15:40
 14 |     <script type="module">
 15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
                                             ^`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // but it can be allowed explicitely and it will copy the directory content

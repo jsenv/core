@@ -2,9 +2,9 @@ import { assert } from "@jsenv/assert";
 
 import { distributePercentages } from "@jsenv/humanize";
 
-const test = (namedNumbers, expected) => {
+const test = (namedNumbers, expect) => {
   const actual = distributePercentages(namedNumbers);
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 test(

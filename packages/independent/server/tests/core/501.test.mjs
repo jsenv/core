@@ -18,7 +18,7 @@ const { origin, stop } = await startServer({
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url: `${origin}/`,
     status: 501,
     statusText: "Not Implemented",
@@ -29,7 +29,7 @@ const { origin, stop } = await startServer({
     },
     body: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 stop();

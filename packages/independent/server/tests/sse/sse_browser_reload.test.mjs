@@ -49,8 +49,8 @@ if (process.platform !== "win32") {
 
   {
     const actual = room.getRoomClientCount();
-    const expected = 1;
-    assert({ actual, expected });
+    const expect = 1;
+    assert({ actual, expect });
   }
 
   await page.evaluate(() => {
@@ -61,8 +61,8 @@ if (process.platform !== "win32") {
 
   {
     const actual = room.getRoomClientCount();
-    const expected = 0;
-    assert({ actual, expected });
+    const expect = 0;
+    assert({ actual, expect });
   }
 
   browser.close();

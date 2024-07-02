@@ -32,8 +32,8 @@ const setup = async () => {
     predicate: ({ source }) => source,
   });
   const actual = matchingFileResultArray.map(({ relativeUrl }) => relativeUrl);
-  const expected = ["a/aa/e.js", "a/d.js", "b/c.js", "a.js", "b.js"];
-  assert({ actual, expected });
+  const expect = ["a/aa/e.js", "a/d.js", "b/c.js", "a.js", "b.js"];
+  assert({ actual, expect });
 }
 
 // abort
@@ -56,9 +56,9 @@ const setup = async () => {
     const actual = {
       isAbortError: Abort.isAbortError(e),
     };
-    const expected = {
+    const expect = {
       isAbortError: true,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }

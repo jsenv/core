@@ -30,11 +30,11 @@ const test = async ({ name, ...params }) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     importMetaResolveReturnValue: `${server.origin}/js/foo.js`,
     __TEST__: `${server.origin}/js/foo.js`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // import.meta.resolve supported

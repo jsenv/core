@@ -22,7 +22,7 @@ if (process.platform !== "win32") {
   const actual = await fetchFileSystem(
     new URL("./file.js?ok=true", fixturesDirectoryUrl),
   );
-  const expected = {
+  const expect = {
     status: 200,
     statusText: undefined,
     statusMessage: undefined,
@@ -38,7 +38,7 @@ if (process.platform !== "win32") {
         actual.timing["file service>read file stat"],
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // 404 if file is missing
@@ -58,7 +58,7 @@ if (process.platform !== "win32") {
       compressionSizeThreshold: 1,
     },
   );
-  const expected = {
+  const expect = {
     status: 404,
     statusText: `ENOENT: File not found at ${urlToFileSystemPath(fileUrl)}`,
     statusMessage: undefined,
@@ -69,7 +69,7 @@ if (process.platform !== "win32") {
     bodyEncoding: undefined,
     timing: undefined,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // 304 if file not modified (using etag)
@@ -94,7 +94,7 @@ if (process.platform !== "win32") {
       body: response.body,
       timing: response.timing,
     };
-    const expected = {
+    const expect = {
       status: 200,
       headers: {
         "cache-control": "private,max-age=0,must-revalidate",
@@ -110,7 +110,7 @@ if (process.platform !== "win32") {
           actual.timing["file service>generate file etag"],
       },
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // do an other request with if-none-match
@@ -128,13 +128,13 @@ if (process.platform !== "win32") {
       status: secondResponse.status,
       headers: secondResponse.headers,
     };
-    const expected = {
+    const expect = {
       status: 304,
       headers: {
         "cache-control": "private,max-age=0,must-revalidate",
       },
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // modifiy the file content, then third request
@@ -153,7 +153,7 @@ if (process.platform !== "win32") {
       status: thirdResponse.status,
       headers: thirdResponse.headers,
     };
-    const expected = {
+    const expect = {
       status: 200,
       headers: {
         "cache-control": "private,max-age=0,must-revalidate",
@@ -162,7 +162,7 @@ if (process.platform !== "win32") {
         "etag": bufferToEtag(fileBufferModified),
       },
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -186,7 +186,7 @@ if (process.platform !== "win32") {
       body: response.body,
       timing: response.timing,
     };
-    const expected = {
+    const expect = {
       status: 200,
       headers: {
         "cache-control": "private,max-age=0,must-revalidate",
@@ -202,7 +202,7 @@ if (process.platform !== "win32") {
           actual.timing["file service>read file stat"],
       },
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // do an other request with if-modified-since
@@ -220,13 +220,13 @@ if (process.platform !== "win32") {
       status: secondResponse.status,
       headers: secondResponse.headers,
     };
-    const expected = {
+    const expect = {
       status: 304,
       headers: {
         "cache-control": "private,max-age=0,must-revalidate",
       },
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // modifiy the file content, then third request
@@ -247,7 +247,7 @@ if (process.platform !== "win32") {
       status: thirdResponse.status,
       headers: thirdResponse.headers,
     };
-    const expected = {
+    const expect = {
       status: 200,
       headers: {
         "cache-control": "private,max-age=0,must-revalidate",
@@ -258,7 +258,7 @@ if (process.platform !== "win32") {
         ).toUTCString(),
       },
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -266,11 +266,11 @@ if (process.platform !== "win32") {
 {
   await ensureEmptyDirectory(fixturesDirectoryUrl);
   const actual = await fetchFileSystem(fixturesDirectoryUrl);
-  const expected = {
+  const expect = {
     status: 403,
     statusText: "not allowed to read directory",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // 200 on directory when allowed
@@ -278,7 +278,7 @@ if (process.platform !== "win32") {
   const actual = await fetchFileSystem(fixturesDirectoryUrl, {
     canReadDirectory: true,
   });
-  const expected = {
+  const expect = {
     status: 200,
     headers: {
       "content-type": "application/json",
@@ -286,13 +286,13 @@ if (process.platform !== "win32") {
     },
     body: actual.body,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // url missing
 {
   const actual = await fetchFileSystem();
-  const expected = {
+  const expect = {
     status: 500,
     headers: {
       "content-type": "text/plain",
@@ -300,13 +300,13 @@ if (process.platform !== "win32") {
     },
     body: `fetchFileSystem first parameter must be a file url, got undefined`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // wrong rootDirectoryUrl
 {
   const actual = await fetchFileSystem("https://example.com/file.js");
-  const expected = {
+  const expect = {
     status: 500,
     headers: {
       "content-type": "text/plain",
@@ -314,7 +314,7 @@ if (process.platform !== "win32") {
     },
     body: `fetchFileSystem url must use "file://" scheme, got https://example.com/file.js`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // 501 on POST
@@ -322,8 +322,8 @@ if (process.platform !== "win32") {
   const actual = await fetchFileSystem(fixturesDirectoryUrl, {
     method: "POST",
   });
-  const expected = {
+  const expect = {
     status: 501,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

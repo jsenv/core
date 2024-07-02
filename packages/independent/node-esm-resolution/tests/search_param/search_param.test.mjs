@@ -10,9 +10,9 @@ const actual = {
   type,
   url,
 };
-const expected = {
+const expect = {
   type: "field:main",
   url: new URL("./root/node_modules/foo.js/entry.js?test", import.meta.url)
     .href,
 };
-assert({ actual, expected });
+assert({ actual, expect });

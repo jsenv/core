@@ -45,7 +45,7 @@ const port = await listen({
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     status: 301,
     headers: {
       "connection": "close",
@@ -55,7 +55,7 @@ const port = await listen({
     },
     body: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // 200 on https request
@@ -67,9 +67,9 @@ const port = await listen({
     status: response.status,
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     status: 200,
     body: "Welcome, HTTPS user!",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

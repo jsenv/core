@@ -54,7 +54,7 @@ const expectedBody = `<!DOCTYPE html>
     </ul>
   </body>
 </html>`;
-const expected = {
+const expect = {
   url: requestUrl,
   status: 200,
   statusText: "OK",
@@ -66,4 +66,4 @@ const expected = {
   },
   body: expectedBody,
 };
-assert({ actual, expected });
+assert({ actual, expect });

@@ -55,9 +55,9 @@ const sendToParent = (type, data) => {
   if (!process.connected) {
     return;
   }
-  // this can keep process alive longer than expected
+  // this can keep process alive longer than expect
   // when source is a long string.
-  // It means node process may stay alive longer than expected
+  // It means node process may stay alive longer than expect
   // the time to send the data to the parent.
   process.send({
     __jsenv__: type,

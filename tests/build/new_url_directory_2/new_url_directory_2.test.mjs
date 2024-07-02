@@ -21,8 +21,8 @@ const test = async (params) => {
   // eslint-disable-next-line import/no-unresolved
   const { directoryUrl } = await import("./snapshots/main.js");
   const actual = directoryUrl;
-  const expected = new URL("./snapshots/src/", import.meta.url).href;
-  assert({ actual, expected });
+  const expect = new URL("./snapshots/src/", import.meta.url).href;
+  assert({ actual, expect });
 };
 
 await test({

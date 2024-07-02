@@ -22,11 +22,11 @@ const test = async ({ browserLauncher }) => {
       /* eslint-enable no-undef */
     );
     const actual = result;
-    const expected = {
+    const expect = {
       bodyBackgroundColor: "rgb(255, 0, 0)",
       bodyBackgroundImage: `url("${devServer.origin}/src/jsenv.png")`,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   } finally {
     browser.close();
   }

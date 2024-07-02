@@ -167,7 +167,7 @@ function compileAndroidCode() {
   throw new Error("wrong JDK!");
 }
 
-test("compiling android goes as expected", () => {
+test("compiling android goes as expect", () => {
   expect(() => compileAndroidCode()).toThrow();
   expect(() => compileAndroidCode()).toThrow(Error);
 
@@ -188,7 +188,7 @@ function compileAndroidCode() {
   throw new Error("wrong JDK!");
 }
 
-// compiling android goes as expected
+// compiling android goes as expect
 try {
   compileAndroidCode();
   throw new Error("unexpected");
@@ -196,17 +196,17 @@ try {
   // test error type + message
   assert({
     actual: e,
-    expected: new Error("wrong JDK!"),
+    expect: new Error("wrong JDK!"),
   });
   // test only the error type
   assert({
     actual: e,
-    expected: assert.any(Error),
+    expect: assert.any(Error),
   });
   // test only the message
   assert({
     actual: e.message,
-    expected: "wrong JDK!",
+    expect: "wrong JDK!",
   });
 }
 ```
@@ -239,7 +239,7 @@ test("the fetch fails with an error", async () => {
   const data = await fetchData();
   assert({
     actual: data,
-    expected: "peanut butter",
+    expect: "peanut butter",
   });
 }
 // the fetch fails with an error
@@ -250,7 +250,7 @@ test("the fetch fails with an error", async () => {
   } catch (e) {
     assert({
       actual: e,
-      expected: new Error("error"),
+      expect: new Error("error"),
     });
   }
 }
@@ -295,7 +295,7 @@ test("the data is peanut butter", (done) => {
   });
   assert({
     actual: data,
-    expected: "peanut butter",
+    expect: "peanut butter",
   });
 }
 ```
@@ -331,7 +331,7 @@ const test = async (expectedCity) => {
   await initializeCityDatabase();
   assert({
     actual: isCity(expectedCity),
-    expected: true,
+    expect: true,
   });
   await clearCityDatabase();
 };
@@ -372,12 +372,12 @@ try {
   // "city database has Vienna"
   assert({
     actual: isCity("Vienna"),
-    expected: true,
+    expect: true,
   });
   // "city database has San Juan"
   assert({
     actual: isCity("San Juan"),
-    expected: true,
+    expect: true,
   });
 } finally {
   await clearCityDatabase();
@@ -453,7 +453,7 @@ const mockCallback = (value) => {
   forEach(["a", "b"], mockCallback);
   assert({
     actual: calls,
-    expected: ["a", "b"],
+    expect: ["a", "b"],
   });
 }
 ```
@@ -482,20 +482,20 @@ expect(someMockFunction.mock.lastCall[0]).toBe("test");
 // The function was called exactly once
 assert({
   actual: calls.length,
-  expected: 1,
+  expect: 1,
 });
 
 // The first arg of the first call to the function was 'first arg'
 // The second arg of the first call to the function was 'second arg'
 expect({
   actual: calls[0],
-  expected: ["first arg", "second arg"],
+  expect: ["first arg", "second arg"],
 });
 
 // The first argument of the last call to the function was 'test'
 expect({
   actual: calls[calls.length - 1],
-  expected: ["test"],
+  expect: ["test"],
 });
 ```
 
@@ -520,24 +520,24 @@ expect(value).toEqual(4);
 const value = 2 + 2;
 assert({
   actual: value > 3,
-  expected: true,
+  expect: true,
 });
 assert({
   actual: value > 3.5,
-  expected: true,
+  expect: true,
 });
 assert({
   actual: value < 5,
-  expected: true,
+  expect: true,
 });
 assert({
   actual: value <= 4.5,
-  expected: true,
+  expect: true,
 });
 // no need to think about toBe nor toEqual
 assert({
   actual: value,
-  expected: 4,
+  expect: 4,
 });
 ```
 
@@ -556,7 +556,7 @@ expect(value).toBeCloseTo(0.3);
 const value = 0.1 + 0.2;
 assert({
   actual: value.toFixed(1),
-  expected: 0.3,
+  expect: 0.3,
 });
 ```
 
@@ -566,7 +566,7 @@ If you absolutely need the closeTo behaviour you can use
 const value = 0.1 + 0.2;
 assert({
   actual: value,
-  expected: assert.closeTo(0.3),
+  expect: assert.closeTo(0.3),
 });
 ```
 
@@ -584,11 +584,11 @@ expect("Christoph").toMatch(/stop/);
 ```js
 assert({
   actual: /I/.test("team"),
-  expected: false,
+  expect: false,
 });
 assert({
   actual: /stop/.test("Christoph")
-  expected: true,
+  expect: true,
 });
 ```
 
@@ -621,7 +621,7 @@ const shoppingList = [
 ];
 assert({
   actual: shoppingList.includes("milk"),
-  expected: true,
+  expect: true,
 });
 ```
 
@@ -645,12 +645,12 @@ test("array equality", () => {
 // object equality
 assert({
   actual: { foo: true },
-  expected: { foo: true },
+  expect: { foo: true },
 });
 // array equality
 assert({
   actual: ["a", "b"],
-  expected: ["a", "b"],
+  expect: ["a", "b"],
 });
 ```
 
@@ -795,8 +795,8 @@ import Users from "./users.js";
     return { data: users };
   };
   const actual = await Users.all();
-  const expected = users;
-  assert({ actual, expected });
+  const expect = users;
+  assert({ actual, expect });
 }
 ```
 

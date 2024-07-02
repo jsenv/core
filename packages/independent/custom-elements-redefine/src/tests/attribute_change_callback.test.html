@@ -36,7 +36,7 @@
         await createAnimationFramePromise();
         assert({
           actual: attributeChangedCallbackCalls,
-          expected: [
+          expect: [
             {
               name: "attribute-one",
               oldValue: null,
@@ -68,7 +68,7 @@
         await createAnimationFramePromise();
         assert({
           actual: attributeChangedCallbackCalls,
-          expected: [],
+          expect: [],
         });
       }
 
@@ -93,7 +93,7 @@
         await createAnimationFramePromise();
         assert({
           actual: attributeChangedCallbackCalls,
-          expected: [
+          expect: [
             {
               name: "attribute-one",
               oldValue: null,
@@ -129,7 +129,7 @@
         await createAnimationFramePromise();
         assert({
           actual: attributeChangedCallbackCalls,
-          expected: [
+          expect: [
             {
               name: "attribute-two",
               oldValue: null,
@@ -166,7 +166,7 @@
         await createAnimationFramePromise();
         assert({
           actual: attributeChangedCallbackCalls,
-          expected: [
+          expect: [
             {
               name: "attribute-one",
               oldValue: null,

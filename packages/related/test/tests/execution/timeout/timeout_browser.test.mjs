@@ -32,7 +32,7 @@ const test = async (params) => {
     consoleCalls: result.consoleCalls,
     duration,
   };
-  const expected = {
+  const expect = {
     status: "timedout",
     consoleCalls: [
       {
@@ -42,7 +42,7 @@ const test = async (params) => {
     ],
     duration: assert.between(2_000, 6_000),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({ runtime: chromium() });

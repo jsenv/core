@@ -34,7 +34,7 @@ const test = async (params) => {
     order,
     resourcesFromJsenvBuild,
   };
-  const expected = {
+  const expect = {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
     resourcesFromJsenvBuild: {
       "/main.html": {
@@ -54,7 +54,7 @@ const test = async (params) => {
       },
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 if (process.platform === "darwin") {

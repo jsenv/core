@@ -52,7 +52,7 @@ const createFileSnapshot = (fileUrl) => {
     throw e;
   }
   if (!fileSnapshot.stat.isFile()) {
-    throw new Error(`file expected at ${fileUrl}`);
+    throw new Error(`file expect at ${fileUrl}`);
   }
 
   const isTextual = CONTENT_TYPE.isTextual(
@@ -270,12 +270,12 @@ const createDirectorySnapshot = (directoryUrl) => {
     if (e.code === "ENOTDIR") {
       // trailing slash is forced on directoryUrl
       // as a result Node.js throw ENOTDIR when doing "stat" operation
-      throw new Error(`directory expected at ${directoryUrl}`);
+      throw new Error(`directory expect at ${directoryUrl}`);
     }
     throw e;
   }
   if (!directorySnapshot.stat.isDirectory()) {
-    throw new Error(`directory expected at ${directoryUrl}`);
+    throw new Error(`directory expect at ${directoryUrl}`);
   }
 
   const entryNames = readdirSync(directoryUrl);

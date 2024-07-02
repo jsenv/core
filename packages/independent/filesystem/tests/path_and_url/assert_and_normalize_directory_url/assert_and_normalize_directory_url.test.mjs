@@ -8,40 +8,40 @@ try {
   assertAndNormalizeDirectoryUrl();
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError(
+  const expect = new TypeError(
     "directoryUrl must be a string or an url, got undefined",
   );
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 try {
   assertAndNormalizeDirectoryUrl("http://example.com");
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError(
+  const expect = new TypeError(
     `directoryUrl must start with "file://", got http://example.com`,
   );
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const actual = assertAndNormalizeDirectoryUrl("file:///directory");
-  const expected = "file:///directory/";
-  assert({ actual, expected });
+  const expect = "file:///directory/";
+  assert({ actual, expect });
 }
 
 if (isWindows) {
   const actual = assertAndNormalizeDirectoryUrl("C:/directory");
-  const expected = "file:///C:/directory/";
-  assert({ actual, expected });
+  const expect = "file:///C:/directory/";
+  assert({ actual, expect });
 } else {
   const actual = assertAndNormalizeDirectoryUrl("/directory");
-  const expected = "file:///directory/";
-  assert({ actual, expected });
+  const expect = "file:///directory/";
+  assert({ actual, expect });
 }
 
 {
   const actual = assertAndNormalizeDirectoryUrl(new URL("file:///directory"));
-  const expected = "file:///directory/";
-  assert({ actual, expected });
+  const expect = "file:///directory/";
+  assert({ actual, expect });
 }

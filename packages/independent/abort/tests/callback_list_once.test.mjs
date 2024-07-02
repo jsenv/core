@@ -14,10 +14,10 @@ import { createCallbackListNotifiedOnce } from "@jsenv/abort";
   const actual = {
     callCount,
   };
-  const expected = {
+  const expect = {
     callCount: 0,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // remove 2 while calling 1
@@ -37,11 +37,11 @@ import { createCallbackListNotifiedOnce } from "@jsenv/abort";
     firstCallbackCallCount,
     secondCallbackCallCount,
   };
-  const expected = {
+  const expect = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 0,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // remove 1 while calling 1 and there is 3
@@ -66,12 +66,12 @@ import { createCallbackListNotifiedOnce } from "@jsenv/abort";
     secondCallbackCallCount,
     thridCallbackCallCount,
   };
-  const expected = {
+  const expect = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 1,
     thridCallbackCallCount: 1,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // remove 2 while calling 1 and there is 3
@@ -96,12 +96,12 @@ import { createCallbackListNotifiedOnce } from "@jsenv/abort";
     secondCallbackCallCount,
     thridCallbackCallCount,
   };
-  const expected = {
+  const expect = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 0,
     thridCallbackCallCount: 1,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // remove 1 and 2 while calling 1 and there is 3
@@ -127,12 +127,12 @@ import { createCallbackListNotifiedOnce } from "@jsenv/abort";
     secondCallbackCallCount,
     thridCallbackCallCount,
   };
-  const expected = {
+  const expect = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 0,
     thridCallbackCallCount: 1,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // remove 1 and 2 while calling 2 and there is 3
@@ -158,12 +158,12 @@ import { createCallbackListNotifiedOnce } from "@jsenv/abort";
     secondCallbackCallCount,
     thridCallbackCallCount,
   };
-  const expected = {
+  const expect = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 1,
     thridCallbackCallCount: 1,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // call many
@@ -182,9 +182,9 @@ import { createCallbackListNotifiedOnce } from "@jsenv/abort";
     firstCallbackCallCount,
     secondCallbackCallCount,
   };
-  const expected = {
+  const expect = {
     firstCallbackCallCount: 1,
     secondCallbackCallCount: 1,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

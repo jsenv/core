@@ -10,8 +10,8 @@ const actual = {
   type,
   url,
 };
-const expected = {
+const expect = {
   type: "field:imports",
   url: new URL("./root/fire/fire.js", import.meta.url).href,
 };
-assert({ actual, expected });
+assert({ actual, expect });

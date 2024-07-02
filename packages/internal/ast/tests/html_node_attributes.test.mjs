@@ -15,6 +15,6 @@ import { setHtmlNodeAttributes, getHtmlNodeAttribute } from "@jsenv/ast";
     foo: undefined,
   });
   const actual = getHtmlNodeAttribute(htmlNode, "foo");
-  const expected = undefined;
-  assert({ actual, expected });
+  const expect = undefined;
+  assert({ actual, expect });
 }

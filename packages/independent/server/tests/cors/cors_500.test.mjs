@@ -46,7 +46,7 @@ const actual = {
   body: await response.text(),
 };
 const body = JSON.stringify({ code: "UNKNOWN_ERROR" });
-const expected = {
+const expect = {
   url: `${server.origin}/`,
   status: 500,
   statusText: "Internal Server Error",
@@ -66,4 +66,4 @@ const expected = {
   },
   body,
 };
-assert({ actual, expected });
+assert({ actual, expect });

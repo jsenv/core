@@ -20,10 +20,10 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = new Error(
+    const expect = new Error(
       `"${webServer.moduleUrl}" does not lead to a file`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -43,10 +43,10 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     throw new Error("should throw");
   } catch (e) {
     const actual = e.message;
-    const expected = `"node ${fileURLToPath(
+    const expect = `"node ${fileURLToPath(
       webServer.moduleUrl,
     )}" command did not start a server in less than 500ms`;
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -66,12 +66,12 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = new Error(
+    const expect = new Error(
       `"node ${fileURLToPath(
         webServer.moduleUrl,
       )}" command did not start a server in less than 500ms`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -97,9 +97,9 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     serverUp,
     serverUpAfterTeardown,
   };
-  const expected = {
+  const expect = {
     serverUp: true,
     serverUpAfterTeardown: false,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

@@ -6,7 +6,7 @@ const CustomConstructor = function () {
 };
 const customInstance = new CustomConstructor();
 const actual = humanize(customInstance);
-const expected = `CustomConstructor({
+const expect = `CustomConstructor({
   "foo": true
 })`;
-assert({ actual, expected });
+assert({ actual, expect });

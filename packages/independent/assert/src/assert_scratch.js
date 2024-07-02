@@ -36,7 +36,7 @@ const addedColor = ANSI.YELLOW;
 const unexpectColor = ANSI.RED;
 const expectColor = ANSI.GREEN;
 /**
- * When a js value CANNOT EXISTS in actual or expected
+ * When a js value CANNOT EXISTS in actual or expect
  * the missing Node is set to PLACEHOLDER_FOR_NOTHING
  * For example,
  * - actual is a primitive, it cannot have properties
@@ -53,7 +53,7 @@ const PLACEHOLDER_FOR_NOTHING = {
   placeholder: "nothing",
 };
 /**
- * When a js value DOES NOT EXISTS ANYMORE in actual or expected
+ * When a js value DOES NOT EXISTS ANYMORE in actual or expect
  * the missing Node is set to PLACEHOLDER_WHEN_ADDED_OR_REMOVED
  * For example,
  * - actual has 2 properties: "a" and "b"
@@ -499,7 +499,7 @@ export const assert = (firstArg, ...rest) => {
         visitDuo(actualNode, expectNode);
         break visit;
       }
-      // not found in expected (added or expect cannot have this type of value)
+      // not found in expect (added or expect cannot have this type of value)
       if (
         actualNode === PLACEHOLDER_WHEN_ADDED_OR_REMOVED ||
         actualNode === PLACEHOLDER_FOR_NOTHING
@@ -552,7 +552,7 @@ export const assert = (firstArg, ...rest) => {
 
       // not same category
       onSelfDiff(`should_be_${expect.category}`);
-      // primitive expected
+      // primitive expect
       if (
         expectNode.category === "primitive" &&
         actualNode.category === "composite"
@@ -565,7 +565,7 @@ export const assert = (firstArg, ...rest) => {
           break visit;
         }
       }
-      // composite expected
+      // composite expect
       else if (
         expectNode.category === "composite" &&
         actualNode.category === "primitive"

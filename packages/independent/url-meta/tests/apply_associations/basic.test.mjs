@@ -17,13 +17,13 @@ import { URL_META } from "@jsenv/url-meta";
       },
     },
   });
-  const expected = {
+  const expect = {
     node: {
       foo: true,
       bar: true,
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 try {
@@ -33,8 +33,8 @@ try {
   throw new Error("shoud crash");
 } catch (error) {
   const actual = error;
-  const expected = new TypeError(`url must be a url string, got *$^=`);
-  assert({ actual, expected });
+  const expect = new TypeError(`url must be a url string, got *$^=`);
+  assert({ actual, expect });
 }
 
 // associate "foo.js" to { a: true }
@@ -52,11 +52,11 @@ try {
     fooJs: test("file:///foo.js"),
     fileJs: test("file:///file.js"),
   };
-  const expected = {
+  const expect = {
     fooJs: { a: true },
     fileJs: {},
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // associate "*.js" to {whatever: true}
@@ -77,12 +77,12 @@ try {
     fooJs: test("file:///foo.js"),
     fileJs: test("file:///file.js"),
   };
-  const expected = {
+  const expect = {
     file: {},
     fooJs: { whatever: true },
     fileJs: { whatever: null },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // ignore associations that are not plain object
@@ -95,8 +95,8 @@ try {
       },
     });
   const actual = test("file:///file.js");
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 // ensure getUrlMeta overrides in order (without sorting specifier keys by length)
@@ -110,8 +110,8 @@ try {
       },
     },
   });
-  const expected = { whatever: 42 };
-  assert({ actual, expected });
+  const expect = { whatever: 42 };
+  assert({ actual, expect });
 }
 
 {
@@ -133,13 +133,13 @@ try {
     nodeModuleFile: test("file:///node_modules/a.js"),
     insideGitDirectory: test("file:///.git/a.js"),
   };
-  const expected = {
+  const expect = {
     jsFile: { whatever: true },
     gitignore: { whatever: false },
     nodeModuleFile: { whatever: false },
     insideGitDirectory: { whatever: false },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -153,8 +153,8 @@ try {
       },
     });
   const actual = test("file:///");
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 {
@@ -166,8 +166,8 @@ try {
       },
     },
   });
-  const expected = { a: true };
-  assert({ actual, expected });
+  const expect = { a: true };
+  assert({ actual, expect });
 }
 
 {
@@ -179,8 +179,8 @@ try {
       },
     },
   });
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 {
@@ -192,8 +192,8 @@ try {
       },
     },
   });
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 {
@@ -205,8 +205,8 @@ try {
       },
     },
   });
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 {
@@ -218,8 +218,8 @@ try {
       },
     },
   });
-  const expected = { a: true };
-  assert({ actual, expected });
+  const expect = { a: true };
+  assert({ actual, expect });
 }
 
 {
@@ -231,8 +231,8 @@ try {
       },
     },
   });
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 {
@@ -244,8 +244,8 @@ try {
       },
     },
   });
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 {
@@ -257,8 +257,8 @@ try {
       },
     },
   });
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 {
@@ -270,8 +270,8 @@ try {
       },
     },
   });
-  const expected = { a: 0 };
-  assert({ actual, expected });
+  const expect = { a: 0 };
+  assert({ actual, expect });
 }
 
 {
@@ -283,8 +283,8 @@ try {
       },
     },
   });
-  const expected = {};
-  assert({ actual, expected });
+  const expect = {};
+  assert({ actual, expect });
 }
 
 {
@@ -302,9 +302,9 @@ try {
     jsFile: test("file:///main.js"),
     gitIgnore: test("file:///.gitignore"),
   };
-  const expected = {
+  const expect = {
     jsFile: { a: true },
     gitIgnore: { a: false },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

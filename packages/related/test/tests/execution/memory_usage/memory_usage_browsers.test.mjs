@@ -35,11 +35,11 @@ const test = async (params) => {
   });
   devServer.stop();
   const actual = memoryUsage;
-  const expected =
+  const expect =
     params.runtime.name === "chromium"
       ? assert.between(4_000_000, 8_000_000) // around 5MB
       : null;
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({

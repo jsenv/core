@@ -31,8 +31,8 @@ const test = async ({ name, ...params }) => {
   });
 
   const actual = returnValue;
-  const expected = { answer: 42 };
-  assert({ actual, expected });
+  const expect = { answer: 42 };
+  assert({ actual, expect });
 };
 
 // support

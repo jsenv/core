@@ -3,33 +3,33 @@ import { humanize } from "@jsenv/humanize";
 
 {
   const actual = humanize(true);
-  const expected = "true";
-  assert({ actual, expected });
+  const expect = "true";
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(false);
-  const expected = "false";
-  assert({ actual, expected });
+  const expect = "false";
+  assert({ actual, expect });
 }
 
 /* eslint-disable no-new-wrappers */
 {
   const actual = humanize(new Boolean(true));
-  const expected = "Boolean(true)";
-  assert({ actual, expected });
+  const expect = "Boolean(true)";
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(new Boolean(true), { parenthesis: true });
-  const expected = "(Boolean(true))";
-  assert({ actual, expected });
+  const expect = "(Boolean(true))";
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(new Boolean(true), { useNew: true });
-  const expected = "new Boolean(true)";
-  assert({ actual, expected });
+  const expect = "new Boolean(true)";
+  assert({ actual, expect });
 }
 
 {
@@ -37,9 +37,9 @@ import { humanize } from "@jsenv/humanize";
     parenthesis: true,
     useNew: true,
   });
-  const expected = "new (Boolean(true))";
+  const expect = "new (Boolean(true))";
   assert({
     actual,
-    expected,
+    expect,
   });
 }

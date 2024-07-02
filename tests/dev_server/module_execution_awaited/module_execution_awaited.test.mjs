@@ -26,7 +26,7 @@ const test = async ({ browserLauncher }) => {
     const actual = moduleExecutionResult.timings.end;
     assert({
       actual,
-      expected: assert.between(3_000, 8_000),
+      expect: assert.between(3_000, 8_000),
       details: {
         browser: `${browserLauncher.name()}`,
       },

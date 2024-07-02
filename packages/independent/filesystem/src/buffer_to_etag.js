@@ -11,7 +11,7 @@ const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
 
 export const bufferToEtag = (buffer) => {
   if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expected, got ${buffer}`);
+    throw new TypeError(`buffer expect,got ${buffer}`);
   }
 
   if (buffer.length === 0) {

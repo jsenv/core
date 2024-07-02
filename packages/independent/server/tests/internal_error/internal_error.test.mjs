@@ -36,7 +36,7 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
     const body = JSON.stringify({
       code: "TEST_CODE",
     });
-    const expected = {
+    const expect = {
       url: `${origin}/`,
       status: 500,
       statusText: "Internal Server Error",
@@ -49,7 +49,7 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
       },
       body,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
     stop();
   }
 }
@@ -86,7 +86,7 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
       code: "VALUE_THROWED",
       value: "here",
     });
-    const expected = {
+    const expect = {
       url: `${origin}/`,
       status: 500,
       statusText: "Internal Server Error",
@@ -99,7 +99,7 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
       },
       body,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
     stop();
   }
 }

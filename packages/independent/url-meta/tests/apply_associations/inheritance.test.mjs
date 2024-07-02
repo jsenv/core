@@ -12,8 +12,8 @@ import { URL_META } from "@jsenv/url-meta";
       },
     },
   });
-  const expected = { whatever: true };
-  assert({ actual, expected });
+  const expect = { whatever: true };
+  assert({ actual, expect });
 }
 
 {
@@ -26,8 +26,8 @@ import { URL_META } from "@jsenv/url-meta";
       },
     },
   });
-  const expected = { whatever: false };
-  assert({ actual, expected });
+  const expect = { whatever: false };
+  assert({ actual, expect });
 }
 
 {
@@ -40,8 +40,8 @@ import { URL_META } from "@jsenv/url-meta";
       },
     },
   });
-  const expected = { whatever: true };
-  assert({ actual, expected });
+  const expect = { whatever: true };
+  assert({ actual, expect });
 }
 
 {
@@ -54,6 +54,6 @@ import { URL_META } from "@jsenv/url-meta";
       },
     },
   });
-  const expected = { whatever: false };
-  assert({ actual, expected });
+  const expect = { whatever: false };
+  assert({ actual, expect });
 }

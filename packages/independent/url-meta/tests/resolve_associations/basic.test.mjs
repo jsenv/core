@@ -12,13 +12,13 @@ import { URL_META } from "@jsenv/url-meta";
     },
     "file:///User/name/directory/",
   );
-  const expected = {
+  const expect = {
     whatever: {
       "file:///User/name/directory/a.js": true,
       "http://example.com/file.js": true,
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -31,11 +31,11 @@ import { URL_META } from "@jsenv/url-meta";
     },
     "file:///",
   );
-  const expected = {
+  const expect = {
     a: { "file:///a.js": true },
     whatever: null,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // ensure resolveAssociations does not sort by length
@@ -49,13 +49,13 @@ import { URL_META } from "@jsenv/url-meta";
     },
     "file:///",
   );
-  const expected = {
+  const expect = {
     whatever: {
       "file:///a.js": 42,
       "file:///long.js": 42,
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -81,11 +81,11 @@ import { URL_META } from "@jsenv/url-meta";
     nodeModuleFile: test("file:///src/node_modules/a.js"),
     insideGitDirectory: test("file:///src/.git/a.js"),
   };
-  const expected = {
+  const expect = {
     jsFile: { whatever: true },
     gitignore: { whatever: false },
     nodeModuleFile: { whatever: false },
     insideGitDirectory: { whatever: false },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

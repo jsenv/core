@@ -1,11 +1,9 @@
 // see also https://github.com/sindresorhus/figures
 
-import isUnicodeSupported from "is-unicode-supported";
-
-import { ANSI } from "./ansi.js";
+import { ANSI } from "./ansi_browser.js";
 
 export const UNICODE = {
-  supported: isUnicodeSupported(),
+  supported: true,
 
   get COMMAND_RAW() {
     return UNICODE.supported ? `❯` : `>`;

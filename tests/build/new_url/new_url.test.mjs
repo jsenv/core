@@ -30,14 +30,14 @@ const test = async ({ name, ...params }) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     textFileUrl: `${server.origin}/other/file.txt?v=268b0aca`,
     absoluteUrl: `http://example.com/file.txt`,
     windowLocationRelativeUrl: `${server.origin}/other/file.txt?v=268b0aca`,
     windowOriginRelativeUrl: `${server.origin}/other/file.txt?v=268b0aca`,
     absoluteBaseUrl: `http://jsenv.dev/file.txt`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // support for <script type="module">

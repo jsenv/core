@@ -25,21 +25,21 @@ room.sendEventToAllClients({
 });
 {
   const actual = room.getRoomClientCount();
-  const expected = 1;
-  assert({ actual, expected });
+  const expect = 1;
+  assert({ actual, expect });
 }
 await closeEventSource(eventSource);
 await new Promise((resolve) => setTimeout(resolve, 100));
 {
   const actual = room.getRoomClientCount();
-  const expected = 0;
-  assert({ actual, expected });
+  const expect = 0;
+  assert({ actual, expect });
 }
 
 const eventSource2 = await openEventSource(server.origin);
 {
   const actual = room.getRoomClientCount();
-  const expected = 1;
-  assert({ actual, expected });
+  const expect = 1;
+  assert({ actual, expect });
 }
 await closeEventSource(eventSource2);

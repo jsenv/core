@@ -13,8 +13,8 @@ import { URL_META } from "@jsenv/url-meta";
     },
     predicate: ({ source }) => source,
   });
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }
 
 {
@@ -33,12 +33,12 @@ import { URL_META } from "@jsenv/url-meta";
     two: test("file:///a/b/"),
     three: test("file:///a/c/"),
   };
-  const expected = {
+  const expect = {
     one: true,
     two: true,
     three: false,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -56,11 +56,11 @@ import { URL_META } from "@jsenv/url-meta";
     one: test("file:///a/bZ/"),
     two: test("file:///a/bZ/c/"),
   };
-  const expected = {
+  const expect = {
     one: true,
     two: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -73,8 +73,8 @@ import { URL_META } from "@jsenv/url-meta";
     },
     predicate: ({ whatever }) => whatever === 42,
   });
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }
 
 {
@@ -88,8 +88,8 @@ import { URL_META } from "@jsenv/url-meta";
     },
     predicate: ({ whatever }) => whatever === 42,
   });
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 {
@@ -103,8 +103,8 @@ import { URL_META } from "@jsenv/url-meta";
     },
     predicate: ({ whatever }) => whatever === 42,
   });
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }
 
 {
@@ -122,11 +122,11 @@ import { URL_META } from "@jsenv/url-meta";
     one: test("file:///src/folder/"),
     two: test("file:///src/folder/subfolder/"),
   };
-  const expected = {
+  const expect = {
     one: true,
     two: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -139,8 +139,8 @@ import { URL_META } from "@jsenv/url-meta";
     },
     predicate: ({ whatever }) => whatever === 42,
   });
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }
 
 {
@@ -162,12 +162,12 @@ import { URL_META } from "@jsenv/url-meta";
     nodeModuleDirectory: test("file:///node_modules/"),
     gitDirectory: test("file:///.git/"),
   };
-  const expected = {
+  const expect = {
     appDirectory: true,
     nodeModuleDirectory: false,
     gitDirectory: false,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -187,10 +187,10 @@ import { URL_META } from "@jsenv/url-meta";
     b: test("file:///project/src/"),
     c: test("file:///project/node_modules/"),
   };
-  const expected = {
+  const expect = {
     a: false,
     b: true,
     c: false,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

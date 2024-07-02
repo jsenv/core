@@ -25,8 +25,8 @@ const test = async (params) => {
   });
 
   const actual = returnValue;
-  const expected = "dev";
-  assert({ actual, expected });
+  const expect = "dev";
+  assert({ actual, expect });
 };
 
 await test();

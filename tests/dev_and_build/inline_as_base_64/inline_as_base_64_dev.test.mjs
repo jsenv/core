@@ -20,8 +20,8 @@ const test = async () => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = "data:";
-  assert({ actual, expected });
+  const expect = "data:";
+  assert({ actual, expect });
 };
 
 await test();

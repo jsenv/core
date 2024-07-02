@@ -24,7 +24,7 @@ const test = async (params) => {
   });
   devServer.stop();
   const actual = timings;
-  const expected = {
+  const expect = {
     origin: assert.any(Number),
     start: assert.any(Number),
     runtimeStart: assert.any(Number),
@@ -33,7 +33,7 @@ const test = async (params) => {
     runtimeEnd: assert.any(Number),
     end: assert.any(Number),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   {
     const runDuration = timings.end - timings.start;
     const executionDuration = timings.executionEnd - timings.executionStart;
@@ -46,7 +46,7 @@ const test = async (params) => {
       runtimeDuration,
       timeBetweenRuntimeStartAndExecutionStart,
     };
-    const expected = {
+    const expect = {
       // execution must take around 2s (due to the timeout)
       executionDuration: assert.between(2_000, 6_000),
       // the overall run duration and runtime alive duration is between 2/9s
@@ -55,7 +55,7 @@ const test = async (params) => {
       // it does not take more than 800ms to start the file
       timeBetweenRuntimeStartAndExecutionStart: assert.between(0, 800),
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 };
 

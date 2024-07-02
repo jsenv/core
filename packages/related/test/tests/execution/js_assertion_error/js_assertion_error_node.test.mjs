@@ -23,7 +23,7 @@ const test = async (params) => {
     stack: stripAnsi(error.stack),
     site: error.site,
   };
-  const expected = {
+  const expect = {
     isException: true,
     isError: true,
     name: "CharacterAssertionError",
@@ -31,7 +31,7 @@ const test = async (params) => {
 --- details ---
 foo
 ^
-unexpected "f", expected to continue with "bar"
+unexpected "f", expect to continue with "bar"
 --- path ---
 actual`,
     stack:
@@ -39,7 +39,7 @@ actual`,
 --- details ---
 foo
 ^
-unexpected "f", expected to continue with "bar"
+unexpected "f", expect to continue with "bar"
 --- path ---
 actual
   at ${clientDirectoryUrl}/main.mjs:3:1`),
@@ -49,7 +49,7 @@ actual
       column: 1,
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({

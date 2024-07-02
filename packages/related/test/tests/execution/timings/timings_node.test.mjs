@@ -14,7 +14,7 @@ const test = async (params) => {
       status,
       timings,
     };
-    const expected = {
+    const expect = {
       status: "completed",
       timings: {
         origin: assert.any(Number),
@@ -26,7 +26,7 @@ const test = async (params) => {
         end: assert.any(Number),
       },
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
   {
     const runDuration = timings.end - timings.start;
@@ -40,7 +40,7 @@ const test = async (params) => {
       runtimeDuration,
       timeBetweenRuntimeStartAndExecutionStart,
     };
-    const expected = {
+    const expect = {
       // execution must take around 2s (due to the timeout)
       executionDuration: assert.between(2_000, 3_000),
       // the overall run duration and runtime alive duration is between 2/5s
@@ -49,7 +49,7 @@ const test = async (params) => {
       // it does not take more than 500ms to start the file
       timeBetweenRuntimeStartAndExecutionStart: assert.between(0, 500),
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 };
 

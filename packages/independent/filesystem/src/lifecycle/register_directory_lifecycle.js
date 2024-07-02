@@ -24,7 +24,7 @@ export const registerDirectoryLifecycle = (
     notifyExistent = false,
     keepProcessAlive = true,
     recursive = false,
-    // filesystem might dispatch more events than expected
+    // filesystem might dispatch more events than expect
     // Code can use "cooldownBetweenFileEvents" to prevent that
     // BUT it is UNADVISED to rely on this as explained later (search for "is lying" in this file)
     // For this reason"cooldownBetweenFileEvents" should be reserved to scenarios

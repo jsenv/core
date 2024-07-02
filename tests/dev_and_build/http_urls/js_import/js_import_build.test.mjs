@@ -26,10 +26,10 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     url: `http://127.0.0.1:9999/constants.js?foo=bar`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // http url preserved

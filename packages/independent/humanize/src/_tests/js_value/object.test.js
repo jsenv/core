@@ -3,21 +3,21 @@ import { humanize } from "@jsenv/humanize";
 
 {
   const actual = humanize({});
-  const expected = "{}";
-  assert({ actual, expected });
+  const expect = "{}";
+  assert({ actual, expect });
 }
 
 {
   // eslint-disable-next-line no-new-object
   const actual = humanize(new Object({}));
-  const expected = "{}";
-  assert({ actual, expected });
+  const expect = "{}";
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize({}, { objectConstructor: true });
-  const expected = "Object({})";
-  assert({ actual, expected });
+  const expect = "Object({})";
+  assert({ actual, expect });
 }
 
 {
@@ -25,37 +25,37 @@ import { humanize } from "@jsenv/humanize";
     { foo: true },
     { objectConstructor: true, useNew: true },
   );
-  const expected = `new Object({
+  const expect = `new Object({
   "foo": true
 })`;
   assert({
     actual,
-    expected,
+    expect,
   });
 }
 
 {
   const actual = humanize({ 0: "foo" });
-  const expected = `{
+  const expect = `{
   0: "foo"
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize({ Infinity: "foo" });
-  const expected = `{
+  const expect = `{
   "Infinity": "foo"
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize({ name: "dam" }, { quote: "'" });
-  const expected = `{
+  const expect = `{
   'name': 'dam'
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -63,24 +63,24 @@ import { humanize } from "@jsenv/humanize";
     { foo: true, nested: { bar: true } },
     { parenthesis: true },
   );
-  const expected = `({
+  const expect = `({
   "foo": true,
   "nested": ({
     "bar": true
   })
 })`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const foo = { foo: true, bar: false };
 
   const actual = humanize(foo);
-  const expected = `{
+  const expect = `{
   "foo": true,
   "bar": false
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -89,19 +89,19 @@ import { humanize } from "@jsenv/humanize";
       foo: true,
     }),
   );
-  const expected = "{}";
-  assert({ actual, expected });
+  const expect = "{}";
+  assert({ actual, expect });
 }
 
 {
   const nested = { foo: { name: "dam" } };
   const actual = humanize(nested);
-  const expected = `{
+  const expect = `{
   "foo": {
     "name": "dam"
   }
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -110,11 +110,11 @@ import { humanize } from "@jsenv/humanize";
   };
   circularObject.self = circularObject;
   const actual = humanize(circularObject);
-  const expected = `{
+  const expect = `{
   "foo": true,
   "self": Symbol.for('circular')
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -126,30 +126,30 @@ import { humanize } from "@jsenv/humanize";
     parent: nestedCircularObject,
   };
   const actual = humanize(nestedCircularObject);
-  const expected = `{
+  const expect = `{
   "foo": true,
   "nested": {
     "bar": true,
     "parent": Symbol.for('circular')
   }
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(Object.create(null));
-  const expected = "{}";
-  assert({ actual, expected });
+  const expect = "{}";
+  assert({ actual, expect });
 }
 
 {
   const object = Object.create(null);
   object[Symbol.toStringTag] = "stuff";
   const actual = humanize(object);
-  const expected = `{
+  const expect = `{
   [Symbol("Symbol.toStringTag")]: "stuff"
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -157,17 +157,17 @@ import { humanize } from "@jsenv/humanize";
   object[Symbol.toStringTag] = "stuff";
   object.foo = true;
   const actual = humanize(object);
-  const expected = `{
+  const expect = `{
   "foo": true,
   [Symbol("Symbol.toStringTag")]: "stuff"
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize({ [Symbol()]: true });
-  const expected = `{
+  const expect = `{
   [Symbol()]: true
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

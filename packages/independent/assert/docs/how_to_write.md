@@ -80,7 +80,7 @@ abortSignal.abort();
 
 // assert
 const actual = called;
-const expected = true;
+const expect = true;
 assert({ actual, expect });
 ```
 

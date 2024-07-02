@@ -38,7 +38,7 @@ const test = async ({ name, ...rest }) => {
   });
   assert({
     actual: returnValue,
-    expected: {
+    expect: {
       ping: "pong",
       workerResponse: "pong",
     },

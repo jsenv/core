@@ -43,7 +43,7 @@ await startSnapshotTesting("assert_between", {
   // "string is not between 100,200": () => {
   //   assert({
   //     actual: "toto",
-  //     expected: assert.between(100, 200),
+  //     expect: assert.between(100, 200),
   //   });
   // },
 });

@@ -27,8 +27,8 @@ test(() => {
     throw new Error("should throw");
   } catch (e) {
     const actual = e.message;
-    const expected = `file expected at ${fileUrl}`;
-    assert({ actual, expected });
+    const expect = `file expect at ${fileUrl}`;
+    assert({ actual, expect });
   }
 });
 
@@ -40,12 +40,12 @@ test(() => {
     throw new Error("should throw");
   } catch (e) {
     const actual = e.message;
-    const expected = `snapshot comparison failed for "file.txt"
+    const expect = `snapshot comparison failed for "file.txt"
 --- reason ---
 file not found
 --- file ---
 ${fileUrl}`;
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 });
 
@@ -58,12 +58,12 @@ test(() => {
     throw new Error("should throw");
   } catch (e) {
     const actual = e.message;
-    const expected = `snapshot comparison failed for "file.txt"
+    const expect = `snapshot comparison failed for "file.txt"
 --- reason ---
 file not found
 --- file ---
 ${fileUrl}`;
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 });
 
@@ -77,16 +77,16 @@ test(() => {
     throw new Error("should throw");
   } catch (e) {
     const actual = stripAnsi(e.message);
-    const expected = `snapshot comparison failed for "file.txt"
+    const expect = `snapshot comparison failed for "file.txt"
 --- reason ---
 unexpected character in file content
 --- details ---
 coucou
 ^
-unexpected "c", expected to continue with "hello"
+unexpected "c", expect to continue with "hello"
 --- file ---
 ${fileUrl}`;
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 });
 

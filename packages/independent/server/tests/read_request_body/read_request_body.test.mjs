@@ -29,8 +29,8 @@ import { startServer, readRequestBody } from "@jsenv/server";
     body: "toto",
   });
   const actual = requestBody;
-  const expected = "toto";
-  assert({ actual, expected });
+  const expect = "toto";
+  assert({ actual, expect });
 }
 
 // read request body as json
@@ -61,8 +61,8 @@ import { startServer, readRequestBody } from "@jsenv/server";
     body: JSON.stringify({ foo: true }),
   });
   const actual = requestBody;
-  const expected = { foo: true };
-  assert({ actual, expected });
+  const expect = { foo: true };
+  assert({ actual, expect });
 }
 
 // read request body as buffer
@@ -92,8 +92,8 @@ import { startServer, readRequestBody } from "@jsenv/server";
     body: "toto",
   });
   const actual = requestBody;
-  const expected = Buffer.from("toto");
-  assert({ actual, expected });
+  const expect = Buffer.from("toto");
+  assert({ actual, expect });
 }
 
 // read request body a bit late
@@ -131,6 +131,6 @@ import { startServer, readRequestBody } from "@jsenv/server";
   resolveReadPromise();
   await responsePromise;
   const actual = requestBody;
-  const expected = "toto";
-  assert({ actual, expected });
+  const expect = "toto";
+  assert({ actual, expect });
 }

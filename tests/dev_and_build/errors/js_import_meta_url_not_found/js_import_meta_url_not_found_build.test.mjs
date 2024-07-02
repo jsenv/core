@@ -14,7 +14,7 @@ try {
   throw new Error("should throw");
 } catch (e) {
   const actual = e.message;
-  const expected = `Failed to fetch url content
+  const expect = `Failed to fetch url content
 --- reason ---
 no entry on filesystem
 --- url ---
@@ -25,5 +25,5 @@ ${new URL("./client/main.js", import.meta.url).href}:1:23
                           ^
 --- plugin name ---
 "jsenv:file_url_fetching"`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

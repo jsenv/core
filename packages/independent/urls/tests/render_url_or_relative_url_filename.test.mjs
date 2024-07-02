@@ -8,8 +8,8 @@ import { renderUrlOrRelativeUrlFilename } from "@jsenv/urls";
       return `${basename}-coucou${extension}`;
     },
   );
-  const expected = "./file-coucou.js";
-  assert({ actual, expected });
+  const expect = "./file-coucou.js";
+  assert({ actual, expect });
 }
 
 {
@@ -19,8 +19,8 @@ import { renderUrlOrRelativeUrlFilename } from "@jsenv/urls";
       return `hey-${basename}${extension}`;
     },
   );
-  const expected = "./hey-file.js?v=toto";
-  assert({ actual, expected });
+  const expect = "./hey-file.js?v=toto";
+  assert({ actual, expect });
 }
 
 {
@@ -30,8 +30,8 @@ import { renderUrlOrRelativeUrlFilename } from "@jsenv/urls";
       return `hey-${basename}${extension}`;
     },
   );
-  const expected = "./a/b/hey-file.js?v=toto&t=\uf7f9";
-  assert({ actual, expected });
+  const expect = "./a/b/hey-file.js?v=toto&t=\uf7f9";
+  assert({ actual, expect });
 }
 
 {
@@ -41,6 +41,6 @@ import { renderUrlOrRelativeUrlFilename } from "@jsenv/urls";
       return `hey-${basename}${extension}`;
     },
   );
-  const expected = "https://cdn.com/a/b/hey-file.js?v=toto&t=\uf7f9";
-  assert({ actual, expected });
+  const expect = "https://cdn.com/a/b/hey-file.js?v=toto&t=\uf7f9";
+  assert({ actual, expect });
 }

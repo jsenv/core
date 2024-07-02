@@ -34,11 +34,11 @@ const createObservableSource = () => {
     nextCallsBefore,
     nextCalls,
   };
-  const expected = {
+  const expect = {
     nextCallsBefore: [],
     nextCalls: ["a", "b"],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // can add after subscribe
@@ -62,11 +62,11 @@ const createObservableSource = () => {
     nextCallsBefore,
     nextCalls,
   };
-  const expected = {
+  const expect = {
     nextCallsBefore: [],
     nextCalls: ["foo"],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // can remove after subscribe
@@ -90,11 +90,11 @@ const createObservableSource = () => {
     nextCallsBefore,
     nextCalls,
   };
-  const expected = {
+  const expect = {
     nextCallsBefore: [],
     nextCalls: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // subscription complete when all source are complete
@@ -123,12 +123,12 @@ const createObservableSource = () => {
     completeCalledAfterSourceAComplete,
     completeCalledAfterAllSourceComplete,
   };
-  const expected = {
+  const expect = {
     completeCalledBefore: false,
     completeCalledAfterSourceAComplete: false,
     completeCalledAfterAllSourceComplete: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // subscription complete when last non completed source is removed
@@ -157,12 +157,12 @@ const createObservableSource = () => {
     completeCalledAfterSourceAComplete,
     completeCalledAfterSourceBRemoved,
   };
-  const expected = {
+  const expect = {
     completeCalledBefore: false,
     completeCalledAfterSourceAComplete: false,
     completeCalledAfterSourceBRemoved: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // subscription complete when all source are complete
@@ -184,9 +184,9 @@ const createObservableSource = () => {
     completeCalledBefore,
     completeCalled,
   };
-  const expected = {
+  const expect = {
     completeCalledBefore: false,
     completeCalled: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

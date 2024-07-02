@@ -20,7 +20,7 @@ export const ensureWindowsDriveLetter = (url, baseUrl) => {
   try {
     url = String(new URL(url));
   } catch (e) {
-    throw new Error(`absolute url expected but got ${url}`);
+    throw new Error(`absolute url expect but got ${url}`);
   }
 
   if (!isWindows) {
@@ -31,7 +31,7 @@ export const ensureWindowsDriveLetter = (url, baseUrl) => {
     baseUrl = String(new URL(baseUrl));
   } catch (e) {
     throw new Error(
-      `absolute baseUrl expected but got ${baseUrl} to ensure windows drive letter on ${url}`,
+      `absolute baseUrl expect but got ${baseUrl} to ensure windows drive letter on ${url}`,
     );
   }
 
@@ -53,7 +53,7 @@ export const ensureWindowsDriveLetter = (url, baseUrl) => {
   );
   if (!driveLetter) {
     throw new Error(
-      `drive letter expected on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`,
+      `drive letter expect on baseUrl but got ${baseUrl} to ensure windows drive letter on ${url}`,
     );
   }
   return `file:///${driveLetter}:${afterProtocol}`;

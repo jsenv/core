@@ -41,8 +41,8 @@ try {
 
   {
     const actual = await getDocumentBodyInnerHTML();
-    const expected = `init`;
-    assert({ actual, expected });
+    const expect = `init`;
+    assert({ actual, expect });
   }
 
   jsFileContent.update(`export const value = "after_update";`);
@@ -50,17 +50,17 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 500));
   {
     const actual = await getDocumentBodyInnerHTML();
-    const expected = `after_update`;
-    assert({ actual, expected });
+    const expect = `after_update`;
+    assert({ actual, expect });
   }
   jsFileContent.restore();
   // wait for hot reload
   await new Promise((resolve) => setTimeout(resolve, 500));
   {
     const actual = await getDocumentBodyInnerHTML();
-    const expected = `init`;
+    const expect = `init`;
 
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 } finally {
   jsFileContent.restore();

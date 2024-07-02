@@ -20,7 +20,7 @@ import { composeEslintConfig } from "@jsenv/eslint-config";
       ],
     },
   );
-  const expected = {
+  const expect = {
     overrides: [
       {
         files: ["**/*.cjs"],
@@ -30,7 +30,7 @@ import { composeEslintConfig } from "@jsenv/eslint-config";
       },
     ],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // settings extension

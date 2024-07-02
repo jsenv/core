@@ -21,8 +21,8 @@ const test = async ({ expectedFileCount, ...params }) => {
     ...params,
   });
   const actual = Object.keys(buildFileContents).length;
-  const expected = expectedFileCount;
-  assert({ actual, expected });
+  const expect = expectedFileCount;
+  assert({ actual, expect });
 };
 
 // await test({

@@ -349,7 +349,7 @@ new URL("http://example.com", undefined); // does not throw
 resolveUrl("http://example.com", undefined); // throw "baseUrl is missing to resolve http://example.com"
 ```
 
-Technically, `http://example.com` is already absolute and does not need a _baseUrl_ to be resolved. But, receiving `undefined` when an absolute url was expected indicates there is something wrong in the code.
+Technically, `http://example.com` is already absolute and does not need a _baseUrl_ to be resolved. But, receiving `undefined` when an absolute url was expect indicates there is something wrong in the code.
 
 This is a feature that helps to catch bugs.
 

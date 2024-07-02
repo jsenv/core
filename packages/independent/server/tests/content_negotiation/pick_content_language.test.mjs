@@ -12,42 +12,42 @@ import { pickContentLanguage } from "@jsenv/server";
 
   {
     const actual = pickContentLanguage(request, ["en", "fr"]);
-    const expected = "fr";
-    assert({ actual, expected });
+    const expect = "fr";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentLanguage(request, ["fr", "fr-CH"]);
-    const expected = "fr-CH";
-    assert({ actual, expected });
+    const expect = "fr-CH";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentLanguage(request, ["fr-CH", "fr"]);
-    const expected = "fr-CH";
-    assert({ actual, expected });
+    const expect = "fr-CH";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentLanguage(request, ["fr-BE", "fr-CH"]);
-    const expected = "fr-CH";
-    assert({ actual, expected });
+    const expect = "fr-CH";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentLanguage(request, ["fr-CH", "fr-BE"]);
-    const expected = "fr-CH";
-    assert({ actual, expected });
+    const expect = "fr-CH";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentLanguage(request, ["fr", "fr-BE"]);
-    const expected = "fr-BE";
-    assert({ actual, expected });
+    const expect = "fr-BE";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentLanguage(request, ["it", "de"]);
-    const expected = "de";
-    assert({ actual, expected });
+    const expect = "de";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentLanguage(request, ["it", "es"]);
-    const expected = "it";
-    assert({ actual, expected });
+    const expect = "it";
+    assert({ actual, expect });
   }
 }

@@ -32,6 +32,6 @@ const page = await browser.newPage({
 });
 await page.goto(`${server.origin}/index.html`);
 const actual = await page.evaluate(`window.ask()`);
-const expected = 42;
-assert({ actual, expected });
+const expect = 42;
+assert({ actual, expect });
 browser.close();

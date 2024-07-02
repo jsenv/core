@@ -30,7 +30,7 @@ const { origin } = await startServer({
     status: response.status,
     timing: parseServerTimingHeader(response.headers.get("server-timing")),
   };
-  const expected = {
+  const expect = {
     status: 204,
     timing: {
       a: {
@@ -43,7 +43,7 @@ const { origin } = await startServer({
       },
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -52,7 +52,7 @@ const { origin } = await startServer({
     status: response.status,
     timing: parseServerTimingHeader(response.headers.get("server-timing")),
   };
-  const expected = {
+  const expect = {
     status: 200,
     timing: {
       a: {
@@ -69,5 +69,5 @@ const { origin } = await startServer({
       },
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

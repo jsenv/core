@@ -30,13 +30,13 @@ const test = async ({ name, ...params }) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = [
+  const expect = [
     "a_before_timeout",
     "a_after_timeout",
     "before_import_a",
     "after_import_a",
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // support for top level await and <script type="module">
@@ -72,6 +72,6 @@ try {
   const actual = e.message.includes(
     'Cannot export after a top-level await when using topLevelAwait: "simple"!',
   );
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }

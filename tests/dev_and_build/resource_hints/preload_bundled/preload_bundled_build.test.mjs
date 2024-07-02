@@ -45,7 +45,7 @@ const test = async ({ name, ...params }) => {
     consoleLogs: consoleOutput.logs,
     consoleWarnings: consoleOutput.warnings,
   };
-  const expected = {
+  const expect = {
     warnCalls: [
       `⚠ remove resource hint on "${
         new URL("./client/file.js", import.meta.url).href
@@ -55,7 +55,7 @@ const test = async ({ name, ...params }) => {
     consoleLogs: ["42"],
     consoleWarnings: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // window does not support unicode, it would make assertion on console.warn calls

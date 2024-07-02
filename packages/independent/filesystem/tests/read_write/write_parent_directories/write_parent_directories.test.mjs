@@ -18,8 +18,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   await ensureParentDirectories(destinationUrl);
   const actual = await testDirectoryPresence(parentDirectoryUrl);
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -31,7 +31,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   await ensureParentDirectories(destinationUrl);
   const actual = await testDirectoryPresence(parentDirectoryUrl);
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }

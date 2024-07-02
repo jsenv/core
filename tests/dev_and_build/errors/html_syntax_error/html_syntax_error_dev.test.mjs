@@ -35,7 +35,7 @@ const test = async (params) => {
       pageErrors,
       consoleOutputRaw: consoleOutput.raw,
     };
-    const expected = {
+    const expect = {
       consoleErrorOutput: `Error while handling ${htmlServerUrl}:
 invalid-first-character-of-tag-name
 ${htmFileUrl}:4:12
@@ -47,7 +47,7 @@ ${htmFileUrl}:4:12
       pageErrors: [],
       consoleOutputRaw: "",
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   } finally {
     console.error = error;
   }

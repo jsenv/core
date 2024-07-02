@@ -5,14 +5,14 @@ import { humanize } from "@jsenv/humanize";
 
 {
   const actual = humanize(function () {});
-  const expected = `function () {/* hidden */}`;
-  assert({ actual, expected });
+  const expect = `function () {/* hidden */}`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(function () {}, { showFunctionBody: true });
-  const expected = "function () {}";
-  assert({ actual, expected });
+  const expect = "function () {}";
+  assert({ actual, expect });
 }
 
 {
@@ -20,8 +20,8 @@ import { humanize } from "@jsenv/humanize";
     return true;
   };
   const actual = humanize(value, { showFunctionBody: true });
-  const expected = value.toString();
-  assert({ actual, expected });
+  const expect = value.toString();
+  assert({ actual, expect });
 }
 
 function named(a) {
@@ -29,13 +29,13 @@ function named(a) {
 }
 {
   const actual = humanize(named);
-  const expected = `function named() {/* hidden */}`;
-  assert({ actual, expected });
+  const expect = `function named() {/* hidden */}`;
+  assert({ actual, expect });
 }
 {
   const actual = humanize(named, { showFunctionBody: true });
-  const expected = named.toString();
-  assert({ actual, expected });
+  const expect = named.toString();
+  assert({ actual, expect });
 }
 
 {
@@ -44,8 +44,8 @@ function named(a) {
     function: function () {},
   };
   const actual = humanize(nested);
-  const expected = `{
+  const expect = `{
   "function": function () {/* hidden */}
 }`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

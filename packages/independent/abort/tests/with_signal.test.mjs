@@ -26,7 +26,7 @@ import { Abort } from "@jsenv/abort";
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = abortError;
-    assert({ actual, expected });
+    const expect = abortError;
+    assert({ actual, expect });
   }
 }

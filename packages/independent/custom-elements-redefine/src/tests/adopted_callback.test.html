@@ -36,7 +36,7 @@
       const node = document.getElementById("my-element");
       assert({
         actual: node.textContent,
-        expected: "I work",
+        expect: "I work",
       });
 
       const iframe2 = document.createElement("iframe");
@@ -47,7 +47,7 @@
       await createAnimationFramePromise();
       assert({
         actual: adoptedCallbackValue,
-        expected: `adopted from ${window.location.href} to about:blank`,
+        expect: `adopted from ${window.location.href} to about:blank`,
       });
     </script>
   </body>

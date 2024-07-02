@@ -33,7 +33,7 @@ try {
     consoleErrors: consoleOutput.errors,
     errorMessage: returnValue.executionResults["/main.js"].exception.message,
   };
-  const expected = {
+  const expect = {
     serverWarnOutput: `GET ${devServer.origin}/not_found.js
   [33m404[0m Failed to fetch url content
   --- reason ---
@@ -54,7 +54,7 @@ try {
     ],
     errorMessage: `Error while loading module`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 } finally {
   console.warn = warn;
 }

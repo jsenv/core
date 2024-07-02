@@ -16,14 +16,14 @@ This file is testing a "countDogs" function implemented in "animals.js"
 
       {
         const actual = window.countDogs(["dog", "dog"]);
-        const expected = 2;
-        assert({ actual, expected });
+        const expect = 2;
+        assert({ actual, expect });
       }
 
       {
         const actual = window.countDogs(["dog", "cat"]);
-        const expected = 1;
-        assert({ actual, expected });
+        const expect = 1;
+        assert({ actual, expect });
       }
 
       document.body.appendChild(document.createTextNode("ok"));

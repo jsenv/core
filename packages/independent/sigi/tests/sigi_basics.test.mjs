@@ -10,8 +10,8 @@ import { sigi } from "@jsenv/sigi";
     },
   });
   const actual = state.nested.name;
-  const expected = "yes";
-  assert({ actual, expected });
+  const expect = "yes";
+  assert({ actual, expect });
 }
 
 // from primitive to object
@@ -34,11 +34,11 @@ import { sigi } from "@jsenv/sigi";
     callsBeforeMutate,
     callsAfterMutate,
   };
-  const expected = {
+  const expect = {
     callsBeforeMutate: [null],
     callsAfterMutate: [null, 1],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // from object to primitive
@@ -61,11 +61,11 @@ import { sigi } from "@jsenv/sigi";
     callsBeforeMutate,
     callsAfterMutate,
   };
-  const expected = {
+  const expect = {
     callsBeforeMutate: [1],
     callsAfterMutate: [1, null],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // can subscribe to top level changes
@@ -82,11 +82,11 @@ import { sigi } from "@jsenv/sigi";
     callsBeforeUpdate,
     callsAfterUpdate,
   };
-  const expected = {
+  const expect = {
     callsBeforeUpdate: [10],
     callsAfterUpdate: [10, 20],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // subscribe callback not called when something else changes
@@ -103,11 +103,11 @@ import { sigi } from "@jsenv/sigi";
     callsBeforeUpdate,
     callsAfterUpdate,
   };
-  const expected = {
+  const expect = {
     callsBeforeUpdate: [10],
     callsAfterUpdate: [10],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // can subscribe to nested changes
@@ -124,11 +124,11 @@ import { sigi } from "@jsenv/sigi";
     callsBeforeUpdate,
     callsAfterUpdate,
   };
-  const expected = {
+  const expect = {
     callsBeforeUpdate: ["blue"],
     callsAfterUpdate: ["blue", "red"],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // extending root state with mutate
@@ -150,12 +150,12 @@ import { sigi } from "@jsenv/sigi";
     callsAfterMutate,
     callsAfterSecondMutate,
   };
-  const expected = {
+  const expect = {
     callsBeforeMutate: [undefined],
     callsAfterMutate: [undefined, "a"],
     callsAfterSecondMutate: [undefined, "a", "b"],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // array are primitives
@@ -169,11 +169,11 @@ import { sigi } from "@jsenv/sigi";
   });
   mutate({ users: ["a", "b", "c"] });
   const actual = calls;
-  const expected = [
+  const expect = [
     ["a", "b"],
     ["a", "b", "c"],
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // "complex objects" are primitive
@@ -192,8 +192,8 @@ import { sigi } from "@jsenv/sigi";
   });
   mutate({ user: userB });
   const actual = calls;
-  const expected = [userA, userB];
-  assert({ actual, expected });
+  const expect = [userA, userB];
+  assert({ actual, expect });
 }
 
 // reading non existent prop twice
@@ -205,8 +205,8 @@ import { sigi } from "@jsenv/sigi";
   values.push(state.value);
   values.push(state.value);
   const actual = values;
-  const expected = [undefined, undefined];
-  assert({ actual, expected });
+  const expect = [undefined, undefined];
+  assert({ actual, expect });
 }
 
 // throw if attempt to set prop
@@ -217,10 +217,10 @@ import { sigi } from "@jsenv/sigi";
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = new Error(
+    const expect = new Error(
       `Invalid attempt to set "foo", cannot mutate state from outside`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -232,10 +232,10 @@ import { sigi } from "@jsenv/sigi";
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = new Error(
+    const expect = new Error(
       `Invalid attempt to delete "foo", cannot mutate state from outside`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -249,10 +249,10 @@ import { sigi } from "@jsenv/sigi";
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = new Error(
+    const expect = new Error(
       `Invalid attempt to define "foo", cannot mutate state from outside`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -271,9 +271,9 @@ import { sigi } from "@jsenv/sigi";
     nestedPreserved,
     foo,
   };
-  const expected = {
+  const expect = {
     nestedPreserved: true,
     foo: false,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

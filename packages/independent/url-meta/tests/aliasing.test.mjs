@@ -9,8 +9,8 @@ import { URL_META } from "@jsenv/url-meta";
       "file:///alias.json": "file:///data.json",
     },
   });
-  const expected = "file:///data.json";
-  assert({ actual, expected });
+  const expect = "file:///data.json";
+  assert({ actual, expect });
 }
 
 {
@@ -20,8 +20,8 @@ import { URL_META } from "@jsenv/url-meta";
       "file:///*.js": "file:///file.js",
     },
   });
-  const expected = "file:///file.js";
-  assert({ actual, expected });
+  const expect = "file:///file.js";
+  assert({ actual, expect });
 }
 
 {
@@ -31,8 +31,8 @@ import { URL_META } from "@jsenv/url-meta";
       "file:///dir/*": "file:///dir/a.txt",
     },
   });
-  const expected = "file:///dir/a.txt";
-  assert({ actual, expected });
+  const expect = "file:///dir/a.txt";
+  assert({ actual, expect });
 }
 
 {
@@ -42,6 +42,6 @@ import { URL_META } from "@jsenv/url-meta";
       "file:///*/deep/*.js": "file:///*/deep/file.js",
     },
   });
-  const expected = "file:///foo/deep/file.js";
-  assert({ actual, expected });
+  const expect = "file:///foo/deep/file.js";
+  assert({ actual, expect });
 }

@@ -18,5 +18,5 @@ const { returnValue } = await executeInBrowser({
   /* eslint-enable no-undef */
 });
 const actual = returnValue;
-const expected = "Hello world";
-assert({ actual, expected });
+const expect = "Hello world";
+assert({ actual, expect });

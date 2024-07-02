@@ -32,8 +32,8 @@ try {
       () => window.resultPromise,
       /* eslint-enable no-undef */
     );
-    const expected = 84;
-    assert({ actual, expected });
+    const expect = 84;
+    assert({ actual, expect });
   }
 } finally {
   if (!debug) {
