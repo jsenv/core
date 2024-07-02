@@ -13,8 +13,8 @@ const test = async (params) => {
     ...params,
   });
   const actual = status;
-  const expected = "completed";
-  assert({ actual, expected });
+  const expect = "completed";
+  assert({ actual, expect });
 };
 
 await test({

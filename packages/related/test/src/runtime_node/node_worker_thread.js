@@ -3,6 +3,7 @@
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 import { Worker } from "node:worker_threads";
 import { fileURLToPath } from "node:url";
+import supportsColor from "supports-color";
 import { Abort, raceCallbacks } from "@jsenv/abort";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
@@ -32,6 +33,7 @@ export const nodeWorkerThread = ({
   env = {
     ...env,
     JSENV: true,
+    FORCE_COLOR: supportsColor.stdout,
   };
 
   return {

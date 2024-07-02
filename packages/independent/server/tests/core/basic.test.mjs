@@ -32,19 +32,20 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url: `${server.origin}/`,
     status: 200,
     statusText: "OK",
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "content-type": "text/plain",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
       "transfer-encoding": "chunked",
     },
     body: "ok",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // can be calld without arg, returns 501
@@ -60,17 +61,18 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
       headers: headersToObject(response.headers),
       size: response.size,
     };
-    const expected = {
+    const expect = {
       status: 501,
       statusText: "Not Implemented",
       headers: {
-        "connection": "close",
+        "connection": "keep-alive",
         "date": actual.headers.date,
+        "keep-alive": "timeout=5",
         "transfer-encoding": "chunked",
       },
       size: 0,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   } finally {
     await server.stop();
   }

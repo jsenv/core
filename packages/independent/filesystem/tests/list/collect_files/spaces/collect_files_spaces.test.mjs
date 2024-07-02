@@ -10,5 +10,5 @@ const files = await collectFiles({
   predicate: ({ any }) => any,
 });
 const actual = files.map((file) => file.relativeUrl);
-const expected = ["subdir with spaces/a b.js", "file.js"];
-assert({ actual, expected });
+const expect = ["subdir with spaces/a b.js", "file.js"];
+assert({ actual, expect });

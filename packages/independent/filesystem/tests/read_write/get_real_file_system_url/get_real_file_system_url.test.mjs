@@ -20,10 +20,10 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
   const actual = {
     realFileSystemUrl,
   };
-  const expected = {
+  const expect = {
     realFileSystemUrl: caseSensitiveFileUrl,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // with symlink
@@ -56,9 +56,9 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
     fileRealUrl,
     fileRealUrlBeforeLink,
   };
-  const expected = {
+  const expect = {
     fileRealUrl: fileUrl,
     fileRealUrlBeforeLink: fileUrlBeforeLink,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

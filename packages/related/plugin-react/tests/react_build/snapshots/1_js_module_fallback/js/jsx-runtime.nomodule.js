@@ -120,6 +120,9 @@ System.register([], function (_export, _context) {
     if (1 === a._status) return a._result.default;
     throw a._result;
   }
+  function X() {
+    throw Error("act(...) is not supported in production builds of React.");
+  }
   function q(c, a, g) {
     var b,
       d = {},
@@ -248,6 +251,7 @@ System.register([], function (_export, _context) {
       react_production_min.StrictMode = q$1;
       react_production_min.Suspense = w;
       react_production_min.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = W;
+      react_production_min.act = X;
       react_production_min.cloneElement = function (a, b, e) {
         if (null === a || void 0 === a) throw Error("React.cloneElement(...): The argument must be a React element, but you passed " + a + ".");
         var d = C({}, a.props),
@@ -336,9 +340,7 @@ System.register([], function (_export, _context) {
           V.transition = b;
         }
       };
-      react_production_min.unstable_act = function () {
-        throw Error("act(...) is not supported in production builds of React.");
-      };
+      react_production_min.unstable_act = X;
       react_production_min.useCallback = function (a, b) {
         return U.current.useCallback(a, b);
       };
@@ -382,7 +384,7 @@ System.register([], function (_export, _context) {
       react_production_min.useTransition = function () {
         return U.current.useTransition();
       };
-      react_production_min.version = "18.2.0";
+      react_production_min.version = "18.3.1";
       {
         react.exports = react_production_min;
       }

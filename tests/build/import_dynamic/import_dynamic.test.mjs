@@ -30,11 +30,11 @@ const test = async ({ name, expectedFilename, ...params }) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     answer: 42,
     nestedFeatureUrl: `${server.origin}/js/${expectedFilename}`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // can use <script type="module">

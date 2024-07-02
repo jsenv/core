@@ -37,12 +37,12 @@ const test = async (params) => {
   });
   removeFileSync(new URL("./main.html", snapshotDirectoryUrl));
   const actual = returnValue;
-  const expected = {
+  const expect = {
     typeofCurrentScript: "object",
     answer: 42,
     url: `${server.origin}/main.js`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // support for <script type="module">

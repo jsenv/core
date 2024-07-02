@@ -4,60 +4,60 @@ import { urlToFilename } from "@jsenv/urls";
 
 {
   const actual = urlToFilename("http://example.com/dir/file.js?page=1");
-  const expected = "file.js";
-  assert({ actual, expected });
+  const expect = "file.js";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToFilename("http://example.com/dir/file.?page=1");
-  const expected = "file.";
-  assert({ actual, expected });
+  const expect = "file.";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToFilename("http://example.com/dir/file?page=1");
-  const expected = "file";
-  assert({ actual, expected });
+  const expect = "file";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToFilename("http://example.com/dir/");
-  const expected = "dir";
-  assert({ actual, expected });
+  const expect = "dir";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToFilename("http://example.com/");
-  const expected = "";
-  assert({ actual, expected });
+  const expect = "";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToFilename("file:///dir/file.js?page=1");
-  const expected = "file.js";
-  assert({ actual, expected });
+  const expect = "file.js";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToFilename("file:///dir/?page=1");
-  const expected = "dir";
-  assert({ actual, expected });
+  const expect = "dir";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToFilename("file:///?page=1");
-  const expected = "";
-  assert({ actual, expected });
+  const expect = "";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToFilename("file://?page=1");
-  const expected = "";
-  assert({ actual, expected });
+  const expect = "";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToFilename("blob:d3958f5c-0777-0845-9dcf-2cb28783acaf");
-  const expected = "d3958f5c-0777-0845-9dcf-2cb28783acaf";
-  assert({ actual, expected });
+  const expect = "d3958f5c-0777-0845-9dcf-2cb28783acaf";
+  assert({ actual, expect });
 }

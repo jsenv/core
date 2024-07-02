@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/humanize",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Generate messages meant to read by humans",
   "license": "MIT",
   "repository": {
@@ -39,10 +39,10 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "string-width": "7.0.0"
+    "string-width": "7.2.0"
   },
   "devDependencies": {
-    "ansi-escapes": "6.2.0",
+    "ansi-escapes": "7.0.0",
     "is-unicode-supported": "2.0.0",
     "supports-color": "9.4.0"
   }

@@ -1,0 +1,118 @@
+# string single char
+actual: "a"
+expect: "b"
+
+# diff end of string
+actual: "hello world"
+expect: "hello france"
+
+# one char should be empty
+actual: "a"
+expect: ""
+
+# empty should be one char
+actual: ""
+expect: "a"
+
+# tab vs space
+actual: "\t"
+expect: "  "
+
+# blank char should be empty
+actual: "\x7F"
+expect: ""
+
+# blank char should be empty 2
+actual: "\x00"
+expect: ""
+
+# diff unicode
+actual: "⚫️"
+expect: "⚪️"
+
+# diff emoticon
+actual: "👨‍👩‍👧‍👧"
+expect: "😍"
+
+# diff special char
+actual: "ñ"
+expect: "n"
+
+# special char diff
+actual: ""
+expect: ""
+
+# more special char diff
+actual: "!'#$%&'()*+,-./:;<=>"
+expect: "?@^[\\]_`{|}~"
+
+# diff blackslash and ellipsis special chars
+actual: "\\"
+expect: ""
+
+# diff single space with 2 space
+actual: " "
+expect: "  "
+
+# added char
+actual: "ab"
+expect: "a"
+
+# removed char
+actual: "a"
+expect: "ab"
+
+# diff at end of long string, start truncated
+actual: …"efghijk"
+expect: …"efghijj"
+
+# diff at start of long string, end truncated
+actual: "a2cdefg"…
+expect: "a3cdefg"…
+
+# many diff in long string, only first is shown truncated
+actual: "a2cdefZ"…
+expect: "a3cdefY"…
+
+# diff at middle of long string, start + end truncated
+actual: …"gh5"…
+expect: …"gh6"…
+
+# diff new String value
+actual: String("a")
+expect: String("b")
+
+# diff String object vs literal
+actual: String("abc")
+expect: "a2"
+
+# new String collapsed with overview
+actual: {
+  a: String("toto"),
+  b: true,
+}
+expect: {
+  a: String("toto"),
+  b: false,
+}
+
+# new String collapsed
+actual: {
+  foo: {
+    a: String(4),
+  },
+}
+expect: {
+  bar: {
+    a: String(4),
+  },
+}
+
+# new String prop
+actual: String("a") {
+  foo: true,
+}
+expect: String("b") {
+  foo: false,
+}
+

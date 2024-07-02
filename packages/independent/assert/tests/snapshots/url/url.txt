@@ -1,0 +1,142 @@
+# url object port
+actual: URL("http://example.com/")
+expect: URL("http://example.com:8000/")
+
+# url string port
+actual: "http://example.com/"
+expect: "http://example.com:8000/"
+
+# url string vs url object port
+actual: "http://example.com/"
+expect: URL("http://example.com:8000/")
+
+# url search param modified
+actual: URL("http://example.com/?foo=a")
+expect: URL("http://example.com/?foo=b")
+
+# url search param added
+actual: URL("http://example.com/?foo=a")
+expect: URL("http://example.com/")
+
+# url search param added 2
+actual: URL("http://example.com/?foo=a&bar=b")
+expect: URL("http://example.com/?foo=a")
+
+# url search param removed
+actual: URL("http://example.com/")
+expect: URL("http://example.com/?foo=a")
+
+# url search param removed 2
+actual: URL("http://example.com/?foo=a")
+expect: URL("http://example.com/?foo=a&bar=b")
+
+# multi search param 2nd value modified
+actual: "http://example.com/?foo=a&foo=b&foo=a"
+expect: "http://example.com/?foo=a&foo=a&foo=a"
+
+# adding multi search
+actual: "http://example.com/?foo=a&foo=b"
+expect: "http://example.com/?foo=a"
+
+# multi search adding a 3rd param
+actual: "http://example.com/?foo=a&foo=a&foo=a"
+expect: "http://example.com/?foo=a&foo=a"
+
+# multi search removing a 3rd param
+actual: "http://example.com/?foo=a&foo=a"
+expect: "http://example.com/?foo=a&foo=a&foo=a"
+
+# removing multi search
+actual: "http://example.com/?foo=a"
+expect: "http://example.com/?foo=a&foo=b"
+
+# url search param + vs space
+actual: {
+  a: "http://example.com/?a=+&b=1",
+  b: true,
+}
+expect: {
+  a: "http://example.com/?a= &b=1",
+  b: false,
+}
+
+# param order modified and value modified
+actual: "http://example.com/?foo=a&bar=a"
+expect: "http://example.com/?bar=b&foo=b"
+
+# param order modified and value modified 2
+actual: "http://example.com/?foo=foo_1&foo=foo_2&bar=bar_1&bar=bar_2"
+expect: "http://example.com/?bar=BAR_1&bar=BAR_2&foo=FOO_1&foo=FOO_2"
+
+# url hash modified
+actual: URL("http://example.com/#foo")
+expect: URL("http://example.com/#bar")
+
+# url hash removed
+actual: URL("http://example.com/")
+expect: URL("http://example.com/#bar")
+
+# url and url string
+actual: URL("http://example.com/")
+expect: "http://example.com:8000/"
+
+# url string and url string
+actual: "http://example.com/"
+expect: "http://example.com:8000/"
+
+# url and non url string
+actual: URL("http://example.com/")
+expect: "totoabcexample.com"
+
+# non url string and url
+actual: "totoabcexample.com"
+expect: URL("http://example.com/")
+
+# url and boolean
+actual: URL("http://example.com/")
+expect: true
+
+# url string inside a prop
+actual: {
+  a: "http://example.com/",
+  b: true,
+}
+expect: {
+  a: "http://example.com/",
+  b: false,
+}
+
+# url string and object with href
+actual: "http://example.com/"
+expect: {
+  href: "http://example.com/",
+}
+
+# url object port and object with port
+actual: URL("http://example.com:45/")
+expect: {
+  port: 45,
+}
+
+# file protocol vs http protocol
+actual: "http://example/file.txt"
+expect: "file://example/file.js"
+
+# url origin is case insensitive
+actual: {
+  a: "http://example.com/page",
+  b: true,
+}
+expect: {
+  a: "http://example.com/PAGE",
+  b: false,
+}
+
+# internal string vs url object
+actual: Signal("toto")
+expect: URL("http://toto.com/")
+
+# internal url string vs url string
+actual: Signal("http://a.com/")
+expect: "http://b.com/"
+

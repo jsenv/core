@@ -16,8 +16,8 @@ if (process.platform === "linux") {
       () => window.resultPromise,
       /* eslint-enable no-undef */
     );
-    const expected = "pong";
-    assert({ actual, expected });
+    const expect = "pong";
+    assert({ actual, expect });
   } finally {
     if (!debug) {
       browser.close();

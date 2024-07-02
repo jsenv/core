@@ -4,24 +4,24 @@ import { urlToScheme } from "@jsenv/urls";
 
 {
   const actual = urlToScheme("http://example.com/dir/file.js");
-  const expected = "http";
-  assert({ actual, expected });
+  const expect = "http";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToScheme("https://example.com/dir/file.js");
-  const expected = "https";
-  assert({ actual, expected });
+  const expect = "https";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToScheme("file:///example.com/dir/file.js");
-  const expected = "file";
-  assert({ actual, expected });
+  const expect = "file";
+  assert({ actual, expect });
 }
 
 {
   const actual = urlToScheme("about:blank");
-  const expected = "about";
-  assert({ actual, expected });
+  const expect = "about";
+  assert({ actual, expect });
 }

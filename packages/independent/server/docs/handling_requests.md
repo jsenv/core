@@ -26,7 +26,7 @@ _handleRequest_ is a function responsible to generate a response from a request.
 
 - It is optional
 - It receives a _request_ object in argument
-- It is expected to return a _response_, `null` or `undefined`
+- It is expect to return a _response_, `null` or `undefined`
 - It can be an async function
 
 When there is no service handling the request, server respond with _501 Not implemented_.

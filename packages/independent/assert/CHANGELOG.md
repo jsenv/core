@@ -1,3 +1,7 @@
+# 4.0.0
+
+TODO
+
 # 3.0.0
 
 ### introduce color in message for Node.js
@@ -15,7 +19,7 @@ Also remove the column number from path
 unexpected character in string
 --- details ---
 file:///@jsenv/assert/src/internal/something.js
-                                   ^ unexpected "s", expected to continue with "/something.js"
+                                   ^ unexpected "s", expect to continue with "/something.js"
 --- path ---
 actual[35]
 ```
@@ -27,7 +31,7 @@ unexpected character in string
 --- details ---
 file:///@jsenv/assert/src/internal/something.js
                                    ^
-unexpected "s", expected to continue with "/something.js"
+unexpected "s", expect to continue with "/something.js"
 --- path ---
 actual
 ```
@@ -40,7 +44,7 @@ import { assert } from "@jsenv/assert";
 
 assert({
   actual: 10,
-  expected: assert.between(5, 12),
+  expect: assert.between(5, 12),
 });
 ```
 
@@ -53,7 +57,7 @@ unexpected character in string
 --- details ---
 "Hello,
 my name is Damien"
-           ^ unexpected "D", expected string continues with "Flore"
+           ^ unexpected "D", expect string continues with "Flore"
 --- path ---
 actual[18]
 ```
@@ -65,7 +69,7 @@ unexpected character in string
 --- details ---
 1 | Hello,
 2 | my name is Damien
-               ^ unexpected "D", expected string continues with "Flore"
+               ^ unexpected "D", expect string continues with "Flore"
 --- path ---
 actual
 ```
@@ -85,7 +89,7 @@ actual
 ```js
 assert({
   actual: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js`,
-  expected: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`,
+  expect: `file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal//something.js`,
 });
 ```
 
@@ -95,7 +99,7 @@ assert({
 unexpected string, "s" was found instead of "/" at index 79
 --- details ---
 "file:///dmail/documents/dev/jsenv-core/node_modules/@jsenv/assert/src/internal/something.js"
-                                                                                ^ unexpected character, expected string continues with "/something.js"
+                                                                                ^ unexpected character, expect string continues with "/something.js"
 --- path ---
 actual[79]
 ```
@@ -106,7 +110,7 @@ actual[79]
 unexpected character in string
 --- details ---
 …node_modules/@jsenv/assert/src/internal/something.js
-                                         ^ unexpected "s", expected to continue with "/something.js"
+                                         ^ unexpected "s", expect to continue with "/something.js"
 --- path ---
 actual[79]
 ```
@@ -123,10 +127,10 @@ Add a new helper method `assert.startsWith`. It is useful to perform assertion o
 const stack = `Error: message
   at file.js:10:1
   at node_modules/foo/foo.js:125:10`;
-const expected = `Error: message 
+const expect = `Error: message 
   at files.js:10:1`;
-const actual = stack.slice(0, expected.length);
-assert({ actual, expected });
+const actual = stack.slice(0, expect.length);
+assert({ actual, expect });
 ```
 
 <!-- @jsenv/assert 2.11.0 -->
@@ -135,9 +139,9 @@ assert({ actual, expected });
 const actual = `Error: message
   at file.js:10:1
   at node_modules/foo/foo.js:125:10`;
-const expected = assert.startsWith(`Error: message
+const expect = assert.startsWith(`Error: message
   at files.js:10:1`);
-assert({ actual, expected });
+assert({ actual, expect });
 ```
 ````
 
@@ -147,9 +151,9 @@ It was also possible to use `matchesRegExp` to obtain `startsWith` but again not
 const actual = `Error: message
   at file.js:10:1
   at node_modules/foo/foo.js:125:10`;
-const expected = /Error\: message\\n  at files.js\:10\:1.*+/;
-const actual = stack.slice(0, expected.length);
-assert({ actual, expected });
+const expect = /Error\: message\\n  at files.js\:10\:1.*+/;
+const actual = stack.slice(0, expect.length);
+assert({ actual, expect });
 ```
 
 # 2.10.0
@@ -166,7 +170,7 @@ There is also a short message around the point of failure showing the unexpected
 assert({
   actual: `Hello,
 my name is Damien`,
-  expected: `Hello,
+  expect: `Hello,
 my name is Flore`,
 });
 ```
@@ -177,7 +181,7 @@ my name is Flore`,
 unequal strings
 --- found ---
 "Hello,\nmy name is Damien"
---- expected ---
+--- expect ---
 "Hello,\nmy name is Flore"
 --- path ---
 actual
@@ -192,7 +196,7 @@ unexpected string, "D" was found instead of "F" at index 18
 --- details ---
 "Hello,
 my name is Damien"
-           ^ unexpected character, expected string continues with "Flore"
+           ^ unexpected character, expect string continues with "Flore"
 --- path ---
 actual[18]#L2C12
 ```
@@ -213,7 +217,7 @@ assert({
 4abcdefghijklmnopqrstuvwxy
 5abcdefghijklmnopqrstuvwxy
 [Hello world]abcdefghijklmnopqrstuvwxyz`,
-  expected: `1abcdefghijklmnopqrstuvwx
+  expect: `1abcdefghijklmnopqrstuvwx
 2abcdefghijklmnopqrstuvwxy
 3abcdefghijklmnopqrstuvwx
 4abcdefghijklmnopqrstuvwxy
@@ -228,7 +232,7 @@ assert({
 unequal strings
 --- found ---
 "1abcdefghijklmnopqrstuvwx\n2abcdefghijklmnopqrstuvwxy\n3abcdefghijklmnopqrstuvwx\n4abcdefghijklmnopqrstuvwxy\n5abcdefghijklmnopqrstuvwxy\n[Hello world]abcdefghijklmnopqrstuvwxyz"
---- expected ---
+--- expect ---
 "1abcdefghijklmnopqrstuvwx\n2abcdefghijklmnopqrstuvwxy\n3abcdefghijklmnopqrstuvwx\n4abcdefghijklmnopqrstuvwxy\n5abcdefghijklmnopqrstuvwxy\n[Hello france]abcdefghijklmnopqrstuvwxyz"
 --- path ---
 actual
@@ -246,7 +250,7 @@ unexpected string, "w" was found instead of "f" at index 140
 4abcdefghijklmnopqrstuvwxy
 5abcdefghijklmnopqrstuvwxy
 [Hello world]abcdefghijklmnopqrstuvwxyz"
-       ^ unexpected character, expected string continues with "france]abcdefgh"…
+       ^ unexpected character, expect string continues with "france]abcdefgh"…
 --- path ---
 actual[140]#L6C8
 ```

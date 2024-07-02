@@ -6,13 +6,13 @@ import { URL_META } from "@jsenv/url-meta";
   const pattern = "file:///.git/";
   const url = "file:///.github/";
   const actual = URL_META.applyPatternMatching({ pattern, url });
-  const expected = {
+  const expect = {
     matched: false,
     patternIndex: pattern.lastIndexOf("/"),
     urlIndex: url.indexOf("hub"),
     matchGroups: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 try {
@@ -21,8 +21,8 @@ try {
   });
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError("pattern must be a url string, got 10");
-  assert({ actual, expected });
+  const expect = new TypeError("pattern must be a url string, got 10");
+  assert({ actual, expect });
 }
 
 try {
@@ -31,10 +31,10 @@ try {
   });
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError(
+  const expect = new TypeError(
     "pattern must be a url but looks like a windows pathname, got C://Users/folder/file.js",
   );
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 try {
@@ -43,10 +43,10 @@ try {
   });
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError(
+  const expect = new TypeError(
     "pattern must be a url and no scheme found, got hello",
   );
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 try {
@@ -56,47 +56,47 @@ try {
   });
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError("url must be a url string, got 10");
-  assert({ actual, expected });
+  const expect = new TypeError("url must be a url string, got 10");
+  assert({ actual, expect });
 }
 
 {
   const pattern = "file:///foo.js";
   const url = "file:///foo.js";
   const actual = URL_META.applyPatternMatching({ pattern, url });
-  const expected = {
+  const expect = {
     matched: true,
     patternIndex: pattern.length,
     urlIndex: url.length,
     matchGroups: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const pattern = "http:///foo.js";
   const url = "file:///foo.js";
   const actual = URL_META.applyPatternMatching({ pattern, url });
-  const expected = {
+  const expect = {
     matched: false,
     patternIndex: 0,
     urlIndex: 0,
     matchGroups: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const pattern = "file:///bar.js";
   const url = "file:///foo.js";
   const actual = URL_META.applyPatternMatching({ pattern, url });
-  const expected = {
+  const expect = {
     matched: false,
     patternIndex: pattern.indexOf("bar.js"),
     urlIndex: url.indexOf("foo.js"),
     matchGroups: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -104,8 +104,8 @@ try {
   const url = "file:///aZb";
   const { matched } = URL_META.applyPatternMatching({ pattern, url });
   const actual = matched;
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 {
@@ -113,6 +113,6 @@ try {
   const url = "file:///app/app.jsx";
   const { matched } = URL_META.applyPatternMatching({ pattern, url });
   const actual = matched;
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }

@@ -1,0 +1,34 @@
+# below or equals
+actual: 50
+expect: assert.belowOrEquals(25)
+
+# below or equals when removed
+actual: {}
+expect: {
+  a: assert.belowOrEquals(25),
+}
+
+# below or equals ok
+actual: {
+  a: true,
+  b: 25,
+}
+expect: {
+  a: false,
+  b: assert.belowOrEquals(25),
+}
+
+# 50 is too small
+actual: 50
+expect: assert.between(100, 200)
+
+# 3500 is between 3000 and 5000
+actual: {
+  a: 3_500,
+  b: true,
+}
+expect: {
+  a: assert.between(3_000, 5_000),
+  b: false,
+}
+

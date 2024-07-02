@@ -36,20 +36,21 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
     const body = JSON.stringify({
       code: "TEST_CODE",
     });
-    const expected = {
+    const expect = {
       url: `${origin}/`,
       status: 500,
       statusText: "Internal Server Error",
       headers: {
         "cache-control": "no-store",
-        "connection": "close",
+        "connection": "keep-alive",
         "content-length": String(Buffer.byteLength(body)),
         "content-type": "application/json",
         "date": actual.headers.date,
+        "keep-alive": "timeout=5",
       },
       body,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
     stop();
   }
 }
@@ -86,20 +87,21 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
       code: "VALUE_THROWED",
       value: "here",
     });
-    const expected = {
+    const expect = {
       url: `${origin}/`,
       status: 500,
       statusText: "Internal Server Error",
       headers: {
         "cache-control": "no-store",
-        "connection": "close",
+        "connection": "keep-alive",
         "content-length": String(Buffer.byteLength(body)),
         "content-type": "application/json",
         "date": actual.headers.date,
+        "keep-alive": "timeout=5",
       },
       body,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
     stop();
   }
 }

@@ -43,10 +43,10 @@ try {
     const actual = {
       displayed: await getErrorOverlayDisplayedOnPage(page),
     };
-    const expected = {
+    const expect = {
       displayed: false,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   jsFileContent.update(`const j = (`);
@@ -57,10 +57,10 @@ try {
     const actual = {
       displayedAfterSyntaxError: await getErrorOverlayDisplayedOnPage(page),
     };
-    const expected = {
+    const expect = {
       displayedAfterSyntaxError: true,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
   jsFileContent.update(`const j = true`);
   await new Promise((resolve) => {
@@ -71,10 +71,10 @@ try {
       displayedAfterFixAndAutoreload:
         await getErrorOverlayDisplayedOnPage(page),
     };
-    const expected = {
+    const expect = {
       displayedAfterFixAndAutoreload: false,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 } finally {
   jsFileContent.restore();

@@ -26,11 +26,11 @@ const server = await startServer({
   const response = await fetchUrl(server.origin);
   const { status, statusText } = response;
   const actual = { status, statusText };
-  const expected = {
+  const expect = {
     status: 504,
     statusText: "server timeout after 0.5s waiting to handle request",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // an other request if things are fixed should 200
@@ -39,6 +39,6 @@ const server = await startServer({
   const response = await fetchUrl(server.origin);
   const { status } = response;
   const actual = { status };
-  const expected = { status: 200 };
-  assert({ actual, expected });
+  const expect = { status: 200 };
+  assert({ actual, expect });
 }

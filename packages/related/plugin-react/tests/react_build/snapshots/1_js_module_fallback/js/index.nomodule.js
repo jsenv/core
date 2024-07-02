@@ -1,7 +1,7 @@
 System.register([], function (_export, _context) {
   "use strict";
 
-  var react, react_production_min, l, n, p, q, r, t, u, v, w, x, y, z, B, C, D, H, I, J, K, L, P, U, V, W, reactExports, __jsenv_default_import__, Children, Component, Fragment, Profiler, PureComponent, StrictMode, Suspense, __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED, cloneElement, createContext, createElement, createFactory, createRef, forwardRef, isValidElement, lazy, memo, startTransition, unstable_act, useCallback, useContext, useDebugValue, useDeferredValue, useEffect, useId, useImperativeHandle, useInsertionEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, useTransition, version;
+  var react, react_production_min, l, n, p, q, r, t, u, v, w, x, y, z, B, C, D, H, I, J, K, L, P, U, V, W, reactExports, __jsenv_default_import__, Children, Component, Fragment, Profiler, PureComponent, StrictMode, Suspense, __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED, act, cloneElement, createContext, createElement, createFactory, createRef, forwardRef, isValidElement, lazy, memo, startTransition, unstable_act, useCallback, useContext, useDebugValue, useDeferredValue, useEffect, useId, useImperativeHandle, useInsertionEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, useTransition, version;
   function getDefaultExportFromCjs(x) {
     return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
   }
@@ -120,6 +120,9 @@ System.register([], function (_export, _context) {
     if (1 === a._status) return a._result.default;
     throw a._result;
   }
+  function X() {
+    throw Error("act(...) is not supported in production builds of React.");
+  }
   return {
     setters: [],
     execute: function () {
@@ -225,6 +228,7 @@ System.register([], function (_export, _context) {
       react_production_min.StrictMode = q;
       react_production_min.Suspense = w;
       react_production_min.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = W;
+      react_production_min.act = X;
       react_production_min.cloneElement = function (a, b, e) {
         if (null === a || void 0 === a) throw Error("React.cloneElement(...): The argument must be a React element, but you passed " + a + ".");
         var d = C({}, a.props),
@@ -313,9 +317,7 @@ System.register([], function (_export, _context) {
           V.transition = b;
         }
       };
-      react_production_min.unstable_act = function () {
-        throw Error("act(...) is not supported in production builds of React.");
-      };
+      react_production_min.unstable_act = X;
       react_production_min.useCallback = function (a, b) {
         return U.current.useCallback(a, b);
       };
@@ -359,7 +361,7 @@ System.register([], function (_export, _context) {
       react_production_min.useTransition = function () {
         return U.current.useTransition();
       };
-      react_production_min.version = "18.2.0";
+      react_production_min.version = "18.3.1";
       {
         react.exports = react_production_min;
       }
@@ -373,6 +375,7 @@ System.register([], function (_export, _context) {
       _export("StrictMode", StrictMode = reactExports.StrictMode);
       _export("Suspense", Suspense = reactExports.Suspense);
       _export("__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED", __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED = reactExports.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED);
+      _export("act", act = reactExports.act);
       _export("cloneElement", cloneElement = reactExports.cloneElement);
       _export("createContext", createContext = reactExports.createContext);
       _export("createElement", createElement = reactExports.createElement);

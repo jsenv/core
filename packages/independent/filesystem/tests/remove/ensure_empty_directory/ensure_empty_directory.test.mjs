@@ -21,8 +21,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   await ensureEmptyDirectory(sourceUrl);
   const actual = await readDirectory(sourceUrl);
-  const expected = [];
-  assert({ actual, expected });
+  const expect = [];
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -35,8 +35,8 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   await ensureEmptyDirectory(sourceUrl);
   const actual = await readDirectory(sourceUrl);
-  const expected = [];
-  assert({ actual, expected });
+  const expect = [];
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -49,12 +49,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await ensureEmptyDirectory(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `ensureEmptyDirectory expect directory at ${urlToFileSystemPath(
         sourceUrl,
       )}, found file instead`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -70,12 +70,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await ensureEmptyDirectory(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `ensureEmptyDirectory expect directory at ${urlToFileSystemPath(
         sourceUrl,
       )}, found symbolic-link instead`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -89,8 +89,8 @@ if (!isWindows) {
 
   await ensureEmptyDirectory(sourceUrl);
   const actual = await readDirectory(sourceUrl);
-  const expected = [];
-  assert({ actual, expected });
+  const expect = [];
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -110,6 +110,6 @@ if (!isWindows) {
   await ensureEmptyDirectory(sourceUrl);
   const permissionsAfter = await readEntryPermissions(sourceUrl);
   const actual = permissionsAfter;
-  const expected = permissions;
-  assert({ actual, expected });
+  const expect = permissions;
+  assert({ actual, expect });
 }

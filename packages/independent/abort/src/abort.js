@@ -30,7 +30,7 @@ const createOperation = () => {
   const operationSignal = operationAbortController.signal;
 
   // abortCallbackList is used to ignore the max listeners warning from Node.js
-  // this warning is useful but becomes problematic when it's expected
+  // this warning is useful but becomes problematic when it's expect
   // (a function doing 20 http call in parallel)
   // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
   // uses abortCallbackList to know when something is aborted

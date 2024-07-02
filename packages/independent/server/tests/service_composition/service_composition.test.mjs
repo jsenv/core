@@ -38,17 +38,18 @@ const { origin } = await startServer({
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url: `${origin}/`,
     status: 204,
     statusText: "No Content",
     headers: {
-      connection: "close",
-      date: actual.headers.date,
+      "connection": "keep-alive",
+      "date": actual.headers.date,
+      "keep-alive": "timeout=5",
     },
     body: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -60,16 +61,17 @@ const { origin } = await startServer({
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url: `${origin}/whatever`,
     status: 200,
     statusText: "OK",
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
       "transfer-encoding": "chunked",
     },
     body: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

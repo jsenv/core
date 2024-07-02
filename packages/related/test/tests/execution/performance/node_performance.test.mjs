@@ -16,7 +16,7 @@ const test = async (params) => {
     namespace,
     performance,
   };
-  const expected = {
+  const expect = {
     namespace: { answer: 42 },
     performance: {
       nodeTiming: assert.any(Object),
@@ -27,7 +27,7 @@ const test = async (params) => {
       },
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({

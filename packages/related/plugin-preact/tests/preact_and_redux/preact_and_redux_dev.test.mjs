@@ -43,8 +43,8 @@ const { returnValue } = await executeInBrowser({
   /* eslint-enable no-undef */
 });
 const actual = returnValue;
-const expected = {
+const expect = {
   spanContentAfterIncrement: "1",
   spanContentAfterDecrement: "0",
 };
-assert({ actual, expected });
+assert({ actual, expect });

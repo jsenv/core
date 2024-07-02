@@ -3,14 +3,14 @@ import { humanize } from "@jsenv/humanize";
 
 {
   const actual = humanize(new Error("here"));
-  const expected = `Error("here")`;
-  assert({ actual, expected });
+  const expect = `Error("here")`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(new RangeError("here"));
-  const expected = `RangeError("here")`;
-  assert({ actual, expected });
+  const expect = `RangeError("here")`;
+  assert({ actual, expect });
 }
 
 {
@@ -20,14 +20,14 @@ import { humanize } from "@jsenv/humanize";
     value: "bar",
   });
   const actual = humanize(actualError);
-  const expected = `Error("hello")`;
-  assert({ actual, expected });
+  const expect = `Error("hello")`;
+  assert({ actual, expect });
 }
 
 {
   const error = new Error();
   error.name = "AssertionError";
   const actual = humanize(error);
-  const expected = `Error("")`;
-  assert({ actual, expected });
+  const expect = `Error("")`;
+  assert({ actual, expect });
 }

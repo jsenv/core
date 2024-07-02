@@ -1,0 +1,30 @@
+# promise
+actual: {
+  a: true,
+  b: Promise,
+}
+expect: {
+  a: false,
+  b: Promise,
+}
+
+# weakset
+actual: {
+  a: true,
+  b: WeakSet,
+}
+expect: {
+  a: false,
+  b: WeakSet,
+}
+
+# weakmap
+actual: {
+  a: true,
+  b: WeakMap,
+}
+expect: {
+  a: false,
+  b: WeakMap,
+}
+

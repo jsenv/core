@@ -11,5 +11,5 @@ const names = await detectExportsUsingSandboxedRuntime({
 });
 
 const actual = names;
-const expected = ["toto"];
-assert({ actual, expected });
+const expect = ["toto"];
+assert({ actual, expect });

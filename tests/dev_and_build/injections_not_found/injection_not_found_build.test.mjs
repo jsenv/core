@@ -29,7 +29,7 @@ const test = async (params) => {
   }
   const actual = consoleWarnings;
   const fileUrl = new URL("./client/main.html", import.meta.url).href;
-  const expected = [
+  const expect = [
     `placeholder "__DEMO__" not found in ${fileUrl}.
 --- suggestion a ---
 Add "__DEMO__" in that file.
@@ -44,7 +44,7 @@ return {
   "__DEMO__": INJECTIONS.optional("foo"),
 }`,
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({

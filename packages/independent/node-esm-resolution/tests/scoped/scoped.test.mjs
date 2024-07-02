@@ -10,8 +10,8 @@ const actual = {
   type,
   url,
 };
-const expected = {
+const expect = {
   type: "field:exports",
   url: new URL("./root/node_modules/@jsenv/toto/main.js", import.meta.url).href,
 };
-assert({ actual, expected });
+assert({ actual, expect });

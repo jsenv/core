@@ -13,7 +13,6 @@ import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 import { assert } from "@jsenv/assert";
-import { getStringAssertionErrorInfo } from "@jsenv/assert/src/error_info/strings.js";
 
 export const takeFileSnapshot = (fileUrl) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);
@@ -53,7 +52,7 @@ const createFileSnapshot = (fileUrl) => {
     throw e;
   }
   if (!fileSnapshot.stat.isFile()) {
-    throw new Error(`file expected at ${fileUrl}`);
+    throw new Error(`file expect at ${fileUrl}`);
   }
 
   const isTextual = CONTENT_TYPE.isTextual(
@@ -113,20 +112,13 @@ ${fileUrl}`);
   if (actualFileContent === expectedFileContent) {
     return;
   }
-  const errorInfo = getStringAssertionErrorInfo({
+  assert({
+    message: failureMessage,
+    details: fileUrl,
     actual: actualFileContent,
-    expected: expectedFileContent,
-    name: `file content`,
-    format: assert.format,
+    expect: expectedFileContent,
+    forceMultilineDiff: true,
   });
-  const fileContentStringAssertionError =
-    assert.createAssertionError(`${failureMessage}
---- reason ---
-${errorInfo.message}
---- file ---
-${fileUrl}`);
-  fileContentStringAssertionError.name = errorInfo.type;
-  throw fileContentStringAssertionError;
 };
 
 export const takeDirectorySnapshot = (directoryUrl) => {
@@ -280,12 +272,12 @@ const createDirectorySnapshot = (directoryUrl) => {
     if (e.code === "ENOTDIR") {
       // trailing slash is forced on directoryUrl
       // as a result Node.js throw ENOTDIR when doing "stat" operation
-      throw new Error(`directory expected at ${directoryUrl}`);
+      throw new Error(`directory expect at ${directoryUrl}`);
     }
     throw e;
   }
   if (!directorySnapshot.stat.isDirectory()) {
-    throw new Error(`directory expected at ${directoryUrl}`);
+    throw new Error(`directory expect at ${directoryUrl}`);
   }
 
   const entryNames = readdirSync(directoryUrl);

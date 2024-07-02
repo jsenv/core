@@ -43,7 +43,7 @@ const { origin } = await startServer({
       "content-type": response.headers.get("content-type"),
     },
   };
-  const expected = {
+  const expect = {
     resourceBeforeAlias: "/src/deep/whatever.js",
     resource: "/src/deep/file.js",
     status: 200,
@@ -51,7 +51,7 @@ const { origin } = await startServer({
       "content-type": "text/javascript",
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -64,7 +64,7 @@ const { origin } = await startServer({
       "content-type": response.headers.get("content-type"),
     },
   };
-  const expected = {
+  const expect = {
     resourceBeforeAlias: "/alias.json?foo=foo&test=1",
     resource: "/data.json?foo=foo&test=1",
     status: 200,
@@ -72,7 +72,7 @@ const { origin } = await startServer({
       "content-type": "application/json",
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -84,14 +84,14 @@ const { origin } = await startServer({
       "content-type": response.headers.get("content-type"),
     },
   };
-  const expected = {
+  const expect = {
     resourceBeforeAlias: "/diuei.js",
     status: 200,
     headers: {
       "content-type": "text/javascript",
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -100,11 +100,11 @@ const { origin } = await startServer({
     resourceBeforeAlias,
     status: response.status,
   };
-  const expected = {
+  const expect = {
     resourceBeforeAlias: undefined,
     status: 404,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -116,12 +116,12 @@ const { origin } = await startServer({
       "content-type": response.headers.get("content-type"),
     },
   };
-  const expected = {
+  const expect = {
     resourceBeforeAlias: "/dir/toto",
     status: 200,
     headers: {
       "content-type": "text/plain",
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

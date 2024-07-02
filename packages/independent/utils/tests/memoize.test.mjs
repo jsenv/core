@@ -15,36 +15,36 @@ import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
       value: fn(),
       callCount,
     };
-    const expected = {
+    const expect = {
       value: 42,
       callCount: 1,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
   {
     const actual = {
       value: fn(),
       callCount,
     };
-    const expected = {
+    const expect = {
       value: 42,
       callCount: 1,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
-  // forget works as expected
+  // forget works as expect
   fn.forget();
   {
     const actual = {
       value: fn(),
       callCount,
     };
-    const expected = {
+    const expect = {
       value: 42,
       callCount: 2,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // after being forgotten memoization still works
@@ -53,11 +53,11 @@ import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
       value: fn(),
       callCount,
     };
-    const expected = {
+    const expect = {
       value: 42,
       callCount: 2,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -76,9 +76,9 @@ import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
     value: memoized(),
     callCount,
   };
-  const expected = {
+  const expect = {
     value: 3,
     callCount: 3,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

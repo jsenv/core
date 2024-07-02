@@ -41,8 +41,8 @@ try {
 
   {
     const actual = await getWindowAnswer();
-    const expected = 42;
-    assert({ actual, expected });
+    const expect = 42;
+    assert({ actual, expect });
   }
 
   const pageReloadPromise = page.waitForNavigation();
@@ -54,15 +54,15 @@ try {
   await pageReloadPromise;
   {
     const actual = await getWindowAnswer();
-    const expected = "b";
-    assert({ actual, expected });
+    const expect = "b";
+    assert({ actual, expect });
   }
   importmapFileContent.restore();
   await new Promise((resolve) => setTimeout(resolve, 500));
   {
     const actual = await getWindowAnswer();
-    const expected = 42;
-    assert({ actual, expected });
+    const expect = 42;
+    assert({ actual, expect });
   }
 } finally {
   importmapFileContent.restore();

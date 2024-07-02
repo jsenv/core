@@ -45,11 +45,11 @@ const test = async (params) => {
       messageFromClientToServer: await messageFromClientToServerPromise,
       messageFromServerToClient: await messageFromServerToClientPromise,
     };
-    const expected = {
+    const expect = {
       messageFromClientToServer: "hello server",
       messageFromServerToClient: "hello client",
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   } finally {
     wsClient.close();
   }

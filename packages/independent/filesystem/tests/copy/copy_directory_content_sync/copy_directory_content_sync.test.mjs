@@ -32,10 +32,10 @@ test(() => {
     });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `no directory to copy content from at ${urlToFileSystemPath(sourceUrl)}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 });
 
@@ -52,12 +52,12 @@ test(() => {
     });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `found a file instead of a directory at ${urlToFileSystemPath(
         sourceUrl,
       )}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 });
 
@@ -74,12 +74,12 @@ test(() => {
     });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `no directory to copy content into at ${urlToFileSystemPath(
         destinationUrl,
       )}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 });
 
@@ -97,12 +97,12 @@ test(() => {
     });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `destination leads to a file instead of a directory at ${urlToFileSystemPath(
         destinationUrl,
       )}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 });
 
@@ -117,10 +117,10 @@ test(() => {
     to: new URL("into/dest", tempDirectoryUrl),
   });
   const actual = readFileStructureSync(tempDirectoryUrl);
-  const expected = {
+  const expect = {
     "into/dest/a.txt": "",
     "into/dest/b.txt": "",
     "source/a.txt": "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });

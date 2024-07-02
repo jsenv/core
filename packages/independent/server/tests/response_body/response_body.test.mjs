@@ -28,8 +28,8 @@ import { startServer, fromFetchResponse } from "@jsenv/server";
   const response = await fetchUrl(server.origin);
 
   const actual = await response.text();
-  const expected = "Hello";
-  assert({ actual, expected });
+  const expect = "Hello";
+  assert({ actual, expect });
 
   // node-fetch response
   {
@@ -47,7 +47,7 @@ import { startServer, fromFetchResponse } from "@jsenv/server";
     });
     const response = await fetchUrl(serverB.origin);
     const actual = await response.text();
-    const expected = "Hello";
-    assert({ actual, expected });
+    const expect = "Hello";
+    assert({ actual, expect });
   }
 }

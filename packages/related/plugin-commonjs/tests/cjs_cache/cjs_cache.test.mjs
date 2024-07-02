@@ -45,8 +45,8 @@ try {
 
   {
     const actual = await getResult();
-    const expected = 42;
-    assert({ actual, expected });
+    const expect = 42;
+    assert({ actual, expect });
   }
 
   // now update the package content + version and see if reloading the page updates the result
@@ -54,8 +54,8 @@ try {
     cjsFileContent.update(`module.exports = 43`);
     await page.reload();
     const actual = await getResult();
-    const expected = 43;
-    assert({ actual, expected });
+    const expect = 43;
+    assert({ actual, expect });
   }
 } finally {
   if (!debug) {

@@ -18,7 +18,7 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     meta: {
       url: `${devServer.origin}/main.js`,
       resolve: undefined,
@@ -36,7 +36,7 @@ const test = async (params) => {
     importMetaTest: undefined,
     importMetaBuild: undefined,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test();

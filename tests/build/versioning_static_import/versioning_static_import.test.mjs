@@ -119,7 +119,7 @@ const test = async ({ name, ...rest }) => {
         modifiedReturnValue,
         responseForAppJs,
       },
-      expected: {
+      expect: {
         initialReturnValue: 42,
         modifiedReturnValue: 43,
         responseForAppJs: undefined,

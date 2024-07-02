@@ -28,7 +28,7 @@ await ensureEmptyDirectory(fixturesDirectoryUrl);
     body: response.body,
     timing: response.timing,
   };
-  const expected = {
+  const expect = {
     status: 200,
     headers: {
       "cache-control": "no-store",
@@ -42,6 +42,6 @@ await ensureEmptyDirectory(fixturesDirectoryUrl);
         actual.timing["file service>read file stat"],
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 await ensureEmptyDirectory(fixturesDirectoryUrl);

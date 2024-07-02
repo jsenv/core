@@ -42,17 +42,18 @@ import {
       headers: headersToObject(response.headers),
       body: await response.text(),
     };
-    const expected = {
+    const expect = {
       status: 301,
       headers: {
-        "connection": "close",
+        "connection": "keep-alive",
         "date": actual.headers.date,
+        "keep-alive": "timeout=5",
         "location": `${server.origin}/file.js?page=2`,
         "transfer-encoding": "chunked",
       },
       body: "",
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // 200 in https
@@ -64,11 +65,11 @@ import {
       status: response.status,
       body: await response.text(),
     };
-    const expected = {
+    const expect = {
       status: 200,
       body: "Welcome, HTTPS user!",
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -107,17 +108,18 @@ import {
       headers: headersToObject(response.headers),
       body: await response.text(),
     };
-    const expected = {
+    const expect = {
       status: 301,
       headers: {
-        "connection": "close",
+        "connection": "keep-alive",
         "date": actual.headers.date,
+        "keep-alive": "timeout=5",
         "location": `${server.origin}/`,
         "transfer-encoding": "chunked",
       },
       body: "",
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // 200 in https
@@ -129,11 +131,11 @@ import {
       status: response.status,
       body: await response.text(),
     };
-    const expected = {
+    const expect = {
       status: 200,
       body: "Welcome, HTTPS user!",
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -162,11 +164,11 @@ import {
         code: e.code,
         message: e.message,
       };
-      const expected = {
+      const expect = {
         code: "ECONNRESET",
         message: `request to ${serverHttpOrigin}/ failed, reason: socket hang up`,
       };
-      assert({ actual, expected });
+      assert({ actual, expect });
     }
   }
 }
@@ -206,11 +208,11 @@ import {
       status: response.status,
       body: await response.text(),
     };
-    const expected = {
+    const expect = {
       status: 200,
       body: serverHttpOrigin,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // request origin is https on https requests
@@ -220,10 +222,10 @@ import {
       status: response.status,
       body: await response.text(),
     };
-    const expected = {
+    const expect = {
       status: 200,
       body: server.origin,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }

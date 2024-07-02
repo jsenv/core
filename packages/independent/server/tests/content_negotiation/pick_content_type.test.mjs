@@ -11,8 +11,8 @@ import { pickContentType } from "@jsenv/server";
     },
     ["text/html"],
   );
-  const expected = "text/html";
-  assert({ actual, expected });
+  const expect = "text/html";
+  assert({ actual, expect });
 }
 
 {
@@ -24,8 +24,8 @@ import { pickContentType } from "@jsenv/server";
     },
     ["text/plain"],
   );
-  const expected = null;
-  assert({ actual, expected });
+  const expect = null;
+  assert({ actual, expect });
 }
 
 {
@@ -37,8 +37,8 @@ import { pickContentType } from "@jsenv/server";
     },
     ["text/plain"],
   );
-  const expected = "text/plain";
-  assert({ actual, expected });
+  const expect = "text/plain";
+  assert({ actual, expect });
 }
 
 {
@@ -50,8 +50,8 @@ import { pickContentType } from "@jsenv/server";
     },
     ["text/plain"],
   );
-  const expected = null;
-  assert({ actual, expected });
+  const expect = null;
+  assert({ actual, expect });
 }
 
 {
@@ -63,8 +63,8 @@ import { pickContentType } from "@jsenv/server";
     },
     ["text/plain"],
   );
-  const expected = "text/plain";
-  assert({ actual, expected });
+  const expect = "text/plain";
+  assert({ actual, expect });
 }
 
 {
@@ -76,8 +76,8 @@ import { pickContentType } from "@jsenv/server";
     },
     ["text/javascript"],
   );
-  const expected = "text/javascript";
-  assert({ actual, expected });
+  const expect = "text/javascript";
+  assert({ actual, expect });
 }
 
 {
@@ -89,8 +89,8 @@ import { pickContentType } from "@jsenv/server";
     },
     ["application/pdf"],
   );
-  const expected = null;
-  assert({ actual, expected });
+  const expect = null;
+  assert({ actual, expect });
 }
 
 {
@@ -102,8 +102,8 @@ import { pickContentType } from "@jsenv/server";
     },
     ["text/javascript"],
   );
-  const expected = "text/javascript";
-  assert({ actual, expected });
+  const expect = "text/javascript";
+  assert({ actual, expect });
 }
 
 {
@@ -115,6 +115,6 @@ import { pickContentType } from "@jsenv/server";
     },
     ["text/javascript"],
   );
-  const expected = "text/javascript";
-  assert({ actual, expected });
+  const expect = "text/javascript";
+  assert({ actual, expect });
 }

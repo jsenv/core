@@ -8,18 +8,18 @@
 
   <body>
     <script type="module">
-      import { addWellKnownComposite } from "../error_info/utils/well_known_value.js";
+      // import { addWellKnownComposite } from "../utils/well_known_value.js";
 
-      if (typeof window === "object") {
-        const iframe = document.createElement("iframe");
-        iframe.setAttribute("sandbox", "");
-        document.body.appendChild(iframe);
-        try {
-          addWellKnownComposite(iframe.contentWindow);
-        } finally {
-          document.body.removeChild(iframe);
-        }
-      }
+      // if (typeof window === "object") {
+      //   const iframe = document.createElement("iframe");
+      //   iframe.setAttribute("sandbox", "");
+      //   document.body.appendChild(iframe);
+      //   try {
+      //     addWellKnownComposite(iframe.contentWindow);
+      //   } finally {
+      //     document.body.removeChild(iframe);
+      //   }
+      // }
     </script>
   </body>
 </html>

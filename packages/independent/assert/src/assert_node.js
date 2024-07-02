@@ -1,15 +1,14 @@
-import { ANSI } from "@jsenv/humanize";
-
-import { createAssert } from "./assert.js";
+import Graphemer from "graphemer";
+import stringWidth from "string-width";
+import { createAssert } from "./assert_scratch.js";
+import { createGetWellKnownValuePath } from "./utils/well_known_value.js";
 
 export const assert = createAssert({
-  format: (string, type) => {
-    if (type === "line_number_aside") {
-      return ANSI.color(string, ANSI.GREY);
-    }
-    if (type === "column_marker_char") {
-      return ANSI.color(string, ANSI.RED);
-    }
-    return string;
+  measureStringWidth: stringWidth,
+  tokenizeString: (string) => {
+    // eslint-disable-next-line new-cap
+    const splitter = new Graphemer.default();
+    return splitter.splitGraphemes(string);
   },
+  getWellKnownValuePath: createGetWellKnownValuePath(global),
 });

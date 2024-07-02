@@ -11,11 +11,11 @@ try {
   throw new Error("should throw");
 } catch (e) {
   const actual = e;
-  const expected = new Error(
+  const expect = new Error(
     `Cannot find "foo" imported from ${fileURLToPath(
       new URL("./root/index.js", import.meta.url),
     )}`,
   );
-  expected.code = "MODULE_NOT_FOUND";
-  assert({ actual, expected });
+  expect.code = "MODULE_NOT_FOUND";
+  assert({ actual, expect });
 }

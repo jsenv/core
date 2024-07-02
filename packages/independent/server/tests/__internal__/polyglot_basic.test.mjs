@@ -37,17 +37,18 @@ const port = await listen({
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     status: 200,
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "content-type": "text/plain",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
       "transfer-encoding": "chunked",
     },
     body: "http",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // https request
@@ -60,7 +61,7 @@ const port = await listen({
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     status: 200,
     headers: {
       "connection": "close",
@@ -70,7 +71,7 @@ const port = await listen({
     },
     body: "https",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // https request rejected (using node request)
@@ -97,19 +98,19 @@ if (!process.env.JSENV) {
       code: error.code,
       message: error.message,
     };
-    const expected = {
-      code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
-      message: `unable to verify the first certificate`,
+    const expect = {
+      code: "CERT_HAS_EXPIRED",
+      message: `certificate has expired`,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   await new Promise((resolve) => setTimeout(resolve, 100));
   {
     const actual = clientError;
-    const expected = new Error("socket hang up");
-    expected.code = "ECONNRESET";
-    assert({ actual, expected });
+    const expect = new Error("socket hang up");
+    expect.code = "ECONNRESET";
+    assert({ actual, expect });
   }
 }
 
@@ -129,18 +130,18 @@ if (!process.env.JSENV) {
       code: error.code,
       message: error.message,
     };
-    const expected = {
-      code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
-      message: `request to https://127.0.0.1:${port}/ failed, reason: unable to verify the first certificate`,
+    const expect = {
+      code: "CERT_HAS_EXPIRED",
+      message: `request to https://127.0.0.1:${port}/ failed, reason: certificate has expired`,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   await new Promise((resolve) => setTimeout(resolve, 100));
   {
     const actual = clientError;
-    const expected = new Error("socket hang up");
-    expected.code = "ECONNRESET";
-    assert({ actual, expected });
+    const expect = new Error("socket hang up");
+    expect.code = "ECONNRESET";
+    assert({ actual, expect });
   }
 }

@@ -11,5 +11,5 @@ const meta = URL_META.applyAssociations({
   associations,
 });
 const actual = meta;
-const expected = { whatever: true };
-assert({ actual, expected });
+const expect = { whatever: true };
+assert({ actual, expect });

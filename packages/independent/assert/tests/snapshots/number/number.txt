@@ -1,0 +1,98 @@
+# -0 and 0
+actual: -0
+expect:  0
+
+# 1 and -0
+actual:  1
+expect: -0
+
+# -1 and 1
+actual: -1
+expect:  1
+
+# 10.45 and 10.456
+actual: 10.45
+expect: 10.456
+
+# -Infinity and Infinity
+actual: -Infinity
+expect:  Infinity
+
+# NaN and Infinity
+actual: NaN
+expect: Infinity
+
+# decimals using exponent
+actual: 0.000_002
+expect: 0.00_000_002
+
+# decimals using exponent v2
+actual: 0.00_000_002
+expect: 0.000_000_002
+
+# exponent integer
+actual: 10_000_000_000_000
+expect:  1_000_000_000_000
+
+# exponent negative integer
+actual:  10_000_000_000_000
+expect: -10_000_000_000_000
+
+# 1235 and 67_000
+actual:  1_235
+expect: 67_000
+
+# 149_600_000 and 1_464_301
+actual: 149_600_000
+expect:   1_464_301
+
+# 1_001 and 2_002
+actual: 1_001
+expect: 2_002
+
+# 2_200_002 and 1_100_001
+actual: 2_200_002
+expect: 1_100_001
+
+# 1234.56 and 12_345.67
+actual:  1_234.56
+expect: 12_345.67
+
+# -0.120_123 and -1_000_001
+actual:         -0.120_123
+expect: -1_000_001
+
+# -1.23456e15 and -1200000e5
+actual: -1_234_560_000_000_000
+expect:       -120_000_000_000
+
+# 1.8e307 and 1.8e308
+actual: 183_070_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000…
+expect: Infinity
+
+# special notations
+actual: {
+  a: 3_654_320_000_000,
+  b: 10_922,
+  c: 10_922,
+  d: 262_926_349,
+  e: 11_259_375,
+  f: 1_090_785_345,
+  g: 1_090_785_345,
+}
+expect: {
+  a: 365_673_200,
+}
+
+# 10 and "10"
+actual: 10
+expect: "10"
+
+# BigInt(1) and BigInt(2)
+actual: 1n
+expect: 2n
+
+# BigInt(1) and "1n"
+actual: 1n
+expect: "1n"
+

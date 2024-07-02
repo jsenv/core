@@ -103,6 +103,7 @@ export const reporterList = ({
         });
         const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
         let frameIndex = 0;
+        let oneExecutionWritten = false;
         const renderDynamicLog = (testPlanResult) => {
           frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
           let dynamicLogContent = "";
@@ -135,7 +136,10 @@ export const reporterList = ({
             ANSI.GREY,
           )}${infoFormatted}${ANSI.color("]", ANSI.GREY)}`;
 
-          dynamicLogContent = `\n${dynamicLogContent}\n`;
+          if (oneExecutionWritten) {
+            dynamicLogContent = `\n${dynamicLogContent}`;
+          }
+          dynamicLogContent = `${dynamicLogContent}\n`;
           return dynamicLogContent;
         };
         dynamicLog.update(renderDynamicLog(testPlanResult));
@@ -150,10 +154,16 @@ export const reporterList = ({
             });
           },
           afterEachInOrder: (execution) => {
-            dynamicLog.clearDuringFunctionCall(() => {
-              const log = renderExecutionLog(execution, logOptions);
-              write(log);
-            });
+            oneExecutionWritten = true;
+            dynamicLog.clearDuringFunctionCall(
+              () => {
+                const log = renderExecutionLog(execution, logOptions);
+                write(log);
+              },
+              // regenerate the dynamic log to put the leading "\n"
+              // because of oneExecutionWritten becoming true
+              renderDynamicLog(testPlanResult),
+            );
           },
           afterAll: async () => {
             dynamicLog.update("");
@@ -484,7 +494,7 @@ const renderConsoleOutput = (consoleCalls) => {
     const textFormatted = prefixFirstAndIndentRemainingLines({
       prefix: CONSOLE_ICONS[regroupedCall.type],
       text,
-      trimLines: true,
+      trimLines: false,
       trimLastLine: index === regroupedCalls.length - 1,
     });
     consoleOutput += textFormatted;

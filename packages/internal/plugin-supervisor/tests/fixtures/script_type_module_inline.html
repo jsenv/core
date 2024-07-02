@@ -27,8 +27,8 @@
       window.namespace2 = namespace2;
 
       const actual = await getAnswer();
-      const expected = 42;
-      if (actual !== expected) {
+      const expect = 42;
+      if (actual !== expect) {
         throw new Error(`getAnswer should return 42, got ${actual}`);
       }
     </script>

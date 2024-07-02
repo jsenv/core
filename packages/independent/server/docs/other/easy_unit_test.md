@@ -6,7 +6,7 @@
 >
 > 1. start the server
 > 2. send specific http request to that server
-> 3. for each http request sent, assert the http response from server is expected.
+> 3. for each http request sent, assert the http response from server is expect.
 >
 > And this type of test should be favored because they are closer to the final behaviour of an http server. That being said, this section is still useful to illustrates how pure function are easy to unit test because they are independent from their environment. And this aspect of pure function makes code way easier to reason about.
 
@@ -47,28 +47,28 @@ import assert from "assert";
 // okService returns 200 on /whatever
 {
   const actual = okService({ pathname: "/whatever" });
-  const expected = { status: 200 };
-  assert.equal(actual, expected);
+  const expect = { status: 200 };
+  assert.equal(actual, expect);
 }
 
 // okService returns 200 only on /whatever
 {
   const actual = okService({ pathname: "/" });
-  const expected = null;
-  assert.equal(actual, expected);
+  const expect = null;
+  assert.equal(actual, expect);
 }
 
 // noContentService returns 204 on /
 {
   const actual = noContentService({ pathname: "/" });
-  const expected = { status: 204 };
-  assert.equal(actual, expected);
+  const expect = { status: 204 };
+  assert.equal(actual, expect);
 }
 
 // noContentService returns 204 only on /
 {
   const actual = noContentService({ pathname: "/toto" });
-  const expected = null;
-  assert.equal(actual, expected);
+  const expect = null;
+  assert.equal(actual, expect);
 }
 ```

@@ -9,7 +9,7 @@ import { asFlatAssociations } from "@jsenv/url-meta/src/url_meta.js";
       "file:///b.js": false,
     },
   });
-  const expected = {
+  const expect = {
     "file:///a.js": {
       visible: true,
     },
@@ -17,7 +17,7 @@ import { asFlatAssociations } from "@jsenv/url-meta/src/url_meta.js";
       visible: false,
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -29,13 +29,13 @@ import { asFlatAssociations } from "@jsenv/url-meta/src/url_meta.js";
       "file:///a.js": true,
     },
   });
-  const expected = {
+  const expect = {
     "file:///a.js": {
       visible: true,
       whatever: true,
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 try {
@@ -43,10 +43,8 @@ try {
   throw new Error("shoud crash");
 } catch (error) {
   const actual = error;
-  const expected = new TypeError(
-    `associations must be a plain object, got foo`,
-  );
-  assert({ actual, expected });
+  const expect = new TypeError(`associations must be a plain object, got foo`);
+  assert({ actual, expect });
 }
 
 {
@@ -56,8 +54,8 @@ try {
       "file:///a.js": true,
     },
   });
-  const expected = {
+  const expect = {
     "file:///a.js": { whatever: true },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

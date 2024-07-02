@@ -28,11 +28,11 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
     readSymbolicLinkReturnValue,
     readFileOnLinkReturnValue,
   };
-  const expected = {
+  const expect = {
     readSymbolicLinkReturnValue: fileUrl,
     readFileOnLinkReturnValue: "hello world",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // directories
@@ -51,11 +51,11 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
     presentBeforeLink,
     presentAfterLink,
   };
-  const expected = {
+  const expect = {
     presentBeforeLink: false,
     presentAfterLink: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // preserves relative notation
@@ -74,11 +74,11 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
     readSymbolicLinkReturnValue,
     readFileOnLinkReturnValue,
   };
-  const expected = {
+  const expect = {
     readSymbolicLinkReturnValue: "./file.txt",
     readFileOnLinkReturnValue: "hello world",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // link already exists
@@ -98,8 +98,8 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
   } catch (e) {
     // assert
     const actual = { code: e.code };
-    const expected = { code: "EEXIST" };
-    assert({ actual, expected });
+    const expect = { code: "EEXIST" };
+    assert({ actual, expect });
   }
 }
 
@@ -121,11 +121,11 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
     readSymbolicLinkReturnValue,
     readFileOnLinkReturnValue,
   };
-  const expected = {
+  const expect = {
     readSymbolicLinkReturnValue: fileUrl,
     readFileOnLinkReturnValue: "hello world",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // link already exists to an other dest + allowUseless
@@ -144,8 +144,8 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
     throw new Error("should throw");
   } catch (e) {
     const actual = { code: e.code };
-    const expected = { code: "EEXIST" };
-    assert({ actual, expected });
+    const expect = { code: "EEXIST" };
+    assert({ actual, expect });
   }
 }
 
@@ -167,9 +167,9 @@ const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
     readSymbolicLinkReturnValue,
     readFileOnLinkReturnValue,
   };
-  const expected = {
+  const expect = {
     readSymbolicLinkReturnValue: fileUrl,
     readFileOnLinkReturnValue: "hello world",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

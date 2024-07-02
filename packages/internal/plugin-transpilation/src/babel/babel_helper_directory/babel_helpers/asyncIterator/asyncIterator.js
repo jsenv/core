@@ -44,7 +44,10 @@ function AsyncFromSyncIterator(s) {
     },
     throw: function (value) {
       var thr = this.s.return;
-      if (thr === undefined) return Promise.reject(value);
+      if (thr === undefined) {
+        // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
+        return Promise.reject(maybeError);
+      }
       return AsyncFromSyncIteratorContinuation(thr.apply(this.s, arguments));
     },
   };

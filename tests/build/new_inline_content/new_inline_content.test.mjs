@@ -45,7 +45,7 @@ const test = async (params) => {
     pageArguments: [`./${buildManifest["js/main.js"]}`],
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     complexInsideDoubleQuotes: `\n'😀'\n`,
     complexInsideSingleQuotes: `\n"😀"\n`,
     cssAndTemplate: `
@@ -71,7 +71,7 @@ body {
     singleQuoteEscaped: `'`,
     bodyBackgroundImage: `url("${server.origin}/other/jsenv.png?v=467b6542")`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // script type module can be used

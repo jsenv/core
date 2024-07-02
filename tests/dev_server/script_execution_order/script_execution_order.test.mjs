@@ -42,10 +42,10 @@ const test = async ({ browserLauncher }) => {
 
     if (browserLauncher === chromium) {
       const actual = result;
-      const expected = correctOrder;
+      const expect = correctOrder;
       assert({
         actual,
-        expected,
+        expect,
         details: {
           browser: `chromium`,
         },
@@ -53,10 +53,10 @@ const test = async ({ browserLauncher }) => {
     }
     if (browserLauncher === firefox) {
       const actual = result;
-      const expected = correctOrder;
+      const expect = correctOrder;
       assert({
         actual,
-        expected,
+        expect,
         details: {
           browser: `firefox`,
         },
@@ -66,7 +66,7 @@ const test = async ({ browserLauncher }) => {
       // window "load" event is not deterministic on webkit due to
       // the bug mentioned previously so order is different
       const actual = result;
-      const expected = [
+      const expect = [
         "before_js_classic_inline",
         "js_classic_inline",
         "before_js_classic_src",
@@ -79,7 +79,7 @@ const test = async ({ browserLauncher }) => {
       ];
       assert({
         actual,
-        expected,
+        expect,
         details: {
           browser: `webkit`,
         },

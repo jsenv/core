@@ -39,11 +39,11 @@ try {
       result: await getResult(),
       dereferencedCalls,
     };
-    const expected = {
+    const expect = {
       result: 42,
       dereferencedCalls: [],
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
   await page.reload();
   {
@@ -51,11 +51,11 @@ try {
       result: await getResult(),
       dereferencedCalls,
     };
-    const expected = {
+    const expect = {
       result: 42,
       dereferencedCalls: [],
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 } finally {
   if (!debug) {

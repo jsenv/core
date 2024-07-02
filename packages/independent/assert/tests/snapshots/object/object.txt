@@ -1,0 +1,284 @@
+# basic
+actual: {
+  foo: true,
+}
+expect: {
+  foo: false,
+}
+
+# property are different
+actual: {
+  a: true,
+}
+expect: {
+  a: {
+    b: true,
+  },
+}
+
+# property removed
+actual: {
+  a: true,
+}
+expect: {
+  a: true,
+  should_be_there: true,
+}
+
+# property added
+actual: {
+  a: true,
+  should_not_be_there: true,
+}
+expect: {
+  a: true,
+}
+
+# false should be an object
+actual: false
+expect: {
+  foo: true,
+}
+
+# object should be false
+actual: {
+  foo: {
+    a: Object(0),
+  },
+}
+expect: false
+
+# false should be an object at property
+actual: {
+  foo: false,
+}
+expect: {
+  foo: {
+    a: true,
+  },
+}
+
+# object should be false at property
+actual: {
+  foo: {
+    a: true,
+  },
+}
+expect: {
+  foo: false,
+}
+
+# max depth inside diff
+actual: {
+  foo: { foo_a: { foo_a2: Object(1) }, foo_b: { foo_b2: Object(1) } },
+  bar: true,
+}
+expect: {
+  foo: { foo_a: { foo_a2: Object(1) }, foo_b: { foo_b2: Object(1) } },
+  bar: {
+    bar_a: Object(1),
+  },
+}
+
+# max diff per object
+actual: {
+  a: true,
+  b: {
+    a: Object(2),
+  },
+  c: true,
+}
+expect: {
+  c: true,
+  b: {
+    a: false,
+  },
+  a: true,
+}
+
+# max 2 context after diff (there is 2)
+actual: {
+  a: true,
+  b: true,
+  c: true,
+}
+expect: {
+  a: false,
+  b: true,
+  c: true,
+}
+
+# max 2 context after diff (there is 3)
+actual: {
+  a: true,
+  b: true,
+  c: true,
+  e: true,
+}
+expect: {
+  a: false,
+  b: true,
+  c: true,
+  d: true,
+}
+
+# max 2 context after diff (there is 4)
+actual: {
+  a: true,
+  b: true,
+  ↓ 3 props ↓
+}
+expect: {
+  a: false,
+  b: true,
+  ↓ 3 props ↓
+}
+
+# max 2 context before diff (there is 2)
+actual: {
+  a: true,
+  b: true,
+  c: true,
+}
+expect: {
+  a: true,
+  b: true,
+  c: false,
+}
+
+# max 2 context before diff (there is 3)
+actual: {
+  ↑ 2 props ↑
+  c: true,
+  d: true,
+}
+expect: {
+  ↑ 2 props ↑
+  c: true,
+  d: false,
+}
+
+# max 2 context before diff (there is 4)
+actual: {
+  ↑ 3 props ↑
+  d: true,
+  e: true,
+}
+expect: {
+  ↑ 3 props ↑
+  d: true,
+  e: false,
+}
+
+# max 2 context around diff
+actual: {
+  ↑ 2 props ↑
+  c: true,
+  d: true,
+  e: true,
+  f: true,
+  g: true,
+  h: true,
+  i: true,
+  ↕ 2 props ↕
+  l: true,
+  m: true,
+  n: true,
+  ↓ 2 props ↓
+}
+expect: {
+  ↑ 2 props ↑
+  c: true,
+  d: false,
+  e: true,
+  f: true,
+  g: true,
+  h: false,
+  i: true,
+  ↕ 2 props ↕
+  l: true,
+  m: false,
+  n: true,
+  ↓ 2 props ↓
+}
+
+# max 1 context around diff
+actual: {
+  a: true,
+  b: true,
+  c: true,
+}
+expect: {
+  c: true,
+  b: false,
+  a: true,
+}
+
+# max 0 context around diff
+actual: {
+  ↑ 1 prop ↑
+  b: true,
+  ↓ 1 prop ↓
+}
+expect: {
+  ↑ 1 prop ↑
+  b: false,
+  ↓ 1 prop ↓
+}
+
+# property should be there and is big
+actual: {
+  a: true,
+}
+expect: {
+  a: true,
+  should_be_there: {
+    a: true,
+    b: true,
+    item: Object(3),
+    c: true,
+    ↓ 4 props ↓
+  },
+}
+
+# many props should not be there
+actual: {
+  a: true,
+  b: true,
+  c: {
+    an_object: true,
+    and: true,
+  },
+  d: true,
+  e: true,
+  ↓ 3 props ↓
+}
+expect: {
+  a: true,
+  c: {},
+}
+
+# object vs user
+actual: {}
+expect: User {}
+
+# collapsed with overview when no diff
+actual: {
+  a: { foo: true, bar: true, baz: { t: 1 } },
+  b: true,
+}
+expect: {
+  a: { foo: true, bar: true, baz: { t: 1 } },
+  b: false,
+}
+
+# one prop no diff
+actual: {
+  a: { foo: true },
+  z: true,
+}
+expect: {
+  a: { foo: true },
+  z: false,
+}
+

@@ -55,10 +55,10 @@ try {
     const actual = {
       displayed: await getErrorOverlayDisplayedOnPage(pageGeneratingError),
     };
-    const expected = {
+    const expect = {
       displayed: false,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // regen the server error on an other page
@@ -76,12 +76,12 @@ try {
         await getErrorOverlayDisplayedOnPage(pageUnrelated),
       displayedOnRelatedPage: await getErrorOverlayDisplayedOnPage(pageRelated),
     };
-    const expected = {
+    const expect = {
       displayedOnPageGeneratingError: false,
       displayedOnUnrelatedPage: false,
       displayedOnRelatedPage: true,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 } finally {
   browser.close();

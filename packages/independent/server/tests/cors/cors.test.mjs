@@ -44,7 +44,7 @@ const actual = {
   headers: headersToObject(response.headers),
   body: await response.text(),
 };
-const expected = {
+const expect = {
   url: `${server.origin}/`,
   status: 200,
   statusText: "OK",
@@ -53,7 +53,8 @@ const expected = {
     "access-control-allow-methods": "GET",
     "access-control-allow-origin": "http://example.com:80",
     "access-control-max-age": "400",
-    "connection": "close",
+    "connection": "keep-alive",
+    "keep-alive": "timeout=5",
     "content-length": "0",
     "date": actual.headers.date,
     "vary":
@@ -61,4 +62,4 @@ const expected = {
   },
   body: "",
 };
-assert({ actual, expected });
+assert({ actual, expect });

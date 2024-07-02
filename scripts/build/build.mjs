@@ -30,6 +30,7 @@ await build({
     "file://**/node_modules/ansi-escapes/": false,
     "file://**/node_modules/is-unicode-supported/": false,
     "file://**/node_modules/supports-color/": false,
+    "file://**/node_modules/environment/": false,
   },
   directoryReferenceEffect: (reference) => {
     return reference.url.includes("/babel_helpers/") ? "copy" : "error";

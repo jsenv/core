@@ -13,8 +13,8 @@ import { URL_META } from "@jsenv/url-meta";
     },
     predicate: ({ whatever }) => whatever === 42,
   });
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }
 
 {
@@ -28,8 +28,8 @@ import { URL_META } from "@jsenv/url-meta";
     },
     predicate: ({ whatever }) => whatever === 42,
   });
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 try {
@@ -46,8 +46,8 @@ try {
   throw new Error("shoud crash");
 } catch (error) {
   const actual = error;
-  const expected = new Error(`url should end with /, got file:///.git`);
-  assert({ actual, expected });
+  const expect = new Error(`url should end with /, got file:///.git`);
+  assert({ actual, expect });
 }
 
 try {
@@ -64,8 +64,8 @@ try {
   throw new Error("shoud crash");
 } catch (error) {
   const actual = error;
-  const expected = new TypeError(
+  const expect = new TypeError(
     `predicate must be a function, got I'm a string`,
   );
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

@@ -16,7 +16,7 @@ export const assertDirectoryPresence = async (source) => {
   }
   if (!sourceStats.isDirectory()) {
     throw new Error(
-      `directory expected at ${sourcePath} and found ${statsToType(
+      `directory expect at ${sourcePath} and found ${statsToType(
         sourceStats,
       )} instead`,
     );

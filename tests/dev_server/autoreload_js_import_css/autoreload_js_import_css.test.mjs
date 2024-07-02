@@ -161,11 +161,11 @@ const test = async ({
         type: "log",
         text: "adding stylesheet",
       });
-      const expected = {
+      const expect = {
         bodyBackgroundColor: "rgb(255, 0, 0)", // red
         pageLogs: expectedPageLogs,
       };
-      assert({ actual, expected });
+      assert({ actual, expect });
     }
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     cssFileContent.update(`body { background: green; }`);
@@ -176,11 +176,11 @@ const test = async ({
         pageLogs,
       };
       expectedPageLogs.push(...pageLogsAfterUpdatingCssFile);
-      const expected = {
+      const expect = {
         bodyBackgroundColor: "rgb(0, 128, 0)", // green
         pageLogs: expectedPageLogs,
       };
-      assert({ actual, expected });
+      assert({ actual, expect });
     }
     // remove usage of the css file
     jsFileContent.update(`
@@ -196,13 +196,13 @@ if (import.meta.hot) {
         pageLogs,
       };
       expectedPageLogs.push(...pageLogsAfterRemovingCssImport);
-      const expected = {
+      const expect = {
         bodyBackgroundColor: "rgba(0, 0, 0, 0)",
         pageLogs: expectedPageLogs,
       };
       assert({
         actual,
-        expected,
+        expect,
         details: {
           browser: browserName,
         },
@@ -223,13 +223,13 @@ if (import.meta.hot) {
         pageLogs,
       };
       expectedPageLogs.push(...pageLogsAfterRestoringCssImport);
-      const expected = {
+      const expect = {
         bodyBackgroundColor: "rgb(0, 128, 0)", // green
         pageLogs: expectedPageLogs,
       };
       assert({
         actual,
-        expected,
+        expect,
         details: {
           browswer: browserName,
         },

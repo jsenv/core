@@ -876,13 +876,6 @@ const { concat, toArrayBuffer, unmask } = bufferUtilExports;
 const { isValidStatusCode: isValidStatusCode$1, isValidUTF8 } = validationExports;
 
 const FastBuffer = Buffer[Symbol.species];
-const promise = Promise.resolve();
-
-//
-// `queueMicrotask()` is not available in Node.js < 11.
-//
-const queueTask =
-  typeof queueMicrotask === 'function' ? queueMicrotask : queueMicrotaskShim;
 
 const GET_INFO = 0;
 const GET_PAYLOAD_LENGTH_16 = 1;
@@ -902,7 +895,7 @@ let Receiver$1 = class Receiver extends Writable {
    * Creates a Receiver instance.
    *
    * @param {Object} [options] Options object
-   * @param {Boolean} [options.allowSynchronousEvents=false] Specifies whether
+   * @param {Boolean} [options.allowSynchronousEvents=true] Specifies whether
    *     any of the `'message'`, `'ping'`, and `'pong'` events can be emitted
    *     multiple times in the same tick
    * @param {String} [options.binaryType=nodebuffer] The type for binary data
@@ -917,7 +910,10 @@ let Receiver$1 = class Receiver extends Writable {
   constructor(options = {}) {
     super();
 
-    this._allowSynchronousEvents = !!options.allowSynchronousEvents;
+    this._allowSynchronousEvents =
+      options.allowSynchronousEvents !== undefined
+        ? options.allowSynchronousEvents
+        : true;
     this._binaryType = options.binaryType || BINARY_TYPES$1[0];
     this._extensions = options.extensions || {};
     this._isServer = !!options.isServer;
@@ -1430,17 +1426,12 @@ let Receiver$1 = class Receiver extends Writable {
         data = fragments;
       }
 
-      //
-      // If the state is `INFLATING`, it means that the frame data was
-      // decompressed asynchronously, so there is no need to defer the event
-      // as it will be emitted asynchronously anyway.
-      //
-      if (this._state === INFLATING || this._allowSynchronousEvents) {
+      if (this._allowSynchronousEvents) {
         this.emit('message', data, true);
         this._state = GET_INFO;
       } else {
         this._state = DEFER_EVENT;
-        queueTask(() => {
+        setImmediate(() => {
           this.emit('message', data, true);
           this._state = GET_INFO;
           this.startLoop(cb);
@@ -1467,7 +1458,7 @@ let Receiver$1 = class Receiver extends Writable {
         this._state = GET_INFO;
       } else {
         this._state = DEFER_EVENT;
-        queueTask(() => {
+        setImmediate(() => {
           this.emit('message', buf, false);
           this._state = GET_INFO;
           this.startLoop(cb);
@@ -1538,7 +1529,7 @@ let Receiver$1 = class Receiver extends Writable {
       this._state = GET_INFO;
     } else {
       this._state = DEFER_EVENT;
-      queueTask(() => {
+      setImmediate(() => {
         this.emit(this._opcode === 0x09 ? 'ping' : 'pong', data);
         this._state = GET_INFO;
         this.startLoop(cb);
@@ -1575,35 +1566,6 @@ let Receiver$1 = class Receiver extends Writable {
 
 var receiver = Receiver$1;
 
-/**
- * A shim for `queueMicrotask()`.
- *
- * @param {Function} cb Callback
- */
-function queueMicrotaskShim(cb) {
-  promise.then(cb).catch(throwErrorNextTick);
-}
-
-/**
- * Throws an error.
- *
- * @param {Error} err The error to throw
- * @private
- */
-function throwError(err) {
-  throw err;
-}
-
-/**
- * Throws an error in the next tick.
- *
- * @param {Error} err The error to throw
- * @private
- */
-function throwErrorNextTick(err) {
-  process.nextTick(throwError, err);
-}
-
 /* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex" }] */
 const { randomFillSync } = require$$1;
 
@@ -1614,6 +1576,9 @@ const { mask: applyMask, toBuffer: toBuffer$1 } = bufferUtilExports;
 
 const kByteLength = Symbol('kByteLength');
 const maskBuffer = Buffer.alloc(4);
+const RANDOM_POOL_SIZE = 8 * 1024;
+let randomPool;
+let randomPoolPointer = RANDOM_POOL_SIZE;
 
 /**
  * HyBi Sender implementation.
@@ -1678,7 +1643,24 @@ let Sender$1 = class Sender {
       if (options.generateMask) {
         options.generateMask(mask);
       } else {
-        randomFillSync(mask, 0, 4);
+        if (randomPoolPointer === RANDOM_POOL_SIZE) {
+          /* istanbul ignore else  */
+          if (randomPool === undefined) {
+            //
+            // This is lazily initialized because server-sent frames must not
+            // be masked so it may never be used.
+            //
+            randomPool = Buffer.alloc(RANDOM_POOL_SIZE);
+          }
+
+          randomFillSync(randomPool, 0, RANDOM_POOL_SIZE);
+          randomPoolPointer = 0;
+        }
+
+        mask[0] = randomPool[randomPoolPointer++];
+        mask[1] = randomPool[randomPoolPointer++];
+        mask[2] = randomPool[randomPoolPointer++];
+        mask[3] = randomPool[randomPoolPointer++];
       }
 
       skipMasking = (mask[0] | mask[1] | mask[2] | mask[3]) === 0;
@@ -2571,7 +2553,7 @@ function format$1(extensions) {
 
 var extension$1 = { format: format$1, parse: parse$2 };
 
-/* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex|Readable$" }] */
+/* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex|Readable$", "caughtErrors": "none" }] */
 
 const EventEmitter$1 = require$$0$3;
 const https = require$$1$1;
@@ -3193,7 +3175,7 @@ var websocket = WebSocket$1;
  * @param {(String|URL)} address The URL to which to connect
  * @param {Array} protocols The subprotocols
  * @param {Object} [options] Connection options
- * @param {Boolean} [options.allowSynchronousEvents=false] Specifies whether any
+ * @param {Boolean} [options.allowSynchronousEvents=true] Specifies whether any
  *     of the `'message'`, `'ping'`, and `'pong'` events can be emitted multiple
  *     times in the same tick
  * @param {Boolean} [options.autoPong=true] Specifies whether or not to
@@ -3222,7 +3204,7 @@ var websocket = WebSocket$1;
  */
 function initAsClient(websocket, address, protocols, options) {
   const opts = {
-    allowSynchronousEvents: false,
+    allowSynchronousEvents: true,
     autoPong: true,
     protocolVersion: protocolVersions[1],
     maxPayload: 100 * 1024 * 1024,
@@ -3231,7 +3213,6 @@ function initAsClient(websocket, address, protocols, options) {
     followRedirects: false,
     maxRedirects: 10,
     ...options,
-    createConnection: undefined,
     socketPath: undefined,
     hostname: undefined,
     protocol: undefined,
@@ -3302,7 +3283,8 @@ function initAsClient(websocket, address, protocols, options) {
   const protocolSet = new Set();
   let perMessageDeflate;
 
-  opts.createConnection = isSecure ? tlsConnect : netConnect;
+  opts.createConnection =
+    opts.createConnection || (isSecure ? tlsConnect : netConnect);
   opts.defaultPort = opts.defaultPort || defaultPort;
   opts.port = parsedUrl.port || defaultPort;
   opts.host = parsedUrl.hostname.startsWith('[')
@@ -3498,7 +3480,9 @@ function initAsClient(websocket, address, protocols, options) {
 
     req = websocket._req = null;
 
-    if (res.headers.upgrade.toLowerCase() !== 'websocket') {
+    const upgrade = res.headers.upgrade;
+
+    if (upgrade === undefined || upgrade.toLowerCase() !== 'websocket') {
       abortHandshake$1(websocket, socket, 'Invalid Upgrade header');
       return;
     }
@@ -3966,7 +3950,7 @@ function parse(header) {
 
 var subprotocol$1 = { parse };
 
-/* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex$" }] */
+/* eslint no-unused-vars: ["error", { "varsIgnorePattern": "^Duplex$", "caughtErrors": "none" }] */
 
 const EventEmitter = require$$0$3;
 const http = require$$2;
@@ -3994,7 +3978,7 @@ class WebSocketServer extends EventEmitter {
    * Create a `WebSocketServer` instance.
    *
    * @param {Object} options Configuration options
-   * @param {Boolean} [options.allowSynchronousEvents=false] Specifies whether
+   * @param {Boolean} [options.allowSynchronousEvents=true] Specifies whether
    *     any of the `'message'`, `'ping'`, and `'pong'` events can be emitted
    *     multiple times in the same tick
    * @param {Boolean} [options.autoPong=true] Specifies whether or not to
@@ -4025,7 +4009,7 @@ class WebSocketServer extends EventEmitter {
     super();
 
     options = {
-      allowSynchronousEvents: false,
+      allowSynchronousEvents: true,
       autoPong: true,
       maxPayload: 100 * 1024 * 1024,
       skipUTF8Validation: false,
@@ -4200,6 +4184,7 @@ class WebSocketServer extends EventEmitter {
     socket.on('error', socketOnError);
 
     const key = req.headers['sec-websocket-key'];
+    const upgrade = req.headers.upgrade;
     const version = +req.headers['sec-websocket-version'];
 
     if (req.method !== 'GET') {
@@ -4208,13 +4193,13 @@ class WebSocketServer extends EventEmitter {
       return;
     }
 
-    if (req.headers.upgrade.toLowerCase() !== 'websocket') {
+    if (upgrade === undefined || upgrade.toLowerCase() !== 'websocket') {
       const message = 'Invalid Upgrade header';
       abortHandshakeOrEmitwsClientError(this, req, socket, 400, message);
       return;
     }
 
-    if (!key || !keyRegex.test(key)) {
+    if (key === undefined || !keyRegex.test(key)) {
       const message = 'Missing or invalid Sec-WebSocket-Key header';
       abortHandshakeOrEmitwsClientError(this, req, socket, 400, message);
       return;

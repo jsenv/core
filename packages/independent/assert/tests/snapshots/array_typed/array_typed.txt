@@ -1,0 +1,110 @@
+# buffer.from("") vs buffer.from("a")
+actual: Buffer []
+expect: Buffer [
+  97,
+]
+
+# buffer.from("a") vs buffer.from("")
+actual: Buffer [
+  97,
+]
+expect: Buffer []
+
+# buffer without diff are collapsed
+actual: {
+  a: Buffer [97],
+  b: true,
+}
+expect: {
+  a: Buffer [97],
+  b: false,
+}
+
+# same length buffer diff at the end
+actual: Buffer [
+  ↑ 19 values ↑
+  97,
+  109,
+]
+expect: Buffer [
+  ↑ 19 values ↑
+  97,
+  90,
+]
+
+# same length buffer diff at start
+actual: Buffer [
+  104,
+  101,
+  ↓ 19 values ↓
+]
+expect: Buffer [
+  90,
+  101,
+  ↓ 19 values ↓
+]
+
+# same length buffer diff at middle
+actual: Buffer [
+  ↑ 10 values ↑
+  110,
+  97,
+  109,
+  ↓ 8 values ↓
+]
+expect: Buffer [
+  ↑ 10 values ↑
+  110,
+  90,
+  109,
+  ↓ 8 values ↓
+]
+
+# same length buffer diff start, middle, end
+actual: Buffer [
+  104,
+  101,
+  ↕ 8 values ↕
+  110,
+  97,
+  109,
+  ↓ 8 values ↓ (1 modified)
+]
+expect: Buffer [
+  90,
+  101,
+  ↕ 8 values ↕
+  110,
+  90,
+  109,
+  ↓ 8 values ↓ (1 modified)
+]
+
+# buffer vs string
+actual: Buffer [
+  97,
+]
+expect: "a"
+
+# buffer vs array
+actual: {
+  a: Buffer [97],
+  b: Buffer [
+    97,
+  ],
+}
+expect: {
+  a: [97],
+  b: [
+    61,
+  ],
+}
+
+# buffer.from vs Uint8Array.from
+actual: Buffer [97]
+expect: Uint8Array [97]
+
+# Uint8Array vs Array
+actual: Uint8Array
+expect: Array
+

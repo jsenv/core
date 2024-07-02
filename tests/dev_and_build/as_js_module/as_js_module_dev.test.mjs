@@ -22,8 +22,8 @@ const test = async ({ browserLauncher }) => {
       /* eslint-enable no-undef */
     );
     const actual = result;
-    const expected = 42;
-    assert({ actual, expected });
+    const expect = 42;
+    assert({ actual, expect });
   } finally {
     browser.close();
   }

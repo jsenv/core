@@ -47,7 +47,7 @@ try {
   await takeServiceWorkerUIScreenshot({ name: "1_after_register.png" });
   assert({
     actual: pageLogs,
-    expected: [],
+    expect: [],
   });
 } finally {
   if (!debug) {

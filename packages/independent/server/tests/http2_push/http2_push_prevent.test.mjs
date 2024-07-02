@@ -94,7 +94,7 @@ const actual = {
   responseBodyAsString,
   pushedHeaders,
 };
-const expected = {
+const expect = {
   responseBodyAsString: await readFile(
     new URL("./main.html", import.meta.url),
     { as: "string" },
@@ -108,4 +108,4 @@ const expected = {
     },
   ],
 };
-assert({ actual, expected });
+assert({ actual, expect });

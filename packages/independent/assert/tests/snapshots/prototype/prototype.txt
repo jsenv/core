@@ -1,0 +1,48 @@
+# Error vs TypeError
+actual: Error
+expect: TypeError
+
+# object with different prototypes
+actual: {
+  __proto__: {
+    a: true,
+  },
+}
+expect: {
+  __proto__: {
+    a: Object(1),
+  },
+}
+
+# Object.create(null) and {}
+actual: {
+  __proto__: null,
+}
+expect: {}
+
+# Object.create(null) and []
+actual: {
+  __proto__: null,
+}
+expect: []
+
+# object vs custom proto
+actual: User {
+  name: "dam",
+}
+expect: {
+  name: "bob",
+}
+
+# object vs instance
+actual: {
+  a: User {
+    name: "dam",
+  },
+}
+expect: {
+  a: {
+    name: "bob",
+  },
+}
+

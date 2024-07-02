@@ -1,0 +1,162 @@
+# array first item diff
+actual: [
+  true,
+]
+expect: [
+  false,
+]
+
+# array expect, object received
+actual: {}
+expect: []
+
+# object expect, array received
+actual: []
+expect: {}
+
+# array without diff
+actual: {
+  a: [0],
+  z: true,
+}
+expect: {
+  a: [0],
+  z: false,
+}
+
+# diff in the middle of big array
+actual: [
+  ↑ 2 values ↑
+  "c",
+  "Z",
+  "e",
+  ↓ 3 values ↓
+]
+expect: [
+  ↑ 2 values ↑
+  "c",
+  "d",
+  "e",
+  ↓ 3 values ↓
+]
+
+# big array collapsed because diff is elsewhere
+actual: {
+  a: ["a", "b", "c", "d", "e", …],
+  b: true,
+}
+expect: {
+  a: ["a", "b", "c", "d", "e", …],
+  b: false,
+}
+
+# undefined vs empty
+actual: [
+  empty,
+]
+expect: [
+  undefined,
+]
+
+# empty added
+actual: [
+  empty,
+]
+expect: []
+
+# empty removed
+actual: []
+expect: [
+  empty,
+]
+
+# false should be an array
+actual: false
+expect: []
+
+# associative array expect, object received
+actual: [] { foo: true }
+expect: { foo: true }
+
+# diff on associate array.foo and object.foo
+actual: [] {
+  foo: true,
+}
+expect: {
+  foo: false,
+}
+
+# diff on associate array deep property and object deep property
+actual: [] {
+  user: {
+    name: "bob",
+  },
+}
+expect: {
+  user: {
+    name: "alice",
+  },
+}
+
+# diff on collapsed array
+actual: {
+  a: {
+    same: [true],
+    a: [
+      false,
+      false,
+    ],
+    r: [],
+    ↓ 3 props ↓
+  },
+}
+expect: {
+  a: {
+    same: [true],
+    a: [],
+    r: [
+      true,
+      true,
+      true,
+    ],
+    ↓ 3 props ↓
+  },
+}
+
+# string and array of chars
+actual: "hello world"
+expect: [
+  "h",
+  "e",
+  ↓ 9 values ↓
+]
+
+# associative array with values
+actual: [
+  "a",
+  "b",
+] {
+  user: "bob",
+}
+expect: [
+  "Z",
+  "b",
+] {
+  user: "alice",
+}
+
+# array like and array
+actual: {
+  0: "Z",
+  1: "b",
+  length: 2,
+}
+expect: [
+  "a",
+  "b",
+]
+
+# array subclass
+actual: [true]
+expect: MyArray [true]
+

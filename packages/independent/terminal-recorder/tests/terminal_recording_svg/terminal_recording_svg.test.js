@@ -22,6 +22,8 @@ const test = async (file, snapshotFilename = `${file}.svg`, options) => {
   svgFileSnapshot.compare();
 };
 
+await test("hello_world_2_lines.txt", "hello_world_2_lines.svg", {});
+await test("special.txt", "special_width_640.svg", {});
 await test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg", {});
 await test("jsenv_test_output.txt", "jsenv_test_output_width_auto.svg", {
   width: "auto",

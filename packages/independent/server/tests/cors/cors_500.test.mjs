@@ -46,7 +46,7 @@ const actual = {
   body: await response.text(),
 };
 const body = JSON.stringify({ code: "UNKNOWN_ERROR" });
-const expected = {
+const expect = {
   url: `${server.origin}/`,
   status: 500,
   statusText: "Internal Server Error",
@@ -57,13 +57,14 @@ const expected = {
     "access-control-allow-origin": "http://example.com:80",
     "access-control-max-age": "400",
     "cache-control": "no-store",
-    "connection": "close",
+    "connection": "keep-alive",
     "content-length": String(Buffer.byteLength(body)),
     "content-type": "application/json",
     "date": actual.headers.date,
+    "keep-alive": "timeout=5",
     "vary":
       "origin, access-control-request-method, access-control-request-headers",
   },
   body,
 };
-assert({ actual, expected });
+assert({ actual, expect });

@@ -17,6 +17,6 @@ await prependContent(
   },
 );
 const actual = result;
-const expected = `console.log("banner");
+const expect = `console.log("banner");
 console.log("hello");`;
-assert({ actual, expected });
+assert({ actual, expect });

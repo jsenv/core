@@ -14,8 +14,8 @@ const test = ({ pattern, url }) => {
     pattern: "./dist/cdn/*flag.*.js",
     url: "./dist/cdn/flag.hash.js",
   });
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 {
@@ -23,8 +23,8 @@ const test = ({ pattern, url }) => {
     pattern: "./dist/cdn/*flag.*.js",
     url: "./dist/cdn/flag_startscreen.hash.js",
   });
-  const expected = false;
-  assert({ actual, expected });
+  const expect = false;
+  assert({ actual, expect });
 }
 
 {
@@ -32,8 +32,8 @@ const test = ({ pattern, url }) => {
     pattern: "file:///dist/cdn/**flag**.*.js",
     url: "./dist/cdn/flag.hash.js",
   });
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }
 
 {
@@ -41,6 +41,6 @@ const test = ({ pattern, url }) => {
     pattern: "file:///dist/cdn/**flag**.*.js",
     url: "./dist/cdn/flag_startscreen.hash.js",
   });
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }

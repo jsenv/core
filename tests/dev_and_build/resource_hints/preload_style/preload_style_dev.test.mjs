@@ -25,8 +25,8 @@ const actual = {
   consoleOutputRaw: consoleOutput.raw,
   pageErrors,
 };
-const expected = {
+const expect = {
   consoleOutputRaw: "", // ensure there is no warning about preload link not used
   pageErrors: [],
 };
-assert({ actual, expected });
+assert({ actual, expect });

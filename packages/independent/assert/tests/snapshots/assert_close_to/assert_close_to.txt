@@ -1,0 +1,18 @@
+# 0.1 + 0.2 is close to 0.3
+actual: {
+  a: 0.30_000_000_000_000_004,
+  b: true,
+}
+expect: {
+  a: assert.closeTo(0.3),
+  b: false,
+}
+
+# on a string
+actual: "toto"
+expect: assert.closeTo(0.4)
+
+# 0.3 and 0.4
+actual: 0.30_000_000_000_000_004
+expect: assert.closeTo(0.4)
+

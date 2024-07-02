@@ -27,11 +27,11 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     workerResponse: "pong",
     worker2Response: "pong",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({

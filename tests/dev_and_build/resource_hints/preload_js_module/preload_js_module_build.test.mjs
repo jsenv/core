@@ -37,12 +37,12 @@ const test = async ({ name, ...params }) => {
     consoleLogs: consoleOutput.logs,
     consoleWarnings: consoleOutput.warnings,
   };
-  const expected = {
+  const expect = {
     returnValue: 42,
     consoleLogs: ["Window", "Window"],
     consoleWarnings: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // support for top level await and <script type="module">

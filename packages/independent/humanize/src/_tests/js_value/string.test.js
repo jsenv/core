@@ -3,104 +3,104 @@ import { humanize } from "@jsenv/humanize";
 
 {
   const actual = humanize(String.fromCharCode(127));
-  const expected = `"\\x7F"`;
-  assert({ actual, expected });
+  const expect = `"\\x7F"`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize("");
-  const expected = `""`;
-  assert({ actual, expected });
+  const expect = `""`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize("dam");
-  const expected = `"dam"`;
-  assert({ actual, expected });
+  const expect = `"dam"`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize("don't");
-  const expected = `"don't"`;
-  assert({ actual, expected });
+  const expect = `"don't"`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize("don't", { quote: "'" });
-  const expected = `'don\\\'t'`;
-  assert({ actual, expected });
+  const expect = `'don\\\'t'`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(`his name is "dam"`);
-  const expected = `'his name is "dam"'`;
-  assert({ actual, expected });
+  const expect = `'his name is "dam"'`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(`his name is "dam"`, { quote: "'" });
-  const expected = `'his name is "dam"'`;
-  assert({ actual, expected });
+  const expect = `'his name is "dam"'`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize("a\nb");
-  const expected = `"a\\nb"`;
-  assert({ actual, expected });
+  const expect = `"a\\nb"`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize("a\rb");
-  const expected = `"a\\rb"`;
-  assert({ actual, expected });
+  const expect = `"a\\rb"`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize("a\u2028b");
-  const expected = `"a\\u2028b"`;
-  assert({ actual, expected });
+  const expect = `"a\\u2028b"`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize("a\u2029b");
-  const expected = `"a\\u2029b"`;
-  assert({ actual, expected });
+  const expect = `"a\\u2029b"`;
+  assert({ actual, expect });
 }
 
 {
   // eslint-disable-next-line no-new-wrappers
   const actual = humanize(new String(""));
-  const expected = `String("")`;
+  const expect = `String("")`;
   assert({
     actual,
-    expected,
+    expect,
   });
 }
 
 {
   // eslint-disable-next-line no-new-wrappers
   const actual = humanize(new String("dam"));
-  const expected = `String("dam")`;
+  const expect = `String("dam")`;
   assert({
     actual,
-    expected,
+    expect,
   });
 }
 
 {
   const actual = humanize("dam", { quote: "'" });
-  const expected = `'dam'`;
-  assert({ actual, expected });
+  const expect = `'dam'`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(`\`"'`);
-  const expected = `"\`\\\"'"`;
-  assert({ actual, expected });
+  const expect = `"\`\\\"'"`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(`""''`);
-  const expected = `\`""''\``;
-  assert({ actual, expected });
+  const expect = `\`""''\``;
+  assert({ actual, expect });
 }

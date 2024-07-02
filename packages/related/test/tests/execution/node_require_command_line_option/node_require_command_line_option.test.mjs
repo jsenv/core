@@ -14,8 +14,8 @@ const test = async ({ requireEnabled, ...params }) => {
     ...params,
   });
   const actual = result.namespace.answer;
-  const expected = requireEnabled ? "42" : undefined;
-  assert({ actual, expected });
+  const expect = requireEnabled ? "42" : undefined;
+  assert({ actual, expect });
 };
 
 await test({

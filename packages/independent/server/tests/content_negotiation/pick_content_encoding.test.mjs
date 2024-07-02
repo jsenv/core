@@ -11,18 +11,18 @@ import { pickContentEncoding } from "@jsenv/server";
 
   {
     const actual = pickContentEncoding(request, ["gzip"]);
-    const expected = "gzip";
-    assert({ actual, expected });
+    const expect = "gzip";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentEncoding(request, ["deflate"]);
-    const expected = "deflate";
-    assert({ actual, expected });
+    const expect = "deflate";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentEncoding(request, ["brotli"]);
-    const expected = null;
-    assert({ actual, expected });
+    const expect = null;
+    assert({ actual, expect });
   }
 }
 
@@ -35,17 +35,17 @@ import { pickContentEncoding } from "@jsenv/server";
 
   {
     const actual = pickContentEncoding(request, ["gzip", "deflate", "brotli"]);
-    const expected = "brotli";
-    assert({ actual, expected });
+    const expect = "brotli";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentEncoding(request, ["gzip", "deflate"]);
-    const expected = "gzip";
-    assert({ actual, expected });
+    const expect = "gzip";
+    assert({ actual, expect });
   }
   {
     const actual = pickContentEncoding(request, ["deflate"]);
-    const expected = "deflate";
-    assert({ actual, expected });
+    const expect = "deflate";
+    assert({ actual, expect });
   }
 }

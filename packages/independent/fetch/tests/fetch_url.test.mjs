@@ -25,10 +25,10 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url,
     status: 200,
-    statusText: "OK",
+    statusText: "",
     headers: {
       "cache-control": "no-store",
       "content-length": `${fileContent.length}`,
@@ -36,7 +36,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     },
     body: fileContent,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // fetching data url
@@ -52,16 +52,16 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url,
     status: 200,
-    statusText: "OK",
+    statusText: "",
     headers: {
       "content-type": "text/javascript",
     },
     body: jsData,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // fetch file but 404
@@ -79,7 +79,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url,
     status: 404,
     statusText: `ENOENT: File not found at ${urlToFileSystemPath(url)}`,
@@ -88,7 +88,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     },
     body: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // fetching http
@@ -124,19 +124,20 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url: `${url}/`,
     status: 201,
     statusText: "Created",
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "content-length": `${body.length}`,
       "content-type": "text/plain",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
     },
     body,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await server.stop();
 }
 
@@ -170,7 +171,7 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
     throw new Error("should throw");
   } catch (error) {
     const actual = error.name;
-    const expected = "AbortError";
-    assert({ actual, expected });
+    const expect = "AbortError";
+    assert({ actual, expect });
   }
 }

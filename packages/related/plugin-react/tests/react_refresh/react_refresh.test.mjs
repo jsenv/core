@@ -47,20 +47,20 @@ const test = async () => {
       const actual = {
         countLabelText: await getCountLabelText(),
       };
-      const expected = {
+      const expect = {
         countLabelText: "toto: 0",
       };
-      assert({ actual, expected });
+      assert({ actual, expect });
     }
     {
       await increase();
       const actual = {
         countLabelText: await getCountLabelText(),
       };
-      const expected = {
+      const expect = {
         countLabelText: "toto: 1",
       };
-      assert({ actual, expected });
+      assert({ actual, expect });
     }
     writeFileSync(
       countLabelClientFileUrl,
@@ -71,20 +71,20 @@ const test = async () => {
       const actual = {
         countLabelText: await getCountLabelText(),
       };
-      const expected = {
+      const expect = {
         countLabelText: "tata: 1",
       };
-      assert({ actual, expected });
+      assert({ actual, expect });
     }
     {
       await increase();
       const actual = {
         countLabelText: await getCountLabelText(),
       };
-      const expected = {
+      const expect = {
         countLabelText: "tata: 2",
       };
-      assert({ actual, expected });
+      assert({ actual, expect });
     }
   } finally {
     browser.close();

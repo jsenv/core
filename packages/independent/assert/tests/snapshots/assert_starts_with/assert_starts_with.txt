@@ -1,0 +1,14 @@
+# no diff
+actual: {
+  a: "AABB",
+  b: true,
+}
+expect: {
+  a: assert.startsWith("AAB"),
+  b: false,
+}
+
+# does not start with
+actual: "AABB"
+expect: assert.startsWith("AB")
+

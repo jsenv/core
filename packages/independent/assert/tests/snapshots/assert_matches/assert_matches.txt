@@ -1,0 +1,14 @@
+# works
+actual: {
+  a: "expired 3 seconds ago",
+  b: true,
+}
+expect: {
+  a: assert.matches(/expired \d seconds ago/),
+  b: false,
+}
+
+# does not
+actual: "expired n seconds ago"
+expect: assert.matches(/expired \d seconds ago/)
+

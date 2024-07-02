@@ -24,7 +24,7 @@ const actual = {
   fileUrlMeta,
   httpUrlMeta,
 };
-const expected = {
+const expect = {
   fileUrlMeta: {
     whatever: false,
   },
@@ -32,4 +32,4 @@ const expected = {
     whatever: true,
   },
 };
-assert({ actual, expected });
+assert({ actual, expect });

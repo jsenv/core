@@ -1,0 +1,103 @@
+# reference removed
+actual: {}
+expect: {
+  self: expect,
+}
+
+# reference added
+actual: {
+  self: actual,
+}
+expect: {}
+
+# same ref to self
+actual: {
+  a: true,
+  self: actual,
+}
+expect: {
+  a: false,
+  self: expect,
+}
+
+# same ref to self 2
+actual: {
+  a: true,
+  object: { self: actual, self2: actual },
+}
+expect: {
+  a: false,
+  object: { self: expect, self2: expect },
+}
+
+# same ref to parent
+actual: {
+  a: true,
+  object: { parent: actual },
+}
+expect: {
+  a: false,
+  object: { parent: expect },
+}
+
+# same ref to value after
+actual: {
+  a: true,
+  b: {},
+  toto: actual.b,
+}
+expect: {
+  a: false,
+  b: {},
+  toto: expect.b,
+}
+
+# same ref to value before
+actual: {
+  a: true,
+  toto: {},
+  b: actual.toto,
+}
+expect: {
+  a: false,
+  toto: {},
+  b: expect.toto,
+}
+
+# ref changed
+actual: {
+  object: {
+    self: actual,
+  },
+}
+expect: {
+  object: {
+    self: expect.object,
+  },
+}
+
+# true should be a ref to self
+actual: {
+  self: true,
+}
+expect: {
+  self: expect,
+}
+
+# ref to self should be true
+actual: {
+  self: actual,
+}
+expect: {
+  self: true,
+}
+
+# true should be object using ref
+actual: true
+expect: {
+  foo: {
+    id: "a",
+  },
+  bar: expect.foo,
+}
+

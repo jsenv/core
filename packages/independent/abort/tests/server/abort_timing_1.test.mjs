@@ -12,6 +12,6 @@ try {
   throw new Error("should abort");
 } catch (error) {
   const actual = Abort.isAbortError(error);
-  const expected = true;
-  assert({ actual, expected });
+  const expect = true;
+  assert({ actual, expect });
 }

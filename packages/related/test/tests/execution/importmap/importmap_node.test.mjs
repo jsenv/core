@@ -14,8 +14,8 @@ const test = async ({ remapped, ...params }) => {
     ...params,
   });
   const actual = result.namespace.answer;
-  const expected = remapped ? 42 : 43;
-  assert({ actual, expected });
+  const expect = remapped ? 42 : 43;
+  assert({ actual, expect });
 };
 
 // child process

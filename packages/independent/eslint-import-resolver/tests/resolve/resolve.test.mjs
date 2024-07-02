@@ -51,7 +51,7 @@ test(({ consoleWarnCalls }) => {
     consoleWarnCalls,
     resolveResult,
   };
-  const expected = {
+  const expect = {
     consoleWarnCalls: [
       `filesystem resolution failed for "/file.js" imported by ${importerFileUrl} (file not found at ${resolvedFileUrl})`,
     ],
@@ -60,7 +60,7 @@ test(({ consoleWarnCalls }) => {
       path: urlToFileSystemPath(resolvedFileUrl),
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // import starting with / (node style)
@@ -83,7 +83,7 @@ test(({ consoleWarnCalls }) => {
     consoleWarnCalls,
     resolveResult,
   };
-  const expected = {
+  const expect = {
     consoleWarnCalls: [
       `filesystem resolution failed for "/file.js" imported by ${importerFileUrl} (file not found at ${resolvedFileUrl})`,
     ],
@@ -92,7 +92,7 @@ test(({ consoleWarnCalls }) => {
       path: urlToFileSystemPath(resolvedFileUrl),
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // import containing query param
@@ -107,11 +107,11 @@ test(() => {
       rootDirectoryUrl: tempDirectoryUrl,
     },
   );
-  const expected = {
+  const expect = {
     found: true,
     path: urlToFileSystemPath(fileUrl),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // import 'fs' outside node
@@ -124,11 +124,11 @@ test(() => {
     rootDirectoryUrl: tempDirectoryUrl,
     logLevel: "off",
   });
-  const expected = {
+  const expect = {
     found: false,
     path: urlToFileSystemPath(fileUrl),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // import 'fs' inside node
@@ -140,11 +140,11 @@ test(() => {
     rootDirectoryUrl: tempDirectoryUrl,
     packageConditions: ["node", "import"],
   });
-  const expected = {
+  const expect = {
     found: true,
     path: null,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // bare specifier not mapped
@@ -157,11 +157,11 @@ test(() => {
     rootDirectoryUrl: tempDirectoryUrl,
     logLevel: "off",
   });
-  const expected = {
+  const expect = {
     found: false,
     path: urlToFileSystemPath(fileUrl),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // bare specifier remapped
@@ -195,7 +195,7 @@ test(({ consoleWarnCalls }) => {
     consoleWarnCalls,
     resolveResult,
   };
-  const expected = {
+  const expect = {
     consoleWarnCalls: [
       `filesystem resolution failed for "@babel/plugin-proposal-object-rest-spread" imported by ${importerFileUrl} (file not found at ${resolvedFileUrl})`,
     ],
@@ -204,7 +204,7 @@ test(({ consoleWarnCalls }) => {
       path: urlToFileSystemPath(resolvedFileUrl),
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // bare specifier remapped by scope
@@ -242,7 +242,7 @@ test(({ consoleWarnCalls }) => {
     consoleWarnCalls,
     resolveResult,
   };
-  const expected = {
+  const expect = {
     consoleWarnCalls: [
       `filesystem resolution failed for "foo" imported by ${importerFileUrl} (file not found at ${resolvedFileUrl})`,
     ],
@@ -251,7 +251,7 @@ test(({ consoleWarnCalls }) => {
       path: urlToFileSystemPath(resolvedFileUrl),
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // import an http url
@@ -265,7 +265,7 @@ test(() => {
       rootDirectoryUrl: tempDirectoryUrl,
     },
   );
-  const expected = {
+  const expect = {
     found: true,
     // it's important to return null here and not the url
     // because eslint-plugin-import will try to read
@@ -273,7 +273,7 @@ test(() => {
     // when it is an url
     path: null,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // sibling file from top level project file
@@ -290,11 +290,11 @@ test(() => {
   const actual = resolver.resolve("./file", importerPath, {
     rootDirectoryUrl,
   });
-  const expected = {
+  const expect = {
     found: true,
     path: urlToFileSystemPath(resolvedFileUrl),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // parent from project directory
@@ -314,11 +314,11 @@ test(() => {
       rootDirectoryUrl,
     },
   );
-  const expected = {
+  const expect = {
     found: true,
     path: urlToFileSystemPath(resolvedFileUrl),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // parent from top level project file
@@ -337,11 +337,11 @@ test(() => {
       rootDirectoryUrl,
     },
   );
-  const expected = {
+  const expect = {
     found: true,
     path: urlToFileSystemPath(resolvedFileUrl),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // an importmap file inside a directory
@@ -366,9 +366,9 @@ test(() => {
       importmapFileRelativeUrl: "project/test.importmap",
     },
   );
-  const expected = {
+  const expect = {
     found: true,
     path: urlToFileSystemPath(resolvedFileUrl),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });

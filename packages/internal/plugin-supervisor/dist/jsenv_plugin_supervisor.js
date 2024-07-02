@@ -48,8 +48,26 @@ const getOriginalPosition = ({
   return originalPosition;
 };
 
-/* global window */
-const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+globalThis.process?.versions?.node !== undefined;
+globalThis.process?.versions?.bun !== undefined;
+globalThis.Deno?.version?.deno !== undefined;
+globalThis.process?.versions?.electron !== undefined;
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+platform === 'macOS' || globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+|| globalThis.navigator?.userAgent?.includes(' Mac ') === true || globalThis.process?.platform === 'darwin';
+platform === 'Windows' || globalThis.navigator?.platform === 'Win32' || globalThis.process?.platform === 'win32';
+platform === 'Linux' || globalThis.navigator?.platform?.startsWith('Linux') === true || globalThis.navigator?.userAgent?.includes(' Linux ') === true || globalThis.process?.platform === 'linux';
+platform === 'Android' || globalThis.navigator?.platform === 'Android' || globalThis.navigator?.userAgent?.includes(' Android ') === true || globalThis.process?.platform === 'android';
 !isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
 !isBrowser && process$1.platform === 'win32';
 isBrowser ? () => {
@@ -206,13 +224,16 @@ const ANSI = {
   YELLOW: "\x1b[33m",
   BLUE: "\x1b[34m",
   MAGENTA: "\x1b[35m",
+  CYAN: "\x1b[36m",
   GREY: "\x1b[90m",
   color: (text, ANSI_COLOR) => {
-    return ANSI.supported ? "".concat(ANSI_COLOR).concat(text).concat(RESET) : text;
+    return ANSI.supported && ANSI_COLOR ? "".concat(ANSI_COLOR).concat(text).concat(RESET) : text;
   },
   BOLD: "\x1b[1m",
+  UNDERLINE: "\x1b[4m",
+  STRIKE: "\x1b[9m",
   effect: (text, ANSI_EFFECT) => {
-    return ANSI.supported ? "".concat(ANSI_EFFECT).concat(text).concat(RESET) : text;
+    return ANSI.supported && ANSI_EFFECT ? "".concat(ANSI_EFFECT).concat(text).concat(RESET) : text;
   }
 };
 
@@ -280,6 +301,9 @@ const UNICODE = {
   },
   get CIRCLE_CROSS() {
     return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+  },
+  get ELLIPSIS() {
+    return UNICODE.supported ? "\u2026" : "...";
   }
 };
 const formatDefault = v => v;

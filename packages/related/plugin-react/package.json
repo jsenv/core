@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-react",
-  "version": "1.4.34",
+  "version": "1.4.35",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,19 +24,19 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@babel/plugin-transform-react-jsx": "7.23.4",
-    "@babel/plugin-transform-react-jsx-development": "7.22.5",
-    "@jsenv/ast": "6.0.3",
-    "@jsenv/plugin-commonjs": "2.7.9",
-    "@jsenv/sourcemap": "1.2.6",
+    "@babel/plugin-transform-react-jsx": "7.24.7",
+    "@babel/plugin-transform-react-jsx-development": "7.24.7",
+    "@jsenv/ast": "6.0.4",
+    "@jsenv/plugin-commonjs": "2.7.10",
+    "@jsenv/sourcemap": "1.2.7",
     "@jsenv/url-meta": "8.4.0",
-    "react-refresh": "0.14.0"
+    "react-refresh": "0.14.2"
   },
   "peerDependencies": {
     "@jsenv/core": "*"
   },
   "devDependencies": {
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   }
 }

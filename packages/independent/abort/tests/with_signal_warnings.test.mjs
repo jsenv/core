@@ -40,10 +40,10 @@ const fakeFetch = async ({ signal }) => {
   );
 
   const actual = getProcessWarnings();
-  const expected = [
+  const expect = [
     Object.assign(
       new Error(
-        `Possible EventTarget memory leak detected. 11 abort listeners added to [AbortSignal]. Use events.setMaxListeners() to increase limit`,
+        `Possible EventTarget memory leak detected. 11 abort listeners added to [AbortSignal]. MaxListeners is 10. Use events.setMaxListeners() to increase limit`,
       ),
       {
         name: "MaxListenersExceededWarning",
@@ -53,7 +53,7 @@ const fakeFetch = async ({ signal }) => {
       },
     ),
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // withSignal can be called any amount of time without trigerring a warning
@@ -74,6 +74,6 @@ const fakeFetch = async ({ signal }) => {
   );
 
   const actual = getProcessWarnings();
-  const expected = [];
-  assert({ actual, expected });
+  const expect = [];
+  assert({ actual, expect });
 }

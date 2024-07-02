@@ -35,13 +35,13 @@ const test = ({ content, contentType, lineBreakNormalization }) => {
       lineBreakNormalization: true,
     }),
   };
-  const expected = {
+  const expect = {
     unixStringWithoutNormalization: "7df141f2",
     windowsStringWithoutNormalization: "fda1b59e",
     unixStringWithNormalization: "7df141f2",
     windowsStringWithNormalization: "7df141f2",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -67,13 +67,13 @@ const test = ({ content, contentType, lineBreakNormalization }) => {
       lineBreakNormalization: true,
     }),
   };
-  const expected = {
+  const expect = {
     unixBufferWithoutNormalization: "7df141f2",
     windowsBufferWithoutNormalization: "fda1b59e",
     unixBufferWithNormalization: "7df141f2",
     windowsBufferWithNormalization: "7df141f2",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // lineBreakNormalization disabled when content type is not textual
@@ -92,9 +92,9 @@ const test = ({ content, contentType, lineBreakNormalization }) => {
       lineBreakNormalization: true,
     }),
   };
-  const expected = {
+  const expect = {
     imageBufferRecognizedAsImage: "574c1c76",
     imageBufferRecognizedAsHtml: "f649d8e3",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

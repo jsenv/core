@@ -1,0 +1,83 @@
+# abort signal pending vs aborted
+actual: AbortSignal
+expect: AbortSignal {
+  aborted: true,
+  reason: "toto",
+}
+
+# request url diff
+actual: Request("https://foo.com/")
+expect: Request("https://bar.com/")
+
+# request with custom options
+actual: Request("http://example.com/")
+expect: Request("http://example.com/", {
+  body: ReadableStream,
+  cache: "no-store",
+  credentials: "omit",
+  headers: Headers(
+    "from" => "developer@example.org",
+  ),
+  method: "POST",
+  mode: "same-origin",
+  redirect: "manual",
+  referrerPolicy: "strict-origin",
+  referrer: "http://google.com/",
+})
+
+# request abort signal pending vs aborted
+actual: Request("http://example.com/")
+expect: Request("http://example.com/", {
+  signal: AbortSignal {
+    aborted: true,
+    reason: "toto",
+  },
+})
+
+# response body diff
+actual: {
+  a: Response(ReadableStream, { status: 200 }),
+  b: true,
+}
+expect: {
+  a: Response(ReadableStream, { status: 200 }),
+  b: false,
+}
+
+# response status diff
+actual: Response(ReadableStream, {
+  status: 200,
+})
+expect: Response(ReadableStream, {
+  status: 400,
+})
+
+# response prop diff
+actual: Response(ReadableStream, {
+  headers: Headers(
+    "content-type" => "text/plain;charset=UTF-8",
+  ),
+  status: 200,
+})
+expect: Response(ReadableStream, {
+  headers: Headers(
+    "content-length" => "0"
+  ),
+  status: 400,
+  statusText: "Bad request",
+})
+
+# redirected response
+actual: Response(ReadableStream, {
+  headers: Headers(
+    "content-type" => "text/plain;charset=UTF-8",
+  ),
+  status: 200,
+})
+expect: Response(null, {
+  headers: Headers(
+    "location" => "http://example.com/",
+  ),
+  status: 302,
+})
+

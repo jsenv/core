@@ -21,10 +21,10 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await moveDirectoryContent({ from: sourceUrl, to: destinationUrl });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `no directory to move content from at ${urlToFileSystemPath(sourceUrl)}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -38,12 +38,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await moveDirectoryContent({ from: sourceUrl, to: destinationUrl });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `found a file instead of a directory at ${urlToFileSystemPath(
         sourceUrl,
       )}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -58,12 +58,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await moveDirectoryContent({ from: sourceUrl, to: destinationUrl });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `no directory to move content into at ${urlToFileSystemPath(
         destinationUrl,
       )}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -79,12 +79,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     await moveDirectoryContent({ from: sourceUrl, to: destinationUrl });
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `destination leads to a file instead of a directory at ${urlToFileSystemPath(
         destinationUrl,
       )}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -108,11 +108,11 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     fileADestinationPresence: await testFilePresence(fileADestinationUrl),
     fileBDestinationPresence: await testFilePresence(fileBDestinationUrl),
   };
-  const expected = {
+  const expect = {
     fileASourcePresence: false,
     fileADestinationPresence: true,
     fileBDestinationPresence: true,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }

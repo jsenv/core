@@ -35,13 +35,13 @@ const timeEllapsedPromise = (ms) => {
     lastEventId: firstMessageEvent.lastEventId,
     origin: firstMessageEvent.origin,
   };
-  const expected = {
+  const expect = {
     type: "message",
     data: "42",
     lastEventId: "1",
     origin: server.origin,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
   await closeEventSource(eventSource);
   room.close();
 }
@@ -88,18 +88,18 @@ const timeEllapsedPromise = (ms) => {
     lastEventId: secondMessageEvent.lastEventId,
     origin: secondMessageEvent.origin,
   };
-  const expected = {
+  const expect = {
     type: "message",
     data: "true",
     lastEventId: "2",
     origin: server.origin,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 
   {
     const actual = room.getRoomClientCount();
-    const expected = 1;
-    assert({ actual, expected });
+    const expect = 1;
+    assert({ actual, expect });
   }
 
   await closeEventSource(eventSource);
@@ -108,8 +108,8 @@ const timeEllapsedPromise = (ms) => {
   // and room takes that into accout
   {
     const actual = room.getRoomClientCount();
-    const expected = 0;
-    assert({ actual, expected });
+    const expect = 0;
+    assert({ actual, expect });
   }
   room.close();
 }
@@ -149,7 +149,7 @@ const timeEllapsedPromise = (ms) => {
 
   {
     const actual = roomAEventSource.getAllMessageEvents();
-    const expected = [
+    const expect = [
       {
         type: "message",
         data: "a",
@@ -157,11 +157,11 @@ const timeEllapsedPromise = (ms) => {
         origin: server.origin,
       },
     ];
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
   {
     const actual = roomBEventSource.getAllMessageEvents();
-    const expected = [
+    const expect = [
       {
         type: "message",
         data: "b",
@@ -169,7 +169,7 @@ const timeEllapsedPromise = (ms) => {
         origin: server.origin,
       },
     ];
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   await closeEventSource(roomAEventSource);
@@ -201,14 +201,14 @@ const timeEllapsedPromise = (ms) => {
   await timeEllapsedPromise(200);
   {
     const actual = room.getRoomClientCount();
-    const expected = 2;
-    assert({ actual, expected });
+    const expect = 2;
+    assert({ actual, expect });
   }
   const clientAEvents = clientA.getAllMessageEvents();
   const clientBEvents = clientB.getAllMessageEvents();
   {
     const actual = clientAEvents;
-    const expected = [
+    const expect = [
       {
         type: "message",
         data: "42",
@@ -216,11 +216,11 @@ const timeEllapsedPromise = (ms) => {
         origin: server.origin,
       },
     ];
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
   {
     const actual = clientBEvents;
-    const expected = [
+    const expect = [
       {
         type: "message",
         data: "42",
@@ -228,7 +228,7 @@ const timeEllapsedPromise = (ms) => {
         origin: server.origin,
       },
     ];
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   await closeEventSource(clientA);
@@ -255,19 +255,19 @@ const timeEllapsedPromise = (ms) => {
   const clientA = await openEventSource(server.origin);
   try {
     await openEventSource(server.origin);
-    throw new Error("expected to throw");
+    throw new Error("expect to throw");
   } catch (errorEvent) {
     const actual = {
       type: errorEvent.type,
       status: errorEvent.status,
       message: errorEvent.message,
     };
-    const expected = {
+    const expect = {
       type: "error",
       status: 503,
       message: "Service Unavailable",
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   } finally {
     await closeEventSource(clientA);
     room.close();
@@ -291,18 +291,18 @@ const timeEllapsedPromise = (ms) => {
   });
   try {
     await openEventSource(server.origin);
-    throw new Error("expected to throw");
+    throw new Error("expect to throw");
   } catch (errorEvent) {
     const actual = {
       type: errorEvent.type,
       status: errorEvent.status,
       message: errorEvent.message,
     };
-    const expected = {
+    const expect = {
       type: "error",
       status: 204,
       message: "No Content",
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }

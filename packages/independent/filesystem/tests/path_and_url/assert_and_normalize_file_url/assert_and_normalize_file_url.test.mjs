@@ -8,42 +8,42 @@ try {
   assertAndNormalizeFileUrl();
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError(
+  const expect = new TypeError(
     "fileUrl must be a string or an url, got undefined",
   );
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 try {
   assertAndNormalizeFileUrl("http://example.com");
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError(
+  const expect = new TypeError(
     `fileUrl must start with "file://", got http://example.com`,
   );
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const actual = assertAndNormalizeFileUrl("file:///directory/file.js");
-  const expected = "file:///directory/file.js";
-  assert({ actual, expected });
+  const expect = "file:///directory/file.js";
+  assert({ actual, expect });
 }
 
 if (isWindows) {
   const actual = assertAndNormalizeFileUrl("C:/directory/file.js");
-  const expected = "file:///C:/directory/file.js";
-  assert({ actual, expected });
+  const expect = "file:///C:/directory/file.js";
+  assert({ actual, expect });
 } else {
   const actual = assertAndNormalizeFileUrl("/directory/file.js");
-  const expected = "file:///directory/file.js";
-  assert({ actual, expected });
+  const expect = "file:///directory/file.js";
+  assert({ actual, expect });
 }
 
 {
   const actual = assertAndNormalizeFileUrl(
     new URL("file:///directory/file.js"),
   );
-  const expected = "file:///directory/file.js";
-  assert({ actual, expected });
+  const expect = "file:///directory/file.js";
+  assert({ actual, expect });
 }

@@ -1,4 +1,4 @@
-import { ANSI } from "./ansi.js";
+import { ANSI } from "./ansi_node.js";
 
 export const startSpinner = ({
   dynamicLog,

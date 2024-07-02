@@ -19,10 +19,10 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = new Error(
+    const expect = new Error(
       `"${webServer.command}" command did not start a server in less than 500ms`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -42,10 +42,10 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = new Error(
+    const expect = new Error(
       `"${webServer.command}" command did not start a server in less than 500ms`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -67,10 +67,10 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = new Error(
+    const expect = new Error(
       `"${webServer.command}" command did not start a server in less than 500ms`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -98,9 +98,9 @@ import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
     serverUp,
     serverUpAfterTeardown,
   };
-  const expected = {
+  const expect = {
     serverUp: true,
     serverUpAfterTeardown: false,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

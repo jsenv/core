@@ -36,8 +36,8 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = "build";
-  assert({ actual, expected });
+  const expect = "build";
+  assert({ actual, expect });
 };
 
 await test({

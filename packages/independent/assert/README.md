@@ -13,22 +13,17 @@ It can be resumed by the following quote:
 ```js
 import { assert } from "@jsenv/assert";
 
-const actual = { foo: false };
-const expected = { foo: true };
-assert({ actual, expected });
+assert({
+  actual: {
+    foo: true,
+  },
+  expect: {
+    foo: false,
+  },
+});
 ```
 
-```console
-> node ./docs/demo.mjs
-
-AssertionError: unequal values
---- found ---
-false
---- expected ---
-true
---- path ---
-actual.foo
-```
+![img](./tests/snapshots/object/basic.svg)
 
 ## How it works
 
@@ -40,50 +35,26 @@ _Type failure:_
 ```js
 import { assert } from "@jsenv/assert";
 
-const actual = 10;
-const expected = "10";
-
-try {
-  assert({ actual, expected });
-} catch (e) {
-  console.log(e.message);
-}
+assert({
+  actual: 10,
+  expect: "10",
+});
 ```
 
-```console
-AssertionError: unequal values
---- found ---
-10
---- expected ---
-"10"
---- path ---
-actual
-```
+![img](./tests/snapshots/number/10_and_10.svg)
 
 _Prototype failure:_
 
 ```js
 import { assert } from "@jsenv/assert";
 
-const actual = new TypeError();
-const expected = new Error();
-
-try {
-  assert({ actual, expected });
-} catch (e) {
-  console.log(e.message);
-}
+assert({
+  actual: new Error(),
+  expect: new TypeError(),
+});
 ```
 
-```console
-AssertionError: unequal prototypes
---- prototype found ---
-window.TypeError.prototype
---- prototype expected ---
-window.Error.prototype
---- path ---
-actual[[Prototype]]
-```
+![img](./tests/snapshots/prototype/error_vs_typeerror.svg)
 
 ## Usage in Node.js
 
@@ -96,7 +67,7 @@ import { assert } from "@jsenv/assert";
 
 assert({
   actual: true,
-  expected: false,
+  expect: false,
 });
 ```
 
@@ -108,7 +79,7 @@ assert({
 
   assert({
     actual: true,
-    expected: false,
+    expect: false,
   });
 </script>
 ```
@@ -125,187 +96,7 @@ npm i --save-dev @jsenv/assert
 
   assert({
     actual: true,
-    expected: false,
+    expect: false,
   });
 </script>
-```
-
-## Writing tests with _@jsenv/assert_
-
-This part contain examples where _@jsenv/assert_ is used to write tests.
-
-### Exception
-
-```js
-import { assert } from "@jsenv/assert";
-
-const getCircleArea = (circleRadius) => {
-  if (isNaN(circleRadius)) {
-    throw new TypeError(
-      `circleRadius must be a number, received ${circleRadius}`,
-    );
-  }
-  return circleRadius * circleRadius * Math.PI;
-};
-
-try {
-  getCircleArea("toto");
-  throw new Error("should throw"); // this line throw if getCircleArea does not throw as it should
-} catch (error) {
-  const actual = error;
-  const expected = new TypeError(
-    `circleRadius must be a number, received toto`,
-  );
-  assert({ actual, expected });
-}
-```
-
-### Async exception
-
-```js
-import { assert } from "@jsenv/assert";
-
-const getCircleArea = async (circleRadius) => {
-  if (isNaN(circleRadius)) {
-    throw new TypeError(
-      `circleRadius must be a number, received ${circleRadius}`,
-    );
-  }
-  return circleRadius * circleRadius * Math.PI;
-};
-
-try {
-  await getCircleArea("toto");
-  throw new Error("should throw"); // this line throw if getCircleArea does not throw as it should
-} catch (error) {
-  const actual = error;
-  const expected = new TypeError(
-    `circleRadius must be a number, received toto`,
-  );
-  assert({ actual, expected });
-}
-```
-
-> Note how code testing `getCircleArea` is similar in [Assert exception](#assert-exception) and [Assert async exception](#assert-async-exception).
-
-### Callback
-
-```js
-import { assert } from "@jsenv/assert";
-
-const createAbortSignal = () => {
-  const abortSignal = {
-    onabort: () => {},
-    abort: () => {
-      abortSignal.onabort();
-    },
-  };
-
-  return abortSignal;
-};
-
-// arrange
-const abortSignal = createAbortSignal();
-let called = false;
-abortSignal.onabort = () => {
-  called = true;
-};
-
-// act
-abortSignal.abort();
-
-// assert
-const actual = called;
-const expected = true;
-assert({ actual, expected });
-```
-
-> Code above is a great example of [the AAA pattern](./docs/aaa_pattern.md).
-
-### Callback with delay
-
-```js
-import { assert } from "@jsenv/assert";
-
-const callAfter50Ms = (callback) => {
-  setTimeout(callback, 50);
-};
-
-let called = false;
-callAfter50Ms(() => {
-  called = true;
-});
-await new Promise((resolve) => setTimeout(resolve, 80));
-const actual = called;
-const expected = true;
-assert({ actual, expected });
-```
-
-### Any
-
-```js
-import { assert } from "@jsenv/assert";
-
-const createUser = () => {
-  return {
-    name: "sam",
-    creationTime: Date.now(),
-  };
-};
-
-const user = createUser();
-const actual = user;
-const expected = {
-  name: "sam",
-  creationTime: assert.any(Number),
-};
-assert({ actual, expected });
-```
-
-#### Not
-
-```js
-import { assert } from "@jsenv/assert";
-
-const getRandomDifferentUserName = (user) => {
-  const getRandomName = () => {
-    return Array.from({ length: 4 })
-      .map(() => getRandomLetter())
-      .join("");
-  };
-  const getRandomLetter = () => {
-    return ALPHABET.charAt(Math.floor(Math.random() * ALPHABET.length));
-  };
-  const ALPHABET = "abcdefghijklmnopqrstuvwxyz";
-
-  const randomName = getRandomName();
-  if (randomName === user.name) {
-    return getRandomDifferentUserName(user);
-  }
-  return randomName;
-};
-
-const name = getRandomDifferentUserName({ name: "toto" });
-const actual = name;
-const expected = assert.not("toto");
-assert({ actual, expected });
-```
-
-### Subset of properties
-
-```js
-import { assert } from "@jsenv/assert";
-
-const getUser = () => {
-  return {
-    name: "sam",
-    age: 32,
-    friends: [], // poor sam :(
-  };
-};
-
-const user = getUser();
-const actual = { name: user.name, age: user.age };
-const expected = { name: "sam", age: 32 };
-assert({ actual, expected });
 ```

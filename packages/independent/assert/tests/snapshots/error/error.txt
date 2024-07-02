@@ -1,0 +1,58 @@
+# error message added
+actual: Error: foo
+expect: Error
+
+# error message removed
+actual: Error
+expect: Error: bar
+
+# error message modified
+actual: Error: foo
+expect: Error: bar
+
+# error message vs object with message
+actual: Error: foo
+expect: {
+  message: "foo",
+}
+
+# error stack vs object with stack
+actual: Error: message
+expect: {
+  stack: "stack",
+}
+
+# error message multiline
+actual: Error: Hello
+world
+expect: Error: Hello
+france
+
+# error prop added
+actual: Error: message {
+  a: true,
+}
+expect: Error: message
+
+# error prop removed
+actual: Error: message
+expect: Error: message {
+  a: true,
+}
+
+# error prop modified
+actual: Error: message {
+  a: true,
+}
+expect: Error: message {
+  a: false,
+}
+
+# error vs typeError
+actual: Error
+expect: TypeError
+
+# error vs CustomError
+actual: Error
+expect: ValidationError
+

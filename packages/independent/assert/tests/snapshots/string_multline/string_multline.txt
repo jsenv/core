@@ -1,0 +1,124 @@
+# add empty line
+actual: 1| 
+        2| 
+expect: 1| 
+
+# remove empty line
+actual: 1| 
+expect: 1| 
+        2| 
+
+# one line vs two lines
+actual: 1| Hel
+expect: 1| Hello
+        2| world
+
+# second line contains extra chars
+actual: {
+  foo: 1| Hello,
+       2| my name is Benjamin
+       3| and my brother is joe
+}
+expect: {
+  foo: 1| Hello,
+       2| my name is Ben
+       3| and my brother is joe
+}
+
+# second line differs
+actual: 1| Hello
+        2| world
+expect: 1| Hello
+        2| france
+
+# too many lines before and after
+actual: ↑ 2 lines ↑
+        3| three
+        4| four/true
+        5| five
+        ↓ 2 lines ↓
+expect: ↑ 2 lines ↑
+        3| three
+        4| four/false
+        5| five
+        ↓ 2 lines ↓
+
+# many lines added
+actual: 1| one
+        2| two
+        3| three
+        4| four
+        5| five six
+expect: 1| one
+
+# many lines removed
+actual: 1| one
+expect: 1| one
+        2| two
+        3| three
+        4| four
+        5| five six
+
+# prop before and after
+actual: {
+  a: true,
+  b: 1| a
+     2| b
+  c: true,
+}
+expect: {
+  a: true,
+  b: 1| a
+     2| c
+  c: true,
+}
+
+# new line escaped
+actual: {
+  a: "\\n",
+  b: true,
+}
+expect: {
+  a: "\\n",
+  b: false,
+}
+
+# multiline without diff
+actual: {
+  a: 1| a
+     ↓ 1 line ↓
+  b: true,
+}
+expect: {
+  a: 1| a
+     ↓ 1 line ↓
+  b: false,
+}
+
+# many lines around
+actual: 1| 1abcdefghijklmnopqrstuvwx
+        2| 2abcdefghijklmnopqrstuvwxy
+        3| Hello world
+        4| 3abcdefghijklmnopqrstuvwxy
+        5| 4abcdefghijklmnopqrstuvwxy
+expect: 1| 1abcdefghijklmnopqrstuvwx
+        2| 2abcdefghijklmnopqrstuvwxy
+        3| Hello europa
+        4| 3abcdefghijklmnopqrstuvwxy
+        5| 4abcdefghijklmnopqrstuvwxy
+
+# many lines before
+actual: ↑ 3 lines ↑
+        4| 4abcdefghijklmnopqrstuvwxy
+        5| 5abcdefghijklmnopqrstuvwxy
+        6| [Hello world]abcdefghijklmnopqrstuvwxyz
+expect: ↑ 3 lines ↑
+        4| 4abcdefghijklmnopqrstuvwxy
+        5| 5abcdefghijklmnopqrstuvwxy
+        6| [Hello france]abcdefghijklmnopqrstuvwxyz
+
+# exactly on line break
+actual: 1| abc
+expect: 1| ab
+        2| c
+

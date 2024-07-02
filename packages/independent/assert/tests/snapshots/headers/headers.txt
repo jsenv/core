@@ -1,0 +1,168 @@
+# content-type added
+actual: Headers(
+  "content-type" => "text/xml",
+)
+expect: Headers()
+
+# content-type removed
+actual: Headers()
+expect: Headers(
+  "content-type" => "text/xml",
+)
+
+# content-type modified
+actual: Headers(
+  "content-type" => "text/css",
+)
+expect: Headers(
+  "content-type" => "text/xml",
+)
+
+# content-type multi diff
+actual: Headers(
+  "content-type" => "text/xml, text/css",
+)
+expect: Headers(
+  "content-type" => "text/xml, text/html",
+)
+
+# content-type spacing diff
+actual: Headers(
+  "content-type" => "text/xml,text/css",
+)
+expect: Headers(
+  "content-type" => "text/xml, text/css",
+)
+
+# set cookie added
+actual: Headers(
+  "set-cookie" => "a=1"
+)
+expect: Headers()
+
+# set cookie removed
+actual: Headers()
+expect: Headers(
+  "set-cookie" => "a=1"
+)
+
+# cookie added
+actual: Headers(
+  "set-cookie" => "a=1,b=2"
+)
+expect: Headers(
+  "set-cookie" => "a=1"
+)
+
+# cookie removed
+actual: Headers(
+  "set-cookie" => "a=1"
+)
+expect: Headers(
+  "set-cookie" => "a=1,b=2"
+)
+
+# cookie order modified
+actual: Headers(
+  "set-cookie" => "a=1,b=2"
+)
+expect: Headers(
+  "set-cookie" => "b=2,a=1"
+)
+
+# cookie name used several times
+actual: Headers(
+  "set-cookie" => "a=1,a=2"
+)
+expect: Headers(
+  "set-cookie" => "a=9,a=8"
+)
+
+# cookie becomes secure
+actual: Headers(
+  "set-cookie" => "a=1; Secure"
+)
+expect: Headers(
+  "set-cookie" => "a=1"
+)
+
+# accept
+actual: Headers(
+  "accept" => "text/html, application/xml;q=0.9, */*;q=0.8"
+)
+expect: Headers(
+  "accept" => "text/html, application/xml;q=0.8, */*;q=0.7, text/css"
+)
+
+# accept diff on non standard attribute
+actual: Headers(
+  "accept" => "text/html; a=1; b=2"
+)
+expect: Headers(
+  "accept" => "text/html; a=9; b=9"
+)
+
+# add accepted encoding
+actual: Headers(
+  "accept-encoding" => "deflate, gzip, br"
+)
+expect: Headers(
+  "accept-encoding" => "deflate, gzip"
+)
+
+# remove accepted encoding
+actual: Headers(
+  "accept-encoding" => "deflate, gzip"
+)
+expect: Headers(
+  "accept-encoding" => "deflate, gzip, br"
+)
+
+# accept-encoding diff on q
+actual: Headers(
+  "accept-encoding" => "deflate, gzip;q=1.0, *;q=0.5"
+)
+expect: Headers(
+  "accept-encoding" => "deflate, gzip;q=0.9, *;q=0.4"
+)
+
+# accept-language
+actual: Headers(
+  "accept-language" => "fr-CH, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5"
+)
+expect: Headers(
+  "accept-language" => "en-US,en;q=0.5"
+)
+
+# add metric in server timing
+actual: Headers(
+  "server-timing" => "cpu;dur=2.4, app;dur=47.2"
+)
+expect: Headers(
+  "server-timing" => "cpu;dur=2.4"
+)
+
+# remove metric in server timing
+actual: Headers(
+  "server-timing" => "cpu;dur=2.4"
+)
+expect: Headers(
+  "server-timing" => "cpu;dur=2.4, app;dur=47.2"
+)
+
+# add description to a metric
+actual: Headers(
+  "server-timing" => "cache;dur=23.2"
+)
+expect: Headers(
+  "server-timing" => 'cache;desc="Cache Read";dur=23.2'
+)
+
+# content length diff
+actual: Headers(
+  "content-length" => "1456"
+)
+expect: Headers(
+  "content-length" => "1356"
+)
+

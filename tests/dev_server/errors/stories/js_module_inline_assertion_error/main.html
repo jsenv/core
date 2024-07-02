@@ -10,9 +10,10 @@
     <script type="module">
       import { assert } from "@jsenv/assert";
 
+      assert.colors = false;
       assert({
         actual: "foo",
-        expected: "bar",
+        expect: "bar",
       });
     </script>
   </body>

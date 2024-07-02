@@ -1,0 +1,214 @@
+# Symbol.toPrimitive added
+actual: {
+  [Symbol.toPrimitive()]: "10",
+}
+expect: {}
+
+# Symbol.toPrimitive removed
+actual: {}
+expect: {
+  [Symbol.toPrimitive()]: "10",
+}
+
+# Symbol.toPrimitive vs primitive
+actual: {
+  [Symbol.toPrimitive()]: 10,
+}
+expect: 10
+
+# primitive vs Symbol.toPrimitive
+actual: "10"
+expect: {
+  [Symbol.toPrimitive()]: "10",
+}
+
+# valueOf({ a: true }) vs { a: true }
+actual: {
+  valueOf(): {
+    a: true,
+  },
+}
+expect: {
+  a: false,
+}
+
+# 10 vs valueOf(10)
+actual: 10
+expect: {
+  valueOf(): 10,
+}
+
+# valueOf(10) vs 10
+actual: {
+  valueOf(): 10,
+}
+expect: 10
+
+# valueOf(10) vs valueOf(11)
+actual: {
+  valueOf(): 10,
+}
+expect: {
+  valueOf(): 11,
+}
+
+# valueOf(10) vs valueOf(10)
+actual: {
+  a: true,
+  valueOf(): 10,
+}
+expect: {
+  b: false,
+  valueOf(): 10,
+}
+
+# valueOf with object tag vs primitive
+actual: Signal(10)
+expect: false
+
+# valueOf with object tag 
+actual: Signal(10)
+expect: Signal(11)
+
+# no diff on valueOf in constructor
+actual: Signal(10) {
+  a: true,
+}
+expect: Signal(10) {
+  a: false,
+}
+
+# signal(true) and signal(false)
+actual: Signal(true)
+expect: Signal(false)
+
+# signal(true) and true
+actual: Signal(true)
+expect: true
+
+# true and signal(true)
+actual: true
+expect: Signal(true)
+
+# true and signal(false)
+actual: true
+expect: Signal(false)
+
+# signal(true) and false
+actual: Signal(true)
+expect: false
+
+# signal(true) and 1
+actual: Signal(true)
+expect: 1
+
+# signal({ foo: true }) and signal({ foo: false })
+actual: Signal({
+  foo: true,
+})
+expect: Signal({
+  foo: false,
+})
+
+# signal([true]) and signal([false]) with props
+actual: Signal([
+  true,
+]) {
+  a: true,
+}
+expect: Signal([
+  false,
+]) {
+  a: false,
+}
+
+# signal([true]) and [true]
+actual: Signal([
+  true,
+])
+expect: [
+  true,
+]
+
+# [true] and signal([true])
+actual: [
+  true,
+]
+expect: Signal([
+  true,
+])
+
+# [true] and signal([false])
+actual: [
+  true,
+]
+expect: Signal([
+  false,
+])
+
+# signal([true]) and [false]
+actual: Signal([
+  true,
+])
+expect: [
+  false,
+]
+
+# signal(string) and signal(string)
+actual: Signal("ab")
+expect: Signal("a")
+
+# signal(string) and string
+actual: Signal("a")
+expect: "a"
+
+# string and signal(string)
+actual: "a"
+expect: Signal("a")
+
+# both valueOf return object itself
+actual: {
+  a: true,
+  valueOf(): actual,
+}
+expect: {
+  a: false,
+  valueOf(): expect,
+}
+
+# valueOf self and valueOf 10
+actual: {
+  valueOf(): actual,
+}
+expect: {
+  valueOf(): 10,
+}
+
+# valueOf 10 and valueOf self
+actual: {
+  valueOf(): 10,
+}
+expect: {
+  valueOf(): expect,
+}
+
+# own valueOf order respected
+actual: {
+  a: true,
+  valueOf(): 0,
+  b: true,
+}
+expect: {
+  a: true,
+  valueOf(): 1,
+  b: true,
+}
+
+# valueOf inherited
+actual: Signal("a") {
+  foo: true,
+}
+expect: Signal("b") {
+  foo: false,
+}
+

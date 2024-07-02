@@ -42,8 +42,8 @@ try {
 
   {
     const actual = await getResult();
-    const expected = 42;
-    assert({ actual, expected });
+    const expect = 42;
+    assert({ actual, expect });
   }
 
   // reloading page = 304
@@ -60,11 +60,11 @@ try {
       jsFileResponseStatus,
       answer,
     };
-    const expected = {
+    const expect = {
       jsFileResponseStatus: 304,
       answer: 42,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   {
@@ -72,8 +72,8 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 150));
     await page.reload();
     const actual = await getResult();
-    const expected = 43;
-    assert({ actual, expected });
+    const expect = 43;
+    assert({ actual, expect });
   }
 } finally {
   jsFileContent.restore();

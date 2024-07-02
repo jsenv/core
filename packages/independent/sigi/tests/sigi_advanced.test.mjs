@@ -21,10 +21,10 @@ import { sigi } from "@jsenv/sigi";
     // eslint-disable-next-line no-unused-expressions
     state.bar;
     const actual = consoleWarnings;
-    const expected = [
+    const expect = [
       `no property named "bar" exists on state and state is not extensible`,
     ];
-    assert({ actual, expected });
+    assert({ actual, expect });
   } finally {
     console.warn = warn;
   }
@@ -42,10 +42,10 @@ import { sigi } from "@jsenv/sigi";
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = new Error(
+    const expect = new Error(
       `Cannot add property "bar", state is not extensible`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -55,8 +55,8 @@ import { sigi } from "@jsenv/sigi";
   const foo = "foo" in state;
   const bar = "bar" in state;
   const actual = { foo, bar };
-  const expected = { foo: true, bar: false };
-  assert({ actual, expected });
+  const expect = { foo: true, bar: false };
+  assert({ actual, expect });
 }
 
 // Object.getOwnPropertyDescriptor
@@ -68,7 +68,7 @@ import { sigi } from "@jsenv/sigi";
     fooDescriptor,
     barDescriptor,
   };
-  const expected = {
+  const expect = {
     fooDescriptor: {
       value: true,
       writable: true,
@@ -77,7 +77,7 @@ import { sigi } from "@jsenv/sigi";
     },
     barDescriptor: undefined,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // Object.hasOwn
@@ -86,8 +86,8 @@ import { sigi } from "@jsenv/sigi";
   const foo = Object.hasOwn(state, "foo");
   const bar = Object.hasOwn(state, "bar");
   const actual = { foo, bar };
-  const expected = { foo: true, bar: false };
-  assert({ actual, expected });
+  const expect = { foo: true, bar: false };
+  assert({ actual, expect });
 }
 
 // Object.isExtensible
@@ -98,19 +98,19 @@ import { sigi } from "@jsenv/sigi";
     extensible: Object.isExtensible(extensible.state),
     nonExtensible: Object.isExtensible(nonExtensible.state),
   };
-  const expected = {
+  const expect = {
     extensible: true,
     nonExtensible: false,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // Object.create(null)
 {
   const { state } = sigi(Object.create(null));
   const actual = Object.getPrototypeOf(state);
-  const expected = null;
-  assert({ actual, expected });
+  const expect = null;
+  assert({ actual, expect });
 }
 
 // throw if initial state is not configurable
@@ -126,10 +126,8 @@ import { sigi } from "@jsenv/sigi";
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
-    const expected = new Error(
-      `Cannot set "foo", property must be configurable`,
-    );
-    assert({ actual, expected });
+    const expect = new Error(`Cannot set "foo", property must be configurable`);
+    assert({ actual, expect });
   }
 }
 
@@ -144,10 +142,10 @@ import { sigi } from "@jsenv/sigi";
     const { mutate } = sigi({ isLogged: true }, { strict: true });
     mutate({ isLogged: 1 });
     const actual = consoleWarnings;
-    const expected = [
+    const expect = [
       `A value type will change from "boolean" to "number" at state.isLogged`,
     ];
-    assert({ actual, expected });
+    assert({ actual, expect });
   } finally {
     console.warn = warn;
   }

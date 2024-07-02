@@ -46,10 +46,10 @@ const { coverage } = await executeTestPlan({
   githubCheck: false,
 });
 const actual = coverage;
-const expected = {
+const expect = {
   "./client/js_syntax_error.js": {
     ...actual["./client/js_syntax_error.js"],
     s: {},
   },
 };
-assert({ actual, expected });
+assert({ actual, expect });

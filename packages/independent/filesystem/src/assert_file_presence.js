@@ -16,7 +16,7 @@ export const assertFilePresence = async (source) => {
   }
   if (!sourceStats.isFile()) {
     throw new Error(
-      `file expected at ${sourcePath} and found ${statsToType(
+      `file expect at ${sourcePath} and found ${statsToType(
         sourceStats,
       )} instead`,
     );

@@ -29,10 +29,10 @@ try {
   const htmlFileUrl = new URL("./client/main.noeslint.html", import.meta.url)
     .href;
   const actual = consoleErrorCalls[0];
-  const expected = assert.startsWith(
+  const expect = assert.startsWith(
     `Error while cooking js_module declared in ${htmlFileUrl}:22:2`,
   );
-  assert({ actual, expected });
+  assert({ actual, expect });
 } finally {
   console.error = error;
 }

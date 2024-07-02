@@ -11,6 +11,7 @@ const beforeDevServerStarts = countListeners();
 const devServer = await startDevServer({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./", import.meta.url),
+  port: 4609,
 });
 const whileDevServerIsRunning = countListeners();
 devServer.stop();
@@ -20,9 +21,9 @@ const actual = {
   whileDevServerIsRunning,
   afterDevServerStop,
 };
-const expected = {
+const expect = {
   beforeDevServerStarts: 0,
   whileDevServerIsRunning: 1,
   afterDevServerStop: 0,
 };
-assert({ actual, expected });
+assert({ actual, expect });

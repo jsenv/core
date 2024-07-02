@@ -88,7 +88,7 @@ const applyMatching = (pattern, string) => {
     }
     // pattern consumed, string not consumed
     if (remainingPattern === "" && remainingString !== "") {
-      return false; // fails because string longer than expected
+      return false; // fails because string longer than expect
     }
     // -- from this point pattern is not consumed --
     // string consumed, pattern not consumed
@@ -101,7 +101,7 @@ const applyMatching = (pattern, string) => {
       if (remainingPattern === "*") {
         groups.push({ string: "" });
       }
-      return false; // fail because string shorter than expected
+      return false; // fail because string shorter than expect
     }
     // -- from this point pattern and string are not consumed --
     // fast path trailing slash
@@ -163,7 +163,7 @@ const applyMatching = (pattern, string) => {
         groups.push({ string: consumeString(slashIndex) });
         return false;
       }
-      // the next char must not the one expected by remainingPattern[0]
+      // the next char must not the one expect by remainingPattern[0]
       // because * is greedy and expect to skip at least one char
       if (remainingPattern[0] === remainingString[0]) {
         groups.push({ string: "" });

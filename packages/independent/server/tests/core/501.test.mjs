@@ -18,18 +18,19 @@ const { origin, stop } = await startServer({
     headers: headersToObject(response.headers),
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     url: `${origin}/`,
     status: 501,
     statusText: "Not Implemented",
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
       "transfer-encoding": "chunked",
     },
     body: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 stop();

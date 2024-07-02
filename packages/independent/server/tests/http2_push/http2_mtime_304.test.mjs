@@ -86,7 +86,7 @@ const actual = {
   responseBodyAsString,
   pushedHeaders,
 };
-const expected = {
+const expect = {
   responseBodyAsString: "",
   pushedHeaders: [
     {
@@ -103,4 +103,4 @@ const expected = {
     },
   ],
 };
-assert({ actual, expected });
+assert({ actual, expect });

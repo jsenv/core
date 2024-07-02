@@ -54,16 +54,17 @@ const expectedBody = `<!DOCTYPE html>
     </ul>
   </body>
 </html>`;
-const expected = {
+const expect = {
   url: requestUrl,
   status: 200,
   statusText: "OK",
   headers: {
-    "connection": "close",
+    "connection": "keep-alive",
     "content-length": `${expectedBody.length}`,
     "content-type": "text/html",
     "date": actual.headers.date,
+    "keep-alive": "timeout=5",
   },
   body: expectedBody,
 };
-assert({ actual, expected });
+assert({ actual, expect });

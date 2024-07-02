@@ -35,11 +35,11 @@ const test = async ({ name, ...params }) => {
     returnValue,
     consoleOutputRaw: consoleOutput.raw,
   };
-  const expected = {
+  const expect = {
     returnValue: "20px",
     consoleOutputRaw: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // support for <script type="module">

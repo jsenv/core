@@ -31,8 +31,8 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = 42;
-  assert({ actual, expected });
+  const expect = 42;
+  assert({ actual, expect });
 };
 
 // no support for spread operator

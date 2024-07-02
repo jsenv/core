@@ -3,18 +3,18 @@ import { humanize } from "@jsenv/humanize";
 
 {
   const actual = humanize(Symbol());
-  const expected = "Symbol()";
-  assert({ actual, expected });
+  const expect = "Symbol()";
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(Symbol("foo"));
-  const expected = `Symbol("foo")`;
-  assert({ actual, expected });
+  const expect = `Symbol("foo")`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(Symbol(42));
-  const expected = `Symbol("42")`;
-  assert({ actual, expected });
+  const expect = `Symbol("42")`;
+  assert({ actual, expect });
 }

@@ -30,8 +30,8 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = `${server.origin}/other/file.txt?v=ead31da8`;
-  assert({ actual, expected });
+  const expect = `${server.origin}/other/file.txt?v=ead31da8`;
+  assert({ actual, expect });
 };
 
 // no support for <script type="module">

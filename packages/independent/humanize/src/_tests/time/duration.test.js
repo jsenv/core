@@ -2,9 +2,9 @@ import { assert } from "@jsenv/assert";
 
 import { humanizeDuration } from "@jsenv/humanize";
 
-const test = (durationInMs, expected) => {
+const test = (durationInMs, expect) => {
   const actual = humanizeDuration(durationInMs);
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 test(0.1, "0 second");

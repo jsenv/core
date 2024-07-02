@@ -23,11 +23,11 @@ import { portIsFree } from "@jsenv/server/src/internal/listen.js";
       listenStartCallCount,
       isAbortError: Abort.isAbortError(e),
     };
-    const expected = {
+    const expect = {
       listenStartCallCount: 0,
       isAbortError: true,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -50,11 +50,11 @@ import { portIsFree } from "@jsenv/server/src/internal/listen.js";
       isAbortError: Abort.isAbortError(e),
       portIsFree: await portIsFree(port, "0.0.0.0"),
     };
-    const expected = {
+    const expect = {
       isAbortError: true,
       portIsFree: true,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -77,11 +77,11 @@ import { portIsFree } from "@jsenv/server/src/internal/listen.js";
       isAbortError: Abort.isAbortError(e),
       portIsFree: await portIsFree(port, "0.0.0.0"),
     };
-    const expected = {
+    const expect = {
       isAbortError: true,
       portIsFree: true,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -98,8 +98,8 @@ import { portIsFree } from "@jsenv/server/src/internal/listen.js";
   const actual = {
     portIsFree: await portIsFree(port, "0.0.0.0"),
   };
-  const expected = {
+  const expect = {
     portIsFree: false,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

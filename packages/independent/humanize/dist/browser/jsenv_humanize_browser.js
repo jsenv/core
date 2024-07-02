@@ -678,6 +678,80 @@ const compositeStringifiers = {
   String: inspectStringObject
 };
 
+// https://github.com/Marak/colors.js/blob/master/lib/styles.js
+// https://stackoverflow.com/a/75985833/2634179
+const RESET = "\x1b[0m";
+const ANSI = {
+  supported: true,
+  RED: "\x1b[31m",
+  GREEN: "\x1b[32m",
+  YELLOW: "\x1b[33m",
+  BLUE: "\x1b[34m",
+  MAGENTA: "\x1b[35m",
+  CYAN: "\x1b[36m",
+  GREY: "\x1b[90m",
+  color: (text, ANSI_COLOR) => {
+    return ANSI.supported && ANSI_COLOR ? "".concat(ANSI_COLOR).concat(text).concat(RESET) : text;
+  },
+  BOLD: "\x1b[1m",
+  UNDERLINE: "\x1b[4m",
+  STRIKE: "\x1b[9m",
+  effect: (text, ANSI_EFFECT) => {
+    return ANSI.supported && ANSI_EFFECT ? "".concat(ANSI_EFFECT).concat(text).concat(RESET) : text;
+  }
+};
+
+// see also https://github.com/sindresorhus/figures
+
+const UNICODE = {
+  supported: true,
+  get COMMAND_RAW() {
+    return UNICODE.supported ? "\u276F" : ">";
+  },
+  get OK_RAW() {
+    return UNICODE.supported ? "\u2714" : "\u221A";
+  },
+  get FAILURE_RAW() {
+    return UNICODE.supported ? "\u2716" : "\xD7";
+  },
+  get DEBUG_RAW() {
+    return UNICODE.supported ? "\u25C6" : "\u2666";
+  },
+  get INFO_RAW() {
+    return UNICODE.supported ? "\u2139" : "i";
+  },
+  get WARNING_RAW() {
+    return UNICODE.supported ? "\u26A0" : "\u203C";
+  },
+  get CIRCLE_CROSS_RAW() {
+    return UNICODE.supported ? "\u24E7" : "(\xD7)";
+  },
+  get COMMAND() {
+    return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+  },
+  get OK() {
+    return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+  },
+  get FAILURE() {
+    return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+  },
+  get DEBUG() {
+    return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+  },
+  get INFO() {
+    return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+  },
+  get WARNING() {
+    return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+  },
+  get CIRCLE_CROSS() {
+    return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+  },
+  get ELLIPSIS() {
+    return UNICODE.supported ? "\u2026" : "...";
+  }
+};
+
 const getPrecision = number => {
   if (Math.floor(number) === number) return 0;
   const [, decimals] = number.toString().split(".");
@@ -1154,4 +1228,4 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
-export { createDetailedMessage, determineQuote, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, inspectChar };
+export { ANSI, UNICODE, createDetailedMessage, determineQuote, distributePercentages, generateContentFrame, humanize, humanizeDuration, humanizeEllapsedTime, humanizeFileSize, humanizeMemory, humanizeMethodSymbol, inspectChar };

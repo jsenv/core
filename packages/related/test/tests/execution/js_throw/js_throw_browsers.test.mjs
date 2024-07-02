@@ -45,13 +45,13 @@ triggerError@${devServer.origin}/trigger_error.js:2:18
 module code@${devServer.origin}/main.js:3:13`),
   }[params.runtime.name];
 
-  const expected = {
+  const expect = {
     status: "failed",
     errorMessage: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
     errorStack: expectedErrorStack,
     consoleCalls: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({ runtime: chromium() });

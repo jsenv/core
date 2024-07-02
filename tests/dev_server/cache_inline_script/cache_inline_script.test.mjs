@@ -38,8 +38,8 @@ try {
 
   {
     const actual = await getResult();
-    const expected = 42;
-    assert({ actual, expected });
+    const expect = 42;
+    assert({ actual, expect });
   }
 
   // now reload, expect 304
@@ -56,11 +56,11 @@ try {
       inlineJsResponseStatus,
       answer,
     };
-    const expected = {
+    const expect = {
       inlineJsResponseStatus: 304,
       answer: 42,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 
   // change original file content
@@ -85,11 +85,11 @@ try {
       inlineJsResponseStatus,
       answer,
     };
-    const expected = {
+    const expect = {
       inlineJsResponseStatus: 200,
       answer: 43,
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 } finally {
   htmlFileContent.restore();

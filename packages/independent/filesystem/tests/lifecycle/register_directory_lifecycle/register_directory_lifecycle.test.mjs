@@ -39,7 +39,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await writeFile(fileUrl);
   await wait(200);
   const actual = mutations;
-  const expected = [
+  const expect = [
     {
       name: "added",
       relativeUrl: "file",
@@ -55,7 +55,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       mtime: assert.any(Number),
     },
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -83,7 +83,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await wait(200);
 
   const actual = mutations;
-  const expected = [
+  const expect = [
     {
       name: "added",
       relativeUrl: `dir`,
@@ -99,7 +99,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       mtime: assert.any(Number),
     },
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -130,7 +130,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await wait(200);
 
   const actual = mutations;
-  const expected = [
+  const expect = [
     {
       name: "added",
       relativeUrl: "file",
@@ -154,7 +154,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       mtime: assert.any(Number),
     },
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -183,7 +183,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await removeEntry(fileUrl);
   await wait(200);
   const actual = mutations;
-  const expected = [
+  const expect = [
     {
       name: "removed",
       relativeUrl: "file",
@@ -199,7 +199,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       mtime: assert.any(Number),
     },
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -231,7 +231,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await removeEntry(directoryUrl);
   await wait(400);
   const actual = mutations;
-  const expected = [
+  const expect = [
     {
       name: "removed",
       relativeUrl: "dir/file",
@@ -261,7 +261,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       mtime: assert.any(Number),
     },
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -290,7 +290,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await writeEntryModificationTime(fileUrl, Date.now() + 1000);
   await wait(200);
   const actual = mutations;
-  const expected = [
+  const expect = [
     {
       name: "updated",
       relativeUrl: "file",
@@ -308,7 +308,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       previousMtime: assert.any(Number),
     },
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
@@ -335,7 +335,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await writeEntryModificationTime(fileUrl, Date.now());
   await wait(200);
   const actual = mutations;
-  const expected = [
+  const expect = [
     {
       name: "updated",
       relativeUrl: "file",
@@ -361,7 +361,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
       previousMtime: actual[1].mtime,
     },
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
   unregister();
   await ensureEmptyDirectory(tempDirectoryUrl);
 }

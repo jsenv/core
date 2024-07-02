@@ -1,0 +1,24 @@
+# String and Object
+actual: String
+expect: Object
+
+# Number.MAX_VALUE and Number.MIN_VALUE
+actual: 1_797_693_134_862_315_730_800_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_0…
+expect: 0.0_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000…
+
+# Symbol.iterator and Symbol.toPrimitive
+actual: Symbol.iterator
+expect: Symbol.toPrimitive
+
+# Symbol.for("a") and Symbol.for("b")
+actual: Symbol.for("a")
+expect: Symbol.for("b")
+
+# Object.prototype.toString vs Object.prototype.hasOwnProperty
+actual: Object.prototype.toString
+expect: Object.prototype.hasOwnProperty
+
+# null and Array.prototype
+actual: null
+expect: Array.prototype
+

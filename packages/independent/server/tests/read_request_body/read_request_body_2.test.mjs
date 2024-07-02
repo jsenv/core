@@ -25,5 +25,5 @@ const { origin } = await startServer({
 const response = await fetchUsingNodeBuiltin(origin, { body: "Hello" });
 
 const actual = await response.text();
-const expected = "Hello world";
-assert({ actual, expected });
+const expect = "Hello world";
+assert({ actual, expect });

@@ -24,10 +24,10 @@ await writeEntryPermissions(tempDirectoryUrl, {
     await assertDirectoryPresence(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `directory not found at ${urlToFileSystemPath(sourceUrl)}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -40,12 +40,12 @@ await writeEntryPermissions(tempDirectoryUrl, {
     await assertDirectoryPresence(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
-      `directory expected at ${urlToFileSystemPath(
+    const expect = new Error(
+      `directory expect at ${urlToFileSystemPath(
         sourceUrl,
       )} and found file instead`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -56,8 +56,8 @@ await writeEntryPermissions(tempDirectoryUrl, {
   await writeDirectory(sourceUrl);
 
   const actual = await assertDirectoryPresence(sourceUrl);
-  const expected = undefined;
-  assert({ actual, expected });
+  const expect = undefined;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }
 
@@ -72,12 +72,12 @@ await writeEntryPermissions(tempDirectoryUrl, {
     await assertDirectoryPresence(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
-      `directory expected at ${urlToFileSystemPath(
+    const expect = new Error(
+      `directory expect at ${urlToFileSystemPath(
         sourceUrl,
       )} and found file instead`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -91,10 +91,10 @@ await writeEntryPermissions(tempDirectoryUrl, {
     await assertDirectoryPresence(sourceUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `directory not found at ${urlToFileSystemPath(sourceUrl)}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -107,7 +107,7 @@ await writeEntryPermissions(tempDirectoryUrl, {
   await writeSymbolicLink({ from: sourceUrl, to: "./dir" });
 
   const actual = await assertDirectoryPresence(sourceUrl);
-  const expected = undefined;
-  assert({ actual, expected });
+  const expect = undefined;
+  assert({ actual, expect });
   await ensureEmptyDirectory(tempDirectoryUrl);
 }

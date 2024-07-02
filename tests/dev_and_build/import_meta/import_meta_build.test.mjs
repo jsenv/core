@@ -29,7 +29,7 @@ const test = async (name, { expectedBuildPath, ...rest }) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     meta: {
       url: `${server.origin}${expectedBuildPath}`,
       resolve: undefined,
@@ -41,7 +41,7 @@ const test = async (name, { expectedBuildPath, ...rest }) => {
     importMetaBuild: true,
   };
 
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // can use <script type="module">

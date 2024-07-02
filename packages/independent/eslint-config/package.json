@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-config",
-  "version": "16.5.0",
+  "version": "16.5.1",
   "description": "Create ESLint configuration for any project",
   "license": "MIT",
   "author": {
@@ -42,12 +42,12 @@
     "@jsenv/eslint-import-resolver": "8.1.1"
   },
   "devDependencies": {
-    "@babel/core": "7.23.7",
-    "@babel/preset-env": "7.23.8",
-    "@babel/eslint-parser": "7.23.3",
-    "@babel/plugin-syntax-decorators": "7.23.3",
-    "@babel/plugin-syntax-jsx": "7.23.3",
-    "eslint-plugin-html": "7.1.0",
-    "eslint-plugin-react": "7.33.2"
+    "@babel/core": "7.24.7",
+    "@babel/preset-env": "7.24.7",
+    "@babel/eslint-parser": "7.24.7",
+    "@babel/plugin-syntax-decorators": "7.24.7",
+    "@babel/plugin-syntax-jsx": "7.24.7",
+    "eslint-plugin-html": "8.1.1",
+    "eslint-plugin-react": "7.34.3"
   }
 }

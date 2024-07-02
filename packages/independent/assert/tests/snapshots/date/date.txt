@@ -1,0 +1,56 @@
+# year month day minutes diff on iso
+actual: "1970-01-01 00:00:00"
+expect: "1995-12-04 00:12:00"
+
+# millisecond only diff on iso
+actual: "1970-01-01 00:00:00.000Z"
+expect: "1970-01-01 00:00:00.020Z"
+
+# +2 hour on timezone
+actual: "1970-01-01 07:00:00"
+expect: "1970-01-01 09:00:00"
+
+# -2 hour on timezone
+actual: "1970-01-01 13:00:00"
+expect: "1970-01-01 11:00:00"
+
+# +1h30 on timezone
+actual: "1970-01-01 08:30:00"
+expect: "1970-01-01 10:00:00"
+
+# -1h30 on timezone
+actual: "1970-01-01 11:30:00"
+expect: "1970-01-01 10:00:00"
+
+# +0h30 on timezone
+actual: "1970-01-01 09:30:00"
+expect: "1970-01-01 10:00:00"
+
+# GMT vs iso
+actual: "2024-05-07 10:27:04"
+expect: "1970-01-01 00:00:00"
+
+# simplified date
+actual: "1970-01-01 09:00:00"
+expect: "1970-01-01 10:00:00"
+
+# date objects
+actual: Date("1970-01-01 10:00:00")
+expect: Date("1970-01-01 08:00:00")
+
+# date object vs date string
+actual: Date("1970-01-01")
+expect: "1970-01-01"
+
+# date object prop
+actual: Date("1970-01-01") {
+  foo: true,
+}
+expect: Date("1970-01-01") {
+  foo: false,
+}
+
+# incorrect date string
+actual: "0"
+expect: "70/01/01"
+

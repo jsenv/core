@@ -8,6 +8,6 @@ import { moveUrl } from "@jsenv/urls";
     from: "http://localhost_alias:3452/",
     to: "file:///dir/",
   });
-  const expected = "http://localhost:3452/file.js";
-  assert({ actual, expected });
+  const expect = "http://localhost:3452/file.js";
+  assert({ actual, expect });
 }

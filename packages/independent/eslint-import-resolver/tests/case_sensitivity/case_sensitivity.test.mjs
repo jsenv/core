@@ -35,7 +35,7 @@ test(() => {
       logLevel: "error",
     },
   );
-  const expected = {
+  const expect = {
     found: false,
     path: urlToFileSystemPath(
       new URL(
@@ -44,7 +44,7 @@ test(() => {
       ),
     ),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });
 
 // symlink
@@ -68,7 +68,7 @@ test(() => {
       logLevel: "error",
     },
   );
-  const expected = {
+  const expect = {
     found: false,
     path: urlToFileSystemPath(
       new URL(
@@ -79,5 +79,5 @@ test(() => {
       ),
     ),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 });

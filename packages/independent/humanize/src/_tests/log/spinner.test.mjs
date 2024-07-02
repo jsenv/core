@@ -12,22 +12,22 @@
 
 // {
 //   const actual = getOutput()
-//   const expected = `a loading\n`
-//   assert({ actual, expected })
+//   const expect = `a loading\n`
+//   assert({ actual, expect })
 // }
 // getOutput = spyStreamOutput(process.stdout)
 // await new Promise((resolve) => setTimeout(resolve, 1500))
 
 // {
 //   const actual = getOutput()
-//   const expected = `b loading\n`
-//   assert({ actual, expected })
+//   const expect = `b loading\n`
+//   assert({ actual, expect })
 // }
 // getOutput = spyStreamOutput(process.stdout)
 // await new Promise((resolve) => setTimeout(resolve, 1500))
 
 // {
 //   const actual = getOutput()
-//   const expected = `a loading\n`
-//   assert({ actual, expected })
+//   const expect = `a loading\n`
+//   assert({ actual, expect })
 // }

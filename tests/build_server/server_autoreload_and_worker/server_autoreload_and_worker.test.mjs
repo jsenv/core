@@ -25,9 +25,9 @@ if (process.platform !== "win32") {
     status: response.status,
     contentType: response.headers.get("content-type"),
   };
-  const expected = {
+  const expect = {
     status: 200,
     contentType: "text/html",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

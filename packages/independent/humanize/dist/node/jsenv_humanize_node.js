@@ -91,170 +91,86 @@ const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
 
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+
+globalThis.process?.versions?.node !== undefined;
+
+globalThis.process?.versions?.bun !== undefined;
+
+globalThis.Deno?.version?.deno !== undefined;
+
+globalThis.process?.versions?.electron !== undefined;
+
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+
+platform === 'macOS'
+	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
+	|| globalThis.process?.platform === 'darwin';
+
+platform === 'Windows'
+	|| globalThis.navigator?.platform === 'Win32'
+	|| globalThis.process?.platform === 'win32';
+
+platform === 'Linux'
+	|| globalThis.navigator?.platform?.startsWith('Linux') === true
+	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
+	|| globalThis.process?.platform === 'linux';
+
+platform === 'Android'
+	|| globalThis.navigator?.platform === 'Android'
+	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
+	|| globalThis.process?.platform === 'android';
+
 const ESC = '\u001B[';
-const OSC = '\u001B]';
-const BEL = '\u0007';
-const SEP = ';';
 
-/* global window */
-const isBrowser = typeof window !== 'undefined' && typeof window.document !== 'undefined';
-
-const isTerminalApp = !isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
 const isWindows = !isBrowser && process$1.platform === 'win32';
-const cwdFunction = isBrowser ? () => {
+
+isBrowser ? () => {
 	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
 } : process$1.cwd;
 
-const ansiEscapes = {};
+const cursorUp = (count = 1) => ESC + count + 'A';
 
-ansiEscapes.cursorTo = (x, y) => {
-	if (typeof x !== 'number') {
-		throw new TypeError('The `x` argument is required');
-	}
+const cursorLeft = ESC + 'G';
 
-	if (typeof y !== 'number') {
-		return ESC + (x + 1) + 'G';
-	}
-
-	return ESC + (y + 1) + SEP + (x + 1) + 'H';
-};
-
-ansiEscapes.cursorMove = (x, y) => {
-	if (typeof x !== 'number') {
-		throw new TypeError('The `x` argument is required');
-	}
-
-	let returnValue = '';
-
-	if (x < 0) {
-		returnValue += ESC + (-x) + 'D';
-	} else if (x > 0) {
-		returnValue += ESC + x + 'C';
-	}
-
-	if (y < 0) {
-		returnValue += ESC + (-y) + 'A';
-	} else if (y > 0) {
-		returnValue += ESC + y + 'B';
-	}
-
-	return returnValue;
-};
-
-ansiEscapes.cursorUp = (count = 1) => ESC + count + 'A';
-ansiEscapes.cursorDown = (count = 1) => ESC + count + 'B';
-ansiEscapes.cursorForward = (count = 1) => ESC + count + 'C';
-ansiEscapes.cursorBackward = (count = 1) => ESC + count + 'D';
-
-ansiEscapes.cursorLeft = ESC + 'G';
-ansiEscapes.cursorSavePosition = isTerminalApp ? '\u001B7' : ESC + 's';
-ansiEscapes.cursorRestorePosition = isTerminalApp ? '\u001B8' : ESC + 'u';
-ansiEscapes.cursorGetPosition = ESC + '6n';
-ansiEscapes.cursorNextLine = ESC + 'E';
-ansiEscapes.cursorPrevLine = ESC + 'F';
-ansiEscapes.cursorHide = ESC + '?25l';
-ansiEscapes.cursorShow = ESC + '?25h';
-
-ansiEscapes.eraseLines = count => {
+const eraseLines = count => {
 	let clear = '';
 
 	for (let i = 0; i < count; i++) {
-		clear += ansiEscapes.eraseLine + (i < count - 1 ? ansiEscapes.cursorUp() : '');
+		clear += eraseLine + (i < count - 1 ? cursorUp() : '');
 	}
 
 	if (count) {
-		clear += ansiEscapes.cursorLeft;
+		clear += cursorLeft;
 	}
 
 	return clear;
 };
+const eraseLine = ESC + '2K';
+const eraseScreen = ESC + '2J';
 
-ansiEscapes.eraseEndLine = ESC + 'K';
-ansiEscapes.eraseStartLine = ESC + '1K';
-ansiEscapes.eraseLine = ESC + '2K';
-ansiEscapes.eraseDown = ESC + 'J';
-ansiEscapes.eraseUp = ESC + '1J';
-ansiEscapes.eraseScreen = ESC + '2J';
-ansiEscapes.scrollUp = ESC + 'S';
-ansiEscapes.scrollDown = ESC + 'T';
-
-ansiEscapes.clearScreen = '\u001Bc';
-
-ansiEscapes.clearTerminal = isWindows
-	? `${ansiEscapes.eraseScreen}${ESC}0f`
+const clearTerminal = isWindows
+	? `${eraseScreen}${ESC}0f`
 	// 1. Erases the screen (Only done in case `2` is not supported)
 	// 2. Erases the whole screen including scrollback buffer
 	// 3. Moves cursor to the top-left position
 	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	: `${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
-
-ansiEscapes.enterAlternativeScreen = ESC + '?1049h';
-ansiEscapes.exitAlternativeScreen = ESC + '?1049l';
-
-ansiEscapes.beep = BEL;
-
-ansiEscapes.link = (text, url) => [
-	OSC,
-	'8',
-	SEP,
-	SEP,
-	url,
-	BEL,
-	text,
-	OSC,
-	'8',
-	SEP,
-	SEP,
-	BEL,
-].join('');
-
-ansiEscapes.image = (buffer, options = {}) => {
-	let returnValue = `${OSC}1337;File=inline=1`;
-
-	if (options.width) {
-		returnValue += `;width=${options.width}`;
-	}
-
-	if (options.height) {
-		returnValue += `;height=${options.height}`;
-	}
-
-	if (options.preserveAspectRatio === false) {
-		returnValue += ';preserveAspectRatio=0';
-	}
-
-	return returnValue + ':' + buffer.toString('base64') + BEL;
-};
-
-ansiEscapes.iTerm = {
-	setCwd: (cwd = cwdFunction()) => `${OSC}50;CurrentDir=${cwd}${BEL}`,
-
-	annotation(message, options = {}) {
-		let returnValue = `${OSC}1337;`;
-
-		const hasX = typeof options.x !== 'undefined';
-		const hasY = typeof options.y !== 'undefined';
-		if ((hasX || hasY) && !(hasX && hasY && typeof options.length !== 'undefined')) {
-			throw new Error('`x`, `y` and `length` must be defined when `x` or `y` is defined');
-		}
-
-		message = message.replace(/\|/g, '');
-
-		returnValue += options.isHidden ? 'AddHiddenAnnotation=' : 'AddAnnotation=';
-
-		if (options.length > 0) {
-			returnValue += (
-				hasX
-					? [message, options.length, options.x, options.y]
-					: [options.length, message]
-			).join('|');
-		} else {
-			returnValue += message;
-		}
-
-		return returnValue + BEL;
-	},
-};
+	:	`${eraseScreen}${ESC}3J${ESC}H`;
 
 /*
  * see also https://github.com/vadimdemedes/ink
@@ -302,7 +218,7 @@ const createDynamicLog = ({
     if (visualLineCount > rows) {
       if (clearTerminalAllowed) {
         clearAttemptResult = true;
-        return ansiEscapes.clearTerminal;
+        return clearTerminal;
       }
       // the whole log cannot be cleared because it's vertically to long
       // (longer than terminal height)
@@ -315,7 +231,7 @@ const createDynamicLog = ({
     }
 
     clearAttemptResult = true;
-    return ansiEscapes.eraseLines(visualLineCount);
+    return eraseLines(visualLineCount);
   };
 
   const update = (string) => {
@@ -344,20 +260,22 @@ const createDynamicLog = ({
     clearAttemptResult = undefined;
   };
 
-  const clearDuringFunctionCall = (callback) => {
+  const clearDuringFunctionCall = (
+    callback,
+    ouputAfterCallback = lastOutput,
+  ) => {
     // 1. Erase the current log
-    // 2. Call callback (expected to write something on stdout)
+    // 2. Call callback (expect to write something on stdout)
     // 3. Restore the current log
     // During step 2. we expect a "write from outside" so we uninstall
     // the stream spy during function call
-    const currentOutput = lastOutput;
     update("");
 
     writing = true;
     callback();
     writing = false;
 
-    update(currentOutput);
+    update(ouputAfterCallback);
   };
 
   const writeFromOutsideEffect = (value) => {
@@ -630,14 +548,19 @@ const ANSI = {
   YELLOW: "\x1b[33m",
   BLUE: "\x1b[34m",
   MAGENTA: "\x1b[35m",
+  CYAN: "\x1b[36m",
   GREY: "\x1b[90m",
   color: (text, ANSI_COLOR) => {
-    return ANSI.supported ? `${ANSI_COLOR}${text}${RESET}` : text;
+    return ANSI.supported && ANSI_COLOR ? `${ANSI_COLOR}${text}${RESET}` : text;
   },
 
   BOLD: "\x1b[1m",
+  UNDERLINE: "\x1b[4m",
+  STRIKE: "\x1b[9m",
   effect: (text, ANSI_EFFECT) => {
-    return ANSI.supported ? `${ANSI_EFFECT}${text}${RESET}` : text;
+    return ANSI.supported && ANSI_EFFECT
+      ? `${ANSI_EFFECT}${text}${RESET}`
+      : text;
   },
 };
 
@@ -1010,6 +933,9 @@ const UNICODE = {
   },
   get CIRCLE_CROSS() {
     return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+  },
+  get ELLIPSIS() {
+    return UNICODE.supported ? `…` : `...`;
   },
 };
 

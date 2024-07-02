@@ -3,35 +3,35 @@ import { humanize } from "@jsenv/humanize";
 
 {
   const actual = humanize([]);
-  const expected = `[]`;
-  assert({ actual, expected });
+  const expect = `[]`;
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize([[]]);
-  const expected = `[
+  const expect = `[
   []
 ]`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize(Array(3));
   // prettier-ignore
-  const expected = `[
+  const expect = `[
   ,
   ,
 ${"  "}
 ]`
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
   const actual = humanize([Symbol()]);
-  const expected = `[
+  const expect = `[
   Symbol()
 ]`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -40,23 +40,23 @@ ${"  "}
 
   {
     const actual = humanize(newArray);
-    const expected = `[
+    const expect = `[
   "foo",
   1
 ]`;
     assert({
       actual,
-      expected,
+      expect,
     });
   }
 
   {
     const actual = humanize(newArray);
-    const expected = `[
+    const expect = `[
   "foo",
   1
 ]`;
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -64,9 +64,9 @@ ${"  "}
   const circularArray = [0];
   circularArray.push(circularArray);
   const actual = humanize(circularArray);
-  const expected = `[
+  const expect = `[
   0,
   Symbol.for('circular')
 ]`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

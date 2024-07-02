@@ -16,6 +16,9 @@ const esToCjs = async ({ url, map, content }) => {
             id = String(pathToFileURL(id));
           }
           const url = await import.meta.resolve(id, pathToFileURL(importer));
+          if (url.endsWith("emoji-regex/index.js")) {
+            return fileURLToPath(new URL(url.replace("index.js", "index.mjs")));
+          }
           if (url.startsWith("node:")) {
             return { id: url, external: true };
           }

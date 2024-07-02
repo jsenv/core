@@ -22,11 +22,11 @@ const test = (eventName) => {
     numberOfListenersAddedDuringRace,
     numberOfListenersAfterRaceCleanup,
   };
-  const expected = {
+  const expect = {
     numberOfListenersAddedDuringRace: 1,
     numberOfListenersAfterRaceCleanup: 0,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 test("SIGINT");

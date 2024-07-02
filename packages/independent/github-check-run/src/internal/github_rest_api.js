@@ -112,7 +112,7 @@ ${error.stack}`);
 ${response.status}
 --- response statusText ---
 ${response.statusText}
---- expected response status ---
+--- expect response status ---
 ${Object.keys(responseStatusHandlers).join(", ")}
 --- request method ---
 ${method}

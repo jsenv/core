@@ -8,8 +8,8 @@ try {
   });
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError("htt: there is no such param");
-  assert({ actual, expected });
+  const expect = new TypeError("htt: there is no such param");
+  assert({ actual, expect });
 }
 
 try {
@@ -18,8 +18,8 @@ try {
   });
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError("https must be an object, got toto");
-  assert({ actual, expected });
+  const expect = new TypeError("https must be an object, got toto");
+  assert({ actual, expect });
 }
 
 try {
@@ -28,10 +28,10 @@ try {
   });
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError(
+  const expect = new TypeError(
     "https must be an object with { certificate, privateKey }",
   );
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 try {
@@ -40,10 +40,10 @@ try {
   });
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new TypeError(
+  const expect = new TypeError(
     "https must be an object with { certificate, privateKey }",
   );
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 try {
@@ -52,6 +52,6 @@ try {
   });
   throw new Error("should throw");
 } catch (actual) {
-  const expected = new Error(`http2 needs https`);
-  assert({ actual, expected });
+  const expect = new Error(`http2 needs https`);
+  assert({ actual, expect });
 }

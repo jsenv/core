@@ -31,8 +31,8 @@ const test = async (params) => {
     webkit: "SyntaxError: Unexpected end of script",
   }[params.runtime.name];
   const actual = error.stack;
-  const expected = expectedStack;
-  assert({ actual, expected });
+  const expect = expectedStack;
+  assert({ actual, expect });
 };
 
 await test({ runtime: chromium() });

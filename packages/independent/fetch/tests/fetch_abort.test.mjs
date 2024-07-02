@@ -41,8 +41,8 @@ const server = await startServer({
     throw new Error("should throw");
   } catch (error) {
     const actual = error.name;
-    const expected = "AbortError";
-    assert({ actual, expected });
+    const expect = "AbortError";
+    assert({ actual, expect });
   }
 }
 
@@ -68,8 +68,8 @@ const server = await startServer({
     throw new Error("should throw");
   } catch (error) {
     const actual = error.name;
-    const expected = "AbortError";
-    assert({ actual, expected });
+    const expect = "AbortError";
+    assert({ actual, expect });
   }
 }
 
@@ -100,12 +100,12 @@ const server = await startServer({
       type: error.type,
       message: error.message,
     };
-    const expected = {
+    const expect = {
       name: "AbortError",
       type: "aborted",
-      message: "The user aborted a request.",
+      message: "The operation was aborted.",
     };
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 }
 
@@ -122,7 +122,7 @@ const server = await startServer({
   });
   const response = await clientResponsePromise;
   const actual = await response.text();
-  const expected = "Hello";
-  assert({ actual, expected });
+  const expect = "Hello";
+  assert({ actual, expect });
   abortController.abort();
 }

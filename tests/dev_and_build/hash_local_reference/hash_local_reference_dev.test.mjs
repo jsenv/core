@@ -18,8 +18,8 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = `${devServer.origin}/main.html#toto`;
-  assert({ actual, expected });
+  const expect = `${devServer.origin}/main.html#toto`;
+  assert({ actual, expect });
 };
 
 await test();

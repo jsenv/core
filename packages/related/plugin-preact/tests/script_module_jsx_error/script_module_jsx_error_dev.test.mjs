@@ -20,9 +20,9 @@ try {
   });
   await page.goto(`${devServer.origin}/main.noeslint.html`);
   const actual = await firstErrorPromise;
-  const expected = new Error(`Unexpected token '<'`);
-  expected.name = "SyntaxError";
-  assert({ actual, expected });
+  const expect = new Error(`Unexpected token '<'`);
+  expect.name = "SyntaxError";
+  assert({ actual, expect });
 } finally {
   browser.close();
 }

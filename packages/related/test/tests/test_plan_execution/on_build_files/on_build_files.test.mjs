@@ -39,8 +39,8 @@ const actual = {
   status: chromiumResult.status,
   errorMessage: chromiumResult.errors[0].message,
 };
-const expected = {
+const expect = {
   status: "failed",
   errorMessage: "answer should be 42, got 43",
 };
-assert({ actual, expected });
+assert({ actual, expect });

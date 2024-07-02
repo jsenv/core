@@ -31,10 +31,10 @@ const test = async ({ name, ...params }) => {
   // eslint-disable-next-line import/no-unresolved
   const namespace = await import("./snapshots/0_with_bundling/main.js");
   const actual = { ...namespace };
-  const expected = {
+  const expect = {
     executionOrder: ["index", "tag", "data", "main: Tag: Tag data Tag data"],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // without bundling
@@ -49,8 +49,8 @@ const test = async ({ name, ...params }) => {
   // eslint-disable-next-line import/no-unresolved
   const namespace = await import("./snapshots/1_without_bundling/main.js");
   const actual = { ...namespace };
-  const expected = {
+  const expect = {
     executionOrder: ["index", "tag", "data", "main: Tag: Tag data Tag data"],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

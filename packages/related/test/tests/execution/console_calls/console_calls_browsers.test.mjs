@@ -34,7 +34,7 @@ const test = async (params) => {
     namespace,
     consoleCalls,
   };
-  const expected = {
+  const expect = {
     status: "completed",
     namespace: {
       "/main.js": {
@@ -58,7 +58,7 @@ const test = async (params) => {
       },
     ],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({

@@ -19,11 +19,11 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = {
+  const expect = {
     ignoreAJsHref: `${devServer.origin}/a.js`,
     ignoreIgnoreBJsHref: `ignore:b.js`,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test();

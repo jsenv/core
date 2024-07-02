@@ -20,7 +20,7 @@ const actual = {
   start_url,
   icons,
 };
-const expected = {
+const expect = {
   start_url: "/",
   icons: [
     {
@@ -30,4 +30,4 @@ const expected = {
     },
   ],
 };
-assert({ actual, expected });
+assert({ actual, expect });

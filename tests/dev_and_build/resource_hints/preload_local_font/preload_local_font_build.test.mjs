@@ -37,12 +37,12 @@ const test = async ({ name, ...params }) => {
     consoleLogs: consoleOutput.logs,
     consoleWarnings: consoleOutput.warnings,
   };
-  const expected = {
+  const expect = {
     returnValue: "Roboto",
     consoleLogs: [],
     consoleWarnings: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 // support for <script type="module">

@@ -11,8 +11,8 @@ const test = async (params) => {
     ...params,
   });
   const actual = memoryUsage;
-  const expected = assert.between(5_000_000, 9_000_000); // around 7MB
-  assert({ actual, expected });
+  const expect = assert.between(5_000_000, 9_000_000); // around 7MB
+  assert({ actual, expect });
 };
 
 await test({

@@ -10,8 +10,8 @@ const actual = {
   type,
   url,
 };
-const expected = {
+const expect = {
   type: "node_builtin_specifier",
   url: "node:fs",
 };
-assert({ actual, expected });
+assert({ actual, expect });

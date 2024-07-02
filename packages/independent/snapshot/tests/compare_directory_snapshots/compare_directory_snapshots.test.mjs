@@ -30,8 +30,8 @@ test(() => {
     throw new Error("should throw");
   } catch (e) {
     const actual = e.message;
-    const expected = `directory expected at ${fileUrl}/`;
-    assert({ actual, expected });
+    const expect = `directory expect at ${fileUrl}/`;
+    assert({ actual, expect });
   }
 });
 
@@ -73,12 +73,12 @@ test(() => {
     throw new Error("should throw");
   } catch (e) {
     const actual = stripAnsi(e.message);
-    const expected = `snapshot comparison failed for "snapshots/"
+    const expect = `snapshot comparison failed for "snapshots/"
 --- reason ---
 "file.txt" is missing
 --- file missing ---
 ${new URL("./file.txt", snapshotsDirectoryUrl)}`;
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 });
 
@@ -100,12 +100,12 @@ test(() => {
     throw new Error("should throw");
   } catch (e) {
     const actual = stripAnsi(e.message);
-    const expected = `snapshot comparison failed for "snapshots/"
+    const expect = `snapshot comparison failed for "snapshots/"
 --- reason ---
 "hello.js" is unexpected
 --- file unexpected ---
 ${new URL("./hello.js", snapshotsDirectoryUrl)}`;
-    assert({ actual, expected });
+    assert({ actual, expect });
   }
 });
 
@@ -127,17 +127,15 @@ test(() => {
     throw new Error("should throw");
   } catch (e) {
     const actual = stripAnsi(e.message);
-    const expected = `snapshot comparison failed for "b.js"
---- reason ---
-unexpected character in file content
+    const expect = `snapshot comparison failed for "b.js"
+actual: 1| console.log("c");
+        2| 
+expect: 1| console.log("b");
+        2| 
 --- details ---
-1 | console.log("c");
-                 ^
-unexpected "c", expected to continue with 'b");'…
-2 | 
---- file ---
-${snapshotsDirectoryUrl}b.js`;
-    assert({ actual, expected });
+"${snapshotsDirectoryUrl}b.js"
+---------------`;
+    assert({ actual, expect });
   }
 });
 
@@ -160,6 +158,6 @@ test(() => {
     snapshotsDirectoryUrl,
   );
   const actual = fileStructureBeforeTest;
-  const expected = fileStructureAfterComparison;
-  assert({ actual, expected });
+  const expect = fileStructureAfterComparison;
+  assert({ actual, expect });
 });

@@ -31,7 +31,7 @@ const test = async (params) => {
     errorText,
     consoleOutputRaw: consoleOutput.raw,
   };
-  const expected = {
+  const expect = {
     pageErrors: [
       Object.assign(new Error("Unexpected end of input"), {
         name: "SyntaxError",
@@ -40,7 +40,7 @@ const test = async (params) => {
     errorText: "SyntaxError: Unexpected end of input",
     consoleOutputRaw: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test();

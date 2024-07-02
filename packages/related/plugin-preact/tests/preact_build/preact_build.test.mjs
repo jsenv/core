@@ -30,8 +30,8 @@ const test = async ({ name, ...params }) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expected = { spanContent: "Hello world" };
-  assert({ actual, expected });
+  const expect = { spanContent: "Hello world" };
+  assert({ actual, expect });
 };
 
 // support for <script type="module">

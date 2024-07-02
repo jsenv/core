@@ -15,27 +15,27 @@
     "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "dependencies": {
-    "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.23.3",
-    "@babel/plugin-syntax-import-assertions": "7.23.3",
-    "@babel/plugin-transform-react-jsx": "7.23.4",
-    "@jsenv/assert": "3.0.3",
-    "@jsenv/core": "38.4.8",
-    "@jsenv/plugin-react": "1.4.34",
-    "@jsenv/plugin-bundling": "2.6.6",
+    "@babel/eslint-parser": "7.24.7",
+    "@babel/plugin-syntax-import-assertions": "7.24.7",
+    "@babel/plugin-transform-react-jsx": "7.24.7",
+    "@jsenv/assert": "4.0.0",
+    "@jsenv/core": "38.4.10",
+    "@jsenv/plugin-react": "1.4.35",
+    "@jsenv/plugin-bundling": "2.6.7",
     "@jsenv/plugin-minification": "1.5.4",
-    "@jsenv/eslint-config": "16.5.0",
+    "@jsenv/eslint-config": "16.5.1",
     "@jsenv/eslint-import-resolver": "8.1.1",
-    "@jsenv/test": "3.0.13",
+    "@jsenv/test": "3.0.16",
     "eslint": "8.56.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.29.1",
-    "eslint-plugin-react": "7.33.2",
-    "open": "10.0.3",
-    "@playwright/browser-chromium": "1.40.1",
-    "prettier": "3.2.2"
+    "eslint-plugin-react": "7.34.3",
+    "open": "10.1.0",
+    "@playwright/browser-chromium": "1.45.0",
+    "prettier": "3.3.2"
   }
 }

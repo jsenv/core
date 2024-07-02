@@ -1,0 +1,62 @@
+# set value added
+actual: Set(
+  ↑ 3 values ↑
+  "d",
+  "Y",
+)
+expect: Set(
+  ↑ 3 values ↑
+  "c",
+  "Z",
+)
+
+# compare set and map
+actual: Map(
+  0 => "a",
+)
+expect: Set(
+  "a",
+)
+
+# compare set and array
+actual: [
+  "a",
+]
+expect: Set(
+  "a",
+)
+
+# set collapsed various cases
+actual: {
+  a: true,
+  set_without_diff: Set("a", "b"),
+  set_with_added: Set(
+    "a",
+  ),
+}
+expect: {
+  a: false,
+  set_without_diff: Set("b", "a"),
+  set_with_added: Set(
+    "b",
+  ),
+}
+
+# set collapsed deep
+actual: {
+  a: {
+    set_without_diff: Set("a", "b"),
+    set_with_added: Set(
+      "a",
+    ),
+  },
+}
+expect: {
+  a: {
+    set_without_diff: Set("b", "a"),
+    set_with_added: Set(
+      "b",
+    ),
+  },
+}
+

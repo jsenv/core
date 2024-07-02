@@ -1,6 +1,7 @@
 // inspired by https://github.com/F1LT3R/parse-ansi/blob/master/index.js
 
 import ansiRegex from "ansi-regex";
+import stringWidth from "string-width";
 import stripAnsi from "strip-ansi";
 
 export const parseAnsi = (ansi) => {
@@ -219,7 +220,6 @@ export const parseAnsi = (ansi) => {
     if (word === "\n") {
       const chunk = bundle("newline", "\n");
       result.chunks.push(chunk);
-
       x = 0;
       y += 1;
       nAnsi += 1;
@@ -230,10 +230,10 @@ export const parseAnsi = (ansi) => {
     if (delimiters.includes(word) === false) {
       const chunk = bundle("text", word);
       result.chunks.push(chunk);
-
-      x += word.length;
-      nAnsi += word.length;
-      nPlain += word.length;
+      const width = stringWidth(word);
+      x += width;
+      nAnsi += width;
+      nPlain += width;
       continue;
     }
     // ANSI Escape characters
@@ -251,7 +251,6 @@ export const parseAnsi = (ansi) => {
       decorator,
     });
     result.chunks.push(chunk);
-
     nAnsi += word.length;
   }
 

@@ -10,12 +10,12 @@ import { getMessage, getMessageAsync } from "jsenv-demo-node-package";
 
 {
   const actual = getMessage();
-  const expected = "Hello dev!";
-  assert({ actual, expected });
+  const expect = "Hello dev!";
+  assert({ actual, expect });
 }
 
 {
   const actual = await getMessageAsync();
-  const expected = "Hello dev async!";
-  assert({ actual, expected });
+  const expect = "Hello dev async!";
+  assert({ actual, expect });
 }

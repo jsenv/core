@@ -26,16 +26,16 @@ if (!isWindows) {
     await writeDirectory(destinationUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `EACCES: permission denied, lstat '${urlToFileSystemPath(
         destinationUrl,
       )}'`,
     );
-    expected.errno = -13;
-    expected.code = "EACCES";
-    expected.syscall = "lstat";
-    expected.path = urlToFileSystemPath(destinationUrl);
-    assert({ actual, expected });
+    expect.errno = -13;
+    expect.code = "EACCES";
+    expect.syscall = "lstat";
+    expect.path = urlToFileSystemPath(destinationUrl);
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -49,10 +49,10 @@ if (!isWindows) {
     await writeDirectory(destinationUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `directory already exists at ${urlToFileSystemPath(destinationUrl)}`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -67,12 +67,12 @@ if (!isWindows) {
     await writeDirectory(destinationUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `cannot write directory at ${urlToFileSystemPath(
         directoryUrl,
       )} because there is a file`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -87,12 +87,12 @@ if (!isWindows) {
     await writeDirectory(destinationUrl);
     throw new Error("should throw");
   } catch (actual) {
-    const expected = new Error(
+    const expect = new Error(
       `cannot write directory at ${urlToFileSystemPath(
         directoryUrl,
       )} because there is a symbolic-link`,
     );
-    assert({ actual, expected });
+    assert({ actual, expect });
     await ensureEmptyDirectory(tempDirectoryUrl);
   }
 }
@@ -103,6 +103,6 @@ if (!isWindows) {
   await writeDirectory(destinationUrl);
 
   const actual = await writeDirectory(destinationUrl, { allowUseless: true });
-  const expected = undefined;
-  assert({ actual, expected });
+  const expect = undefined;
+  assert({ actual, expect });
 }

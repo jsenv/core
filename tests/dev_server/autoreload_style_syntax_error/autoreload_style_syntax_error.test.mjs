@@ -41,8 +41,8 @@ try {
 
   {
     const actual = await getDocumentBodyBackgroundColor();
-    const expected = `rgb(255, 0, 0)`;
-    assert({ actual, expected });
+    const expect = `rgb(255, 0, 0)`;
+    assert({ actual, expect });
   }
 
   const pageReloadPromise = page.waitForNavigation();
@@ -66,8 +66,8 @@ try {
   await pageReloadPromise;
   {
     const actual = await getDocumentBodyBackgroundColor();
-    const expected = `rgba(0, 0, 0, 0)`;
-    assert({ actual, expected });
+    const expect = `rgba(0, 0, 0, 0)`;
+    assert({ actual, expect });
   }
   htmlFileContent.restore();
   await new Promise((resolve) => {
@@ -75,8 +75,8 @@ try {
   });
   {
     const actual = await getDocumentBodyBackgroundColor();
-    const expected = `rgb(255, 0, 0)`;
-    assert({ actual, expected });
+    const expect = `rgb(255, 0, 0)`;
+    assert({ actual, expect });
   }
 } finally {
   htmlFileContent.restore();

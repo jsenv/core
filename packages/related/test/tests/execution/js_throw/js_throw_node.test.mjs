@@ -22,7 +22,7 @@ const test = async (params) => {
     stack: error.stack,
     site: error.site,
   };
-  const expected = {
+  const expect = {
     isException: true,
     isError: true,
     name: "Error",
@@ -36,7 +36,7 @@ const test = async (params) => {
       column: 9,
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({

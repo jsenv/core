@@ -32,11 +32,11 @@ const { origin } = await startServer({
     status: response.status,
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     status: 200,
     body: "a.js",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -45,11 +45,11 @@ const { origin } = await startServer({
     status: response.status,
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     status: 200,
     body: "a.js",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -58,9 +58,9 @@ const { origin } = await startServer({
     status: response.status,
     body: await response.text(),
   };
-  const expected = {
+  const expect = {
     status: 200,
     body: "34rtys.js",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

@@ -51,8 +51,8 @@ try {
 
   {
     const actual = await getResult();
-    const expected = 42;
-    assert({ actual, expected });
+    const expect = 42;
+    assert({ actual, expect });
   }
 
   renameSync(helperFileUrl, helperRenamedFileUrl);
@@ -62,10 +62,10 @@ try {
   // now reload and see what happens
   await page.reload();
   const actual = consoleErrors;
-  const expected = [
+  const expect = [
     "Failed to load resource: the server responded with a status of 404 (no entry on filesystem)",
   ];
-  assert({ actual, expected });
+  assert({ actual, expect });
 } finally {
   jsFileContent.restore();
   renameSync(helperRenamedFileUrl, helperFileUrl);

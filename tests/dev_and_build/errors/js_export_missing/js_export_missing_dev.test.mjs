@@ -29,12 +29,12 @@ const test = async (params) => {
     errorMessage: returnValue.executionResults["/main.js"].exception.message,
     consoleOutputRaw: consoleOutput.raw,
   };
-  const expected = {
+  const expect = {
     pageErrors: [assert.any(Error)],
     errorMessage: `The requested module '/file.js' does not provide an export named 'answer'`,
     consoleOutputRaw: "",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test();

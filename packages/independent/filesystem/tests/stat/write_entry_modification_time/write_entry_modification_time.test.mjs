@@ -19,6 +19,6 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   await writeEntryModificationTime(sourceUrl, mtime);
 
   const actual = toSecondsPrecision(await readEntryModificationTime(sourceUrl));
-  const expected = mtime;
-  assert({ actual, expected });
+  const expect = mtime;
+  assert({ actual, expect });
 }

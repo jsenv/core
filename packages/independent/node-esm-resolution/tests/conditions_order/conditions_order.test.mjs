@@ -12,11 +12,11 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
     type,
     url,
   };
-  const expected = {
+  const expect = {
     type: "field:imports",
     url: new URL("./import_first/import.js", import.meta.url).href,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -29,9 +29,9 @@ import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
     type,
     url,
   };
-  const expected = {
+  const expect = {
     type: "field:imports",
     url: new URL("./node_first/node.js", import.meta.url).href,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

@@ -6,6 +6,6 @@ import { readFile } from "@jsenv/filesystem";
 {
   const txtFileUrl = resolveUrl("./file.txt", import.meta.url);
   const actual = await readFile(txtFileUrl, { as: "string" });
-  const expected = "hello world";
-  assert({ actual, expected });
+  const expect = "hello world";
+  assert({ actual, expect });
 }

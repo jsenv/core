@@ -1,3 +1,4 @@
+import stripAnsi from "strip-ansi";
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
@@ -38,31 +39,16 @@ const test = async (params) => {
   const actual = {
     status,
     consoleCalls,
-    errorMessage: error.message,
+    errorMessage: stripAnsi(error.message.trim()),
     site: error.site,
   };
   const expectedErrorMessage = {
-    chromium: assert.startsWith(`unexpected character in string
---- details ---
-foo
-^
-unexpected "f", expected to continue with "bar"
---- path ---
-actual`),
-    firefox: assert.startsWith(`unexpected character in string
---- details ---
-foo
-^
-unexpected "f", expected to continue with "bar"
---- path ---
-actual`),
-    webkit: assert.startsWith(`unexpected character in string
---- details ---
-foo
-^
-unexpected "f", expected to continue with "bar"
---- path ---
-actual`),
+    chromium: `actual: "foo"
+expect: "bar"`,
+    firefox: `actual: "foo"
+expect: "bar"`,
+    webkit: `actual: "foo"
+expect: "bar"`,
   }[params.runtime.name];
   const expectedLine = {
     chromium: 13,
@@ -75,7 +61,7 @@ actual`),
     webkit: 5,
   }[params.runtime.name];
 
-  const expected = {
+  const expect = {
     status: "failed",
     consoleCalls: [],
     errorMessage: expectedErrorMessage,
@@ -88,7 +74,7 @@ actual`),
       serverUrl: `${devServer.origin}/main.html`,
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 };
 
 await test({ runtime: chromium() });

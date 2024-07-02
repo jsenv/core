@@ -11,7 +11,7 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
       headers: { foo: false },
     },
   );
-  const expected = {
+  const expect = {
     status: undefined,
     statusText: undefined,
     statusMessage: undefined,
@@ -22,7 +22,7 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     bodyEncoding: undefined,
     timing: undefined,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -39,7 +39,7 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
       },
     },
   );
-  const expected = {
+  const expect = {
     status: undefined,
     statusText: undefined,
     statusMessage: undefined,
@@ -51,7 +51,7 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     bodyEncoding: undefined,
     timing: undefined,
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -66,10 +66,10 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     },
   );
   const actual = response.headers;
-  const expected = {
+  const expect = {
     etag: "toto",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -86,10 +86,10 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     },
   );
   const actual = response.headers;
-  const expected = {
+  const expect = {
     etag: "bar",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -106,8 +106,8 @@ import { composeTwoResponses } from "@jsenv/server/src/internal/response_composi
     },
   );
   const actual = response.headers;
-  const expected = {
+  const expect = {
     etag: "bar",
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
