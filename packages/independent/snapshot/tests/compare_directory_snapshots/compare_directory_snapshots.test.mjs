@@ -128,6 +128,7 @@ test(() => {
   } catch (e) {
     const actual = stripAnsi(e.message);
     const expect = `snapshot comparison failed for "b.js"
+
 actual: 1| console.log("c");
         2| 
 expect: 1| console.log("b");

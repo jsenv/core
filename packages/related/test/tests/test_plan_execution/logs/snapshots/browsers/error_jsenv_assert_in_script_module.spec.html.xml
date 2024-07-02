@@ -17,7 +17,8 @@
 12 | 
 13 |       assert({ actual: 1, expect: &#x22;1&#x22; });
                 ^
-AssertionError: 
+AssertionError: &#x1B;[31mactual&#x1B;[0m and &#x1B;[32mexpect&#x1B;[0m are different
+
 &#x1B;[90mactual:&#x1B;[0m &#x1B;[31m1&#x1B;[0m
 &#x1B;[90mexpect:&#x1B;[0m &#x1B;[32m&#x22;&#x1B;[0m&#x1B;[32m1&#x1B;[0m&#x1B;[32m&#x22;&#x1B;[0m
   at [mock]/error_jsenv_assert_in_script_module.spec.html:13:12</failure>
@@ -38,7 +39,8 @@ AssertionError:
 8 | 
 9 |   &#x3C;body&#x3E;
         ^
-AssertionError: 
+AssertionError: &#x1B;[31mactual&#x1B;[0m and &#x1B;[32mexpect&#x1B;[0m are different
+
 &#x1B;[90mactual:&#x1B;[0m &#x1B;[31m1&#x1B;[0m
 &#x1B;[90mexpect:&#x1B;[0m &#x1B;[32m&#x22;&#x1B;[0m&#x1B;[32m1&#x1B;[0m&#x1B;[32m&#x22;&#x1B;[0m
 @[mock]/error_jsenv_assert_in_script_module.spec.html:13:18</failure>
@@ -59,7 +61,8 @@ AssertionError:
 8 | 
 9 |   &#x3C;body&#x3E;
         ^
-AssertionError: 
+AssertionError: &#x1B;[31mactual&#x1B;[0m and &#x1B;[32mexpect&#x1B;[0m are different
+
 &#x1B;[90mactual:&#x1B;[0m &#x1B;[31m1&#x1B;[0m
 &#x1B;[90mexpect:&#x1B;[0m &#x1B;[32m&#x22;&#x1B;[0m&#x1B;[32m1&#x1B;[0m&#x1B;[32m&#x22;&#x1B;[0m
 module code@[mock]/error_jsenv_assert_in_script_module.spec.html:13:18</failure>

@@ -485,7 +485,9 @@ window.__supervisor__ = (() => {
         }
         // isError can be false when reason is an ErrorEvent for instance
         exception.isError = reason instanceof Error;
-        exception.name = reason.name || "Error";
+        exception.name = reason.constructor
+          ? reason.constructor.name
+          : reason.name || "Error";
         exception.message = reason.message || message || "";
 
         let stackFrames;
@@ -557,7 +559,9 @@ window.__supervisor__ = (() => {
             exception.stackTrace = stackTrace;
 
             let stack = "";
-            const name = reason.name || "Error";
+            const name = reason.constructor
+              ? reason.constructor.name
+              : reason.name || "Error";
             const message = reason.message || "";
             stack += `${name}: ${message}`;
             if (stackTrace) {
@@ -745,7 +749,8 @@ window.__supervisor__ = (() => {
     const getErrorStackTrace = (error) => {
       let stack = error.stack;
       if (!stack) return "";
-      const messageInStack = `${error.name}: ${error.message}`;
+      const name = error.constructor ? error.constructor.name : error.name;
+      const messageInStack = `${name}: ${error.message}`;
       if (stack.startsWith(messageInStack)) {
         stack = stack.slice(messageInStack.length);
       }
@@ -923,7 +928,7 @@ window.__supervisor__ = (() => {
             });
             if (cause) {
               const causeText = stringifyStack({
-                name: cause.name,
+                name: cause.constructor ? cause.constructor.name : cause.name,
                 message: cause.reason
                   ? generateClickableText(cause.reason)
                   : cause.stack

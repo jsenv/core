@@ -42,14 +42,10 @@ const test = async (params) => {
     errorMessage: stripAnsi(error.message.trim()),
     site: error.site,
   };
-  const expectedErrorMessage = {
-    chromium: `actual: "foo"
-expect: "bar"`,
-    firefox: `actual: "foo"
-expect: "bar"`,
-    webkit: `actual: "foo"
-expect: "bar"`,
-  }[params.runtime.name];
+  const expectedErrorMessage = `actual and expect are different
+
+actual: "foo"
+expect: "bar"`;
   const expectedLine = {
     chromium: 13,
     firefox: 9,

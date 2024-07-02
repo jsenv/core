@@ -2,6 +2,8 @@
  * This file is named "scratch" as a testimony of the fact it has been
  * recoded from scratch around april 2024
  *
+ * To fix:
+ * - Error: is a valid url ???
  * Nice to have:
  * - preact signals
  * - a DOM node should be converted to outerHTML right?

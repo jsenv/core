@@ -78,6 +78,7 @@ test(() => {
   } catch (e) {
     const actual = stripAnsi(e.message);
     const expect = `snapshot comparison failed for "file.txt"
+
 actual: 1| coucou
 expect: 1| hello
 --- details ---

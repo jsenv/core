@@ -27,10 +27,12 @@ const test = async (params) => {
     isException: true,
     isError: true,
     name: "AssertionError",
-    message: `
+    message: `actual and expect are different
+
 actual: "foo"
 expect: "bar"`,
-    stack: assert.startsWith(`AssertionError: 
+    stack: assert.startsWith(`AssertionError: actual and expect are different
+
 actual: "foo"
 expect: "bar"
   at ${clientDirectoryUrl}/main.mjs:3:1`),

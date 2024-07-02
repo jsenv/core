@@ -76,11 +76,11 @@
           assert({ actual: 1, expect: &#x22;1&#x22; });</text
         >
         <text x="144.42" y="185.55" fill="#cd5555">^</text>
-        <text x="10" y="204.55">Error: </text>
-        <text x="68.81" y="204.55" fill="#cd5555">actual</text>
-        <text x="127.62" y="204.55"> and </text>
-        <text x="161.22" y="204.55" fill="#11bc79">expect</text>
-        <text x="220.03" y="204.55"> are different</text>
+        <text x="10" y="204.55">AssertionError: </text>
+        <text x="144.42" y="204.55" fill="#cd5555">actual</text>
+        <text x="203.23" y="204.55"> and </text>
+        <text x="236.84" y="204.55" fill="#11bc79">expect</text>
+        <text x="295.65" y="204.55"> are different</text>
         <text x="10" y="242.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="242.55" fill="#cd5555">1</text>
         <text x="10" y="261.55" fill="#7f7f7f">expect:</text>
@@ -115,11 +115,11 @@
         <text x="10" y="394.55" fill="#7f7f7f">9 |</text>
         <text x="60.41" y="394.55"> &#x3C;body&#x3E;</text>
         <text x="77.21" y="413.55" fill="#cd5555">^</text>
-        <text x="10" y="432.55">Error: </text>
-        <text x="68.81" y="432.55" fill="#cd5555">actual</text>
-        <text x="127.62" y="432.55"> and </text>
-        <text x="161.22" y="432.55" fill="#11bc79">expect</text>
-        <text x="220.03" y="432.55"> are different</text>
+        <text x="10" y="432.55">AssertionError: </text>
+        <text x="144.42" y="432.55" fill="#cd5555">actual</text>
+        <text x="203.23" y="432.55"> and </text>
+        <text x="236.84" y="432.55" fill="#11bc79">expect</text>
+        <text x="295.65" y="432.55"> are different</text>
         <text x="10" y="470.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="470.55" fill="#cd5555">1</text>
         <text x="10" y="489.55" fill="#7f7f7f">expect:</text>
@@ -154,11 +154,11 @@
         <text x="10" y="622.55" fill="#7f7f7f">9 |</text>
         <text x="60.41" y="622.55"> &#x3C;body&#x3E;</text>
         <text x="77.21" y="641.55" fill="#cd5555">^</text>
-        <text x="10" y="660.55">Error: </text>
-        <text x="68.81" y="660.55" fill="#cd5555">actual</text>
-        <text x="127.62" y="660.55"> and </text>
-        <text x="161.22" y="660.55" fill="#11bc79">expect</text>
-        <text x="220.03" y="660.55"> are different</text>
+        <text x="10" y="660.55">AssertionError: </text>
+        <text x="144.42" y="660.55" fill="#cd5555">actual</text>
+        <text x="203.23" y="660.55"> and </text>
+        <text x="236.84" y="660.55" fill="#11bc79">expect</text>
+        <text x="295.65" y="660.55"> are different</text>
         <text x="10" y="698.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="698.55" fill="#cd5555">1</text>
         <text x="10" y="717.55" fill="#7f7f7f">expect:</text>

@@ -845,7 +845,9 @@ const createException = (reason, { rootDirectoryUrl } = {}) => {
     }
     reason.stackTrace = stackTrace;
     let stack = "";
-    const name = reason.name || "Error";
+    const name = reason.constructor
+      ? reason.constructor.name
+      : reason.name || "Error";
     const message = reason.message || "";
     stack += `${name}: ${message}`;
     if (stackTrace) {
@@ -876,7 +878,7 @@ const createException = (reason, { rootDirectoryUrl } = {}) => {
   if (isError) {
     // getOwnPropertyNames is not enough to copy .name and .message
     // on error instances
-    exception.name = reason.name;
+    exception.name = reason.constructor ? reason.constructor.name : reason.name;
     exception.message = reason.message;
   }
   return exception;
