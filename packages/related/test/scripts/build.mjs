@@ -30,6 +30,7 @@ await build({
     "file://**/node_modules/errorstacks/": false,
     "file://**/node_modules/is-unicode-supported/": false,
     "file://**/node_modules/supports-color/": false,
+    "file://**/node_modules/environment/": false,
   },
   runtimeCompat: {
     node: "20.0",

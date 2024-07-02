@@ -1,7 +1,6 @@
 import { readdir, chmod, stat, lstat, promises, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, createReadStream, readFile, existsSync, readFileSync, realpathSync } from "node:fs";
 import stringWidth from "string-width";
 import process$1 from "node:process";
-import { isBrowser } from "environment";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -676,6 +675,50 @@ const warnDisabled = () => {};
 const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
+
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+
+globalThis.process?.versions?.node !== undefined;
+
+globalThis.process?.versions?.bun !== undefined;
+
+globalThis.Deno?.version?.deno !== undefined;
+
+globalThis.process?.versions?.electron !== undefined;
+
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+
+platform === 'macOS'
+	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
+	|| globalThis.process?.platform === 'darwin';
+
+platform === 'Windows'
+	|| globalThis.navigator?.platform === 'Win32'
+	|| globalThis.process?.platform === 'win32';
+
+platform === 'Linux'
+	|| globalThis.navigator?.platform?.startsWith('Linux') === true
+	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
+	|| globalThis.process?.platform === 'linux';
+
+platform === 'Android'
+	|| globalThis.navigator?.platform === 'Android'
+	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
+	|| globalThis.process?.platform === 'android';
 
 const ESC = '\u001B[';
 
