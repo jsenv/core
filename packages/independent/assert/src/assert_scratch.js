@@ -116,8 +116,6 @@ export const createAssert = ({
   measureStringWidth = (string) => stripAnsi(string).length,
   tokenizeString = (string) => string.split(""),
   getWellKnownValuePath,
-  // for test
-  localTimezoneOffset = localTimezoneOffsetSystem,
 } = {}) => {
   const setColor = (text, color) => {
     if (!assert.colors) {
@@ -852,7 +850,6 @@ export const createAssert = ({
     throw assertionError;
   };
   // for test
-  assert.localTimezoneOffset = localTimezoneOffset;
   assert.colors = colors;
   class AssertionError extends Error {}
   assert.createAssertionError = (message) => {
@@ -1907,20 +1904,17 @@ let createRootNode;
           const dateString = value;
           let dateTimestamp = Date.parse(dateString);
           const localTimezoneOffset = node.context.assert.localTimezoneOffset;
-          if (localTimezoneOffsetSystem === localTimezoneOffset) {
+          if (localTimezoneOffset) {
             dateTimestamp += localTimezoneOffset;
-          } else {
-            // happens in CI when generating date diff snapshot
-            // and comparing with diff generated in an other timezone
             const diff = localTimezoneOffsetSystem - localTimezoneOffset;
-            console.log({
-              localTimezoneOffset,
-              localTimezoneOffsetSystem,
-              diff,
-            });
-            dateTimestamp += diff;
+            // happens when running code in an different timezone
+            // in that case we want to adapt the timestamp
+            // but in theory we need to do that solely if the timestamp is not specified right?
+            // and comparing with diff generated in an other timezone
+            dateTimestamp -= diff;
+          } else {
+            dateTimestamp += localTimezoneOffsetSystem;
           }
-
           const dateObject = new Date(dateTimestamp);
           const datePartsNode = node.appendChild("parts", {
             value,
