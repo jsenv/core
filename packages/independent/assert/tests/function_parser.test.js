@@ -1,6 +1,6 @@
 import { parseFunction } from "@jsenv/assert/src/function_parser.js";
 
-import { startSnapshotTesting } from "./start_snapshot_testing.js";
+import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 const generateFunctionBody = (fn) => {
   const body = parseFunction(fn).body;

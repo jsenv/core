@@ -1,6 +1,6 @@
 /* eslint-disable accessor-pairs */
 import { assert } from "../src/assert_scratch.js";
-import { startSnapshotTesting } from "./start_snapshot_testing.js";
+import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("property_descriptor", ({ test }) => {
   test("enumerable and configurable and value diff", () => {

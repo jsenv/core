@@ -2,7 +2,7 @@
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format
 
 import { assert } from "../src/assert_scratch.js";
-import { startSnapshotTesting } from "./start_snapshot_testing.js";
+import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("regexp", ({ test }) => {
   test("a vs b", () => {

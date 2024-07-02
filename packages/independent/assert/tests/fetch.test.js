@@ -1,7 +1,7 @@
 // https://developer.mozilla.org/en-US/docs/Web/API/Request/Request
 
 import { assert } from "../src/assert_scratch.js";
-import { startSnapshotTesting } from "./start_snapshot_testing.js";
+import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("fetch", ({ test }) => {
   test("abort signal pending vs aborted", () => {

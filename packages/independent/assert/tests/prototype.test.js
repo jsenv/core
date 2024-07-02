@@ -1,5 +1,5 @@
 import { assert } from "../src/assert_scratch.js";
-import { startSnapshotTesting } from "./start_snapshot_testing.js";
+import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("prototype", ({ test }) => {
   test("object with different prototypes", () => {

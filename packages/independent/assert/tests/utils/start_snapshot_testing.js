@@ -12,14 +12,15 @@ const generateMarkdown =
 export const startSnapshotTesting = async (name, scenarios) => {
   let fileContent = "";
   let markdown = "";
+  const snapshotsDirectoryUrl = new URL("../snapshots/", import.meta.url);
   const snapshotFileUrl = new URL(
-    `./snapshots/${name}/${name}.txt`,
-    import.meta.url,
+    `./${name}/${name}.txt`,
+    snapshotsDirectoryUrl,
   );
-  const markdownFileUrl = new URL(`./snapshots/${name}.md`, import.meta.url);
+  const markdownFileUrl = new URL(`./${name}.md`, snapshotsDirectoryUrl);
   const fileSnapshot = takeFileSnapshot(snapshotFileUrl);
   if (generateMarkdown) {
-    clearDirectorySync(new URL(`./snapshots/${name}/`, import.meta.url));
+    clearDirectorySync(new URL(`./${name}/`, snapshotsDirectoryUrl));
   }
 
   if (typeof scenarios === "function") {
@@ -77,8 +78,8 @@ export const startSnapshotTesting = async (name, scenarios) => {
         const result = await terminalRecorder.stop();
         const svg = await result.svg();
         const svgFileUrl = new URL(
-          `./snapshots/${name}/${key}.svg`,
-          import.meta.url,
+          `./${name}/${key}.svg`,
+          snapshotsDirectoryUrl,
         );
         writeFileSync(svgFileUrl, svg);
 

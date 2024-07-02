@@ -1,5 +1,5 @@
 import { assert } from "../src/assert_scratch.js";
-import { startSnapshotTesting } from "./start_snapshot_testing.js";
+import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("assert_close_to", ({ test }) => {
   test("0.1 + 0.2 is close to 0.3", () => {
