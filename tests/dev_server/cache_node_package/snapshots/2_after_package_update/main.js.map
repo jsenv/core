@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": [
-    "file:///Users/d.maillard/dev/jsenv/jsenv-core/tests/dev_server/cache_node_package/client/main.js"
+    "file:///Users/damien.maillard/dev/perso/jsenv-core/tests/dev_server/cache_node_package/client/main.js"
   ],
   "sourcesContent": [
     "import { answer } from \"foo\";\n\ndocument.querySelector(\"#app\").innerHTML = answer;\nwindow.resolveResultPromise(answer);\n"

@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": [
-    "file:///Users/d.maillard/dev/jsenv/jsenv-core/tests/dev_and_build/sourcemap_js_inline/client/main.html@L9C5-L13C14.js"
+    "file:///Users/damien.maillard/dev/perso/jsenv-core/tests/dev_and_build/sourcemap_js_inline/client/main.html@L9C5-L13C14.js"
   ],
   "sourcesContent": [
     "\n      import { answer } from \"foo\";\n\n      console.log(answer);\n    "

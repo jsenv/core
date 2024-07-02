@@ -1,7 +1,7 @@
 {
   "version": 3,
   "sources": [
-    "file:///Users/d.maillard/dev/jsenv/jsenv-core/tests/dev_and_build/inlining/client/css/main.css?inline"
+    "file:///Users/damien.maillard/dev/perso/jsenv-core/tests/dev_and_build/inlining/client/css/main.css?inline"
   ],
   "sourcesContent": [
     "body {\n  background: red;\n  background-image: url(\"../img/jsenv.png\");\n}\n"
