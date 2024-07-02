@@ -6,7 +6,7 @@ export default (source, excluded) => {
   var i;
   for (i = 0; i < sourceKeys.length; i++) {
     key = sourceKeys[i];
-    if (excluded.indexOf(key) >= 0) continue;
+    if (excluded.includes(key)) continue;
     target[key] = source[key];
   }
   return target;

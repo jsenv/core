@@ -3,6 +3,7 @@
 // https://tc39.es/ecma262/#sec-setfunctionname
 export default function setFunctionName(fn, name, prefix) {
   if (typeof name === "symbol") {
+    // Here `undefined` is possible, we check for it in the next line.
     name = name.description;
     name = name ? "[" + name + "]" : "";
   }

@@ -28,8 +28,8 @@
     "@jsenv/url-meta": "8.4.0",
     "@jsenv/urls": "2.2.4",
     "@jsenv/sourcemap": "1.2.7",
-    "lightningcss": "1.22.1",
-    "rollup": "4.9.5"
+    "lightningcss": "1.25.1",
+    "rollup": "4.18.0"
   },
   "peerDependencies": {
     "@jsenv/core": "*"

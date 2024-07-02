@@ -81,9 +81,9 @@
     "@jsenv/utils": "2.1.1"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.23.3",
-    "@babel/plugin-syntax-import-assertions": "7.23.3",
-    "@babel/plugin-syntax-optional-chaining-assign": "7.24.1",
+    "@babel/eslint-parser": "7.24.7",
+    "@babel/plugin-syntax-import-assertions": "7.24.7",
+    "@babel/plugin-syntax-optional-chaining-assign": "7.24.7",
     "@jsenv/assert": "./packages/independent/assert/",
     "@jsenv/core": "./",
     "@jsenv/eslint-config": "./packages/independent/eslint-config/",
@@ -94,16 +94,16 @@
     "@jsenv/plugin-as-js-classic": "./packages/related/plugin-as-js-classic/",
     "@jsenv/snapshot": "./packages/independent/snapshot/",
     "@jsenv/test": "./packages/related/test/",
-    "@playwright/browser-chromium": "1.40.1",
-    "@playwright/browser-firefox": "1.40.1",
-    "@playwright/browser-webkit": "1.40.1",
+    "@playwright/browser-chromium": "1.45.0",
+    "@playwright/browser-firefox": "1.45.0",
+    "@playwright/browser-webkit": "1.45.0",
     "babel-plugin-transform-async-to-promises": "0.8.18",
     "eslint": "8.56.0",
     "eslint-plugin-html": "7.1.0",
     "eslint-plugin-import": "2.29.1",
-    "eslint-plugin-react": "7.33.2",
-    "open": "10.0.3",
-    "playwright": "1.40.1",
-    "prettier": "3.2.2"
+    "eslint-plugin-react": "7.34.3",
+    "open": "10.1.0",
+    "playwright": "1.45.0",
+    "prettier": "3.3.2"
   }
 }

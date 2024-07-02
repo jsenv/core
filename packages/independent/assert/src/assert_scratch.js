@@ -1,6 +1,10 @@
 /*
  * This file is named "scratch" as a testimony of the fact it has been
  * recoded from scratch around april 2024
+ *
+ * Next steps:
+ * - preact signals
+ * - a DOM node should be converted to outerHTML right?
  * - ansi in browser
  * - Blob, FormData, DataView, ArrayBuffer
  * - count diff + displayed diff ( + display in message?)

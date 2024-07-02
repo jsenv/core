@@ -39,7 +39,7 @@
     "@jsenv/urls": "2.2.4",
     "@jsenv/utils": "2.1.1",
     "@jsenv/assert": "4.0.0",
-    "prettier": "3.2.4"
+    "prettier": "3.3.2"
   },
   "devDependencies": {
     "strip-ansi": "7.1.0"

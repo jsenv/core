@@ -28,14 +28,14 @@
     "@jsenv/humanize": "1.1.0",
     "@jsenv/url-meta": "8.4.0",
     "@jsenv/urls": "2.2.4",
-    "@rollup/plugin-commonjs": "25.0.7",
+    "@rollup/plugin-commonjs": "26.0.1",
     "@rollup/plugin-json": "6.1.0",
     "@rollup/plugin-node-resolve": "15.2.3",
-    "@rollup/plugin-replace": "5.0.5",
-    "cjs-module-lexer": "1.2.3",
+    "@rollup/plugin-replace": "5.0.7",
+    "cjs-module-lexer": "1.3.1",
     "is-valid-identifier": "2.0.2",
     "resolve": "1.22.8",
-    "rollup": "4.9.5",
+    "rollup": "4.18.0",
     "rollup-plugin-node-globals": "1.4.0",
     "rollup-plugin-polyfill-node": "0.13.0"
   }

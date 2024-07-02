@@ -29,7 +29,7 @@
     "@jsenv/ast": "6.0.4",
     "@jsenv/urls": "2.2.4",
     "@jsenv/sourcemap": "1.2.7",
-    "launch-editor": "2.6.1"
+    "launch-editor": "2.8.0"
   },
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",

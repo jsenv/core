@@ -13,7 +13,7 @@ try {
   });
   throw new Error("should throw");
 } catch (e) {
-  const expect = `"answer" is not exported by "tests/dev_and_build/errors/js_export_missing/client/file.js", imported by "tests/dev_and_build/errors/js_export_missing/client/main.js".
+  const expect = `tests/dev_and_build/errors/js_export_missing/client/main.js (2:9): "answer" is not exported by "tests/dev_and_build/errors/js_export_missing/client/file.js", imported by "tests/dev_and_build/errors/js_export_missing/client/main.js".
 --- frame ---
 1: // eslint-disable-next-line import/named
 2: import { answer } from`;
