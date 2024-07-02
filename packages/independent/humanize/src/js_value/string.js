@@ -67,7 +67,7 @@ export const determineQuote = (
   return quoteDefault;
 };
 
-export const inspectChar = (char, { quote, preserveLineBreaks }) => {
+const inspectChar = (char, { quote, preserveLineBreaks }) => {
   const point = char.charCodeAt(0);
   if (preserveLineBreaks && (char === "\n" || char === "\r")) {
     return char;

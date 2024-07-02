@@ -1,5 +1,5 @@
 import { humanizeDuration } from "../time/time.js";
-import { UNICODE } from "./unicode_node.js";
+import { UNICODE } from "../unicode/unicode_node.js";
 import { createDynamicLog } from "./dynamic_log.js";
 import { startSpinner } from "./spinner.js";
 
