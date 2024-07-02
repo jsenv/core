@@ -38,34 +38,19 @@ const test = async (params) => {
   const actual = {
     status,
     consoleCalls,
-    errorMessage: error.message,
+    errorMessage: error.message.trim(),
     site: error.site,
   };
   const expectedErrorMessage = {
-    chromium: assert.startsWith(`unexpected character in string
---- details ---
-foo
-^
-unexpected "f", expect to continue with "bar"
---- path ---
-actual`),
-    firefox: assert.startsWith(`unexpected character in string
---- details ---
-foo
-^
-unexpected "f", expect to continue with "bar"
---- path ---
-actual`),
-    webkit: assert.startsWith(`unexpected character in string
---- details ---
-foo
-^
-unexpected "f", expect to continue with "bar"
---- path ---
-actual`),
+    chromium: `actual: "foo"
+expect: "bar"`,
+    firefox: `actual: "foo"
+expect: "bar"`,
+    webkit: `actual: "foo"
+expect: "bar"`,
   }[params.runtime.name];
   const expectedLine = {
-    chromium: 13,
+    chromium: 14,
     firefox: 9,
     webkit: 9,
   }[params.runtime.name];
@@ -84,7 +69,7 @@ actual`),
       url: `${clientDirectoryUrl}/main.html`,
       line: expectedLine,
       column: expectedColumn,
-      originalUrl: `${clientDirectoryUrl}/main.html@L10C5-L17C14.js`,
+      originalUrl: `${clientDirectoryUrl}/main.html@L10C5-L18C14.js`,
       serverUrl: `${devServer.origin}/main.html`,
     },
   };
