@@ -23,7 +23,6 @@ import {
 } from "./utils/tokenize_function.js";
 import { tokenizeFloat, tokenizeInteger } from "./utils/tokenize_number.js";
 import { tokenizeUrlSearch } from "./utils/tokenize_url_search.js";
-import { getWellKnownValuePath } from "./utils/well_known_value.js";
 import { getIsNegativeZero } from "./utils/negative_zero.js";
 import { groupDigits } from "./utils/group_digits.js";
 import { canParseDate } from "./utils/can_parse_date.js";
@@ -50,6 +49,7 @@ const expectColor = ANSI.GREEN;
  */
 const PLACEHOLDER_FOR_NOTHING = {
   placeholder: "nothing",
+  context: {},
 };
 /**
  * When a js value DOES NOT EXISTS ANYMORE in actual or expect
@@ -71,12 +71,15 @@ const PLACEHOLDER_FOR_NOTHING = {
  */
 const PLACEHOLDER_WHEN_ADDED_OR_REMOVED = {
   placeholder: "added_or_removed",
+  context: {},
 };
 const PLACEHOLDER_FOR_SAME = {
   placeholder: "same",
+  context: {},
 };
 const PLACEHOLDER_FOR_MODIFIED = {
   placeholder: "modified",
+  context: {},
 };
 const ARRAY_EMPTY_VALUE = { tag: "array_empty_value" };
 const SOURCE_CODE_ENTRY_KEY = { key: "[[source code]]" };
@@ -101,6 +104,7 @@ export const createAssert = ({
   colors = true,
   measureStringWidth = (string) => stripAnsi(string).length,
   tokenizeString = (string) => string.split(""),
+  getWellKnownValuePath,
 } = {}) => {
   const setColor = (text, color) => {
     if (!assert.colors) {
@@ -165,28 +169,34 @@ export const createAssert = ({
       ...firstArg,
     };
 
-    const actualRootNode = createRootNode({
+    const sharedContext = {
+      getWellKnownValuePath,
       tokenizeString,
       measureStringWidth,
       setColor,
-      colorWhenSolo: addedColor,
-      colorWhenSame: sameColor,
-      colorWhenModified: unexpectColor,
-      name: "actual",
-      origin: "actual",
+    };
+    const actualRootNode = createRootNode({
+      context: {
+        ...sharedContext,
+        colorWhenSolo: addedColor,
+        colorWhenSame: sameColor,
+        colorWhenModified: unexpectColor,
+        name: "actual",
+        origin: "actual",
+      },
       value: actual,
       // otherValue: expect,
       render: renderValue,
     });
     const expectRootNode = createRootNode({
-      tokenizeString,
-      measureStringWidth,
-      setColor,
-      colorWhenSolo: removedColor,
-      colorWhenSame: sameColor,
-      colorWhenModified: expectColor,
-      name: "expect",
-      origin: "expect",
+      context: {
+        ...sharedContext,
+        colorWhenSolo: removedColor,
+        colorWhenSame: sameColor,
+        colorWhenModified: expectColor,
+        name: "expect",
+        origin: "expect",
+      },
       value: expect,
       // otherValue: actual,
       render: renderValue,
@@ -278,7 +288,7 @@ export const createAssert = ({
         return childComparison;
       };
       const subcompareSolo = (childNode, placeholderNode, compareOptions) => {
-        if (childNode.name === "actual") {
+        if (childNode.context.name === "actual") {
           return subcompareDuo(childNode, placeholderNode, compareOptions);
         }
         return subcompareDuo(placeholderNode, childNode, compareOptions);
@@ -643,12 +653,12 @@ export const createAssert = ({
         }
         node.diffType = diffType;
         if (isNot) {
-          node.color = node.colorWhenSame;
+          node.color = node.context.colorWhenSame;
         } else {
           node.color = {
-            solo: node.colorWhenSolo,
-            modified: node.colorWhenModified,
-            same: node.colorWhenSame,
+            solo: node.context.colorWhenSolo,
+            modified: node.context.colorWhenModified,
+            same: node.context.colorWhenSame,
           }[diffType];
         }
       };
@@ -708,7 +718,7 @@ export const createAssert = ({
         for (const comparisonWithDiff of causeSet) {
           const node =
             comparisonWithDiff[
-              rootNode.name === "actual" ? "actualNode" : "expectNode"
+              rootNode.context.name === "actual" ? "actualNode" : "expectNode"
             ];
           if (!topMostNodeWithDiff || node.depth < topMostNodeWithDiff.depth) {
             topMostNodeWithDiff = node;
@@ -1282,17 +1292,7 @@ let createRootNode;
  * - And finally info useful to render the js value into a readable string
  */
 {
-  createRootNode = ({
-    tokenizeString,
-    measureStringWidth,
-    setColor,
-    colorWhenSolo,
-    colorWhenSame,
-    colorWhenModified,
-    name,
-    value,
-    render,
-  }) => {
+  createRootNode = ({ context, value, render }) => {
     /*
      * Il est possible pour actual de ref des valeurs de expect et inversement tel que
      * - Object.prototype
@@ -1336,14 +1336,8 @@ let createRootNode;
     let nodeId = 1;
 
     const rootNode = createNode({
-      tokenizeString,
-      measureStringWidth,
-      setColor,
+      context,
       id: nodeId,
-      colorWhenSolo,
-      colorWhenSame,
-      colorWhenModified,
-      name,
       group: "root",
       value,
       parent: null,
@@ -1351,7 +1345,7 @@ let createRootNode;
       path: createValuePath([
         {
           type: "identifier",
-          value: name,
+          value: context.name,
         },
       ]),
       render,
@@ -1366,13 +1360,7 @@ let createRootNode;
   };
 
   const createNode = ({
-    tokenizeString,
-    measureStringWidth,
-    setColor,
-    colorWhenSolo,
-    colorWhenSame,
-    colorWhenModified,
-    name,
+    context,
     group,
     subgroup = group,
     category = group,
@@ -1418,13 +1406,7 @@ let createRootNode;
     stringDiffPrecision = "per_line_and_per_char",
   }) => {
     const node = {
-      tokenizeString,
-      measureStringWidth,
-      setColor,
-      colorWhenSolo,
-      colorWhenSame,
-      colorWhenModified,
-      name,
+      context,
       value,
       key,
       group,
@@ -2061,7 +2043,7 @@ let createRootNode;
                   appendCharNode,
                 };
               };
-              const chars = tokenizeString(value);
+              const chars = node.context.tokenizeString(value);
               let currentLineEntry = appendLineEntry(0);
               let lineIndex = 0;
               let charIndex = 0;
@@ -2101,7 +2083,7 @@ let createRootNode;
       node.category = "primitive";
       node.isSymbol = true;
       node.childGenerator = () => {
-        const wellKnownPath = getWellKnownValuePath(value);
+        const wellKnownPath = node.context.getWellKnownValuePath(value);
         if (wellKnownPath) {
           const wellKnownNode = node.appendChild("well_known", {
             value: wellKnownPath,
@@ -2269,7 +2251,7 @@ let createRootNode;
       } else if (!Object.isExtensible(value)) {
         isExtensible = false;
       }
-      const wellKnownPath = getWellKnownValuePath(value);
+      const wellKnownPath = node.context.getWellKnownValuePath(value);
       if (
         node.reference ||
         wellKnownPath ||
@@ -3638,13 +3620,7 @@ let createRootNode;
   const appendChildNodeGeneric = (node, childKey, params) => {
     const childNode = createNode({
       id: node.nextId(),
-      tokenizeString: node.tokenizeString,
-      setColor: node.setColor,
-      measureStringWidth: node.measureStringWidth,
-      colorWhenSolo: node.colorWhenSolo,
-      colorWhenSame: node.colorWhenSame,
-      colorWhenModified: node.colorWhenModified,
-      name: node.name,
+      context: node.context,
       parent: node,
       path: node.path,
       referenceMap: node.referenceMap,
@@ -3671,7 +3647,7 @@ const renderValue = (node, props) => {
 };
 const renderPrimitive = (node, props) => {
   if (props.columnsRemaining < 1) {
-    return node.setColor("…", node.color);
+    return node.context.setColor("…", node.color);
   }
   if (node.isSourceCode) {
     return truncateAndApplyColor("[source code]", node, props);
@@ -3764,7 +3740,9 @@ const renderSymbol = (node, props) => {
 const truncateAndApplyColor = (valueDiff, node, props) => {
   const { columnsRemaining } = props;
   if (columnsRemaining < 1) {
-    return props.endSkippedMarkerDisabled ? "" : node.setColor("…", node.color);
+    return props.endSkippedMarkerDisabled
+      ? ""
+      : node.context.setColor("…", node.color);
   }
   let columnsRemainingForValue = columnsRemaining;
   let { startMarker, endMarker } = node;
@@ -3775,7 +3753,9 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
     columnsRemainingForValue -= endMarker.length;
   }
   if (columnsRemainingForValue < 1) {
-    return props.endSkippedMarkerDisabled ? "" : node.setColor("…", node.color);
+    return props.endSkippedMarkerDisabled
+      ? ""
+      : node.context.setColor("…", node.color);
   }
   if (valueDiff.length > columnsRemainingForValue) {
     if (props.endSkippedMarkerDisabled) {
@@ -3793,7 +3773,7 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
   if (endMarker) {
     diff += endMarker;
   }
-  diff = node.setColor(diff, node.color);
+  diff = node.context.setColor(diff, node.color);
   return diff;
 };
 
@@ -3803,7 +3783,7 @@ const renderComposite = (node, props) => {
   // and a constructor that might differ
   let diff = "";
   if (props.columnsRemaining < 2) {
-    diff = node.setColor("…", node.color);
+    diff = node.context.setColor("…", node.color);
     return diff;
   }
   const referenceNode = node.childNodeMap.get("reference");
@@ -3897,7 +3877,7 @@ const renderChildren = (node, props) => {
     if (fromIndex > 0 && hasSpacingBetweenEachChild) {
       diff += " ";
     }
-    diff += node.setColor(skippedMarker, color);
+    diff += node.context.setColor(skippedMarker, color);
     return diff;
   };
 
@@ -3996,7 +3976,7 @@ const renderChildren = (node, props) => {
     }
     if (columnsRemainingForChildrenConsideringBoilerplate === 0) {
       return skippedMarkersPlacement === "inside"
-        ? node.setColor(boilerplate, node.color)
+        ? node.context.setColor(boilerplate, node.color)
         : renderSkippedSection(0, childrenKeys.length - 1);
     }
   }
@@ -4135,15 +4115,15 @@ const renderChildren = (node, props) => {
     let childDiffWidth;
     const newLineIndex = childDiff.indexOf("\n");
     if (newLineIndex === -1) {
-      childDiffWidth = node.measureStringWidth(childDiff);
+      childDiffWidth = node.context.measureStringWidth(childDiff);
     } else {
       const newLineLastIndex = childDiff.lastIndexOf("\n");
       if (newLineLastIndex === newLineIndex) {
         const line = childDiff.slice(0, newLineIndex + "\n".length);
-        childDiffWidth = node.measureStringWidth(line);
+        childDiffWidth = node.context.measureStringWidth(line);
       } else {
         const lastLine = childDiff.slice(newLineLastIndex + "\n".length);
-        childDiffWidth = node.measureStringWidth(lastLine);
+        childDiffWidth = node.context.measureStringWidth(lastLine);
       }
     }
     let separatorMarkerToAppend;
@@ -4164,10 +4144,13 @@ const renderChildren = (node, props) => {
     if (separatorMarkerToAppend) {
       if (childNode.diffType === "solo") {
         childDiffWidth += separatorMarkerToAppend.length;
-        childDiff += node.setColor(separatorMarkerToAppend, childNode.color);
+        childDiff += node.context.setColor(
+          separatorMarkerToAppend,
+          childNode.color,
+        );
       } else {
         childDiffWidth += separatorMarkerToAppend.length;
-        childDiff += node.setColor(separatorMarkerToAppend, node.color);
+        childDiff += node.context.setColor(separatorMarkerToAppend, node.color);
       }
     }
     if (!isFirstAppend && hasSpacingBetweenEachChild && childDiff) {
@@ -4247,24 +4230,24 @@ const renderChildren = (node, props) => {
   };
   if (minIndexDisplayed === Infinity || maxIndexDisplayed === -1) {
     return skippedMarkersPlacement === "inside"
-      ? node.setColor(boilerplate, node.color)
+      ? node.context.setColor(boilerplate, node.color)
       : renderSkippedSection(0, childrenKeys.length - 1);
   }
   let diff = "";
   if (hasSomeChildSkippedAtStart) {
     if (skippedMarkersPlacement === "inside") {
       if (startMarker) {
-        diff += node.setColor(startMarker, node.color);
+        diff += node.context.setColor(startMarker, node.color);
       }
       diff += renderSkippedSection(0, minIndexDisplayed);
     } else {
       diff += renderSkippedSection(0, minIndexDisplayed);
       if (startMarker) {
-        diff += node.setColor(startMarker, node.color);
+        diff += node.context.setColor(startMarker, node.color);
       }
     }
   } else if (startMarker) {
-    diff += node.setColor(startMarker, node.color);
+    diff += node.context.setColor(startMarker, node.color);
   }
   if (hasSpacingAroundChildren) {
     diff += " ";
@@ -4280,11 +4263,11 @@ const renderChildren = (node, props) => {
         childrenKeys.length - 1,
       );
       if (endMarker) {
-        diff += node.setColor(endMarker, node.color);
+        diff += node.context.setColor(endMarker, node.color);
       }
     } else {
       if (endMarker) {
-        diff += node.setColor(endMarker, node.color);
+        diff += node.context.setColor(endMarker, node.color);
       }
       diff += renderSkippedSection(
         maxIndexDisplayed + 1,
@@ -4292,7 +4275,7 @@ const renderChildren = (node, props) => {
       );
     }
   } else if (endMarker) {
-    diff += node.setColor(endMarker, node.color);
+    diff += node.context.setColor(endMarker, node.color);
   }
   return diff;
 };
@@ -4630,32 +4613,34 @@ const renderChildrenMultiline = (node, props) => {
       }
     }
     if (skippedCount === 1) {
-      skippedDiff += node.setColor(
+      skippedDiff += node.context.setColor(
         skippedMarker[0],
         allModified ? modifiedColor : allSolo ? soloColor : node.color,
       );
     } else {
-      skippedDiff += node.setColor(
+      skippedDiff += node.context.setColor(
         skippedMarker[1].replace("{x}", skippedCount),
         allModified ? modifiedColor : allSolo ? soloColor : node.color,
       );
     }
     const details = [];
     if (modifiedCount && modifiedCount !== skippedCount) {
-      details.push(node.setColor(`${modifiedCount} modified`, modifiedColor));
+      details.push(
+        node.context.setColor(`${modifiedCount} modified`, modifiedColor),
+      );
     }
     if (soloCount && soloCount !== skippedCount) {
       details.push(
-        node.name === "actual"
-          ? node.setColor(`${soloCount} added`, soloColor)
-          : node.setColor(`${soloCount} removed`, soloColor),
+        node.context.name === "actual"
+          ? node.context.setColor(`${soloCount} added`, soloColor)
+          : node.context.setColor(`${soloCount} removed`, soloColor),
       );
     }
     if (details.length) {
       skippedDiff += " ";
-      skippedDiff += node.setColor(`(`, node.color);
+      skippedDiff += node.context.setColor(`(`, node.color);
       skippedDiff += details.join(", ");
-      skippedDiff += node.setColor(`)`, node.color);
+      skippedDiff += node.context.setColor(`)`, node.color);
     }
     childrenDiff = appendChildDiff(
       skippedDiff,
@@ -4728,7 +4713,8 @@ const renderChildrenMultiline = (node, props) => {
       separatorMarkerToAppend = separatorMarker;
     } else {
       const remainingColumns =
-        columnsRemainingForThisChild - node.measureStringWidth(childDiff);
+        columnsRemainingForThisChild -
+        node.context.measureStringWidth(childDiff);
       if (remainingColumns > separatorMarker.length + 1) {
         separatorMarkerToAppend = separatorMarkerDisabled
           ? ""
@@ -4739,9 +4725,12 @@ const renderChildrenMultiline = (node, props) => {
     }
     if (separatorMarkerToAppend) {
       if (childNode.diffType === "solo") {
-        childDiff += node.setColor(separatorMarkerToAppend, childNode.color);
+        childDiff += node.context.setColor(
+          separatorMarkerToAppend,
+          childNode.color,
+        );
       } else {
-        childDiff += node.setColor(separatorMarkerToAppend, node.color);
+        childDiff += node.context.setColor(separatorMarkerToAppend, node.color);
       }
     }
     return childDiff;
@@ -4781,7 +4770,7 @@ const renderChildrenMultiline = (node, props) => {
     appendSkippedSection(previousChildIndexDisplayed, childrenKeys.length - 1);
   }
   let diff = "";
-  diff += node.setColor(startMarker, node.color);
+  diff += node.context.setColor(startMarker, node.color);
   if (hasNewLineAroundChildren) {
     diff += "\n";
   }
@@ -4790,7 +4779,7 @@ const renderChildrenMultiline = (node, props) => {
     diff += "\n";
     diff += "  ".repeat(getNodeDepth(node, props));
   }
-  diff += node.setColor(endMarker, node.color);
+  diff += node.context.setColor(endMarker, node.color);
   return diff;
 };
 const getNodeDepth = (node, props) => {
