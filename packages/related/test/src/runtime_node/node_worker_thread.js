@@ -33,7 +33,11 @@ export const nodeWorkerThread = ({
   env = {
     ...env,
     JSENV: true,
-    FORCE_COLOR: supportsColor.stdout,
+    FORCE_COLOR:
+      supportsColor.stdout ||
+      // GitHub workflow does support ANSI but "supports-color" returns false
+      // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+      process.env.GITHUB_WORKFLOW,
   };
 
   return {

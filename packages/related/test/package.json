@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "3.0.17",
+  "version": "3.0.18",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -38,13 +38,13 @@
   "dependencies": {
     "@c88/v8-coverage": "0.1.1",
     "@jsenv/abort": "4.3.0",
-    "@jsenv/ast": "6.0.5",
-    "@jsenv/filesystem": "4.6.7",
-    "@jsenv/github-check-run": "0.1.12",
-    "@jsenv/humanize": "1.1.1",
-    "@jsenv/plugin-supervisor": "1.4.5",
+    "@jsenv/ast": "6.0.6",
+    "@jsenv/filesystem": "4.6.8",
+    "@jsenv/github-check-run": "0.1.13",
+    "@jsenv/humanize": "1.1.2",
+    "@jsenv/plugin-supervisor": "1.4.6",
     "@jsenv/url-meta": "8.4.0",
-    "@jsenv/urls": "2.2.5",
+    "@jsenv/urls": "2.2.6",
     "@jsenv/utils": "2.1.1",
     "istanbul-lib-coverage": "3.2.2",
     "istanbul-lib-instrument": "6.0.3",
