@@ -1,5 +1,7 @@
 /*
  * - Blob, FormData, DataView, ArrayBuffer
+ * - count diff + displayed diff ( + display in message?)
+ * - add or removed reason must be unique
  */
 
 import stringWidth from "string-width";
@@ -1090,6 +1092,27 @@ assert.any = (constructor) => {
               return `should_have_constructor_${constructor.toString()}`;
             },
       ),
+    },
+  ]);
+};
+assert.startsWith = (string) => {
+  if (typeof string !== "string") {
+    throw new TypeError(
+      `assert.startsWith 1st argument must be a string, received ${string}`,
+    );
+  }
+  return createAssertMethodCustomExpectation("startsWith", [
+    {
+      value: string,
+      customCompare: createValueCustomCompare((actualNode) => {
+        if (!actualNode.iString) {
+          return "should_be_a_string";
+        }
+        if (!actualNode.value.startsWith(string)) {
+          return `should_start_with_${string}`;
+        }
+        return null;
+      }),
     },
   ]);
 };

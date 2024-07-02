@@ -3,6 +3,7 @@ await import("./array_typed.test.js");
 await import("./assert_any.test.js");
 await import("./assert_between.test.js");
 await import("./assert_not.test.js");
+await import("./assert_starts_with.test.js");
 await import("./date.test.js");
 await import("./error.test.js");
 await import("./fetch.test.js");
