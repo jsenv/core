@@ -229,7 +229,7 @@ assert({
 });
 ```
 
-![img](<./number/10_and_"10".svg>)
+![img](<./number/10_and_10.svg>)
 
 # BigInt(1) and BigInt(2)
 
@@ -251,5 +251,5 @@ assert({
 });
 ```
 
-![img](<./number/bigint(1)_and_"1n".svg>)
+![img](<./number/bigint(1)_and_1n.svg>)
 

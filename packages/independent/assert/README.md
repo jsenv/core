@@ -41,7 +41,7 @@ assert({
 });
 ```
 
-![img](<./tests/snapshots/number/10 and "10".svg>)
+![img](./tests/snapshots/number/10_and_10.svg)
 
 _Prototype failure:_
 
@@ -54,7 +54,7 @@ assert({
 });
 ```
 
-![img](<./tests/snapshots/prototype/Error vs TypeError.svg>)
+![img](./tests/snapshots/prototype/error_vs_typeerror.svg)
 
 ## Usage in Node.js
 

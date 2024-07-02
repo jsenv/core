@@ -24,7 +24,7 @@ assert({
 });
 ```
 
-![img](<./assert_any/"foo"_and_any(string).svg>)
+![img](<./assert_any/foo_and_any(string).svg>)
 
 # "foo" and not(any(String))
 
@@ -35,7 +35,7 @@ assert({
 });
 ```
 
-![img](<./assert_any/"foo"_and_not(any(string)).svg>)
+![img](<./assert_any/foo_and_not(any(string)).svg>)
 
 # 10 is any Number
 

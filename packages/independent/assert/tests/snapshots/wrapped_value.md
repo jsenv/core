@@ -71,7 +71,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/valueof({_a:_true_})_vs_{_a:_true_}.svg>)
+![img](<./wrapped_value/valueof({_a_true_})_vs_{_a_true_}.svg>)
 
 # 10 vs valueOf(10)
 
@@ -293,7 +293,7 @@ assert({
 });
 ```
 
-![img](<./wrapped_value/signal({_foo:_true_})_and_signal({_foo:_false_}).svg>)
+![img](<./wrapped_value/signal({_foo_true_})_and_signal({_foo_false_}).svg>)
 
 # signal([true]) and signal([false]) with props
 

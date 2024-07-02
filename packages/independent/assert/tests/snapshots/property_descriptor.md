@@ -130,7 +130,7 @@ assert({
 });
 ```
 
-![img](<./property_descriptor/getter/setter_and_value.svg>)
+![img](<./property_descriptor/gettersetter_and_value.svg>)
 
 # getter only and setter only
 

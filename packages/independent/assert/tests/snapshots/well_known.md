@@ -40,7 +40,7 @@ assert({
 });
 ```
 
-![img](<./well_known/symbol_for("a")_and_symbol_for("b").svg>)
+![img](<./well_known/symbol_for(a)_and_symbol_for(b).svg>)
 
 # Object.prototype.toString vs Object.prototype.hasOwnProperty
 

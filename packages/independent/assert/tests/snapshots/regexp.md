@@ -47,7 +47,7 @@ assert({
 });
 ```
 
-![img](<./regexp/special_char:_parenthesis_vs_dot.svg>)
+![img](<./regexp/special_char_parenthesis_vs_dot.svg>)
 
 # last index
 
