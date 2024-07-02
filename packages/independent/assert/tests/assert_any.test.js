@@ -1,14 +1,14 @@
 import { assert } from "../src/assert_scratch.js";
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
-await startSnapshotTesting("assert_any", {
-  "10 and any(String)": () => {
+await startSnapshotTesting("assert_any", ({ test }) => {
+  test("10 and any(String)", () => {
     assert({
       actual: 10,
       expect: assert.any(String),
     });
-  },
-  [`"foo" and any(String)`]: () => {
+  });
+  test(`"foo" and any(String)`, () => {
     assert({
       actual: {
         a: true,
@@ -19,13 +19,37 @@ await startSnapshotTesting("assert_any", {
         b: assert.any(String),
       },
     });
-  },
-  [`"foo" and not(any(String))`]: () => {
+  });
+  test(`"foo" and not(any(String))`, () => {
     assert({
       actual: "foo",
       expect: assert.not(assert.any(String)),
     });
-  },
+  });
+  test("10 is any Number", () => {
+    assert({
+      actual: {
+        a: 10,
+        b: true,
+      },
+      expect: {
+        a: assert.any(Number),
+        b: false,
+      },
+    });
+  });
+  test("any Error", () => {
+    assert({
+      actual: {
+        a: new Error(),
+        b: true,
+      },
+      expect: {
+        a: assert.any(Error),
+        b: false,
+      },
+    });
+  });
   //   any_array_cross_realm: async () => {
   //     assert({
   //       actual: await executeInNewContext("[]"),

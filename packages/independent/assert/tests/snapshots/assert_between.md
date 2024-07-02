@@ -50,3 +50,20 @@ assert({
 
 ![img](<./assert_between/50 is too small.svg>)
 
+# 3500 is between 3000 and 5000
+
+```js
+assert({
+  actual: {
+    a: 3_500,
+    b: true,
+  },
+  expect: {
+    a: assert.between(3_000, 5_000),
+    b: false,
+  },
+});
+```
+
+![img](<./assert_between/3500 is between 3000 and 5000.svg>)
+

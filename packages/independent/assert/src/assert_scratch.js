@@ -107,6 +107,7 @@ const defaultOptions = {
   MAX_CONTEXT_BEFORE_DIFF: { prop: 2, line: 3 },
   MAX_CONTEXT_AFTER_DIFF: { prop: 2, line: 3 },
   MAX_COLUMNS: 100,
+  details: "",
 };
 
 export const assert = (firstArg, ...rest) => {
@@ -152,6 +153,7 @@ export const assert = (firstArg, ...rest) => {
     MAX_CONTEXT_BEFORE_DIFF,
     MAX_CONTEXT_AFTER_DIFF,
     MAX_COLUMNS,
+    details,
   } = {
     ...defaultOptions,
     ...firstArg,
@@ -495,6 +497,21 @@ export const assert = (firstArg, ...rest) => {
     };
 
     visit: {
+      // custom comparison
+      if (
+        expectNode.customCompare &&
+        (actualNode.category === "primitive" ||
+          actualNode.category === "composite")
+      ) {
+        expectNode.customCompare(actualNode, expectNode, {
+          subcompareChildrenDuo,
+          subcompareChildrenSolo,
+          subcompareDuo,
+          subcompareSolo,
+          onSelfDiff,
+        });
+        break visit;
+      }
       if (actualNode.category === expectNode.category) {
         visitDuo(actualNode, expectNode);
         break visit;
@@ -532,22 +549,6 @@ export const assert = (firstArg, ...rest) => {
       ) {
         visitSolo(actualNode, expectNode);
         break visit;
-      }
-      // custom comparison
-      if (
-        actualNode.category === "primitive" ||
-        actualNode.category === "composite"
-      ) {
-        if (expectNode.customCompare) {
-          expectNode.customCompare(actualNode, expectNode, {
-            subcompareChildrenDuo,
-            subcompareChildrenSolo,
-            subcompareDuo,
-            subcompareSolo,
-            onSelfDiff,
-          });
-          break visit;
-        }
       }
 
       // not same category
@@ -741,7 +742,7 @@ export const assert = (firstArg, ...rest) => {
     }
     diff += "\n";
   }
-
+  diff += "\n";
   diff += ANSI.color("actual:", sameColor);
   diff += " ";
   diff += actualStartNode.render({
@@ -767,6 +768,12 @@ export const assert = (firstArg, ...rest) => {
     columnsRemaining: MAX_COLUMNS - "expect: ".length,
     startNode: expectStartNode,
   });
+  if (details) {
+    diff += "\n";
+    diff += `--- details ---`;
+    diff += JSON.stringify(details);
+    diff += `---------------`;
+  }
   throw assert.createAssertionError(diff);
 };
 

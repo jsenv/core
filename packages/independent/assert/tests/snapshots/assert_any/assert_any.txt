@@ -16,3 +16,23 @@ expect: {
 actual: "foo"
 expect: assert.not(assert.any(String))
 
+# 10 is any Number
+actual: {
+  a: 10,
+  b: true,
+}
+expect: {
+  a: assert.any(Number),
+  b: false,
+}
+
+# any Error
+actual: {
+  a: Error,
+  b: true,
+}
+expect: {
+  a: assert.any(Error),
+  b: false,
+}
+

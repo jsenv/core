@@ -34,6 +34,18 @@ await startSnapshotTesting("assert_between", {
       expect: assert.between(100, 200),
     });
   },
+  "3500 is between 3000 and 5000": () => {
+    assert({
+      actual: {
+        a: 3_500,
+        b: true,
+      },
+      expect: {
+        a: assert.between(3_000, 5_000),
+        b: false,
+      },
+    });
+  },
   // "250 is too big": () => {
   //   assert({
   //     actual: 42,
