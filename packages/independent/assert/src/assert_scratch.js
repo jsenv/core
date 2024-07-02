@@ -1170,10 +1170,11 @@ assert.startsWith = (string) => {
     {
       value: string,
       customCompare: createValueCustomCompare((actualNode) => {
-        if (!actualNode.iString) {
+        if (!actualNode.isString) {
           return "should_be_a_string";
         }
-        if (!actualNode.value.startsWith(string)) {
+        const actual = actualNode.value;
+        if (!actual.startsWith(string)) {
           return `should_start_with_${string}`;
         }
         return null;

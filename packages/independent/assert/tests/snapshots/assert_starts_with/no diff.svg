@@ -49,7 +49,7 @@
         <text x="60.41" y="33.55" fill="#7f7f7f">A</text>
         <text x="68.81" y="33.55" fill="#7f7f7f">A</text>
         <text x="77.21" y="33.55" fill="#7f7f7f">B</text>
-        <text x="85.61" y="33.55" fill="#DAA520">B</text>
+        <text x="85.61" y="33.55" fill="#7f7f7f">B</text>
         <text x="94.01" y="33.55" fill="#7f7f7f">&#x22;</text>
         <text x="102.42" y="33.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="52.55" fill="#7f7f7f">b</text>
@@ -61,16 +61,16 @@
         <text x="77.21" y="90.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="109.55" fill="#7f7f7f">a</text>
         <text x="35.2" y="109.55" fill="#7f7f7f">: </text>
-        <text x="52.01" y="109.55" fill="#11bc79">assert</text>
-        <text x="102.42" y="109.55" fill="#11bc79">.</text>
-        <text x="110.82" y="109.55" fill="#11bc79">startsWith</text>
-        <text x="194.83" y="109.55" fill="#11bc79">(</text>
+        <text x="52.01" y="109.55" fill="#7f7f7f">assert</text>
+        <text x="102.42" y="109.55" fill="#7f7f7f">.</text>
+        <text x="110.82" y="109.55" fill="#7f7f7f">startsWith</text>
+        <text x="194.83" y="109.55" fill="#7f7f7f">(</text>
         <text x="203.23" y="109.55" fill="#7f7f7f">&#x22;</text>
         <text x="211.63" y="109.55" fill="#7f7f7f">A</text>
         <text x="220.03" y="109.55" fill="#7f7f7f">A</text>
         <text x="228.44" y="109.55" fill="#7f7f7f">B</text>
         <text x="236.84" y="109.55" fill="#7f7f7f">&#x22;</text>
-        <text x="245.24" y="109.55" fill="#11bc79">)</text>
+        <text x="245.24" y="109.55" fill="#7f7f7f">)</text>
         <text x="253.64" y="109.55" fill="#7f7f7f">,</text>
         <text x="26.8" y="128.55" fill="#7f7f7f">b</text>
         <text x="35.2" y="128.55" fill="#7f7f7f">: </text>
