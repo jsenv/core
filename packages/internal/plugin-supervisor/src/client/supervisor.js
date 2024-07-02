@@ -485,9 +485,7 @@ window.__supervisor__ = (() => {
         }
         // isError can be false when reason is an ErrorEvent for instance
         exception.isError = reason instanceof Error;
-        exception.name = reason.constructor
-          ? reason.constructor.name
-          : reason.name || "Error";
+        exception.name = getErrorName(reason);
         exception.message = reason.message || message || "";
 
         let stackFrames;
@@ -559,9 +557,7 @@ window.__supervisor__ = (() => {
             exception.stackTrace = stackTrace;
 
             let stack = "";
-            const name = reason.constructor
-              ? reason.constructor.name
-              : reason.name || "Error";
+            const name = getErrorName(reason);
             const message = reason.message || "";
             stack += `${name}: ${message}`;
             if (stackTrace) {
@@ -749,7 +745,7 @@ window.__supervisor__ = (() => {
     const getErrorStackTrace = (error) => {
       let stack = error.stack;
       if (!stack) return "";
-      const name = error.constructor ? error.constructor.name : error.name;
+      const name = getErrorName(error);
       const messageInStack = `${name}: ${error.message}`;
       if (stack.startsWith(messageInStack)) {
         stack = stack.slice(messageInStack.length);
@@ -928,7 +924,7 @@ window.__supervisor__ = (() => {
             });
             if (cause) {
               const causeText = stringifyStack({
-                name: cause.constructor ? cause.constructor.name : cause.name,
+                name: getErrorName(cause),
                 message: cause.reason
                   ? generateClickableText(cause.reason)
                   : cause.stack
@@ -1263,6 +1259,17 @@ window.__supervisor__ = (() => {
         });
       });
     });
+  };
+
+  const getErrorName = (value) => {
+    const { constructor } = value;
+    if (constructor === "Object") {
+      return value.name || "Error";
+    }
+    if (constructor) {
+      return constructor.name;
+    }
+    return value.name || "Error";
   };
 
   return supervisor;

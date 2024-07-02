@@ -159,9 +159,7 @@ export const createException = (reason, { rootDirectoryUrl } = {}) => {
     }
     reason.stackTrace = stackTrace;
     let stack = "";
-    const name = reason.constructor
-      ? reason.constructor.name
-      : reason.name || "Error";
+    const name = getErrorName(reason);
     const message = reason.message || "";
     stack += `${name}: ${message}`;
     if (stackTrace) {
@@ -192,10 +190,21 @@ export const createException = (reason, { rootDirectoryUrl } = {}) => {
   if (isError) {
     // getOwnPropertyNames is not enough to copy .name and .message
     // on error instances
-    exception.name = reason.constructor ? reason.constructor.name : reason.name;
+    exception.name = getErrorName(reason);
     exception.message = reason.message;
   }
   return exception;
+};
+
+const getErrorName = (value) => {
+  const { constructor } = value;
+  if (constructor === "Object") {
+    return value.name || "Error";
+  }
+  if (constructor) {
+    return constructor.name;
+  }
+  return value.name || "Error";
 };
 
 const getPropertiesFromEvalOrigin = (origin) => {

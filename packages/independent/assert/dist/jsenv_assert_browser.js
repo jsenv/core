@@ -2259,7 +2259,7 @@ let createRootNode;
           } else {
             // happens in CI when generating date diff snapshot
             // and comparing with diff generated in an other timezone
-            dateTimestamp += Math.abs(localTimezoneOffsetSystem - localTimezoneOffset);
+            dateTimestamp += Math.abs(localTimezoneOffset - localTimezoneOffsetSystem);
           }
           const dateObject = new Date(dateTimestamp);
           const datePartsNode = node.appendChild("parts", {
@@ -5313,10 +5313,19 @@ const shouldDisableSeparator = (childIndex, childrenKeys, {
   }
   return false;
 };
-const canParseUrl = URL.canParse || (() => {
+const canParseUrl = value => {
+  if (!canParseUrlNative(value)) {
+    return false;
+  }
+  if (/^[a-z]*Error: .*?/i.test(value)) {
+    return false;
+  }
+  return true;
+};
+const canParseUrlNative = URL.canParse || (value => {
   try {
     // eslint-disable-next-line no-new, no-undef
-    new URL(url);
+    new URL(value);
     return true;
   } catch (e) {
     return false;
