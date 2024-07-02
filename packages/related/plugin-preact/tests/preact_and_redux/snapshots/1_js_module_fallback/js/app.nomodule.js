@@ -1,12 +1,12 @@
 System.register([__v__("/js/main.nomodule.js")], function (_export, _context) {
   "use strict";
 
-  var useSelector, useDispatch, p, u, increment, decrement, counterValueSelector, App;
+  var useSelector, useDispatch, y, u, increment, decrement, counterValueSelector, App;
   return {
     setters: [function (_mainJsx) {
       useSelector = _mainJsx.useSelector;
       useDispatch = _mainJsx.useDispatch;
-      p = _mainJsx.p;
+      y = _mainJsx.y;
       u = _mainJsx.u;
     }],
     execute: function () {
@@ -28,7 +28,7 @@ System.register([__v__("/js/main.nomodule.js")], function (_export, _context) {
       }) => {
         const counterValue = useSelector(counterValueSelector);
         const dispatch = useDispatch();
-        p(() => {
+        y(() => {
           onRender();
         }, []);
         return u("p", {

@@ -1,23 +1,21 @@
 System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _context) {
   "use strict";
 
-  var n, t, r, u, i, o, f, c, e, a, v, l, m, g;
-  function d(t, u) {
-    n.__h && n.__h(r, t, o || u), o = 0;
-    var i = r.__H || (r.__H = {
+  var n, t, r, u, i, o, f, c, e, a, v, l, m, s, k;
+  function d(n, t) {
+    c.__h && c.__h(r, n, o || t), o = 0;
+    var u = r.__H || (r.__H = {
       __: [],
       __h: []
     });
-    return t >= i.__.length && i.__.push({
-      __V: c
-    }), i.__[t];
+    return n >= u.__.length && u.__.push({}), u.__[n];
   }
   function h(n) {
-    return o = 1, s(B, n);
+    return o = 1, p(D, n);
   }
-  function s(n, u, i) {
+  function p(n, u, i) {
     var o = d(t++, 2);
-    if (o.t = n, !o.__c && (o.__ = [i ? i(u) : B(void 0, u), function (n) {
+    if (o.t = n, !o.__c && (o.__ = [i ? i(u) : D(void 0, u), function (n) {
       var t = o.__N ? o.__N[0] : o.__[0],
         r = o.t(t, n);
       t !== r && (o.__N = [r, o.__[1]], o.__c.setState({}));
@@ -25,7 +23,7 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
       var f = function (n, t, r) {
         if (!o.__c.__H) return !0;
         var u = o.__c.__H.__.filter(function (n) {
-          return n.__c;
+          return !!n.__c;
         });
         if (u.every(function (n) {
           return !n.__N;
@@ -51,23 +49,23 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
     }
     return o.__N || o.__;
   }
-  function p(u, i) {
-    var o = d(t++, 3);
-    !n.__s && z(o.__H, i) && (o.__ = u, o.i = i, r.__H.__h.push(o));
+  function y(n, u) {
+    var i = d(t++, 3);
+    !c.__s && C(i.__H, u) && (i.__ = n, i.i = u, r.__H.__h.push(i));
   }
-  function y(u, i) {
-    var o = d(t++, 4);
-    !n.__s && z(o.__H, i) && (o.__ = u, o.i = i, r.__h.push(o));
+  function _(n, u) {
+    var i = d(t++, 4);
+    !c.__s && C(i.__H, u) && (i.__ = n, i.i = u, r.__h.push(i));
   }
-  function _(n) {
-    return o = 5, F(function () {
+  function A(n) {
+    return o = 5, T(function () {
       return {
         current: n
       };
     }, []);
   }
-  function A(n, t, r) {
-    o = 6, y(function () {
+  function F(n, t, r) {
+    o = 6, _(function () {
       return "function" == typeof n ? (n(t()), function () {
         return n(null);
       }) : n ? (n.current = t(), function () {
@@ -75,24 +73,24 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
       }) : void 0;
     }, null == r ? r : r.concat(n));
   }
-  function F(n, r) {
+  function T(n, r) {
     var u = d(t++, 7);
-    return z(u.__H, r) ? (u.__V = n(), u.i = r, u.__h = n, u.__V) : u.__;
+    return C(u.__H, r) && (u.__ = n(), u.__H = r, u.__h = n), u.__;
   }
-  function T(n, t) {
-    return o = 8, F(function () {
+  function q(n, t) {
+    return o = 8, T(function () {
       return n;
     }, t);
   }
-  function q(n) {
+  function x(n) {
     var u = r.context[n.__c],
       i = d(t++, 9);
     return i.c = n, u ? (null == i.__ && (i.__ = !0, u.sub(r)), u.props.value) : n.__;
   }
-  function x(t, r) {
-    n.useDebugValue && n.useDebugValue(r ? r(t) : t);
+  function P(n, t) {
+    c.useDebugValue && c.useDebugValue(t ? t(n) : n);
   }
-  function P(n) {
+  function b(n) {
     var u = d(t++, 10),
       i = h();
     return u.__ = n, r.componentDidCatch || (r.componentDidCatch = function (n, t) {
@@ -101,7 +99,7 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
       i[1](void 0);
     }];
   }
-  function V() {
+  function g() {
     var n = d(t++, 11);
     if (!n.__) {
       for (var u = r.__v; null !== u && !u.__m && null !== u.__;) u = u.__;
@@ -110,50 +108,50 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
     }
     return n.__;
   }
-  function b() {
-    for (var t; t = f.shift();) if (t.__P && t.__H) try {
-      t.__H.__h.forEach(k), t.__H.__h.forEach(w), t.__H.__h = [];
-    } catch (r) {
-      t.__H.__h = [], n.__e(r, t.__v);
+  function j() {
+    for (var n; n = f.shift();) if (n.__P && n.__H) try {
+      n.__H.__h.forEach(z), n.__H.__h.forEach(B), n.__H.__h = [];
+    } catch (t) {
+      n.__H.__h = [], c.__e(t, n.__v);
     }
   }
-  function j(n) {
+  function w(n) {
     var t,
       r = function () {
-        clearTimeout(u), g && cancelAnimationFrame(t), setTimeout(n);
+        clearTimeout(u), k && cancelAnimationFrame(t), setTimeout(n);
       },
       u = setTimeout(r, 100);
-    g && (t = requestAnimationFrame(r));
+    k && (t = requestAnimationFrame(r));
   }
-  function k(n) {
+  function z(n) {
     var t = r,
       u = n.__c;
     "function" == typeof u && (n.__c = void 0, u()), r = t;
   }
-  function w(n) {
+  function B(n) {
     var t = r;
     n.__c = n.__(), r = t;
   }
-  function z(n, t) {
+  function C(n, t) {
     return !n || n.length !== t.length || t.some(function (t, r) {
       return t !== n[r];
     });
   }
-  function B(n, t) {
+  function D(n, t) {
     return "function" == typeof t ? t(n) : t;
   }
   _export({
-    useCallback: T,
-    useContext: q,
-    useDebugValue: x,
-    useEffect: p,
-    useErrorBoundary: P,
-    useId: V,
-    useImperativeHandle: A,
-    useLayoutEffect: y,
-    useMemo: F,
-    useReducer: s,
-    useRef: _,
+    useCallback: q,
+    useContext: x,
+    useDebugValue: P,
+    useEffect: y,
+    useErrorBoundary: b,
+    useId: g,
+    useImperativeHandle: F,
+    useLayoutEffect: _,
+    useMemo: T,
+    useReducer: p,
+    useRef: A,
     useState: h
   });
   return {
@@ -163,51 +161,54 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
     execute: function () {
       o = 0;
       f = [];
-      c = [];
-      e = n.__b;
-      a = n.__r;
-      v = n.diffed;
-      l = n.__c;
-      m = n.unmount;
-      n.__b = function (n) {
+      c = n;
+      e = c.__b;
+      a = c.__r;
+      v = c.diffed;
+      l = c.__c;
+      m = c.unmount;
+      s = c.__;
+      c.__b = function (n) {
         r = null, e && e(n);
-      }, n.__r = function (n) {
+      }, c.__ = function (n, t) {
+        n && t.__k && t.__k.__m && (n.__m = t.__k.__m), s && s(n, t);
+      }, c.__r = function (n) {
         a && a(n), t = 0;
         var i = (r = n.__c).__H;
         i && (u === r ? (i.__h = [], r.__h = [], i.__.forEach(function (n) {
-          n.__N && (n.__ = n.__N), n.__V = c, n.__N = n.i = void 0;
-        })) : (i.__h.forEach(k), i.__h.forEach(w), i.__h = [], t = 0)), u = r;
-      }, n.diffed = function (t) {
-        v && v(t);
-        var o = t.__c;
-        o && o.__H && (o.__H.__h.length && (1 !== f.push(o) && i === n.requestAnimationFrame || ((i = n.requestAnimationFrame) || j)(b)), o.__H.__.forEach(function (n) {
-          n.i && (n.__H = n.i), n.__V !== c && (n.__ = n.__V), n.i = void 0, n.__V = c;
+          n.__N && (n.__ = n.__N), n.i = n.__N = void 0;
+        })) : (i.__h.forEach(z), i.__h.forEach(B), i.__h = [], t = 0)), u = r;
+      }, c.diffed = function (n) {
+        v && v(n);
+        var t = n.__c;
+        t && t.__H && (t.__H.__h.length && (1 !== f.push(t) && i === c.requestAnimationFrame || ((i = c.requestAnimationFrame) || w)(j)), t.__H.__.forEach(function (n) {
+          n.i && (n.__H = n.i), n.i = void 0;
         })), u = r = null;
-      }, n.__c = function (t, r) {
-        r.some(function (t) {
+      }, c.__c = function (n, t) {
+        t.some(function (n) {
           try {
-            t.__h.forEach(k), t.__h = t.__h.filter(function (n) {
-              return !n.__ || w(n);
+            n.__h.forEach(z), n.__h = n.__h.filter(function (n) {
+              return !n.__ || B(n);
             });
-          } catch (u) {
-            r.some(function (n) {
+          } catch (r) {
+            t.some(function (n) {
               n.__h && (n.__h = []);
-            }), r = [], n.__e(u, t.__v);
+            }), t = [], c.__e(r, n.__v);
           }
-        }), l && l(t, r);
-      }, n.unmount = function (t) {
-        m && m(t);
-        var r,
-          u = t.__c;
-        u && u.__H && (u.__H.__.forEach(function (n) {
+        }), l && l(n, t);
+      }, c.unmount = function (n) {
+        m && m(n);
+        var t,
+          r = n.__c;
+        r && r.__H && (r.__H.__.forEach(function (n) {
           try {
-            k(n);
+            z(n);
           } catch (n) {
-            r = n;
+            t = n;
           }
-        }), u.__H = void 0, r && n.__e(r, u.__v));
+        }), r.__H = void 0, t && c.__e(t, r.__v));
       };
-      g = "function" == typeof requestAnimationFrame;
+      k = "function" == typeof requestAnimationFrame;
     }
   };
 });

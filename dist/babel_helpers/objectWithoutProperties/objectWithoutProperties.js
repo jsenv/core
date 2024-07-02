@@ -10,7 +10,7 @@ export default (source, excluded) => {
     var sourceSymbolKeys = Object.getOwnPropertySymbols(source);
     for (i = 0; i < sourceSymbolKeys.length; i++) {
       key = sourceSymbolKeys[i];
-      if (excluded.indexOf(key) >= 0) continue;
+      if (excluded.includes(key)) continue;
       if (!Object.prototype.propertyIsEnumerable.call(source, key)) continue;
       target[key] = source[key];
     }

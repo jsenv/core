@@ -23,10 +23,11 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
     return n !== e && (o += r.slice(e, n)), o;
   }
   function u(e, t, n, o, i, u) {
+    t || (t = {});
     var a,
       c,
-      p = {};
-    for (c in t) "ref" == c ? a = t[c] : p[c] = t[c];
+      p = t;
+    if ("ref" in p) for (c in p = {}, t) "ref" == c ? a = t[c] : p[c] = t[c];
     var l = {
       type: e,
       props: p,
