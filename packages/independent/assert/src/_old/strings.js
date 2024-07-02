@@ -1,7 +1,8 @@
-import { humanize, determineQuote, inspectChar } from "@jsenv/humanize";
-
 import { isRegExp, isError } from "../utils/object_subtype.js";
 
+const humanize = () => {};
+const determineQuote = () => {};
+const inspectChar = () => {};
 const createDetailedMessage = () => {};
 const comparisonToPath = () => {};
 
