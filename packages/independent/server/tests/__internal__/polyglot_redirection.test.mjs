@@ -48,8 +48,9 @@ const port = await listen({
   const expect = {
     status: 301,
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
       "location": `https://127.0.0.1:${port}/file.js?page=2`,
       "transfer-encoding": "chunked",
     },

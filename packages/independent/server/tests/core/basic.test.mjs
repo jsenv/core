@@ -37,9 +37,10 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
     status: 200,
     statusText: "OK",
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "content-type": "text/plain",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
       "transfer-encoding": "chunked",
     },
     body: "ok",
@@ -64,8 +65,9 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
       status: 501,
       statusText: "Not Implemented",
       headers: {
-        "connection": "close",
+        "connection": "keep-alive",
         "date": actual.headers.date,
+        "keep-alive": "timeout=5",
         "transfer-encoding": "chunked",
       },
       size: 0,

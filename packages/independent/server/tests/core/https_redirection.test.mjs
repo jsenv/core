@@ -45,8 +45,9 @@ import {
     const expect = {
       status: 301,
       headers: {
-        "connection": "close",
+        "connection": "keep-alive",
         "date": actual.headers.date,
+        "keep-alive": "timeout=5",
         "location": `${server.origin}/file.js?page=2`,
         "transfer-encoding": "chunked",
       },
@@ -110,8 +111,9 @@ import {
     const expect = {
       status: 301,
       headers: {
-        "connection": "close",
+        "connection": "keep-alive",
         "date": actual.headers.date,
+        "keep-alive": "timeout=5",
         "location": `${server.origin}/`,
         "transfer-encoding": "chunked",
       },

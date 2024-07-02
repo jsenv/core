@@ -42,10 +42,11 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
       statusText: "Internal Server Error",
       headers: {
         "cache-control": "no-store",
-        "connection": "close",
+        "connection": "keep-alive",
         "content-length": String(Buffer.byteLength(body)),
         "content-type": "application/json",
         "date": actual.headers.date,
+        "keep-alive": "timeout=5",
       },
       body,
     };
@@ -92,10 +93,11 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
       statusText: "Internal Server Error",
       headers: {
         "cache-control": "no-store",
-        "connection": "close",
+        "connection": "keep-alive",
         "content-length": String(Buffer.byteLength(body)),
         "content-type": "application/json",
         "date": actual.headers.date,
+        "keep-alive": "timeout=5",
       },
       body,
     };

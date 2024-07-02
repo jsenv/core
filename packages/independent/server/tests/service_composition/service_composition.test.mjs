@@ -43,8 +43,9 @@ const { origin } = await startServer({
     status: 204,
     statusText: "No Content",
     headers: {
-      connection: "close",
-      date: actual.headers.date,
+      "connection": "keep-alive",
+      "date": actual.headers.date,
+      "keep-alive": "timeout=5",
     },
     body: "",
   };
@@ -65,8 +66,9 @@ const { origin } = await startServer({
     status: 200,
     statusText: "OK",
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
       "transfer-encoding": "chunked",
     },
     body: "",

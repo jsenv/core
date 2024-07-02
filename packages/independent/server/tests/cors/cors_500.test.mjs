@@ -57,10 +57,11 @@ const expect = {
     "access-control-allow-origin": "http://example.com:80",
     "access-control-max-age": "400",
     "cache-control": "no-store",
-    "connection": "close",
+    "connection": "keep-alive",
     "content-length": String(Buffer.byteLength(body)),
     "content-type": "application/json",
     "date": actual.headers.date,
+    "keep-alive": "timeout=5",
     "vary":
       "origin, access-control-request-method, access-control-request-headers",
   },

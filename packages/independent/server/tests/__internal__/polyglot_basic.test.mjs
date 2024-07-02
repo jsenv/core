@@ -40,9 +40,10 @@ const port = await listen({
   const expect = {
     status: 200,
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "content-type": "text/plain",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
       "transfer-encoding": "chunked",
     },
     body: "http",
@@ -98,8 +99,8 @@ if (!process.env.JSENV) {
       message: error.message,
     };
     const expect = {
-      code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
-      message: `unable to verify the first certificate`,
+      code: "CERT_HAS_EXPIRED",
+      message: `certificate has expired`,
     };
     assert({ actual, expect });
   }
@@ -130,8 +131,8 @@ if (!process.env.JSENV) {
       message: error.message,
     };
     const expect = {
-      code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
-      message: `request to https://127.0.0.1:${port}/ failed, reason: unable to verify the first certificate`,
+      code: "CERT_HAS_EXPIRED",
+      message: `request to https://127.0.0.1:${port}/ failed, reason: certificate has expired`,
     };
     assert({ actual, expect });
   }

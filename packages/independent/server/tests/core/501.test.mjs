@@ -23,8 +23,9 @@ const { origin, stop } = await startServer({
     status: 501,
     statusText: "Not Implemented",
     headers: {
-      "connection": "close",
+      "connection": "keep-alive",
       "date": actual.headers.date,
+      "keep-alive": "timeout=5",
       "transfer-encoding": "chunked",
     },
     body: "",
