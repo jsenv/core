@@ -44,7 +44,6 @@ const createAnsi = ({
   };
   return ANSI;
 };
-
 const ANSI = createAnsi({
   supported: true
 });
@@ -105,7 +104,6 @@ const createUnicode = ({
   };
   return UNICODE;
 };
-
 const UNICODE = createUnicode({
   supported: true,
   ANSI
@@ -580,6 +578,21 @@ const canParseDate = value => {
   }
   return false;
 };
+const usesTimezone = value => {
+  if (value[value.length - 1] === "Z") {
+    return true;
+  }
+  if (value.includes("UTC")) {
+    return true;
+  }
+  if (value.includes("GMT")) {
+    return true;
+  }
+  if (/[\+-]\d{2}:\d{2}$/.test(value)) {
+    return true;
+  }
+  return false;
+};
 
 /*
  * This file is named "scratch" as a testimony of the fact it has been
@@ -686,14 +699,11 @@ const defaultOptions = {
   message: "",
   details: ""
 };
-const localTimezoneOffsetSystem = new Date(0).getTimezoneOffset() * 60000;
 const createAssert = ({
   colors = true,
   measureStringWidth = string => stripAnsi(string).length,
   tokenizeString = string => string.split(""),
-  getWellKnownValuePath,
-  // for test
-  localTimezoneOffset = localTimezoneOffsetSystem
+  getWellKnownValuePath
 } = {}) => {
   const setColor = (text, color) => {
     if (!assert.colors) {
@@ -1020,9 +1030,15 @@ const createAssert = ({
             };
             if (actualNode.isHiddenWhenSame) {
               actualNode.isHidden = true;
+              if (actualNode.onHide) {
+                actualNode.onHide();
+              }
             }
             if (expectNode.isHiddenWhenSame) {
               expectNode.isHidden = true;
+              if (expectNode.onHide) {
+                expectNode.onHide();
+              }
             }
             return;
           }
@@ -1183,9 +1199,15 @@ const createAssert = ({
       if (comparison.reasons.overall.any.size === 0) {
         if (actualNode.isHiddenWhenSame) {
           actualNode.isHidden = true;
+          if (actualNode.onHide) {
+            actualNode.onHide();
+          }
         }
         if (expectNode.isHiddenWhenSame) {
           expectNode.isHidden = true;
+          if (expectNode.onHide) {
+            expectNode.onHide();
+          }
         }
       }
       if (actualNode.subgroup === "line_entries" && expectNode.subgroup === "line_entries") {
@@ -1322,7 +1344,6 @@ const createAssert = ({
     throw assertionError;
   };
   // for test
-  assert.localTimezoneOffset = localTimezoneOffset;
   assert.colors = colors;
   class AssertionError extends Error {}
   assert.createAssertionError = message => {
@@ -1789,6 +1810,7 @@ let createRootNode;
     isHidden = false,
     isHiddenWhenSame = false,
     isHiddenWhenSolo = false,
+    onHide = null,
     focusedChildIndex,
     startMarker = "",
     endMarker = "",
@@ -1870,6 +1892,7 @@ let createRootNode;
       isHidden,
       isHiddenWhenSame,
       isHiddenWhenSolo,
+      onHide,
       focusedChildIndex,
       beforeRender: null,
       // START will be set by comparison
@@ -2255,16 +2278,9 @@ let createRootNode;
         node.childGenerator = () => {
           const dateString = value;
           let dateTimestamp = Date.parse(dateString);
-          const localTimezoneOffset = node.context.assert.localTimezoneOffset;
-          if (localTimezoneOffset === localTimezoneOffsetSystem) {
-            dateTimestamp += localTimezoneOffset;
-          }
-          // happens in CI when generating date diff snapshot
-          // and comparing with diff generated in an other timezone
-          else if (localTimezoneOffsetSystem > localTimezoneOffset) {
-            dateTimestamp += localTimezoneOffsetSystem - localTimezoneOffset;
-          } else {
-            dateTimestamp += localTimezoneOffset - localTimezoneOffsetSystem;
+          if (usesTimezone(dateString)) {
+            const dateObjectUsingSystemTimezone = new Date(dateTimestamp);
+            dateTimestamp += dateObjectUsingSystemTimezone.getTimezoneOffset() * 60000;
           }
           const dateObject = new Date(dateTimestamp);
           const datePartsNode = node.appendChild("parts", {
@@ -2286,7 +2302,7 @@ let createRootNode;
             quoteMarkerRef,
             childGenerator: () => {
               const appendDatePartNode = (name, value, params) => {
-                datePartsNode.appendChild(name, {
+                return datePartsNode.appendChild(name, {
                   value,
                   render: renderValue,
                   quoteMarkerRef,
@@ -2314,7 +2330,7 @@ let createRootNode;
                 isHiddenWhenSame: true,
                 childGenerator: () => {
                   const appendTimePartNode = (name, value, params) => {
-                    timePartsNode.appendChild(name, {
+                    return timePartsNode.appendChild(name, {
                       value,
                       render: renderString,
                       stringDiffPrecision: "none",
@@ -2334,13 +2350,16 @@ let createRootNode;
                   appendTimePartNode("minutes", String(dateObject.getMinutes()).padStart(2, "0"), {
                     startMarker: ":"
                   });
-                  appendTimePartNode("seconds", String(dateObject.getSeconds()).padStart(2, "0"), {
+                  const secondsPartNode = appendTimePartNode("seconds", String(dateObject.getSeconds()).padStart(2, "0"), {
                     startMarker: ":"
                   });
                   appendTimePartNode("milliseconds", String(dateObject.getMilliseconds()).padStart(3, "0"), {
                     startMarker: ".",
                     endMarker: "Z",
-                    isHiddenWhenSame: true
+                    isHiddenWhenSame: true,
+                    onHide: () => {
+                      secondsPartNode.endMarker = "Z";
+                    }
                   });
                 }
               });
@@ -2894,7 +2913,7 @@ let createRootNode;
               }
               if (node.isDate) {
                 objectConstructArgs = [{
-                  value: value.toString(),
+                  value: value.toISOString(),
                   key: "toString()",
                   isStringForDate: true
                 }];
