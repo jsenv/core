@@ -41,3 +41,19 @@ export const canParseDate = (value) => {
   }
   return false;
 };
+
+export const usesTimezone = (value) => {
+  if (value[value.length - 1] === "Z") {
+    return true;
+  }
+  if (value.includes("UTC")) {
+    return true;
+  }
+  if (value.includes("GMT")) {
+    return true;
+  }
+  if (/[\+-]\d{2}:\d{2}$/.test(value)) {
+    return true;
+  }
+  return false;
+};

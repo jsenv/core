@@ -5,18 +5,6 @@ import { assert } from "@jsenv/assert";
 import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
 
 await startSnapshotTesting("date", ({ test }) => {
-  test("timezone stuff", () => {
-    assert({
-      actual: "Thu Jan 01 1970 12:00:00 GMT+0500",
-      expect: "1970-01-01 00:00:00.000Z",
-    });
-  });
-  test("GMT vs iso", () => {
-    assert({
-      actual: "Tue May 07 2024 11:27:04 GMT+0200",
-      expect: "1970-01-01 00:00:00Z",
-    });
-  });
   test("year month day minutes diff on iso", () => {
     assert({
       actual: "1970-01-01 00:00:00.000Z",
@@ -59,12 +47,26 @@ await startSnapshotTesting("date", ({ test }) => {
       expect: "1970-01-01 10:00:00+00:00",
     });
   });
-  test("simplified date", () => {
-    assert({
-      actual: "1970-01-01 10:00:00",
-      expect: "1970-01-01 10:00:00Z",
+  timezone: {
+    test("timezone stuff", () => {
+      assert({
+        actual: "Thu Jan 01 1970 12:00:00 GMT+0500",
+        expect: "1970-01-01 00:00:00.000Z",
+      });
     });
-  });
+    test("GMT vs iso", () => {
+      assert({
+        actual: "Tue May 07 2024 11:27:04 GMT+0200",
+        expect: "1970-01-01 00:00:00Z",
+      });
+    });
+    test("simplified date", () => {
+      assert({
+        actual: "1970-01-01 10:00:00",
+        expect: "1970-01-01 10:00:00Z",
+      });
+    });
+  }
   test("date objects", () => {
     assert({
       actual: new Date("1970-01-01 10:00:00Z"),

@@ -32,7 +32,7 @@ import { tokenizeFloat, tokenizeInteger } from "./utils/tokenize_number.js";
 import { tokenizeUrlSearch } from "./utils/tokenize_url_search.js";
 import { getIsNegativeZero } from "./utils/negative_zero.js";
 import { groupDigits } from "./utils/group_digits.js";
-import { canParseDate } from "./utils/can_parse_date.js";
+import { canParseDate, usesTimezone } from "./utils/can_parse_date.js";
 
 // ANSI.supported = false;
 const sameColor = ANSI.GREY;
@@ -1914,12 +1914,14 @@ let createRootNode;
       if (isStringForDate) {
         node.childGenerator = () => {
           const dateString = value;
-          const dateTimestamp = Date.parse(dateString);
-          const dateObjectUsingSystemTimezone = new Date(dateTimestamp);
-          const dateObject = new Date(
-            dateTimestamp +
-              dateObjectUsingSystemTimezone.getTimezoneOffset() * 60_000,
-          );
+          let dateTimestamp = Date.parse(dateString);
+          if (usesTimezone(dateString)) {
+            const dateObjectUsingSystemTimezone = new Date(dateTimestamp);
+            dateTimestamp +=
+              dateObjectUsingSystemTimezone.getTimezoneOffset() * 60_000;
+          }
+          const dateObject = new Date(dateTimestamp);
+
           const datePartsNode = node.appendChild("parts", {
             value,
             category: "date_parts",
