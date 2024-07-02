@@ -12,15 +12,17 @@
       <property name="runtimeName" value="node_worker_thread"></property>
       <property name="runtimeVersion" value="[mock]"></property>
     </properties>
+    <system-err>{ env: undefined, supported: true }
+</system-err>
   </testcase>
-  <failure type="AssertionError">1 | import { assert } from &#x22;@jsenv/assert&#x22;;
-2 | 
-3 | assert({
+  <failure type="AssertionError">7 | });
+8 | 
+9 | assert({
     ^
 AssertionError: 
 &#x1B;[90mactual:&#x1B;[0m &#x1B;[31mtrue&#x1B;[0m
 &#x1B;[90mexpect:&#x1B;[0m &#x1B;[32mfalse&#x1B;[0m
-  at [mock]/error_in_test_jsenv_assert.spec.js:3:1</failure>
+  at [mock]/error_in_test_jsenv_assert.spec.js:9:1</failure>
   <testcase
     file="error_in_test_jsenv_assert.spec.js"
     name="child_process"
@@ -33,13 +35,15 @@ AssertionError:
       <property name="runtimeName" value="node_child_process"></property>
       <property name="runtimeVersion" value="[mock]"></property>
     </properties>
+    <system-err>{ env: undefined, supported: true }
+</system-err>
   </testcase>
-  <failure type="AssertionError">1 | import { assert } from &#x22;@jsenv/assert&#x22;;
-2 | 
-3 | assert({
+  <failure type="AssertionError">7 | });
+8 | 
+9 | assert({
     ^
 AssertionError: 
 &#x1B;[90mactual:&#x1B;[0m &#x1B;[31mtrue&#x1B;[0m
 &#x1B;[90mexpect:&#x1B;[0m &#x1B;[32mfalse&#x1B;[0m
-  at [mock]/error_in_test_jsenv_assert.spec.js:3:1</failure>
+  at [mock]/error_in_test_jsenv_assert.spec.js:9:1</failure>
 </testsuite>
