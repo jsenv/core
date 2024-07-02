@@ -15,15 +15,11 @@
   </testcase>
   <failure type="AssertionError">11 |       import { assert } from &#x22;@jsenv/assert&#x22;;
 12 | 
-13 |       assert({ actual: 1, expected: &#x22;1&#x22; });
+13 |       assert({ actual: 1, expect: &#x22;1&#x22; });
                 ^
-AssertionError: unequal values
---- found ---
-1
---- expected ---
-&#x22;1&#x22;
---- path ---
-actual
+AssertionError: 
+&#x1B;[90mactual:&#x1B;[0m &#x1B;[31m1&#x1B;[0m
+&#x1B;[90mexpect:&#x1B;[0m &#x1B;[32m&#x22;&#x1B;[0m&#x1B;[32m1&#x1B;[0m&#x1B;[32m&#x22;&#x1B;[0m
   at [mock]/error_jsenv_assert_in_script_module.spec.html:13:12</failure>
   <testcase
     file="error_jsenv_assert_in_script_module.spec.html"
@@ -42,13 +38,9 @@ actual
 8 | 
 9 |   &#x3C;body&#x3E;
         ^
-AssertionError: unequal values
---- found ---
-1
---- expected ---
-&#x22;1&#x22;
---- path ---
-actual
+AssertionError: 
+&#x1B;[90mactual:&#x1B;[0m &#x1B;[31m1&#x1B;[0m
+&#x1B;[90mexpect:&#x1B;[0m &#x1B;[32m&#x22;&#x1B;[0m&#x1B;[32m1&#x1B;[0m&#x1B;[32m&#x22;&#x1B;[0m
 @[mock]/error_jsenv_assert_in_script_module.spec.html:13:18</failure>
   <testcase
     file="error_jsenv_assert_in_script_module.spec.html"
@@ -67,12 +59,8 @@ actual
 8 | 
 9 |   &#x3C;body&#x3E;
         ^
-AssertionError: unequal values
---- found ---
-1
---- expected ---
-&#x22;1&#x22;
---- path ---
-actual
+AssertionError: 
+&#x1B;[90mactual:&#x1B;[0m &#x1B;[31m1&#x1B;[0m
+&#x1B;[90mexpect:&#x1B;[0m &#x1B;[32m&#x22;&#x1B;[0m&#x1B;[32m1&#x1B;[0m&#x1B;[32m&#x22;&#x1B;[0m
 module code@[mock]/error_jsenv_assert_in_script_module.spec.html:13:18</failure>
 </testsuite>
