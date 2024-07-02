@@ -1912,9 +1912,9 @@ let createRootNode;
             // happens in CI when generating date diff snapshot
             // and comparing with diff generated in an other timezone
             if (localTimezoneOffsetSystem > localTimezoneOffset) {
-              dateTimestamp += localTimezoneOffsetSystem - localTimezoneOffset;
-            } else {
               dateTimestamp += localTimezoneOffset - localTimezoneOffsetSystem;
+            } else {
+              dateTimestamp += localTimezoneOffsetSystem - localTimezoneOffset;
             }
           }
           const dateObject = new Date(dateTimestamp);
