@@ -2,21 +2,17 @@
   <h1 class="title">
     An error occured
   </h1>
-  <pre class="text"> 7 | };
- 8 | 
- 9 | export const createAssertionError = (message) => {
-10 |   const error = new Error(message);
-                     ^
-CharacterAssertionError: unexpected character in string
---- details ---
-foo
-^
-unexpected "f", expected to continue with "bar"
---- path ---
-actual
-createAssertionError@<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fmocked_for_snapshots%3A10%3A17')">file:///mocked_for_snapshots:10:17</a>
-assert@<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fmocked_for_snapshots%3A63%3A41')">file:///mocked_for_snapshots:63:41</a>
-@<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fjs_module_inline_assertion_error%2Fmain.html%3A13%3A18')">file:///js_module_inline_assertion_error/main.html:13:18</a>
+  <pre class="text">809 |   };
+810 |   assert.colors = colors;
+811 |   assert.createAssertionError = (message) => {
+812 |     const error = new Error(message);
+                        ^
+AssertionError: 
+actual: "foo"
+expect: "bar"
+createAssert/assert.createAssertionError@<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fmocked_for_snapshots%3A812%3A19')">file:///mocked_for_snapshots:812:19</a>
+assert@<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fmocked_for_snapshots%3A804%3A35')">file:///mocked_for_snapshots:804:35</a>
+@<a href="javascript:window.fetch('/__open_in_editor__/file%3A%2F%2F%2Fjs_module_inline_assertion_error%2Fmain.html%3A14%3A18')">file:///js_module_inline_assertion_error/main.html:14:18</a>
 </pre>
   <div class="tip">
     Click outside to close.

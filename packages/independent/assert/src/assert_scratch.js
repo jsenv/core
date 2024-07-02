@@ -7,7 +7,7 @@
  * - add or removed reason must be unique
  */
 
-import stringWidth from "string-width";
+import stripAnsi from "strip-ansi";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 
 import { isComposite } from "./utils/is_composite.js";
@@ -85,18 +85,6 @@ const SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY = {
   key: "Symbol.toPrimitive()",
 };
 
-const setColor = (text, color) => {
-  if (text.trim() === "") {
-    // cannot set color of blank chars
-    return text;
-  }
-  const textColored = ANSI.color(text, color);
-  // if (color === ANSI.RED || color === ANSI.GREEN) {
-  //   return ANSI.effect(textColored, ANSI.UNDERLINE);
-  // }
-  return textColored;
-};
-
 const defaultOptions = {
   actual: undefined,
   expect: undefined,
@@ -110,8 +98,24 @@ const defaultOptions = {
 };
 
 export const createAssert = ({
+  colors = true,
+  measureStringWidth = (string) => stripAnsi(string).length,
   tokenizeString = (string) => string.split(""),
 } = {}) => {
+  const setColor = (text, color) => {
+    if (!assert.colors) {
+      return text;
+    }
+    if (text.trim() === "") {
+      // cannot set color of blank chars
+      return text;
+    }
+    const textColored = ANSI.color(text, color);
+    // if (color === ANSI.RED || color === ANSI.GREEN) {
+    //   return ANSI.effect(textColored, ANSI.UNDERLINE);
+    // }
+    return textColored;
+  };
   const assert = (firstArg, ...rest) => {
     if (firstArg === undefined) {
       throw new TypeError(
@@ -163,6 +167,8 @@ export const createAssert = ({
 
     const actualRootNode = createRootNode({
       tokenizeString,
+      measureStringWidth,
+      setColor,
       colorWhenSolo: addedColor,
       colorWhenSame: sameColor,
       colorWhenModified: unexpectColor,
@@ -174,6 +180,8 @@ export const createAssert = ({
     });
     const expectRootNode = createRootNode({
       tokenizeString,
+      measureStringWidth,
+      setColor,
       colorWhenSolo: removedColor,
       colorWhenSame: sameColor,
       colorWhenModified: expectColor,
@@ -733,23 +741,23 @@ export const createAssert = ({
         const expectStartNodePath = expectStartNode.path.toString();
         if (actualStartNodePath === expectStartNodePath) {
           infos.push(
-            `diff starts at ${ANSI.color(actualStartNodePath, ANSI.YELLOW)}`,
+            `diff starts at ${setColor(actualStartNodePath, ANSI.YELLOW)}`,
           );
         } else {
           infos.push(
-            `actual diff starts at ${ANSI.color(actualStartNodePath, ANSI.YELLOW)}`,
+            `actual diff starts at ${setColor(actualStartNodePath, ANSI.YELLOW)}`,
           );
           infos.push(
-            `expect diff starts at ${ANSI.color(expectStartNodePath, ANSI.YELLOW)}`,
+            `expect diff starts at ${setColor(expectStartNodePath, ANSI.YELLOW)}`,
           );
         }
       } else if (actualStartNode !== actualRootNode) {
         infos.push(
-          `actual diff starts at ${ANSI.color(actualStartNode.path, ANSI.YELLOW)}`,
+          `actual diff starts at ${setColor(actualStartNode.path, ANSI.YELLOW)}`,
         );
       } else if (expectStartNode !== expectRootNode) {
         infos.push(
-          `expect diff starts at ${ANSI.color(expectStartNode.path, ANSI.YELLOW)}`,
+          `expect diff starts at ${setColor(expectStartNode.path, ANSI.YELLOW)}`,
         );
       }
     }
@@ -762,7 +770,7 @@ export const createAssert = ({
       diff += "\n";
     }
     diff += "\n";
-    diff += ANSI.color("actual:", sameColor);
+    diff += setColor("actual:", sameColor);
     diff += " ";
     diff += actualStartNode.render({
       MAX_DEPTH,
@@ -775,7 +783,7 @@ export const createAssert = ({
       startNode: actualStartNode,
     });
     diff += `\n`;
-    diff += ANSI.color("expect:", sameColor);
+    diff += setColor("expect:", sameColor);
     diff += " ";
     diff += expectStartNode.render({
       MAX_DEPTH,
@@ -793,8 +801,13 @@ export const createAssert = ({
       diff += JSON.stringify(details);
       diff += `---------------`;
     }
-    throw assert.createAssertionError(diff);
+    const assertionError = assert.createAssertionError(diff);
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(assertionError, assert);
+    }
+    throw assertionError;
   };
+  assert.colors = colors;
   assert.createAssertionError = (message) => {
     const error = new Error(message);
     error.name = "AssertionError";
@@ -1271,6 +1284,8 @@ let createRootNode;
 {
   createRootNode = ({
     tokenizeString,
+    measureStringWidth,
+    setColor,
     colorWhenSolo,
     colorWhenSame,
     colorWhenModified,
@@ -1322,6 +1337,8 @@ let createRootNode;
 
     const rootNode = createNode({
       tokenizeString,
+      measureStringWidth,
+      setColor,
       id: nodeId,
       colorWhenSolo,
       colorWhenSame,
@@ -1350,6 +1367,8 @@ let createRootNode;
 
   const createNode = ({
     tokenizeString,
+    measureStringWidth,
+    setColor,
     colorWhenSolo,
     colorWhenSame,
     colorWhenModified,
@@ -1400,6 +1419,8 @@ let createRootNode;
   }) => {
     const node = {
       tokenizeString,
+      measureStringWidth,
+      setColor,
       colorWhenSolo,
       colorWhenSame,
       colorWhenModified,
@@ -3618,6 +3639,8 @@ let createRootNode;
     const childNode = createNode({
       id: node.nextId(),
       tokenizeString: node.tokenizeString,
+      setColor: node.setColor,
+      measureStringWidth: node.measureStringWidth,
       colorWhenSolo: node.colorWhenSolo,
       colorWhenSame: node.colorWhenSame,
       colorWhenModified: node.colorWhenModified,
@@ -3648,7 +3671,7 @@ const renderValue = (node, props) => {
 };
 const renderPrimitive = (node, props) => {
   if (props.columnsRemaining < 1) {
-    return setColor("…", node.color);
+    return node.setColor("…", node.color);
   }
   if (node.isSourceCode) {
     return truncateAndApplyColor("[source code]", node, props);
@@ -3741,7 +3764,7 @@ const renderSymbol = (node, props) => {
 const truncateAndApplyColor = (valueDiff, node, props) => {
   const { columnsRemaining } = props;
   if (columnsRemaining < 1) {
-    return props.endSkippedMarkerDisabled ? "" : setColor("…", node.color);
+    return props.endSkippedMarkerDisabled ? "" : node.setColor("…", node.color);
   }
   let columnsRemainingForValue = columnsRemaining;
   let { startMarker, endMarker } = node;
@@ -3752,7 +3775,7 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
     columnsRemainingForValue -= endMarker.length;
   }
   if (columnsRemainingForValue < 1) {
-    return props.endSkippedMarkerDisabled ? "" : setColor("…", node.color);
+    return props.endSkippedMarkerDisabled ? "" : node.setColor("…", node.color);
   }
   if (valueDiff.length > columnsRemainingForValue) {
     if (props.endSkippedMarkerDisabled) {
@@ -3770,7 +3793,7 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
   if (endMarker) {
     diff += endMarker;
   }
-  diff = setColor(diff, node.color);
+  diff = node.setColor(diff, node.color);
   return diff;
 };
 
@@ -3780,7 +3803,7 @@ const renderComposite = (node, props) => {
   // and a constructor that might differ
   let diff = "";
   if (props.columnsRemaining < 2) {
-    diff = setColor("…", node.color);
+    diff = node.setColor("…", node.color);
     return diff;
   }
   const referenceNode = node.childNodeMap.get("reference");
@@ -3874,7 +3897,7 @@ const renderChildren = (node, props) => {
     if (fromIndex > 0 && hasSpacingBetweenEachChild) {
       diff += " ";
     }
-    diff += setColor(skippedMarker, color);
+    diff += node.setColor(skippedMarker, color);
     return diff;
   };
 
@@ -3973,7 +3996,7 @@ const renderChildren = (node, props) => {
     }
     if (columnsRemainingForChildrenConsideringBoilerplate === 0) {
       return skippedMarkersPlacement === "inside"
-        ? setColor(boilerplate, node.color)
+        ? node.setColor(boilerplate, node.color)
         : renderSkippedSection(0, childrenKeys.length - 1);
     }
   }
@@ -4112,15 +4135,15 @@ const renderChildren = (node, props) => {
     let childDiffWidth;
     const newLineIndex = childDiff.indexOf("\n");
     if (newLineIndex === -1) {
-      childDiffWidth = stringWidth(childDiff);
+      childDiffWidth = node.measureStringWidth(childDiff);
     } else {
       const newLineLastIndex = childDiff.lastIndexOf("\n");
       if (newLineLastIndex === newLineIndex) {
         const line = childDiff.slice(0, newLineIndex + "\n".length);
-        childDiffWidth = stringWidth(line);
+        childDiffWidth = node.measureStringWidth(line);
       } else {
         const lastLine = childDiff.slice(newLineLastIndex + "\n".length);
-        childDiffWidth = stringWidth(lastLine);
+        childDiffWidth = node.measureStringWidth(lastLine);
       }
     }
     let separatorMarkerToAppend;
@@ -4141,10 +4164,10 @@ const renderChildren = (node, props) => {
     if (separatorMarkerToAppend) {
       if (childNode.diffType === "solo") {
         childDiffWidth += separatorMarkerToAppend.length;
-        childDiff += setColor(separatorMarkerToAppend, childNode.color);
+        childDiff += node.setColor(separatorMarkerToAppend, childNode.color);
       } else {
         childDiffWidth += separatorMarkerToAppend.length;
-        childDiff += setColor(separatorMarkerToAppend, node.color);
+        childDiff += node.setColor(separatorMarkerToAppend, node.color);
       }
     }
     if (!isFirstAppend && hasSpacingBetweenEachChild && childDiff) {
@@ -4224,24 +4247,24 @@ const renderChildren = (node, props) => {
   };
   if (minIndexDisplayed === Infinity || maxIndexDisplayed === -1) {
     return skippedMarkersPlacement === "inside"
-      ? setColor(boilerplate, node.color)
+      ? node.setColor(boilerplate, node.color)
       : renderSkippedSection(0, childrenKeys.length - 1);
   }
   let diff = "";
   if (hasSomeChildSkippedAtStart) {
     if (skippedMarkersPlacement === "inside") {
       if (startMarker) {
-        diff += setColor(startMarker, node.color);
+        diff += node.setColor(startMarker, node.color);
       }
       diff += renderSkippedSection(0, minIndexDisplayed);
     } else {
       diff += renderSkippedSection(0, minIndexDisplayed);
       if (startMarker) {
-        diff += setColor(startMarker, node.color);
+        diff += node.setColor(startMarker, node.color);
       }
     }
   } else if (startMarker) {
-    diff += setColor(startMarker, node.color);
+    diff += node.setColor(startMarker, node.color);
   }
   if (hasSpacingAroundChildren) {
     diff += " ";
@@ -4257,11 +4280,11 @@ const renderChildren = (node, props) => {
         childrenKeys.length - 1,
       );
       if (endMarker) {
-        diff += setColor(endMarker, node.color);
+        diff += node.setColor(endMarker, node.color);
       }
     } else {
       if (endMarker) {
-        diff += setColor(endMarker, node.color);
+        diff += node.setColor(endMarker, node.color);
       }
       diff += renderSkippedSection(
         maxIndexDisplayed + 1,
@@ -4269,7 +4292,7 @@ const renderChildren = (node, props) => {
       );
     }
   } else if (endMarker) {
-    diff += setColor(endMarker, node.color);
+    diff += node.setColor(endMarker, node.color);
   }
   return diff;
 };
@@ -4607,32 +4630,32 @@ const renderChildrenMultiline = (node, props) => {
       }
     }
     if (skippedCount === 1) {
-      skippedDiff += setColor(
+      skippedDiff += node.setColor(
         skippedMarker[0],
         allModified ? modifiedColor : allSolo ? soloColor : node.color,
       );
     } else {
-      skippedDiff += setColor(
+      skippedDiff += node.setColor(
         skippedMarker[1].replace("{x}", skippedCount),
         allModified ? modifiedColor : allSolo ? soloColor : node.color,
       );
     }
     const details = [];
     if (modifiedCount && modifiedCount !== skippedCount) {
-      details.push(setColor(`${modifiedCount} modified`, modifiedColor));
+      details.push(node.setColor(`${modifiedCount} modified`, modifiedColor));
     }
     if (soloCount && soloCount !== skippedCount) {
       details.push(
         node.name === "actual"
-          ? setColor(`${soloCount} added`, soloColor)
-          : setColor(`${soloCount} removed`, soloColor),
+          ? node.setColor(`${soloCount} added`, soloColor)
+          : node.setColor(`${soloCount} removed`, soloColor),
       );
     }
     if (details.length) {
       skippedDiff += " ";
-      skippedDiff += setColor(`(`, node.color);
+      skippedDiff += node.setColor(`(`, node.color);
       skippedDiff += details.join(", ");
-      skippedDiff += setColor(`)`, node.color);
+      skippedDiff += node.setColor(`)`, node.color);
     }
     childrenDiff = appendChildDiff(
       skippedDiff,
@@ -4705,7 +4728,7 @@ const renderChildrenMultiline = (node, props) => {
       separatorMarkerToAppend = separatorMarker;
     } else {
       const remainingColumns =
-        columnsRemainingForThisChild - stringWidth(childDiff);
+        columnsRemainingForThisChild - node.measureStringWidth(childDiff);
       if (remainingColumns > separatorMarker.length + 1) {
         separatorMarkerToAppend = separatorMarkerDisabled
           ? ""
@@ -4716,9 +4739,9 @@ const renderChildrenMultiline = (node, props) => {
     }
     if (separatorMarkerToAppend) {
       if (childNode.diffType === "solo") {
-        childDiff += setColor(separatorMarkerToAppend, childNode.color);
+        childDiff += node.setColor(separatorMarkerToAppend, childNode.color);
       } else {
-        childDiff += setColor(separatorMarkerToAppend, node.color);
+        childDiff += node.setColor(separatorMarkerToAppend, node.color);
       }
     }
     return childDiff;
@@ -4758,7 +4781,7 @@ const renderChildrenMultiline = (node, props) => {
     appendSkippedSection(previousChildIndexDisplayed, childrenKeys.length - 1);
   }
   let diff = "";
-  diff += setColor(startMarker, node.color);
+  diff += node.setColor(startMarker, node.color);
   if (hasNewLineAroundChildren) {
     diff += "\n";
   }
@@ -4767,7 +4790,7 @@ const renderChildrenMultiline = (node, props) => {
     diff += "\n";
     diff += "  ".repeat(getNodeDepth(node, props));
   }
-  diff += setColor(endMarker, node.color);
+  diff += node.setColor(endMarker, node.color);
   return diff;
 };
 const getNodeDepth = (node, props) => {

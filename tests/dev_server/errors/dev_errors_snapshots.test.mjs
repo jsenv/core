@@ -72,63 +72,35 @@ const test = async ({ browserLauncher, browserName }) => {
   };
 
   try {
-    await generateHtmlForStory({
-      story: "js_classic_inline_throw",
-    });
-    await generateHtmlForStory({
-      story: "js_classic_throw",
-    });
-    await generateHtmlForStory({
-      story: "js_module_export_not_found",
-    });
-    await generateHtmlForStory({
-      story: "js_module_import_not_found",
-    });
-    await generateHtmlForStory({
-      story: "js_module_inline_export_not_found",
-    });
-    await generateHtmlForStory({
-      story: "js_module_inline_import_not_found",
-    });
-    await generateHtmlForStory({
-      story: "js_module_inline_assertion_error",
-    });
-    await generateHtmlForStory({
-      story: "js_module_inline_syntax_error",
-    });
-    await generateHtmlForStory({
-      story: "js_module_inline_throw",
-    });
-    await generateHtmlForStory({
-      story: "js_module_plugin_error_transform",
-    });
-    await generateHtmlForStory({
-      story: "js_module_syntax_error",
-    });
-    await generateHtmlForStory({
-      story: "js_module_throw",
-    });
-    // for some reason webkit ignore this error (it does not report an error on window)
-    if (browserLauncher !== webkit) {
+    for (const story of [
+      "js_classic_inline_throw",
+      "js_classic_throw",
+      "js_module_export_not_found",
+      "js_module_import_not_found",
+      "js_module_inline_export_not_found",
+      "js_module_inline_import_not_found",
+      "js_module_inline_assertion_error",
+      "js_module_inline_syntax_error",
+      "js_module_inline_throw",
+      "js_module_plugin_error_transform",
+      "js_module_syntax_error",
+      "js_module_throw",
+      // for some reason webkit ignore this error (it does not report an error on window)
+      ...(browserLauncher === webkit
+        ? []
+        : ["js_module_top_level_await_then_throw"]),
+      "js_module_unhandled_rejection",
+      // the column number is flaky on CI for this specific story + webkit
+      ...(browserLauncher === webkit
+        ? []
+        : ["js_module_undefined_is_not_a_function"]),
+      "js_module_worker_throw",
+      "script_src_not_found",
+    ]) {
       await generateHtmlForStory({
-        story: "js_module_top_level_await_then_throw",
+        story,
       });
     }
-    await generateHtmlForStory({
-      story: "js_module_unhandled_rejection",
-    });
-    // the column number is flaky on CI for this specific story + webkit
-    if (browserLauncher !== webkit) {
-      await generateHtmlForStory({
-        story: "js_module_undefined_is_not_a_function",
-      });
-    }
-    await generateHtmlForStory({
-      story: "js_module_worker_throw",
-    });
-    await generateHtmlForStory({
-      story: "script_src_not_found",
-    });
   } finally {
     browser.close();
   }
