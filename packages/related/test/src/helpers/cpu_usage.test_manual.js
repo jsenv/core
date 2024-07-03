@@ -11,5 +11,7 @@ setInterval(() => {
 
 const totalCpuUsage = startMeasuringTotalCpuUsage();
 setInterval(() => {
-  console.log(formatUsage(totalCpuUsage.overall));
+  console.log(`overall: ${formatUsage(totalCpuUsage.overall)}
+this process: ${formatUsage(totalCpuUsage.thisProcess)}
+`);
 }, 400);

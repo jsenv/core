@@ -46,7 +46,7 @@
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "dev": "node --conditions=development ./scripts/dev/dev.mjs",
-    "test": "node --trace-deprecation --conditions=development ./scripts/test/test.mjs",
+    "test": "node --conditions=development ./scripts/test/test.mjs",
     "test:workspace": "npm run test --workspaces --if-present -- --workspace",
     "test:snapshots_clear": "npx @jsenv/snapshot clear **/tests/**/snapshots/",
     "test:only_dev_server_errors": "node --conditions=development ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",

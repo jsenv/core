@@ -14,7 +14,6 @@ export const startMeasuringTotalCpuUsage = () => {
     system: 0,
     user: 0,
   };
-
   const thisProcess = {
     active: 0,
     system: 0,
@@ -34,7 +33,7 @@ export const startMeasuringTotalCpuUsage = () => {
     let cpuArray = cpus();
     const ms = Date.now();
     const ellapsedMs = ms - previousMs;
-    const cpuUsagesSample = [];
+    const cpuUsageSampleArray = [];
     let overallSystemMs = 0;
     let overallUserMs = 0;
     let overallInactiveMs = 0;
@@ -54,7 +53,7 @@ export const startMeasuringTotalCpuUsage = () => {
         system: systemMs / ellapsedMs,
         user: userMs / ellapsedMs,
       };
-      cpuUsagesSample.push(cpuUsageSample);
+      cpuUsageSampleArray.push(cpuUsageSample);
 
       overallSystemMs += systemMs;
       overallUserMs += userMs;
@@ -71,10 +70,6 @@ export const startMeasuringTotalCpuUsage = () => {
     };
     previousCpuArray = cpuArray;
     previousMs = ms;
-    samples.push({
-      cpuUsagesSample,
-      overallUsageSample,
-    });
 
     const processCpuUsage = cpuUsage();
     const thisProcessSystemMs = Math.round(
@@ -84,53 +79,83 @@ export const startMeasuringTotalCpuUsage = () => {
       (processCpuUsage.user - previousCpuUsage.user) / 1000,
     );
     previousCpuUsage = processCpuUsage;
+
     const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
-    thisProcess.active = thisProcessActiveMs / overallMsEllapsed;
-    thisProcess.system = thisProcessSystemMs / overallMsEllapsed;
-    thisProcess.user = thisProcessUserMs / overallMsEllapsed;
-
+    const thisProcessInactiveMs = overallMsEllapsed - thisProcessActiveMs;
+    const thisProcessSample = {
+      inactive: thisProcessInactiveMs / overallMsEllapsed,
+      active: thisProcessActiveMs / overallMsEllapsed,
+      system: thisProcessSystemMs / overallMsEllapsed,
+      user: thisProcessUserMs / overallMsEllapsed,
+    };
+    samples.push({
+      cpuUsageSampleArray,
+      overallUsageSample,
+      thisProcessSample,
+    });
     if (samples.length === 10) {
-      let index = 0;
-      for (const detail of details) {
-        let systemSum = 0;
-        let userSum = 0;
-        let inactiveSum = 0;
-        let activeSum = 0;
-        for (const sample of samples) {
-          const { cpuUsagesSample } = sample;
-          const cpuUsageSample = cpuUsagesSample[index];
-          inactiveSum += cpuUsageSample.inactive;
-          activeSum += cpuUsageSample.active;
-          systemSum += cpuUsageSample.system;
-          userSum += cpuUsageSample.user;
+      per_cpu: {
+        let index = 0;
+        for (const detail of details) {
+          let systemSum = 0;
+          let userSum = 0;
+          let inactiveSum = 0;
+          let activeSum = 0;
+          for (const sample of samples) {
+            const { cpuUsageSampleArray } = sample;
+            const cpuUsageSample = cpuUsageSampleArray[index];
+            inactiveSum += cpuUsageSample.inactive;
+            activeSum += cpuUsageSample.active;
+            systemSum += cpuUsageSample.system;
+            userSum += cpuUsageSample.user;
+          }
+          Object.assign(detail, {
+            inactive: inactiveSum / samples.length,
+            active: activeSum / samples.length,
+            system: systemSum / samples.length,
+            user: userSum / samples.length,
+          });
+          index++;
         }
-        Object.assign(detail, {
-          inactive: inactiveSum / samples.length,
-          active: activeSum / samples.length,
-          system: systemSum / samples.length,
-          user: userSum / samples.length,
+      }
+      all: {
+        let overallSystemSum = 0;
+        let overallUserSum = 0;
+        let overallInactiveSum = 0;
+        let overallActiveSum = 0;
+        for (const sample of samples) {
+          const { overallUsageSample } = sample;
+          overallSystemSum += overallUsageSample.system;
+          overallUserSum += overallUsageSample.user;
+          overallInactiveSum += overallUsageSample.inactive;
+          overallActiveSum += overallUsageSample.active;
+        }
+        Object.assign(overall, {
+          inactive: overallInactiveSum / samples.length,
+          active: overallActiveSum / samples.length,
+          system: overallSystemSum / samples.length,
+          user: overallUserSum / samples.length,
         });
-        index++;
       }
-
-      let overallSystemSum = 0;
-      let overallUserSum = 0;
-      let overallInactiveSum = 0;
-      let overallActiveSum = 0;
-      for (const sample of samples) {
-        const { overallUsageSample } = sample;
-        overallSystemSum += overallUsageSample.system;
-        overallUserSum += overallUsageSample.user;
-        overallInactiveSum += overallUsageSample.inactive;
-        overallActiveSum += overallUsageSample.active;
+      this_process: {
+        let thisProcessSystemSum = 0;
+        let thisProcessUserSum = 0;
+        let thisProcessInactiveSum = 0;
+        let thisProcessActiveSum = 0;
+        for (const sample of samples) {
+          const { thisProcessSample } = sample;
+          thisProcessSystemSum += thisProcessSample.system;
+          thisProcessUserSum += thisProcessSample.user;
+          thisProcessInactiveSum += thisProcessSample.inactive;
+          thisProcessActiveSum += thisProcessSample.active;
+        }
+        Object.assign(thisProcess, {
+          inactive: thisProcessInactiveSum / samples.length,
+          active: thisProcessActiveSum / samples.length,
+          system: thisProcessSystemSum / samples.length,
+          user: thisProcessUserSum / samples.length,
+        });
       }
-      Object.assign(overall, {
-        inactive: overallInactiveSum / samples.length,
-        active: overallActiveSum / samples.length,
-        system: overallSystemSum / samples.length,
-        user: overallUserSum / samples.length,
-      });
-      // console.log(formatUsage(globalUsageInfo));
       samples.length = 0;
     }
   }, 15);
