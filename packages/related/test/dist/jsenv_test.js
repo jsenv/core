@@ -5289,6 +5289,13 @@ const renderErrors = (execution, logOptions) => {
 };
 
 const renderOutro = (testPlanResult, logOptions = {}) => {
+  return `\n${renderBigSection({
+    title: "execution end",
+    content: renderOutroContent(testPlanResult, logOptions),
+  })}\n`;
+};
+
+const renderOutroContent = (testPlanResult, logOptions = {}) => {
   const lines = [];
   const { counters } = testPlanResult;
   const { planified } = counters;
@@ -5348,11 +5355,7 @@ const renderOutro = (testPlanResult, logOptions = {}) => {
     });
     lines.push(memoryUsageLine);
   }
-
-  return `\n${renderBigSection({
-    title: "execution end",
-    content: lines.join("\n"),
-  })}\n`;
+  return lines.join("\n");
 };
 
 const humanizeTiming = (value) => {
@@ -6197,7 +6200,7 @@ To fix this warning:
             },
             afterAll: async () => {
               const title = "Jsenv test results";
-              const summaryText = stripAnsi(renderOutro(testPlanResult));
+              const summaryText = stripAnsi(renderOutroContent(testPlanResult));
               if (testPlanResult.failed) {
                 await githubCheckRun.fail({
                   title,

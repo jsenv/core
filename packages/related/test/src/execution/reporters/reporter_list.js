@@ -580,7 +580,14 @@ const renderErrors = (execution, logOptions) => {
   });
 };
 
-export const renderOutro = (testPlanResult, logOptions = {}) => {
+const renderOutro = (testPlanResult, logOptions = {}) => {
+  return `\n${renderBigSection({
+    title: "execution end",
+    content: renderOutroContent(testPlanResult, logOptions),
+  })}\n`;
+};
+
+export const renderOutroContent = (testPlanResult, logOptions = {}) => {
   const lines = [];
   const { counters } = testPlanResult;
   const { planified } = counters;
@@ -640,11 +647,7 @@ export const renderOutro = (testPlanResult, logOptions = {}) => {
     });
     lines.push(memoryUsageLine);
   }
-
-  return `\n${renderBigSection({
-    title: "execution end",
-    content: lines.join("\n"),
-  })}\n`;
+  return lines.join("\n");
 };
 
 const humanizeTiming = (value) => {

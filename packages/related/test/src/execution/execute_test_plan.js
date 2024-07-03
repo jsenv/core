@@ -32,7 +32,7 @@ import { generateCoverage } from "../coverage/generate_coverage.js";
 import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { run } from "./run.js";
-import { reporterList, renderOutro } from "./reporters/reporter_list.js";
+import { reporterList, renderOutroContent } from "./reporters/reporter_list.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -744,7 +744,7 @@ To fix this warning:
             },
             afterAll: async () => {
               const title = "Jsenv test results";
-              const summaryText = stripAnsi(renderOutro(testPlanResult));
+              const summaryText = stripAnsi(renderOutroContent(testPlanResult));
               if (testPlanResult.failed) {
                 await githubCheckRun.fail({
                   title,
