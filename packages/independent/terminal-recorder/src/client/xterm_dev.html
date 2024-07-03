@@ -19,12 +19,17 @@
           repeat: true,
           msAddedAtTheEnd: 3_000,
         },
-        video: true,
+        logs: true,
+        // video: true,
       });
       const { writeIntoTerminal, stopRecording } = await startRecording();
-      writeIntoTerminal("hello\n");
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      writeIntoTerminal("world");
+      const sourceResponse = await fetch("./source.txt");
+      const source = await sourceResponse.text();
+      const lines = source.split("\n");
+      for (const line of lines) {
+        writeIntoTerminal(`${line}\n`);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
       await new Promise((resolve) => setTimeout(resolve, 1000));
       const terminalRecords = await stopRecording();
       const video = terminalRecords.video;

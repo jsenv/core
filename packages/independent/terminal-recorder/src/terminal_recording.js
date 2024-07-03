@@ -90,10 +90,10 @@ export const startTerminalRecording = async ({
     });
   }
   if (gif || video) {
-    const { chromium } = await import("playwright");
+    const { webkit } = await import("playwright");
     const server = await startLocalServer();
-    const browser = await chromium.launch({
-      channel: "chrome", // https://github.com/microsoft/playwright/issues/7716#issuecomment-882634893
+    const browser = await webkit.launch({
+      // channel: "chrome", // https://github.com/microsoft/playwright/issues/7716#issuecomment-882634893
       headless: !debug,
       // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
       args: ["--ignore-certificate-errors"],

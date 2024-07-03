@@ -97,16 +97,16 @@
     "@jsenv/plugin-as-js-classic": "./packages/related/plugin-as-js-classic/",
     "@jsenv/snapshot": "./packages/independent/snapshot/",
     "@jsenv/test": "./packages/related/test/",
-    "@playwright/browser-chromium": "1.45.0",
-    "@playwright/browser-firefox": "1.45.0",
-    "@playwright/browser-webkit": "1.45.0",
+    "@playwright/browser-chromium": "1.45.1",
+    "@playwright/browser-firefox": "1.45.1",
+    "@playwright/browser-webkit": "1.45.1",
     "babel-plugin-transform-async-to-promises": "0.8.18",
     "eslint": "8.56.0",
     "eslint-plugin-html": "8.1.1",
     "eslint-plugin-import": "2.29.1",
     "eslint-plugin-react": "7.34.3",
     "open": "10.1.0",
-    "playwright": "1.45.0",
+    "playwright": "1.45.1",
     "prettier": "3.3.2"
   }
 }
