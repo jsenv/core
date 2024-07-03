@@ -1194,6 +1194,8 @@ const initTerminal = ({
     }
   };
 
+  log("init", { cols, rows, fontFamily, fontSize, convertEol, gif, video });
+
   const cssUrl = new URL("/css/xterm.css", import.meta.url);
   const link = document.createElement("link");
   link.rel = "stylesheet";
@@ -1314,7 +1316,24 @@ const initTerminal = ({
           };
           mediaRecorder.start();
         });
-        await startPromise;
+        let timeout;
+        let hasTimedout = false;
+        const MS_ALLOCATED_TO_MEDIA_RECORDER = 2_000;
+        await Promise.race([
+          startPromise,
+          new Promise((resolve) => {
+            timeout = setTimeout(() => {
+              hasTimedout = true;
+              resolve();
+            }, MS_ALLOCATED_TO_MEDIA_RECORDER);
+          }),
+        ]);
+        if (hasTimedout) {
+          throw new Error(
+            `media recorder did not start in less than ${MS_ALLOCATED_TO_MEDIA_RECORDER}ms`,
+          );
+        }
+        clearTimeout(timeout);
         log("media recorder started");
 
         stopCallbackSet.add(async () => {
@@ -1410,6 +1429,7 @@ const initTerminal = ({
       return {
         writeIntoTerminal: async (data) => {
           await new Promise((resolve) => {
+            log(`write data: "${data}"`);
             term.write(data, () => {
               term._core._renderService._renderDebouncer._innerRefresh();
               replicateXterm();

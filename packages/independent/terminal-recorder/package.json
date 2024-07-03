@@ -32,7 +32,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/server": "15.2.5",
+    "@jsenv/server": "15.2.6",
     "@playwright/browser-webkit": "1.45.1",
     "ansi-regex": "6.0.1",
     "he": "1.2.0",

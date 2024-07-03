@@ -289,7 +289,7 @@ const createUnicode = ({
   return UNICODE;
 };
 createUnicode({
-  supported: isUnicodeSupported(),
+  supported: isUnicodeSupported() || process.env.FORCE_UNICODE === "1",
   ANSI
 });
 const formatDefault = v => v;

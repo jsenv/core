@@ -839,7 +839,7 @@ const createUnicode = ({ supported, ANSI }) => {
 };
 
 const UNICODE = createUnicode({
-  supported: isUnicodeSupported(),
+  supported: isUnicodeSupported() || process.env.FORCE_UNICODE === "1",
   ANSI,
 });
 
