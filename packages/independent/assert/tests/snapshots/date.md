@@ -20,6 +20,39 @@ assert({
 
 ![img](<./date/millisecond_only_diff_on_iso.svg>)
 
+# GMT+5 vs Z
+
+```js
+assert({
+  actual: "Thu Jan 01 1970 12:00:00 GMT+0500",
+  expect: "1970-01-01 00:00:00.000Z",
+});
+```
+
+![img](<./date/gmt+5_vs_z.svg>)
+
+# GMT+2 vs iso
+
+```js
+assert({
+  actual: "Tue May 07 2024 11:27:04 GMT+0200",
+  expect: "1970-01-01 00:00:00Z",
+});
+```
+
+![img](<./date/gmt+2_vs_iso.svg>)
+
+# simplified date
+
+```js
+assert({
+  actual: "1970-01-01 10:00:00",
+  expect: "1970-01-01 10:00:00Z",
+});
+```
+
+![img](<./date/simplified_date.svg>)
+
 # +2 hour on timezone
 
 ```js
@@ -74,39 +107,6 @@ assert({
 ```
 
 ![img](<./date/+0h30_on_timezone.svg>)
-
-# timezone stuff
-
-```js
-assert({
-  actual: "Thu Jan 01 1970 12:00:00 GMT+0500",
-  expect: "1970-01-01 00:00:00.000Z",
-});
-```
-
-![img](<./date/timezone_stuff.svg>)
-
-# GMT vs iso
-
-```js
-assert({
-  actual: "Tue May 07 2024 11:27:04 GMT+0200",
-  expect: "1970-01-01 00:00:00Z",
-});
-```
-
-![img](<./date/gmt_vs_iso.svg>)
-
-# simplified date
-
-```js
-assert({
-  actual: "1970-01-01 10:00:00",
-  expect: "1970-01-01 10:00:00Z",
-});
-```
-
-![img](<./date/simplified_date.svg>)
 
 # date objects
 

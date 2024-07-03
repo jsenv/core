@@ -17,44 +17,14 @@ await startSnapshotTesting("date", ({ test }) => {
       expect: "1970-01-01 00:00:00.020Z",
     });
   });
-  test("+2 hour on timezone", () => {
-    assert({
-      actual: "1970-01-01 10:00:00+03:00",
-      expect: "1970-01-01 10:00:00+01:00",
-    });
-  });
-  test("-2 hour on timezone", () => {
-    assert({
-      actual: "1970-01-01 10:00:00-03:00",
-      expect: "1970-01-01 10:00:00-01:00",
-    });
-  });
-  test("+1h30 on timezone", () => {
-    assert({
-      actual: "1970-01-01 10:00:00+01:30",
-      expect: "1970-01-01 10:00:00+00:00",
-    });
-  });
-  test("-1h30 on timezone", () => {
-    assert({
-      actual: "1970-01-01 10:00:00-01:30",
-      expect: "1970-01-01 10:00:00+00:00",
-    });
-  });
-  test("+0h30 on timezone", () => {
-    assert({
-      actual: "1970-01-01 10:00:00+00:30",
-      expect: "1970-01-01 10:00:00+00:00",
-    });
-  });
   timezone: {
-    test("timezone stuff", () => {
+    test("GMT+5 vs Z", () => {
       assert({
         actual: "Thu Jan 01 1970 12:00:00 GMT+0500",
         expect: "1970-01-01 00:00:00.000Z",
       });
     });
-    test("GMT vs iso", () => {
+    test("GMT+2 vs iso", () => {
       assert({
         actual: "Tue May 07 2024 11:27:04 GMT+0200",
         expect: "1970-01-01 00:00:00Z",
@@ -64,6 +34,36 @@ await startSnapshotTesting("date", ({ test }) => {
       assert({
         actual: "1970-01-01 10:00:00",
         expect: "1970-01-01 10:00:00Z",
+      });
+    });
+    test("+2 hour on timezone", () => {
+      assert({
+        actual: "1970-01-01 10:00:00+03:00",
+        expect: "1970-01-01 10:00:00+01:00",
+      });
+    });
+    test("-2 hour on timezone", () => {
+      assert({
+        actual: "1970-01-01 10:00:00-03:00",
+        expect: "1970-01-01 10:00:00-01:00",
+      });
+    });
+    test("+1h30 on timezone", () => {
+      assert({
+        actual: "1970-01-01 10:00:00+01:30",
+        expect: "1970-01-01 10:00:00+00:00",
+      });
+    });
+    test("-1h30 on timezone", () => {
+      assert({
+        actual: "1970-01-01 10:00:00-01:30",
+        expect: "1970-01-01 10:00:00+00:00",
+      });
+    });
+    test("+0h30 on timezone", () => {
+      assert({
+        actual: "1970-01-01 10:00:00+00:30",
+        expect: "1970-01-01 10:00:00+00:00",
       });
     });
   }

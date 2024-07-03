@@ -489,15 +489,9 @@ export const createAssert = ({
             };
             if (actualNode.isHiddenWhenSame) {
               actualNode.isHidden = true;
-              if (actualNode.onHide) {
-                actualNode.onHide();
-              }
             }
             if (expectNode.isHiddenWhenSame) {
               expectNode.isHidden = true;
-              if (expectNode.onHide) {
-                expectNode.onHide();
-              }
             }
             return;
           }
@@ -687,15 +681,9 @@ export const createAssert = ({
       if (comparison.reasons.overall.any.size === 0) {
         if (actualNode.isHiddenWhenSame) {
           actualNode.isHidden = true;
-          if (actualNode.onHide) {
-            actualNode.onHide();
-          }
         }
         if (expectNode.isHiddenWhenSame) {
           expectNode.isHidden = true;
-          if (expectNode.onHide) {
-            expectNode.onHide();
-          }
         }
       }
       if (
@@ -1427,7 +1415,6 @@ let createRootNode;
     isHidden = false,
     isHiddenWhenSame = false,
     isHiddenWhenSolo = false,
-    onHide = null,
     focusedChildIndex,
     startMarker = "",
     endMarker = "",
@@ -1510,7 +1497,6 @@ let createRootNode;
       isHidden,
       isHiddenWhenSame,
       isHiddenWhenSolo,
-      onHide,
       focusedChildIndex,
       beforeRender: null,
       // START will be set by comparison
@@ -1915,7 +1901,8 @@ let createRootNode;
         node.childGenerator = () => {
           const dateString = value;
           let dateTimestamp = Date.parse(dateString);
-          if (usesTimezone(dateString)) {
+          const hasTimezone = usesTimezone(dateString);
+          if (hasTimezone) {
             const dateObjectUsingSystemTimezone = new Date(dateTimestamp);
             dateTimestamp +=
               dateObjectUsingSystemTimezone.getTimezoneOffset() * 60_000;
@@ -1923,7 +1910,7 @@ let createRootNode;
           const dateObject = new Date(dateTimestamp);
 
           const datePartsNode = node.appendChild("parts", {
-            value,
+            value: `${dateTimestamp}${hasTimezone ? "Z" : ""}`,
             category: "date_parts",
             group: "entries",
             subgroup: "date_parts",
@@ -1940,80 +1927,86 @@ let createRootNode;
             endMarker: quotesDisabled ? "" : quoteMarkerRef.current,
             quoteMarkerRef,
             childGenerator: () => {
-              const appendDatePartNode = (name, value, params) => {
+              const appendDatePartNode = (name, value, params, width) => {
                 return datePartsNode.appendChild(name, {
-                  value,
-                  render: renderValue,
-                  quoteMarkerRef,
-                  quotesDisabled: true,
-                  dateStringDetectionDisabled: true,
-                  numericSeparatorsDisabled: true,
-                  preserveLineBreaks: true,
                   group: "date_part",
                   subgroup: `date_${name}`,
+                  value,
+                  render: (node, props) => {
+                    return truncateAndApplyColor(
+                      String(value).padStart(width, "0"),
+                      node,
+                      props,
+                    );
+                  },
                   ...params,
                 });
               };
               appendDatePartNode("year", dateObject.getFullYear());
               appendDatePartNode(
                 "month",
-                String(dateObject.getMonth() + 1).padStart(2, "0"),
+                dateObject.getMonth() + 1,
                 { startMarker: "-" },
+                2,
               );
               appendDatePartNode(
                 "day",
-                String(dateObject.getDate()).padStart(2, "0"),
+                dateObject.getDate(),
                 { startMarker: "-" },
+                2,
               );
               const timePartsNode = datePartsNode.appendChild("time", {
-                render: renderChildren,
-                onelineDiff: {},
                 group: "entries",
                 subgroup: "date_time",
+                render: renderChildren,
+                onelineDiff: {},
                 isHiddenWhenSame: true,
                 childGenerator: () => {
-                  const appendTimePartNode = (name, value, params) => {
+                  const appendTimePartNode = (name, value, params, width) => {
                     return timePartsNode.appendChild(name, {
-                      value,
-                      render: renderString,
-                      stringDiffPrecision: "none",
-                      quoteMarkerRef,
-                      quotesDisabled: true,
-                      dateStringDetectionDisabled: true,
-                      numericSeparatorsDisabled: true,
-                      preserveLineBreaks: true,
                       group: "time_prop",
                       subgroup: `time_${name}`,
+                      value,
+                      render: (node, props) => {
+                        return truncateAndApplyColor(
+                          width ? String(value).padStart(width, "0") : value,
+                          node,
+                          props,
+                        );
+                      },
                       ...params,
                     });
                   };
                   appendTimePartNode(
                     "hours",
-                    String(dateObject.getHours()).padStart(2, "0"),
+                    dateObject.getHours(),
                     { startMarker: " " },
+                    2,
                   );
                   appendTimePartNode(
                     "minutes",
-                    String(dateObject.getMinutes()).padStart(2, "0"),
+                    dateObject.getMinutes(),
                     { startMarker: ":" },
+                    2,
                   );
-                  const secondsPartNode = appendTimePartNode(
+                  appendTimePartNode(
                     "seconds",
-                    String(dateObject.getSeconds()).padStart(2, "0"),
+                    dateObject.getSeconds(),
                     { startMarker: ":" },
+                    2,
                   );
                   appendTimePartNode(
                     "milliseconds",
-                    String(dateObject.getMilliseconds()).padStart(3, "0"),
+                    dateObject.getMilliseconds(),
                     {
                       startMarker: ".",
-                      endMarker: "Z",
                       isHiddenWhenSame: true,
-                      onHide: () => {
-                        secondsPartNode.endMarker = "Z";
-                      },
                     },
+                    3,
                   );
+                  if (hasTimezone) {
+                    appendTimePartNode("timezone", "Z");
+                  }
                 },
               });
             },
