@@ -42,7 +42,7 @@
     "@jsenv/filesystem": "4.7.0",
     "@jsenv/github-check-run": "0.1.14",
     "@jsenv/humanize": "1.1.3",
-    "@jsenv/plugin-supervisor": "1.4.10",
+    "@jsenv/plugin-supervisor": "1.4.11",
     "@jsenv/url-meta": "8.4.0",
     "@jsenv/urls": "2.2.7",
     "@jsenv/utils": "2.1.1",

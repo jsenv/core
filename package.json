@@ -74,7 +74,7 @@
     "@jsenv/node-esm-resolution": "1.0.2",
     "@jsenv/plugin-bundling": "2.6.10",
     "@jsenv/plugin-minification": "1.5.4",
-    "@jsenv/plugin-supervisor": "1.4.10",
+    "@jsenv/plugin-supervisor": "1.4.11",
     "@jsenv/plugin-transpilation": "1.3.16",
     "@jsenv/runtime-compat": "1.3.0",
     "@jsenv/server": "15.2.6",
