@@ -148,9 +148,12 @@ export const createTransformUrlContentError = ({
     if (code === "PARSE_ERROR") {
       transformError.reason = `parse error on ${urlInfo.type}`;
       transformError.cause = error;
+      let line = error.line;
+      if (urlInfo.type === "js_module") {
+        line = line - 1;
+      }
       if (urlInfo.isInline) {
-        transformError.trace.line =
-          urlInfo.firstReference.trace.line + error.line - 1;
+        transformError.trace.line = urlInfo.firstReference.trace.line + line;
         transformError.trace.column =
           urlInfo.firstReference.trace.column + error.column;
         transformError.trace.codeFrame = generateContentFrame({
@@ -167,16 +170,16 @@ export const createTransformUrlContentError = ({
       } else {
         transformError.trace = {
           url: urlInfo.url,
-          line: error.line,
+          line,
           column: error.column,
           codeFrame: generateContentFrame({
-            line: error.line - 1,
+            line,
             column: error.column,
             content: urlInfo.content,
           }),
           message: stringifyUrlSite({
             url: urlInfo.url,
-            line: error.line - 1,
+            line,
             column: error.column,
             content: urlInfo.content,
           }),

@@ -12,10 +12,10 @@
   },
   "devDependencies": {
     "@jsenv/assert": "4.0.8",
-    "@jsenv/core": "38.4.16",
+    "@jsenv/core": "38.4.17",
     "@jsenv/eslint-config": "16.5.2",
     "@jsenv/eslint-import-resolver": "8.1.2",
-    "@jsenv/test": "3.0.24",
+    "@jsenv/test": "3.0.25",
     "eslint": "8.56.0",
     "eslint-plugin-import": "2.29.1",
     "prettier": "3.3.2"

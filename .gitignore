@@ -13,3 +13,4 @@
 .DS_STORE
 todo.txt
 /tests/**/dist/
+/tests/**/ignored/
