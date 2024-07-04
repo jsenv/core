@@ -7,16 +7,14 @@
  * - same for "/dir/404.html"
  * - "/404.js" does nothing special
  *
- * - what happens when serving a directory? It would be great to have autoreload here too?
- * so we would need something special
+ * - TODO: improve the page message
+ *   404 http://localhost:5674/404.html
+ *   No entry on the filesystem at file:///Users/damien.maillard/dev/perso/jsenv-core/tests/dev_server/404_directory_listing/client/404.html
  *
+ *   See following files are availables in file:///Users/damien.maillard/dev/perso/jsenv-core/tests/dev_server/404_directory_listing/client/:
+ *   - dir/
+ *   - main.html
  * - TODO in an other test: check what happens for syntax error
- */
-
-/*
- * Test the following:
- * - Ensure adding/removing a syntax error in html is gracefully handled
- *   (no waiting forever for importmap to load and js properly executes)
  */
 
 import { writeFileSync } from "node:fs";
@@ -54,12 +52,12 @@ try {
   await page.goto(`${devServer.origin}`);
   await takeScreenshot("root_url.png");
   await takePageSnapshot("root_url.html");
-  //   await page.goto(`${devServer.origin}/404.html`);
-  //   await takeScreenshot("404.html.png");
-  //   await takePageSnapshot("404.html.html");
-  //   await page.goto(`${devServer.origin}/dir/404.html`);
-  //   await takeScreenshot("dir_404.html.png");
-  //   await takePageSnapshot("dir_404.html.html");
+  await page.goto(`${devServer.origin}/404.html`);
+  await takeScreenshot("404.html.png");
+  await takePageSnapshot("404.html.html");
+  await page.goto(`${devServer.origin}/dir/404.html`);
+  await takeScreenshot("dir_404.html.png");
+  await takePageSnapshot("dir_404.html.html");
 } finally {
   if (!debug) {
     browser.close();

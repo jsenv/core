@@ -1,4 +1,4 @@
-import { readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { serveDirectory } from "@jsenv/server";
 import { pathToFileURL } from "node:url";
 import {
@@ -100,6 +100,11 @@ export const jsenvPluginProtocolFile = ({
         if (reference.leadsToADirectory) {
           let actionForDirectory;
           if (
+            reference.ownerUrlInfo.type === "html" &&
+            reference.type === "a_href"
+          ) {
+            actionForDirectory = "ignore";
+          } else if (
             reference.type === "http_request" ||
             reference.type === "filesystem"
           ) {
@@ -208,6 +213,9 @@ export const jsenvPluginProtocolFile = ({
               throw e;
             }
             const parentDirectoryUrl = new URL("./", urlInfo.url).href;
+            if (!existsSync(parentDirectoryUrl)) {
+              throw e;
+            }
             return createDirectoryResponse(parentDirectoryUrl, urlInfo);
           }
         }
@@ -234,7 +242,6 @@ const createDirectoryResponse = (url, urlInfo) => {
   const contentLength = headers["content-length"];
   if (contentType === "text/html") {
     return {
-      type: "directory",
       contentType,
       contentLength,
       content: body,

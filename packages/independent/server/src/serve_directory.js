@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, lstatSync } from "node:fs";
 
 import { pickContentType } from "./content_negotiation/pick_content_type.js";
 
@@ -38,10 +38,14 @@ export const serveDirectory = (
     <h1>Content of directory ${url}</h1>
     <ul>
       ${directoryContentArray.map((filename) => {
-        const fileUrl = String(new URL(filename, url));
-        const fileUrlRelativeToServer = fileUrl.slice(
+        const fileUrlObject = new URL(filename, url);
+        const fileUrl = String(fileUrlObject);
+        let fileUrlRelativeToServer = fileUrl.slice(
           String(rootDirectoryUrl).length,
         );
+        if (lstatSync(fileUrlObject).isDirectory()) {
+          fileUrlRelativeToServer += "/";
+        }
         return `<li>
         <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
       </li>`;
