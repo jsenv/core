@@ -184,18 +184,7 @@ export const jsenvPluginProtocolFile = ({
               urlInfo.filenameHint = `${urlToFilename(urlInfo.url)}/`;
             }
           }
-          const { headers, body } = serveDirectory(urlObject.href, {
-            headers: urlInfo.context.request
-              ? urlInfo.context.request.headers
-              : {},
-            rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
-          });
-          return {
-            type: "directory",
-            contentType: headers["content-type"],
-            contentLength: headers["content-length"],
-            content: body,
-          };
+          return createDirectoryResponse(urlObject.href, urlInfo);
         }
         if (
           !urlInfo.dirnameHint &&
@@ -204,18 +193,59 @@ export const jsenvPluginProtocolFile = ({
           urlInfo.dirnameHint =
             urlInfo.firstReference.ownerUrlInfo.filenameHint;
         }
-        const fileBuffer = readFileSync(urlObject);
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
+        if (contentType === "text/html") {
+          try {
+            const fileBuffer = readFileSync(urlObject);
+            const content = String(fileBuffer);
+            return {
+              content,
+              contentType,
+              contentLength: fileBuffer.length,
+            };
+          } catch (e) {
+            if (e.code !== "ENOENT") {
+              throw e;
+            }
+            const parentDirectoryUrl = new URL("./", urlInfo.url).href;
+            return createDirectoryResponse(parentDirectoryUrl, urlInfo);
+          }
+        }
+        const fileBuffer = readFileSync(urlObject);
         const content = CONTENT_TYPE.isTextual(contentType)
           ? String(fileBuffer)
           : fileBuffer;
         return {
           content,
           contentType,
+          contentLength: fileBuffer.length,
         };
       },
     },
   ];
+};
+
+const createDirectoryResponse = (url, urlInfo) => {
+  const { headers, body } = serveDirectory(url, {
+    headers: urlInfo.context.request ? urlInfo.context.request.headers : {},
+    rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+  });
+  const contentType = headers["content-type"];
+  const contentLength = headers["content-length"];
+  if (contentType === "text/html") {
+    return {
+      type: "directory",
+      contentType,
+      contentLength,
+      content: body,
+    };
+  }
+  return {
+    type: "directory",
+    contentType,
+    contentLength,
+    content: body,
+  };
 };
 
 const resolveSymlink = (fileUrl) => {
