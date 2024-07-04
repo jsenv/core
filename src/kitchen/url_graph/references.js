@@ -72,13 +72,14 @@ export const createDependencies = (ownerUrlInfo) => {
     const parentContent = isOriginalPosition
       ? ownerUrlInfo.originalContent
       : ownerUrlInfo.content;
+    const trace = traceFromUrlSite({
+      url: parentUrl,
+      content: parentContent,
+      line: specifierLine,
+      column: specifierColumn,
+    });
     const reference = createResolveAndFinalize({
-      trace: traceFromUrlSite({
-        url: parentUrl,
-        content: parentContent,
-        line: specifierLine,
-        column: specifierColumn,
-      }),
+      trace,
       isOriginalPosition,
       specifierLine,
       specifierColumn,

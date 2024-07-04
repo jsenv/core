@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { URL_META } from "@jsenv/url-meta";
 import {
   assertAndNormalizeDirectoryUrl,
@@ -91,6 +91,9 @@ export const startDevServer = async ({
       sourceDirectoryUrl,
       "sourceDirectoryUrl",
     );
+    if (!existsSync(new URL(sourceDirectoryUrl))) {
+      throw new Error(`ENOENT on sourceDirectoryUrl at ${sourceDirectoryUrl}`);
+    }
     if (typeof sourceMainFilePath !== "string") {
       throw new TypeError(
         `sourceMainFilePath must be a string, got ${sourceMainFilePath}`,

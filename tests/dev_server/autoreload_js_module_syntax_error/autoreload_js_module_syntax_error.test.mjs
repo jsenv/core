@@ -7,9 +7,12 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
-import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
+import {
+  assertErrorOverlayNotDisplayed,
+  assertErrorOverlayDisplayed,
+} from "../error_overlay_test_helpers.js";
 
 let debug = false;
 const jsFileUrl = new URL("./client/main.js", import.meta.url);
@@ -31,51 +34,13 @@ const page = await browser.newPage({ ignoreHTTPSErrors: true });
 
 try {
   await page.goto(`${devServer.origin}/main.html`);
-  const getErrorOverlayDisplayedOnPage = async (page) => {
-    const errorOverlayHandle = await page.evaluate(
-      /* eslint-disable no-undef */
-      () => document.querySelector("jsenv-error-overlay"),
-      /* eslint-enable no-undef */
-    );
-    return Boolean(errorOverlayHandle);
-  };
-  {
-    const actual = {
-      displayed: await getErrorOverlayDisplayedOnPage(page),
-    };
-    const expect = {
-      displayed: false,
-    };
-    assert({ actual, expect });
-  }
-
+  await assertErrorOverlayNotDisplayed(page);
   jsFileContent.update(`const j = (`);
-  await new Promise((resolve) => {
-    setTimeout(resolve, 500);
-  });
-  {
-    const actual = {
-      displayedAfterSyntaxError: await getErrorOverlayDisplayedOnPage(page),
-    };
-    const expect = {
-      displayedAfterSyntaxError: true,
-    };
-    assert({ actual, expect });
-  }
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await assertErrorOverlayDisplayed(page, "after_syntax_error");
   jsFileContent.update(`const j = true`);
-  await new Promise((resolve) => {
-    setTimeout(resolve, 500);
-  });
-  {
-    const actual = {
-      displayedAfterFixAndAutoreload:
-        await getErrorOverlayDisplayedOnPage(page),
-    };
-    const expect = {
-      displayedAfterFixAndAutoreload: false,
-    };
-    assert({ actual, expect });
-  }
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await assertErrorOverlayNotDisplayed(page, "after_fix_and_autoreload");
 } finally {
   jsFileContent.restore();
   if (!debug) {

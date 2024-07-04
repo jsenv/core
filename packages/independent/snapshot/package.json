@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "1.3.8",
+  "version": "1.3.9",
   "description": "Snapshot testing",
   "license": "MIT",
   "author": {
@@ -35,7 +35,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.6.9",
+    "@jsenv/filesystem": "4.7.0",
     "@jsenv/urls": "2.2.7",
     "@jsenv/utils": "2.1.1",
     "@jsenv/assert": "4.0.8",

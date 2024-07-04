@@ -33,7 +33,6 @@ export const parseHtml = ({
       const htmlParseError = new Error(
         `Unable to parse HTML; ${parse5Error.code}`,
       );
-
       htmlParseError.reasonCode = parse5Error.code;
       htmlParseError.code = "PARSE_ERROR";
       htmlParseError.url = url;

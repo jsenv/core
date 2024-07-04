@@ -38,11 +38,11 @@ const test = async (params) => {
     const expect = {
       consoleErrorOutput: `Error while handling ${htmlServerUrl}:
 invalid-first-character-of-tag-name
-${htmFileUrl}:4:12
-1 | <!doctype html>
+${htmFileUrl}:5:12
 2 | <html lang="en">
 3 |   <body>
 4 |     <pre>
+5 |       foo <=> baz;
                ^`,
       pageErrors: [],
       consoleOutputRaw: "",
