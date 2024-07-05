@@ -88,9 +88,9 @@ ${fileUrl}`);
       }
       assert({
         message: failureMessage,
-        details: fileUrl,
         actual: nextFileContent,
         expect: fileContent,
+        details: fileUrl,
         forceMultilineDiff: true,
       });
     },

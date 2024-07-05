@@ -1,3 +1,3 @@
 import { writeFileSync } from "node:fs";
 
-writeFileSync(new URL("./my_snapshots/", import.meta.url), "b");
+writeFileSync(new URL("./git_ignored/file.txt", import.meta.url), "b");

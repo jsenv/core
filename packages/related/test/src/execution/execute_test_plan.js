@@ -993,7 +993,9 @@ To fix this warning:
       await startAsMuchAsPossible();
     }
     timings.executionEnd = takeTiming();
-    directorySnapshot.compare();
+    if (directorySnapshot) {
+      directorySnapshot.compare();
+    }
   } catch (e) {
     if (Abort.isAbortError(e)) {
     } else {
