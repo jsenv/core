@@ -27,6 +27,9 @@ export const startSnapshotTesting = async (name, scenarios) => {
     const scenarioMap = new Map();
     const onlyScenarioMap = new Map();
     const test = (name, callback) => {
+      if (scenarioMap.has(name)) {
+        console.warn(`a test with "${name} already exists`);
+      }
       scenarioMap.set(name, callback);
     };
     test.ONLY = (name, callback) => {

@@ -20,6 +20,19 @@ assert({
 
 ![img](<./string_multline/remove_empty_line.svg>)
 
+# two line url
+
+```js
+assert({
+  actual: `a
+file:///file.txt`,
+  expect: `b
+file:///file.txt`,
+});
+```
+
+![img](<./string_multline/two_line_url.svg>)
+
 # one line vs two lines
 
 ```js

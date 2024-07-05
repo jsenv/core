@@ -12,6 +12,12 @@ actual: 1|
 expect: 1| 
         2| 
 
+# two line url
+AssertionError: actual and expect are different
+
+actual: "afile://…"
+expect: "bfile://…"
+
 # one line vs two lines
 AssertionError: actual and expect are different
 

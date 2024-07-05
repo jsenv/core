@@ -86,9 +86,3 @@ b
 file:///Users/damien.maillard/dev/perso/jsenv-core/packages/related/test/tests/test_plan_execution/…
 expect: Error: snapshot comparison
 
-# actual message multiline, expect single v2
-AssertionError: actual and expect are different
-
-actual: Error: afile://…
-expect: Error: abc
-

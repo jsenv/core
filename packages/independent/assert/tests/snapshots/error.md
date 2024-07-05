@@ -135,15 +135,3 @@ file:///Users/damien.maillard/dev/perso/jsenv-core/packages/related/test/tests/t
 
 ![img](<./error/actual_message_multiline__expect_single.svg>)
 
-# actual message multiline, expect single v2
-
-```js
-assert({
-  actual: new Error(`a
-file:///dir/file.txt`),
-  expect: new Error(`abc`),
-});
-```
-
-![img](<./error/actual_message_multiline__expect_single_v2.svg>)
-

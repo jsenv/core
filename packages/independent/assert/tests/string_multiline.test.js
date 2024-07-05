@@ -14,6 +14,14 @@ await startSnapshotTesting("string_multline", ({ test }) => {
       expect: `\n`,
     });
   });
+  test.ONLY("two line url", () => {
+    assert({
+      actual: `a
+file:///file.txt`,
+      expect: `b
+file:///file.txt`,
+    });
+  });
   test("one line vs two lines", () => {
     assert({
       actual: "Hel",

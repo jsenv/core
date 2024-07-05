@@ -79,11 +79,4 @@ file:///Users/damien.maillard/dev/perso/jsenv-core/packages/related/test/tests/t
       expect: new Error(`snapshot comparison`),
     });
   });
-  test("actual message multiline, expect single v2", () => {
-    assert({
-      actual: new Error(`a
-file:///dir/file.txt`),
-      expect: new Error(`abc`),
-    });
-  });
 });
