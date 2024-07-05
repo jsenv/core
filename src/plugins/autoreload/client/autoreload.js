@@ -6,134 +6,134 @@ import {
   getDOMNodesUsingUrl,
 } from "./reload.js";
 
-let debug = false;
-const reloader = {
-  urlHotMetas,
-  status: {
-    value: "idle",
-    onchange: () => {},
-    goTo: (value) => {
-      reloader.status.value = value;
-      reloader.status.onchange();
+export const initAutoreload = ({ mainFilePath }) => {
+  let debug = false;
+  const reloader = {
+    urlHotMetas,
+    status: {
+      value: "idle",
+      onchange: () => {},
+      goTo: (value) => {
+        reloader.status.value = value;
+        reloader.status.onchange();
+      },
     },
-  },
-  autoreload: {
-    enabled: ["1", null].includes(window.localStorage.getItem("autoreload")),
-    onchange: () => {},
-    enable: () => {
-      reloader.autoreload.enabled = true;
-      window.localStorage.setItem("autoreload", "1");
-      reloader.autoreload.onchange();
+    autoreload: {
+      enabled: ["1", null].includes(window.localStorage.getItem("autoreload")),
+      onchange: () => {},
+      enable: () => {
+        reloader.autoreload.enabled = true;
+        window.localStorage.setItem("autoreload", "1");
+        reloader.autoreload.onchange();
+      },
+      disable: () => {
+        reloader.autoreload.enabled = false;
+        window.localStorage.setItem("autoreload", "0");
+        reloader.autoreload.onchange();
+      },
     },
-    disable: () => {
-      reloader.autoreload.enabled = false;
-      window.localStorage.setItem("autoreload", "0");
-      reloader.autoreload.onchange();
-    },
-  },
-  changes: {
-    value: [],
-    onchange: () => {},
-    add: (reloadMessage) => {
-      if (debug) {
-        console.debug("received reload message", reloadMessage);
-      }
-      reloader.changes.value.push(reloadMessage);
-      reloader.changes.onchange();
-      if (reloader.autoreload.enabled) {
-        reloader.reload();
-      } else {
-        reloader.status.goTo("can_reload");
-      }
-    },
-    remove: (reloadMessage) => {
-      const index = reloader.changes.value.indexOf(reloadMessage);
-      if (index > -1) {
-        reloader.changes.value.splice(index, 1);
-        if (reloader.changes.value.length === 0) {
-          reloader.status.goTo("idle");
+    changes: {
+      value: [],
+      onchange: () => {},
+      add: (reloadMessage) => {
+        if (debug) {
+          console.debug("received reload message", reloadMessage);
         }
+        reloader.changes.value.push(reloadMessage);
         reloader.changes.onchange();
-      }
+        if (reloader.autoreload.enabled) {
+          reloader.reload();
+        } else {
+          reloader.status.goTo("can_reload");
+        }
+      },
+      remove: (reloadMessage) => {
+        const index = reloader.changes.value.indexOf(reloadMessage);
+        if (index > -1) {
+          reloader.changes.value.splice(index, 1);
+          if (reloader.changes.value.length === 0) {
+            reloader.status.goTo("idle");
+          }
+          reloader.changes.onchange();
+        }
+      },
     },
-  },
-  currentExecution: null,
-  reload: () => {
-    const someEffectIsFullReload = reloader.changes.value.some(
-      (reloadMessage) => reloadMessage.type === "full",
-    );
-    if (someEffectIsFullReload) {
-      reloadHtmlPage();
+    currentExecution: null,
+    reload: () => {
+      const someEffectIsFullReload = reloader.changes.value.some(
+        (reloadMessage) => reloadMessage.type === "full",
+      );
+      if (someEffectIsFullReload) {
+        reloadHtmlPage();
+        return;
+      }
+      reloader.status.goTo("reloading");
+      const onApplied = (reloadMessage) => {
+        reloader.changes.remove(reloadMessage);
+      };
+      const setReloadMessagePromise = (reloadMessage, promise) => {
+        promise.then(
+          () => {
+            onApplied(reloadMessage);
+            reloader.currentExecution = null;
+          },
+          (e) => {
+            reloader.status.goTo("failed");
+            if (typeof window.reportError === "function") {
+              window.reportError(e);
+            } else {
+              console.error(e);
+            }
+            console.error(
+              `[jsenv] Hot reload failed after ${reloadMessage.reason}.
+This could be due to syntax errors or importing non-existent modules (see errors in console)`,
+            );
+            reloader.currentExecution = null;
+          },
+        );
+      };
+      reloader.changes.value.forEach((reloadMessage) => {
+        if (reloadMessage.type === "hot") {
+          const promise = addToHotQueue(() => {
+            return applyHotReload(reloadMessage);
+          });
+          setReloadMessagePromise(reloadMessage, promise);
+        } else {
+          setReloadMessagePromise(reloadMessage, Promise.resolve());
+        }
+      });
+    },
+  };
+
+  let pendingCallbacks = [];
+  let running = false;
+  const addToHotQueue = async (callback) => {
+    pendingCallbacks.push(callback);
+    dequeue();
+  };
+  const dequeue = async () => {
+    if (running) {
       return;
     }
-    reloader.status.goTo("reloading");
-    const onApplied = (reloadMessage) => {
-      reloader.changes.remove(reloadMessage);
-    };
-    const setReloadMessagePromise = (reloadMessage, promise) => {
-      promise.then(
-        () => {
-          onApplied(reloadMessage);
-          reloader.currentExecution = null;
-        },
-        (e) => {
-          reloader.status.goTo("failed");
-          if (typeof window.reportError === "function") {
-            window.reportError(e);
-          } else {
-            console.error(e);
-          }
-          console.error(
-            `[jsenv] Hot reload failed after ${reloadMessage.reason}.
-This could be due to syntax errors or importing non-existent modules (see errors in console)`,
-          );
-          reloader.currentExecution = null;
-        },
-      );
-    };
-    reloader.changes.value.forEach((reloadMessage) => {
-      if (reloadMessage.type === "hot") {
-        const promise = addToHotQueue(() => {
-          return applyHotReload(reloadMessage);
-        });
-        setReloadMessagePromise(reloadMessage, promise);
-      } else {
-        setReloadMessagePromise(reloadMessage, Promise.resolve());
+    const callbacks = pendingCallbacks.slice();
+    pendingCallbacks = [];
+    running = true;
+    try {
+      await callbacks.reduce(async (previous, callback) => {
+        await previous;
+        await callback();
+      }, Promise.resolve());
+    } finally {
+      running = false;
+      if (pendingCallbacks.length) {
+        dequeue();
       }
-    });
-  },
-};
-
-let pendingCallbacks = [];
-let running = false;
-const addToHotQueue = async (callback) => {
-  pendingCallbacks.push(callback);
-  dequeue();
-};
-const dequeue = async () => {
-  if (running) {
-    return;
-  }
-  const callbacks = pendingCallbacks.slice();
-  pendingCallbacks = [];
-  running = true;
-  try {
-    await callbacks.reduce(async (previous, callback) => {
-      await previous;
-      await callback();
-    }, Promise.resolve());
-  } finally {
-    running = false;
-    if (pendingCallbacks.length) {
-      dequeue();
     }
-  }
-};
+  };
 
-const applyHotReload = async ({ cause, hotInstructions }) => {
-  await hotInstructions.reduce(
-    async (previous, { type, boundary, acceptedBy }) => {
-      await previous;
+  const applyHotReload = async ({ cause, hotInstructions }) => {
+    for (const instruction of hotInstructions) {
+      const { type, boundary, acceptedBy } = instruction;
 
       const hot = Date.now();
       const urlToFetch = new URL(boundary, `${window.location.origin}/`).href;
@@ -141,7 +141,6 @@ const applyHotReload = async ({ cause, hotInstructions }) => {
       // there is no url hot meta when:
       // - code was not executed (code splitting with dynamic import)
       // - import.meta.hot.accept() is not called (happens for HTML and CSS)
-
       if (type === "prune") {
         if (urlHotMeta) {
           delete urlHotMetas[urlToFetch];
@@ -154,9 +153,8 @@ const applyHotReload = async ({ cause, hotInstructions }) => {
             console.groupEnd();
           }
         }
-        return null;
+        continue;
       }
-
       if (acceptedBy === boundary) {
         console.groupCollapsed(`[jsenv] hot reloading ${boundary} (${cause})`);
       } else {
@@ -167,7 +165,7 @@ const applyHotReload = async ({ cause, hotInstructions }) => {
       if (type === "js_module") {
         if (!urlHotMeta) {
           // code was not executed, no need to re-execute it
-          return null;
+          continue;
         }
         if (urlHotMeta.disposeCallback) {
           console.log(`call dispose callback`);
@@ -184,18 +182,24 @@ const applyHotReload = async ({ cause, hotInstructions }) => {
         }
         console.log(`js module import done`);
         console.groupEnd();
-        return namespace;
+        continue;
       }
       if (type === "html") {
-        const isRootHtmlFile =
-          window.location.pathname === "/" &&
-          new URL(urlToFetch).pathname.slice(1).indexOf("/") === -1;
+        let isRootHtmlFile;
+        if (window.location.pathname === "/") {
+          debugger;
+          if (new URL(urlToFetch).pathname.slice(1).indexOf("/") === -1) {
+            isRootHtmlFile = true;
+          } else if (new URL(urlToFetch).pathname === mainFilePath) {
+            isRootHtmlFile = true;
+          }
+        }
         if (
           !isRootHtmlFile &&
           !compareTwoUrlPaths(urlToFetch, window.location.href)
         ) {
           // we are not in that HTML page
-          return null;
+          continue;
         }
         const urlToReload = new URL(acceptedBy, `${window.location.origin}/`)
           .href;
@@ -213,18 +217,16 @@ const applyHotReload = async ({ cause, hotInstructions }) => {
           });
         }
         console.groupEnd();
-        return null;
+        continue;
       }
       console.warn(`unknown update type: "${type}"`);
-      return null;
-    },
-    Promise.resolve(),
-  );
-};
+    }
+  };
 
-window.__reloader__ = reloader;
-window.__server_events__.listenEvents({
-  reload: (reloadServerEvent) => {
-    reloader.changes.add(reloadServerEvent.data);
-  },
-});
+  window.__reloader__ = reloader;
+  window.__server_events__.listenEvents({
+    reload: (reloadServerEvent) => {
+      reloader.changes.add(reloadServerEvent.data);
+    },
+  });
+};

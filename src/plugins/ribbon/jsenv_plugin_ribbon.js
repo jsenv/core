@@ -62,7 +62,7 @@ export const jsenvPluginRibbon = ({
           createHtmlNode({
             tagName: "script",
             type: "module",
-            textContent: `import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}"
+            textContent: `import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}";
 
 injectRibbon(${paramsJson});`,
           }),

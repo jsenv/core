@@ -5,6 +5,7 @@ import {
   bufferToEtag,
 } from "@jsenv/filesystem";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
+import { urlToRelativeUrl } from "@jsenv/urls";
 import {
   jsenvAccessControlAllowedHeaders,
   startServer,
@@ -99,6 +100,10 @@ export const startDevServer = async ({
         `sourceMainFilePath must be a string, got ${sourceMainFilePath}`,
       );
     }
+    sourceMainFilePath = urlToRelativeUrl(
+      new URL(sourceMainFilePath, sourceDirectoryUrl),
+      sourceDirectoryUrl,
+    );
     if (outDirectoryUrl === undefined) {
       if (!process.env.CI) {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);

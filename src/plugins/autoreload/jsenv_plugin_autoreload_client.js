@@ -26,12 +26,21 @@ export const jsenvPluginAutoreloadClient = () => {
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl,
         });
+        const paramsJson = JSON.stringify(
+          {
+            mainFilePath: `/${htmlUrlInfo.kitchen.context.mainFilePath}`,
+          },
+          null,
+          "  ",
+        );
         injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
             type: "module",
-            src: autoreloadClientReference.generatedSpecifier,
+            textContent: `import { initAutoreload } from "${autoreloadClientReference.generatedSpecifier}";
+
+initAutoreload(${paramsJson});`,
           }),
           "jsenv:autoreload_client",
         );

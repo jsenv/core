@@ -9,14 +9,17 @@
  * - TODO in an other test: check what happens for syntax error
  */
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
+import { writeFileStructureSync } from "@jsenv/filesystem";
 // import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
 
-let debug = false;
-const sourceDirectoryUrl = new URL("./client/", import.meta.url);
+let debug = true;
+const sourceDirectoryUrl = new URL("./ignored/", import.meta.url);
+const atStartDirectoryUrl = new URL("./0_at_start/", import.meta.url);
+writeFileStructureSync(sourceDirectoryUrl, atStartDirectoryUrl);
 const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
@@ -25,7 +28,7 @@ const devServer = await startDevServer({
   port: 0,
 });
 
-const browser = await chromium.launch({ headless: !debug });
+const browser = await chromium.launch({ headless: !debug, devtools: debug });
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
 await page.setViewportSize({ width: 600, height: 300 }); // set a relatively small and predicatble size
 const takeScreenshot = async (name) => {
@@ -44,12 +47,17 @@ try {
   await page.goto(`${devServer.origin}`);
   await takeScreenshot("0_root_url.png");
   await takePageSnapshot("0_root_url.html");
-  await page.goto(`${devServer.origin}/404.html`);
-  await takeScreenshot("1_404.html.png");
-  await takePageSnapshot("1_404.html.html");
-  await page.goto(`${devServer.origin}/dir/404.html`);
-  await takeScreenshot("2_dir_404.html.png");
-  await takePageSnapshot("2_dir_404.html.html");
+  writeFileSync(
+    new URL("./index.html", sourceDirectoryUrl),
+    readFileSync(new URL("./1_other/index.html", import.meta.url)),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  // await page.goto(`${devServer.origin}/404.html`);
+  // await takeScreenshot("1_404.html.png");
+  // await takePageSnapshot("1_404.html.html");
+  // await page.goto(`${devServer.origin}/dir/404.html`);
+  // await takeScreenshot("2_dir_404.html.png");
+  // await takePageSnapshot("2_dir_404.html.html");
 } finally {
   if (!debug) {
     browser.close();
