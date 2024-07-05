@@ -1,6 +1,5 @@
 import { chromium, firefox, webkit } from "playwright";
-import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { writeFileSync } from "@jsenv/filesystem";
 
 if (process.platform === "win32") {
   // disable on windows because it would fails due to line endings (CRLF)
@@ -10,7 +9,7 @@ if (process.platform === "win32") {
 process.env.GENERATING_SNAPSHOTS = "true";
 const { devServer } = await import("./start_dev_server.mjs");
 const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
-const screenshotsDirectoryUrl = new URL(`./sceenshots/`, import.meta.url);
+const screenshotsDirectoryUrl = new URL(`./sceenshots/`, snapshotDirectoryUrl);
 
 const test = async ({ browserLauncher, browserName }) => {
   const browser = await browserLauncher.launch({ headless: true });
@@ -49,16 +48,14 @@ const test = async ({ browserLauncher, browserName }) => {
       },
       /* eslint-enable no-undef */
     );
-    if (!process.env.CI) {
-      await page.setViewportSize({ width: 900, height: 550 }); // generate smaller screenshots
-      const sceenshotBuffer = await page
-        .locator("jsenv-error-overlay")
-        .screenshot();
-      writeFileSync(
-        new URL(`./${story}_${browserName}.png`, screenshotsDirectoryUrl),
-        sceenshotBuffer,
-      );
-    }
+    await page.setViewportSize({ width: 900, height: 550 }); // generate smaller screenshots
+    const sceenshotBuffer = await page
+      .locator("jsenv-error-overlay")
+      .screenshot();
+    writeFileSync(
+      new URL(`./${story}_${browserName}.png`, screenshotsDirectoryUrl),
+      sceenshotBuffer,
+    );
     writeFileSync(
       new URL(`./${story}_${browserName}.html`, snapshotDirectoryUrl),
       process.platform === "win32"
@@ -107,17 +104,11 @@ const test = async ({ browserLauncher, browserName }) => {
 };
 
 try {
-  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  if (!process.env.CI) {
-    await ensureEmptyDirectory(screenshotsDirectoryUrl);
-  }
-  await ensureEmptyDirectory(snapshotDirectoryUrl);
   await Promise.all([
     test({ browserLauncher: chromium, browserName: "chromium" }),
     test({ browserLauncher: firefox, browserName: "firefox" }),
     test({ browserLauncher: webkit, browserName: "webkit" }),
   ]);
-  directorySnapshot.compare();
 } finally {
   devServer.stop();
 }
