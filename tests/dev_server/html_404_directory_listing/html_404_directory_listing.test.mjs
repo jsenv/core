@@ -4,24 +4,34 @@
  * Autoreload works when adding the file
  * (to be confirmed) autoreload when adding an other file
  *
- * - TODO: ensure it can autoreload after recovering from 404
- * - TODO: ensure it can autoreload back to 404
+ * - TODO: test in a subdirectory
  * - TODO: test when dir is empty
  * - TODO: test "/404.js"
  * - TODO in an other test: quite the same but for syntax error in html
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
-import { writeFileStructureSync } from "@jsenv/filesystem";
+import {
+  writeFileStructureSync,
+  ensureEmptyDirectorySync,
+} from "@jsenv/filesystem";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 // import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
 
-let debug = true;
+let debug = false;
 const sourceDirectoryUrl = new URL("./ignored/", import.meta.url);
-const atStartDirectoryUrl = new URL("./0_at_start/", import.meta.url);
-writeFileStructureSync(sourceDirectoryUrl, atStartDirectoryUrl);
+
+const screenshotsDirectoryUrl = new URL("./screenshots/", import.meta.url);
+const writeFileStructureForScenario = (scenario) => {
+  const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
+  writeFileStructureSync(sourceDirectoryUrl, scenarioDirectoryUrl);
+};
+ensureEmptyDirectorySync(screenshotsDirectoryUrl);
+writeFileStructureForScenario("0_at_start");
+
 const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
@@ -30,36 +40,36 @@ const devServer = await startDevServer({
   port: 0,
 });
 
-const browser = await chromium.launch({ headless: !debug, devtools: debug });
+const browser = await chromium.launch({
+  headless: !debug,
+  devtools: debug,
+});
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
 await page.setViewportSize({ width: 600, height: 300 }); // set a relatively small and predicatble size
-const takeScreenshot = async (name) => {
+const takeScreenshot = async (scenario) => {
   const sceenshotBuffer = await page.screenshot();
   writeFileSync(
-    new URL(`./screenshots/${name}`, import.meta.url),
+    new URL(`./screenshots/${scenario}.png`, import.meta.url),
     sceenshotBuffer,
   );
 };
-const takePageSnapshot = async (name) => {
-  const html = await page.content();
-  writeFileSync(new URL(`./snapshots/${name}`, import.meta.url), html);
+const testScenario = async (scenario) => {
+  const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
+  writeFileStructureSync(sourceDirectoryUrl, scenarioDirectoryUrl);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await takeScreenshot(scenario);
 };
 
 try {
   await page.goto(`${devServer.origin}`);
-  await takeScreenshot("0_root_url.png");
-  await takePageSnapshot("0_root_url.html");
-  writeFileSync(
-    new URL("./index.html", sourceDirectoryUrl),
-    readFileSync(new URL("./1_other/index.html", import.meta.url)),
+  const sceenshotDirectorySnapshot = takeDirectorySnapshot(
+    screenshotsDirectoryUrl,
   );
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  // await page.goto(`${devServer.origin}/404.html`);
-  // await takeScreenshot("1_404.html.png");
-  // await takePageSnapshot("1_404.html.html");
-  // await page.goto(`${devServer.origin}/dir/404.html`);
-  // await takeScreenshot("2_dir_404.html.png");
-  // await takePageSnapshot("2_dir_404.html.html");
+  await takeScreenshot("0_at_start");
+  await testScenario("1_fix_404");
+  await testScenario("2_update");
+  await testScenario("3_back_to_404");
+  sceenshotDirectorySnapshot.compare();
 } finally {
   if (!debug) {
     browser.close();
