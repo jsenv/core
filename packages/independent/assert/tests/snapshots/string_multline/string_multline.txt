@@ -15,8 +15,10 @@ expect: 1|
 # two line url
 AssertionError: actual and expect are different
 
-actual: "afile://…"
-expect: "bfile://…"
+actual: 1| a
+        2| file:///file.txt
+expect: 1| b
+        2| file:///file.txt
 
 # one line vs two lines
 AssertionError: actual and expect are different

@@ -2095,15 +2095,15 @@ let createRootNode;
               let lineIndex = 0;
               let charIndex = 0;
               for (const char of chars) {
-                if (preserveLineBreaks || char !== "\n") {
-                  currentLineEntry.appendCharNode(charIndex, char);
-                  charIndex++;
+                if (char === "\n" && !preserveLineBreaks) {
+                  isMultiline = true;
+                  lineIndex++;
+                  charIndex = 0;
+                  currentLineEntry = appendLineEntry(lineIndex);
                   continue;
                 }
-                isMultiline = true;
-                lineIndex++;
-                charIndex = 0;
-                currentLineEntry = appendLineEntry(lineIndex);
+                currentLineEntry.appendCharNode(charIndex, char);
+                charIndex++;
               }
               if (isMultiline) {
                 enableMultilineDiff(lineEntriesNode);
@@ -5406,6 +5406,9 @@ const shouldDisableSeparator = (
 
 const canParseUrl = (value) => {
   if (!canParseUrlNative(value)) {
+    return false;
+  }
+  if (value.includes("\n")) {
     return false;
   }
   if (/^[a-z]*Error: .*?/i.test(value)) {
