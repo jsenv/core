@@ -259,7 +259,7 @@ ${testPlanResult.patterns.join("\n")}`;
   return `${renderBigSection({
     title: "execution start",
     content: lines.join("\n"),
-  })}\n\n`;
+  })}\n`;
 };
 
 const renderExecutionLog = (execution, logOptions) => {
@@ -581,8 +581,8 @@ const renderErrors = (execution, logOptions) => {
 };
 
 const renderOutro = (testPlanResult, logOptions = {}) => {
-  return `\n${renderBigSection({
-    title: "execution end",
+  return `${renderBigSection({
+    title: "",
     content: renderOutroContent(testPlanResult, logOptions),
   })}\n`;
 };
@@ -729,28 +729,39 @@ const renderSection = ({
   content,
   dashColor = ANSI.GREY,
   width = 38,
+  bottomSeparator = true,
 }) => {
   let section = "";
 
-  const titleWidth = stripAnsi(title).length;
-  const minWidthRequired = `--- … ---`.length;
-  const needsTruncate = titleWidth + minWidthRequired >= width;
-  if (needsTruncate) {
-    const titleTruncated = title.slice(0, width - minWidthRequired);
-    const leftDashes = ANSI.color("---", dashColor);
-    const rightDashes = ANSI.color("---", dashColor);
-    section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
+  if (title) {
+    const titleWidth = stripAnsi(title).length;
+    const minWidthRequired = `--- … ---`.length;
+    const needsTruncate = titleWidth + minWidthRequired >= width;
+    if (needsTruncate) {
+      const titleTruncated = title.slice(0, width - minWidthRequired);
+      const leftDashes = ANSI.color("---", dashColor);
+      const rightDashes = ANSI.color("---", dashColor);
+      section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
+    } else {
+      const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
+      const dashLeftCount = Math.floor(remainingWidth / 2);
+      const dashRightCount = remainingWidth - dashLeftCount;
+      const leftDashes = ANSI.color("-".repeat(dashLeftCount), dashColor);
+      const rightDashes = ANSI.color("-".repeat(dashRightCount), dashColor);
+      section += `${leftDashes} ${title} ${rightDashes}`;
+    }
+    section += "\n";
   } else {
-    const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
-    const dashLeftCount = Math.floor(remainingWidth / 2);
-    const dashRightCount = remainingWidth - dashLeftCount;
-    const leftDashes = ANSI.color("-".repeat(dashLeftCount), dashColor);
-    const rightDashes = ANSI.color("-".repeat(dashRightCount), dashColor);
-    section += `${leftDashes} ${title} ${rightDashes}`;
+    const topDashes = ANSI.color(`-`.repeat(width), dashColor);
+    section += topDashes;
+    section += "\n";
   }
-  section += `\n${content}\n`;
-  const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
-  section += bottomDashes;
+  section += `${content}`;
+  if (bottomSeparator) {
+    section += "\n";
+    const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
+    section += bottomDashes;
+  }
   return section;
 };
 

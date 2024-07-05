@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="499.45"
+  height="461.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="497.45"
+      height="459.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -32,12 +32,12 @@
     id="body"
     y="40"
     width="100%"
-    height="459.45"
+    height="421.45"
     overflow="hidden"
   >
     <svg
       width="566.09"
-      height="459.45"
+      height="421.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
@@ -52,65 +52,65 @@
         <text x="10" y="52.55" fill="#7f7f7f"
           >---------------------------------------------</text
         >
-        <text x="10" y="90.55" fill="#cd5555"
+        <text x="10" y="71.55" fill="#cd5555"
           >&#x2716; 1/2 error_in_test.spec.js</text
         >
-        <text x="245.24" y="90.55" fill="#7f7f7f">[</text>
-        <text x="253.64" y="90.55" fill="#7f7f7f">worker_thread</text>
-        <text x="362.86" y="90.55" fill="#7f7f7f">/</text>
-        <text x="371.26" y="90.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
-        <text x="438.47" y="90.55" fill="#7f7f7f">]</text>
-        <text x="455.27" y="90.55"> (1 </text>
-        <text x="480.48" y="90.55" fill="#cd5555">failed</text>
-        <text x="530.88" y="90.55">)</text>
-        <text x="10" y="109.55" fill="#7f7f7f">---------------</text>
-        <text x="144.42" y="109.55"> error </text>
-        <text x="194.83" y="109.55" fill="#7f7f7f">----------------</text>
-        <text x="10" y="128.55" fill="#7f7f7f">1 |</text>
-        <text x="43.61" y="128.55"> throw new Error(&#x22;here&#x22;);</text>
-        <text x="94.01" y="147.55" fill="#cd5555">^</text>
-        <text x="10" y="166.55">Error: here</text>
-        <text x="26.8" y="185.55"> at </text>
-        <text x="52.01" y="185.55" font-weight="bold"
+        <text x="245.24" y="71.55" fill="#7f7f7f">[</text>
+        <text x="253.64" y="71.55" fill="#7f7f7f">worker_thread</text>
+        <text x="362.86" y="71.55" fill="#7f7f7f">/</text>
+        <text x="371.26" y="71.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
+        <text x="438.47" y="71.55" fill="#7f7f7f">]</text>
+        <text x="455.27" y="71.55"> (1 </text>
+        <text x="480.48" y="71.55" fill="#cd5555">failed</text>
+        <text x="530.88" y="71.55">)</text>
+        <text x="10" y="90.55" fill="#7f7f7f">---------------</text>
+        <text x="144.42" y="90.55"> error </text>
+        <text x="194.83" y="90.55" fill="#7f7f7f">----------------</text>
+        <text x="10" y="109.55" fill="#7f7f7f">1 |</text>
+        <text x="43.61" y="109.55"> throw new Error(&#x22;here&#x22;);</text>
+        <text x="94.01" y="128.55" fill="#cd5555">^</text>
+        <text x="10" y="147.55">Error: here</text>
+        <text x="26.8" y="166.55"> at </text>
+        <text x="52.01" y="166.55" font-weight="bold"
           >[mock]/error_in_test.spec.js</text
         >
-        <text x="287.25" y="185.55">:1:7</text>
-        <text x="10" y="204.55" fill="#7f7f7f"
+        <text x="287.25" y="166.55">:1:7</text>
+        <text x="10" y="185.55" fill="#7f7f7f"
           >--------------------------------------</text
         >
-        <text x="10" y="223.55" fill="#cd5555"
+        <text x="10" y="204.55" fill="#cd5555"
           >&#x2716; 2/2 error_in_test.spec.js</text
         >
-        <text x="245.24" y="223.55" fill="#7f7f7f">[</text>
-        <text x="253.64" y="223.55" fill="#7f7f7f">child_process</text>
-        <text x="362.86" y="223.55" fill="#7f7f7f">/</text>
-        <text x="371.26" y="223.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
-        <text x="438.47" y="223.55" fill="#7f7f7f">]</text>
-        <text x="455.27" y="223.55"> (all </text>
-        <text x="497.28" y="223.55" fill="#cd5555">failed</text>
-        <text x="547.69" y="223.55">)</text>
-        <text x="10" y="242.55" fill="#7f7f7f">---------------</text>
-        <text x="144.42" y="242.55"> error </text>
-        <text x="194.83" y="242.55" fill="#7f7f7f">----------------</text>
-        <text x="10" y="261.55" fill="#7f7f7f">1 |</text>
-        <text x="43.61" y="261.55"> throw new Error(&#x22;here&#x22;);</text>
-        <text x="94.01" y="280.55" fill="#cd5555">^</text>
-        <text x="10" y="299.55">Error: here</text>
-        <text x="26.8" y="318.55"> at </text>
-        <text x="52.01" y="318.55" font-weight="bold"
+        <text x="245.24" y="204.55" fill="#7f7f7f">[</text>
+        <text x="253.64" y="204.55" fill="#7f7f7f">child_process</text>
+        <text x="362.86" y="204.55" fill="#7f7f7f">/</text>
+        <text x="371.26" y="204.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
+        <text x="438.47" y="204.55" fill="#7f7f7f">]</text>
+        <text x="455.27" y="204.55"> (all </text>
+        <text x="497.28" y="204.55" fill="#cd5555">failed</text>
+        <text x="547.69" y="204.55">)</text>
+        <text x="10" y="223.55" fill="#7f7f7f">---------------</text>
+        <text x="144.42" y="223.55"> error </text>
+        <text x="194.83" y="223.55" fill="#7f7f7f">----------------</text>
+        <text x="10" y="242.55" fill="#7f7f7f">1 |</text>
+        <text x="43.61" y="242.55"> throw new Error(&#x22;here&#x22;);</text>
+        <text x="94.01" y="261.55" fill="#cd5555">^</text>
+        <text x="10" y="280.55">Error: here</text>
+        <text x="26.8" y="299.55"> at </text>
+        <text x="52.01" y="299.55" font-weight="bold"
           >[mock]/error_in_test.spec.js</text
         >
-        <text x="287.25" y="318.55">:1:7</text>
-        <text x="10" y="337.55" fill="#7f7f7f"
+        <text x="287.25" y="299.55">:1:7</text>
+        <text x="10" y="318.55" fill="#7f7f7f"
           >--------------------------------------</text
         >
-        <text x="10" y="375.55" fill="#7f7f7f">---------------</text>
-        <text x="144.42" y="375.55"> execution end </text>
-        <text x="262.04" y="375.55" fill="#7f7f7f">---------------</text>
-        <text x="10" y="394.55">2 executions: all </text>
-        <text x="161.22" y="394.55" fill="#cd5555">failed</text>
-        <text x="10" y="413.55">duration: &#x3C;mock&#x3E;s</text>
-        <text x="10" y="432.55" fill="#7f7f7f"
+        <text x="10" y="337.55" fill="#7f7f7f"
+          >---------------------------------------------</text
+        >
+        <text x="10" y="356.55">2 executions: all </text>
+        <text x="161.22" y="356.55" fill="#cd5555">failed</text>
+        <text x="10" y="375.55">duration: &#x3C;mock&#x3E;s</text>
+        <text x="10" y="394.55" fill="#7f7f7f"
           >---------------------------------------------</text
         >
       </g>

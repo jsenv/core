@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="537.45"
+  height="499.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="535.45"
+      height="497.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -32,12 +32,12 @@
     id="body"
     y="40"
     width="100%"
-    height="497.45"
+    height="459.45"
     overflow="hidden"
   >
     <svg
       width="423.27"
-      height="497.45"
+      height="459.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
@@ -52,47 +52,47 @@
         <text x="10" y="52.55" fill="#7f7f7f"
           >---------------------------------------------</text
         >
-        <text x="10" y="90.55" fill="#11bc79"
+        <text x="10" y="71.55" fill="#11bc79"
           >&#x2714; 1/1 console.spec.js</text
         >
-        <text x="194.83" y="90.55" fill="#7f7f7f">[</text>
-        <text x="203.23" y="90.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
-        <text x="270.44" y="90.55" fill="#7f7f7f">]</text>
-        <text x="287.25" y="90.55"> (all </text>
-        <text x="329.25" y="90.55" fill="#11bc79">completed</text>
-        <text x="404.86" y="90.55">)</text>
-        <text x="10" y="109.55" fill="#7f7f7f">-----------</text>
-        <text x="110.82" y="109.55"> console (</text>
-        <text x="186.43" y="109.55" fill="#cd5555">&#x2716;</text>
-        <text x="203.23" y="109.55"> 4) </text>
-        <text x="228.44" y="109.55" fill="#7f7f7f">------------</text>
-        <text x="10" y="128.55" fill="#cd5555">&#x2716;</text>
-        <text x="26.8" y="128.55"> toto</text>
-        <text x="26.8" y="147.55"> ho</text>
+        <text x="194.83" y="71.55" fill="#7f7f7f">[</text>
+        <text x="203.23" y="71.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
+        <text x="270.44" y="71.55" fill="#7f7f7f">]</text>
+        <text x="287.25" y="71.55"> (all </text>
+        <text x="329.25" y="71.55" fill="#11bc79">completed</text>
+        <text x="404.86" y="71.55">)</text>
+        <text x="10" y="90.55" fill="#7f7f7f">-----------</text>
+        <text x="110.82" y="90.55"> console (</text>
+        <text x="186.43" y="90.55" fill="#cd5555">&#x2716;</text>
+        <text x="203.23" y="90.55"> 4) </text>
+        <text x="228.44" y="90.55" fill="#7f7f7f">------------</text>
+        <text x="10" y="109.55" fill="#cd5555">&#x2716;</text>
+        <text x="26.8" y="109.55"> toto</text>
+        <text x="26.8" y="128.55"> ho</text>
+        <text x="10" y="147.55" fill="#cd5555">&#x2716;</text>
+        <text x="26.8" y="147.55"> hey</text>
         <text x="10" y="166.55" fill="#cd5555">&#x2716;</text>
         <text x="26.8" y="166.55"> hey</text>
         <text x="10" y="185.55" fill="#cd5555">&#x2716;</text>
-        <text x="26.8" y="185.55"> hey</text>
-        <text x="10" y="204.55" fill="#cd5555">&#x2716;</text>
-        <text x="26.8" y="204.55"> test</text>
-        <text x="26.8" y="223.55"> multiline</text>
-        <text x="26.8" y="242.55"> info</text>
-        <text x="26.8" y="261.55"> verbose log</text>
-        <text x="26.8" y="280.55"> la</text>
-        <text x="26.8" y="299.55"> {</text>
-        <text x="43.61" y="318.55"> &#x22;foo&#x22;: true,</text>
-        <text x="43.61" y="337.55"> &#x22;bar&#x22;: false</text>
-        <text x="26.8" y="356.55"> }</text>
-        <text x="10" y="375.55" fill="#7f7f7f"
+        <text x="26.8" y="185.55"> test</text>
+        <text x="26.8" y="204.55"> multiline</text>
+        <text x="26.8" y="223.55"> info</text>
+        <text x="26.8" y="242.55"> verbose log</text>
+        <text x="26.8" y="261.55"> la</text>
+        <text x="26.8" y="280.55"> {</text>
+        <text x="43.61" y="299.55"> &#x22;foo&#x22;: true,</text>
+        <text x="43.61" y="318.55"> &#x22;bar&#x22;: false</text>
+        <text x="26.8" y="337.55"> }</text>
+        <text x="10" y="356.55" fill="#7f7f7f"
           >--------------------------------------</text
         >
-        <text x="10" y="413.55" fill="#7f7f7f">---------------</text>
-        <text x="144.42" y="413.55"> execution end </text>
-        <text x="262.04" y="413.55" fill="#7f7f7f">---------------</text>
-        <text x="10" y="432.55">1 execution: all </text>
-        <text x="152.82" y="432.55" fill="#11bc79">completed</text>
-        <text x="10" y="451.55">duration: &#x3C;mock&#x3E;s</text>
-        <text x="10" y="470.55" fill="#7f7f7f"
+        <text x="10" y="375.55" fill="#7f7f7f"
+          >---------------------------------------------</text
+        >
+        <text x="10" y="394.55">1 execution: all </text>
+        <text x="152.82" y="394.55" fill="#11bc79">completed</text>
+        <text x="10" y="413.55">duration: &#x3C;mock&#x3E;s</text>
+        <text x="10" y="432.55" fill="#7f7f7f"
           >---------------------------------------------</text
         >
       </g>
