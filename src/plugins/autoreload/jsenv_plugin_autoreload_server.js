@@ -38,7 +38,10 @@ export const jsenvPluginAutoreloadServer = ({
                       : `a dependent file accepts hot reload`,
                 };
               }
-              if (urlInfo.data.hotDecline) {
+              if (
+                urlInfo.data.hotDecline ||
+                urlInfo.firstReference.type === "http_request"
+              ) {
                 return {
                   declined: true,
                   reason: `file declines hot reload`,

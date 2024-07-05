@@ -4,9 +4,11 @@
  * Autoreload works when adding the file
  * (to be confirmed) autoreload when adding an other file
  *
- * - TODO: test "/404.js"
+ * - TODO: ensure it can autoreload after recovering from 404
+ * - TODO: ensure it can autoreload back to 404
  * - TODO: test when dir is empty
- * - TODO in an other test: check what happens for syntax error
+ * - TODO: test "/404.js"
+ * - TODO in an other test: quite the same but for syntax error in html
  */
 
 import { readFileSync, writeFileSync } from "node:fs";

@@ -187,7 +187,6 @@ This could be due to syntax errors or importing non-existent modules (see errors
       if (type === "html") {
         let isRootHtmlFile;
         if (window.location.pathname === "/") {
-          debugger;
           if (new URL(urlToFetch).pathname.slice(1).indexOf("/") === -1) {
             isRootHtmlFile = true;
           } else if (new URL(urlToFetch).pathname === mainFilePath) {
