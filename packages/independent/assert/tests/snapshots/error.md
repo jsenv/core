@@ -122,3 +122,18 @@ assert({
 
 ![img](<./error/error_vs_customerror.svg>)
 
+# actual message multiline, expect single
+
+```js
+assert({
+  actual: new Error(`snapshot comparison failed for "my_snapshots/"
+--- reason ---
+"file.txt" directory entry is missing
+--- missing entry ---
+file:///Users/damien.maillard/dev/perso/jsenv-core/packages/related/test/tests/test_plan_execution/snapshot_comparison/node_client/my_snapshots/file.txt`),
+  expect: new Error(`snapshot comparison failed for "my_snapshots/"`),
+});
+```
+
+![img](<./error/actual_message_multiline__expect_single.svg>)
+

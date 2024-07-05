@@ -78,3 +78,9 @@ AssertionError: actual and expect are different
 actual: Error
 expect: ValidationError
 
+# actual message multiline, expect single
+AssertionError: actual and expect are different
+
+actual: 
+expect: Error: snapshot comparison failed for "my_snapshots/"
+
