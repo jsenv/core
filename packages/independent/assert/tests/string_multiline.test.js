@@ -21,6 +21,13 @@ await startSnapshotTesting("string_multline", ({ test }) => {
 world`,
     });
   });
+  test("two line vs one line", () => {
+    assert({
+      actual: `Hello 
+world`,
+      expect: "Hello",
+    });
+  });
   test("second line contains extra chars", () => {
     assert({
       actual: {

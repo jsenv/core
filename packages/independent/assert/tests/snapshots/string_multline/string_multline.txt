@@ -19,6 +19,13 @@ actual: 1| Hel
 expect: 1| Hello
         2| world
 
+# two line vs one line
+AssertionError: actual and expect are different
+
+actual: 1| Hello 
+        2| world
+expect: 1| Hello
+
 # second line contains extra chars
 AssertionError: actual and expect are different
 

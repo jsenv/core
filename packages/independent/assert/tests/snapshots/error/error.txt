@@ -82,5 +82,5 @@ expect: ValidationError
 AssertionError: actual and expect are different
 
 actual: 
-expect: Error: snapshot comparison failed for "my_snapshots/"
+expect: Error: snapshot comparison
 

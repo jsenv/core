@@ -74,12 +74,18 @@ france`),
   // TOFIX:
   test("actual message multiline, expect single", () => {
     assert({
-      actual: new Error(`snapshot comparison failed for "my_snapshots/"
---- reason ---
-"file.txt" directory entry is missing
---- missing entry ---
+      actual: new Error(`snapshot comparison
+b
+c
 file:///Users/damien.maillard/dev/perso/jsenv-core/packages/related/test/tests/test_plan_execution/snapshot_comparison/node_client/my_snapshots/file.txt`),
-      expect: new Error(`snapshot comparison failed for "my_snapshots/"`),
+      expect: new Error(`snapshot comparison`),
+    });
+  });
+  test.TODO("actual message multiline, expect single", () => {
+    assert({
+      actual: new Error(`a
+file:///dir/file.txt`),
+      expect: new Error(`abc`),
     });
   });
 });

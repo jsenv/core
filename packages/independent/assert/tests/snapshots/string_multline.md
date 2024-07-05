@@ -32,6 +32,18 @@ world`,
 
 ![img](<./string_multline/one_line_vs_two_lines.svg>)
 
+# two line vs one line
+
+```js
+assert({
+  actual: `Hello 
+world`,
+  expect: "Hello",
+});
+```
+
+![img](<./string_multline/two_line_vs_one_line.svg>)
+
 # second line contains extra chars
 
 ```js
