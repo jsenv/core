@@ -26,7 +26,10 @@ export const takeFileSnapshot = (fileUrl) => {
   const fileSnapshot = createFileSnapshot(fileUrl);
   removeFileSync(fileUrl, { allowUseless: true });
   return {
-    compare: () => {
+    compare: (doIt = process.env.CI) => {
+      if (!doIt) {
+        return;
+      }
       fileSnapshot.compare(createFileSnapshot(fileUrl));
     },
     writeContent: (content) => {
@@ -161,12 +164,15 @@ export const takeDirectorySnapshot = (
   });
   return {
     __snapshot: directorySnapshot,
-    compare: () => {
+    compare: (doIt = process.env.CI) => {
+      if (!doIt) {
+        return;
+      }
       const nextDirectorySnapshot = createDirectorySnapshot(directoryUrl, {
         shouldVisitDirectory,
         shouldIncludeFile,
       });
-      return directorySnapshot.compare(nextDirectorySnapshot);
+      directorySnapshot.compare(nextDirectorySnapshot);
     },
     addFile: (relativeUrl, content) => {
       writeFileSync(new URL(relativeUrl, directoryUrl), content);

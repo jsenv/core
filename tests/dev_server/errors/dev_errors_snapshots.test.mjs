@@ -1,5 +1,6 @@
 import { chromium, firefox, webkit } from "playwright";
 import { writeFileSync } from "@jsenv/filesystem";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 if (process.platform === "win32") {
   // disable on windows because it would fails due to line endings (CRLF)
@@ -104,11 +105,13 @@ const test = async ({ browserLauncher, browserName }) => {
 };
 
 try {
+  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await Promise.all([
     test({ browserLauncher: chromium, browserName: "chromium" }),
     test({ browserLauncher: firefox, browserName: "firefox" }),
     test({ browserLauncher: webkit, browserName: "webkit" }),
   ]);
+  directorySnapshot.compare();
 } finally {
   devServer.stop();
 }
