@@ -850,6 +850,7 @@ export const createAssert = ({
   // for test
   assert.colors = colors;
   class AssertionError extends Error {}
+  assert.AssertionError = AssertionError;
   assert.createAssertionError = (message) => {
     const assertionError = new AssertionError(message);
     return assertionError;

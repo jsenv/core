@@ -3,8 +3,10 @@ import {
   removeEntrySync,
   writeFileSync,
 } from "@jsenv/filesystem";
+import { assert } from "@jsenv/assert";
 
 import { takeFileSnapshot } from "@jsenv/snapshot";
+import { FileContentAssertionError } from "@jsenv/snapshot/src/errors.js";
 
 const snapshotFileUrl = new URL("./snapshots/file.png", import.meta.url);
 const test = (callback) => {
@@ -26,7 +28,20 @@ test(() => {
     snapshotFileUrl,
     readFileSync(new URL("./fixtures/map_expect.png", import.meta.url)),
   );
-  fileSnapshot.compare();
+  try {
+    fileSnapshot.compare();
+    throw new Error("should throw");
+  } catch (e) {
+    assert({
+      actual: e,
+      expect:
+        new FileContentAssertionError(`snapshot comparison failed for "file.png"
+--- reason ---
+content has changed
+--- file ---
+${snapshotFileUrl.href}`),
+    });
+  }
 });
 
 test(() => {

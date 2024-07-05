@@ -10,10 +10,17 @@ import {
   writeFileStructureSync,
 } from "@jsenv/filesystem";
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import { URL_META } from "@jsenv/url-meta";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { comparePngFiles } from "./compare_png_files.js";
 
 import { assert } from "@jsenv/assert";
+import {
+  FileContentNotFoundAssertionError,
+  FileMissingAssertionError,
+  ExtraFileAssertionError,
+  FileContentAssertionError,
+} from "./errors.js";
+import { comparePngFiles } from "./compare_png_files.js";
 
 export const takeFileSnapshot = (fileUrl) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);
@@ -83,12 +90,11 @@ const compareFileSnapshots = (actualFileSnapshot, expectedFileSnapshot) => {
 
   if (!actualFileSnapshot.stat) {
     const fileNotFoundAssertionError =
-      assert.createAssertionError(`${failureMessage}
+      new FileContentNotFoundAssertionError(`${failureMessage}
 --- reason ---
 file not found
 --- file ---
 ${fileUrl}`);
-    fileNotFoundAssertionError.name = "FileNotFoundAssertionError";
     throw fileNotFoundAssertionError;
   }
   if (!expectedFileSnapshot.stat) {
@@ -106,12 +112,11 @@ ${fileUrl}`);
       }
     }
     const fileContentAssertionError =
-      assert.createAssertionError(`${failureMessage}
+      new FileContentAssertionError(`${failureMessage}
 --- reason ---
 content has changed
 --- file ---
 ${fileUrl}`);
-    fileContentAssertionError.name = "FileContentAssertionError";
     throw fileContentAssertionError;
   }
   if (actualFileContent === expectedFileContent) {
@@ -126,17 +131,48 @@ ${fileUrl}`);
   });
 };
 
-export const takeDirectorySnapshot = (directoryUrl) => {
+export const takeDirectorySnapshot = (directoryUrl, pattern) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+  const includePredicate = pattern
+    ? (() => {
+        const associations = URL_META.resolveAssociations(
+          {
+            include: {
+              [pattern]: true,
+              "**/.*": false,
+              "**/.*/": false,
+              ...(pattern.includes("node_modules")
+                ? {}
+                : { "**/node_modules/": false }),
+            },
+          },
+          directoryUrl,
+        );
+        return (url) => {
+          const meta = URL_META.applyAssociations({
+            url,
+            associations,
+          });
+          return meta.include;
+        };
+      })()
+    : () => true;
+
   directoryUrl = new URL(directoryUrl);
 
-  const expectedDirectorySnapshot = createDirectorySnapshot(directoryUrl);
+  const expectedDirectorySnapshot = createDirectorySnapshot(
+    directoryUrl,
+    includePredicate,
+  );
   ensureEmptyDirectorySync(directoryUrl);
   return {
     compare: () => {
       const dirname = `${urlToFilename(directoryUrl)}/`;
       const failureMessage = `snapshot comparison failed for "${dirname}"`;
-      const actualDirectorySnapshot = createDirectorySnapshot(directoryUrl);
+      const actualDirectorySnapshot = createDirectorySnapshot(
+        directoryUrl,
+        includePredicate,
+      );
       if (!expectedDirectorySnapshot.stat || expectedDirectorySnapshot.empty) {
         // the snapshot taken for directory/file/whatever is empty:
         // - first time code executes:
@@ -166,21 +202,20 @@ export const takeDirectorySnapshot = (directoryUrl) => {
           );
           if (missingFileCount === 1) {
             const fileMissingAssertionError =
-              assert.createAssertionError(`${failureMessage}
+              new FileMissingAssertionError(`${failureMessage}
 --- reason ---
 "${missingRelativeUrls[0]}" is missing
 --- file missing ---
 ${missingUrls[0]}`);
-            fileMissingAssertionError.name = "FileMissingAssertionError";
+
             throw fileMissingAssertionError;
           }
           const fileMissingAssertionError =
-            assert.createAssertionError(`${failureMessage}
+            new FileMissingAssertionError(`${failureMessage}
 --- reason ---
 ${missingFileCount} files are missing
 --- files missing ---
 ${missingUrls.join("\n")}`);
-          fileMissingAssertionError.name = "FileMissingAssertionError";
           throw fileMissingAssertionError;
         }
       }
@@ -198,21 +233,19 @@ ${missingUrls.join("\n")}`);
           );
           if (extraFileCount === 1) {
             const extraFileAssertionError =
-              assert.createAssertionError(`${failureMessage}
+              new ExtraFileAssertionError(`${failureMessage}
 --- reason ---
 "${extraRelativeUrls[0]}" is unexpected
 --- file unexpected ---
 ${extraUrls[0]}`);
-            extraFileAssertionError.name = "ExtraFileAssertionError";
             throw extraFileAssertionError;
           }
           const extraFileAssertionError =
-            assert.createAssertionError(`${failureMessage}
+            new ExtraFileAssertionError(`${failureMessage}
 --- reason ---
 ${extraFileCount} files are unexpected
 --- files unexpected ---
 ${extraUrls.join("\n")}`);
-          extraFileAssertionError.name = "ExtraFileAssertionError";
           throw extraFileAssertionError;
         }
       }
@@ -259,7 +292,7 @@ ${extraUrls.join("\n")}`);
     },
   };
 };
-const createDirectorySnapshot = (directoryUrl) => {
+const createDirectorySnapshot = (directoryUrl, includePredicate) => {
   const directorySnapshot = {
     type: "directory",
     url: directoryUrl.href,
@@ -293,6 +326,9 @@ const createDirectorySnapshot = (directoryUrl) => {
 
   const fileSnapshotsNaturalOrder = {};
   const visitDirectory = (url) => {
+    if (!includePredicate(url)) {
+      return;
+    }
     try {
       const directoryContent = readdirSync(url);
       for (const filename of directoryContent) {
@@ -300,6 +336,9 @@ const createDirectorySnapshot = (directoryUrl) => {
         const stat = statSync(contentUrl);
         if (stat.isDirectory()) {
           visitDirectory(new URL(`${contentUrl}/`));
+          return;
+        }
+        if (!includePredicate(contentUrl)) {
           return;
         }
         const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl);
