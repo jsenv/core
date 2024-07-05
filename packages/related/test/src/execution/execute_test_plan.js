@@ -25,6 +25,7 @@ import {
   startGithubCheckRun,
   readGitHubWorkflowEnv,
 } from "@jsenv/github-check-run";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { startMeasuringTotalCpuUsage } from "../helpers/cpu_usage.js";
 import { createCallOrderer } from "../helpers/call_orderer.js";
@@ -107,6 +108,11 @@ export const executeTestPlan = async ({
   rootDirectoryUrl,
   webServer,
   testPlan,
+  snapshotFiles = process.env.CI
+    ? {
+        "**/snapshots/**": true,
+      }
+    : null,
 
   signal = new AbortController().signal,
   handleSIGINT = true,
@@ -763,7 +769,13 @@ To fix this warning:
         },
       });
     }
-
+    let directorySnapshot;
+    if (snapshotFiles) {
+      directorySnapshot = takeDirectorySnapshot(
+        rootDirectoryUrl,
+        snapshotFiles,
+      );
+    }
     timings.executionStart = takeTiming();
     // execute all
     {
@@ -984,6 +996,7 @@ To fix this warning:
       await startAsMuchAsPossible();
     }
     timings.executionEnd = takeTiming();
+    directorySnapshot.compare();
   } catch (e) {
     if (Abort.isAbortError(e)) {
     } else {

@@ -16,7 +16,6 @@ import {
   writeFileStructureSync,
   ensureEmptyDirectorySync,
 } from "@jsenv/filesystem";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
 // import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
@@ -62,14 +61,10 @@ const testScenario = async (scenario) => {
 
 try {
   await page.goto(`${devServer.origin}`);
-  const sceenshotDirectorySnapshot = takeDirectorySnapshot(
-    screenshotsDirectoryUrl,
-  );
   await takeScreenshot("0_at_start");
   await testScenario("1_fix_404");
   await testScenario("2_update");
   await testScenario("3_back_to_404");
-  sceenshotDirectorySnapshot.compare();
 } finally {
   if (!debug) {
     browser.close();
