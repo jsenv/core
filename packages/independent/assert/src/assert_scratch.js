@@ -2538,6 +2538,7 @@ let createRootNode;
                     onelineDiff: {},
                     group: "entries",
                     subgroup: "error_construct",
+                    focusedChildIndex: 0,
                     childGenerator: () => {
                       errorConstructNode.appendChild("error_constructor", {
                         ...getGrammarProps(),
@@ -4161,18 +4162,12 @@ const renderChildren = (node, props) => {
       break;
     }
     let childDiffWidth;
-    const newLineIndex = childDiff.indexOf("\n");
-    if (newLineIndex === -1) {
+    const newLineFirstIndex = childDiff.indexOf("\n");
+    if (newLineFirstIndex === -1) {
       childDiffWidth = node.context.measureStringWidth(childDiff);
     } else {
-      const newLineLastIndex = childDiff.lastIndexOf("\n");
-      if (newLineLastIndex === newLineIndex) {
-        const line = childDiff.slice(0, newLineIndex + "\n".length);
-        childDiffWidth = node.context.measureStringWidth(line);
-      } else {
-        const lastLine = childDiff.slice(newLineLastIndex + "\n".length);
-        childDiffWidth = node.context.measureStringWidth(lastLine);
-      }
+      const firstLine = childDiff.slice(0, newLineFirstIndex + "\n".length);
+      childDiffWidth = node.context.measureStringWidth(firstLine);
     }
     let separatorMarkerToAppend;
     let separatorWhenTruncatedUsed = false;
@@ -4249,7 +4244,15 @@ const renderChildren = (node, props) => {
     }
     hasSomeChildSkippedAtStart = hasSomeChildSkippedAtStartCandidate;
     hasSomeChildSkippedAtEnd = hasSomeChildSkippedAtEndCandidate;
-    columnsRemainingForChildren -= childDiffWidth;
+    const newLineLastIndex = childDiff.lastIndexOf("\n");
+    if (newLineLastIndex === newLineFirstIndex) {
+      columnsRemainingForChildren -= childDiffWidth;
+    } else {
+      const lastLine = childDiff.slice(newLineLastIndex + "\n".length);
+      const childDiffLastLineWidth = node.context.measureStringWidth(lastLine);
+      columnsRemainingForChildren =
+        props.columnsRemaining - childDiffLastLineWidth;
+    }
     childrenDiff = appendChildDiff(childDiff, childIndex);
     if (separatorWhenTruncatedUsed) {
       break;
