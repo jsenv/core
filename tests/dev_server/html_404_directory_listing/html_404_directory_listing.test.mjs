@@ -16,12 +16,12 @@ import {
   writeFileStructureSync,
   ensureEmptyDirectorySync,
 } from "@jsenv/filesystem";
-// import { assert } from "@jsenv/assert";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { startDevServer } from "@jsenv/core";
 
 let debug = false;
-const sourceDirectoryUrl = new URL("./ignored/", import.meta.url);
+const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 const writeFileStructureForScenario = (scenario) => {
@@ -60,11 +60,13 @@ const testScenario = async (scenario) => {
 };
 
 try {
+  const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
   await page.goto(`${devServer.origin}`);
   await takeScreenshot("0_at_start");
   await testScenario("1_fix_404");
   await testScenario("2_update");
   await testScenario("3_back_to_404");
+  directorySnapshot.compare();
 } finally {
   if (!debug) {
     browser.close();

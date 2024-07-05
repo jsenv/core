@@ -6,6 +6,6 @@
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
-  sourceDirectoryUrl: new URL("./ignored/", import.meta.url),
+  sourceDirectoryUrl: new URL("./git_ignored/", import.meta.url),
   sourceMainFilePath: "main.html",
 });

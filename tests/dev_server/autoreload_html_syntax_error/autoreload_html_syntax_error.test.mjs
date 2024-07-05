@@ -11,7 +11,7 @@ import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
 let debug = false;
-const sourceDirectoryUrl = new URL("./ignored/", import.meta.url);
+const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 const atStartDirectoryUrl = new URL("./0_at_start/", import.meta.url);
 const withSyntaxErrorDirectoryUrl = new URL(
   "./1_with_html_syntax_error/",
@@ -22,7 +22,7 @@ writeFileStructureSync(sourceDirectoryUrl, atStartDirectoryUrl);
 const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
-  sourceDirectoryUrl: new URL("./ignored/", import.meta.url),
+  sourceDirectoryUrl,
   keepProcessAlive: !debug,
   port: 0,
 });
