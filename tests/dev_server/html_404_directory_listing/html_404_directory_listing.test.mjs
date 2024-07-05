@@ -23,12 +23,12 @@ import { startDevServer } from "@jsenv/core";
 let debug = false;
 const sourceDirectoryUrl = new URL("./ignored/", import.meta.url);
 
-const screenshotsDirectoryUrl = new URL("./screenshots/", import.meta.url);
+const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 const writeFileStructureForScenario = (scenario) => {
   const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
   writeFileStructureSync(sourceDirectoryUrl, scenarioDirectoryUrl);
 };
-ensureEmptyDirectorySync(screenshotsDirectoryUrl);
+ensureEmptyDirectorySync(snapshotsDirectoryUrl);
 writeFileStructureForScenario("0_at_start");
 
 const devServer = await startDevServer({
@@ -48,7 +48,7 @@ await page.setViewportSize({ width: 600, height: 300 }); // set a relatively sma
 const takeScreenshot = async (scenario) => {
   const sceenshotBuffer = await page.screenshot();
   writeFileSync(
-    new URL(`./screenshots/${scenario}.png`, import.meta.url),
+    new URL(`./${scenario}.png`, snapshotsDirectoryUrl),
     sceenshotBuffer,
   );
 };
