@@ -30,7 +30,7 @@ test(() => {
     throw new Error("should throw");
   } catch (e) {
     const actual = e.message;
-    const expect = `directory expect at ${fileUrl}/`;
+    const expect = `directory expected at ${fileUrl}/`;
     assert({ actual, expect });
   }
 });
@@ -75,8 +75,8 @@ test(() => {
     const actual = stripAnsi(e.message);
     const expect = `snapshot comparison failed for "snapshots/"
 --- reason ---
-"file.txt" is missing
---- file missing ---
+"file.txt" directory entry is missing
+--- missing entry ---
 ${new URL("./file.txt", snapshotsDirectoryUrl)}`;
     assert({ actual, expect });
   }
@@ -102,8 +102,8 @@ test(() => {
     const actual = stripAnsi(e.message);
     const expect = `snapshot comparison failed for "snapshots/"
 --- reason ---
-"hello.js" is unexpected
---- file unexpected ---
+"hello.js" directory entry is unexpected
+--- unexpected entry ---
 ${new URL("./hello.js", snapshotsDirectoryUrl)}`;
     assert({ actual, expect });
   }

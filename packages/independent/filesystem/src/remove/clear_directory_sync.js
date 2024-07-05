@@ -6,14 +6,22 @@ import { removeEntrySync } from "./remove_entry_sync.js";
 export const clearDirectorySync = (initialDirectoryUrl, pattern = "**/*") => {
   const associations = URL_META.resolveAssociations(
     {
-      clear: {
-        [pattern]: true,
-        "**/.*": false,
-        "**/.*/": false,
-        ...(pattern.includes("node_modules")
-          ? {}
-          : { "**/node_modules/": false }),
-      },
+      clear:
+        typeof pattern === "string"
+          ? {
+              [pattern]: true,
+              "**/.*": false,
+              "**/.*/": false,
+              ...(pattern.includes("node_modules")
+                ? {}
+                : { "**/node_modules/": false }),
+            }
+          : {
+              "**/.*": false,
+              "**/.*/": false,
+              "**/node_modules/": false,
+              ...pattern,
+            },
     },
     initialDirectoryUrl,
   );

@@ -1,4 +1,5 @@
 import { readdirSync, statSync, readFileSync } from "node:fs";
+import { URL_META } from "@jsenv/url-meta";
 import {
   assertAndNormalizeDirectoryUrl,
   assertAndNormalizeFileUrl,
@@ -7,11 +8,9 @@ import {
   removeFileSync,
   writeFileSync,
   removeDirectorySync,
-  writeFileStructureSync,
 } from "@jsenv/filesystem";
-import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
-import { URL_META } from "@jsenv/url-meta";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { urlToRelativeUrl, urlToFilename } from "@jsenv/urls";
 
 import { assert } from "@jsenv/assert";
 import {
@@ -24,22 +23,21 @@ import { comparePngFiles } from "./compare_png_files.js";
 
 export const takeFileSnapshot = (fileUrl) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);
-  const expectedFileSnapshot = createFileSnapshot(fileUrl);
+  const fileSnapshot = createFileSnapshot(fileUrl);
   removeFileSync(fileUrl, { allowUseless: true });
-
   return {
     compare: () => {
-      compareFileSnapshots(createFileSnapshot(fileUrl), expectedFileSnapshot);
+      fileSnapshot.compare(createFileSnapshot(fileUrl));
     },
     writeContent: (content) => {
       writeFileSync(fileUrl, content);
     },
     restore: () => {
-      if (expectedFileSnapshot.empty) {
+      if (fileSnapshot.empty) {
         removeFileSync(fileUrl, { allowUseless: true });
         return;
       }
-      writeFileSync(fileUrl, expectedFileSnapshot.content);
+      writeFileSync(fileUrl, fileSnapshot.content);
     },
   };
 };
@@ -50,6 +48,52 @@ const createFileSnapshot = (fileUrl) => {
     stat: null,
     contentType: CONTENT_TYPE.fromUrlExtension(fileUrl),
     content: "",
+    compare: (nextFileSnapshot) => {
+      const filename = urlToFilename(fileUrl);
+      const failureMessage = `snapshot comparison failed for "${filename}"`;
+
+      if (!nextFileSnapshot.stat) {
+        const fileNotFoundAssertionError =
+          new FileContentNotFoundAssertionError(`${failureMessage}
+--- reason ---
+file not found
+--- file ---
+${fileUrl}`);
+        throw fileNotFoundAssertionError;
+      }
+      if (!fileSnapshot.stat) {
+        return;
+      }
+      const fileContent = fileSnapshot.content;
+      const nextFileContent = nextFileSnapshot.content;
+      if (Buffer.isBuffer(nextFileContent)) {
+        if (nextFileContent.equals(fileContent)) {
+          return;
+        }
+        if (nextFileContent.contentType === "image/png") {
+          if (comparePngFiles(fileContent, nextFileContent)) {
+            return;
+          }
+        }
+        const fileContentAssertionError =
+          new FileContentAssertionError(`${failureMessage}
+--- reason ---
+content has changed
+--- file ---
+${fileUrl}`);
+        throw fileContentAssertionError;
+      }
+      if (nextFileContent === fileContent) {
+        return;
+      }
+      assert({
+        message: failureMessage,
+        details: fileUrl,
+        actual: nextFileContent,
+        expect: fileContent,
+        forceMultilineDiff: true,
+      });
+    },
   };
 
   try {
@@ -83,95 +127,83 @@ const createFileSnapshot = (fileUrl) => {
   }
   return fileSnapshot;
 };
-const compareFileSnapshots = (actualFileSnapshot, expectedFileSnapshot) => {
-  const fileUrl = actualFileSnapshot.url;
-  const filename = urlToFilename(fileUrl);
-  const failureMessage = `snapshot comparison failed for "${filename}"`;
 
-  if (!actualFileSnapshot.stat) {
-    const fileNotFoundAssertionError =
-      new FileContentNotFoundAssertionError(`${failureMessage}
---- reason ---
-file not found
---- file ---
-${fileUrl}`);
-    throw fileNotFoundAssertionError;
-  }
-  if (!expectedFileSnapshot.stat) {
-    return;
-  }
-  const actualFileContent = actualFileSnapshot.content;
-  const expectedFileContent = expectedFileSnapshot.content;
-  if (Buffer.isBuffer(actualFileContent)) {
-    if (actualFileContent.equals(expectedFileContent)) {
-      return;
-    }
-    if (actualFileSnapshot.contentType === "image/png") {
-      if (comparePngFiles(actualFileContent, expectedFileContent)) {
+export const takeDirectorySnapshot = (
+  directoryUrl,
+  pattern = { "**/*": true },
+) => {
+  directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+  directoryUrl = new URL(directoryUrl);
+  const associations = URL_META.resolveAssociations(
+    {
+      included: pattern,
+    },
+    directoryUrl,
+  );
+  const predicate = ({ included }) => included;
+  const shouldVisitDirectory = (url) =>
+    URL_META.urlChildMayMatch({
+      url,
+      associations,
+      predicate,
+    });
+  const shouldIncludeFile = (url) =>
+    predicate(
+      URL_META.applyAssociations({
+        url,
+        associations,
+      }),
+    );
+  const directorySnapshot = createDirectorySnapshot(directoryUrl, {
+    shouldVisitDirectory,
+    shouldIncludeFile,
+    clean: true,
+  });
+  return {
+    __snapshot: directorySnapshot,
+    compare: () => {
+      const nextDirectorySnapshot = createDirectorySnapshot(directoryUrl, {
+        shouldVisitDirectory,
+        shouldIncludeFile,
+      });
+      return directorySnapshot.compare(nextDirectorySnapshot);
+    },
+    addFile: (relativeUrl, content) => {
+      writeFileSync(new URL(relativeUrl, directoryUrl), content);
+    },
+    restore: () => {
+      if (directorySnapshot.notFound) {
+        removeDirectorySync(directoryUrl, {
+          recursive: true,
+          allowUseless: true,
+        });
         return;
       }
-    }
-    const fileContentAssertionError =
-      new FileContentAssertionError(`${failureMessage}
---- reason ---
-content has changed
---- file ---
-${fileUrl}`);
-    throw fileContentAssertionError;
-  }
-  if (actualFileContent === expectedFileContent) {
-    return;
-  }
-  assert({
-    message: failureMessage,
-    details: fileUrl,
-    actual: actualFileContent,
-    expect: expectedFileContent,
-    forceMultilineDiff: true,
-  });
+      if (directorySnapshot.empty) {
+        ensureEmptyDirectorySync(directoryUrl);
+        return;
+      }
+      for (const relativeUrl of directorySnapshot.contentSnapshot) {
+        const snapshot = directorySnapshot.contentSnapshot[relativeUrl];
+        snapshot.restore();
+      }
+    },
+  };
 };
-
-export const takeDirectorySnapshot = (directoryUrl, pattern) => {
-  directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
-  const includePredicate = pattern
-    ? (() => {
-        const associations = URL_META.resolveAssociations(
-          {
-            include: {
-              "**/.*": false,
-              "**/.*/": false,
-              "**/node_modules/": false,
-              ...pattern,
-            },
-          },
-          directoryUrl,
-        );
-        return (url) => {
-          const meta = URL_META.applyAssociations({
-            url,
-            associations,
-          });
-          return meta.include;
-        };
-      })()
-    : () => true;
-
-  directoryUrl = new URL(directoryUrl);
-
-  const expectedDirectorySnapshot = createDirectorySnapshot(
-    directoryUrl,
-    includePredicate,
-  );
-  ensureEmptyDirectorySync(directoryUrl);
-  return {
-    compare: () => {
+const createDirectorySnapshot = (
+  directoryUrl,
+  { shouldVisitDirectory, shouldIncludeFile, clean },
+) => {
+  const directorySnapshot = {
+    type: "directory",
+    url: directoryUrl.href,
+    stat: null,
+    empty: false,
+    contentSnapshot: {},
+    compare: (nextDirectorySnapshot) => {
       const dirname = `${urlToFilename(directoryUrl)}/`;
       const failureMessage = `snapshot comparison failed for "${dirname}"`;
-      const actualDirectorySnapshot = createDirectorySnapshot(
-        directoryUrl,
-        includePredicate,
-      );
-      if (!expectedDirectorySnapshot.stat || expectedDirectorySnapshot.empty) {
+      if (!directorySnapshot.stat || directorySnapshot.empty) {
         // the snapshot taken for directory/file/whatever is empty:
         // - first time code executes:
         //   it defines snapshot that will be used for comparison by future runs
@@ -181,17 +213,15 @@ export const takeDirectorySnapshot = (directoryUrl, pattern) => {
         //   to review them using git diff)
         return;
       }
-
-      const actualFileSnapshots = actualDirectorySnapshot.fileSnapshots;
-      const expectedFileSnapshots = expectedDirectorySnapshot.fileSnapshots;
-      const actualRelativeUrls = Object.keys(actualFileSnapshots);
-      const expectedRelativeUrls = Object.keys(expectedFileSnapshots);
-
-      // missing_files
+      const directoryContentSnapshot = directorySnapshot.contentSnapshot;
+      const relativeUrls = Object.keys(directoryContentSnapshot);
+      const nextDirectoryContentSnapshot =
+        nextDirectorySnapshot.contentSnapshot;
+      const nextRelativeUrls = Object.keys(nextDirectoryContentSnapshot);
+      // missing content
       {
-        const missingRelativeUrls = expectedRelativeUrls.filter(
-          (expectedRelativeUrl) =>
-            !actualRelativeUrls.includes(expectedRelativeUrl),
+        const missingRelativeUrls = relativeUrls.filter(
+          (relativeUrl) => !nextRelativeUrls.includes(relativeUrl),
         );
         const missingFileCount = missingRelativeUrls.length;
         if (missingFileCount > 0) {
@@ -202,27 +232,24 @@ export const takeDirectorySnapshot = (directoryUrl, pattern) => {
             const fileMissingAssertionError =
               new FileMissingAssertionError(`${failureMessage}
 --- reason ---
-"${missingRelativeUrls[0]}" is missing
---- file missing ---
+"${missingRelativeUrls[0]}" directory entry is missing
+--- missing entry ---
 ${missingUrls[0]}`);
-
             throw fileMissingAssertionError;
           }
           const fileMissingAssertionError =
             new FileMissingAssertionError(`${failureMessage}
 --- reason ---
-${missingFileCount} files are missing
---- files missing ---
+${missingFileCount} directory entries are missing
+--- missing entries ---
 ${missingUrls.join("\n")}`);
           throw fileMissingAssertionError;
         }
       }
-
-      // unexpected files
+      // unexpected content
       {
-        const extraRelativeUrls = actualRelativeUrls.filter(
-          (actualRelativeUrl) =>
-            !expectedRelativeUrls.includes(actualRelativeUrl),
+        const extraRelativeUrls = nextRelativeUrls.filter(
+          (nextRelativeUrl) => !relativeUrls.includes(nextRelativeUrl),
         );
         const extraFileCount = extraRelativeUrls.length;
         if (extraFileCount > 0) {
@@ -233,74 +260,32 @@ ${missingUrls.join("\n")}`);
             const extraFileAssertionError =
               new ExtraFileAssertionError(`${failureMessage}
 --- reason ---
-"${extraRelativeUrls[0]}" is unexpected
---- file unexpected ---
+"${extraRelativeUrls[0]}" directory entry is unexpected
+--- unexpected entry ---
 ${extraUrls[0]}`);
             throw extraFileAssertionError;
           }
           const extraFileAssertionError =
             new ExtraFileAssertionError(`${failureMessage}
 --- reason ---
-${extraFileCount} files are unexpected
---- files unexpected ---
+${extraFileCount} directory entries are unexpected
+--- unexpected entries ---
 ${extraUrls.join("\n")}`);
           throw extraFileAssertionError;
         }
       }
-
-      // file contents
+      // content
       {
-        for (const relativeUrl of actualRelativeUrls) {
-          const actualFileSnapshot = actualFileSnapshots[relativeUrl];
-          const expectedFileSnapshot = expectedFileSnapshots[relativeUrl];
-          compareFileSnapshots(actualFileSnapshot, expectedFileSnapshot);
+        for (const relativeUrl of nextRelativeUrls) {
+          const snapshot = directoryContentSnapshot[relativeUrl];
+          const nextSnapshot = nextDirectoryContentSnapshot[relativeUrl];
+          snapshot.compare(nextSnapshot);
         }
       }
     },
-    addFile: (relativeUrl, content) => {
-      writeFileSync(new URL(relativeUrl, directoryUrl), content);
-    },
-    restore: () => {
-      if (expectedDirectorySnapshot.notFound) {
-        removeDirectorySync(directoryUrl, {
-          recursive: true,
-          allowUseless: true,
-        });
-        return;
-      }
-      if (expectedDirectorySnapshot.empty) {
-        ensureEmptyDirectorySync(directoryUrl);
-        return;
-      }
-
-      const fileStructure = {};
-      Object.keys(expectedDirectorySnapshot.fileSnapshots).forEach(
-        (relativeUrl) => {
-          const fileSnapshot =
-            expectedDirectorySnapshot.fileSnapshots[relativeUrl];
-          if (!fileSnapshot.empty) {
-            fileStructure[relativeUrl] = fileSnapshot.content;
-          }
-        },
-      );
-      writeFileStructureSync(
-        directoryUrl,
-        expectedDirectorySnapshot.fileStructure,
-      );
-    },
   };
-};
-const createDirectorySnapshot = (directoryUrl, includePredicate) => {
-  const directorySnapshot = {
-    type: "directory",
-    url: directoryUrl.href,
-    stat: null,
-    empty: false,
-    fileSnapshots: {},
-  };
-
   try {
-    directorySnapshot.stat = statSync(directoryUrl);
+    directorySnapshot.stat = statSync(new URL(directoryUrl));
   } catch (e) {
     if (e.code === "ENOENT") {
       return directorySnapshot;
@@ -308,54 +293,67 @@ const createDirectorySnapshot = (directoryUrl, includePredicate) => {
     if (e.code === "ENOTDIR") {
       // trailing slash is forced on directoryUrl
       // as a result Node.js throw ENOTDIR when doing "stat" operation
-      throw new Error(`directory expect at ${directoryUrl}`);
+      throw new Error(`directory expected at ${directoryUrl}`);
     }
     throw e;
   }
   if (!directorySnapshot.stat.isDirectory()) {
-    throw new Error(`directory expect at ${directoryUrl}`);
+    throw new Error(`directory expected at ${directoryUrl}`);
   }
-
   const entryNames = readdirSync(directoryUrl);
   if (entryNames.length === 0) {
     directorySnapshot.empty = true;
     return directorySnapshot;
   }
-
-  const fileSnapshotsNaturalOrder = {};
-  const visitDirectory = (url) => {
-    if (!includePredicate(url)) {
-      return;
+  const contentSnapshotNaturalOrder = {};
+  try {
+    const directoryItemArray = readdirSync(directoryUrl);
+    for (const directoryItem of directoryItemArray) {
+      const directoryItemUrl = new URL(directoryItem, directoryUrl);
+      let directoryItemStat;
+      try {
+        directoryItemStat = statSync(directoryItemUrl);
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          continue;
+        }
+        throw e;
+      }
+      const relativeUrl = urlToRelativeUrl(directoryItemUrl, directoryUrl);
+      if (directoryItemStat.isDirectory()) {
+        if (!shouldVisitDirectory(directoryUrl)) {
+          continue;
+        }
+        contentSnapshotNaturalOrder[relativeUrl] = createDirectorySnapshot(
+          new URL(`${directoryItemUrl}/`),
+          {
+            shouldVisitDirectory,
+            shouldIncludeFile,
+            clean,
+          },
+        );
+        continue;
+      }
+      if (!shouldIncludeFile(directoryItemUrl)) {
+        continue;
+      }
+      contentSnapshotNaturalOrder[relativeUrl] =
+        createFileSnapshot(directoryItemUrl);
+      if (clean) {
+        removeFileSync(directoryItemUrl, { allowUseless: true });
+      }
     }
-    try {
-      const directoryContent = readdirSync(url);
-      for (const filename of directoryContent) {
-        const contentUrl = new URL(filename, url);
-        const stat = statSync(contentUrl);
-        if (stat.isDirectory()) {
-          visitDirectory(new URL(`${contentUrl}/`));
-          return;
-        }
-        if (!includePredicate(contentUrl)) {
-          return;
-        }
-        const relativeUrl = urlToRelativeUrl(contentUrl, directoryUrl);
-        fileSnapshotsNaturalOrder[relativeUrl] = createFileSnapshot(contentUrl);
-      }
-    } catch (e) {
-      if (e && e.code === "ENOENT") {
-        return;
-      }
+  } catch (e) {
+    if (e && e.code === "ENOENT") {
+    } else {
       throw e;
     }
-  };
-  visitDirectory(directoryUrl);
-
-  const relativeUrls = Object.keys(fileSnapshotsNaturalOrder);
+  }
+  const relativeUrls = Object.keys(contentSnapshotNaturalOrder);
   relativeUrls.sort(comparePathnames);
   relativeUrls.forEach((relativeUrl) => {
-    directorySnapshot.fileSnapshots[relativeUrl] =
-      fileSnapshotsNaturalOrder[relativeUrl];
+    directorySnapshot.contentSnapshot[relativeUrl] =
+      contentSnapshotNaturalOrder[relativeUrl];
   });
   return directorySnapshot;
 };

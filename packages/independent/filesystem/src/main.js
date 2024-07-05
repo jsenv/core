@@ -20,6 +20,7 @@ export { ensureWindowsDriveLetter } from "./path_and_url/ensure_windows_drive_le
 export { collectDirectoryMatchReport } from "./list/collect_directory_match_report.js";
 export { collectFiles } from "./list/collect_files.js";
 export { listFilesMatching } from "./list/list_files_matching.js";
+export { visitStructureSync } from "./list/visit_structure_sync.js";
 
 // read and write
 export { ensureParentDirectories } from "./read_write/ensure_parent_directories.js";
