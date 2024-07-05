@@ -138,12 +138,10 @@ export const takeDirectorySnapshot = (directoryUrl, pattern) => {
         const associations = URL_META.resolveAssociations(
           {
             include: {
-              [pattern]: true,
               "**/.*": false,
               "**/.*/": false,
-              ...(pattern.includes("node_modules")
-                ? {}
-                : { "**/node_modules/": false }),
+              "**/node_modules/": false,
+              ...pattern,
             },
           },
           directoryUrl,

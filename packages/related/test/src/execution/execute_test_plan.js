@@ -108,7 +108,7 @@ export const executeTestPlan = async ({
   rootDirectoryUrl,
   webServer,
   testPlan,
-  snapshotFiles = process.env.CI
+  snapshotPlan = process.env.CI
     ? {
         "**/snapshots/**": true,
       }
@@ -770,11 +770,8 @@ To fix this warning:
       });
     }
     let directorySnapshot;
-    if (snapshotFiles) {
-      directorySnapshot = takeDirectorySnapshot(
-        rootDirectoryUrl,
-        snapshotFiles,
-      );
+    if (snapshotPlan) {
+      directorySnapshot = takeDirectorySnapshot(rootDirectoryUrl, snapshotPlan);
     }
     timings.executionStart = takeTiming();
     // execute all
