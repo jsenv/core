@@ -11,6 +11,7 @@ import {
 } from "@jsenv/filesystem";
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { comparePngFiles } from "./compare_png_files.js";
 
 import { assert } from "@jsenv/assert";
 
@@ -40,6 +41,7 @@ const createFileSnapshot = (fileUrl) => {
     type: "file",
     url: fileUrl,
     stat: null,
+    contentType: CONTENT_TYPE.fromUrlExtension(fileUrl),
     content: "",
   };
 
@@ -55,9 +57,7 @@ const createFileSnapshot = (fileUrl) => {
     throw new Error(`file expect at ${fileUrl}`);
   }
 
-  const isTextual = CONTENT_TYPE.isTextual(
-    CONTENT_TYPE.fromUrlExtension(fileUrl),
-  );
+  const isTextual = CONTENT_TYPE.isTextual(fileSnapshot.contentType);
   if (isTextual) {
     const contentAsString = readFileSync(new URL(fileUrl), "utf8");
     if (process.platform === "win32") {
@@ -99,6 +99,11 @@ ${fileUrl}`);
   if (Buffer.isBuffer(actualFileContent)) {
     if (actualFileContent.equals(expectedFileContent)) {
       return;
+    }
+    if (actualFileSnapshot.contentType === "image/png") {
+      if (comparePngFiles(actualFileContent, expectedFileContent)) {
+        return;
+      }
     }
     const fileContentAssertionError =
       assert.createAssertionError(`${failureMessage}
