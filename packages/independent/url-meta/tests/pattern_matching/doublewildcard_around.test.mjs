@@ -23,7 +23,7 @@ import { URL_META } from "@jsenv/url-meta";
     matched: true,
     patternIndex: pattern.length,
     urlIndex: url.length,
-    matchGroups: [],
+    matchGroups: ["/b/c.js"],
   };
   assert({ actual, expect });
 }
@@ -36,7 +36,7 @@ import { URL_META } from "@jsenv/url-meta";
     matched: true,
     patternIndex: pattern.length,
     urlIndex: url.length,
-    matchGroups: [],
+    matchGroups: ["/c.js"],
   };
   assert({ actual, expect });
 }

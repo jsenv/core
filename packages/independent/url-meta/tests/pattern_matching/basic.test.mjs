@@ -116,3 +116,12 @@ try {
   const expect = false;
   assert({ actual, expect });
 }
+
+{
+  const pattern = "file:///**/b/";
+  const url = "file:///ab/c";
+  const { matched } = URL_META.applyPatternMatching({ pattern, url });
+  const actual = matched;
+  const expect = false;
+  assert({ actual, expect });
+}

@@ -57,7 +57,7 @@ import { URL_META } from "@jsenv/url-meta";
   const expect = {
     matched: false,
     patternIndex: pattern.length,
-    urlIndex: 9,
+    urlIndex: 12,
     matchGroups: [],
   };
   assert({ actual, expect });
