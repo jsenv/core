@@ -53,7 +53,7 @@ const testScenario = async (scenario) => {
 try {
   await page.goto(`${devServer.origin}/main.html`);
   await takeScreenshot("0_at_start");
-  // await testScenario("1_add_syntax_error");
+  await testScenario("1_add_syntax_error");
   // await testScenario("2_fix_syntax_error");
 } finally {
   if (!debug) {

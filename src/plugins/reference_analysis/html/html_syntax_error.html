@@ -1,13 +1,14 @@
 <!doctype html>
 <html>
   <head>
-    <title>404 ENOENT</title>
+    <title>Syntax error in HTML</title>
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
   </head>
 
   <body>
-    <p>Syntax error in <strong>/${fileRelativeUrl}</strong></p>
+    <p>Syntax error: <strong>${reasonCode}</strong></p>
+    <a href="${errorLinkHref}">${errorLinkText}</a>
     <pre>${syntaxError}</pre>
   </body>
 </html>

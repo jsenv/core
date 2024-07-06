@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { urlToRelativeUrl } from "@jsenv/urls";
+import { generateContentFrame } from "@jsenv/humanize";
 import {
   parseHtml,
   visitHtmlNodes,
@@ -23,7 +24,7 @@ import {
 } from "@jsenv/importmap";
 
 const htmlSyntaxErrorFileUrl = new URL(
-  "./html_syntax_eror.html",
+  "./html_syntax_error.html",
   import.meta.url,
 );
 
@@ -143,17 +144,18 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
           });
         } catch (e) {
           if (e.code === "PARSE_ERROR") {
-            const html = generateHtmlForSyntaxError(
-              e,
-              urlInfo.url,
-              urlInfo.context.rootDirectoryUrl,
-            );
+            const html = generateHtmlForSyntaxError(e, {
+              htmlUrl: urlInfo.url,
+              htmlContent: urlInfo.content,
+              rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+            });
             htmlAst = parseHtml({
               html,
               url: htmlSyntaxErrorFileUrl,
             });
+          } else {
+            throw e;
           }
-          throw e;
         }
 
         const importmapLoaded = startLoadingImportmap(urlInfo);
@@ -595,16 +597,37 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
 
 const generateHtmlForSyntaxError = (
   htmlSyntaxError,
-  htmlUrl,
-  rootDirectoryUrl,
+  { htmlUrl, htmlContent, rootDirectoryUrl },
 ) => {
   const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
+  const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
+  const { line, column } = htmlSyntaxError;
+  const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
   const replacers = {
-    fileRelativeUrl: urlToRelativeUrl(htmlUrl, rootDirectoryUrl),
-    syntaxError: htmlSyntaxError,
+    fileRelativeUrl: htmlRelativeUrl,
+    reasonCode: htmlSyntaxError.reasonCode,
+    errorLinkHref: `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
+      urlWithLineAndColumn,
+    )}')`,
+    errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
+    syntaxError: escapeHtml(
+      generateContentFrame({
+        content: htmlContent,
+        line,
+        column,
+      }),
+    ),
   };
   const html = replacePlaceholders(htmlForSyntaxError, replacers);
   return html;
+};
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 };
 const replacePlaceholders = (html, replacers) => {
   return html.replace(/\${([\w]+)}/g, (match, name) => {
