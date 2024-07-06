@@ -15921,10 +15921,21 @@ const jsenvPluginHtmlReferenceAnalysis = ({
           });
         } catch (e) {
           if (e.code === "PARSE_ERROR") {
+            const line = e.line;
+            const column = e.column;
+            const htmlErrorContentFrame = generateContentFrame({
+              content: urlInfo.content,
+              line,
+              column,
+            });
+            console.error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
+${e.reasonCode}
+${urlInfo.url}:${line}:${column}
+${htmlErrorContentFrame}`);
             const html = generateHtmlForSyntaxError(e, {
               htmlUrl: urlInfo.url,
-              htmlContent: urlInfo.content,
               rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+              htmlErrorContentFrame,
             });
             htmlAst = parseHtml({
               html,
@@ -16388,7 +16399,7 @@ const visitNonIgnoredHtmlNode = (htmlAst, visitors) => {
 
 const generateHtmlForSyntaxError = (
   htmlSyntaxError,
-  { htmlUrl, htmlContent, rootDirectoryUrl },
+  { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame },
 ) => {
   const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
   const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
@@ -16401,13 +16412,7 @@ const generateHtmlForSyntaxError = (
       urlWithLineAndColumn,
     )}')`,
     errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
-    syntaxError: escapeHtml(
-      generateContentFrame({
-        content: htmlContent,
-        line,
-        column,
-      }),
-    ),
+    syntaxError: escapeHtml(htmlErrorContentFrame),
   };
   const html = replacePlaceholders$2(htmlForSyntaxError, replacers);
   return html;
@@ -19754,7 +19759,7 @@ const jsenvPluginAutoreloadServer = ({
               }
               if (
                 urlInfo.data.hotDecline ||
-                urlInfo.firstReference.type === "http_request"
+                urlInfo.firstReference?.type === "http_request"
               ) {
                 return {
                   declined: true,
