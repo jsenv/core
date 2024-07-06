@@ -339,7 +339,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
             });
           };
 
-          visitHtmlNodes(htmlAst, {
+          visitNonIgnoredHtmlNode(htmlAst, {
             link: (linkNode) => {
               const rel = getHtmlNodeAttribute(linkNode, "rel");
               const type = getHtmlNodeAttribute(linkNode, "type");
@@ -593,6 +593,20 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
       },
     },
   };
+};
+
+const visitNonIgnoredHtmlNode = (htmlAst, visitors) => {
+  const visitorsInstrumented = {};
+  for (const key of Object.keys(visitors)) {
+    visitorsInstrumented[key] = (node) => {
+      const jsenvIgnoreAttribute = getHtmlNodeAttribute(node, "jsenv-ignore");
+      if (jsenvIgnoreAttribute !== undefined) {
+        return;
+      }
+      visitors[key](node);
+    };
+  }
+  visitHtmlNodes(htmlAst, visitorsInstrumented);
 };
 
 const generateHtmlForSyntaxError = (

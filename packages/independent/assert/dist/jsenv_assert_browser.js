@@ -1334,6 +1334,7 @@ const createAssert = ({
   // for test
   assert.colors = colors;
   class AssertionError extends Error {}
+  assert.AssertionError = AssertionError;
   assert.createAssertionError = message => {
     const assertionError = new AssertionError(message);
     return assertionError;
@@ -2427,15 +2428,15 @@ let createRootNode;
               let lineIndex = 0;
               let charIndex = 0;
               for (const char of chars) {
-                if (preserveLineBreaks || char !== "\n") {
-                  currentLineEntry.appendCharNode(charIndex, char);
-                  charIndex++;
+                if (char === "\n" && !preserveLineBreaks) {
+                  isMultiline = true;
+                  lineIndex++;
+                  charIndex = 0;
+                  currentLineEntry = appendLineEntry(lineIndex);
                   continue;
                 }
-                isMultiline = true;
-                lineIndex++;
-                charIndex = 0;
-                currentLineEntry = appendLineEntry(lineIndex);
+                currentLineEntry.appendCharNode(charIndex, char);
+                charIndex++;
               }
               if (isMultiline) {
                 enableMultilineDiff(lineEntriesNode);
@@ -2816,6 +2817,7 @@ let createRootNode;
                   onelineDiff: {},
                   group: "entries",
                   subgroup: "error_construct",
+                  focusedChildIndex: 0,
                   childGenerator: () => {
                     errorConstructNode.appendChild("error_constructor", {
                       ...getGrammarProps(),
@@ -4202,18 +4204,12 @@ const renderChildren = (node, props) => {
       break;
     }
     let childDiffWidth;
-    const newLineIndex = childDiff.indexOf("\n");
-    if (newLineIndex === -1) {
+    const newLineFirstIndex = childDiff.indexOf("\n");
+    if (newLineFirstIndex === -1) {
       childDiffWidth = node.context.measureStringWidth(childDiff);
     } else {
-      const newLineLastIndex = childDiff.lastIndexOf("\n");
-      if (newLineLastIndex === newLineIndex) {
-        const line = childDiff.slice(0, newLineIndex + "\n".length);
-        childDiffWidth = node.context.measureStringWidth(line);
-      } else {
-        const lastLine = childDiff.slice(newLineLastIndex + "\n".length);
-        childDiffWidth = node.context.measureStringWidth(lastLine);
-      }
+      const firstLine = childDiff.slice(0, newLineFirstIndex + "\n".length);
+      childDiffWidth = node.context.measureStringWidth(firstLine);
     }
     let separatorMarkerToAppend;
     let separatorWhenTruncatedUsed = false;
@@ -4278,7 +4274,14 @@ const renderChildren = (node, props) => {
     }
     hasSomeChildSkippedAtStart = hasSomeChildSkippedAtStartCandidate;
     hasSomeChildSkippedAtEnd = hasSomeChildSkippedAtEndCandidate;
-    columnsRemainingForChildren -= childDiffWidth;
+    const newLineLastIndex = childDiff.lastIndexOf("\n");
+    if (newLineLastIndex === newLineFirstIndex) {
+      columnsRemainingForChildren -= childDiffWidth;
+    } else {
+      const lastLine = childDiff.slice(newLineLastIndex + "\n".length);
+      const childDiffLastLineWidth = node.context.measureStringWidth(lastLine);
+      columnsRemainingForChildren = props.columnsRemaining - childDiffLastLineWidth;
+    }
     childrenDiff = appendChildDiff(childDiff, childIndex);
     if (separatorWhenTruncatedUsed) {
       break;
@@ -5318,6 +5321,9 @@ const shouldDisableSeparator = (childIndex, childrenKeys, {
 };
 const canParseUrl = value => {
   if (!canParseUrlNative(value)) {
+    return false;
+  }
+  if (value.includes("\n")) {
     return false;
   }
   if (/^[a-z]*Error: .*?/i.test(value)) {

@@ -1,6 +1,6 @@
 import os, { cpus, release, totalmem, availableParallelism, freemem } from "node:os";
 import process$1, { cpuUsage, memoryUsage } from "node:process";
-import { readdir, chmod, stat, lstat, promises, readFile as readFile$1, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, chmodSync, statSync, lstatSync, unlinkSync, readdirSync, rmdirSync, readFileSync, existsSync } from "node:fs";
+import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, unlinkSync, readdirSync, rmdirSync, readFileSync, existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { URL_META, createException } from "./js/exception.js";
@@ -2298,6 +2298,105 @@ const collectFiles = async ({
   }
 };
 
+const writeEntryPermissionsSync = (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  let binaryFlags;
+  {
+    binaryFlags = permissions;
+  }
+
+  chmodSync(new URL(sourceUrl), binaryFlags);
+};
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+const isWindows = process.platform === "win32";
+
+const readEntryStatSync = (
+  source,
+  { nullIfNotFound = false, followLink = true } = {},
+) => {
+  let sourceUrl = assertAndNormalizeFileUrl(source);
+  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+
+  const handleNotFoundOption = nullIfNotFound
+    ? {
+        handleNotFoundError: () => null,
+      }
+    : {};
+
+  return statSyncNaive(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows
+      ? {
+          // Windows can EPERM on stat
+          handlePermissionDeniedError: (error) => {
+            console.error(
+              `trying to fix windows EPERM after stats on ${sourcePath}`,
+            );
+
+            try {
+              // unfortunately it means we mutate the permissions
+              // without being able to restore them to the previous value
+              // (because reading current permission would also throw)
+              writeEntryPermissionsSync(sourceUrl, 0o666);
+              const stats = statSyncNaive(sourcePath, {
+                followLink,
+                ...handleNotFoundOption,
+                // could not fix the permission error, give up and throw original error
+                handlePermissionDeniedError: () => {
+                  console.error(`still got EPERM after stats on ${sourcePath}`);
+                  throw error;
+                },
+              });
+              return stats;
+            } catch (e) {
+              console.error(
+                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
+              );
+              throw error;
+            }
+          },
+        }
+      : {}),
+  });
+};
+
+const statSyncNaive = (
+  sourcePath,
+  {
+    followLink,
+    handleNotFoundError = null,
+    handlePermissionDeniedError = null,
+  } = {},
+) => {
+  const nodeMethod = followLink ? statSync : lstatSync;
+
+  try {
+    const stats = nodeMethod(sourcePath);
+    return stats;
+  } catch (error) {
+    if (handleNotFoundError && error.code === "ENOENT") {
+      return handleNotFoundError(error);
+    }
+    if (
+      handlePermissionDeniedError &&
+      (error.code === "EPERM" || error.code === "EACCES")
+    ) {
+      return handlePermissionDeniedError(error);
+    }
+    throw error;
+  }
+};
+
 const statsToType = (stats) => {
   if (stats.isFile()) return "file";
   if (stats.isDirectory()) return "directory";
@@ -2647,105 +2746,6 @@ const removeDirectoryNaive = (
 };
 
 process.platform === "win32";
-
-const writeEntryPermissionsSync = (source, permissions) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-
-  let binaryFlags;
-  {
-    binaryFlags = permissions;
-  }
-
-  chmodSync(new URL(sourceUrl), binaryFlags);
-};
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
-
-const isWindows = process.platform === "win32";
-
-const readEntryStatSync = (
-  source,
-  { nullIfNotFound = false, followLink = true } = {},
-) => {
-  let sourceUrl = assertAndNormalizeFileUrl(source);
-  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
-
-  const sourcePath = urlToFileSystemPath(sourceUrl);
-
-  const handleNotFoundOption = nullIfNotFound
-    ? {
-        handleNotFoundError: () => null,
-      }
-    : {};
-
-  return statSyncNaive(sourcePath, {
-    followLink,
-    ...handleNotFoundOption,
-    ...(isWindows
-      ? {
-          // Windows can EPERM on stat
-          handlePermissionDeniedError: (error) => {
-            console.error(
-              `trying to fix windows EPERM after stats on ${sourcePath}`,
-            );
-
-            try {
-              // unfortunately it means we mutate the permissions
-              // without being able to restore them to the previous value
-              // (because reading current permission would also throw)
-              writeEntryPermissionsSync(sourceUrl, 0o666);
-              const stats = statSyncNaive(sourcePath, {
-                followLink,
-                ...handleNotFoundOption,
-                // could not fix the permission error, give up and throw original error
-                handlePermissionDeniedError: () => {
-                  console.error(`still got EPERM after stats on ${sourcePath}`);
-                  throw error;
-                },
-              });
-              return stats;
-            } catch (e) {
-              console.error(
-                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
-              );
-              throw error;
-            }
-          },
-        }
-      : {}),
-  });
-};
-
-const statSyncNaive = (
-  sourcePath,
-  {
-    followLink,
-    handleNotFoundError = null,
-    handlePermissionDeniedError = null,
-  } = {},
-) => {
-  const nodeMethod = followLink ? statSync : lstatSync;
-
-  try {
-    const stats = nodeMethod(sourcePath);
-    return stats;
-  } catch (error) {
-    if (handleNotFoundError && error.code === "ENOENT") {
-      return handleNotFoundError(error);
-    }
-    if (
-      handlePermissionDeniedError &&
-      (error.code === "EPERM" || error.code === "EACCES")
-    ) {
-      return handlePermissionDeniedError(error);
-    }
-    throw error;
-  }
-};
 
 const writeDirectorySync = (
   destination,
@@ -4992,7 +4992,7 @@ ${testPlanResult.patterns.join("\n")}`;
   return `${renderBigSection({
     title: "execution start",
     content: lines.join("\n"),
-  })}\n\n`;
+  })}\n`;
 };
 
 const renderExecutionLog = (execution, logOptions) => {
@@ -5314,8 +5314,8 @@ const renderErrors = (execution, logOptions) => {
 };
 
 const renderOutro = (testPlanResult, logOptions = {}) => {
-  return `\n${renderBigSection({
-    title: "execution end",
+  return `${renderBigSection({
+    title: "",
     content: renderOutroContent(testPlanResult, logOptions),
   })}\n`;
 };
@@ -5462,28 +5462,39 @@ const renderSection = ({
   content,
   dashColor = ANSI.GREY,
   width = 38,
+  bottomSeparator = true,
 }) => {
   let section = "";
 
-  const titleWidth = stripAnsi(title).length;
-  const minWidthRequired = `--- … ---`.length;
-  const needsTruncate = titleWidth + minWidthRequired >= width;
-  if (needsTruncate) {
-    const titleTruncated = title.slice(0, width - minWidthRequired);
-    const leftDashes = ANSI.color("---", dashColor);
-    const rightDashes = ANSI.color("---", dashColor);
-    section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
+  if (title) {
+    const titleWidth = stripAnsi(title).length;
+    const minWidthRequired = `--- … ---`.length;
+    const needsTruncate = titleWidth + minWidthRequired >= width;
+    if (needsTruncate) {
+      const titleTruncated = title.slice(0, width - minWidthRequired);
+      const leftDashes = ANSI.color("---", dashColor);
+      const rightDashes = ANSI.color("---", dashColor);
+      section += `${leftDashes} ${titleTruncated}… ${rightDashes}`;
+    } else {
+      const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
+      const dashLeftCount = Math.floor(remainingWidth / 2);
+      const dashRightCount = remainingWidth - dashLeftCount;
+      const leftDashes = ANSI.color("-".repeat(dashLeftCount), dashColor);
+      const rightDashes = ANSI.color("-".repeat(dashRightCount), dashColor);
+      section += `${leftDashes} ${title} ${rightDashes}`;
+    }
+    section += "\n";
   } else {
-    const remainingWidth = width - titleWidth - 2; // 2 for spaces around the title
-    const dashLeftCount = Math.floor(remainingWidth / 2);
-    const dashRightCount = remainingWidth - dashLeftCount;
-    const leftDashes = ANSI.color("-".repeat(dashLeftCount), dashColor);
-    const rightDashes = ANSI.color("-".repeat(dashRightCount), dashColor);
-    section += `${leftDashes} ${title} ${rightDashes}`;
+    const topDashes = ANSI.color(`-`.repeat(width), dashColor);
+    section += topDashes;
+    section += "\n";
   }
-  section += `\n${content}\n`;
-  const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
-  section += bottomDashes;
+  section += `${content}`;
+  if (bottomSeparator) {
+    section += "\n";
+    const bottomDashes = ANSI.color(`-`.repeat(width), dashColor);
+    section += bottomDashes;
+  }
   return section;
 };
 
@@ -6244,7 +6255,6 @@ To fix this warning:
         },
       });
     }
-
     timings.executionStart = takeTiming();
     // execute all
     {

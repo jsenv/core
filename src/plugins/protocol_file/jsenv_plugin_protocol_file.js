@@ -116,10 +116,7 @@ export const jsenvPluginProtocolFile = ({
         reference.leadsToADirectory = stat && stat.isDirectory();
         if (reference.leadsToADirectory) {
           let actionForDirectory;
-          if (
-            reference.ownerUrlInfo.type === "html" &&
-            reference.type === "a_href"
-          ) {
+          if (reference.type === "a_href") {
             actionForDirectory = "ignore";
           } else if (
             reference.type === "http_request" ||
@@ -279,11 +276,16 @@ export const jsenvPluginProtocolFile = ({
 const generateHtmlForDirectory = (directoryUrl, rootDirectoryUrl) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
   const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
+  const directoryContentArray = readdirSync(new URL(directoryUrl));
   const replacers = {
     directoryRelativeUrl: urlToRelativeUrl(directoryUrl, rootDirectoryUrl),
     directoryUrl,
     directoryContent: () =>
-      generateDirectoryContent(directoryUrl, rootDirectoryUrl),
+      generateDirectoryContent(
+        directoryContentArray,
+        directoryUrl,
+        rootDirectoryUrl,
+      ),
   };
   const html = replacePlaceholders(htmlForDirectory, replacers);
   return html;
