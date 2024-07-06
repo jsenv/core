@@ -29,7 +29,7 @@ test(() => {
     readFileSync(new URL("./fixtures/map_expect.png", import.meta.url)),
   );
   try {
-    fileSnapshot.compare();
+    fileSnapshot.compare(true);
     throw new Error("should throw");
   } catch (e) {
     assert({
@@ -54,5 +54,5 @@ test(() => {
     snapshotFileUrl,
     readFileSync(new URL("./fixtures/restau_expect.png", import.meta.url)),
   );
-  fileSnapshot.compare();
+  fileSnapshot.compare(true);
 });

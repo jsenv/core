@@ -39,20 +39,20 @@ test(() => {
 test(() => {
   removeDirectorySync(snapshotsDirectoryUrl);
   const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
-  directorySnapshot.compare();
+  directorySnapshot.compare(true);
 });
 
 // snapshot never stored on filesystem + nothing written
 test(() => {
   removeDirectorySync(snapshotsDirectoryUrl);
   const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
-  directorySnapshot.compare();
+  directorySnapshot.compare(true);
 });
 
 // compare empty with empty
 test(() => {
   const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
-  directorySnapshot.compare();
+  directorySnapshot.compare(true);
 });
 
 // missing file
@@ -69,7 +69,7 @@ test(() => {
     overwrite: true,
   });
   try {
-    directorySnapshot.compare();
+    directorySnapshot.compare(true);
     throw new Error("should throw");
   } catch (e) {
     const actual = stripAnsi(e.message);
@@ -96,7 +96,7 @@ test(() => {
     overwrite: true,
   });
   try {
-    directorySnapshot.compare();
+    directorySnapshot.compare(true);
     throw new Error("should throw");
   } catch (e) {
     const actual = stripAnsi(e.message);
@@ -123,7 +123,7 @@ test(() => {
     overwrite: true,
   });
   try {
-    directorySnapshot.compare();
+    directorySnapshot.compare(true);
     throw new Error("should throw");
   } catch (e) {
     const actual = stripAnsi(e.message);
@@ -154,7 +154,7 @@ test(() => {
     to: snapshotsDirectoryUrl,
     overwrite: true,
   });
-  directorySnapshot.compare();
+  directorySnapshot.compare(true);
   const fileStructureAfterComparison = readFileStructureSync(
     snapshotsDirectoryUrl,
   );

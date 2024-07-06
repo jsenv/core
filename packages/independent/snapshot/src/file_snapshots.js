@@ -73,7 +73,7 @@ ${fileUrl}`);
         if (nextFileContent.equals(fileContent)) {
           return;
         }
-        if (nextFileContent.contentType === "image/png") {
+        if (fileSnapshot.contentType === "image/png") {
           if (comparePngFiles(fileContent, nextFileContent)) {
             return;
           }
