@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { urlToRelativeUrl } from "@jsenv/urls";
 import {
   parseHtml,
   visitHtmlNodes,
@@ -19,6 +21,11 @@ import {
   composeTwoImportMaps,
   normalizeImportMap,
 } from "@jsenv/importmap";
+
+const htmlSyntaxErrorFileUrl = new URL(
+  "./html_syntax_eror.html",
+  import.meta.url,
+);
 
 export const jsenvPluginHtmlReferenceAnalysis = ({
   inlineContent,
@@ -127,14 +134,31 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
       },
       html: async (urlInfo) => {
         let importmapFound = false;
-        const importmapLoaded = startLoadingImportmap(urlInfo);
 
+        let htmlAst;
         try {
-          const htmlAst = parseHtml({
+          htmlAst = parseHtml({
             html: urlInfo.content,
             url: urlInfo.url,
           });
+        } catch (e) {
+          if (e.code === "PARSE_ERROR") {
+            const html = generateHtmlForSyntaxError(
+              e,
+              urlInfo.url,
+              urlInfo.context.rootDirectoryUrl,
+            );
+            htmlAst = parseHtml({
+              html,
+              url: htmlSyntaxErrorFileUrl,
+            });
+          }
+          throw e;
+        }
 
+        const importmapLoaded = startLoadingImportmap(urlInfo);
+
+        try {
           const mutations = [];
           const actions = [];
           const finalizeCallbacks = [];
@@ -567,6 +591,32 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
       },
     },
   };
+};
+
+const generateHtmlForSyntaxError = (
+  htmlSyntaxError,
+  htmlUrl,
+  rootDirectoryUrl,
+) => {
+  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
+  const replacers = {
+    fileRelativeUrl: urlToRelativeUrl(htmlUrl, rootDirectoryUrl),
+    syntaxError: htmlSyntaxError,
+  };
+  const html = replacePlaceholders(htmlForSyntaxError, replacers);
+  return html;
+};
+const replacePlaceholders = (html, replacers) => {
+  return html.replace(/\${([\w]+)}/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
 };
 
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];

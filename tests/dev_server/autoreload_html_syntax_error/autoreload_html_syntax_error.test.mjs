@@ -4,21 +4,25 @@
  *   (no waiting forever for importmap to load and js properly executes)
  */
 
+import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
-import { writeFileStructureSync } from "@jsenv/filesystem";
-import { assert } from "@jsenv/assert";
+import {
+  writeFileStructureSync,
+  ensureEmptyDirectorySync,
+} from "@jsenv/filesystem";
 
 import { startDevServer } from "@jsenv/core";
 
 let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
-const atStartDirectoryUrl = new URL("./0_at_start/", import.meta.url);
-const withSyntaxErrorDirectoryUrl = new URL(
-  "./1_with_html_syntax_error/",
-  import.meta.url,
-);
+const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
+const writeFileStructureForScenario = (scenario) => {
+  const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
+  writeFileStructureSync(sourceDirectoryUrl, scenarioDirectoryUrl);
+};
+ensureEmptyDirectorySync(snapshotsDirectoryUrl);
+writeFileStructureForScenario("0_at_start");
 
-writeFileStructureSync(sourceDirectoryUrl, atStartDirectoryUrl);
 const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
@@ -26,42 +30,31 @@ const devServer = await startDevServer({
   keepProcessAlive: !debug,
   port: 0,
 });
-
-const browser = await chromium.launch({ headless: !debug });
+const browser = await chromium.launch({
+  headless: !debug,
+  devtools: debug,
+});
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
-const readWindowAnswer = async () => {
-  const value = await page.evaluate(
-    /* eslint-disable no-undef */
-    () => window.answer,
-    /* eslint-enable no-undef */
+await page.setViewportSize({ width: 600, height: 300 }); // set a relatively small and predicatble size
+const takeScreenshot = async (scenario) => {
+  const sceenshotBuffer = await page.screenshot();
+  writeFileSync(
+    new URL(`./${scenario}.png`, snapshotsDirectoryUrl),
+    sceenshotBuffer,
   );
-  return value;
 };
-const assertWindowAnswerValue = async (expectValue, scenario) => {
-  const actualValue = await readWindowAnswer();
-  assert({
-    actual: {
-      scenario,
-      windowAnswer: actualValue,
-    },
-    expect: {
-      scenario,
-      windowAnswer: expectValue,
-    },
-  });
+const testScenario = async (scenario) => {
+  const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
+  writeFileStructureSync(sourceDirectoryUrl, scenarioDirectoryUrl);
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await takeScreenshot(scenario);
 };
 
 try {
   await page.goto(`${devServer.origin}/main.html`);
-  await assertWindowAnswerValue(41, "at_start");
-  writeFileStructureSync(sourceDirectoryUrl, withSyntaxErrorDirectoryUrl);
-  // first time there is no need for page.reload() because autoreload works (there is no syntax error)
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  await assertWindowAnswerValue(42, "with_html_syntax_error");
-  writeFileStructureSync(sourceDirectoryUrl, atStartDirectoryUrl);
-  // here we need to reload manually because syntax error prevents injection of autoreload script
-  await page.reload();
-  await assertWindowAnswerValue(41, "after_restore_at_start");
+  await takeScreenshot("0_at_start");
+  // await testScenario("1_add_syntax_error");
+  // await testScenario("2_fix_syntax_error");
 } finally {
   if (!debug) {
     browser.close();
