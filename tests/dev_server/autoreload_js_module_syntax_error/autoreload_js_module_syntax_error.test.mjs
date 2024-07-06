@@ -15,16 +15,16 @@ import {
 } from "../error_overlay_test_helpers.js";
 
 let debug = false;
-const jsFileUrl = new URL("./client/main.js", import.meta.url);
-const jsFileContent = {
-  beforeTest: readFileSync(jsFileUrl),
-  update: (content) => writeFileSync(jsFileUrl, content),
-  restore: () => writeFileSync(jsFileUrl, jsFileContent.beforeTest),
-};
+const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
+const mainJsFileUrl = new URL("./main.js", sourceDirectoryUrl);
+writeFileSync(
+  mainJsFileUrl,
+  readFileSync(new URL("./0_at_start/main.js", import.meta.url)),
+);
 const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl,
   keepProcessAlive: !debug,
   port: 0,
 });
@@ -35,14 +35,21 @@ const page = await browser.newPage({ ignoreHTTPSErrors: true });
 try {
   await page.goto(`${devServer.origin}/main.html`);
   await assertErrorOverlayNotDisplayed(page);
-  jsFileContent.update(`const j = (`);
+  writeFileSync(
+    mainJsFileUrl,
+    readFileSync(
+      new URL("./1_syntax_error/js_syntax_error.js", import.meta.url),
+    ),
+  );
   await new Promise((resolve) => setTimeout(resolve, 500));
   await assertErrorOverlayDisplayed(page, "after_syntax_error");
-  jsFileContent.update(`const j = true`);
+  writeFileSync(
+    mainJsFileUrl,
+    readFileSync(new URL("./2_fix_syntax_error/main.js", import.meta.url)),
+  );
   await new Promise((resolve) => setTimeout(resolve, 500));
   await assertErrorOverlayNotDisplayed(page, "after_fix_and_autoreload");
 } finally {
-  jsFileContent.restore();
   if (!debug) {
     browser.close();
     devServer.stop(); // required because for some reason the rooms are kept alive

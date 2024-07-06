@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { urlToRelativeUrl } from "@jsenv/urls";
+import { generateContentFrame } from "@jsenv/humanize";
 import {
   parseHtml,
   visitHtmlNodes,
@@ -19,6 +22,11 @@ import {
   composeTwoImportMaps,
   normalizeImportMap,
 } from "@jsenv/importmap";
+
+const htmlSyntaxErrorFileUrl = new URL(
+  "./html_syntax_error.html",
+  import.meta.url,
+);
 
 export const jsenvPluginHtmlReferenceAnalysis = ({
   inlineContent,
@@ -127,14 +135,43 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
       },
       html: async (urlInfo) => {
         let importmapFound = false;
-        const importmapLoaded = startLoadingImportmap(urlInfo);
 
+        let htmlAst;
         try {
-          const htmlAst = parseHtml({
+          htmlAst = parseHtml({
             html: urlInfo.content,
             url: urlInfo.url,
           });
+        } catch (e) {
+          if (e.code === "PARSE_ERROR") {
+            const line = e.line;
+            const column = e.column;
+            const htmlErrorContentFrame = generateContentFrame({
+              content: urlInfo.content,
+              line,
+              column,
+            });
+            console.error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
+${e.reasonCode}
+${urlInfo.url}:${line}:${column}
+${htmlErrorContentFrame}`);
+            const html = generateHtmlForSyntaxError(e, {
+              htmlUrl: urlInfo.url,
+              rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+              htmlErrorContentFrame,
+            });
+            htmlAst = parseHtml({
+              html,
+              url: htmlSyntaxErrorFileUrl,
+            });
+          } else {
+            throw e;
+          }
+        }
 
+        const importmapLoaded = startLoadingImportmap(urlInfo);
+
+        try {
           const mutations = [];
           const actions = [];
           const finalizeCallbacks = [];
@@ -313,7 +350,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
             });
           };
 
-          visitHtmlNodes(htmlAst, {
+          visitNonIgnoredHtmlNode(htmlAst, {
             link: (linkNode) => {
               const rel = getHtmlNodeAttribute(linkNode, "rel");
               const type = getHtmlNodeAttribute(linkNode, "type");
@@ -567,6 +604,61 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
       },
     },
   };
+};
+
+const visitNonIgnoredHtmlNode = (htmlAst, visitors) => {
+  const visitorsInstrumented = {};
+  for (const key of Object.keys(visitors)) {
+    visitorsInstrumented[key] = (node) => {
+      const jsenvIgnoreAttribute = getHtmlNodeAttribute(node, "jsenv-ignore");
+      if (jsenvIgnoreAttribute !== undefined) {
+        return;
+      }
+      visitors[key](node);
+    };
+  }
+  visitHtmlNodes(htmlAst, visitorsInstrumented);
+};
+
+const generateHtmlForSyntaxError = (
+  htmlSyntaxError,
+  { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame },
+) => {
+  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
+  const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
+  const { line, column } = htmlSyntaxError;
+  const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
+  const replacers = {
+    fileRelativeUrl: htmlRelativeUrl,
+    reasonCode: htmlSyntaxError.reasonCode,
+    errorLinkHref: `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
+      urlWithLineAndColumn,
+    )}')`,
+    errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
+    syntaxError: escapeHtml(htmlErrorContentFrame),
+  };
+  const html = replacePlaceholders(htmlForSyntaxError, replacers);
+  return html;
+};
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+const replacePlaceholders = (html, replacers) => {
+  return html.replace(/\${([\w]+)}/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
 };
 
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];

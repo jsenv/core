@@ -22,7 +22,6 @@ import { startDevServer } from "@jsenv/core";
 
 let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
-
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 const writeFileStructureForScenario = (scenario) => {
   const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
@@ -38,7 +37,6 @@ const devServer = await startDevServer({
   keepProcessAlive: !debug,
   port: 0,
 });
-
 const browser = await chromium.launch({
   headless: !debug,
   devtools: debug,

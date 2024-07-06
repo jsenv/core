@@ -120,6 +120,19 @@ const applyMatching = (pattern, string) => {
       consumeRemainingString();
       return true;
     }
+    if (remainingPattern.slice(0, 4) === "/**/") {
+      consumePattern(3); // consumes "/**/"
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: true,
+      });
+      groups.push(...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeRemainingString();
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
     // pattern leading **
     if (remainingPattern.slice(0, 2) === "**") {
       consumePattern(2); // consumes "**"

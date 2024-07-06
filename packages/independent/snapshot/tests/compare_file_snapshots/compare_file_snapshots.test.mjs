@@ -36,7 +36,7 @@ test(() => {
 test(() => {
   const fileSnapshot = takeFileSnapshot(fileUrl);
   try {
-    fileSnapshot.compare();
+    fileSnapshot.compare(true);
     throw new Error("should throw");
   } catch (e) {
     const actual = e.message;
@@ -54,7 +54,7 @@ test(() => {
   writeFileSync(fileUrl, "hello");
   const fileSnapshot = takeFileSnapshot(fileUrl);
   try {
-    fileSnapshot.compare();
+    fileSnapshot.compare(true);
     throw new Error("should throw");
   } catch (e) {
     const actual = e.message;
@@ -73,7 +73,7 @@ test(() => {
   const fileSnapshot = takeFileSnapshot(fileUrl);
   writeFileSync(fileUrl, "coucou");
   try {
-    fileSnapshot.compare();
+    fileSnapshot.compare(true);
     throw new Error("should throw");
   } catch (e) {
     const actual = stripAnsi(e.message);
@@ -97,14 +97,14 @@ test(() => {
   writeFileSync(fileUrl, "hello");
   const fileSnapshot = takeFileSnapshot(fileUrl);
   writeFileSync(fileUrl, "hello");
-  fileSnapshot.compare();
+  fileSnapshot.compare(true);
 });
 
 // snapshot never stored on filesystem + empty file is written
 test(() => {
   const fileSnapshot = takeFileSnapshot(fileUrl);
   writeFileSync(fileUrl, "");
-  fileSnapshot.compare();
+  fileSnapshot.compare(true);
 });
 
 // snapshot exists on filesystem + comparing empty files
@@ -112,5 +112,5 @@ test(() => {
   writeFileSync(fileUrl, "");
   const fileSnapshot = takeFileSnapshot(fileUrl);
   writeFileSync(fileUrl, "");
-  fileSnapshot.compare();
+  fileSnapshot.compare(true);
 });

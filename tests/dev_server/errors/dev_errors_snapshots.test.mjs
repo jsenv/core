@@ -7,15 +7,48 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
-process.env.GENERATING_SNAPSHOTS = "true";
+process.env.GENERATING_SNAPSHOTS = "true"; // for dev sevrer
 const { devServer } = await import("./start_dev_server.mjs");
 const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
-const screenshotsDirectoryUrl = new URL(`./sceenshots/`, snapshotDirectoryUrl);
+const screenshotsDirectoryUrl = new URL(
+  `./snapshots/sceenshots/`,
+  import.meta.url,
+);
+const takePageSnapshots = async (page, scenario) => {
+  const htmlGenerated = await page.evaluate(
+    /* eslint-disable no-undef */
+    async () => {
+      const outerHtml = document
+        .querySelector("jsenv-error-overlay")
+        .shadowRoot.querySelector(".overlay").outerHTML;
+      return outerHtml
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, `"`)
+        .replace(/&#039;/g, `'`);
+    },
+    /* eslint-enable no-undef */
+  );
+  await page.setViewportSize({ width: 900, height: 550 }); // generate smaller screenshots
+  const sceenshotBuffer = await page
+    .locator("jsenv-error-overlay")
+    .screenshot();
+  writeFileSync(
+    new URL(`./${scenario}.png`, screenshotsDirectoryUrl),
+    sceenshotBuffer,
+  );
+  writeFileSync(
+    new URL(`./${scenario}.html`, snapshotDirectoryUrl),
+    process.platform === "win32"
+      ? htmlGenerated.replace(/\r\n/g, "\n")
+      : htmlGenerated,
+  );
+};
 
 const test = async ({ browserLauncher, browserName }) => {
   const browser = await browserLauncher.launch({ headless: true });
-
-  const generateHtmlForStory = async ({ story }) => {
+  const takeSnapshotsForStory = async (story) => {
     const page = await browser.newPage();
     try {
       await page.goto(`${devServer.origin}/${story}/main.html`);
@@ -33,36 +66,8 @@ const test = async ({ browserLauncher, browserName }) => {
     }
     // wait a bit more to let client time to fetch error details from server
     await new Promise((resolve) => setTimeout(resolve, 200));
+    await takePageSnapshots(page, `${story}_${browserName}`);
 
-    const htmlGenerated = await page.evaluate(
-      /* eslint-disable no-undef */
-      async () => {
-        const outerHtml = document
-          .querySelector("jsenv-error-overlay")
-          .shadowRoot.querySelector(".overlay").outerHTML;
-        return outerHtml
-          .replace(/&amp;/g, "&")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/&quot;/g, `"`)
-          .replace(/&#039;/g, `'`);
-      },
-      /* eslint-enable no-undef */
-    );
-    await page.setViewportSize({ width: 900, height: 550 }); // generate smaller screenshots
-    const sceenshotBuffer = await page
-      .locator("jsenv-error-overlay")
-      .screenshot();
-    writeFileSync(
-      new URL(`./${story}_${browserName}.png`, screenshotsDirectoryUrl),
-      sceenshotBuffer,
-    );
-    writeFileSync(
-      new URL(`./${story}_${browserName}.html`, snapshotDirectoryUrl),
-      process.platform === "win32"
-        ? htmlGenerated.replace(/\r\n/g, "\n")
-        : htmlGenerated,
-    );
     await page.close();
     if (!process.env.CI && !process.env.JSENV) {
       console.log(`"${story}" snapshot generated for ${browserName}`);
@@ -95,9 +100,7 @@ const test = async ({ browserLauncher, browserName }) => {
       "js_module_worker_throw",
       "script_src_not_found",
     ]) {
-      await generateHtmlForStory({
-        story,
-      });
+      await takeSnapshotsForStory(story);
     }
   } finally {
     browser.close();

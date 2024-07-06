@@ -11,11 +11,11 @@
     "test:coverage": "npm run test -- --coverage"
   },
   "devDependencies": {
-    "@jsenv/assert": "4.0.8",
-    "@jsenv/core": "38.4.17",
+    "@jsenv/assert": "4.0.10",
+    "@jsenv/core": "38.4.19",
     "@jsenv/eslint-config": "16.5.2",
     "@jsenv/eslint-import-resolver": "8.1.2",
-    "@jsenv/test": "3.0.25",
+    "@jsenv/test": "3.0.27",
     "eslint": "8.56.0",
     "eslint-plugin-import": "2.29.1",
     "prettier": "3.3.2"

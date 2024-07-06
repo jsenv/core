@@ -40,7 +40,7 @@ export const jsenvPluginAutoreloadServer = ({
               }
               if (
                 urlInfo.data.hotDecline ||
-                urlInfo.firstReference.type === "http_request"
+                urlInfo.firstReference?.type === "http_request"
               ) {
                 return {
                   declined: true,
