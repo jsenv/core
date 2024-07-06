@@ -17,6 +17,7 @@ import {
   applyFileSystemMagicResolution,
   getExtensionsToTry,
 } from "@jsenv/node-esm-resolution";
+import { pickContentType } from "@jsenv/server";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 
@@ -203,20 +204,33 @@ export const jsenvPluginProtocolFile = ({
               urlInfo.filenameHint = `${urlToFilename(urlInfo.url)}/`;
             }
           }
-          const html = generateHtmlForDirectory(
-            urlObject.href,
-            urlInfo.context.rootDirectoryUrl,
-          );
+          const directoryContentArray = readdirSync(urlObject);
           if (urlInfo.firstReference.type === "filesystem") {
+            const content = JSON.stringify(directoryContentArray, null, "  ");
             return {
               type: "directory",
+              contentType: "application/json",
+              content,
+            };
+          }
+          const acceptsHtml = urlInfo.context.request
+            ? pickContentType(urlInfo.context.request, ["text/html"])
+            : false;
+          if (acceptsHtml) {
+            const html = generateHtmlForDirectory(
+              urlObject.href,
+              directoryContentArray,
+              urlInfo.context.rootDirectoryUrl,
+            );
+            return {
               contentType: "text/html",
               content: html,
             };
           }
           return {
-            contentType: "text/html",
-            content: html,
+            type: "directory",
+            contentType: "application/json",
+            content: JSON.stringify(directoryContentArray, null, "  "),
           };
         }
         if (
@@ -244,15 +258,15 @@ export const jsenvPluginProtocolFile = ({
             if (!existsSync(parentDirectoryUrl)) {
               throw e;
             }
+            const parentDirectoryContentArray = readdirSync(
+              new URL(parentDirectoryUrl),
+            );
             const html = generateHtmlForENOENTOnHtmlFile(
               urlInfo.url,
+              parentDirectoryContentArray,
               parentDirectoryUrl,
               urlInfo.context.rootDirectoryUrl,
             );
-            // import { pickContentType } from "@jsenv/server";
-            // const acceptsHtml = urlInfo.context.request
-            //   ? pickContentType(urlInfo.context.request, ["text/html"])
-            //   : true;
             return {
               contentType: "text/html",
               content: html,
@@ -273,10 +287,13 @@ export const jsenvPluginProtocolFile = ({
   ];
 };
 
-const generateHtmlForDirectory = (directoryUrl, rootDirectoryUrl) => {
+const generateHtmlForDirectory = (
+  directoryUrl,
+  directoryContentArray,
+  rootDirectoryUrl,
+) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
   const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
-  const directoryContentArray = readdirSync(new URL(directoryUrl));
   const replacers = {
     directoryRelativeUrl: urlToRelativeUrl(directoryUrl, rootDirectoryUrl),
     directoryUrl,
@@ -292,10 +309,10 @@ const generateHtmlForDirectory = (directoryUrl, rootDirectoryUrl) => {
 };
 const generateHtmlForENOENTOnHtmlFile = (
   url,
+  parentDirectoryContentArray,
   parentDirectoryUrl,
   rootDirectoryUrl,
 ) => {
-  const parentDirectoryContentArray = readdirSync(new URL(parentDirectoryUrl));
   if (parentDirectoryContentArray.length === 0) {
     const htmlFor404AndParentDirIsEmpty = String(
       readFileSync(html404AndParentDirIsEmptyFileUrl),

@@ -588,6 +588,14 @@ const extractDriveLetter = (resource) => {
 
 process.platform === "win32";
 
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+process.platform === "win32";
+
 const readFileSync = (value, { as = "buffer" } = {}) => {
   const fileUrl = assertAndNormalizeFileUrl(value);
   const buffer = node_fs.readFileSync(new URL(fileUrl));
@@ -604,14 +612,6 @@ const readFileSync = (value, { as = "buffer" } = {}) => {
     `"as" must be one of "buffer","string","json" received "${as}"`,
   );
 };
-
-process.platform === "win32";
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
 
 process.platform === "win32";
 

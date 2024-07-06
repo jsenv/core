@@ -1,4 +1,4 @@
-import { readdir, chmod, stat, lstat, promises, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, createReadStream, readFile, existsSync, readFileSync, realpathSync } from "node:fs";
+import { readdir, chmod, stat, lstat, promises, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, createReadStream, lstatSync, readFile, existsSync, readFileSync, realpathSync } from "node:fs";
 import process$1 from "node:process";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
@@ -141,6 +141,19 @@ const applyMatching = (pattern, string) => {
       consumePattern(2);
       consumeRemainingString();
       return true;
+    }
+    if (remainingPattern.slice(0, 4) === "/**/") {
+      consumePattern(3); // consumes "/**/"
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: true,
+      });
+      groups.push(...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeRemainingString();
+      restoreIndexes = false;
+      return skipResult.matched;
     }
     // pattern leading **
     if (remainingPattern.slice(0, 2) === "**") {
@@ -3159,6 +3172,14 @@ const readStat = (
   });
 };
 
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+process.platform === "win32";
+
 const statsToType = (stats) => {
   if (stats.isFile()) return "file";
   if (stats.isDirectory()) return "directory";
@@ -3470,14 +3491,6 @@ const removeDirectoryNaive = (
     });
   });
 };
-
-process.platform === "win32";
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
 
 process.platform === "win32";
 
@@ -7381,10 +7394,14 @@ const serveDirectory = (
     <h1>Content of directory ${url}</h1>
     <ul>
       ${directoryContentArray.map((filename) => {
-        const fileUrl = String(new URL(filename, url));
-        const fileUrlRelativeToServer = fileUrl.slice(
+        const fileUrlObject = new URL(filename, url);
+        const fileUrl = String(fileUrlObject);
+        let fileUrlRelativeToServer = fileUrl.slice(
           String(rootDirectoryUrl).length,
         );
+        if (lstatSync(fileUrlObject).isDirectory()) {
+          fileUrlRelativeToServer += "/";
+        }
         return `<li>
         <a href="/${fileUrlRelativeToServer}">${fileUrlRelativeToServer}</a>
       </li>`;
@@ -15783,6 +15800,11 @@ const applyDefaultExtension = ({ url, importer, defaultExtension }) => {
   return url
 };
 
+const htmlSyntaxErrorFileUrl = new URL(
+  "./html/html_syntax_error.html",
+  import.meta.url,
+);
+
 const jsenvPluginHtmlReferenceAnalysis = ({
   inlineContent,
   inlineConvertedScript,
@@ -15890,14 +15912,32 @@ const jsenvPluginHtmlReferenceAnalysis = ({
       },
       html: async (urlInfo) => {
         let importmapFound = false;
-        const importmapLoaded = startLoadingImportmap(urlInfo);
 
+        let htmlAst;
         try {
-          const htmlAst = parseHtml({
+          htmlAst = parseHtml({
             html: urlInfo.content,
             url: urlInfo.url,
           });
+        } catch (e) {
+          if (e.code === "PARSE_ERROR") {
+            const html = generateHtmlForSyntaxError(e, {
+              htmlUrl: urlInfo.url,
+              htmlContent: urlInfo.content,
+              rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+            });
+            htmlAst = parseHtml({
+              html,
+              url: htmlSyntaxErrorFileUrl,
+            });
+          } else {
+            throw e;
+          }
+        }
 
+        const importmapLoaded = startLoadingImportmap(urlInfo);
+
+        try {
           const mutations = [];
           const actions = [];
           const finalizeCallbacks = [];
@@ -16076,7 +16116,7 @@ const jsenvPluginHtmlReferenceAnalysis = ({
             });
           };
 
-          visitHtmlNodes(htmlAst, {
+          visitNonIgnoredHtmlNode(htmlAst, {
             link: (linkNode) => {
               const rel = getHtmlNodeAttribute(linkNode, "rel");
               const type = getHtmlNodeAttribute(linkNode, "type");
@@ -16330,6 +16370,67 @@ const jsenvPluginHtmlReferenceAnalysis = ({
       },
     },
   };
+};
+
+const visitNonIgnoredHtmlNode = (htmlAst, visitors) => {
+  const visitorsInstrumented = {};
+  for (const key of Object.keys(visitors)) {
+    visitorsInstrumented[key] = (node) => {
+      const jsenvIgnoreAttribute = getHtmlNodeAttribute(node, "jsenv-ignore");
+      if (jsenvIgnoreAttribute !== undefined) {
+        return;
+      }
+      visitors[key](node);
+    };
+  }
+  visitHtmlNodes(htmlAst, visitorsInstrumented);
+};
+
+const generateHtmlForSyntaxError = (
+  htmlSyntaxError,
+  { htmlUrl, htmlContent, rootDirectoryUrl },
+) => {
+  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
+  const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
+  const { line, column } = htmlSyntaxError;
+  const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
+  const replacers = {
+    fileRelativeUrl: htmlRelativeUrl,
+    reasonCode: htmlSyntaxError.reasonCode,
+    errorLinkHref: `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
+      urlWithLineAndColumn,
+    )}')`,
+    errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
+    syntaxError: escapeHtml(
+      generateContentFrame({
+        content: htmlContent,
+        line,
+        column,
+      }),
+    ),
+  };
+  const html = replacePlaceholders$2(htmlForSyntaxError, replacers);
+  return html;
+};
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+const replacePlaceholders$2 = (html, replacers) => {
+  return html.replace(/\${([\w]+)}/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
 };
 
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];
@@ -18061,6 +18162,16 @@ const jsenvPluginVersionSearchParam = () => {
   };
 };
 
+const html404AndParentDirIsEmptyFileUrl = new URL(
+  "./html/html_404_and_parent_dir_is_empty.html",
+  import.meta.url,
+);
+const html404AndParentDirFileUrl = new URL(
+  "./html/html_404_and_parent_dir.html",
+  import.meta.url,
+);
+const htmlFileUrlForDirectory = new URL("./html/directory.html", import.meta.url);
+
 const jsenvPluginProtocolFile = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
@@ -18147,7 +18258,9 @@ const jsenvPluginProtocolFile = ({
         reference.leadsToADirectory = stat && stat.isDirectory();
         if (reference.leadsToADirectory) {
           let actionForDirectory;
-          if (
+          if (reference.type === "a_href") {
+            actionForDirectory = "ignore";
+          } else if (
             reference.type === "http_request" ||
             reference.type === "filesystem"
           ) {
@@ -18232,17 +18345,33 @@ const jsenvPluginProtocolFile = ({
               urlInfo.filenameHint = `${urlToFilename$1(urlInfo.url)}/`;
             }
           }
-          const { headers, body } = serveDirectory(urlObject.href, {
-            headers: urlInfo.context.request
-              ? urlInfo.context.request.headers
-              : {},
-            rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
-          });
+          const directoryContentArray = readdirSync(urlObject);
+          if (urlInfo.firstReference.type === "filesystem") {
+            const content = JSON.stringify(directoryContentArray, null, "  ");
+            return {
+              type: "directory",
+              contentType: "application/json",
+              content,
+            };
+          }
+          const acceptsHtml = urlInfo.context.request
+            ? pickContentType(urlInfo.context.request, ["text/html"])
+            : false;
+          if (acceptsHtml) {
+            const html = generateHtmlForDirectory(
+              urlObject.href,
+              directoryContentArray,
+              urlInfo.context.rootDirectoryUrl,
+            );
+            return {
+              contentType: "text/html",
+              content: html,
+            };
+          }
           return {
             type: "directory",
-            contentType: headers["content-type"],
-            contentLength: headers["content-length"],
-            content: body,
+            contentType: "application/json",
+            content: JSON.stringify(directoryContentArray, null, "  "),
           };
         }
         if (
@@ -18252,18 +18381,142 @@ const jsenvPluginProtocolFile = ({
           urlInfo.dirnameHint =
             urlInfo.firstReference.ownerUrlInfo.filenameHint;
         }
-        const fileBuffer = readFileSync(urlObject);
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
+        if (contentType === "text/html") {
+          try {
+            const fileBuffer = readFileSync(urlObject);
+            const content = String(fileBuffer);
+            return {
+              content,
+              contentType,
+              contentLength: fileBuffer.length,
+            };
+          } catch (e) {
+            if (e.code !== "ENOENT") {
+              throw e;
+            }
+            const parentDirectoryUrl = new URL("./", urlInfo.url);
+            if (!existsSync(parentDirectoryUrl)) {
+              throw e;
+            }
+            const parentDirectoryContentArray = readdirSync(
+              new URL(parentDirectoryUrl),
+            );
+            const html = generateHtmlForENOENTOnHtmlFile(
+              urlInfo.url,
+              parentDirectoryContentArray,
+              parentDirectoryUrl,
+              urlInfo.context.rootDirectoryUrl,
+            );
+            return {
+              contentType: "text/html",
+              content: html,
+            };
+          }
+        }
+        const fileBuffer = readFileSync(urlObject);
         const content = CONTENT_TYPE.isTextual(contentType)
           ? String(fileBuffer)
           : fileBuffer;
         return {
           content,
           contentType,
+          contentLength: fileBuffer.length,
         };
       },
     },
   ];
+};
+
+const generateHtmlForDirectory = (
+  directoryUrl,
+  directoryContentArray,
+  rootDirectoryUrl,
+) => {
+  directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+  const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
+  const replacers = {
+    directoryRelativeUrl: urlToRelativeUrl(directoryUrl, rootDirectoryUrl),
+    directoryUrl,
+    directoryContent: () =>
+      generateDirectoryContent(
+        directoryContentArray,
+        directoryUrl,
+        rootDirectoryUrl,
+      ),
+  };
+  const html = replacePlaceholders$1(htmlForDirectory, replacers);
+  return html;
+};
+const generateHtmlForENOENTOnHtmlFile = (
+  url,
+  parentDirectoryContentArray,
+  parentDirectoryUrl,
+  rootDirectoryUrl,
+) => {
+  if (parentDirectoryContentArray.length === 0) {
+    const htmlFor404AndParentDirIsEmpty = String(
+      readFileSync(html404AndParentDirIsEmptyFileUrl),
+    );
+    return replacePlaceholders$1(htmlFor404AndParentDirIsEmpty, {
+      fileRelativeUrl: urlToRelativeUrl(url, rootDirectoryUrl),
+      parentDirectoryRelativeUrl: urlToRelativeUrl(
+        parentDirectoryUrl,
+        rootDirectoryUrl,
+      ),
+    });
+  }
+  const htmlFor404AndParentDir = String(
+    readFileSync(html404AndParentDirFileUrl),
+  );
+
+  const replacers = {
+    fileUrl: url,
+    fileRelativeUrl: urlToRelativeUrl(url, rootDirectoryUrl),
+    parentDirectoryUrl,
+    parentDirectoryRelativeUrl: urlToRelativeUrl(
+      parentDirectoryUrl,
+      rootDirectoryUrl,
+    ),
+    parentDirectoryContent: () =>
+      generateDirectoryContent(
+        parentDirectoryContentArray,
+        parentDirectoryUrl,
+        rootDirectoryUrl,
+      ),
+  };
+  const html = replacePlaceholders$1(htmlFor404AndParentDir, replacers);
+  return html;
+};
+const generateDirectoryContent = (
+  directoryContentArray,
+  directoryUrl,
+  rootDirectoryUrl,
+) => {
+  return directoryContentArray.map((filename) => {
+    const fileUrlObject = new URL(filename, directoryUrl);
+    const fileUrl = String(fileUrlObject);
+    let fileUrlRelative = urlToRelativeUrl(fileUrl, rootDirectoryUrl);
+    if (lstatSync(fileUrlObject).isDirectory()) {
+      fileUrlRelative += "/";
+    }
+    return `<li>
+    <a href="/${fileUrlRelative}">/${fileUrlRelative}</a>
+  </li>`;
+  }).join(`
+  `);
+};
+const replacePlaceholders$1 = (html, replacers) => {
+  return html.replace(/\${([\w]+)}/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
 };
 
 const resolveSymlink = (fileUrl) => {
@@ -19434,12 +19687,21 @@ const jsenvPluginAutoreloadClient = () => {
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl,
         });
+        const paramsJson = JSON.stringify(
+          {
+            mainFilePath: `/${htmlUrlInfo.kitchen.context.mainFilePath}`,
+          },
+          null,
+          "  ",
+        );
         injectHtmlNodeAsEarlyAsPossible(
           htmlAst,
           createHtmlNode({
             tagName: "script",
             type: "module",
-            src: autoreloadClientReference.generatedSpecifier,
+            textContent: `import { initAutoreload } from "${autoreloadClientReference.generatedSpecifier}";
+
+initAutoreload(${paramsJson});`,
           }),
           "jsenv:autoreload_client",
         );
@@ -19490,7 +19752,10 @@ const jsenvPluginAutoreloadServer = ({
                       : `a dependent file accepts hot reload`,
                 };
               }
-              if (urlInfo.data.hotDecline) {
+              if (
+                urlInfo.data.hotDecline ||
+                urlInfo.firstReference.type === "http_request"
+              ) {
                 return {
                   declined: true,
                   reason: `file declines hot reload`,
@@ -19884,7 +20149,7 @@ const jsenvPluginRibbon = ({
           createHtmlNode({
             tagName: "script",
             type: "module",
-            textContent: `import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}"
+            textContent: `import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}";
 
 injectRibbon(${paramsJson});`,
           }),
@@ -22335,6 +22600,10 @@ const startDevServer = async ({
         `sourceMainFilePath must be a string, got ${sourceMainFilePath}`,
       );
     }
+    sourceMainFilePath = urlToRelativeUrl(
+      new URL(sourceMainFilePath, sourceDirectoryUrl),
+      sourceDirectoryUrl,
+    );
     if (outDirectoryUrl === undefined) {
       if (!process.env.CI) {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
