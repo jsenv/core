@@ -35,8 +35,8 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/assert": "4.0.8",
-    "@jsenv/filesystem": "4.7.0",
+    "@jsenv/assert": "4.0.10",
+    "@jsenv/filesystem": "4.7.1",
     "@jsenv/urls": "2.2.7",
     "@jsenv/utils": "2.1.1",
     "pixelmatch": "6.0.0",
