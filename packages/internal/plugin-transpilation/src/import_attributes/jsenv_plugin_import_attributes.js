@@ -3,10 +3,10 @@
  * ```js
  * const file = "./style.css"
  * const type = "css"
- * import(file, { assert: { type }})
+ * import(file, { with: { type }})
  * ```
  * Jsenv could throw an error when it knows some browsers in runtimeCompat
- * do not support import assertions
+ * do not support import attributes
  * But for now (as it is simpler) we let the browser throw the error
  */
 
