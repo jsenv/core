@@ -809,6 +809,9 @@ const createException = (reason, { rootDirectoryUrl } = {}) => {
 
     const stackFramesNonNative = [];
     for (const stackFrame of stackFrames) {
+      if (!stackFrame.url) {
+        continue;
+      }
       if (stackFrame.url.startsWith("node:")) {
         stackFrame.native = "node";
         continue;
