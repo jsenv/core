@@ -6,9 +6,12 @@ import { build } from "@jsenv/core";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 
-const test = async (params) => {
+const test = async (params = {}) => {
   const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  let buildDirectorySnapshot;
+  if (params.directoryReferenceEffect) {
+    buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  }
   const { buildManifest } = await build({
     logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -22,7 +25,9 @@ const test = async (params) => {
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     ...params,
   });
-  buildDirectorySnapshot.compare();
+  if (params.directoryReferenceEffect) {
+    buildDirectorySnapshot.compare();
+  }
 
   const server = await startFileServer({
     rootDirectoryUrl: snapshotDirectoryUrl,
@@ -67,4 +72,6 @@ ${new URL("./client/main.html", import.meta.url)}:15:40
 
 // but it can be allowed explicitely and it will copy the directory content
 // in the build directory and update the url accoringly
-await test({ directoryReferenceEffect: "copy" });
+await test({
+  directoryReferenceEffect: "copy",
+});
