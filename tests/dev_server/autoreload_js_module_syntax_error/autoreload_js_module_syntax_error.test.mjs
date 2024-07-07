@@ -5,7 +5,8 @@
  * - Fixing the syntax error removes the error overlay
  */
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { writeFileSync } from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
