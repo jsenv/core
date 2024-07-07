@@ -146,22 +146,29 @@ const test = async ({
         /* eslint-enable no-undef */
       );
     };
-
-    {
+    const assertBodyColorAndLogs = async (expectBodyBackgroundColor) => {
       const actual = {
         bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
         pageLogs,
+        browserName,
       };
-      expectedPageLogs.push({
-        type: "log",
-        text: "adding stylesheet",
-      });
       const expect = {
-        bodyBackgroundColor: "rgb(255, 0, 0)", // red
+        bodyBackgroundColor: expectBodyBackgroundColor,
         pageLogs: expectedPageLogs,
+        browserName,
       };
-      assert({ actual, expect });
-    }
+      assert({
+        actual,
+        expect,
+      });
+    };
+    expectedPageLogs.push({
+      type: "log",
+      text: "adding stylesheet",
+    });
+    await assertBodyColorAndLogs(
+      "rgb(255, 0, 0)", // red
+    );
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     writeFileSync(
       cssFileUrl,
@@ -170,18 +177,8 @@ const test = async ({
       ),
     );
     await new Promise((resolve) => setTimeout(resolve, 1_000));
-    {
-      const actual = {
-        bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
-        pageLogs,
-      };
-      expectedPageLogs.push(...pageLogsAfterUpdatingCssFile);
-      const expect = {
-        bodyBackgroundColor: "rgb(0, 128, 0)", // green
-        pageLogs: expectedPageLogs,
-      };
-      assert({ actual, expect });
-    }
+    expectedPageLogs.push(...pageLogsAfterUpdatingCssFile);
+    await assertBodyColorAndLogs("rgb(0, 128, 0)");
     // remove usage of the css file
     writeFileSync(
       jsFileUrl,
@@ -190,24 +187,8 @@ const test = async ({
       ),
     );
     await new Promise((resolve) => setTimeout(resolve, 1_000));
-    {
-      const actual = {
-        bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
-        pageLogs,
-      };
-      expectedPageLogs.push(...pageLogsAfterRemovingCssImport);
-      const expect = {
-        bodyBackgroundColor: "rgba(0, 0, 0, 0)",
-        pageLogs: expectedPageLogs,
-      };
-      assert({
-        actual,
-        expect,
-        details: {
-          browser: browserName,
-        },
-      });
-    }
+    expectedPageLogs.push(...pageLogsAfterRemovingCssImport);
+    await assertBodyColorAndLogs("rgba(0, 0, 0, 0)");
     // restore deps on css file
     writeFileSync(
       jsFileUrl,
@@ -215,24 +196,10 @@ const test = async ({
     );
     // wait for partial reload effect to be done
     await new Promise((resolve) => setTimeout(resolve, 1_000));
-    {
-      const actual = {
-        bodyBackgroundColor: await getDocumentBodyBackgroundColor(),
-        pageLogs,
-      };
-      expectedPageLogs.push(...pageLogsAfterRestoringCssImport);
-      const expect = {
-        bodyBackgroundColor: "rgb(0, 128, 0)", // green
-        pageLogs: expectedPageLogs,
-      };
-      assert({
-        actual,
-        expect,
-        details: {
-          browswer: browserName,
-        },
-      });
-    }
+    expectedPageLogs.push(...pageLogsAfterRestoringCssImport);
+    await assertBodyColorAndLogs(
+      "rgb(0, 128, 0)", // green
+    );
   } finally {
     if (!debug) {
       browser.close();
@@ -243,18 +210,20 @@ const test = async ({
   }
 };
 
-if (
+if (process.platform === "win32") {
   // TODO: fix on windows
-  process.platform !== "win32" &&
-  // TODO: fix on linux
-  process.platform !== "linux"
-) {
-  await test({
-    browserLauncher: chromium,
-    browserName: "chromium",
-  });
-  await test({
-    browserLauncher: firefox,
-    browserName: "firefox",
-  });
+  process.exit();
 }
+if (process.platform === "linux") {
+  // TODO: fix on linux
+  process.exit();
+}
+
+await test({
+  browserLauncher: chromium,
+  browserName: "chromium",
+});
+await test({
+  browserLauncher: firefox,
+  browserName: "firefox",
+});
