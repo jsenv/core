@@ -1,3 +1,7 @@
+# 39.0.0
+
+- Move to import attributes, import assertions no longer supported
+
 # 38.3.0
 
 - [fix] ensure updating importmap (inline or inside a file trigger autoreload)

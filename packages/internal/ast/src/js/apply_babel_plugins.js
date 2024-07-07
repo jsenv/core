@@ -58,6 +58,7 @@ export const applyBabelPlugins = async ({
     generatorOpts: {
       compact: false,
       ...(options.generatorOpts || {}),
+      ...(inputIsJsModule ? { importAttributesKeyword: "with" } : {}),
     },
   };
   try {
