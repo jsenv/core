@@ -6133,6 +6133,7 @@ To fix this warning:
             runtime,
             runtimeParams,
             allocatedMs = defaultMsAllocatedPerExecution,
+            uses,
           } = stepConfig;
           const params = {
             measureMemoryUsage: true,
@@ -6140,6 +6141,7 @@ To fix this warning:
             collectPerformance: false,
             collectConsole: true,
             allocatedMs,
+            uses,
             runtime,
             runtimeParams: {
               rootDirectoryUrl,
@@ -6169,6 +6171,7 @@ To fix this warning:
           }
 
           const execution = {
+            name: `${relativeUrl}/${groupName}`,
             counters,
             countersInOrder,
             index,
@@ -6321,7 +6324,13 @@ To fix this warning:
 
       const executionRemainingSet = new Set(executionPlanifiedSet);
       const executionExecutingSet = new Set();
+      const usedTagSet = new Set();
       const start = async (execution) => {
+        if (execution.params.uses) {
+          for (const tagThatWillBeUsed of execution.params.uses) {
+            usedTagSet.add(tagThatWillBeUsed);
+          }
+        }
         execution.fileExecutionCount = Object.keys(
           testPlanResult.results[execution.fileRelativeUrl],
         ).length;
@@ -6341,7 +6350,6 @@ To fix this warning:
             afterEachCallbackSet.add(callback);
           }
         }
-
         for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
           const returnValue = beforeEachInOrderCallback(
             execution,
@@ -6374,7 +6382,6 @@ To fix this warning:
             process.exitCode = 1;
           }
         }
-
         for (const afterEachCallback of afterEachCallbackSet) {
           afterEachCallback(execution, testPlanResult);
         }
@@ -6384,7 +6391,11 @@ To fix this warning:
             afterEachInOrderCallback(execution, testPlanResult);
           }
         });
-
+        if (execution.params.uses) {
+          for (const tagNoLongerInUse of execution.params.uses) {
+            usedTagSet.delete(tagNoLongerInUse);
+          }
+        }
         if (testPlanResult.failed && failFast && counters.remaining) {
           logger.info(`"failFast" enabled -> cancel remaining executions`);
           failFastAbortController.abort();
@@ -6392,23 +6403,16 @@ To fix this warning:
         }
       };
       const startAsMuchAsPossible = async () => {
+        operation.throwIfAborted();
         const promises = [];
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-          operation.throwIfAborted();
-          if (executionRemainingSet.size === 0) {
-            break;
-          }
+        for (const executionCandidate of executionRemainingSet) {
           if (executionExecutingSet.size >= parallel.max) {
             break;
           }
-
-          if (
+          if (executionExecutingSet.size > 0) {
             // starting execution in parallel is limited by
             // cpu and memory only when trying to parallelize
             // if nothing is executing these limitations don't apply
-            executionExecutingSet.size > 0
-          ) {
             if (processMemoryUsageMonitoring.measure() > parallel.maxMemory) {
               // retry after Xms in case memory usage decreases
               const promise = (async () => {
@@ -6418,7 +6422,6 @@ To fix this warning:
               promises.push(promise);
               break;
             }
-
             if (processCpuUsageMonitoring.measure() > parallel.maxCpu) {
               // retry after Xms in case cpu usage decreases
               const promise = (async () => {
@@ -6428,27 +6431,29 @@ To fix this warning:
               promises.push(promise);
               break;
             }
+            if (executionCandidate.params.uses) {
+              const nonAvailableTag = executionCandidate.params.uses.find(
+                (tagToUse) => usedTagSet.has(tagToUse),
+              );
+              if (nonAvailableTag) {
+                logger.debug(
+                  `"${nonAvailableTag}" is not available, ${executionCandidate.name} will wait until it is released by a previous execution`,
+                );
+                continue;
+              }
+            }
           }
-
-          let execution;
-          for (const executionCandidate of executionRemainingSet) {
-            // TODO: this is where we'll check if it can be executed
-            // according to upcoming "using" execution param
-            execution = executionCandidate;
-            break;
-          }
-          if (execution) {
-            const promise = (async () => {
-              await start(execution);
-              await startAsMuchAsPossible();
-            })();
-            promises.push(promise);
-          }
+          const promise = (async () => {
+            await start(executionCandidate);
+            await startAsMuchAsPossible();
+          })();
+          promises.push(promise);
         }
-        if (promises.length) {
-          await Promise.all(promises);
-          promises.length = 0;
+        if (promises.length === 0) {
+          return;
         }
+        await Promise.all(promises);
+        promises.length = 0;
       };
 
       reporters = reporters.flat(Infinity);
@@ -9186,4 +9191,75 @@ const execute = async ({
   }
 };
 
-export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, nodeChildProcess, nodeWorkerThread, reportAsJunitXml, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, webkit, webkitIsolatedTab };
+const inlineRuntime = (fn) => {
+  return {
+    type: "inline",
+    name: "inline",
+    version: "1",
+    run: async ({
+      signal = new AbortController().signal,
+      onRuntimeStarted,
+      onRuntimeStopped,
+    }) => {
+      const actionOperation = Abort.startOperation();
+      actionOperation.addAbortSignal(signal);
+      const result = {
+        status: "executing",
+        errors: [],
+        namespace: null,
+        timings: {},
+        memoryUsage: null,
+        performance: null,
+      };
+      try {
+        let executionInternalErrorCallback;
+        let executionCompletedCallback;
+        const winnerPromise = new Promise((resolve) => {
+          raceCallbacks(
+            {
+              aborted: (cb) => {
+                return actionOperation.addAbortCallback(cb);
+              },
+              execution_internal_error: (cb) => {
+                executionInternalErrorCallback = cb;
+              },
+              execution_completed: (cb) => {
+                executionCompletedCallback = cb;
+              },
+            },
+            resolve,
+          );
+        });
+        try {
+          onRuntimeStarted();
+          const value = await fn();
+          executionCompletedCallback(value);
+        } catch (e) {
+          executionInternalErrorCallback(e);
+        }
+        const raceHandlers = {
+          aborted: () => {
+            result.status = "aborted";
+          },
+          execution_internal_error: (e) => {
+            result.status = "failed";
+            result.errors.push(e);
+          },
+          execution_completed: (value) => {
+            result.status = "completed";
+            result.errors = [];
+            result.namespace = value;
+          },
+        };
+        const winner = await winnerPromise;
+        raceHandlers[winner.name](winner.data);
+      } finally {
+        onRuntimeStopped();
+        await actionOperation.end();
+        return result;
+      }
+    },
+  };
+};
+
+export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, inlineRuntime, nodeChildProcess, nodeWorkerThread, reportAsJunitXml, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, webkit, webkitIsolatedTab };

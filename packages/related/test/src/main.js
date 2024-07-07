@@ -16,3 +16,7 @@ export { reporterList } from "./execution/reporters/reporter_list.js";
 export { reportAsJunitXml } from "./execution/junit_xml_file/report_as_junit_xml.js";
 // advanced
 export { execute } from "./execution/execute.js";
+
+// internals
+// help for internal self unit test
+export { inlineRuntime } from "./runtime_inline/runtime_inline.js";

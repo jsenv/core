@@ -1,3 +1,7 @@
+# 3.2.0
+
+- Add `uses` param to each test execution
+
 # 3.0.0 (draft)
 
 #### Test execution in parallel by default
