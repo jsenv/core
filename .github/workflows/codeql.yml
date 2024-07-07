@@ -14,7 +14,6 @@ name: "CodeQL"
 on:
   push:
     branches: ["main"]
-    paths-ignore: ["**/tests/**/**syntax_error.js"]
   pull_request:
     branches: ["main"]
   schedule:
@@ -92,3 +91,5 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:${{matrix.language}}"
+          config: |
+            paths-ignore: ["**/tests/**/**syntax_error.js"]
