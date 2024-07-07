@@ -1,4 +1,4 @@
-import AppCustomElementStyleSheet from "./app_custom_element.css" assert { type: "css" };
+import AppCustomElementStyleSheet from "./app_custom_element.css" with { type: "css" };
 import { initCounter } from "./counter.js";
 
 const jsenvLogoUrl = new URL("/jsenv_logo.svg", import.meta.url);

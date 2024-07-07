@@ -1,6 +1,6 @@
 import { useLayoutEffect } from "preact/hooks";
 
-import appStyleSheet from "./app.css" assert { type: "css" };
+import appStyleSheet from "./app.css" with { type: "css" };
 import { Counter } from "./counter.jsx";
 
 const preactLogoUrl = new URL("../preact_logo.svg", import.meta.url);

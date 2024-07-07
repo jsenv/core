@@ -1,6 +1,6 @@
 module.exports = {
   plugins: [
-    "@babel/plugin-syntax-import-assertions",
+    "@babel/plugin-syntax-import-attributes",
     [
       "@babel/plugin-syntax-optional-chaining-assign",
       {

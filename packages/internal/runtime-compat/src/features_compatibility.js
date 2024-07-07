@@ -67,12 +67,11 @@ export const featuresCompatMap = {
     safari: "16.4",
   },
   import_type_json: {
-    // chrome: "91",
-    // edge: "91",
+    chrome: "123",
+    safari: "17.2",
   },
   import_type_css: {
-    // chrome: "93",
-    // edge: "93",
+    chrome: "123",
   },
   import_type_text: {},
   // https://developer.mozilla.org/en-US/docs/Web/API/CSSStyleSheet#browser_compatibility

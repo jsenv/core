@@ -36,17 +36,17 @@ export const jsenvPluginImportAssertions = ({
       } else {
         const { importTypeAttributeNode } = reference.astInfo;
         const content = reference.ownerUrlInfo.content;
-        const assertKeyboardStart = content.indexOf(
-          "assert",
-          importTypeAttributeNode.start - " assert { ".length,
+        const withKeywordStart = content.indexOf(
+          "with",
+          importTypeAttributeNode.start - " with { ".length,
         );
-        const assertKeywordEnd = content.indexOf(
+        const withKeywordEnd = content.indexOf(
           "}",
           importTypeAttributeNode.end,
         );
         magicSource.remove({
-          start: assertKeyboardStart,
-          end: assertKeywordEnd + 1,
+          start: withKeywordStart,
+          end: withKeywordEnd + 1,
         });
       }
     };

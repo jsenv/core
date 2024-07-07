@@ -84,7 +84,7 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.24.7",
-    "@babel/plugin-syntax-import-assertions": "7.24.7",
+    "@babel/plugin-syntax-import-attributes": "7.24.7",
     "@babel/plugin-syntax-optional-chaining-assign": "7.24.7",
     "@jsenv/assert": "./packages/independent/assert/",
     "@jsenv/core": "./",

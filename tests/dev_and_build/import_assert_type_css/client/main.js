@@ -1,4 +1,4 @@
-import sheet from "./src/main.css" assert { type: "css" };
+import sheet from "./src/main.css" with { type: "css" };
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
 

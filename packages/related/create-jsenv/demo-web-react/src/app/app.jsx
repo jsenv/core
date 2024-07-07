@@ -1,6 +1,6 @@
 import { useLayoutEffect } from "react";
 
-import appStyleSheet from "./app.css" assert { type: "css" };
+import appStyleSheet from "./app.css" with { type: "css" };
 import { Counter } from "./counter.jsx";
 
 const reactLogoUrl = new URL("../react_logo.svg", import.meta.url);

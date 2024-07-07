@@ -1,4 +1,4 @@
-import style from "./style.css" assert { type: "css" };
+import style from "./style.css" with { type: "css" };
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, style];
 
