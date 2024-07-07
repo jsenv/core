@@ -42,7 +42,7 @@
       /* expose on window to let automated test do things */
       window.registerServiceWorkerScript = () => {
         return swFacade.setRegistrationPromise(
-          window.navigator.serviceWorker.register("./sw.js"),
+          window.navigator.serviceWorker.register("./sw_syntax_error.js"),
         );
       };
 

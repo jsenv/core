@@ -12,9 +12,8 @@ node_modules/
 **/babel_helpers/
 **/client/regenerator_runtime.js
 **/async-to-promises.js
-**/syntax_error/client/*.js
 
-**/tests/**/js_syntax_error.js
+**/tests/**/**syntax_error.js
 **/tests/**/js_module_inline_syntax_error/main.html
 **/tests/**/snapshots/
 

@@ -11,7 +11,7 @@ node_modules/
 **/client/regenerator_runtime.js
 **/async-to-promises.js
 
-/tests/**/js_syntax_error.js
+**/tests/**/**syntax_error.js
 /packages/**/server/tests/internal_error/snapshots/
 /**/dist/**
 
