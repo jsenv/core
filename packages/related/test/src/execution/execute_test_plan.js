@@ -619,6 +619,7 @@ To fix this warning:
             runtime,
             runtimeParams,
             allocatedMs = defaultMsAllocatedPerExecution,
+            uses,
           } = stepConfig;
           const params = {
             measureMemoryUsage: true,
@@ -626,6 +627,7 @@ To fix this warning:
             collectPerformance: false,
             collectConsole: true,
             allocatedMs,
+            uses,
             runtime,
             runtimeParams: {
               rootDirectoryUrl,
@@ -655,6 +657,7 @@ To fix this warning:
           }
 
           const execution = {
+            name: `${relativeUrl}/${groupName}`,
             counters,
             countersInOrder,
             index,
@@ -807,7 +810,13 @@ To fix this warning:
 
       const executionRemainingSet = new Set(executionPlanifiedSet);
       const executionExecutingSet = new Set();
+      const usedTagsSet = new Set();
       const start = async (execution) => {
+        if (execution.params.uses) {
+          for (const tagThatWillBeUsed of execution.params.uses) {
+            usedTagsSet.add(tagThatWillBeUsed);
+          }
+        }
         execution.fileExecutionCount = Object.keys(
           testPlanResult.results[execution.fileRelativeUrl],
         ).length;
@@ -827,7 +836,6 @@ To fix this warning:
             afterEachCallbackSet.add(callback);
           }
         }
-
         for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
           const returnValue = beforeEachInOrderCallback(
             execution,
@@ -860,7 +868,6 @@ To fix this warning:
             process.exitCode = 1;
           }
         }
-
         for (const afterEachCallback of afterEachCallbackSet) {
           afterEachCallback(execution, testPlanResult);
         }
@@ -870,7 +877,11 @@ To fix this warning:
             afterEachInOrderCallback(execution, testPlanResult);
           }
         });
-
+        if (execution.params.uses) {
+          for (const tagNoLongerInUse of execution.params.uses) {
+            usedTagsSet.delete(tagNoLongerInUse);
+          }
+        }
         if (testPlanResult.failed && failFast && counters.remaining) {
           logger.info(`"failFast" enabled -> cancel remaining executions`);
           failFastAbortController.abort();
@@ -888,7 +899,6 @@ To fix this warning:
           if (executionExecutingSet.size >= parallel.max) {
             break;
           }
-
           if (
             // starting execution in parallel is limited by
             // cpu and memory only when trying to parallelize
@@ -918,8 +928,17 @@ To fix this warning:
 
           let execution;
           for (const executionCandidate of executionRemainingSet) {
-            // TODO: this is where we'll check if it can be executed
-            // according to upcoming "using" execution param
+            if (executionCandidate.params.uses) {
+              const nonAvailableTag = executionCandidate.params.uses.find(
+                (tagToUse) => usedTagsSet.has(tagToUse),
+              );
+              if (nonAvailableTag) {
+                logger.debug(
+                  `"${nonAvailableTag}" is not available, ${executionCandidate.name} will wait until it is released by a previous execution`,
+                );
+                continue;
+              }
+            }
             execution = executionCandidate;
             break;
           }
