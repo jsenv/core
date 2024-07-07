@@ -6,10 +6,6 @@ if (process.platform === "win32") {
   // disable on windows because it would fails due to line endings (CRLF)
   process.exit(0);
 }
-if (process.platform === "linux") {
-  // disable on linux for now (screenshot comparison would fail)
-  process.exit(0);
-}
 
 process.env.GENERATING_SNAPSHOTS = "true"; // for dev sevrer
 const { devServer } = await import("./start_dev_server.mjs");
@@ -112,7 +108,11 @@ const test = async ({ browserLauncher, browserName }) => {
 };
 
 try {
-  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl, {
+    "**/*": true,
+    // on linux do not compare screenshots
+    ...(process.platform === "linux" ? { "**/*.png": false } : {}),
+  });
   await Promise.all([
     test({ browserLauncher: chromium, browserName: "chromium" }),
     test({ browserLauncher: firefox, browserName: "firefox" }),
