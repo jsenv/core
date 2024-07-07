@@ -99,7 +99,7 @@ const defaultOptions = {
   actual: undefined,
   expect: undefined,
   MAX_DEPTH: 5,
-  MAX_DEPTH_INSIDE_DIFF: 1,
+  MAX_DEPTH_INSIDE_DIFF: 2,
   MAX_DIFF_INSIDE_VALUE: { prop: 2, line: 1 },
   MAX_CONTEXT_BEFORE_DIFF: { prop: 2, line: 3 },
   MAX_CONTEXT_AFTER_DIFF: { prop: 2, line: 3 },

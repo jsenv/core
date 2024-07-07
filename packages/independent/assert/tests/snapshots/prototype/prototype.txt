@@ -14,7 +14,9 @@ actual: {
 }
 expect: {
   __proto__: {
-    a: Object(1),
+    a: {
+      b: true,
+    },
   },
 }
 

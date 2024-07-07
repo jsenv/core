@@ -55,8 +55,8 @@
         <text x="68.81" y="71.55" fill="#cd5555">{</text>
         <text x="43.61" y="90.55" fill="#cd5555">a</text>
         <text x="52.01" y="90.55" fill="#cd5555">: </text>
-        <text x="68.81" y="90.55" fill="#cd5555">Object(0)</text>
-        <text x="144.42" y="90.55" fill="#cd5555">,</text>
+        <text x="68.81" y="90.55" fill="#cd5555">{}</text>
+        <text x="85.61" y="90.55" fill="#cd5555">,</text>
         <text x="26.8" y="109.55" fill="#cd5555">}</text>
         <text x="35.2" y="109.55" fill="#cd5555">,</text>
         <text x="10" y="128.55" fill="#cd5555">}</text>
