@@ -9141,15 +9141,15 @@ const JS_QUOTE_REPLACEMENTS = {
  * ```js
  * const file = "./style.css"
  * const type = "css"
- * import(file, { assert: { type }})
+ * import(file, { with: { type }})
  * ```
  * Jsenv could throw an error when it knows some browsers in runtimeCompat
- * do not support import assertions
+ * do not support import attributes
  * But for now (as it is simpler) we let the browser throw the error
  */
 
 
-const jsenvPluginImportAssertions = ({
+const jsenvPluginImportAttributes = ({
   json = "auto",
   css = "auto",
   text = "auto",
@@ -9172,17 +9172,17 @@ const jsenvPluginImportAssertions = ({
       } else {
         const { importTypeAttributeNode } = reference.astInfo;
         const content = reference.ownerUrlInfo.content;
-        const assertKeyboardStart = content.indexOf(
-          "assert",
-          importTypeAttributeNode.start - " assert { ".length,
+        const withKeywordStart = content.indexOf(
+          "with",
+          importTypeAttributeNode.start - " with { ".length,
         );
-        const assertKeywordEnd = content.indexOf(
+        const withKeywordEnd = content.indexOf(
           "}",
           importTypeAttributeNode.end,
         );
         magicSource.remove({
-          start: assertKeyboardStart,
-          end: assertKeywordEnd + 1,
+          start: withKeywordStart,
+          end: withKeywordEnd + 1,
         });
       }
     };
@@ -10161,7 +10161,7 @@ const analyzeConstructableStyleSheetUsage = (urlInfo) => {
         // import('./' + moduleName)
         return false;
       }
-      if (hasImportTypeCssAssertion(node)) {
+      if (hasImportTypeCssAttribute(node)) {
         return node;
       }
       if (hasCssModuleQueryParam(source)) {
@@ -10174,7 +10174,7 @@ const analyzeConstructableStyleSheetUsage = (urlInfo) => {
       if (hasCssModuleQueryParam(source)) {
         return source;
       }
-      if (hasImportTypeCssAssertion(node)) {
+      if (hasImportTypeCssAttribute(node)) {
         return node;
       }
       return false;
@@ -10236,22 +10236,20 @@ const hasCssModuleQueryParam = (node) => {
   );
 };
 
-const hasImportTypeCssAssertion = (node) => {
-  const importAssertionsDescriptor = getImportAssertionsDescriptor(
-    node.assertions,
-  );
-  return Boolean(importAssertionsDescriptor.type === "css");
+const hasImportTypeCssAttribute = (node) => {
+  const importAttributes = getImportAttributes(node);
+  return Boolean(importAttributes.type === "css");
 };
 
-const getImportAssertionsDescriptor = (importAssertions) => {
-  const importAssertionsDescriptor = {};
-  if (importAssertions) {
-    importAssertions.forEach((importAssertion) => {
-      importAssertionsDescriptor[importAssertion.key.name] =
-        importAssertion.value.value;
+const getImportAttributes = (importNode) => {
+  const importAttributes = {};
+  if (importNode.attributes) {
+    importNode.attributes.forEach((importAttributeNode) => {
+      importAttributes[importAttributeNode.key.name] =
+        importAttributeNode.value.value;
     });
   }
-  return importAssertionsDescriptor;
+  return importAttributes;
 };
 
 const babelPluginNewStylesheetInjector = (
@@ -11111,7 +11109,7 @@ const jsenvPluginCssTranspilation = () => {
 
 
 const jsenvPluginTranspilation = ({
-  importAssertions = true,
+  importAttributes = true,
   css = true, // TODO
   // build sets jsModuleFallback: false during first step of the build
   // and re-enable it in the second phase (when performing the bundling)
@@ -11119,8 +11117,8 @@ const jsenvPluginTranspilation = ({
   jsModuleFallback = true,
   babelHelpersAsImport = true,
 }) => {
-  if (importAssertions === true) {
-    importAssertions = {};
+  if (importAttributes === true) {
+    importAttributes = {};
   }
   if (jsModuleFallback === true) {
     jsModuleFallback = {};
@@ -11132,8 +11130,8 @@ const jsenvPluginTranspilation = ({
     }),
     jsenvPluginAsJsModule(),
     ...(jsModuleFallback ? [jsenvPluginJsModuleFallback()] : []),
-    ...(importAssertions
-      ? [jsenvPluginImportAssertions(importAssertions)]
+    ...(importAttributes
+      ? [jsenvPluginImportAttributes(importAttributes)]
       : []),
 
     ...(css ? [jsenvPluginCssTranspilation()] : []),

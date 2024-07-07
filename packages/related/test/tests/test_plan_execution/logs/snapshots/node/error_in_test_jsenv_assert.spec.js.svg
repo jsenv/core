@@ -43,9 +43,9 @@
       fill="#cccccc"
     >
       <g>
-        <text x="10" y="14.55" fill="#7f7f7f">-------------</text>
-        <text x="127.62" y="14.55"> 1 file to execute </text>
-        <text x="278.84" y="14.55" fill="#7f7f7f">-------------</text>
+        <text x="10" y="14.55" fill="#7f7f7f">----------</text>
+        <text x="102.42" y="14.55"> 2 executions planified </text>
+        <text x="295.65" y="14.55" fill="#7f7f7f">-----------</text>
         <text x="10" y="33.55">directory: /mock/</text>
         <text x="10" y="52.55" fill="#7f7f7f"
           >---------------------------------------------</text
@@ -128,11 +128,11 @@
         <text x="10" y="508.55" fill="#7f7f7f"
           >--------------------------------------</text
         >
-        <text x="10" y="527.55" fill="#7f7f7f"
-          >---------------------------------------------</text
-        >
-        <text x="10" y="546.55">2 executions: all </text>
-        <text x="161.22" y="546.55" fill="#cd5555">failed</text>
+        <text x="10" y="527.55" fill="#7f7f7f">-------------</text>
+        <text x="127.62" y="527.55"> 2 executions done </text>
+        <text x="278.84" y="527.55" fill="#7f7f7f">-------------</text>
+        <text x="10" y="546.55">status: all </text>
+        <text x="110.82" y="546.55" fill="#cd5555">failed</text>
         <text x="10" y="565.55">duration: &#x3C;mock&#x3E;s</text>
         <text x="10" y="584.55" fill="#7f7f7f"
           >---------------------------------------------</text
