@@ -5563,7 +5563,7 @@ const logsDefault = {
   level: "info",
   type: "list",
   animated: true,
-  platformInfo: false,
+  platformInfo: false, // maybe true as long as not executed by npm workspace?
   memoryUsage: false,
   cpuUsage: false,
   fileUrl: undefined,
