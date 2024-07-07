@@ -1,5 +1,5 @@
 const namespace = await import("/js/data.json.js?debug", {
-  assert: {  },
+  with: {  },
 });
 
 window.resolveResultPromise(namespace.default);

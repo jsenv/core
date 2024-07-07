@@ -124,7 +124,7 @@ const extractImportAttributesInfo = (node) => {
   }
   const { properties } = firstArgNode;
   const withProperty = properties.find((property) => {
-    return property.key.name === "assert";
+    return property.key.name === "with";
   });
   if (!withProperty) {
     return null;

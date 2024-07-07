@@ -96,7 +96,7 @@ const hasCssModuleQueryParam = (node) => {
 };
 
 const hasImportTypeCssAttribute = (node) => {
-  const importAttributes = getImportAttributes(node.attributes);
+  const importAttributes = getImportAttributes(node);
   return Boolean(importAttributes.type === "css");
 };
 
