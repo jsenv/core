@@ -81,7 +81,10 @@ export const reporterList = ({
 
         logOptions.group = Object.keys(testPlanResult.groups).length > 1;
         write(renderIntro(testPlanResult, logOptions));
-        if (!animatedLogEnabled) {
+        if (
+          !animatedLogEnabled ||
+          Object.keys(testPlanResult.results).length === 0
+        ) {
           return {
             afterEachInOrder: (execution) => {
               const log = renderExecutionLog(execution, logOptions);
@@ -190,7 +193,6 @@ export const reporterList = ({
         mockFluctuatingValues, // used for snapshot testing logs
         spy: () => {
           let rawOutput = "";
-
           return {
             write: (log) => {
               rawOutput += stripAnsi(log);
@@ -212,19 +214,34 @@ const renderIntro = (testPlanResult, logOptions) => {
     : urlToFileSystemPath(testPlanResult.rootDirectoryUrl);
   const numberOfFiles = Object.keys(testPlanResult.results).length;
 
-  if (numberOfFiles === 0) {
-    return `no file matching "testPlan" in ${directory}:
-${testPlanResult.patterns.join("\n")}`;
-  }
-
   let title;
-  if (numberOfFiles === 1) {
+  if (numberOfFiles === 0) {
+    title = `no file to execute`;
+  } else if (numberOfFiles === 1) {
     title = `1 file to execute`;
   } else {
     title = `${numberOfFiles} files to execute`;
   }
   const lines = [];
   lines.push(`directory: ${directory}`);
+  if (numberOfFiles === 0) {
+    let testPlanLog = "";
+    testPlanLog += "{";
+    testPlanLog += "\n";
+    const single = testPlanResult.patterns.length === 1;
+    for (const pattern of testPlanResult.patterns) {
+      testPlanLog += "  ";
+      testPlanLog += JSON.stringify(pattern);
+      testPlanLog += ": ";
+      testPlanLog += "...";
+      if (!single) {
+        testPlanLog += ",";
+      }
+    }
+    testPlanLog += "\n";
+    testPlanLog += "}";
+    lines.push(`testPlan: ${testPlanLog}`);
+  }
   if (logOptions.platformInfo) {
     os_line: {
       let osLine = `os: `;

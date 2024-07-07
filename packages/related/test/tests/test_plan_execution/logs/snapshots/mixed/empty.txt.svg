@@ -43,12 +43,10 @@
       fill="#cccccc"
     >
       <g>
-        <text x="10" y="14.55" fill="#7f7f7f">--------------</text>
-        <text x="136.02" y="14.55"> execution start </text>
-        <text x="270.44" y="14.55" fill="#7f7f7f">--------------</text>
-        <text x="10" y="33.55"
-          >2 files matching &#x22;testPlan&#x22; in /mock/</text
-        >
+        <text x="10" y="14.55" fill="#7f7f7f">------------</text>
+        <text x="119.22" y="14.55"> 2 files to execute </text>
+        <text x="278.84" y="14.55" fill="#7f7f7f">-------------</text>
+        <text x="10" y="33.55">directory: /mock/</text>
         <text x="10" y="52.55" fill="#7f7f7f"
           >---------------------------------------------</text
         >
