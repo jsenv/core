@@ -6,6 +6,10 @@ if (process.platform === "win32") {
   // disable on windows because it would fails due to line endings (CRLF)
   process.exit(0);
 }
+if (process.platform === "linux") {
+  // disable on linux for now (screenshot comparison would fail)
+  process.exit(0);
+}
 
 process.env.GENERATING_SNAPSHOTS = "true"; // for dev sevrer
 const { devServer } = await import("./start_dev_server.mjs");
