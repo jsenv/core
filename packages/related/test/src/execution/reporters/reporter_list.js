@@ -213,14 +213,16 @@ const renderIntro = (testPlanResult, logOptions) => {
     ? "/mock/"
     : urlToFileSystemPath(testPlanResult.rootDirectoryUrl);
   const numberOfFiles = Object.keys(testPlanResult.results).length;
+  const { counters } = testPlanResult;
+  const { planified } = counters;
 
   let title;
-  if (numberOfFiles === 0) {
+  if (planified === 0) {
     title = `no file to execute`;
-  } else if (numberOfFiles === 1) {
-    title = `1 file to execute`;
+  } else if (planified === 1) {
+    title = `1 execution planified`;
   } else {
-    title = `${numberOfFiles} files to execute`;
+    title = `${planified} executions planified`;
   }
   const lines = [];
   lines.push(`directory: ${directory}`);
@@ -602,8 +604,16 @@ const renderOutro = (testPlanResult, logOptions = {}) => {
   if (planified === 0) {
     return "";
   }
+  let title;
+  if (planified === 0) {
+    title = `no execution`;
+  } else if (planified === 1) {
+    title = `1 execution done`;
+  } else {
+    title = `${planified} executions done`;
+  }
   return `${renderBigSection({
-    title: "",
+    title,
     content: renderOutroContent(testPlanResult, logOptions),
   })}\n`;
 };
@@ -611,17 +621,8 @@ const renderOutro = (testPlanResult, logOptions = {}) => {
 export const renderOutroContent = (testPlanResult, logOptions = {}) => {
   const lines = [];
   const { counters } = testPlanResult;
-  const { planified } = counters;
 
-  let executionLine = "";
-  if (planified === 0) {
-    executionLine += `no execution`;
-  } else if (planified === 1) {
-    executionLine += `1 execution: `;
-  } else {
-    executionLine += `${planified} executions: `;
-  }
-  executionLine += renderStatusRepartition(counters);
+  let executionLine = `status: ${renderStatusRepartition(counters)}`;
   lines.push(executionLine);
 
   let durationLine = `duration: `;

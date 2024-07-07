@@ -1,10 +1,10 @@
 import { Parser, getLineInfo } from "acorn";
-import { importAssertions } from "acorn-import-assertions";
+import { importAttributes } from "acorn-import-attributes";
 
 import { createJsParseError } from "./js_parse_error.js";
 
 export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
-  const AcornParser = Parser.extend(importAssertions);
+  const AcornParser = Parser.extend(importAttributes);
   const comments = [];
 
   try {

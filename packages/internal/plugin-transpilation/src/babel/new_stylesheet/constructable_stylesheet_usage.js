@@ -20,7 +20,7 @@ export const analyzeConstructableStyleSheetUsage = (urlInfo) => {
         // import('./' + moduleName)
         return false;
       }
-      if (hasImportTypeCssAssertion(node)) {
+      if (hasImportTypeCssAttribute(node)) {
         return node;
       }
       if (hasCssModuleQueryParam(source)) {
@@ -33,7 +33,7 @@ export const analyzeConstructableStyleSheetUsage = (urlInfo) => {
       if (hasCssModuleQueryParam(source)) {
         return source;
       }
-      if (hasImportTypeCssAssertion(node)) {
+      if (hasImportTypeCssAttribute(node)) {
         return node;
       }
       return false;
@@ -95,20 +95,18 @@ const hasCssModuleQueryParam = (node) => {
   );
 };
 
-const hasImportTypeCssAssertion = (node) => {
-  const importAssertionsDescriptor = getImportAssertionsDescriptor(
-    node.assertions,
-  );
-  return Boolean(importAssertionsDescriptor.type === "css");
+const hasImportTypeCssAttribute = (node) => {
+  const importAttributes = getImportAttributes(node);
+  return Boolean(importAttributes.type === "css");
 };
 
-const getImportAssertionsDescriptor = (importAssertions) => {
-  const importAssertionsDescriptor = {};
-  if (importAssertions) {
-    importAssertions.forEach((importAssertion) => {
-      importAssertionsDescriptor[importAssertion.key.name] =
-        importAssertion.value.value;
+const getImportAttributes = (importNode) => {
+  const importAttributes = {};
+  if (importNode.attributes) {
+    importNode.attributes.forEach((importAttributeNode) => {
+      importAttributes[importAttributeNode.key.name] =
+        importAttributeNode.value.value;
     });
   }
-  return importAssertionsDescriptor;
+  return importAttributes;
 };

@@ -3,17 +3,17 @@
  * ```js
  * const file = "./style.css"
  * const type = "css"
- * import(file, { assert: { type }})
+ * import(file, { with: { type }})
  * ```
  * Jsenv could throw an error when it knows some browsers in runtimeCompat
- * do not support import assertions
+ * do not support import attributes
  * But for now (as it is simpler) we let the browser throw the error
  */
 
 import { urlToFilename, injectQueryParams } from "@jsenv/urls";
 import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
 
-export const jsenvPluginImportAssertions = ({
+export const jsenvPluginImportAttributes = ({
   json = "auto",
   css = "auto",
   text = "auto",
@@ -36,17 +36,17 @@ export const jsenvPluginImportAssertions = ({
       } else {
         const { importTypeAttributeNode } = reference.astInfo;
         const content = reference.ownerUrlInfo.content;
-        const assertKeyboardStart = content.indexOf(
-          "assert",
-          importTypeAttributeNode.start - " assert { ".length,
+        const withKeywordStart = content.indexOf(
+          "with",
+          importTypeAttributeNode.start - " with { ".length,
         );
-        const assertKeywordEnd = content.indexOf(
+        const withKeywordEnd = content.indexOf(
           "}",
           importTypeAttributeNode.end,
         );
         magicSource.remove({
-          start: assertKeyboardStart,
-          end: assertKeywordEnd + 1,
+          start: withKeywordStart,
+          end: withKeywordEnd + 1,
         });
       }
     };

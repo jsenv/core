@@ -44,7 +44,7 @@ export const applyBabelPlugins = async ({
       plugins: [
         // "importMeta",
         // "topLevelAwait",
-        ...(inputIsJsModule ? ["dynamicImport", "importAssertions"] : []),
+        ...(inputIsJsModule ? ["dynamicImport", "importAttributes"] : []),
         "jsx",
         "classProperties",
         "classPrivateProperties",
@@ -58,6 +58,7 @@ export const applyBabelPlugins = async ({
     generatorOpts: {
       compact: false,
       ...(options.generatorOpts || {}),
+      ...(inputIsJsModule ? { importAttributesKeyword: "with" } : {}),
     },
   };
   try {

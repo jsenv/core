@@ -1,4 +1,4 @@
-import mainStyleSheet from "./main.css" assert { type: "css" };
+import mainStyleSheet from "./main.css" with { type: "css" };
 import { initCounter } from "./app/counter.js";
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, mainStyleSheet];
