@@ -890,49 +890,43 @@ To fix this warning:
       };
       const startAsMuchAsPossible = async () => {
         operation.throwIfAborted();
-        if (executionRemainingSet.size === 0) {
-          return;
-        }
-        if (executionExecutingSet.size >= parallel.max) {
-          return;
-        }
         const promises = [];
-        if (
-          // starting execution in parallel is limited by
-          // cpu and memory only when trying to parallelize
-          // if nothing is executing these limitations don't apply
-          executionExecutingSet.size > 0
-        ) {
-          if (processMemoryUsageMonitoring.measure() > parallel.maxMemory) {
-            // retry after Xms in case memory usage decreases
-            const promise = (async () => {
-              await operation.wait(200);
-              await startAsMuchAsPossible();
-            })();
-            promises.push(promise);
-            return;
-          }
-
-          if (processCpuUsageMonitoring.measure() > parallel.maxCpu) {
-            // retry after Xms in case cpu usage decreases
-            const promise = (async () => {
-              await operation.wait(200);
-              await startAsMuchAsPossible();
-            })();
-            promises.push(promise);
-            return;
-          }
-        }
         for (const executionCandidate of executionRemainingSet) {
-          if (executionCandidate.params.uses) {
-            const nonAvailableTag = executionCandidate.params.uses.find(
-              (tagToUse) => usedTagSet.has(tagToUse),
-            );
-            if (nonAvailableTag) {
-              logger.debug(
-                `"${nonAvailableTag}" is not available, ${executionCandidate.name} will wait until it is released by a previous execution`,
+          if (executionExecutingSet.size >= parallel.max) {
+            break;
+          }
+          if (executionExecutingSet.size > 0) {
+            // starting execution in parallel is limited by
+            // cpu and memory only when trying to parallelize
+            // if nothing is executing these limitations don't apply
+            if (processMemoryUsageMonitoring.measure() > parallel.maxMemory) {
+              // retry after Xms in case memory usage decreases
+              const promise = (async () => {
+                await operation.wait(200);
+                await startAsMuchAsPossible();
+              })();
+              promises.push(promise);
+              break;
+            }
+            if (processCpuUsageMonitoring.measure() > parallel.maxCpu) {
+              // retry after Xms in case cpu usage decreases
+              const promise = (async () => {
+                await operation.wait(200);
+                await startAsMuchAsPossible();
+              })();
+              promises.push(promise);
+              break;
+            }
+            if (executionCandidate.params.uses) {
+              const nonAvailableTag = executionCandidate.params.uses.find(
+                (tagToUse) => usedTagSet.has(tagToUse),
               );
-              continue;
+              if (nonAvailableTag) {
+                logger.debug(
+                  `"${nonAvailableTag}" is not available, ${executionCandidate.name} will wait until it is released by a previous execution`,
+                );
+                continue;
+              }
             }
           }
           const promise = (async () => {
@@ -941,10 +935,11 @@ To fix this warning:
           })();
           promises.push(promise);
         }
-        if (promises.length) {
-          await Promise.all(promises);
-          promises.length = 0;
+        if (promises.length === 0) {
+          return;
         }
+        await Promise.all(promises);
+        promises.length = 0;
       };
 
       reporters = reporters.flat(Infinity);
