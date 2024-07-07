@@ -151,7 +151,8 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
               line,
               column,
             });
-            console.error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
+            urlInfo.kitchen.context.logger
+              .error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
 ${e.reasonCode}
 ${urlInfo.url}:${line}:${column}
 ${htmlErrorContentFrame}`);

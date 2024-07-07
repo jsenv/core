@@ -4814,7 +4814,10 @@ const reporterList = ({
 
         logOptions.group = Object.keys(testPlanResult.groups).length > 1;
         write(renderIntro(testPlanResult, logOptions));
-        if (!animatedLogEnabled) {
+        if (
+          !animatedLogEnabled ||
+          Object.keys(testPlanResult.results).length === 0
+        ) {
           return {
             afterEachInOrder: (execution) => {
               const log = renderExecutionLog(execution, logOptions);
@@ -4923,7 +4926,6 @@ const reporterList = ({
         mockFluctuatingValues, // used for snapshot testing logs
         spy: () => {
           let rawOutput = "";
-
           return {
             write: (log) => {
               rawOutput += stripAnsi(log);
@@ -4940,7 +4942,39 @@ const reporterList = ({
 };
 
 const renderIntro = (testPlanResult, logOptions) => {
+  const directory = logOptions.mockFluctuatingValues
+    ? "/mock/"
+    : urlToFileSystemPath(testPlanResult.rootDirectoryUrl);
+  const numberOfFiles = Object.keys(testPlanResult.results).length;
+
+  let title;
+  if (numberOfFiles === 0) {
+    title = `no file to execute`;
+  } else if (numberOfFiles === 1) {
+    title = `1 file to execute`;
+  } else {
+    title = `${numberOfFiles} files to execute`;
+  }
   const lines = [];
+  lines.push(`directory: ${directory}`);
+  if (numberOfFiles === 0) {
+    let testPlanLog = "";
+    testPlanLog += "{";
+    testPlanLog += "\n";
+    const single = testPlanResult.patterns.length === 1;
+    for (const pattern of testPlanResult.patterns) {
+      testPlanLog += "  ";
+      testPlanLog += JSON.stringify(pattern);
+      testPlanLog += ": ";
+      testPlanLog += "...";
+      if (!single) {
+        testPlanLog += ",";
+      }
+    }
+    testPlanLog += "\n";
+    testPlanLog += "}";
+    lines.push(`testPlan: ${testPlanLog}`);
+  }
   if (logOptions.platformInfo) {
     {
       let osLine = `os: `;
@@ -4961,6 +4995,7 @@ const renderIntro = (testPlanResult, logOptions) => {
             }),
       });
       lines.push(osLine);
+      // TODO: an option to log how many cpu, memory etc we'll use?
     }
     {
       const process = logOptions.mockFluctuatingValues
@@ -4970,27 +5005,8 @@ const renderIntro = (testPlanResult, logOptions) => {
       lines.push(processLine);
     }
   }
-
-  const directory = logOptions.mockFluctuatingValues
-    ? "/mock/"
-    : urlToFileSystemPath(testPlanResult.rootDirectoryUrl);
-  const numberOfFiles = Object.keys(testPlanResult.results).length;
-  let fileFoundLine = "";
-  if (numberOfFiles === 0) {
-    fileFoundLine += `no file matching "testPlan" in ${directory}:
-${testPlanResult.patterns.join("\n")}`;
-  } else if (numberOfFiles === 1) {
-    fileFoundLine += `1 file matching "testPlan" in ${directory}`;
-  } else {
-    fileFoundLine += `${numberOfFiles} files matching "testPlan" in ${directory}`;
-  }
-
-  // TODO: an option to log how many cpu, memory etc we'll use?
-
-  lines.push(fileFoundLine);
-
   return `${renderBigSection({
-    title: "execution start",
+    title,
     content: lines.join("\n"),
   })}\n`;
 };
@@ -5314,6 +5330,11 @@ const renderErrors = (execution, logOptions) => {
 };
 
 const renderOutro = (testPlanResult, logOptions = {}) => {
+  const { counters } = testPlanResult;
+  const { planified } = counters;
+  if (planified === 0) {
+    return "";
+  }
   return `${renderBigSection({
     title: "",
     content: renderOutroContent(testPlanResult, logOptions),
@@ -5542,7 +5563,7 @@ const logsDefault = {
   level: "info",
   type: "list",
   animated: true,
-  platformInfo: false,
+  platformInfo: false, // maybe true as long as not executed by npm workspace?
   memoryUsage: false,
   cpuUsage: false,
   fileUrl: undefined,

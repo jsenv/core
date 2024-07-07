@@ -37,24 +37,32 @@ export const injectRibbon = ({ text }) => {
         user-select: none;
       }
     `;
-
   const html = /* html */ `<div id="jsenv_ribbon_container">
       <style>${css}</style>
       <div id="jsenv_ribbon">
         <div id="jsenv_ribbon_text">${text}</div>
       </div>
     </div>`;
-
-  const node = document.createElement("div");
-  node.innerHTML = html;
-
+  class JsenvRibbonHtmlElement extends HTMLElement {
+    constructor({ hidden }) {
+      super();
+      const root = this.attachShadow({ mode: "open" });
+      root.innerHTML = html;
+      if (hidden) {
+        root.style.display = "none";
+      }
+    }
+  }
+  if (customElements && !customElements.get("jsenv-ribbon")) {
+    customElements.define("jsenv-ribbon", JsenvRibbonHtmlElement);
+  }
   const toolbarStateInLocalStorage = localStorage.hasOwnProperty(
     "jsenv_toolbar",
   )
     ? JSON.parse(localStorage.getItem("jsenv_toolbar"))
     : {};
-  if (toolbarStateInLocalStorage.ribbonDisplayed === false) {
-    node.querySelector("#jsenv_ribbon_container").style.display = "none";
-  }
-  document.body.appendChild(node.firstChild);
+  const jsenvRibbonElement = new JsenvRibbonHtmlElement({
+    hidden: toolbarStateInLocalStorage.ribbonDisplayed === false,
+  });
+  document.body.appendChild(jsenvRibbonElement);
 };

@@ -129,6 +129,7 @@ const test = async (filename, params) => {
   junitXmlFileSnapshot.compare();
 };
 
+await test("not_found.js");
 await test("console.spec.js");
 await test("empty.spec.js");
 await test("error_in_source_function.spec.js");

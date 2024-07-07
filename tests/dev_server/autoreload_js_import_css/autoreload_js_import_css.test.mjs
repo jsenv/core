@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium, firefox } from "playwright";
 import { assert } from "@jsenv/assert";
+import { writeFileStructureSync } from "@jsenv/filesystem";
 
 import { startDevServer } from "@jsenv/core";
 
@@ -99,22 +100,16 @@ const test = async ({
   ],
   ...rest
 }) => {
-  const jsFileUrl = new URL("./client/main.js", import.meta.url);
-  const jsFileContent = {
-    beforeTest: readFileSync(jsFileUrl),
-    update: (content) => writeFileSync(jsFileUrl, content),
-    restore: () => writeFileSync(jsFileUrl, jsFileContent.beforeTest),
-  };
-  const cssFileUrl = new URL("./client/style.css", import.meta.url);
-  const cssFileContent = {
-    beforeTest: readFileSync(cssFileUrl),
-    update: (content) => writeFileSync(cssFileUrl, content),
-    restore: () => writeFileSync(cssFileUrl, cssFileContent.beforeTest),
-  };
-
+  const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
+  const jsFileUrl = new URL("./main.js", sourceDirectoryUrl);
+  const cssFileUrl = new URL("./style.css", sourceDirectoryUrl);
+  writeFileStructureSync(
+    sourceDirectoryUrl,
+    new URL("./0_at_start/", import.meta.url),
+  );
   const devServer = await startDevServer({
     logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl,
     keepProcessAlive: false,
     clientAutoreload: {
       cooldownBetweenFileEvents: 250,
@@ -168,7 +163,12 @@ const test = async ({
       assert({ actual, expect });
     }
     await new Promise((resolve) => setTimeout(resolve, 1_000));
-    cssFileContent.update(`body { background: green; }`);
+    writeFileSync(
+      cssFileUrl,
+      readFileSync(
+        new URL("./1_fixtures/style_background_green.css", import.meta.url),
+      ),
+    );
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     {
       const actual = {
@@ -183,12 +183,12 @@ const test = async ({
       assert({ actual, expect });
     }
     // remove usage of the css file
-    jsFileContent.update(`
-// import "./file.js";
-
-if (import.meta.hot) {
-  import.meta.hot.accept();
-}`);
+    writeFileSync(
+      jsFileUrl,
+      readFileSync(
+        new URL("./1_fixtures/main_comment_file_import.js", import.meta.url),
+      ),
+    );
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     {
       const actual = {
@@ -209,12 +209,10 @@ if (import.meta.hot) {
       });
     }
     // restore deps on css file
-    jsFileContent.update(`
-import "./file.js";
-
-if (import.meta.hot) {
-  import.meta.hot.accept();
-}`);
+    writeFileSync(
+      jsFileUrl,
+      readFileSync(new URL("./0_at_start/main.js", import.meta.url)),
+    );
     // wait for partial reload effect to be done
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     {
@@ -239,8 +237,6 @@ if (import.meta.hot) {
     if (!debug) {
       browser.close();
     }
-    jsFileContent.restore();
-    cssFileContent.restore();
     if (!debug) {
       await devServer.stop();
     }
