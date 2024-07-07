@@ -13,7 +13,7 @@
 import { urlToFilename, injectQueryParams } from "@jsenv/urls";
 import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
 
-export const jsenvPluginImportAssertions = ({
+export const jsenvPluginImportAttributes = ({
   json = "auto",
   css = "auto",
   text = "auto",

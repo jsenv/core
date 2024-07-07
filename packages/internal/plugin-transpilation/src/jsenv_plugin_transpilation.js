@@ -7,14 +7,14 @@
  * of this plugin
  */
 
-import { jsenvPluginImportAssertions } from "./import_assertions/jsenv_plugin_import_assertions.js";
+import { jsenvPluginImportAttributes } from "./import_attributes/jsenv_plugin_import_attributes.js";
 import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js";
 import { jsenvPluginJsModuleFallback } from "./js_module_fallback/jsenv_plugin_js_module_fallback.js";
 import { jsenvPluginAsJsModule } from "./as_js_module/jsenv_plugin_as_js_module.js";
 import { jsenvPluginCssTranspilation } from "./css/jsenv_plugin_css_transpilation.js";
 
 export const jsenvPluginTranspilation = ({
-  importAssertions = true,
+  importAttributes = true,
   css = true, // TODO
   // build sets jsModuleFallback: false during first step of the build
   // and re-enable it in the second phase (when performing the bundling)
@@ -22,8 +22,8 @@ export const jsenvPluginTranspilation = ({
   jsModuleFallback = true,
   babelHelpersAsImport = true,
 }) => {
-  if (importAssertions === true) {
-    importAssertions = {};
+  if (importAttributes === true) {
+    importAttributes = {};
   }
   if (jsModuleFallback === true) {
     jsModuleFallback = {};
@@ -35,8 +35,8 @@ export const jsenvPluginTranspilation = ({
     }),
     jsenvPluginAsJsModule(),
     ...(jsModuleFallback ? [jsenvPluginJsModuleFallback()] : []),
-    ...(importAssertions
-      ? [jsenvPluginImportAssertions(importAssertions)]
+    ...(importAttributes
+      ? [jsenvPluginImportAttributes(importAttributes)]
       : []),
 
     ...(css ? [jsenvPluginCssTranspilation()] : []),

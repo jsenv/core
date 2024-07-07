@@ -2,7 +2,7 @@ import { isStringLiteralNode } from "./helpers.js";
 
 export const analyzeImportDeclaration = (node, { onUrl }) => {
   const specifierNode = node.source;
-  const assertionInfo = extractImportAssertionsInfo(node);
+  const attributesInfo = extractImportAttributesInfo(node);
   const info = {
     type: "js_import",
     subtype: "import_static",
@@ -14,9 +14,9 @@ export const analyzeImportDeclaration = (node, { onUrl }) => {
     expectedType: "js_module",
     astInfo: { node: specifierNode },
   };
-  if (assertionInfo) {
+  if (attributesInfo) {
     const { importAttributes, importNode, importTypeAttributeNode } =
-      assertionInfo;
+      attributesInfo;
     info.expectedType = importAttributes.type;
     info.importAttributes = importAttributes;
     Object.assign(info.astInfo, { importNode, importTypeAttributeNode });
@@ -28,7 +28,7 @@ export const analyzeImportExpression = (node, { onUrl }) => {
   if (!isStringLiteralNode(specifierNode)) {
     return;
   }
-  const assertionInfo = extractImportAssertionsInfo(node);
+  const attributesInfo = extractImportAttributesInfo(node);
   const info = {
     type: "js_import",
     subtype: "import_dynamic",
@@ -40,9 +40,9 @@ export const analyzeImportExpression = (node, { onUrl }) => {
     column: specifierNode.loc.start.column,
     astInfo: { node: specifierNode },
   };
-  if (assertionInfo) {
+  if (attributesInfo) {
     const { importAttributes, importNode, importTypeAttributeNode } =
-      assertionInfo;
+      attributesInfo;
     info.expectedType = importAttributes.type;
     info.importAttributes = importAttributes;
     Object.assign(info.astInfo, { importNode, importTypeAttributeNode });
@@ -84,23 +84,23 @@ export const analyzeExportAllDeclaration = (node, { onUrl }) => {
   });
 };
 
-const extractImportAssertionsInfo = (node) => {
+const extractImportAttributesInfo = (node) => {
   if (node.type === "ImportDeclaration") {
     // static import
-    const { assertions } = node;
-    if (!assertions) {
+    const { attributes } = node;
+    if (!attributes) {
       return null;
     }
-    if (assertions.length === 0) {
+    if (attributes.length === 0) {
       return null;
     }
-    const typeAssertionNode = assertions.find(
-      (assertion) => assertion.key.name === "type",
+    const typeAttributeNode = attributes.find(
+      (attributeNode) => attributeNode.key.name === "type",
     );
-    if (!typeAssertionNode) {
+    if (!typeAttributeNode) {
       return null;
     }
-    const typeNode = typeAssertionNode.value;
+    const typeNode = typeAttributeNode.value;
     if (!isStringLiteralNode(typeNode)) {
       return null;
     }
@@ -109,7 +109,7 @@ const extractImportAssertionsInfo = (node) => {
         type: typeNode.value,
       },
       importNode: node,
-      importTypeAttributeNode: typeAssertionNode,
+      importTypeAttributeNode: typeAttributeNode,
     };
   }
   // dynamic import
@@ -123,18 +123,18 @@ const extractImportAssertionsInfo = (node) => {
     return null;
   }
   const { properties } = firstArgNode;
-  const assertProperty = properties.find((property) => {
+  const withProperty = properties.find((property) => {
     return property.key.name === "assert";
   });
-  if (!assertProperty) {
+  if (!withProperty) {
     return null;
   }
-  const assertValueNode = assertProperty.value;
-  if (assertValueNode.type !== "ObjectExpression") {
+  const withValueNode = withProperty.value;
+  if (withValueNode.type !== "ObjectExpression") {
     return null;
   }
-  const assertValueProperties = assertValueNode.properties;
-  const typePropertyNode = assertValueProperties.find((property) => {
+  const withValueProperties = withValueNode.properties;
+  const typePropertyNode = withValueProperties.find((property) => {
     return property.key.name === "type";
   });
   if (!typePropertyNode) {

@@ -6,7 +6,7 @@ await startDevServer({
   sourceMainFilePath: "main.html",
   supervisor: false,
   transpilation: {
-    importAssertions: {
+    importAttributes: {
       css: true,
     },
   },
