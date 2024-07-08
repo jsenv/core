@@ -44,7 +44,7 @@
     >
       <g>
         <text x="10" y="14.55" fill="#7f7f7f">------------</text>
-        <text x="119.22" y="14.55"> 5 executions found </text>
+        <text x="119.22" y="14.55"> 5 executions ready </text>
         <text x="278.84" y="14.55" fill="#7f7f7f">-------------</text>
         <text x="10" y="33.55">directory: /mock/</text>
         <text x="10" y="52.55">fragment: 3/3, executing only 5:5</text>
