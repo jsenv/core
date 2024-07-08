@@ -24,6 +24,9 @@ export const createUnicode = ({ supported, ANSI }) => {
     get CIRCLE_CROSS_RAW() {
       return UNICODE.supported ? `ⓧ` : `(×)`;
     },
+    get CIRCLE_DOTTED_RAW() {
+      return UNICODE.supported ? `◌` : `*`;
+    },
     get COMMAND() {
       return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
     },

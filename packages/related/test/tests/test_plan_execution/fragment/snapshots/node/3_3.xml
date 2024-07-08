@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite time="[mock]" timestamp="[mock]" tests="5" skipped="0" failures="0">
+  <testcase file="a.spec.js" name="worker_thread" time="[mock]" timestamp="[mock]" tests="1" skipped="1">
+    <properties>
+      <property name="runtimeName" value="node_worker_thread"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <skipped message="Execution was skipped"></skipped>
+  <testcase file="b.spec.js" name="worker_thread" time="[mock]" timestamp="[mock]" tests="1" skipped="1">
+    <properties>
+      <property name="runtimeName" value="node_worker_thread"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <skipped message="Execution was skipped"></skipped>
+  <testcase file="c.spec.js" name="worker_thread" time="[mock]" timestamp="[mock]" tests="1" skipped="1">
+    <properties>
+      <property name="runtimeName" value="node_worker_thread"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <skipped message="Execution was skipped"></skipped>
+  <testcase file="d.spec.js" name="worker_thread" time="[mock]" timestamp="[mock]" tests="1" skipped="1">
+    <properties>
+      <property name="runtimeName" value="node_worker_thread"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+  <skipped message="Execution was skipped"></skipped>
+  <testcase file="e.spec.js" name="worker_thread" time="[mock]" timestamp="[mock]" tests="1">
+    <properties>
+      <property name="runtimeName" value="node_worker_thread"></property>
+      <property name="runtimeVersion" value="[mock]"></property>
+    </properties>
+  </testcase>
+</testsuite>

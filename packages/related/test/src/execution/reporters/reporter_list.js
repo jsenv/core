@@ -86,9 +86,15 @@ export const reporterList = ({
           Object.keys(testPlanResult.results).length === 0
         ) {
           return {
-            afterEachInOrder: (execution) => {
-              const log = renderExecutionLog(execution, logOptions);
-              write(log);
+            afterEachInOrder: (execution, testPlanResult, testPlanHelpers) => {
+              const log = renderExecutionLog(
+                execution,
+                logOptions,
+                testPlanHelpers,
+              );
+              if (log) {
+                write(log);
+              }
             },
             afterAll: async () => {
               await write(renderOutro(testPlanResult, logOptions));
@@ -156,12 +162,18 @@ export const reporterList = ({
               console.warn(warning.message);
             });
           },
-          afterEachInOrder: (execution) => {
+          afterEachInOrder: (execution, testPlanResult, testPlanHelpers) => {
             oneExecutionWritten = true;
             dynamicLog.clearDuringFunctionCall(
               () => {
-                const log = renderExecutionLog(execution, logOptions);
-                write(log);
+                const log = renderExecutionLog(
+                  execution,
+                  logOptions,
+                  testPlanHelpers,
+                );
+                if (log) {
+                  write(log);
+                }
               },
               // regenerate the dynamic log to put the leading "\n"
               // because of oneExecutionWritten becoming true
@@ -218,11 +230,11 @@ const renderIntro = (testPlanResult, logOptions) => {
 
   let title;
   if (planified === 0) {
-    title = `no file to execute`;
+    title = `nothing to execute`;
   } else if (planified === 1) {
-    title = `1 execution planified`;
+    title = `1 execution found`;
   } else {
-    title = `${planified} executions planified`;
+    title = `${planified} executions found`;
   }
   const lines = [];
   lines.push(`directory: ${directory}`);
@@ -243,6 +255,11 @@ const renderIntro = (testPlanResult, logOptions) => {
     testPlanLog += "\n";
     testPlanLog += "}";
     lines.push(`testPlan: ${testPlanLog}`);
+  }
+  if (testPlanResult.fragment) {
+    lines.push(
+      `fragment: ${testPlanResult.fragment}, executing only ${testPlanResult.fragmentStart}:${testPlanResult.fragmentEnd}`,
+    );
   }
   if (logOptions.platformInfo) {
     os_line: {
@@ -280,7 +297,36 @@ const renderIntro = (testPlanResult, logOptions) => {
   })}\n`;
 };
 
-const renderExecutionLog = (execution, logOptions) => {
+const renderExecutionLog = (
+  execution,
+  logOptions,
+  { getPreviousExecution, getNextExecution },
+) => {
+  if (execution.skipped) {
+    const skipReason = execution.skipReason;
+    const prev = getPreviousExecution(execution);
+    if (prev && prev.skipped && prev.skipReason === skipReason) {
+      return "";
+    }
+    let nextExecutionSkippedWithSameReason = 0;
+    let next = getNextExecution(execution);
+    while (next) {
+      if (!next.skipped || next.skipReason !== skipReason) {
+        break;
+      }
+      nextExecutionSkippedWithSameReason++;
+      next = getNextExecution(next);
+    }
+    if (nextExecutionSkippedWithSameReason) {
+      const skippedGroupLog = descriptionFormatters.skippedGroup({
+        from: execution.index,
+        to: execution.index + nextExecutionSkippedWithSameReason,
+        skipReason,
+      });
+      return `${skippedGroupLog}\n`;
+    }
+  }
+
   let log = "";
   // label
   {
@@ -361,13 +407,36 @@ const descriptionFormatters = {
   executing: ({ fileRelativeUrl }) => {
     return ANSI.color(`${fileRelativeUrl}`, COLOR_EXECUTING);
   },
+  skippedGroup: ({ from, to, skipReason }) => {
+    let description = `${UNICODE.CIRCLE_DOTTED_RAW} ${from + 1}:${to + 1} skipped`;
+    if (skipReason) {
+      description += ` (${skipReason})`;
+    }
+    return ANSI.color(description, COLOR_SKIPPED);
+  },
+  skipped: ({ index, countersInOrder, fileRelativeUrl, skipReason }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total, "0");
+    let description = `${UNICODE.CIRCLE_DOTTED_RAW} ${number}/${total} skipped ${fileRelativeUrl}`;
+    if (skipReason) {
+      description += ` (${skipReason})`;
+    }
+    return ANSI.color(description, COLOR_SKIPPED);
+  },
   aborted: ({ index, countersInOrder, fileRelativeUrl }) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-
     return ANSI.color(
       `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
       COLOR_ABORTED,
+    );
+  },
+  cancelled: ({ index, countersInOrder, fileRelativeUrl }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total, "0");
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
+      COLOR_CANCELLED,
     );
   },
   timedout: ({ index, countersInOrder, fileRelativeUrl, params }) => {
@@ -397,23 +466,15 @@ const descriptionFormatters = {
       COLOR_COMPLETED,
     );
   },
-  cancelled: ({ index, countersInOrder, fileRelativeUrl }) => {
-    const total = countersInOrder.planified;
-    const number = fillLeft(index + 1, total, "0");
-
-    return ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
-      COLOR_CANCELLED,
-    );
-  },
 };
 
 const COLOR_EXECUTING = ANSI.BLUE;
+const COLOR_SKIPPED = ANSI.GREY;
 const COLOR_ABORTED = ANSI.MAGENTA;
+const COLOR_CANCELLED = ANSI.GREY;
 const COLOR_TIMEOUT = ANSI.MAGENTA;
 const COLOR_FAILED = ANSI.RED;
 const COLOR_COMPLETED = ANSI.GREEN;
-const COLOR_CANCELLED = ANSI.GREY;
 const fillLeft = (value, biggestValue, char = " ") => {
   const width = String(value).length;
   const biggestWidth = String(biggestValue).length;
@@ -691,8 +752,14 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
   if (counters.planified === 0) {
     return ``;
   }
+  if (counters.skipped === counters.planified) {
+    return `all ${ANSI.color(`skipped`, COLOR_SKIPPED)}`;
+  }
   if (counters.aborted === counters.planified) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
+  }
+  if (counters.cancelled === counters.planified) {
+    return `all ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`;
   }
   if (counters.timedout === counters.planified) {
     return `all ${ANSI.color(`timed out`, COLOR_TIMEOUT)}`;
@@ -702,9 +769,6 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
   }
   if (counters.completed === counters.planified) {
     return `all ${ANSI.color(`completed`, COLOR_COMPLETED)}`;
-  }
-  if (counters.cancelled === counters.planified) {
-    return `all ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`;
   }
   const parts = [];
   if (counters.timedout) {
@@ -727,6 +791,9 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
     parts.push(
       `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
     );
+  }
+  if (counters.skipped) {
+    parts.push(`${counters.skipped} ${ANSI.color(`skipped`, COLOR_SKIPPED)}`);
   }
   if (showProgression) {
     if (counters.executing) {

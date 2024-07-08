@@ -46,22 +46,26 @@ export const reportAsJunitXml = async (
       });
       testSuite.appendChild(testCase);
 
-      if (executionResult.status === "aborted") {
+      if (executionResult.status === "skipped") {
+        testCase.attributes.skipped = 1;
+        const skipped = testCase.createNode("skipped", {
+          message: "Execution was skipped",
+        });
+        testSuite.appendChild(skipped);
+      } else if (executionResult.status === "aborted") {
         testCase.attributes.skipped = 1;
         const skipped = testCase.createNode("skipped", {
           message: "Execution was aborted",
         });
         testSuite.appendChild(skipped);
-      }
-      if (executionResult.status === "timedout") {
+      } else if (executionResult.status === "timedout") {
         testCase.attributes.failures = 1;
         const failure = testCase.createNode("failure", {
           message: `Execution timeout after ${executionResult.params.allocatedMs}ms"`,
           type: "timeout",
         });
         testSuite.appendChild(failure);
-      }
-      if (executionResult.status === "failed") {
+      } else if (executionResult.status === "failed") {
         const [error] = executionResult.errors;
         if (
           error &&
@@ -115,7 +119,7 @@ export const reportAsJunitXml = async (
         propertiesNode.appendChild(propertyNode);
       }
 
-      const { consoleCalls } = executionResult;
+      const { consoleCalls = [] } = executionResult;
       let stdout = "";
       let stderr = "";
       for (const consoleCall of consoleCalls) {

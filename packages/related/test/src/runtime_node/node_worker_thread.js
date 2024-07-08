@@ -4,6 +4,7 @@
 import { Worker } from "node:worker_threads";
 import { fileURLToPath } from "node:url";
 import supportsColor from "supports-color";
+import isUnicodeSupported from "is-unicode-supported";
 import { Abort, raceCallbacks } from "@jsenv/abort";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
@@ -38,6 +39,7 @@ export const nodeWorkerThread = ({
       // GitHub workflow does support ANSI but "supports-color" returns false
       // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
       process.env.GITHUB_WORKFLOW,
+    FORCE_UNICODE: isUnicodeSupported(),
   };
 
   return {
