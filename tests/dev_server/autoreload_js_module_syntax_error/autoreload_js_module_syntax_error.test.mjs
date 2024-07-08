@@ -6,7 +6,7 @@
  */
 
 import { readFileSync } from "node:fs";
-import { writeFileSync } from "@jsenv/filesystem";
+import { writeFileStructureSync, writeFileSync } from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
@@ -17,10 +17,9 @@ import {
 
 let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
-const mainJsFileUrl = new URL("./main.js", sourceDirectoryUrl);
-writeFileSync(
-  mainJsFileUrl,
-  readFileSync(new URL("./0_at_start/main.js", import.meta.url)),
+writeFileStructureSync(
+  sourceDirectoryUrl,
+  new URL("./0_at_start/", import.meta.url),
 );
 const devServer = await startDevServer({
   logLevel: "off",
@@ -34,6 +33,7 @@ const browser = await chromium.launch({ headless: !debug });
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
 
 try {
+  const mainJsFileUrl = new URL("./main.js", sourceDirectoryUrl);
   await page.goto(`${devServer.origin}/main.html`);
   await assertErrorOverlayNotDisplayed(page);
   writeFileSync(
