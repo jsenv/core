@@ -1,6 +1,6 @@
 import os, { cpus, release, totalmem, availableParallelism, freemem } from "node:os";
 import process$1, { cpuUsage, memoryUsage } from "node:process";
-import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, unlinkSync, readdirSync, rmdirSync, readFileSync, existsSync } from "node:fs";
+import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, unlinkSync, readdirSync, rmdirSync, existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { URL_META, createException } from "./js/exception.js";
@@ -2486,6 +2486,9 @@ const readFile = async (value, { as = "buffer" } = {}) => {
 const writeFileSync = (destination, content = "") => {
   const destinationUrl = assertAndNormalizeFileUrl(destination);
   const destinationUrlObject = new URL(destinationUrl);
+  if (content && content instanceof URL) {
+    content = readFileSync(content);
+  }
   try {
     writeFileSync$1(destinationUrlObject, content);
   } catch (error) {

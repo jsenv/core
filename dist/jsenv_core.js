@@ -1,4 +1,4 @@
-import { readdir, chmod, stat, lstat, promises, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, createReadStream, lstatSync, readFile, existsSync, readFileSync, realpathSync } from "node:fs";
+import { readdir, chmod, stat, lstat, promises, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, createReadStream, lstatSync, readFile, existsSync, realpathSync } from "node:fs";
 import process$1 from "node:process";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
@@ -3233,6 +3233,9 @@ const writeDirectory = async (
 const writeFileSync = (destination, content = "") => {
   const destinationUrl = assertAndNormalizeFileUrl(destination);
   const destinationUrlObject = new URL(destinationUrl);
+  if (content && content instanceof URL) {
+    content = readFileSync(content);
+  }
   try {
     writeFileSync$1(destinationUrlObject, content);
   } catch (error) {
@@ -4576,7 +4579,7 @@ const stringifyServerTimingHeader = (serverTimingHeader) => {
 // https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
 // https://tools.ietf.org/html/rfc7230#section-3.2.6
 const validateServerTimingName = (name) => {
-  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/gi.test(name);
+  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/i.test(name);
   if (!valid) {
     console.warn(`server timing contains invalid symbols`);
     return false;
@@ -5126,7 +5129,7 @@ const onceReadableStreamUsedOrClosed = (readableStream, callback) => {
 
 const normalizeHeaderName = (headerName) => {
   headerName = String(headerName);
-  if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(headerName)) {
+  if (/[^a-z0-9\-#$%&'*+.^_`|~]/i.test(headerName)) {
     throw new TypeError("Invalid character in header field name");
   }
 
@@ -13928,7 +13931,7 @@ const parseAsHashWithOptions = (token) => {
   return { isValid, algo, base64Value, optionExpression };
 };
 
-const BASE64_REGEX = /^[A-Za-z0-9+\/=+]+$/;
+const BASE64_REGEX = /^[A-Za-z0-9+/=]+$/;
 const VCHAR_REGEX = /^[\x21-\x7E]+$/;
 
 // https://www.w3.org/TR/SRI/#does-response-match-metadatalist
@@ -16425,7 +16428,7 @@ const escapeHtml = (string) => {
     .replace(/'/g, "&#039;");
 };
 const replacePlaceholders$2 = (html, replacers) => {
-  return html.replace(/\${([\w]+)}/g, (match, name) => {
+  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
     const replacer = replacers[name];
     if (replacer === undefined) {
       return match;
@@ -18511,7 +18514,7 @@ const generateDirectoryContent = (
   `);
 };
 const replacePlaceholders$1 = (html, replacers) => {
-  return html.replace(/\${([\w]+)}/g, (match, name) => {
+  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
     const replacer = replacers[name];
     if (replacer === undefined) {
       return match;
