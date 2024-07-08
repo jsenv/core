@@ -283,7 +283,7 @@ const isImageSetFunctionNode = (node) => {
 };
 
 const isDataUrl = (url) => {
-  return /data:[^\n\r;]+?(?:;charset=[^\n\r;]+?)?;base64,([\d+/A-Za-z]+={0,2})/.test(
+  return /data:[^\n\r;]+(?:;charset=[^\n\r;]+)?;base64,[\d+/A-Za-z]+={0,2}/.test(
     url,
   );
 };

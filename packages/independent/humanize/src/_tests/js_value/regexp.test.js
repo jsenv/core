@@ -8,6 +8,7 @@ import { humanize } from "@jsenv/humanize";
 }
 
 {
+  // eslint-disable-next-line prefer-regex-literals
   const actual = humanize(new RegExp("foo", "g"));
   const expect = "/foo/g";
   assert({ actual, expect });

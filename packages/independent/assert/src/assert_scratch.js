@@ -5411,7 +5411,7 @@ const canParseUrl = (value) => {
   if (value.includes("\n")) {
     return false;
   }
-  if (/^[a-z]*Error: .*?/i.test(value)) {
+  if (/^[a-z]*Error: /i.test(value)) {
     return false;
   }
   return true;

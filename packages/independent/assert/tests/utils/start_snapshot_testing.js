@@ -107,6 +107,6 @@ const keyAsValidFilename = (key) => {
   return key
     .trim()
     .toLowerCase()
-    .replace(/[ ,\.]/g, "_")
-    .replace(/["\/\?<>\\:\*\|]/g, "");
+    .replace(/[ ,.]/g, "_")
+    .replace(/["/?<>\\:*|]/g, "");
 };

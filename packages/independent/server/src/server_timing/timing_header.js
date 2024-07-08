@@ -59,7 +59,7 @@ export const stringifyServerTimingHeader = (serverTimingHeader) => {
 // https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
 // https://tools.ietf.org/html/rfc7230#section-3.2.6
 const validateServerTimingName = (name) => {
-  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/gi.test(name);
+  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/i.test(name);
   if (!valid) {
     console.warn(`server timing contains invalid symbols`);
     return false;

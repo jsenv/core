@@ -1,3 +1,8 @@
+// This file is used just for test and internal tests
+// so super-linear-backtracking is ok
+// and I don't know how to update the regexes to prevent this
+/* eslint-disable regexp/no-super-linear-backtracking */
+
 export const parseFunction = (fn) => {
   const string = fn.toString();
   for (const candidate of CANDIDATES) {
@@ -44,7 +49,7 @@ const CANDIDATES = [
   },
   (fnString) => {
     const FUNCTION_BODY_REGEX =
-      /^function\s*([\S]*)\s*(\([\s\S]*?\))\s*\{([\s\S]*)\}$/;
+      /^function\s*(\S*)\s*(\([\s\S]*?\))\s*\{([\s\S]*)\}$/;
     const match = fnString.match(FUNCTION_BODY_REGEX);
     if (match) {
       return {
@@ -58,7 +63,7 @@ const CANDIDATES = [
   },
   (fnString) => {
     const GETTER_SETTER_FUNCTION_BODY_REGEX =
-      /^[gs]et\s*([\S]*)\s*(\([\s\S]*?\))\s*\{([\s\S]*)\}$/;
+      /^[gs]et\s*(\S*)\s*(\([\s\S]*?\))\s*\{([\s\S]*)\}$/;
     const match = fnString.match(GETTER_SETTER_FUNCTION_BODY_REGEX);
     if (match) {
       return {

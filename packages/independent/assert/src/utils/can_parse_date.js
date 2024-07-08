@@ -14,7 +14,7 @@ export const canParseDate = (value) => {
   // Iso format
   // "1995-12-04 00:12:00.000Z"
   if (
-    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3})?([\+\-]\d{2}\:\d{2}|Z)?$/.test(
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:[+\-]\d{2}:\d{2}|Z)?$/.test(
       value,
     )
   ) {
@@ -24,7 +24,7 @@ export const canParseDate = (value) => {
   // GMT format
   // "Tue May 07 2024 11:27:04 GMT+0200 (Central European Summer Time)",
   if (
-    /^[a-zA-Z]{0,4} [a-z-A-Z]{0,4} [0-9]{2} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT([\+\-][0-9]{0,4})?( \((.*)\))?$/.test(
+    /^[a-zA-Z]{0,4} [a-z-A-Z]{0,4} [0-9]{2} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT(?:[+\-][0-9]{0,4})?(?: \(.*\))?$/.test(
       value,
     )
   ) {
@@ -52,7 +52,7 @@ export const usesTimezone = (value) => {
   if (value.includes("GMT")) {
     return true;
   }
-  if (/[\+-]\d{2}:\d{2}$/.test(value)) {
+  if (/[+-]\d{2}:\d{2}$/.test(value)) {
     return true;
   }
   return false;

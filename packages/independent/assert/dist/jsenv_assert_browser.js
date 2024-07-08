@@ -375,7 +375,7 @@ const tokenizeFunction = fn => {
         argsAndBodySource: fnSource.slice(methodComputedMatch[0].length - 1)
       };
     }
-    const methodAsyncGeneratorMatch = fnSource.match(/^async\s+\*\s*([\S]+)\s*\(/);
+    const methodAsyncGeneratorMatch = fnSource.match(/^async\s+\*\s*(\S+)\s*\(/);
     if (methodAsyncGeneratorMatch) {
       return {
         ...defaultFunctionAnalysis,
@@ -386,7 +386,7 @@ const tokenizeFunction = fn => {
         isGenerator: true
       };
     }
-    const methodAsyncMatch = fnSource.match(/^async\s+([\S]+)\s*\(/);
+    const methodAsyncMatch = fnSource.match(/^async\s+(\S+)\s*\(/);
     if (methodAsyncMatch) {
       return {
         ...defaultFunctionAnalysis,
@@ -397,7 +397,7 @@ const tokenizeFunction = fn => {
         methodAsyncMatch
       };
     }
-    const methodGeneratorMatch = fnSource.match(/^\*\s*([\S]+)\s*\(/);
+    const methodGeneratorMatch = fnSource.match(/^\*\s*(\S+)\s*\(/);
     if (methodGeneratorMatch) {
       return {
         ...defaultFunctionAnalysis,
@@ -407,7 +407,7 @@ const tokenizeFunction = fn => {
         isGenerator: true
       };
     }
-    const methodMatch = fnSource.match(/^([\S]+)\s*\(/);
+    const methodMatch = fnSource.match(/^(\S+)\s*\(/);
     if (methodMatch) {
       return {
         ...defaultFunctionAnalysis,
@@ -562,13 +562,13 @@ const canParseDate = value => {
   }
   // Iso format
   // "1995-12-04 00:12:00.000Z"
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3})?([\+\-]\d{2}\:\d{2}|Z)?$/.test(value)) {
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:[+\-]\d{2}:\d{2}|Z)?$/.test(value)) {
     return true;
   }
 
   // GMT format
   // "Tue May 07 2024 11:27:04 GMT+0200 (Central European Summer Time)",
-  if (/^[a-zA-Z]{0,4} [a-z-A-Z]{0,4} [0-9]{2} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT([\+\-][0-9]{0,4})?( \((.*)\))?$/.test(value)) {
+  if (/^[a-zA-Z]{0,4} [a-z-A-Z]{0,4} [0-9]{2} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT(?:[+\-][0-9]{0,4})?(?: \(.*\))?$/.test(value)) {
     return true;
   }
   // other format
@@ -588,7 +588,7 @@ const usesTimezone = value => {
   if (value.includes("GMT")) {
     return true;
   }
-  if (/[\+-]\d{2}:\d{2}$/.test(value)) {
+  if (/[+-]\d{2}:\d{2}$/.test(value)) {
     return true;
   }
   return false;
@@ -5326,7 +5326,7 @@ const canParseUrl = value => {
   if (value.includes("\n")) {
     return false;
   }
-  if (/^[a-z]*Error: .*?/i.test(value)) {
+  if (/^[a-z]*Error: /i.test(value)) {
     return false;
   }
   return true;

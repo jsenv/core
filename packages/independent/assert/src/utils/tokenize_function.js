@@ -135,7 +135,7 @@ export const tokenizeFunction = (fn) => {
       };
     }
     const methodAsyncGeneratorMatch = fnSource.match(
-      /^async\s+\*\s*([\S]+)\s*\(/,
+      /^async\s+\*\s*(\S+)\s*\(/,
     );
     if (methodAsyncGeneratorMatch) {
       return {
@@ -149,7 +149,7 @@ export const tokenizeFunction = (fn) => {
         isGenerator: true,
       };
     }
-    const methodAsyncMatch = fnSource.match(/^async\s+([\S]+)\s*\(/);
+    const methodAsyncMatch = fnSource.match(/^async\s+(\S+)\s*\(/);
     if (methodAsyncMatch) {
       return {
         ...defaultFunctionAnalysis,
@@ -160,7 +160,7 @@ export const tokenizeFunction = (fn) => {
         methodAsyncMatch,
       };
     }
-    const methodGeneratorMatch = fnSource.match(/^\*\s*([\S]+)\s*\(/);
+    const methodGeneratorMatch = fnSource.match(/^\*\s*(\S+)\s*\(/);
     if (methodGeneratorMatch) {
       return {
         ...defaultFunctionAnalysis,
@@ -170,7 +170,7 @@ export const tokenizeFunction = (fn) => {
         isGenerator: true,
       };
     }
-    const methodMatch = fnSource.match(/^([\S]+)\s*\(/);
+    const methodMatch = fnSource.match(/^(\S+)\s*\(/);
     if (methodMatch) {
       return {
         ...defaultFunctionAnalysis,

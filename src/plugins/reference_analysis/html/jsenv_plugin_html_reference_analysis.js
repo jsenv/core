@@ -650,7 +650,7 @@ const escapeHtml = (string) => {
     .replace(/'/g, "&#039;");
 };
 const replacePlaceholders = (html, replacers) => {
-  return html.replace(/\${([\w]+)}/g, (match, name) => {
+  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
     const replacer = replacers[name];
     if (replacer === undefined) {
       return match;

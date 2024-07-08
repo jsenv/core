@@ -544,7 +544,7 @@ window.__supervisor__ = (() => {
             Error.prepareStackTrace = prepareStackTrace;
             const getPropertiesFromEvalOrigin = origin => {
               // Most eval() calls are in this format
-              const topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(origin);
+              const topLevelEvalMatch = /^eval at [^(]+ \(.+:\d+:\d+\)$/.exec(origin);
               if (topLevelEvalMatch) {
                 const source = topLevelEvalMatch[2];
                 const line = Number(topLevelEvalMatch[3]);
@@ -556,7 +556,7 @@ window.__supervisor__ = (() => {
                 };
               }
               // Parse nested eval() calls using recursion
-              const nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
+              const nestedEvalMatch = /^eval at [^(]+ \(.+\)$/.exec(origin);
               if (nestedEvalMatch) {
                 return getPropertiesFromEvalOrigin(nestedEvalMatch[2]);
               }
@@ -744,7 +744,7 @@ window.__supervisor__ = (() => {
       line,
       column
     }) => {
-      const inlineUrlMatch = url.match(/@L([0-9]+)C([0-9]+)\-L([0-9]+)C([0-9]+)(\.[\w]+)$/);
+      const inlineUrlMatch = url.match(/@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)(\.\w+)$/);
       if (inlineUrlMatch) {
         const htmlUrl = url.slice(0, inlineUrlMatch.index);
         const tagLineStart = parseInt(inlineUrlMatch[1]);
@@ -816,7 +816,7 @@ window.__supervisor__ = (() => {
     //   debugger
     // })
     const replaceUrls = (source, replace) => {
-      return source.replace(/(?:https?|ftp|file):\/\/\S+/gm, match => {
+      return source.replace(/(?:https?|ftp|file):\/\/\S+/g, match => {
         let replacement = "";
         const lastChar = match[match.length - 1];
 

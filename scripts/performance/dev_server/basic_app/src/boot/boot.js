@@ -139,7 +139,7 @@ const setBootingState = (nextBootingState, data = {}) => {
 
 const replaceNodeVariables = (node, data) => {
   if (node.nodeName === "#text") {
-    node.textContent = node.textContent.replace(/\${(\w*)}/g, (_, key) => {
+    node.textContent = node.textContent.replace(/\$\{(\w*)\}/g, (_, key) => {
       return data.hasOwnProperty(key) ? data[key] : "";
     });
     return;

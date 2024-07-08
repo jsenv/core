@@ -47,6 +47,16 @@ const eslintConfig = composeEslintConfig(
   },
 
   {
+    plugins: ["regexp"],
+    extends: ["plugin:regexp/recommended"],
+    rules: {
+      "regexp/prefer-d": ["off"],
+      "regexp/prefer-w": ["off"],
+      "regexp/use-ignore-case": ["off"],
+    },
+  },
+
+  {
     plugins: ["html"],
     settings: {
       extensions: [".html"],

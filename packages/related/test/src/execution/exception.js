@@ -211,9 +211,7 @@ const getErrorName = (value) => {
 
 const getPropertiesFromEvalOrigin = (origin) => {
   // Most eval() calls are in this format
-  const topLevelEvalMatch = /^eval at ([^(]+) \((.+):(\d+):(\d+)\)$/.exec(
-    origin,
-  );
+  const topLevelEvalMatch = /^eval at [^(]+ \(.+:\d+:\d+\)$/.exec(origin);
   if (topLevelEvalMatch) {
     const source = topLevelEvalMatch[2];
     const line = Number(topLevelEvalMatch[3]);
@@ -225,7 +223,7 @@ const getPropertiesFromEvalOrigin = (origin) => {
     };
   }
   // Parse nested eval() calls using recursion
-  const nestedEvalMatch = /^eval at ([^(]+) \((.+)\)$/.exec(origin);
+  const nestedEvalMatch = /^eval at [^(]+ \(.+\)$/.exec(origin);
   if (nestedEvalMatch) {
     return getPropertiesFromEvalOrigin(nestedEvalMatch[2]);
   }

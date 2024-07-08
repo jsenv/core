@@ -46,5 +46,5 @@ const parseAsHashWithOptions = (token) => {
   return { isValid, algo, base64Value, optionExpression };
 };
 
-const BASE64_REGEX = /^[A-Za-z0-9+\/=+]+$/;
+const BASE64_REGEX = /^[A-Za-z0-9+/=]+$/;
 const VCHAR_REGEX = /^[\x21-\x7E]+$/;

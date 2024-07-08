@@ -85,7 +85,7 @@ const stringifyUrlSite = ({ url, line, column }) => {
 };
 
 const replaceUrls = (source, replace) => {
-  return source.replace(/(?:https?|ftp|file):\/\/\S+/gm, (match) => {
+  return source.replace(/(?:https?|ftp|file):\/\/\S+/g, (match) => {
     let replacement = "";
     const lastChar = match[match.length - 1];
 

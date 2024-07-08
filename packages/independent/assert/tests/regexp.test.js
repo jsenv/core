@@ -17,6 +17,7 @@ await startSnapshotTesting("regexp", ({ test }) => {
       expect: /a/,
     });
   });
+  /* eslint-disable regexp/sort-flags */
   test("gi flag vs ig flag", () => {
     assert({
       actual: {
@@ -30,6 +31,7 @@ await startSnapshotTesting("regexp", ({ test }) => {
       },
     });
   });
+  /* eslint-enable regexp/sort-flags */
   test("special char: parenthesis vs dot", () => {
     assert({
       actual: /^\($/g,
