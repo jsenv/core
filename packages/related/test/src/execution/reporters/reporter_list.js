@@ -232,9 +232,9 @@ const renderIntro = (testPlanResult, logOptions) => {
   if (planified === 0) {
     title = `nothing to execute`;
   } else if (planified === 1) {
-    title = `1 execution found`;
+    title = `1 execution ready`;
   } else {
-    title = `${planified} executions found`;
+    title = `${planified} executions ready`;
   }
   const lines = [];
   lines.push(`directory: ${directory}`);

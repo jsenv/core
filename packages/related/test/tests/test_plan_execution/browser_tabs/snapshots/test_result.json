@@ -73,6 +73,7 @@
     "waiting": 0,
     "executing": 0,
     "executed": 2,
+    "skipped": 0,
     "aborted": 0,
     "cancelled": 0,
     "timedout": 0,
