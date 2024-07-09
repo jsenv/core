@@ -1,3 +1,5 @@
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
+
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
@@ -25,8 +27,7 @@ const testPlanResult = await executeTestPlan({
   },
   githubCheck: false,
 });
-await takeCoverageSnapshots(
-  testPlanResult,
-  new URL(`./snapshots/`, import.meta.url),
-  ["main.js"],
-);
+const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
+const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+await takeCoverageSnapshots(testPlanResult, snapshotDirectoryUrl, ["main.js"]);
+directorySnapshot.compare();

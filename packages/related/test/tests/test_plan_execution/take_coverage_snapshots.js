@@ -1,7 +1,6 @@
 import prettier from "prettier";
 import { chromium as playwrightChromium } from "playwright";
 import { writeFileSync } from "@jsenv/filesystem";
-import { takeFileSnapshot } from "@jsenv/snapshot";
 
 import { reportCoverageAsHtml } from "@jsenv/test";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
@@ -39,10 +38,8 @@ export const takeCoverageSnapshots = async (
         `${fileRelativeUrl}.html`,
         snapshotDirectoryUrl,
       );
-      const fileSnapshot = takeFileSnapshot(snapshotFileUrl);
       const wrapperOuterHtml = await getLocatorOuterHtml(wrapperLocator);
       writeFileSync(snapshotFileUrl, wrapperOuterHtml);
-      fileSnapshot.compare();
     }
   }
 

@@ -1,7 +1,10 @@
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
+
 import {
   executeTestPlan,
   nodeChildProcess,
   nodeWorkerThread,
+  reportAsJson,
 } from "@jsenv/test";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
@@ -28,11 +31,19 @@ const test = async (name, params) => {
     },
     githubCheck: false,
   });
-  await takeCoverageSnapshots(
+  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
+  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+  reportAsJson(
     testPlanResult,
-    new URL(`./snapshots/${name}/`, import.meta.url),
-    ["file.js"],
+    new URL("./test_plan_result.json", snapshotDirectoryUrl),
+    {
+      mockFluctuatingValues: true,
+    },
   );
+  await takeCoverageSnapshots(testPlanResult, snapshotDirectoryUrl, [
+    "file.js",
+  ]);
+  directorySnapshot.compare();
 };
 
 await test("child_process", {

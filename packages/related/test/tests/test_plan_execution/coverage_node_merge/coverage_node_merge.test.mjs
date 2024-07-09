@@ -3,6 +3,8 @@
  * https://github.com/SimenB/jest/blob/917efc3398577c205f33c1c2f9a1aeabfaad6f7d/packages/jest-coverage/src/index.ts
  */
 
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
+
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
@@ -32,8 +34,7 @@ const testPlanResult = await executeTestPlan({
   },
   githubCheck: false,
 });
-await takeCoverageSnapshots(
-  testPlanResult,
-  new URL(`./snapshots/`, import.meta.url),
-  ["file.js"],
-);
+const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
+const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+await takeCoverageSnapshots(testPlanResult, snapshotDirectoryUrl, ["file.js"]);
+directorySnapshot.compare();
