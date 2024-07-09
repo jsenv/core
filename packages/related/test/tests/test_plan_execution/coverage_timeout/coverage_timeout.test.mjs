@@ -27,7 +27,10 @@ const testPlanResult = await executeTestPlan({
   },
   githubCheck: false,
 });
-const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
+const snapshotDirectoryUrl = new URL(`./output/snapshots/`, import.meta.url);
 const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-await takeCoverageSnapshots(testPlanResult, snapshotDirectoryUrl, ["main.js"]);
+await takeCoverageSnapshots(testPlanResult, {
+  testOutputDirectoryUrl: new URL("./output/", import.meta.url),
+  fileRelativeUrls: ["main.js"],
+});
 directorySnapshot.compare();

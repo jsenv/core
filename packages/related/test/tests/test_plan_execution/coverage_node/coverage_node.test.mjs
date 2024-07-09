@@ -31,7 +31,10 @@ const test = async (name, params) => {
     },
     githubCheck: false,
   });
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
+  const snapshotDirectoryUrl = new URL(
+    `./output/${name}/snapshots/`,
+    import.meta.url,
+  );
   const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   reportAsJson(
     testPlanResult,
@@ -40,9 +43,10 @@ const test = async (name, params) => {
       mockFluctuatingValues: true,
     },
   );
-  await takeCoverageSnapshots(testPlanResult, snapshotDirectoryUrl, [
-    "file.js",
-  ]);
+  await takeCoverageSnapshots(testPlanResult, {
+    testOutputDirectoryUrl: new URL(`./output/${name}/`, import.meta.url),
+    fileRelativeUrls: ["file.js"],
+  });
   directorySnapshot.compare();
 };
 
