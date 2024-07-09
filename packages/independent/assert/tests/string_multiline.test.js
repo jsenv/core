@@ -173,4 +173,14 @@ Hello europa
       expect: `ab\nc`,
     });
   });
+  test("space added end of string", () => {
+    assert({
+      actual: `a
+b 
+c`,
+      expect: `a
+b
+c`,
+    });
+  });
 });
