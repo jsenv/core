@@ -5511,6 +5511,14 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
     return `all ${ANSI.color(`completed`, COLOR_COMPLETED)}`;
   }
   const parts = [];
+  if (showProgression) {
+    if (counters.executing) {
+      parts.push(`${counters.executing} executing`);
+    }
+    if (counters.waiting) {
+      parts.push(`${counters.waiting} waiting`);
+    }
+  }
   if (counters.timedout) {
     parts.push(
       `${counters.timedout} ${ANSI.color(`timed out`, COLOR_TIMEOUT)}`,
@@ -5534,14 +5542,6 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
   }
   if (counters.skipped) {
     parts.push(`${counters.skipped} ${ANSI.color(`skipped`, COLOR_SKIPPED)}`);
-  }
-  if (showProgression) {
-    if (counters.executing) {
-      parts.push(`${counters.executing} executing`);
-    }
-    if (counters.waiting) {
-      parts.push(`${counters.waiting} waiting`);
-    }
   }
   return `${parts.join(", ")}`;
 };
