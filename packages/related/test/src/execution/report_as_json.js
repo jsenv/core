@@ -15,17 +15,17 @@ export const reportAsJson = (
     return;
   }
   const testPlanResultCopy = deepCopy(testPlanResult, {});
-  testPlanResultCopy.os.name = "[mock]";
-  testPlanResultCopy.os.version = "[mock]";
-  testPlanResultCopy.os.availableCpu = "[mock]";
-  testPlanResultCopy.os.availableMemory = "[mock]";
-  testPlanResultCopy.process.version = "[mock]";
-  testPlanResultCopy.memoryUsage = "[mock]";
-  testPlanResultCopy.cpuUsage = "[mock]";
-  testPlanResultCopy.rootDirectoryUrl = "[mock]";
-  testPlanResultCopy.timings = "[mock]";
+  testPlanResultCopy.os.name = "<mock>";
+  testPlanResultCopy.os.version = "<mock>";
+  testPlanResultCopy.os.availableCpu = "<mock>";
+  testPlanResultCopy.os.availableMemory = "<mock>";
+  testPlanResultCopy.process.version = "<mock>";
+  testPlanResultCopy.memoryUsage = "<mock>";
+  testPlanResultCopy.cpuUsage = "<mock>";
+  testPlanResultCopy.rootDirectoryUrl = "/mock/";
+  testPlanResultCopy.timings = "<mock>";
   for (const group of Object.keys(testPlanResultCopy.groups)) {
-    testPlanResultCopy.groups[group].runtimeVersion = "[mock]";
+    testPlanResultCopy.groups[group].runtimeVersion = "<mock>";
   }
 
   for (const relativeUrl of Object.keys(testPlanResultCopy.results)) {
@@ -56,16 +56,16 @@ export const reportAsJson = (
         }
       }
       if (executionResult.timings) {
-        executionResult.timings = "[mock]";
+        executionResult.timings = "<mock>";
       }
       if (executionResult.memoryUsage) {
-        executionResult.memoryUsage = "[mock]";
+        executionResult.memoryUsage = "<mock>";
       }
       if (executionResult.performance) {
-        executionResult.performance = "[mock]";
+        executionResult.performance = "<mock>";
       }
       if (executionResult.coverageFileUrl) {
-        executionResult.coverageFileUrl = "[mock]";
+        executionResult.coverageFileUrl = "<mock>";
       }
     }
   }
@@ -78,7 +78,7 @@ const mockFluctuatingValuesInMessage = (message, { rootDirectoryUrl }) => {
       ? urlToFileSystemPath(url)
       : url;
     const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
-    urlAsPath = urlAsPath.replace(rootDirectoryPath, "[mock]");
+    urlAsPath = urlAsPath.replace(rootDirectoryPath, "/mock/");
     if (process.platform === "win32") {
       urlAsPath = urlAsPath.replace(/\\/g, "/");
     }

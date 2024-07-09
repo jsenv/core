@@ -1,18 +1,18 @@
 {
   "os": {
-    "name": "[mock]",
-    "version": "[mock]",
-    "availableCpu": "[mock]",
-    "availableMemory": "[mock]"
+    "name": "<mock>",
+    "version": "<mock>",
+    "availableCpu": "<mock>",
+    "availableMemory": "<mock>"
   },
   "process": {
     "name": "node",
-    "version": "[mock]"
+    "version": "<mock>"
   },
-  "memoryUsage": "[mock]",
-  "cpuUsage": "[mock]",
-  "timings": "[mock]",
-  "rootDirectoryUrl": "[mock]",
+  "memoryUsage": "<mock>",
+  "cpuUsage": "<mock>",
+  "timings": "<mock>",
+  "rootDirectoryUrl": "/mock/",
   "patterns": [
     "**/*.spec.js"
   ],
@@ -21,7 +21,7 @@
       "count": 5,
       "runtimeType": "node",
       "runtimeName": "node_worker_thread",
-      "runtimeVersion": "[mock]"
+      "runtimeVersion": "<mock>"
     }
   },
   "fragment": "3/3",
@@ -74,7 +74,7 @@
         "errors": [],
         "namespace": {},
         "consoleCalls": [],
-        "timings": "[mock]",
+        "timings": "<mock>",
         "memoryUsage": 0,
         "performance": null,
         "coverageFileUrl": null
