@@ -337,6 +337,9 @@ ${extraUrls.join("\n")}`);
       }
       const relativeUrl = urlToRelativeUrl(directoryItemUrl, directoryUrl);
       if (directoryItemStat.isDirectory()) {
+        if (!shouldIncludeFile(directoryUrl)) {
+          continue;
+        }
         if (!shouldVisitDirectory(directoryUrl)) {
           continue;
         }

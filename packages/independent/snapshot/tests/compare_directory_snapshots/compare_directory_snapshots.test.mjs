@@ -164,7 +164,7 @@ test(() => {
   assert({ actual, expect });
 });
 
-// directory sarting with "." are ignored
+// file inside directory sarting with "." are ignored
 test(() => {
   writeFileStructureSync(
     snapshotsDirectoryUrl,
@@ -194,6 +194,39 @@ test(() => {
     fileStructureAfterComparison: {
       ".toto/hey.txt": "ho",
       "a.txt": "",
+    },
+  };
+  assert({ actual, expect });
+});
+
+// directory sarting with "." is added, not a problem
+test(() => {
+  writeFileStructureSync(snapshotsDirectoryUrl, {
+    "a.txt": "a",
+  });
+  const fileStructureBeforeComparison = readFileStructureSync(
+    snapshotsDirectoryUrl,
+  );
+  const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
+  writeFileStructureSync(
+    snapshotsDirectoryUrl,
+    new URL("./fixtures/6_dir_starting_with_dot_added/", import.meta.url),
+  );
+  directorySnapshot.compare(true);
+  const fileStructureAfterComparison = readFileStructureSync(
+    snapshotsDirectoryUrl,
+  );
+  const actual = {
+    fileStructureBeforeComparison,
+    fileStructureAfterComparison,
+  };
+  const expect = {
+    fileStructureBeforeComparison: {
+      "a.txt": "a",
+    },
+    fileStructureAfterComparison: {
+      ".toto/file.txt": "file",
+      "a.txt": "a",
     },
   };
   assert({ actual, expect });
