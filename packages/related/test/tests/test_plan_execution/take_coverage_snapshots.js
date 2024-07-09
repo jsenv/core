@@ -21,8 +21,14 @@ export const takeCoverageSnapshots = async (
   for (const fileRelativeUrl of fileRelativeUrls) {
     await page.goto(`${fileServer.origin}/${fileRelativeUrl}.html`);
     await page.setViewportSize({ width: 640, height: 670 }); // generate smaller screenshots
+    await page.evaluate(
+      /* eslint-disable no-undef */
+      () => {
+        document.querySelector(".footer").style.display = "none";
+      },
+      /* eslint-enable no-undef */
+    );
     const wrapperLocator = await page.locator(".wrapper");
-
     // screenshot
     {
       const screenshotFileUrl = new URL(

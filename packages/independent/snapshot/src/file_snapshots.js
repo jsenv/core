@@ -141,7 +141,10 @@ ${fileUrl}`);
 
 export const takeDirectorySnapshot = (
   directoryUrl,
-  pattern = { "**/*": true },
+  pattern = {
+    "**/*": true,
+    "**/.*/": false,
+  },
 ) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
   directoryUrl = new URL(directoryUrl);
