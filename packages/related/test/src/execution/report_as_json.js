@@ -38,6 +38,7 @@ export const reportAsJson = (
           consoleCall.text = mockFluctuatingValuesInMessage(consoleCall.text, {
             rootDirectoryUrl: testPlanResult.rootDirectoryUrl,
           });
+          consoleCall.text = consoleCall.text.replace(/\r\n/g, "\n");
         }
       }
       const { errors } = executionResult;
