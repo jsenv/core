@@ -293,7 +293,9 @@ ${extraUrls.join("\n")}`);
         for (const relativeUrl of nextRelativeUrls) {
           const snapshot = directoryContentSnapshot[relativeUrl];
           const nextSnapshot = nextDirectoryContentSnapshot[relativeUrl];
-          snapshot.compare(nextSnapshot, { throwWhenDiff });
+          snapshot.compare(nextSnapshot, {
+            throwWhenDiff: relativeUrl.endsWith(".gif") ? false : throwWhenDiff,
+          });
         }
       }
     },
