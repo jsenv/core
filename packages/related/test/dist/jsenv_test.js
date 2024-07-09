@@ -810,6 +810,9 @@ const createUnicode = ({ supported, ANSI }) => {
     get CIRCLE_CROSS_RAW() {
       return UNICODE.supported ? `ⓧ` : `(×)`;
     },
+    get CIRCLE_DOTTED_RAW() {
+      return UNICODE.supported ? `◌` : `*`;
+    },
     get COMMAND() {
       return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
     },
@@ -4565,6 +4568,57 @@ const normalizeRuntimeError = (runtimeError) => {
   return errorProxy;
 };
 
+// `Error: yo
+// at Object.execute (http://127.0.0.1:57300/build/src/__test__/file-throw.js:9:13)
+// at doExec (http://127.0.0.1:3000/src/__test__/file-throw.js:452:38)
+// at postOrderExec (http://127.0.0.1:3000/src/__test__/file-throw.js:448:16)
+// at http://127.0.0.1:3000/src/__test__/file-throw.js:399:18`.replace(/(?:https?|ftp|file):\/\/(.*+)$/gm, (...args) => {
+//   debugger
+// })
+const replaceUrls = (source, replace) => {
+  return source.replace(/(?:https?|ftp|file):\/\/\S+/g, (match) => {
+    let replacement = "";
+    const lastChar = match[match.length - 1];
+
+    // hotfix because our url regex sucks a bit
+    const endsWithSeparationChar = lastChar === ")" || lastChar === ":";
+    if (endsWithSeparationChar) {
+      match = match.slice(0, -1);
+    }
+
+    const lineAndColumnPattern = /:([0-9]+):([0-9]+)$/;
+    const lineAndColumMatch = match.match(lineAndColumnPattern);
+    if (lineAndColumMatch) {
+      const lineAndColumnString = lineAndColumMatch[0];
+      const lineString = lineAndColumMatch[1];
+      const columnString = lineAndColumMatch[2];
+      replacement = replace({
+        url: match.slice(0, -lineAndColumnString.length),
+        line: lineString ? parseInt(lineString) : null,
+        column: columnString ? parseInt(columnString) : null,
+      });
+    } else {
+      const linePattern = /:([0-9]+)$/;
+      const lineMatch = match.match(linePattern);
+      if (lineMatch) {
+        const lineString = lineMatch[0];
+        replacement = replace({
+          url: match.slice(0, -lineString.length),
+          line: lineString ? parseInt(lineString) : null,
+        });
+      } else {
+        replacement = replace({
+          url: match,
+        });
+      }
+    }
+    if (endsWithSeparationChar) {
+      return `${replacement}${lastChar}`;
+    }
+    return replacement;
+  });
+};
+
 const formatErrorForTerminal = (
   error,
   { rootDirectoryUrl, mainFileRelativeUrl, mockFluctuatingValues, tryColors },
@@ -4697,57 +4751,6 @@ const formatErrorForTerminal = (
   return text;
 };
 
-// `Error: yo
-// at Object.execute (http://127.0.0.1:57300/build/src/__test__/file-throw.js:9:13)
-// at doExec (http://127.0.0.1:3000/src/__test__/file-throw.js:452:38)
-// at postOrderExec (http://127.0.0.1:3000/src/__test__/file-throw.js:448:16)
-// at http://127.0.0.1:3000/src/__test__/file-throw.js:399:18`.replace(/(?:https?|ftp|file):\/\/(.*+)$/gm, (...args) => {
-//   debugger
-// })
-const replaceUrls = (source, replace) => {
-  return source.replace(/(?:https?|ftp|file):\/\/\S+/g, (match) => {
-    let replacement = "";
-    const lastChar = match[match.length - 1];
-
-    // hotfix because our url regex sucks a bit
-    const endsWithSeparationChar = lastChar === ")" || lastChar === ":";
-    if (endsWithSeparationChar) {
-      match = match.slice(0, -1);
-    }
-
-    const lineAndColumnPattern = /:([0-9]+):([0-9]+)$/;
-    const lineAndColumMatch = match.match(lineAndColumnPattern);
-    if (lineAndColumMatch) {
-      const lineAndColumnString = lineAndColumMatch[0];
-      const lineString = lineAndColumMatch[1];
-      const columnString = lineAndColumMatch[2];
-      replacement = replace({
-        url: match.slice(0, -lineAndColumnString.length),
-        line: lineString ? parseInt(lineString) : null,
-        column: columnString ? parseInt(columnString) : null,
-      });
-    } else {
-      const linePattern = /:([0-9]+)$/;
-      const lineMatch = match.match(linePattern);
-      if (lineMatch) {
-        const lineString = lineMatch[0];
-        replacement = replace({
-          url: match.slice(0, -lineString.length),
-          line: lineString ? parseInt(lineString) : null,
-        });
-      } else {
-        replacement = replace({
-          url: match,
-        });
-      }
-    }
-    if (endsWithSeparationChar) {
-      return `${replacement}${lastChar}`;
-    }
-    return replacement;
-  });
-};
-
 /*
  *                                 label
  *           ┌───────────────────────┴────────────────────────────────┐
@@ -4822,9 +4825,15 @@ const reporterList = ({
           Object.keys(testPlanResult.results).length === 0
         ) {
           return {
-            afterEachInOrder: (execution) => {
-              const log = renderExecutionLog(execution, logOptions);
-              write(log);
+            afterEachInOrder: (execution, testPlanResult, testPlanHelpers) => {
+              const log = renderExecutionLog(
+                execution,
+                logOptions,
+                testPlanHelpers,
+              );
+              if (log) {
+                write(log);
+              }
             },
             afterAll: async () => {
               await write(renderOutro(testPlanResult, logOptions));
@@ -4892,12 +4901,18 @@ const reporterList = ({
               console.warn(warning.message);
             });
           },
-          afterEachInOrder: (execution) => {
+          afterEachInOrder: (execution, testPlanResult, testPlanHelpers) => {
             oneExecutionWritten = true;
             dynamicLog.clearDuringFunctionCall(
               () => {
-                const log = renderExecutionLog(execution, logOptions);
-                write(log);
+                const log = renderExecutionLog(
+                  execution,
+                  logOptions,
+                  testPlanHelpers,
+                );
+                if (log) {
+                  write(log);
+                }
               },
               // regenerate the dynamic log to put the leading "\n"
               // because of oneExecutionWritten becoming true
@@ -4954,11 +4969,11 @@ const renderIntro = (testPlanResult, logOptions) => {
 
   let title;
   if (planified === 0) {
-    title = `no file to execute`;
+    title = `nothing to execute`;
   } else if (planified === 1) {
-    title = `1 execution planified`;
+    title = `1 execution ready`;
   } else {
-    title = `${planified} executions planified`;
+    title = `${planified} executions ready`;
   }
   const lines = [];
   lines.push(`directory: ${directory}`);
@@ -4979,6 +4994,11 @@ const renderIntro = (testPlanResult, logOptions) => {
     testPlanLog += "\n";
     testPlanLog += "}";
     lines.push(`testPlan: ${testPlanLog}`);
+  }
+  if (testPlanResult.fragment) {
+    lines.push(
+      `fragment: ${testPlanResult.fragment}, executing only ${testPlanResult.fragmentStart}:${testPlanResult.fragmentEnd}`,
+    );
   }
   if (logOptions.platformInfo) {
     {
@@ -5016,7 +5036,36 @@ const renderIntro = (testPlanResult, logOptions) => {
   })}\n`;
 };
 
-const renderExecutionLog = (execution, logOptions) => {
+const renderExecutionLog = (
+  execution,
+  logOptions,
+  { getPreviousExecution, getNextExecution },
+) => {
+  if (execution.skipped) {
+    const skipReason = execution.skipReason;
+    const prev = getPreviousExecution(execution);
+    if (prev && prev.skipped && prev.skipReason === skipReason) {
+      return "";
+    }
+    let nextExecutionSkippedWithSameReason = 0;
+    let next = getNextExecution(execution);
+    while (next) {
+      if (!next.skipped || next.skipReason !== skipReason) {
+        break;
+      }
+      nextExecutionSkippedWithSameReason++;
+      next = getNextExecution(next);
+    }
+    if (nextExecutionSkippedWithSameReason) {
+      const skippedGroupLog = descriptionFormatters.skippedGroup({
+        from: execution.index,
+        to: execution.index + nextExecutionSkippedWithSameReason,
+        skipReason,
+      });
+      return `${skippedGroupLog}\n`;
+    }
+  }
+
   let log = "";
   // label
   {
@@ -5097,13 +5146,36 @@ const descriptionFormatters = {
   executing: ({ fileRelativeUrl }) => {
     return ANSI.color(`${fileRelativeUrl}`, COLOR_EXECUTING);
   },
+  skippedGroup: ({ from, to, skipReason }) => {
+    let description = `${UNICODE.CIRCLE_DOTTED_RAW} ${from + 1}:${to + 1} skipped`;
+    if (skipReason) {
+      description += ` (${skipReason})`;
+    }
+    return ANSI.color(description, COLOR_SKIPPED);
+  },
+  skipped: ({ index, countersInOrder, fileRelativeUrl, skipReason }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total, "0");
+    let description = `${UNICODE.CIRCLE_DOTTED_RAW} ${number}/${total} skipped ${fileRelativeUrl}`;
+    if (skipReason) {
+      description += ` (${skipReason})`;
+    }
+    return ANSI.color(description, COLOR_SKIPPED);
+  },
   aborted: ({ index, countersInOrder, fileRelativeUrl }) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-
     return ANSI.color(
       `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
       COLOR_ABORTED,
+    );
+  },
+  cancelled: ({ index, countersInOrder, fileRelativeUrl }) => {
+    const total = countersInOrder.planified;
+    const number = fillLeft(index + 1, total, "0");
+    return ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
+      COLOR_CANCELLED,
     );
   },
   timedout: ({ index, countersInOrder, fileRelativeUrl, params }) => {
@@ -5133,23 +5205,15 @@ const descriptionFormatters = {
       COLOR_COMPLETED,
     );
   },
-  cancelled: ({ index, countersInOrder, fileRelativeUrl }) => {
-    const total = countersInOrder.planified;
-    const number = fillLeft(index + 1, total, "0");
-
-    return ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
-      COLOR_CANCELLED,
-    );
-  },
 };
 
 const COLOR_EXECUTING = ANSI.BLUE;
+const COLOR_SKIPPED = ANSI.GREY;
 const COLOR_ABORTED = ANSI.MAGENTA;
+const COLOR_CANCELLED = ANSI.GREY;
 const COLOR_TIMEOUT = ANSI.MAGENTA;
 const COLOR_FAILED = ANSI.RED;
 const COLOR_COMPLETED = ANSI.GREEN;
-const COLOR_CANCELLED = ANSI.GREY;
 const fillLeft = (value, biggestValue, char = " ") => {
   const width = String(value).length;
   const biggestWidth = String(biggestValue).length;
@@ -5427,8 +5491,14 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
   if (counters.planified === 0) {
     return ``;
   }
+  if (counters.skipped === counters.planified) {
+    return `all ${ANSI.color(`skipped`, COLOR_SKIPPED)}`;
+  }
   if (counters.aborted === counters.planified) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
+  }
+  if (counters.cancelled === counters.planified) {
+    return `all ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`;
   }
   if (counters.timedout === counters.planified) {
     return `all ${ANSI.color(`timed out`, COLOR_TIMEOUT)}`;
@@ -5438,9 +5508,6 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
   }
   if (counters.completed === counters.planified) {
     return `all ${ANSI.color(`completed`, COLOR_COMPLETED)}`;
-  }
-  if (counters.cancelled === counters.planified) {
-    return `all ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`;
   }
   const parts = [];
   if (counters.timedout) {
@@ -5463,6 +5530,9 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
     parts.push(
       `${counters.cancelled} ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`,
     );
+  }
+  if (counters.skipped) {
+    parts.push(`${counters.skipped} ${ANSI.color(`skipped`, COLOR_SKIPPED)}`);
   }
   if (showProgression) {
     if (counters.executing) {
@@ -5544,6 +5614,39 @@ const renderDetails = (data) => {
   string += details.join(ANSI.color(", ", ANSI.GREY));
   string += ANSI.color(")", ANSI.GREY);
   return string;
+};
+
+const createIsInsideFragment = (fragment, total) => {
+  let [dividend, divisor] = fragment.split("/");
+  dividend = parseInt(dividend);
+  divisor = parseInt(divisor);
+  const groupSize = Math.ceil(total / divisor);
+  let from;
+  let to;
+  if (groupSize === 0) {
+    if (dividend === 1) {
+      from = 0;
+      to = 0;
+    } else {
+      from = Infinity;
+      to = -1;
+    }
+  } else if (dividend === 1) {
+    from = 0;
+    to = groupSize;
+  } else {
+    from = (dividend - 1) * groupSize;
+    if (dividend === divisor) {
+      to = total;
+    } else {
+      to = from + groupSize;
+    }
+  }
+  return (index) => {
+    if (index < from) return false;
+    if (index >= to) return false;
+    return true;
+  };
 };
 
 /*
@@ -5631,6 +5734,11 @@ const executeTestPlan = async ({
   handleSIGTERM = true,
   updateProcessExitCode = true,
   parallel = parallelDefault,
+  // https://github.com/avajs/ava/blob/main/docs/recipes/splitting-tests-ci.md
+  // https://playwright.dev/docs/test-sharding
+  fragment,
+  fragmentByRuntime,
+  fragmentBy,
   defaultMsAllocatedPerExecution = 30_000,
   failFast = false,
   // keepRunning: false to ensure runtime is stopped once executed
@@ -5724,6 +5832,9 @@ const executeTestPlan = async ({
     rootDirectoryUrl: String(rootDirectoryUrl),
     patterns: Object.keys(testPlan),
     groups: {},
+    fragment,
+    fragmentStart: undefined,
+    fragmentEnd: undefined,
     counters: {
       planified: 0,
       remaining: 0,
@@ -5731,6 +5842,7 @@ const executeTestPlan = async ({
       executing: 0,
       executed: 0,
 
+      skipped: 0,
       aborted: 0,
       cancelled: 0,
       timedout: 0,
@@ -5760,6 +5872,36 @@ const executeTestPlan = async ({
   };
   const beforeEachCallbackSet = new Set();
   const beforeEachInOrderCallbackSet = new Set();
+  const triggerBeforeEach = (execution, testPlanResult, testPlanHelpers) => {
+    for (const beforeEachCallback of beforeEachCallbackSet) {
+      const returnValue = beforeEachCallback(
+        execution,
+        testPlanResult,
+        testPlanHelpers,
+      );
+      if (typeof returnValue === "function") {
+        const callback = (...args) => {
+          afterEachCallbackSet.delete(callback);
+          return returnValue(...args);
+        };
+        afterEachCallbackSet.add(callback);
+      }
+    }
+    for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
+      const returnValue = beforeEachInOrderCallback(
+        execution,
+        testPlanResult,
+        testPlanHelpers,
+      );
+      if (typeof returnValue === "function") {
+        const callback = (...args) => {
+          afterEachInOrderCallbackSet.delete(callback);
+          return returnValue(...args);
+        };
+        afterEachInOrderCallbackSet.add(callback);
+      }
+    }
+  };
   const afterEachCallbackSet = new Set();
   const afterEachInOrderCallbackSet = new Set();
   const afterAllCallbackSet = new Set();
@@ -5890,6 +6032,16 @@ const executeTestPlan = async ({
           throw new TypeError(
             `parallel.maxCpu must be a number or a percentage, got ${maxCpu}`,
           );
+        }
+      }
+      // fragment/fragmentByRuntime
+      {
+        if (fragment) {
+          if (!/[0-9]+\/[0-9]+/.test(fragment)) {
+            throw new TypeError(
+              `fragment must look like number/number, received ${fragment}`,
+            );
+          }
         }
       }
       // testPlan
@@ -6096,9 +6248,21 @@ To fix this warning:
       }
     }
 
-    const executionPlanifiedSet = new Set();
+    const executionPlanifiedArray = [];
+    const getPreviousExecution = (execution) => {
+      const index = execution.index;
+      return executionPlanifiedArray[index - 1] || null;
+    };
+    const getNextExecution = (execution) => {
+      const index = execution.index;
+      return executionPlanifiedArray[index + 1] || null;
+    };
+    const testPlanHelpers = {
+      getPreviousExecution,
+      getNextExecution,
+    };
 
-    // collect files to execute + fill executionPlanifiedSet
+    // collect files to execute + fill executionPlanifiedArray
     {
       const fileResultArray = await collectFiles({
         signal,
@@ -6106,6 +6270,11 @@ To fix this warning:
         associations: { testPlan },
         predicate: ({ testPlan }) => testPlan,
       });
+
+      // idéalement dans les logs on aurait un truc comme ceci:
+      // --- 100 execution found ---
+      // Executing only from 33 to 66 according to fragment: "2/3"
+
       let index = 0;
       let lastExecution;
       const fileExecutionCountMap = new Map();
@@ -6128,10 +6297,6 @@ To fix this warning:
               ),
             );
           }
-          if (stepConfig.runtime?.disabled) {
-            continue;
-          }
-
           const {
             runtime,
             runtimeParams,
@@ -6188,6 +6353,8 @@ To fix this warning:
             runtimeName,
             runtimeVersion,
             params,
+            skipped: false,
+            skipReason: "",
 
             // will be set by run()
             status: "planified",
@@ -6198,7 +6365,7 @@ To fix this warning:
           }
 
           lastExecution = execution;
-          executionPlanifiedSet.add(execution);
+          executionPlanifiedArray.push(execution);
           const existingResults = results[relativeUrl];
           if (existingResults) {
             existingResults[groupName] = execution.result;
@@ -6218,7 +6385,46 @@ To fix this warning:
               runtimeVersion,
             };
           }
+
+          if (runtime?.disabled) {
+            execution.skipped = true;
+            execution.skipReason =
+              runtime.disabledReason || "reason not specified";
+          } else if (fragmentByRuntime && runtime.name !== fragmentByRuntime) {
+            execution.skipped = true;
+            execution.skipReason = "runtime disabled";
+          } else if (fragmentBy) {
+            const fragmentByResult = fragmentBy(execution);
+            if (fragmentByResult) {
+              execution.skipped = true;
+              execution.skipReason =
+                typeof fragmentByResult === "string"
+                  ? fragmentByResult
+                  : `reason not specified`;
+            }
+          }
           index++;
+        }
+      }
+
+      if (fragment) {
+        const total = executionPlanifiedArray.length;
+        const isInsideFragment = createIsInsideFragment(fragment, total);
+        for (const execution of executionPlanifiedArray) {
+          if (isInsideFragment(execution.index)) {
+            const executionNumber = execution.index + 1;
+            if (testPlanResult.fragmentStart === undefined) {
+              testPlanResult.fragmentStart = executionNumber;
+            }
+            if (
+              testPlanResult.fragmentEnd === undefined ||
+              executionNumber > testPlanResult.fragmentEnd
+            ) {
+              testPlanResult.fragmentEnd = executionNumber;
+            }
+          } else {
+            execution.skipped = true;
+          }
         }
       }
       fileResultArray.length = 0;
@@ -6231,11 +6437,11 @@ To fix this warning:
     counters.planified =
       counters.remaining =
       counters.waiting =
-        executionPlanifiedSet.size;
+        executionPlanifiedArray.length;
     countersInOrder.planified =
       countersInOrder.remaining =
       countersInOrder.waiting =
-        executionPlanifiedSet.size;
+        executionPlanifiedArray.length;
     if (githubCheck) {
       const githubCheckRun = await startGithubCheckRun({
         logLevel: githubCheck.logLevel,
@@ -6245,7 +6451,7 @@ To fix this warning:
         commitSha: githubCheck.commitSha,
         checkName: githubCheck.name,
         checkTitle: githubCheck.title,
-        checkSummary: `${executionPlanifiedSet.size} files will be executed`,
+        checkSummary: `${executionPlanifiedArray.length} files will be executed`,
       });
       const annotations = [];
       reporters.push({
@@ -6325,80 +6531,66 @@ To fix this warning:
 
       const callWhenPreviousExecutionAreDone = createCallOrderer();
 
-      const executionRemainingSet = new Set(executionPlanifiedSet);
+      const executionRemainingSet = new Set(executionPlanifiedArray);
       const executionExecutingSet = new Set();
       const usedTagSet = new Set();
       const start = async (execution) => {
-        if (execution.params.uses) {
-          for (const tagThatWillBeUsed of execution.params.uses) {
-            usedTagSet.add(tagThatWillBeUsed);
-          }
-        }
         execution.fileExecutionCount = Object.keys(
           testPlanResult.results[execution.fileRelativeUrl],
         ).length;
         mutateCountersBeforeExecutionStarts(counters, execution);
         mutateCountersBeforeExecutionStarts(countersInOrder, execution);
-
-        execution.status = "executing";
         executionRemainingSet.delete(execution);
         executionExecutingSet.add(execution);
-        for (const beforeEachCallback of beforeEachCallbackSet) {
-          const returnValue = beforeEachCallback(execution, testPlanResult);
-          if (typeof returnValue === "function") {
-            const callback = (...args) => {
-              afterEachCallbackSet.delete(callback);
-              return returnValue(...args);
-            };
-            afterEachCallbackSet.add(callback);
+        triggerBeforeEach(execution, testPlanResult, testPlanHelpers);
+        if (execution.skipped) {
+          execution.result.status = "skipped";
+          execution.result.value = execution.skipReason;
+        } else {
+          if (execution.params.uses) {
+            for (const tagThatWillBeUsed of execution.params.uses) {
+              usedTagSet.add(tagThatWillBeUsed);
+            }
+          }
+          execution.status = "executing";
+          const executionResult = await run({
+            ...execution.params,
+            signal: operation.signal,
+            logger,
+            keepRunning,
+            mirrorConsole: false, // might be executed in parallel: log would be a mess to read
+            coverageEnabled: Boolean(coverage),
+            coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
+          });
+          Object.assign(execution.result, executionResult);
+          execution.status = "executed";
+          if (execution.params.uses) {
+            for (const tagNoLongerInUse of execution.params.uses) {
+              usedTagSet.delete(tagNoLongerInUse);
+            }
+          }
+          if (execution.result.status !== "completed") {
+            testPlanResult.failed = true;
+            if (updateProcessExitCode) {
+              process.exitCode = 1;
+            }
           }
         }
-        for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
-          const returnValue = beforeEachInOrderCallback(
-            execution,
-            testPlanResult,
-          );
-          if (typeof returnValue === "function") {
-            const callback = (...args) => {
-              afterEachInOrderCallbackSet.delete(callback);
-              return returnValue(...args);
-            };
-            afterEachInOrderCallbackSet.add(callback);
-          }
-        }
-        const executionResult = await run({
-          ...execution.params,
-          signal: operation.signal,
-          logger,
-          keepRunning,
-          mirrorConsole: false, // might be executed in parallel: log would be a mess to read
-          coverageEnabled: Boolean(coverage),
-          coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
-        });
-        Object.assign(execution.result, executionResult);
-        execution.status = "executed";
-        executionExecutingSet.delete(execution);
         mutateCountersAfterExecutionEnds(counters, execution);
-        if (execution.result.status !== "completed") {
-          testPlanResult.failed = true;
-          if (updateProcessExitCode) {
-            process.exitCode = 1;
-          }
-        }
+        executionExecutingSet.delete(execution);
         for (const afterEachCallback of afterEachCallbackSet) {
-          afterEachCallback(execution, testPlanResult);
+          afterEachCallback(execution, testPlanResult, testPlanHelpers);
         }
         callWhenPreviousExecutionAreDone(execution.index, () => {
           mutateCountersAfterExecutionEnds(countersInOrder, execution);
           for (const afterEachInOrderCallback of afterEachInOrderCallbackSet) {
-            afterEachInOrderCallback(execution, testPlanResult);
+            afterEachInOrderCallback(
+              execution,
+              testPlanResult,
+              testPlanHelpers,
+            );
           }
         });
-        if (execution.params.uses) {
-          for (const tagNoLongerInUse of execution.params.uses) {
-            usedTagSet.delete(tagNoLongerInUse);
-          }
-        }
         if (testPlanResult.failed && failFast && counters.remaining) {
           logger.info(`"failFast" enabled -> cancel remaining executions`);
           failFastAbortController.abort();
@@ -6612,7 +6804,9 @@ const mutateCountersAfterExecutionEnds = (counters, execution) => {
   counters.executing--;
   counters.executed++;
   counters.remaining--;
-  if (execution.result.status === "aborted") {
+  if (execution.result.status === "skipped") {
+    counters.skipped++;
+  } else if (execution.result.status === "aborted") {
     counters.aborted++;
   } else if (execution.result.status === "timedout") {
     counters.timedout++;
@@ -7482,7 +7676,7 @@ const createFirefoxRuntime = ({
     if (disableOnWindowsBecauseFlaky === undefined) {
       // https://github.com/microsoft/playwright/issues/1396
       console.warn(
-        `Windows + firefox detected: executions on firefox will be ignored  (firefox is flaky on windows).
+        `Windows + firefox detected: executions on firefox will be ignored (firefox is flaky on windows).
 To disable this warning, use disableOnWindowsBecauseFlaky: true
 To ignore potential flakyness, use disableOnWindowsBecauseFlaky: false`,
       );
@@ -7491,6 +7685,7 @@ To ignore potential flakyness, use disableOnWindowsBecauseFlaky: false`,
     if (disableOnWindowsBecauseFlaky) {
       return {
         disabled: true,
+        disabledReason: "flaky on windows",
       };
     }
   }
@@ -8361,6 +8556,7 @@ const nodeWorkerThread = ({
       // GitHub workflow does support ANSI but "supports-color" returns false
       // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
       process.env.GITHUB_WORKFLOW,
+    FORCE_UNICODE: isUnicodeSupported(),
   };
 
   return {
@@ -8969,22 +9165,26 @@ const reportAsJunitXml = async (
       });
       testSuite.appendChild(testCase);
 
-      if (executionResult.status === "aborted") {
+      if (executionResult.status === "skipped") {
+        testCase.attributes.skipped = 1;
+        const skipped = testCase.createNode("skipped", {
+          message: "Execution was skipped",
+        });
+        testSuite.appendChild(skipped);
+      } else if (executionResult.status === "aborted") {
         testCase.attributes.skipped = 1;
         const skipped = testCase.createNode("skipped", {
           message: "Execution was aborted",
         });
         testSuite.appendChild(skipped);
-      }
-      if (executionResult.status === "timedout") {
+      } else if (executionResult.status === "timedout") {
         testCase.attributes.failures = 1;
         const failure = testCase.createNode("failure", {
           message: `Execution timeout after ${executionResult.params.allocatedMs}ms"`,
           type: "timeout",
         });
         testSuite.appendChild(failure);
-      }
-      if (executionResult.status === "failed") {
+      } else if (executionResult.status === "failed") {
         const [error] = executionResult.errors;
         if (
           error &&
@@ -9038,7 +9238,7 @@ const reportAsJunitXml = async (
         propertiesNode.appendChild(propertyNode);
       }
 
-      const { consoleCalls } = executionResult;
+      const { consoleCalls = [] } = executionResult;
       let stdout = "";
       let stderr = "";
       for (const consoleCall of consoleCalls) {
@@ -9069,6 +9269,123 @@ const reportAsJunitXml = async (
 ${testSuite.renderAsString()}`;
 
   writeFileSync(new URL(fileUrl), junitXmlFileContent);
+};
+
+const reportAsJson = (
+  testPlanResult,
+  fileUrl,
+  { mockFluctuatingValues } = {},
+) => {
+  fileUrl = assertAndNormalizeFileUrl(fileUrl);
+
+  if (!mockFluctuatingValues) {
+    writeFileSync(fileUrl, JSON.stringify(testPlanResult, null, "  "));
+    return;
+  }
+  const testPlanResultCopy = deepCopy(testPlanResult, {});
+  testPlanResultCopy.os.name = "<mock>";
+  testPlanResultCopy.os.version = "<mock>";
+  testPlanResultCopy.os.availableCpu = "<mock>";
+  testPlanResultCopy.os.availableMemory = "<mock>";
+  testPlanResultCopy.process.version = "<mock>";
+  testPlanResultCopy.memoryUsage = "<mock>";
+  testPlanResultCopy.cpuUsage = "<mock>";
+  testPlanResultCopy.rootDirectoryUrl = "/mock/";
+  testPlanResultCopy.timings = "<mock>";
+  for (const group of Object.keys(testPlanResultCopy.groups)) {
+    testPlanResultCopy.groups[group].runtimeVersion = "<mock>";
+  }
+
+  for (const relativeUrl of Object.keys(testPlanResultCopy.results)) {
+    const fileResults = testPlanResultCopy.results[relativeUrl];
+    for (const groupName of Object.keys(fileResults)) {
+      const executionResult = fileResults[groupName];
+      const { consoleCalls } = executionResult;
+      if (consoleCalls) {
+        for (const consoleCall of consoleCalls) {
+          consoleCall.text = mockFluctuatingValuesInMessage(consoleCall.text, {
+            rootDirectoryUrl: testPlanResult.rootDirectoryUrl,
+          });
+          consoleCall.text = consoleCall.text.replace(/\r\n/g, "\n");
+        }
+      }
+      const { errors } = executionResult;
+      if (errors) {
+        for (const error of errors) {
+          if (error.message) {
+            error.message = mockFluctuatingValuesInMessage(error.message, {
+              rootDirectoryUrl: testPlanResult.rootDirectoryUrl,
+            });
+          }
+          if (error.stack) {
+            error.stack = mockFluctuatingValuesInMessage(error.stack, {
+              rootDirectoryUrl: testPlanResult.rootDirectoryUrl,
+            });
+          }
+        }
+      }
+      if (executionResult.timings) {
+        executionResult.timings = "<mock>";
+      }
+      if (executionResult.memoryUsage) {
+        executionResult.memoryUsage = "<mock>";
+      }
+      if (executionResult.performance) {
+        executionResult.performance = "<mock>";
+      }
+      if (executionResult.coverageFileUrl) {
+        executionResult.coverageFileUrl = "<mock>";
+      }
+    }
+  }
+  writeFileSync(fileUrl, JSON.stringify(testPlanResultCopy, null, "  "));
+};
+
+const mockFluctuatingValuesInMessage = (message, { rootDirectoryUrl }) => {
+  return replaceUrls(message, ({ url, line, column }) => {
+    let urlAsPath = String(url).startsWith("file:")
+      ? urlToFileSystemPath(url)
+      : url;
+    const rootDirectoryPath = urlToFileSystemPath(rootDirectoryUrl);
+    urlAsPath = urlAsPath.replace(rootDirectoryPath, "/mock/");
+    if (process.platform === "win32") {
+      urlAsPath = urlAsPath.replace(/\\/g, "/");
+    }
+    if (typeof line === "number" && typeof column === "number") {
+      return `${urlAsPath}:${line}:${column}`;
+    }
+    if (typeof line === "number") {
+      return `${urlAsPath}:${line}`;
+    }
+    return urlAsPath;
+  });
+};
+
+const deepCopy = (from, into) => {
+  const copyValue = (value) => {
+    if (value === null) {
+      return null;
+    }
+    if (typeof value === "object") {
+      if (Array.isArray(value)) {
+        return deepCopy(value, []);
+      }
+      return deepCopy(value, {});
+    }
+    return value;
+  };
+
+  if (Array.isArray(from)) {
+    let i = 0;
+    while (i < from.length) {
+      into[i] = copyValue(from[i]);
+      i++;
+    }
+  }
+  for (const key of Object.keys(from)) {
+    into[key] = copyValue(from[key]);
+  }
+  return into;
 };
 
 /*
@@ -9265,4 +9582,4 @@ const inlineRuntime = (fn) => {
   };
 };
 
-export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, inlineRuntime, nodeChildProcess, nodeWorkerThread, reportAsJunitXml, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, webkit, webkitIsolatedTab };
+export { chromium, chromiumIsolatedTab, execute, executeTestPlan, firefox, firefoxIsolatedTab, inlineRuntime, nodeChildProcess, nodeWorkerThread, reportAsJson, reportAsJunitXml, reportCoverageAsHtml, reportCoverageAsJson, reportCoverageInConsole, reporterList, webkit, webkitIsolatedTab };

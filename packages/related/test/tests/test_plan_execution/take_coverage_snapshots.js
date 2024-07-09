@@ -24,7 +24,7 @@ export const takeCoverageSnapshots = async (
     const wrapperLocator = await page.locator(".wrapper");
 
     // screenshot
-    if (!process.env.CI && !process.env.JSENV) {
+    {
       const screenshotFileUrl = new URL(
         `${fileRelativeUrl}.png`,
         snapshotDirectoryUrl,

@@ -261,6 +261,9 @@ const createUnicode = ({
     get CIRCLE_CROSS_RAW() {
       return UNICODE.supported ? "\u24E7" : "(\xD7)";
     },
+    get CIRCLE_DOTTED_RAW() {
+      return UNICODE.supported ? "\u25CC" : "*";
+    },
     get COMMAND() {
       return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
     },
