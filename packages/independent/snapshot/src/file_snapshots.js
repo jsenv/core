@@ -26,11 +26,8 @@ export const takeFileSnapshot = (fileUrl) => {
   const fileSnapshot = createFileSnapshot(fileUrl);
   removeFileSync(fileUrl, { allowUseless: true });
   return {
-    compare: (doIt = process.env.CI) => {
-      if (!doIt) {
-        return;
-      }
-      fileSnapshot.compare(createFileSnapshot(fileUrl));
+    compare: (throwWhenDiff = process.env.CI) => {
+      fileSnapshot.compare(createFileSnapshot(fileUrl), { throwWhenDiff });
     },
     writeContent: (content) => {
       writeFileSync(fileUrl, content);
@@ -51,11 +48,14 @@ const createFileSnapshot = (fileUrl) => {
     stat: null,
     contentType: CONTENT_TYPE.fromUrlExtension(fileUrl),
     content: "",
-    compare: (nextFileSnapshot) => {
+    compare: (nextFileSnapshot, { throwWhenDiff }) => {
       const filename = urlToFilename(fileUrl);
       const failureMessage = `snapshot comparison failed for "${filename}"`;
 
       if (!nextFileSnapshot.stat) {
+        if (!throwWhenDiff) {
+          return;
+        }
         const fileNotFoundAssertionError =
           new FileContentNotFoundAssertionError(`${failureMessage}
 --- reason ---
@@ -75,8 +75,13 @@ ${fileUrl}`);
         }
         if (fileSnapshot.contentType === "image/png") {
           if (comparePngFiles(fileContent, nextFileContent)) {
+            // restore old version to prevent git diff
+            writeFileSync(fileUrl, fileContent);
             return;
           }
+        }
+        if (!throwWhenDiff) {
+          return;
         }
         const fileContentAssertionError =
           new FileContentAssertionError(`${failureMessage}
@@ -87,6 +92,9 @@ ${fileUrl}`);
         throw fileContentAssertionError;
       }
       if (nextFileContent === fileContent) {
+        return;
+      }
+      if (!throwWhenDiff) {
         return;
       }
       assert({
@@ -164,15 +172,12 @@ export const takeDirectorySnapshot = (
   });
   return {
     __snapshot: directorySnapshot,
-    compare: (doIt = process.env.CI) => {
-      if (!doIt) {
-        return;
-      }
+    compare: (throwWhenDiff = process.env.CI) => {
       const nextDirectorySnapshot = createDirectorySnapshot(directoryUrl, {
         shouldVisitDirectory,
         shouldIncludeFile,
       });
-      directorySnapshot.compare(nextDirectorySnapshot);
+      directorySnapshot.compare(nextDirectorySnapshot, { throwWhenDiff });
     },
     addFile: (relativeUrl, content) => {
       writeFileSync(new URL(relativeUrl, directoryUrl), content);
@@ -206,7 +211,7 @@ const createDirectorySnapshot = (
     stat: null,
     empty: false,
     contentSnapshot: {},
-    compare: (nextDirectorySnapshot) => {
+    compare: (nextDirectorySnapshot, { throwWhenDiff }) => {
       const dirname = `${urlToFilename(directoryUrl)}/`;
       const failureMessage = `snapshot comparison failed for "${dirname}"`;
       if (!directorySnapshot.stat || directorySnapshot.empty) {
@@ -225,7 +230,7 @@ const createDirectorySnapshot = (
         nextDirectorySnapshot.contentSnapshot;
       const nextRelativeUrls = Object.keys(nextDirectoryContentSnapshot);
       // missing content
-      {
+      if (throwWhenDiff) {
         const missingRelativeUrls = relativeUrls.filter(
           (relativeUrl) => !nextRelativeUrls.includes(relativeUrl),
         );
@@ -253,7 +258,7 @@ ${missingUrls.join("\n")}`);
         }
       }
       // unexpected content
-      {
+      if (throwWhenDiff) {
         const extraRelativeUrls = nextRelativeUrls.filter(
           (nextRelativeUrl) => !relativeUrls.includes(nextRelativeUrl),
         );
@@ -285,7 +290,7 @@ ${extraUrls.join("\n")}`);
         for (const relativeUrl of nextRelativeUrls) {
           const snapshot = directoryContentSnapshot[relativeUrl];
           const nextSnapshot = nextDirectoryContentSnapshot[relativeUrl];
-          snapshot.compare(nextSnapshot);
+          snapshot.compare(nextSnapshot, { throwWhenDiff });
         }
       }
     },
