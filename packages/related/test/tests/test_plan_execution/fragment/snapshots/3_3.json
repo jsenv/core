@@ -75,7 +75,7 @@
         "namespace": {},
         "consoleCalls": [],
         "timings": "<mock>",
-        "memoryUsage": 0,
+        "memoryUsage": "<mock>",
         "performance": null,
         "coverageFileUrl": null
       }

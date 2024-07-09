@@ -720,10 +720,10 @@ function createSupportsColor(stream, options = {}) {
 	return translateLevel(level);
 }
 
-const supportsColor = {
+({
 	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
 	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
-};
+});
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
@@ -763,6 +763,7 @@ const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
 
 const ANSI = createAnsi({
   supported:
+    process.env.FORCE_COLOR === "1" ||
     processSupportsBasicColor ||
     // GitHub workflow does support ANSI but "supports-color" returns false
     // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
@@ -842,7 +843,7 @@ const createUnicode = ({ supported, ANSI }) => {
 };
 
 const UNICODE = createUnicode({
-  supported: isUnicodeSupported() || process.env.FORCE_UNICODE === "1",
+  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
   ANSI,
 });
 
@@ -8072,11 +8073,8 @@ const nodeChildProcess = ({
   env = {
     ...env,
     JSENV: true,
-    FORCE_COLOR:
-      supportsColor.stdout ||
-      // GitHub workflow does support ANSI but "supports-color" returns false
-      // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-      process.env.GITHUB_WORKFLOW,
+    ...(ANSI.supported ? { FORCE_COLOR: "1" } : {}),
+    ...(UNICODE.supported ? { FORCE_UNICODE: "1" } : {}),
   };
 
   return {
@@ -8551,12 +8549,8 @@ const nodeWorkerThread = ({
   env = {
     ...env,
     JSENV: true,
-    FORCE_COLOR:
-      supportsColor.stdout ||
-      // GitHub workflow does support ANSI but "supports-color" returns false
-      // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-      process.env.GITHUB_WORKFLOW,
-    FORCE_UNICODE: isUnicodeSupported(),
+    ...(ANSI.supported ? { FORCE_COLOR: "1" } : {}),
+    ...(UNICODE.supported ? { FORCE_UNICODE: "1" } : {}),
   };
 
   return {
@@ -9327,7 +9321,7 @@ const reportAsJson = (
       if (executionResult.timings) {
         executionResult.timings = "<mock>";
       }
-      if (executionResult.memoryUsage) {
+      if (Object.hasOwn(executionResult, "memoryUsage")) {
         executionResult.memoryUsage = "<mock>";
       }
       if (executionResult.performance) {

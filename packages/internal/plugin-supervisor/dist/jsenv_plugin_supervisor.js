@@ -217,7 +217,7 @@ const createAnsi = ({
 };
 const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
 const ANSI = createAnsi({
-  supported: processSupportsBasicColor ||
+  supported: process.env.FORCE_COLOR === "1" || processSupportsBasicColor ||
   // GitHub workflow does support ANSI but "supports-color" returns false
   // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
   process.env.GITHUB_WORKFLOW
@@ -292,7 +292,7 @@ const createUnicode = ({
   return UNICODE;
 };
 createUnicode({
-  supported: isUnicodeSupported() || process.env.FORCE_UNICODE === "1",
+  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
   ANSI
 });
 const formatDefault = v => v;

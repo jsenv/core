@@ -1,8 +1,7 @@
 import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import supportsColor from "supports-color";
 import { Abort, raceCallbacks } from "@jsenv/abort";
-import { createDetailedMessage } from "@jsenv/humanize";
+import { UNICODE, ANSI, createDetailedMessage } from "@jsenv/humanize";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
 import { createChildExecOptions } from "./child_exec_options.js";
@@ -37,11 +36,8 @@ export const nodeChildProcess = ({
   env = {
     ...env,
     JSENV: true,
-    FORCE_COLOR:
-      supportsColor.stdout ||
-      // GitHub workflow does support ANSI but "supports-color" returns false
-      // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-      process.env.GITHUB_WORKFLOW,
+    ...(ANSI.supported ? { FORCE_COLOR: "1" } : {}),
+    ...(UNICODE.supported ? { FORCE_UNICODE: "1" } : {}),
   };
 
   return {

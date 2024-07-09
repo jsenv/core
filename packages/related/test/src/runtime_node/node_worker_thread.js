@@ -3,9 +3,8 @@
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
 import { Worker } from "node:worker_threads";
 import { fileURLToPath } from "node:url";
-import supportsColor from "supports-color";
-import isUnicodeSupported from "is-unicode-supported";
 import { Abort, raceCallbacks } from "@jsenv/abort";
+import { UNICODE, ANSI } from "@jsenv/humanize";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
 import { createChildExecOptions } from "./child_exec_options.js";
@@ -34,12 +33,8 @@ export const nodeWorkerThread = ({
   env = {
     ...env,
     JSENV: true,
-    FORCE_COLOR:
-      supportsColor.stdout ||
-      // GitHub workflow does support ANSI but "supports-color" returns false
-      // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
-      process.env.GITHUB_WORKFLOW,
-    FORCE_UNICODE: isUnicodeSupported(),
+    ...(ANSI.supported ? { FORCE_COLOR: "1" } : {}),
+    ...(UNICODE.supported ? { FORCE_UNICODE: "1" } : {}),
   };
 
   return {

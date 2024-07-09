@@ -59,7 +59,7 @@ export const reportAsJson = (
       if (executionResult.timings) {
         executionResult.timings = "<mock>";
       }
-      if (executionResult.memoryUsage) {
+      if (Object.hasOwn(executionResult, "memoryUsage")) {
         executionResult.memoryUsage = "<mock>";
       }
       if (executionResult.performance) {

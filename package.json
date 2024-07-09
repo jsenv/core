@@ -48,6 +48,8 @@
     "dev": "node --conditions=development ./scripts/dev/dev.mjs",
     "test": "node --conditions=development ./scripts/test/test.mjs",
     "test:workspace": "npm run test --workspaces --if-present -- --workspace",
+    "test:ci": "CI=1 npm run test",
+    "test:workspace:ci": "CI=1 npm run test:workspace",
     "test:only_dev_server_errors": "node --conditions=development ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",
     "build": "node --conditions=development ./scripts/build/build.mjs",
     "build:file_size": "node ./scripts/build/build_file_size.mjs --log",
