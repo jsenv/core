@@ -1986,7 +1986,7 @@ let createRootNode;
       node.isNumber = true;
       return node;
     }
-    if (subgroup === "char_entry_value") {
+    if (subgroup === "char") {
       node.category = "primitive";
       node.isString = true;
       return node;
@@ -2411,6 +2411,7 @@ let createRootNode;
                 const appendCharNode = (charIndex, char) => {
                   lineNode.value += char; // just for debug purposes
                   lineNode.appendChild(charIndex, {
+                    key: charIndex,
                     value: char,
                     render: renderChar,
                     renderOptions: isRegexpSource ? {
@@ -2418,7 +2419,7 @@ let createRootNode;
                     } : undefined,
                     quoteMarkerRef,
                     group: "entry_value",
-                    subgroup: "char_entry_value"
+                    subgroup: "char"
                   });
                 };
                 return {
@@ -3833,7 +3834,34 @@ const renderChar = (node, props) => {
   if (stringCharMapping && stringCharMapping.has(char)) {
     char = stringCharMapping.get(char);
   }
-  return truncateAndApplyColor(char, node, props);
+  // if last char or followed solely by empty char
+  return truncateAndApplyColor(char, node, props, {
+    underline: shouldUnderline(node)
+  });
+};
+const shouldUnderline = node => {
+  if (node.parent.endMarker) {
+    // must be inside a multiline
+    // when there is no end marker trailing spaces are hard to see
+    // that's why we want to underline them
+    // otherwise no need
+    return false;
+  }
+  const char = node.value;
+  if (char !== " ") {
+    return false;
+  }
+  if (node.diffType === "same") {
+    return false;
+  }
+  // all next char must be spaces
+  const charsAfterSpace = node.parent.value.slice(node.key + " ".length);
+  for (const charAfterSpace of charsAfterSpace) {
+    if (charAfterSpace !== " ") {
+      return false;
+    }
+  }
+  return true;
 };
 const renderNumber = (node, props) => {
   const numberCompositionNode = node.childNodeMap.get("composition");
@@ -3850,7 +3878,9 @@ const renderSymbol = (node, props) => {
   const symbolConstructNode = node.childNodeMap.get("symbol_construct");
   return symbolConstructNode.render(props);
 };
-const truncateAndApplyColor = (valueDiff, node, props) => {
+const truncateAndApplyColor = (valueDiff, node, props, {
+  underline
+} = {}) => {
   const {
     columnsRemaining
   } = props;
@@ -3883,7 +3913,11 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
   if (startMarker) {
     diff += startMarker;
   }
-  diff += valueDiff;
+  if (underline) {
+    diff += ANSI.effect(valueDiff, ANSI.UNDERLINE);
+  } else {
+    diff += valueDiff;
+  }
   if (endMarker) {
     diff += endMarker;
   }

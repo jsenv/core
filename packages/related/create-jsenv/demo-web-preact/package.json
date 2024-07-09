@@ -21,7 +21,7 @@
     "@babel/eslint-parser": "7.24.7",
     "@babel/plugin-syntax-import-assertions": "7.24.7",
     "@babel/plugin-transform-react-jsx": "7.24.7",
-    "@jsenv/assert": "4.0.13",
+    "@jsenv/assert": "4.0.14",
     "@jsenv/core": "39.0.2",
     "@jsenv/plugin-preact": "1.5.12",
     "@jsenv/plugin-bundling": "2.6.13",
