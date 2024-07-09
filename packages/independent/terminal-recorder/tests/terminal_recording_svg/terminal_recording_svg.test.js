@@ -3,7 +3,7 @@ import { takeFileSnapshot } from "@jsenv/snapshot";
 
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
 
-const test = async (file, snapshotFilename = `${file}.svg`, options) => {
+const test = async (file, snapshotFilename = `${file}.svg`, options = {}) => {
   const ansiFixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);
   const svgSnapshotFileUrl = new URL(
     `./snapshots/${snapshotFilename}`,
@@ -22,9 +22,9 @@ const test = async (file, snapshotFilename = `${file}.svg`, options) => {
   svgFileSnapshot.compare();
 };
 
-await test("hello_world_2_lines.txt", "hello_world_2_lines.svg", {});
-await test("special.txt", "special_width_640.svg", {});
-await test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg", {});
+await test("hello_world_2_lines.txt", "hello_world_2_lines.svg");
+await test("special.txt", "special_width_640.svg");
+await test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg");
 await test("jsenv_test_output.txt", "jsenv_test_output_width_auto.svg", {
   width: "auto",
 });
@@ -36,3 +36,4 @@ await test(
     height: 480,
   },
 );
+await test("a_space_b.txt", "a_space_b.svg");
