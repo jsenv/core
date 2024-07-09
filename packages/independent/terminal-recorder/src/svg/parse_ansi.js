@@ -143,6 +143,7 @@ export const parseAnsi = (ansi) => {
       styleState.strikethrough = false;
     },
     reset: () => {
+      styleState.underline = false;
       styleState.strikethrough = false;
       styleState.inverse = false;
       styleState.italic = false;
