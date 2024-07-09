@@ -25,3 +25,5 @@ test("robot.txt");
 test("your_wish_is_my_command.txt");
 test("special.txt");
 test("unicode.txt");
+test("underline.txt");
+test("underline_2.txt");

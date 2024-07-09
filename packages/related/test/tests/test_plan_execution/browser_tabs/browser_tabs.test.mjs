@@ -4,9 +4,8 @@
 
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
-import { writeFileSync } from "@jsenv/filesystem";
 
-import { executeTestPlan, chromium } from "@jsenv/test";
+import { executeTestPlan, chromium, reportAsJson } from "@jsenv/test";
 
 const testResultJsonFileUrl = new URL(
   "./snapshots/test_result.json",
@@ -40,43 +39,7 @@ const result = await executeTestPlan({
   },
   githubCheck: false,
 });
-result.os.name = "<mock>";
-result.os.version = "<mock>";
-result.os.availableCpu = "<mock>";
-result.os.availableMemory = "<mock>Gb";
-result.process.name = "<mock>";
-result.process.version = "<mock>";
-for (const key of Object.keys(result.memoryUsage.os)) {
-  result.memoryUsage.os[key] = "<mock>";
-}
-for (const key of Object.keys(result.memoryUsage.process)) {
-  result.memoryUsage.process[key] = "<mock>";
-}
-for (const key of Object.keys(result.cpuUsage.os)) {
-  result.cpuUsage.os[key] = "<mock>";
-}
-for (const key of Object.keys(result.cpuUsage.process)) {
-  result.cpuUsage.process[key] = "<mock>";
-}
-for (const key of Object.keys(result.timings)) {
-  result.timings[key] = "<mock>";
-}
-result.rootDirectoryUrl = "/mock/";
-for (const group of Object.keys(result.groups)) {
-  result.groups[group].runtimeVersion = "<mock>";
-}
-for (const relativeUrl of Object.keys(result.results)) {
-  const fileExecutionResults = result.results[relativeUrl];
-  for (const group of Object.keys(fileExecutionResults)) {
-    const executionResult = fileExecutionResults[group];
-    for (const key of Object.keys(executionResult.timings)) {
-      executionResult.timings[key] = "<mock>";
-    }
-    if (executionResult.memoryUsage) {
-      executionResult.memoryUsage = "<mock>";
-    }
-  }
-}
-
-writeFileSync(testResultJsonFileUrl, JSON.stringify(result, null, "  "));
+reportAsJson(result, testResultJsonFileUrl, {
+  mockFluctuatingValues: true,
+});
 testResultJsonSnapshot.compare();

@@ -1,0 +1,253 @@
+{
+  "os": {
+    "name": "<mock>",
+    "version": "<mock>",
+    "availableCpu": "<mock>",
+    "availableMemory": "<mock>"
+  },
+  "process": {
+    "name": "node",
+    "version": "<mock>"
+  },
+  "memoryUsage": "<mock>",
+  "cpuUsage": "<mock>",
+  "timings": "<mock>",
+  "rootDirectoryUrl": "/mock/",
+  "patterns": [
+    "./node_client/main.js"
+  ],
+  "groups": {
+    "node": {
+      "count": 1,
+      "runtimeType": "node",
+      "runtimeName": "node_worker_thread",
+      "runtimeVersion": "<mock>"
+    }
+  },
+  "counters": {
+    "planified": 1,
+    "remaining": 0,
+    "waiting": 0,
+    "executing": 0,
+    "executed": 1,
+    "skipped": 0,
+    "aborted": 0,
+    "cancelled": 0,
+    "timedout": 0,
+    "failed": 0,
+    "completed": 1
+  },
+  "aborted": false,
+  "failed": false,
+  "coverage": {
+    "./node_client/file.js": {
+      "path": "./node_client/file.js",
+      "all": false,
+      "statementMap": {
+        "0": {
+          "start": {
+            "line": 1,
+            "column": 0
+          },
+          "end": {
+            "line": 1,
+            "column": 24
+          }
+        },
+        "1": {
+          "start": {
+            "line": 2,
+            "column": 0
+          },
+          "end": {
+            "line": 2,
+            "column": 33
+          }
+        },
+        "2": {
+          "start": {
+            "line": 3,
+            "column": 0
+          },
+          "end": {
+            "line": 3,
+            "column": 25
+          }
+        },
+        "3": {
+          "start": {
+            "line": 4,
+            "column": 0
+          },
+          "end": {
+            "line": 4,
+            "column": 41
+          }
+        },
+        "4": {
+          "start": {
+            "line": 5,
+            "column": 0
+          },
+          "end": {
+            "line": 5,
+            "column": 22
+          }
+        },
+        "5": {
+          "start": {
+            "line": 6,
+            "column": 0
+          },
+          "end": {
+            "line": 6,
+            "column": 8
+          }
+        },
+        "6": {
+          "start": {
+            "line": 7,
+            "column": 0
+          },
+          "end": {
+            "line": 7,
+            "column": 23
+          }
+        },
+        "7": {
+          "start": {
+            "line": 8,
+            "column": 0
+          },
+          "end": {
+            "line": 8,
+            "column": 1
+          }
+        }
+      },
+      "s": {
+        "0": 1,
+        "1": 1,
+        "2": 0,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 0,
+        "7": 0
+      },
+      "branchMap": {
+        "0": {
+          "type": "branch",
+          "line": 1,
+          "loc": {
+            "start": {
+              "line": 1,
+              "column": 0
+            },
+            "end": {
+              "line": 8,
+              "column": 1
+            }
+          },
+          "locations": [
+            {
+              "start": {
+                "line": 1,
+                "column": 0
+              },
+              "end": {
+                "line": 8,
+                "column": 1
+              }
+            }
+          ]
+        },
+        "1": {
+          "type": "branch",
+          "line": 2,
+          "loc": {
+            "start": {
+              "line": 2,
+              "column": 32
+            },
+            "end": {
+              "line": 4,
+              "column": 1
+            }
+          },
+          "locations": [
+            {
+              "start": {
+                "line": 2,
+                "column": 32
+              },
+              "end": {
+                "line": 4,
+                "column": 1
+              }
+            }
+          ]
+        },
+        "2": {
+          "type": "branch",
+          "line": 6,
+          "loc": {
+            "start": {
+              "line": 6,
+              "column": 1
+            },
+            "end": {
+              "line": 8,
+              "column": 1
+            }
+          },
+          "locations": [
+            {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 8,
+                "column": 1
+              }
+            }
+          ]
+        }
+      },
+      "b": {
+        "0": [
+          1
+        ],
+        "1": [
+          0
+        ],
+        "2": [
+          0
+        ]
+      },
+      "fnMap": {},
+      "f": {},
+      "fromV8": true
+    }
+  },
+  "results": {
+    "node_client/main.js": {
+      "node": {
+        "status": "completed",
+        "errors": [],
+        "namespace": {},
+        "consoleCalls": [
+          {
+            "type": "log",
+            "text": "node\n"
+          }
+        ],
+        "timings": "<mock>",
+        "memoryUsage": "<mock>",
+        "performance": null,
+        "coverageFileUrl": "<mock>"
+      }
+    }
+  }
+}

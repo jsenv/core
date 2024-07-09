@@ -236,6 +236,7 @@ const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
 
 const ANSI = createAnsi({
   supported:
+    process.env.FORCE_COLOR === "1" ||
     processSupportsBasicColor ||
     // GitHub workflow does support ANSI but "supports-color" returns false
     // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
@@ -283,6 +284,9 @@ const createUnicode = ({ supported, ANSI }) => {
     get CIRCLE_CROSS_RAW() {
       return UNICODE.supported ? `ⓧ` : `(×)`;
     },
+    get CIRCLE_DOTTED_RAW() {
+      return UNICODE.supported ? `◌` : `*`;
+    },
     get COMMAND() {
       return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
     },
@@ -312,7 +316,7 @@ const createUnicode = ({ supported, ANSI }) => {
 };
 
 const UNICODE = createUnicode({
-  supported: isUnicodeSupported() || process.env.FORCE_UNICODE === "1",
+  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
   ANSI,
 });
 

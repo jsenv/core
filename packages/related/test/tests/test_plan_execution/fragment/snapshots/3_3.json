@@ -1,0 +1,84 @@
+{
+  "os": {
+    "name": "<mock>",
+    "version": "<mock>",
+    "availableCpu": "<mock>",
+    "availableMemory": "<mock>"
+  },
+  "process": {
+    "name": "node",
+    "version": "<mock>"
+  },
+  "memoryUsage": "<mock>",
+  "cpuUsage": "<mock>",
+  "timings": "<mock>",
+  "rootDirectoryUrl": "/mock/",
+  "patterns": [
+    "**/*.spec.js"
+  ],
+  "groups": {
+    "group_name": {
+      "count": 5,
+      "runtimeType": "node",
+      "runtimeName": "node_worker_thread",
+      "runtimeVersion": "<mock>"
+    }
+  },
+  "fragment": "3/3",
+  "fragmentStart": 5,
+  "fragmentEnd": 5,
+  "counters": {
+    "planified": 5,
+    "remaining": 0,
+    "waiting": 0,
+    "executing": 0,
+    "executed": 5,
+    "skipped": 4,
+    "aborted": 0,
+    "cancelled": 0,
+    "timedout": 0,
+    "failed": 0,
+    "completed": 1
+  },
+  "aborted": false,
+  "failed": false,
+  "coverage": null,
+  "results": {
+    "a.spec.js": {
+      "group_name": {
+        "status": "skipped",
+        "value": ""
+      }
+    },
+    "b.spec.js": {
+      "group_name": {
+        "status": "skipped",
+        "value": ""
+      }
+    },
+    "c.spec.js": {
+      "group_name": {
+        "status": "skipped",
+        "value": ""
+      }
+    },
+    "d.spec.js": {
+      "group_name": {
+        "status": "skipped",
+        "value": ""
+      }
+    },
+    "e.spec.js": {
+      "group_name": {
+        "status": "completed",
+        "errors": [],
+        "namespace": {},
+        "consoleCalls": [],
+        "timings": "<mock>",
+        "memoryUsage": "<mock>",
+        "performance": null,
+        "coverageFileUrl": null
+      }
+    }
+  }
+}

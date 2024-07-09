@@ -248,3 +248,18 @@ assert({
 
 ![img](<./string_multline/exactly_on_line_break.svg>)
 
+# space added end of string
+
+```js
+assert({
+  actual: `a
+b 
+c`,
+  expect: `a
+b
+c`,
+});
+```
+
+![img](<./string_multline/space_added_end_of_string.svg>)
+

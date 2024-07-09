@@ -3,52 +3,15 @@
     "name": "<mock>",
     "version": "<mock>",
     "availableCpu": "<mock>",
-    "availableMemory": "<mock>Gb"
+    "availableMemory": "<mock>"
   },
   "process": {
-    "name": "<mock>",
+    "name": "node",
     "version": "<mock>"
   },
-  "memoryUsage": {
-    "os": {
-      "start": "<mock>",
-      "min": "<mock>",
-      "max": "<mock>",
-      "median": "<mock>",
-      "end": "<mock>"
-    },
-    "process": {
-      "start": "<mock>",
-      "min": "<mock>",
-      "max": "<mock>",
-      "median": "<mock>",
-      "end": "<mock>"
-    }
-  },
-  "cpuUsage": {
-    "os": {
-      "start": "<mock>",
-      "min": "<mock>",
-      "max": "<mock>",
-      "median": "<mock>",
-      "end": "<mock>"
-    },
-    "process": {
-      "start": "<mock>",
-      "min": "<mock>",
-      "max": "<mock>",
-      "median": "<mock>",
-      "end": "<mock>"
-    }
-  },
-  "timings": {
-    "origin": "<mock>",
-    "executionStart": "<mock>",
-    "executionEnd": "<mock>",
-    "teardownEnd": "<mock>",
-    "coverageTeardownEnd": "<mock>",
-    "end": "<mock>"
-  },
+  "memoryUsage": "<mock>",
+  "cpuUsage": "<mock>",
+  "timings": "<mock>",
   "rootDirectoryUrl": "/mock/",
   "patterns": [
     "./client/*.html"
@@ -73,6 +36,7 @@
     "waiting": 0,
     "executing": 0,
     "executed": 2,
+    "skipped": 0,
     "aborted": 0,
     "cancelled": 0,
     "timedout": 0,
@@ -89,15 +53,7 @@
         "errors": [],
         "namespace": {},
         "consoleCalls": [],
-        "timings": {
-          "origin": "<mock>",
-          "start": "<mock>",
-          "runtimeStart": "<mock>",
-          "executionStart": "<mock>",
-          "executionEnd": "<mock>",
-          "runtimeEnd": "<mock>",
-          "end": "<mock>"
-        },
+        "timings": "<mock>",
         "memoryUsage": "<mock>",
         "performance": null,
         "coverageFileUrl": null
@@ -107,15 +63,7 @@
         "errors": [],
         "namespace": {},
         "consoleCalls": [],
-        "timings": {
-          "origin": "<mock>",
-          "start": "<mock>",
-          "runtimeStart": "<mock>",
-          "executionStart": "<mock>",
-          "executionEnd": "<mock>",
-          "runtimeEnd": "<mock>",
-          "end": "<mock>"
-        },
+        "timings": "<mock>",
         "memoryUsage": "<mock>",
         "performance": null,
         "coverageFileUrl": null

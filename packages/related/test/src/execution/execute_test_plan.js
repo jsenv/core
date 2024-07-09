@@ -33,6 +33,7 @@ import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
 import { run } from "./run.js";
 import { reporterList, renderOutroContent } from "./reporters/reporter_list.js";
+import { createIsInsideFragment } from "./is_inside_fragment.js";
 
 /**
  * Execute a list of files and log how it goes.
@@ -114,6 +115,11 @@ export const executeTestPlan = async ({
   handleSIGTERM = true,
   updateProcessExitCode = true,
   parallel = parallelDefault,
+  // https://github.com/avajs/ava/blob/main/docs/recipes/splitting-tests-ci.md
+  // https://playwright.dev/docs/test-sharding
+  fragment,
+  fragmentByRuntime,
+  fragmentBy,
   defaultMsAllocatedPerExecution = 30_000,
   failFast = false,
   // keepRunning: false to ensure runtime is stopped once executed
@@ -207,6 +213,9 @@ export const executeTestPlan = async ({
     rootDirectoryUrl: String(rootDirectoryUrl),
     patterns: Object.keys(testPlan),
     groups: {},
+    fragment,
+    fragmentStart: undefined,
+    fragmentEnd: undefined,
     counters: {
       planified: 0,
       remaining: 0,
@@ -214,6 +223,7 @@ export const executeTestPlan = async ({
       executing: 0,
       executed: 0,
 
+      skipped: 0,
       aborted: 0,
       cancelled: 0,
       timedout: 0,
@@ -243,6 +253,36 @@ export const executeTestPlan = async ({
   };
   const beforeEachCallbackSet = new Set();
   const beforeEachInOrderCallbackSet = new Set();
+  const triggerBeforeEach = (execution, testPlanResult, testPlanHelpers) => {
+    for (const beforeEachCallback of beforeEachCallbackSet) {
+      const returnValue = beforeEachCallback(
+        execution,
+        testPlanResult,
+        testPlanHelpers,
+      );
+      if (typeof returnValue === "function") {
+        const callback = (...args) => {
+          afterEachCallbackSet.delete(callback);
+          return returnValue(...args);
+        };
+        afterEachCallbackSet.add(callback);
+      }
+    }
+    for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
+      const returnValue = beforeEachInOrderCallback(
+        execution,
+        testPlanResult,
+        testPlanHelpers,
+      );
+      if (typeof returnValue === "function") {
+        const callback = (...args) => {
+          afterEachInOrderCallbackSet.delete(callback);
+          return returnValue(...args);
+        };
+        afterEachInOrderCallbackSet.add(callback);
+      }
+    }
+  };
   const afterEachCallbackSet = new Set();
   const afterEachInOrderCallbackSet = new Set();
   const afterAllCallbackSet = new Set();
@@ -373,6 +413,16 @@ export const executeTestPlan = async ({
           throw new TypeError(
             `parallel.maxCpu must be a number or a percentage, got ${maxCpu}`,
           );
+        }
+      }
+      // fragment/fragmentByRuntime
+      {
+        if (fragment) {
+          if (!/[0-9]+\/[0-9]+/.test(fragment)) {
+            throw new TypeError(
+              `fragment must look like number/number, received ${fragment}`,
+            );
+          }
         }
       }
       // testPlan
@@ -579,9 +629,21 @@ To fix this warning:
       }
     }
 
-    const executionPlanifiedSet = new Set();
+    const executionPlanifiedArray = [];
+    const getPreviousExecution = (execution) => {
+      const index = execution.index;
+      return executionPlanifiedArray[index - 1] || null;
+    };
+    const getNextExecution = (execution) => {
+      const index = execution.index;
+      return executionPlanifiedArray[index + 1] || null;
+    };
+    const testPlanHelpers = {
+      getPreviousExecution,
+      getNextExecution,
+    };
 
-    // collect files to execute + fill executionPlanifiedSet
+    // collect files to execute + fill executionPlanifiedArray
     {
       const fileResultArray = await collectFiles({
         signal,
@@ -589,6 +651,11 @@ To fix this warning:
         associations: { testPlan },
         predicate: ({ testPlan }) => testPlan,
       });
+
+      // idéalement dans les logs on aurait un truc comme ceci:
+      // --- 100 execution found ---
+      // Executing only from 33 to 66 according to fragment: "2/3"
+
       let index = 0;
       let lastExecution;
       const fileExecutionCountMap = new Map();
@@ -611,10 +678,6 @@ To fix this warning:
               ),
             );
           }
-          if (stepConfig.runtime?.disabled) {
-            continue;
-          }
-
           const {
             runtime,
             runtimeParams,
@@ -671,6 +734,8 @@ To fix this warning:
             runtimeName,
             runtimeVersion,
             params,
+            skipped: false,
+            skipReason: "",
 
             // will be set by run()
             status: "planified",
@@ -681,7 +746,7 @@ To fix this warning:
           }
 
           lastExecution = execution;
-          executionPlanifiedSet.add(execution);
+          executionPlanifiedArray.push(execution);
           const existingResults = results[relativeUrl];
           if (existingResults) {
             existingResults[groupName] = execution.result;
@@ -701,7 +766,46 @@ To fix this warning:
               runtimeVersion,
             };
           }
+
+          if (runtime?.disabled) {
+            execution.skipped = true;
+            execution.skipReason =
+              runtime.disabledReason || "reason not specified";
+          } else if (fragmentByRuntime && runtime.name !== fragmentByRuntime) {
+            execution.skipped = true;
+            execution.skipReason = "runtime disabled";
+          } else if (fragmentBy) {
+            const fragmentByResult = fragmentBy(execution);
+            if (fragmentByResult) {
+              execution.skipped = true;
+              execution.skipReason =
+                typeof fragmentByResult === "string"
+                  ? fragmentByResult
+                  : `reason not specified`;
+            }
+          }
           index++;
+        }
+      }
+
+      if (fragment) {
+        const total = executionPlanifiedArray.length;
+        const isInsideFragment = createIsInsideFragment(fragment, total);
+        for (const execution of executionPlanifiedArray) {
+          if (isInsideFragment(execution.index)) {
+            const executionNumber = execution.index + 1;
+            if (testPlanResult.fragmentStart === undefined) {
+              testPlanResult.fragmentStart = executionNumber;
+            }
+            if (
+              testPlanResult.fragmentEnd === undefined ||
+              executionNumber > testPlanResult.fragmentEnd
+            ) {
+              testPlanResult.fragmentEnd = executionNumber;
+            }
+          } else {
+            execution.skipped = true;
+          }
         }
       }
       fileResultArray.length = 0;
@@ -714,11 +818,11 @@ To fix this warning:
     counters.planified =
       counters.remaining =
       counters.waiting =
-        executionPlanifiedSet.size;
+        executionPlanifiedArray.length;
     countersInOrder.planified =
       countersInOrder.remaining =
       countersInOrder.waiting =
-        executionPlanifiedSet.size;
+        executionPlanifiedArray.length;
     if (githubCheck) {
       const githubCheckRun = await startGithubCheckRun({
         logLevel: githubCheck.logLevel,
@@ -728,7 +832,7 @@ To fix this warning:
         commitSha: githubCheck.commitSha,
         checkName: githubCheck.name,
         checkTitle: githubCheck.title,
-        checkSummary: `${executionPlanifiedSet.size} files will be executed`,
+        checkSummary: `${executionPlanifiedArray.length} files will be executed`,
       });
       const annotations = [];
       reporters.push({
@@ -808,80 +912,66 @@ To fix this warning:
 
       const callWhenPreviousExecutionAreDone = createCallOrderer();
 
-      const executionRemainingSet = new Set(executionPlanifiedSet);
+      const executionRemainingSet = new Set(executionPlanifiedArray);
       const executionExecutingSet = new Set();
       const usedTagSet = new Set();
       const start = async (execution) => {
-        if (execution.params.uses) {
-          for (const tagThatWillBeUsed of execution.params.uses) {
-            usedTagSet.add(tagThatWillBeUsed);
-          }
-        }
         execution.fileExecutionCount = Object.keys(
           testPlanResult.results[execution.fileRelativeUrl],
         ).length;
         mutateCountersBeforeExecutionStarts(counters, execution);
         mutateCountersBeforeExecutionStarts(countersInOrder, execution);
-
-        execution.status = "executing";
         executionRemainingSet.delete(execution);
         executionExecutingSet.add(execution);
-        for (const beforeEachCallback of beforeEachCallbackSet) {
-          const returnValue = beforeEachCallback(execution, testPlanResult);
-          if (typeof returnValue === "function") {
-            const callback = (...args) => {
-              afterEachCallbackSet.delete(callback);
-              return returnValue(...args);
-            };
-            afterEachCallbackSet.add(callback);
+        triggerBeforeEach(execution, testPlanResult, testPlanHelpers);
+        if (execution.skipped) {
+          execution.result.status = "skipped";
+          execution.result.value = execution.skipReason;
+        } else {
+          if (execution.params.uses) {
+            for (const tagThatWillBeUsed of execution.params.uses) {
+              usedTagSet.add(tagThatWillBeUsed);
+            }
+          }
+          execution.status = "executing";
+          const executionResult = await run({
+            ...execution.params,
+            signal: operation.signal,
+            logger,
+            keepRunning,
+            mirrorConsole: false, // might be executed in parallel: log would be a mess to read
+            coverageEnabled: Boolean(coverage),
+            coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
+          });
+          Object.assign(execution.result, executionResult);
+          execution.status = "executed";
+          if (execution.params.uses) {
+            for (const tagNoLongerInUse of execution.params.uses) {
+              usedTagSet.delete(tagNoLongerInUse);
+            }
+          }
+          if (execution.result.status !== "completed") {
+            testPlanResult.failed = true;
+            if (updateProcessExitCode) {
+              process.exitCode = 1;
+            }
           }
         }
-        for (const beforeEachInOrderCallback of beforeEachInOrderCallbackSet) {
-          const returnValue = beforeEachInOrderCallback(
-            execution,
-            testPlanResult,
-          );
-          if (typeof returnValue === "function") {
-            const callback = (...args) => {
-              afterEachInOrderCallbackSet.delete(callback);
-              return returnValue(...args);
-            };
-            afterEachInOrderCallbackSet.add(callback);
-          }
-        }
-        const executionResult = await run({
-          ...execution.params,
-          signal: operation.signal,
-          logger,
-          keepRunning,
-          mirrorConsole: false, // might be executed in parallel: log would be a mess to read
-          coverageEnabled: Boolean(coverage),
-          coverageTempDirectoryUrl: coverage?.tempDirectoryUrl,
-        });
-        Object.assign(execution.result, executionResult);
-        execution.status = "executed";
-        executionExecutingSet.delete(execution);
         mutateCountersAfterExecutionEnds(counters, execution);
-        if (execution.result.status !== "completed") {
-          testPlanResult.failed = true;
-          if (updateProcessExitCode) {
-            process.exitCode = 1;
-          }
-        }
+        executionExecutingSet.delete(execution);
         for (const afterEachCallback of afterEachCallbackSet) {
-          afterEachCallback(execution, testPlanResult);
+          afterEachCallback(execution, testPlanResult, testPlanHelpers);
         }
         callWhenPreviousExecutionAreDone(execution.index, () => {
           mutateCountersAfterExecutionEnds(countersInOrder, execution);
           for (const afterEachInOrderCallback of afterEachInOrderCallbackSet) {
-            afterEachInOrderCallback(execution, testPlanResult);
+            afterEachInOrderCallback(
+              execution,
+              testPlanResult,
+              testPlanHelpers,
+            );
           }
         });
-        if (execution.params.uses) {
-          for (const tagNoLongerInUse of execution.params.uses) {
-            usedTagSet.delete(tagNoLongerInUse);
-          }
-        }
         if (testPlanResult.failed && failFast && counters.remaining) {
           logger.info(`"failFast" enabled -> cancel remaining executions`);
           failFastAbortController.abort();
@@ -1096,7 +1186,9 @@ const mutateCountersAfterExecutionEnds = (counters, execution) => {
   counters.executing--;
   counters.executed++;
   counters.remaining--;
-  if (execution.result.status === "aborted") {
+  if (execution.result.status === "skipped") {
+    counters.skipped++;
+  } else if (execution.result.status === "aborted") {
     counters.aborted++;
   } else if (execution.result.status === "timedout") {
     counters.timedout++;

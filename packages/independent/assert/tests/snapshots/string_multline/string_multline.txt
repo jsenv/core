@@ -165,3 +165,13 @@ actual: 1| abc
 expect: 1| ab
         2| c
 
+# space added end of string
+AssertionError: actual and expect are different
+
+actual: 1| a
+        2| b 
+        3| c
+expect: 1| a
+        2| b
+        3| c
+

@@ -1,4 +1,5 @@
 import { startDevServer } from "@jsenv/core";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { executeTestPlan, chromium } from "@jsenv/test";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
@@ -34,8 +35,10 @@ const testPlanResult = await executeTestPlan({
   githubCheck: false,
 });
 
-await takeCoverageSnapshots(
-  testPlanResult,
-  new URL("./snapshots/", import.meta.url),
-  ["file.js"],
-);
+const snapshotDirectoryUrl = new URL(`./output/snapshots/`, import.meta.url);
+const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+await takeCoverageSnapshots(testPlanResult, {
+  testOutputDirectoryUrl: new URL("./output/", import.meta.url),
+  fileRelativeUrls: ["file.js"],
+});
+directorySnapshot.compare();

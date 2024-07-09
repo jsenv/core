@@ -206,10 +206,9 @@ export const renderTerminalSvg = async (
       if (type !== "text") {
         continue;
       }
-
       const { position } = chunk;
       const x =
-        offsetLeft + adjustXforWhitespace(value, position.x) * font.width;
+        offsetLeft + (position.x + leadingWhitespaceWidth(value)) * font.width;
       const y = offsetTop + position.y + font.lineHeight * position.y;
       const w = font.width * value.length;
       const attrs = {};
@@ -244,7 +243,7 @@ export const renderTerminalSvg = async (
       }
 
       // Underline & Strikethrough:
-      // Some SVG implmentations do not support underline and
+      // Some SVG implementations do not support underline and
       // strikethrough for <text> elements (see Sketch 49.2)
       if (style.underline) {
         const yOffset = font.height * 0.14;
@@ -267,14 +266,10 @@ export const renderTerminalSvg = async (
         textContainer.appendChild(path);
       }
 
-      // Do not output elements containing whitespace with no style
-      if (
-        value.replace(/ /g, "").length === 0 &&
-        Object.keys(attrs).length === 0
-      ) {
+      if (value.trim() === "") {
+        // Do not output elements containing only whitespace
         continue;
       }
-
       const text = svg.createNode("text", {
         x,
         y,
@@ -294,7 +289,11 @@ export const renderTerminalSvg = async (
 
 // Some SVG Implementations drop whitespaces
 // https://developer.mozilla.org/en-US/docs/Web/SVG/Attribute/xml:space
-const adjustXforWhitespace = (text, x) => {
+// and https://codepen.io/dmail/pen/wvLvbbP
+const leadingWhitespaceWidth = (text) => {
+  if (text.trim() === "") {
+    return 0;
+  }
   const leadingSpace = text.match(/^\s*/g);
-  return x + leadingSpace[0].length;
+  return leadingSpace[0].length;
 };

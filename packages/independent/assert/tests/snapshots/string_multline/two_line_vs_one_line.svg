@@ -47,6 +47,10 @@
         <text x="119.22" y="52.55" fill="#7f7f7f">l</text>
         <text x="127.62" y="52.55" fill="#7f7f7f">l</text>
         <text x="136.02" y="52.55" fill="#7f7f7f">o</text>
+        <path
+          d="M144.421875,54.5146875 L152.8232421875,54.5146875 Z"
+          stroke="#DAA520"
+        />
         <text x="77.21" y="71.55" fill="#DAA520">2| </text>
         <text x="102.42" y="71.55" fill="#DAA520">w</text>
         <text x="110.82" y="71.55" fill="#DAA520">o</text>

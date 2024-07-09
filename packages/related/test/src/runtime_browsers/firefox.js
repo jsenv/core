@@ -19,7 +19,7 @@ const createFirefoxRuntime = ({
     if (disableOnWindowsBecauseFlaky === undefined) {
       // https://github.com/microsoft/playwright/issues/1396
       console.warn(
-        `Windows + firefox detected: executions on firefox will be ignored  (firefox is flaky on windows).
+        `Windows + firefox detected: executions on firefox will be ignored (firefox is flaky on windows).
 To disable this warning, use disableOnWindowsBecauseFlaky: true
 To ignore potential flakyness, use disableOnWindowsBecauseFlaky: false`,
       );
@@ -28,6 +28,7 @@ To ignore potential flakyness, use disableOnWindowsBecauseFlaky: false`,
     if (disableOnWindowsBecauseFlaky) {
       return {
         disabled: true,
+        disabledReason: "flaky on windows",
       };
     }
   }

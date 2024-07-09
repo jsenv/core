@@ -1,21 +1,31 @@
 import he from "he";
 
+export const encodeTextContent = (content) => {
+  return he.encode(content, {
+    decimal: false,
+  });
+};
+
 export const createXmlGenerator = ({
   rootNodeName,
   canSelfCloseNames = [],
   canReceiveChildNames = [],
   canReceiveContentNames = [],
+  canInjectWhitespacesAroundContentNames = [],
 }) => {
   const createNode = (name, attributes = {}) => {
     const canSelfClose = canSelfCloseNames.includes(name);
     const canReceiveChild = canReceiveChildNames.includes(name);
     const canReceiveContent = canReceiveContentNames.includes(name);
+    const canInjectWhitespacesAroundContent =
+      canInjectWhitespacesAroundContentNames.includes(name);
 
     const children = [];
 
     const node = {
       name,
       content: "",
+      contentIsSafe: false,
       children,
       attributes,
       canSelfClose,
@@ -27,11 +37,12 @@ export const createXmlGenerator = ({
         children.push(childNode);
         return childNode;
       },
-      setContent: (value) => {
+      setContent: (value, isSafe = false) => {
         if (!canReceiveContent) {
           throw new Error(`cannot setContent on ${name}`);
         }
         node.content = value;
+        node.contentIsSafe = isSafe;
       },
       renderAsString: () => {
         const renderNode = (node, { depth }) => {
@@ -73,13 +84,17 @@ export const createXmlGenerator = ({
 
           let innerHTML = "";
           if (node.content) {
-            if (node.name !== "text") {
+            if (canInjectWhitespacesAroundContent) {
               innerHTML += "\n  ";
               innerHTML += "  ".repeat(depth);
             }
-            const contentEncoded = he.encode(node.content, { decimal: false });
-            innerHTML += contentEncoded;
-            if (node.name !== "text") {
+            if (node.contentIsSafe) {
+              innerHTML += node.content;
+            } else {
+              const contentEncoded = encodeTextContent(node.content);
+              innerHTML += contentEncoded;
+            }
+            if (canInjectWhitespacesAroundContent) {
               innerHTML += "\n";
               innerHTML += "  ".repeat(depth);
             }
@@ -127,7 +142,8 @@ export const createSvgRootNode = createXmlGenerator({
   rootNodeName: "svg",
   canSelfCloseNames: ["path", "rect", "circle"],
   canReceiveChildNames: ["svg", "foreignObject", "g"],
-  canReceiveContentNames: ["text", "style"],
+  canReceiveContentNames: ["text", "tspan", "style"],
+  canInjectWhitespacesAroundContentNames: ["style"],
 });
 
 // not used for now and needs to configure canReceiveChildNames and so on...
