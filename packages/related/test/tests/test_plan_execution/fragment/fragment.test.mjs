@@ -1,6 +1,6 @@
 import { writeFileSync } from "@jsenv/filesystem";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
-import { takeFileSnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshot, takeFileSnapshot } from "@jsenv/snapshot";
 import { UNICODE, ANSI } from "@jsenv/humanize";
 
 import {
@@ -8,6 +8,7 @@ import {
   nodeWorkerThread,
   reporterList,
   reportAsJunitXml,
+  reportAsJson,
 } from "@jsenv/test";
 
 const terminalAnimatedRecording =
@@ -19,8 +20,21 @@ const terminalAnimatedRecording =
 UNICODE.supported = true;
 ANSI.supported = true;
 
+const snapshotDirectoryUrl = new URL("./snapshots/", import.meta.url);
+
+const results = [];
 const test = async ({ fragment }) => {
   const filename = fragment.replace("/", "_");
+  const terminalSnapshotFileUrl = new URL(
+    `./snapshots/${filename}.svg`,
+    import.meta.url,
+  );
+  const jsonFileUrl = new URL(`./snapshots/${filename}.json`, import.meta.url);
+  const junitXmlFileUrl = new URL(
+    `./snapshots/${filename}.xml`,
+    import.meta.url,
+  );
+
   if (terminalAnimatedRecording) {
     console.log(`snapshoting ${filename}`);
   }
@@ -33,10 +47,6 @@ const test = async ({ fragment }) => {
         animated: false,
         mockFluctuatingValues: true,
         spy: async () => {
-          const terminalSnapshotFileUrl = new URL(
-            `./snapshots/node/${filename}.svg`,
-            import.meta.url,
-          );
           const terminalRecorder = await startTerminalRecording({
             svg: true,
           });
@@ -95,7 +105,7 @@ const test = async ({ fragment }) => {
     rootDirectoryUrl: new URL("./node_client/", import.meta.url),
     testPlan: {
       "**/*.spec.js": {
-        worker_thread: {
+        group_name: {
           runtime: nodeWorkerThread(),
         },
       },
@@ -103,20 +113,18 @@ const test = async ({ fragment }) => {
     githubCheck: false,
     fragment,
   });
-  const junitXmlFileUrl = new URL(
-    `./snapshots/node/${filename}.xml`,
-    import.meta.url,
-  );
-  const junitXmlFileSnapshot = takeFileSnapshot(junitXmlFileUrl);
+  results.push(testPlanResult);
+  reportAsJson(testPlanResult, jsonFileUrl, {
+    mockFluctuatingValues: true,
+  });
   await reportAsJunitXml(testPlanResult, junitXmlFileUrl, {
     mockFluctuatingValues: true,
   });
-  junitXmlFileSnapshot.compare();
   return testPlanResult;
 };
 
+const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
 await test({ fragment: "1/3" });
 await test({ fragment: "2/3" });
 await test({ fragment: "3/3" });
-
-// TODO: test merging result and coverage
+directorySnapshot.compare();

@@ -116,6 +116,7 @@ export const executeTestPlan = async ({
   updateProcessExitCode = true,
   parallel = parallelDefault,
   // https://github.com/avajs/ava/blob/main/docs/recipes/splitting-tests-ci.md
+  // https://playwright.dev/docs/test-sharding
   fragment,
   fragmentByRuntime,
   fragmentBy,
