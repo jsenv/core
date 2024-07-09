@@ -34,6 +34,10 @@ const test = async ({ fragment }) => {
     `./snapshots/${filename}.xml`,
     import.meta.url,
   );
+  const gifFileUrl = new URL(
+    `./recording/node/${filename}.gif`,
+    import.meta.url,
+  );
 
   if (terminalAnimatedRecording) {
     console.log(`snapshoting ${filename}`);
@@ -88,13 +92,7 @@ const test = async ({ fragment }) => {
                   end: async () => {
                     const terminalRecords = await terminalRecorder.stop();
                     const terminalGif = await terminalRecords.gif();
-                    writeFileSync(
-                      new URL(
-                        `./snapshots/node/${filename}.gif`,
-                        import.meta.url,
-                      ),
-                      terminalGif,
-                    );
+                    writeFileSync(gifFileUrl, terminalGif);
                   },
                 };
               },
