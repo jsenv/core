@@ -32,14 +32,34 @@ const createAnsi = ({
     MAGENTA: "\x1b[35m",
     CYAN: "\x1b[36m",
     GREY: "\x1b[90m",
-    color: (text, ANSI_COLOR) => {
-      return ANSI.supported && ANSI_COLOR ? "".concat(ANSI_COLOR).concat(text).concat(RESET) : text;
+    color: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (text.trim() === "") {
+        // cannot set color of blank chars
+        return text;
+      }
+      return "".concat(color).concat(text).concat(RESET);
     },
     BOLD: "\x1b[1m",
     UNDERLINE: "\x1b[4m",
     STRIKE: "\x1b[9m",
-    effect: (text, ANSI_EFFECT) => {
-      return ANSI.supported && ANSI_EFFECT ? "".concat(ANSI_EFFECT).concat(text).concat(RESET) : text;
+    effect: (text, effect) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!effect) {
+        return text;
+      }
+      // cannot add effect to empty string
+      if (text === "") {
+        return text;
+      }
+      return "".concat(effect).concat(text).concat(RESET);
     }
   };
   return ANSI;
@@ -1237,7 +1257,7 @@ const createAssert = ({
           if (!parentNode) {
             return rootNode;
           }
-          if (!parentNode.isContainer && parentNode.depth === startDepth) {
+          if (parentNode.group !== "entries" && parentNode.group !== "entry" && parentNode.depth === startDepth) {
             return parentNode;
           }
           currentNode = parentNode;
@@ -1246,8 +1266,8 @@ const createAssert = ({
       actualStartNode = getStartNode(actualRootNode);
       expectStartNode = getStartNode(expectRootNode);
       if (actualStartNode !== actualRootNode && expectStartNode !== expectRootNode) {
-        const actualStartNodePath = actualStartNode.path.toString();
-        const expectStartNodePath = expectStartNode.path.toString();
+        const actualStartNodePath = actualStartNode.path.pop().pop().toString();
+        const expectStartNodePath = expectStartNode.path.pop().pop().toString();
         if (actualStartNodePath === expectStartNodePath) {
           infos.push("diff starts at ".concat(applyStyles(actualStartNode, actualStartNodePath, {
             color: ANSI.YELLOW,
@@ -3989,13 +4009,14 @@ const renderComposite = (node, props) => {
     return wellKnownNode.render(props);
   }
   let maxDepthReached = false;
+  const nodeDepth = getNodeDepth(node, props);
   if (node.diffType === "same") {
-    maxDepthReached = node.depth > props.MAX_DEPTH;
+    maxDepthReached = nodeDepth > props.MAX_DEPTH;
   } else if (typeof props.firstDiffDepth === "number") {
-    maxDepthReached = node.depth + props.firstDiffDepth > props.MAX_DEPTH_INSIDE_DIFF;
+    maxDepthReached = nodeDepth + props.firstDiffDepth > props.MAX_DEPTH_INSIDE_DIFF;
   } else {
-    props.firstDiffDepth = node.depth;
-    maxDepthReached = node.depth > props.MAX_DEPTH_INSIDE_DIFF;
+    props.firstDiffDepth = nodeDepth;
+    maxDepthReached = nodeDepth > props.MAX_DEPTH_INSIDE_DIFF;
   }
   const compositePartsNode = node.childNodeMap.get("parts");
   if (maxDepthReached) {

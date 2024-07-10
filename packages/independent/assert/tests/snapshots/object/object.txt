@@ -84,6 +84,34 @@ expect: {
   foo: false,
 }
 
+# max depth
+AssertionError: actual and expect are different
+
+ℹ diff starts at the.nesting.is.very
+
+actual: {
+  deep: {
+    in: {
+      this: {
+        one: {
+          foo: Object(2),
+        },
+      },
+    },
+  },
+}
+expect: {
+  deep: {
+    in: {
+      this: {
+        one: {
+          foo: false,
+        },
+      },
+    },
+  },
+}
+
 # max depth inside diff
 AssertionError: actual and expect are different
 

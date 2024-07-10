@@ -116,6 +116,57 @@ assert({
 
 ![img](<./object/object_should_be_false_at_property.svg>)
 
+# max depth
+
+```js
+assert({
+  actual: {
+    the: {
+      nesting: {
+        is: {
+          very: {
+            deep: {
+              in: {
+                this: {
+                  one: {
+                    foo: {
+                      a: true,
+                      tata: { test: true, bar: { a: "1" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  expect: {
+    the: {
+      nesting: {
+        is: {
+          very: {
+            deep: {
+              in: {
+                this: {
+                  one: {
+                    foo: false,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  MAX_DEPTH: 5,
+});
+```
+
+![img](<./object/max_depth.svg>)
+
 # max depth inside diff
 
 ```js

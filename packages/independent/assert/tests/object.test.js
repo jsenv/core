@@ -80,6 +80,52 @@ await startSnapshotTesting("object", ({ test }) => {
       },
     });
   });
+  test("max depth", () => {
+    assert({
+      actual: {
+        the: {
+          nesting: {
+            is: {
+              very: {
+                deep: {
+                  in: {
+                    this: {
+                      one: {
+                        foo: {
+                          a: true,
+                          tata: { test: true, bar: { a: "1" } },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      expect: {
+        the: {
+          nesting: {
+            is: {
+              very: {
+                deep: {
+                  in: {
+                    this: {
+                      one: {
+                        foo: false,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      MAX_DEPTH: 5,
+    });
+  });
   test("max depth inside diff", () => {
     assert({
       actual: {
@@ -393,54 +439,6 @@ await startSnapshotTesting("object", ({ test }) => {
 //       },
 //       expect: false,
 //       maxDepth: 0,
-//     });
-//   },
-//   ["object should be false at deep property"]: () => {
-//     assert({
-//       actual: {
-//         the: {
-//           nesting: {
-//             is: {
-//               very: {
-//                 deep: {
-//                   in: {
-//                     this: {
-//                       one: {
-//                         foo: {
-//                           a: true,
-//                           tata: { test: true, bar: { a: "1" } },
-//                         },
-//                       },
-//                     },
-//                   },
-//                 },
-//               },
-//             },
-//           },
-//         },
-//         toto: "actual",
-//       },
-//       expect: {
-//         the: {
-//           nesting: {
-//             is: {
-//               very: {
-//                 deep: {
-//                   in: {
-//                     this: {
-//                       one: {
-//                         foo: false,
-//                       },
-//                     },
-//                   },
-//                 },
-//               },
-//             },
-//           },
-//         },
-//         toto: "expect",
-//       },
-//       maxDepth: 5,
 //     });
 //   },
 //   ["maxDepth on diff"]: () => {

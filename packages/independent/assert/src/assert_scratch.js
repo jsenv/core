@@ -734,7 +734,11 @@ export const createAssert = ({
           if (!parentNode) {
             return rootNode;
           }
-          if (!parentNode.isContainer && parentNode.depth === startDepth) {
+          if (
+            parentNode.group !== "entries" &&
+            parentNode.group !== "entry" &&
+            parentNode.depth === startDepth
+          ) {
             return parentNode;
           }
           currentNode = parentNode;
@@ -746,8 +750,8 @@ export const createAssert = ({
         actualStartNode !== actualRootNode &&
         expectStartNode !== expectRootNode
       ) {
-        const actualStartNodePath = actualStartNode.path.toString();
-        const expectStartNodePath = expectStartNode.path.toString();
+        const actualStartNodePath = actualStartNode.path.pop().pop().toString();
+        const expectStartNodePath = expectStartNode.path.pop().pop().toString();
         if (actualStartNodePath === expectStartNodePath) {
           infos.push(
             `diff starts at ${applyStyles(actualStartNode, actualStartNodePath, { color: ANSI.YELLOW, underline: false })}`,
@@ -3896,14 +3900,15 @@ const renderComposite = (node, props) => {
     return wellKnownNode.render(props);
   }
   let maxDepthReached = false;
+  const nodeDepth = getNodeDepth(node, props);
   if (node.diffType === "same") {
-    maxDepthReached = node.depth > props.MAX_DEPTH;
+    maxDepthReached = nodeDepth > props.MAX_DEPTH;
   } else if (typeof props.firstDiffDepth === "number") {
     maxDepthReached =
-      node.depth + props.firstDiffDepth > props.MAX_DEPTH_INSIDE_DIFF;
+      nodeDepth + props.firstDiffDepth > props.MAX_DEPTH_INSIDE_DIFF;
   } else {
-    props.firstDiffDepth = node.depth;
-    maxDepthReached = node.depth > props.MAX_DEPTH_INSIDE_DIFF;
+    props.firstDiffDepth = nodeDepth;
+    maxDepthReached = nodeDepth > props.MAX_DEPTH_INSIDE_DIFF;
   }
   const compositePartsNode = node.childNodeMap.get("parts");
   if (maxDepthReached) {

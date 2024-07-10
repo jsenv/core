@@ -16,7 +16,7 @@
   "devDependencies": {
     "@babel/eslint-parser": "7.24.7",
     "@babel/plugin-syntax-import-assertions": "7.24.7",
-    "@jsenv/assert": "4.1.0",
+    "@jsenv/assert": "4.1.1",
     "@jsenv/core": "39.0.3",
     "@jsenv/eslint-config": "16.5.2",
     "@jsenv/eslint-import-resolver": "8.1.2",

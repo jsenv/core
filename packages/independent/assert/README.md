@@ -35,25 +35,27 @@ _assert_ does nothing when comparison is successfull but throws an error when co
 
 ### Colors
 
-In the following image colors helps to find the diff
-
-![img](./tests/snapshots/object/basic.svg)
+The message produced have colors that helps to see the diff.
 
 - grey: same in actual and expect
 - red: found in actual and is different
 - green: found in expect and is different
 - yellow: found only in actual or found only in expect
 
-### Deep understanding of JavaScript natives
+### Understand values
+
+Comparison understand all js native values and make the diff more redable
 
 ```js
 assert({
-  actual: "http://example.com",
-  expect: "http://example.com:8000",
+  actual: 149600000,
+  expect: 1464301,
 });
 ```
 
-![img](./tests/snapshots/url/url_string_port.svg)
+![img](./tests/snapshots/number/149_600_000_and_1_464_301.svg)
+
+This includes things like comparison on url parts, date parts, http headers and many more.
 
 ## Usage in Node.js
 
