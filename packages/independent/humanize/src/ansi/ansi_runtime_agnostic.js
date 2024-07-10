@@ -13,19 +13,27 @@ export const createAnsi = ({ supported }) => {
     MAGENTA: "\x1b[35m",
     CYAN: "\x1b[36m",
     GREY: "\x1b[90m",
-    color: (text, ANSI_COLOR) => {
-      return ANSI.supported && ANSI_COLOR
-        ? `${ANSI_COLOR}${text}${RESET}`
-        : text;
+    color: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      return `${color}${text}${RESET}`;
     },
 
     BOLD: "\x1b[1m",
     UNDERLINE: "\x1b[4m",
     STRIKE: "\x1b[9m",
-    effect: (text, ANSI_EFFECT) => {
-      return ANSI.supported && ANSI_EFFECT
-        ? `${ANSI_EFFECT}${text}${RESET}`
-        : text;
+    effect: (text, effect) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!effect) {
+        return text;
+      }
+      return `${effect}${text}${RESET}`;
     },
   };
 
