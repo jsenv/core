@@ -57,6 +57,107 @@ assert({
 
 This includes things like comparison on url parts, date parts, http headers and many more.
 
+### Multiline diff
+
+```js
+assert({
+  actual: {
+    foo: `Hello,
+my name is Benjamin
+and my brother is joe`,
+  },
+  expect: {
+    foo: `Hello,
+my name is Ben
+and my brother is joe`,
+  },
+});
+```
+
+![img](./tests/snapshots/string_multline/second_line_contains_extra_chars.svg)
+
+### Keep long diff readable
+
+```js
+assert({
+  actual: "http://example_that_is_quite_long.com/dir/file.txt",
+  expect: "http://example_that_is_quite_long.com/dir/file.css",
+});
+```
+
+![img](./tests/snapshots/max_columns/long_url_diff_at_end.svg)
+
+### Keep nested diff readable
+
+When the diff is very deep the message omits the parents to keep the message concise and readable
+
+```js
+assert({
+  actual: {
+    the: {
+      nesting: {
+        is: {
+          very: {
+            deep: {
+              in: {
+                this: {
+                  one: {
+                    foo: {
+                      a: true,
+                      tata: { test: true, bar: { a: "1" } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  expect: {
+    the: {
+      nesting: {
+        is: {
+          very: {
+            deep: {
+              in: {
+                this: {
+                  one: {
+                    foo: false,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+});
+```
+
+![img](./tests/snapshots/object/max_depth.svg)
+
+### Custom assertions
+
+```js
+assert({
+  actual: 50,
+  expect: assert.between(100, 200),
+});
+```
+
+![img](./tests/snapshots/assert_between/50_is_too_small.svg)
+
+### And much more
+
+- Support comparison between value having circular references
+- Can detect diff on prototypes
+- Can detect diff on object integrity (usage of Object.freeze, Object.seal and Object.preventExtensions)
+- Can detect diff on property descriptors
+- Can detect diff on property symbols
+
 ## Usage in Node.js
 
 ```console
