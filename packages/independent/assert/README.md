@@ -25,7 +25,7 @@ assert({
 
 ![img](./tests/snapshots/object/basic.svg)
 
-There is 200+ examples in [./tests/snapshots/](./tests/snapshots/README.md#Array)
+There is 200+ examples in [./tests/snapshots/](./tests/snapshots/README.MD#Array)
 
 ## How it works
 
