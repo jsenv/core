@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
     <script
-      src="/@fs/Users/damien.maillard/dev/perso/jsenv-core/src/plugins/server_events/client/server_events_client.js"
+      src="/@fs/mock/src/plugins/server_events/client/server_events_client.js"
       jsenv-injected-by="jsenv:server_events_client_injection"
     ></script>
     <script
@@ -15,7 +15,7 @@
       window.__server_events__.setup({ logs: true });
     </script>
     <script type="module" jsenv-injected-by="jsenv:ribbon" content-indented="">
-      import { injectRibbon } from "/@fs/Users/damien.maillard/dev/perso/jsenv-core/src/plugins/ribbon/client/ribbon.js";
+      import { injectRibbon } from "/@fs/mock/src/plugins/ribbon/client/ribbon.js";
 
       injectRibbon({
         text: "DEV",
@@ -26,14 +26,14 @@
       jsenv-injected-by="jsenv:autoreload_client"
       content-indented=""
     >
-      import { initAutoreload } from "/@fs/Users/damien.maillard/dev/perso/jsenv-core/src/plugins/autoreload/client/autoreload.js";
+      import { initAutoreload } from "/@fs/mock/src/plugins/autoreload/client/autoreload.js";
 
       initAutoreload({
         mainFilePath: "/index.html",
       });
     </script>
     <script
-      src="/@fs/Users/damien.maillard/dev/perso/jsenv-core/packages/internal/plugin-supervisor/src/client/supervisor.js"
+      src="/@fs/mock/packages/internal/plugin-supervisor/src/client/supervisor.js"
       jsenv-injected-by="jsenv:supervisor"
     ></script>
     <script jsenv-injected-by="jsenv:supervisor" content-indented="">
@@ -43,8 +43,7 @@
         errorOverlay: true,
         openInEditor: true,
         serverIsJsenvDevServer: true,
-        rootDirectoryUrl:
-          "file:///Users/damien.maillard/dev/perso/jsenv-core/tests/dev_server/jsenv_scripts/client/",
+        rootDirectoryUrl: "file:///mock/tests/dev_server/jsenv_scripts/client/",
         scriptInfos: [
           {
             type: "js_module",

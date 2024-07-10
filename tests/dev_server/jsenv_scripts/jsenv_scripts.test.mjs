@@ -1,6 +1,7 @@
 /*
  */
 
+import { fileURLToPath } from "node:url";
 import prettier from "prettier";
 import { chromium } from "playwright";
 import { writeFileSync } from "@jsenv/filesystem";
@@ -17,6 +18,8 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
+const jsenvCoreDirectoryUrl = new URL("../../../", import.meta.url);
+const jsenvCoreDirectoryPath = fileURLToPath(jsenvCoreDirectoryUrl);
 
 const browser = await chromium.launch({ headless: !debug });
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
@@ -27,7 +30,8 @@ try {
     new URL("./output/", import.meta.url),
   );
   const html = await page.content();
-  const htmlFormatted = await prettier.format(html, {
+  const htmlWithUrlsMocked = html.replaceAll(jsenvCoreDirectoryPath, "/mock/");
+  const htmlFormatted = await prettier.format(htmlWithUrlsMocked, {
     parser: "html",
   });
   writeFileSync(new URL("./output/main.html", import.meta.url), htmlFormatted);
