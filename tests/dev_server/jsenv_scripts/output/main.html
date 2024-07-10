@@ -55,6 +55,16 @@
   </head>
 
   <body>
-    Hello
+    <script
+      type="module"
+      content-indented=""
+      jsenv-cooked-by="jsenv:supervisor"
+      inlined-from-src="/main.js"
+    >
+      window.__supervisor__.superviseScriptTypeModule(
+        "/main.js",
+        (url) => import(url),
+      );
+    </script>
   </body>
 </html>
