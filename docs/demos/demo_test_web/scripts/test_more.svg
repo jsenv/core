@@ -1,0 +1,111 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
+  font-size="14"
+  width="640"
+  height="252.45"
+  backgroundColor="#282c34"
+>
+  <g id="background">
+    <rect
+      x="1"
+      y="1"
+      width="638"
+      height="250.45"
+      fill="#282c34"
+      stroke="rgba(255,255,255,0.35)"
+      stroke-width="1"
+      rx="8"
+    />
+  </g>
+  <g id="header">
+    <g transform="translate(20,20)">
+      <circle cx="0" cy="0" r="6" fill="#ff5f57" />
+      <circle cx="20" cy="0" r="6" fill="#febc2e" />
+      <circle cx="40" cy="0" r="6" fill="#28c840" />
+    </g>
+    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">
+      ansi to terminal
+    </text>
+  </g>
+  <foreignObject
+    id="body"
+    y="40"
+    width="100%"
+    height="212.45"
+    overflow="hidden"
+  >
+    <svg
+      width="683.71"
+      height="212.45"
+      font-family="monospace"
+      font-variant-east-asian="full-width"
+      fill="#cccccc"
+    >
+      <g>
+        <text x="10" y="14.55" fill="#7f7f7f">------------</text>
+        <text x="119.22" y="14.55"> 3 executions ready </text>
+        <text x="278.84" y="14.55" fill="#7f7f7f">-------------</text>
+        <text x="10" y="33.55"
+          >directory:
+          /mock/</text
+        >
+        <text x="10" y="52.55" fill="#7f7f7f"
+          >---------------------------------------------</text
+        >
+        <text x="10" y="71.55" fill="#11bc79"
+          >&#x2714; 1/3 src/sum.test.html</text
+        >
+        <text x="211.63" y="71.55" fill="#7f7f7f">[</text>
+        <text x="220.03" y="71.55" fill="#7f7f7f">chromium</text>
+        <text x="287.25" y="71.55" fill="#7f7f7f">/</text>
+        <text x="295.65" y="71.55" fill="#7f7f7f">0.2s</text>
+        <text x="329.25" y="71.55" fill="#7f7f7f">]</text>
+        <text x="346.05" y="71.55"> (1 </text>
+        <text x="371.26" y="71.55" fill="#11bc79">completed</text>
+        <text x="446.87" y="71.55">)</text>
+        <text x="10" y="90.55" fill="#11bc79"
+          >&#x2714; 2/3 src/sum.test.html</text
+        >
+        <text x="211.63" y="90.55" fill="#7f7f7f">[</text>
+        <text x="220.03" y="90.55" fill="#7f7f7f">firefox</text>
+        <text x="278.84" y="90.55" fill="#7f7f7f">/</text>
+        <text x="287.25" y="90.55" fill="#7f7f7f">0.04s</text>
+        <text x="329.25" y="90.55" fill="#7f7f7f">]</text>
+        <text x="346.05" y="90.55"> (2 </text>
+        <text x="371.26" y="90.55" fill="#11bc79">completed</text>
+        <text x="446.87" y="90.55">)</text>
+        <text x="10" y="109.55" fill="#11bc79"
+          >&#x2714; 3/3 src/sum.test.html</text
+        >
+        <text x="211.63" y="109.55" fill="#7f7f7f">[</text>
+        <text x="220.03" y="109.55" fill="#7f7f7f">webkit</text>
+        <text x="270.44" y="109.55" fill="#7f7f7f">/</text>
+        <text x="278.84" y="109.55" fill="#7f7f7f">0.04s</text>
+        <text x="320.85" y="109.55" fill="#7f7f7f">]</text>
+        <text x="337.65" y="109.55"> (all </text>
+        <text x="379.66" y="109.55" fill="#11bc79">completed</text>
+        <text x="455.27" y="109.55">)</text>
+        <text x="10" y="128.55" fill="#7f7f7f">-------------</text>
+        <text x="127.62" y="128.55"> 3 executions done </text>
+        <text x="278.84" y="128.55" fill="#7f7f7f">-------------</text>
+        <text x="10" y="147.55">status: all </text>
+        <text x="110.82" y="147.55" fill="#11bc79">completed</text>
+        <text x="10" y="166.55">duration: 4.5s </text>
+        <text x="136.02" y="166.55" fill="#7f7f7f">(</text>
+        <text x="144.42" y="166.55" fill="#7f7f7f">setup:</text>
+        <text x="203.23" y="166.55" fill="#7f7f7f">0.4s</text>
+        <text x="236.84" y="166.55" fill="#7f7f7f">, </text>
+        <text x="253.64" y="166.55" fill="#7f7f7f">execution:</text>
+        <text x="346.05" y="166.55" fill="#7f7f7f">4.3s</text>
+        <text x="379.66" y="166.55" fill="#7f7f7f">, </text>
+        <text x="396.46" y="166.55" fill="#7f7f7f">teardown:</text>
+        <text x="480.48" y="166.55" fill="#7f7f7f">0.2s</text>
+        <text x="514.08" y="166.55" fill="#7f7f7f">)</text>
+        <text x="10" y="185.55" fill="#7f7f7f"
+          >---------------------------------------------</text
+        >
+      </g>
+    </svg>
+  </foreignObject>
+</svg>

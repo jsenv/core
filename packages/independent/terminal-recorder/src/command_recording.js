@@ -1,10 +1,25 @@
-import { exec } from "node:child_process";
-import { createDetailedMessage, createLogger, UNICODE } from "@jsenv/humanize";
+import { spawn } from "node:child_process";
 
-export const executeCommand = (
+import { startTerminalRecording } from "./terminal_recording.js";
+
+export const recordCommandToSvg = async (command, options) => {
+  const terminalRecorder = await startTerminalRecording({
+    svg: true,
+  });
+  await executeCommand(command, {
+    ...options,
+    onStdout: (data) => {
+      terminalRecorder.write(data);
+    },
+  });
+  const terminalRecords = await terminalRecorder.stop();
+  const terminalSvg = await terminalRecords.svg();
+  return terminalSvg;
+};
+
+const executeCommand = (
   command,
   {
-    logLevel = "info",
     signal = new AbortController().signal,
     onStdout = () => {},
     onStderr = () => {},
@@ -13,11 +28,18 @@ export const executeCommand = (
     timeout,
   } = {},
 ) => {
-  const logger = createLogger({ logLevel });
-
   return new Promise((resolve, reject) => {
-    logger.debug(`${UNICODE.COMMAND} ${command}`);
-    const commandProcess = exec(command, {
+    let args = [];
+    let commandWithoutArgs = "";
+    const firstSpaceIndex = command.indexOf(" ");
+    if (firstSpaceIndex === -1) {
+      commandWithoutArgs = command;
+    } else {
+      commandWithoutArgs = command.slice(0, firstSpaceIndex);
+      const argsRaw = command.slice(firstSpaceIndex + 1).trim();
+      args = argsRaw.split(" ");
+    }
+    const commandProcess = spawn(commandWithoutArgs, args, {
       signal,
       cwd:
         cwd && typeof cwd === "string" && cwd.startsWith("file:")
@@ -25,11 +47,11 @@ export const executeCommand = (
           : cwd,
       env,
       timeout,
-      silent: true,
+      // silent: true,
     });
     commandProcess.on("error", (error) => {
       if (error && error.code === "ETIMEDOUT") {
-        logger.error(`timeout after ${timeout} ms`);
+        console.error(`timeout after ${timeout} ms`);
         reject(error);
       } else {
         reject(error);
@@ -38,13 +60,11 @@ export const executeCommand = (
     const stdoutDatas = [];
     commandProcess.stdout.on("data", (data) => {
       stdoutDatas.push(data);
-      logger.debug(data);
       onStdout(data);
     });
     let stderrDatas = [];
     commandProcess.stderr.on("data", (data) => {
       stderrDatas.push(data);
-      logger.debug(data);
       onStderr(data);
     });
     if (commandProcess.stdin) {
@@ -59,10 +79,9 @@ export const executeCommand = (
       if (exitCode) {
         reject(
           new Error(
-            createDetailedMessage(`failed with exit code ${exitCode}`, {
-              "command stderr": stderrDatas.join(""),
-              // "command stdout": stdoutDatas.join(""),
-            }),
+            `failed with exit code ${exitCode}
+            --- command stderr ---
+            ${stderrDatas.join("")}`,
           ),
         );
         return;
