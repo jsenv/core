@@ -38,7 +38,6 @@ _assert_ does nothing when comparison is successfull but throws an error when co
 Colors and underlines helps to find the diff in a glimpse.
 
 - grey: same in actual and expect
-- underlined: not the same in actual and expect
 - red: found in actual and is different
 - green: found in expect and is different
 - yellow: found only in actual or found only in expect
@@ -52,7 +51,7 @@ assert({
 });
 ```
 
-![img](./url/url_string_port.svg)
+![img](./tests/snapshots/url/url_string_port.svg)
 
 ## Usage in Node.js
 
