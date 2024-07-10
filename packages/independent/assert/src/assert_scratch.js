@@ -111,25 +111,11 @@ const defaultOptions = {
 
 export const createAssert = ({
   colors = true,
-  underline = "trailing_space_multiline", // "all", "trailing_space_multiline"
+  underlines = "trailing_space_multiline_diff", // "any_diff", "trailing_space_multiline_diff"
   measureStringWidth = (string) => stripAnsi(string).length,
   tokenizeString = (string) => string.split(""),
   getWellKnownValuePath,
 } = {}) => {
-  const setColor = (text, color) => {
-    if (!assert.colors) {
-      return text;
-    }
-    if (text.trim() === "") {
-      // cannot set color of blank chars
-      return text;
-    }
-    const textColored = ANSI.color(text, color);
-    // if (color === ANSI.RED || color === ANSI.GREEN) {
-    //   return ANSI.effect(textColored, ANSI.UNDERLINE);
-    // }
-    return textColored;
-  };
   const assert = (firstArg, ...rest) => {
     if (firstArg === undefined) {
       throw new TypeError(
@@ -186,7 +172,6 @@ export const createAssert = ({
       getWellKnownValuePath,
       tokenizeString,
       measureStringWidth,
-      setColor,
       assert,
     };
     const actualRootNode = createRootNode({
@@ -765,23 +750,23 @@ export const createAssert = ({
         const expectStartNodePath = expectStartNode.path.toString();
         if (actualStartNodePath === expectStartNodePath) {
           infos.push(
-            `diff starts at ${setColor(actualStartNodePath, ANSI.YELLOW)}`,
+            `diff starts at ${applyStyles(actualStartNode, actualStartNodePath, { color: ANSI.YELLOW, underline: false })}`,
           );
         } else {
           infos.push(
-            `actual diff starts at ${setColor(actualStartNodePath, ANSI.YELLOW)}`,
+            `actual diff starts at ${applyStyles(actualStartNode, actualStartNodePath, { color: ANSI.YELLOW, underline: false })}`,
           );
           infos.push(
-            `expect diff starts at ${setColor(expectStartNodePath, ANSI.YELLOW)}`,
+            `expect diff starts at ${applyStyles(expectStartNode, expectStartNodePath, { color: ANSI.YELLOW, underline: false })}`,
           );
         }
       } else if (actualStartNode !== actualRootNode) {
         infos.push(
-          `actual diff starts at ${setColor(actualStartNode.path, ANSI.YELLOW)}`,
+          `actual diff starts at ${applyStyles(actualStartNode.path, { color: ANSI.YELLOW, underline: false })}`,
         );
       } else if (expectStartNode !== expectRootNode) {
         infos.push(
-          `expect diff starts at ${setColor(expectStartNode.path, ANSI.YELLOW)}`,
+          `expect diff starts at ${applyStyles(expectStartNode, expectStartNode.path, { color: ANSI.YELLOW, underline: false })}`,
         );
       }
     }
@@ -793,7 +778,10 @@ export const createAssert = ({
       }
       diff += "\n";
     }
-    diff += setColor("actual:", sameColor);
+    diff += applyStyles(actualStartNode, "actual:", {
+      color: sameColor,
+      underline: false,
+    });
     diff += " ";
     diff += actualStartNode.render({
       MAX_DEPTH,
@@ -806,7 +794,10 @@ export const createAssert = ({
       startNode: actualStartNode,
     });
     diff += `\n`;
-    diff += setColor("expect:", sameColor);
+    diff += applyStyles(expectStartNode, "expect:", {
+      color: sameColor,
+      underline: false,
+    });
     diff += " ";
     diff += expectStartNode.render({
       MAX_DEPTH,
@@ -833,7 +824,7 @@ export const createAssert = ({
       errorMessage += "\n\n";
       errorMessage += diff;
     } else {
-      errorMessage += `${setColor("actual", unexpectColor)} and ${setColor("expect", expectColor)} are different`;
+      errorMessage += `${applyStyles(actualStartNode, "actual", { color: unexpectColor, underline: false })} and ${applyStyles(expectStartNode, "expect", { color: expectColor, underline: false })} are different`;
       errorMessage += "\n\n";
       errorMessage += diff;
     }
@@ -850,7 +841,7 @@ export const createAssert = ({
   };
   // for test
   assert.colors = colors;
-  assert.underline = underline;
+  assert.underlines = underlines;
   class AssertionError extends Error {}
   assert.AssertionError = AssertionError;
   assert.createAssertionError = (message) => {
@@ -3699,7 +3690,7 @@ const renderValue = (node, props) => {
 };
 const renderPrimitive = (node, props) => {
   if (props.columnsRemaining < 1) {
-    return node.context.setColor("…", node.color);
+    return applyStyles(node, "…");
   }
   if (node.isSourceCode) {
     return truncateAndApplyColor("[source code]", node, props);
@@ -3793,9 +3784,7 @@ const renderSymbol = (node, props) => {
 const truncateAndApplyColor = (valueDiff, node, props) => {
   const { columnsRemaining } = props;
   if (columnsRemaining < 1) {
-    return props.endSkippedMarkerDisabled
-      ? ""
-      : node.context.setColor("…", node.color);
+    return props.endSkippedMarkerDisabled ? "" : applyStyles(node, "…");
   }
   let columnsRemainingForValue = columnsRemaining;
   let { startMarker, endMarker } = node;
@@ -3806,9 +3795,7 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
     columnsRemainingForValue -= endMarker.length;
   }
   if (columnsRemainingForValue < 1) {
-    return props.endSkippedMarkerDisabled
-      ? ""
-      : node.context.setColor("…", node.color);
+    return props.endSkippedMarkerDisabled ? "" : applyStyles(node, "…");
   }
   if (valueDiff.length > columnsRemainingForValue) {
     if (props.endSkippedMarkerDisabled) {
@@ -3822,51 +3809,73 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
   if (startMarker) {
     diff += startMarker;
   }
-  if (shouldUnderline(node)) {
-    diff += ANSI.effect(valueDiff, ANSI.UNDERLINE);
-  } else {
-    diff += valueDiff;
-  }
+  diff += valueDiff;
   if (endMarker) {
     diff += endMarker;
   }
-  diff = node.context.setColor(diff, node.color);
+  diff = applyStyles(node, diff);
   return diff;
 };
-const shouldUnderline = (node) => {
-  const { underline } = node.context.assert;
-  if (!underline) {
-    return false;
-  }
-  if (underline === "all") {
-    return true;
-  }
-  // "trailing_space_multiline"
-  if (node.subgroup !== "char") {
-    return false;
-  }
-  if (node.parent.endMarker) {
-    // must be inside a multiline
-    // when there is no end marker trailing spaces are hard to see
-    // that's why we want to underline them
-    // otherwise no need
-    return false;
-  }
-  const char = node.value;
-  if (char !== " ") {
-    return false;
-  }
-  if (node.diffType === "same") {
-    return false;
-  }
-  // all next char must be spaces
-  const charsAfterSpace = node.parent.value.slice(node.key + " ".length);
-  for (const charAfterSpace of charsAfterSpace) {
-    if (charAfterSpace !== " ") {
-      return false;
+const applyStyles = (
+  node,
+  text,
+  { color = node.color, underline = true } = {},
+) => {
+  let shouldAddUnderline;
+  let shouldAddColor;
+  should_underline: {
+    if (!underline) {
+      break should_underline;
     }
+    const { underlines } = node.context.assert;
+    if (!underlines) {
+      break should_underline;
+    }
+    if (underlines === "any_diff") {
+      shouldAddUnderline = node.diffType !== "same";
+      break should_underline;
+    }
+    // "trailing_space_multiline_diff"
+    if (node.diffType === "same") {
+      break should_underline;
+    }
+    if (node.subgroup !== "char") {
+      break should_underline;
+    }
+    if (node.parent.endMarker) {
+      // must be inside a multiline
+      // when there is no end marker trailing spaces are hard to see
+      // that's why we want to underline them
+      // otherwise no need
+      break should_underline;
+    }
+    const char = node.value;
+    if (char !== " ") {
+      break should_underline;
+    }
+    // all next char must be spaces
+    const charsAfterSpace = node.parent.value.slice(node.key + " ".length);
+    for (const charAfterSpace of charsAfterSpace) {
+      if (charAfterSpace !== " ") {
+        break should_underline;
+      }
+    }
+    shouldAddUnderline = true;
   }
-  return true;
+  should_color: {
+    const { colors } = node.context.assert;
+    if (!colors) {
+      break should_color;
+    }
+    shouldAddColor = true;
+  }
+  if (shouldAddUnderline) {
+    text = ANSI.effect(text, ANSI.UNDERLINE);
+  }
+  if (shouldAddColor) {
+    text = ANSI.color(text, color);
+  }
+  return text;
 };
 
 const renderComposite = (node, props) => {
@@ -3875,7 +3884,7 @@ const renderComposite = (node, props) => {
   // and a constructor that might differ
   let diff = "";
   if (props.columnsRemaining < 2) {
-    diff = node.context.setColor("…", node.color);
+    diff = applyStyles(node, "…");
     return diff;
   }
   const referenceNode = node.childNodeMap.get("reference");
@@ -3969,7 +3978,7 @@ const renderChildren = (node, props) => {
     if (fromIndex > 0 && hasSpacingBetweenEachChild) {
       diff += " ";
     }
-    diff += node.context.setColor(skippedMarker, color);
+    diff += applyStyles(node, skippedMarker, { color });
     return diff;
   };
 
@@ -4068,7 +4077,7 @@ const renderChildren = (node, props) => {
     }
     if (columnsRemainingForChildrenConsideringBoilerplate === 0) {
       return skippedMarkersPlacement === "inside"
-        ? node.context.setColor(boilerplate, node.color)
+        ? applyStyles(node, boilerplate)
         : renderSkippedSection(0, childrenKeys.length - 1);
     }
   }
@@ -4230,13 +4239,12 @@ const renderChildren = (node, props) => {
     if (separatorMarkerToAppend) {
       if (childNode.diffType === "solo") {
         childDiffWidth += separatorMarkerToAppend.length;
-        childDiff += node.context.setColor(
-          separatorMarkerToAppend,
-          childNode.color,
-        );
+        childDiff += applyStyles(node, separatorMarkerToAppend, {
+          color: childNode.color,
+        });
       } else {
         childDiffWidth += separatorMarkerToAppend.length;
-        childDiff += node.context.setColor(separatorMarkerToAppend, node.color);
+        childDiff += applyStyles(node, separatorMarkerToAppend);
       }
     }
     if (!isFirstAppend && hasSpacingBetweenEachChild && childDiff) {
@@ -4324,24 +4332,24 @@ const renderChildren = (node, props) => {
   };
   if (minIndexDisplayed === Infinity || maxIndexDisplayed === -1) {
     return skippedMarkersPlacement === "inside"
-      ? node.context.setColor(boilerplate, node.color)
+      ? applyStyles(node, boilerplate)
       : renderSkippedSection(0, childrenKeys.length - 1);
   }
   let diff = "";
   if (hasSomeChildSkippedAtStart) {
     if (skippedMarkersPlacement === "inside") {
       if (startMarker) {
-        diff += node.context.setColor(startMarker, node.color);
+        diff += applyStyles(node, startMarker);
       }
       diff += renderSkippedSection(0, minIndexDisplayed);
     } else {
       diff += renderSkippedSection(0, minIndexDisplayed);
       if (startMarker) {
-        diff += node.context.setColor(startMarker, node.color);
+        diff += applyStyles(node, startMarker);
       }
     }
   } else if (startMarker) {
-    diff += node.context.setColor(startMarker, node.color);
+    diff += applyStyles(node, startMarker);
   }
   if (hasSpacingAroundChildren) {
     diff += " ";
@@ -4357,11 +4365,11 @@ const renderChildren = (node, props) => {
         childrenKeys.length - 1,
       );
       if (endMarker) {
-        diff += node.context.setColor(endMarker, node.color);
+        diff += applyStyles(node, endMarker);
       }
     } else {
       if (endMarker) {
-        diff += node.context.setColor(endMarker, node.color);
+        diff += applyStyles(node, endMarker);
       }
       diff += renderSkippedSection(
         maxIndexDisplayed + 1,
@@ -4369,7 +4377,7 @@ const renderChildren = (node, props) => {
       );
     }
   } else if (endMarker) {
-    diff += node.context.setColor(endMarker, node.color);
+    diff += applyStyles(node, endMarker);
   }
   return diff;
 };
@@ -4707,34 +4715,38 @@ const renderChildrenMultiline = (node, props) => {
       }
     }
     if (skippedCount === 1) {
-      skippedDiff += node.context.setColor(
-        skippedMarker[0],
-        allModified ? modifiedColor : allSolo ? soloColor : node.color,
-      );
+      skippedDiff += applyStyles(node, skippedMarker[0], {
+        color: allModified ? modifiedColor : allSolo ? soloColor : node.color,
+      });
     } else {
-      skippedDiff += node.context.setColor(
+      skippedDiff += applyStyles(
+        node,
         skippedMarker[1].replace("{x}", skippedCount),
-        allModified ? modifiedColor : allSolo ? soloColor : node.color,
+        {
+          color: allModified ? modifiedColor : allSolo ? soloColor : node.color,
+        },
       );
     }
     const details = [];
     if (modifiedCount && modifiedCount !== skippedCount) {
       details.push(
-        node.context.setColor(`${modifiedCount} modified`, modifiedColor),
+        applyStyles(node, `${modifiedCount} modified`, {
+          color: modifiedColor,
+        }),
       );
     }
     if (soloCount && soloCount !== skippedCount) {
       details.push(
         node.context.name === "actual"
-          ? node.context.setColor(`${soloCount} added`, soloColor)
-          : node.context.setColor(`${soloCount} removed`, soloColor),
+          ? applyStyles(node, `${soloCount} added`, { color: soloColor })
+          : applyStyles(node, `${soloCount} removed`, { color: soloColor }),
       );
     }
     if (details.length) {
       skippedDiff += " ";
-      skippedDiff += node.context.setColor(`(`, node.color);
+      skippedDiff += applyStyles(node, `(`);
       skippedDiff += details.join(", ");
-      skippedDiff += node.context.setColor(`)`, node.color);
+      skippedDiff += applyStyles(node, `)`);
     }
     childrenDiff = appendChildDiff(
       skippedDiff,
@@ -4819,12 +4831,11 @@ const renderChildrenMultiline = (node, props) => {
     }
     if (separatorMarkerToAppend) {
       if (childNode.diffType === "solo") {
-        childDiff += node.context.setColor(
-          separatorMarkerToAppend,
-          childNode.color,
-        );
+        childDiff += applyStyles(node, separatorMarkerToAppend, {
+          color: childNode.color,
+        });
       } else {
-        childDiff += node.context.setColor(separatorMarkerToAppend, node.color);
+        childDiff += applyStyles(node, separatorMarkerToAppend);
       }
     }
     return childDiff;
@@ -4864,7 +4875,7 @@ const renderChildrenMultiline = (node, props) => {
     appendSkippedSection(previousChildIndexDisplayed, childrenKeys.length - 1);
   }
   let diff = "";
-  diff += node.context.setColor(startMarker, node.color);
+  diff += applyStyles(node, startMarker);
   if (hasNewLineAroundChildren) {
     diff += "\n";
   }
@@ -4873,7 +4884,7 @@ const renderChildrenMultiline = (node, props) => {
     diff += "\n";
     diff += "  ".repeat(getNodeDepth(node, props));
   }
-  diff += node.context.setColor(endMarker, node.color);
+  diff += applyStyles(node, endMarker);
   return diff;
 };
 const getNodeDepth = (node, props) => {

@@ -20,6 +20,10 @@ export const createAnsi = ({ supported }) => {
       if (!color) {
         return text;
       }
+      if (text.trim() === "") {
+        // cannot set color of blank chars
+        return text;
+      }
       return `${color}${text}${RESET}`;
     },
 
@@ -31,6 +35,10 @@ export const createAnsi = ({ supported }) => {
         return text;
       }
       if (!effect) {
+        return text;
+      }
+      // cannot add effect to empty string
+      if (text === "") {
         return text;
       }
       return `${effect}${text}${RESET}`;
