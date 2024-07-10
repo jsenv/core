@@ -33,9 +33,11 @@ _assert_ does nothing when comparison is successfull but throws an error when co
 
 ## Features
 
-### Helps to find the diff
+### Colors
 
-Colors and underlines helps to find the diff in a glimpse.
+In the following image colors helps to find the diff
+
+![img](./tests/snapshots/object/basic.svg)
 
 - grey: same in actual and expect
 - red: found in actual and is different
