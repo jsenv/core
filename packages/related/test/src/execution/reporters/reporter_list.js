@@ -863,7 +863,9 @@ const renderDetails = (data) => {
     const useNonGreyAnsiColor =
       typeof value === "string" && value.includes("\x1b");
     valueString += " ";
-    valueString += useNonGreyAnsiColor ? value : ANSI.color(value, ANSI.GREY);
+    valueString += useNonGreyAnsiColor
+      ? value
+      : ANSI.color(String(value), ANSI.GREY);
     details.push(valueString);
   }
   if (details.length === 0) {

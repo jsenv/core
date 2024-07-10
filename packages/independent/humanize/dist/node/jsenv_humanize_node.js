@@ -220,7 +220,7 @@ const createAnsi = ({ supported }) => {
       if (!color) {
         return text;
       }
-      if (text.trim() === "") {
+      if (typeof text === "string" && text.trim() === "") {
         // cannot set color of blank chars
         return text;
       }

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-bundling",
-  "version": "2.6.14",
+  "version": "2.6.15",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -24,10 +24,10 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/humanize": "1.2.1",
+    "@jsenv/humanize": "1.2.3",
     "@jsenv/url-meta": "8.4.2",
-    "@jsenv/urls": "2.2.9",
-    "@jsenv/sourcemap": "1.2.12",
+    "@jsenv/urls": "2.2.10",
+    "@jsenv/sourcemap": "1.2.13",
     "lightningcss": "1.25.1",
     "rollup": "4.18.0"
   },
