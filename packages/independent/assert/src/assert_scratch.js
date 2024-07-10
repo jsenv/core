@@ -111,6 +111,7 @@ const defaultOptions = {
 
 export const createAssert = ({
   colors = true,
+  underline = "trailing_space_multiline", // "all", "trailing_space_multiline"
   measureStringWidth = (string) => stripAnsi(string).length,
   tokenizeString = (string) => string.split(""),
   getWellKnownValuePath,
@@ -849,6 +850,7 @@ export const createAssert = ({
   };
   // for test
   assert.colors = colors;
+  assert.underline = underline;
   class AssertionError extends Error {}
   assert.AssertionError = AssertionError;
   assert.createAssertionError = (message) => {
@@ -3771,33 +3773,7 @@ const renderChar = (node, props) => {
     char = stringCharMapping.get(char);
   }
   // if last char or followed solely by empty char
-  return truncateAndApplyColor(char, node, props, {
-    underline: shouldUnderline(node),
-  });
-};
-const shouldUnderline = (node) => {
-  if (node.parent.endMarker) {
-    // must be inside a multiline
-    // when there is no end marker trailing spaces are hard to see
-    // that's why we want to underline them
-    // otherwise no need
-    return false;
-  }
-  const char = node.value;
-  if (char !== " ") {
-    return false;
-  }
-  if (node.diffType === "same") {
-    return false;
-  }
-  // all next char must be spaces
-  const charsAfterSpace = node.parent.value.slice(node.key + " ".length);
-  for (const charAfterSpace of charsAfterSpace) {
-    if (charAfterSpace !== " ") {
-      return false;
-    }
-  }
-  return true;
+  return truncateAndApplyColor(char, node, props);
 };
 const renderNumber = (node, props) => {
   const numberCompositionNode = node.childNodeMap.get("composition");
@@ -3814,7 +3790,7 @@ const renderSymbol = (node, props) => {
   const symbolConstructNode = node.childNodeMap.get("symbol_construct");
   return symbolConstructNode.render(props);
 };
-const truncateAndApplyColor = (valueDiff, node, props, { underline } = {}) => {
+const truncateAndApplyColor = (valueDiff, node, props) => {
   const { columnsRemaining } = props;
   if (columnsRemaining < 1) {
     return props.endSkippedMarkerDisabled
@@ -3846,7 +3822,7 @@ const truncateAndApplyColor = (valueDiff, node, props, { underline } = {}) => {
   if (startMarker) {
     diff += startMarker;
   }
-  if (underline) {
+  if (shouldUnderline(node)) {
     diff += ANSI.effect(valueDiff, ANSI.UNDERLINE);
   } else {
     diff += valueDiff;
@@ -3856,6 +3832,41 @@ const truncateAndApplyColor = (valueDiff, node, props, { underline } = {}) => {
   }
   diff = node.context.setColor(diff, node.color);
   return diff;
+};
+const shouldUnderline = (node) => {
+  const { underline } = node.context.assert;
+  if (!underline) {
+    return false;
+  }
+  if (underline === "all") {
+    return true;
+  }
+  // "trailing_space_multiline"
+  if (node.subgroup !== "char") {
+    return false;
+  }
+  if (node.parent.endMarker) {
+    // must be inside a multiline
+    // when there is no end marker trailing spaces are hard to see
+    // that's why we want to underline them
+    // otherwise no need
+    return false;
+  }
+  const char = node.value;
+  if (char !== " ") {
+    return false;
+  }
+  if (node.diffType === "same") {
+    return false;
+  }
+  // all next char must be spaces
+  const charsAfterSpace = node.parent.value.slice(node.key + " ".length);
+  for (const charAfterSpace of charsAfterSpace) {
+    if (charAfterSpace !== " ") {
+      return false;
+    }
+  }
+  return true;
 };
 
 const renderComposite = (node, props) => {

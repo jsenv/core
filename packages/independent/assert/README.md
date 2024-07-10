@@ -25,33 +25,34 @@ assert({
 
 ![img](./tests/snapshots/object/basic.svg)
 
+There is 200+ examples in [./tests/snapshots/](./tests/snapshots/README.md#Array)
+
 ## How it works
 
 _assert_ does nothing when comparison is successfull but throws an error when comparison is failing.
 
-```js
-import { assert } from "@jsenv/assert";
+## Features
 
+### Helps to find the diff
+
+Colors and underlines helps to find the diff in a glimpse.
+
+- grey: same in actual and expect
+- underlined: not the same in actual and expect
+- red: found in actual and is different
+- green: found in expect and is different
+- yellow: found only in actual or found only in expect
+
+### Deep understanding of JavaScript natives
+
+```js
 assert({
-  actual: 10,
-  expect: "10",
+  actual: "http://example.com",
+  expect: "http://example.com:8000",
 });
 ```
 
-![img](./tests/snapshots/number/10_and_10.svg)
-
-```js
-import { assert } from "@jsenv/assert";
-
-assert({
-  actual: new Error(),
-  expect: new TypeError(),
-});
-```
-
-![img](./tests/snapshots/prototype/error_vs_typeerror.svg)
-
-There is a TON of examples in [./tests/snapshots/](./tests/snapshots/)
+![img](./url/url_string_port.svg)
 
 ## Usage in Node.js
 
@@ -68,20 +69,9 @@ assert({
 });
 ```
 
-## Usage in a browser via CDN
+## Usage in a browser
 
-```html
-<script type="module">
-  import { assert } from "https://unpkg.com/@jsenv/assert@latest/src/main.js";
-
-  assert({
-    actual: true,
-    expect: false,
-  });
-</script>
-```
-
-## Usage in a browser via NPM
+### Using NPM
 
 ```console
 npm i --save-dev @jsenv/assert
@@ -90,6 +80,19 @@ npm i --save-dev @jsenv/assert
 ```html
 <script type="module">
   import { assert } from "@jsenv/assert";
+
+  assert({
+    actual: true,
+    expect: false,
+  });
+</script>
+```
+
+### Using CDN
+
+```html
+<script type="module">
+  import { assert } from "https://unpkg.com/@jsenv/assert@latest/src/main.js";
 
   assert({
     actual: true,
