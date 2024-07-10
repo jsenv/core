@@ -28,9 +28,6 @@ assert({
 ## How it works
 
 _assert_ does nothing when comparison is successfull but throws an error when comparison is failing.
-To illustrates when a comparison fails, check the list of examples below
-
-_Type failure:_
 
 ```js
 import { assert } from "@jsenv/assert";
@@ -43,8 +40,6 @@ assert({
 
 ![img](./tests/snapshots/number/10_and_10.svg)
 
-_Prototype failure:_
-
 ```js
 import { assert } from "@jsenv/assert";
 
@@ -55,6 +50,8 @@ assert({
 ```
 
 ![img](./tests/snapshots/prototype/error_vs_typeerror.svg)
+
+There is a TON of examples in [./tests/snapshots/](./tests/snapshots/)
 
 ## Usage in Node.js
 
