@@ -42,9 +42,9 @@ The message produced have colors that helps to see the diff.
 - green: found in expect and is different
 - yellow: found only in actual or found only in expect
 
-### Understand values
+### JavaScript aware
 
-Comparison understand all js native values and make the diff more redable
+Comparison understands JavaScript and makes the diff more redable
 
 ```js
 assert({
