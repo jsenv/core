@@ -22,14 +22,34 @@ const createAnsi = ({
     MAGENTA: "\x1b[35m",
     CYAN: "\x1b[36m",
     GREY: "\x1b[90m",
-    color: (text, ANSI_COLOR) => {
-      return ANSI.supported && ANSI_COLOR ? "".concat(ANSI_COLOR).concat(text).concat(RESET) : text;
+    color: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (text.trim() === "") {
+        // cannot set color of blank chars
+        return text;
+      }
+      return "".concat(color).concat(text).concat(RESET);
     },
     BOLD: "\x1b[1m",
     UNDERLINE: "\x1b[4m",
     STRIKE: "\x1b[9m",
-    effect: (text, ANSI_EFFECT) => {
-      return ANSI.supported && ANSI_EFFECT ? "".concat(ANSI_EFFECT).concat(text).concat(RESET) : text;
+    effect: (text, effect) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!effect) {
+        return text;
+      }
+      // cannot add effect to empty string
+      if (text === "") {
+        return text;
+      }
+      return "".concat(effect).concat(text).concat(RESET);
     }
   };
   return ANSI;

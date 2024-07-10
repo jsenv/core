@@ -44,7 +44,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@jsenv/humanize": "1.2.0",
+    "@jsenv/humanize": "1.2.1",
     "graphemer": "1.4.0",
     "string-width": "7.2.0"
   },
