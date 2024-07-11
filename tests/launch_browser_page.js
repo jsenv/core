@@ -1,4 +1,7 @@
-export const launchBrowserPage = async (browser) => {
+export const launchBrowserPage = async (
+  browser,
+  { pageErrorEffect = "throw" } = {},
+) => {
   const page = await browser.newPage({ ignoreHTTPSErrors: true });
   page.on("console", (message) => {
     if (message.type() === "error") {
@@ -6,7 +9,10 @@ export const launchBrowserPage = async (browser) => {
     }
   });
   page.on("pageerror", (error) => {
-    throw error;
+    if (pageErrorEffect === "throw") {
+      throw error;
+    }
+    console.error(error);
   });
   return page;
 };

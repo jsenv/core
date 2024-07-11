@@ -5,22 +5,9 @@
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
     <script
-      src="/@fs/mock/src/plugins/server_events/client/server_events_client.js"
-      jsenv-injected-by="jsenv:server_events_client_injection"
+      src="/@fs/mock/src/plugins/jsenv_scripts_injection/client/jsenv_scripts.js"
+      jsenv-injected-by="jsenv:jsenv_scripts_injection"
     ></script>
-    <script
-      jsenv-injected-by="jsenv:server_events_client_injection"
-      content-indented=""
-    >
-      window.__server_events__.setup({ logs: true });
-    </script>
-    <script type="module" jsenv-injected-by="jsenv:ribbon" content-indented="">
-      import { injectRibbon } from "/@fs/mock/src/plugins/ribbon/client/ribbon.js";
-
-      injectRibbon({
-        text: "DEV",
-      });
-    </script>
     <script
       type="module"
       jsenv-injected-by="jsenv:autoreload_client"
@@ -50,25 +37,6 @@
             src: "/main.js",
           },
         ],
-      });
-    </script>
-    <script
-      type="module"
-      jsenv-injected-by="jsenv:toolbar"
-      content-indented=""
-      jsenv-cooked-by="jsenv:html_inline_content_analysis"
-    >
-      import { injectToolbar } from "/@fs/mock/packages/related/plugin-toolbar/src/client/toolbar_injector.js";
-
-      injectToolbar({
-        toolbarUrl:
-          "/@fs/mock/packages/related/plugin-toolbar/src/client/toolbar.html",
-        logLevel: "warn",
-        theme: "dark",
-        opened: false,
-        autoreload: true,
-        animationsEnabled: true,
-        notificationsEnabled: true,
       });
     </script>
   </head>

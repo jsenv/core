@@ -5,22 +5,9 @@
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
     <script
-      src="/@fs/mock/src/plugins/server_events/client/server_events_client.js"
-      jsenv-injected-by="jsenv:server_events_client_injection"
+      src="/@fs/mock/src/plugins/jsenv_scripts_injection/client/jsenv_scripts.js"
+      jsenv-injected-by="jsenv:jsenv_scripts_injection"
     ></script>
-    <script
-      jsenv-injected-by="jsenv:server_events_client_injection"
-      content-indented=""
-    >
-      window.__server_events__.setup({ logs: true });
-    </script>
-    <script type="module" jsenv-injected-by="jsenv:ribbon" content-indented="">
-      import { injectRibbon } from "/@fs/mock/src/plugins/ribbon/client/ribbon.js";
-
-      injectRibbon({
-        text: "DEV",
-      });
-    </script>
     <script
       type="module"
       jsenv-injected-by="jsenv:autoreload_client"
@@ -52,25 +39,6 @@
         ],
       });
     </script>
-    <script
-      type="module"
-      jsenv-injected-by="jsenv:toolbar"
-      content-indented=""
-      jsenv-cooked-by="jsenv:html_inline_content_analysis"
-    >
-      import { injectToolbar } from "/@fs/mock/packages/related/plugin-toolbar/src/client/toolbar_injector.js";
-
-      injectToolbar({
-        toolbarUrl:
-          "/@fs/mock/packages/related/plugin-toolbar/src/client/toolbar.html",
-        logLevel: "warn",
-        theme: "dark",
-        opened: false,
-        autoreload: true,
-        animationsEnabled: true,
-        notificationsEnabled: true,
-      });
-    </script>
   </head>
 
   <body>
@@ -78,73 +46,7 @@
     <script
       type="module"
       content-indented=""
-      src="http://localhost:56318/main.js"
+      src="http://localhost:58756/main.js"
     ></script>
-
-    <jsenv-ribbon></jsenv-ribbon
-    ><iframe
-      tabindex="-1"
-      allowtransparency="true"
-      src="http://localhost:56318/@fs/mock/packages/related/plugin-toolbar/src/client/toolbar.html?logLevel=warn&amp;theme=dark&amp;autoreload=&amp;animationsEnabled=&amp;notificationsEnabled="
-      name="jsenv toolbar"
-      style="
-        position: fixed;
-        z-index: 1000;
-        bottom: 0px;
-        left: 0px;
-        width: 100%;
-        height: 0px;
-        visibility: hidden;
-        transition-property: height, visibility;
-        border: none;
-      "
-    ></iframe>
-    <div id="jsenv_toolbar_trigger" style="display: none">
-      <svg id="jsenv_toolbar_trigger_icon">
-        <use
-          xlink:href="http://localhost:56318/@fs/mock/packages/related/plugin-toolbar/src/client/ui/jsenv_logo.svg#jsenv_logo"
-        ></use>
-      </svg>
-      <style>
-        #jsenv_toolbar_trigger {
-          display: block;
-          overflow: hidden;
-          position: fixed;
-          z-index: 1000;
-          bottom: -32px;
-          right: 20px;
-          height: 40px;
-          width: 40px;
-          padding: 0;
-          margin: 0;
-          border-radius: 5px 5px 0 0;
-          border: 1px solid rgba(0, 0, 0, 0.33);
-          border-bottom: none;
-          box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
-          background: transparent;
-          text-align: center;
-          transition: 600ms;
-        }
-
-        #jsenv_toolbar_trigger:hover {
-          cursor: pointer;
-        }
-
-        #jsenv_toolbar_trigger[data-expanded] {
-          bottom: 0;
-        }
-
-        #jsenv_toolbar_trigger_icon {
-          width: 35px;
-          height: 35px;
-          opacity: 0;
-          transition: 600ms;
-        }
-
-        #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
-          opacity: 1;
-        }
-      </style>
-    </div>
   </body>
 </html>

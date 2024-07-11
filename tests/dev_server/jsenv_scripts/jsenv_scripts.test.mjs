@@ -3,16 +3,19 @@
  * - See the effect of using jsenv dev server on source files
  */
 
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import prettier from "prettier";
 import { chromium } from "playwright";
-import { writeFileSync } from "@jsenv/filesystem";
+import { writeFileSync, ensureEmptyDirectory } from "@jsenv/filesystem";
 
 import { startDevServer } from "@jsenv/core";
-import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
-import { readFileSync } from "node:fs";
+import { jsenvScriptsFileUrl } from "@jsenv/core/src/plugins/jsenv_scripts_injection/jsenv_plugin_jsenv_scripts_injection.js";
+// import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
+import { launchBrowserPage } from "../../launch_browser_page.js";
 
 const debug = false;
+await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
 const devServer = await startDevServer({
   sourcemaps: "none",
   logLevel: "off",
@@ -21,13 +24,15 @@ const devServer = await startDevServer({
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
-  plugins: [jsenvPluginToolbar()],
+  // plugins: [jsenvPluginToolbar()],
+  clientAutoreload: true,
+  ribbon: false,
 });
 const jsenvCoreDirectoryUrl = new URL("../../../", import.meta.url);
 const jsenvCoreDirectoryPath = fileURLToPath(jsenvCoreDirectoryUrl);
 
 const browser = await chromium.launch({ headless: !debug });
-const page = await browser.newPage({ ignoreHTTPSErrors: true });
+const page = await launchBrowserPage(browser, { pageErrorEffect: "log" });
 
 const writeDevServerOutputFile = async (relativeUrl) => {
   const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
@@ -57,6 +62,7 @@ try {
   await page.goto(`${devServer.origin}/main.html`);
   await writeDevServerOutputFile("./main.html");
   await writeDevServerOutputFile("./main.js");
+  await writeDevServerOutputFile(`./@fs/${fileURLToPath(jsenvScriptsFileUrl)}`);
   const html = await page.content();
   const htmlFileUrl = new URL(
     `./output/main_after_execution.html`,

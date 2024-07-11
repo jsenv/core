@@ -13,20 +13,18 @@ export const jsenvPluginServerEventsClientInjection = ({ logs = true }) => {
     name: "jsenv:server_events_client_injection",
     appliesDuring: "*",
     transformUrlContent: {
-      html: () => {
-        return {
-          scriptInjections: [
-            {
-              src: serverEventsClientFileUrl,
-              setup: {
-                name: "window.__server_events__.setup",
-                param: {
-                  logs,
-                },
-              },
+      html: (urlInfo) => {
+        // "unshift" so that event source client connection can be put as early as possible in html
+        urlInfo.scriptInjections.unshift({
+          src: serverEventsClientFileUrl,
+          setup: {
+            name: "window.__server_events__.setup",
+            param: {
+              logs,
             },
-          ],
-        };
+          },
+          pluginName: "jsenv:server_events_client_injection",
+        });
       },
     },
   };

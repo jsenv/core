@@ -370,7 +370,7 @@ const returnValueAssertions = [
             });
           }
           if (content === undefined) {
-            return undefined;
+            return null;
           }
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {

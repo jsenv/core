@@ -11,21 +11,15 @@ import {
   createHtmlNode,
 } from "@jsenv/ast";
 
-export const jsenvPluginJsenvScriptsInjection = () => {
-  const jsenvScriptsFileUrl = new URL("./jsenv_scripts.js", import.meta.url);
+export const jsenvScriptsFileUrl = new URL(
+  "./client/jsenv_scripts.js",
+  import.meta.url,
+);
 
+export const jsenvPluginJsenvScriptsInjection = () => {
   return {
     name: "jsenv:jsenv_scripts_injection",
     appliesDuring: "*",
-    fetchUrlContent: {
-      js_classic: (urlInfo) => {
-        if (urlInfo.url !== jsenvScriptsFileUrl.href) {
-          return null;
-        }
-        const { scriptInjections } = urlInfo;
-        return generateJsenvScriptsContent(scriptInjections);
-      },
-    },
     transformUrlContent: {
       html: (urlInfo) => {
         const { scriptInjections } = urlInfo;
@@ -55,31 +49,70 @@ export const jsenvPluginJsenvScriptsInjection = () => {
           content: htmlModified,
         };
       },
+      // c'est un peu risqué d'attendre que le browser fetch parce qu'alors
+      // on peut avoir perdu firstReference.ownerUrlInfo
+      // (rien ne garanti que le browser fera la requete via le HTML)
+      // mais on pour l'instant ok
+      js_classic: (urlInfo) => {
+        if (urlInfo.url !== jsenvScriptsFileUrl.href) {
+          return null;
+        }
+        const { scriptInjections } = urlInfo.firstReference.ownerUrlInfo;
+        return generateJsenvScriptsContent(urlInfo, scriptInjections);
+      },
     },
   };
 };
 
-const generateJsenvScriptsContent = async (scriptInjections) => {
-  // TODO: generate jsenv_client.js dynamically
-  // with the result of all the scripts
-  // ideally we should cook subfiles
-  // we should also use rollup to bundle
-  let content = "";
-  let setupContent = "";
+const generateJsenvScriptsContent = async (urlInfo, scriptInjections) => {
+  const scriptReferences = [];
   for (const scriptInjection of scriptInjections) {
-    content += "yep"; // TODO: the corresponding script content
+    const scriptReference = urlInfo.dependencies.inject({
+      type: "script",
+      subtype: "js_classic",
+      expectedType: "js_classic",
+      specifier: scriptInjection.src,
+    });
+    scriptReferences.push(scriptReference);
+  }
+  await Promise.all(
+    scriptReferences.map(async (scriptReference) => {
+      await scriptReference.urlInfo.cook();
+    }),
+  );
+
+  let setupContent = "";
+  let content = "";
+  let i = 0;
+  while (i < scriptInjections.length) {
+    const scriptInjection = scriptInjections[i];
+    const scriptReference = scriptReferences[i];
+    content += `// injected by "${scriptInjection.pluginName}"`;
+    content += "\n";
+    content += `(function () {`;
+    content += "\n";
+    content += scriptReference.urlInfo.content;
+    content += "\n";
+    content += `})();`;
+    content += "\n\n";
     const { setup } = scriptInjection;
     if (setup) {
       const setupGlobalName = setup.name;
       const setupParamSource = stringifyParams(setup.param, "  ");
       const inlineJs = `${setupGlobalName}({${setupParamSource}})`;
       setupContent += inlineJs;
+      setupContent += "\n\n";
     }
+    i++;
   }
-
   let finalContent = "";
   finalContent += content;
-  finalContent += setupContent;
+  if (setupContent) {
+    finalContent += "// Setup";
+    finalContent += "\n";
+    finalContent += setupContent;
+  }
+
   return finalContent;
 };
 
