@@ -1,6 +1,6 @@
 import { value } from "./a.js";
 
-document.body.innerHTML = value;
+document.querySelector("#app").innerHTML = value;
 
 if (import.meta.hot) {
   import.meta.hot.accept();

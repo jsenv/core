@@ -2,7 +2,7 @@ import { createImportMetaHot } from "/@fs/mock/src/plugins/import_meta_hot/clien
 import.meta.hot = createImportMetaHot(import.meta.url);
 import { value } from "/a.js";
 
-document.body.innerHTML = value;
+document.querySelector("#app").innerHTML = value;
 
 if (import.meta.hot) {
   import.meta.hot.accept();
