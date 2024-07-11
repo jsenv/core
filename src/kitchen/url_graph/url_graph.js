@@ -362,6 +362,7 @@ const createUrlInfo = (url, context) => {
         return;
       }
       visitedSet.add(urlInfo);
+      urlInfo.scriptInjections = [];
       urlInfo.modifiedTimestamp = modifiedTimestamp;
       urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
       for (const referenceToOther of urlInfo.referenceToOthersSet) {
@@ -448,6 +449,11 @@ ${urlInfo.url}`,
       await contentTransformationCallback();
     }
     contentTransformationCallbackSet.clear();
+  };
+
+  urlInfo.scriptInjections = [];
+  urlInfo.addScriptInjection = (scriptInjection) => {
+    urlInfo.scriptInjections.push(scriptInjection);
   };
 
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here

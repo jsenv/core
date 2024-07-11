@@ -1,10 +1,4 @@
 import { performance } from "node:perf_hooks";
-import {
-  parseHtml,
-  stringifyHtmlAst,
-  injectHtmlNodeAsEarlyAsPossible,
-  createHtmlNode,
-} from "@jsenv/ast";
 
 const HOOK_NAMES = [
   "init",
@@ -367,10 +361,16 @@ const returnValueAssertions = [
         if (urlInfo.url.startsWith("ignore:")) {
           return undefined;
         }
-        if (urlInfo.type === "html") {
-          const { scriptInjections } = valueReturned;
-          if (scriptInjections) {
-            return applyScriptInjections(urlInfo, scriptInjections, hook);
+        const { scriptInjections } = valueReturned;
+        if (scriptInjections) {
+          for (const scriptInjection of scriptInjections) {
+            urlInfo.addScriptInjection({
+              pluginName: hook.plugin.name,
+              ...scriptInjection,
+            });
+          }
+          if (content === undefined) {
+            return undefined;
           }
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
@@ -386,60 +386,3 @@ const returnValueAssertions = [
     },
   },
 ];
-
-const applyScriptInjections = (htmlUrlInfo, scriptInjections, hook) => {
-  const htmlAst = parseHtml({
-    html: htmlUrlInfo.content,
-    url: htmlUrlInfo.url,
-  });
-
-  scriptInjections.reverse().forEach((scriptInjection) => {
-    const { setup } = scriptInjection;
-    if (setup) {
-      const setupGlobalName = setup.name;
-      const setupParamSource = stringifyParams(setup.param, "  ");
-      const inlineJs = `${setupGlobalName}({${setupParamSource}})`;
-      injectHtmlNodeAsEarlyAsPossible(
-        htmlAst,
-        createHtmlNode({
-          tagName: "script",
-          textContent: inlineJs,
-        }),
-        hook.plugin.name,
-      );
-    }
-    const scriptReference = htmlUrlInfo.dependencies.inject({
-      type: "script",
-      subtype: scriptInjection.type === "module" ? "js_module" : "js_classic",
-      expectedType:
-        scriptInjection.type === "module" ? "js_module" : "js_classic",
-      specifier: scriptInjection.src,
-    });
-    injectHtmlNodeAsEarlyAsPossible(
-      htmlAst,
-      createHtmlNode({
-        tagName: "script",
-        ...(scriptInjection.type === "module" ? { type: "module" } : {}),
-        src: scriptReference.generatedSpecifier,
-      }),
-      hook.plugin.name,
-    );
-  });
-  const htmlModified = stringifyHtmlAst(htmlAst);
-  return {
-    content: htmlModified,
-  };
-};
-
-const stringifyParams = (params, prefix = "") => {
-  const source = JSON.stringify(params, null, prefix);
-  if (prefix.length) {
-    // remove leading "{\n"
-    // remove leading prefix
-    // remove trailing "\n}"
-    return source.slice(2 + prefix.length, -2);
-  }
-  // remove leading "{"
-  // remove trailing "}"
-  return source.slice(1, -1);
-};
