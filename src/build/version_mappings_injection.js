@@ -74,7 +74,7 @@ export const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
     createHtmlNode({
       tagName: "script",
       type: "importmap",
-      textContent: importmapMinification
+      children: importmapMinification
         ? JSON.stringify({ imports: versionMappings })
         : JSON.stringify({ imports: versionMappings }, null, "  "),
     }),

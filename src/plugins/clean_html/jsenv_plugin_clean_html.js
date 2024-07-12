@@ -10,9 +10,10 @@ export const jsenvPluginCleanHTML = () => {
           html: urlInfo.content,
           url: urlInfo.url,
         });
-        return stringifyHtmlAst(htmlAst, {
+        const htmlClean = stringifyHtmlAst(htmlAst, {
           cleanupPositionAttributes: true,
         });
+        return htmlClean;
       },
     },
   };

@@ -17,6 +17,7 @@ git_ignored/
 **/tests/**/**syntax_error.js
 **/tests/**/js_module_inline_syntax_error/main.html
 **/tests/**/snapshots/
+**/tests/**/output/
 
 /**/*.nomodule.js
 /**/*.jsx

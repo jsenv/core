@@ -9,8 +9,7 @@ import {
   applyBabelPlugins,
   parseHtml,
   stringifyHtmlAst,
-  injectHtmlNodeAsEarlyAsPossible,
-  createHtmlNode,
+  injectJsenvScript,
 } from "@jsenv/ast";
 
 export const jsenvPluginPreact = ({
@@ -88,15 +87,11 @@ export const jsenvPluginPreact = ({
           expectedType: "js_module",
           specifier: urlInfo.context.dev ? "preact/debug" : "preact/devtools",
         });
-        injectHtmlNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            textContent: `import ${preactDevtoolsReference.generatedSpecifier}`,
-          }),
-          "jsenv:preact",
-        );
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: preactDevtoolsReference.generatedSpecifier,
+          pluginName: "jsenv:preact",
+        });
         const htmlModified = stringifyHtmlAst(htmlAst);
         return { content: htmlModified };
       },

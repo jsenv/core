@@ -290,12 +290,16 @@ ${extraUrls.join("\n")}`);
       }
       // content
       {
-        for (const relativeUrl of nextRelativeUrls) {
+        for (const relativeUrl of relativeUrls) {
           const snapshot = directoryContentSnapshot[relativeUrl];
           const nextSnapshot = nextDirectoryContentSnapshot[relativeUrl];
-          snapshot.compare(nextSnapshot, {
-            throwWhenDiff: relativeUrl.endsWith(".gif") ? false : throwWhenDiff,
-          });
+          if (nextSnapshot) {
+            snapshot.compare(nextSnapshot, {
+              throwWhenDiff: relativeUrl.endsWith(".gif")
+                ? false
+                : throwWhenDiff,
+            });
+          }
         }
       }
     },

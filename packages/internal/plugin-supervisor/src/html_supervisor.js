@@ -52,8 +52,7 @@ import {
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
   analyzeScriptNode,
-  injectHtmlNodeAsEarlyAsPossible,
-  createHtmlNode,
+  injectJsenvScript,
   getHtmlNodePosition,
   getHtmlNodeText,
   setHtmlNodeText,
@@ -224,33 +223,19 @@ export const injectSupervisorIntoHTML = async (
   }
   // 2. Inject supervisor js file + setup call
   {
-    const setupParamsSource = stringifyParams(
-      {
-        ...supervisorOptions,
-        serverIsJsenvDevServer: webServer.isJsenvDevServer,
-        rootDirectoryUrl: webServer.rootDirectoryUrl,
-        scriptInfos,
+    injectJsenvScript(htmlAst, {
+      src: supervisorScriptSrc,
+      initCall: {
+        callee: "window.__supervisor__.setup",
+        params: {
+          ...supervisorOptions,
+          serverIsJsenvDevServer: webServer.isJsenvDevServer,
+          rootDirectoryUrl: webServer.rootDirectoryUrl,
+          scriptInfos,
+        },
       },
-      "  ",
-    );
-    injectHtmlNodeAsEarlyAsPossible(
-      htmlAst,
-      createHtmlNode({
-        tagName: "script",
-        textContent: `window.__supervisor__.setup({
-  ${setupParamsSource}
-});`,
-      }),
-      "jsenv:supervisor",
-    );
-    injectHtmlNodeAsEarlyAsPossible(
-      htmlAst,
-      createHtmlNode({
-        tagName: "script",
-        src: supervisorScriptSrc,
-      }),
-      "jsenv:supervisor",
-    );
+      pluginName: "jsenv:supervisor",
+    });
   }
   // 3. Perform actions (transforming inline script content) and html mutations
   if (actions.length > 0) {
@@ -261,19 +246,6 @@ export const injectSupervisorIntoHTML = async (
   return {
     content: htmlModified,
   };
-};
-
-const stringifyParams = (params, prefix = "") => {
-  const source = JSON.stringify(params, null, prefix);
-  if (prefix.length) {
-    // remove leading "{\n"
-    // remove leading prefix
-    // remove trailing "\n}"
-    return source.slice(2 + prefix.length, -2);
-  }
-  // remove leading "{"
-  // remove trailing "}"
-  return source.slice(1, -1);
 };
 
 const generateCodeToSuperviseScriptWithSrc = ({ type, src }) => {

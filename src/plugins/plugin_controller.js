@@ -1,10 +1,4 @@
 import { performance } from "node:perf_hooks";
-import {
-  parseHtml,
-  stringifyHtmlAst,
-  injectHtmlNodeAsEarlyAsPossible,
-  createHtmlNode,
-} from "@jsenv/ast";
 
 const HOOK_NAMES = [
   "init",
@@ -81,7 +75,8 @@ export const createPluginController = (
         key === "name" ||
         key === "appliesDuring" ||
         key === "init" ||
-        key === "serverEvents"
+        key === "serverEvents" ||
+        key === "mustStayFirst"
       ) {
         continue;
       }
@@ -100,7 +95,15 @@ export const createPluginController = (
           value: hookValue,
         };
         if (position === "start") {
-          group.unshift(hook);
+          let i = 0;
+          while (i < group.length) {
+            const before = group[i];
+            if (!before.plugin.mustStayFirst) {
+              break;
+            }
+            i++;
+          }
+          group.splice(i, 0, hook);
         } else {
           group.push(hook);
         }
@@ -225,11 +228,11 @@ export const createPluginController = (
       }
     }
   };
-  const callAsyncHooks = async (hookName, info, callback) => {
+  const callAsyncHooks = async (hookName, info, callback, options) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
       for (const hook of hooks) {
-        const returnValue = await callAsyncHook(hook, info);
+        const returnValue = await callAsyncHook(hook, info, options);
         if (returnValue && callback) {
           await callback(returnValue, hook.plugin);
         }
@@ -249,7 +252,7 @@ export const createPluginController = (
     }
     return null;
   };
-  const callAsyncHooksUntil = (hookName, info) => {
+  const callAsyncHooksUntil = async (hookName, info, options) => {
     const hooks = hookGroups[hookName];
     if (!hooks) {
       return null;
@@ -257,22 +260,23 @@ export const createPluginController = (
     if (hooks.length === 0) {
       return null;
     }
-    return new Promise((resolve, reject) => {
-      const visit = (index) => {
-        if (index >= hooks.length) {
-          return resolve();
-        }
-        const hook = hooks[index];
-        const returnValue = callAsyncHook(hook, info);
-        return Promise.resolve(returnValue).then((output) => {
-          if (output) {
-            return resolve(output);
-          }
-          return visit(index + 1);
-        }, reject);
-      };
-      visit(0);
-    });
+    let result;
+    let index = 0;
+    const visit = async () => {
+      if (index >= hooks.length) {
+        return;
+      }
+      const hook = hooks[index];
+      const returnValue = await callAsyncHook(hook, info, options);
+      if (returnValue) {
+        result = returnValue;
+        return;
+      }
+      index++;
+      await visit();
+    };
+    await visit(0);
+    return result;
   };
 
   return {
@@ -320,11 +324,7 @@ const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
     if (!returnValueAssertion.appliesTo.includes(hook.name)) {
       continue;
     }
-    const assertionResult = returnValueAssertion.assertion(
-      returnValue,
-      info,
-      hook,
-    );
+    const assertionResult = returnValueAssertion.assertion(returnValue, info);
     if (assertionResult !== undefined) {
       // normalization
       returnValue = assertionResult;
@@ -358,7 +358,7 @@ const returnValueAssertions = [
       "finalizeUrlContent",
       "optimizeUrlContent",
     ],
-    assertion: (valueReturned, urlInfo, hook) => {
+    assertion: (valueReturned, urlInfo) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
         return { content: valueReturned };
       }
@@ -366,12 +366,6 @@ const returnValueAssertions = [
         const { content, body } = valueReturned;
         if (urlInfo.url.startsWith("ignore:")) {
           return undefined;
-        }
-        if (urlInfo.type === "html") {
-          const { scriptInjections } = valueReturned;
-          if (scriptInjections) {
-            return applyScriptInjections(urlInfo, scriptInjections, hook);
-          }
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
           throw new Error(
@@ -386,60 +380,3 @@ const returnValueAssertions = [
     },
   },
 ];
-
-const applyScriptInjections = (htmlUrlInfo, scriptInjections, hook) => {
-  const htmlAst = parseHtml({
-    html: htmlUrlInfo.content,
-    url: htmlUrlInfo.url,
-  });
-
-  scriptInjections.reverse().forEach((scriptInjection) => {
-    const { setup } = scriptInjection;
-    if (setup) {
-      const setupGlobalName = setup.name;
-      const setupParamSource = stringifyParams(setup.param, "  ");
-      const inlineJs = `${setupGlobalName}({${setupParamSource}})`;
-      injectHtmlNodeAsEarlyAsPossible(
-        htmlAst,
-        createHtmlNode({
-          tagName: "script",
-          textContent: inlineJs,
-        }),
-        hook.plugin.name,
-      );
-    }
-    const scriptReference = htmlUrlInfo.dependencies.inject({
-      type: "script",
-      subtype: scriptInjection.type === "module" ? "js_module" : "js_classic",
-      expectedType:
-        scriptInjection.type === "module" ? "js_module" : "js_classic",
-      specifier: scriptInjection.src,
-    });
-    injectHtmlNodeAsEarlyAsPossible(
-      htmlAst,
-      createHtmlNode({
-        tagName: "script",
-        ...(scriptInjection.type === "module" ? { type: "module" } : {}),
-        src: scriptReference.generatedSpecifier,
-      }),
-      hook.plugin.name,
-    );
-  });
-  const htmlModified = stringifyHtmlAst(htmlAst);
-  return {
-    content: htmlModified,
-  };
-};
-
-const stringifyParams = (params, prefix = "") => {
-  const source = JSON.stringify(params, null, prefix);
-  if (prefix.length) {
-    // remove leading "{\n"
-    // remove leading prefix
-    // remove trailing "\n}"
-    return source.slice(2 + prefix.length, -2);
-  }
-  // remove leading "{"
-  // remove trailing "}"
-  return source.slice(1, -1);
-};

@@ -13,7 +13,7 @@ import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, parseJsUrls, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getHtmlNodeAttributePosition, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, getUrlForContentInsideJs, analyzeLinkNode, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, parseJsUrls, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getHtmlNodeAttributePosition, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
@@ -11441,10 +11441,10 @@ const prependJsClassicInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
     htmlAst,
     createHtmlNode({
       tagName: "script",
-      textContent: urlInfoToPrepend.content,
       ...(urlInfoToPrepend.url
         ? { "inlined-from-src": urlInfoToPrepend.url }
         : {}),
+      children: urlInfoToPrepend.content,
     }),
     "jsenv:core",
   );
@@ -12747,7 +12747,8 @@ const createPluginController = (
         key === "name" ||
         key === "appliesDuring" ||
         key === "init" ||
-        key === "serverEvents"
+        key === "serverEvents" ||
+        key === "mustStayFirst"
       ) {
         continue;
       }
@@ -12766,7 +12767,15 @@ const createPluginController = (
           value: hookValue,
         };
         if (position === "start") {
-          group.unshift(hook);
+          let i = 0;
+          while (i < group.length) {
+            const before = group[i];
+            if (!before.plugin.mustStayFirst) {
+              break;
+            }
+            i++;
+          }
+          group.splice(i, 0, hook);
         } else {
           group.push(hook);
         }
@@ -12891,7 +12900,7 @@ const createPluginController = (
       }
     }
   };
-  const callAsyncHooks = async (hookName, info, callback) => {
+  const callAsyncHooks = async (hookName, info, callback, options) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
       for (const hook of hooks) {
@@ -12915,7 +12924,7 @@ const createPluginController = (
     }
     return null;
   };
-  const callAsyncHooksUntil = (hookName, info) => {
+  const callAsyncHooksUntil = async (hookName, info, options) => {
     const hooks = hookGroups[hookName];
     if (!hooks) {
       return null;
@@ -12923,22 +12932,23 @@ const createPluginController = (
     if (hooks.length === 0) {
       return null;
     }
-    return new Promise((resolve, reject) => {
-      const visit = (index) => {
-        if (index >= hooks.length) {
-          return resolve();
-        }
-        const hook = hooks[index];
-        const returnValue = callAsyncHook(hook, info);
-        return Promise.resolve(returnValue).then((output) => {
-          if (output) {
-            return resolve(output);
-          }
-          return visit(index + 1);
-        }, reject);
-      };
-      visit(0);
-    });
+    let result;
+    let index = 0;
+    const visit = async () => {
+      if (index >= hooks.length) {
+        return;
+      }
+      const hook = hooks[index];
+      const returnValue = await callAsyncHook(hook, info);
+      if (returnValue) {
+        result = returnValue;
+        return;
+      }
+      index++;
+      await visit();
+    };
+    await visit();
+    return result;
   };
 
   return {
@@ -12986,11 +12996,7 @@ const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
     if (!returnValueAssertion.appliesTo.includes(hook.name)) {
       continue;
     }
-    const assertionResult = returnValueAssertion.assertion(
-      returnValue,
-      info,
-      hook,
-    );
+    const assertionResult = returnValueAssertion.assertion(returnValue, info);
     if (assertionResult !== undefined) {
       // normalization
       returnValue = assertionResult;
@@ -13024,7 +13030,7 @@ const returnValueAssertions = [
       "finalizeUrlContent",
       "optimizeUrlContent",
     ],
-    assertion: (valueReturned, urlInfo, hook) => {
+    assertion: (valueReturned, urlInfo) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
         return { content: valueReturned };
       }
@@ -13032,12 +13038,6 @@ const returnValueAssertions = [
         const { content, body } = valueReturned;
         if (urlInfo.url.startsWith("ignore:")) {
           return undefined;
-        }
-        if (urlInfo.type === "html") {
-          const { scriptInjections } = valueReturned;
-          if (scriptInjections) {
-            return applyScriptInjections(urlInfo, scriptInjections, hook);
-          }
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
           throw new Error(
@@ -13053,61 +13053,92 @@ const returnValueAssertions = [
   },
 ];
 
-const applyScriptInjections = (htmlUrlInfo, scriptInjections, hook) => {
-  const htmlAst = parseHtml({
-    html: htmlUrlInfo.content,
-    url: htmlUrlInfo.url,
-  });
+const jsenvPluginHtmlSyntaxErrorFallback = () => {
+  const htmlSyntaxErrorFileUrl = new URL(
+    "./html/html_syntax_error.html",
+    import.meta.url,
+  );
 
-  scriptInjections.reverse().forEach((scriptInjection) => {
-    const { setup } = scriptInjection;
-    if (setup) {
-      const setupGlobalName = setup.name;
-      const setupParamSource = stringifyParams$1(setup.param, "  ");
-      const inlineJs = `${setupGlobalName}({${setupParamSource}})`;
-      injectHtmlNodeAsEarlyAsPossible(
-        htmlAst,
-        createHtmlNode({
-          tagName: "script",
-          textContent: inlineJs,
-        }),
-        hook.plugin.name,
-      );
-    }
-    const scriptReference = htmlUrlInfo.dependencies.inject({
-      type: "script",
-      subtype: scriptInjection.type === "module" ? "js_module" : "js_classic",
-      expectedType:
-        scriptInjection.type === "module" ? "js_module" : "js_classic",
-      specifier: scriptInjection.src,
-    });
-    injectHtmlNodeAsEarlyAsPossible(
-      htmlAst,
-      createHtmlNode({
-        tagName: "script",
-        ...(scriptInjection.type === "module" ? { type: "module" } : {}),
-        src: scriptReference.generatedSpecifier,
-      }),
-      hook.plugin.name,
-    );
-  });
-  const htmlModified = stringifyHtmlAst(htmlAst);
   return {
-    content: htmlModified,
+    mustStayFirst: true,
+    name: "jsenv:html_syntax_error_fallback",
+    appliesDuring: "dev",
+    transformUrlContent: {
+      html: (urlInfo) => {
+        try {
+          parseHtml({
+            html: urlInfo.content,
+            url: urlInfo.url,
+          });
+          return null;
+        } catch (e) {
+          if (e.code !== "PARSE_ERROR") {
+            return null;
+          }
+          const line = e.line;
+          const column = e.column;
+          const htmlErrorContentFrame = generateContentFrame({
+            content: urlInfo.content,
+            line,
+            column,
+          });
+          urlInfo.kitchen.context.logger
+            .error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
+${e.reasonCode}
+${urlInfo.url}:${line}:${column}
+${htmlErrorContentFrame}`);
+          const html = generateHtmlForSyntaxError(e, {
+            htmlUrl: urlInfo.url,
+            rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+            htmlErrorContentFrame,
+            htmlSyntaxErrorFileUrl,
+          });
+          return html;
+        }
+      },
+    },
   };
 };
 
-const stringifyParams$1 = (params, prefix = "") => {
-  const source = JSON.stringify(params, null, prefix);
-  if (prefix.length) {
-    // remove leading "{\n"
-    // remove leading prefix
-    // remove trailing "\n}"
-    return source.slice(2 + prefix.length, -2);
-  }
-  // remove leading "{"
-  // remove trailing "}"
-  return source.slice(1, -1);
+const generateHtmlForSyntaxError = (
+  htmlSyntaxError,
+  { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame, htmlSyntaxErrorFileUrl },
+) => {
+  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
+  const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
+  const { line, column } = htmlSyntaxError;
+  const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
+  const replacers = {
+    fileRelativeUrl: htmlRelativeUrl,
+    reasonCode: htmlSyntaxError.reasonCode,
+    errorLinkHref: `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
+      urlWithLineAndColumn,
+    )}')`,
+    errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
+    syntaxError: escapeHtml(htmlErrorContentFrame),
+  };
+  const html = replacePlaceholders$2(htmlForSyntaxError, replacers);
+  return html;
+};
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+const replacePlaceholders$2 = (html, replacers) => {
+  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
 };
 
 const defineGettersOnPropertiesDerivedFromOriginalContent = (
@@ -14092,6 +14123,7 @@ const createKitchen = ({
     initialPluginsMeta,
   );
   kitchen.pluginController = pluginController;
+  pluginController.pushPlugin(jsenvPluginHtmlSyntaxErrorFallback());
   plugins.forEach((pluginEntry) => {
     pluginController.pushPlugin(pluginEntry);
   });
@@ -15821,11 +15853,6 @@ const applyDefaultExtension = ({ url, importer, defaultExtension }) => {
   return url
 };
 
-const htmlSyntaxErrorFileUrl = new URL(
-  "./html/html_syntax_error.html",
-  import.meta.url,
-);
-
 const jsenvPluginHtmlReferenceAnalysis = ({
   inlineContent,
   inlineConvertedScript,
@@ -15933,41 +15960,10 @@ const jsenvPluginHtmlReferenceAnalysis = ({
       },
       html: async (urlInfo) => {
         let importmapFound = false;
-
-        let htmlAst;
-        try {
-          htmlAst = parseHtml({
-            html: urlInfo.content,
-            url: urlInfo.url,
-          });
-        } catch (e) {
-          if (e.code === "PARSE_ERROR") {
-            const line = e.line;
-            const column = e.column;
-            const htmlErrorContentFrame = generateContentFrame({
-              content: urlInfo.content,
-              line,
-              column,
-            });
-            urlInfo.kitchen.context.logger
-              .error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
-${e.reasonCode}
-${urlInfo.url}:${line}:${column}
-${htmlErrorContentFrame}`);
-            const html = generateHtmlForSyntaxError(e, {
-              htmlUrl: urlInfo.url,
-              rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
-              htmlErrorContentFrame,
-            });
-            htmlAst = parseHtml({
-              html,
-              url: htmlSyntaxErrorFileUrl,
-            });
-          } else {
-            throw e;
-          }
-        }
-
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
         const importmapLoaded = startLoadingImportmap(urlInfo);
 
         try {
@@ -16417,47 +16413,6 @@ const visitNonIgnoredHtmlNode = (htmlAst, visitors) => {
     };
   }
   visitHtmlNodes(htmlAst, visitorsInstrumented);
-};
-
-const generateHtmlForSyntaxError = (
-  htmlSyntaxError,
-  { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame },
-) => {
-  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
-  const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
-  const { line, column } = htmlSyntaxError;
-  const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
-  const replacers = {
-    fileRelativeUrl: htmlRelativeUrl,
-    reasonCode: htmlSyntaxError.reasonCode,
-    errorLinkHref: `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
-      urlWithLineAndColumn,
-    )}')`,
-    errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
-    syntaxError: escapeHtml(htmlErrorContentFrame),
-  };
-  const html = replacePlaceholders$2(htmlForSyntaxError, replacers);
-  return html;
-};
-const escapeHtml = (string) => {
-  return string
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
-const replacePlaceholders$2 = (html, replacers) => {
-  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
-    const replacer = replacers[name];
-    if (replacer === undefined) {
-      return match;
-    }
-    if (typeof replacer === "function") {
-      return replacer();
-    }
-    return replacer;
-  });
 };
 
 const crossOriginCompatibleTagNames = ["script", "link", "img", "source"];
@@ -19709,29 +19664,22 @@ const jsenvPluginAutoreloadClient = () => {
           url: htmlUrlInfo.url,
         });
         const autoreloadClientReference = htmlUrlInfo.dependencies.inject({
-          type: "script",
+          type: "js_import",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl,
         });
-        const paramsJson = JSON.stringify(
-          {
-            mainFilePath: `/${htmlUrlInfo.kitchen.context.mainFilePath}`,
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: autoreloadClientReference.generatedSpecifier,
+          initCall: {
+            callee: "initAutoreload",
+            params: {
+              mainFilePath: `/${htmlUrlInfo.kitchen.context.mainFilePath}`,
+            },
           },
-          null,
-          "  ",
-        );
-        injectHtmlNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            textContent: `import { initAutoreload } from "${autoreloadClientReference.generatedSpecifier}";
-
-initAutoreload(${paramsJson});`,
-          }),
-          "jsenv:autoreload_client",
-        );
+          pluginName: "jsenv:autoreload_client",
+        });
         const htmlModified = stringifyHtmlAst(htmlAst);
         return {
           content: htmlModified,
@@ -20161,27 +20109,22 @@ const jsenvPluginRibbon = ({
           url: urlInfo.url,
         });
         const ribbonClientFileReference = urlInfo.dependencies.inject({
-          type: "script",
+          type: "js_import",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: ribbonClientFileUrl.href,
         });
-        const paramsJson = JSON.stringify(
-          { text: urlInfo.context.dev ? "DEV" : "BUILD" },
-          null,
-          "  ",
-        );
-        injectHtmlNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            textContent: `import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}";
-
-injectRibbon(${paramsJson});`,
-          }),
-          "jsenv:ribbon",
-        );
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: ribbonClientFileReference.generatedSpecifier,
+          initCall: {
+            callee: "injectRibbon",
+            params: {
+              text: urlInfo.context.dev ? "DEV" : "BUILD",
+            },
+          },
+          pluginName: "jsenv:ribbon",
+        });
         return stringifyHtmlAst(htmlAst);
       },
     },
@@ -20198,9 +20141,10 @@ const jsenvPluginCleanHTML = () => {
           html: urlInfo.content,
           url: urlInfo.url,
         });
-        return stringifyHtmlAst(htmlAst, {
+        const htmlClean = stringifyHtmlAst(htmlAst, {
           cleanupPositionAttributes: true,
         });
+        return htmlClean;
       },
     },
   };
@@ -20572,7 +20516,7 @@ const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
     createHtmlNode({
       tagName: "script",
       type: "importmap",
-      textContent: importmapMinification
+      children: importmapMinification
         ? JSON.stringify({ imports: versionMappings })
         : JSON.stringify({ imports: versionMappings }, null, "  "),
     }),
@@ -22484,6 +22428,7 @@ build ${entryPointKeys.length} entry points`);
  * to provide "serverEvents" used by other plugins
  */
 
+
 const serverEventsClientFileUrl = new URL(
   "./js/server_events_client.js",
   import.meta.url,
@@ -22494,20 +22439,22 @@ const jsenvPluginServerEventsClientInjection = ({ logs = true }) => {
     name: "jsenv:server_events_client_injection",
     appliesDuring: "*",
     transformUrlContent: {
-      html: () => {
-        return {
-          scriptInjections: [
-            {
-              src: serverEventsClientFileUrl,
-              setup: {
-                name: "window.__server_events__.setup",
-                param: {
-                  logs,
-                },
-              },
+      html: (urlInfo) => {
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
+        injectJsenvScript(htmlAst, {
+          src: serverEventsClientFileUrl,
+          initCall: {
+            callee: "window.__server_events__.setup",
+            params: {
+              logs,
             },
-          ],
-        };
+          },
+          pluginName: "jsenv:server_events_client_injection",
+        });
+        return stringifyHtmlAst(htmlAst);
       },
     },
   };
@@ -22893,8 +22840,7 @@ const startDevServer = async ({
             const serverEventInit = allServerEvents[serverEventName];
             serverEventInit(serverEventInfo);
           });
-          // "pushPlugin" so that event source client connection can be put as early as possible in html
-          kitchen.pluginController.pushPlugin(
+          kitchen.pluginController.unshiftPlugin(
             jsenvPluginServerEventsClientInjection(
               clientAutoreload.clientServerEventsConfig,
             ),

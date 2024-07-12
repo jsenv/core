@@ -66,26 +66,25 @@ export const getIndentation = (htmlNode) => {
   const index = siblings.indexOf(htmlNode);
   if (index === 0) {
     if (htmlNode.nodeName === "#text") {
-      return extractIndentation(htmlNode);
+      if (htmlNode.value.length) {
+        return extractIndentation(htmlNode);
+      }
+      return increaseIndentation(getIndentation(parentNode), 2);
     }
-    return "";
   }
 
   let textNodeIndex = 0;
-  let textNode;
   while (textNodeIndex !== index) {
     const previousSibling = siblings[textNodeIndex];
     textNodeIndex++;
     if (previousSibling.nodeName === "#text") {
-      textNode = previousSibling;
-      break;
+      if (previousSibling.value.length) {
+        return extractIndentation(previousSibling);
+      }
+      return increaseIndentation(getIndentation(parentNode), 2);
     }
   }
-  if (!textNode) {
-    return "";
-  }
-
-  return extractIndentation(textNode);
+  return "";
 };
 
 const extractIndentation = (textNode) => {
@@ -115,4 +114,12 @@ const setIndentation = (htmlNodeText, indentation) => {
 export const increaseIndentation = (indentation, size) => {
   const char = indentation[0];
   return char ? `${indentation}${char.repeat(size)}` : " ".repeat(size);
+};
+
+export const decreaseIndentation = (indentation, size) => {
+  const char = indentation[0];
+  if (char) {
+    return char.slice(0, -size);
+  }
+  return "";
 };

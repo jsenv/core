@@ -38,7 +38,7 @@
     "@jsenv/humanize": "1.2.3",
     "@jsenv/url-meta": "8.4.2",
     "@jsenv/utils": "2.1.1",
-    "ws": "8.17.1"
+    "ws": "8.18.0"
   },
   "devDependencies": {
     "@jsenv/fetch": "../fetch/",

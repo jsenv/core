@@ -1,6 +1,6 @@
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "01decf85"
+    "version": "bd11033c"
   },
   "/js/app_loader.nomodule.js": {
     "version": "96bb4e80",

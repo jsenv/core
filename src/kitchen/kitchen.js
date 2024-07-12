@@ -13,6 +13,7 @@ import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { createUrlGraph } from "./url_graph/url_graph.js";
 import { urlSpecifierEncoding } from "./url_graph/url_specifier_encoding.js";
 import { createPluginController } from "../plugins/plugin_controller.js";
+import { jsenvPluginHtmlSyntaxErrorFallback } from "../plugins/html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
 import {
   createResolveUrlError,
@@ -93,6 +94,7 @@ export const createKitchen = ({
     initialPluginsMeta,
   );
   kitchen.pluginController = pluginController;
+  pluginController.pushPlugin(jsenvPluginHtmlSyntaxErrorFallback());
   plugins.forEach((pluginEntry) => {
     pluginController.pushPlugin(pluginEntry);
   });

@@ -1,10 +1,5 @@
 import { createMagicSource } from "@jsenv/sourcemap";
-import {
-  parseHtml,
-  injectHtmlNodeAsEarlyAsPossible,
-  createHtmlNode,
-  stringifyHtmlAst,
-} from "@jsenv/ast";
+import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
 
 export const injectGlobals = (content, globals, urlInfo) => {
   if (urlInfo.type === "html") {
@@ -28,14 +23,10 @@ const globalInjectorOnHtml = (content, globals, urlInfo) => {
   const clientCode = generateClientCodeForGlobals(globals, {
     isWebWorker: false,
   });
-  injectHtmlNodeAsEarlyAsPossible(
-    htmlAst,
-    createHtmlNode({
-      tagName: "script",
-      textContent: clientCode,
-    }),
-    "jsenv:inject_globals",
-  );
+  injectJsenvScript(htmlAst, {
+    content: clientCode,
+    pluginName: "jsenv:inject_globals",
+  });
   return stringifyHtmlAst(htmlAst);
 };
 
