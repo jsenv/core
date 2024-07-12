@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/test",
-  "version": "3.3.5",
+  "version": "3.3.6",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -43,19 +43,20 @@
     "@jsenv/github-check-run": "0.1.20",
     "@jsenv/humanize": "1.2.3",
     "@jsenv/plugin-supervisor": "1.5.0",
+    "@jsenv/sourcemap": "1.2.13",
     "@jsenv/url-meta": "8.4.2",
     "@jsenv/urls": "2.2.10",
     "@jsenv/utils": "2.1.1",
+    "errorstacks": "2.4.1",
+    "he": "1.2.0",
     "istanbul-lib-coverage": "3.2.2",
     "istanbul-lib-instrument": "6.0.3",
     "istanbul-lib-report": "3.0.1",
     "istanbul-reports": "3.1.7",
-    "he": "1.2.0",
     "pidtree": "0.6.0",
     "strip-ansi": "7.1.0",
     "supports-color": "9.4.0",
-    "v8-to-istanbul": "9.3.0",
-    "errorstacks": "2.4.1"
+    "v8-to-istanbul": "9.3.0"
   },
   "devDependencies": {
     "@jsenv/terminal-recorder": "../independent/terminal-recorder/"
