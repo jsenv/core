@@ -1,4 +1,4 @@
-import { parseHtml, stringifyHtmlAst, injectJsenvScript } from "@jsenv/ast";
+import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
 
 export const jsenvPluginAutoreloadClient = () => {
   const autoreloadClientFileUrl = new URL(
@@ -16,7 +16,7 @@ export const jsenvPluginAutoreloadClient = () => {
           url: htmlUrlInfo.url,
         });
         const autoreloadClientReference = htmlUrlInfo.dependencies.inject({
-          type: "script",
+          type: "js_import",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl,

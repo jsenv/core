@@ -1,4 +1,4 @@
-import { parseHtml, stringifyHtmlAst, injectJsenvScript } from "@jsenv/ast";
+import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
 import { URL_META } from "@jsenv/url-meta";
 import { asUrlWithoutSearch } from "@jsenv/urls";
 
@@ -42,7 +42,7 @@ export const jsenvPluginRibbon = ({
           url: urlInfo.url,
         });
         const ribbonClientFileReference = urlInfo.dependencies.inject({
-          type: "script",
+          type: "js_import",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: ribbonClientFileUrl.href,

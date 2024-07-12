@@ -21,6 +21,25 @@
         });
       </script>
       <script
+        type="module"
+        jsenv-injected-by="jsenv:toolbar"
+        content-indented=""
+        jsenv-cooked-by="jsenv:html_inline_content_analysis"
+      >
+        import { injectToolbar } from "/@fs/mock/packages/related/plugin-toolbar/src/client/toolbar_injector.js";
+
+        injectToolbar({
+          toolbarUrl:
+            "/@fs/mock/packages/related/plugin-toolbar/src/client/toolbar.html",
+          logLevel: "warn",
+          theme: "dark",
+          opened: false,
+          autoreload: true,
+          animationsEnabled: true,
+          notificationsEnabled: true,
+        });
+      </script>
+      <script
         src="/@fs/mock/packages/internal/plugin-supervisor/src/client/supervisor.js"
         jsenv-injected-by="jsenv:supervisor"
       ></script>
@@ -50,6 +69,17 @@
 
         initAutoreload({
           mainFilePath: "/index.html",
+        });
+      </script>
+      <script
+        type="module"
+        jsenv-injected-by="jsenv:ribbon"
+        content-indented=""
+      >
+        import { injectRibbon } from "/@fs/mock/src/plugins/ribbon/client/ribbon.js";
+
+        injectRibbon({
+          text: "DEV",
         });
       </script>
     </jsenv-scripts>

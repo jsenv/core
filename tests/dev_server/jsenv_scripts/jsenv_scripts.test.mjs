@@ -10,7 +10,7 @@ import { chromium } from "playwright";
 import { writeFileSync, ensureEmptyDirectory } from "@jsenv/filesystem";
 
 import { startDevServer } from "@jsenv/core";
-// import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
+import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 import { launchBrowserPage } from "../../launch_browser_page.js";
 
 const debug = false;
@@ -23,9 +23,8 @@ const devServer = await startDevServer({
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
-  // plugins: [jsenvPluginToolbar()],
+  plugins: [jsenvPluginToolbar()],
   clientAutoreload: true,
-  ribbon: false,
 });
 const jsenvCoreDirectoryUrl = new URL("../../../", import.meta.url);
 const jsenvCoreDirectoryPath = fileURLToPath(jsenvCoreDirectoryUrl);
