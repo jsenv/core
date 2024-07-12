@@ -75,7 +75,8 @@ export const createPluginController = (
         key === "name" ||
         key === "appliesDuring" ||
         key === "init" ||
-        key === "serverEvents"
+        key === "serverEvents" ||
+        key === "mustStayFirst"
       ) {
         continue;
       }
@@ -94,7 +95,15 @@ export const createPluginController = (
           value: hookValue,
         };
         if (position === "start") {
-          group.unshift(hook);
+          let i = 0;
+          while (i < group.length) {
+            const before = group[i];
+            if (!before.plugin.mustStayFirst) {
+              break;
+            }
+            i++;
+          }
+          group.splice(i, 0, hook);
         } else {
           group.push(hook);
         }
@@ -219,11 +228,11 @@ export const createPluginController = (
       }
     }
   };
-  const callAsyncHooks = async (hookName, info, callback) => {
+  const callAsyncHooks = async (hookName, info, callback, options) => {
     const hooks = hookGroups[hookName];
     if (hooks) {
       for (const hook of hooks) {
-        const returnValue = await callAsyncHook(hook, info);
+        const returnValue = await callAsyncHook(hook, info, options);
         if (returnValue && callback) {
           await callback(returnValue, hook.plugin);
         }
@@ -243,7 +252,7 @@ export const createPluginController = (
     }
     return null;
   };
-  const callAsyncHooksUntil = (hookName, info) => {
+  const callAsyncHooksUntil = async (hookName, info, options) => {
     const hooks = hookGroups[hookName];
     if (!hooks) {
       return null;
@@ -251,22 +260,23 @@ export const createPluginController = (
     if (hooks.length === 0) {
       return null;
     }
-    return new Promise((resolve, reject) => {
-      const visit = (index) => {
-        if (index >= hooks.length) {
-          return resolve();
-        }
-        const hook = hooks[index];
-        const returnValue = callAsyncHook(hook, info);
-        return Promise.resolve(returnValue).then((output) => {
-          if (output) {
-            return resolve(output);
-          }
-          return visit(index + 1);
-        }, reject);
-      };
-      visit(0);
-    });
+    let result;
+    let index = 0;
+    const visit = async () => {
+      if (index >= hooks.length) {
+        return;
+      }
+      const hook = hooks[index];
+      const returnValue = await callAsyncHook(hook, info, options);
+      if (returnValue) {
+        result = returnValue;
+        return;
+      }
+      index++;
+      await visit();
+    };
+    await visit(0);
+    return result;
   };
 
   return {

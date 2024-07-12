@@ -29,6 +29,7 @@ const devServer = await startDevServer({
   serverLogLevel: "off",
   sourceDirectoryUrl,
   keepProcessAlive: !debug,
+  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   port: 0,
 });
 const browser = await chromium.launch({

@@ -16,7 +16,10 @@ export const jsenvPluginServerEventsClientInjection = ({ logs = true }) => {
     appliesDuring: "*",
     transformUrlContent: {
       html: (urlInfo) => {
-        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
         injectJsenvScript(htmlAst, {
           src: serverEventsClientFileUrl,
           initCall: {
