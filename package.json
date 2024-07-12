@@ -66,7 +66,7 @@
   "dependencies": {
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.3.0",
-    "@jsenv/ast": "6.2.0",
+    "@jsenv/ast": "6.2.1",
     "@jsenv/filesystem": "4.7.5",
     "@jsenv/humanize": "1.2.3",
     "@jsenv/importmap": "1.2.1",
