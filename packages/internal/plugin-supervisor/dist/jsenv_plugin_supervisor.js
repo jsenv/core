@@ -4,7 +4,7 @@ import process$1 from "node:process";
 import os from "node:os";
 import tty from "node:tty";
 import "string-width";
-import { applyBabelPlugins, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
+import { applyBabelPlugins, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectJsenvScript, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
 
 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 const intToChar = new Uint8Array(64); // 64 possible chars.
@@ -1140,20 +1140,19 @@ const injectSupervisorIntoHTML = async ({
   }
   // 2. Inject supervisor js file + setup call
   {
-    const setupParamsSource = stringifyParams({
-      ...supervisorOptions,
-      serverIsJsenvDevServer: webServer.isJsenvDevServer,
-      rootDirectoryUrl: webServer.rootDirectoryUrl,
-      scriptInfos
-    }, "  ");
-    injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-      tagName: "script",
-      textContent: "window.__supervisor__.setup({\n  ".concat(setupParamsSource, "\n});")
-    }), "jsenv:supervisor");
-    injectHtmlNodeAsEarlyAsPossible(htmlAst, createHtmlNode({
-      tagName: "script",
-      src: supervisorScriptSrc
-    }), "jsenv:supervisor");
+    injectJsenvScript(htmlAst, {
+      src: supervisorScriptSrc,
+      initCall: {
+        callee: "window.__supervisor__.setup",
+        params: {
+          ...supervisorOptions,
+          serverIsJsenvDevServer: webServer.isJsenvDevServer,
+          rootDirectoryUrl: webServer.rootDirectoryUrl,
+          scriptInfos
+        }
+      },
+      pluginName: "jsenv:supervisor"
+    });
   }
   // 3. Perform actions (transforming inline script content) and html mutations
   if (actions.length > 0) {
@@ -1164,18 +1163,6 @@ const injectSupervisorIntoHTML = async ({
   return {
     content: htmlModified
   };
-};
-const stringifyParams = (params, prefix = "") => {
-  const source = JSON.stringify(params, null, prefix);
-  if (prefix.length) {
-    // remove leading "{\n"
-    // remove leading prefix
-    // remove trailing "\n}"
-    return source.slice(2 + prefix.length, -2);
-  }
-  // remove leading "{"
-  // remove trailing "}"
-  return source.slice(1, -1);
 };
 const generateCodeToSuperviseScriptWithSrc = ({
   type,

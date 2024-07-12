@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-toolbar",
-  "version": "1.3.10",
+  "version": "1.4.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,8 +26,8 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/ast": "6.1.4",
-    "@preact/signals": "1.2.3"
+    "@jsenv/ast": "6.2.0",
+    "@preact/signals": "1.3.0"
   },
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",

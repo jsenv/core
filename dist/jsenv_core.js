@@ -13,7 +13,7 @@ import http from "node:http";
 import { Readable, Stream, Writable } from "node:stream";
 import { Http2ServerResponse } from "node:http2";
 import { lookup } from "node:dns";
-import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, parseJsUrls, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getHtmlNodeAttributePosition, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, getUrlForContentInsideJs, analyzeLinkNode, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, parseJsUrls, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getHtmlNodeAttributePosition, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
@@ -11441,10 +11441,10 @@ const prependJsClassicInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
     htmlAst,
     createHtmlNode({
       tagName: "script",
-      textContent: urlInfoToPrepend.content,
       ...(urlInfoToPrepend.url
         ? { "inlined-from-src": urlInfoToPrepend.url }
         : {}),
+      children: urlInfoToPrepend.content,
     }),
     "jsenv:core",
   );
@@ -12986,11 +12986,7 @@ const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
     if (!returnValueAssertion.appliesTo.includes(hook.name)) {
       continue;
     }
-    const assertionResult = returnValueAssertion.assertion(
-      returnValue,
-      info,
-      hook,
-    );
+    const assertionResult = returnValueAssertion.assertion(returnValue, info);
     if (assertionResult !== undefined) {
       // normalization
       returnValue = assertionResult;
@@ -13024,7 +13020,7 @@ const returnValueAssertions = [
       "finalizeUrlContent",
       "optimizeUrlContent",
     ],
-    assertion: (valueReturned, urlInfo, hook) => {
+    assertion: (valueReturned, urlInfo) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
         return { content: valueReturned };
       }
@@ -13032,12 +13028,6 @@ const returnValueAssertions = [
         const { content, body } = valueReturned;
         if (urlInfo.url.startsWith("ignore:")) {
           return undefined;
-        }
-        if (urlInfo.type === "html") {
-          const { scriptInjections } = valueReturned;
-          if (scriptInjections) {
-            return applyScriptInjections(urlInfo, scriptInjections, hook);
-          }
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
           throw new Error(
@@ -13052,63 +13042,6 @@ const returnValueAssertions = [
     },
   },
 ];
-
-const applyScriptInjections = (htmlUrlInfo, scriptInjections, hook) => {
-  const htmlAst = parseHtml({
-    html: htmlUrlInfo.content,
-    url: htmlUrlInfo.url,
-  });
-
-  scriptInjections.reverse().forEach((scriptInjection) => {
-    const { setup } = scriptInjection;
-    if (setup) {
-      const setupGlobalName = setup.name;
-      const setupParamSource = stringifyParams$1(setup.param, "  ");
-      const inlineJs = `${setupGlobalName}({${setupParamSource}})`;
-      injectHtmlNodeAsEarlyAsPossible(
-        htmlAst,
-        createHtmlNode({
-          tagName: "script",
-          textContent: inlineJs,
-        }),
-        hook.plugin.name,
-      );
-    }
-    const scriptReference = htmlUrlInfo.dependencies.inject({
-      type: "script",
-      subtype: scriptInjection.type === "module" ? "js_module" : "js_classic",
-      expectedType:
-        scriptInjection.type === "module" ? "js_module" : "js_classic",
-      specifier: scriptInjection.src,
-    });
-    injectHtmlNodeAsEarlyAsPossible(
-      htmlAst,
-      createHtmlNode({
-        tagName: "script",
-        ...(scriptInjection.type === "module" ? { type: "module" } : {}),
-        src: scriptReference.generatedSpecifier,
-      }),
-      hook.plugin.name,
-    );
-  });
-  const htmlModified = stringifyHtmlAst(htmlAst);
-  return {
-    content: htmlModified,
-  };
-};
-
-const stringifyParams$1 = (params, prefix = "") => {
-  const source = JSON.stringify(params, null, prefix);
-  if (prefix.length) {
-    // remove leading "{\n"
-    // remove leading prefix
-    // remove trailing "\n}"
-    return source.slice(2 + prefix.length, -2);
-  }
-  // remove leading "{"
-  // remove trailing "}"
-  return source.slice(1, -1);
-};
 
 const defineGettersOnPropertiesDerivedFromOriginalContent = (
   urlInfo,
@@ -19709,29 +19642,22 @@ const jsenvPluginAutoreloadClient = () => {
           url: htmlUrlInfo.url,
         });
         const autoreloadClientReference = htmlUrlInfo.dependencies.inject({
-          type: "script",
+          type: "js_import",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl,
         });
-        const paramsJson = JSON.stringify(
-          {
-            mainFilePath: `/${htmlUrlInfo.kitchen.context.mainFilePath}`,
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: autoreloadClientReference.generatedSpecifier,
+          initCall: {
+            callee: "initAutoreload",
+            params: {
+              mainFilePath: `/${htmlUrlInfo.kitchen.context.mainFilePath}`,
+            },
           },
-          null,
-          "  ",
-        );
-        injectHtmlNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            textContent: `import { initAutoreload } from "${autoreloadClientReference.generatedSpecifier}";
-
-initAutoreload(${paramsJson});`,
-          }),
-          "jsenv:autoreload_client",
-        );
+          pluginName: "jsenv:autoreload_client",
+        });
         const htmlModified = stringifyHtmlAst(htmlAst);
         return {
           content: htmlModified,
@@ -20161,27 +20087,22 @@ const jsenvPluginRibbon = ({
           url: urlInfo.url,
         });
         const ribbonClientFileReference = urlInfo.dependencies.inject({
-          type: "script",
+          type: "js_import",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: ribbonClientFileUrl.href,
         });
-        const paramsJson = JSON.stringify(
-          { text: urlInfo.context.dev ? "DEV" : "BUILD" },
-          null,
-          "  ",
-        );
-        injectHtmlNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            textContent: `import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}";
-
-injectRibbon(${paramsJson});`,
-          }),
-          "jsenv:ribbon",
-        );
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: ribbonClientFileReference.generatedSpecifier,
+          initCall: {
+            callee: "injectRibbon",
+            params: {
+              text: urlInfo.context.dev ? "DEV" : "BUILD",
+            },
+          },
+          pluginName: "jsenv:ribbon",
+        });
         return stringifyHtmlAst(htmlAst);
       },
     },
@@ -20198,9 +20119,10 @@ const jsenvPluginCleanHTML = () => {
           html: urlInfo.content,
           url: urlInfo.url,
         });
-        return stringifyHtmlAst(htmlAst, {
+        const htmlClean = stringifyHtmlAst(htmlAst, {
           cleanupPositionAttributes: true,
         });
+        return htmlClean;
       },
     },
   };
@@ -20572,7 +20494,7 @@ const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
     createHtmlNode({
       tagName: "script",
       type: "importmap",
-      textContent: importmapMinification
+      children: importmapMinification
         ? JSON.stringify({ imports: versionMappings })
         : JSON.stringify({ imports: versionMappings }, null, "  "),
     }),
@@ -22484,6 +22406,7 @@ build ${entryPointKeys.length} entry points`);
  * to provide "serverEvents" used by other plugins
  */
 
+
 const serverEventsClientFileUrl = new URL(
   "./js/server_events_client.js",
   import.meta.url,
@@ -22494,20 +22417,19 @@ const jsenvPluginServerEventsClientInjection = ({ logs = true }) => {
     name: "jsenv:server_events_client_injection",
     appliesDuring: "*",
     transformUrlContent: {
-      html: () => {
-        return {
-          scriptInjections: [
-            {
-              src: serverEventsClientFileUrl,
-              setup: {
-                name: "window.__server_events__.setup",
-                param: {
-                  logs,
-                },
-              },
+      html: (urlInfo) => {
+        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
+        injectJsenvScript(htmlAst, {
+          src: serverEventsClientFileUrl,
+          initCall: {
+            callee: "window.__server_events__.setup",
+            params: {
+              logs,
             },
-          ],
-        };
+          },
+          pluginName: "jsenv:server_events_client_injection",
+        });
+        return stringifyHtmlAst(htmlAst);
       },
     },
   };
@@ -22893,8 +22815,7 @@ const startDevServer = async ({
             const serverEventInit = allServerEvents[serverEventName];
             serverEventInit(serverEventInfo);
           });
-          // "pushPlugin" so that event source client connection can be put as early as possible in html
-          kitchen.pluginController.pushPlugin(
+          kitchen.pluginController.unshiftPlugin(
             jsenvPluginServerEventsClientInjection(
               clientAutoreload.clientServerEventsConfig,
             ),

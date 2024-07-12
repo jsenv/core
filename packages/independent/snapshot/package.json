@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "Snapshot testing",
   "license": "MIT",
   "author": {

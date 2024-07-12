@@ -22,25 +22,11 @@ const injectToolbar = async ({
       window.requestAnimationFrame(resolve);
     }
   });
-  const placeholder = getToolbarPlaceholder();
-  const iframe = document.createElement("iframe");
-  iframe.setAttribute("tabindex", -1);
-  iframe.setAttribute("allowtransparency", true);
-  // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
-  // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
-  Object.assign(iframe.style, {
-    "position": "fixed",
-    "zIndex": 1000,
-    "bottom": 0,
-    "left": 0,
-    "width": "100%",
-    "height": 0,
-    /* ensure toolbar children are not focusable when hidden */
-    "visibility": "hidden",
-    "transition-duration": "0",
-    "transition-property": "height, visibility",
-    "border": "none"
-  });
+  const jsenvToolbar = document.createElement("jsenv-toolbar");
+  const iframe = createIframeNode();
+  const toolbarTriggerNode = createToolbarTriggerNode();
+  jsenvToolbar.appendChild(iframe);
+  jsenvToolbar.appendChild(toolbarTriggerNode);
   const iframeLoadedPromise = iframeToLoadedPromise(iframe);
   const toolbarUrlObject = new URL(toolbarUrl, window.location.href);
   toolbarUrlObject.searchParams.set("logLevel", logLevel);
@@ -60,10 +46,53 @@ const injectToolbar = async ({
   // set iframe src BEFORE putting it into the DOM (prevent firefox adding an history entry)
   iframe.setAttribute("src", toolbarUrlObject.href);
   iframe.name = "jsenv toolbar";
-  placeholder.parentNode.replaceChild(iframe, placeholder);
+  let timer;
+  toolbarTriggerNode.onmouseenter = () => {
+    toolbarTriggerNode.setAttribute("data-animate", "");
+    timer = setTimeout(expandToolbarTrigger, 500);
+  };
+  toolbarTriggerNode.onmouseleave = () => {
+    clearTimeout(timer);
+    collapseToolbarTrigger();
+  };
+  toolbarTriggerNode.onfocus = () => {
+    toolbarTriggerNode.removeAttribute("data-animate");
+    expandToolbarTrigger();
+  };
+  toolbarTriggerNode.onblur = () => {
+    toolbarTriggerNode.removeAttribute("data-animate");
+    clearTimeout(timer);
+    collapseToolbarTrigger();
+  };
+  toolbarTriggerNode.onclick = () => {
+    sendCommandToToolbar(iframe, "openToolbar");
+  };
+  const showToolbarTrigger = () => {
+    toolbarTriggerNode.style.display = "block";
+  };
+  const hideToolbarTrigger = () => {
+    toolbarTriggerNode.style.display = "none";
+  };
+  const expandToolbarTrigger = () => {
+    toolbarTriggerNode.setAttribute("data-expanded", "");
+  };
+  const collapseToolbarTrigger = () => {
+    toolbarTriggerNode.removeAttribute("data-expanded", "");
+  };
+  const placeholder = getToolbarPlaceholder();
+  placeholder.parentNode.replaceChild(jsenvToolbar, placeholder);
   const listenToolbarStateChange = callback => {
     return addToolbarEventCallback(iframe, "toolbar_state_change", callback);
   };
+  listenToolbarStateChange(({
+    opened
+  }) => {
+    if (opened) {
+      hideToolbarTrigger();
+    } else {
+      showToolbarTrigger();
+    }
+  });
   const cleanupInitOnReady = addToolbarEventCallback(iframe, "toolbar_ready", () => {
     cleanupInitOnReady();
     sendCommandToToolbar(iframe, "initToolbar");
@@ -79,55 +108,36 @@ const injectToolbar = async ({
       });
     });
   });
-  const div = document.createElement("div");
-  div.innerHTML = "\n<div id=\"jsenv_toolbar_trigger\" style=\"display:none\">\n  <svg id=\"jsenv_toolbar_trigger_icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgUrl, "#jsenv_logo\"></use>\n  </svg>\n  <style>\n    #jsenv_toolbar_trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv_toolbar_trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv_toolbar_trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv_toolbar_trigger_icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
-  const toolbarTrigger = div.firstElementChild;
-  iframe.parentNode.appendChild(toolbarTrigger);
-  let timer;
-  toolbarTrigger.onmouseenter = () => {
-    toolbarTrigger.setAttribute("data-animate", "");
-    timer = setTimeout(expandToolbarTrigger, 500);
-  };
-  toolbarTrigger.onmouseleave = () => {
-    clearTimeout(timer);
-    collapseToolbarTrigger();
-  };
-  toolbarTrigger.onfocus = () => {
-    toolbarTrigger.removeAttribute("data-animate");
-    expandToolbarTrigger();
-  };
-  toolbarTrigger.onblur = () => {
-    toolbarTrigger.removeAttribute("data-animate");
-    clearTimeout(timer);
-    collapseToolbarTrigger();
-  };
-  toolbarTrigger.onclick = () => {
-    sendCommandToToolbar(iframe, "openToolbar");
-  };
-  const showToolbarTrigger = () => {
-    toolbarTrigger.style.display = "block";
-  };
-  const hideToolbarTrigger = () => {
-    toolbarTrigger.style.display = "none";
-  };
-  const expandToolbarTrigger = () => {
-    toolbarTrigger.setAttribute("data-expanded", "");
-  };
-  const collapseToolbarTrigger = () => {
-    toolbarTrigger.removeAttribute("data-expanded", "");
-  };
-  listenToolbarStateChange(({
-    opened
-  }) => {
-    if (opened) {
-      hideToolbarTrigger();
-    } else {
-      showToolbarTrigger();
-    }
-  });
   await iframeLoadedPromise;
   iframe.removeAttribute("tabindex");
   return iframe;
+};
+const createIframeNode = () => {
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("tabindex", -1);
+  iframe.setAttribute("allowtransparency", true);
+  // sandbox: "allow-forms allow-modals allow-pointer-lock allow-popups allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation",
+  // allow: "accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; vr",
+  Object.assign(iframe.style, {
+    "position": "fixed",
+    "zIndex": 1000,
+    "bottom": 0,
+    "left": 0,
+    "width": "100%",
+    "height": 0,
+    /* ensure toolbar children are not focusable when hidden */
+    "visibility": "hidden",
+    "transition-duration": "0",
+    "transition-property": "height, visibility",
+    "border": "none"
+  });
+  return iframe;
+};
+const createToolbarTriggerNode = () => {
+  const div = document.createElement("div");
+  div.innerHTML = "\n<div id=\"jsenv_toolbar_trigger\" style=\"display:none\">\n  <svg id=\"jsenv_toolbar_trigger_icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgUrl, "#jsenv_logo\"></use>\n  </svg>\n  <style>\n    #jsenv_toolbar_trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv_toolbar_trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv_toolbar_trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv_toolbar_trigger_icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
+  const toolbarTrigger = div.firstElementChild;
+  return toolbarTrigger;
 };
 const addToolbarEventCallback = (iframe, eventName, callback) => {
   const messageEventCallback = messageEvent => {
@@ -177,9 +187,9 @@ const queryPlaceholder = () => {
   return document.querySelector("[data-jsenv-toolbar-placeholder]");
 };
 const createTooolbarPlaceholder = () => {
-  const placeholder = document.createElement("span");
-  document.body.appendChild(placeholder);
-  return placeholder;
+  const jsenvToolbar = document.createElement("jsenv-toolbar");
+  document.body.appendChild(jsenvToolbar);
+  return jsenvToolbar;
 };
 const iframeToLoadedPromise = iframe => {
   return new Promise(resolve => {
