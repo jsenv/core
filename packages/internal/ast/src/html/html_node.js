@@ -300,6 +300,18 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   nodeToInsert.parentNode = futureParentNode;
   if (nextSiblings.length) {
     futureChildNodes.push(...nextSiblings);
+  } else {
+    let indentation;
+    if (childNodes.length) {
+      indentation = getIndentation(childNodes[childNodes.length - 1]);
+    } else {
+      indentation = getIndentation(futureParentNode);
+    }
+    futureChildNodes.push({
+      nodeName: "#text",
+      value: `\n${indentation}`,
+      parentNode: futureParentNode,
+    });
   }
   futureParentNode.childNodes = futureChildNodes;
 

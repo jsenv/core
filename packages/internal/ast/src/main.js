@@ -23,6 +23,7 @@ export {
   injectHtmlNode,
   injectHtmlNodeAsEarlyAsPossible,
   insertHtmlNodeAfter,
+  insertHtmlNodeInside,
   injectJsenvScript,
 } from "./html/html_node.js";
 export {
