@@ -39,7 +39,28 @@ const takeScreenshot = async (scenario) => {
 
 try {
   await page.goto(`${devServer.origin}/main.html`);
+  await new Promise((resolve) => setTimeout(resolve, 1000));
   await takeScreenshot("0_at_start");
+  await page.locator("#jsenv_toolbar_trigger").click();
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await takeScreenshot("1_after_click_to_open_toolbar");
+  await page
+    .frameLocator(`[name="jsenv toolbar"]`)
+    .locator("#settings_open_button")
+    .click();
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await takeScreenshot("2_after_click_to_open_toolbar_settings");
+  await page
+    .frameLocator(`[name="jsenv toolbar"]`)
+    .locator("#settings_close_button")
+    .click();
+  await takeScreenshot("3_after_click_to_close_toolbar_settings");
+  await page
+    .frameLocator(`[name="jsenv toolbar"]`)
+    .locator("#toolbar_close_button")
+    .click();
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await takeScreenshot("4_after_click_to_close_toolbar");
 } finally {
   if (!debug) {
     browser.close();
