@@ -15,10 +15,16 @@ function getDefaultExportFromCjs (x) {
 
 var bufferUtil$1 = {exports: {}};
 
+const BINARY_TYPES$2 = ['nodebuffer', 'arraybuffer', 'fragments'];
+const hasBlob$1 = typeof Blob !== 'undefined';
+
+if (hasBlob$1) BINARY_TYPES$2.push('blob');
+
 var constants = {
-  BINARY_TYPES: ['nodebuffer', 'arraybuffer', 'fragments'],
+  BINARY_TYPES: BINARY_TYPES$2,
   EMPTY_BUFFER: Buffer.alloc(0),
   GUID: '258EAFA5-E914-47DA-95CA-C5AB0DC85B11',
+  hasBlob: hasBlob$1,
   kForOnEventAttribute: Symbol('kIsForOnEventAttribute'),
   kListener: Symbol('kListener'),
   kStatusCode: Symbol('status-code'),
@@ -734,6 +740,8 @@ var isValidUTF8_1;
 
 const { isUtf8 } = require$$0$2;
 
+const { hasBlob } = constants;
+
 //
 // Allowed token characters:
 //
@@ -839,7 +847,27 @@ function _isValidUTF8(buf) {
   return true;
 }
 
+/**
+ * Determines whether a value is a `Blob`.
+ *
+ * @param {*} value The value to be tested
+ * @return {Boolean} `true` if `value` is a `Blob`, else `false`
+ * @private
+ */
+function isBlob$2(value) {
+  return (
+    hasBlob &&
+    typeof value === 'object' &&
+    typeof value.arrayBuffer === 'function' &&
+    typeof value.type === 'string' &&
+    typeof value.stream === 'function' &&
+    (value[Symbol.toStringTag] === 'Blob' ||
+      value[Symbol.toStringTag] === 'File')
+  );
+}
+
 validation.exports = {
+  isBlob: isBlob$2,
   isValidStatusCode: isValidStatusCode$2,
   isValidUTF8: _isValidUTF8,
   tokenChars: tokenChars$2
@@ -870,7 +898,7 @@ const {
   BINARY_TYPES: BINARY_TYPES$1,
   EMPTY_BUFFER: EMPTY_BUFFER$2,
   kStatusCode: kStatusCode$1,
-  kWebSocket: kWebSocket$2
+  kWebSocket: kWebSocket$3
 } = constants;
 const { concat, toArrayBuffer, unmask } = bufferUtilExports;
 const { isValidStatusCode: isValidStatusCode$1, isValidUTF8 } = validationExports;
@@ -919,7 +947,7 @@ let Receiver$1 = class Receiver extends Writable {
     this._isServer = !!options.isServer;
     this._maxPayload = options.maxPayload | 0;
     this._skipUTF8Validation = !!options.skipUTF8Validation;
-    this[kWebSocket$2] = undefined;
+    this[kWebSocket$3] = undefined;
 
     this._bufferedBytes = 0;
     this._buffers = [];
@@ -1422,6 +1450,8 @@ let Receiver$1 = class Receiver extends Writable {
         data = concat(fragments, messageLength);
       } else if (this._binaryType === 'arraybuffer') {
         data = toArrayBuffer(concat(fragments, messageLength));
+      } else if (this._binaryType === 'blob') {
+        data = new Blob(fragments);
       } else {
         data = fragments;
       }
@@ -1570,8 +1600,8 @@ var receiver = Receiver$1;
 const { randomFillSync } = require$$1;
 
 const PerMessageDeflate$2 = permessageDeflate;
-const { EMPTY_BUFFER: EMPTY_BUFFER$1 } = constants;
-const { isValidStatusCode } = validationExports;
+const { EMPTY_BUFFER: EMPTY_BUFFER$1, kWebSocket: kWebSocket$2, NOOP: NOOP$1 } = constants;
+const { isBlob: isBlob$1, isValidStatusCode } = validationExports;
 const { mask: applyMask, toBuffer: toBuffer$1 } = bufferUtilExports;
 
 const kByteLength = Symbol('kByteLength');
@@ -1579,6 +1609,10 @@ const maskBuffer = Buffer.alloc(4);
 const RANDOM_POOL_SIZE = 8 * 1024;
 let randomPool;
 let randomPoolPointer = RANDOM_POOL_SIZE;
+
+const DEFAULT = 0;
+const DEFLATING = 1;
+const GET_BLOB_DATA = 2;
 
 /**
  * HyBi Sender implementation.
@@ -1606,8 +1640,10 @@ let Sender$1 = class Sender {
     this._compress = false;
 
     this._bufferedBytes = 0;
-    this._deflating = false;
     this._queue = [];
+    this._state = DEFAULT;
+    this.onerror = NOOP$1;
+    this[kWebSocket$2] = undefined;
   }
 
   /**
@@ -1774,7 +1810,7 @@ let Sender$1 = class Sender {
       rsv1: false
     };
 
-    if (this._deflating) {
+    if (this._state !== DEFAULT) {
       this.enqueue([this.dispatch, buf, false, options, cb]);
     } else {
       this.sendFrame(Sender.frame(buf, options), cb);
@@ -1795,6 +1831,9 @@ let Sender$1 = class Sender {
 
     if (typeof data === 'string') {
       byteLength = Buffer.byteLength(data);
+      readOnly = false;
+    } else if (isBlob$1(data)) {
+      byteLength = data.size;
       readOnly = false;
     } else {
       data = toBuffer$1(data);
@@ -1817,7 +1856,13 @@ let Sender$1 = class Sender {
       rsv1: false
     };
 
-    if (this._deflating) {
+    if (isBlob$1(data)) {
+      if (this._state !== DEFAULT) {
+        this.enqueue([this.getBlobData, data, false, options, cb]);
+      } else {
+        this.getBlobData(data, false, options, cb);
+      }
+    } else if (this._state !== DEFAULT) {
       this.enqueue([this.dispatch, data, false, options, cb]);
     } else {
       this.sendFrame(Sender.frame(data, options), cb);
@@ -1838,6 +1883,9 @@ let Sender$1 = class Sender {
 
     if (typeof data === 'string') {
       byteLength = Buffer.byteLength(data);
+      readOnly = false;
+    } else if (isBlob$1(data)) {
+      byteLength = data.size;
       readOnly = false;
     } else {
       data = toBuffer$1(data);
@@ -1860,7 +1908,13 @@ let Sender$1 = class Sender {
       rsv1: false
     };
 
-    if (this._deflating) {
+    if (isBlob$1(data)) {
+      if (this._state !== DEFAULT) {
+        this.enqueue([this.getBlobData, data, false, options, cb]);
+      } else {
+        this.getBlobData(data, false, options, cb);
+      }
+    } else if (this._state !== DEFAULT) {
       this.enqueue([this.dispatch, data, false, options, cb]);
     } else {
       this.sendFrame(Sender.frame(data, options), cb);
@@ -1894,6 +1948,9 @@ let Sender$1 = class Sender {
     if (typeof data === 'string') {
       byteLength = Buffer.byteLength(data);
       readOnly = false;
+    } else if (isBlob$1(data)) {
+      byteLength = data.size;
+      readOnly = false;
     } else {
       data = toBuffer$1(data);
       byteLength = data.length;
@@ -1921,38 +1978,92 @@ let Sender$1 = class Sender {
 
     if (options.fin) this._firstFragment = true;
 
-    if (perMessageDeflate) {
-      const opts = {
-        [kByteLength]: byteLength,
-        fin: options.fin,
-        generateMask: this._generateMask,
-        mask: options.mask,
-        maskBuffer: this._maskBuffer,
-        opcode,
-        readOnly,
-        rsv1
-      };
+    const opts = {
+      [kByteLength]: byteLength,
+      fin: options.fin,
+      generateMask: this._generateMask,
+      mask: options.mask,
+      maskBuffer: this._maskBuffer,
+      opcode,
+      readOnly,
+      rsv1
+    };
 
-      if (this._deflating) {
-        this.enqueue([this.dispatch, data, this._compress, opts, cb]);
+    if (isBlob$1(data)) {
+      if (this._state !== DEFAULT) {
+        this.enqueue([this.getBlobData, data, this._compress, opts, cb]);
       } else {
-        this.dispatch(data, this._compress, opts, cb);
+        this.getBlobData(data, this._compress, opts, cb);
       }
+    } else if (this._state !== DEFAULT) {
+      this.enqueue([this.dispatch, data, this._compress, opts, cb]);
     } else {
-      this.sendFrame(
-        Sender.frame(data, {
-          [kByteLength]: byteLength,
-          fin: options.fin,
-          generateMask: this._generateMask,
-          mask: options.mask,
-          maskBuffer: this._maskBuffer,
-          opcode,
-          readOnly,
-          rsv1: false
-        }),
-        cb
-      );
+      this.dispatch(data, this._compress, opts, cb);
     }
+  }
+
+  /**
+   * Gets the contents of a blob as binary data.
+   *
+   * @param {Blob} blob The blob
+   * @param {Boolean} [compress=false] Specifies whether or not to compress
+   *     the data
+   * @param {Object} options Options object
+   * @param {Boolean} [options.fin=false] Specifies whether or not to set the
+   *     FIN bit
+   * @param {Function} [options.generateMask] The function used to generate the
+   *     masking key
+   * @param {Boolean} [options.mask=false] Specifies whether or not to mask
+   *     `data`
+   * @param {Buffer} [options.maskBuffer] The buffer used to store the masking
+   *     key
+   * @param {Number} options.opcode The opcode
+   * @param {Boolean} [options.readOnly=false] Specifies whether `data` can be
+   *     modified
+   * @param {Boolean} [options.rsv1=false] Specifies whether or not to set the
+   *     RSV1 bit
+   * @param {Function} [cb] Callback
+   * @private
+   */
+  getBlobData(blob, compress, options, cb) {
+    this._bufferedBytes += options[kByteLength];
+    this._state = GET_BLOB_DATA;
+
+    blob
+      .arrayBuffer()
+      .then((arrayBuffer) => {
+        if (this._socket.destroyed) {
+          const err = new Error(
+            'The socket was closed while the blob was being read'
+          );
+
+          //
+          // `callCallbacks` is called in the next tick to ensure that errors
+          // that might be thrown in the callbacks behave like errors thrown
+          // outside the promise chain.
+          //
+          process.nextTick(callCallbacks, this, err, cb);
+          return;
+        }
+
+        this._bufferedBytes -= options[kByteLength];
+        const data = toBuffer$1(arrayBuffer);
+
+        if (!compress) {
+          this._state = DEFAULT;
+          this.sendFrame(Sender.frame(data, options), cb);
+          this.dequeue();
+        } else {
+          this.dispatch(data, compress, options, cb);
+        }
+      })
+      .catch((err) => {
+        //
+        // `onError` is called in the next tick for the same reason that
+        // `callCallbacks` above is.
+        //
+        process.nextTick(onError, this, err, cb);
+      });
   }
 
   /**
@@ -1987,27 +2098,19 @@ let Sender$1 = class Sender {
     const perMessageDeflate = this._extensions[PerMessageDeflate$2.extensionName];
 
     this._bufferedBytes += options[kByteLength];
-    this._deflating = true;
+    this._state = DEFLATING;
     perMessageDeflate.compress(data, options.fin, (_, buf) => {
       if (this._socket.destroyed) {
         const err = new Error(
           'The socket was closed while data was being compressed'
         );
 
-        if (typeof cb === 'function') cb(err);
-
-        for (let i = 0; i < this._queue.length; i++) {
-          const params = this._queue[i];
-          const callback = params[params.length - 1];
-
-          if (typeof callback === 'function') callback(err);
-        }
-
+        callCallbacks(this, err, cb);
         return;
       }
 
       this._bufferedBytes -= options[kByteLength];
-      this._deflating = false;
+      this._state = DEFAULT;
       options.readOnly = false;
       this.sendFrame(Sender.frame(buf, options), cb);
       this.dequeue();
@@ -2020,7 +2123,7 @@ let Sender$1 = class Sender {
    * @private
    */
   dequeue() {
-    while (!this._deflating && this._queue.length) {
+    while (this._state === DEFAULT && this._queue.length) {
       const params = this._queue.shift();
 
       this._bufferedBytes -= params[3][kByteLength];
@@ -2059,6 +2162,38 @@ let Sender$1 = class Sender {
 };
 
 var sender = Sender$1;
+
+/**
+ * Calls queued callbacks with an error.
+ *
+ * @param {Sender} sender The `Sender` instance
+ * @param {Error} err The error to call the callbacks with
+ * @param {Function} [cb] The first callback
+ * @private
+ */
+function callCallbacks(sender, err, cb) {
+  if (typeof cb === 'function') cb(err);
+
+  for (let i = 0; i < sender._queue.length; i++) {
+    const params = sender._queue[i];
+    const callback = params[params.length - 1];
+
+    if (typeof callback === 'function') callback(err);
+  }
+}
+
+/**
+ * Handles a `Sender` error.
+ *
+ * @param {Sender} sender The `Sender` instance
+ * @param {Error} err The error
+ * @param {Function} [cb] The first pending callback
+ * @private
+ */
+function onError(sender, err, cb) {
+  callCallbacks(sender, err, cb);
+  sender.onerror(err);
+}
 
 const { kForOnEventAttribute: kForOnEventAttribute$1, kListener: kListener$1 } = constants;
 
@@ -2566,6 +2701,8 @@ const { URL } = require$$7;
 const PerMessageDeflate$1 = permessageDeflate;
 const Receiver = receiver;
 const Sender = sender;
+const { isBlob } = validationExports;
+
 const {
   BINARY_TYPES,
   EMPTY_BUFFER,
@@ -2610,6 +2747,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
     this._closeFrameSent = false;
     this._closeMessage = EMPTY_BUFFER;
     this._closeTimer = null;
+    this._errorEmitted = false;
     this._extensions = {};
     this._paused = false;
     this._protocol = '';
@@ -2642,9 +2780,8 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
   }
 
   /**
-   * This deviates from the WHATWG interface since ws doesn't support the
-   * required default "blob" type (instead we define a custom "nodebuffer"
-   * type).
+   * For historical reasons, the custom "nodebuffer" type is used by the default
+   * instead of "blob".
    *
    * @type {String}
    */
@@ -2765,11 +2902,14 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
       skipUTF8Validation: options.skipUTF8Validation
     });
 
-    this._sender = new Sender(socket, this._extensions, options.generateMask);
+    const sender = new Sender(socket, this._extensions, options.generateMask);
+
     this._receiver = receiver;
+    this._sender = sender;
     this._socket = socket;
 
     receiver[kWebSocket$1] = this;
+    sender[kWebSocket$1] = this;
     socket[kWebSocket$1] = this;
 
     receiver.on('conclude', receiverOnConclude);
@@ -2778,6 +2918,8 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
     receiver.on('message', receiverOnMessage);
     receiver.on('ping', receiverOnPing);
     receiver.on('pong', receiverOnPong);
+
+    sender.onerror = senderOnError;
 
     //
     // These methods may not be available if `socket` is just a `Duplex`.
@@ -2874,13 +3016,7 @@ let WebSocket$1 = class WebSocket extends EventEmitter$1 {
       }
     });
 
-    //
-    // Specify a timeout for the closing handshake to complete.
-    //
-    this._closeTimer = setTimeout(
-      this._socket.destroy.bind(this._socket),
-      closeTimeout
-    );
+    setCloseTimer(this);
   }
 
   /**
@@ -3584,6 +3720,11 @@ function initAsClient(websocket, address, protocols, options) {
  */
 function emitErrorAndClose(websocket, err) {
   websocket._readyState = WebSocket$1.CLOSING;
+  //
+  // The following assignment is practically useless and is done only for
+  // consistency.
+  //
+  websocket._errorEmitted = true;
   websocket.emit('error', err);
   websocket.emitClose();
 }
@@ -3664,7 +3805,7 @@ function abortHandshake$1(websocket, stream, message) {
  */
 function sendAfterClose(websocket, data, cb) {
   if (data) {
-    const length = toBuffer(data).length;
+    const length = isBlob(data) ? data.size : toBuffer(data).length;
 
     //
     // The `_bufferedAmount` property is used only when the peer is a client and
@@ -3740,7 +3881,10 @@ function receiverOnError(err) {
     websocket.close(err[kStatusCode]);
   }
 
-  websocket.emit('error', err);
+  if (!websocket._errorEmitted) {
+    websocket._errorEmitted = true;
+    websocket.emit('error', err);
+  }
 }
 
 /**
@@ -3794,6 +3938,47 @@ function receiverOnPong(data) {
  */
 function resume(stream) {
   stream.resume();
+}
+
+/**
+ * The `Sender` error event handler.
+ *
+ * @param {Error} The error
+ * @private
+ */
+function senderOnError(err) {
+  const websocket = this[kWebSocket$1];
+
+  if (websocket.readyState === WebSocket$1.CLOSED) return;
+  if (websocket.readyState === WebSocket$1.OPEN) {
+    websocket._readyState = WebSocket$1.CLOSING;
+    setCloseTimer(websocket);
+  }
+
+  //
+  // `socket.end()` is used instead of `socket.destroy()` to allow the other
+  // peer to finish sending queued data. There is no need to set a timer here
+  // because `CLOSING` means that it is already set or not needed.
+  //
+  this._socket.end();
+
+  if (!websocket._errorEmitted) {
+    websocket._errorEmitted = true;
+    websocket.emit('error', err);
+  }
+}
+
+/**
+ * Set a timer to destroy the underlying raw socket of a WebSocket.
+ *
+ * @param {WebSocket} websocket The WebSocket instance
+ * @private
+ */
+function setCloseTimer(websocket) {
+  websocket._closeTimer = setTimeout(
+    websocket._socket.destroy.bind(websocket._socket),
+    closeTimeout
+  );
 }
 
 /**
