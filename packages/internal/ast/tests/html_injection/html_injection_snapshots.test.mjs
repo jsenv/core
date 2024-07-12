@@ -72,4 +72,13 @@ test("c.html", (htmlAst, writeOutputFile) => {
   insertHtmlNodeInside(createHtmlNode({ tagName: "span" }), div);
   writeOutputFile("c_2_inject_second_span_in_div.html");
 });
+test("d.html", (htmlAst, writeOutputFile) => {
+  injectHtmlNodeAsEarlyAsPossible(
+    htmlAst,
+    createHtmlNode({
+      tagName: "script",
+    }),
+  );
+  writeOutputFile("d_0_inject_importmap.html");
+});
 outputDirectorySnapshot.compare();

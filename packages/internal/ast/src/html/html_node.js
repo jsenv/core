@@ -283,7 +283,7 @@ const injectWithLineBreakAndIndent = (
 
   const previousSibling = childNodes[futureIndex - 1];
   const parentIndentation = getIndentation(futureParentNode);
-  const nextSibling = childNodes[futureIndex + 1];
+  const nextSibling = childNodes[futureIndex];
   let childIndentation;
   if (previousSibling) {
     childIndentation = getIndentation(previousSibling);
