@@ -13,7 +13,7 @@ export const jsenvPluginHtmlSyntaxErrorFallback = () => {
   return {
     mustStayFirst: true,
     name: "jsenv:html_syntax_error_fallback",
-    appliesDuring: "*",
+    appliesDuring: "dev",
     transformUrlContent: {
       html: (urlInfo) => {
         try {
