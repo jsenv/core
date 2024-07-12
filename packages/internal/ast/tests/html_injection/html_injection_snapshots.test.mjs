@@ -62,4 +62,14 @@ test("b.html", (htmlAst, writeOutputFile) => {
   insertHtmlNodeInside(createHtmlNode({ tagName: "span" }), div);
   writeOutputFile("b_1_inject_second.html");
 });
+test("c.html", (htmlAst, writeOutputFile) => {
+  const body = findHtmlNode(htmlAst, (node) => node.tagName === "body");
+  const div = createHtmlNode({ tagName: "div" });
+  insertHtmlNodeInside(div, body);
+  writeOutputFile("c_0_inject_div_in_body.html");
+  insertHtmlNodeInside(createHtmlNode({ tagName: "span" }), div);
+  writeOutputFile("c_1_inject_span_in_div.html");
+  insertHtmlNodeInside(createHtmlNode({ tagName: "span" }), div);
+  writeOutputFile("c_2_inject_second_span_in_div.html");
+});
 outputDirectorySnapshot.compare();
