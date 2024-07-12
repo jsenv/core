@@ -306,7 +306,9 @@ const injectWithLineBreakAndIndent = (
       break line_break_and_indent_before;
     }
     if (isLineBreakAndIndent(previousSibling)) {
-      // previousSibling.value = `\n${indentation}`;
+      if (!nextSibling) {
+        previousSibling.value = `\n${childIndentation}`;
+      }
       break line_break_and_indent_before;
     }
     futureChildNodes.push({

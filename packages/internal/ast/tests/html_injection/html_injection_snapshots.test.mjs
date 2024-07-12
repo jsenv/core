@@ -55,11 +55,11 @@ test("a.html", (htmlAst, writeOutputFile) => {
   );
   writeOutputFile("a_1_second_script.html");
 });
-// test("b.html", (htmlAst, writeOutputFile) => {
-//   const div = findHtmlNode(htmlAst, (node) => node.tagName === "div");
-//   insertHtmlNodeInside(createHtmlNode({ tagName: "span" }), div);
-//   writeOutputFile("b_0_inject_first.html");
-//   insertHtmlNodeInside(createHtmlNode({ tagName: "span" }), div);
-//   writeOutputFile("b_1_inject_second.html");
-// });
+test("b.html", (htmlAst, writeOutputFile) => {
+  const div = findHtmlNode(htmlAst, (node) => node.tagName === "div");
+  insertHtmlNodeInside(createHtmlNode({ tagName: "span" }), div);
+  writeOutputFile("b_0_inject_first.html");
+  insertHtmlNodeInside(createHtmlNode({ tagName: "span" }), div);
+  writeOutputFile("b_1_inject_second.html");
+});
 outputDirectorySnapshot.compare();
