@@ -35,9 +35,9 @@ export const jsenvPluginHtmlSyntaxErrorFallback = () => {
           });
           urlInfo.kitchen.context.logger
             .error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
-    ${e.reasonCode}
-    ${urlInfo.url}:${line}:${column}
-    ${htmlErrorContentFrame}`);
+${e.reasonCode}
+${urlInfo.url}:${line}:${column}
+${htmlErrorContentFrame}`);
           const html = generateHtmlForSyntaxError(e, {
             htmlUrl: urlInfo.url,
             rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
