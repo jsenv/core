@@ -166,6 +166,7 @@ export const injectHtmlNodeAsEarlyAsPossible = (
     // - after any <link>
     // - but before first <link rel="modulepreload">
     // - and before <script type="module">
+    // - and after any <meta>
     const isImportmap = type === "importmap";
     if (isImportmap) {
       let after = headNode.childNodes[0];
@@ -183,6 +184,9 @@ export const injectHtmlNodeAsEarlyAsPossible = (
         ) {
           return insertHtmlNodeBefore(node, child);
         }
+        if (child.nodeName === "meta") {
+          after = child;
+        }
       }
       if (after) {
         return insertHtmlNodeAfter(node, after);
@@ -196,6 +200,7 @@ export const injectHtmlNodeAsEarlyAsPossible = (
     // <script> or <script type="text/jsx">, ...
     // - after any <link>
     // - before any <script>
+    // - after any <meta>
     let after = headNode.childNodes[0];
     for (const child of headNode.childNodes) {
       if (child.nodeName === "link") {
@@ -204,6 +209,9 @@ export const injectHtmlNodeAsEarlyAsPossible = (
       }
       if (child.nodeName === "script") {
         return insertHtmlNodeBefore(node, child);
+      }
+      if (child.nodeName === "meta") {
+        after = child;
       }
     }
     if (after) {
@@ -218,6 +226,7 @@ export const injectHtmlNodeAsEarlyAsPossible = (
 // - after <script type="importmap">
 // - and after any <link>
 // - and before first <script type="module">
+// - after any <meta>
 const getAsFirstJsModuleInjector = (htmlAst, { anyScript } = {}) => {
   const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
     .childNodes[0];
@@ -240,6 +249,9 @@ const getAsFirstJsModuleInjector = (htmlAst, { anyScript } = {}) => {
       (anyScript || analyzeScriptNode(child).type === "module")
     ) {
       return (node) => insertHtmlNodeBefore(node, child);
+    }
+    if (child.nodeName === "meta") {
+      after = child;
     }
   }
   if (after) {
