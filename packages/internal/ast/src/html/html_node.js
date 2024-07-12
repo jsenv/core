@@ -278,11 +278,20 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   if (previousSiblings.length) {
     futureChildNodes.push(...previousSiblings);
   }
-  const previousSibling = childNodes[futureIndex - 1];
-  if (
-    nodeToInsert.nodeName !== "#text" &&
-    (!previousSibling || !isWhitespaceNode(previousSibling))
-  ) {
+  whitespaces_before: {
+    const previousSibling = childNodes[futureIndex - 1];
+    if (previousSibling) {
+      if (
+        previousSibling.nodeName === "#text" &&
+        previousSibling.value[0] === "\n"
+      ) {
+        previousSibling.value += "  ";
+        break whitespaces_before;
+      }
+    }
+    if (nodeToInsert.nodeName === "#text") {
+      break whitespaces_before;
+    }
     let indentation;
     if (childNodes.length) {
       indentation = getIndentation(childNodes[childNodes.length - 1]);
@@ -298,9 +307,14 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   }
   futureChildNodes.push(nodeToInsert);
   nodeToInsert.parentNode = futureParentNode;
-  if (nextSiblings.length) {
-    futureChildNodes.push(...nextSiblings);
-  } else {
+  whitespaces_after: {
+    const nextSibling = nextSiblings[0];
+    if (nextSibling) {
+      if (nextSibling.nodeName === "#text" && nextSibling.value[0] === "\n") {
+        nextSibling.value = nextSibling.value.slice(-2);
+        break whitespaces_after;
+      }
+    }
     let indentation;
     if (childNodes.length) {
       indentation = getIndentation(childNodes[childNodes.length - 1]);
@@ -312,6 +326,9 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
       value: `\n${indentation}`,
       parentNode: futureParentNode,
     });
+  }
+  if (nextSiblings.length) {
+    futureChildNodes.push(...nextSiblings);
   }
   futureParentNode.childNodes = futureChildNodes;
 
