@@ -1,6 +1,6 @@
 self.resourcesFromJsenvBuild = {
   "/main.html": {
-    "version": "4bfab674"
+    "version": "22b1ab0d"
   },
   "/css/style.css": {
     "version": "2e9d11a2",

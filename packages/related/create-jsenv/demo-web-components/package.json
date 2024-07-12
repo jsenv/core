@@ -15,7 +15,7 @@
     "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "7.24.7",
+    "@babel/eslint-parser": "7.24.8",
     "@babel/plugin-syntax-import-assertions": "7.24.7",
     "@jsenv/custom-elements-redefine": "0.0.1",
     "@jsenv/assert": "4.1.3",
