@@ -47,14 +47,15 @@ const writeDevServerOutputFile = async (relativeUrl) => {
   );
 };
 const normalizeFileContent = async (fileContent, fileUrl) => {
-  const fileWithUrlsMocked = fileContent.replaceAll(
-    jsenvCoreDirectoryPath,
-    "/mock/",
+  fileContent = fileContent.replaceAll(jsenvCoreDirectoryPath, "/mock/");
+  fileContent = fileContent.replaceAll(
+    `${devServer.origin}`,
+    "http://localhost",
   );
-  const fileContentFormatted = await prettier.format(fileWithUrlsMocked, {
+  fileContent = await prettier.format(fileContent, {
     parser: String(fileUrl).endsWith(".html") ? "html" : "babel",
   });
-  return fileContentFormatted;
+  return fileContent;
 };
 
 try {
