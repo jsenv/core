@@ -38,7 +38,7 @@ const test = async (params) => {
     order: ["before-a", "before-b", "b", "after-b", "after-a"],
     resourcesFromJsenvBuild: {
       "/main.html": {
-        version: "090593aa",
+        version: "a3b3b305",
       },
       "/css/style.css": {
         version: "2e9d11a2",
