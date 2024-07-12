@@ -116,3 +116,11 @@ export const increaseIndentation = (indentation, size) => {
   const char = indentation[0];
   return char ? `${indentation}${char.repeat(size)}` : " ".repeat(size);
 };
+
+export const decreaseIndentation = (indentation, size) => {
+  const char = indentation[0];
+  if (char) {
+    return char.slice(0, -size);
+  }
+  return "";
+};

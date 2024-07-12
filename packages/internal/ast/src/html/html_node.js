@@ -46,7 +46,7 @@ export const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
   if (after) {
     insertHtmlNodeAfter(node, after);
   } else {
-    injectWithWhitespaces(node, bodyNode, 0);
+    injectWithLineBreakAndIndent(node, bodyNode, 0);
   }
 };
 
@@ -248,7 +248,7 @@ const getAsFirstJsModuleInjector = (htmlAst) => {
 
 export const insertHtmlNodeInside = (nodeToInsert, futureParentNode) => {
   const { childNodes = [] } = futureParentNode;
-  return injectWithWhitespaces(
+  return injectWithLineBreakAndIndent(
     nodeToInsert,
     futureParentNode,
     childNodes.length,
@@ -259,71 +259,83 @@ export const insertHtmlNodeBefore = (nodeToInsert, futureNextSibling) => {
   const futureParentNode = futureNextSibling.parentNode;
   const { childNodes = [] } = futureParentNode;
   const futureIndex = childNodes.indexOf(futureNextSibling);
-  injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex);
+  injectWithLineBreakAndIndent(nodeToInsert, futureParentNode, futureIndex);
 };
 
 export const insertHtmlNodeAfter = (nodeToInsert, futurePrevSibling) => {
   const futureParentNode = futurePrevSibling.parentNode;
   const { childNodes = [] } = futureParentNode;
   const futureIndex = childNodes.indexOf(futurePrevSibling) + 1;
-  injectWithWhitespaces(nodeToInsert, futureParentNode, futureIndex);
+  injectWithLineBreakAndIndent(nodeToInsert, futureParentNode, futureIndex);
 };
 
-const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
+const injectWithLineBreakAndIndent = (
+  nodeToInsert,
+  futureParentNode,
+  futureIndex,
+) => {
   const { childNodes = [] } = futureParentNode;
   const previousSiblings = childNodes.slice(0, futureIndex);
   const nextSiblings = childNodes.slice(futureIndex);
   const futureChildNodes = [];
 
+  const previousSibling = childNodes[futureIndex - 1];
+  const parentIndentation = getIndentation(futureParentNode);
+  const nextSibling = childNodes[futureIndex + 1];
+  let childIndentation;
+  if (previousSibling) {
+    childIndentation = getIndentation(previousSibling);
+  } else if (nextSibling) {
+    childIndentation = getIndentation(nextSibling);
+  } else {
+    childIndentation = increaseIndentation(parentIndentation, 2);
+  }
   if (previousSiblings.length) {
     futureChildNodes.push(...previousSiblings);
   }
-  whitespaces_before: {
-    const previousSibling = childNodes[futureIndex - 1];
-    if (previousSibling) {
-      if (
-        previousSibling.nodeName === "#text" &&
-        previousSibling.value[0] === "\n"
-      ) {
-        previousSibling.value += "  ";
-        break whitespaces_before;
-      }
-    }
+  line_break_and_indent_before: {
     if (nodeToInsert.nodeName === "#text") {
-      break whitespaces_before;
+      break line_break_and_indent_before;
     }
-    let indentation;
-    if (childNodes.length) {
-      indentation = getIndentation(childNodes[childNodes.length - 1]);
-    } else {
-      const parentIndentation = getIndentation(futureParentNode);
-      indentation = increaseIndentation(parentIndentation, 2);
+    if (!previousSibling) {
+      futureChildNodes.push({
+        nodeName: "#text",
+        value: `\n${childIndentation}`,
+        parentNode: futureParentNode,
+      });
+      break line_break_and_indent_before;
+    }
+    if (isLineBreakAndIndent(previousSibling)) {
+      // previousSibling.value = `\n${indentation}`;
+      break line_break_and_indent_before;
     }
     futureChildNodes.push({
       nodeName: "#text",
-      value: `\n${indentation}`,
+      value: `\n${childIndentation}`,
       parentNode: futureParentNode,
     });
   }
   futureChildNodes.push(nodeToInsert);
   nodeToInsert.parentNode = futureParentNode;
-  whitespaces_after: {
-    const nextSibling = nextSiblings[0];
-    if (nextSibling) {
-      if (nextSibling.nodeName === "#text" && nextSibling.value[0] === "\n") {
-        nextSibling.value = nextSibling.value.slice(-2);
-        break whitespaces_after;
-      }
+  line_break_and_indent_after: {
+    if (nodeToInsert.nodeName === "#text") {
+      break line_break_and_indent_after;
     }
-    let indentation;
-    if (childNodes.length) {
-      indentation = getIndentation(childNodes[childNodes.length - 1]);
-    } else {
-      indentation = getIndentation(futureParentNode);
+    if (!nextSibling) {
+      futureChildNodes.push({
+        nodeName: "#text",
+        value: `\n${parentIndentation}`,
+        parentNode: futureParentNode,
+      });
+      break line_break_and_indent_after;
+    }
+    if (isLineBreakAndIndent(nextSibling)) {
+      // nextSibling.value = `\n${indentation}`;
+      break line_break_and_indent_after;
     }
     futureChildNodes.push({
       nodeName: "#text",
-      value: `\n${indentation}`,
+      value: `\n${childIndentation}`,
       parentNode: futureParentNode,
     });
   }
@@ -339,10 +351,15 @@ const injectWithWhitespaces = (nodeToInsert, futureParentNode, futureIndex) => {
   }
 };
 
-const isWhitespaceNode = (node) => {
-  if (node.nodeName !== "#text") return false;
-  if (node.value.length === 0) return false;
-  return /^\s+$/.test(node.value);
+const isLineBreakAndIndent = (htmlNode) => {
+  if (htmlNode.nodeName !== "#text") {
+    return false;
+  }
+  const { value } = htmlNode;
+  if (value[0] !== "\n") {
+    return false;
+  }
+  return value.slice(1).trim() === "";
 };
 
 const findChild = ({ childNodes = [] }, predicate) =>
