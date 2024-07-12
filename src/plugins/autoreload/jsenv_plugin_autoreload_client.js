@@ -1,9 +1,4 @@
-import {
-  parseHtml,
-  stringifyHtmlAst,
-  injectHtmlNodeAsEarlyAsPossible,
-  createHtmlNode,
-} from "@jsenv/ast";
+import { parseHtml, stringifyHtmlAst, injectJsenvScript } from "@jsenv/ast";
 
 export const jsenvPluginAutoreloadClient = () => {
   const autoreloadClientFileUrl = new URL(
@@ -26,24 +21,17 @@ export const jsenvPluginAutoreloadClient = () => {
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl,
         });
-        const paramsJson = JSON.stringify(
-          {
-            mainFilePath: `/${htmlUrlInfo.kitchen.context.mainFilePath}`,
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: autoreloadClientReference.generatedSpecifier,
+          initCall: {
+            callee: "initAutoreload",
+            params: {
+              mainFilePath: `/${htmlUrlInfo.kitchen.context.mainFilePath}`,
+            },
           },
-          null,
-          "  ",
-        );
-        injectHtmlNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            textContent: `import { initAutoreload } from "${autoreloadClientReference.generatedSpecifier}";
-
-initAutoreload(${paramsJson});`,
-          }),
-          "jsenv:autoreload_client",
-        );
+          pluginName: "jsenv:autoreload_client",
+        });
         const htmlModified = stringifyHtmlAst(htmlAst);
         return {
           content: htmlModified,

@@ -52,10 +52,10 @@ const prependJsClassicInHtml = (htmlUrlInfo, urlInfoToPrepend) => {
     htmlAst,
     createHtmlNode({
       tagName: "script",
-      textContent: urlInfoToPrepend.content,
       ...(urlInfoToPrepend.url
         ? { "inlined-from-src": urlInfoToPrepend.url }
         : {}),
+      children: urlInfoToPrepend.content,
     }),
     "jsenv:core",
   );

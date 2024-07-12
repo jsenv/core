@@ -1,9 +1,4 @@
-import {
-  parseHtml,
-  stringifyHtmlAst,
-  createHtmlNode,
-  injectHtmlNodeAsEarlyAsPossible,
-} from "@jsenv/ast";
+import { parseHtml, stringifyHtmlAst, injectJsenvScript } from "@jsenv/ast";
 import { URL_META } from "@jsenv/url-meta";
 import { asUrlWithoutSearch } from "@jsenv/urls";
 
@@ -52,22 +47,17 @@ export const jsenvPluginRibbon = ({
           expectedType: "js_module",
           specifier: ribbonClientFileUrl.href,
         });
-        const paramsJson = JSON.stringify(
-          { text: urlInfo.context.dev ? "DEV" : "BUILD" },
-          null,
-          "  ",
-        );
-        injectHtmlNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            textContent: `import { injectRibbon } from "${ribbonClientFileReference.generatedSpecifier}";
-
-injectRibbon(${paramsJson});`,
-          }),
-          "jsenv:ribbon",
-        );
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: ribbonClientFileReference.generatedSpecifier,
+          initCall: {
+            callee: "injectRibbon",
+            params: {
+              text: urlInfo.context.dev ? "DEV" : "BUILD",
+            },
+          },
+          pluginName: "jsenv:ribbon",
+        });
         return stringifyHtmlAst(htmlAst);
       },
     },

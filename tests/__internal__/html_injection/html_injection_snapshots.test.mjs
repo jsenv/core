@@ -27,7 +27,7 @@ const test = (fixtureFilename) => {
     htmlAst,
     createHtmlNode({
       tagName: "script",
-      textContent: `console.log('Hello world');`,
+      children: `console.log('Hello world');`,
     }),
     "jsenv:test",
   );
@@ -36,7 +36,7 @@ const test = (fixtureFilename) => {
     createHtmlNode({
       tagName: "script",
       type: "module",
-      textContent: `console.log('Hello again');`,
+      children: `console.log('Hello again');`,
     }),
     "jsenv:test",
   );

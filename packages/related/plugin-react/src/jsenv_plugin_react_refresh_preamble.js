@@ -1,9 +1,4 @@
-import {
-  parseHtml,
-  stringifyHtmlAst,
-  injectHtmlNodeAsEarlyAsPossible,
-  createHtmlNode,
-} from "@jsenv/ast";
+import { parseHtml, stringifyHtmlAst, injectJsenvScript } from "@jsenv/ast";
 
 export const jsenvPluginReactRefreshPreamble = () => {
   const reactRefreshPreambleClientFileUrl = new URL(
@@ -33,15 +28,11 @@ export const jsenvPluginReactRefreshPreamble = () => {
           expectedType: "js_module",
           specifier: reactRefreshPreambleClientFileUrl,
         });
-        injectHtmlNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            src: reactRefreshPreambleReference.generatedSpecifier,
-          }),
-          "jsenv:react_refresh_preamble",
-        );
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: reactRefreshPreambleReference.generatedSpecifier,
+          pluginName: "jsenv:react_refresh_preamble",
+        });
         const htmlModified = stringifyHtmlAst(htmlAst);
         return htmlModified;
       },

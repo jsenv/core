@@ -4,44 +4,56 @@
     <title>Title</title>
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
-    <script
-      src="/@fs/mock/src/plugins/jsenv_scripts_injection/client/jsenv_scripts.js"
-      jsenv-injected-by="jsenv:jsenv_scripts_injection"
-    ></script>
-    <script
-      type="module"
-      jsenv-injected-by="jsenv:autoreload_client"
-      content-indented=""
-    >
-      import { initAutoreload } from "/@fs/mock/src/plugins/autoreload/client/autoreload.js";
-
-      initAutoreload({
-        mainFilePath: "/index.html",
-      });
-    </script>
-    <script
-      src="/@fs/mock/packages/internal/plugin-supervisor/src/client/supervisor.js"
-      jsenv-injected-by="jsenv:supervisor"
-    ></script>
-    <script jsenv-injected-by="jsenv:supervisor" content-indented="">
-      window.__supervisor__.setup({
-        logs: false,
-        measurePerf: false,
-        errorOverlay: true,
-        openInEditor: true,
-        serverIsJsenvDevServer: true,
-        rootDirectoryUrl: "file:///mock/tests/dev_server/jsenv_scripts/client/",
-        scriptInfos: [
-          {
-            type: "js_module",
-            src: "/main.js",
-          },
-        ],
-      });
-    </script>
   </head>
-
   <body>
+    <jsenv-scripts>
+      <script
+        src="/@fs/mock/src/plugins/server_events/client/server_events_client.js"
+        jsenv-injected-by="jsenv:server_events_client_injection"
+      ></script>
+      <script
+        jsenv-injected-by="jsenv:server_events_client_injection"
+        content-indented=""
+        jsenv-cooked-by="jsenv:html_inline_content_analysis"
+      >
+        window.__server_events__.setup({
+          logs: true,
+        });
+      </script>
+      <script
+        src="/@fs/mock/packages/internal/plugin-supervisor/src/client/supervisor.js"
+        jsenv-injected-by="jsenv:supervisor"
+      ></script>
+      <script jsenv-injected-by="jsenv:supervisor" content-indented="">
+        window.__supervisor__.setup({
+          logs: false,
+          measurePerf: false,
+          errorOverlay: true,
+          openInEditor: true,
+          serverIsJsenvDevServer: true,
+          rootDirectoryUrl:
+            "file:///mock/tests/dev_server/jsenv_scripts/client/",
+          scriptInfos: [
+            {
+              type: "js_module",
+              src: "/main.js",
+            },
+          ],
+        });
+      </script>
+      <script
+        type="module"
+        jsenv-injected-by="jsenv:autoreload_client"
+        content-indented=""
+      >
+        import { initAutoreload } from "/@fs/mock/src/plugins/autoreload/client/autoreload.js";
+
+        initAutoreload({
+          mainFilePath: "/index.html",
+        });
+      </script></jsenv-scripts
+    >
+
     <div id="app">INIT</div>
     <script
       type="module"

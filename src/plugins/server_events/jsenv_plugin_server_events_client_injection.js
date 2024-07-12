@@ -3,6 +3,8 @@
  * to provide "serverEvents" used by other plugins
  */
 
+import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
+
 const serverEventsClientFileUrl = new URL(
   "./client/server_events_client.js",
   import.meta.url,
@@ -14,17 +16,18 @@ export const jsenvPluginServerEventsClientInjection = ({ logs = true }) => {
     appliesDuring: "*",
     transformUrlContent: {
       html: (urlInfo) => {
-        // "unshift" so that event source client connection can be put as early as possible in html
-        urlInfo.scriptInjections.unshift({
+        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
+        injectJsenvScript(htmlAst, {
           src: serverEventsClientFileUrl,
-          setup: {
-            name: "window.__server_events__.setup",
-            param: {
+          initCall: {
+            callee: "window.__server_events__.setup",
+            params: {
               logs,
             },
           },
           pluginName: "jsenv:server_events_client_injection",
         });
+        return stringifyHtmlAst(htmlAst);
       },
     },
   };

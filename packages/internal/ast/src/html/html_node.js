@@ -18,10 +18,10 @@ export const removeHtmlNode = (htmlNode) => {
   childNodes.splice(childNodes.indexOf(htmlNode), 1);
 };
 
-export const createHtmlNode = ({ tagName, textContent = "", ...rest }) => {
+export const createHtmlNode = ({ tagName, children = "", ...rest }) => {
   const html = `<${tagName} ${stringifyAttributes(
     rest,
-  )}>${textContent}</${tagName}>`;
+  )}>${children}</${tagName}>`;
   const fragment = parseFragment(html);
   return fragment.childNodes[0];
 };
@@ -48,6 +48,102 @@ export const injectHtmlNode = (htmlAst, node, jsenvPluginName = "jsenv") => {
   } else {
     injectWithWhitespaces(node, bodyNode, 0);
   }
+};
+
+export const injectJsenvScript = (
+  htmlAst,
+  { type, src, content, initCall, pluginName = "jsenv" },
+) => {
+  const jsenvScriptsNode = getJsenvScriptsNode(htmlAst);
+  if (type === "module") {
+    if (src) {
+      if (initCall) {
+        const paramsSource = stringifyParams(initCall.params, "  ");
+        const inlineScriptNode = createHtmlNode({
+          "tagName": "script",
+          "type": "module",
+          "jsenv-injected-by": pluginName,
+          "children": `import { ${initCall.callee} } from "${src}";
+    
+${initCall.callee}({
+  ${paramsSource}
+});`,
+        });
+        insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
+        return;
+      }
+      const remoteScriptNode = createHtmlNode({
+        "tagName": "script",
+        "type": "module",
+        src,
+        "jsenv-injected-by": pluginName,
+      });
+      insertHtmlNodeInside(remoteScriptNode, jsenvScriptsNode);
+      return;
+    }
+    const inlineScriptNode = createHtmlNode({
+      "tagName": "script",
+      "type": "module",
+      "jsenv-injected-by": pluginName,
+      "children": content,
+    });
+    insertHtmlNodeInside(jsenvScriptsNode, inlineScriptNode);
+    return;
+  }
+  if (src) {
+    const remoteScriptNode = createHtmlNode({
+      "tagName": "script",
+      src,
+      "jsenv-injected-by": pluginName,
+    });
+    insertHtmlNodeInside(remoteScriptNode, jsenvScriptsNode);
+    if (initCall) {
+      const paramsSource = stringifyParams(initCall.params, "  ");
+      const inlineScriptNode = createHtmlNode({
+        "tagName": "script",
+        "jsenv-injected-by": pluginName,
+        "children": `${initCall.callee}({
+  ${paramsSource}
+});`,
+      });
+      insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
+    }
+    return;
+  }
+  const inlineScriptNode = createHtmlNode({
+    "tagName": "script",
+    "jsenv-injected-by": pluginName,
+    "children": content,
+  });
+  insertHtmlNodeInside(inlineScriptNode, jsenvScriptsNode);
+};
+
+const getJsenvScriptsNode = (htmlAst) => {
+  // get or insert <jsenv-scripts>
+  let jsenvScripts = findHtmlNode(
+    htmlAst,
+    (node) => node.nodeName === "jsenv-scripts",
+  );
+  if (jsenvScripts) {
+    return jsenvScripts;
+  }
+  jsenvScripts = createHtmlNode({
+    tagName: "jsenv-scripts",
+  });
+  getAsFirstJsModuleInjector(htmlAst)(jsenvScripts);
+  return jsenvScripts;
+};
+const stringifyParams = (params, prefix = "") => {
+  const source = JSON.stringify(params, null, prefix);
+  if (prefix.length) {
+    // remove leading "{\n"
+    // remove leading prefix
+    // remove trailing "\n}"
+    return source.slice(2 + prefix.length, -2);
+  }
+  // remove leading "{"
+  // remove trailing "}"
+  return source.slice(1, -1);
 };
 
 export const injectHtmlNodeAsEarlyAsPossible = (
@@ -91,38 +187,9 @@ export const injectHtmlNodeAsEarlyAsPossible = (
       }
       return injectHtmlNode(htmlAst, node);
     }
-    // <script type="module">
-    // - after <script type="importmap">
-    // - and after any <link>
-    // - and before first <script type="module">
     const isJsModule = type === "js_module";
     if (isJsModule) {
-      const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
-        return (
-          node.nodeName === "script" &&
-          analyzeScriptNode(node).type === "importmap"
-        );
-      });
-      if (firstImportmapScript) {
-        return insertHtmlNodeAfter(node, firstImportmapScript);
-      }
-      let after = headNode.childNodes[0];
-      for (const child of headNode.childNodes) {
-        if (child.nodeName === "link") {
-          after = child;
-          continue;
-        }
-        if (
-          child.nodeName === "script" &&
-          analyzeScriptNode(child).type === "module"
-        ) {
-          return insertHtmlNodeBefore(node, child);
-        }
-      }
-      if (after) {
-        return insertHtmlNodeAfter(node, after);
-      }
-      return injectHtmlNode(htmlAst, node);
+      return getAsFirstJsModuleInjector(htmlAst)(node);
     }
     // <script> or <script type="text/jsx">, ...
     // - after any <link>
@@ -143,6 +210,49 @@ export const injectHtmlNodeAsEarlyAsPossible = (
     return injectHtmlNode(htmlAst, node);
   }
   return injectHtmlNode(htmlAst, node);
+};
+
+// <script type="module">
+// - after <script type="importmap">
+// - and after any <link>
+// - and before first <script type="module">
+const getAsFirstJsModuleInjector = (htmlAst) => {
+  const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
+    .childNodes[0];
+  const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
+    return (
+      node.nodeName === "script" && analyzeScriptNode(node).type === "importmap"
+    );
+  });
+  if (firstImportmapScript) {
+    return (node) => insertHtmlNodeAfter(node, firstImportmapScript);
+  }
+  let after = headNode.childNodes[0];
+  for (const child of headNode.childNodes) {
+    if (child.nodeName === "link") {
+      after = child;
+      continue;
+    }
+    if (
+      child.nodeName === "script" &&
+      analyzeScriptNode(child).type === "module"
+    ) {
+      return (node) => insertHtmlNodeBefore(node, child);
+    }
+  }
+  if (after) {
+    return (node) => insertHtmlNodeAfter(node, after);
+  }
+  return (node) => injectHtmlNode(htmlAst, node);
+};
+
+export const insertHtmlNodeInside = (nodeToInsert, futureParentNode) => {
+  const { childNodes = [] } = futureParentNode;
+  return injectWithWhitespaces(
+    nodeToInsert,
+    futureParentNode,
+    childNodes.length,
+  );
 };
 
 export const insertHtmlNodeBefore = (nodeToInsert, futureNextSibling) => {

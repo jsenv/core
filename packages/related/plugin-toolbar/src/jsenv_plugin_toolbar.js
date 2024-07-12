@@ -1,9 +1,4 @@
-import {
-  parseHtml,
-  stringifyHtmlAst,
-  injectHtmlNodeAsEarlyAsPossible,
-  createHtmlNode,
-} from "@jsenv/ast";
+import { parseHtml, stringifyHtmlAst, injectJsenvScript } from "@jsenv/ast";
 
 export const jsenvPluginToolbar = ({
   logLevel = "warn",
@@ -44,24 +39,23 @@ export const jsenvPluginToolbar = ({
           expectedType: "html",
           specifier: toolbarHtmlClientFileUrl,
         });
-        injectHtmlNodeAsEarlyAsPossible(
-          htmlAst,
-          createHtmlNode({
-            tagName: "script",
-            type: "module",
-            textContent: generateCodeToInjectToolbar({
-              toolbarInjectorReference,
-              toolbarClientFileReference,
+        injectJsenvScript(htmlAst, {
+          type: "module",
+          src: toolbarInjectorReference.generatedSpecifier,
+          initCall: {
+            callee: "injectToolbar",
+            params: {
+              toolbarUrl: toolbarClientFileReference.generatedSpecifier,
               logLevel,
               theme,
               opened,
               autoreload,
               animationsEnabled,
               notificationsEnabled,
-            }),
-          }),
-          "jsenv:toolbar",
-        );
+            },
+          },
+          pluginName: "jsenv:toolbar",
+        });
         const htmlModified = stringifyHtmlAst(htmlAst);
         return {
           content: htmlModified,
@@ -69,34 +63,4 @@ export const jsenvPluginToolbar = ({
       },
     },
   };
-};
-
-const generateCodeToInjectToolbar = ({
-  toolbarInjectorReference,
-  toolbarClientFileReference,
-  logLevel,
-  theme,
-  opened,
-  autoreload,
-  animationsEnabled,
-  notificationsEnabled,
-}) => {
-  const from = toolbarInjectorReference.generatedSpecifier;
-  const paramsSource = JSON.stringify(
-    {
-      toolbarUrl: toolbarClientFileReference.generatedSpecifier,
-      logLevel,
-      theme,
-      opened,
-      autoreload,
-      animationsEnabled,
-      notificationsEnabled,
-    },
-    null,
-    "  ",
-  );
-
-  return `import { injectToolbar } from ${from}
-
-injectToolbar(${paramsSource});`;
 };

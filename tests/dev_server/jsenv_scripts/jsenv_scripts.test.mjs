@@ -10,7 +10,6 @@ import { chromium } from "playwright";
 import { writeFileSync, ensureEmptyDirectory } from "@jsenv/filesystem";
 
 import { startDevServer } from "@jsenv/core";
-import { jsenvScriptsFileUrl } from "@jsenv/core/src/plugins/jsenv_scripts_injection/jsenv_plugin_jsenv_scripts_injection.js";
 // import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 import { launchBrowserPage } from "../../launch_browser_page.js";
 
@@ -62,7 +61,6 @@ try {
   await page.goto(`${devServer.origin}/main.html`);
   await writeDevServerOutputFile("./main.html");
   await writeDevServerOutputFile("./main.js");
-  await writeDevServerOutputFile(`./@fs/${fileURLToPath(jsenvScriptsFileUrl)}`);
   const html = await page.content();
   const htmlFileUrl = new URL(
     `./output/main_after_execution.html`,

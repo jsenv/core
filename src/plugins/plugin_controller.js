@@ -314,11 +314,7 @@ const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
     if (!returnValueAssertion.appliesTo.includes(hook.name)) {
       continue;
     }
-    const assertionResult = returnValueAssertion.assertion(
-      returnValue,
-      info,
-      hook,
-    );
+    const assertionResult = returnValueAssertion.assertion(returnValue, info);
     if (assertionResult !== undefined) {
       // normalization
       returnValue = assertionResult;
@@ -352,7 +348,7 @@ const returnValueAssertions = [
       "finalizeUrlContent",
       "optimizeUrlContent",
     ],
-    assertion: (valueReturned, urlInfo, hook) => {
+    assertion: (valueReturned, urlInfo) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
         return { content: valueReturned };
       }
@@ -360,18 +356,6 @@ const returnValueAssertions = [
         const { content, body } = valueReturned;
         if (urlInfo.url.startsWith("ignore:")) {
           return undefined;
-        }
-        const { scriptInjections } = valueReturned;
-        if (scriptInjections) {
-          for (const scriptInjection of scriptInjections) {
-            urlInfo.addScriptInjection({
-              pluginName: hook.plugin.name,
-              ...scriptInjection,
-            });
-          }
-          if (content === undefined) {
-            return null;
-          }
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
           throw new Error(
