@@ -130,7 +130,9 @@ const getJsenvScriptsNode = (htmlAst) => {
   jsenvScripts = createHtmlNode({
     tagName: "jsenv-scripts",
   });
-  getAsFirstJsModuleInjector(htmlAst)(jsenvScripts);
+  getAsFirstJsModuleInjector(htmlAst, {
+    anyScript: true,
+  })(jsenvScripts);
   return jsenvScripts;
 };
 const stringifyParams = (params, prefix = "") => {
@@ -216,7 +218,7 @@ export const injectHtmlNodeAsEarlyAsPossible = (
 // - after <script type="importmap">
 // - and after any <link>
 // - and before first <script type="module">
-const getAsFirstJsModuleInjector = (htmlAst) => {
+const getAsFirstJsModuleInjector = (htmlAst, { anyScript } = {}) => {
   const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
     .childNodes[0];
   const firstImportmapScript = findHtmlNode(htmlAst, (node) => {
@@ -235,7 +237,7 @@ const getAsFirstJsModuleInjector = (htmlAst) => {
     }
     if (
       child.nodeName === "script" &&
-      analyzeScriptNode(child).type === "module"
+      (anyScript || analyzeScriptNode(child).type === "module")
     ) {
       return (node) => insertHtmlNodeBefore(node, child);
     }
