@@ -10,17 +10,18 @@ import {
   writeFileStructureSync,
   ensureEmptyDirectorySync,
 } from "@jsenv/filesystem";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { startDevServer } from "@jsenv/core";
 
 let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
-const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
+const outputDirectoryUrl = new URL("./output/", import.meta.url);
 const writeFileStructureForScenario = (scenario) => {
   const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
   writeFileStructureSync(sourceDirectoryUrl, scenarioDirectoryUrl);
 };
-ensureEmptyDirectorySync(snapshotsDirectoryUrl);
+ensureEmptyDirectorySync(outputDirectoryUrl);
 writeFileStructureForScenario("0_at_start");
 
 const devServer = await startDevServer({
@@ -39,7 +40,7 @@ await page.setViewportSize({ width: 600, height: 300 }); // set a relatively sma
 const takeScreenshot = async (scenario) => {
   const sceenshotBuffer = await page.screenshot();
   writeFileSync(
-    new URL(`./${scenario}.png`, snapshotsDirectoryUrl),
+    new URL(`./${scenario}.png`, outputDirectoryUrl),
     sceenshotBuffer,
   );
 };
@@ -51,12 +52,14 @@ const testScenario = async (scenario) => {
 };
 
 try {
+  const outputDirectorySnapshot = takeDirectorySnapshot(outputDirectoryUrl);
   await page.goto(`${devServer.origin}/main.html`);
   await takeScreenshot("0_at_start");
   await testScenario("1_add_syntax_error");
   await testScenario("2_fix_syntax_error");
   await testScenario("3_update_js");
   await testScenario("4_back_to_syntax_error");
+  outputDirectorySnapshot.compare();
 } finally {
   if (!debug) {
     browser.close();
