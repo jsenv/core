@@ -24,9 +24,7 @@
       <circle cx="20" cy="0" r="6" fill="#febc2e" />
       <circle cx="40" cy="0" r="6" fill="#28c840" />
     </g>
-    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">
-      ansi to terminal
-    </text>
+    <text fill="#abb2bf" text-anchor="middle" x="320" y="20">Terminal</text>
   </g>
   <foreignObject
     id="body"
@@ -50,7 +48,7 @@
         >
         <text x="10" y="71.55" fill="#11bc79">&#x2714;</text>
         <text x="26.8" y="71.55">
-          generate build graph (done in 0.005 second)</text
+          generate build graph (done in 0.004 second)</text
         >
         <text x="10" y="90.55" fill="#11bc79">&#x2714;</text>
         <text x="26.8" y="90.55">

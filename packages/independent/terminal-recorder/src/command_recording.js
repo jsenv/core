@@ -6,11 +6,14 @@ import { startTerminalRecording } from "./terminal_recording.js";
 export const recordCommandToSvg = async (
   command,
   options,
-  svgOptions = {},
+  svgOptions,
   terminalOptions = {},
 ) => {
   const terminalRecorder = await startTerminalRecording({
-    svg: svgOptions,
+    svg: {
+      title: "Terminal",
+      ...svgOptions,
+    },
     ...terminalOptions,
   });
   await executeCommand(command, {
