@@ -751,19 +751,24 @@ window.__supervisor__ = (() => {
         const ownerSiteUrl = `${fileUrl}@L${tagLineStart}C${tagColumnStart}-L${tagLineEnd}C${tagColumnEnd}${extension}`;
         const ownerSite = {
           url: ownerSiteUrl,
-          line,
-          column,
+          ownerLine: tagLineStart,
+          ownerColumn: tagColumnStart,
+          inlineLine: typeof line === "number" ? line - 1 : undefined,
+          inlineColumn: column,
         };
-        const inlineLine = tagLineStart + (typeof line === "number" ? line : 0);
-        const inlineColumn =
-          tagColumnStart + (typeof column === "number" ? column : 0);
         return {
           ownerSite,
           isInline: true,
           serverUrl: url,
           url: fileUrl,
-          line: inlineLine - 1, // sauf pour les erreur de syntaxe
-          column: inlineColumn,
+          line:
+            typeof ownerSite.inlineLine === "number"
+              ? ownerSite.ownerLine + ownerSite.inlineLine
+              : ownerSite.ownerLine,
+          column:
+            typeof ownerSite.inlineColumn === "number"
+              ? ownerSite.inlineColumn
+              : ownerSite.ownerColumn,
         };
       }
       return {
@@ -1013,9 +1018,13 @@ window.__supervisor__ = (() => {
                   return;
                 }
                 if (exception.site.line !== undefined) {
-                  const errorTraceFile = stringifyUrlSite(
-                    exception.site.ownerSite || exception.site,
-                  );
+                  const errorTraceFile = exception.site.ownerSite
+                    ? stringifyUrlSite({
+                        url: exception.site.ownerSite.url,
+                        line: exception.site.ownerSite.inlineLine,
+                        column: exception.site.ownerSite.inlineColumn,
+                      })
+                    : stringifyUrlSite(exception.site);
                   const errorTraceAPIUrl = `/__get_cause_trace__/${encodeURIComponent(
                     errorTraceFile,
                   )}`;

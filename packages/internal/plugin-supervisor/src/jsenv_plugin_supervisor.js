@@ -20,8 +20,7 @@ export const jsenvPluginSupervisor = ({
   openInEditor = true,
   errorBaseUrl,
 }) => {
-  const resolveUrlSite = (siteFromUrl) => {
-    const urlWithLineAndColumn = decodeURIComponent(siteFromUrl);
+  const resolveUrlSite = (urlWithLineAndColumn) => {
     const inlineUrlMatch = urlWithLineAndColumn.match(
       // eslint-disable-next-line regexp/no-unused-capturing-group
       /@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+(:([0-9]+):([0-9]+))?$/,
@@ -71,9 +70,10 @@ export const jsenvPluginSupervisor = ({
     serve: async (serveInfo) => {
       if (serveInfo.request.pathname.startsWith("/__get_cause_trace__/")) {
         const { pathname, searchParams } = new URL(serveInfo.request.url);
-        const result = resolveUrlSite(
+        const urlWithLineAndColumn = decodeURIComponent(
           pathname.slice("/__get_cause_trace__/".length),
         );
+        const result = resolveUrlSite(urlWithLineAndColumn);
         if (!result) {
           return {
             status: 400,
