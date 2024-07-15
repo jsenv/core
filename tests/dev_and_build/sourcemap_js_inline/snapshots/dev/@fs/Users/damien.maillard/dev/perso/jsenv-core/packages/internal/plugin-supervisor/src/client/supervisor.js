@@ -641,14 +641,39 @@ window.__supervisor__ = (() => {
           column = parseInt(column);
         }
         const fileUrlSite = resolveUrlSite({ url, line, column });
-        if (
-          fileUrlSite.isInline &&
-          exception.name === "SyntaxError" &&
-          exception.code !== DYNAMIC_IMPORT_EXPORT_MISSING
-        ) {
-          // syntax error on inline script need line-1 for some reason
-          fileUrlSite.ownerSite.line = fileUrlSite.ownerSite.line - 1;
-          fileUrlSite.line = fileUrlSite.line - 1;
+        const decreaseLine = () => {
+          const { ownerSite } = fileUrlSite;
+          if (ownerSite) {
+            if (typeof ownerSite.line === "number") {
+              ownerSite.line = fileUrlSite.ownerSite.line - 1;
+            }
+          }
+          if (typeof fileUrlSite.line === "number") {
+            fileUrlSite.line = fileUrlSite.line - 1;
+          }
+        };
+        if (fileUrlSite.isInline) {
+          // chrome
+          if (Error.captureStackTrace && !isWebkitOrSafari) {
+            if (exception.name === "SyntaxError") {
+              // syntax error on inline script need line-1 for some reason
+              decreaseLine();
+            }
+          }
+          // firefox and webkit
+          else if (exception.name === "SyntaxError") {
+            if (
+              exception.code === DYNAMIC_IMPORT_EXPORT_MISSING ||
+              exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR
+            ) {
+              decreaseLine();
+            } else {
+              decreaseLine();
+              decreaseLine();
+            }
+          } else {
+            decreaseLine();
+          }
         }
         Object.assign(exception.site, fileUrlSite);
       }
@@ -726,19 +751,24 @@ window.__supervisor__ = (() => {
         const ownerSiteUrl = `${fileUrl}@L${tagLineStart}C${tagColumnStart}-L${tagLineEnd}C${tagColumnEnd}${extension}`;
         const ownerSite = {
           url: ownerSiteUrl,
-          line,
-          column,
+          ownerLine: tagLineStart,
+          ownerColumn: tagColumnStart,
+          inlineLine: typeof line === "number" ? line - 1 : undefined,
+          inlineColumn: column,
         };
-        const inlineLine = tagLineStart + (typeof line === "number" ? line : 0);
-        const inlineColumn =
-          tagColumnStart + (typeof column === "number" ? column : 0);
         return {
           ownerSite,
           isInline: true,
           serverUrl: url,
           url: fileUrl,
-          line: inlineLine - 1, // sauf pour les erreur de syntaxe
-          column: inlineColumn,
+          line:
+            typeof ownerSite.inlineLine === "number"
+              ? ownerSite.ownerLine + ownerSite.inlineLine
+              : ownerSite.ownerLine,
+          column:
+            typeof ownerSite.inlineColumn === "number"
+              ? ownerSite.inlineColumn
+              : ownerSite.ownerColumn,
         };
       }
       return {
@@ -826,7 +856,7 @@ window.__supervisor__ = (() => {
             const lineString = lineMatch[0];
             replacement = replace({
               url: match.slice(0, -lineString.length),
-              line: lineString ? parseInt(lineString) : null,
+              line: parseInt(lineMatch[1]),
             });
           } else {
             replacement = replace({
@@ -969,13 +999,13 @@ window.__supervisor__ = (() => {
                   exception.code === DYNAMIC_IMPORT_FETCH_ERROR ||
                   exception.reportedBy === "script_error_event"
                 ) {
-                  const response = await window.fetch(
-                    `/__get_error_cause__/${encodeURIComponent(
-                      exception.site.ownerSite
-                        ? exception.ownerSite.url
-                        : exception.site.url,
-                    )}`,
-                  );
+                  const errorCauseFile = exception.site.ownerSite
+                    ? exception.site.ownerSite.url
+                    : exception.site.url;
+                  const errorCauseAPIUrl = `/__get_error_cause__/${encodeURIComponent(
+                    errorCauseFile,
+                  )}`;
+                  const response = await window.fetch(errorCauseAPIUrl);
                   if (response.status !== 200) {
                     return;
                   }
@@ -988,14 +1018,17 @@ window.__supervisor__ = (() => {
                   return;
                 }
                 if (exception.site.line !== undefined) {
-                  const urlToFetch = new URL(
-                    `/__get_cause_trace__/${encodeURIComponent(
-                      stringifyUrlSite(
-                        exception.site.ownerSite || exception.site,
-                      ),
-                    )}`,
-                    window.origin,
-                  );
+                  const errorTraceFile = exception.site.ownerSite
+                    ? stringifyUrlSite({
+                        url: exception.site.ownerSite.url,
+                        line: exception.site.ownerSite.inlineLine,
+                        column: exception.site.ownerSite.inlineColumn,
+                      })
+                    : stringifyUrlSite(exception.site);
+                  const errorTraceAPIUrl = `/__get_cause_trace__/${encodeURIComponent(
+                    errorTraceFile,
+                  )}`;
+                  const urlToFetch = new URL(errorTraceAPIUrl, window.origin);
                   if (!exception.stackSourcemapped) {
                     urlToFetch.searchParams.set("remap", "");
                   }
