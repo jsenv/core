@@ -47,6 +47,11 @@ const takePageSnapshots = async (page, scenario) => {
 };
 
 const test = async ({ browserLauncher, browserName }) => {
+  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl, {
+    [`**/**_${browserName}.*`]: true,
+    // on linux do not compare screenshots
+    ...(process.platform === "linux" ? { "**/*.png": false } : {}),
+  });
   const browser = await browserLauncher.launch({ headless: true });
   const takeSnapshotsForStory = async (story) => {
     const page = await browser.newPage();
@@ -105,20 +110,15 @@ const test = async ({ browserLauncher, browserName }) => {
   } finally {
     browser.close();
   }
+  directorySnapshot.compare();
 };
 
 try {
-  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl, {
-    "**/*": true,
-    // on linux do not compare screenshots
-    ...(process.platform === "linux" ? { "**/*.png": false } : {}),
-  });
   await Promise.all([
     test({ browserLauncher: chromium, browserName: "chromium" }),
     test({ browserLauncher: firefox, browserName: "firefox" }),
     test({ browserLauncher: webkit, browserName: "webkit" }),
   ]);
-  directorySnapshot.compare();
 } finally {
   devServer.stop();
 }
