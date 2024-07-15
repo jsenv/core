@@ -33,13 +33,13 @@ export const jsenvPluginSupervisor = ({
       // const tagLineEnd = parseInt(inlineUrlMatch[3]);
       // const tagColumnEnd = parseInt(inlineUrlMatch[4]);
       const inlineLine =
-        inlineUrlMatch[5] === undefined
-          ? undefined
-          : parseInt(inlineUrlMatch[5]);
-      const inlineColumn =
         inlineUrlMatch[6] === undefined
           ? undefined
           : parseInt(inlineUrlMatch[6]);
+      const inlineColumn =
+        inlineUrlMatch[7] === undefined
+          ? undefined
+          : parseInt(inlineUrlMatch[7]);
       return {
         file: htmlUrl,
         ownerLine: tagLineStart,
