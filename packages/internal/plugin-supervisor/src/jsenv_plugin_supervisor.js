@@ -22,13 +22,9 @@ export const jsenvPluginSupervisor = ({
 }) => {
   const resolveUrlSite = (siteFromUrl) => {
     const urlWithLineAndColumn = decodeURIComponent(siteFromUrl);
-    const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
-    if (!match) {
-      return null;
-    }
     const inlineUrlMatch = urlWithLineAndColumn.match(
       // eslint-disable-next-line regexp/no-unused-capturing-group
-      /@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+:([0-9]+):([0-9]+)$/,
+      /@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+(:([0-9]+):([0-9]+))?$/,
     );
     if (inlineUrlMatch) {
       const htmlUrl = urlWithLineAndColumn.slice(0, inlineUrlMatch.index);
@@ -36,19 +32,28 @@ export const jsenvPluginSupervisor = ({
       const tagColumnStart = parseInt(inlineUrlMatch[2]);
       // const tagLineEnd = parseInt(inlineUrlMatch[3]);
       // const tagColumnEnd = parseInt(inlineUrlMatch[4]);
-      const inlineLine = parseInt(inlineUrlMatch[5]);
-      const inlineColumn = parseInt(inlineUrlMatch[6]);
+      const inlineLine =
+        inlineUrlMatch[5] === undefined
+          ? undefined
+          : parseInt(inlineUrlMatch[5]);
+      const inlineColumn =
+        inlineUrlMatch[6] === undefined
+          ? undefined
+          : parseInt(inlineUrlMatch[6]);
       return {
         file: htmlUrl,
         ownerLine: tagLineStart,
         ownerColumn: tagColumnStart,
         inlineLine,
         inlineColumn,
-        line: tagLineStart + inlineLine,
+        line: tagLineStart + (inlineLine === undefined ? 0 : inlineLine),
         column: inlineColumn,
       };
     }
-
+    const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
+    if (!match) {
+      return null;
+    }
     const file = urlWithLineAndColumn.slice(0, match.index);
     let line = parseInt(match[1]);
     let column = parseInt(match[2]);

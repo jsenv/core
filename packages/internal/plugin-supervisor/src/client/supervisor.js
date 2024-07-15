@@ -642,8 +642,15 @@ window.__supervisor__ = (() => {
         }
         const fileUrlSite = resolveUrlSite({ url, line, column });
         const decreaseLine = () => {
-          fileUrlSite.ownerSite.line = fileUrlSite.ownerSite.line - 1;
-          fileUrlSite.line = fileUrlSite.line - 1;
+          const { ownerSite } = fileUrlSite;
+          if (ownerSite) {
+            if (typeof ownerSite.line === "number") {
+              ownerSite.line = fileUrlSite.ownerSite.line - 1;
+            }
+          }
+          if (typeof fileUrlSite.line === "number") {
+            fileUrlSite.line = fileUrlSite.line - 1;
+          }
         };
         if (fileUrlSite.isInline) {
           // chrome
