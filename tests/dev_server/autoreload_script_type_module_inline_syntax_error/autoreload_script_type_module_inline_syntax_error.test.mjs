@@ -53,8 +53,8 @@ try {
   const outputDirectorySnapshot = takeDirectorySnapshot(outputDirectoryUrl);
   await takeScreenshot("0_at_start");
   await testScenario("1_add_syntax_error");
-  // await testScenario("2_other_syntax_error");
-  // await testScenario("3_fix_syntax_error");
+  await testScenario("2_other_syntax_error");
+  await testScenario("3_fix_syntax_error");
   outputDirectorySnapshot.compare();
 } finally {
   if (!debug) {
