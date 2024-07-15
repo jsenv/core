@@ -458,11 +458,11 @@ window.__supervisor__ = (() => {
         },
         meta: null,
         site: {
+          ownerSite: null,
           isInline: null,
           url: null,
           line: null,
           column: null,
-          originalUrl: null,
         },
       };
 
@@ -721,17 +721,23 @@ window.__supervisor__ = (() => {
         const tagColumnEnd = parseInt(inlineUrlMatch[4]);
         const extension = inlineUrlMatch[5];
         url = htmlUrl;
-        line = tagLineStart + (typeof line === "number" ? line : 0);
-        line = line - 1; // sauf pour les erreur de syntaxe
-        column = tagColumnStart + (typeof column === "number" ? column : 0);
         const fileUrl = resolveFileUrl(url);
-        return {
-          isInline: true,
-          serverUrl: url,
-          originalUrl: `${fileUrl}@L${tagLineStart}C${tagColumnStart}-L${tagLineEnd}C${tagColumnEnd}${extension}`,
-          url: fileUrl,
+        const ownerSiteUrl = `${fileUrl}@L${tagLineStart}C${tagColumnStart}-L${tagLineEnd}C${tagColumnEnd}${extension}`;
+        const ownerSite = {
+          url: ownerSiteUrl,
           line,
           column,
+        };
+        const inlineLine = tagLineStart + (typeof line === "number" ? line : 0);
+        const inlineColumn =
+          tagColumnStart + (typeof column === "number" ? column : 0);
+        return {
+          ownerSite,
+          isInline: true,
+          serverUrl: url,
+          url: fileUrl,
+          line: inlineLine - 1, // sauf pour les erreur de syntaxe
+          column: inlineColumn,
         };
       }
       return {
@@ -964,8 +970,8 @@ window.__supervisor__ = (() => {
                 ) {
                   const response = await window.fetch(
                     `/__get_error_cause__/${encodeURIComponent(
-                      exception.site.isInline
-                        ? exception.site.originalUrl
+                      exception.site.ownerSite
+                        ? exception.ownerSite.url
                         : exception.site.url,
                     )}`,
                   );
@@ -983,7 +989,9 @@ window.__supervisor__ = (() => {
                 if (exception.site.line !== undefined) {
                   const urlToFetch = new URL(
                     `/__get_cause_trace__/${encodeURIComponent(
-                      stringifyUrlSite(exception.site),
+                      stringifyUrlSite(
+                        exception.site.ownerSite || exception.site,
+                      ),
                     )}`,
                     window.origin,
                   );

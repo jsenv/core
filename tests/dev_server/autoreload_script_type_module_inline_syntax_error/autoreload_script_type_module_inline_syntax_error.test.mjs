@@ -15,17 +15,23 @@ writeFileSync(
   readFileSync(new URL("./fixtures/0_at_start.html", import.meta.url)),
 );
 const devServer = await startDevServer({
-  logLevel: "error",
+  logLevel: "off",
   sourceDirectoryUrl,
   keepProcessAlive: false,
   clientAutoreload: {
     cooldownBetweenFileEvents: 250,
   },
+  supervisor: {
+    errorBaseUrl: "file:///mock/",
+  },
   port: 0,
 });
 const browser = await chromium.launch({ headless: !debug });
-const page = await launchBrowserPage(browser);
-await page.setViewportSize({ width: 600, height: 300 }); // set a relatively small and predicatble size
+const page = await launchBrowserPage(browser, {
+  mirrorConsole: true,
+  pageErrorEffect: "none",
+});
+await page.setViewportSize({ width: 600, height: 450 }); // set a relatively small and predicatble size
 const takeScreenshot = async (scenario) => {
   const sceenshotBuffer = await page.screenshot();
   writeFileSync(
@@ -47,6 +53,8 @@ try {
   const outputDirectorySnapshot = takeDirectorySnapshot(outputDirectoryUrl);
   await takeScreenshot("0_at_start");
   await testScenario("1_add_syntax_error");
+  // await testScenario("2_other_syntax_error");
+  // await testScenario("3_fix_syntax_error");
   outputDirectorySnapshot.compare();
 } finally {
   if (!debug) {

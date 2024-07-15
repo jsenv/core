@@ -20,26 +20,57 @@ export const jsenvPluginSupervisor = ({
   openInEditor = true,
   errorBaseUrl,
 }) => {
+  const resolveUrlSite = (siteFromUrl) => {
+    const urlWithLineAndColumn = decodeURIComponent(siteFromUrl);
+    const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
+    if (!match) {
+      return null;
+    }
+    const inlineUrlMatch = urlWithLineAndColumn.match(
+      // eslint-disable-next-line regexp/no-unused-capturing-group
+      /@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+:([0-9]+):([0-9]+)$/,
+    );
+    if (inlineUrlMatch) {
+      const htmlUrl = urlWithLineAndColumn.slice(0, inlineUrlMatch.index);
+      const tagLineStart = parseInt(inlineUrlMatch[1]);
+      const tagColumnStart = parseInt(inlineUrlMatch[2]);
+      // const tagLineEnd = parseInt(inlineUrlMatch[3]);
+      // const tagColumnEnd = parseInt(inlineUrlMatch[4]);
+      const inlineLine = parseInt(inlineUrlMatch[5]);
+      const inlineColumn = parseInt(inlineUrlMatch[6]);
+      return {
+        file: htmlUrl,
+        line: tagLineStart + inlineLine + 1,
+        column: tagColumnStart + inlineColumn,
+      };
+    }
+
+    const file = urlWithLineAndColumn.slice(0, match.index);
+    let line = parseInt(match[1]);
+    let column = parseInt(match[2]);
+    return {
+      file,
+      line,
+      column,
+    };
+  };
+
   return {
     name: "jsenv:supervisor",
     appliesDuring: "dev",
     serve: async (serveInfo) => {
       if (serveInfo.request.pathname.startsWith("/__get_cause_trace__/")) {
         const { pathname, searchParams } = new URL(serveInfo.request.url);
-        let urlWithLineAndColumn = pathname.slice(
-          "/__get_cause_trace__/".length,
+        const result = resolveUrlSite(
+          pathname.slice("/__get_cause_trace__/".length),
         );
-        urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn);
-        const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
-        if (!match) {
+        if (!result) {
           return {
             status: 400,
             body: "Missing line and column in url",
           };
         }
-        const file = urlWithLineAndColumn.slice(0, match.index);
-        let line = parseInt(match[1]);
-        let column = parseInt(match[2]);
+        let { file, line, column } = result;
         const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
         if (!urlInfo) {
           return {
