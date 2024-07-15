@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="290.45"
+  height="271.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="288.45"
+      height="269.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -32,12 +32,12 @@
     id="body"
     y="40"
     width="100%"
-    height="250.45"
+    height="231.45"
     overflow="hidden"
   >
     <svg
       width="448.47"
-      height="250.45"
+      height="231.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
@@ -53,18 +53,14 @@
         >
         <text x="10" y="90.55" fill="#7f7f7f">&#x25CC; 1:2 skipped</text>
         <text x="10" y="109.55" fill="#11bc79">&#x2714; 3/5 c.spec.js</text>
-        <text x="144.42" y="109.55" fill="#7f7f7f">[</text>
-        <text x="152.82" y="109.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
-        <text x="220.03" y="109.55" fill="#7f7f7f">]</text>
+        <text x="144.42" y="109.55" fill="#7f7f7f">[&#x3C;mock&#x3E;ms]</text>
         <text x="236.84" y="109.55"> (1 </text>
         <text x="262.04" y="109.55" fill="#11bc79">completed</text>
         <text x="337.65" y="109.55">, 2 </text>
         <text x="371.26" y="109.55" fill="#7f7f7f">skipped</text>
         <text x="430.07" y="109.55">)</text>
         <text x="10" y="128.55" fill="#11bc79">&#x2714; 4/5 d.spec.js</text>
-        <text x="144.42" y="128.55" fill="#7f7f7f">[</text>
-        <text x="152.82" y="128.55" fill="#7f7f7f">&#x3C;mock&#x3E;ms</text>
-        <text x="220.03" y="128.55" fill="#7f7f7f">]</text>
+        <text x="144.42" y="128.55" fill="#7f7f7f">[&#x3C;mock&#x3E;ms]</text>
         <text x="236.84" y="128.55"> (2 </text>
         <text x="262.04" y="128.55" fill="#11bc79">completed</text>
         <text x="337.65" y="128.55">, 2 </text>
