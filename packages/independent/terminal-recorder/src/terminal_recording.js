@@ -75,21 +75,7 @@ export const startTerminalRecording = async ({
       throw new Error("video not recorded");
     },
   };
-
-  if (svg) {
-    let ansi = "";
-    writeCallbackSet.add((data) => {
-      ansi += data;
-    });
-    stopCallbackSet.add(() => {
-      terminalRecords.svg = async () => {
-        const terminalSvg = await renderTerminalSvg(ansi, svg);
-        ansi = "";
-        return terminalSvg;
-      };
-    });
-  }
-  if (gif || video) {
+  if (svg || gif || video) {
     const { webkit } = await import("playwright");
     const server = await startLocalServer();
     const browser = await webkit.launch({
@@ -110,12 +96,13 @@ export const startTerminalRecording = async ({
     await page.goto(`${server.origin}/xterm.html`);
     await page.evaluate(
       /* eslint-env browser */
-      async ({ cols, rows, convertEol, gif, video, logs }) => {
+      async ({ cols, rows, convertEol, textInViewport, gif, video, logs }) => {
         await window.xtreamReadyPromise;
         const __term__ = await window.initTerminal({
           cols,
           rows,
           convertEol,
+          textInViewport,
           gif,
           video,
           logs,
@@ -126,6 +113,7 @@ export const startTerminalRecording = async ({
         cols,
         rows,
         convertEol: process.platform !== "win32",
+        textInViewport: Boolean(svg),
         gif,
         video,
         logs,
@@ -166,6 +154,11 @@ export const startTerminalRecording = async ({
         browser.close();
       }
 
+      terminalRecords.svg = async () => {
+        const ansi = recordedFormats.textInViewport;
+        const terminalSvg = await renderTerminalSvg(ansi, svg);
+        return terminalSvg;
+      };
       terminalRecords.gif = () => {
         const terminalGifBuffer = Buffer.from(recordedFormats.gif, "binary");
         return terminalGifBuffer;
