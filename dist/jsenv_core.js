@@ -16110,7 +16110,13 @@ const jsenvPluginHtmlReferenceAnalysis = ({
             });
 
             actions.push(async () => {
-              await inlineReference.urlInfo.cook();
+              try {
+                await inlineReference.urlInfo.cook();
+              } catch (e) {
+                if (!e || e.code !== "PARSE_ERROR") {
+                  throw e;
+                }
+              }
               mutations.push(() => {
                 if (hotAccept) {
                   removeHtmlNodeText(node);

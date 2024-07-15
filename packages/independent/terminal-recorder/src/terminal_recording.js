@@ -29,7 +29,7 @@ const startLocalServer = async () => {
     return devServer;
   }
 
-  const serverDirectoryUrl = new URL("../../dist/", import.meta.url);
+  const serverDirectoryUrl = new URL("../dist/", import.meta.url);
   const { startServer, fetchFileSystem } = await import("@jsenv/server");
   const server = await startServer({
     logLevel: "warn",
