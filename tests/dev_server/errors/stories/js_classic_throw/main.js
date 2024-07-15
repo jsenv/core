@@ -1,7 +1,7 @@
-// before: comment
-// before: to
-// before: increase line numbers
-throw new Error("here");
-// after: comment
-// after: to
-// after: increase line numbers
+// above: comment
+// above: to
+// above: increase line numbers
+/* before */ throw new Error("here"); /* after */
+// below: comment
+// below: to
+// below: increase line numbers
