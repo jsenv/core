@@ -647,6 +647,7 @@ window.__supervisor__ = (() => {
           exception.code !== DYNAMIC_IMPORT_EXPORT_MISSING
         ) {
           // syntax error on inline script need line-1 for some reason
+          fileUrlSite.ownerSite.line = fileUrlSite.ownerSite.line - 1;
           fileUrlSite.line = fileUrlSite.line - 1;
         }
         Object.assign(exception.site, fileUrlSite);

@@ -33,15 +33,15 @@ export const jsenvPluginSupervisor = ({
     if (inlineUrlMatch) {
       const htmlUrl = urlWithLineAndColumn.slice(0, inlineUrlMatch.index);
       const tagLineStart = parseInt(inlineUrlMatch[1]);
-      const tagColumnStart = parseInt(inlineUrlMatch[2]);
+      // const tagColumnStart = parseInt(inlineUrlMatch[2]);
       // const tagLineEnd = parseInt(inlineUrlMatch[3]);
       // const tagColumnEnd = parseInt(inlineUrlMatch[4]);
       const inlineLine = parseInt(inlineUrlMatch[5]);
       const inlineColumn = parseInt(inlineUrlMatch[6]);
       return {
         file: htmlUrl,
-        line: tagLineStart + inlineLine + 1,
-        column: tagColumnStart + inlineColumn,
+        line: tagLineStart + inlineLine,
+        column: inlineColumn,
       };
     }
 
@@ -109,7 +109,6 @@ export const jsenvPluginSupervisor = ({
           }),
         };
         const causeTraceJson = JSON.stringify(causeTrace, null, "  ");
-
         return {
           status: 200,
           headers: {

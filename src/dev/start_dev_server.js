@@ -448,6 +448,9 @@ export const startDevServer = async ({
           if (response) {
             return response;
           }
+          if (!urlInfo.contentLength) {
+            debugger;
+          }
           response = {
             url: reference.url,
             status: 200,
