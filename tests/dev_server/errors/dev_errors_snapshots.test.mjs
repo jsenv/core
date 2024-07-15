@@ -93,6 +93,7 @@ const test = async ({ browserLauncher, browserName }) => {
       "js_module_inline_throw",
       "js_module_plugin_error_transform",
       "js_module_syntax_error",
+      "js_module_syntax_error_unexpected_end",
       "js_module_throw",
       // for some reason webkit ignore this error (it does not report an error on window)
       ...(browserLauncher === webkit
