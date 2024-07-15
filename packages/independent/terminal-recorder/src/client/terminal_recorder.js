@@ -14,10 +14,12 @@ https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
 
 import "xterm";
 import "xterm-addon-webgl";
+import "@xterm/addon-serialize?as_js_module";
 import { createGifEncoder } from "./gif_encoder.js";
 
 const { Terminal } = window;
 const { WebglAddon } = window.WebglAddon;
+const { SerializeAddon } = window.SerializeAddon;
 
 export const initTerminal = ({
   cols = 80,
@@ -27,14 +29,16 @@ export const initTerminal = ({
   fontFamily = "SauceCodePro Nerd Font, Source Code Pro, Courier",
   fontSize = 12,
   convertEol = true,
+  textInViewport,
   gif,
   video,
   logs,
 }) => {
-  if (video === true) video = {};
+  if (textInViewport === true) textInViewport = {};
   if (gif === true) gif = {};
-  if (!video && !gif) {
-    throw new Error("video or gif must be enabled");
+  if (video === true) video = {};
+  if (!textInViewport && !video && !gif) {
+    throw new Error("ansi, video or gif must be enabled");
   }
 
   const log = (...args) => {
@@ -79,6 +83,9 @@ export const initTerminal = ({
       true,
     ),
   );
+  const serializeAddon = new SerializeAddon();
+  term.loadAddon(serializeAddon);
+
   const terminalElement = document.getElementById("terminal");
   term.open(terminalElement);
 
@@ -133,10 +140,36 @@ export const initTerminal = ({
   }
 
   return {
+    term,
     startRecording: async () => {
       const records = {};
+      let writePromise = Promise.resolve();
       const frameCallbackSet = new Set();
       const stopCallbackSet = new Set();
+      if (textInViewport) {
+        log("start recording text in viewport");
+        // https://github.com/xtermjs/xterm.js/issues/3681
+        // https://github.com/xtermjs/xterm.js/issues/3681
+        // get the first line
+        // term.buffer.active.getLine(term.buffer.active.viewportY).translateToString()
+        // get the last line
+        // term.buffer.active.getLine(term.buffer.active.length -1).translateToString()
+        // https://github.com/xtermjs/xterm.js/blob/a7952ff36c60ee6dce9141744b1355a5d582ee39/addons/addon-serialize/src/SerializeAddon.ts
+        stopCallbackSet.add(() => {
+          const startY = term.buffer.active.viewportY;
+          const endY = term.buffer.active.length - 1;
+          const range = {
+            start: startY,
+            end: endY,
+          };
+          log(`lines in viewport: ${startY}:${endY}`);
+          const output = serializeAddon.serialize({
+            range,
+          });
+          log(`text in viewport: ${output}`);
+          records.textInViewport = output;
+        });
+      }
       if (video) {
         log("start recording video");
         const { mimeType = "video/webm;codecs=h264", msAddedAtTheEnd } = video;
@@ -277,8 +310,8 @@ export const initTerminal = ({
 
       return {
         writeIntoTerminal: async (data) => {
-          await new Promise((resolve) => {
-            log(`write data: "${data}"`);
+          writePromise = new Promise((resolve) => {
+            log(`write data:`, data);
             term.write(data, () => {
               term._core._renderService._renderDebouncer._innerRefresh();
               replicateXterm();
@@ -286,8 +319,10 @@ export const initTerminal = ({
               resolve();
             });
           });
+          await writePromise;
         },
         stopRecording: async () => {
+          await writePromise;
           const promises = [];
           for (const stopCallback of stopCallbackSet) {
             promises.push(stopCallback());

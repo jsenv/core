@@ -75,116 +75,111 @@ export const startTerminalRecording = async ({
       throw new Error("video not recorded");
     },
   };
-
-  if (svg) {
-    let ansi = "";
-    writeCallbackSet.add((data) => {
-      ansi += data;
-    });
-    stopCallbackSet.add(() => {
-      terminalRecords.svg = async () => {
-        const terminalSvg = await renderTerminalSvg(ansi, svg);
-        ansi = "";
-        return terminalSvg;
-      };
-    });
+  if (!svg && !gif && !video) {
+    throw new Error("svg, video or gif must be enabled ");
   }
-  if (gif || video) {
-    const { webkit } = await import("playwright");
-    const server = await startLocalServer();
-    const browser = await webkit.launch({
-      // channel: "chrome", // https://github.com/microsoft/playwright/issues/7716#issuecomment-882634893
-      headless: !debug,
-      // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
-      args: ["--ignore-certificate-errors"],
-    });
-    const page = await browser.newPage({
-      ignoreHTTPSErrors: true,
-    });
-    page.on("pageerror", (error) => {
-      throw error;
-    });
-    page.on("console", (consoleMessage) => {
-      console.log(`chrome> ${consoleMessage.text()}`);
-    });
-    await page.goto(`${server.origin}/xterm.html`);
-    await page.evaluate(
-      /* eslint-env browser */
-      async ({ cols, rows, convertEol, gif, video, logs }) => {
-        await window.xtreamReadyPromise;
-        const __term__ = await window.initTerminal({
-          cols,
-          rows,
-          convertEol,
-          gif,
-          video,
-          logs,
-        });
-        window.__term__ = __term__;
-      },
-      {
+  const { webkit } = await import("playwright");
+  const server = await startLocalServer();
+  const browser = await webkit.launch({
+    // channel: "chrome", // https://github.com/microsoft/playwright/issues/7716#issuecomment-882634893
+    headless: !debug,
+    // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
+    args: ["--ignore-certificate-errors"],
+  });
+  const page = await browser.newPage({
+    ignoreHTTPSErrors: true,
+  });
+  page.on("pageerror", (error) => {
+    throw error;
+  });
+  page.on("console", (consoleMessage) => {
+    console.log(`browser> ${consoleMessage.text()}`);
+  });
+  await page.goto(`${server.origin}/xterm.html`);
+  await page.evaluate(
+    /* eslint-env browser */
+    async ({ cols, rows, convertEol, textInViewport, gif, video, logs }) => {
+      await window.xtreamReadyPromise;
+      const __term__ = await window.initTerminal({
         cols,
         rows,
-        convertEol: process.platform !== "win32",
+        convertEol,
+        textInViewport,
         gif,
         video,
         logs,
-      },
-      /* eslint-env node */
-    );
+      });
+      window.__term__ = __term__;
+    },
+    {
+      cols,
+      rows,
+      convertEol: process.platform !== "win32",
+      textInViewport: Boolean(svg),
+      gif,
+      video,
+      logs,
+    },
+    /* eslint-env node */
+  );
+  await page.evaluate(
+    /* eslint-env browser */
+    async () => {
+      const { writeIntoTerminal, stopRecording } =
+        await window.__term__.startRecording();
+      window.terminalRecording = { writeIntoTerminal, stopRecording };
+    },
+    /* eslint-env node */
+  );
+  writeCallbackSet.add(async (data) => {
     await page.evaluate(
       /* eslint-env browser */
-      async () => {
-        const { writeIntoTerminal, stopRecording } =
-          await window.__term__.startRecording();
-        window.terminalRecording = { writeIntoTerminal, stopRecording };
+      async (data) => {
+        await window.terminalRecording.writeIntoTerminal(data);
+      },
+      data,
+      /* eslint-env node */
+    );
+  });
+  stopCallbackSet.add(async () => {
+    const recordedFormats = await page.evaluate(
+      /* eslint-env browser */
+      () => {
+        return window.terminalRecording.stopRecording();
       },
       /* eslint-env node */
     );
-
-    writeCallbackSet.add(async (data) => {
-      await page.evaluate(
-        /* eslint-env browser */
-        async (data) => {
-          await window.terminalRecording.writeIntoTerminal(data);
-        },
-        data,
-        /* eslint-env node */
-      );
-    });
-
-    stopCallbackSet.add(async () => {
-      const recordedFormats = await page.evaluate(
-        /* eslint-env browser */
-        () => {
-          return window.terminalRecording.stopRecording();
-        },
-        /* eslint-env node */
-      );
-      if (!debug) {
-        server.stop();
-        browser.close();
-      }
-
-      terminalRecords.gif = () => {
-        const terminalGifBuffer = Buffer.from(recordedFormats.gif, "binary");
-        return terminalGifBuffer;
-      };
-      terminalRecords.webm = () => {
-        const terminalWebmBuffer = Buffer.from(recordedFormats.video, "binary");
-        return terminalWebmBuffer;
-      };
-      terminalRecords.mp4 = async () => {
-        const terminalWebmBuffer = Buffer.from(terminalRecords.video, "binary");
-        const webmToMp4Namespace = await import("webm-to-mp4");
-        const webmToMp4 = webmToMp4Namespace.default;
-        const terminalMp4Buffer = Buffer.from(webmToMp4(terminalWebmBuffer));
-        return terminalMp4Buffer;
-      };
-    });
-  }
+    if (!debug) {
+      server.stop();
+      browser.close();
+    }
+    terminalRecords.svg = async () => {
+      const ansi = recordedFormats.textInViewport;
+      const terminalSvg = await renderTerminalSvg(ansi, svg);
+      return terminalSvg;
+    };
+    terminalRecords.gif = () => {
+      const terminalGifBuffer = Buffer.from(recordedFormats.gif, "binary");
+      return terminalGifBuffer;
+    };
+    terminalRecords.webm = () => {
+      const terminalWebmBuffer = Buffer.from(recordedFormats.video, "binary");
+      return terminalWebmBuffer;
+    };
+    terminalRecords.mp4 = async () => {
+      const terminalWebmBuffer = Buffer.from(terminalRecords.video, "binary");
+      const webmToMp4Namespace = await import("webm-to-mp4");
+      const webmToMp4 = webmToMp4Namespace.default;
+      const terminalMp4Buffer = Buffer.from(webmToMp4(terminalWebmBuffer));
+      return terminalMp4Buffer;
+    };
+  });
+  let stopped = false;
   return {
     write: async (data) => {
+      if (stopped) {
+        throw new Error("write after stop()");
+      }
       const promises = [];
       for (const writeCallback of writeCallbackSet) {
         promises.push(writeCallback(data));

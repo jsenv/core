@@ -14,5 +14,4 @@ const generateTerminalOutputSvg = async (scriptFilename) => {
   writeFileSync(new URL(`./${scriptFilename}.svg`, import.meta.url), svg);
 };
 
-await generateTerminalOutputSvg("test");
-await generateTerminalOutputSvg("test_more");
+await generateTerminalOutputSvg("build");

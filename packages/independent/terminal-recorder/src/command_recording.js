@@ -1,15 +1,25 @@
 import { spawn } from "node:child_process";
+import { UNICODE, ANSI } from "@jsenv/humanize";
 
 import { startTerminalRecording } from "./terminal_recording.js";
 
-export const recordCommandToSvg = async (command, options) => {
+export const recordCommandToSvg = async (
+  command,
+  options,
+  svgOptions,
+  terminalOptions = {},
+) => {
   const terminalRecorder = await startTerminalRecording({
-    svg: true,
+    svg: {
+      title: "Terminal",
+      ...svgOptions,
+    },
+    ...terminalOptions,
   });
   await executeCommand(command, {
     ...options,
     onStdout: (data) => {
-      terminalRecorder.write(data);
+      terminalRecorder.write(String(data));
     },
   });
   const terminalRecords = await terminalRecorder.stop();
@@ -45,7 +55,12 @@ const executeCommand = (
         cwd && typeof cwd === "string" && cwd.startsWith("file:")
           ? new URL(cwd)
           : cwd,
-      env,
+      env: {
+        ...process.env,
+        ...(ANSI.supported ? { FORCE_COLOR: "1" } : {}),
+        ...(UNICODE.supported ? { FORCE_UNICODE: "1" } : {}),
+        ...env,
+      },
       timeout,
       // silent: true,
     });
