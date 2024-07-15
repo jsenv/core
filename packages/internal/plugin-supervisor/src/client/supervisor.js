@@ -641,14 +641,28 @@ window.__supervisor__ = (() => {
           column = parseInt(column);
         }
         const fileUrlSite = resolveUrlSite({ url, line, column });
-        if (
-          fileUrlSite.isInline &&
-          exception.name === "SyntaxError" &&
-          exception.code !== DYNAMIC_IMPORT_EXPORT_MISSING
-        ) {
-          // syntax error on inline script need line-1 for some reason
+        const decreaseLine = () => {
           fileUrlSite.ownerSite.line = fileUrlSite.ownerSite.line - 1;
           fileUrlSite.line = fileUrlSite.line - 1;
+        };
+        if (fileUrlSite.isInline) {
+          if (Error.captureStackTrace && !isWebkitOrSafari) {
+            if (exception.name === "SyntaxError") {
+              // syntax error on inline script need line-1 for some reason
+              decreaseLine();
+            }
+          }
+          // firefox and webkit
+          else if (exception.name === "SyntaxError") {
+            if (exception.code === DYNAMIC_IMPORT_EXPORT_MISSING) {
+              decreaseLine();
+            } else {
+              decreaseLine();
+              decreaseLine();
+            }
+          } else {
+            decreaseLine();
+          }
         }
         Object.assign(exception.site, fileUrlSite);
       }
@@ -969,13 +983,13 @@ window.__supervisor__ = (() => {
                   exception.code === DYNAMIC_IMPORT_FETCH_ERROR ||
                   exception.reportedBy === "script_error_event"
                 ) {
-                  const response = await window.fetch(
-                    `/__get_error_cause__/${encodeURIComponent(
-                      exception.site.ownerSite
-                        ? exception.ownerSite.url
-                        : exception.site.url,
-                    )}`,
-                  );
+                  const errorCauseFile = exception.site.ownerSite
+                    ? exception.site.ownerSite.url
+                    : exception.site.url;
+                  const errorCauseAPIUrl = `/__get_error_cause__/${encodeURIComponent(
+                    errorCauseFile,
+                  )}`;
+                  const response = await window.fetch(errorCauseAPIUrl);
                   if (response.status !== 200) {
                     return;
                   }
@@ -988,14 +1002,13 @@ window.__supervisor__ = (() => {
                   return;
                 }
                 if (exception.site.line !== undefined) {
-                  const urlToFetch = new URL(
-                    `/__get_cause_trace__/${encodeURIComponent(
-                      stringifyUrlSite(
-                        exception.site.ownerSite || exception.site,
-                      ),
-                    )}`,
-                    window.origin,
+                  const errorTraceFile = stringifyUrlSite(
+                    exception.site.ownerSite || exception.site,
                   );
+                  const errorTraceAPIUrl = `/__get_cause_trace__/${encodeURIComponent(
+                    errorTraceFile,
+                  )}`;
+                  const urlToFetch = new URL(errorTraceAPIUrl, window.origin);
                   if (!exception.stackSourcemapped) {
                     urlToFetch.searchParams.set("remap", "");
                   }
