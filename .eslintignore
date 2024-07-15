@@ -16,7 +16,7 @@ git_ignored/
 
 **/tests/**/**syntax_error.js
 **/tests/**/**syntax_error.html
-**/tests/**/js_module_inline_syntax_error/main.html
+**/tests/**/*_syntax_error/main.html
 **/tests/**/snapshots/
 **/tests/**/output/
 

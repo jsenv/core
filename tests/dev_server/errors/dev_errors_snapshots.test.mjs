@@ -89,6 +89,7 @@ const test = async ({ browserLauncher, browserName }) => {
       "js_module_inline_import_not_found",
       "js_module_inline_assertion_error",
       "js_module_inline_syntax_error",
+      "js_module_inline_syntax_error_unexpected_end",
       "js_module_inline_throw",
       "js_module_plugin_error_transform",
       "js_module_syntax_error",
