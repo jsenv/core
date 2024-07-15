@@ -166,6 +166,7 @@ export const initTerminal = ({
           const output = serializeAddon.serialize({
             range,
           });
+          log(`text in viewport: ${output}`);
           records.textInViewport = output;
         });
       }
@@ -310,7 +311,7 @@ export const initTerminal = ({
       return {
         writeIntoTerminal: async (data) => {
           writePromise = new Promise((resolve) => {
-            log(`write data: "${data}"`);
+            log(`write data:`, data);
             term.write(data, () => {
               term._core._renderService._renderDebouncer._innerRefresh();
               replicateXterm();
