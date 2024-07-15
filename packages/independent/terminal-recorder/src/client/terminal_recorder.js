@@ -143,9 +143,11 @@ export const initTerminal = ({
     term,
     startRecording: async () => {
       const records = {};
+      let writePromise = Promise.resolve();
       const frameCallbackSet = new Set();
       const stopCallbackSet = new Set();
       if (textInViewport) {
+        log("start recording text in viewport");
         // https://github.com/xtermjs/xterm.js/issues/3681
         // https://github.com/xtermjs/xterm.js/issues/3681
         // get the first line
@@ -154,10 +156,13 @@ export const initTerminal = ({
         // term.buffer.active.getLine(term.buffer.active.length -1).translateToString()
         // https://github.com/xtermjs/xterm.js/blob/a7952ff36c60ee6dce9141744b1355a5d582ee39/addons/addon-serialize/src/SerializeAddon.ts
         stopCallbackSet.add(() => {
+          const startY = term.buffer.active.viewportY;
+          const endY = term.buffer.active.length - 1;
           const range = {
-            start: term.buffer.active.viewportY,
-            end: term.buffer.active.length - 1,
+            start: startY,
+            end: endY,
           };
+          log(`lines in viewport: ${startY}:${endY}`);
           const output = serializeAddon.serialize({
             range,
           });
@@ -304,7 +309,7 @@ export const initTerminal = ({
 
       return {
         writeIntoTerminal: async (data) => {
-          await new Promise((resolve) => {
+          writePromise = new Promise((resolve) => {
             log(`write data: "${data}"`);
             term.write(data, () => {
               term._core._renderService._renderDebouncer._innerRefresh();
@@ -313,8 +318,10 @@ export const initTerminal = ({
               resolve();
             });
           });
+          await writePromise;
         },
         stopRecording: async () => {
+          await writePromise;
           const promises = [];
           for (const stopCallback of stopCallbackSet) {
             promises.push(stopCallback());

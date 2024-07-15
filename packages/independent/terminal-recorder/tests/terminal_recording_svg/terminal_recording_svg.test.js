@@ -1,39 +1,54 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { takeFileSnapshot } from "@jsenv/snapshot";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
 
 const test = async (file, snapshotFilename = `${file}.svg`, options = {}) => {
   const ansiFixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);
-  const svgSnapshotFileUrl = new URL(
-    `./snapshots/${snapshotFilename}`,
+  const svgOutputFileUrl = new URL(
+    `./output/${snapshotFilename}`,
     import.meta.url,
   );
-
-  const svgFileSnapshot = takeFileSnapshot(svgSnapshotFileUrl);
-  const terminalRecorder = await startTerminalRecording({
-    svg: options,
-  });
+  const terminalRecorder = await startTerminalRecording(options);
   const ansi = readFileSync(ansiFixtureFileUrl, "utf8");
   terminalRecorder.write(ansi);
   const result = await terminalRecorder.stop();
   const svg = await result.svg();
-  writeFileSync(svgSnapshotFileUrl, svg);
-  svgFileSnapshot.compare();
+  writeFileSync(svgOutputFileUrl, svg);
 };
 
-await test("hello_world_2_lines.txt", "hello_world_2_lines.svg");
-await test("special.txt", "special_width_640.svg");
-await test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg");
+const outputDirectorySnapshot = takeDirectorySnapshot(
+  new URL("./output/", import.meta.url),
+);
+await test("hello_world_2_lines.txt", "hello_world_2_lines.svg", {
+  svg: true,
+});
+await test("special.txt", "special_width_640.svg", {
+  svg: true,
+});
+await test("jsenv_test_output.txt", "jsenv_test_output_width_640.svg", {
+  svg: true,
+});
 await test("jsenv_test_output.txt", "jsenv_test_output_width_auto.svg", {
-  width: "auto",
+  svg: {
+    width: "auto",
+  },
 });
 await test(
   "jsenv_test_output.txt",
   "jsenv_test_output_width_auto_height_480.svg",
   {
-    width: "auto",
-    height: 480,
+    svg: {
+      width: "auto",
+      height: 480,
+    },
   },
 );
-await test("a_space_b.txt", "a_space_b.svg");
+await test("a_space_b.txt", "a_space_b.svg", {
+  svg: true,
+});
+await test("jsenv_test_output.txt", "jsenv_test_output_last_10_lines.svg", {
+  rows: 10,
+  svg: true,
+});
+outputDirectorySnapshot.compare();
