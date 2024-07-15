@@ -46,8 +46,9 @@ export const jsenvPluginSupervisor = ({
         ownerColumn: tagColumnStart,
         inlineLine,
         inlineColumn,
-        line: tagLineStart + (inlineLine === undefined ? 0 : inlineLine),
-        column: inlineColumn,
+        line:
+          inlineLine === undefined ? tagLineStart : tagLineStart + inlineLine,
+        column: inlineColumn === undefined ? tagColumnStart : inlineColumn,
       };
     }
     const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
