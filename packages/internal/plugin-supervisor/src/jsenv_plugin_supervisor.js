@@ -20,26 +20,67 @@ export const jsenvPluginSupervisor = ({
   openInEditor = true,
   errorBaseUrl,
 }) => {
+  const resolveUrlSite = (urlWithLineAndColumn) => {
+    const inlineUrlMatch = urlWithLineAndColumn.match(
+      // eslint-disable-next-line regexp/no-unused-capturing-group
+      /@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+(:([0-9]+):([0-9]+))?$/,
+    );
+    if (inlineUrlMatch) {
+      const htmlUrl = urlWithLineAndColumn.slice(0, inlineUrlMatch.index);
+      const tagLineStart = parseInt(inlineUrlMatch[1]);
+      const tagColumnStart = parseInt(inlineUrlMatch[2]);
+      // const tagLineEnd = parseInt(inlineUrlMatch[3]);
+      // const tagColumnEnd = parseInt(inlineUrlMatch[4]);
+      const inlineLine =
+        inlineUrlMatch[6] === undefined
+          ? undefined
+          : parseInt(inlineUrlMatch[6]);
+      const inlineColumn =
+        inlineUrlMatch[7] === undefined
+          ? undefined
+          : parseInt(inlineUrlMatch[7]);
+      return {
+        file: htmlUrl,
+        ownerLine: tagLineStart,
+        ownerColumn: tagColumnStart,
+        inlineLine,
+        inlineColumn,
+        line:
+          inlineLine === undefined ? tagLineStart : tagLineStart + inlineLine,
+        column: inlineColumn === undefined ? tagColumnStart : inlineColumn,
+      };
+    }
+    const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
+    if (!match) {
+      return null;
+    }
+    const file = urlWithLineAndColumn.slice(0, match.index);
+    let line = parseInt(match[1]);
+    let column = parseInt(match[2]);
+    return {
+      file,
+      line,
+      column,
+    };
+  };
+
   return {
     name: "jsenv:supervisor",
     appliesDuring: "dev",
     serve: async (serveInfo) => {
       if (serveInfo.request.pathname.startsWith("/__get_cause_trace__/")) {
         const { pathname, searchParams } = new URL(serveInfo.request.url);
-        let urlWithLineAndColumn = pathname.slice(
-          "/__get_cause_trace__/".length,
+        const urlWithLineAndColumn = decodeURIComponent(
+          pathname.slice("/__get_cause_trace__/".length),
         );
-        urlWithLineAndColumn = decodeURIComponent(urlWithLineAndColumn);
-        const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
-        if (!match) {
+        const result = resolveUrlSite(urlWithLineAndColumn);
+        if (!result) {
           return {
             status: 400,
             body: "Missing line and column in url",
           };
         }
-        const file = urlWithLineAndColumn.slice(0, match.index);
-        let line = parseInt(match[1]);
-        let column = parseInt(match[2]);
+        let { file, line, column } = result;
         const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
         if (!urlInfo) {
           return {
@@ -78,7 +119,6 @@ export const jsenvPluginSupervisor = ({
           }),
         };
         const causeTraceJson = JSON.stringify(causeTrace, null, "  ");
-
         return {
           status: 200,
           headers: {

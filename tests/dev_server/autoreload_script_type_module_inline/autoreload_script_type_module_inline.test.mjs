@@ -6,16 +6,13 @@ import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
 let debug = false;
-const htmlFileUrl = new URL("./client/main.html", import.meta.url);
-const htmlFileContent = {
-  beforeTest: readFileSync(htmlFileUrl),
-  update: (content) => writeFileSync(htmlFileUrl, content),
-  restore: () => writeFileSync(htmlFileUrl, htmlFileContent.beforeTest),
-};
-
+writeFileSync(
+  new URL("./git_ignored/main.html", import.meta.url),
+  readFileSync(new URL("./fixtures/0_at_start.html", import.meta.url)),
+);
 const devServer = await startDevServer({
   logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl: new URL("./git_ignored/", import.meta.url),
   keepProcessAlive: false,
   clientAutoreload: {
     cooldownBetweenFileEvents: 250,
@@ -41,11 +38,9 @@ try {
     assert({ actual, expect });
   }
   const navigationPromise = page.waitForNavigation();
-  htmlFileContent.update(
-    String(htmlFileContent.beforeTest).replace(
-      "window.resolveResultPromise(42);",
-      "window.resolveResultPromise(43);",
-    ),
+  writeFileSync(
+    new URL("./git_ignored/main.html", import.meta.url),
+    readFileSync(new URL("./fixtures/1_after_update.html", import.meta.url)),
   );
   await navigationPromise; // full reload
   {
@@ -54,7 +49,6 @@ try {
     assert({ actual, expect });
   }
 } finally {
-  htmlFileContent.restore();
   if (!debug) {
     browser.close();
   }

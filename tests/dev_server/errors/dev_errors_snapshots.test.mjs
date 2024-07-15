@@ -47,6 +47,11 @@ const takePageSnapshots = async (page, scenario) => {
 };
 
 const test = async ({ browserLauncher, browserName }) => {
+  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl, {
+    [`**/**_${browserName}.*`]: true,
+    // on linux do not compare screenshots
+    ...(process.platform === "linux" ? { "**/*.png": false } : {}),
+  });
   const browser = await browserLauncher.launch({ headless: true });
   const takeSnapshotsForStory = async (story) => {
     const page = await browser.newPage();
@@ -84,9 +89,11 @@ const test = async ({ browserLauncher, browserName }) => {
       "js_module_inline_import_not_found",
       "js_module_inline_assertion_error",
       "js_module_inline_syntax_error",
+      "js_module_inline_syntax_error_unexpected_end",
       "js_module_inline_throw",
       "js_module_plugin_error_transform",
       "js_module_syntax_error",
+      "js_module_syntax_error_unexpected_end",
       "js_module_throw",
       // for some reason webkit ignore this error (it does not report an error on window)
       ...(browserLauncher === webkit
@@ -105,20 +112,15 @@ const test = async ({ browserLauncher, browserName }) => {
   } finally {
     browser.close();
   }
+  directorySnapshot.compare();
 };
 
 try {
-  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl, {
-    "**/*": true,
-    // on linux do not compare screenshots
-    ...(process.platform === "linux" ? { "**/*.png": false } : {}),
-  });
   await Promise.all([
     test({ browserLauncher: chromium, browserName: "chromium" }),
     test({ browserLauncher: firefox, browserName: "firefox" }),
     test({ browserLauncher: webkit, browserName: "webkit" }),
   ]);
-  directorySnapshot.compare();
 } finally {
   devServer.stop();
 }

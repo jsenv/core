@@ -4,4 +4,10 @@ import "./file.js";
 //   import.meta.hot.accept()
 // }
 
-throw new Error("here");
+// above: comment
+// above: to
+// above: increase line numbers
+/* before */ throw new Error("here"); /* after */
+// below: comment
+// below: to
+// below: increase line numbers

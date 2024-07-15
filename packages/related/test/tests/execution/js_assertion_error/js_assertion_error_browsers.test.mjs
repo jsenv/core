@@ -52,9 +52,32 @@ expect: "bar"`;
     webkit: 9,
   }[params.runtime.name];
   const expectedColumn = {
-    chromium: 12,
+    chromium: 7,
     firefox: 5,
     webkit: 5,
+  }[params.runtime.name];
+  const ownerSite = {
+    chromium: {
+      url: `${clientDirectoryUrl}/main.html@L10C5-L17C14.js`,
+      ownerColumn: 5,
+      ownerLine: 10,
+      inlineColumn: expectedColumn,
+      inlineLine: 3,
+    },
+    firefox: {
+      url: `${clientDirectoryUrl}/main.html@L10C5-L17C14.js`,
+      ownerColumn: 5,
+      ownerLine: 10,
+      inlineColumn: undefined,
+      inlineLine: undefined,
+    },
+    webkit: {
+      url: `${clientDirectoryUrl}/main.html@L10C5-L17C14.js`,
+      ownerColumn: 5,
+      ownerLine: 10,
+      inlineColumn: undefined,
+      inlineLine: undefined,
+    },
   }[params.runtime.name];
 
   const expect = {
@@ -62,15 +85,15 @@ expect: "bar"`;
     consoleCalls: [],
     errorMessage: expectedErrorMessage,
     site: {
+      ownerSite,
       isInline: true,
       url: `${clientDirectoryUrl}/main.html`,
       line: expectedLine,
       column: expectedColumn,
-      originalUrl: `${clientDirectoryUrl}/main.html@L10C5-L17C14.js`,
       serverUrl: `${devServer.origin}/main.html`,
     },
   };
-  assert({ actual, expect });
+  assert({ actual, expect, details: params.runtime.name });
 };
 
 await test({ runtime: chromium() });
