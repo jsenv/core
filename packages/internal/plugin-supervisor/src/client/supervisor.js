@@ -851,7 +851,7 @@ window.__supervisor__ = (() => {
             const lineString = lineMatch[0];
             replacement = replace({
               url: match.slice(0, -lineString.length),
-              line: lineString ? parseInt(lineString) : null,
+              line: parseInt(lineMatch[1]),
             });
           } else {
             replacement = replace({
