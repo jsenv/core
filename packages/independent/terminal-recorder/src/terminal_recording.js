@@ -9,6 +9,8 @@
  - we should have a webm video
 */
 
+import prettier from "prettier";
+
 import { renderTerminalSvg } from "./svg/render_terminal_svg.js";
 
 const isDev = process.execArgv.includes("--conditions=development");
@@ -155,8 +157,11 @@ export const startTerminalRecording = async ({
     }
     terminalRecords.svg = async () => {
       const ansi = recordedFormats.textInViewport;
-      const terminalSvg = await renderTerminalSvg(ansi, svg);
-      return terminalSvg;
+      const terminalSvg = renderTerminalSvg(ansi, svg);
+      const terminalSvgFormatted = await prettier.format(terminalSvg, {
+        parser: "html",
+      });
+      return terminalSvgFormatted;
     };
     terminalRecords.gif = () => {
       const terminalGifBuffer = Buffer.from(recordedFormats.gif, "binary");

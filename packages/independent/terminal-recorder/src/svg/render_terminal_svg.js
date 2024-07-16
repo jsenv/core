@@ -1,4 +1,3 @@
-import prettier from "prettier";
 import { parseAnsi } from "./parse_ansi.js";
 import { createSvgRootNode } from "./xml_generator.js";
 
@@ -36,8 +35,11 @@ const colorsDefault = {
   bgCyanBright: "#00FFFF",
   bgWhiteBright: "#FFFFFF",
 };
+const headDefault = {
+  height: 40,
+};
 
-export const renderTerminalSvg = async (
+export const renderTerminalSvg = (
   ansi,
   {
     title = "ansi to terminal",
@@ -61,9 +63,10 @@ export const renderTerminalSvg = async (
     height,
     maxWidth,
     maxHeight,
+
+    head = true,
   } = {},
 ) => {
-  const { rows, columns, chunks } = parseAnsi(ansi);
   const font = {
     size: fontSize,
     width: 8.4013671875,
@@ -75,13 +78,20 @@ export const renderTerminalSvg = async (
     emHeightDescent: 3.4453125,
   };
 
-  const headerHeight = 40;
-  const textWidth = columns * font.width;
-  const textHeight = rows * (font.lineHeight + 1) + font.emHeightDescent;
-  const bodyContentWidth = paddingLeft + textWidth + paddingRight;
-  const bodyContentHeight = paddingTop + textHeight + paddingBottom;
-  const contentWidth = bodyContentWidth;
-  const contentHeight = headerHeight + bodyContentHeight;
+  let headerHeight = 0;
+  if (head) {
+    if (head === true) head = {};
+    const headOptions = { ...headDefault, ...head };
+    headerHeight = headOptions.height;
+  }
+
+  const { rows, columns, chunks } = parseAnsi(ansi);
+  const bodyTextWidth = columns * font.width;
+  const bodyTextHeight = rows * (font.lineHeight + 1) + font.emHeightDescent;
+  const bodyContentWidth = paddingLeft + bodyTextWidth + paddingRight;
+  const bodyContentHeight = paddingTop + bodyTextHeight + paddingBottom;
+  let contentWidth = bodyContentWidth;
+  let contentHeight = headerHeight + bodyContentHeight;
 
   let computedWidth;
   if (typeof width === "number") {
@@ -111,7 +121,7 @@ export const renderTerminalSvg = async (
     backgroundColor,
   });
 
-  background: {
+  render_background: {
     const backgroundGroup = svg.createNode("g", {
       id: "background",
     });
@@ -129,48 +139,50 @@ export const renderTerminalSvg = async (
     svg.appendChild(backgroundGroup);
   }
 
-  header: {
-    const headerGroup = svg.createNode("g", {
-      id: "header",
-    });
-    const iconsGroup = svg.createNode("g", {
-      transform: `translate(20,${headerHeight / 2})`,
-    });
-    const circleA = svg.createNode("circle", {
-      cx: 0,
-      cy: 0,
-      r: 6,
-      fill: "#ff5f57",
-    });
-    iconsGroup.appendChild(circleA);
-    const circleB = svg.createNode("circle", {
-      cx: 20,
-      cy: 0,
-      r: 6,
-      fill: "#febc2e",
-    });
-    iconsGroup.appendChild(circleB);
-    const circleC = svg.createNode("circle", {
-      cx: 40,
-      cy: 0,
-      r: 6,
-      fill: "#28c840",
-    });
-    iconsGroup.appendChild(circleC);
-    headerGroup.appendChild(iconsGroup);
+  if (head) {
+    render_head: {
+      const headerGroup = svg.createNode("g", {
+        id: "header",
+      });
+      const iconsGroup = svg.createNode("g", {
+        transform: `translate(20,${headerHeight / 2})`,
+      });
+      const circleA = svg.createNode("circle", {
+        cx: 0,
+        cy: 0,
+        r: 6,
+        fill: "#ff5f57",
+      });
+      iconsGroup.appendChild(circleA);
+      const circleB = svg.createNode("circle", {
+        cx: 20,
+        cy: 0,
+        r: 6,
+        fill: "#febc2e",
+      });
+      iconsGroup.appendChild(circleB);
+      const circleC = svg.createNode("circle", {
+        cx: 40,
+        cy: 0,
+        r: 6,
+        fill: "#28c840",
+      });
+      iconsGroup.appendChild(circleC);
+      headerGroup.appendChild(iconsGroup);
 
-    const text = svg.createNode("text", {
-      "fill": "#abb2bf",
-      "text-anchor": "middle",
-      "x": computedWidth / 2,
-      "y": headerHeight / 2,
-    });
-    text.setContent(title);
-    headerGroup.appendChild(text);
-    svg.appendChild(headerGroup);
+      const text = svg.createNode("text", {
+        "fill": "#abb2bf",
+        "text-anchor": "middle",
+        "x": computedWidth / 2,
+        "y": headerHeight / 2,
+      });
+      text.setContent(title);
+      headerGroup.appendChild(text);
+      svg.appendChild(headerGroup);
+    }
   }
 
-  body: {
+  render_body: {
     const bodyComputedHeight = computedHeight - headerHeight + paddingBottom;
     const foreignObject = svg.createNode("foreignObject", {
       id: "body",
@@ -281,10 +293,7 @@ export const renderTerminalSvg = async (
   }
 
   const svgString = svg.renderAsString();
-  const formatted = await prettier.format(svgString, {
-    parser: "html",
-  });
-  return formatted;
+  return svgString;
 };
 
 // Some SVG Implementations drop whitespaces
