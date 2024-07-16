@@ -15,6 +15,7 @@ git_ignored/
 **/async-to-promises.js
 
 **/tests/**/**syntax_error**.*
+!**/tests/**/**syntax_error**.test.*
 **/tests/**/**syntax_error**/main.html
 **/tests/**/snapshots/
 **/tests/**/output/

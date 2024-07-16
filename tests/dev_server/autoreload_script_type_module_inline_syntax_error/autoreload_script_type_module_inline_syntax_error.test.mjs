@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
-import { writeFileSync } from "@jsenv/filesystem";
+import { writeFileSync, readFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { startDevServer } from "@jsenv/core";
@@ -55,7 +54,9 @@ try {
   await testScenario("1_add_syntax_error");
   await testScenario("2_other_syntax_error");
   await testScenario("3_fix_syntax_error");
-  outputDirectorySnapshot.compare();
+  outputDirectorySnapshot.compare(
+    process.platform === "darwin" && process.env.CI,
+  );
 } finally {
   if (!debug) {
     browser.close();

@@ -13,7 +13,7 @@ const startTesting = (callback) => {
     const output = renderTerminalSvg(text, options);
     writeFileSync(new URL(`./output/${scenario}.svg`, import.meta.url), output);
     if (markdown) {
-      markdown += "\n\n";
+      markdown += "\n";
     }
     markdown += `# ${scenario}
 
