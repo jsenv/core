@@ -11,13 +11,15 @@ node_modules/
 **/client/regenerator_runtime.js
 **/async-to-promises.js
 
-**/tests/**/**syntax_error.js
+**/tests/**/**syntax_error**.*
+**/tests/**/**syntax_error**/main.html
+**/tests/**/snapshots/
+**/tests/**/output/
 /packages/**/server/tests/internal_error/snapshots/
 /**/dist/**
 
 /**/*.nomodule.js
 /**/*.es5.js
 source-map@*.js
-**/tests/**/snapshots/
 /jsconfig.json
 /package-lock.json

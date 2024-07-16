@@ -14,9 +14,8 @@ git_ignored/
 **/client/regenerator_runtime.js
 **/async-to-promises.js
 
-**/tests/**/**syntax_error.js
-**/tests/**/**syntax_error.html
-**/tests/**/*_syntax_error/main.html
+**/tests/**/**syntax_error**.*
+**/tests/**/**syntax_error**/main.html
 **/tests/**/snapshots/
 **/tests/**/output/
 
@@ -24,5 +23,4 @@ git_ignored/
 /**/*.jsx
 /**/*.noeslint.*
 source-map@*.js
-/**/tests/**/snapshots/
 !.eslintrc.js
