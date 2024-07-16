@@ -78,9 +78,9 @@ export const startTerminalRecording = async ({
   if (!svg && !gif && !video) {
     throw new Error("svg, video or gif must be enabled ");
   }
-  const { webkit } = await import("playwright");
+  const { chromium } = await import("playwright");
   const server = await startLocalServer();
-  const browser = await webkit.launch({
+  const browser = await chromium.launch({
     // channel: "chrome", // https://github.com/microsoft/playwright/issues/7716#issuecomment-882634893
     headless: !debug,
     // needed because https-localhost fails to trust cert on chrome + linux (ubuntu 20.04)
