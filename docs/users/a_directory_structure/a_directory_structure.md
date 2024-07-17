@@ -61,10 +61,4 @@ npm run build
 npm run test
 ```
 
-<table>
- <tr>
-  <td width="2000px" align="right" nowrap>
-   <a href="../b_dev/b_dev.md">> B) Dev</a>
-  </td>
- </tr>
-<table>
+${PREV_NEXT_NAV}

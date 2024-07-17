@@ -10,7 +10,8 @@ export const visitStructureSync = ({
   directoryUrl,
   associations,
   predicate,
-  callback = () => {},
+  onDirectory = () => {},
+  onMatch = () => {},
 }) => {
   const rootDirectoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
   if (typeof predicate !== "function") {
@@ -20,6 +21,7 @@ export const visitStructureSync = ({
   const matchingFileResultArray = [];
   const visitDirectory = (directoryUrl) => {
     const directoryItems = readDirectorySync(directoryUrl);
+    const matchingFileInfoArray = [];
     for (const directoryItem of directoryItems) {
       const directoryChildNodeUrl = `${directoryUrl}${directoryItem}`;
       let directoryChildNodeStats;
@@ -50,7 +52,7 @@ export const visitStructureSync = ({
         ) {
           continue;
         }
-        callback({
+        onDirectory({
           url: subDirectoryUrl,
           relativeUrl: urlToRelativeUrl(subDirectoryUrl, rootDirectoryUrl),
           stats: directoryChildNodeStats,
@@ -77,14 +79,25 @@ export const visitStructureSync = ({
           meta,
           fileStats: directoryChildNodeStats,
         });
-        callback({
+        matchingFileInfoArray.push({
           url: directoryChildNodeUrl,
           relativeUrl,
           stats: directoryChildNodeStats,
-          isDirectory: false,
         });
         continue;
       }
+    }
+    let i = 0;
+    while (i < matchingFileInfoArray.length) {
+      const matchingFileInfo = matchingFileInfoArray[i];
+      onMatch(matchingFileInfo, {
+        prev: i === 0 ? null : matchingFileInfoArray[i - 1],
+        next:
+          i === matchingFileInfoArray.length - 1
+            ? null
+            : matchingFileInfoArray[i + 1],
+      });
+      i++;
     }
   };
   visitDirectory(rootDirectoryUrl);
