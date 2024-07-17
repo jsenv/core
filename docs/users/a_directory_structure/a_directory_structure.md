@@ -61,4 +61,6 @@ npm run build
 npm run test
 ```
 
-${PREV_NEXT_NAV}
+<!-- PLACEHOLDER_START:PREV_NEXT_NAV --->
+
+<!-- PLACEHOLDER_END --->

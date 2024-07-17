@@ -6,10 +6,4 @@ TODO:
 - [ ] Explain benefits (less file = faster)
 - [ ] Show various examples
 
-<table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../i_test_in_node/i_test_in_node.md">< I) Test in Node.js</a>
-  </td>
- </tr>
-<table>
+${PREV_NEXT_NAV}

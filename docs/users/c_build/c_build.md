@@ -604,13 +604,4 @@ Number listened by the build server (default is 9779). `0` listen a random avail
 
 Same as https in [B) Dev](../b_dev/b_dev.md#210-https)
 
-<table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../b_dev/b_dev.md">< B) Dev</a>
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../d_test/d_test.md">> D) Test</a>
-  </td>
- </tr>
-<table>
+${PREV_NEXT_NAV}

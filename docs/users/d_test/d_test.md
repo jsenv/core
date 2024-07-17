@@ -571,13 +571,4 @@ const testPlanResult = await executeTestPlan();
 
 It contains all execution results and a few more infos
 
-<table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../c_build/c_build.md">< C) Build</a>
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../e_referencing_files/e_referencing_files.md">> E) Referencing files</a>
-  </td>
- </tr>
-<table>
+${PREV_NEXT_NAV}

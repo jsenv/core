@@ -9,6 +9,9 @@ import {
 import { parseHtml, findHtmlNode, getHtmlNodeText } from "@jsenv/ast";
 import { urlToRelativeUrl, urlToFilename } from "@jsenv/urls";
 
+const PREVIOUS_CHAR = "&lt;"; // "<"
+const NEXT_CHAR = "&gt;"; // ">"
+
 const extractMarkdownFileTitle = (mdFileUrl) => {
   const mdFileContent = String(readFileSync(mdFileUrl));
   const mdAsHtml = marked.parse(mdFileContent);
@@ -32,16 +35,13 @@ const generateTableOfContents = (directoryUrl) => {
       if (!subEntryName.endsWith(".md")) {
         continue;
       }
-      const mdFileUrl = new URL(subEntryName, `${entryUrl}/`);
-      const mdFileContent = String(readFileSync(mdFileUrl));
-      const mdAsHtml = marked.parse(mdFileContent);
-      const htmlTree = parseHtml({ html: mdAsHtml });
-      const h1 = findHtmlNode(htmlTree, (node) => node.nodeName === "h1");
-      const title = h1 ? getHtmlNodeText(h1) : subEntryName;
+      const title = extractMarkdownFileTitle(
+        new URL(subEntryName, `${entryUrl}/`),
+      );
       if (tableOfContent) {
         tableOfContent += "\n";
       }
-      tableOfContent += `<a href="./${entryName}/${subEntryName}">${title}</a>`;
+      tableOfContent += `<a href="./${entryName}/${subEntryName}">${escapeHtml(title)}</a>`;
     }
   }
   return tableOfContent;
@@ -58,7 +58,7 @@ const generatePrevNextNav = (url, prevUrl, nextUrl) => {
     return `<table>
   <tr>
     <td width="2000px" align="right" nowrap>
-      <a href="${nextUrlRelativeToCurrent}">> ${nextTitle}</a>
+      <a href="${nextUrlRelativeToCurrent}">${NEXT_CHAR} ${escapeHtml(nextTitle)}</a>
     </td>
   </tr>
 </table>`;
@@ -70,7 +70,7 @@ const generatePrevNextNav = (url, prevUrl, nextUrl) => {
     return `<table>
  <tr>
   <td width="2000px" align="left" nowrap>
-   <a href="${prevUrlRelativeToCurrent}">< ${prevTitle}</a>
+   <a href="${prevUrlRelativeToCurrent}">${PREVIOUS_CHAR} ${escapeHtml(prevTitle)}</a>
   </td>
  </tr>
 <table></table>`;
@@ -83,29 +83,28 @@ const generatePrevNextNav = (url, prevUrl, nextUrl) => {
   return `<table>
  <tr>
   <td width="2000px" align="left" nowrap>
-   <a href="${prevUrlRelativeToCurrent}">< ${prevTitle}</a>
+   <a href="${prevUrlRelativeToCurrent}">${PREVIOUS_CHAR} ${escapeHtml(prevTitle)}</a>
   </td>
   <td width="2000px" align="right" nowrap>
-   <a href="${nextUrlRelativeToCurrent}">> ${nextTitle}</a>
+   <a href="${nextUrlRelativeToCurrent}">${NEXT_CHAR} ${escapeHtml(nextTitle)}</a>
   </td>
  </tr>
 <table>`;
 };
-const replacePlaceholders = (string, replacers) => {
-  const generateReplacement = (value, placeholder) => {
-    let replacementWithMarkers = `<!-- PLACEHOLDER_START:${placeholder} --->
+const generateReplacement = (value, placeholder) => {
+  let replacementWithMarkers = `<!-- PLACEHOLDER_START:${placeholder} --->
 ${value}
 <!-- PLACEHOLDER_END --->`;
-    return replacementWithMarkers;
-  };
-
+  return replacementWithMarkers;
+};
+const replacePlaceholders = (string, replacers) => {
   string = string.replace(/\$\{(\w+)\}/g, (match, name) => {
     const replacer = replacers[name];
     if (replacer === undefined) {
       return match;
     }
     let replacement = typeof replacer === "function" ? replacer() : replacer;
-    return generateReplacement(replacement);
+    return generateReplacement(replacement, name);
   });
   string = string.replace(
     /<!-- PLACEHOLDER_START:(\w+) -->[\s\S]*<!-- PLACEHOLDER_END -->/g,
@@ -115,9 +114,10 @@ ${value}
         return match;
       }
       let replacement = typeof replacer === "function" ? replacer() : replacer;
-      return generateReplacement(replacement);
+      return generateReplacement(replacement, name);
     },
   );
+  return string;
 };
 const syncMarkdownContent = (markdownFileUrl, replacers) => {
   const mardownFileContent = String(readFileSync(markdownFileUrl));
@@ -126,6 +126,14 @@ const syncMarkdownContent = (markdownFileUrl, replacers) => {
     replacers,
   );
   writeFileSync(markdownFileUrl, markdownFileContentReplaced);
+};
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 };
 
 const syncMarkdownsInDirectory = (directoryUrl) => {
@@ -139,8 +147,8 @@ const syncMarkdownsInDirectory = (directoryUrl) => {
     predicate: ({ md }) => md,
     onMatch: ({ url, prev, next }) => {
       syncMarkdownContent(url, {
-        DIRECTORY_TABLE_OF_CONTENT: (markdownFileUrl) => {
-          return generateTableOfContents(new URL("./", markdownFileUrl));
+        DIRECTORY_TABLE_OF_CONTENT: () => {
+          return generateTableOfContents(new URL("./", url));
         },
         PREV_NEXT_NAV: () => {
           return generatePrevNextNav(url, prev?.url, next?.url);
@@ -150,4 +158,4 @@ const syncMarkdownsInDirectory = (directoryUrl) => {
   });
 };
 
-syncMarkdownsInDirectory(new URL("./", import.meta.url));
+syncMarkdownsInDirectory(new URL("./users/", import.meta.url));

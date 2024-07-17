@@ -305,13 +305,4 @@ await startDevServer({
 
 There is no plugin specific to build for now.
 
-<table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../f_features/f_features.md">< F) Features</a>
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../h_going_futher/h_going_further.md">> H) Going further</a>
-  </td>
- </tr>
-<table>
+${PREV_NEXT_NAV}
