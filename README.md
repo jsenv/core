@@ -12,7 +12,7 @@ Jsenv is a suite of tools that can be used in projects involving JavaScript.
 It favors standards and simplicity.  
 As a result it can be enjoyed by people without much experience in tooling or seeking for simple tools without hidden complexities
 
-[Link to documentation](./docs/users/readme.md)
+[Link to documentation](./docs/users/users.md)
 
 # The best parts
 

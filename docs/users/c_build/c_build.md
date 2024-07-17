@@ -68,7 +68,7 @@ node ./scripts/build.mjs
 
 It will display the following output in the terminal:
 
-![build](https://github.com/user-attachments/assets/be0acaf4-6607-4b68-9602-4a78c0145713)
+![build](./build_terminal.svg)
 
 # 2. Features
 
