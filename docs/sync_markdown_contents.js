@@ -39,7 +39,7 @@ const generateTableOfContents = (directoryUrl) => {
         new URL(subEntryName, `${entryUrl}/`),
       );
       if (tableOfContent) {
-        tableOfContent += "\n";
+        tableOfContent += "<br />\n";
       }
       tableOfContent += `<a href="./${entryName}/${subEntryName}">${escapeHtml(title)}</a>`;
     }
@@ -93,8 +93,10 @@ const generatePrevNextNav = (url, prevUrl, nextUrl) => {
 };
 const generateReplacement = (value, placeholder) => {
   let replacementWithMarkers = `<!-- PLACEHOLDER_START:${placeholder} --->
+
 ${value}
-<!-- PLACEHOLDER_END --->`;
+
+<!-- PLACEHOLDER_END -->`;
   return replacementWithMarkers;
 };
 const replacePlaceholders = (string, replacers) => {
