@@ -21,3 +21,11 @@ await generateTerminalOutputSvg(
   "./c_build/demo/build.mjs",
   "./c_build/build_terminal.svg",
 );
+await generateTerminalOutputSvg(
+  "./d_test/demo/test.mjs",
+  "./d_test/test_terminal.svg",
+);
+await generateTerminalOutputSvg(
+  "./d_test/demo/test_many_browser.mjs",
+  "./d_test/test_many_browser_terminal.svg",
+);
