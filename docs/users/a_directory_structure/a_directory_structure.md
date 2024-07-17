@@ -61,6 +61,12 @@ npm run build
 npm run test
 ```
 
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV --->
-
-<!-- PLACEHOLDER_END --->
+<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<table>
+  <tr>
+    <td width="2000px" align="right" nowrap>
+      <a href="../b_dev/b_dev.md">&gt; B) Dev</a>
+    </td>
+  </tr>
+</table>
+<!-- PLACEHOLDER_END -->

@@ -1,11 +1,13 @@
 import { getHtmlNodeAttribute } from "./html_node_attributes.js";
 
 export const visitHtmlNodes = (htmlAst, visitors) => {
+  let stopped = false;
   const visitNode = (node) => {
     const visitor = visitors[node.nodeName] || visitors["*"];
     if (visitor) {
       const callbackReturnValue = visitor(node);
       if (callbackReturnValue === "stop") {
+        stopped = true;
         return;
       }
     }
@@ -14,6 +16,9 @@ export const visitHtmlNodes = (htmlAst, visitors) => {
       let i = 0;
       while (i < childNodes.length) {
         visitNode(childNodes[i++]);
+        if (stopped) {
+          break;
+        }
       }
     }
   };

@@ -256,4 +256,15 @@ When js is inlined between `<script>` tags inside html `window.location` must be
 
 It is because in this situation `document.currentScript.src` would be `undefined`.
 
-${PREV_NEXT_NAV}
+<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<table>
+ <tr>
+  <td width="2000px" align="left" nowrap>
+   <a href="../d_test/d_test.md">&lt; D) Test</a>
+  </td>
+  <td width="2000px" align="right" nowrap>
+   <a href="../f_features/f_features.md">&gt; F) Features</a>
+  </td>
+ </tr>
+<table>
+<!-- PLACEHOLDER_END -->

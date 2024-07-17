@@ -389,4 +389,15 @@ However in specific cases we want things from both worlds:
 
 It's possible to obtain this thanks to `jsenvPluginAsJsClassic` documented in [G) Plugins#asJsClassic](../g_plugins/g_plugins.md#22-asjsclassic).
 
-${PREV_NEXT_NAV}
+<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<table>
+ <tr>
+  <td width="2000px" align="left" nowrap>
+   <a href="../e_referencing_files/e_referencing_files.md">&lt; E) Referencing files</a>
+  </td>
+  <td width="2000px" align="right" nowrap>
+   <a href="../g_plugins/g_plugins.md">&gt; G) Plugins</a>
+  </td>
+ </tr>
+<table>
+<!-- PLACEHOLDER_END -->
