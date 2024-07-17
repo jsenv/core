@@ -1,0 +1,30 @@
+{
+  "name": "@jsenv/cli",
+  "version": "0.0.1",
+  "description": "Command Line Interface for jsenv",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/related/cli"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com",
+    "url": "https://twitter.com/damienmaillard"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "type": "module",
+  "bin": {
+    "jsenv": "src/jsenv_cli.mjs"
+  },
+  "files": [
+    "./src/"
+  ],
+  "dependencies": {}
+}
