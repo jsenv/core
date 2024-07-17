@@ -44,11 +44,11 @@
         <text x="10" y="33.55">build &#x22;./index.html&#x22;</text>
         <text x="10" y="52.55" fill="#11bc79">&#x2714;</text>
         <text x="26.8" y="52.55">
-          generate source graph (done in 0.009 second)</text
+          generate source graph (done in 0.01 second)</text
         >
         <text x="10" y="71.55" fill="#11bc79">&#x2714;</text>
         <text x="26.8" y="71.55">
-          generate build graph (done in 0.005 second)</text
+          generate build graph (done in 0.004 second)</text
         >
         <text x="10" y="90.55" fill="#11bc79">&#x2714;</text>
         <text x="26.8" y="90.55">

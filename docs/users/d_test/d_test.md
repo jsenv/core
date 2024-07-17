@@ -137,7 +137,7 @@ node ./scripts/test.mjs
 
 It will display the following output in the terminal:
 
-![test](https://github.com/jsenv/core/assets/443639/1edc3d51-9c73-4ed0-bd6d-2437858aa13e)
+![test](./test_terminal.svg)
 
 ## 1.4 Executing a single test
 
@@ -233,7 +233,7 @@ npm i --save-dev @playwright/browser-webkit
 
 The terminal output:
 
-![test_more](https://github.com/jsenv/core/assets/443639/32c825c3-da89-42db-bcad-d58351a79b4c)
+![test_more](./test_many_browser_terminal.svg)
 
 ## 3.3 Isolated environment
 
