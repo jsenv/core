@@ -80,6 +80,9 @@ export { removeDirectorySync } from "./remove/remove_directory_sync.js";
 export { removeFileSync } from "./remove/remove_file_sync.js";
 export { removeEntrySync } from "./remove/remove_entry_sync.js";
 
+// replace
+export { replaceFileSync } from "./replace/replace_file_sync.js";
+
 // lifecycle
 export { registerDirectoryLifecycle } from "./lifecycle/register_directory_lifecycle.js";
 export { registerFileLifecycle } from "./lifecycle/register_file_lifecycle.js";
