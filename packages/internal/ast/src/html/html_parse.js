@@ -1,4 +1,5 @@
 import { parse, serialize, parseFragment } from "parse5";
+import { generateContentFrame } from "@jsenv/humanize";
 
 import { insertHtmlNodeAfter, insertHtmlNodeBefore } from "./html_node.js";
 import {
@@ -38,6 +39,11 @@ export const parseHtml = ({
       htmlParseError.url = url;
       htmlParseError.line = parse5Error.startLine;
       htmlParseError.column = parse5Error.startCol;
+      htmlParseError.contentFrame = generateContentFrame({
+        content: html,
+        line: parse5Error.startLine,
+        column: parse5Error.startCol,
+      });
       throw htmlParseError;
     },
   });
