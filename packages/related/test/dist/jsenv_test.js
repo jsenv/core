@@ -2285,7 +2285,6 @@ const collectFiles = async ({
             associations,
           });
           if (!predicate(meta)) return;
-
           const relativeUrl = urlToRelativeUrl(
             directoryChildNodeUrl,
             rootDirectoryUrl,
@@ -5767,7 +5766,10 @@ const executeTestPlan = async ({
   // (can eventually be used for debug)
   keepRunning = false,
 
-  githubCheck = process.env.GITHUB_WORKFLOW ? githubCheckDefault : null,
+  githubCheck = process.argv.includes("--github-check") &&
+  process.env.GITHUB_WORKFLOW
+    ? githubCheckDefault
+    : null,
   coverage = process.argv.includes("--coverage") ? coverageDefault : null,
 
   reporters = [],
@@ -6093,13 +6095,16 @@ const executeTestPlan = async ({
         }
         testPlan = {
           "file:///**/node_modules/": null,
-          "**/*./": null,
           ...testPlan,
+          "**/.*/": null,
           "**/.jsenv/": null, // ensure it's impossible to look for ".jsenv/"
         };
       }
       // webServer
       if (runtimeInfo.someNeedsServer) {
+        if (webServer.start) {
+          webServer = await webServer.start();
+        }
         await assertAndNormalizeWebServer(webServer, {
           signal: operation.signal,
           teardownCallbackSet,

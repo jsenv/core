@@ -13500,7 +13500,11 @@ const createUrlInfoTransformer = ({
     if (!generatedUrl.startsWith("file:")) {
       return;
     }
-    if (urlInfo.type === "directory") {
+    if (
+      urlInfo.type === "directory" ||
+      // happens when type is "html" to list directory content for example
+      urlInfo.firstReference?.leadsToADirectory
+    ) {
       // no need to write the directory
       return;
     }
@@ -18481,13 +18485,20 @@ const generateDirectoryContent = (
   directoryUrl,
   rootDirectoryUrl,
 ) => {
-  return directoryContentArray.map((filename) => {
+  const sortedNames = [];
+  for (const filename of directoryContentArray) {
+    const fileUrlObject = new URL(filename, directoryUrl);
+    if (lstatSync(fileUrlObject).isDirectory()) {
+      sortedNames.push(`${filename}/`);
+    } else {
+      sortedNames.push(filename);
+    }
+  }
+  sortedNames.sort(comparePathnames);
+  return sortedNames.map((filename) => {
     const fileUrlObject = new URL(filename, directoryUrl);
     const fileUrl = String(fileUrlObject);
     let fileUrlRelative = urlToRelativeUrl(fileUrl, rootDirectoryUrl);
-    if (lstatSync(fileUrlObject).isDirectory()) {
-      fileUrlRelative += "/";
-    }
     return `<li>
     <a href="/${fileUrlRelative}">/${fileUrlRelative}</a>
   </li>`;
@@ -23129,6 +23140,7 @@ ${e.trace?.message}`);
   logger.info(``);
   return {
     origin: server.origin,
+    sourceDirectoryUrl,
     stop: () => {
       server.stop();
     },

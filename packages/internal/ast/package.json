@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/ast",
-  "version": "6.2.1",
+  "version": "6.2.2",
   "description": "Parse and transform HTML, CSS and JS",
   "license": "MIT",
   "repository": {
@@ -13,8 +13,7 @@
   },
   "author": {
     "name": "dmail",
-    "email": "dmaillard06@gmail.com",
-    "url": "https://twitter.com/damienmaillard"
+    "email": "dmaillard06@gmail.com"
   },
   "engines": {
     "node": ">=16.14.0"
@@ -34,8 +33,8 @@
   },
   "dependencies": {
     "@babel/parser": "7.24.8",
-    "@jsenv/humanize": "1.2.3",
-    "@jsenv/urls": "2.2.10",
+    "@jsenv/humanize": "1.2.4",
+    "@jsenv/urls": "2.2.11",
     "acorn": "8.12.1",
     "acorn-import-attributes": "1.9.5",
     "acorn-walk": "8.3.3",

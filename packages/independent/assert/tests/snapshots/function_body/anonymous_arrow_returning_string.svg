@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="640"
-  height="100.45"
+  height="62.45"
   backgroundColor="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="98.45"
+      height="60.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -26,10 +26,10 @@
     </g>
     <text fill="#abb2bf" text-anchor="middle" x="320" y="20">Terminal</text>
   </g>
-  <foreignObject id="body" y="40" width="100%" height="60.45" overflow="hidden">
+  <foreignObject id="body" y="40" width="100%" height="22.45" overflow="hidden">
     <svg
       width="120.82"
-      height="60.45"
+      height="22.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"

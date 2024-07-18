@@ -1,12 +1,11 @@
 {
   "name": "@jsenv/fetch",
-  "version": "1.1.61",
+  "version": "1.1.62",
   "description": "Unified url fetcher (http, http, file, data)",
   "license": "MIT",
   "author": {
     "name": "dmail",
-    "email": "dmaillard06@gmail.com",
-    "url": "https://twitter.com/damienmaillard"
+    "email": "dmaillard06@gmail.com"
   },
   "repository": {
     "type": "git",
@@ -36,8 +35,8 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/urls": "2.2.10",
-    "@jsenv/server": "15.2.12",
+    "@jsenv/urls": "2.2.11",
+    "@jsenv/server": "15.2.13",
     "node-fetch": "3.3.2"
   }
 }

@@ -1,12 +1,11 @@
 {
   "name": "@jsenv/core",
-  "version": "39.1.1",
+  "version": "39.1.2",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
     "name": "dmail",
-    "email": "dmaillard06@gmail.com",
-    "url": "https://twitter.com/damienmaillard"
+    "email": "dmaillard06@gmail.com"
   },
   "repository": {
     "type": "git",
@@ -66,22 +65,22 @@
   "dependencies": {
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.3.0",
-    "@jsenv/ast": "6.2.1",
-    "@jsenv/filesystem": "4.7.5",
-    "@jsenv/humanize": "1.2.3",
+    "@jsenv/ast": "6.2.2",
+    "@jsenv/filesystem": "4.8.0",
+    "@jsenv/humanize": "1.2.4",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.2",
-    "@jsenv/js-module-fallback": "1.3.22",
+    "@jsenv/js-module-fallback": "1.3.23",
     "@jsenv/node-esm-resolution": "1.0.2",
-    "@jsenv/plugin-bundling": "2.6.15",
+    "@jsenv/plugin-bundling": "2.6.16",
     "@jsenv/plugin-minification": "1.5.4",
-    "@jsenv/plugin-supervisor": "1.5.1",
-    "@jsenv/plugin-transpilation": "1.4.5",
+    "@jsenv/plugin-supervisor": "1.5.2",
+    "@jsenv/plugin-transpilation": "1.4.6",
     "@jsenv/runtime-compat": "1.3.0",
-    "@jsenv/server": "15.2.12",
-    "@jsenv/sourcemap": "1.2.13",
+    "@jsenv/server": "15.2.13",
+    "@jsenv/sourcemap": "1.2.14",
     "@jsenv/url-meta": "8.4.2",
-    "@jsenv/urls": "2.2.10",
+    "@jsenv/urls": "2.2.11",
     "@jsenv/utils": "2.1.1"
   },
   "devDependencies": {
@@ -89,6 +88,7 @@
     "@babel/plugin-syntax-import-attributes": "7.24.7",
     "@babel/plugin-syntax-optional-chaining-assign": "7.24.7",
     "@jsenv/assert": "./packages/independent/assert/",
+    "@jsenv/cli": "./packages/related/cli/",
     "@jsenv/core": "./",
     "@jsenv/eslint-config": "./packages/independent/eslint-config/",
     "@jsenv/file-size-impact": "14.1.6",

@@ -1,6 +1,6 @@
 {
   "name": "create-jsenv",
-  "version": "1.9.82",
+  "version": "1.9.84",
   "description": "npm initializer for jsenv",
   "license": "MIT",
   "repository": {
@@ -13,8 +13,7 @@
   },
   "author": {
     "name": "dmail",
-    "email": "dmaillard06@gmail.com",
-    "url": "https://twitter.com/damienmaillard"
+    "email": "dmaillard06@gmail.com"
   },
   "engines": {
     "node": ">=16.13.0"
@@ -30,6 +29,6 @@
   ],
   "dependencies": {
     "prompts": "2.4.2",
-    "@jsenv/humanize": "1.2.3"
+    "@jsenv/humanize": "1.2.4"
   }
 }

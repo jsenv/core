@@ -41,24 +41,12 @@
         <text x="236.84" y="14.55" fill="#11bc79">expect</text>
         <text x="295.65" y="14.55"> are different</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual:</text>
-        <text x="77.21" y="52.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="52.55" fill="#7f7f7f">I</text>
-        <text x="94.01" y="52.55" fill="#7f7f7f">\\</text>
-        <text x="110.82" y="52.55" fill="#7f7f7f">\&#x22;</text>
-        <text x="127.62" y="52.55" fill="#7f7f7f">m</text>
-        <text x="144.42" y="52.55" fill="#cd5555">d</text>
-        <text x="152.82" y="52.55" fill="#cd5555">a</text>
-        <text x="161.22" y="52.55" fill="#cd5555">m</text>
+        <text x="77.21" y="52.55" fill="#7f7f7f">&#x22;I\\\&#x22;m</text>
+        <text x="144.42" y="52.55" fill="#cd5555">dam</text>
         <text x="169.63" y="52.55" fill="#7f7f7f">&#x22;</text>
         <text x="10" y="71.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="71.55" fill="#7f7f7f">&#x22;</text>
-        <text x="85.61" y="71.55" fill="#7f7f7f">I</text>
-        <text x="94.01" y="71.55" fill="#7f7f7f">\\</text>
-        <text x="110.82" y="71.55" fill="#7f7f7f">\&#x22;</text>
-        <text x="127.62" y="71.55" fill="#7f7f7f">m</text>
-        <text x="144.42" y="71.55" fill="#11bc79">s</text>
-        <text x="152.82" y="71.55" fill="#11bc79">e</text>
-        <text x="161.22" y="71.55" fill="#11bc79">b</text>
+        <text x="77.21" y="71.55" fill="#7f7f7f">&#x22;I\\\&#x22;m</text>
+        <text x="144.42" y="71.55" fill="#11bc79">seb</text>
         <text x="169.63" y="71.55" fill="#7f7f7f">&#x22;</text>
       </g>
     </svg>

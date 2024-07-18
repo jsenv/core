@@ -48,19 +48,11 @@
         <text x="295.65" y="14.55"> are different</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="71.55" fill="#DAA520">Symbol</text>
-        <text x="77.21" y="71.55" fill="#DAA520">()</text>
-        <text x="94.01" y="71.55" fill="#DAA520">: </text>
-        <text x="110.82" y="71.55" fill="#DAA520">true</text>
-        <text x="144.42" y="71.55" fill="#DAA520">,</text>
+        <text x="26.8" y="71.55" fill="#DAA520">Symbol(): true,</text>
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="109.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="128.55" fill="#DAA520">Symbol</text>
-        <text x="77.21" y="128.55" fill="#DAA520">()</text>
-        <text x="94.01" y="128.55" fill="#DAA520">: </text>
-        <text x="110.82" y="128.55" fill="#DAA520">false</text>
-        <text x="152.82" y="128.55" fill="#DAA520">,</text>
+        <text x="26.8" y="128.55" fill="#DAA520">Symbol(): false,</text>
         <text x="10" y="147.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

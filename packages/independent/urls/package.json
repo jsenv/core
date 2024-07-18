@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/urls",
-  "version": "2.2.10",
+  "version": "2.2.11",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -12,8 +12,7 @@
   },
   "author": {
     "name": "dmail",
-    "email": "dmaillard06@gmail.com",
-    "url": "https://twitter.com/damienmaillard"
+    "email": "dmaillard06@gmail.com"
   },
   "type": "module",
   "exports": {
@@ -29,6 +28,6 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/humanize": "1.2.3"
+    "@jsenv/humanize": "1.2.4"
   }
 }

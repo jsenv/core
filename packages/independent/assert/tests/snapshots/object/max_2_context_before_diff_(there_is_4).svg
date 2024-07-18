@@ -49,12 +49,8 @@
         <text x="10" y="52.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="71.55" fill="#7f7f7f">&#x2191; 3 props &#x2191;</text>
-        <text x="26.8" y="90.55" fill="#7f7f7f">d</text>
-        <text x="35.2" y="90.55" fill="#7f7f7f">: </text>
-        <text x="52.01" y="90.55" fill="#7f7f7f">true</text>
-        <text x="85.61" y="90.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="109.55" fill="#7f7f7f">e</text>
-        <text x="35.2" y="109.55" fill="#7f7f7f">: </text>
+        <text x="26.8" y="90.55" fill="#7f7f7f">d: true,</text>
+        <text x="26.8" y="109.55" fill="#7f7f7f">e: </text>
         <text x="52.01" y="109.55" fill="#cd5555">true</text>
         <text x="85.61" y="109.55" fill="#7f7f7f">,</text>
         <text x="10" y="128.55" fill="#7f7f7f">}</text>
@@ -63,12 +59,8 @@
         <text x="26.8" y="166.55" fill="#7f7f7f"
           >&#x2191; 3 props &#x2191;</text
         >
-        <text x="26.8" y="185.55" fill="#7f7f7f">d</text>
-        <text x="35.2" y="185.55" fill="#7f7f7f">: </text>
-        <text x="52.01" y="185.55" fill="#7f7f7f">true</text>
-        <text x="85.61" y="185.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="204.55" fill="#7f7f7f">e</text>
-        <text x="35.2" y="204.55" fill="#7f7f7f">: </text>
+        <text x="26.8" y="185.55" fill="#7f7f7f">d: true,</text>
+        <text x="26.8" y="204.55" fill="#7f7f7f">e: </text>
         <text x="52.01" y="204.55" fill="#11bc79">false</text>
         <text x="94.01" y="204.55" fill="#7f7f7f">,</text>
         <text x="10" y="223.55" fill="#7f7f7f">}</text>
