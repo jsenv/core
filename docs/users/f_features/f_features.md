@@ -390,6 +390,7 @@ However in specific cases we want things from both worlds:
 It's possible to obtain this thanks to `jsenvPluginAsJsClassic` documented in [G) Plugins#asJsClassic](../g_plugins/g_plugins.md#22-asjsclassic).
 
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+
 <table>
  <tr>
   <td width="2000px" align="left" nowrap>
@@ -400,4 +401,5 @@ It's possible to obtain this thanks to `jsenvPluginAsJsClassic` documented in [G
   </td>
  </tr>
 <table>
+
 <!-- PLACEHOLDER_END -->

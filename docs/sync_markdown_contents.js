@@ -170,7 +170,9 @@ const extractMarkdownFileTitle = (markdownFile) => {
 };
 const generateReplacement = (value, placeholder) => {
   let replacementWithMarkers = `<!-- PLACEHOLDER_START:${placeholder} -->
+
 ${value}
+
 <!-- PLACEHOLDER_END -->`;
   return replacementWithMarkers;
 };

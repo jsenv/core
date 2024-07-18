@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "1.5.6",
+  "version": "1.5.7",
   "description": "Snapshot testing",
   "license": "MIT",
   "author": {
@@ -39,7 +39,7 @@
     "@jsenv/urls": "2.2.11",
     "@jsenv/utils": "2.1.1",
     "pixelmatch": "6.0.0",
-    "prettier": "3.3.2"
+    "prettier": "3.3.3"
   },
   "devDependencies": {
     "strip-ansi": "7.1.0"

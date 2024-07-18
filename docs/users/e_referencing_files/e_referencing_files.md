@@ -257,6 +257,7 @@ When js is inlined between `<script>` tags inside html `window.location` must be
 It is because in this situation `document.currentScript.src` would be `undefined`.
 
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+
 <table>
  <tr>
   <td width="2000px" align="left" nowrap>
@@ -267,4 +268,5 @@ It is because in this situation `document.currentScript.src` would be `undefined
   </td>
  </tr>
 <table>
+
 <!-- PLACEHOLDER_END -->

@@ -572,6 +572,7 @@ const testPlanResult = await executeTestPlan();
 It contains all execution results and a few more infos
 
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+
 <table>
  <tr>
   <td width="2000px" align="left" nowrap>
@@ -582,4 +583,5 @@ It contains all execution results and a few more infos
   </td>
  </tr>
 <table>
+
 <!-- PLACEHOLDER_END -->
