@@ -14,9 +14,9 @@ As a result it can be enjoyed by people without much experience in tooling or se
 
 | Scenario                                              | Action                                               |
 | ----------------------------------------------------- | ---------------------------------------------------- |
-| Try a demo on my machine                    | [./#demos](#demos)                              |
-| Try jsenv on a project I have on my machine | [./#cli](#cli)                                  |
-| Learn how to use jsenv                      | [./docs/users/users.md](./docs/users/users.md) |
+| Try a demo on my machine                    | [#demos](#demos)                              |
+| Try on my machine | [#CLI](#cli)                                  |
+| Learn how to use jsenv                      | [users.md](./docs/users/users.md) |
 
 # Demos
 
