@@ -18,7 +18,6 @@ const options = {
   },
 };
 const { values, positionals } = parseArgs({ options, allowPositionals: true });
-const outfile = positionals[0];
 
 if (values.help || positionals.length === 0) {
   console.log(`jsenv: dev build and test.
@@ -30,7 +29,7 @@ npx @jsenv/cli build <src> <dist> generate an optimized version of files in <src
 npx @jsenv/cli preview <dist>     start a server for files in <dist>
 npx @jsenv/cli test               run test files
 
-<src> defaults to cwd()/src/
+<src> defaults to cwd()/src/ if exists otherwise cwd()
 <dist> defaults to cwd()/dist/
 
 https://github.com/jsenv/core
@@ -39,4 +38,17 @@ For more advanced options, see the API.`);
   process.exit(0);
 }
 
-// TODO
+const commandHandlers = {
+  dev: async (src) => {
+    const { runDevCommand } = await import("./command_dev.mjs");
+    await runDevCommand(src);
+  },
+};
+
+const [command] = positionals;
+const commandHandler = commandHandlers[command];
+if (!commandHandler) {
+  console.error(`Error: unknown command ${command}.`);
+  process.exit(1);
+}
+await commandHandler(...positionals.slice(1));

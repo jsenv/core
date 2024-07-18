@@ -89,6 +89,7 @@
     "@babel/plugin-syntax-import-attributes": "7.24.7",
     "@babel/plugin-syntax-optional-chaining-assign": "7.24.7",
     "@jsenv/assert": "./packages/independent/assert/",
+    "@jsenv/cli": "./packages/related/cli/",
     "@jsenv/core": "./",
     "@jsenv/eslint-config": "./packages/independent/eslint-config/",
     "@jsenv/file-size-impact": "14.1.6",
