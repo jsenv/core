@@ -32,7 +32,7 @@ export const runDevCommand = async (
     logLevel,
   });
   if (open) {
-    openModule.open(`${devServer.origin}`);
+    openModule.default(`${devServer.origin}`);
   }
   return devServer;
 };

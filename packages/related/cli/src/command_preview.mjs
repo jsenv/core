@@ -4,7 +4,7 @@ export const runPreviewCommand = async (dist) => {
   const cwdUrl = new URL(`${process.cwd()}/`, import.meta.url);
   const packagesRequired = ["@jsenv/core", "open"];
   await installPackagesIfMissing(packagesRequired, cwdUrl);
-  const [{ startBuildServer }, { default: open }] = await Promise.all([
+  const [{ startBuildServer }, openModule] = await Promise.all([
     import("@jsenv/core"),
     import("open"),
   ]);
@@ -18,5 +18,5 @@ export const runPreviewCommand = async (dist) => {
     buildDirectoryUrl,
     port: 4567,
   });
-  open(`${buildServer.origin}`);
+  openModule.default(`${buildServer.origin}`);
 };
