@@ -1,0 +1,9 @@
+parse error on "js_module"
+file:///mock/main_syntax_error.js:0:3
+1 | --;
+      ^
+Unexpected token (1:2)
+--- first reference ---
+file:///mock/main.html:9:27
+--- plugin name ---
+"jsenv:js_reference_analysis"

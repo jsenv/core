@@ -7,7 +7,11 @@ export const createResolveUrlError = ({
   reference,
   error,
 }) => {
-  const createFailedToResolveUrlError = ({ reason, ...details }) => {
+  const createFailedToResolveUrlError = ({
+    code = error.code || "RESOLVE_URL_ERROR",
+    reason,
+    ...details
+  }) => {
     const resolveError = new Error(
       createDetailedMessage(
         `Failed to resolve url reference
@@ -21,7 +25,7 @@ ${reason}`,
       ),
     );
     resolveError.name = "RESOLVE_URL_ERROR";
-    resolveError.code = "RESOLVE_URL_ERROR";
+    resolveError.code = code;
     resolveError.reason = reason;
     resolveError.asResponse = error.asResponse;
     return resolveError;
@@ -48,7 +52,11 @@ export const createFetchUrlContentError = ({
   urlInfo,
   error,
 }) => {
-  const createFailedToFetchUrlContentError = ({ code, reason, ...details }) => {
+  const createFailedToFetchUrlContentError = ({
+    code = error.code || "FETCH_URL_CONTENT_ERROR",
+    reason,
+    ...details
+  }) => {
     const reference = urlInfo.firstReference;
     const fetchError = new Error(
       createDetailedMessage(
@@ -63,7 +71,7 @@ ${reason}`,
       ),
     );
     fetchError.name = "FETCH_URL_CONTENT_ERROR";
-    fetchError.code = "FETCH_URL_CONTENT_ERROR";
+    fetchError.code = code;
     fetchError.reason = reason;
     fetchError.url = urlInfo.url;
     if (code === "PARSE_ERROR") {
@@ -118,18 +126,86 @@ export const createTransformUrlContentError = ({
   urlInfo,
   error,
 }) => {
-  if (error.code === "RESOLVE_URL_ERROR") {
+  if (error.code === "MODULE_NOT_FOUND") {
     return error;
   }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     return error;
   }
-  const createFailedToTransformError = ({ code, reason, ...details }) => {
+  if (error.code === "PARSE_ERROR") {
     const reference = urlInfo.firstReference;
+    let trace = reference.trace;
+    let line = error.line;
+    if (urlInfo.type === "js_module") {
+      line = line - 1;
+    }
+    if (urlInfo.isInline) {
+      trace = {
+        ...reference.trace,
+        line: reference.trace.line + line,
+        column: reference.trace.column + error.column,
+        codeFrame: generateContentFrame({
+          line: trace.line,
+          column: trace.column,
+          content: urlInfo.inlineUrlSite.content,
+        }),
+        message: stringifyUrlSite({
+          url: urlInfo.inlineUrlSite.url,
+          line: trace.line,
+          column: trace.column,
+          content: urlInfo.inlineUrlSite.content,
+        }),
+      };
+    } else {
+      trace = {
+        url: urlInfo.url,
+        line,
+        column: error.column,
+        codeFrame: generateContentFrame({
+          line,
+          column: error.column,
+          content: urlInfo.content,
+        }),
+        message: stringifyUrlSite({
+          url: urlInfo.url,
+          line,
+          column: error.column,
+          content: urlInfo.content,
+        }),
+      };
+    }
+    const transformError = new Error(
+      createDetailedMessage(
+        `parse error on "${urlInfo.type}"
+${trace.message}
+${error.message}`,
+        {
+          "first reference": `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`,
+          ...detailsFromFirstReference(reference),
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
+    );
+    transformError.cause = error;
+    transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
+    transformError.code = "PARSE_ERROR";
+    transformError.stack = error.stack;
+    transformError.reason = error.message;
+    transformError.trace = trace;
+    transformError.asResponse = error.asResponse;
+    return transformError;
+  }
+  const createFailedToTransformError = ({
+    code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
+    reason,
+    ...details
+  }) => {
+    const reference = urlInfo.firstReference;
+    let trace = reference.trace;
     const transformError = new Error(
       createDetailedMessage(
         `"transformUrlContent" error on "${urlInfo.type}"
-${reference.trace.message}
+${trace.message}
 ${reason}`,
         {
           ...detailsFromFirstReference(reference),
@@ -138,53 +214,13 @@ ${reason}`,
         },
       ),
     );
+    transformError.cause = error;
     transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
-    transformError.code = "TRANSFORM_URL_CONTENT_ERROR";
+    transformError.code = code;
     transformError.reason = reason;
     transformError.stack = error.stack;
     transformError.url = urlInfo.url;
-    transformError.trace = urlInfo.firstReference.trace;
-    if (code === "PARSE_ERROR") {
-      transformError.reason = `parse error on ${urlInfo.type}`;
-      transformError.cause = error;
-      let line = error.line;
-      if (urlInfo.type === "js_module") {
-        line = line - 1;
-      }
-      if (urlInfo.isInline) {
-        transformError.trace.line = urlInfo.firstReference.trace.line + line;
-        transformError.trace.column =
-          urlInfo.firstReference.trace.column + error.column;
-        transformError.trace.codeFrame = generateContentFrame({
-          line: transformError.trace.line,
-          column: transformError.trace.column,
-          content: urlInfo.inlineUrlSite.content,
-        });
-        transformError.trace.message = stringifyUrlSite({
-          url: urlInfo.inlineUrlSite.url,
-          line: transformError.trace.line,
-          column: transformError.trace.column,
-          content: urlInfo.inlineUrlSite.content,
-        });
-      } else {
-        transformError.trace = {
-          url: urlInfo.url,
-          line,
-          column: error.column,
-          codeFrame: generateContentFrame({
-            line,
-            column: error.column,
-            content: urlInfo.content,
-          }),
-          message: stringifyUrlSite({
-            url: urlInfo.url,
-            line,
-            column: error.column,
-            content: urlInfo.content,
-          }),
-        };
-      }
-    }
+    transformError.trace = trace;
     transformError.asResponse = error.asResponse;
     return transformError;
   };
@@ -215,7 +251,6 @@ ${reference.trace.message}`,
     finalizeError.cause = error;
   }
   finalizeError.name = "FINALIZE_URL_CONTENT_ERROR";
-  finalizeError.code = "FINALIZE_URL_CONTENT_ERROR";
   finalizeError.reason = `"finalizeUrlContent" error on "${urlInfo.type}"`;
   finalizeError.asResponse = error.asResponse;
   return finalizeError;
@@ -249,6 +284,7 @@ const detailsFromPluginController = (pluginController) => {
 const detailsFromValueThrown = (valueThrownByPlugin) => {
   if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
     if (
+      valueThrownByPlugin.code === "PARSE_ERROR" ||
       valueThrownByPlugin.code === "MODULE_NOT_FOUND" ||
       valueThrownByPlugin.name === "RESOLVE_URL_ERROR" ||
       valueThrownByPlugin.name === "FETCH_URL_CONTENT_ERROR" ||
