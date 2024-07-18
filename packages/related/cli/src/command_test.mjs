@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { installPackagesIfMissing } from "./package_installer.js";
 import { runDevCommand } from "./command_dev.mjs";
 
@@ -8,10 +9,20 @@ export const runTestCommand = async () => {
   const [{ executeTestPlan, nodeWorkerThread, chromium }] = await Promise.all([
     import("@jsenv/test"),
   ]);
+  let sourceDirectoryUrl;
+  const defaultSourceDirectoryUrl = new URL("./src/", cwdUrl);
+  if (existsSync(defaultSourceDirectoryUrl)) {
+    sourceDirectoryUrl = defaultSourceDirectoryUrl;
+  } else {
+    sourceDirectoryUrl = cwdUrl;
+  }
+
   await executeTestPlan({
     rootDirectoryUrl: cwdUrl,
     testPlan: {
-      "./**/*.test.html": {
+      [sourceDirectoryUrl === cwdUrl
+        ? "./**/*.test.html"
+        : "./src/**/*.test.html"]: {
         chromium: {
           runtime: chromium(),
         },
@@ -34,17 +45,15 @@ export const runTestCommand = async () => {
           ["@playwright/browser-chromium"],
           cwdUrl,
         );
-        const devServer = await runDevCommand(undefined, {
+        const devServer = await runDevCommand(sourceDirectoryUrl, {
           keepProcessAlive: false,
           logLevel: "warn",
         });
         return {
           origin: devServer.origin,
-          rootDirectoryUrl: devServer.sourceDirectoryUrl,
+          rootDirectoryUrl: sourceDirectoryUrl,
         };
       },
     },
   });
 };
-
-runTestCommand();
