@@ -1,0 +1,9 @@
+GET http://localhost:59461/not_found.js
+  404 Failed to fetch url content
+  file:///mock/intermediate.js:2:7
+  1 | // eslint-disable-next-line import/no-unresolved
+  2 | import "./not_found.js";
+            ^
+  no entry on filesystem
+  --- plugin name ---
+  "jsenv:file_url_fetching"
