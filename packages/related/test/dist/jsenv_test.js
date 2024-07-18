@@ -4845,6 +4845,7 @@ const reporterList = ({
               const log = renderExecutionLog(
                 execution,
                 logOptions,
+                testPlanResult,
                 testPlanHelpers,
               );
               if (log) {
@@ -4868,6 +4869,7 @@ const reporterList = ({
         const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
         let frameIndex = 0;
         let oneExecutionWritten = false;
+        const memoryHeapUsedAtStart = memoryUsage().heapUsed;
         const renderDynamicLog = (testPlanResult) => {
           frameIndex = frameIndex === frames.length - 1 ? 0 : frameIndex + 1;
           let dynamicLogContent = "";
@@ -4887,12 +4889,18 @@ const reporterList = ({
             rounded: false,
           });
           infos.push(ANSI.color(duration, ANSI.GREY));
+          let memoryUsageColor = ANSI.GREY;
           const memoryHeapUsed = memoryUsage().heapUsed;
+          if (memoryHeapUsed > 1.5 * memoryHeapUsedAtStart) {
+            memoryUsageColor = ANSI.YELLOW;
+          } else if (memoryHeapUsed > 1.2 * memoryHeapUsedAtStart) {
+            memoryUsageColor = null;
+          }
           const memoryHeapUsedFormatted = humanizeMemory(memoryHeapUsed, {
             short: true,
             decimals: 0,
           });
-          infos.push(ANSI.color(memoryHeapUsedFormatted, ANSI.GREY));
+          infos.push(ANSI.color(memoryHeapUsedFormatted, memoryUsageColor));
 
           const infoFormatted = infos.join(ANSI.color(`/`, ANSI.GREY));
           dynamicLogContent += ` ${ANSI.color(
@@ -4924,6 +4932,7 @@ const reporterList = ({
                 const log = renderExecutionLog(
                   execution,
                   logOptions,
+                  testPlanResult,
                   testPlanHelpers,
                 );
                 if (log) {
@@ -5055,6 +5064,7 @@ const renderIntro = (testPlanResult, logOptions) => {
 const renderExecutionLog = (
   execution,
   logOptions,
+  testPlanResult,
   { getPreviousExecution, getNextExecution },
 ) => {
   if (execution.skipped) {
@@ -5130,16 +5140,28 @@ const renderExecutionLabel = (execution, logOptions) => {
     const { timings, memoryUsage } = execution.result;
     if (timings) {
       const duration = timings.executionEnd - timings.executionStart;
-      const durationFormatted = logOptions.mockFluctuatingValues
-        ? `<mock>ms`
-        : humanizeDuration(duration, { short: true });
-      infos.push(ANSI.color(durationFormatted, ANSI.GREY));
+      if (logOptions.mockFluctuatingValues) {
+        infos.push(ANSI.color(`<mock>ms`, ANSI.GREY));
+      } else {
+        let color = ANSI.GREY;
+        if (duration > 0.8 * execution.params.allocatedMs) {
+          color = ANSI.YELLOW;
+        } else if (duration > 0.3 * execution.params.allocatedMs) {
+          color = null;
+        }
+        infos.push(
+          ANSI.color(humanizeDuration(duration, { short: true }), color),
+        );
+      }
     }
     if (logOptions.memoryUsage && typeof memoryUsage === "number") {
-      const memoryUsageFormatted = logOptions.mockFluctuatingValues
-        ? `<mock>MB`
-        : humanizeMemory(memoryUsage, { short: true });
-      infos.push(ANSI.color(memoryUsageFormatted, ANSI.GREY));
+      if (logOptions.mockFluctuatingValues) {
+        infos.push(ANSI.color(`<mock>MB`, ANSI.GREY));
+      } else {
+        infos.push(
+          ANSI.color(humanizeMemory(memoryUsage, { short: true }), ANSI.GREY),
+        );
+      }
     }
     if (infos.length) {
       const runtimeInfo = infos.join(ANSI.color(`/`, ANSI.GREY));
