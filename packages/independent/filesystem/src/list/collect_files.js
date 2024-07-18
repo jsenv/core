@@ -65,7 +65,6 @@ export const collectFiles = async ({
             associations,
           });
           if (!predicate(meta)) return;
-
           const relativeUrl = urlToRelativeUrl(
             directoryChildNodeUrl,
             rootDirectoryUrl,

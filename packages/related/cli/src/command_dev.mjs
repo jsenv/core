@@ -4,7 +4,7 @@ import { installPackagesIfMissing } from "./package_installer.js";
 
 export const runDevCommand = async (
   src,
-  { open, keepProcessAlive = true } = {},
+  { open, keepProcessAlive = true, logLevel } = {},
 ) => {
   const cwdUrl = new URL(`${process.cwd()}/`, import.meta.url);
   const packagesRequired = ["@jsenv/core", "open"];
@@ -29,6 +29,7 @@ export const runDevCommand = async (
     sourceDirectoryUrl,
     port: 3456,
     keepProcessAlive,
+    logLevel,
   });
   if (open) {
     openModule.open(`${devServer.origin}`);

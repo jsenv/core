@@ -9,18 +9,25 @@ const test = ({ shouldBeIncluded, shouldBeExcluded }) => {
   for (const url of urls) {
     const meta = URL_META.applyAssociations({
       url,
-      associations: {
-        include: {
-          "file:///**/*.test.js": {
-            runtime: "node",
+      associations: URL_META.resolveAssociations(
+        {
+          testPlan: {
+            "./**/*.test.js": {
+              runtime: "node",
+            },
+            "./**/*.test.html": {
+              runtime: "browser",
+            },
+            "**/.jsenv/": null,
+            "**/.*/": null,
+            "./packages/": null,
+            "./**/node_modules/": null,
           },
-          "file:///**/packages/": null,
-          "file:///**/.*/": null,
-          "file:///**/node_modules/": null,
         },
-      },
+        "file:///project/",
+      ),
     });
-    if (meta.include) {
+    if (meta.testPlan) {
       included.push(url);
     } else {
       excluded.push(url);
@@ -45,6 +52,7 @@ test({
     "file:///project/packages/file.test.js",
     "file:///project/packages/package-name/file.test.js",
     "file:///project/node_modules/file.test.js",
+    "file:///project/.github/workflows/check_run_playground/src/a.test.mjs",
   ],
   shouldBeIncluded: [
     "file:///project/file.test.js",

@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/urls",
-  "version": "2.2.10",
+  "version": "2.2.11",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -28,6 +28,6 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/humanize": "1.2.3"
+    "@jsenv/humanize": "1.2.4"
   }
 }

@@ -12,7 +12,9 @@ export const runTestCommand = async () => {
     rootDirectoryUrl: cwdUrl,
     testPlan: {
       "./**/*.test.html": {
-        chromium: chromium(),
+        chromium: {
+          runtime: chromium(),
+        },
       },
       "./**/*.test.js": {
         node: {
@@ -24,12 +26,17 @@ export const runTestCommand = async () => {
           runtime: nodeWorkerThread(),
         },
       },
+      "./packages/": null,
     },
     webServer: {
       start: async () => {
-        await installPackagesIfMissing(["playwright-chromium"], cwdUrl);
+        await installPackagesIfMissing(
+          ["@playwright/browser-chromium"],
+          cwdUrl,
+        );
         const devServer = await runDevCommand(undefined, {
           keepProcessAlive: false,
+          logLevel: "warn",
         });
         return {
           origin: devServer.origin,
@@ -39,3 +46,5 @@ export const runTestCommand = async () => {
     },
   });
 };
+
+runTestCommand();

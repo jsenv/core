@@ -31,7 +31,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/urls": "2.2.10",
+    "@jsenv/urls": "2.2.11",
     "@jsenv/url-meta": "8.4.2",
     "@jsenv/abort": "4.3.0",
     "@jsenv/utils": "2.1.1"

@@ -25,9 +25,9 @@
   },
   "dependencies": {
     "@jsenv/filesystem": "4.8.0",
-    "@jsenv/humanize": "1.2.3",
+    "@jsenv/humanize": "1.2.4",
     "@jsenv/url-meta": "8.4.2",
-    "@jsenv/urls": "2.2.10",
+    "@jsenv/urls": "2.2.11",
     "@rollup/plugin-commonjs": "26.0.1",
     "@rollup/plugin-json": "6.1.0",
     "@rollup/plugin-node-resolve": "15.2.3",
