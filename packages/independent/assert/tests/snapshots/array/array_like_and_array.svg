@@ -48,38 +48,14 @@
         <text x="295.65" y="14.55"> are different</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="52.55" fill="#DAA520">{</text>
-        <text x="26.8" y="71.55" fill="#DAA520">0</text>
-        <text x="35.2" y="71.55" fill="#DAA520">: </text>
-        <text x="52.01" y="71.55" fill="#DAA520">&#x22;</text>
-        <text x="60.41" y="71.55" fill="#DAA520">Z</text>
-        <text x="68.81" y="71.55" fill="#DAA520">&#x22;</text>
-        <text x="77.21" y="71.55" fill="#DAA520">,</text>
-        <text x="26.8" y="90.55" fill="#DAA520">1</text>
-        <text x="35.2" y="90.55" fill="#DAA520">: </text>
-        <text x="52.01" y="90.55" fill="#DAA520">&#x22;</text>
-        <text x="60.41" y="90.55" fill="#DAA520">b</text>
-        <text x="68.81" y="90.55" fill="#DAA520">&#x22;</text>
-        <text x="77.21" y="90.55" fill="#DAA520">,</text>
-        <text x="26.8" y="109.55" fill="#DAA520">l</text>
-        <text x="35.2" y="109.55" fill="#DAA520">e</text>
-        <text x="43.61" y="109.55" fill="#DAA520">n</text>
-        <text x="52.01" y="109.55" fill="#DAA520">g</text>
-        <text x="60.41" y="109.55" fill="#DAA520">t</text>
-        <text x="68.81" y="109.55" fill="#DAA520">h</text>
-        <text x="77.21" y="109.55" fill="#DAA520">: </text>
-        <text x="94.01" y="109.55" fill="#DAA520">2</text>
-        <text x="102.42" y="109.55" fill="#DAA520">,</text>
+        <text x="26.8" y="71.55" fill="#DAA520">0: &#x22;Z&#x22;,</text>
+        <text x="26.8" y="90.55" fill="#DAA520">1: &#x22;b&#x22;,</text>
+        <text x="26.8" y="109.55" fill="#DAA520">length: 2,</text>
         <text x="10" y="128.55" fill="#DAA520">}</text>
         <text x="10" y="147.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="147.55" fill="#DAA520">[</text>
-        <text x="26.8" y="166.55" fill="#DAA520">&#x22;</text>
-        <text x="35.2" y="166.55" fill="#DAA520">a</text>
-        <text x="43.61" y="166.55" fill="#DAA520">&#x22;</text>
-        <text x="52.01" y="166.55" fill="#DAA520">,</text>
-        <text x="26.8" y="185.55" fill="#DAA520">&#x22;</text>
-        <text x="35.2" y="185.55" fill="#DAA520">b</text>
-        <text x="43.61" y="185.55" fill="#DAA520">&#x22;</text>
-        <text x="52.01" y="185.55" fill="#DAA520">,</text>
+        <text x="26.8" y="166.55" fill="#DAA520">&#x22;a&#x22;,</text>
+        <text x="26.8" y="185.55" fill="#DAA520">&#x22;b&#x22;,</text>
         <text x="10" y="204.55" fill="#DAA520">]</text>
       </g>
     </svg>
