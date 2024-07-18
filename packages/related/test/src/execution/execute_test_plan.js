@@ -465,6 +465,9 @@ export const executeTestPlan = async ({
       }
       // webServer
       if (runtimeInfo.someNeedsServer) {
+        if (webServer.start) {
+          webServer = await webServer.start();
+        }
         await assertAndNormalizeWebServer(webServer, {
           signal: operation.signal,
           teardownCallbackSet,

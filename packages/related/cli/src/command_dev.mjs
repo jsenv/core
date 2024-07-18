@@ -2,11 +2,14 @@ import { existsSync } from "node:fs";
 
 import { installPackagesIfMissing } from "./package_installer.js";
 
-export const runDevCommand = async (src) => {
+export const runDevCommand = async (
+  src,
+  { open, keepProcessAlive = true } = {},
+) => {
   const cwdUrl = new URL(`${process.cwd()}/`, import.meta.url);
   const packagesRequired = ["@jsenv/core", "open"];
   await installPackagesIfMissing(packagesRequired, cwdUrl);
-  const [{ startDevServer }, { default: open }] = await Promise.all([
+  const [{ startDevServer }, openModule] = await Promise.all([
     import("@jsenv/core"),
     import("open"),
   ]);
@@ -25,6 +28,10 @@ export const runDevCommand = async (src) => {
   const devServer = await startDevServer({
     sourceDirectoryUrl,
     port: 3456,
+    keepProcessAlive,
   });
-  open(`${devServer.origin}`);
+  if (open) {
+    openModule.open(`${devServer.origin}`);
+  }
+  return devServer;
 };

@@ -41,7 +41,7 @@ For more advanced options, see the API.`);
 const commandHandlers = {
   dev: async (src) => {
     const { runDevCommand } = await import("./command_dev.mjs");
-    await runDevCommand(src);
+    await runDevCommand(src, { open: true });
   },
   build: async (src, dist) => {
     const { runBuildCommand } = await import("./command_build.mjs");

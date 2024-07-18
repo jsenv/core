@@ -649,6 +649,7 @@ ${e.trace?.message}`);
   logger.info(``);
   return {
     origin: server.origin,
+    sourceDirectoryUrl,
     stop: () => {
       server.stop();
     },
