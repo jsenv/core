@@ -43,6 +43,18 @@ const commandHandlers = {
     const { runDevCommand } = await import("./command_dev.mjs");
     await runDevCommand(src);
   },
+  build: async (src, dist) => {
+    const { runBuildCommand } = await import("./command_build.mjs");
+    await runBuildCommand(src, dist);
+  },
+  preview: async (dist) => {
+    const { runPreviewCommand } = await import("./command_preview.mjs");
+    await runPreviewCommand(dist);
+  },
+  test: async () => {
+    const { runTestCommand } = await import("./command_test.mjs");
+    await runTestCommand();
+  },
 };
 
 const [command] = positionals;
