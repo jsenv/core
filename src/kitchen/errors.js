@@ -136,23 +136,25 @@ export const createTransformUrlContentError = ({
     const reference = urlInfo.firstReference;
     let trace = reference.trace;
     let line = error.line;
+    let column = error.column;
     if (urlInfo.type === "js_module") {
       line = line - 1;
     }
     if (urlInfo.isInline) {
+      line = trace.line + line;
       trace = {
-        ...reference.trace,
-        line: reference.trace.line + line,
-        column: reference.trace.column + error.column,
+        ...trace,
+        line,
+        column,
         codeFrame: generateContentFrame({
-          line: trace.line,
-          column: trace.column,
+          line,
+          column,
           content: urlInfo.inlineUrlSite.content,
         }),
         message: stringifyUrlSite({
           url: urlInfo.inlineUrlSite.url,
-          line: trace.line,
-          column: trace.column,
+          line,
+          column,
           content: urlInfo.inlineUrlSite.content,
         }),
       };

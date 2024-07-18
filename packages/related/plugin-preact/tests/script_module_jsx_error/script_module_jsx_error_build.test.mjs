@@ -1,5 +1,7 @@
-import { assert } from "@jsenv/assert";
+import { fileURLToPath } from "node:url";
 import { build } from "@jsenv/core";
+import { writeFileSync } from "@jsenv/filesystem";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 
 const consoleErrorCalls = [];
 const { error } = console;
@@ -7,10 +9,12 @@ console.error = (message) => {
   consoleErrorCalls.push(message);
 };
 
+const sourceDirectoryUrl = new URL("./client/", import.meta.url);
+const sourceDirectoryPath = fileURLToPath(sourceDirectoryUrl);
 const test = async (params) => {
   await build({
     logLevel: "error",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl,
     buildDirectoryUrl: new URL("./dist/", import.meta.url),
     entryPoints: {
       "./main.noeslint.html": "main.html",
@@ -26,13 +30,21 @@ try {
     bundling: false,
     minification: false,
   });
-  const htmlFileUrl = new URL("./client/main.noeslint.html", import.meta.url)
-    .href;
-  const actual = consoleErrorCalls[0];
-  const expect = assert.startsWith(
-    `Error while cooking js_module declared in ${htmlFileUrl}:22:2`,
+  const callMocked = consoleErrorCalls.map((consoleErrorMessage) => {
+    consoleErrorMessage = consoleErrorMessage.replaceAll(
+      sourceDirectoryPath,
+      "/mock/",
+    );
+    return consoleErrorMessage;
+  });
+  const consoleOutputFileSnapshot = takeFileSnapshot(
+    new URL("./output/console_errors.txt", import.meta.url),
   );
-  assert({ actual, expect });
+  writeFileSync(
+    new URL("./output/console_errors.txt", import.meta.url),
+    callMocked[0],
+  );
+  consoleOutputFileSnapshot.compare();
 } finally {
   console.error = error;
 }

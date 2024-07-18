@@ -1,0 +1,15 @@
+Error while cooking js_module
+file:///mock/main.noeslint.html:23:16
+20 |         useEffect(() => {
+21 |           onFirstRender();
+22 |         }, []);
+23 |         return <span>Hello world</span>;
+                    ^
+Unexpected token (9:15)
+--- declared in ---
+file:///mock/main.noeslint.html:15:5
+12 |         window.resolveResultPromise = resolve;
+13 |       });
+14 |     </script>
+15 |     <script type="module">
+         ^

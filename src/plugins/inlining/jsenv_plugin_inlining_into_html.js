@@ -47,7 +47,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             url: linkReference.url,
           });
           const linkReferenceInlined = linkReference.inline({
-            line: line - 1,
+            line,
             column,
             isOriginal,
             specifier: linkInlineUrl,
@@ -99,7 +99,7 @@ export const jsenvPluginInliningIntoHtml = () => {
             url: scriptReference.url,
           });
           const scriptReferenceInlined = scriptReference.inline({
-            line: line - 1,
+            line,
             column,
             isOriginal,
             specifier: scriptInlineUrl,

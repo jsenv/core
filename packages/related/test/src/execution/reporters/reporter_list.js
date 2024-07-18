@@ -136,9 +136,9 @@ export const reporterList = ({
           infos.push(ANSI.color(duration, ANSI.GREY));
           let memoryUsageColor = ANSI.GREY;
           const memoryHeapUsed = processMemoryUsage().heapUsed;
-          if (memoryHeapUsed > 1.5 * memoryHeapUsedAtStart) {
+          if (memoryHeapUsed > 2.5 * memoryHeapUsedAtStart) {
             memoryUsageColor = ANSI.YELLOW;
-          } else if (memoryHeapUsed > 1.2 * memoryHeapUsedAtStart) {
+          } else if (memoryHeapUsed > 1.5 * memoryHeapUsedAtStart) {
             memoryUsageColor = null;
           }
           const memoryHeapUsedFormatted = humanizeMemory(memoryHeapUsed, {
