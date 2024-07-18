@@ -88,7 +88,7 @@ const getBuildParamsToBuildForBrowser = ({ cwdUrl, src, dist }) => {
       sourceDirectoryUrl,
       buildDirectoryUrl,
       entryPoints: {
-        "./index.html": "./index.html",
+        "./index.html": "index.html",
       },
       bundling: {
         js_module: {
@@ -104,7 +104,7 @@ const getBuildParamsToBuildForBrowser = ({ cwdUrl, src, dist }) => {
       sourceDirectoryUrl,
       buildDirectoryUrl,
       entryPoints: {
-        "./index.html": "./index.html",
+        "./index.html": "index.html",
       },
       bundling: {
         js_module: {
@@ -146,7 +146,7 @@ const getBuildParamsToBuildForNode = (
       sourceDirectoryUrl,
       buildDirectoryUrl,
       entryPoints: {
-        [`./${mainFileRelativeUrl}`]: `./${mainFileRelativeUrl}`,
+        [`./${mainFileRelativeUrl}`]: mainFileRelativeUrl,
       },
       runtimeCompat: {
         node: process.version.slice(1),
@@ -162,7 +162,7 @@ const getBuildParamsToBuildForNode = (
       sourceDirectoryUrl,
       buildDirectoryUrl,
       entryPoints: {
-        "./main.js": "./main.js",
+        "./main.js": "main.js",
       },
       runtimeCompat: {
         node: process.version.slice(1),

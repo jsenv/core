@@ -7,22 +7,21 @@ export const createResolveUrlError = ({
   reference,
   error,
 }) => {
-  const createFailedToResolveUrlError = ({
-    code = error.code || "RESOLVE_URL_ERROR",
-    reason,
-    ...details
-  }) => {
+  const createFailedToResolveUrlError = ({ reason, ...details }) => {
     const resolveError = new Error(
-      createDetailedMessage(`Failed to resolve url reference`, {
-        reason,
-        ...details,
-        "specifier": `"${reference.specifier}"`,
-        "specifier trace": reference.trace.message,
-        ...detailsFromPluginController(pluginController),
-      }),
+      createDetailedMessage(
+        `Failed to resolve url reference
+${reference.trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
     );
     resolveError.name = "RESOLVE_URL_ERROR";
-    resolveError.code = code;
+    resolveError.code = "RESOLVE_URL_ERROR";
     resolveError.reason = reason;
     resolveError.asResponse = error.asResponse;
     return resolveError;
@@ -49,22 +48,22 @@ export const createFetchUrlContentError = ({
   urlInfo,
   error,
 }) => {
-  const createFailedToFetchUrlContentError = ({
-    code = error.code || "FETCH_URL_CONTENT_ERROR",
-    reason,
-    ...details
-  }) => {
+  const createFailedToFetchUrlContentError = ({ code, reason, ...details }) => {
+    const reference = urlInfo.firstReference;
     const fetchError = new Error(
-      createDetailedMessage(`Failed to fetch url content`, {
-        reason,
-        ...details,
-        "url": urlInfo.url,
-        "url reference trace": urlInfo.firstReference.trace.message,
-        ...detailsFromPluginController(pluginController),
-      }),
+      createDetailedMessage(
+        `Failed to fetch url content
+${reference.trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
     );
     fetchError.name = "FETCH_URL_CONTENT_ERROR";
-    fetchError.code = code;
+    fetchError.code = "FETCH_URL_CONTENT_ERROR";
     fetchError.reason = reason;
     fetchError.url = urlInfo.url;
     if (code === "PARSE_ERROR") {
@@ -119,28 +118,28 @@ export const createTransformUrlContentError = ({
   urlInfo,
   error,
 }) => {
+  if (error.code === "RESOLVE_URL_ERROR") {
+    return error;
+  }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     return error;
   }
-  const createFailedToTransformError = ({
-    code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
-    reason,
-    ...details
-  }) => {
+  const createFailedToTransformError = ({ code, reason, ...details }) => {
+    const reference = urlInfo.firstReference;
     const transformError = new Error(
       createDetailedMessage(
-        `"transformUrlContent" error on "${urlInfo.type}"`,
+        `"transformUrlContent" error on "${urlInfo.type}"
+${reference.trace.message}
+${reason}`,
         {
-          reason,
+          ...detailsFromFirstReference(reference),
           ...details,
-          "url": urlInfo.url,
-          "url reference trace": urlInfo.firstReference.trace.message,
           ...detailsFromPluginController(pluginController),
         },
       ),
     );
     transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
-    transformError.code = code;
+    transformError.code = "TRANSFORM_URL_CONTENT_ERROR";
     transformError.reason = reason;
     transformError.stack = error.stack;
     transformError.url = urlInfo.url;
@@ -197,25 +196,46 @@ export const createTransformUrlContentError = ({
 
 export const createFinalizeUrlContentError = ({
   pluginController,
-
   urlInfo,
   error,
 }) => {
+  const reference = urlInfo.firstReference;
   const finalizeError = new Error(
-    createDetailedMessage(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
-      ...detailsFromValueThrown(error),
-      "url": urlInfo.url,
-      "url reference trace": urlInfo.firstReference.trace.message,
-      ...detailsFromPluginController(pluginController),
-    }),
+    createDetailedMessage(
+      `"finalizeUrlContent" error on "${urlInfo.type}"
+${reference.trace.message}`,
+      {
+        ...detailsFromFirstReference(reference),
+        ...detailsFromValueThrown(error),
+        ...detailsFromPluginController(pluginController),
+      },
+    ),
   );
   if (error && error instanceof Error) {
     finalizeError.cause = error;
   }
   finalizeError.name = "FINALIZE_URL_CONTENT_ERROR";
+  finalizeError.code = "FINALIZE_URL_CONTENT_ERROR";
   finalizeError.reason = `"finalizeUrlContent" error on "${urlInfo.type}"`;
   finalizeError.asResponse = error.asResponse;
   return finalizeError;
+};
+
+const detailsFromFirstReference = (reference) => {
+  const referenceInProject = getFirstReferenceInProject(reference);
+  if (referenceInProject === reference) {
+    return {};
+  }
+  return {
+    "first reference in project": `${referenceInProject.trace.url}:${referenceInProject.trace.line}:${referenceInProject.trace.column}`,
+  };
+};
+const getFirstReferenceInProject = (reference) => {
+  const ownerUrlInfo = reference.ownerUrlInfo;
+  if (!ownerUrlInfo.url.includes("/node_modules/")) {
+    return reference;
+  }
+  return getFirstReferenceInProject(ownerUrlInfo.firstReference);
 };
 
 const detailsFromPluginController = (pluginController) => {
@@ -228,6 +248,17 @@ const detailsFromPluginController = (pluginController) => {
 
 const detailsFromValueThrown = (valueThrownByPlugin) => {
   if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
+    if (
+      valueThrownByPlugin.code === "MODULE_NOT_FOUND" ||
+      valueThrownByPlugin.name === "RESOLVE_URL_ERROR" ||
+      valueThrownByPlugin.name === "FETCH_URL_CONTENT_ERROR" ||
+      valueThrownByPlugin.name === "TRANSFORM_URL_CONTENT_ERROR" ||
+      valueThrownByPlugin.name === "FINALIZE_URL_CONTENT_ERROR"
+    ) {
+      return {
+        "error message": valueThrownByPlugin.message,
+      };
+    }
     return {
       "error stack": valueThrownByPlugin.stack,
     };

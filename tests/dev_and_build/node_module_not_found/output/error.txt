@@ -1,0 +1,11 @@
+Failed to resolve url reference
+file:///mock/node_modules/foo/index.js:1:7
+1 | import "not_found";
+          ^
+An error occured during specifier resolution
+--- first reference in project ---
+file:///mock/main.js:1:7
+--- error message ---
+Cannot find "not_found" imported from /mock/node_modules/foo/index.js
+--- plugin name ---
+"jsenv:node_esm_resolution"
