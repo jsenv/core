@@ -12,13 +12,11 @@ Jsenv is a suite of tools that can be used in projects involving JavaScript.
 It favors standards and simplicity.  
 As a result it can be enjoyed by people without much experience in tooling or seeking for simple tools without hidden complexities
 
-Now what do you want to do?
-
 | Scenario                                              | Action                                               |
 | ----------------------------------------------------- | ---------------------------------------------------- |
-| I want to try a demo on my machine                    | Go to [./demos](#demos)                              |
-| I want to try jsenv on a project I have on my machine | Go to [./cli](#cli)                                  |
-| I want to learn how to use jsenv                      | Go to [./docs/users/users.md](./docs/users/users.md) |
+| Try a demo on my machine                    | [./#demos](#demos)                              |
+| Try jsenv on a project I have on my machine | [./#cli](#cli)                                  |
+| Learn how to use jsenv                      | [./docs/users/users.md](./docs/users/users.md) |
 
 # Demos
 
