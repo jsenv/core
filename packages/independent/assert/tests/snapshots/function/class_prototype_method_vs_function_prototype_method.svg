@@ -56,13 +56,9 @@
         <text x="60.41" y="90.55" fill="#7f7f7f">{</text>
         <text x="43.61" y="109.55" fill="#cd5555">[source code]</text>
         <text x="152.82" y="109.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="128.55" fill="#7f7f7f">}</text>
-        <text x="35.2" y="128.55" fill="#7f7f7f">;</text>
+        <text x="26.8" y="128.55" fill="#7f7f7f">};</text>
         <text x="26.8" y="147.55" fill="#DAA520">static</text>
-        <text x="85.61" y="147.55" fill="#7f7f7f">a</text>
-        <text x="102.42" y="147.55" fill="#7f7f7f"> = </text>
-        <text x="119.22" y="147.55" fill="#7f7f7f">true</text>
-        <text x="152.82" y="147.55" fill="#7f7f7f">;</text>
+        <text x="85.61" y="147.55" fill="#7f7f7f">a = true;</text>
         <text x="10" y="166.55" fill="#7f7f7f">}</text>
         <text x="10" y="185.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="185.55" fill="#DAA520">function</text>
@@ -71,31 +67,15 @@
         <text x="220.03" y="185.55" fill="#7f7f7f">{</text>
         <text x="26.8" y="204.55" fill="#11bc79">[source code]</text>
         <text x="136.02" y="204.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="223.55" fill="#7f7f7f">p</text>
-        <text x="35.2" y="223.55" fill="#7f7f7f">r</text>
-        <text x="43.61" y="223.55" fill="#7f7f7f">o</text>
-        <text x="52.01" y="223.55" fill="#7f7f7f">t</text>
-        <text x="60.41" y="223.55" fill="#7f7f7f">o</text>
-        <text x="68.81" y="223.55" fill="#7f7f7f">t</text>
-        <text x="77.21" y="223.55" fill="#7f7f7f">y</text>
-        <text x="85.61" y="223.55" fill="#7f7f7f">p</text>
-        <text x="94.01" y="223.55" fill="#7f7f7f">e</text>
-        <text x="102.42" y="223.55" fill="#7f7f7f">: </text>
-        <text x="119.22" y="223.55" fill="#7f7f7f">{</text>
-        <text x="43.61" y="242.55" fill="#7f7f7f">b</text>
-        <text x="52.01" y="242.55" fill="#7f7f7f">: </text>
+        <text x="26.8" y="223.55" fill="#7f7f7f">prototype: {</text>
+        <text x="43.61" y="242.55" fill="#7f7f7f">b: </text>
         <text x="68.81" y="242.55" fill="#11bc79">() =&#x3E;</text>
         <text x="119.22" y="242.55" fill="#7f7f7f">{</text>
         <text x="60.41" y="261.55" fill="#11bc79">[source code]</text>
         <text x="169.63" y="261.55" fill="#7f7f7f">,</text>
-        <text x="43.61" y="280.55" fill="#7f7f7f">}</text>
-        <text x="52.01" y="280.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="299.55" fill="#7f7f7f">}</text>
-        <text x="35.2" y="299.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="318.55" fill="#7f7f7f">a</text>
-        <text x="35.2" y="318.55" fill="#7f7f7f">: </text>
-        <text x="52.01" y="318.55" fill="#7f7f7f">true</text>
-        <text x="85.61" y="318.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="280.55" fill="#7f7f7f">},</text>
+        <text x="26.8" y="299.55" fill="#7f7f7f">},</text>
+        <text x="26.8" y="318.55" fill="#7f7f7f">a: true,</text>
         <text x="10" y="337.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

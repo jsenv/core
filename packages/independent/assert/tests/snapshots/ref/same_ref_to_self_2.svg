@@ -48,65 +48,23 @@
         <text x="295.65" y="14.55"> are different</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="71.55" fill="#7f7f7f">a</text>
-        <text x="35.2" y="71.55" fill="#7f7f7f">: </text>
+        <text x="26.8" y="71.55" fill="#7f7f7f">a: </text>
         <text x="52.01" y="71.55" fill="#cd5555">true</text>
         <text x="85.61" y="71.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="90.55" fill="#7f7f7f">o</text>
-        <text x="35.2" y="90.55" fill="#7f7f7f">b</text>
-        <text x="43.61" y="90.55" fill="#7f7f7f">j</text>
-        <text x="52.01" y="90.55" fill="#7f7f7f">e</text>
-        <text x="60.41" y="90.55" fill="#7f7f7f">c</text>
-        <text x="68.81" y="90.55" fill="#7f7f7f">t</text>
-        <text x="77.21" y="90.55" fill="#7f7f7f">: </text>
-        <text x="94.01" y="90.55" fill="#7f7f7f">{</text>
-        <text x="110.82" y="90.55" fill="#7f7f7f">s</text>
-        <text x="119.22" y="90.55" fill="#7f7f7f">e</text>
-        <text x="127.62" y="90.55" fill="#7f7f7f">l</text>
-        <text x="136.02" y="90.55" fill="#7f7f7f">f</text>
-        <text x="144.42" y="90.55" fill="#7f7f7f">: </text>
-        <text x="161.22" y="90.55" fill="#7f7f7f">actual</text>
-        <text x="211.63" y="90.55" fill="#7f7f7f">,</text>
-        <text x="228.44" y="90.55" fill="#7f7f7f">s</text>
-        <text x="236.84" y="90.55" fill="#7f7f7f">e</text>
-        <text x="245.24" y="90.55" fill="#7f7f7f">l</text>
-        <text x="253.64" y="90.55" fill="#7f7f7f">f</text>
-        <text x="262.04" y="90.55" fill="#7f7f7f">2</text>
-        <text x="270.44" y="90.55" fill="#7f7f7f">: </text>
-        <text x="287.25" y="90.55" fill="#7f7f7f">actual</text>
-        <text x="346.05" y="90.55" fill="#7f7f7f">}</text>
-        <text x="354.46" y="90.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="90.55" fill="#7f7f7f">object: {</text>
+        <text x="110.82" y="90.55" fill="#7f7f7f">self: actual,</text>
+        <text x="228.44" y="90.55" fill="#7f7f7f">self2: actual</text>
+        <text x="346.05" y="90.55" fill="#7f7f7f">},</text>
         <text x="10" y="109.55" fill="#7f7f7f">}</text>
         <text x="10" y="128.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="128.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="147.55" fill="#7f7f7f">a</text>
-        <text x="35.2" y="147.55" fill="#7f7f7f">: </text>
+        <text x="26.8" y="147.55" fill="#7f7f7f">a: </text>
         <text x="52.01" y="147.55" fill="#11bc79">false</text>
         <text x="94.01" y="147.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="166.55" fill="#7f7f7f">o</text>
-        <text x="35.2" y="166.55" fill="#7f7f7f">b</text>
-        <text x="43.61" y="166.55" fill="#7f7f7f">j</text>
-        <text x="52.01" y="166.55" fill="#7f7f7f">e</text>
-        <text x="60.41" y="166.55" fill="#7f7f7f">c</text>
-        <text x="68.81" y="166.55" fill="#7f7f7f">t</text>
-        <text x="77.21" y="166.55" fill="#7f7f7f">: </text>
-        <text x="94.01" y="166.55" fill="#7f7f7f">{</text>
-        <text x="110.82" y="166.55" fill="#7f7f7f">s</text>
-        <text x="119.22" y="166.55" fill="#7f7f7f">e</text>
-        <text x="127.62" y="166.55" fill="#7f7f7f">l</text>
-        <text x="136.02" y="166.55" fill="#7f7f7f">f</text>
-        <text x="144.42" y="166.55" fill="#7f7f7f">: </text>
-        <text x="161.22" y="166.55" fill="#7f7f7f">expect</text>
-        <text x="211.63" y="166.55" fill="#7f7f7f">,</text>
-        <text x="228.44" y="166.55" fill="#7f7f7f">s</text>
-        <text x="236.84" y="166.55" fill="#7f7f7f">e</text>
-        <text x="245.24" y="166.55" fill="#7f7f7f">l</text>
-        <text x="253.64" y="166.55" fill="#7f7f7f">f</text>
-        <text x="262.04" y="166.55" fill="#7f7f7f">2</text>
-        <text x="270.44" y="166.55" fill="#7f7f7f">: </text>
-        <text x="287.25" y="166.55" fill="#7f7f7f">expect</text>
-        <text x="346.05" y="166.55" fill="#7f7f7f">}</text>
-        <text x="354.46" y="166.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="166.55" fill="#7f7f7f">object: {</text>
+        <text x="110.82" y="166.55" fill="#7f7f7f">self: expect,</text>
+        <text x="228.44" y="166.55" fill="#7f7f7f">self2: expect</text>
+        <text x="346.05" y="166.55" fill="#7f7f7f">},</text>
         <text x="10" y="185.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

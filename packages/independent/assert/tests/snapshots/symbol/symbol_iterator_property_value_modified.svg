@@ -48,19 +48,13 @@
         <text x="295.65" y="14.55"> are different</text>
         <text x="10" y="52.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="71.55" fill="#7f7f7f">Symbol</text>
-        <text x="77.21" y="71.55" fill="#7f7f7f">.</text>
-        <text x="85.61" y="71.55" fill="#7f7f7f">iterator</text>
-        <text x="152.82" y="71.55" fill="#7f7f7f">: </text>
+        <text x="26.8" y="71.55" fill="#7f7f7f">Symbol.iterator: </text>
         <text x="169.63" y="71.55" fill="#cd5555">true</text>
         <text x="203.23" y="71.55" fill="#7f7f7f">,</text>
         <text x="10" y="90.55" fill="#7f7f7f">}</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="109.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="128.55" fill="#7f7f7f">Symbol</text>
-        <text x="77.21" y="128.55" fill="#7f7f7f">.</text>
-        <text x="85.61" y="128.55" fill="#7f7f7f">iterator</text>
-        <text x="152.82" y="128.55" fill="#7f7f7f">: </text>
+        <text x="26.8" y="128.55" fill="#7f7f7f">Symbol.iterator: </text>
         <text x="169.63" y="128.55" fill="#11bc79">false</text>
         <text x="211.63" y="128.55" fill="#7f7f7f">,</text>
         <text x="10" y="147.55" fill="#7f7f7f">}</text>

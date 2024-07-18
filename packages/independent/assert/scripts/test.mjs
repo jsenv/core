@@ -6,6 +6,7 @@ await executeTestPlan({
     "./tests/**/*.test.js": {
       node: {
         runtime: nodeWorkerThread(),
+        allocatedMs: 180_000, // generating svgs takes a lot of time
       },
     },
   },

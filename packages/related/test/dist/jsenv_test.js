@@ -6095,8 +6095,8 @@ const executeTestPlan = async ({
         }
         testPlan = {
           "file:///**/node_modules/": null,
-          "**/*./": null,
           ...testPlan,
+          "**/.*/": null,
           "**/.jsenv/": null, // ensure it's impossible to look for ".jsenv/"
         };
       }

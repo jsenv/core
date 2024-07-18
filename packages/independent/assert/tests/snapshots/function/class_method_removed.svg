@@ -61,10 +61,8 @@
         <text x="136.02" y="128.55" fill="#7f7f7f">;</text>
         <text x="26.8" y="147.55" fill="#DAA520">a()</text>
         <text x="60.41" y="147.55" fill="#DAA520">{</text>
-        <text x="43.61" y="166.55" fill="#DAA520">[source code]</text>
-        <text x="152.82" y="166.55" fill="#DAA520">,</text>
-        <text x="26.8" y="185.55" fill="#DAA520">}</text>
-        <text x="35.2" y="185.55" fill="#DAA520">;</text>
+        <text x="43.61" y="166.55" fill="#DAA520">[source code],</text>
+        <text x="26.8" y="185.55" fill="#DAA520">};</text>
         <text x="10" y="204.55" fill="#7f7f7f">}</text>
       </g>
     </svg>

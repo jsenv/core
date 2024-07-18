@@ -49,16 +49,12 @@
         <text x="10" y="52.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="52.55" fill="#7f7f7f">1| </text>
         <text x="77.21" y="71.55" fill="#7f7f7f">2| &#x2026;</text>
-        <text x="77.21" y="90.55" fill="#7f7f7f">3| </text>
-        <text x="102.42" y="90.55" fill="#7f7f7f">&#x2026;</text>
-        <text x="110.82" y="90.55" fill="#7f7f7f">c</text>
+        <text x="77.21" y="90.55" fill="#7f7f7f">3| &#x2026;c</text>
         <text x="119.22" y="90.55" fill="#cd5555">d</text>
         <text x="10" y="109.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="109.55" fill="#7f7f7f">1| </text>
         <text x="77.21" y="128.55" fill="#7f7f7f">2| &#x2026;</text>
-        <text x="77.21" y="147.55" fill="#7f7f7f">3| </text>
-        <text x="102.42" y="147.55" fill="#7f7f7f">&#x2026;</text>
-        <text x="110.82" y="147.55" fill="#7f7f7f">c</text>
+        <text x="77.21" y="147.55" fill="#7f7f7f">3| &#x2026;c</text>
         <text x="119.22" y="147.55" fill="#11bc79">Z</text>
       </g>
     </svg>
