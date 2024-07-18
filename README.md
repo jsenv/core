@@ -61,6 +61,21 @@ The demo contains preconfigured scripts:
 - `npm run build:serve`: start a server for build files; Documented in [C) Build#how-to-serve-build-files](./docs/users/c_build/c_build.md#3-how-to-serve-build-files).
 - `npm run test`: execute test files; Documented in [D) Test](./docs/users/d_test/d_test.md).
 
+# CLI
+
+Jsenv commands to test it quickly.
+
+| I want to                             | Command                  |
+| ------------------------------------- | ------------------------ |
+| Start a local server for source files | `npx @jsenv/cli dev`     |
+| Build source files into "./dist/"     | `npx @jsenv/cli build`   |
+| Start a local server for build files  | `npx @jsenv/cli preview` |
+| Run all test files                    | `npx @jsenv/cli test`    |
+
+The commands are very basic, for advanced use cases you should use jsenv API.
+
+For example in order to start a dev server you would rather do `npm run dev` that would be declared in [package.json#scripts.dev](./packages/related/create-jsenv/demo-web/package.json#L8) to execute [scripts/dev.mjs](./packages/related/create-jsenv/demo-web/scripts/dev.mjs).
+
 # The best parts
 
 - Test files are [executed like standard files](./docs/users/d_test/d_test.md#14-executing-a-single-test)
