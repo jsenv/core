@@ -129,7 +129,10 @@ export const executeTestPlan = async ({
   // (can eventually be used for debug)
   keepRunning = false,
 
-  githubCheck = process.env.GITHUB_WORKFLOW ? githubCheckDefault : null,
+  githubCheck = process.argv.includes("--github-check") &&
+  process.env.GITHUB_WORKFLOW
+    ? githubCheckDefault
+    : null,
   coverage = process.argv.includes("--coverage") ? coverageDefault : null,
 
   reporters = [],
