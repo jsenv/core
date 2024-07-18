@@ -212,4 +212,10 @@ await startSnapshotTesting("url", ({ test }) => {
       expect: "http://b.com",
     });
   });
+  test("file url inside array", () => {
+    assert({
+      actual: "file:///dir/a.js",
+      expect: "file:///dir/b.js",
+    });
+  });
 });

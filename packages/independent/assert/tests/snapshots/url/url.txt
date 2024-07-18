@@ -200,3 +200,9 @@ AssertionError: actual and expect are different
 actual: Signal("http://a.com/")
 expect: "http://b.com/"
 
+# file url inside array
+AssertionError: actual and expect are different
+
+actual: "file:///dir/a.js"
+expect: "file:///dir/b.js"
+

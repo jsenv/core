@@ -1780,7 +1780,9 @@ let createRootNode;
                   });
                 }
               }
-              appendUrlPartNode("hostname", decodeURIComponent(hostname));
+              if (hostname) {
+                appendUrlPartNode("hostname", decodeURIComponent(hostname));
+              }
 
               if (port) {
                 appendUrlPartNode("port", parseInt(port), {

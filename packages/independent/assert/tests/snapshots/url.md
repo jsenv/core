@@ -356,3 +356,14 @@ assert({
 
 ![img](<./url/internal_url_string_vs_url_string.svg>)
 
+# file url inside array
+
+```js
+assert({
+  actual: "file:///dir/a.js",
+  expect: "file:///dir/b.js",
+});
+```
+
+![img](<./url/file_url_inside_array.svg>)
+
