@@ -1,1 +1,4 @@
-export { takeDirectorySnapshot, takeFileSnapshot } from "./file_snapshots.js";
+export {
+  takeDirectorySnapshot,
+  takeFileSnapshot,
+} from "./filesystem_snapshot.js";
