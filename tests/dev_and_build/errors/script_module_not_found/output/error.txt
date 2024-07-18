@@ -1,0 +1,10 @@
+Failed to fetch url content
+file:///mock/main.html:10:27
+ 7 |   </head>
+ 8 | 
+ 9 |   <body>
+10 |     <script type="module" src="./404.js"></script>
+                               ^
+no entry on filesystem
+--- plugin name ---
+"jsenv:file_url_fetching"
