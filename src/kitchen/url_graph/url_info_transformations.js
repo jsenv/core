@@ -268,7 +268,11 @@ export const createUrlInfoTransformer = ({
     if (!generatedUrl.startsWith("file:")) {
       return;
     }
-    if (urlInfo.type === "directory") {
+    if (
+      urlInfo.type === "directory" ||
+      // happens when type is "html" to list directory content for example
+      urlInfo.firstReference?.leadsToADirectory
+    ) {
       // no need to write the directory
       return;
     }

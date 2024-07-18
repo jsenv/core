@@ -19,7 +19,10 @@ import {
 } from "@jsenv/node-esm-resolution";
 import { pickContentType } from "@jsenv/server";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
+import {
+  assertAndNormalizeDirectoryUrl,
+  comparePathnames,
+} from "@jsenv/filesystem";
 
 const html404AndParentDirIsEmptyFileUrl = new URL(
   "./html_404_and_parent_dir_is_empty.html",
@@ -352,13 +355,20 @@ const generateDirectoryContent = (
   directoryUrl,
   rootDirectoryUrl,
 ) => {
-  return directoryContentArray.map((filename) => {
+  const sortedNames = [];
+  for (const filename of directoryContentArray) {
+    const fileUrlObject = new URL(filename, directoryUrl);
+    if (lstatSync(fileUrlObject).isDirectory()) {
+      sortedNames.push(`${filename}/`);
+    } else {
+      sortedNames.push(filename);
+    }
+  }
+  sortedNames.sort(comparePathnames);
+  return sortedNames.map((filename) => {
     const fileUrlObject = new URL(filename, directoryUrl);
     const fileUrl = String(fileUrlObject);
     let fileUrlRelative = urlToRelativeUrl(fileUrl, rootDirectoryUrl);
-    if (lstatSync(fileUrlObject).isDirectory()) {
-      fileUrlRelative += "/";
-    }
     return `<li>
     <a href="/${fileUrlRelative}">/${fileUrlRelative}</a>
   </li>`;
