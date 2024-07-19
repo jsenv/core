@@ -257,6 +257,16 @@ write_files: {
         continue;
       }
       if (!existsSync(toUrl)) {
+        if (directoryEntryName === "package.json") {
+          commands.push({
+            label: "npm install",
+            run: () => {
+              execSync("npm install", {
+                stdio: [0, 1, 2],
+              });
+            },
+          });
+        }
         writeFileSync(toUrl, readFileSync(fromUrl));
         continue;
       }
