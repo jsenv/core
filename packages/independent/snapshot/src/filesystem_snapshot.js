@@ -1,4 +1,5 @@
 import { readdirSync, statSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { URL_META } from "@jsenv/url-meta";
 import {
   assertAndNormalizeDirectoryUrl,
@@ -19,18 +20,32 @@ import {
   ExtraFileAssertionError,
   FileContentAssertionError,
 } from "./errors.js";
+import { replaceFluctuatingValues } from "./replace_fluctuating_values.js";
 import { comparePngFiles } from "./compare_png_files.js";
 
 export const takeFileSnapshot = (fileUrl) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);
   const fileSnapshot = createFileSnapshot(fileUrl);
   removeFileSync(fileUrl, { allowUseless: true });
+  const compare = (throwWhenDiff = process.env.CI) => {
+    fileSnapshot.compare(createFileSnapshot(fileUrl), { throwWhenDiff });
+  };
   return {
-    compare: (throwWhenDiff = process.env.CI) => {
-      fileSnapshot.compare(createFileSnapshot(fileUrl), { throwWhenDiff });
-    },
-    writeContent: (content) => {
+    compare,
+    update: (
+      content,
+      { mockFluctuatingValues = true, rootDirectoryUrl, throwWhenDiff } = {},
+    ) => {
+      if (mockFluctuatingValues) {
+        content = replaceFluctuatingValues(content, {
+          cwdPath: rootDirectoryUrl
+            ? fileURLToPath(rootDirectoryUrl)
+            : undefined,
+          cwdUrl: rootDirectoryUrl ? String(rootDirectoryUrl) : undefined,
+        });
+      }
       writeFileSync(fileUrl, content);
+      compare(throwWhenDiff);
     },
     restore: () => {
       if (fileSnapshot.empty) {

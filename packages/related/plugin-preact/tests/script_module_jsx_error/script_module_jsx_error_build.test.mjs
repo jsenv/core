@@ -1,12 +1,11 @@
-import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
+import { takeFileSnapshot, replaceFluctuatingValues } from "@jsenv/snapshot";
 
 const consoleErrorCalls = [];
 const { error } = console;
 console.error = (message) => {
   consoleErrorCalls.push(message);
 };
-
 const test = async (params) => {
   await build({
     logLevel: "error",
@@ -26,13 +25,15 @@ try {
     bundling: false,
     minification: false,
   });
-  const htmlFileUrl = new URL("./client/main.noeslint.html", import.meta.url)
-    .href;
-  const actual = consoleErrorCalls[0];
-  const expect = assert.startsWith(
-    `Error while cooking js_module declared in ${htmlFileUrl}:22:2`,
+  const callMocked = consoleErrorCalls.map((consoleErrorMessage) => {
+    return replaceFluctuatingValues(consoleErrorMessage, {
+      rootDirectoryUrl: new URL("./", import.meta.url),
+    });
+  });
+  const consoleOutputFileSnapshot = takeFileSnapshot(
+    new URL("./output/console_errors.txt", import.meta.url),
   );
-  assert({ actual, expect });
+  consoleOutputFileSnapshot.update(callMocked[0]);
 } finally {
   console.error = error;
 }

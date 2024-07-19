@@ -1,4 +1,6 @@
 import { assert } from "@jsenv/assert";
+import { writeFileSync } from "@jsenv/filesystem";
+import { takeFileSnapshot, replaceFluctuatingValues } from "@jsenv/snapshot";
 
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
@@ -8,8 +10,8 @@ const warn = console.warn;
 console.warn = (...args) => {
   warnCalls.push(args.join(""));
 };
+const sourceDirectoryUrl = new URL("./client/", import.meta.url);
 try {
-  const sourceDirectoryUrl = new URL("./client/", import.meta.url);
   const devServer = await startDevServer({
     logLevel: "warn",
     serverLogLevel: "warn",
@@ -25,28 +27,24 @@ try {
     pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
     /* eslint-enable no-undef */
   });
+  const serverWarnings = warnCalls
+    .map((warnCall) => replaceFluctuatingValues(warnCall))
+    .join("\n");
+  const serverWarningsFileUrl = new URL(
+    "./output/server_warnings.txt",
+    import.meta.url,
+  );
+  const serverWarningsSnapshot = takeFileSnapshot(serverWarningsFileUrl);
+  writeFileSync(serverWarningsFileUrl, serverWarnings);
+  serverWarningsSnapshot.compare();
 
   const actual = {
-    serverWarnOutput: warnCalls.join("\n"),
     pageErrors,
     consoleLogs: consoleOutput.logs,
     consoleErrors: consoleOutput.errors,
     errorMessage: returnValue.executionResults["/main.js"].exception.message,
   };
   const expect = {
-    serverWarnOutput: `GET ${devServer.origin}/not_found.js
-  [33m404[0m Failed to fetch url content
-  --- reason ---
-  no entry on filesystem
-  --- url ---
-  ${sourceDirectoryUrl}not_found.js
-  --- url reference trace ---
-  ${sourceDirectoryUrl}intermediate.js:2:7
-  1 | // eslint-disable-next-line import/no-unresolved
-  2 | import "./not_found.js";
-            ^
-  --- plugin name ---
-  "jsenv:file_url_fetching"`,
     pageErrors: [],
     consoleLogs: [],
     consoleErrors: [

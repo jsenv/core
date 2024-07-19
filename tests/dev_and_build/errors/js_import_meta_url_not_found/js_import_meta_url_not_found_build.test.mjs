@@ -1,6 +1,5 @@
-import { assert } from "@jsenv/assert";
-
 import { build } from "@jsenv/core";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 
 try {
   await build({
@@ -13,17 +12,8 @@ try {
   });
   throw new Error("should throw");
 } catch (e) {
-  const actual = e.message;
-  const expect = `Failed to fetch url content
---- reason ---
-no entry on filesystem
---- url ---
-${new URL("./client/style.css", import.meta.url).href}
---- url reference trace ---
-${new URL("./client/main.js", import.meta.url).href}:1:23
-1 | const cssUrl = new URL("./style.css", import.meta.url);
-                          ^
---- plugin name ---
-"jsenv:file_url_fetching"`;
-  assert({ actual, expect });
+  const errorFileSnapshot = takeFileSnapshot(
+    new URL("./output/error.txt", import.meta.url),
+  );
+  errorFileSnapshot.update(e.message);
 }

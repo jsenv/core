@@ -1,0 +1,7 @@
+Failed to fetch url content
+file:///cwd()/tests/dev_and_build/errors/js_import_meta_url_not_found/client/main.js:1:23
+1 | const cssUrl = new URL("./style.css", import.meta.url);
+                          ^
+no entry on filesystem
+--- plugin name ---
+"jsenv:file_url_fetching"

@@ -264,10 +264,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
               type,
               expectedType,
               isOriginalPosition: isOriginal,
-              // we remove 1 to the line because imagine the following html:
-              // <style>body { color: red; }</style>
-              // -> content starts same line as <style> (same for <script>)
-              specifierLine: line - 1,
+              specifierLine: line,
               specifierColumn: column,
               specifier: inlineContentUrl,
               contentType,
@@ -386,7 +383,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
                     },
                   );
                   const importmapReferenceInlined = importmapReference.inline({
-                    line: line - 1,
+                    line,
                     column,
                     isOriginal,
                     specifier: importmapInlineUrl,

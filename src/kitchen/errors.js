@@ -13,13 +13,16 @@ export const createResolveUrlError = ({
     ...details
   }) => {
     const resolveError = new Error(
-      createDetailedMessage(`Failed to resolve url reference`, {
-        reason,
-        ...details,
-        "specifier": `"${reference.specifier}"`,
-        "specifier trace": reference.trace.message,
-        ...detailsFromPluginController(pluginController),
-      }),
+      createDetailedMessage(
+        `Failed to resolve url reference
+${reference.trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
     );
     resolveError.name = "RESOLVE_URL_ERROR";
     resolveError.code = code;
@@ -54,14 +57,18 @@ export const createFetchUrlContentError = ({
     reason,
     ...details
   }) => {
+    const reference = urlInfo.firstReference;
     const fetchError = new Error(
-      createDetailedMessage(`Failed to fetch url content`, {
-        reason,
-        ...details,
-        "url": urlInfo.url,
-        "url reference trace": urlInfo.firstReference.trace.message,
-        ...detailsFromPluginController(pluginController),
-      }),
+      createDetailedMessage(
+        `Failed to fetch url content
+${reference.trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
     );
     fetchError.name = "FETCH_URL_CONTENT_ERROR";
     fetchError.code = code;
@@ -70,7 +77,7 @@ export const createFetchUrlContentError = ({
     if (code === "PARSE_ERROR") {
       fetchError.trace = error.trace;
     } else {
-      fetchError.trace = urlInfo.firstReference.trace;
+      fetchError.trace = reference.trace;
     }
     fetchError.asResponse = error.asResponse;
     return fetchError;
@@ -119,73 +126,101 @@ export const createTransformUrlContentError = ({
   urlInfo,
   error,
 }) => {
+  if (error.code === "MODULE_NOT_FOUND") {
+    return error;
+  }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     return error;
+  }
+  if (error.code === "PARSE_ERROR") {
+    const reference = urlInfo.firstReference;
+    let trace = reference.trace;
+    let line = error.line;
+    let column = error.column;
+    if (urlInfo.isInline) {
+      line = trace.line + line;
+      line = line - 1;
+      trace = {
+        ...trace,
+        line,
+        column,
+        codeFrame: generateContentFrame({
+          line,
+          column,
+          content: urlInfo.inlineUrlSite.content,
+        }),
+        message: stringifyUrlSite({
+          url: urlInfo.inlineUrlSite.url,
+          line,
+          column,
+          content: urlInfo.inlineUrlSite.content,
+        }),
+      };
+    } else {
+      trace = {
+        url: urlInfo.url,
+        line,
+        column: error.column,
+        codeFrame: generateContentFrame({
+          line,
+          column: error.column,
+          content: urlInfo.content,
+        }),
+        message: stringifyUrlSite({
+          url: urlInfo.url,
+          line,
+          column: error.column,
+          content: urlInfo.content,
+        }),
+      };
+    }
+    const transformError = new Error(
+      createDetailedMessage(
+        `parse error on "${urlInfo.type}"
+${trace.message}
+${error.message}`,
+        {
+          "first reference": `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`,
+          ...detailsFromFirstReference(reference),
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
+    );
+    transformError.cause = error;
+    transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
+    transformError.code = "PARSE_ERROR";
+    transformError.stack = error.stack;
+    transformError.reason = error.message;
+    transformError.trace = trace;
+    transformError.asResponse = error.asResponse;
+    return transformError;
   }
   const createFailedToTransformError = ({
     code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
     reason,
     ...details
   }) => {
+    const reference = urlInfo.firstReference;
+    let trace = reference.trace;
     const transformError = new Error(
       createDetailedMessage(
-        `"transformUrlContent" error on "${urlInfo.type}"`,
+        `"transformUrlContent" error on "${urlInfo.type}"
+${trace.message}
+${reason}`,
         {
-          reason,
+          ...detailsFromFirstReference(reference),
           ...details,
-          "url": urlInfo.url,
-          "url reference trace": urlInfo.firstReference.trace.message,
           ...detailsFromPluginController(pluginController),
         },
       ),
     );
+    transformError.cause = error;
     transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
     transformError.code = code;
     transformError.reason = reason;
     transformError.stack = error.stack;
     transformError.url = urlInfo.url;
-    transformError.trace = urlInfo.firstReference.trace;
-    if (code === "PARSE_ERROR") {
-      transformError.reason = `parse error on ${urlInfo.type}`;
-      transformError.cause = error;
-      let line = error.line;
-      if (urlInfo.type === "js_module") {
-        line = line - 1;
-      }
-      if (urlInfo.isInline) {
-        transformError.trace.line = urlInfo.firstReference.trace.line + line;
-        transformError.trace.column =
-          urlInfo.firstReference.trace.column + error.column;
-        transformError.trace.codeFrame = generateContentFrame({
-          line: transformError.trace.line,
-          column: transformError.trace.column,
-          content: urlInfo.inlineUrlSite.content,
-        });
-        transformError.trace.message = stringifyUrlSite({
-          url: urlInfo.inlineUrlSite.url,
-          line: transformError.trace.line,
-          column: transformError.trace.column,
-          content: urlInfo.inlineUrlSite.content,
-        });
-      } else {
-        transformError.trace = {
-          url: urlInfo.url,
-          line,
-          column: error.column,
-          codeFrame: generateContentFrame({
-            line,
-            column: error.column,
-            content: urlInfo.content,
-          }),
-          message: stringifyUrlSite({
-            url: urlInfo.url,
-            line,
-            column: error.column,
-            content: urlInfo.content,
-          }),
-        };
-      }
-    }
+    transformError.trace = trace;
     transformError.asResponse = error.asResponse;
     return transformError;
   };
@@ -197,17 +232,20 @@ export const createTransformUrlContentError = ({
 
 export const createFinalizeUrlContentError = ({
   pluginController,
-
   urlInfo,
   error,
 }) => {
+  const reference = urlInfo.firstReference;
   const finalizeError = new Error(
-    createDetailedMessage(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
-      ...detailsFromValueThrown(error),
-      "url": urlInfo.url,
-      "url reference trace": urlInfo.firstReference.trace.message,
-      ...detailsFromPluginController(pluginController),
-    }),
+    createDetailedMessage(
+      `"finalizeUrlContent" error on "${urlInfo.type}"
+${reference.trace.message}`,
+      {
+        ...detailsFromFirstReference(reference),
+        ...detailsFromValueThrown(error),
+        ...detailsFromPluginController(pluginController),
+      },
+    ),
   );
   if (error && error instanceof Error) {
     finalizeError.cause = error;
@@ -216,6 +254,23 @@ export const createFinalizeUrlContentError = ({
   finalizeError.reason = `"finalizeUrlContent" error on "${urlInfo.type}"`;
   finalizeError.asResponse = error.asResponse;
   return finalizeError;
+};
+
+const detailsFromFirstReference = (reference) => {
+  const referenceInProject = getFirstReferenceInProject(reference);
+  if (referenceInProject === reference) {
+    return {};
+  }
+  return {
+    "first reference in project": `${referenceInProject.trace.url}:${referenceInProject.trace.line}:${referenceInProject.trace.column}`,
+  };
+};
+const getFirstReferenceInProject = (reference) => {
+  const ownerUrlInfo = reference.ownerUrlInfo;
+  if (!ownerUrlInfo.url.includes("/node_modules/")) {
+    return reference;
+  }
+  return getFirstReferenceInProject(ownerUrlInfo.firstReference);
 };
 
 const detailsFromPluginController = (pluginController) => {
@@ -228,6 +283,18 @@ const detailsFromPluginController = (pluginController) => {
 
 const detailsFromValueThrown = (valueThrownByPlugin) => {
   if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
+    if (
+      valueThrownByPlugin.code === "PARSE_ERROR" ||
+      valueThrownByPlugin.code === "MODULE_NOT_FOUND" ||
+      valueThrownByPlugin.name === "RESOLVE_URL_ERROR" ||
+      valueThrownByPlugin.name === "FETCH_URL_CONTENT_ERROR" ||
+      valueThrownByPlugin.name === "TRANSFORM_URL_CONTENT_ERROR" ||
+      valueThrownByPlugin.name === "FINALIZE_URL_CONTENT_ERROR"
+    ) {
+      return {
+        "error message": valueThrownByPlugin.message,
+      };
+    }
     return {
       "error stack": valueThrownByPlugin.stack,
     };

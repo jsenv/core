@@ -487,16 +487,21 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           e.code !== "DIRECTORY_REFERENCE_NOT_ALLOWED" &&
           errorOnInlineContentCanSkipThrow(urlInfo)
         ) {
-          const errorInfo =
-            e.code === "PARSE_ERROR" && e.cause
-              ? `${e.cause.reasonCode}\n${e.trace?.message}`
-              : e.stack;
           // When something like <style> or <script> contains syntax error
           // the HTML in itself it still valid
           // keep the syntax error and continue with the HTML
+          if (e.code === "PARSE_ERROR") {
+            logger.error(`parse error on "${urlInfo.type}"
+${e.trace?.message}
+${e.reason}
+--- declared in ---
+${urlInfo.firstReference.trace.message}`);
+            return;
+          }
           logger.error(
-            `Error while cooking ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}:
-${errorInfo}`,
+            `Error while cooking ${urlInfo.type}
+${urlInfo.firstReference.trace.message}
+${e.stack}`,
           );
           return;
         }

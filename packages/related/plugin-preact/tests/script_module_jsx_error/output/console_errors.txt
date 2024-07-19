@@ -1,0 +1,15 @@
+parse error on "js_module"
+file:///cwd()/client/main.noeslint.html:15:16
+12 |       import { useEffect } from "preact/hooks";
+13 | 
+14 |       const App = () => {
+15 |         return <span>Hello world</span>;
+                    ^
+Unexpected token (6:15)
+--- declared in ---
+file:///cwd()/client/main.noeslint.html:10:5
+ 7 | 
+ 8 |   <body>
+ 9 |     <div id="app"></div>
+10 |     <script type="module">
+         ^
