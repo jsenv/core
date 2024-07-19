@@ -100,10 +100,13 @@ dir: {
   directoryUrl = ensurePathnameTrailingSlash(new URL(result.directory, cwdUrl));
 }
 if (directoryUrl.href !== cwdUrl.href) {
-  console.log(directoryUrl.href, cwdUrl.href);
-  commands.push(
-    `cd ${relative(fileURLToPath(cwdUrl), fileURLToPath(directoryUrl))}`,
-  );
+  const dir = relative(fileURLToPath(cwdUrl), fileURLToPath(directoryUrl));
+  commands.push({
+    label: `cd ${dir}`,
+    run: () => {
+      process.chdir(dir);
+    },
+  });
 }
 let templateName;
 template: {
@@ -206,7 +209,14 @@ write_files: {
         JSON.stringify(existingDevDependencies) !==
           JSON.stringify(finalDevDependencies)
       ) {
-        commands.push("npm install");
+        commands.push({
+          label: "npm install",
+          run: () => {
+            execSync("npm install", {
+              stdio: [0, 1, 2],
+            });
+          },
+        });
       }
       if (existingContent.startsWith("{\n")) {
         return JSON.stringify(existingPackage, null, "  ");
@@ -276,13 +286,22 @@ run_commands: {
   if (commands.length === 0) {
     break run_commands;
   }
-  console.log(`----- ${commands.length} commands to run -----
-${commands.join("\n")}
+  let message;
+  if (commands.length === 1) {
+    console.log(`----- 1 command to run -----
+${commands[0].label}
 ---------------------------`);
+    message = "Can we run it for you?";
+  } else {
+    console.log(`----- ${commands.length} commands to run -----
+${commands.map((c) => c.label).join("\n")}
+---------------------------`);
+    message = "Can we run them for you?";
+  }
   const { value } = await prompts({
     type: "confirm",
     name: "value",
-    message: "Do you want to run them?",
+    message,
     initial: true,
   });
   if (!value) {
@@ -290,9 +309,7 @@ ${commands.join("\n")}
     process.exit(0);
   }
   for (const command of commands) {
-    execSync(command, {
-      stdio: [0, 1, 2],
-    });
+    await command.run();
   }
   console.log("Done, thank you");
 }
