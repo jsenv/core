@@ -165,7 +165,7 @@ write_files: {
     "package.json": (existingContent, templateContent) => {
       const existingPackage = JSON.parse(existingContent);
       const templatePackage = JSON.parse(templateContent);
-      const override = (left, right) => {
+      const override = (left, right, allowedKeys) => {
         if (right === null) {
           return left === undefined ? null : left;
         }
@@ -182,11 +182,14 @@ write_files: {
         }
         if (typeof right === "object") {
           if (left && typeof left === "object") {
-            for (const keyInRight of Object.keys(right)) {
-              if (keyInRight === "private") continue;
-              const leftValue = left[keyInRight];
-              const rightValue = right[keyInRight];
-              left[keyInRight] = override(leftValue, rightValue);
+            const keysToVisit = allowedKeys || Object.keys(right);
+            for (const keyToVisit of keysToVisit) {
+              const rightValue = right[keyToVisit];
+              if (rightValue === undefined) {
+                continue;
+              }
+              const leftValue = left[keyToVisit];
+              left[keyToVisit] = override(leftValue, rightValue);
             }
             return left;
           }
@@ -200,7 +203,11 @@ write_files: {
       const existingDevDependencies = existingPackage.devDependencies
         ? { ...existingPackage.devDependencies }
         : {};
-      override(existingPackage, templatePackage);
+      override(existingPackage, templatePackage, [
+        "scripts",
+        "dependencies",
+        "devDependencies",
+      ]);
       const finalDependencies = existingPackage.dependencies || {};
       const finalDevDependencies = existingPackage.devDependencies || {};
       if (
