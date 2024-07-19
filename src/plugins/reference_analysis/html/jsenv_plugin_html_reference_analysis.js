@@ -264,9 +264,6 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
               type,
               expectedType,
               isOriginalPosition: isOriginal,
-              // we remove 1 to the line because imagine the following html:
-              // <style>body { color: red; }</style>
-              // -> content starts same line as <style> (same for <script>)
               specifierLine: line,
               specifierColumn: column,
               specifier: inlineContentUrl,

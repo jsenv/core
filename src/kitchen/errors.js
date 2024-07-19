@@ -77,7 +77,7 @@ ${reason}`,
     if (code === "PARSE_ERROR") {
       fetchError.trace = error.trace;
     } else {
-      fetchError.trace = urlInfo.firstReference.trace;
+      fetchError.trace = reference.trace;
     }
     fetchError.asResponse = error.asResponse;
     return fetchError;

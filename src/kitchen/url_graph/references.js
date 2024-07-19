@@ -64,8 +64,15 @@ export const createDependencies = (ownerUrlInfo) => {
     isOriginalPosition,
     specifierLine,
     specifierColumn,
+    content,
     ...rest
   }) => {
+    // we remove 1 to the line because imagine the following html:
+    // <style>body { color: red; }</style>
+    // -> content starts same line as <style> (same for <script>)
+    if (content[0] === "\n") {
+      specifierLine = specifierLine - 1;
+    }
     const parentUrl = isOriginalPosition
       ? ownerUrlInfo.url
       : ownerUrlInfo.generatedUrl;
@@ -84,6 +91,7 @@ export const createDependencies = (ownerUrlInfo) => {
       specifierLine,
       specifierColumn,
       isInline: true,
+      content,
       ...rest,
     });
     return reference;
@@ -411,6 +419,15 @@ const createReference = ({
     ownerUrlInfo = reference.ownerUrlInfo,
     ...props
   }) => {
+    const content =
+      ownerUrlInfo === undefined
+        ? isOriginalPosition
+          ? reference.ownerUrlInfo.originalContent
+          : reference.ownerUrlInfo.content
+        : ownerUrlInfo.content;
+    if (content[0] === "\n") {
+      line = line - 1;
+    }
     const trace = traceFromUrlSite({
       url:
         ownerUrlInfo === undefined
@@ -418,12 +435,7 @@ const createReference = ({
             ? reference.ownerUrlInfo.url
             : reference.ownerUrlInfo.generatedUrl
           : reference.ownerUrlInfo.url,
-      content:
-        ownerUrlInfo === undefined
-          ? isOriginalPosition
-            ? reference.ownerUrlInfo.originalContent
-            : reference.ownerUrlInfo.content
-          : ownerUrlInfo.content,
+      content,
       line,
       column,
     });
