@@ -303,6 +303,14 @@ run_commands: {
     console.log(`----- 1 command to run -----
 ${commands[0].label}
 ---------------------------`);
+    // we can't run cd for the parent terminal
+    // so we'll just print the command in that case
+    // and user will have to run it if he want to go into the
+    // directory
+    if (commands[0].label.startsWith("cd")) {
+      console.log("Done, thank you");
+      process.exit(0);
+    }
     message = "Can we run it for you?";
   } else {
     console.log(`----- ${commands.length} commands to run -----
