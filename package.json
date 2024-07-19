@@ -57,7 +57,7 @@
     "prettier": "prettier --write .",
     "test:ci": "CI=1 npm run test",
     "test:only_dev_server_errors": "node --conditions=development ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",
-    "workspace:test:ci": "CI=1 npm run test:workspace",
+    "workspace:test:ci": "CI=1 npm run workspace:test",
     "dev": "node --conditions=development ./scripts/dev/dev.mjs",
     "certificate:install": "node ./scripts/dev/install_certificate_authority.mjs",
     "prepublishOnly": "npm run build"
