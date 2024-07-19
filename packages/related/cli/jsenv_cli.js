@@ -99,8 +99,8 @@ dir: {
   );
   directoryUrl = ensurePathnameTrailingSlash(new URL(result.directory, cwdUrl));
 }
-if (directoryUrl !== cwdUrl) {
-  console.log({ directoryUrl, cwdUrl });
+if (directoryUrl.href !== cwdUrl.href) {
+  console.log(directoryUrl.href, cwdUrl.href);
   commands.push(
     `cd ${relative(fileURLToPath(cwdUrl), fileURLToPath(directoryUrl))}`,
   );
@@ -204,8 +204,6 @@ write_files: {
     import.meta.url,
   );
   const copyDirectoryContent = (fromDirectoryUrl, toDirectoryUrl) => {
-    fromDirectoryUrl = new URL(fromDirectoryUrl);
-    toDirectoryUrl = new URL(toDirectoryUrl);
     if (!existsSync(toDirectoryUrl)) {
       mkdirSync(toDirectoryUrl, { recursive: true });
     }
@@ -250,7 +248,10 @@ write_files: {
       writeFileSync(toUrl, finalContent);
     }
   };
-  copyDirectoryContent(templateSourceDirectoryUrl, directoryUrl);
+  copyDirectoryContent(
+    new URL(templateSourceDirectoryUrl),
+    new URL(directoryUrl),
+  );
   writeFilesTask.done();
 }
 
