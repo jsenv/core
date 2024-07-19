@@ -26,7 +26,9 @@ try {
     minification: false,
   });
   const callMocked = consoleErrorCalls.map((consoleErrorMessage) => {
-    return replaceFluctuatingValues(consoleErrorMessage);
+    return replaceFluctuatingValues(consoleErrorMessage, {
+      rootDirectoryUrl: new URL("./", import.meta.url),
+    });
   });
   const consoleOutputFileSnapshot = takeFileSnapshot(
     new URL("./output/console_errors.txt", import.meta.url),

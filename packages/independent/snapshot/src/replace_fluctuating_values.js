@@ -2,33 +2,37 @@
 // - Find all things looking likes dates and replace with stable values
 
 import stripAnsi from "strip-ansi";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 
 export const replaceFluctuatingValues = (
   string,
   {
     removeAnsi = true,
+    rootDirectoryUrl = pathToFileURL(process.cwd()),
     // for unit tests
-    cwdPath = process.cwd(),
-    cwdUrl = String(pathToFileURL(cwdPath)),
+    rootDirectoryPath = fileURLToPath(rootDirectoryUrl),
     isWindows = process.platform === "win32",
   } = {},
 ) => {
   if (removeAnsi) {
     string = stripAnsi(string);
   }
-  string = string.replaceAll(cwdUrl, "file:///cwd()");
+  rootDirectoryUrl = String(rootDirectoryUrl);
+  if (rootDirectoryUrl[rootDirectoryUrl.length - 1] === "/") {
+    rootDirectoryUrl = rootDirectoryUrl.slice(0, -1);
+  }
+  string = string.replaceAll(rootDirectoryUrl, "file:///cwd()");
   if (isWindows) {
     const windowPathRegex = new RegExp(
-      `${escapeRegexpSpecialChars(cwdPath)}(((?:\\\\(?:[\\w !#()-]+|[.]{1,2})+)*)(?:\\\\)?)`,
+      `${escapeRegexpSpecialChars(rootDirectoryPath)}(((?:\\\\(?:[\\w !#()-]+|[.]{1,2})+)*)(?:\\\\)?)`,
       "gm",
     );
     string = string.replaceAll(windowPathRegex, (match, afterCwd) => {
       return `cwd()${afterCwd.replaceAll("\\", "/")}`;
     });
   } else {
-    string = string.replaceAll(cwdPath, "cwd()");
+    string = string.replaceAll(rootDirectoryPath, "cwd()");
   }
   string = replaceHttpUrls(string);
   return string;

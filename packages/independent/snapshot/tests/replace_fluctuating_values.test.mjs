@@ -58,8 +58,8 @@ And file urls
 - file:///C:/Users/project/directory/
 - file:///C:/Users/project/directory/file.txt`,
     {
-      cwdPath: "C:\\Users\\project",
-      cwdUrl: "file:///C:/Users/project",
+      rootDirectoryUrl: "file:///C:/Users/project",
+      rootDirectoryPath: "C:\\Users\\project",
       isWindows: true,
     },
   );

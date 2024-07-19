@@ -1,4 +1,5 @@
 import { readdirSync, statSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { URL_META } from "@jsenv/url-meta";
 import {
   assertAndNormalizeDirectoryUrl,
@@ -31,9 +32,17 @@ export const takeFileSnapshot = (fileUrl) => {
   };
   return {
     compare,
-    update: (content, { mockFluctuatingValues = true, throwWhenDiff } = {}) => {
+    update: (
+      content,
+      { mockFluctuatingValues = true, rootDirectoryUrl, throwWhenDiff } = {},
+    ) => {
       if (mockFluctuatingValues) {
-        content = replaceFluctuatingValues(content);
+        content = replaceFluctuatingValues(content, {
+          cwdPath: rootDirectoryUrl
+            ? fileURLToPath(rootDirectoryUrl)
+            : undefined,
+          cwdUrl: rootDirectoryUrl ? String(rootDirectoryUrl) : undefined,
+        });
       }
       writeFileSync(fileUrl, content);
       compare(throwWhenDiff);
