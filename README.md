@@ -24,7 +24,7 @@ The following command init jsenv on your machine.
 npx @jsenv/cli
 ```
 
-> `npx` command is available after [installing Node.js](https://nodejs.org/en/download/package-manager)
+> If you don't have `npx` command you must [install Node.js](https://nodejs.org/en/download/package-manager)
 
 The command init jsenv in a directory. It can be a new directory or an existing one.
 
