@@ -27,7 +27,8 @@
     "./template-*/**"
   ],
   "dependencies": {
-    "prompts": "2.4.2",
-    "@jsenv/humanize": "1.2.4"
+    "@jsenv/humanize": "1.2.4",
+    "@jsenv/urls": "2.2.11",
+    "prompts": "2.4.2"
   }
 }
