@@ -73,7 +73,7 @@ Options:
 
 console.log("Welcome in jsenv CLI");
 const commands = [];
-const cwdUrl = `${pathToFileURL(process.cwd())}/`;
+const cwdUrl = ensurePathnameTrailingSlash(pathToFileURL(process.cwd()));
 let directoryUrl;
 dir: {
   const directoryPathFromArg = positionals[0];
@@ -99,7 +99,8 @@ dir: {
   );
   directoryUrl = ensurePathnameTrailingSlash(new URL(result.directory, cwdUrl));
 }
-if (directoryUrl.href !== cwdUrl.href) {
+if (directoryUrl !== cwdUrl) {
+  console.log({ directoryUrl, cwdUrl });
   commands.push(
     `cd ${relative(fileURLToPath(cwdUrl), fileURLToPath(directoryUrl))}`,
   );
@@ -140,9 +141,7 @@ template: {
 }
 
 write_files: {
-  const writeFilesTask = createTaskLog(
-    `init files into "${directoryUrl.href}"`,
-  );
+  const writeFilesTask = createTaskLog(`init files into "${directoryUrl}"`);
   const mergeTwoIgnoreFileContents = (left, right) => {
     const leftLines = String(left)
       .split("\n")
