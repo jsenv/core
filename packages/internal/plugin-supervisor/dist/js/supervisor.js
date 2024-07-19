@@ -689,12 +689,7 @@ window.__supervisor__ = (() => {
         };
         if (fileUrlSite.isInline) {
           // chrome
-          if (Error.captureStackTrace && !isWebkitOrSafari) {
-            if (exception.name === "SyntaxError") {
-              // syntax error on inline script need line-1 for some reason
-              decreaseLine();
-            }
-          }
+          if (Error.captureStackTrace && !isWebkitOrSafari) ;
           // firefox and webkit
           else if (exception.name === "SyntaxError") {
             if (exception.code === DYNAMIC_IMPORT_EXPORT_MISSING || exception.code === DYNAMIC_IMPORT_SYNTAX_ERROR) {

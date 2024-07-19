@@ -11558,6 +11558,7 @@ const createDependencies = (ownerUrlInfo) => {
     isOriginalPosition,
     specifierLine,
     specifierColumn,
+    content,
     ...rest
   }) => {
     const parentUrl = isOriginalPosition
@@ -11578,6 +11579,7 @@ const createDependencies = (ownerUrlInfo) => {
       specifierLine,
       specifierColumn,
       isInline: true,
+      content,
       ...rest,
     });
     return reference;
@@ -11905,6 +11907,12 @@ const createReference = ({
     ownerUrlInfo = reference.ownerUrlInfo,
     ...props
   }) => {
+    const content =
+      ownerUrlInfo === undefined
+        ? isOriginalPosition
+          ? reference.ownerUrlInfo.originalContent
+          : reference.ownerUrlInfo.content
+        : ownerUrlInfo.content;
     const trace = traceFromUrlSite({
       url:
         ownerUrlInfo === undefined
@@ -11912,12 +11920,7 @@ const createReference = ({
             ? reference.ownerUrlInfo.url
             : reference.ownerUrlInfo.generatedUrl
           : reference.ownerUrlInfo.url,
-      content:
-        ownerUrlInfo === undefined
-          ? isOriginalPosition
-            ? reference.ownerUrlInfo.originalContent
-            : reference.ownerUrlInfo.content
-          : ownerUrlInfo.content,
+      content,
       line,
       column,
     });
@@ -12114,14 +12117,15 @@ const applyDependencyRemovalEffects = (reference) => {
 };
 
 const traceFromUrlSite = (urlSite) => {
+  const codeFrame = urlSite.content
+    ? generateContentFrame({
+        content: urlSite.content,
+        line: urlSite.line,
+        column: urlSite.column,
+      })
+    : "";
   return {
-    codeFrame: urlSite.content
-      ? generateContentFrame({
-          content: urlSite.content,
-          line: urlSite.line,
-          column: urlSite.column,
-        })
-      : "",
+    codeFrame,
     message: stringifyUrlSite(urlSite),
     url: urlSite.url,
     line: urlSite.line,
@@ -12131,7 +12135,7 @@ const traceFromUrlSite = (urlSite) => {
 
 const adjustUrlSite = (urlInfo, { url, line, column }) => {
   const isOriginal = url === urlInfo.url;
-  const adjust = (urlSite, urlInfo) => {
+  const adjust = (urlInfo, urlSite) => {
     if (!urlSite.isOriginal) {
       return urlSite;
     }
@@ -12140,33 +12144,35 @@ const adjustUrlSite = (urlInfo, { url, line, column }) => {
       return urlSite;
     }
     const parentUrlInfo = urlInfo.graph.getUrlInfo(inlineUrlSite.url);
-    return adjust(
-      {
-        isOriginal: true,
-        url: inlineUrlSite.url,
-        content: inlineUrlSite.content,
-        line:
-          inlineUrlSite.line === undefined
-            ? urlSite.line
-            : inlineUrlSite.line + urlSite.line,
-        column:
-          inlineUrlSite.column === undefined
-            ? urlSite.column
-            : inlineUrlSite.column + urlSite.column,
-      },
-      parentUrlInfo,
-    );
-  };
-  return adjust(
-    {
-      isOriginal,
-      url,
-      content: isOriginal ? urlInfo.originalContent : urlInfo.content,
+    line =
+      inlineUrlSite.line === undefined
+        ? urlSite.line
+        : inlineUrlSite.line + urlSite.line;
+    // we remove 1 to the line because imagine the following html:
+    // <style>body { color: red; }</style>
+    // -> content starts same line as <style> (same for <script>)
+    if (urlInfo.content[0] === "\n") {
+      line = line - 1;
+    }
+    column =
+      inlineUrlSite.column === undefined
+        ? urlSite.column
+        : inlineUrlSite.column + urlSite.column;
+    return adjust(parentUrlInfo, {
+      isOriginal: true,
+      url: inlineUrlSite.url,
+      content: inlineUrlSite.content,
       line,
       column,
-    },
-    urlInfo,
-  );
+    });
+  };
+  return adjust(urlInfo, {
+    isOriginal,
+    url,
+    content: isOriginal ? urlInfo.originalContent : urlInfo.content,
+    line,
+    column,
+  });
 };
 
 const getRedirectedReferenceProps = (reference, url) => {
@@ -13686,13 +13692,16 @@ const createResolveUrlError = ({
     ...details
   }) => {
     const resolveError = new Error(
-      createDetailedMessage$1(`Failed to resolve url reference`, {
-        reason,
-        ...details,
-        "specifier": `"${reference.specifier}"`,
-        "specifier trace": reference.trace.message,
-        ...detailsFromPluginController(pluginController),
-      }),
+      createDetailedMessage$1(
+        `Failed to resolve url reference
+${reference.trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
     );
     resolveError.name = "RESOLVE_URL_ERROR";
     resolveError.code = code;
@@ -13727,14 +13736,18 @@ const createFetchUrlContentError = ({
     reason,
     ...details
   }) => {
+    const reference = urlInfo.firstReference;
     const fetchError = new Error(
-      createDetailedMessage$1(`Failed to fetch url content`, {
-        reason,
-        ...details,
-        "url": urlInfo.url,
-        "url reference trace": urlInfo.firstReference.trace.message,
-        ...detailsFromPluginController(pluginController),
-      }),
+      createDetailedMessage$1(
+        `Failed to fetch url content
+${reference.trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
     );
     fetchError.name = "FETCH_URL_CONTENT_ERROR";
     fetchError.code = code;
@@ -13743,7 +13756,7 @@ const createFetchUrlContentError = ({
     if (code === "PARSE_ERROR") {
       fetchError.trace = error.trace;
     } else {
-      fetchError.trace = urlInfo.firstReference.trace;
+      fetchError.trace = reference.trace;
     }
     fetchError.asResponse = error.asResponse;
     return fetchError;
@@ -13792,73 +13805,101 @@ const createTransformUrlContentError = ({
   urlInfo,
   error,
 }) => {
+  if (error.code === "MODULE_NOT_FOUND") {
+    return error;
+  }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     return error;
+  }
+  if (error.code === "PARSE_ERROR") {
+    const reference = urlInfo.firstReference;
+    let trace = reference.trace;
+    let line = error.line;
+    let column = error.column;
+    if (urlInfo.isInline) {
+      line = trace.line + line;
+      line = line - 1;
+      trace = {
+        ...trace,
+        line,
+        column,
+        codeFrame: generateContentFrame({
+          line,
+          column,
+          content: urlInfo.inlineUrlSite.content,
+        }),
+        message: stringifyUrlSite({
+          url: urlInfo.inlineUrlSite.url,
+          line,
+          column,
+          content: urlInfo.inlineUrlSite.content,
+        }),
+      };
+    } else {
+      trace = {
+        url: urlInfo.url,
+        line,
+        column: error.column,
+        codeFrame: generateContentFrame({
+          line,
+          column: error.column,
+          content: urlInfo.content,
+        }),
+        message: stringifyUrlSite({
+          url: urlInfo.url,
+          line,
+          column: error.column,
+          content: urlInfo.content,
+        }),
+      };
+    }
+    const transformError = new Error(
+      createDetailedMessage$1(
+        `parse error on "${urlInfo.type}"
+${trace.message}
+${error.message}`,
+        {
+          "first reference": `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`,
+          ...detailsFromFirstReference(reference),
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
+    );
+    transformError.cause = error;
+    transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
+    transformError.code = "PARSE_ERROR";
+    transformError.stack = error.stack;
+    transformError.reason = error.message;
+    transformError.trace = trace;
+    transformError.asResponse = error.asResponse;
+    return transformError;
   }
   const createFailedToTransformError = ({
     code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
     reason,
     ...details
   }) => {
+    const reference = urlInfo.firstReference;
+    let trace = reference.trace;
     const transformError = new Error(
       createDetailedMessage$1(
-        `"transformUrlContent" error on "${urlInfo.type}"`,
+        `"transformUrlContent" error on "${urlInfo.type}"
+${trace.message}
+${reason}`,
         {
-          reason,
+          ...detailsFromFirstReference(reference),
           ...details,
-          "url": urlInfo.url,
-          "url reference trace": urlInfo.firstReference.trace.message,
           ...detailsFromPluginController(pluginController),
         },
       ),
     );
+    transformError.cause = error;
     transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
     transformError.code = code;
     transformError.reason = reason;
     transformError.stack = error.stack;
     transformError.url = urlInfo.url;
-    transformError.trace = urlInfo.firstReference.trace;
-    if (code === "PARSE_ERROR") {
-      transformError.reason = `parse error on ${urlInfo.type}`;
-      transformError.cause = error;
-      let line = error.line;
-      if (urlInfo.type === "js_module") {
-        line = line - 1;
-      }
-      if (urlInfo.isInline) {
-        transformError.trace.line = urlInfo.firstReference.trace.line + line;
-        transformError.trace.column =
-          urlInfo.firstReference.trace.column + error.column;
-        transformError.trace.codeFrame = generateContentFrame({
-          line: transformError.trace.line,
-          column: transformError.trace.column,
-          content: urlInfo.inlineUrlSite.content,
-        });
-        transformError.trace.message = stringifyUrlSite({
-          url: urlInfo.inlineUrlSite.url,
-          line: transformError.trace.line,
-          column: transformError.trace.column,
-          content: urlInfo.inlineUrlSite.content,
-        });
-      } else {
-        transformError.trace = {
-          url: urlInfo.url,
-          line,
-          column: error.column,
-          codeFrame: generateContentFrame({
-            line,
-            column: error.column,
-            content: urlInfo.content,
-          }),
-          message: stringifyUrlSite({
-            url: urlInfo.url,
-            line,
-            column: error.column,
-            content: urlInfo.content,
-          }),
-        };
-      }
-    }
+    transformError.trace = trace;
     transformError.asResponse = error.asResponse;
     return transformError;
   };
@@ -13870,17 +13911,20 @@ const createTransformUrlContentError = ({
 
 const createFinalizeUrlContentError = ({
   pluginController,
-
   urlInfo,
   error,
 }) => {
+  const reference = urlInfo.firstReference;
   const finalizeError = new Error(
-    createDetailedMessage$1(`"finalizeUrlContent" error on "${urlInfo.type}"`, {
-      ...detailsFromValueThrown(error),
-      "url": urlInfo.url,
-      "url reference trace": urlInfo.firstReference.trace.message,
-      ...detailsFromPluginController(pluginController),
-    }),
+    createDetailedMessage$1(
+      `"finalizeUrlContent" error on "${urlInfo.type}"
+${reference.trace.message}`,
+      {
+        ...detailsFromFirstReference(reference),
+        ...detailsFromValueThrown(error),
+        ...detailsFromPluginController(pluginController),
+      },
+    ),
   );
   if (error && error instanceof Error) {
     finalizeError.cause = error;
@@ -13889,6 +13933,23 @@ const createFinalizeUrlContentError = ({
   finalizeError.reason = `"finalizeUrlContent" error on "${urlInfo.type}"`;
   finalizeError.asResponse = error.asResponse;
   return finalizeError;
+};
+
+const detailsFromFirstReference = (reference) => {
+  const referenceInProject = getFirstReferenceInProject(reference);
+  if (referenceInProject === reference) {
+    return {};
+  }
+  return {
+    "first reference in project": `${referenceInProject.trace.url}:${referenceInProject.trace.line}:${referenceInProject.trace.column}`,
+  };
+};
+const getFirstReferenceInProject = (reference) => {
+  const ownerUrlInfo = reference.ownerUrlInfo;
+  if (!ownerUrlInfo.url.includes("/node_modules/")) {
+    return reference;
+  }
+  return getFirstReferenceInProject(ownerUrlInfo.firstReference);
 };
 
 const detailsFromPluginController = (pluginController) => {
@@ -13901,6 +13962,18 @@ const detailsFromPluginController = (pluginController) => {
 
 const detailsFromValueThrown = (valueThrownByPlugin) => {
   if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
+    if (
+      valueThrownByPlugin.code === "PARSE_ERROR" ||
+      valueThrownByPlugin.code === "MODULE_NOT_FOUND" ||
+      valueThrownByPlugin.name === "RESOLVE_URL_ERROR" ||
+      valueThrownByPlugin.name === "FETCH_URL_CONTENT_ERROR" ||
+      valueThrownByPlugin.name === "TRANSFORM_URL_CONTENT_ERROR" ||
+      valueThrownByPlugin.name === "FINALIZE_URL_CONTENT_ERROR"
+    ) {
+      return {
+        "error message": valueThrownByPlugin.message,
+      };
+    }
     return {
       "error stack": valueThrownByPlugin.stack,
     };
@@ -14520,16 +14593,21 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           e.code !== "DIRECTORY_REFERENCE_NOT_ALLOWED" &&
           errorOnInlineContentCanSkipThrow(urlInfo)
         ) {
-          const errorInfo =
-            e.code === "PARSE_ERROR" && e.cause
-              ? `${e.cause.reasonCode}\n${e.trace?.message}`
-              : e.stack;
           // When something like <style> or <script> contains syntax error
           // the HTML in itself it still valid
           // keep the syntax error and continue with the HTML
+          if (e.code === "PARSE_ERROR") {
+            logger.error(`parse error on "${urlInfo.type}"
+${e.trace?.message}
+${e.reason}
+--- declared in ---
+${urlInfo.firstReference.trace.message}`);
+            return;
+          }
           logger.error(
-            `Error while cooking ${urlInfo.type} declared in ${urlInfo.firstReference.trace.message}:
-${errorInfo}`,
+            `Error while cooking ${urlInfo.type}
+${urlInfo.firstReference.trace.message}
+${e.stack}`,
           );
           return;
         }
@@ -16101,10 +16179,7 @@ const jsenvPluginHtmlReferenceAnalysis = ({
               type,
               expectedType,
               isOriginalPosition: isOriginal,
-              // we remove 1 to the line because imagine the following html:
-              // <style>body { color: red; }</style>
-              // -> content starts same line as <style> (same for <script>)
-              specifierLine: line - 1,
+              specifierLine: line,
               specifierColumn: column,
               specifier: inlineContentUrl,
               contentType,
@@ -16223,7 +16298,7 @@ const jsenvPluginHtmlReferenceAnalysis = ({
                     },
                   );
                   const importmapReferenceInlined = importmapReference.inline({
-                    line: line - 1,
+                    line,
                     column,
                     isOriginal,
                     specifier: importmapInlineUrl,
@@ -18777,7 +18852,7 @@ const jsenvPluginInliningIntoHtml = () => {
             url: linkReference.url,
           });
           const linkReferenceInlined = linkReference.inline({
-            line: line - 1,
+            line,
             column,
             isOriginal,
             specifier: linkInlineUrl,
@@ -18829,7 +18904,7 @@ const jsenvPluginInliningIntoHtml = () => {
             url: scriptReference.url,
           });
           const scriptReferenceInlined = scriptReference.inline({
-            line: line - 1,
+            line,
             column,
             isOriginal,
             specifier: scriptInlineUrl,
