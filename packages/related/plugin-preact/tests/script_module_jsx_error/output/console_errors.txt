@@ -1,4 +1,4 @@
-Error while cooking js_module
+parse error on "js_module"
 file:///cwd()/packages/related/plugin-preact/tests/script_module_jsx_error/client/main.noeslint.html:15:16
 12 |       import { useEffect } from "preact/hooks";
 13 | 

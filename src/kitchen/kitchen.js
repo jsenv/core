@@ -491,7 +491,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
           // the HTML in itself it still valid
           // keep the syntax error and continue with the HTML
           if (e.code === "PARSE_ERROR") {
-            logger.error(`Error while cooking ${urlInfo.type}
+            logger.error(`parse error on "${urlInfo.type}"
 ${e.trace?.message}
 ${e.reason}
 --- declared in ---
