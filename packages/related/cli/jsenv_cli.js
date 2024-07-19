@@ -258,6 +258,22 @@ write_files: {
       );
       const fromStat = statSync(fromUrl);
       if (fromStat.isDirectory()) {
+        if (directoryEntryName === "src" || directoryEntryName === "tests") {
+          // copy src and tests if they don't exists
+          if (existsSync(toUrl)) {
+            continue;
+          }
+          // for web the presence of index.html or main.html at the root
+          // prevent src/ content from being copied
+          if (templateName.startsWith("web")) {
+            if (existsSync(new URL("./index.html", directoryUrl))) {
+              continue;
+            }
+            if (existsSync(new URL("./main.html", directoryUrl))) {
+              continue;
+            }
+          }
+        }
         copyDirectoryContent(
           ensurePathnameTrailingSlash(fromUrl),
           ensurePathnameTrailingSlash(toUrl),
