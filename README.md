@@ -44,7 +44,7 @@ Then you'll be prompted to select a template.
 ```
 
 A template is a project pre-configured with jsenv.  
-Selecting "web" would init [demo-web/](./packages/related/cli/demo-web/):
+Selecting "web" would init [template-web/](./packages/related/cli/template-web/):
 
 ```console
 ✔ Enter a directory: › demo
