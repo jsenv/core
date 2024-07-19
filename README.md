@@ -24,15 +24,17 @@ The following command helps to init jsenv on your machine.
 npm @jsenv/cli
 ```
 
-The CLI will ask where to init jsenv, it can be a new directory or an existing one.
+CLI will init jsenv in a directory. It can be a new directory or an existing one.
 
 ```console
-TODO: show output
+Welcome in jsenv CLI
+? Enter a directory: ›
 ```
 
 Then you'll be prompted to select a template.
 
 ```console
+✔ Enter a directory: › demo
 ? Select a template: › - Use arrow-keys. Return to submit.
 ❯   web
     web-components
@@ -41,18 +43,17 @@ Then you'll be prompted to select a template.
     node-package
 ```
 
-A template is a project pre-configured with jsenv. A template can be installed in a new directory or in an existing one.
-
+A template is a project pre-configured with jsenv.  
 Selecting "web" would init [demo-web/](./packages/related/cli/demo-web/):
 
 ```console
+✔ Enter a directory: › demo
 ✔ Select a template: › web
-✔ copy demo files into "[...]jsenv-demo-web/" (done in 0.1 second)
------ commands to run -----
-cd jsenv-demo-web
+✔ init jsenv in "[...]/demo/" (done in 0.01 second)
+----- 2 commands to run -----
+cd demo
 npm install
-npm start
----------------------------
+-----------------------------
 ```
 
 The templates have installed scripts:

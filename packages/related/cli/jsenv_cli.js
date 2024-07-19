@@ -144,7 +144,7 @@ template: {
 }
 
 write_files: {
-  const writeFilesTask = createTaskLog(`init files into "${directoryUrl}"`);
+  const writeFilesTask = createTaskLog(`init jsenv in "${directoryUrl}"`);
   const mergeTwoIgnoreFileContents = (left, right) => {
     const leftLines = String(left)
       .split("\n")
@@ -311,12 +311,12 @@ ${commands[0].label}
       console.log("Done, thank you");
       process.exit(0);
     }
-    message = "Can we run it for you?";
+    message = "Can we run the command";
   } else {
     console.log(`----- ${commands.length} commands to run -----
 ${commands.map((c) => c.label).join("\n")}
----------------------------`);
-    message = "Can we run them for you?";
+-----------------------------`);
+    message = "Can we run the commands";
   }
   const { value } = await prompts({
     type: "confirm",
@@ -325,7 +325,7 @@ ${commands.map((c) => c.label).join("\n")}
     initial: true,
   });
   if (!value) {
-    console.log("Ok, thank you");
+    console.log("Done, thank you");
     process.exit(0);
   }
   for (const command of commands) {
