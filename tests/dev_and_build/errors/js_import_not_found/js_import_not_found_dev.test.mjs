@@ -1,8 +1,6 @@
-import { fileURLToPath } from "node:url";
-import stripAnsi from "strip-ansi";
 import { assert } from "@jsenv/assert";
 import { writeFileSync } from "@jsenv/filesystem";
-import { takeFileSnapshot } from "@jsenv/snapshot";
+import { takeFileSnapshot, replaceFluctuatingValues } from "@jsenv/snapshot";
 
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
@@ -13,7 +11,6 @@ console.warn = (...args) => {
   warnCalls.push(args.join(""));
 };
 const sourceDirectoryUrl = new URL("./client/", import.meta.url);
-const sourceDirectoryPath = fileURLToPath(sourceDirectoryUrl);
 try {
   const devServer = await startDevServer({
     logLevel: "warn",
@@ -31,11 +28,7 @@ try {
     /* eslint-enable no-undef */
   });
   const serverWarnings = warnCalls
-    .map((warnCall) => {
-      warnCall = stripAnsi(warnCall);
-      warnCall = warnCall.replaceAll(sourceDirectoryPath, "/mock/");
-      return warnCall;
-    })
+    .map((warnCall) => replaceFluctuatingValues(warnCall))
     .join("\n");
   const serverWarningsFileUrl = new URL(
     "./output/server_warnings.txt",

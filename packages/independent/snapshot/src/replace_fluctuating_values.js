@@ -1,14 +1,5 @@
-// content = content.replaceAll
-// TODO: if textual find all things looking like urls
-// and replace with process.cwd()
-// replace things that looks like date
-// if http urls replace with localhost
-// replace evntual port with 9999?
-// for .json we would parse (and ignore syntax error)
-// and try to recognize value based on key
-// and re-stringify
-// see report_as_json.js
-// ideally we would cover all this and replace with mocked values
+// - Find all things looking like urls and replace with stable values
+// - Find all things looking likes dates and replace with stable values
 
 import stripAnsi from "strip-ansi";
 import { pathToFileURL } from "node:url";
@@ -39,5 +30,26 @@ export const replaceFluctuatingValues = (
   } else {
     string = string.replaceAll(cwdPath, "cwd()");
   }
+  string = replaceHttpUrls(string);
   return string;
+};
+
+const replaceHttpUrls = (source) => {
+  return source.replace(/(?:https?|ftp):\/\/\S+/g, (match) => {
+    const lastChar = match[match.length - 1];
+    // hotfix because our url regex sucks a bit
+    const endsWithSeparationChar = lastChar === ")" || lastChar === ":";
+    if (endsWithSeparationChar) {
+      match = match.slice(0, -1);
+    }
+    try {
+      const urlObject = new URL(match);
+      if (urlObject.port) {
+        urlObject.port = 9999;
+      }
+      return urlObject.href;
+    } catch (e) {
+      return match;
+    }
+  });
 };
