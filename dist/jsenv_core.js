@@ -2092,18 +2092,26 @@ const setUrlFilename = (url, filename) => {
 };
 
 const ensurePathnameTrailingSlash = (url) => {
-  const urlObject = new URL(url);
-  const { pathname } = urlObject;
-  if (pathname.endsWith("/")) {
+  if (typeof url === "string") {
+    const urlObject = new URL(url);
+    const { pathname } = urlObject;
+    if (pathname.endsWith("/")) {
+      return url;
+    }
+    let { origin } = urlObject;
+    // origin is "null" for "file://" urls with Node.js
+    if (origin === "null" && urlObject.href.startsWith("file:")) {
+      origin = "file://";
+    }
+    const { search, hash } = urlObject;
+    const urlWithTrailingSlash = `${origin}${pathname}/${search}${hash}`;
+    return urlWithTrailingSlash;
+  }
+  if (url.pathname.endsWith("/")) {
     return url;
   }
-  let { origin } = urlObject;
-  // origin is "null" for "file://" urls with Node.js
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-  const { search, hash } = urlObject;
-  return `${origin}${pathname}/${search}${hash}`;
+  url.pathname += "/";
+  return url;
 };
 
 const isFileSystemPath$1 = (value) => {
