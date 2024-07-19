@@ -247,7 +247,8 @@ write_files: {
       if (
         directoryEntryName === ".jsenv" ||
         directoryEntryName === "dist" ||
-        directoryEntryName === "node_modules"
+        directoryEntryName === "node_modules" ||
+        directoryEntryName === "readme.md"
       ) {
         continue;
       }
