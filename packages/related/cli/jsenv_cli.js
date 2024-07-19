@@ -16,8 +16,8 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 
 import prompts from "prompts";
-import { createTaskLog } from "@jsenv/humanize";
-import { urlToRelativeUrl } from "@jsenv/urls";
+import { createTaskLog, UNICODE } from "@jsenv/humanize";
+import { urlToRelativeUrl, ensurePathnameTrailingSlash } from "@jsenv/urls";
 
 // not using readdir to control order
 const availableTemplateNameArray = [
@@ -78,7 +78,10 @@ let directoryUrl;
 dir: {
   const directoryPathFromArg = positionals[0];
   if (directoryPathFromArg) {
-    directoryUrl = new URL(directoryPathFromArg, cwdUrl);
+    directoryUrl = ensurePathnameTrailingSlash(
+      new URL(directoryPathFromArg, cwdUrl),
+    );
+    console.log(`${UNICODE.OK} Enter a directory: ${directoryPathFromArg}`);
     break dir;
   }
   const result = await prompts(
@@ -94,7 +97,7 @@ dir: {
       },
     },
   );
-  directoryUrl = new URL(result.directory, cwdUrl);
+  directoryUrl = ensurePathnameTrailingSlash(new URL(result.directory, cwdUrl));
 }
 if (directoryUrl.href !== cwdUrl.href) {
   commands.push(
@@ -108,6 +111,7 @@ template: {
   );
   if (templateNameFromArg) {
     templateName = templateNameFromArg;
+    console.log(`${UNICODE.OK} Select a template: ${templateNameFromArg}`);
     break template;
   }
   const result = await prompts(
@@ -139,7 +143,22 @@ write_files: {
   const writeFilesTask = createTaskLog(
     `init files into "${directoryUrl.href}"`,
   );
-  // when there is no handler the file is kept as is
+  const mergeTwoIgnoreFileContents = (left, right) => {
+    const leftLines = String(left)
+      .split("\n")
+      .map((l) => l.trim());
+    const rightLines = String(right)
+      .split("\n")
+      .map((l) => l.trim());
+    let finalContent = left;
+    for (const rightLine of rightLines) {
+      if (!leftLines.includes(rightLine)) {
+        finalContent += "\n";
+        finalContent += rightLine;
+      }
+    }
+    return finalContent;
+  };
   const overrideHandlers = {
     "package.json": (existingContent, templateContent) => {
       const existingPackage = JSON.parse(existingContent);
@@ -178,41 +197,24 @@ write_files: {
       }
       return JSON.stringify(existingPackage);
     },
-    ".gitignore": (existingContent, templateContent) => {
-      const existingLines = existingContent.split("\n").map((l) => l.trim());
-      const newLines = templateContent.split("\n").map((l) => l.trim());
-      let finalContent = existingContent;
-      for (const newLine of newLines) {
-        if (!existingLines.includes(newLine)) {
-          finalContent += "\n";
-          finalContent += newLine;
-        }
-      }
-      return finalContent;
-    },
-    ".eslintignore": (existingContent, templateContent) => {
-      const existingLines = existingContent.split("\n").map((l) => l.trim());
-      const newLines = templateContent.split("\n").map((l) => l.trim());
-      let finalContent = existingContent;
-      for (const newLine of newLines) {
-        if (!existingLines.includes(newLine)) {
-          finalContent += "\n";
-          finalContent += newLine;
-        }
-      }
-      return finalContent;
-    },
+    ".gitignore": mergeTwoIgnoreFileContents,
+    ".eslintignore": mergeTwoIgnoreFileContents,
   };
   const templateSourceDirectoryUrl = new URL(
     `./template-${templateName}/`,
     import.meta.url,
   );
   const copyDirectoryContent = (fromDirectoryUrl, toDirectoryUrl) => {
+    fromDirectoryUrl = new URL(fromDirectoryUrl);
+    toDirectoryUrl = new URL(toDirectoryUrl);
     if (!existsSync(toDirectoryUrl)) {
       mkdirSync(toDirectoryUrl, { recursive: true });
     }
     const files = readdirSync(fromDirectoryUrl);
     for (const file of files) {
+      if (file === ".jsenv" || file === "dist" || file === "node_modules") {
+        continue;
+      }
       const fromUrl = new URL(file, fromDirectoryUrl);
       const toUrl = new URL(
         file === "_gitignore" ? ".gitignore" : file,
@@ -220,7 +222,10 @@ write_files: {
       );
       const fromStat = statSync(fromUrl);
       if (fromStat.isDirectory()) {
-        copyDirectoryContent(fromUrl, toUrl);
+        copyDirectoryContent(
+          ensurePathnameTrailingSlash(fromUrl),
+          ensurePathnameTrailingSlash(toUrl),
+        );
         continue;
       }
       if (!existsSync(toUrl)) {
@@ -230,11 +235,15 @@ write_files: {
       const relativeUrl = urlToRelativeUrl(fromUrl, templateSourceDirectoryUrl);
       const overrideHandler = overrideHandlers[relativeUrl];
       if (!overrideHandler) {
+        // when there is no handler the file is kept as is
         continue;
       }
       const existingContent = readFileSync(toUrl);
       const templateContent = readFileSync(fromUrl);
-      const finalContent = overrideHandler(existingContent, templateContent);
+      const finalContent = overrideHandler(
+        String(existingContent),
+        String(templateContent),
+      );
       writeFileSync(toUrl, finalContent);
     }
   };
