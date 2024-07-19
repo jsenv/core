@@ -210,15 +210,19 @@ write_files: {
     if (!existsSync(toDirectoryUrl)) {
       mkdirSync(toDirectoryUrl, { recursive: true });
     }
-    const files = readdirSync(fromDirectoryUrl);
-    for (const file of files) {
-      if (file === ".jsenv" || file === "dist" || file === "node_modules") {
+    const directoryEntryNameArray = readdirSync(fromDirectoryUrl);
+    for (const directoryEntryName of directoryEntryNameArray) {
+      if (
+        directoryEntryName === ".jsenv" ||
+        directoryEntryName === "dist" ||
+        directoryEntryName === "node_modules"
+      ) {
         continue;
       }
-      const fromUrl = new URL(file, fromDirectoryUrl);
+      const fromUrl = new URL(directoryEntryName, fromDirectoryUrl);
       const toUrl = new URL(
-        file === "_gitignore" ? ".gitignore" : file,
-        directoryUrl,
+        directoryEntryName === "_gitignore" ? ".gitignore" : directoryEntryName,
+        toDirectoryUrl,
       );
       const fromStat = statSync(fromUrl);
       if (fromStat.isDirectory()) {
