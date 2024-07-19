@@ -3,5 +3,5 @@
 _@jsenv/cli_ is a NPM package meant to run via the command below:
 
 ```console
-npx @jsenv/cli init
+npx @jsenv/cli
 ```
