@@ -1,5 +1,4 @@
-import { assert } from "@jsenv/assert";
-
+import { takeFileSnapshot } from "@jsenv/snapshot";
 import { build } from "@jsenv/core";
 
 try {
@@ -13,18 +12,8 @@ try {
   });
   throw new Error("should throw");
 } catch (e) {
-  const actual = e.message;
-  const expect = `Failed to fetch url content
---- reason ---
-no entry on filesystem
---- url ---
-${new URL("./client/not_found.js", import.meta.url).href}
---- url reference trace ---
-${new URL("./client/intermediate.js", import.meta.url).href}:2:7
-1 | // eslint-disable-next-line import/no-unresolved
-2 | import "./not_found.js";
-          ^
---- plugin name ---
-"jsenv:file_url_fetching"`;
-  assert({ actual, expect });
+  const errorFileSnapshot = takeFileSnapshot(
+    new URL("./output/error.txt", import.meta.url),
+  );
+  errorFileSnapshot.update(e.message);
 }

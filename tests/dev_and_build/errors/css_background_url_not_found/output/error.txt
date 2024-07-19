@@ -1,0 +1,8 @@
+Failed to fetch url content
+file:///cwd()/tests/dev_and_build/errors/css_background_url_not_found/client/style.css:2:25
+1 | body {
+2 |   background-image: url("./img.png");
+                            ^
+no entry on filesystem
+--- plugin name ---
+"jsenv:file_url_fetching"
