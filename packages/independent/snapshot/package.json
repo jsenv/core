@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Snapshot testing",
   "license": "MIT",
   "author": {
@@ -35,8 +35,8 @@
   },
   "dependencies": {
     "@jsenv/assert": "4.1.4",
-    "@jsenv/filesystem": "4.8.0",
-    "@jsenv/urls": "2.2.11",
+    "@jsenv/filesystem": "4.8.1",
+    "@jsenv/urls": "2.3.0",
     "@jsenv/utils": "2.1.1",
     "pixelmatch": "6.0.0",
     "prettier": "3.3.3",

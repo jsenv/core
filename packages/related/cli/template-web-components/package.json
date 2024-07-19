@@ -1,5 +1,5 @@
 {
-  "name": "jsenv-demo-web-preact",
+  "name": "jsenv-template-web-components",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,29 +10,24 @@
     "test:coverage": "npm run test -- --coverage",
     "build": "node ./scripts/build.mjs",
     "build:serve": "node ./scripts/build_serve.mjs --open",
-    "eslint": "npx eslint . --ext=.html,.js,.jsx,.mjs,.cjs",
+    "eslint": "npx eslint . --ext=.html,.js,.mjs,.cjs",
     "prettier": "prettier --write .",
     "playwright:install": "npx playwright install-deps && npx playwright install"
-  },
-  "dependencies": {
-    "preact": "10.22.1"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.24.8",
     "@babel/plugin-syntax-import-assertions": "7.24.7",
-    "@babel/plugin-transform-react-jsx": "7.24.7",
+    "@jsenv/custom-elements-redefine": "0.0.1",
     "@jsenv/assert": "4.1.4",
-    "@jsenv/core": "39.2.0",
-    "@jsenv/plugin-preact": "1.6.1",
-    "@jsenv/plugin-bundling": "2.6.16",
+    "@jsenv/core": "39.2.1",
+    "@jsenv/plugin-bundling": "2.6.17",
     "@jsenv/plugin-minification": "1.5.5",
     "@jsenv/eslint-config": "16.5.2",
     "@jsenv/eslint-import-resolver": "8.1.2",
-    "@jsenv/test": "3.3.10",
+    "@jsenv/test": "3.3.11",
     "eslint": "8.56.0",
     "eslint-plugin-html": "8.1.1",
     "eslint-plugin-import": "2.29.1",
-    "eslint-plugin-react": "7.34.4",
     "open": "10.1.0",
     "@playwright/browser-chromium": "1.45.2",
     "prettier": "3.3.3"
