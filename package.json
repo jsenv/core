@@ -40,7 +40,7 @@
     "./packages/independent/*",
     "./packages/internal/*",
     "./packages/related/*",
-    "./packages/related/create-jsenv/*"
+    "./packages/related/cli/*"
   ],
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",

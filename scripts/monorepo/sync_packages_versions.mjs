@@ -7,7 +7,7 @@ import { syncPackagesVersions } from "@jsenv/monorepo";
 await syncPackagesVersions({
   directoryUrl: new URL("../../", import.meta.url),
   packagesRelations: {
-    "create-jsenv": [
+    "@jsenv/cli": [
       "jsenv-demo-node-package",
       "jsenv-demo-web",
       "jsenv-demo-web-preact",

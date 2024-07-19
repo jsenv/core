@@ -126,6 +126,6 @@ if (!cancelled) {
     commands.push("npm start");
   }
   console.log(`----- commands to run -----
-${commands.join("\n")}
----------------------------`);
+  ${commands.join("\n")}
+  ---------------------------`);
 }

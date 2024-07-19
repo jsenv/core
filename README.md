@@ -10,27 +10,30 @@ Jsenv is a suite of tools that can be used in projects involving JavaScript.
 4. **test runner**; execute all test files at once
 
 It favors standards and simplicity.  
-As a result it can be enjoyed by people without much experience in tooling or seeking for simple tools without hidden complexities
+As a result it can be enjoyed by people without much experience in tooling or seeking for simple tools without hidden complexities.
 
-| Scenario                                              | Action                                               |
-| ----------------------------------------------------- | ---------------------------------------------------- |
-| Try a demo on my machine                    | [#demos](#demos)                              |
-| Try on my machine | [#CLI](#cli)                                  |
-| Learn how to use jsenv                      | [users.md](./docs/users/users.md) |
+If you want to try jsenv on your machine, use [#CLI](#cli).
 
-# Demos
+Link to [documentation](./docs/users/users.md)
 
-A demo is a project pre-configured with jsenv.  
-The following command can be used to install and try a demo:
+# CLI
+
+The following command helps to init jsenv on your machine.
 
 ```console
-npm create jsenv@latest
+npm @jsenv/cli
 ```
 
-It will prompt to choose one of the available demo:
+The CLI will ask where to init jsenv, it can be a new directory or an existing one.
 
 ```console
-? Select a demo: › - Use arrow-keys. Return to submit.
+TODO: show output
+```
+
+Then you'll be prompted to select a template.
+
+```console
+? Select a template: › - Use arrow-keys. Return to submit.
 ❯   web
     web-components
     web-react
@@ -38,10 +41,12 @@ It will prompt to choose one of the available demo:
     node-package
 ```
 
-Selecting "web" will copy [create-jsenv/demo-web/](./packages/related/create-jsenv/demo-web/) files into a directory:
+A template is a project pre-configured with jsenv. A template can be installed in a new directory or in an existing one.
+
+Selecting "web" would init [demo-web/](./packages/related/cli/demo-web/):
 
 ```console
-✔ Select a demo: › web
+✔ Select a template: › web
 ✔ copy demo files into "[...]jsenv-demo-web/" (done in 0.1 second)
 ----- commands to run -----
 cd jsenv-demo-web
@@ -50,29 +55,14 @@ npm start
 ---------------------------
 ```
 
-After running the suggested commands the demo is ready.
-
-The demo contains preconfigured scripts:
+The templates have installed scripts:
 
 - `npm run dev`: starts a server for source files; Documented in [B) Dev](./docs/users/b_dev/b_dev.md).
 - `npm run build`: generate build files; Documented in [C) Build](./docs/users/c_build/c_build.md).
 - `npm run build:serve`: start a server for build files; Documented in [C) Build#how-to-serve-build-files](./docs/users/c_build/c_build.md#3-how-to-serve-build-files).
 - `npm run test`: execute test files; Documented in [D) Test](./docs/users/d_test/d_test.md).
 
-# CLI
-
-Jsenv commands to test it quickly.
-
-| I want to                             | Command                  |
-| ------------------------------------- | ------------------------ |
-| Start a local server for source files | `npx @jsenv/cli dev`     |
-| Build source files into "./dist/"     | `npx @jsenv/cli build`   |
-| Start a local server for build files  | `npx @jsenv/cli preview` |
-| Run all test files                    | `npx @jsenv/cli test`    |
-
-The commands are very basic, for advanced use cases you should use jsenv API.
-
-For example in order to start a dev server you would rather do `npm run dev` that would be declared in [package.json#scripts.dev](./packages/related/create-jsenv/demo-web/package.json#L8) to execute [scripts/dev.mjs](./packages/related/create-jsenv/demo-web/scripts/dev.mjs).
+<!-- For example in order to start a dev server you would rather do `npm run dev` that would be declared in [package.json#scripts.dev](./packages/related/create-jsenv/demo-web/package.json#L8) to execute [scripts/dev.mjs](./packages/related/create-jsenv/demo-web/scripts/dev.mjs). -->
 
 # The best parts
 
