@@ -7,125 +7,262 @@ import {
   readdirSync,
   mkdirSync,
   statSync,
-  copyFileSync,
+  writeFileSync,
+  readFileSync,
 } from "node:fs";
 import { relative } from "node:path";
+import { parseArgs } from "node:util";
 import { pathToFileURL, fileURLToPath } from "node:url";
+import { execSync } from "node:child_process";
 import prompts from "prompts";
-import { createTaskLog, UNICODE } from "@jsenv/humanize";
+import { createTaskLog } from "@jsenv/humanize";
+import { urlToRelativeUrl } from "@jsenv/urls";
 
-const copy = (fromUrl, toUrl) => {
-  const stat = statSync(fromUrl);
-  if (stat.isDirectory()) {
-    copyDirectoryContent(new URL(`${fromUrl}/`), new URL(`${toUrl}/`));
-  } else {
-    copyFileSync(fromUrl, toUrl);
-  }
+// not using readdir to control order
+const availableTemplateNameArray = [
+  "web",
+  "web-components",
+  "web-react",
+  "web-preact",
+  "node-package",
+];
+const options = {
+  help: {
+    type: "boolean",
+  },
+  web: {
+    type: "boolean",
+  },
+  ["web-components"]: {
+    type: "boolean",
+  },
+  ["web-react"]: {
+    type: "boolean",
+  },
+  ["web-preact"]: {
+    type: "boolean",
+  },
+  ["node-package"]: {
+    type: "boolean",
+  },
 };
-const copyDirectoryContent = (fromUrl, toUrl) => {
-  mkdirSync(toUrl, { recursive: true });
-  for (const file of readdirSync(fromUrl)) {
-    copy(new URL(file, fromUrl), new URL(file, toUrl));
-  }
-};
+const { values, positionals } = parseArgs({
+  options,
+  allowPositionals: true,
+});
+if (values.help) {
+  console.log(`@jsenv/cli: Init jsenv in a directory.
 
-const cwdUrl = `${pathToFileURL(process.cwd())}/`;
-const getParamsFromProcessAndPrompts = async () => {
-  const argv = process.argv.slice(2);
-  // not using readdir to control order
-  const availableDemoNames = [
-    "web",
-    "web-components",
-    "web-react",
-    "web-preact",
-    "node-package",
-  ];
-  let demoName = availableDemoNames.find((demoNameCandidate) =>
-    argv.includes(`--${demoNameCandidate}`),
-  );
-  let cancelled = false;
-  await new Promise((resolve, reject) => {
-    prompts(
-      [
-        {
-          type: demoName ? null : "select",
-          name: "demoName",
-          message: "Select a demo:",
-          initial: 0,
-          choices: availableDemoNames.map((demoName) => {
-            return { title: demoName, value: demoName };
-          }),
-          onState: (state) => {
-            demoName = state.value;
-          },
-        },
-      ],
-      {
-        onCancel: () => {
-          cancelled = true;
-          resolve();
-        },
-      },
-    ).then(resolve, reject);
-  });
-  if (cancelled) {
-    return {
-      cancelled,
-    };
-  }
-  const demoSourceDirectoryUrl = new URL(
-    `./demo-${demoName}/`,
-    import.meta.url,
-  );
-  const demoTargetDirectoryUrl = new URL(`jsenv-demo-${demoName}/`, cwdUrl);
-  return {
-    cancelled,
-    demoName,
-    demoSourceDirectoryUrl,
-    demoTargetDirectoryUrl,
-  };
-};
+Usage: npx @jsenv/cli <dir> [options]
 
-const { cancelled, demoName, demoSourceDirectoryUrl, demoTargetDirectoryUrl } =
-  await getParamsFromProcessAndPrompts();
+https://github.com/jsenv/core/tree/main/packages/related/cli
 
-if (cancelled) {
-} else if (existsSync(demoTargetDirectoryUrl)) {
-  console.log(
-    `${UNICODE.INFO} directory exists at "${demoTargetDirectoryUrl.href}"`,
-  );
-} else {
-  const copyTask = createTaskLog(
-    `copy demo files into "${demoTargetDirectoryUrl.href}"`,
-  );
-  mkdirSync(demoTargetDirectoryUrl, { recursive: true });
-  const files = readdirSync(demoSourceDirectoryUrl);
-  for (const file of files) {
-    const fromUrl = new URL(file, demoSourceDirectoryUrl);
-    const toUrl = new URL(
-      file === "_gitignore" ? ".gitignore" : file,
-      demoTargetDirectoryUrl,
-    );
-    copy(fromUrl, toUrl);
-  }
-  copyTask.done();
+<dir> Where to install jsenv files; Otherwise you'll be prompted to select.
+
+Options:
+  --help             Display this message.
+  --web              Consider directory as "web" project; Otherwise you'll be prompted to select.
+  --web-components   Consider directory as "web-components" project; Otherwise you'll be prompted to select.
+  --web-react        Consider directory as "web-react" project; Otherwise you'll be prompted to select.
+  --web-preact       Consider directory as "web-preact" project; Otherwise you'll be prompted to select.
+  --node-package     Consider directory as "node-package" project; Otherwise you'll be prompted to select.
+`);
+  process.exit(0);
 }
 
-if (!cancelled) {
-  const commands = [];
-  if (demoTargetDirectoryUrl.href !== cwdUrl.href) {
-    commands.push(
-      `cd ${relative(
-        fileURLToPath(cwdUrl),
-        fileURLToPath(demoTargetDirectoryUrl),
-      )}`,
-    );
+console.log("Welcome in jsenv CLI");
+const commands = [];
+const cwdUrl = `${pathToFileURL(process.cwd())}/`;
+let directoryUrl;
+dir: {
+  const directoryPathFromArg = positionals[0];
+  if (directoryPathFromArg) {
+    directoryUrl = new URL(directoryPathFromArg, cwdUrl);
+    break dir;
   }
-  commands.push("npm install");
-  if (demoName.includes("web")) {
-    commands.push("npm start");
+  const result = await prompts(
+    {
+      type: "text",
+      name: "directory",
+      message: "Enter a directory:",
+    },
+    {
+      onCancel: () => {
+        console.log("Aborted, can be resumed any time");
+        process.exit(0);
+      },
+    },
+  );
+  directoryUrl = new URL(result.directory, cwdUrl);
+}
+if (directoryUrl.href !== cwdUrl.href) {
+  commands.push(
+    `cd ${relative(fileURLToPath(cwdUrl), fileURLToPath(directoryUrl))}`,
+  );
+}
+let templateName;
+template: {
+  const templateNameFromArg = availableTemplateNameArray.find(
+    (availableTemplateName) => values[availableTemplateName],
+  );
+  if (templateNameFromArg) {
+    templateName = templateNameFromArg;
+    break template;
   }
-  console.log(`----- commands to run -----
-  ${commands.join("\n")}
-  ---------------------------`);
+  const result = await prompts(
+    [
+      {
+        type: "select",
+        name: "templateName",
+        message: "Select a template:",
+        initial: 0,
+        choices: availableTemplateNameArray.map((availableTemplateName) => {
+          return {
+            title: availableTemplateName,
+            value: availableTemplateName,
+          };
+        }),
+      },
+    ],
+    {
+      onCancel: () => {
+        console.log("Aborted, can be resumed any time");
+        process.exit(0);
+      },
+    },
+  );
+  templateName = result.templateName;
+}
+
+write_files: {
+  const writeFilesTask = createTaskLog(
+    `init files into "${directoryUrl.href}"`,
+  );
+  // when there is no handler the file is kept as is
+  const overrideHandlers = {
+    "package.json": (existingContent, templateContent) => {
+      const existingPackage = JSON.parse(existingContent);
+      const templatePackage = JSON.parse(templateContent);
+      const override = (left, right) => {
+        if (right === null) {
+          return left === undefined ? null : left;
+        }
+        if (Array.isArray(right)) {
+          if (Array.isArray(left)) {
+            for (const valueFromRight of right) {
+              if (!left.includes(valueFromRight)) {
+                left.push(valueFromRight);
+              }
+            }
+            return left;
+          }
+          return left === undefined ? right : left;
+        }
+        if (typeof right === "object") {
+          if (left && typeof left === "object") {
+            for (const keyInRight of Object.keys(right)) {
+              const leftValue = left[keyInRight];
+              const rightValue = right[keyInRight];
+              left[keyInRight] = override(leftValue, rightValue);
+            }
+            return left;
+          }
+          return left === undefined ? right : left;
+        }
+        return left === undefined ? right : left;
+      };
+      override(existingPackage, templatePackage);
+      if (existingContent.startsWith("{\n")) {
+        return JSON.stringify(existingPackage, null, "  ");
+      }
+      return JSON.stringify(existingPackage);
+    },
+    ".gitignore": (existingContent, templateContent) => {
+      const existingLines = existingContent.split("\n").map((l) => l.trim());
+      const newLines = templateContent.split("\n").map((l) => l.trim());
+      let finalContent = existingContent;
+      for (const newLine of newLines) {
+        if (!existingLines.includes(newLine)) {
+          finalContent += "\n";
+          finalContent += newLine;
+        }
+      }
+      return finalContent;
+    },
+    ".eslintignore": (existingContent, templateContent) => {
+      const existingLines = existingContent.split("\n").map((l) => l.trim());
+      const newLines = templateContent.split("\n").map((l) => l.trim());
+      let finalContent = existingContent;
+      for (const newLine of newLines) {
+        if (!existingLines.includes(newLine)) {
+          finalContent += "\n";
+          finalContent += newLine;
+        }
+      }
+      return finalContent;
+    },
+  };
+  const templateSourceDirectoryUrl = new URL(
+    `./template-${templateName}/`,
+    import.meta.url,
+  );
+  const copyDirectoryContent = (fromDirectoryUrl, toDirectoryUrl) => {
+    if (!existsSync(toDirectoryUrl)) {
+      mkdirSync(toDirectoryUrl, { recursive: true });
+    }
+    const files = readdirSync(fromDirectoryUrl);
+    for (const file of files) {
+      const fromUrl = new URL(file, fromDirectoryUrl);
+      const toUrl = new URL(
+        file === "_gitignore" ? ".gitignore" : file,
+        directoryUrl,
+      );
+      const fromStat = statSync(fromUrl);
+      if (fromStat.isDirectory()) {
+        copyDirectoryContent(fromUrl, toUrl);
+        continue;
+      }
+      if (!existsSync(toUrl)) {
+        writeFileSync(toUrl, readFileSync(fromUrl));
+        continue;
+      }
+      const relativeUrl = urlToRelativeUrl(fromUrl, templateSourceDirectoryUrl);
+      const overrideHandler = overrideHandlers[relativeUrl];
+      if (!overrideHandler) {
+        continue;
+      }
+      const existingContent = readFileSync(toUrl);
+      const templateContent = readFileSync(fromUrl);
+      const finalContent = overrideHandler(existingContent, templateContent);
+      writeFileSync(toUrl, finalContent);
+    }
+  };
+  copyDirectoryContent(templateSourceDirectoryUrl, directoryUrl);
+  writeFilesTask.done();
+}
+
+commands.push("npm install");
+run_commands: {
+  if (commands.length === 0) {
+    break run_commands;
+  }
+  console.log(`----- ${commands.length} commands to run -----
+${commands.join("\n")}
+---------------------------`);
+  const { value } = await prompts({
+    type: "confirm",
+    name: "value",
+    message: "Do you want to run them?",
+    initial: true,
+  });
+  if (!value) {
+    console.log("Ok, thank you");
+    process.exit(0);
+  }
+  for (const command of commands) {
+    execSync(command, {
+      stdio: [0, 1, 2],
+    });
+  }
+  console.log("Done, thank you");
 }

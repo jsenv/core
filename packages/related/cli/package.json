@@ -24,7 +24,7 @@
   },
   "files": [
     "./jsenv_cli.js",
-    "./demo-*/**"
+    "./template-*/**"
   ],
   "dependencies": {
     "prompts": "2.4.2",

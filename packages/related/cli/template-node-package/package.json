@@ -1,5 +1,5 @@
 {
-  "name": "jsenv-demo-node-package",
+  "name": "jsenv-template-node-package",
   "private": true,
   "version": "0.0.0",
   "type": "module",

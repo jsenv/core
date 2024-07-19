@@ -1,5 +1,5 @@
 {
-  "name": "jsenv-demo-web-react",
+  "name": "jsenv-template-web-preact",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -15,8 +15,7 @@
     "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "dependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "preact": "10.22.1"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.24.8",
@@ -24,7 +23,7 @@
     "@babel/plugin-transform-react-jsx": "7.24.7",
     "@jsenv/assert": "4.1.4",
     "@jsenv/core": "39.2.0",
-    "@jsenv/plugin-react": "1.5.1",
+    "@jsenv/plugin-preact": "1.6.1",
     "@jsenv/plugin-bundling": "2.6.16",
     "@jsenv/plugin-minification": "1.5.5",
     "@jsenv/eslint-config": "16.5.2",

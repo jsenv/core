@@ -8,10 +8,10 @@ await syncPackagesVersions({
   directoryUrl: new URL("../../", import.meta.url),
   packagesRelations: {
     "@jsenv/cli": [
-      "jsenv-demo-node-package",
-      "jsenv-demo-web",
-      "jsenv-demo-web-preact",
-      "jsenv-demo-web-react",
+      "jsenv-template-node-package",
+      "jsenv-template-web",
+      "jsenv-template-web-preact",
+      "jsenv-template-web-react",
     ],
   },
 });
