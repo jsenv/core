@@ -419,9 +419,6 @@ const createReference = ({
           ? reference.ownerUrlInfo.originalContent
           : reference.ownerUrlInfo.content
         : ownerUrlInfo.content;
-    if (content && content[0] === "\n") {
-      line = line - 1;
-    }
     const trace = traceFromUrlSite({
       url:
         ownerUrlInfo === undefined
@@ -626,14 +623,15 @@ const applyDependencyRemovalEffects = (reference) => {
 };
 
 const traceFromUrlSite = (urlSite) => {
+  const codeFrame = urlSite.content
+    ? generateContentFrame({
+        content: urlSite.content,
+        line: urlSite.line,
+        column: urlSite.column,
+      })
+    : "";
   return {
-    codeFrame: urlSite.content
-      ? generateContentFrame({
-          content: urlSite.content,
-          line: urlSite.line,
-          column: urlSite.column,
-        })
-      : "",
+    codeFrame,
     message: stringifyUrlSite(urlSite),
     url: urlSite.url,
     line: urlSite.line,
@@ -643,7 +641,7 @@ const traceFromUrlSite = (urlSite) => {
 
 const adjustUrlSite = (urlInfo, { url, line, column }) => {
   const isOriginal = url === urlInfo.url;
-  const adjust = (urlSite, urlInfo) => {
+  const adjust = (urlInfo, urlSite) => {
     if (!urlSite.isOriginal) {
       return urlSite;
     }
@@ -652,33 +650,35 @@ const adjustUrlSite = (urlInfo, { url, line, column }) => {
       return urlSite;
     }
     const parentUrlInfo = urlInfo.graph.getUrlInfo(inlineUrlSite.url);
-    return adjust(
-      {
-        isOriginal: true,
-        url: inlineUrlSite.url,
-        content: inlineUrlSite.content,
-        line:
-          inlineUrlSite.line === undefined
-            ? urlSite.line
-            : inlineUrlSite.line + urlSite.line,
-        column:
-          inlineUrlSite.column === undefined
-            ? urlSite.column
-            : inlineUrlSite.column + urlSite.column,
-      },
-      parentUrlInfo,
-    );
-  };
-  return adjust(
-    {
-      isOriginal,
-      url,
-      content: isOriginal ? urlInfo.originalContent : urlInfo.content,
+    line =
+      inlineUrlSite.line === undefined
+        ? urlSite.line
+        : inlineUrlSite.line + urlSite.line;
+    // we remove 1 to the line because imagine the following html:
+    // <style>body { color: red; }</style>
+    // -> content starts same line as <style> (same for <script>)
+    if (urlInfo.content[0] === "\n") {
+      line = line - 1;
+    }
+    column =
+      inlineUrlSite.column === undefined
+        ? urlSite.column
+        : inlineUrlSite.column + urlSite.column;
+    return adjust(parentUrlInfo, {
+      isOriginal: true,
+      url: inlineUrlSite.url,
+      content: inlineUrlSite.content,
       line,
       column,
-    },
-    urlInfo,
-  );
+    });
+  };
+  return adjust(urlInfo, {
+    isOriginal,
+    url,
+    content: isOriginal ? urlInfo.originalContent : urlInfo.content,
+    line,
+    column,
+  });
 };
 
 const getRedirectedReferenceProps = (reference, url) => {
