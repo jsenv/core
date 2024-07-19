@@ -425,7 +425,7 @@ const createReference = ({
           ? reference.ownerUrlInfo.originalContent
           : reference.ownerUrlInfo.content
         : ownerUrlInfo.content;
-    if (content[0] === "\n") {
+    if (content && content[0] === "\n") {
       line = line - 1;
     }
     const trace = traceFromUrlSite({
