@@ -180,6 +180,7 @@ write_files: {
         if (typeof right === "object") {
           if (left && typeof left === "object") {
             for (const keyInRight of Object.keys(right)) {
+              if (keyInRight === "private") continue;
               const leftValue = left[keyInRight];
               const rightValue = right[keyInRight];
               left[keyInRight] = override(leftValue, rightValue);
@@ -190,7 +191,23 @@ write_files: {
         }
         return left === undefined ? right : left;
       };
+      const existingDependencies = existingPackage.dependencies
+        ? { ...existingPackage.dependencies }
+        : {};
+      const existingDevDependencies = existingPackage.devDependencies
+        ? { ...existingPackage.devDependencies }
+        : {};
       override(existingPackage, templatePackage);
+      const finalDependencies = existingPackage.dependencies || {};
+      const finalDevDependencies = existingPackage.devDependencies || {};
+      if (
+        JSON.stringify(existingDependencies) !==
+          JSON.stringify(finalDependencies) ||
+        JSON.stringify(existingDevDependencies) !==
+          JSON.stringify(finalDevDependencies)
+      ) {
+        commands.push("npm install");
+      }
       if (existingContent.startsWith("{\n")) {
         return JSON.stringify(existingPackage, null, "  ");
       }
@@ -255,7 +272,6 @@ write_files: {
   writeFilesTask.done();
 }
 
-commands.push("npm install");
 run_commands: {
   if (commands.length === 0) {
     break run_commands;
