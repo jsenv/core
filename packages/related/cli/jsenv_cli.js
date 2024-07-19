@@ -212,6 +212,7 @@ write_files: {
         commands.push({
           label: "npm install",
           run: () => {
+            console.log("npm install");
             execSync("npm install", {
               stdio: [0, 1, 2],
             });
@@ -261,6 +262,7 @@ write_files: {
           commands.push({
             label: "npm install",
             run: () => {
+              console.log("npm install");
               execSync("npm install", {
                 stdio: [0, 1, 2],
               });
