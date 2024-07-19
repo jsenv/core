@@ -67,12 +67,6 @@ export const createDependencies = (ownerUrlInfo) => {
     content,
     ...rest
   }) => {
-    // we remove 1 to the line because imagine the following html:
-    // <style>body { color: red; }</style>
-    // -> content starts same line as <style> (same for <script>)
-    if (content[0] === "\n") {
-      specifierLine = specifierLine - 1;
-    }
     const parentUrl = isOriginalPosition
       ? ownerUrlInfo.url
       : ownerUrlInfo.generatedUrl;

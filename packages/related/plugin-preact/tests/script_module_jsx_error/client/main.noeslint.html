@@ -7,32 +7,14 @@
 
   <body>
     <div id="app"></div>
-    <script>
-      window.resultPromise = new Promise((resolve) => {
-        window.resolveResultPromise = resolve;
-      });
-    </script>
     <script type="module">
       import { render } from "preact";
       import { useEffect } from "preact/hooks";
 
-      const App = ({ onFirstRender }) => {
-        useEffect(() => {
-          onFirstRender();
-        }, []);
+      const App = () => {
         return <span>Hello world</span>;
       };
-
-      render(
-        <App
-          onFirstRender={() => {
-            window.resolveResultPromise(
-              document.querySelector("span").innerHTML,
-            );
-          }}
-        />,
-        document.querySelector("#app"),
-      );
+      render(<App />, document.querySelector("#app"));
     </script>
   </body>
 </html>
