@@ -1,0 +1,8 @@
+Reference leads to a directory
+--- reference trace ---
+file:///cwd()/tests/build/new_url_directory/client/main.html:16:40
+13 |     </script>
+14 |     <script type="module">
+15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
+16 | 
+                                            ^
