@@ -18,15 +18,18 @@ Link to [documentation](./docs/users/users.md)
 
 # CLI
 
-The following command helps to init jsenv on your machine.
+The following command init jsenv on your machine.
 
 ```console
-npm @jsenv/cli
+npx @jsenv/cli
 ```
 
-CLI will init jsenv in a directory. It can be a new directory or an existing one.
+> `npx` command is available after [installing Node.js](https://nodejs.org/en/download/package-manager)
+
+The command init jsenv in a directory. It can be a new directory or an existing one.
 
 ```console
+> npx @jsenv/cli
 Welcome in jsenv CLI
 ? Enter a directory: ›
 ```
@@ -34,6 +37,7 @@ Welcome in jsenv CLI
 Then you'll be prompted to select a template.
 
 ```console
+> npx @jsenv/cli
 ✔ Enter a directory: › demo
 ? Select a template: › - Use arrow-keys. Return to submit.
 ❯   web
@@ -47,6 +51,7 @@ A template is a project pre-configured with jsenv.
 Selecting "web" would init [template-web/](./packages/related/cli/template-web/):
 
 ```console
+> npx @jsenv/cli
 ✔ Enter a directory: › demo
 ✔ Select a template: › web
 ✔ init jsenv in "[...]/demo/" (done in 0.01 second)
