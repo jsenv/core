@@ -137,11 +137,9 @@ export const createTransformUrlContentError = ({
     let trace = reference.trace;
     let line = error.line;
     let column = error.column;
-    if (urlInfo.type === "js_module") {
-      line = line - 1;
-    }
     if (urlInfo.isInline) {
       line = trace.line + line;
+      line = line - 1;
       trace = {
         ...trace,
         line,

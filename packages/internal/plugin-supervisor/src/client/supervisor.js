@@ -658,6 +658,8 @@ window.__supervisor__ = (() => {
             if (exception.name === "SyntaxError") {
               // syntax error on inline script need line-1 for some reason
               decreaseLine();
+            } else {
+              decreaseLine();
             }
           }
           // firefox and webkit
