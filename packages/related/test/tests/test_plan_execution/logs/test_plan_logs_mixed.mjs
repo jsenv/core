@@ -85,7 +85,7 @@ const test = async (filename, params) => {
                     const terminalGif = await terminalRecords.gif();
                     writeFileSync(
                       new URL(
-                        `./snapshots/node/${filename}.gif`,
+                        `./snapshots/mixed/${filename}.gif`,
                         import.meta.url,
                       ),
                       terminalGif,
