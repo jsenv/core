@@ -1,3 +1,5 @@
+Welcome on jsenv documentation for users.
+
 # Table of content
 
 <!-- PLACEHOLDER_START:DIRECTORY_TABLE_OF_CONTENT -->
