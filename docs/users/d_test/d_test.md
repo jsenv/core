@@ -6,12 +6,12 @@ If you want to execute tests in Node.js go to [I) Test in Node.js](../i_test_in_
 
 Best parts of jsenv tests:
 
-- [Isolated environment](#33-isolated-environment) for each test file
-- Each test file is executed like a standard file
-  - [debugging a test file === debugging a source file](#14-executing-a-single-test)
-  - switching from source files to test files is easy, it saves a lot of energy
+- [debugging a test file === debugging a source file](#14-executing-a-single-test)
+- Test execution is standard; switching from source files to test files is easy
+- [Isolated environment](#33-isolated-environment); each test file has a dedicated runtime
 - Test files can be executed in [Chrome, Firefox and Safari](#32-execute-on-more-browsers)
 - [Smart parallelism](#34-parallelism)
+- Logs are [nice](../../../../packages/related/test/tests/test_plan_execution/logs/snapshots/browsers/empty.spec.html.gif); dynamic, colorful and human friendly
 
 <!--
 When coding, we spend most of our time working on source files. At some point we switch from source files to test files. Suddenly things are different:
