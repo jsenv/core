@@ -305,7 +305,7 @@ await startDevServer({
 });
 ```
 
-See the list of plugins in [G) Plugins](../g_plugins/plugins.md)
+See the list of plugins in [G) Plugins](../g_plugins/g_plugins.md)
 
 ## 2.8 sourcemaps
 
