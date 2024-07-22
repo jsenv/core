@@ -3,6 +3,15 @@ export const getHtmlNodeAttribute = (htmlNode, attributeName) => {
   return attribute ? attribute.value || "" : undefined;
 };
 
+export const getHtmlNodeAttributes = (htmlNode) => {
+  const { attrs } = htmlNode;
+  const attributes = {};
+  for (const attr of attrs) {
+    attributes[attr.name] = attr.value;
+  }
+  return attributes;
+};
+
 export const setHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
   if (typeof attributesToAssign !== "object") {
     throw new TypeError(`attributesToAssign must be an object`);
@@ -35,9 +44,10 @@ export const setHtmlNodeAttributes = (htmlNode, attributesToAssign) => {
 };
 
 const getHtmlAttributeByName = (htmlNode, attributeName) => {
-  const attrs = htmlNode.attrs;
-  const attribute = attrs
-    ? attrs.find((attr) => attr.name === attributeName)
-    : null;
+  const { attrs } = htmlNode;
+  if (!attrs) {
+    return null;
+  }
+  const attribute = attrs.find((attr) => attr.name === attributeName);
   return attribute;
 };

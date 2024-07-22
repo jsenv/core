@@ -15,6 +15,7 @@ export {
 export { parseSrcSet, stringifySrcSet } from "./html/html_src_set.js";
 export {
   getHtmlNodeAttribute,
+  getHtmlNodeAttributes,
   setHtmlNodeAttributes,
 } from "./html/html_node_attributes.js";
 export {
