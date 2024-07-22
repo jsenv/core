@@ -1,5 +1,5 @@
-import { readFileSync, statSync } from "node:fs";
 import { bufferToEtag } from "@jsenv/filesystem";
+import { readFileSync, statSync } from "node:fs";
 
 export const validateCompileCache = ({
   compiledFileUrl,

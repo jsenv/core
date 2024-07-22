@@ -1,11 +1,11 @@
+import { assert } from "@jsenv/assert";
 import {
   ensureEmptyDirectory,
-  writeFile,
-  writeEntryModificationTime,
   readEntryModificationTime,
+  writeEntryModificationTime,
+  writeFile,
 } from "@jsenv/filesystem";
 import { urlToFileSystemPath } from "@jsenv/urls";
-import { assert } from "@jsenv/assert";
 
 import { fetchFileSystem } from "@jsenv/server";
 import { bufferToEtag } from "@jsenv/server/src/internal/etag.js";

@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
-import { generateContentFrame, ANSI } from "@jsenv/humanize";
+import { ANSI, generateContentFrame } from "@jsenv/humanize";
 import { urlToFileSystemPath } from "@jsenv/urls";
+import { readFileSync } from "node:fs";
 
 import { replaceUrls } from "./replace_urls.js";
 

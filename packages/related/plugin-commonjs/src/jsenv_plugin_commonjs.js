@@ -1,6 +1,6 @@
-import { URL_META } from "@jsenv/url-meta";
-import { injectQueryParams, urlToExtension, urlToBasename } from "@jsenv/urls";
 import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution";
+import { URL_META } from "@jsenv/url-meta";
+import { injectQueryParams, urlToBasename, urlToExtension } from "@jsenv/urls";
 
 import { commonJsToJsModule } from "./cjs_to_esm.js";
 

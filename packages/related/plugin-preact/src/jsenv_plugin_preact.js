@@ -3,14 +3,14 @@
  * - https://github.com/preactjs/prefresh/blob/main/packages/vite/src/index.js
  */
 
-import { URL_META } from "@jsenv/url-meta";
-import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap";
 import {
   applyBabelPlugins,
+  injectJsenvScript,
   parseHtml,
   stringifyHtmlAst,
-  injectJsenvScript,
 } from "@jsenv/ast";
+import { composeTwoSourcemaps, createMagicSource } from "@jsenv/sourcemap";
+import { URL_META } from "@jsenv/url-meta";
 
 export const jsenvPluginPreact = ({
   jsxTranspilation = true,

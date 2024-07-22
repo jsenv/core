@@ -1,12 +1,12 @@
-import https from "node:https";
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
+import https from "node:https";
 
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 import { listen } from "@jsenv/server/src/internal/listen.js";
-import { createPolyglotServer } from "@jsenv/server/src/internal/server-polyglot.js";
 import { listenClientError } from "@jsenv/server/src/internal/listenClientError.js";
 import { listenRequest } from "@jsenv/server/src/internal/listenRequest.js";
+import { createPolyglotServer } from "@jsenv/server/src/internal/server-polyglot.js";
 import {
   testServerCertificate,
   testServerCertificatePrivateKey,

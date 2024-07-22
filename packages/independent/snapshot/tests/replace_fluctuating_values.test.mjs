@@ -1,5 +1,5 @@
-import { replaceFluctuatingValues } from "@jsenv/snapshot/src/replace_fluctuating_values.js";
 import { assert } from "@jsenv/assert";
+import { replaceFluctuatingValues } from "@jsenv/snapshot/src/replace_fluctuating_values.js";
 
 // current path and http urls
 if (process.platform !== "win32") {

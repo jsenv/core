@@ -1,13 +1,13 @@
 import { effect } from "@preact/signals";
 
 import {
+  closeServerTooltip,
+  openServerTooltip,
+} from "../../core/server_actions.js";
+import {
   serverConnectionSignal,
   serverTooltipOpenedSignal,
 } from "../../core/server_signals.js";
-import {
-  openServerTooltip,
-  closeServerTooltip,
-} from "../../core/server_actions.js";
 import { removeForceHideElement } from "../util/dom.js";
 import { enableVariant } from "../variant.js";
 

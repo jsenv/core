@@ -1,5 +1,5 @@
 import { build } from "@jsenv/core";
-import { takeFileSnapshot, replaceFluctuatingValues } from "@jsenv/snapshot";
+import { replaceFluctuatingValues, takeFileSnapshot } from "@jsenv/snapshot";
 
 const consoleErrorCalls = [];
 const { error } = console;

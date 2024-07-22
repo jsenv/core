@@ -3,14 +3,14 @@
  * - Know how many js are executed, when they are done, collect errors, etc...
  */
 
+import { generateContentFrame } from "@jsenv/humanize";
+import { getOriginalPosition } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-import { getOriginalPosition } from "@jsenv/sourcemap";
-import { generateContentFrame } from "@jsenv/humanize";
 
 import {
-  supervisorFileUrl,
   injectSupervisorIntoHTML,
+  supervisorFileUrl,
 } from "./html_supervisor.js";
 
 export const jsenvPluginSupervisor = ({

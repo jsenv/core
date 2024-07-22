@@ -14,25 +14,25 @@
  * - maintenir le format de date lorsqu'il est le meme dans actual/expect et favoriser celui de actual
  */
 
-import stripAnsi from "strip-ansi";
 import { ANSI, UNICODE } from "@jsenv/humanize";
+import stripAnsi from "strip-ansi";
 
+import { canParseDate, usesTimezone } from "./utils/can_parse_date.js";
+import { groupDigits } from "./utils/group_digits.js";
 import { isComposite } from "./utils/is_composite.js";
-import { isValidPropertyIdentifier } from "./utils/property_identifier.js";
-import { createValuePath } from "./utils/value_path.js";
+import { getIsNegativeZero } from "./utils/negative_zero.js";
 import {
   getObjectTag,
   objectPrototypeChainGenerator,
 } from "./utils/object_tag.js";
+import { isValidPropertyIdentifier } from "./utils/property_identifier.js";
 import {
-  tokenizeFunction,
   defaultFunctionAnalysis,
+  tokenizeFunction,
 } from "./utils/tokenize_function.js";
 import { tokenizeFloat, tokenizeInteger } from "./utils/tokenize_number.js";
 import { tokenizeUrlSearch } from "./utils/tokenize_url_search.js";
-import { getIsNegativeZero } from "./utils/negative_zero.js";
-import { groupDigits } from "./utils/group_digits.js";
-import { canParseDate, usesTimezone } from "./utils/can_parse_date.js";
+import { createValuePath } from "./utils/value_path.js";
 
 // ANSI.supported = false;
 const sameColor = ANSI.GREY;

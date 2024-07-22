@@ -1,24 +1,24 @@
-import { copyFileSync as copyFileSyncNode } from "node:fs";
 import { Abort } from "@jsenv/abort";
 import {
-  resolveUrl,
-  urlToRelativeUrl,
   ensurePathnameTrailingSlash,
+  resolveUrl,
   urlIsInsideOf,
   urlToFileSystemPath,
+  urlToRelativeUrl,
 } from "@jsenv/urls";
+import { copyFileSync as copyFileSyncNode } from "node:fs";
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 import { urlTargetsSameFileSystemPath } from "../path_and_url/url_targets_same_file_system_path.js";
-import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
-import { statsToType } from "../read_write/stat/stats_to_type.js";
-import { binaryFlagsToPermissions } from "../read_write/stat/permissions.js";
-import { writeEntryPermissionsSync } from "../read_write/stat/write_entry_permissions_sync.js";
-import { writeEntryModificationTimeSync } from "../read_write/stat/write_entry_modification_time_sync.js";
-import { writeDirectorySync } from "../read_write/write_directory_sync.js";
 import { ensureParentDirectoriesSync } from "../read_write/ensure_parent_directories_sync.js";
 import { readDirectorySync } from "../read_write/read_directory_sync.js";
 import { readSymbolicLinkSync } from "../read_write/read_symbolic_link_sync.js";
+import { binaryFlagsToPermissions } from "../read_write/stat/permissions.js";
+import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
+import { statsToType } from "../read_write/stat/stats_to_type.js";
+import { writeEntryModificationTimeSync } from "../read_write/stat/write_entry_modification_time_sync.js";
+import { writeEntryPermissionsSync } from "../read_write/stat/write_entry_permissions_sync.js";
+import { writeDirectorySync } from "../read_write/write_directory_sync.js";
 import { writeSymbolicLinkSync } from "../read_write/write_symbolic_link_sync.js";
 import { removeEntrySync } from "../remove/remove_entry_sync.js";
 

@@ -7,13 +7,13 @@
  *   it should likely be an other plugin happening after the others
  */
 
-import { readFileSync } from "node:fs";
 import {
   applyNodeEsmResolution,
-  readCustomConditionsFromProcessArgs,
   defaultLookupPackageScope,
   defaultReadPackageJson,
+  readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
+import { readFileSync } from "node:fs";
 
 export const createNodeEsmResolver = ({
   runtimeCompat,

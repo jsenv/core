@@ -1,5 +1,5 @@
-import { startServer, fetchFileSystem } from "@jsenv/server";
 import { requestCertificate } from "@jsenv/https-local";
+import { fetchFileSystem, startServer } from "@jsenv/server";
 
 const { certificate, privateKey } = requestCertificate({ altNames: ["local"] });
 const directoryUrl = new URL("../../", import.meta.url).href;

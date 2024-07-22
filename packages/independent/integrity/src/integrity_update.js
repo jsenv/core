@@ -1,8 +1,8 @@
-import { parseIntegrity } from "./integrity_parsing.js";
 import {
-  getPrioritizedHashFunction,
   applyAlgoToRepresentationData,
+  getPrioritizedHashFunction,
 } from "./integrity_algorithms.js";
+import { parseIntegrity } from "./integrity_parsing.js";
 
 export const updateIntegrity = (integrity, representationData) => {
   const integrityMetadata = parseIntegrity(integrity);

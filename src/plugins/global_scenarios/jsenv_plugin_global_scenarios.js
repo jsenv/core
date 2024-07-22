@@ -6,8 +6,8 @@
  */
 
 import {
-  replacePlaceholders,
   INJECTIONS,
+  replacePlaceholders,
 } from "../injections/jsenv_plugin_injections.js";
 
 export const jsenvPluginGlobalScenarios = () => {

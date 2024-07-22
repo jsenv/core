@@ -1,10 +1,10 @@
 import { effect } from "@preact/signals";
 
+import { notifyExecutionResult } from "./execution_actions.js";
 import {
   executionSignal,
   previousExecutionSignal,
 } from "./execution_signals.js";
-import { notifyExecutionResult } from "./execution_actions.js";
 
 effect(() => {
   const execution = executionSignal.value;

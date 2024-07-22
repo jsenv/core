@@ -1,8 +1,8 @@
 /* eslint-env browser */
 import {
-  pwaLogger,
-  navigatorControllerRef,
   createServiceWorkerFacade,
+  navigatorControllerRef,
+  pwaLogger,
 } from "@jsenv/pwa";
 
 pwaLogger.setOptions({

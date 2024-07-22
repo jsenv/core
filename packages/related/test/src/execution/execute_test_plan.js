@@ -2,38 +2,38 @@
  *
  */
 
-import {
-  release,
-  cpus,
-  availableParallelism,
-  totalmem,
-  freemem,
-} from "node:os";
-import { memoryUsage } from "node:process";
-import { existsSync } from "node:fs";
-import { takeCoverage } from "node:v8";
-import stripAnsi from "strip-ansi";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
-import { URL_META } from "@jsenv/url-meta";
 import {
-  ensureEmptyDirectory,
   assertAndNormalizeDirectoryUrl,
   collectFiles,
+  ensureEmptyDirectory,
 } from "@jsenv/filesystem";
-import { createLogger, createDetailedMessage, UNICODE } from "@jsenv/humanize";
 import {
-  startGithubCheckRun,
   readGitHubWorkflowEnv,
+  startGithubCheckRun,
 } from "@jsenv/github-check-run";
+import { createDetailedMessage, createLogger, UNICODE } from "@jsenv/humanize";
+import { URL_META } from "@jsenv/url-meta";
+import { existsSync } from "node:fs";
+import {
+  availableParallelism,
+  cpus,
+  freemem,
+  release,
+  totalmem,
+} from "node:os";
+import { memoryUsage } from "node:process";
+import { takeCoverage } from "node:v8";
+import stripAnsi from "strip-ansi";
 
-import { startMeasuringTotalCpuUsage } from "../helpers/cpu_usage.js";
-import { createCallOrderer } from "../helpers/call_orderer.js";
 import { generateCoverage } from "../coverage/generate_coverage.js";
-import { assertAndNormalizeWebServer } from "./web_server_param.js";
+import { createCallOrderer } from "../helpers/call_orderer.js";
+import { startMeasuringTotalCpuUsage } from "../helpers/cpu_usage.js";
 import { githubAnnotationFromError } from "./github_annotation_from_error.js";
-import { run } from "./run.js";
-import { reporterList, renderOutroContent } from "./reporters/reporter_list.js";
 import { createIsInsideFragment } from "./is_inside_fragment.js";
+import { renderOutroContent, reporterList } from "./reporters/reporter_list.js";
+import { run } from "./run.js";
+import { assertAndNormalizeWebServer } from "./web_server_param.js";
 
 /**
  * Execute a list of files and log how it goes.

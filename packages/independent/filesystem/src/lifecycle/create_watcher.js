@@ -1,4 +1,4 @@
-import { watch, openSync, closeSync } from "node:fs";
+import { closeSync, openSync, watch } from "node:fs";
 
 const isWindows = process.platform === "win32";
 

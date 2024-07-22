@@ -3,9 +3,9 @@ import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 
 import {
   ensureEmptyDirectory,
+  moveDirectoryContent,
   writeDirectory,
   writeFile,
-  moveDirectoryContent,
 } from "@jsenv/filesystem";
 import { testFilePresence } from "@jsenv/filesystem/tests/testHelpers.js";
 

@@ -1,6 +1,6 @@
+import { startDevServer } from "@jsenv/core";
 import { requestCertificate } from "@jsenv/https-local";
 import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
-import { startDevServer } from "@jsenv/core";
 
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 

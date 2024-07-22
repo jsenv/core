@@ -1,4 +1,4 @@
-import { isRegExp, isError } from "../utils/object_subtype.js";
+import { isError, isRegExp } from "../utils/object_subtype.js";
 
 const humanize = () => {};
 const determineQuote = () => {};

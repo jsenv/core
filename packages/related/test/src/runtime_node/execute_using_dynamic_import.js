@@ -1,9 +1,9 @@
 import { writeFileSync } from "node:fs";
 import { memoryUsage } from "node:process";
 
-import { startJsCoverage } from "./profiler_v8_coverage.js";
-import { startObservingPerformances } from "./node_execution_performance.js";
 import { createException } from "../execution/exception.js";
+import { startObservingPerformances } from "./node_execution_performance.js";
+import { startJsCoverage } from "./profiler_v8_coverage.js";
 
 export const executeUsingDynamicImport = async ({
   rootDirectoryUrl,

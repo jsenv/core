@@ -9,10 +9,10 @@
  *    It will trigger the http requests, populating the server performances
  */
 
-import { startServer, fetchFileSystem } from "@jsenv/server";
-import { requestCertificate } from "@jsenv/https-local";
-import { urlToRelativeUrl, resolveUrl } from "@jsenv/urls";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
+import { requestCertificate } from "@jsenv/https-local";
+import { fetchFileSystem, startServer } from "@jsenv/server";
+import { resolveUrl, urlToRelativeUrl } from "@jsenv/urls";
 
 const { certificate, privateKey } = requestCertificate();
 const projectDirectoryUrl = new URL("../../../", import.meta.url);

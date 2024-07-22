@@ -1,5 +1,5 @@
-import { writeFileSync, readFileSync } from "node:fs";
 import { assert } from "@jsenv/assert";
+import { readFileSync, writeFileSync } from "node:fs";
 
 import { setupTest } from "@jsenv/pwa/tests/setup_test.mjs";
 

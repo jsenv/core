@@ -1,12 +1,12 @@
 // https://github.com/snowpackjs/snowpack/blob/main/esinstall/src/rollup-plugins/rollup-plugin-wrap-install-targets.ts
 
+import { init, parse } from "cjs-module-lexer";
+import isValidIdentifier from "is-valid-identifier";
 import { readFileSync } from "node:fs";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import resolve from "resolve";
-import isValidIdentifier from "is-valid-identifier";
-import { init, parse } from "cjs-module-lexer";
 
 const importWrapper = {
   wrap: (specifier) => {

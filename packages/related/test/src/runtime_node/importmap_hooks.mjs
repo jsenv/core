@@ -1,6 +1,6 @@
+import { normalizeImportMap, resolveImport } from "@jsenv/importmap";
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { normalizeImportMap, resolveImport } from "@jsenv/importmap";
 
 let importMap;
 

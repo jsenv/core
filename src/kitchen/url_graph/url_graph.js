@@ -1,13 +1,13 @@
 import {
-  urlToRelativeUrl,
   asUrlWithoutSearch,
   injectQueryParamsIntoSpecifier,
+  urlToRelativeUrl,
 } from "@jsenv/urls";
 
 import { createEventEmitter } from "../../helpers/event_emitter.js";
-import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 import { createDependencies } from "./references.js";
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
+import { urlSpecifierEncoding } from "./url_specifier_encoding.js";
 
 export const createUrlGraph = ({
   rootDirectoryUrl,

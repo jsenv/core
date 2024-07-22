@@ -1,6 +1,6 @@
+import { assert } from "@jsenv/assert";
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
-import { assert } from "@jsenv/assert";
 
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginReact } from "@jsenv/plugin-react";

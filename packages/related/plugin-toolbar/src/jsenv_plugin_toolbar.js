@@ -1,4 +1,4 @@
-import { parseHtml, stringifyHtmlAst, injectJsenvScript } from "@jsenv/ast";
+import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 
 export const jsenvPluginToolbar = ({
   logLevel = "warn",

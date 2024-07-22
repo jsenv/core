@@ -1,8 +1,8 @@
 import { assert } from "@jsenv/assert";
 
 import {
-  createObservable,
   createCompositeProducer,
+  createObservable,
 } from "@jsenv/server/src/interfacing_with_node/observable.js";
 
 const createObservableSource = () => {

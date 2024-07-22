@@ -1,7 +1,7 @@
 import { startDevServer } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
-import { executeTestPlan, chromium } from "@jsenv/test";
+import { chromium, executeTestPlan } from "@jsenv/test";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
 const devServer = await startDevServer({

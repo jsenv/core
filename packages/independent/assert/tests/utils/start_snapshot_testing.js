@@ -1,8 +1,8 @@
-import stripAnsi from "strip-ansi";
-import { takeFileSnapshot } from "@jsenv/snapshot";
-import { startTerminalRecording } from "@jsenv/terminal-recorder";
 import { clearDirectorySync, writeFileSync } from "@jsenv/filesystem";
 import { ANSI } from "@jsenv/humanize";
+import { takeFileSnapshot } from "@jsenv/snapshot";
+import { startTerminalRecording } from "@jsenv/terminal-recorder";
+import stripAnsi from "strip-ansi";
 
 import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
 

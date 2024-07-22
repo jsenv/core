@@ -2,10 +2,10 @@
  * - https://github.com/vitejs/vite/blob/main/packages/plugin-react/src/index.ts
  */
 
-import { URL_META } from "@jsenv/url-meta";
-import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
-import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap";
 import { applyBabelPlugins } from "@jsenv/ast";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+import { composeTwoSourcemaps, createMagicSource } from "@jsenv/sourcemap";
+import { URL_META } from "@jsenv/url-meta";
 
 import { jsenvPluginReactRefreshPreamble } from "./jsenv_plugin_react_refresh_preamble.js";
 

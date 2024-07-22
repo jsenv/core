@@ -1,9 +1,9 @@
 import {
-  executeTestPlan,
   chromium,
+  executeTestPlan,
   firefox,
-  webkit,
   nodeWorkerThread,
+  webkit,
 } from "@jsenv/test";
 
 await executeTestPlan({

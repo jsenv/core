@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 
-import { startServer, createSSERoom } from "@jsenv/server";
-import { openEventSource, closeEventSource } from "./sse_test_helpers.mjs";
+import { createSSERoom, startServer } from "@jsenv/server";
+import { closeEventSource, openEventSource } from "./sse_test_helpers.mjs";
 
 const timeEllapsedPromise = (ms) => {
   return new Promise((resolve) => {

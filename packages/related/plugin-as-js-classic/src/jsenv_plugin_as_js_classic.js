@@ -1,9 +1,9 @@
-import { urlToFilename } from "@jsenv/urls";
 import {
   convertJsModuleToJsClassic,
   systemJsClientFileUrlDefault,
 } from "@jsenv/js-module-fallback";
 import { bundleJsModules } from "@jsenv/plugin-bundling";
+import { urlToFilename } from "@jsenv/urls";
 
 export const jsenvPluginAsJsClassic = () => {
   const markAsJsClassicProxy = (reference) => {

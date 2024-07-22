@@ -1,7 +1,7 @@
 import {
-  writeFileSync as writeFileSyncNode,
   mkdirSync,
   readFileSync,
+  writeFileSync as writeFileSyncNode,
 } from "node:fs";
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";

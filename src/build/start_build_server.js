@@ -13,17 +13,17 @@
  * we want to be in the user shoes and we should not alter build files.
  */
 
-import { existsSync } from "node:fs";
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
+import { createLogger, createTaskLog } from "@jsenv/humanize";
 import {
-  jsenvAccessControlAllowedHeaders,
-  startServer,
   fetchFileSystem,
+  jsenvAccessControlAllowedHeaders,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
+  startServer,
 } from "@jsenv/server";
-import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
-import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
-import { createLogger, createTaskLog } from "@jsenv/humanize";
+import { existsSync } from "node:fs";
 
 /**
  * Start a server for build files.

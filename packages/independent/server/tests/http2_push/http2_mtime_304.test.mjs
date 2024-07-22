@@ -1,8 +1,8 @@
-import { connect } from "node:http2";
-import { requestCertificate } from "@jsenv/https-local";
 import { assert } from "@jsenv/assert";
+import { requestCertificate } from "@jsenv/https-local";
+import { connect } from "node:http2";
 
-import { startServer, fetchFileSystem } from "@jsenv/server";
+import { fetchFileSystem, startServer } from "@jsenv/server";
 
 if (process.platform !== "linux") {
   // certificates only generated on linux

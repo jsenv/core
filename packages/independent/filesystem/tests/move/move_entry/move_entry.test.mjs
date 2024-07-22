@@ -3,17 +3,17 @@ import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 
 import {
   ensureEmptyDirectory,
-  writeDirectory,
-  writeFile,
   moveEntry,
   readFile,
   readSymbolicLink,
+  writeDirectory,
+  writeFile,
   writeSymbolicLink,
 } from "@jsenv/filesystem";
 import {
+  testDirectoryPresence,
   testFilePresence,
   testSymbolicLinkPresence,
-  testDirectoryPresence,
 } from "@jsenv/filesystem/tests/testHelpers.js";
 
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);

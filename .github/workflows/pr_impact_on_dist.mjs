@@ -6,8 +6,8 @@
  */
 
 import {
-  reportFileSizeImpactInGitHubPullRequest,
   readGitHubWorkflowEnv,
+  reportFileSizeImpactInGitHubPullRequest,
 } from "@jsenv/file-size-impact";
 
 await reportFileSizeImpactInGitHubPullRequest({

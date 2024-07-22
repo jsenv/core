@@ -1,16 +1,16 @@
-import { promises } from "node:fs";
 import {
   fileSystemPathToUrl,
-  urlToFileSystemPath,
-  resolveUrl,
   isFileSystemPath,
+  resolveUrl,
+  urlToFileSystemPath,
 } from "@jsenv/urls";
+import { promises } from "node:fs";
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 import { removeEntry } from "../remove/remove_entry.js";
-import { readEntryStat } from "./stat/read_entry_stat.js";
-import { readSymbolicLink } from "./read_symbolic_link.js";
 import { ensureParentDirectories } from "./ensure_parent_directories.js";
+import { readSymbolicLink } from "./read_symbolic_link.js";
+import { readEntryStat } from "./stat/read_entry_stat.js";
 
 // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_symlink_target_path_type
 const { symlink } = promises;

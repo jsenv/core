@@ -2,8 +2,8 @@ import { WebSocket } from "ws";
 
 import { requestCertificate } from "@jsenv/https-local";
 
-import { startServer } from "@jsenv/server";
 import { assert } from "@jsenv/assert";
+import { startServer } from "@jsenv/server";
 
 const test = async (params) => {
   let messageFromClientToServerPromise;

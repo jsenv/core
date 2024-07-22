@@ -1,5 +1,5 @@
+import { closeToolbar, openToolbar } from "../../core/toolbar_open_actions.js";
 import { openedSignal } from "../../core/toolbar_open_signals.js";
-import { openToolbar, closeToolbar } from "../../core/toolbar_open_actions.js";
 
 export const renderToolbarCloseButton = () => {
   // if user click enter or space quickly while closing toolbar

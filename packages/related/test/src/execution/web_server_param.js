@@ -1,9 +1,9 @@
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 
-import { startServerUsingModuleUrl } from "./web_server/start_using_module_url.js";
-import { startServerUsingCommand } from "./web_server/start_using_command.js";
-import { pingServer } from "../helpers/ping_server.js";
 import { basicFetch } from "../helpers/basic_fetch.js";
+import { pingServer } from "../helpers/ping_server.js";
+import { startServerUsingCommand } from "./web_server/start_using_command.js";
+import { startServerUsingModuleUrl } from "./web_server/start_using_module_url.js";
 
 export const assertAndNormalizeWebServer = async (
   webServer,

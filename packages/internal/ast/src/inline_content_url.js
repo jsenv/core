@@ -1,4 +1,4 @@
-import { urlToFilename, urlToExtension } from "@jsenv/urls";
+import { urlToExtension, urlToFilename } from "@jsenv/urls";
 
 export const generateUrlForInlineContent = ({
   url,

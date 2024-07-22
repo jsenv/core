@@ -1,6 +1,6 @@
 import {
-  isFileSystemPath,
   fileSystemPathToUrl,
+  isFileSystemPath,
   urlToFileSystemPath,
 } from "@jsenv/urls";
 

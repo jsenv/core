@@ -1,7 +1,7 @@
-import { fileURLToPath } from "node:url";
 import { assert } from "@jsenv/assert";
 import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_param.js";
 import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
+import { fileURLToPath } from "node:url";
 
 // the command does not exists
 {

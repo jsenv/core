@@ -16,26 +16,26 @@
  *  - injecting urls into service workers
  */
 
+import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
+import { parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import {
   assertAndNormalizeDirectoryUrl,
   ensureEmptyDirectory,
   writeFileSync,
 } from "@jsenv/filesystem";
-import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
-import { parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
-import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js";
+import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
+import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
-import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
 import { jsenvPluginLineBreakNormalization } from "./jsenv_plugin_line_break_normalization.js";
 
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";

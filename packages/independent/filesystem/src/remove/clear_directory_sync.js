@@ -1,5 +1,5 @@
-import { readdirSync, statSync } from "node:fs";
 import { URL_META } from "@jsenv/url-meta";
+import { readdirSync, statSync } from "node:fs";
 
 import { removeEntrySync } from "./remove_entry_sync.js";
 

@@ -1,9 +1,9 @@
-import { readFileSync } from "node:fs";
-import { urlToExtension } from "@jsenv/urls";
 import {
   injectSupervisorIntoHTML,
   supervisorFileUrl,
 } from "@jsenv/plugin-supervisor";
+import { urlToExtension } from "@jsenv/urls";
+import { readFileSync } from "node:fs";
 
 export const initJsSupervisorMiddleware = async (
   page,

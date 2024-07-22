@@ -2,22 +2,22 @@
 
 // see https://docs.npmjs.com/cli/v8/commands/npm-init#description
 
+import { execSync } from "node:child_process";
 import {
   existsSync,
-  readdirSync,
   mkdirSync,
+  readdirSync,
+  readFileSync,
   statSync,
   writeFileSync,
-  readFileSync,
 } from "node:fs";
 import { relative } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
-import { pathToFileURL, fileURLToPath } from "node:url";
-import { execSync } from "node:child_process";
 
-import prompts from "prompts";
 import { createTaskLog, UNICODE } from "@jsenv/humanize";
-import { urlToRelativeUrl, ensurePathnameTrailingSlash } from "@jsenv/urls";
+import { ensurePathnameTrailingSlash, urlToRelativeUrl } from "@jsenv/urls";
+import prompts from "prompts";
 
 // not using readdir to control order
 const availableTemplateNameArray = [

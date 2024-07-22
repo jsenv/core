@@ -1,4 +1,4 @@
-import { parseHtml, stringifyHtmlAst, injectJsenvScript } from "@jsenv/ast";
+import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 
 export const jsenvPluginReactRefreshPreamble = () => {
   const reactRefreshPreambleClientFileUrl = new URL(

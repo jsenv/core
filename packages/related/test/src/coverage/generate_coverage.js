@@ -1,14 +1,14 @@
-import { readFileSync } from "node:fs";
 import { Abort } from "@jsenv/abort";
+import { readFileSync } from "node:fs";
 
-import { filterV8Coverage } from "./v8_coverage.js";
-import { readNodeV8CoverageDirectory } from "./v8_coverage_node_directory.js";
-import { composeTwoV8Coverages } from "./v8_coverage_composition.js";
-import { composeTwoFileByFileIstanbulCoverages } from "./istanbul_coverage_composition.js";
-import { v8CoverageToIstanbul } from "./v8_coverage_to_istanbul.js";
-import { composeV8AndIstanbul } from "./v8_and_istanbul.js";
 import { normalizeFileByFileCoveragePaths } from "./file_by_file_coverage.js";
+import { composeTwoFileByFileIstanbulCoverages } from "./istanbul_coverage_composition.js";
 import { getMissingFileByFileCoverage } from "./missing_coverage.js";
+import { composeV8AndIstanbul } from "./v8_and_istanbul.js";
+import { filterV8Coverage } from "./v8_coverage.js";
+import { composeTwoV8Coverages } from "./v8_coverage_composition.js";
+import { readNodeV8CoverageDirectory } from "./v8_coverage_node_directory.js";
+import { v8CoverageToIstanbul } from "./v8_coverage_to_istanbul.js";
 
 export const generateCoverage = async (
   testPlanResult,

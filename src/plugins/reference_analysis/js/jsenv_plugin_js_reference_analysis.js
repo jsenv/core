@@ -1,5 +1,5 @@
+import { getUrlForContentInsideJs, parseJsUrls } from "@jsenv/ast";
 import { createMagicSource } from "@jsenv/sourcemap";
-import { parseJsUrls, getUrlForContentInsideJs } from "@jsenv/ast";
 import { urlToExtension } from "@jsenv/urls";
 import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
 

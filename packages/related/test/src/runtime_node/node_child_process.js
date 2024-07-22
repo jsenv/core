@@ -1,14 +1,14 @@
+import { Abort, raceCallbacks } from "@jsenv/abort";
+import { ANSI, createDetailedMessage, UNICODE } from "@jsenv/humanize";
+import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { Abort, raceCallbacks } from "@jsenv/abort";
-import { UNICODE, ANSI, createDetailedMessage } from "@jsenv/humanize";
-import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 
 import { createChildExecOptions } from "./child_exec_options.js";
 import { ExecOptions } from "./exec_options.js";
-import { killProcessTree } from "./kill_process_tree.js";
 import { EXIT_CODES } from "./exit_codes.js";
 import { IMPORTMAP_NODE_LOADER_FILE_URL } from "./importmap_node_loader_file_url.js";
+import { killProcessTree } from "./kill_process_tree.js";
 import { NO_EXPERIMENTAL_WARNING_FILE_URL } from "./no_experimental_warnings_file_url.js";
 
 const CONTROLLED_CHILD_PROCESS_URL = new URL(

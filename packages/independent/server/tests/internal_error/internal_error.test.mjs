@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer, jsenvServiceErrorHandler } from "@jsenv/server";
+import { jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
 // throw an error in "handleRequest"

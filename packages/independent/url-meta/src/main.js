@@ -1,10 +1,10 @@
 import {
-  resolveAssociations,
-  applyAssociations,
   applyAliases,
+  applyAssociations,
   applyPatternMatching,
-  urlChildMayMatch,
   matches,
+  resolveAssociations,
+  urlChildMayMatch,
 } from "./url_meta.js";
 
 export const URL_META = {

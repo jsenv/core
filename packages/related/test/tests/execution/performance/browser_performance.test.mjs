@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
-import { execute, chromium, firefox, webkit } from "@jsenv/test";
+import { chromium, execute, firefox, webkit } from "@jsenv/test";
 
 if (process.platform === "win32") {
   process.exit(0);

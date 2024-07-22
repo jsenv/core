@@ -1,5 +1,5 @@
-import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { ANSI } from "@jsenv/humanize";
+import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 
 export const createBuildUrlsGenerator = ({
   logger,

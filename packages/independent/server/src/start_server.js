@@ -1,43 +1,43 @@
-import { isIP } from "node:net";
-import cluster from "node:cluster";
-import { createDetailedMessage, createLogger } from "@jsenv/humanize";
 import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
+import { createDetailedMessage, createLogger } from "@jsenv/humanize";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
+import cluster from "node:cluster";
+import { isIP } from "node:net";
 
-import { createServiceController } from "./service_controller.js";
-import { timingToServerTimingResponseHeaders } from "./server_timing/timing_header.js";
-import { createPolyglotServer } from "./internal/server-polyglot.js";
-import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js";
-import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js";
 import {
-  fromNodeRequest,
-  createPushRequest,
   applyRedirectionToRequest,
+  createPushRequest,
+  fromNodeRequest,
 } from "./interfacing_with_node/request_factory.js";
 import { writeNodeResponse } from "./interfacing_with_node/write_node_response.js";
 import {
-  statusToType,
   colorizeResponseStatus,
+  statusToType,
 } from "./internal/colorizeResponseStatus.js";
+import { composeTwoHeaders } from "./internal/headers_composition.js";
 import { listen, stopListening } from "./internal/listen.js";
-import { composeTwoResponses } from "./internal/response_composition.js";
-import { listenRequest } from "./internal/listenRequest.js";
 import { listenEvent } from "./internal/listenEvent.js";
+import { listenRequest } from "./internal/listenRequest.js";
 import { listenServerConnectionError } from "./internal/listenServerConnectionError.js";
+import { composeTwoResponses } from "./internal/response_composition.js";
+import { createPolyglotServer } from "./internal/server-polyglot.js";
+import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js";
+import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js";
+import { timingToServerTimingResponseHeaders } from "./server_timing/timing_header.js";
+import { createServiceController } from "./service_controller.js";
 import {
   STOP_REASON_INTERNAL_ERROR,
-  STOP_REASON_PROCESS_SIGHUP,
-  STOP_REASON_PROCESS_SIGTERM,
-  STOP_REASON_PROCESS_SIGINT,
+  STOP_REASON_NOT_SPECIFIED,
   STOP_REASON_PROCESS_BEFORE_EXIT,
   STOP_REASON_PROCESS_EXIT,
-  STOP_REASON_NOT_SPECIFIED,
+  STOP_REASON_PROCESS_SIGHUP,
+  STOP_REASON_PROCESS_SIGINT,
+  STOP_REASON_PROCESS_SIGTERM,
 } from "./stopReasons.js";
-import { composeTwoHeaders } from "./internal/headers_composition.js";
 
-import { createIpGetters } from "./internal/server_ips.js";
-import { parseHostname } from "./internal/hostname_parser.js";
 import { applyDnsResolution } from "./internal/dns_resolution.js";
+import { parseHostname } from "./internal/hostname_parser.js";
+import { createIpGetters } from "./internal/server_ips.js";
 
 export const startServer = async ({
   signal = new AbortController().signal,

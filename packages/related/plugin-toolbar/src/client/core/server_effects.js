@@ -1,7 +1,7 @@
 import { effect } from "@preact/signals";
 
-import { serverConnectionSignal } from "./server_signals.js";
 import { openServerTooltip } from "./server_actions.js";
+import { serverConnectionSignal } from "./server_signals.js";
 
 effect(() => {
   const serverConnection = serverConnectionSignal.value;

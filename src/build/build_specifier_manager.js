@@ -1,30 +1,30 @@
-import { createHash } from "node:crypto";
-import { createDetailedMessage, UNICODE } from "@jsenv/humanize";
+import {
+  createHtmlNode,
+  findHtmlNode,
+  getHtmlNodeAttribute,
+  insertHtmlNodeAfter,
+  parseHtml,
+  removeHtmlNode,
+  setHtmlNodeAttributes,
+  stringifyHtmlAst,
+  visitHtmlNodes,
+} from "@jsenv/ast";
 import { comparePathnames } from "@jsenv/filesystem";
+import { createDetailedMessage, UNICODE } from "@jsenv/humanize";
 import { createMagicSource, generateSourcemapFileUrl } from "@jsenv/sourcemap";
 import {
   ensurePathnameTrailingSlash,
-  urlToRelativeUrl,
   injectQueryParamIntoSpecifierWithoutEncoding,
   renderUrlOrRelativeUrlFilename,
+  urlToRelativeUrl,
 } from "@jsenv/urls";
-import {
-  parseHtml,
-  stringifyHtmlAst,
-  visitHtmlNodes,
-  getHtmlNodeAttribute,
-  setHtmlNodeAttributes,
-  removeHtmlNode,
-  createHtmlNode,
-  insertHtmlNodeAfter,
-  findHtmlNode,
-} from "@jsenv/ast";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { createHash } from "node:crypto";
 
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
+import { prependContent } from "../kitchen/prepend_content.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { isWebWorkerUrlInfo } from "../kitchen/web_workers.js";
-import { prependContent } from "../kitchen/prepend_content.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import {
   injectVersionMappingsAsGlobal,

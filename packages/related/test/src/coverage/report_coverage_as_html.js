@@ -1,7 +1,7 @@
-import { fileURLToPath } from "node:url";
-import { readFileSync } from "node:fs";
-import { urlToRelativeUrl } from "@jsenv/urls";
 import { ensureEmptyDirectorySync } from "@jsenv/filesystem";
+import { urlToRelativeUrl } from "@jsenv/urls";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import { importWithRequire } from "../helpers/import_with_require.js";
 import { istanbulCoverageMapFromCoverage } from "./istanbul_coverage_map_from_coverage.js";

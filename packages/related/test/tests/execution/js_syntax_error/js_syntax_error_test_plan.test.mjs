@@ -2,8 +2,8 @@ import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 
 import {
-  executeTestPlan,
   chromium,
+  executeTestPlan,
   nodeChildProcess,
   nodeWorkerThread,
 } from "@jsenv/test";

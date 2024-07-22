@@ -1,5 +1,5 @@
-import { createServer } from "node:net";
 import { Abort } from "@jsenv/abort";
+import { createServer } from "node:net";
 
 const listen = async ({
   signal = new AbortController().signal,

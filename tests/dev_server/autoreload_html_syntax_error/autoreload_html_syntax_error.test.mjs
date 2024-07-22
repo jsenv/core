@@ -4,13 +4,13 @@
  *   (no waiting forever for importmap to load and js properly executes)
  */
 
-import { writeFileSync } from "node:fs";
-import { chromium } from "playwright";
 import {
-  writeFileStructureSync,
   ensureEmptyDirectorySync,
+  writeFileStructureSync,
 } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { writeFileSync } from "node:fs";
+import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 

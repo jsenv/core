@@ -1,8 +1,8 @@
+import { applyBabelPlugins, parseHtml } from "@jsenv/ast";
 import { createMagicSource } from "@jsenv/sourcemap";
-import { parseHtml, applyBabelPlugins } from "@jsenv/ast";
 
-import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js";
 import { babelPluginMetadataImportMetaHot } from "./babel_plugin_metadata_import_meta_hot.js";
+import { collectHotDataFromHtmlAst } from "./html_hot_dependencies.js";
 
 export const jsenvPluginImportMetaHot = () => {
   const importMetaHotClientFileUrl = new URL(

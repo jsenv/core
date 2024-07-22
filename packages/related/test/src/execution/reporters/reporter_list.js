@@ -1,14 +1,14 @@
-import { memoryUsage as processMemoryUsage } from "node:process";
-import stripAnsi from "strip-ansi";
 import { writeFileSync } from "@jsenv/filesystem";
 import {
+  ANSI,
   createDynamicLog,
   humanizeDuration,
   humanizeMemory,
-  ANSI,
   UNICODE,
 } from "@jsenv/humanize";
 import { urlToFileSystemPath } from "@jsenv/urls";
+import { memoryUsage as processMemoryUsage } from "node:process";
+import stripAnsi from "strip-ansi";
 
 import { formatErrorForTerminal } from "../format_error_for_terminal.js";
 

@@ -11,7 +11,7 @@
  * See https://github.com/jsenv/file-size-impact
  */
 
-import { generateFileSizeReport, raw, gzip } from "@jsenv/file-size-impact";
+import { generateFileSizeReport, gzip, raw } from "@jsenv/file-size-impact";
 
 const dist = {
   "./dist/**/*.html": true,

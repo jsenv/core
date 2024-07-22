@@ -1,17 +1,17 @@
 import { parseFragment } from "parse5";
 
+import { analyzeScriptNode } from "./html_analysis.js";
 import {
   getHtmlNodeAttribute,
   setHtmlNodeAttributes,
 } from "./html_node_attributes.js";
-import { findHtmlNode } from "./html_search.js";
-import { analyzeScriptNode } from "./html_analysis.js";
 import {
+  getHtmlNodeText,
   getIndentation,
   increaseIndentation,
-  getHtmlNodeText,
   setHtmlNodeText,
 } from "./html_node_text.js";
+import { findHtmlNode } from "./html_search.js";
 
 export const removeHtmlNode = (htmlNode) => {
   const { childNodes } = htmlNode.parentNode;

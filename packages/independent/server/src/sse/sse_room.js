@@ -1,8 +1,8 @@
 import { createLogger } from "@jsenv/humanize";
 
 import {
-  createObservable,
   createCompositeProducer,
+  createObservable,
 } from "@jsenv/server/src/interfacing_with_node/observable.js";
 
 // https://www.html5rocks.com/en/tutorials/eventsource/basics/

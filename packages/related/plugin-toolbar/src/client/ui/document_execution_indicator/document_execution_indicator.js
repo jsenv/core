@@ -1,13 +1,13 @@
 import { effect } from "@preact/signals";
 
 import {
-  executionSignal,
-  executionTooltipOpenedSignal,
-} from "../../core/execution_signals.js";
-import {
   closeExecutionTooltip,
   openExecutionTooltip,
 } from "../../core/execution_actions.js";
+import {
+  executionSignal,
+  executionTooltipOpenedSignal,
+} from "../../core/execution_signals.js";
 import { removeForceHideElement } from "../util/dom.js";
 import { enableVariant } from "../variant.js";
 

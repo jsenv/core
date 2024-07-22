@@ -1,9 +1,9 @@
-import { readdirSync, statSync, readFileSync } from "node:fs";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 
-import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
 import { comparePathnames } from "../path_and_url/compare_pathnames.js";
+import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
 
 export const readFileStructureSync = (directoryUrl) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);

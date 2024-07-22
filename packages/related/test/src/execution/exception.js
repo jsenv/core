@@ -19,8 +19,8 @@
 
 // https://github.com/marvinhagemeister/errorstacks/tree/main
 // https://cdn.jsdelivr.net/npm/errorstacks@latest/dist/esm/index.mjs
-import { parseStackTrace } from "errorstacks";
 import { URL_META } from "@jsenv/url-meta";
+import { parseStackTrace } from "errorstacks";
 
 const isDev = process.execArgv.includes("--conditions=development");
 const jsenvCoreDirectoryUrl = new URL("../../../../../", import.meta.url);

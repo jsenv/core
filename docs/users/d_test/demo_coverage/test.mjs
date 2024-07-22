@@ -1,4 +1,4 @@
-import { executeTestPlan, chromium, reportCoverageAsHtml } from "@jsenv/test";
+import { chromium, executeTestPlan, reportCoverageAsHtml } from "@jsenv/test";
 import { takeCoverageScreenshots } from "../../take_coverage_screenshots.js";
 
 const testPlanResult = await executeTestPlan({

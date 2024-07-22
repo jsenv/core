@@ -1,24 +1,24 @@
-import { copyFile as copyFileNode } from "node:fs";
 import { Abort } from "@jsenv/abort";
 import {
-  resolveUrl,
-  urlToRelativeUrl,
   ensurePathnameTrailingSlash,
+  resolveUrl,
   urlIsInsideOf,
   urlToFileSystemPath,
+  urlToRelativeUrl,
 } from "@jsenv/urls";
+import { copyFile as copyFileNode } from "node:fs";
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 import { urlTargetsSameFileSystemPath } from "../path_and_url/url_targets_same_file_system_path.js";
-import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
-import { statsToType } from "../read_write/stat/stats_to_type.js";
-import { binaryFlagsToPermissions } from "../read_write/stat/permissions.js";
-import { writeEntryPermissions } from "../read_write/stat/write_entry_permissions.js";
-import { writeEntryModificationTime } from "../read_write/stat/write_entry_modification_time.js";
-import { writeDirectory } from "../read_write/write_directory.js";
 import { ensureParentDirectories } from "../read_write/ensure_parent_directories.js";
 import { readDirectory } from "../read_write/read_directory.js";
 import { readSymbolicLink } from "../read_write/read_symbolic_link.js";
+import { binaryFlagsToPermissions } from "../read_write/stat/permissions.js";
+import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
+import { statsToType } from "../read_write/stat/stats_to_type.js";
+import { writeEntryModificationTime } from "../read_write/stat/write_entry_modification_time.js";
+import { writeEntryPermissions } from "../read_write/stat/write_entry_permissions.js";
+import { writeDirectory } from "../read_write/write_directory.js";
 import { writeSymbolicLink } from "../read_write/write_symbolic_link.js";
 import { removeEntry } from "../remove/remove_entry.js";
 

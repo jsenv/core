@@ -1,4 +1,4 @@
-import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
+import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 
 export const jsenvPluginAutoreloadClient = () => {
   const autoreloadClientFileUrl = new URL(

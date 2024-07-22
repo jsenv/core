@@ -1,5 +1,5 @@
-import { takeFileSnapshot } from "@jsenv/snapshot";
 import { build } from "@jsenv/core";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 
 try {
   await build({

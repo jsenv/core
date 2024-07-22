@@ -3,7 +3,7 @@
  * TOOD: "fix" array being objects
  */
 
-import { signal, effect, batch } from "@preact/signals";
+import { batch, effect, signal } from "@preact/signals";
 
 const isDev =
   import.meta.hot ||

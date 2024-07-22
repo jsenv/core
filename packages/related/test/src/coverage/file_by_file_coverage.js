@@ -1,7 +1,7 @@
 import {
-  urlToRelativeUrl,
   fileSystemPathToUrl,
   isFileSystemPath,
+  urlToRelativeUrl,
 } from "@jsenv/urls";
 
 export const normalizeFileByFileCoveragePaths = (

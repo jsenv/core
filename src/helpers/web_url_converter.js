@@ -1,5 +1,5 @@
 import { ensureWindowsDriveLetter } from "@jsenv/filesystem";
-import { urlIsInsideOf, moveUrl } from "@jsenv/urls";
+import { moveUrl, urlIsInsideOf } from "@jsenv/urls";
 
 export const WEB_URL_CONVERTER = {
   asWebUrl: (fileUrl, webServer) => {

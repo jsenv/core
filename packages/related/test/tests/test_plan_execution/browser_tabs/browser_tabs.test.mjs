@@ -2,10 +2,10 @@
  * The goal is to ensure test plan execution in browser tabs works without errors
  */
 
-import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startDevServer } from "@jsenv/core";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 
-import { executeTestPlan, chromium, reportAsJson } from "@jsenv/test";
+import { chromium, executeTestPlan, reportAsJson } from "@jsenv/test";
 
 const testResultJsonFileUrl = new URL(
   "./snapshots/test_result.json",

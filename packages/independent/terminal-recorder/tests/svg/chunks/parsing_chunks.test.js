@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync } from "node:fs";
 import { takeFileSnapshot } from "@jsenv/snapshot";
+import { readFileSync, writeFileSync } from "node:fs";
 
 import { parseAnsi } from "@jsenv/terminal-recorder/src/svg/parse_ansi.js";
 

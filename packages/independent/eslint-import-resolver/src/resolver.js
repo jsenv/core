@@ -2,24 +2,24 @@
 // https://github.com/benmosher/eslint-plugin-import/tree/master/resolvers
 // https://github.com/olalonde/eslint-import-resolver-babel-root-import
 
-import { createRequire } from "node:module";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   assertAndNormalizeDirectoryUrl,
   ensureWindowsDriveLetter,
   getRealFileSystemUrlSync,
 } from "@jsenv/filesystem";
-import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import {
-  determineModuleSystem,
-  applyNodeEsmResolution,
   applyFileSystemMagicResolution,
-  readCustomConditionsFromProcessArgs,
+  applyNodeEsmResolution,
+  determineModuleSystem,
   getExtensionsToTry,
+  readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
+import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
+import { createRequire } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { createLogger } from "./logger.js";
 import { applyImportmapResolution } from "./importmap_resolution.js";
+import { createLogger } from "./logger.js";
 import { applyUrlResolution } from "./url_resolution.js";
 
 export const interfaceVersion = 2;

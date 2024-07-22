@@ -1,13 +1,13 @@
-import stripAnsi from "strip-ansi";
 import { assert } from "@jsenv/assert";
 import {
-  ensureEmptyDirectorySync,
-  removeDirectorySync,
   copyDirectorySync,
-  writeFileSync,
+  ensureEmptyDirectorySync,
   readFileStructureSync,
+  removeDirectorySync,
   writeFileStructureSync,
+  writeFileSync,
 } from "@jsenv/filesystem";
+import stripAnsi from "strip-ansi";
 
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 

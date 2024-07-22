@@ -1,18 +1,18 @@
-import { writeFileSync } from "@jsenv/filesystem";
-import { startTerminalRecording } from "@jsenv/terminal-recorder";
-import { takeFileSnapshot } from "@jsenv/snapshot";
-import { UNICODE, ANSI } from "@jsenv/humanize";
 import { startDevServer } from "@jsenv/core";
+import { writeFileSync } from "@jsenv/filesystem";
+import { ANSI, UNICODE } from "@jsenv/humanize";
+import { takeFileSnapshot } from "@jsenv/snapshot";
+import { startTerminalRecording } from "@jsenv/terminal-recorder";
 
 import {
-  executeTestPlan,
-  nodeWorkerThread,
-  nodeChildProcess,
   chromium,
+  executeTestPlan,
   firefox,
-  webkit,
-  reporterList,
+  nodeChildProcess,
+  nodeWorkerThread,
   reportAsJunitXml,
+  reporterList,
+  webkit,
 } from "@jsenv/test";
 
 const terminalAnimatedRecording =

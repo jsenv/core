@@ -1,6 +1,6 @@
+import { createMagicSource } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
 import { asUrlWithoutSearch } from "@jsenv/urls";
-import { createMagicSource } from "@jsenv/sourcemap";
 
 export const jsenvPluginInjections = (rawAssociations) => {
   let resolvedAssociations;

@@ -1,7 +1,7 @@
 import { notificationAPIDetected } from "./notification_context.js";
 import {
-  notificationsEnabledSignal,
   notificationPermissionSignal,
+  notificationsEnabledSignal,
 } from "./notification_signals.js";
 
 export const enableNotifications = () => {

@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync } from "node:fs";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { readFileSync, writeFileSync } from "node:fs";
 
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
 

@@ -1,52 +1,52 @@
 import { ancestor } from "acorn-walk";
 
-import { parseJsWithAcorn } from "./parse_js_with_acorn.js";
 import {
-  analyzeImportExpression,
-  analyzeImportDeclaration,
-  analyzeExportNamedDeclaration,
   analyzeExportAllDeclaration,
+  analyzeExportNamedDeclaration,
+  analyzeImportDeclaration,
+  analyzeImportExpression,
 } from "./js_static_analysis/import_export.js";
 import {
-  isImportMetaResolveCall,
   analyzeImportMetaResolveCall,
+  isImportMetaResolveCall,
 } from "./js_static_analysis/import_meta_resolve.js";
 import {
-  isNewWorkerCall,
-  analyzeNewWorkerCall,
-  isNewSharedWorkerCall,
-  analyzeNewSharedWorkerCall,
-  isServiceWorkerRegisterCall,
-  analyzeServiceWorkerRegisterCall,
-} from "./js_static_analysis/web_worker_entry_point.js";
+  analyzeJSONParseCall,
+  isJSONParseCall,
+} from "./js_static_analysis/json_parse.js";
 import {
-  isImportScriptsCall,
-  analyzeImportScriptCalls,
-} from "./js_static_analysis/web_worker.js";
-import {
-  isNewUrlCall,
-  analyzeNewUrlCall,
-} from "./js_static_analysis/new_url.js";
-import {
-  isSystemRegisterCall,
-  analyzeSystemRegisterCall,
-  isSystemImportCall,
-  analyzeSystemImportCall,
-  isSystemResolveCall,
-  analyzeSystemResolveCall,
-} from "./js_static_analysis/system.js";
-import {
-  isNewBlobCall,
   analyzeNewBlobCall,
+  isNewBlobCall,
 } from "./js_static_analysis/new_blob.js";
 import {
-  isNewInlineContentCall,
   analyzeNewInlineContentCall,
+  isNewInlineContentCall,
 } from "./js_static_analysis/new_inline_content.js";
 import {
-  isJSONParseCall,
-  analyzeJSONParseCall,
-} from "./js_static_analysis/json_parse.js";
+  analyzeNewUrlCall,
+  isNewUrlCall,
+} from "./js_static_analysis/new_url.js";
+import {
+  analyzeSystemImportCall,
+  analyzeSystemRegisterCall,
+  analyzeSystemResolveCall,
+  isSystemImportCall,
+  isSystemRegisterCall,
+  isSystemResolveCall,
+} from "./js_static_analysis/system.js";
+import {
+  analyzeImportScriptCalls,
+  isImportScriptsCall,
+} from "./js_static_analysis/web_worker.js";
+import {
+  analyzeNewSharedWorkerCall,
+  analyzeNewWorkerCall,
+  analyzeServiceWorkerRegisterCall,
+  isNewSharedWorkerCall,
+  isNewWorkerCall,
+  isServiceWorkerRegisterCall,
+} from "./js_static_analysis/web_worker_entry_point.js";
+import { parseJsWithAcorn } from "./parse_js_with_acorn.js";
 
 export const parseJsUrls = ({
   js,

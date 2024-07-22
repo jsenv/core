@@ -1,4 +1,4 @@
-import { ensureEmptyDirectory, copyDirectorySync } from "@jsenv/filesystem";
+import { copyDirectorySync, ensureEmptyDirectory } from "@jsenv/filesystem";
 
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";

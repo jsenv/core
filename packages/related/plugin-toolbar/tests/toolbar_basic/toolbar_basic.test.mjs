@@ -3,12 +3,12 @@
  * - See the effect of using jsenv dev server on source files
  */
 
+import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 import { chromium } from "playwright";
-import { writeFileSync, ensureEmptyDirectory } from "@jsenv/filesystem";
 
 import { startDevServer } from "@jsenv/core";
-import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
+import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 
 const debug = false;
 await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));

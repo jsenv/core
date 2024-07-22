@@ -3,9 +3,9 @@ import { resolveUrl } from "@jsenv/urls";
 
 import {
   ensureEmptyDirectory,
+  getRealFileSystemUrlSync,
   writeFile,
   writeSymbolicLink,
-  getRealFileSystemUrlSync,
 } from "@jsenv/filesystem";
 
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);

@@ -1,4 +1,4 @@
-import { executeTestPlan, chromium } from "@jsenv/test";
+import { chromium, executeTestPlan } from "@jsenv/test";
 
 await executeTestPlan({
   rootDirectoryUrl: new URL("./", import.meta.url),

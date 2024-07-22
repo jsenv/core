@@ -1,27 +1,27 @@
-import { readdirSync, statSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { URL_META } from "@jsenv/url-meta";
 import {
   assertAndNormalizeDirectoryUrl,
   assertAndNormalizeFileUrl,
   comparePathnames,
   ensureEmptyDirectorySync,
+  removeDirectorySync,
   removeFileSync,
   writeFileSync,
-  removeDirectorySync,
 } from "@jsenv/filesystem";
+import { URL_META } from "@jsenv/url-meta";
+import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { urlToRelativeUrl, urlToFilename } from "@jsenv/urls";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import { assert } from "@jsenv/assert";
+import { comparePngFiles } from "./compare_png_files.js";
 import {
-  FileContentNotFoundAssertionError,
-  FileMissingAssertionError,
   ExtraFileAssertionError,
   FileContentAssertionError,
+  FileContentNotFoundAssertionError,
+  FileMissingAssertionError,
 } from "./errors.js";
 import { replaceFluctuatingValues } from "./replace_fluctuating_values.js";
-import { comparePngFiles } from "./compare_png_files.js";
 
 export const takeFileSnapshot = (fileUrl) => {
   fileUrl = assertAndNormalizeFileUrl(fileUrl);

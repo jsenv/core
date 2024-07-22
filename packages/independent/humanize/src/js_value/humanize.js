@@ -1,3 +1,5 @@
+// tslint:disable:ordered-imports
+
 // primitives
 import { inspectBoolean } from "./boolean.js";
 import { inspectNull } from "./null.js";

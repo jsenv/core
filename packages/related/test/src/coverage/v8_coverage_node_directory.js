@@ -1,7 +1,7 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { Abort } from "@jsenv/abort";
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
-import { Abort } from "@jsenv/abort";
+import { readFileSync, readdirSync } from "node:fs";
 
 export const readNodeV8CoverageDirectory = async ({
   logger,

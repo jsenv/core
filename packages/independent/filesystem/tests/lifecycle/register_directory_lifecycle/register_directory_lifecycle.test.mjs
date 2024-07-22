@@ -3,11 +3,11 @@ import { resolveUrl } from "@jsenv/urls";
 
 import {
   ensureEmptyDirectory,
-  writeFile,
+  registerDirectoryLifecycle,
   removeEntry,
   writeDirectory,
-  registerDirectoryLifecycle,
   writeEntryModificationTime,
+  writeFile,
 } from "@jsenv/filesystem";
 import { wait } from "@jsenv/filesystem/tests/testHelpers.js";
 

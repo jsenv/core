@@ -1,7 +1,7 @@
-import { createRequire } from "node:smodule";
 import { assert } from "@jsenv/assert";
+import { createRequire } from "node:smodule";
 
-import { startServer, fetchFileSystem } from "@jsenv/server";
+import { fetchFileSystem, startServer } from "@jsenv/server";
 
 const require = createRequire(import.meta.url);
 const testDirectoryUrl = new URL("./", import.meta.url).href;

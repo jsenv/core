@@ -1,3 +1,5 @@
+// tslint:disable:ordered-imports
+
 // html
 export {
   parseHtml,

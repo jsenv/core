@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer, jsenvServiceCORS } from "@jsenv/server";
+import { jsenvServiceCORS, startServer } from "@jsenv/server";
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
 const server = await startServer({

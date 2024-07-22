@@ -1,4 +1,4 @@
-import { signal, effect } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
 
 export const sigref = (initialValue) => {
   const valueSignal = signal(initialValue);

@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 
-import { setHtmlNodeAttributes, getHtmlNodeAttribute } from "@jsenv/ast";
+import { getHtmlNodeAttribute, setHtmlNodeAttributes } from "@jsenv/ast";
 
 {
   const htmlNode = {

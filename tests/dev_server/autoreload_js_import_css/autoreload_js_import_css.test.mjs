@@ -1,7 +1,7 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { chromium, firefox } from "playwright";
 import { assert } from "@jsenv/assert";
 import { writeFileStructureSync } from "@jsenv/filesystem";
+import { readFileSync, writeFileSync } from "node:fs";
+import { chromium, firefox } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 

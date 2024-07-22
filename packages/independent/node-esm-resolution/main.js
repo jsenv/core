@@ -1,3 +1,5 @@
+// tslint:disable:ordered-imports
+
 export { applyNodeEsmResolution } from "./src/node_esm_resolution.js";
 export { determineModuleSystem } from "./src/determine_module_system.js";
 export {

@@ -1,6 +1,6 @@
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakMap
-import { createValuePath } from "./value_path.js";
 import { isComposite } from "./is_composite.js";
+import { createValuePath } from "./value_path.js";
 
 export const createGetWellKnownValuePath = (globalObject) => {
   const wellKnownWeakMap = new WeakMap();

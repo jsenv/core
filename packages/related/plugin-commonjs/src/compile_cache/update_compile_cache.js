@@ -1,7 +1,7 @@
+import { bufferToEtag, writeFileSync } from "@jsenv/filesystem";
+import { urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, utimesSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { urlToRelativeUrl } from "@jsenv/urls";
-import { writeFileSync, bufferToEtag } from "@jsenv/filesystem";
 
 export const updateCompileCache = ({
   logger,

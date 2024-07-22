@@ -1,13 +1,13 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { createLogger, UNICODE } from "@jsenv/humanize";
 import {
   assertAndNormalizeFileUrl,
   ensureEmptyDirectory,
 } from "@jsenv/filesystem";
+import { createLogger, UNICODE } from "@jsenv/humanize";
+import { readFileSync, writeFileSync } from "node:fs";
 
-import { validateCompileCache } from "./validate_compile_cache.js";
 import { createLockRegistry } from "./file_lock_registry.js";
 import { updateCompileCache } from "./update_compile_cache.js";
+import { validateCompileCache } from "./validate_compile_cache.js";
 
 const { lockForResource } = createLockRegistry();
 

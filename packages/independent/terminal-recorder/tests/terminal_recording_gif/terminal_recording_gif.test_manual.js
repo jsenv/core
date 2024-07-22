@@ -1,5 +1,5 @@
-import { writeFileSync, readFileSync } from "node:fs";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
+import { readFileSync, writeFileSync } from "node:fs";
 
 const outputLines = readFileSync(
   new URL("./output.txt", import.meta.url),

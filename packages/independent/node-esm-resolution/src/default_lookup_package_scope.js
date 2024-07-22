@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 
-import { getParentUrl, asDirectoryUrl } from "./url_utils.js";
+import { asDirectoryUrl, getParentUrl } from "./url_utils.js";
 
 export const defaultLookupPackageScope = (url) => {
   let scopeUrl = asDirectoryUrl(url);

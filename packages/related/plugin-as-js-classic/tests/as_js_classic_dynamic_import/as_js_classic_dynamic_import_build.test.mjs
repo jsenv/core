@@ -1,8 +1,8 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 

@@ -2,8 +2,8 @@
 // https://github.com/jnordberg/gif.js
 // https://github.com/jnordberg/gif.js/blob/master/src/GIFEncoder.js
 
-import { createNeuQuant } from "./neuquant.js";
 import { createLzwEncoder } from "./lzw_encoder.js";
+import { createNeuQuant } from "./neuquant.js";
 
 export const createGifEncoder = ({
   width,

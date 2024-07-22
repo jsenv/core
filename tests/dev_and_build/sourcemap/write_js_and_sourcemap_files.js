@@ -1,5 +1,5 @@
-import { writeFileSync } from "node:fs";
 import { createMagicSource, SOURCEMAP } from "@jsenv/sourcemap";
+import { writeFileSync } from "node:fs";
 
 const magic = createMagicSource(`const answer = 42;
 console.log(answer)`);

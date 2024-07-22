@@ -1,3 +1,5 @@
+// tslint:disable:ordered-imports
+
 export { pwaLogger } from "./pwa_logger.js";
 export { navigatorControllerRef } from "./navigator_controller_ref.js";
 export { createServiceWorkerFacade } from "./service_worker_facade.js";

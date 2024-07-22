@@ -1,5 +1,5 @@
-import { readdirSync } from "node:fs";
 import { assert } from "@jsenv/assert";
+import { readdirSync } from "node:fs";
 
 import {
   clearDirectorySync,

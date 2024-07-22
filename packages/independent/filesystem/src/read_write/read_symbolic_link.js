@@ -3,8 +3,8 @@
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_fs_symlink_target_path_type_callback
  */
 
+import { fileSystemPathToUrl, isFileSystemPath } from "@jsenv/urls";
 import { readlink } from "node:fs";
-import { isFileSystemPath, fileSystemPathToUrl } from "@jsenv/urls";
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 

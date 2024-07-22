@@ -1,7 +1,7 @@
 import { startDevServer } from "@jsenv/core";
 
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 const plugins = [
   jsenvPluginPreact(),

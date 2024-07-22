@@ -1,10 +1,10 @@
-import { createRequire } from "node:module";
-import { urlToRelativeUrl } from "@jsenv/urls";
-import { composeTwoSourcemaps } from "@jsenv/sourcemap";
 import { applyBabelPlugins } from "@jsenv/ast";
+import { composeTwoSourcemaps } from "@jsenv/sourcemap";
+import { urlToRelativeUrl } from "@jsenv/urls";
+import { createRequire } from "node:module";
 
-import { babelPluginTransformImportMetaUrl } from "./internal/babel_plugin_transform_import_meta_url.js";
 import { babelPluginTransformImportMetaResolve } from "./internal/babel_plugin_transform_import_meta_resolve.js";
+import { babelPluginTransformImportMetaUrl } from "./internal/babel_plugin_transform_import_meta_url.js";
 // because of https://github.com/rpetrich/babel-plugin-transform-async-to-promises/issues/84
 import customAsyncToPromises from "./internal/async-to-promises.js";
 

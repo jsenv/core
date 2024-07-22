@@ -1,6 +1,6 @@
-import { fileURLToPath } from "node:url";
 import { readFileSync } from "@jsenv/filesystem";
 import { normalizeImportMap } from "@jsenv/importmap";
+import { fileURLToPath } from "node:url";
 
 import { applyUrlResolution } from "./url_resolution.js";
 

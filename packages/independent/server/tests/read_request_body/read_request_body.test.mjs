@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer, readRequestBody } from "@jsenv/server";
+import { readRequestBody, startServer } from "@jsenv/server";
 
 // read request body as string
 {

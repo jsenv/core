@@ -1,4 +1,4 @@
-import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
+import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import { URL_META } from "@jsenv/url-meta";
 import { asUrlWithoutSearch } from "@jsenv/urls";
 

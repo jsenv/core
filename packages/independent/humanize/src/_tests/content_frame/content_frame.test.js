@@ -1,5 +1,5 @@
-import { writeFileSync } from "node:fs";
 import { takeFileSnapshot } from "@jsenv/snapshot";
+import { writeFileSync } from "node:fs";
 
 import { generateContentFrame } from "@jsenv/humanize";
 

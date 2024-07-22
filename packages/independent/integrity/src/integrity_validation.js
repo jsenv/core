@@ -1,8 +1,8 @@
-import { parseIntegrity } from "./integrity_parsing.js";
 import {
-  getPrioritizedHashFunction,
   applyAlgoToRepresentationData,
+  getPrioritizedHashFunction,
 } from "./integrity_algorithms.js";
+import { parseIntegrity } from "./integrity_parsing.js";
 
 // https://www.w3.org/TR/SRI/#does-response-match-metadatalist
 export const validateResponseIntegrity = (

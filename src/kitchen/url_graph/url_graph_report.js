@@ -1,4 +1,4 @@
-import { humanizeFileSize, distributePercentages, ANSI } from "@jsenv/humanize";
+import { ANSI, distributePercentages, humanizeFileSize } from "@jsenv/humanize";
 
 import { GRAPH_VISITOR } from "./url_graph_visitor.js";
 

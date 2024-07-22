@@ -1,12 +1,12 @@
-import { marked } from "marked";
+import { findHtmlNode, getHtmlNodeText, parseHtml } from "@jsenv/ast";
 import {
   readDirectorySync,
   readEntryStatSync,
   readFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
-import { parseHtml, findHtmlNode, getHtmlNodeText } from "@jsenv/ast";
-import { urlToRelativeUrl, urlToFilename } from "@jsenv/urls";
+import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import { marked } from "marked";
 
 const PREVIOUS_CHAR = "&lt;"; // "<"
 const NEXT_CHAR = "&gt;"; // ">"

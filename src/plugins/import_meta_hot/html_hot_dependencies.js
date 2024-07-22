@@ -1,4 +1,4 @@
-import { getHtmlNodeAttribute, analyzeLinkNode, parseSrcSet } from "@jsenv/ast";
+import { analyzeLinkNode, getHtmlNodeAttribute, parseSrcSet } from "@jsenv/ast";
 
 // Some "smart" default applied to decide what should hot reload / fullreload:
 // By default:

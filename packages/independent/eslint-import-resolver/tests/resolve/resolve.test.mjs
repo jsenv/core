@@ -1,11 +1,11 @@
 import { assert } from "@jsenv/assert";
-import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 import {
-  ensureWindowsDriveLetter,
-  writeFileSync,
-  writeFileStructureSync,
   ensureEmptyDirectorySync,
+  ensureWindowsDriveLetter,
+  writeFileStructureSync,
+  writeFileSync,
 } from "@jsenv/filesystem";
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 
 import * as resolver from "@jsenv/eslint-import-resolver";
 

@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
 import { injectJsImport } from "@jsenv/ast";
+import { readFileSync } from "node:fs";
 
 export const injectSideEffectFileIntoBabelAst = ({
   programPath,

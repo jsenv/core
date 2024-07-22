@@ -1,5 +1,5 @@
-import { parse, serialize, parseFragment } from "parse5";
 import { generateContentFrame } from "@jsenv/humanize";
+import { parse, parseFragment, serialize } from "parse5";
 
 import { insertHtmlNodeAfter, insertHtmlNodeBefore } from "./html_node.js";
 import {
@@ -7,11 +7,11 @@ import {
   setHtmlNodeAttributes,
 } from "./html_node_attributes.js";
 import {
-  storeHtmlNodePosition,
   storeHtmlNodeAttributePosition,
+  storeHtmlNodePosition,
 } from "./html_node_position.js";
-import { findHtmlChildNode, visitHtmlNodes } from "./html_search.js";
 import { getHtmlNodeText } from "./html_node_text.js";
+import { findHtmlChildNode, visitHtmlNodes } from "./html_search.js";
 
 export const parseHtml = ({ html, url, storeOriginalPositions = true }) => {
   const htmlAst = parse(html, {

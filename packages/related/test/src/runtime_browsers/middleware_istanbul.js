@@ -1,9 +1,9 @@
-import { URL_META } from "@jsenv/url-meta";
 import { applyBabelPlugins } from "@jsenv/ast";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { URL_META } from "@jsenv/url-meta";
 
-import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { babelPluginInstrument } from "../coverage/babel_plugin_instrument.js";
+import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 
 export const initIstanbulMiddleware = async (
   page,

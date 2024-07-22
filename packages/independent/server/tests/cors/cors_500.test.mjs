@@ -2,9 +2,9 @@ import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 
 import {
-  startServer,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
+  startServer,
 } from "@jsenv/server";
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 

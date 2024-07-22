@@ -1,12 +1,12 @@
 import { applyBabelPlugins } from "@jsenv/ast";
 
-import { getBaseBabelPluginStructure } from "./babel_plugin_structure.js";
 import { babelPluginBabelHelpersAsJsenvImports } from "./babel_plugin_babel_helpers_as_jsenv_imports.js";
-import { analyzeRegeneratorRuntimeUsage } from "./regenerator_runtime/regenerator_runtime_usage.js";
+import { getBaseBabelPluginStructure } from "./babel_plugin_structure.js";
+import { babelPluginNewStylesheetInjector } from "./new_stylesheet/babel_plugin_new_stylesheet_injector.js";
+import { analyzeConstructableStyleSheetUsage } from "./new_stylesheet/constructable_stylesheet_usage.js";
 import { babelPluginRegeneratorRuntimeInjector } from "./regenerator_runtime/babel_plugin_regenerator_runtime_injector.js";
 import { regeneratorRuntimeClientFileUrl } from "./regenerator_runtime/regenerator_runtime_client_file_url.js";
-import { analyzeConstructableStyleSheetUsage } from "./new_stylesheet/constructable_stylesheet_usage.js";
-import { babelPluginNewStylesheetInjector } from "./new_stylesheet/babel_plugin_new_stylesheet_injector.js";
+import { analyzeRegeneratorRuntimeUsage } from "./regenerator_runtime/regenerator_runtime_usage.js";
 
 export const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
   const transformWithBabel = async (urlInfo) => {

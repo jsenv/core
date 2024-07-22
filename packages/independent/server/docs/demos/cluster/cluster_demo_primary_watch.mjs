@@ -1,7 +1,7 @@
+import { registerFileLifecycle } from "@jsenv/filesystem";
 import cluster from "node:cluster";
 import { cpus } from "node:os";
 import { fileURLToPath } from "node:url";
-import { registerFileLifecycle } from "@jsenv/filesystem";
 
 const numCPUs = cpus().length;
 

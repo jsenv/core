@@ -1,4 +1,4 @@
-import { promises, constants } from "node:fs";
+import { constants, promises } from "node:fs";
 
 import { assertAndNormalizeFileUrl } from "../../path_and_url/file_url_validation.js";
 

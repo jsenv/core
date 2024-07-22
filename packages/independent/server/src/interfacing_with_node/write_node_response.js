@@ -1,6 +1,6 @@
+import { raceCallbacks } from "@jsenv/abort";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
-import { raceCallbacks } from "@jsenv/abort";
 
 import { normalizeBodyMethods } from "./body.js";
 

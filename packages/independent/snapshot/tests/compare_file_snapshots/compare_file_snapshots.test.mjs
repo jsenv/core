@@ -1,10 +1,10 @@
-import stripAnsi from "strip-ansi";
 import { assert } from "@jsenv/assert";
 import {
   removeEntrySync,
   writeDirectorySync,
   writeFileSync,
 } from "@jsenv/filesystem";
+import stripAnsi from "strip-ansi";
 
 import { takeFileSnapshot } from "@jsenv/snapshot";
 

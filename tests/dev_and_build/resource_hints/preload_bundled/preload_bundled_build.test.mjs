@@ -1,6 +1,6 @@
-import stripAnsi from "strip-ansi";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import stripAnsi from "strip-ansi";
 
 import { build, startBuildServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";

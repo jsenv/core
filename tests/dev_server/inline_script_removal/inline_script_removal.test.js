@@ -2,11 +2,11 @@
  Ensure dev server behaviour when fetching inline js files
  */
 
-import { readFileSync } from "node:fs";
-import { chromium } from "playwright";
+import { assert } from "@jsenv/assert";
 import { writeFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
-import { assert } from "@jsenv/assert";
+import { readFileSync } from "node:fs";
+import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";

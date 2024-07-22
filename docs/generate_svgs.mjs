@@ -1,7 +1,7 @@
+import { replaceFluctuatingValues } from "@jsenv/snapshot";
+import { recordCommandToSvg } from "@jsenv/terminal-recorder";
 import { writeFileSync } from "node:fs";
 import prettier from "prettier";
-import { recordCommandToSvg } from "@jsenv/terminal-recorder";
-import { replaceFluctuatingValues } from "@jsenv/snapshot";
 
 const generateTerminalOutputSvg = async (scriptRelativeUrl, svgRelativeUrl) => {
   const command = `node ${scriptRelativeUrl}`;

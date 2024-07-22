@@ -1,14 +1,14 @@
+import { generateUrlForInlineContent } from "@jsenv/ast";
+import { generateContentFrame } from "@jsenv/humanize";
 import {
   getCallerPosition,
   stringifyUrlSite,
   urlToBasename,
   urlToExtension,
 } from "@jsenv/urls";
-import { generateUrlForInlineContent } from "@jsenv/ast";
-import { generateContentFrame } from "@jsenv/humanize";
 
-import { isWebWorkerEntryPointReference } from "../web_workers.js";
 import { prependContent } from "../prepend_content.js";
+import { isWebWorkerEntryPointReference } from "../web_workers.js";
 
 let referenceId = 0;
 

@@ -1,9 +1,9 @@
+import { assert } from "@jsenv/assert";
 import {
   readFileSync,
   removeEntrySync,
   writeFileSync,
 } from "@jsenv/filesystem";
-import { assert } from "@jsenv/assert";
 
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { FileContentAssertionError } from "@jsenv/snapshot/src/errors.js";

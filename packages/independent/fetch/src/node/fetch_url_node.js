@@ -1,14 +1,14 @@
 // https://github.com/node-fetch/node-fetch/blob/8c197f8982a238b3c345c64b17bfa92e16b4f7c4/src/response.js#L1
 
-import { Agent } from "node:https";
 import nodeFetch, { Response } from "node-fetch";
+import { Agent } from "node:https";
 
-import { DATA_URL } from "@jsenv/urls";
 import { fetchFileSystem } from "@jsenv/server";
 import {
-  isFileHandle,
   fileHandleToReadableStream,
+  isFileHandle,
 } from "@jsenv/server/src/interfacing_with_node/body.js";
+import { DATA_URL } from "@jsenv/urls";
 
 export const fetchUrl = async (
   url,

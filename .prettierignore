@@ -17,6 +17,7 @@ node_modules/
 **/tests/**/snapshots/
 **/tests/**/output/
 /packages/**/server/tests/internal_error/snapshots/
+/packages/internal/plugin-transpilation/src/babel/babel_helper_directory/
 /**/dist/**
 
 /**/*.nomodule.js

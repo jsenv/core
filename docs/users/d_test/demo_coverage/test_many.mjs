@@ -1,9 +1,9 @@
 import {
-  executeTestPlan,
   chromium,
+  executeTestPlan,
   firefox,
-  webkit,
   reportCoverageAsHtml,
+  webkit,
 } from "@jsenv/test";
 import { takeCoverageScreenshots } from "../../take_coverage_screenshots.js";
 

@@ -1,15 +1,15 @@
 import { effect } from "@preact/signals";
 
 import {
-  notificationsEnabledSignal,
-  notificationPermissionSignal,
-} from "../../core/notification_signals.js";
-import { notificationAPIDetected } from "../../core/notification_context.js";
-import {
-  enableNotifications,
   disableNotifications,
+  enableNotifications,
   requestPermission,
 } from "../../core/notification_actions.js";
+import { notificationAPIDetected } from "../../core/notification_context.js";
+import {
+  notificationPermissionSignal,
+  notificationsEnabledSignal,
+} from "../../core/notification_signals.js";
 import { enableVariant } from "../variant.js";
 
 const notifCheckbox = document.querySelector("#toggle_notifs");

@@ -1,7 +1,7 @@
 import { startDevServer } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
-import { executeTestPlan, chromium, firefox, webkit } from "@jsenv/test";
+import { chromium, executeTestPlan, firefox, webkit } from "@jsenv/test";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
 if (process.platform === "win32") {

@@ -5,7 +5,7 @@
 
 import { assert } from "@jsenv/assert";
 import { startBuildServer } from "@jsenv/core";
-import { executeTestPlan, chromium } from "@jsenv/test";
+import { chromium, executeTestPlan } from "@jsenv/test";
 
 const buildServer = await startBuildServer({
   logLevel: "warn",

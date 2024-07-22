@@ -1,6 +1,6 @@
-import { chromium } from "playwright";
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
+import { chromium } from "playwright";
 
 const devServer = await startDevServer({
   logLevel: "off",

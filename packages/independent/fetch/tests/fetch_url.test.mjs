@@ -1,8 +1,8 @@
 import { assert } from "@jsenv/assert";
-import { writeFile, ensureEmptyDirectory } from "@jsenv/filesystem";
-import { urlToFileSystemPath } from "@jsenv/urls";
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
+import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
 import { startServer } from "@jsenv/server";
+import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
+import { urlToFileSystemPath } from "@jsenv/urls";
 
 import { fetchUrl } from "@jsenv/fetch";
 

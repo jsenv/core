@@ -1,7 +1,7 @@
-import { URL_META } from "@jsenv/url-meta";
-import { isFileSystemPath } from "@jsenv/urls";
 import { createDetailedMessage } from "@jsenv/humanize";
 import { sourcemapConverter } from "@jsenv/sourcemap";
+import { URL_META } from "@jsenv/url-meta";
+import { isFileSystemPath } from "@jsenv/urls";
 
 import { fileUrlConverter } from "../file_url_converter.js";
 

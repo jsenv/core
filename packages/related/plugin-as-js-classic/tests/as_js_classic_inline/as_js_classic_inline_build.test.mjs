@@ -1,6 +1,6 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { build } from "@jsenv/core";
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 const test = async (params) => {
   const snapshotDirectoryUrl = new URL("./snapshots/build/", import.meta.url);

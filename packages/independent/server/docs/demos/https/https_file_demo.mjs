@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
 import { startServer } from "@jsenv/server";
+import { readFileSync } from "node:fs";
 
 await startServer({
   https: {

@@ -1,5 +1,5 @@
-import { fileURLToPath } from "node:url";
 import { assert } from "@jsenv/assert";
+import { fileURLToPath } from "node:url";
 
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
 

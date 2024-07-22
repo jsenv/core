@@ -1,3 +1,5 @@
+// tslint:disable:ordered-imports
+
 // we might wanna expose the sync versions as follows:
 // readDirectory.sync()
 // +1: very easy to switch between sync/async versions of a given function

@@ -46,17 +46,17 @@
  */
 
 import {
-  parseHtml,
-  stringifyHtmlAst,
-  visitHtmlNodes,
-  getHtmlNodeAttribute,
-  setHtmlNodeAttributes,
   analyzeScriptNode,
-  injectJsenvScript,
+  getHtmlNodeAttribute,
   getHtmlNodePosition,
   getHtmlNodeText,
-  setHtmlNodeText,
   getUrlForContentInsideHtml,
+  injectJsenvScript,
+  parseHtml,
+  setHtmlNodeAttributes,
+  setHtmlNodeText,
+  stringifyHtmlAst,
+  visitHtmlNodes,
 } from "@jsenv/ast";
 import { urlToRelativeUrl } from "@jsenv/urls";
 

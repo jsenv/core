@@ -1,7 +1,7 @@
 import { effect } from "@preact/signals";
 
-import { toolbarStateSignal } from "./toolbar_state_signals.js";
 import { sendEventToParent } from "./parent_window_actions.js";
+import { toolbarStateSignal } from "./toolbar_state_signals.js";
 
 effect(() => {
   const toolbarState = toolbarStateSignal.value;

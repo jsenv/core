@@ -1,3 +1,5 @@
+// tslint:disable:ordered-imports
+
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { jsenvPluginTranspilation } from "@jsenv/plugin-transpilation";
 

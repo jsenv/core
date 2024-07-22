@@ -12,9 +12,9 @@ https://webglfundamentals.org/webgl/lessons/webgl-tips.html
 https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
 */
 
+import "@xterm/addon-serialize?as_js_module";
 import "xterm";
 import "xterm-addon-webgl";
-import "@xterm/addon-serialize?as_js_module";
 import { createGifEncoder } from "./gif_encoder.js";
 
 const { Terminal } = window;

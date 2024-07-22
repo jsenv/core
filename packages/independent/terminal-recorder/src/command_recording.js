@@ -1,5 +1,5 @@
+import { ANSI, UNICODE } from "@jsenv/humanize";
 import { spawn } from "node:child_process";
-import { UNICODE, ANSI } from "@jsenv/humanize";
 
 import { startTerminalRecording } from "./terminal_recording.js";
 

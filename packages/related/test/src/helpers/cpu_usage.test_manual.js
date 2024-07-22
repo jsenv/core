@@ -1,7 +1,7 @@
 import {
+  formatUsage,
   startMeasuringCpuUsage,
   startMeasuringTotalCpuUsage,
-  formatUsage,
 } from "./cpu_usage.js";
 
 const cpuUsage = startMeasuringCpuUsage();

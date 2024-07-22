@@ -1,6 +1,6 @@
-import stripAnsi from "strip-ansi";
 import { assert } from "@jsenv/assert";
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
+import stripAnsi from "strip-ansi";
 
 const test = async (params) => {
   const { errors } = await execute({

@@ -1,5 +1,5 @@
-import { spawn, spawnSync } from "node:child_process";
 import { Abort } from "@jsenv/abort";
+import { spawn, spawnSync } from "node:child_process";
 
 import { pingServer } from "../../helpers/ping_server.js";
 

@@ -1,5 +1,5 @@
+import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import { createMagicSource } from "@jsenv/sourcemap";
-import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
 
 export const injectGlobals = (content, globals, urlInfo) => {
   if (urlInfo.type === "html") {

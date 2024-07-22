@@ -1,5 +1,5 @@
-import { startTestServer } from "@jsenv/pwa/tests/start_test_server.mjs";
 import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
+import { startTestServer } from "@jsenv/pwa/tests/start_test_server.mjs";
 
 await startTestServer({
   logLevel: "info",

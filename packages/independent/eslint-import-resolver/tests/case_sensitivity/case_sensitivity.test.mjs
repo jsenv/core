@@ -1,10 +1,10 @@
 import { assert } from "@jsenv/assert";
-import { urlToFileSystemPath } from "@jsenv/urls";
 import {
   ensureEmptyDirectorySync,
   writeFileSync,
   writeSymbolicLinkSync,
 } from "@jsenv/filesystem";
+import { urlToFileSystemPath } from "@jsenv/urls";
 
 import * as resolver from "@jsenv/eslint-import-resolver";
 

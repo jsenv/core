@@ -1,7 +1,7 @@
-import { chromium } from "playwright";
 import { assert } from "@jsenv/assert";
+import { chromium } from "playwright";
 
-import { startServer, createSSERoom, fetchFileSystem } from "@jsenv/server";
+import { createSSERoom, fetchFileSystem, startServer } from "@jsenv/server";
 
 if (process.platform !== "win32") {
   const room = createSSERoom({

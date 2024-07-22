@@ -8,8 +8,8 @@
  * - replaced by undefined (import.meta.dev but it's build; the goal is to ensure it's tree-shaked)
  */
 
-import { createMagicSource } from "@jsenv/sourcemap";
 import { applyBabelPlugins } from "@jsenv/ast";
+import { createMagicSource } from "@jsenv/sourcemap";
 
 export const jsenvPluginImportMetaScenarios = () => {
   return {

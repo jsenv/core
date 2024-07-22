@@ -7,11 +7,11 @@
  * of this plugin
  */
 
-import { jsenvPluginImportAttributes } from "./import_attributes/jsenv_plugin_import_attributes.js";
-import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js";
-import { jsenvPluginJsModuleFallback } from "./js_module_fallback/jsenv_plugin_js_module_fallback.js";
 import { jsenvPluginAsJsModule } from "./as_js_module/jsenv_plugin_as_js_module.js";
+import { jsenvPluginBabel } from "./babel/jsenv_plugin_babel.js";
 import { jsenvPluginCssTranspilation } from "./css/jsenv_plugin_css_transpilation.js";
+import { jsenvPluginImportAttributes } from "./import_attributes/jsenv_plugin_import_attributes.js";
+import { jsenvPluginJsModuleFallback } from "./js_module_fallback/jsenv_plugin_js_module_fallback.js";
 
 export const jsenvPluginTranspilation = ({
   importAttributes = true,

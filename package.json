@@ -111,6 +111,7 @@
     "marked": "13.0.2",
     "open": "10.1.0",
     "playwright": "1.45.2",
-    "prettier": "3.3.3"
+    "prettier": "3.3.3",
+    "prettier-plugin-organize-imports": "4.0.0"
   }
 }

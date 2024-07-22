@@ -1,4 +1,4 @@
-import { startServer, createSSERoom } from "@jsenv/server";
+import { createSSERoom, startServer } from "@jsenv/server";
 
 const room = createSSERoom();
 setInterval(() => {

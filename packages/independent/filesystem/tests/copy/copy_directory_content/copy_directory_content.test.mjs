@@ -4,9 +4,9 @@ import { urlToFileSystemPath } from "@jsenv/urls";
 import {
   copyDirectoryContent,
   ensureEmptyDirectorySync,
+  readFileStructureSync,
   writeDirectory,
   writeFile,
-  readFileStructureSync,
   writeFileStructureSync,
 } from "@jsenv/filesystem";
 

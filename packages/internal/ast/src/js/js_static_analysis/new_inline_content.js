@@ -1,7 +1,7 @@
 import {
-  isStringLiteralNode,
-  findPropertyNodeByName,
   extractContentInfo,
+  findPropertyNodeByName,
+  isStringLiteralNode,
 } from "./helpers.js";
 
 export const isNewInlineContentCall = (node) => {

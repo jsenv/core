@@ -1,3 +1,5 @@
+// tslint:disable:ordered-imports
+
 export { parseIntegrity } from "./src/integrity_parsing.js";
 export {
   getPrioritizedHashFunction,

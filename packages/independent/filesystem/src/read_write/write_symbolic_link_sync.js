@@ -1,16 +1,16 @@
-import { symlinkSync } from "node:fs";
 import {
   fileSystemPathToUrl,
-  urlToFileSystemPath,
-  resolveUrl,
   isFileSystemPath,
+  resolveUrl,
+  urlToFileSystemPath,
 } from "@jsenv/urls";
+import { symlinkSync } from "node:fs";
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 import { removeEntrySync } from "../remove/remove_entry_sync.js";
-import { readEntryStatSync } from "./stat/read_entry_stat_sync.js";
-import { readSymbolicLinkSync } from "./read_symbolic_link_sync.js";
 import { ensureParentDirectoriesSync } from "./ensure_parent_directories_sync.js";
+import { readSymbolicLinkSync } from "./read_symbolic_link_sync.js";
+import { readEntryStatSync } from "./stat/read_entry_stat_sync.js";
 
 const isWindows = process.platform === "win32";
 

@@ -14,8 +14,8 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 import { createLogger } from "@jsenv/humanize";
 
-import { assertAndNormalizeWebServer } from "./web_server_param.js";
 import { run } from "./run.js";
+import { assertAndNormalizeWebServer } from "./web_server_param.js";
 
 export const execute = async ({
   signal = new AbortController().signal,

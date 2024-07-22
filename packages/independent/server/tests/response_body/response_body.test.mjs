@@ -1,8 +1,8 @@
-import { promises } from "node:fs";
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
+import { promises } from "node:fs";
 
-import { startServer, fromFetchResponse } from "@jsenv/server";
+import { fromFetchResponse, startServer } from "@jsenv/server";
 
 // file handle
 {

@@ -1,5 +1,5 @@
-import { chromium, firefox } from "playwright";
 import { assert } from "@jsenv/assert";
+import { chromium, firefox } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";

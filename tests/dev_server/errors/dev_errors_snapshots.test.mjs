@@ -1,6 +1,6 @@
-import { chromium, firefox, webkit } from "playwright";
 import { writeFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { chromium, firefox, webkit } from "playwright";
 
 if (process.platform === "win32") {
   // disable on windows because it would fails due to line endings (CRLF)

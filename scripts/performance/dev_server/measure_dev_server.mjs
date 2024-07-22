@@ -1,5 +1,5 @@
-import { chromium } from "playwright";
 import { startMeasures } from "@jsenv/performance-impact";
+import { chromium } from "playwright";
 
 const devServerMetrics = {};
 

@@ -1,7 +1,7 @@
 import { useEffect } from "preact/hooks";
-import { useSelector, useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
-import { increment, decrement } from "./counter/counter_action.js";
+import { decrement, increment } from "./counter/counter_action.js";
 import { counterValueSelector } from "./counter/counter_selectors.js";
 
 export const App = ({ onRender }) => {

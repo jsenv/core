@@ -4,18 +4,18 @@
 
 import { sigi } from "@jsenv/sigi";
 
-import { pwaLogger } from "./pwa_logger.js";
 import {
-  serviceWorkerAPI,
   canUseServiceWorkers,
+  serviceWorkerAPI,
 } from "./internal/service_worker_api.js";
 import {
   inspectServiceWorker,
-  requestSkipWaitingOnServiceWorker,
-  requestClaimOnServiceWorker,
   postMessageToServiceWorker,
+  requestClaimOnServiceWorker,
+  requestSkipWaitingOnServiceWorker,
 } from "./internal/service_worker_communication.js";
 import { createServiceWorkerHotReplacer } from "./internal/service_worker_hot_replacement.js";
+import { pwaLogger } from "./pwa_logger.js";
 
 export const createServiceWorkerFacade = ({
   scope,

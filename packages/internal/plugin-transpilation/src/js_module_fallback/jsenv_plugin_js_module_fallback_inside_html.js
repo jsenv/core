@@ -5,16 +5,16 @@
  * - <link rel="modulepreload"> are converted to <link rel="preload">
  */
 
-import { injectQueryParams } from "@jsenv/urls";
 import {
-  parseHtml,
-  visitHtmlNodes,
-  stringifyHtmlAst,
-  getHtmlNodeAttribute,
-  setHtmlNodeAttributes,
   analyzeScriptNode,
+  getHtmlNodeAttribute,
   getHtmlNodeText,
+  parseHtml,
+  setHtmlNodeAttributes,
+  stringifyHtmlAst,
+  visitHtmlNodes,
 } from "@jsenv/ast";
+import { injectQueryParams } from "@jsenv/urls";
 
 export const jsenvPluginJsModuleFallbackInsideHtml = ({
   needJsModuleFallback,

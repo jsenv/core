@@ -1,11 +1,11 @@
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/fork.js#L23
 // https://nodejs.org/api/worker_threads.html
 // https://github.com/avajs/ava/blob/576f534b345259055c95fa0c2b33bef10847a2af/lib/worker/base.js
-import { Worker } from "node:worker_threads";
-import { fileURLToPath } from "node:url";
 import { Abort, raceCallbacks } from "@jsenv/abort";
-import { UNICODE, ANSI } from "@jsenv/humanize";
+import { ANSI, UNICODE } from "@jsenv/humanize";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
+import { fileURLToPath } from "node:url";
+import { Worker } from "node:worker_threads";
 
 import { createChildExecOptions } from "./child_exec_options.js";
 import { ExecOptions } from "./exec_options.js";

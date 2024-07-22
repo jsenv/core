@@ -1,14 +1,14 @@
 import {
-  parseHtml,
-  stringifyHtmlAst,
-  visitHtmlNodes,
-  getHtmlNodeText,
   analyzeScriptNode,
   getHtmlNodeAttribute,
+  getHtmlNodePosition,
+  getHtmlNodeText,
+  getUrlForContentInsideHtml,
+  parseHtml,
   setHtmlNodeAttributes,
   setHtmlNodeText,
-  getHtmlNodePosition,
-  getUrlForContentInsideHtml,
+  stringifyHtmlAst,
+  visitHtmlNodes,
 } from "@jsenv/ast";
 
 export const jsenvPluginInliningIntoHtml = () => {

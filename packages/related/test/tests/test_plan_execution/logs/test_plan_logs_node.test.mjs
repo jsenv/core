@@ -1,14 +1,14 @@
 import { writeFileSync } from "@jsenv/filesystem";
-import { startTerminalRecording } from "@jsenv/terminal-recorder";
+import { ANSI, UNICODE } from "@jsenv/humanize";
 import { takeFileSnapshot } from "@jsenv/snapshot";
-import { UNICODE, ANSI } from "@jsenv/humanize";
+import { startTerminalRecording } from "@jsenv/terminal-recorder";
 
 import {
   executeTestPlan,
-  nodeWorkerThread,
   nodeChildProcess,
-  reporterList,
+  nodeWorkerThread,
   reportAsJunitXml,
+  reporterList,
 } from "@jsenv/test";
 
 if (process.platform === "win32") {

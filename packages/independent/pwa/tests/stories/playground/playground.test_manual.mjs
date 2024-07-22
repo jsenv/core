@@ -1,6 +1,6 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { startTestServer } from "@jsenv/pwa/tests/start_test_server.mjs";
 import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
+import { startTestServer } from "@jsenv/pwa/tests/start_test_server.mjs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 await startTestServer({
   logLevel: "info",

@@ -1,9 +1,9 @@
-import { injectQueryParams, urlToExtension, urlToBasename } from "@jsenv/urls";
+import { injectQueryParams, urlToBasename, urlToExtension } from "@jsenv/urls";
 
 import { generateUrlForInlineContent } from "../inline_content_url.js";
+import { analyzeScriptNode } from "./html_analysis.js";
 import { getHtmlNodeAttribute } from "./html_node_attributes.js";
 import { getHtmlNodePosition } from "./html_node_position.js";
-import { analyzeScriptNode } from "./html_analysis.js";
 
 export const getUrlForContentInsideHtml = (node, { htmlUrl, url }) => {
   let externalSpecifierAttributeName;

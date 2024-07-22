@@ -2,8 +2,8 @@
  * https://github.com/whatwg/dom/issues/920
  */
 
-import { raceCallbacks } from "./callback_race.js";
 import { createCallbackListNotifiedOnce } from "./callback_list_once.js";
+import { raceCallbacks } from "./callback_race.js";
 
 export const Abort = {
   isAbortError: (error) => {

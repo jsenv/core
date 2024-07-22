@@ -1,16 +1,16 @@
-import {
-  unlinkSync,
-  rmdirSync,
-  readdirSync,
-  openSync,
-  closeSync,
-} from "node:fs";
 import { Abort } from "@jsenv/abort";
 import {
   ensurePathnameTrailingSlash,
-  urlToFileSystemPath,
   resolveUrl,
+  urlToFileSystemPath,
 } from "@jsenv/urls";
+import {
+  closeSync,
+  openSync,
+  readdirSync,
+  rmdirSync,
+  unlinkSync,
+} from "node:fs";
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";

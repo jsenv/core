@@ -1,6 +1,6 @@
-import { urlToFileSystemPath } from "@jsenv/urls";
 import { writeFileSync } from "@jsenv/filesystem";
 import { humanizeFileSize } from "@jsenv/humanize";
+import { urlToFileSystemPath } from "@jsenv/urls";
 
 export const reportCoverageAsJson = (
   testPlanResult,

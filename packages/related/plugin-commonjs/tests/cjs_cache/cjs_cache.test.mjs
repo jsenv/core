@@ -1,9 +1,9 @@
-import { writeFileSync, readFileSync } from "node:fs";
-import { chromium } from "playwright";
 import { assert } from "@jsenv/assert";
-import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
+import { ensureEmptyDirectory } from "@jsenv/filesystem";
+import { readFileSync, writeFileSync } from "node:fs";
+import { chromium } from "playwright";
 
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 

@@ -1,14 +1,14 @@
-import { rename } from "node:fs";
 import { Abort } from "@jsenv/abort";
-import { urlToFileSystemPath, resolveUrl } from "@jsenv/urls";
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
+import { rename } from "node:fs";
 
+import { copyEntry } from "../copy/copy_entry.js";
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 import { urlTargetsSameFileSystemPath } from "../path_and_url/url_targets_same_file_system_path.js";
-import { statsToType } from "../read_write/stat/stats_to_type.js";
-import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
 import { ensureParentDirectories } from "../read_write/ensure_parent_directories.js";
 import { readSymbolicLink } from "../read_write/read_symbolic_link.js";
-import { copyEntry } from "../copy/copy_entry.js";
+import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
+import { statsToType } from "../read_write/stat/stats_to_type.js";
 import { removeEntry } from "../remove/remove_entry.js";
 
 export const moveEntry = async ({

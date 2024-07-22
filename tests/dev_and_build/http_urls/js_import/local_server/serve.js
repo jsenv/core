@@ -1,4 +1,4 @@
-import { startServer, fetchFileSystem, jsenvServiceCORS } from "@jsenv/server";
+import { fetchFileSystem, jsenvServiceCORS, startServer } from "@jsenv/server";
 
 const serverDirectoryUrl = new URL("./client/", import.meta.url);
 

@@ -1,8 +1,8 @@
 import { Signal } from "../signal.js";
 
-import { SIGTERMSignal } from "./SIGTERMSignal.js";
-import { SIGINTSignal } from "./SIGINTSignal.js";
 import { SIGHUPSignal } from "./SIGHUPSignal.js";
+import { SIGINTSignal } from "./SIGINTSignal.js";
+import { SIGTERMSignal } from "./SIGTERMSignal.js";
 import { beforeExitSignal } from "./beforeExitSignal.js";
 import { exitSignal } from "./exitSignal.js";
 

@@ -9,21 +9,21 @@
  *   maintain symlink as facade url when it's outside project directory
  *   or use the real path when inside
  */
-import { pathToFileURL } from "node:url";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
-import { isSpecifierForNodeBuiltin } from "./node_builtin_specifiers.js";
+import { readCustomConditionsFromProcessArgs } from "./custom_conditions.js";
 import { defaultLookupPackageScope } from "./default_lookup_package_scope.js";
 import { defaultReadPackageJson } from "./default_read_package_json.js";
-import { getParentUrl, isValidUrl } from "./url_utils.js";
 import {
   createInvalidModuleSpecifierError,
+  createInvalidPackageTargetError,
   createModuleNotFoundError,
   createPackageImportNotDefinedError,
   createPackagePathNotExportedError,
-  createInvalidPackageTargetError,
 } from "./errors.js";
-import { readCustomConditionsFromProcessArgs } from "./custom_conditions.js";
+import { isSpecifierForNodeBuiltin } from "./node_builtin_specifiers.js";
+import { getParentUrl, isValidUrl } from "./url_utils.js";
 
 export const applyNodeEsmResolution = ({
   specifier,

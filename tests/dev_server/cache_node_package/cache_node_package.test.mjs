@@ -3,10 +3,10 @@
  * - Ensure cache is invalidated when package version changes
  */
 
-import { writeFileSync, readFileSync } from "node:fs";
-import { chromium } from "playwright";
-import { copyDirectorySync } from "@jsenv/filesystem";
 import { assert } from "@jsenv/assert";
+import { copyDirectorySync } from "@jsenv/filesystem";
+import { readFileSync, writeFileSync } from "node:fs";
+import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";

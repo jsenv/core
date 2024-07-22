@@ -3,11 +3,11 @@
  * - perform conversion from js module to js classic when url uses "?js_module_fallback"
  */
 
-import { urlToFilename, injectQueryParams } from "@jsenv/urls";
 import {
   convertJsModuleToJsClassic,
   systemJsClientFileUrlDefault,
 } from "@jsenv/js-module-fallback";
+import { injectQueryParams, urlToFilename } from "@jsenv/urls";
 
 export const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
   const isReferencingJsModule = (reference) => {

@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { resolveUrl } from "@jsenv/urls";
 
-import { ensureEmptyDirectory, writeFile, readFile } from "@jsenv/filesystem";
+import { ensureEmptyDirectory, readFile, writeFile } from "@jsenv/filesystem";
 
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
 await ensureEmptyDirectory(tempDirectoryUrl);

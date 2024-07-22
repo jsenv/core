@@ -1,12 +1,12 @@
 import { Abort } from "@jsenv/abort";
-import { urlToFileSystemPath, resolveUrl } from "@jsenv/urls";
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 
 import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
 import { urlTargetsSameFileSystemPath } from "../path_and_url/url_targets_same_file_system_path.js";
-import { statsToType } from "../read_write/stat/stats_to_type.js";
-import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
-import { readSymbolicLinkSync } from "../read_write/read_symbolic_link_sync.js";
 import { readDirectorySync } from "../read_write/read_directory_sync.js";
+import { readSymbolicLinkSync } from "../read_write/read_symbolic_link_sync.js";
+import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
+import { statsToType } from "../read_write/stat/stats_to_type.js";
 import { copyEntrySync } from "./copy_entry_sync.js";
 
 export const copyDirectoryContentSync = ({

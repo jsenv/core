@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
-import { urlToRelativeUrl } from "@jsenv/urls";
 import { parseHtml } from "@jsenv/ast";
+import { urlToRelativeUrl } from "@jsenv/urls";
+import { readFileSync } from "node:fs";
 
 import { generateContentFrame } from "@jsenv/humanize";
 

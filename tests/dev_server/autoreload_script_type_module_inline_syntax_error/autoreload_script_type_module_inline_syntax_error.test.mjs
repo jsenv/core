@@ -1,6 +1,6 @@
-import { chromium } from "playwright";
-import { writeFileSync, readFileSync } from "@jsenv/filesystem";
+import { readFileSync, writeFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";

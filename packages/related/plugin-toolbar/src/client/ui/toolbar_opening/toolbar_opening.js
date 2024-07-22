@@ -1,10 +1,10 @@
 import { effect } from "@preact/signals";
 
-import { closeAllTooltips } from "../../core/tooltip_actions.js";
 import { animationsEnabledSignal } from "../../core/animation_signals.js";
 import { openedSignal } from "../../core/toolbar_open_signals.js";
-import { getToolbarIframe, setStyles } from "../util/dom.js";
+import { closeAllTooltips } from "../../core/tooltip_actions.js";
 import { startJavaScriptAnimation } from "../util/animation.js";
+import { getToolbarIframe, setStyles } from "../util/dom.js";
 
 export const initToolbarOpening = () => {
   effect(() => {

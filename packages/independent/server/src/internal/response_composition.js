@@ -1,5 +1,5 @@
-import { composeTwoObjects } from "./object_composition.js";
 import { composeTwoHeaders } from "./headers_composition.js";
+import { composeTwoObjects } from "./object_composition.js";
 
 export const composeTwoResponses = (firstResponse, secondResponse) => {
   return composeTwoObjects(firstResponse, secondResponse, {

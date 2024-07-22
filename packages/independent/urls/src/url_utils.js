@@ -1,5 +1,5 @@
-import { urlToOrigin } from "./url_to_origin.js";
 import { urlToExtension } from "./url_to_extension.js";
+import { urlToOrigin } from "./url_to_origin.js";
 import { urlToResource } from "./url_to_resource.js";
 
 export const asUrlWithoutSearch = (url) => {

@@ -1,10 +1,10 @@
 import { effect } from "@preact/signals";
 
-import { autoreloadEnabledSignal } from "../../core/parent_window_signals.js";
 import {
   disableAutoreload,
   enableAutoreload,
 } from "../../core/parent_window_actions.js";
+import { autoreloadEnabledSignal } from "../../core/parent_window_signals.js";
 
 export const renderToolbarAutoreloadSetting = () => {
   const parentWindowReloader = window.parent.__reloader__;

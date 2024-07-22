@@ -1,5 +1,5 @@
-import { writeFileSync } from "node:fs";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
+import { writeFileSync } from "node:fs";
 
 const terminalRecorder = await startTerminalRecording({
   svg: {

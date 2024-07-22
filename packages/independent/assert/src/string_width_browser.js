@@ -1,5 +1,5 @@
-import { cleanup } from "./segmenter_firefox.js";
 import stringWidth from "string-width";
+import { cleanup } from "./segmenter_firefox.js";
 
 cleanup();
 

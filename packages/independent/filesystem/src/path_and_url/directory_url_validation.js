@@ -1,7 +1,7 @@
 import {
+  ensurePathnameTrailingSlash,
   fileSystemPathToUrl,
   isFileSystemPath,
-  ensurePathnameTrailingSlash,
 } from "@jsenv/urls";
 
 export const validateDirectoryUrl = (value) => {

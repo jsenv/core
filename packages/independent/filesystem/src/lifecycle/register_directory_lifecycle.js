@@ -1,11 +1,11 @@
-import { readdirSync, statSync } from "node:fs";
 import { URL_META } from "@jsenv/url-meta";
 import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
+import { readdirSync, statSync } from "node:fs";
 
 import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
 import { statsToType } from "../read_write/stat/stats_to_type.js";
-import { guardTooFastSecondCallPerFile } from "./guard_second_call.js";
 import { createWatcher } from "./create_watcher.js";
+import { guardTooFastSecondCallPerFile } from "./guard_second_call.js";
 import { trackResources } from "./track_resources.js";
 
 const isLinux = process.platform === "linux";

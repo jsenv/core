@@ -1,8 +1,8 @@
 import { sigref } from "@jsenv/sigi";
 
 import {
-  serviceWorkerAPI,
   canUseServiceWorkers,
+  serviceWorkerAPI,
 } from "./internal/service_worker_api.js";
 import { inspectServiceWorker } from "./internal/service_worker_communication.js";
 

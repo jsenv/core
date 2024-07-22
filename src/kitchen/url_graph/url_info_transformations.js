@@ -1,15 +1,15 @@
-import { pathToFileURL } from "node:url";
 import { writeFileSync } from "@jsenv/filesystem";
-import { urlToRelativeUrl, isFileSystemPath } from "@jsenv/urls";
 import {
   composeTwoSourcemaps,
-  SOURCEMAP,
-  generateSourcemapFileUrl,
   generateSourcemapDataUrl,
+  generateSourcemapFileUrl,
+  SOURCEMAP,
 } from "@jsenv/sourcemap";
+import { isFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
+import { pathToFileURL } from "node:url";
 import {
-  defineGettersOnPropertiesDerivedFromOriginalContent,
   defineGettersOnPropertiesDerivedFromContent,
+  defineGettersOnPropertiesDerivedFromOriginalContent,
 } from "./url_content.js";
 
 export const createUrlInfoTransformer = ({

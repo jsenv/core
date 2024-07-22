@@ -10,13 +10,13 @@
  * - TODO in an other test: quite the same but for syntax error in html
  */
 
-import { writeFileSync } from "node:fs";
-import { chromium } from "playwright";
 import {
-  writeFileStructureSync,
   ensureEmptyDirectorySync,
+  writeFileStructureSync,
 } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { writeFileSync } from "node:fs";
+import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 

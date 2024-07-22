@@ -1,5 +1,5 @@
-import { chromium as playwrightChromium } from "playwright";
 import { writeFileSync } from "@jsenv/filesystem";
+import { chromium as playwrightChromium } from "playwright";
 
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 

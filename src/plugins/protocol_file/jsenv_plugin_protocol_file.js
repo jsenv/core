@@ -1,28 +1,28 @@
 import {
-  existsSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-  lstatSync,
-  readdirSync,
-} from "node:fs";
-import { pathToFileURL } from "node:url";
-import {
-  urlIsInsideOf,
-  urlToRelativeUrl,
-  urlToFilename,
-  ensurePathnameTrailingSlash,
-} from "@jsenv/urls";
+  assertAndNormalizeDirectoryUrl,
+  comparePathnames,
+} from "@jsenv/filesystem";
 import {
   applyFileSystemMagicResolution,
   getExtensionsToTry,
 } from "@jsenv/node-esm-resolution";
 import { pickContentType } from "@jsenv/server";
+import {
+  ensurePathnameTrailingSlash,
+  urlIsInsideOf,
+  urlToFilename,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import {
-  assertAndNormalizeDirectoryUrl,
-  comparePathnames,
-} from "@jsenv/filesystem";
+  existsSync,
+  lstatSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+} from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const html404AndParentDirIsEmptyFileUrl = new URL(
   "./html_404_and_parent_dir_is_empty.html",

@@ -1,17 +1,17 @@
 import { effect } from "@preact/signals";
 
+import { closeSettings, openSettings } from "../../core/settings_actions.js";
 import { settingsOpenedSignal } from "../../core/settings_signals.js";
-import { openSettings, closeSettings } from "../../core/settings_actions.js";
-import { enableVariant } from "../variant.js";
 import {
   activateToolbarSection,
   deactivateToolbarSection,
 } from "../util/dom.js";
-import { renderToolbarAutoreloadSetting } from "./toolbar_autoreload_setting.js";
+import { enableVariant } from "../variant.js";
 import { renderToolbarAnimationSetting } from "./toolbar_animation_setting.js";
+import { renderToolbarAutoreloadSetting } from "./toolbar_autoreload_setting.js";
 import { renderToolbarNotificationSetting } from "./toolbar_notification_setting.js";
-import { renderToolbarThemeSetting } from "./toolbar_theme_setting.js";
 import { renderToolbarRibbonSetting } from "./toolbar_ribbon_setting.js";
+import { renderToolbarThemeSetting } from "./toolbar_theme_setting.js";
 
 export const renderToolbarSettings = () => {
   document.querySelector("#settings_open_button").onclick = toggleSettings;

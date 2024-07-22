@@ -1,9 +1,9 @@
 import { requestCertificate } from "@jsenv/https-local";
 
 import {
-  startServer,
   fetchFileSystem,
   jsenvServiceErrorHandler,
+  startServer,
 } from "@jsenv/server";
 
 const { certificate, privateKey } = requestCertificate();

@@ -1,3 +1,5 @@
+// tslint:disable:ordered-imports
+
 // test
 export { executeTestPlan } from "./execution/execute_test_plan.js";
 // runtimes (used to execute tests)
@@ -7,9 +9,9 @@ export { webkit, webkitIsolatedTab } from "./runtime_browsers/webkit.js";
 export { nodeChildProcess } from "./runtime_node/node_child_process.js";
 export { nodeWorkerThread } from "./runtime_node/node_worker_thread.js";
 // coverage
-export { reportCoverageInConsole } from "./coverage/report_coverage_in_console.js";
-export { reportCoverageAsJson } from "./coverage/report_coverage_as_json.js";
 export { reportCoverageAsHtml } from "./coverage/report_coverage_as_html.js";
+export { reportCoverageAsJson } from "./coverage/report_coverage_as_json.js";
+export { reportCoverageInConsole } from "./coverage/report_coverage_in_console.js";
 // reporters
 export { reporterList } from "./execution/reporters/reporter_list.js";
 // other

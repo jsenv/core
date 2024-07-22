@@ -1,14 +1,14 @@
 import { writeFileSync } from "@jsenv/filesystem";
-import { startTerminalRecording } from "@jsenv/terminal-recorder";
+import { ANSI, UNICODE } from "@jsenv/humanize";
 import { takeDirectorySnapshot, takeFileSnapshot } from "@jsenv/snapshot";
-import { UNICODE, ANSI } from "@jsenv/humanize";
+import { startTerminalRecording } from "@jsenv/terminal-recorder";
 
 import {
   executeTestPlan,
   nodeWorkerThread,
-  reporterList,
-  reportAsJunitXml,
   reportAsJson,
+  reportAsJunitXml,
+  reporterList,
 } from "@jsenv/test";
 
 const terminalAnimatedRecording =

@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 import { writeFileSync } from "@jsenv/filesystem";
-import { takeFileSnapshot, replaceFluctuatingValues } from "@jsenv/snapshot";
+import { replaceFluctuatingValues, takeFileSnapshot } from "@jsenv/snapshot";
 
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";

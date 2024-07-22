@@ -1,23 +1,23 @@
 import {
-  parseHtml,
-  visitHtmlNodes,
-  getHtmlNodeText,
-  setHtmlNodeText,
-  removeHtmlNodeText,
-  removeHtmlNode,
-  getHtmlNodeAttribute,
-  getHtmlNodePosition,
-  setHtmlNodeAttributes,
-  getHtmlNodeAttributePosition,
   analyzeScriptNode,
-  parseSrcSet,
-  stringifyHtmlAst,
+  getHtmlNodeAttribute,
+  getHtmlNodeAttributePosition,
+  getHtmlNodePosition,
+  getHtmlNodeText,
   getUrlForContentInsideHtml,
+  parseHtml,
+  parseSrcSet,
+  removeHtmlNode,
+  removeHtmlNodeText,
+  setHtmlNodeAttributes,
+  setHtmlNodeText,
+  stringifyHtmlAst,
+  visitHtmlNodes,
 } from "@jsenv/ast";
 import {
-  resolveImport,
   composeTwoImportMaps,
   normalizeImportMap,
+  resolveImport,
 } from "@jsenv/importmap";
 
 export const jsenvPluginHtmlReferenceAnalysis = ({

@@ -11,8 +11,8 @@ with a human eye verification before commiting anything that would change them.
 
 */
 
-import { readFileSync, readdirSync } from "node:fs";
 import { assert } from "@jsenv/assert";
+import { readFileSync, readdirSync } from "node:fs";
 
 const readHtmlFiles = () => {
   const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url);

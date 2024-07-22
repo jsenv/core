@@ -1,6 +1,6 @@
-import { chromium } from "playwright";
-import { readFileSync, writeFileSync } from "@jsenv/filesystem";
 import { assert } from "@jsenv/assert";
+import { readFileSync, writeFileSync } from "@jsenv/filesystem";
+import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";

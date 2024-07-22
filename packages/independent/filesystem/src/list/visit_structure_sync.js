@@ -1,10 +1,10 @@
 import { URL_META } from "@jsenv/url-meta";
 import { urlToRelativeUrl } from "@jsenv/urls";
 
-import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
 import { comparePathnames } from "../path_and_url/compare_pathnames.js";
-import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
+import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
 import { readDirectorySync } from "../read_write/read_directory_sync.js";
+import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
 
 export const visitStructureSync = ({
   directoryUrl,

@@ -2,8 +2,8 @@
  * see also https://github.com/vadimdemedes/ink
  */
 
-import stringWidth from "string-width";
 import ansiEscapes from "ansi-escapes";
+import stringWidth from "string-width";
 
 export const createDynamicLog = ({
   stream = process.stdout,

@@ -1,12 +1,12 @@
 import { effect } from "@preact/signals";
 
-import { openedSignal } from "../../core/toolbar_open_signals.js";
-import { settingsOpenedSignal } from "../../core/settings_signals.js";
-import { closeSettings } from "../../core/settings_actions.js";
-import { closeAllTooltips } from "../../core/tooltip_actions.js";
-import { executionTooltipOpenedSignal } from "../../core/execution_signals.js";
 import { changesTooltipOpenedSignal } from "../../core/changes_signals.js";
+import { executionTooltipOpenedSignal } from "../../core/execution_signals.js";
 import { serverTooltipOpenedSignal } from "../../core/server_signals.js";
+import { closeSettings } from "../../core/settings_actions.js";
+import { settingsOpenedSignal } from "../../core/settings_signals.js";
+import { openedSignal } from "../../core/toolbar_open_signals.js";
+import { closeAllTooltips } from "../../core/tooltip_actions.js";
 import { getToolbarIframe, setStyles } from "../util/dom.js";
 
 export const renderToolbarOverlay = () => {

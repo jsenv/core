@@ -11,8 +11,8 @@ hence sourcemap cannot point the original source location
 
 */
 
-import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 

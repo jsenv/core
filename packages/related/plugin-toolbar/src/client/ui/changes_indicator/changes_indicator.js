@@ -1,15 +1,15 @@
 import { effect } from "@preact/signals";
 
+import {
+  closeChangesToolip,
+  openChangesToolip,
+} from "../../core/changes_actions.js";
+import { changesTooltipOpenedSignal } from "../../core/changes_signals.js";
 import { parentWindowReloader } from "../../core/parent_window_context.js";
 import {
   autoreloadEnabledSignal,
   changesSignal,
 } from "../../core/parent_window_signals.js";
-import { changesTooltipOpenedSignal } from "../../core/changes_signals.js";
-import {
-  openChangesToolip,
-  closeChangesToolip,
-} from "../../core/changes_actions.js";
 import { enableVariant } from "../variant.js";
 
 const changesIndicator = document.querySelector("#changes_indicator");

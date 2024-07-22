@@ -1,9 +1,9 @@
 // https://bundlers.tooling.report/hashing/avoid-cascade/
 
 import {
-  parseHtml,
-  injectHtmlNodeAsEarlyAsPossible,
   createHtmlNode,
+  injectHtmlNodeAsEarlyAsPossible,
+  parseHtml,
   stringifyHtmlAst,
 } from "@jsenv/ast";
 

@@ -25,9 +25,9 @@
 
 import { sigref } from "@jsenv/sigi";
 
+import { displayModeStandaloneRef } from "./display_mode_standalone_ref.js";
 import { listenEvent } from "./internal/listenEvent.js";
 import { listenAppInstalled } from "./listen_app_installed.js";
-import { displayModeStandaloneRef } from "./display_mode_standalone_ref.js";
 
 let appInstalledEvent = false;
 

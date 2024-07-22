@@ -1,10 +1,10 @@
-import { assert } from "@jsenv/assert";
 import { Abort } from "@jsenv/abort";
+import { assert } from "@jsenv/assert";
 import { resolveUrl } from "@jsenv/urls";
 
 import {
-  ensureEmptyDirectory,
   collectFiles,
+  ensureEmptyDirectory,
   writeFile,
 } from "@jsenv/filesystem";
 

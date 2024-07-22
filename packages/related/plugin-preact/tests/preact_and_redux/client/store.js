@@ -1,4 +1,4 @@
-import { createStore, combineReducers, compose } from "redux";
+import { combineReducers, compose, createStore } from "redux";
 
 import { counterReducer } from "./counter/counter_reducer.js";
 

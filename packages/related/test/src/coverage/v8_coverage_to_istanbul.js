@@ -1,5 +1,5 @@
-import { urlToFileSystemPath } from "@jsenv/urls";
 import { Abort } from "@jsenv/abort";
+import { urlToFileSystemPath } from "@jsenv/urls";
 
 import { importWithRequire } from "../helpers/import_with_require.js";
 import { composeTwoFileByFileIstanbulCoverages } from "./istanbul_coverage_composition.js";

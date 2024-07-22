@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
-import { urlToFilename } from "@jsenv/urls";
 import { writeFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { urlToFilename } from "@jsenv/urls";
+import { readFileSync } from "node:fs";
 
 import { injectSupervisorIntoHTML } from "@jsenv/plugin-supervisor";
 

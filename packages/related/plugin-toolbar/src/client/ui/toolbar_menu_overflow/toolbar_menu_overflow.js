@@ -1,8 +1,8 @@
 import { closeAllTooltips } from "../../core/tooltip_actions.js";
 import {
+  deactivateToolbarSection,
   forceHideElement,
   removeForceHideElement,
-  deactivateToolbarSection,
 } from "../util/dom.js";
 import { createHorizontalBreakpoint } from "../util/responsive.js";
 

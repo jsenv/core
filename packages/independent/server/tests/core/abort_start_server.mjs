@@ -1,5 +1,5 @@
-import { assert } from "@jsenv/assert";
 import { Abort } from "@jsenv/abort";
+import { assert } from "@jsenv/assert";
 
 import { startServer } from "@jsenv/server";
 import { portIsFree } from "@jsenv/server/src/internal/listen.js";

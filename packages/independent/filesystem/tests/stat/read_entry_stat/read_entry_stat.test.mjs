@@ -3,10 +3,10 @@ import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 
 import {
   ensureEmptyDirectory,
-  writeDirectory,
-  writeFile,
   readEntryStat,
+  writeDirectory,
   writeEntryPermissions,
+  writeFile,
   writeSymbolicLink,
 } from "@jsenv/filesystem";
 import { makeBusyFile } from "@jsenv/filesystem/tests/testHelpers.js";

@@ -3,8 +3,8 @@ import { resolveUrl } from "@jsenv/urls";
 
 import {
   ensureEmptyDirectory,
-  writeEntryModificationTime,
   readEntryModificationTime,
+  writeEntryModificationTime,
   writeFile,
 } from "@jsenv/filesystem";
 import { toSecondsPrecision } from "@jsenv/filesystem/tests/testHelpers.js";

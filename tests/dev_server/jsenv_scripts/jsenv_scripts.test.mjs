@@ -3,11 +3,11 @@
  * - See the effect of using jsenv dev server on source files
  */
 
+import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import prettier from "prettier";
 import { chromium } from "playwright";
-import { writeFileSync, ensureEmptyDirectory } from "@jsenv/filesystem";
+import prettier from "prettier";
 
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";

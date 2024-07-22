@@ -1,9 +1,9 @@
-import { connect } from "node:http2";
-import { requestCertificate } from "@jsenv/https-local";
 import { assert } from "@jsenv/assert";
 import { readFile } from "@jsenv/filesystem";
+import { requestCertificate } from "@jsenv/https-local";
+import { connect } from "node:http2";
 
-import { startServer, fetchFileSystem } from "@jsenv/server";
+import { fetchFileSystem, startServer } from "@jsenv/server";
 import { applyDnsResolution } from "@jsenv/server/src/internal/dns_resolution.js";
 
 if (process.platform !== "linux") {

@@ -1,15 +1,15 @@
-import { readFileSync } from "node:fs";
 import { writeFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { readFileSync } from "node:fs";
 
 import {
-  parseHtml,
-  stringifyHtmlAst,
-  injectHtmlNodeAsEarlyAsPossible,
-  injectHtmlNode,
   createHtmlNode,
   findHtmlNode,
+  injectHtmlNode,
+  injectHtmlNodeAsEarlyAsPossible,
   insertHtmlNodeInside,
+  parseHtml,
+  stringifyHtmlAst,
 } from "@jsenv/ast";
 
 const outputDirectoryUrl = new URL("./output/", import.meta.url);

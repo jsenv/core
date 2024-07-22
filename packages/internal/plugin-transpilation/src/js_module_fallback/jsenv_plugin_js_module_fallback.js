@@ -1,7 +1,7 @@
+import { jsenvPluginImportMetaResolve } from "./jsenv_plugin_import_meta_resolve.js";
 import { jsenvPluginJsModuleConversion } from "./jsenv_plugin_js_module_conversion.js";
 import { jsenvPluginJsModuleFallbackInsideHtml } from "./jsenv_plugin_js_module_fallback_inside_html.js";
 import { jsenvPluginJsModuleFallbackOnWorkers } from "./jsenv_plugin_js_module_fallback_on_workers.js";
-import { jsenvPluginImportMetaResolve } from "./jsenv_plugin_import_meta_resolve.js";
 import { jsenvPluginTopLevelAwait } from "./jsenv_plugin_top_level_await.js";
 
 export const jsenvPluginJsModuleFallback = ({ remapImportSpecifier } = {}) => {

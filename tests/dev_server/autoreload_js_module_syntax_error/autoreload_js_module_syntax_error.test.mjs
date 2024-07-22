@@ -5,14 +5,14 @@
  * - Fixing the syntax error removes the error overlay
  */
 
-import { readFileSync } from "node:fs";
 import { writeFileStructureSync, writeFileSync } from "@jsenv/filesystem";
+import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 import {
-  assertErrorOverlayNotDisplayed,
   assertErrorOverlayDisplayed,
+  assertErrorOverlayNotDisplayed,
 } from "../error_overlay_test_helpers.js";
 
 let debug = false;

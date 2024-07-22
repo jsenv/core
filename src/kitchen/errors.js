@@ -1,6 +1,6 @@
-import { pathToFileURL } from "node:url";
 import { createDetailedMessage, generateContentFrame } from "@jsenv/humanize";
 import { stringifyUrlSite } from "@jsenv/urls";
+import { pathToFileURL } from "node:url";
 
 export const createResolveUrlError = ({
   pluginController,

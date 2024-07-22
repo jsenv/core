@@ -1,5 +1,5 @@
-import { observableFromNodeStream } from "./observable_from_node_stream.js";
 import { headersFromObject } from "../internal/headersFromObject.js";
+import { observableFromNodeStream } from "./observable_from_node_stream.js";
 
 export const fromNodeRequest = (
   nodeRequest,

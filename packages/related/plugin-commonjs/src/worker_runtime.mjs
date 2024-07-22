@@ -1,6 +1,6 @@
-import { parentPort } from "node:worker_threads";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
+import { parentPort } from "node:worker_threads";
 
 parentPort.once("message", ({ filePath }) => {
   const fileContents = readFileSync(filePath, "utf8");

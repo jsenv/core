@@ -2,8 +2,8 @@
  * Ensures standard script execution order is preserved by jsenv supervisor
  */
 
-import { chromium, firefox, webkit } from "playwright";
 import { assert } from "@jsenv/assert";
+import { chromium, firefox, webkit } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";

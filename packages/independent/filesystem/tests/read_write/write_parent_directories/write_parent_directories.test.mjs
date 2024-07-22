@@ -2,9 +2,9 @@ import { assert } from "@jsenv/assert";
 import { resolveUrl } from "@jsenv/urls";
 
 import {
-  writeDirectory,
   ensureEmptyDirectory,
   ensureParentDirectories,
+  writeDirectory,
 } from "@jsenv/filesystem";
 import { testDirectoryPresence } from "@jsenv/filesystem/tests/testHelpers.js";
 

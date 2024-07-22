@@ -3,10 +3,10 @@ import { resolveUrl } from "@jsenv/urls";
 
 import {
   ensureEmptyDirectory,
-  writeFile,
   readFile,
-  writeSymbolicLink,
   readSymbolicLink,
+  writeFile,
+  writeSymbolicLink,
 } from "@jsenv/filesystem";
 import { testFilePresence } from "@jsenv/filesystem/tests/testHelpers.js";
 

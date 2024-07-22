@@ -2,9 +2,9 @@ import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 
 import {
-  startServer,
   fetchFileSystem,
   jsenvServiceRequestAliases,
+  startServer,
 } from "@jsenv/server";
 
 let resourceBeforeAlias;

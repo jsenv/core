@@ -1,9 +1,9 @@
 import { findPropertyNodeByName, isStringLiteralNode } from "./helpers.js";
-import { isNewUrlCall, analyzeNewUrlCall } from "./new_url.js";
 import {
-  isImportMetaResolveCall,
   analyzeImportMetaResolveCall,
+  isImportMetaResolveCall,
 } from "./import_meta_resolve.js";
+import { analyzeNewUrlCall, isNewUrlCall } from "./new_url.js";
 
 export const isNewWorkerCall = (node) => {
   return (

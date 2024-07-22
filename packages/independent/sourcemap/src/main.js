@@ -1,3 +1,5 @@
+// tslint:disable:ordered-imports
+
 export { createMagicSource } from "./magic_source.js";
 export { composeTwoSourcemaps } from "./sourcemap_composition_v3.js";
 

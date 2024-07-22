@@ -1,11 +1,11 @@
-import { createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap";
 import {
-  parseHtml,
-  stringifyHtmlAst,
+  applyBabelPlugins,
   createHtmlNode,
   injectHtmlNodeAsEarlyAsPossible,
-  applyBabelPlugins,
+  parseHtml,
+  stringifyHtmlAst,
 } from "@jsenv/ast";
+import { composeTwoSourcemaps, createMagicSource } from "@jsenv/sourcemap";
 
 export const prependContent = async (
   urlInfoReceivingCode,

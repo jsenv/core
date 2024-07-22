@@ -1,6 +1,6 @@
 import { requestCertificate } from "@jsenv/https-local";
 
-import { startServer, fetchFileSystem } from "@jsenv/server";
+import { fetchFileSystem, startServer } from "@jsenv/server";
 
 const { certificate, privateKey } = requestCertificate();
 await startServer({

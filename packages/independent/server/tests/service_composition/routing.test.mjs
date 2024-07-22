@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer, setupRoutes } from "@jsenv/server";
+import { setupRoutes, startServer } from "@jsenv/server";
 
 const { origin } = await startServer({
   keepProcessAlive: false,

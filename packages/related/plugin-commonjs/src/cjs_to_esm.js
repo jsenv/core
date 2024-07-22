@@ -1,11 +1,11 @@
-import { readFileSync } from "node:fs";
 import { ensureWindowsDriveLetter } from "@jsenv/filesystem";
+import { readFileSync } from "node:fs";
 
 import {
   setUrlExtension,
   setUrlFilename,
-  urlToExtension,
   urlToBasename,
+  urlToExtension,
 } from "@jsenv/urls";
 import { commonJsToJsModuleRaw } from "./cjs_to_esm_raw.js";
 import { reuseOrCreateCompiledFile } from "./compile_cache/compiled_file_cache.js";

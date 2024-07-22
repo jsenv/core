@@ -1,5 +1,5 @@
-import { fileURLToPath } from "node:url";
 import { assert } from "@jsenv/assert";
+import { fileURLToPath } from "node:url";
 
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 

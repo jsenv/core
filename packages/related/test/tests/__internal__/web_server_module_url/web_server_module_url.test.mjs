@@ -1,6 +1,6 @@
-import { fileURLToPath } from "node:url";
 import { assert } from "@jsenv/assert";
 import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
+import { fileURLToPath } from "node:url";
 
 import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_param.js";
 

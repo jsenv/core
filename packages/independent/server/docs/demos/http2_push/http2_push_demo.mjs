@@ -1,11 +1,11 @@
 import { requestCertificate } from "@jsenv/https-local";
 
 import {
-  startServer,
   fetchFileSystem,
+  jsenvAccessControlAllowedHeaders,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
-  jsenvAccessControlAllowedHeaders,
+  startServer,
 } from "@jsenv/server";
 
 const { certificate, privateKey } = requestCertificate();

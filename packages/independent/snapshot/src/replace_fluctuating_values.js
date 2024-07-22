@@ -1,20 +1,20 @@
 // - Find all things looking like urls and replace with stable values
 // - Find all things looking likes dates and replace with stable values
 
-import stripAnsi from "strip-ansi";
-import { pathToFileURL, fileURLToPath } from "node:url";
-import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import {
-  parseSvgString,
-  parseHtml,
-  setHtmlNodeText,
-  visitHtmlNodes,
-  getHtmlNodeText,
   getHtmlNodeAttributes,
+  getHtmlNodeText,
+  parseHtml,
+  parseSvgString,
   setHtmlNodeAttributes,
+  setHtmlNodeText,
   stringifyHtmlAst,
+  visitHtmlNodes,
 } from "@jsenv/ast";
 import { urlToExtension } from "@jsenv/urls";
+import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import stripAnsi from "strip-ansi";
 
 export const replaceFluctuatingValues = (
   string,

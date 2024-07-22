@@ -3,7 +3,7 @@
  * to provide "serverEvents" used by other plugins
  */
 
-import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
+import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 
 const serverEventsClientFileUrl = new URL(
   "./client/server_events_client.js",

@@ -1,14 +1,14 @@
-import { writeFileSync, readFileSync } from "node:fs";
-import { createDetailedMessage } from "@jsenv/humanize";
 import { Abort, raceCallbacks } from "@jsenv/abort";
+import { createDetailedMessage } from "@jsenv/humanize";
 import { urlIsInsideOf } from "@jsenv/urls";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
+import { readFileSync, writeFileSync } from "node:fs";
 
-import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
-import { filterV8Coverage } from "../coverage/v8_coverage.js";
 import { composeTwoFileByFileIstanbulCoverages } from "../coverage/istanbul_coverage_composition.js";
-import { initJsSupervisorMiddleware } from "./middleware_js_supervisor.js";
+import { filterV8Coverage } from "../coverage/v8_coverage.js";
+import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { initIstanbulMiddleware } from "./middleware_istanbul.js";
+import { initJsSupervisorMiddleware } from "./middleware_js_supervisor.js";
 
 const browserPromiseCache = new Map();
 

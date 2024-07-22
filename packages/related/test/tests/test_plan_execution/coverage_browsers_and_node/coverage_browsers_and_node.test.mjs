@@ -2,10 +2,10 @@ import { startDevServer } from "@jsenv/core";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import {
-  executeTestPlan,
-  nodeWorkerThread,
   chromium,
+  executeTestPlan,
   firefox,
+  nodeWorkerThread,
   webkit,
 } from "@jsenv/test";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";

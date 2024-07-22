@@ -3,8 +3,8 @@ import { fetchUrl } from "@jsenv/fetch";
 
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 import { listen } from "@jsenv/server/src/internal/listen.js";
-import { createPolyglotServer } from "@jsenv/server/src/internal/server-polyglot.js";
 import { listenRequest } from "@jsenv/server/src/internal/listenRequest.js";
+import { createPolyglotServer } from "@jsenv/server/src/internal/server-polyglot.js";
 import {
   testServerCertificate,
   testServerCertificatePrivateKey,

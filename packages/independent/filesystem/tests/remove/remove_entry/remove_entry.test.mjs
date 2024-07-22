@@ -2,17 +2,17 @@ import { assert } from "@jsenv/assert";
 import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 
 import {
-  removeEntry,
   ensureEmptyDirectory,
-  writeFile,
+  removeEntry,
   writeDirectory,
   writeEntryPermissions,
+  writeFile,
   writeSymbolicLink,
 } from "@jsenv/filesystem";
 import {
   makeBusyFile,
-  testFilePresence,
   testDirectoryPresence,
+  testFilePresence,
   testSymbolicLinkPresence,
 } from "@jsenv/filesystem/tests/testHelpers.js";
 

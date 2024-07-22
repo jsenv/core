@@ -1,7 +1,7 @@
 import {
-  startServer,
   fetchFileSystem,
   jsenvServiceErrorHandler,
+  startServer,
 } from "@jsenv/server";
 
 export const startFileServer = ({

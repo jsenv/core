@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 
-import { startServer, fetchFileSystem } from "@jsenv/server";
+import { fetchFileSystem, startServer } from "@jsenv/server";
 import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
 const testDirectoryUrl = new URL("./", import.meta.url).href;

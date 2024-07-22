@@ -10,9 +10,9 @@
  * - File execution result is returned, it contains status/errors/namespace/consoleCalls
  */
 
-import crypto from "node:crypto";
 import { Abort, raceCallbacks } from "@jsenv/abort";
 import { ensureParentDirectories } from "@jsenv/filesystem";
+import crypto from "node:crypto";
 
 import { createException } from "./exception.js";
 

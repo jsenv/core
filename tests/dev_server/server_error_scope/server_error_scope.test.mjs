@@ -3,8 +3,8 @@
  * for the error; unrelated pages must not display an error.
  */
 
-import { chromium } from "playwright";
 import { assert } from "@jsenv/assert";
+import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 

@@ -1,6 +1,6 @@
 // import { createGunzip } from "zlib"
-import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
 import { assert } from "@jsenv/assert";
+import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
 
 import { fetchFileSystem } from "@jsenv/server";
 

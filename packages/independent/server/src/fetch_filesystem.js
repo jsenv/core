@@ -4,19 +4,19 @@
  * It is meant to be used inside "requestToResponse"
  */
 
-import { createReadStream, statSync, readFile } from "node:fs";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { createReadStream, readFile, statSync } from "node:fs";
 
-import {
-  isFileSystemPath,
-  fileSystemPathToUrl,
-} from "./internal/filesystem.js";
-import { bufferToEtag } from "./internal/etag.js";
-import { composeTwoResponses } from "./internal/response_composition.js";
-import { convertFileSystemErrorToResponseProperties } from "./internal/convertFileSystemErrorToResponseProperties.js";
-import { timeFunction } from "./server_timing/timing_measure.js";
 import { pickContentEncoding } from "./content_negotiation/pick_content_encoding.js";
+import { convertFileSystemErrorToResponseProperties } from "./internal/convertFileSystemErrorToResponseProperties.js";
+import { bufferToEtag } from "./internal/etag.js";
+import {
+  fileSystemPathToUrl,
+  isFileSystemPath,
+} from "./internal/filesystem.js";
+import { composeTwoResponses } from "./internal/response_composition.js";
 import { serveDirectory } from "./serve_directory.js";
+import { timeFunction } from "./server_timing/timing_measure.js";
 
 export const fetchFileSystem = async (
   filesystemUrl,

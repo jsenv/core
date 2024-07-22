@@ -1,14 +1,14 @@
 // https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#server-side-example
 
-import { connect } from "node:http2";
-import { requestCertificate } from "@jsenv/https-local";
 import { assert } from "@jsenv/assert";
 import { readFile } from "@jsenv/filesystem";
+import { requestCertificate } from "@jsenv/https-local";
+import { connect } from "node:http2";
 
 import {
-  startServer,
   fetchFileSystem,
   jsenvServiceErrorHandler,
+  startServer,
 } from "@jsenv/server";
 
 if (process.platform !== "linux") {

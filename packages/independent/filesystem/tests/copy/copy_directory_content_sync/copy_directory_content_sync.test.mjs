@@ -4,10 +4,10 @@ import { urlToFileSystemPath } from "@jsenv/urls";
 import {
   copyDirectoryContentSync,
   ensureEmptyDirectorySync,
-  writeFileSync,
-  writeDirectorySync,
   readFileStructureSync,
+  writeDirectorySync,
   writeFileStructureSync,
+  writeFileSync,
 } from "@jsenv/filesystem";
 
 const tempDirectoryUrl = new URL("./temp/", import.meta.url);

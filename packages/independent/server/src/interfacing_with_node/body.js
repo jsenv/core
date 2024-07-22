@@ -1,5 +1,5 @@
-import { Stream, Writable, Readable } from "node:stream";
 import { createReadStream } from "node:fs";
+import { Readable, Stream, Writable } from "node:stream";
 
 import { isObservable, observableFromValue } from "./observable.js";
 import { observableFromNodeStream } from "./observable_from_node_stream.js";

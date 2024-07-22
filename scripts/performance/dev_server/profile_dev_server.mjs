@@ -9,8 +9,8 @@
  *    It will trigger the http requests, populating the server performances
  */
 
-import { requestCertificate } from "@jsenv/https-local";
 import { startDevServer } from "@jsenv/core";
+import { requestCertificate } from "@jsenv/https-local";
 
 const { certificate, privateKey } = requestCertificate();
 await startDevServer({

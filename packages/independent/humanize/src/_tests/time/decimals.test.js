@@ -1,10 +1,10 @@
 import { assert } from "@jsenv/assert";
 
 import {
-  setRoundedPrecision,
   setCeiledPrecision,
   setFlooredPrecision,
   setPrecision,
+  setRoundedPrecision,
 } from "@jsenv/humanize/src/utils/decimals.js";
 
 /* numbers between -1 and 1 */

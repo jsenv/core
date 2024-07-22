@@ -1,5 +1,5 @@
-import { minifyHtml } from "./html/html_minification.js";
 import { minifyCss } from "./css/css_minification.js";
+import { minifyHtml } from "./html/html_minification.js";
 import { minifyJs } from "./js/js_minification.js";
 import { minifyJson } from "./json/json_minification.js";
 

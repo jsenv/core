@@ -1,14 +1,14 @@
-import { unlink, rmdir, openSync, closeSync } from "node:fs";
 import { Abort } from "@jsenv/abort";
 import {
   ensurePathnameTrailingSlash,
-  urlToFileSystemPath,
   resolveUrl,
+  urlToFileSystemPath,
 } from "@jsenv/urls";
+import { closeSync, openSync, rmdir, unlink } from "node:fs";
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
-import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
 import { readDirectory } from "../read_write/read_directory.js";
+import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
 
 export const removeEntry = async (
   source,

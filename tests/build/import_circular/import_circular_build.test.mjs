@@ -1,7 +1,7 @@
 // https://github.com/rollup/rollup/tree/dba6f13132a1d7dac507d5056399d8af0eed6375/test/function/samples/preserve-modules-circular-order
 
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { assert } from "@jsenv/assert";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { build } from "@jsenv/core";
 

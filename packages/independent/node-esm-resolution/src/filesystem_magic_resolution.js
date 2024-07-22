@@ -1,6 +1,6 @@
 import { statSync } from "node:fs";
 
-import { urlToFilename, urlToExtension } from "./url_utils.js";
+import { urlToExtension, urlToFilename } from "./url_utils.js";
 
 export const applyFileSystemMagicResolution = (
   fileUrl,

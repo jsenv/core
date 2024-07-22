@@ -1,5 +1,5 @@
-import { createMagicSource } from "@jsenv/sourcemap";
 import { parseJsUrls } from "@jsenv/ast";
+import { createMagicSource } from "@jsenv/sourcemap";
 
 export const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
   return {

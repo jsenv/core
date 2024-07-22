@@ -1,8 +1,8 @@
-import { chromium } from "playwright";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { fetchUrl } from "@jsenv/fetch";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
 import { createTaskLog } from "@jsenv/humanize";
+import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { chromium } from "playwright";
 
 if (process.env.CI) {
   // https certificate not trusted on CI, see https://github.com/jsenv/https-local/issues/9

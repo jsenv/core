@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { parseArgs } from "node:util";
-import { pathToFileURL } from "node:url";
 import { clearDirectorySync } from "@jsenv/filesystem";
+import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
 
 const options = {
   help: {

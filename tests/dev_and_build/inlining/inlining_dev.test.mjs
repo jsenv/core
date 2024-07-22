@@ -1,5 +1,5 @@
-import { copyDirectorySync } from "@jsenv/filesystem";
 import { assert } from "@jsenv/assert";
+import { copyDirectorySync } from "@jsenv/filesystem";
 
 import { startDevServer } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";

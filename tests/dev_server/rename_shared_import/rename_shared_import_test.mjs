@@ -6,9 +6,9 @@
  * 4. Let the old import for the other file
  */
 
-import { writeFileSync, readFileSync, renameSync } from "node:fs";
-import { chromium } from "playwright";
 import { assert } from "@jsenv/assert";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { chromium } from "playwright";
 
 import { startDevServer } from "@jsenv/core";
 
