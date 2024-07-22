@@ -1,52 +1,10 @@
-import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
+import { applyBabelPlugins, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectJsenvScript, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
 import process$1 from "node:process";
 import os from "node:os";
 import tty from "node:tty";
 import "string-width";
-import { applyBabelPlugins, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, injectJsenvScript, stringifyHtmlAst, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, setHtmlNodeAttributes } from "@jsenv/ast";
-
-const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-const intToChar = new Uint8Array(64); // 64 possible chars.
-const charToInt = new Uint8Array(128); // z is 122 in ASCII
-for (let i = 0; i < chars.length; i++) {
-  const c = chars.charCodeAt(i);
-  intToChar[i] = c;
-  charToInt[c] = i;
-}
-
-const require = createRequire(import.meta.url);
-// consider using https://github.com/7rulnik/source-map-js
-
-const requireSourcemap = () => {
-  const namespace = require("source-map-js");
-  return namespace;
-};
-
-/*
- * https://github.com/mozilla/source-map#sourcemapgenerator
- */
-
-requireSourcemap();
-
-// https://github.com/mozilla/source-map#sourcemapconsumerprototypeoriginalpositionforgeneratedposition
-const getOriginalPosition = ({
-  sourcemap,
-  line,
-  column,
-  bias
-}) => {
-  const {
-    SourceMapConsumer
-  } = requireSourcemap();
-  const sourceMapConsumer = new SourceMapConsumer(sourcemap);
-  const originalPosition = sourceMapConsumer.originalPositionFor({
-    line,
-    column,
-    bias
-  });
-  return originalPosition;
-};
+import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
@@ -569,6 +527,48 @@ const pathnameToParentPathname = pathname => {
     return "/";
   }
   return pathname.slice(0, slashLastIndex + 1);
+};
+
+const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const intToChar = new Uint8Array(64); // 64 possible chars.
+const charToInt = new Uint8Array(128); // z is 122 in ASCII
+for (let i = 0; i < chars.length; i++) {
+  const c = chars.charCodeAt(i);
+  intToChar[i] = c;
+  charToInt[c] = i;
+}
+
+const require = createRequire(import.meta.url);
+// consider using https://github.com/7rulnik/source-map-js
+
+const requireSourcemap = () => {
+  const namespace = require("source-map-js");
+  return namespace;
+};
+
+/*
+ * https://github.com/mozilla/source-map#sourcemapgenerator
+ */
+
+requireSourcemap();
+
+// https://github.com/mozilla/source-map#sourcemapconsumerprototypeoriginalpositionforgeneratedposition
+const getOriginalPosition = ({
+  sourcemap,
+  line,
+  column,
+  bias
+}) => {
+  const {
+    SourceMapConsumer
+  } = requireSourcemap();
+  const sourceMapConsumer = new SourceMapConsumer(sourcemap);
+  const originalPosition = sourceMapConsumer.originalPositionFor({
+    line,
+    column,
+    bias
+  });
+  return originalPosition;
 };
 
 const generateSourcemapDataUrl = sourcemap => {

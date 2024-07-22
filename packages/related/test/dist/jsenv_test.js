@@ -1,69 +1,25 @@
-import os, { cpus, release, totalmem, availableParallelism, freemem } from "node:os";
 import process$1, { cpuUsage, memoryUsage } from "node:process";
-import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, unlinkSync, readdirSync, rmdirSync, existsSync } from "node:fs";
-import { takeCoverage } from "node:v8";
-import stripAnsi from "strip-ansi";
-import { URL_META, createException } from "./js/exception.js";
+import os, { cpus, release, totalmem, availableParallelism, freemem } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { pathToFileURL, fileURLToPath } from "node:url";
+import { URL_META, createException } from "./js/exception.js";
+import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, unlinkSync, readdirSync, rmdirSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
 import crypto from "node:crypto";
 import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
-import { filterV8Coverage } from "./js/v8_coverage.js";
+import { takeCoverage } from "node:v8";
+import stripAnsi from "strip-ansi";
 import { createRequire } from "node:module";
 import { applyBabelPlugins } from "@jsenv/ast";
-import { spawn, spawnSync, fork } from "node:child_process";
+import { filterV8Coverage } from "./js/v8_coverage.js";
 import { createServer } from "node:net";
-import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
+import { spawn, spawnSync, fork } from "node:child_process";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { injectSupervisorIntoHTML, supervisorFileUrl } from "@jsenv/plugin-supervisor";
 import { findFreePort } from "@jsenv/server";
 import { Worker } from "node:worker_threads";
 import he from "he";
-
-/*
- * See callback_race.md
- */
-
-const raceCallbacks = (raceDescription, winnerCallback) => {
-  let cleanCallbacks = [];
-  let status = "racing";
-
-  const clean = () => {
-    cleanCallbacks.forEach((clean) => {
-      clean();
-    });
-    cleanCallbacks = null;
-  };
-
-  const cancel = () => {
-    if (status !== "racing") {
-      return;
-    }
-    status = "cancelled";
-    clean();
-  };
-
-  Object.keys(raceDescription).forEach((candidateName) => {
-    const register = raceDescription[candidateName];
-    const returnValue = register((data) => {
-      if (status !== "racing") {
-        return;
-      }
-      status = "done";
-      clean();
-      winnerCallback({
-        name: candidateName,
-        data,
-      });
-    });
-    if (typeof returnValue === "function") {
-      cleanCallbacks.push(returnValue);
-    }
-  });
-
-  return cancel;
-};
 
 const createCallbackListNotifiedOnce = () => {
   let callbacks = [];
@@ -176,6 +132,50 @@ const emitCallbackDuplicationWarning = () => {
 };
 
 const removeNoop = () => {};
+
+/*
+ * See callback_race.md
+ */
+
+const raceCallbacks = (raceDescription, winnerCallback) => {
+  let cleanCallbacks = [];
+  let status = "racing";
+
+  const clean = () => {
+    cleanCallbacks.forEach((clean) => {
+      clean();
+    });
+    cleanCallbacks = null;
+  };
+
+  const cancel = () => {
+    if (status !== "racing") {
+      return;
+    }
+    status = "cancelled";
+    clean();
+  };
+
+  Object.keys(raceDescription).forEach((candidateName) => {
+    const register = raceDescription[candidateName];
+    const returnValue = register((data) => {
+      if (status !== "racing") {
+        return;
+      }
+      status = "done";
+      clean();
+      winnerCallback({
+        name: candidateName,
+        data,
+      });
+    });
+    if (typeof returnValue === "function") {
+      cleanCallbacks.push(returnValue);
+    }
+  });
+
+  return cancel;
+};
 
 /*
  * https://github.com/whatwg/dom/issues/920
@@ -3097,326 +3097,27 @@ process.platform === "win32";
 
 process.platform === "linux";
 
-// https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
-
-
-const startMeasuringTotalCpuUsage = () => {
-  let previousCpuArray = cpus();
-  let previousMs = Date.now();
-  let previousCpuUsage = cpuUsage();
-
-  const overall = {
-    inactive: 100,
-    active: 0,
-    system: 0,
-    user: 0,
-  };
-  const thisProcess = {
-    active: 0,
-    system: 0,
-    user: 0,
-  };
-  const details = previousCpuArray.map(() => {
-    return {
-      inactive: 100,
-      active: 0,
-      system: 0,
-      user: 0,
+const normalizeFileByFileCoveragePaths = (
+  fileByFileCoverage,
+  rootDirectoryUrl,
+) => {
+  const fileByFileNormalized = {};
+  Object.keys(fileByFileCoverage).forEach((key) => {
+    const fileCoverage = fileByFileCoverage[key];
+    const { path } = fileCoverage;
+    const url = isFileSystemPath(path)
+      ? fileSystemPathToUrl(path)
+      : new URL(path, rootDirectoryUrl).href;
+    const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+    fileByFileNormalized[`./${relativeUrl}`] = {
+      ...fileCoverage,
+      path: `./${relativeUrl}`,
     };
   });
-
-  const samples = [];
-  const interval = setInterval(() => {
-    let cpuArray = cpus();
-    const ms = Date.now();
-    const ellapsedMs = ms - previousMs;
-    const cpuUsageSampleArray = [];
-    let overallSystemMs = 0;
-    let overallUserMs = 0;
-    let overallInactiveMs = 0;
-    let overallActiveMs = 0;
-    let overallMsEllapsed = 0;
-    let index = 0;
-    for (const cpu of cpuArray) {
-      const previousCpuTimes = previousCpuArray[index].times;
-      const cpuTimes = cpu.times;
-      const systemMs = cpuTimes.sys - previousCpuTimes.sys;
-      const userMs = cpuTimes.user - previousCpuTimes.user;
-      const activeMs = systemMs + userMs;
-      const inactiveMs = ellapsedMs - activeMs;
-      const cpuUsageSample = {
-        inactive: inactiveMs / ellapsedMs,
-        active: activeMs / ellapsedMs,
-        system: systemMs / ellapsedMs,
-        user: userMs / ellapsedMs,
-      };
-      cpuUsageSampleArray.push(cpuUsageSample);
-
-      overallSystemMs += systemMs;
-      overallUserMs += userMs;
-      overallInactiveMs += inactiveMs;
-      overallActiveMs += activeMs;
-      overallMsEllapsed += ellapsedMs;
-      index++;
-    }
-    const overallUsageSample = {
-      inactive: overallInactiveMs / overallMsEllapsed,
-      active: overallActiveMs / overallMsEllapsed,
-      system: overallSystemMs / overallMsEllapsed,
-      user: overallUserMs / overallMsEllapsed,
-    };
-    previousCpuArray = cpuArray;
-    previousMs = ms;
-
-    const processCpuUsage = cpuUsage();
-    const thisProcessSystemMs = Math.round(
-      (processCpuUsage.system - previousCpuUsage.system) / 1000,
-    );
-    const thisProcessUserMs = Math.round(
-      (processCpuUsage.user - previousCpuUsage.user) / 1000,
-    );
-    previousCpuUsage = processCpuUsage;
-
-    const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
-    const thisProcessInactiveMs = overallMsEllapsed - thisProcessActiveMs;
-    const thisProcessSample = {
-      inactive: thisProcessInactiveMs / overallMsEllapsed,
-      active: thisProcessActiveMs / overallMsEllapsed,
-      system: thisProcessSystemMs / overallMsEllapsed,
-      user: thisProcessUserMs / overallMsEllapsed,
-    };
-    samples.push({
-      cpuUsageSampleArray,
-      overallUsageSample,
-      thisProcessSample,
-    });
-    if (samples.length === 10) {
-      {
-        let index = 0;
-        for (const detail of details) {
-          let systemSum = 0;
-          let userSum = 0;
-          let inactiveSum = 0;
-          let activeSum = 0;
-          for (const sample of samples) {
-            const { cpuUsageSampleArray } = sample;
-            const cpuUsageSample = cpuUsageSampleArray[index];
-            inactiveSum += cpuUsageSample.inactive;
-            activeSum += cpuUsageSample.active;
-            systemSum += cpuUsageSample.system;
-            userSum += cpuUsageSample.user;
-          }
-          Object.assign(detail, {
-            inactive: inactiveSum / samples.length,
-            active: activeSum / samples.length,
-            system: systemSum / samples.length,
-            user: userSum / samples.length,
-          });
-          index++;
-        }
-      }
-      {
-        let overallSystemSum = 0;
-        let overallUserSum = 0;
-        let overallInactiveSum = 0;
-        let overallActiveSum = 0;
-        for (const sample of samples) {
-          const { overallUsageSample } = sample;
-          overallSystemSum += overallUsageSample.system;
-          overallUserSum += overallUsageSample.user;
-          overallInactiveSum += overallUsageSample.inactive;
-          overallActiveSum += overallUsageSample.active;
-        }
-        Object.assign(overall, {
-          inactive: overallInactiveSum / samples.length,
-          active: overallActiveSum / samples.length,
-          system: overallSystemSum / samples.length,
-          user: overallUserSum / samples.length,
-        });
-      }
-      {
-        let thisProcessSystemSum = 0;
-        let thisProcessUserSum = 0;
-        let thisProcessInactiveSum = 0;
-        let thisProcessActiveSum = 0;
-        for (const sample of samples) {
-          const { thisProcessSample } = sample;
-          thisProcessSystemSum += thisProcessSample.system;
-          thisProcessUserSum += thisProcessSample.user;
-          thisProcessInactiveSum += thisProcessSample.inactive;
-          thisProcessActiveSum += thisProcessSample.active;
-        }
-        Object.assign(thisProcess, {
-          inactive: thisProcessInactiveSum / samples.length,
-          active: thisProcessActiveSum / samples.length,
-          system: thisProcessSystemSum / samples.length,
-          user: thisProcessUserSum / samples.length,
-        });
-      }
-      samples.length = 0;
-    }
-  }, 15);
-  interval.unref();
-
-  return {
-    overall,
-    thisProcess,
-    details,
-    stop: () => {
-      clearInterval(interval);
-    },
-  };
-};
-
-const createCallOrderer = () => {
-  const queue = [];
-  const callWhenPreviousExecutionAreDone = (executionIndex, callback) => {
-    if (queue[executionIndex]) {
-      throw new Error(`${executionIndex} already used`);
-    }
-
-    let allBeforeAreDone = true;
-    if (executionIndex > 0) {
-      let beforeIndex = executionIndex - 1;
-      do {
-        const value = queue[beforeIndex];
-        if (!value) {
-          allBeforeAreDone = false;
-          break;
-        }
-      } while (beforeIndex--);
-    }
-    if (!allBeforeAreDone) {
-      queue[executionIndex] = callback;
-      return;
-    }
-    queue[executionIndex] = true;
-    callback();
-    let afterIndex = executionIndex + 1;
-    while (afterIndex < queue.length) {
-      const value = queue[afterIndex];
-      if (value === undefined) {
-        break;
-      }
-      if (typeof value === "function") {
-        queue[afterIndex] = true;
-        value();
-      }
-      afterIndex++;
-    }
-  };
-  return callWhenPreviousExecutionAreDone;
-};
-
-const readNodeV8CoverageDirectory = async ({
-  logger,
-  warn,
-  signal,
-  onV8Coverage,
-  maxMsWaitingForNodeToWriteCoverageFile = 2000,
-}) => {
-  const NODE_V8_COVERAGE = process.env.NODE_V8_COVERAGE;
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-
-  let timeSpentTrying = 0;
-  const tryReadDirectory = async () => {
-    const dirContent = readdirSync(NODE_V8_COVERAGE);
-    if (dirContent.length > 0) {
-      return dirContent;
-    }
-    if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      timeSpentTrying += 200;
-      logger.debug("retry to read coverage directory");
-      return tryReadDirectory();
-    }
-    warn({
-      code: "V8_COVERAGE_EMPTY",
-      message: `v8 coverage directory is empty at ${NODE_V8_COVERAGE}`,
-    });
-    return dirContent;
-  };
-
-  try {
-    operation.throwIfAborted();
-    const dirContent = await tryReadDirectory();
-
-    const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      NODE_V8_COVERAGE,
-      "NODE_V8_COVERAGE",
-    );
-
-    await dirContent.reduce(async (previous, dirEntry) => {
-      operation.throwIfAborted();
-      await previous;
-
-      const dirEntryUrl = new URL(dirEntry, coverageDirectoryUrl);
-      const tryReadJsonFile = async () => {
-        const fileContent = String(readFileSync(dirEntryUrl));
-        if (fileContent === "") {
-          if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
-            timeSpentTrying += 200;
-            return tryReadJsonFile();
-          }
-          console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`);
-          return null;
-        }
-
-        try {
-          const fileAsJson = JSON.parse(fileContent);
-          return fileAsJson;
-        } catch (e) {
-          if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
-            timeSpentTrying += 200;
-            return tryReadJsonFile();
-          }
-          console.warn(
-            createDetailedMessage(`Error while reading coverage file`, {
-              "error stack": e.stack,
-              "file": dirEntryUrl,
-            }),
-          );
-          return null;
-        }
-      };
-
-      const fileContent = await tryReadJsonFile();
-      if (fileContent) {
-        await onV8Coverage(fileContent);
-      }
-    }, Promise.resolve());
-  } finally {
-    await operation.end();
-  }
+  return fileByFileNormalized;
 };
 
 const importWithRequire = createRequire(import.meta.url);
-
-const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
-  if (secondV8Coverage.result.length === 0) {
-    return firstV8Coverage;
-  }
-
-  // eslint-disable-next-line import/no-unresolved
-  const { mergeProcessCovs } = importWithRequire("@c88/v8-coverage");
-  // "mergeProcessCovs" do not preserves source-map-cache during the merge
-  // so we store sourcemap cache now
-  const sourceMapCache = {};
-  const visit = (coverageReport) => {
-    if (coverageReport["source-map-cache"]) {
-      Object.assign(sourceMapCache, coverageReport["source-map-cache"]);
-    }
-  };
-  visit(firstV8Coverage);
-  visit(secondV8Coverage);
-  const v8Coverage = mergeProcessCovs([firstV8Coverage, secondV8Coverage]);
-  v8Coverage["source-map-cache"] = sourceMapCache;
-
-  return v8Coverage;
-};
 
 const composeTwoFileByFileIstanbulCoverages = (
   firstFileByFileIstanbulCoverage,
@@ -3443,172 +3144,6 @@ const merge = (firstIstanbulCoverage, secondIstanbulCoverage) => {
   istanbulFileCoverageObject.merge(secondIstanbulCoverage);
   const istanbulCoverage = istanbulFileCoverageObject.toJSON();
   return istanbulCoverage;
-};
-
-const v8CoverageToIstanbul = async (v8Coverage, { signal }) => {
-  const operation = Abort.startOperation();
-  operation.addAbortSignal(signal);
-
-  try {
-    const v8ToIstanbul = importWithRequire("v8-to-istanbul");
-    const sourcemapCache = v8Coverage["source-map-cache"];
-    let istanbulCoverageComposed = null;
-
-    await v8Coverage.result.reduce(async (previous, fileV8Coverage) => {
-      operation.throwIfAborted();
-      await previous;
-
-      const { source } = fileV8Coverage;
-      let sources;
-      // when v8 coverage comes from playwright (chromium) v8Coverage.source is set
-      if (typeof source === "string") {
-        sources = { source };
-      }
-      // when v8 coverage comes from Node.js, the source can be read from sourcemapCache
-      else if (sourcemapCache) {
-        sources = sourcesFromSourceMapCache(fileV8Coverage.url, sourcemapCache);
-      }
-      const path = urlToFileSystemPath(fileV8Coverage.url);
-
-      const converter = v8ToIstanbul(
-        path,
-        // wrapperLength is undefined we don't need it
-        // https://github.com/istanbuljs/v8-to-istanbul/blob/2b54bc97c5edf8a37b39a171ec29134ba9bfd532/lib/v8-to-istanbul.js#L27
-        undefined,
-        sources,
-      );
-      await converter.load();
-
-      converter.applyCoverage(fileV8Coverage.functions);
-      const istanbulCoverage = converter.toIstanbul();
-
-      istanbulCoverageComposed = istanbulCoverageComposed
-        ? composeTwoFileByFileIstanbulCoverages(
-            istanbulCoverageComposed,
-            istanbulCoverage,
-          )
-        : istanbulCoverage;
-    }, Promise.resolve());
-
-    if (!istanbulCoverageComposed) {
-      return {};
-    }
-    istanbulCoverageComposed = markAsConvertedFromV8(istanbulCoverageComposed);
-    return istanbulCoverageComposed;
-  } finally {
-    await operation.end();
-  }
-};
-
-const markAsConvertedFromV8 = (fileByFileCoverage) => {
-  const fileByFileMarked = {};
-  Object.keys(fileByFileCoverage).forEach((key) => {
-    const fileCoverage = fileByFileCoverage[key];
-    fileByFileMarked[key] = {
-      ...fileCoverage,
-      fromV8: true,
-    };
-  });
-  return fileByFileMarked;
-};
-
-const sourcesFromSourceMapCache = (url, sourceMapCache) => {
-  const sourceMapAndLineLengths = sourceMapCache[url];
-  if (!sourceMapAndLineLengths) {
-    return {};
-  }
-
-  const { data, lineLengths } = sourceMapAndLineLengths;
-  // See: https://github.com/nodejs/node/pull/34305
-  if (!data) {
-    return undefined;
-  }
-
-  const sources = {
-    sourcemap: data,
-    ...(lineLengths ? { source: sourcesFromLineLengths(lineLengths) } : {}),
-  };
-  return sources;
-};
-
-const sourcesFromLineLengths = (lineLengths) => {
-  let source = "";
-  lineLengths.forEach((length) => {
-    source += `${"".padEnd(length, ".")}\n`;
-  });
-  return source;
-};
-
-const composeV8AndIstanbul = (
-  v8FileByFileCoverage,
-  istanbulFileByFileCoverage,
-  { warn, v8ConflictWarning },
-) => {
-  const fileByFileCoverage = {};
-  const v8Files = Object.keys(v8FileByFileCoverage);
-  const istanbulFiles = Object.keys(istanbulFileByFileCoverage);
-
-  v8Files.forEach((key) => {
-    fileByFileCoverage[key] = v8FileByFileCoverage[key];
-  });
-  istanbulFiles.forEach((key) => {
-    const v8Coverage = v8FileByFileCoverage[key];
-    if (v8Coverage) {
-      if (v8ConflictWarning) {
-        warn({
-          code: "V8_COVERAGE_CONFLICT",
-          message: createDetailedMessage(
-            `Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`,
-            {
-              "details": `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
-              "suggestion":
-                "disable this warning with coverage.v8ConflictWarning: false",
-              "suggestion 2": `force coverage using istanbul with coverage.methodForBrowsers: "istanbul"`,
-            },
-          ),
-        });
-      }
-      fileByFileCoverage[key] = v8Coverage;
-    } else {
-      fileByFileCoverage[key] = istanbulFileByFileCoverage[key];
-    }
-  });
-
-  return fileByFileCoverage;
-};
-
-const normalizeFileByFileCoveragePaths = (
-  fileByFileCoverage,
-  rootDirectoryUrl,
-) => {
-  const fileByFileNormalized = {};
-  Object.keys(fileByFileCoverage).forEach((key) => {
-    const fileCoverage = fileByFileCoverage[key];
-    const { path } = fileCoverage;
-    const url = isFileSystemPath(path)
-      ? fileSystemPathToUrl(path)
-      : new URL(path, rootDirectoryUrl).href;
-    const relativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-    fileByFileNormalized[`./${relativeUrl}`] = {
-      ...fileCoverage,
-      path: `./${relativeUrl}`,
-    };
-  });
-  return fileByFileNormalized;
-};
-
-const listRelativeFileUrlToCover = async ({
-  signal,
-  rootDirectoryUrl,
-  coverageInclude,
-}) => {
-  const matchingFileResultArray = await collectFiles({
-    signal,
-    directoryUrl: rootDirectoryUrl,
-    associations: { cover: coverageInclude },
-    predicate: ({ cover }) => cover,
-  });
-  return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl);
 };
 
 // https://github.com/istanbuljs/babel-plugin-istanbul/blob/321740f7b25d803f881466ea819d870f7ed6a254/src/index.js
@@ -3704,6 +3239,20 @@ const createEmptyCoverage = (relativeUrl) => {
   return createFileCoverage(relativeUrl).toJSON();
 };
 
+const listRelativeFileUrlToCover = async ({
+  signal,
+  rootDirectoryUrl,
+  coverageInclude,
+}) => {
+  const matchingFileResultArray = await collectFiles({
+    signal,
+    directoryUrl: rootDirectoryUrl,
+    associations: { cover: coverageInclude },
+    predicate: ({ cover }) => cover,
+  });
+  return matchingFileResultArray.map(({ relativeUrl }) => relativeUrl);
+};
+
 const getMissingFileByFileCoverage = async ({
   signal,
   rootDirectoryUrl,
@@ -3739,6 +3288,246 @@ const getMissingFileByFileCoverage = async ({
     });
   }, Promise.resolve());
   return missingFileByFileCoverage;
+};
+
+const composeV8AndIstanbul = (
+  v8FileByFileCoverage,
+  istanbulFileByFileCoverage,
+  { warn, v8ConflictWarning },
+) => {
+  const fileByFileCoverage = {};
+  const v8Files = Object.keys(v8FileByFileCoverage);
+  const istanbulFiles = Object.keys(istanbulFileByFileCoverage);
+
+  v8Files.forEach((key) => {
+    fileByFileCoverage[key] = v8FileByFileCoverage[key];
+  });
+  istanbulFiles.forEach((key) => {
+    const v8Coverage = v8FileByFileCoverage[key];
+    if (v8Coverage) {
+      if (v8ConflictWarning) {
+        warn({
+          code: "V8_COVERAGE_CONFLICT",
+          message: createDetailedMessage(
+            `Coverage conflict on "${key}", found two coverage that cannot be merged together: v8 and istanbul. The istanbul coverage will be ignored.`,
+            {
+              "details": `This happens when a file is executed on a runtime using v8 coverage (node or chromium) and on runtime using istanbul coverage (firefox or webkit)`,
+              "suggestion":
+                "disable this warning with coverage.v8ConflictWarning: false",
+              "suggestion 2": `force coverage using istanbul with coverage.methodForBrowsers: "istanbul"`,
+            },
+          ),
+        });
+      }
+      fileByFileCoverage[key] = v8Coverage;
+    } else {
+      fileByFileCoverage[key] = istanbulFileByFileCoverage[key];
+    }
+  });
+
+  return fileByFileCoverage;
+};
+
+const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
+  if (secondV8Coverage.result.length === 0) {
+    return firstV8Coverage;
+  }
+
+  // eslint-disable-next-line import/no-unresolved
+  const { mergeProcessCovs } = importWithRequire("@c88/v8-coverage");
+  // "mergeProcessCovs" do not preserves source-map-cache during the merge
+  // so we store sourcemap cache now
+  const sourceMapCache = {};
+  const visit = (coverageReport) => {
+    if (coverageReport["source-map-cache"]) {
+      Object.assign(sourceMapCache, coverageReport["source-map-cache"]);
+    }
+  };
+  visit(firstV8Coverage);
+  visit(secondV8Coverage);
+  const v8Coverage = mergeProcessCovs([firstV8Coverage, secondV8Coverage]);
+  v8Coverage["source-map-cache"] = sourceMapCache;
+
+  return v8Coverage;
+};
+
+const readNodeV8CoverageDirectory = async ({
+  logger,
+  warn,
+  signal,
+  onV8Coverage,
+  maxMsWaitingForNodeToWriteCoverageFile = 2000,
+}) => {
+  const NODE_V8_COVERAGE = process.env.NODE_V8_COVERAGE;
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+
+  let timeSpentTrying = 0;
+  const tryReadDirectory = async () => {
+    const dirContent = readdirSync(NODE_V8_COVERAGE);
+    if (dirContent.length > 0) {
+      return dirContent;
+    }
+    if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      timeSpentTrying += 200;
+      logger.debug("retry to read coverage directory");
+      return tryReadDirectory();
+    }
+    warn({
+      code: "V8_COVERAGE_EMPTY",
+      message: `v8 coverage directory is empty at ${NODE_V8_COVERAGE}`,
+    });
+    return dirContent;
+  };
+
+  try {
+    operation.throwIfAborted();
+    const dirContent = await tryReadDirectory();
+
+    const coverageDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      NODE_V8_COVERAGE,
+      "NODE_V8_COVERAGE",
+    );
+
+    await dirContent.reduce(async (previous, dirEntry) => {
+      operation.throwIfAborted();
+      await previous;
+
+      const dirEntryUrl = new URL(dirEntry, coverageDirectoryUrl);
+      const tryReadJsonFile = async () => {
+        const fileContent = String(readFileSync(dirEntryUrl));
+        if (fileContent === "") {
+          if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            timeSpentTrying += 200;
+            return tryReadJsonFile();
+          }
+          console.warn(`Coverage JSON file is empty at ${dirEntryUrl}`);
+          return null;
+        }
+
+        try {
+          const fileAsJson = JSON.parse(fileContent);
+          return fileAsJson;
+        } catch (e) {
+          if (timeSpentTrying < maxMsWaitingForNodeToWriteCoverageFile) {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            timeSpentTrying += 200;
+            return tryReadJsonFile();
+          }
+          console.warn(
+            createDetailedMessage(`Error while reading coverage file`, {
+              "error stack": e.stack,
+              "file": dirEntryUrl,
+            }),
+          );
+          return null;
+        }
+      };
+
+      const fileContent = await tryReadJsonFile();
+      if (fileContent) {
+        await onV8Coverage(fileContent);
+      }
+    }, Promise.resolve());
+  } finally {
+    await operation.end();
+  }
+};
+
+const v8CoverageToIstanbul = async (v8Coverage, { signal }) => {
+  const operation = Abort.startOperation();
+  operation.addAbortSignal(signal);
+
+  try {
+    const v8ToIstanbul = importWithRequire("v8-to-istanbul");
+    const sourcemapCache = v8Coverage["source-map-cache"];
+    let istanbulCoverageComposed = null;
+
+    await v8Coverage.result.reduce(async (previous, fileV8Coverage) => {
+      operation.throwIfAborted();
+      await previous;
+
+      const { source } = fileV8Coverage;
+      let sources;
+      // when v8 coverage comes from playwright (chromium) v8Coverage.source is set
+      if (typeof source === "string") {
+        sources = { source };
+      }
+      // when v8 coverage comes from Node.js, the source can be read from sourcemapCache
+      else if (sourcemapCache) {
+        sources = sourcesFromSourceMapCache(fileV8Coverage.url, sourcemapCache);
+      }
+      const path = urlToFileSystemPath(fileV8Coverage.url);
+
+      const converter = v8ToIstanbul(
+        path,
+        // wrapperLength is undefined we don't need it
+        // https://github.com/istanbuljs/v8-to-istanbul/blob/2b54bc97c5edf8a37b39a171ec29134ba9bfd532/lib/v8-to-istanbul.js#L27
+        undefined,
+        sources,
+      );
+      await converter.load();
+
+      converter.applyCoverage(fileV8Coverage.functions);
+      const istanbulCoverage = converter.toIstanbul();
+
+      istanbulCoverageComposed = istanbulCoverageComposed
+        ? composeTwoFileByFileIstanbulCoverages(
+            istanbulCoverageComposed,
+            istanbulCoverage,
+          )
+        : istanbulCoverage;
+    }, Promise.resolve());
+
+    if (!istanbulCoverageComposed) {
+      return {};
+    }
+    istanbulCoverageComposed = markAsConvertedFromV8(istanbulCoverageComposed);
+    return istanbulCoverageComposed;
+  } finally {
+    await operation.end();
+  }
+};
+
+const markAsConvertedFromV8 = (fileByFileCoverage) => {
+  const fileByFileMarked = {};
+  Object.keys(fileByFileCoverage).forEach((key) => {
+    const fileCoverage = fileByFileCoverage[key];
+    fileByFileMarked[key] = {
+      ...fileCoverage,
+      fromV8: true,
+    };
+  });
+  return fileByFileMarked;
+};
+
+const sourcesFromSourceMapCache = (url, sourceMapCache) => {
+  const sourceMapAndLineLengths = sourceMapCache[url];
+  if (!sourceMapAndLineLengths) {
+    return {};
+  }
+
+  const { data, lineLengths } = sourceMapAndLineLengths;
+  // See: https://github.com/nodejs/node/pull/34305
+  if (!data) {
+    return undefined;
+  }
+
+  const sources = {
+    sourcemap: data,
+    ...(lineLengths ? { source: sourcesFromLineLengths(lineLengths) } : {}),
+  };
+  return sources;
+};
+
+const sourcesFromLineLengths = (lineLengths) => {
+  let source = "";
+  lineLengths.forEach((length) => {
+    source += `${"".padEnd(length, ".")}\n`;
+  });
+  return source;
 };
 
 const generateCoverage = async (
@@ -3921,323 +3710,215 @@ const getCoverageFromTestPlanResults = async (
 
 const isV8Coverage = (coverage) => Boolean(coverage.result);
 
-const pingServer = async (url) => {
-  const server = createServer();
-  const { hostname, port } = new URL(url);
-
-  try {
-    await new Promise((resolve, reject) => {
-      server.on("error", reject);
-      server.on("listening", () => {
-        resolve();
-      });
-      server.listen(port, hostname);
-    });
-  } catch (error) {
-    if (error && error.code === "EADDRINUSE") {
-      return true;
+const createCallOrderer = () => {
+  const queue = [];
+  const callWhenPreviousExecutionAreDone = (executionIndex, callback) => {
+    if (queue[executionIndex]) {
+      throw new Error(`${executionIndex} already used`);
     }
-    if (error && error.code === "EACCES") {
-      return true;
+
+    let allBeforeAreDone = true;
+    if (executionIndex > 0) {
+      let beforeIndex = executionIndex - 1;
+      do {
+        const value = queue[beforeIndex];
+        if (!value) {
+          allBeforeAreDone = false;
+          break;
+        }
+      } while (beforeIndex--);
     }
-    throw error;
-  }
-  await new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("close", resolve);
-    server.close();
-  });
-  return false;
-};
-
-const startServerUsingCommand = async (
-  webServer,
-  { signal, allocatedMs, logger, teardownCallbackSet },
-) => {
-  const spawnedProcess = spawn(webServer.command, [], {
-    // On non-windows platforms, `detached: true` makes child process a leader of a new
-    // process group, making it possible to kill child process tree with `.kill(-pid)` command.
-    // @see https://nodejs.org/api/child_process.html#child_process_options_detached
-    detached: process.platform !== "win32",
-    stdio: ["pipe", "pipe", "pipe"],
-    shell: true,
-    cwd: webServer.cwd,
-  });
-  if (!spawnedProcess.pid) {
-    await new Promise((resolve, reject) => {
-      spawnedProcess.once("error", (error) => {
-        reject(new Error(`Failed to launch: ${error}`));
-      });
-    });
-  }
-
-  let errorReceived = false;
-  const errorPromise = new Promise((resolve, reject) => {
-    spawnedProcess.on("error", (e) => {
-      errorReceived = true;
-      reject(e);
-    });
-  });
-
-  // const stdout = readline.createInterface({ input: spawnedProcess.stdout });
-  // stdout.on("line", () => {
-  //   logger.debug(`[pid=${spawnedProcess.pid}][out] ${data}`);
-  // });
-  // const stderr = readline.createInterface({ input: spawnedProcess.stderr });
-  // stderr.on("line", (data) => {
-  //   logger.debug(`[pid=${spawnedProcess.pid}][err] ${data}`);
-  // });
-  let processClosed = false;
-  const closedPromise = new Promise((resolve) => {
-    spawnedProcess.once("exit", (exitCode, signal) => {
-      logger.debug(
-        `[pid=${spawnedProcess.pid}] <process did exit: exitCode=${exitCode}, signal=${signal}>`,
-      );
-      processClosed = true;
-      resolve();
-    });
-  });
-  const killProcess = async () => {
-    logger.debug(`[pid=${spawnedProcess.pid}] <kill>`);
-    if (!spawnedProcess.pid || spawnedProcess.killed || processClosed) {
-      logger.debug(
-        `[pid=${spawnedProcess.pid}] <skipped force kill spawnedProcess.killed=${spawnedProcess.killed} processClosed=${processClosed}>`,
-      );
+    if (!allBeforeAreDone) {
+      queue[executionIndex] = callback;
       return;
     }
-    logger.debug(`[pid=${spawnedProcess.pid}] <will force kill>`);
-    // Force kill the browser.
-    try {
-      if (process.platform === "win32") {
-        const taskkillProcess = spawnSync(
-          `taskkill /pid ${spawnedProcess.pid} /T /F`,
-          { shell: true },
-        );
-        const [stdout, stderr] = [
-          taskkillProcess.stdout.toString(),
-          taskkillProcess.stderr.toString(),
-        ];
-        if (stdout)
-          logger.debug(
-            `[pid=${spawnedProcess.pid}] taskkill stdout: ${stdout}`,
-          );
-        if (stderr)
-          logger.info(`[pid=${spawnedProcess.pid}] taskkill stderr: ${stderr}`);
-      } else {
-        process.kill(-spawnedProcess.pid, "SIGKILL");
+    queue[executionIndex] = true;
+    callback();
+    let afterIndex = executionIndex + 1;
+    while (afterIndex < queue.length) {
+      const value = queue[afterIndex];
+      if (value === undefined) {
+        break;
       }
-    } catch (e) {
-      logger.info(
-        `[pid=${spawnedProcess.pid}] exception while trying to kill process: ${e}`,
-      );
-      // the process might have already stopped
+      if (typeof value === "function") {
+        queue[afterIndex] = true;
+        value();
+      }
+      afterIndex++;
     }
-    await closedPromise;
   };
-
-  const startOperation = Abort.startOperation();
-  startOperation.addAbortSignal(signal);
-  const timeoutAbortSource = startOperation.timeout(allocatedMs);
-  startOperation.addAbortCallback(killProcess);
-  teardownCallbackSet.add(killProcess);
-
-  const startedPromise = (async () => {
-    const logScale = [100, 250, 500];
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      if (errorReceived) {
-        break;
-      }
-      const connected = await pingServer(webServer.origin);
-      if (connected) {
-        break;
-      }
-      startOperation.throwIfAborted();
-      const delay = logScale.shift() || 1000;
-      logger.debug(`Waiting ${delay}ms`);
-      await new Promise((x) => setTimeout(x, delay));
-    }
-  })();
-
-  try {
-    await Promise.race([errorPromise, startedPromise]);
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      if (timeoutAbortSource.signal.aborted) {
-        // aborted by timeout
-        throw new Error(
-          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms`,
-        );
-      }
-      if (signal.aborted) {
-        // aborted from outside
-        return;
-      }
-    }
-    throw e;
-  } finally {
-    await startOperation.end();
-  }
+  return callWhenPreviousExecutionAreDone;
 };
 
-const startServerUsingModuleUrl = async (webServer, params) => {
-  if (!existsSync(new URL(webServer.moduleUrl))) {
-    throw new Error(`"${webServer.moduleUrl}" does not lead to a file`);
-  }
-  return startServerUsingCommand(
-    {
-      ...webServer,
-      command: `node ${fileURLToPath(webServer.moduleUrl)}`,
-    },
-    params,
-  );
-};
+// https://gist.github.com/GaetanoPiazzolla/c40e1ebb9f709d091208e89baf9f4e00
 
-const basicFetch = async (
-  url,
-  { rejectUnauthorized = true, method = "GET", headers = {} } = {},
-) => {
-  let requestModule;
-  if (url.startsWith("http:")) {
-    requestModule = await import("node:http");
-  } else {
-    requestModule = await import("node:https");
-  }
-  const { request } = requestModule;
 
-  const urlObject = new URL(url);
+const startMeasuringTotalCpuUsage = () => {
+  let previousCpuArray = cpus();
+  let previousMs = Date.now();
+  let previousCpuUsage = cpuUsage();
 
-  return new Promise((resolve, reject) => {
-    const req = request({
-      rejectUnauthorized,
-      hostname: urlObject.hostname,
-      port: urlObject.port,
-      path: urlObject.pathname,
-      method,
-      headers,
+  const overall = {
+    inactive: 100,
+    active: 0,
+    system: 0,
+    user: 0,
+  };
+  const thisProcess = {
+    active: 0,
+    system: 0,
+    user: 0,
+  };
+  const details = previousCpuArray.map(() => {
+    return {
+      inactive: 100,
+      active: 0,
+      system: 0,
+      user: 0,
+    };
+  });
+
+  const samples = [];
+  const interval = setInterval(() => {
+    let cpuArray = cpus();
+    const ms = Date.now();
+    const ellapsedMs = ms - previousMs;
+    const cpuUsageSampleArray = [];
+    let overallSystemMs = 0;
+    let overallUserMs = 0;
+    let overallInactiveMs = 0;
+    let overallActiveMs = 0;
+    let overallMsEllapsed = 0;
+    let index = 0;
+    for (const cpu of cpuArray) {
+      const previousCpuTimes = previousCpuArray[index].times;
+      const cpuTimes = cpu.times;
+      const systemMs = cpuTimes.sys - previousCpuTimes.sys;
+      const userMs = cpuTimes.user - previousCpuTimes.user;
+      const activeMs = systemMs + userMs;
+      const inactiveMs = ellapsedMs - activeMs;
+      const cpuUsageSample = {
+        inactive: inactiveMs / ellapsedMs,
+        active: activeMs / ellapsedMs,
+        system: systemMs / ellapsedMs,
+        user: userMs / ellapsedMs,
+      };
+      cpuUsageSampleArray.push(cpuUsageSample);
+
+      overallSystemMs += systemMs;
+      overallUserMs += userMs;
+      overallInactiveMs += inactiveMs;
+      overallActiveMs += activeMs;
+      overallMsEllapsed += ellapsedMs;
+      index++;
+    }
+    const overallUsageSample = {
+      inactive: overallInactiveMs / overallMsEllapsed,
+      active: overallActiveMs / overallMsEllapsed,
+      system: overallSystemMs / overallMsEllapsed,
+      user: overallUserMs / overallMsEllapsed,
+    };
+    previousCpuArray = cpuArray;
+    previousMs = ms;
+
+    const processCpuUsage = cpuUsage();
+    const thisProcessSystemMs = Math.round(
+      (processCpuUsage.system - previousCpuUsage.system) / 1000,
+    );
+    const thisProcessUserMs = Math.round(
+      (processCpuUsage.user - previousCpuUsage.user) / 1000,
+    );
+    previousCpuUsage = processCpuUsage;
+
+    const thisProcessActiveMs = thisProcessSystemMs + thisProcessUserMs;
+    const thisProcessInactiveMs = overallMsEllapsed - thisProcessActiveMs;
+    const thisProcessSample = {
+      inactive: thisProcessInactiveMs / overallMsEllapsed,
+      active: thisProcessActiveMs / overallMsEllapsed,
+      system: thisProcessSystemMs / overallMsEllapsed,
+      user: thisProcessUserMs / overallMsEllapsed,
+    };
+    samples.push({
+      cpuUsageSampleArray,
+      overallUsageSample,
+      thisProcessSample,
     });
-    req.on("response", (response) => {
-      resolve({
-        status: response.statusCode,
-        headers: response.headers,
-        json: () => {
-          req.setTimeout(0);
-          req.destroy();
-          return new Promise((resolve) => {
-            if (response.headers["content-type"] !== "application/json") {
-              console.warn("not json");
-            }
-            let responseBody = "";
-            response.setEncoding("utf8");
-            response.on("data", (chunk) => {
-              responseBody += chunk;
-            });
-            response.on("end", () => {
-              resolve(JSON.parse(responseBody));
-            });
-            response.on("error", (e) => {
-              reject(e);
-            });
+    if (samples.length === 10) {
+      {
+        let index = 0;
+        for (const detail of details) {
+          let systemSum = 0;
+          let userSum = 0;
+          let inactiveSum = 0;
+          let activeSum = 0;
+          for (const sample of samples) {
+            const { cpuUsageSampleArray } = sample;
+            const cpuUsageSample = cpuUsageSampleArray[index];
+            inactiveSum += cpuUsageSample.inactive;
+            activeSum += cpuUsageSample.active;
+            systemSum += cpuUsageSample.system;
+            userSum += cpuUsageSample.user;
+          }
+          Object.assign(detail, {
+            inactive: inactiveSum / samples.length,
+            active: activeSum / samples.length,
+            system: systemSum / samples.length,
+            user: userSum / samples.length,
           });
-        },
-      });
-    });
-    req.on("error", reject);
-    req.end();
-  });
-};
-
-const assertAndNormalizeWebServer = async (
-  webServer,
-  { signal, logger, teardownCallbackSet },
-) => {
-  if (!webServer) {
-    throw new TypeError(
-      `webServer is required when running tests on browser(s)`,
-    );
-  }
-  const unexpectedParamNames = Object.keys(webServer).filter((key) => {
-    return ![
-      "origin",
-      "moduleUrl",
-      "command",
-      "cwd",
-      "rootDirectoryUrl",
-    ].includes(key);
-  });
-  if (unexpectedParamNames.length > 0) {
-    throw new TypeError(
-      `${unexpectedParamNames.join(",")}: there is no such param to webServer`,
-    );
-  }
-  if (typeof webServer.origin !== "string") {
-    throw new TypeError(
-      `webServer.origin must be a string, got ${webServer.origin}`,
-    );
-  }
-  await ensureWebServerIsStarted(webServer, {
-    signal,
-    teardownCallbackSet,
-    logger,
-  });
-  const { headers } = await basicFetch(webServer.origin, {
-    method: "GET",
-    rejectUnauthorized: false,
-    headers: {
-      "x-server-inspect": "1",
-    },
-  });
-  if (String(headers["server"]).includes("jsenv_dev_server")) {
-    webServer.isJsenvDevServer = true;
-    const { json } = await basicFetch(`${webServer.origin}/__params__.json`, {
-      rejectUnauthorized: false,
-    });
-    if (webServer.rootDirectoryUrl === undefined) {
-      const jsenvDevServerParams = await json();
-      webServer.rootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl;
-    } else {
-      webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-        webServer.rootDirectoryUrl,
-        "webServer.rootDirectoryUrl",
-      );
+          index++;
+        }
+      }
+      {
+        let overallSystemSum = 0;
+        let overallUserSum = 0;
+        let overallInactiveSum = 0;
+        let overallActiveSum = 0;
+        for (const sample of samples) {
+          const { overallUsageSample } = sample;
+          overallSystemSum += overallUsageSample.system;
+          overallUserSum += overallUsageSample.user;
+          overallInactiveSum += overallUsageSample.inactive;
+          overallActiveSum += overallUsageSample.active;
+        }
+        Object.assign(overall, {
+          inactive: overallInactiveSum / samples.length,
+          active: overallActiveSum / samples.length,
+          system: overallSystemSum / samples.length,
+          user: overallUserSum / samples.length,
+        });
+      }
+      {
+        let thisProcessSystemSum = 0;
+        let thisProcessUserSum = 0;
+        let thisProcessInactiveSum = 0;
+        let thisProcessActiveSum = 0;
+        for (const sample of samples) {
+          const { thisProcessSample } = sample;
+          thisProcessSystemSum += thisProcessSample.system;
+          thisProcessUserSum += thisProcessSample.user;
+          thisProcessInactiveSum += thisProcessSample.inactive;
+          thisProcessActiveSum += thisProcessSample.active;
+        }
+        Object.assign(thisProcess, {
+          inactive: thisProcessInactiveSum / samples.length,
+          active: thisProcessActiveSum / samples.length,
+          system: thisProcessSystemSum / samples.length,
+          user: thisProcessUserSum / samples.length,
+        });
+      }
+      samples.length = 0;
     }
-  } else {
-    webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
-      webServer.rootDirectoryUrl,
-      "webServer.rootDirectoryUrl",
-    );
-  }
-};
+  }, 15);
+  interval.unref();
 
-const ensureWebServerIsStarted = async (
-  webServer,
-  { signal, teardownCallbackSet, logger, allocatedMs = 5_000 },
-) => {
-  const aServerIsListening = await pingServer(webServer.origin);
-  if (aServerIsListening) {
-    return;
-  }
-  if (webServer.moduleUrl) {
-    await startServerUsingModuleUrl(webServer, {
-      signal,
-      allocatedMs,
-      teardownCallbackSet,
-      logger,
-    });
-    return;
-  }
-  if (webServer.command) {
-    await startServerUsingCommand(webServer, {
-      signal,
-      allocatedMs,
-      teardownCallbackSet,
-      logger,
-    });
-    return;
-  }
-  throw new TypeError(
-    `webServer.moduleUrl or webServer.command is required as there is no server listening "${webServer.origin}"`,
-  );
+  return {
+    overall,
+    thisProcess,
+    details,
+    stop: () => {
+      clearInterval(interval);
+    },
+  };
 };
 
 const githubAnnotationFromError = (
@@ -4371,225 +4052,37 @@ const replaceUrls$1 = (source, replace) => {
   });
 };
 
-/*
- * Export a function capable to run a file on a runtime.
- *
- * - Used internally by "executeTestPlan" part of the documented API
- * - Used internally by "execute" an advanced API not documented
- * - logs generated during file execution can be collected
- * - logs generated during file execution can be mirrored (re-logged to the console)
- * - File is given allocatedMs to complete
- * - Errors are collected
- * - File execution result is returned, it contains status/errors/namespace/consoleCalls
- */
-
-
-const run = async ({
-  signal = new AbortController().signal,
-  logger,
-  allocatedMs,
-  keepRunning = false,
-  mirrorConsole = false,
-  collectConsole = false,
-  measureMemoryUsage = false,
-  onMeasureMemoryAvailable,
-  collectPerformance = false,
-  coverageEnabled = false,
-  coverageTempDirectoryUrl,
-  runtime,
-  runtimeParams,
-}) => {
-  if (keepRunning) {
-    allocatedMs = Infinity;
-  }
-  if (allocatedMs === Infinity) {
-    allocatedMs = 0;
-  }
-
-  const timingsOrigin = Date.now();
-  const takeTiming = () => {
-    return Date.now() - timingsOrigin;
-  };
-  const result = {
-    status: "pending",
-    errors: [],
-    namespace: null,
-    consoleCalls: null,
-    timings: {
-      origin: timingsOrigin,
-      start: 0,
-      runtimeStart: null,
-      executionStart: null,
-      executionEnd: null,
-      runtimeEnd: null,
-      end: null,
-    },
-    memoryUsage: null,
-    performance: null,
-    coverageFileUrl: null,
-  };
-  const onConsoleRef = { current: () => {} };
-  const stopSignal = { notify: () => {} };
-  const runtimeLabel = `${runtime.name}/${runtime.version}`;
-
-  const runOperation = Abort.startOperation();
-  runOperation.addAbortSignal(signal);
-  let timeoutAbortSource;
-  if (allocatedMs) {
-    timeoutAbortSource = runOperation.timeout(allocatedMs);
-  }
-  const consoleCalls = [];
-  onConsoleRef.current = ({ type, text }) => {
-    if (mirrorConsole) {
-      if (type === "error") {
-        process.stderr.write(text);
-      } else {
-        process.stdout.write(text);
-      }
-    }
-    if (collectConsole) {
-      consoleCalls.push({ type, text });
-    }
-  };
-  if (collectConsole) {
-    result.consoleCalls = consoleCalls;
-  }
-
-  // we do not keep coverage in memory, it can grow very big
-  // instead we store it on the filesystem
-  // and they can be read later at "coverageFileUrl"
-  let coverageFileUrl;
-  if (coverageEnabled) {
-    coverageFileUrl = new URL(
-      `./${runtime.name}/${crypto.randomUUID()}.json`,
-      coverageTempDirectoryUrl,
-    ).href;
-    await ensureParentDirectories(coverageFileUrl);
-    result.coverageFileUrl = coverageFileUrl;
-    // written within the child_process/worker_thread or during runtime.run()
-    // for browsers
-    // (because it takes time to serialize and transfer the coverage object)
-  }
-
-  try {
-    logger.debug(`run() ${runtimeLabel}`);
-    runOperation.throwIfAborted();
-    const winnerPromise = new Promise((resolve) => {
-      raceCallbacks(
-        {
-          aborted: (cb) => {
-            runOperation.signal.addEventListener("abort", cb);
-            return () => {
-              runOperation.signal.removeEventListener("abort", cb);
-            };
-          },
-          runned: async (cb) => {
-            let runtimeStatus = "starting";
-            try {
-              const runResult = await runtime.run({
-                signal: runOperation.signal,
-                logger,
-                ...runtimeParams,
-                collectConsole,
-                measureMemoryUsage,
-                onMeasureMemoryAvailable,
-                collectPerformance,
-                coverageFileUrl,
-                keepRunning,
-                stopSignal,
-                onConsole: (log) => onConsoleRef.current(log),
-                onRuntimeStarted: () => {
-                  runtimeStatus = "started";
-                  result.timings.runtimeStart = takeTiming();
-                },
-                onRuntimeStopped: () => {
-                  if (runtimeStatus === "stopped") return; // ignore double calls
-                  runtimeStatus = "stopped";
-                  result.timings.runtimeEnd = takeTiming();
-                },
-              });
-              cb(runResult);
-            } catch (e) {
-              cb({
-                status: "failed",
-                errors: [e],
-              });
-            }
-          },
-        },
-        resolve,
-      );
-    });
-    const winner = await winnerPromise;
-    if (winner.name === "aborted") {
-      runOperation.throwIfAborted();
-    }
-    const {
-      status,
-      errors,
-      namespace,
-      timings = {},
-      memoryUsage,
-      performance,
-    } = winner.data;
-    result.status = status;
-    for (let error of errors) {
-      const errorProxy = normalizeRuntimeError(error);
-      result.errors.push(errorProxy);
-    }
-    result.namespace = namespace;
-    if (timings && typeof timings.start === "number") {
-      const diff = timings.origin - result.timings.origin;
-      result.timings.executionStart = timings.start + diff;
-      result.timings.executionEnd = timings.end + diff;
-
-      if (result.timings.executionStart < result.timings.runtimeStart) {
-        // can happen for browsers where navigationStart can be earlier
-        // than when node.js calls runtimeStarted()
-        result.timings.runtimeStart = result.timings.executionStart;
-      }
-    }
-    result.memoryUsage =
-      typeof memoryUsage === "number"
-        ? memoryUsage < 0
-          ? 0
-          : memoryUsage
-        : memoryUsage;
-    result.performance = performance;
-  } catch (e) {
-    if (Abort.isAbortError(e)) {
-      if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
-        result.status = "timedout";
-      } else {
-        result.status = "aborted";
-      }
+const createIsInsideFragment = (fragment, total) => {
+  let [dividend, divisor] = fragment.split("/");
+  dividend = parseInt(dividend);
+  divisor = parseInt(divisor);
+  const groupSize = Math.ceil(total / divisor);
+  let from;
+  let to;
+  if (groupSize === 0) {
+    if (dividend === 1) {
+      from = 0;
+      to = 0;
     } else {
-      result.status = "failed";
-      result.errors.push(e);
+      from = Infinity;
+      to = -1;
     }
-  } finally {
-    await runOperation.end();
-    result.timings.end = takeTiming();
-    return result;
+  } else if (dividend === 1) {
+    from = 0;
+    to = groupSize;
+  } else {
+    from = (dividend - 1) * groupSize;
+    if (dividend === divisor) {
+      to = total;
+    } else {
+      to = from + groupSize;
+    }
   }
-};
-const normalizeRuntimeError = (runtimeError) => {
-  // the goal here is to obtain a "regular error"
-  // that can be thrown using "throw" keyword
-  // so we wrap the error hapenning inside the runtime
-  // into "errorProxy" and put .stack property on it
-  // the other properties are set by defineProperty so they are not enumerable
-  // otherwise they would pollute the error displayed by Node.js
-  const errorProxy = new Error(runtimeError.message);
-  const exception = createException(runtimeError);
-  for (const ownPropertyName of Object.getOwnPropertyNames(exception)) {
-    Object.defineProperty(errorProxy, ownPropertyName, {
-      writable: true,
-      configurable: true,
-      value: runtimeError[ownPropertyName],
-    });
-  }
-  return errorProxy;
+  return (index) => {
+    if (index < from) return false;
+    if (index >= to) return false;
+    return true;
+  };
 };
 
 // `Error: yo
@@ -5664,37 +5157,544 @@ const renderDetails = (data) => {
   return string;
 };
 
-const createIsInsideFragment = (fragment, total) => {
-  let [dividend, divisor] = fragment.split("/");
-  dividend = parseInt(dividend);
-  divisor = parseInt(divisor);
-  const groupSize = Math.ceil(total / divisor);
-  let from;
-  let to;
-  if (groupSize === 0) {
-    if (dividend === 1) {
-      from = 0;
-      to = 0;
-    } else {
-      from = Infinity;
-      to = -1;
-    }
-  } else if (dividend === 1) {
-    from = 0;
-    to = groupSize;
-  } else {
-    from = (dividend - 1) * groupSize;
-    if (dividend === divisor) {
-      to = total;
-    } else {
-      to = from + groupSize;
-    }
+/*
+ * Export a function capable to run a file on a runtime.
+ *
+ * - Used internally by "executeTestPlan" part of the documented API
+ * - Used internally by "execute" an advanced API not documented
+ * - logs generated during file execution can be collected
+ * - logs generated during file execution can be mirrored (re-logged to the console)
+ * - File is given allocatedMs to complete
+ * - Errors are collected
+ * - File execution result is returned, it contains status/errors/namespace/consoleCalls
+ */
+
+
+const run = async ({
+  signal = new AbortController().signal,
+  logger,
+  allocatedMs,
+  keepRunning = false,
+  mirrorConsole = false,
+  collectConsole = false,
+  measureMemoryUsage = false,
+  onMeasureMemoryAvailable,
+  collectPerformance = false,
+  coverageEnabled = false,
+  coverageTempDirectoryUrl,
+  runtime,
+  runtimeParams,
+}) => {
+  if (keepRunning) {
+    allocatedMs = Infinity;
   }
-  return (index) => {
-    if (index < from) return false;
-    if (index >= to) return false;
-    return true;
+  if (allocatedMs === Infinity) {
+    allocatedMs = 0;
+  }
+
+  const timingsOrigin = Date.now();
+  const takeTiming = () => {
+    return Date.now() - timingsOrigin;
   };
+  const result = {
+    status: "pending",
+    errors: [],
+    namespace: null,
+    consoleCalls: null,
+    timings: {
+      origin: timingsOrigin,
+      start: 0,
+      runtimeStart: null,
+      executionStart: null,
+      executionEnd: null,
+      runtimeEnd: null,
+      end: null,
+    },
+    memoryUsage: null,
+    performance: null,
+    coverageFileUrl: null,
+  };
+  const onConsoleRef = { current: () => {} };
+  const stopSignal = { notify: () => {} };
+  const runtimeLabel = `${runtime.name}/${runtime.version}`;
+
+  const runOperation = Abort.startOperation();
+  runOperation.addAbortSignal(signal);
+  let timeoutAbortSource;
+  if (allocatedMs) {
+    timeoutAbortSource = runOperation.timeout(allocatedMs);
+  }
+  const consoleCalls = [];
+  onConsoleRef.current = ({ type, text }) => {
+    if (mirrorConsole) {
+      if (type === "error") {
+        process.stderr.write(text);
+      } else {
+        process.stdout.write(text);
+      }
+    }
+    if (collectConsole) {
+      consoleCalls.push({ type, text });
+    }
+  };
+  if (collectConsole) {
+    result.consoleCalls = consoleCalls;
+  }
+
+  // we do not keep coverage in memory, it can grow very big
+  // instead we store it on the filesystem
+  // and they can be read later at "coverageFileUrl"
+  let coverageFileUrl;
+  if (coverageEnabled) {
+    coverageFileUrl = new URL(
+      `./${runtime.name}/${crypto.randomUUID()}.json`,
+      coverageTempDirectoryUrl,
+    ).href;
+    await ensureParentDirectories(coverageFileUrl);
+    result.coverageFileUrl = coverageFileUrl;
+    // written within the child_process/worker_thread or during runtime.run()
+    // for browsers
+    // (because it takes time to serialize and transfer the coverage object)
+  }
+
+  try {
+    logger.debug(`run() ${runtimeLabel}`);
+    runOperation.throwIfAborted();
+    const winnerPromise = new Promise((resolve) => {
+      raceCallbacks(
+        {
+          aborted: (cb) => {
+            runOperation.signal.addEventListener("abort", cb);
+            return () => {
+              runOperation.signal.removeEventListener("abort", cb);
+            };
+          },
+          runned: async (cb) => {
+            let runtimeStatus = "starting";
+            try {
+              const runResult = await runtime.run({
+                signal: runOperation.signal,
+                logger,
+                ...runtimeParams,
+                collectConsole,
+                measureMemoryUsage,
+                onMeasureMemoryAvailable,
+                collectPerformance,
+                coverageFileUrl,
+                keepRunning,
+                stopSignal,
+                onConsole: (log) => onConsoleRef.current(log),
+                onRuntimeStarted: () => {
+                  runtimeStatus = "started";
+                  result.timings.runtimeStart = takeTiming();
+                },
+                onRuntimeStopped: () => {
+                  if (runtimeStatus === "stopped") return; // ignore double calls
+                  runtimeStatus = "stopped";
+                  result.timings.runtimeEnd = takeTiming();
+                },
+              });
+              cb(runResult);
+            } catch (e) {
+              cb({
+                status: "failed",
+                errors: [e],
+              });
+            }
+          },
+        },
+        resolve,
+      );
+    });
+    const winner = await winnerPromise;
+    if (winner.name === "aborted") {
+      runOperation.throwIfAborted();
+    }
+    const {
+      status,
+      errors,
+      namespace,
+      timings = {},
+      memoryUsage,
+      performance,
+    } = winner.data;
+    result.status = status;
+    for (let error of errors) {
+      const errorProxy = normalizeRuntimeError(error);
+      result.errors.push(errorProxy);
+    }
+    result.namespace = namespace;
+    if (timings && typeof timings.start === "number") {
+      const diff = timings.origin - result.timings.origin;
+      result.timings.executionStart = timings.start + diff;
+      result.timings.executionEnd = timings.end + diff;
+
+      if (result.timings.executionStart < result.timings.runtimeStart) {
+        // can happen for browsers where navigationStart can be earlier
+        // than when node.js calls runtimeStarted()
+        result.timings.runtimeStart = result.timings.executionStart;
+      }
+    }
+    result.memoryUsage =
+      typeof memoryUsage === "number"
+        ? memoryUsage < 0
+          ? 0
+          : memoryUsage
+        : memoryUsage;
+    result.performance = performance;
+  } catch (e) {
+    if (Abort.isAbortError(e)) {
+      if (timeoutAbortSource && timeoutAbortSource.signal.aborted) {
+        result.status = "timedout";
+      } else {
+        result.status = "aborted";
+      }
+    } else {
+      result.status = "failed";
+      result.errors.push(e);
+    }
+  } finally {
+    await runOperation.end();
+    result.timings.end = takeTiming();
+    return result;
+  }
+};
+const normalizeRuntimeError = (runtimeError) => {
+  // the goal here is to obtain a "regular error"
+  // that can be thrown using "throw" keyword
+  // so we wrap the error hapenning inside the runtime
+  // into "errorProxy" and put .stack property on it
+  // the other properties are set by defineProperty so they are not enumerable
+  // otherwise they would pollute the error displayed by Node.js
+  const errorProxy = new Error(runtimeError.message);
+  const exception = createException(runtimeError);
+  for (const ownPropertyName of Object.getOwnPropertyNames(exception)) {
+    Object.defineProperty(errorProxy, ownPropertyName, {
+      writable: true,
+      configurable: true,
+      value: runtimeError[ownPropertyName],
+    });
+  }
+  return errorProxy;
+};
+
+const basicFetch = async (
+  url,
+  { rejectUnauthorized = true, method = "GET", headers = {} } = {},
+) => {
+  let requestModule;
+  if (url.startsWith("http:")) {
+    requestModule = await import("node:http");
+  } else {
+    requestModule = await import("node:https");
+  }
+  const { request } = requestModule;
+
+  const urlObject = new URL(url);
+
+  return new Promise((resolve, reject) => {
+    const req = request({
+      rejectUnauthorized,
+      hostname: urlObject.hostname,
+      port: urlObject.port,
+      path: urlObject.pathname,
+      method,
+      headers,
+    });
+    req.on("response", (response) => {
+      resolve({
+        status: response.statusCode,
+        headers: response.headers,
+        json: () => {
+          req.setTimeout(0);
+          req.destroy();
+          return new Promise((resolve) => {
+            if (response.headers["content-type"] !== "application/json") {
+              console.warn("not json");
+            }
+            let responseBody = "";
+            response.setEncoding("utf8");
+            response.on("data", (chunk) => {
+              responseBody += chunk;
+            });
+            response.on("end", () => {
+              resolve(JSON.parse(responseBody));
+            });
+            response.on("error", (e) => {
+              reject(e);
+            });
+          });
+        },
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
+};
+
+const pingServer = async (url) => {
+  const server = createServer();
+  const { hostname, port } = new URL(url);
+
+  try {
+    await new Promise((resolve, reject) => {
+      server.on("error", reject);
+      server.on("listening", () => {
+        resolve();
+      });
+      server.listen(port, hostname);
+    });
+  } catch (error) {
+    if (error && error.code === "EADDRINUSE") {
+      return true;
+    }
+    if (error && error.code === "EACCES") {
+      return true;
+    }
+    throw error;
+  }
+  await new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+  return false;
+};
+
+const startServerUsingCommand = async (
+  webServer,
+  { signal, allocatedMs, logger, teardownCallbackSet },
+) => {
+  const spawnedProcess = spawn(webServer.command, [], {
+    // On non-windows platforms, `detached: true` makes child process a leader of a new
+    // process group, making it possible to kill child process tree with `.kill(-pid)` command.
+    // @see https://nodejs.org/api/child_process.html#child_process_options_detached
+    detached: process.platform !== "win32",
+    stdio: ["pipe", "pipe", "pipe"],
+    shell: true,
+    cwd: webServer.cwd,
+  });
+  if (!spawnedProcess.pid) {
+    await new Promise((resolve, reject) => {
+      spawnedProcess.once("error", (error) => {
+        reject(new Error(`Failed to launch: ${error}`));
+      });
+    });
+  }
+
+  let errorReceived = false;
+  const errorPromise = new Promise((resolve, reject) => {
+    spawnedProcess.on("error", (e) => {
+      errorReceived = true;
+      reject(e);
+    });
+  });
+
+  // const stdout = readline.createInterface({ input: spawnedProcess.stdout });
+  // stdout.on("line", () => {
+  //   logger.debug(`[pid=${spawnedProcess.pid}][out] ${data}`);
+  // });
+  // const stderr = readline.createInterface({ input: spawnedProcess.stderr });
+  // stderr.on("line", (data) => {
+  //   logger.debug(`[pid=${spawnedProcess.pid}][err] ${data}`);
+  // });
+  let processClosed = false;
+  const closedPromise = new Promise((resolve) => {
+    spawnedProcess.once("exit", (exitCode, signal) => {
+      logger.debug(
+        `[pid=${spawnedProcess.pid}] <process did exit: exitCode=${exitCode}, signal=${signal}>`,
+      );
+      processClosed = true;
+      resolve();
+    });
+  });
+  const killProcess = async () => {
+    logger.debug(`[pid=${spawnedProcess.pid}] <kill>`);
+    if (!spawnedProcess.pid || spawnedProcess.killed || processClosed) {
+      logger.debug(
+        `[pid=${spawnedProcess.pid}] <skipped force kill spawnedProcess.killed=${spawnedProcess.killed} processClosed=${processClosed}>`,
+      );
+      return;
+    }
+    logger.debug(`[pid=${spawnedProcess.pid}] <will force kill>`);
+    // Force kill the browser.
+    try {
+      if (process.platform === "win32") {
+        const taskkillProcess = spawnSync(
+          `taskkill /pid ${spawnedProcess.pid} /T /F`,
+          { shell: true },
+        );
+        const [stdout, stderr] = [
+          taskkillProcess.stdout.toString(),
+          taskkillProcess.stderr.toString(),
+        ];
+        if (stdout)
+          logger.debug(
+            `[pid=${spawnedProcess.pid}] taskkill stdout: ${stdout}`,
+          );
+        if (stderr)
+          logger.info(`[pid=${spawnedProcess.pid}] taskkill stderr: ${stderr}`);
+      } else {
+        process.kill(-spawnedProcess.pid, "SIGKILL");
+      }
+    } catch (e) {
+      logger.info(
+        `[pid=${spawnedProcess.pid}] exception while trying to kill process: ${e}`,
+      );
+      // the process might have already stopped
+    }
+    await closedPromise;
+  };
+
+  const startOperation = Abort.startOperation();
+  startOperation.addAbortSignal(signal);
+  const timeoutAbortSource = startOperation.timeout(allocatedMs);
+  startOperation.addAbortCallback(killProcess);
+  teardownCallbackSet.add(killProcess);
+
+  const startedPromise = (async () => {
+    const logScale = [100, 250, 500];
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      if (errorReceived) {
+        break;
+      }
+      const connected = await pingServer(webServer.origin);
+      if (connected) {
+        break;
+      }
+      startOperation.throwIfAborted();
+      const delay = logScale.shift() || 1000;
+      logger.debug(`Waiting ${delay}ms`);
+      await new Promise((x) => setTimeout(x, delay));
+    }
+  })();
+
+  try {
+    await Promise.race([errorPromise, startedPromise]);
+  } catch (e) {
+    if (Abort.isAbortError(e)) {
+      if (timeoutAbortSource.signal.aborted) {
+        // aborted by timeout
+        throw new Error(
+          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms`,
+        );
+      }
+      if (signal.aborted) {
+        // aborted from outside
+        return;
+      }
+    }
+    throw e;
+  } finally {
+    await startOperation.end();
+  }
+};
+
+const startServerUsingModuleUrl = async (webServer, params) => {
+  if (!existsSync(new URL(webServer.moduleUrl))) {
+    throw new Error(`"${webServer.moduleUrl}" does not lead to a file`);
+  }
+  return startServerUsingCommand(
+    {
+      ...webServer,
+      command: `node ${fileURLToPath(webServer.moduleUrl)}`,
+    },
+    params,
+  );
+};
+
+const assertAndNormalizeWebServer = async (
+  webServer,
+  { signal, logger, teardownCallbackSet },
+) => {
+  if (!webServer) {
+    throw new TypeError(
+      `webServer is required when running tests on browser(s)`,
+    );
+  }
+  const unexpectedParamNames = Object.keys(webServer).filter((key) => {
+    return ![
+      "origin",
+      "moduleUrl",
+      "command",
+      "cwd",
+      "rootDirectoryUrl",
+    ].includes(key);
+  });
+  if (unexpectedParamNames.length > 0) {
+    throw new TypeError(
+      `${unexpectedParamNames.join(",")}: there is no such param to webServer`,
+    );
+  }
+  if (typeof webServer.origin !== "string") {
+    throw new TypeError(
+      `webServer.origin must be a string, got ${webServer.origin}`,
+    );
+  }
+  await ensureWebServerIsStarted(webServer, {
+    signal,
+    teardownCallbackSet,
+    logger,
+  });
+  const { headers } = await basicFetch(webServer.origin, {
+    method: "GET",
+    rejectUnauthorized: false,
+    headers: {
+      "x-server-inspect": "1",
+    },
+  });
+  if (String(headers["server"]).includes("jsenv_dev_server")) {
+    webServer.isJsenvDevServer = true;
+    const { json } = await basicFetch(`${webServer.origin}/__params__.json`, {
+      rejectUnauthorized: false,
+    });
+    if (webServer.rootDirectoryUrl === undefined) {
+      const jsenvDevServerParams = await json();
+      webServer.rootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl;
+    } else {
+      webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+        webServer.rootDirectoryUrl,
+        "webServer.rootDirectoryUrl",
+      );
+    }
+  } else {
+    webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(
+      webServer.rootDirectoryUrl,
+      "webServer.rootDirectoryUrl",
+    );
+  }
+};
+
+const ensureWebServerIsStarted = async (
+  webServer,
+  { signal, teardownCallbackSet, logger, allocatedMs = 5_000 },
+) => {
+  const aServerIsListening = await pingServer(webServer.origin);
+  if (aServerIsListening) {
+    return;
+  }
+  if (webServer.moduleUrl) {
+    await startServerUsingModuleUrl(webServer, {
+      signal,
+      allocatedMs,
+      teardownCallbackSet,
+      logger,
+    });
+    return;
+  }
+  if (webServer.command) {
+    await startServerUsingCommand(webServer, {
+      signal,
+      allocatedMs,
+      teardownCallbackSet,
+      logger,
+    });
+    return;
+  }
+  throw new TypeError(
+    `webServer.moduleUrl or webServer.command is required as there is no server listening "${webServer.origin}"`,
+  );
 };
 
 /*
@@ -6922,6 +6922,63 @@ const WEB_URL_CONVERTER = {
   },
 };
 
+const initIstanbulMiddleware = async (
+  page,
+  { webServer, rootDirectoryUrl, coverageInclude },
+) => {
+  const associations = URL_META.resolveAssociations(
+    { cover: coverageInclude },
+    rootDirectoryUrl,
+  );
+  await page.route("**", async (route) => {
+    const request = route.request();
+    const url = request.url(); // transform into a local url
+    const fileUrl = WEB_URL_CONVERTER.asFileUrl(url, webServer);
+    const needsInstrumentation = URL_META.applyAssociations({
+      url: fileUrl,
+      associations,
+    }).cover;
+    if (!needsInstrumentation) {
+      route.fallback();
+      return;
+    }
+    const response = await route.fetch();
+    const originalBody = await response.text();
+    try {
+      const result = await applyBabelPlugins({
+        babelPlugins: [babelPluginInstrument],
+        input: originalBody,
+        // jsenv server could send info to know it's a js module or js classic
+        // but in the end it's not super important
+        // - it's ok to parse js classic as js module considering it's only for istanbul instrumentation
+        inputIsJsModule: true,
+        inputUrl: fileUrl,
+      });
+      let code = result.code;
+      code = SOURCEMAP.writeComment({
+        contentType: "text/javascript",
+        content: code,
+        specifier: generateSourcemapDataUrl(result.map),
+      });
+      route.fulfill({
+        response,
+        body: code,
+        headers: {
+          ...response.headers(),
+          "content-length": Buffer.byteLength(code),
+        },
+      });
+    } catch (e) {
+      if (e.code === "PARSE_ERROR") {
+        route.fulfill({ response });
+      } else {
+        console.error(e);
+        route.fulfill({ response });
+      }
+    }
+  });
+};
+
 const initJsSupervisorMiddleware = async (
   page,
   { webServer, fileUrl, fileServerUrl },
@@ -7011,63 +7068,6 @@ const initJsSupervisorMiddleware = async (
       return;
     }
     route.fallback();
-  });
-};
-
-const initIstanbulMiddleware = async (
-  page,
-  { webServer, rootDirectoryUrl, coverageInclude },
-) => {
-  const associations = URL_META.resolveAssociations(
-    { cover: coverageInclude },
-    rootDirectoryUrl,
-  );
-  await page.route("**", async (route) => {
-    const request = route.request();
-    const url = request.url(); // transform into a local url
-    const fileUrl = WEB_URL_CONVERTER.asFileUrl(url, webServer);
-    const needsInstrumentation = URL_META.applyAssociations({
-      url: fileUrl,
-      associations,
-    }).cover;
-    if (!needsInstrumentation) {
-      route.fallback();
-      return;
-    }
-    const response = await route.fetch();
-    const originalBody = await response.text();
-    try {
-      const result = await applyBabelPlugins({
-        babelPlugins: [babelPluginInstrument],
-        input: originalBody,
-        // jsenv server could send info to know it's a js module or js classic
-        // but in the end it's not super important
-        // - it's ok to parse js classic as js module considering it's only for istanbul instrumentation
-        inputIsJsModule: true,
-        inputUrl: fileUrl,
-      });
-      let code = result.code;
-      code = SOURCEMAP.writeComment({
-        contentType: "text/javascript",
-        content: code,
-        specifier: generateSourcemapDataUrl(result.map),
-      });
-      route.fulfill({
-        response,
-        body: code,
-        headers: {
-          ...response.headers(),
-          "content-length": Buffer.byteLength(code),
-        },
-      });
-    } catch (e) {
-      if (e.code === "PARSE_ERROR") {
-        route.fulfill({ response });
-      } else {
-        console.error(e);
-        route.fulfill({ response });
-      }
-    }
   });
 };
 
@@ -8006,6 +8006,21 @@ const getDebugInfo = (processOptions) => {
 //   return typeof process.env.VSCODE_PID === "string"
 // }
 
+// https://nodejs.org/api/process.html#process_signal_events
+const SIGINT_SIGNAL_NUMBER = 2;
+const SIGABORT_SIGNAL_NUMBER = 6;
+const SIGTERM_SIGNAL_NUMBER = 15;
+const EXIT_CODES = {
+  SIGINT: 128 + SIGINT_SIGNAL_NUMBER,
+  SIGABORT: 128 + SIGABORT_SIGNAL_NUMBER,
+  SIGTERM: 128 + SIGTERM_SIGNAL_NUMBER,
+};
+
+const IMPORTMAP_NODE_LOADER_FILE_URL = new URL(
+  "./importmap_node_loader.mjs",
+  import.meta.url,
+).href;
+
 // see also https://github.com/sindresorhus/execa/issues/96
 const killProcessTree = async (
   processId,
@@ -8080,21 +8095,6 @@ const killProcessTree = async (
   });
   await check();
 };
-
-// https://nodejs.org/api/process.html#process_signal_events
-const SIGINT_SIGNAL_NUMBER = 2;
-const SIGABORT_SIGNAL_NUMBER = 6;
-const SIGTERM_SIGNAL_NUMBER = 15;
-const EXIT_CODES = {
-  SIGINT: 128 + SIGINT_SIGNAL_NUMBER,
-  SIGABORT: 128 + SIGABORT_SIGNAL_NUMBER,
-  SIGTERM: 128 + SIGTERM_SIGNAL_NUMBER,
-};
-
-const IMPORTMAP_NODE_LOADER_FILE_URL = new URL(
-  "./importmap_node_loader.mjs",
-  import.meta.url,
-).href;
 
 const NO_EXPERIMENTAL_WARNING_FILE_URL = new URL(
   "./no_experimental_warnings.cjs",
@@ -8973,46 +8973,6 @@ const istanbulCoverageMapFromCoverage = (coverage) => {
   return coverageMap;
 };
 
-const reportCoverageInConsole = (
-  testPlanResult,
-  { skipEmpty, skipFull } = {},
-) => {
-  if (testPlanResult.aborted) {
-    return;
-  }
-  const testPlanCoverage = testPlanResult.coverage;
-  const libReport = importWithRequire("istanbul-lib-report");
-  const reports = importWithRequire("istanbul-reports");
-  const context = libReport.createContext({
-    coverageMap: istanbulCoverageMapFromCoverage(testPlanCoverage),
-  });
-  const report = reports.create("text", {
-    skipEmpty,
-    skipFull,
-  });
-  report.execute(context);
-};
-
-const reportCoverageAsJson = (
-  testPlanResult,
-  fileUrl,
-  { logs } = {},
-) => {
-  if (testPlanResult.aborted) {
-    return;
-  }
-  const testPlanCoverage = testPlanResult.coverage;
-  const coverageAsText = JSON.stringify(testPlanCoverage, null, "  ");
-  writeFileSync(fileUrl, coverageAsText);
-  if (logs) {
-    console.log(
-      `-> ${urlToFileSystemPath(fileUrl)} (${humanizeFileSize(
-        Buffer.byteLength(coverageAsText),
-      )})`,
-    );
-  }
-};
-
 const reportCoverageAsHtml = (
   testPlanResult,
   directoryUrl,
@@ -9046,6 +9006,46 @@ const reportCoverageAsHtml = (
   report.execute(context);
   // const htmlCoverageDirectoryIndexFileUrl = `${directoryUrl}index.html`;
   // console.log(`-> ${urlToFileSystemPath(htmlCoverageDirectoryIndexFileUrl)}`);
+};
+
+const reportCoverageAsJson = (
+  testPlanResult,
+  fileUrl,
+  { logs } = {},
+) => {
+  if (testPlanResult.aborted) {
+    return;
+  }
+  const testPlanCoverage = testPlanResult.coverage;
+  const coverageAsText = JSON.stringify(testPlanCoverage, null, "  ");
+  writeFileSync(fileUrl, coverageAsText);
+  if (logs) {
+    console.log(
+      `-> ${urlToFileSystemPath(fileUrl)} (${humanizeFileSize(
+        Buffer.byteLength(coverageAsText),
+      )})`,
+    );
+  }
+};
+
+const reportCoverageInConsole = (
+  testPlanResult,
+  { skipEmpty, skipFull } = {},
+) => {
+  if (testPlanResult.aborted) {
+    return;
+  }
+  const testPlanCoverage = testPlanResult.coverage;
+  const libReport = importWithRequire("istanbul-lib-report");
+  const reports = importWithRequire("istanbul-reports");
+  const context = libReport.createContext({
+    coverageMap: istanbulCoverageMapFromCoverage(testPlanCoverage),
+  });
+  const report = reports.create("text", {
+    skipEmpty,
+    skipFull,
+  });
+  report.execute(context);
 };
 
 const createXmlGenerator = ({

@@ -1,8 +1,35 @@
-import { createRequire } from "node:module";
-import { urlToRelativeUrl } from "@jsenv/urls";
-import { composeTwoSourcemaps } from "@jsenv/sourcemap";
 import { applyBabelPlugins } from "@jsenv/ast";
+import { composeTwoSourcemaps } from "@jsenv/sourcemap";
+import { urlToRelativeUrl } from "@jsenv/urls";
+import { createRequire } from "node:module";
 import { parseExpression } from "@babel/parser";
+
+const babelPluginTransformImportMetaResolve = () => {
+  return {
+    name: "transform-import-meta-resolve",
+    visitor: {
+      Program: (programPath) => {
+        programPath.traverse({
+          MemberExpression: (path) => {
+            const node = path.node;
+            if (
+              node.object.type === "MetaProperty" &&
+              node.object.property.name === "meta" &&
+              node.property.name === "resolve"
+            ) {
+              const firstArg = node.arguments[0];
+              if (firstArg && firstArg.type === "StringLiteral") {
+                path.replaceWithSourceString(
+                  `new URL(${firstArg.value}, document.currentScript.src).href`,
+                );
+              }
+            }
+          },
+        });
+      },
+    },
+  };
+};
 
 const babelPluginTransformImportMetaUrl = (babel) => {
   return {
@@ -47,33 +74,6 @@ const babelPluginTransformImportMetaUrl = (babel) => {
 const generateExpressionAst = (expression, options) => {
   const ast = parseExpression(expression, options);
   return ast;
-};
-
-const babelPluginTransformImportMetaResolve = () => {
-  return {
-    name: "transform-import-meta-resolve",
-    visitor: {
-      Program: (programPath) => {
-        programPath.traverse({
-          MemberExpression: (path) => {
-            const node = path.node;
-            if (
-              node.object.type === "MetaProperty" &&
-              node.object.property.name === "meta" &&
-              node.property.name === "resolve"
-            ) {
-              const firstArg = node.arguments[0];
-              if (firstArg && firstArg.type === "StringLiteral") {
-                path.replaceWithSourceString(
-                  `new URL(${firstArg.value}, document.currentScript.src).href`,
-                );
-              }
-            }
-          },
-        });
-      },
-    },
-  };
 };
 
 // eslint-disable-next-line import/no-default-export

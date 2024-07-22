@@ -683,7 +683,8 @@ const inspectStringObject = (value, {
   });
 };
 
-// primitives
+// tslint:disable:ordered-imports
+
 const humanize = (value, {
   parenthesis = false,
   quote = "auto",

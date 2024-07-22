@@ -1,13 +1,13 @@
 'use strict';
 
-var node_module = require('module');
-var node_url = require('url');
 var process$1 = require('process');
 var os = require('os');
 var tty = require('tty');
+var node_url = require('url');
 var node_fs = require('fs');
 require('path');
 require('crypto');
+var node_module = require('module');
 
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
@@ -376,18 +376,26 @@ isBrowser ? () => {
 } : process$1.cwd;
 
 const ensurePathnameTrailingSlash = (url) => {
-  const urlObject = new URL(url);
-  const { pathname } = urlObject;
-  if (pathname.endsWith("/")) {
+  if (typeof url === "string") {
+    const urlObject = new URL(url);
+    const { pathname } = urlObject;
+    if (pathname.endsWith("/")) {
+      return url;
+    }
+    let { origin } = urlObject;
+    // origin is "null" for "file://" urls with Node.js
+    if (origin === "null" && urlObject.href.startsWith("file:")) {
+      origin = "file://";
+    }
+    const { search, hash } = urlObject;
+    const urlWithTrailingSlash = `${origin}${pathname}/${search}${hash}`;
+    return urlWithTrailingSlash;
+  }
+  if (url.pathname.endsWith("/")) {
     return url;
   }
-  let { origin } = urlObject;
-  // origin is "null" for "file://" urls with Node.js
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-  const { search, hash } = urlObject;
-  return `${origin}${pathname}/${search}${hash}`;
+  url.pathname += "/";
+  return url;
 };
 
 const isFileSystemPath = (value) => {
@@ -696,90 +704,21 @@ process.platform === "win32";
 
 process.platform === "linux";
 
-const isSpecifierForNodeBuiltin = (specifier) => {
-  return (
-    specifier.startsWith("node:") ||
-    NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
-  );
+// https://nodejs.org/api/packages.html#resolving-user-conditions
+const readCustomConditionsFromProcessArgs = () => {
+  const packageConditions = [];
+  process.execArgv.forEach((arg) => {
+    if (arg.includes("-C=")) {
+      const packageCondition = arg.slice(0, "-C=".length);
+      packageConditions.push(packageCondition);
+    }
+    if (arg.includes("--conditions=")) {
+      const packageCondition = arg.slice("--conditions=".length);
+      packageConditions.push(packageCondition);
+    }
+  });
+  return packageConditions;
 };
-
-const NODE_BUILTIN_MODULE_SPECIFIERS = [
-  "assert",
-  "assert/strict",
-  "async_hooks",
-  "buffer_ieee754",
-  "buffer",
-  "child_process",
-  "cluster",
-  "console",
-  "constants",
-  "crypto",
-  "_debugger",
-  "dgram",
-  "dns",
-  "domain",
-  "events",
-  "freelist",
-  "fs",
-  "fs/promises",
-  "_http_agent",
-  "_http_client",
-  "_http_common",
-  "_http_incoming",
-  "_http_outgoing",
-  "_http_server",
-  "http",
-  "http2",
-  "https",
-  "inspector",
-  "_linklist",
-  "module",
-  "net",
-  "node-inspect/lib/_inspect",
-  "node-inspect/lib/internal/inspect_client",
-  "node-inspect/lib/internal/inspect_repl",
-  "os",
-  "path",
-  "perf_hooks",
-  "process",
-  "punycode",
-  "querystring",
-  "readline",
-  "repl",
-  "smalloc",
-  "_stream_duplex",
-  "_stream_transform",
-  "_stream_wrap",
-  "_stream_passthrough",
-  "_stream_readable",
-  "_stream_writable",
-  "stream",
-  "stream/promises",
-  "string_decoder",
-  "sys",
-  "timers",
-  "_tls_common",
-  "_tls_legacy",
-  "_tls_wrap",
-  "tls",
-  "trace_events",
-  "tty",
-  "url",
-  "util",
-  "v8/tools/arguments",
-  "v8/tools/codemap",
-  "v8/tools/consarray",
-  "v8/tools/csvparser",
-  "v8/tools/logreader",
-  "v8/tools/profile_view",
-  "v8/tools/splaytree",
-  "v8",
-  "vm",
-  "worker_threads",
-  "zlib",
-  // global is special
-  "global",
-];
 
 const asDirectoryUrl = (url) => {
   const { pathname } = new URL(url);
@@ -951,21 +890,90 @@ const createPackageImportNotDefinedError = (
   return error;
 };
 
-// https://nodejs.org/api/packages.html#resolving-user-conditions
-const readCustomConditionsFromProcessArgs = () => {
-  const packageConditions = [];
-  process.execArgv.forEach((arg) => {
-    if (arg.includes("-C=")) {
-      const packageCondition = arg.slice(0, "-C=".length);
-      packageConditions.push(packageCondition);
-    }
-    if (arg.includes("--conditions=")) {
-      const packageCondition = arg.slice("--conditions=".length);
-      packageConditions.push(packageCondition);
-    }
-  });
-  return packageConditions;
+const isSpecifierForNodeBuiltin = (specifier) => {
+  return (
+    specifier.startsWith("node:") ||
+    NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
+  );
 };
+
+const NODE_BUILTIN_MODULE_SPECIFIERS = [
+  "assert",
+  "assert/strict",
+  "async_hooks",
+  "buffer_ieee754",
+  "buffer",
+  "child_process",
+  "cluster",
+  "console",
+  "constants",
+  "crypto",
+  "_debugger",
+  "dgram",
+  "dns",
+  "domain",
+  "events",
+  "freelist",
+  "fs",
+  "fs/promises",
+  "_http_agent",
+  "_http_client",
+  "_http_common",
+  "_http_incoming",
+  "_http_outgoing",
+  "_http_server",
+  "http",
+  "http2",
+  "https",
+  "inspector",
+  "_linklist",
+  "module",
+  "net",
+  "node-inspect/lib/_inspect",
+  "node-inspect/lib/internal/inspect_client",
+  "node-inspect/lib/internal/inspect_repl",
+  "os",
+  "path",
+  "perf_hooks",
+  "process",
+  "punycode",
+  "querystring",
+  "readline",
+  "repl",
+  "smalloc",
+  "_stream_duplex",
+  "_stream_transform",
+  "_stream_wrap",
+  "_stream_passthrough",
+  "_stream_readable",
+  "_stream_writable",
+  "stream",
+  "stream/promises",
+  "string_decoder",
+  "sys",
+  "timers",
+  "_tls_common",
+  "_tls_legacy",
+  "_tls_wrap",
+  "tls",
+  "trace_events",
+  "tty",
+  "url",
+  "util",
+  "v8/tools/arguments",
+  "v8/tools/codemap",
+  "v8/tools/consarray",
+  "v8/tools/csvparser",
+  "v8/tools/logreader",
+  "v8/tools/profile_view",
+  "v8/tools/splaytree",
+  "v8",
+  "vm",
+  "worker_threads",
+  "zlib",
+  // global is special
+  "global",
+];
 
 /*
  * https://nodejs.org/api/esm.html#resolver-algorithm-specification
@@ -1848,90 +1856,6 @@ const getExtensionsToTry = (magicExtensions, importer) => {
   return Array.from(extensionsSet.values());
 };
 
-const LOG_LEVEL_OFF = "off";
-const LOG_LEVEL_DEBUG = "debug";
-const LOG_LEVEL_INFO = "info";
-const LOG_LEVEL_WARN = "warn";
-const LOG_LEVEL_ERROR = "error";
-
-const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG) {
-    return {
-      level: "debug",
-      levels: { debug: true, info: true, warn: true, error: true },
-      debug,
-      info,
-      warn,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_INFO) {
-    return {
-      level: "info",
-      levels: { debug: false, info: true, warn: true, error: true },
-      debug: debugDisabled,
-      info,
-      warn,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_WARN) {
-    return {
-      level: "warn",
-      levels: { debug: false, info: false, warn: true, error: true },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_ERROR) {
-    return {
-      level: "error",
-      levels: { debug: false, info: false, warn: false, error: true },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error,
-    };
-  }
-  if (logLevel === LOG_LEVEL_OFF) {
-    return {
-      level: "off",
-      levels: { debug: false, info: false, warn: false, error: false },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error: errorDisabled,
-    };
-  }
-  throw new Error(`unexpected logLevel.
---- logLevel ---
-${logLevel}
---- allowed log levels ---
-${LOG_LEVEL_OFF}
-${LOG_LEVEL_ERROR}
-${LOG_LEVEL_WARN}
-${LOG_LEVEL_INFO}
-${LOG_LEVEL_DEBUG}`);
-};
-
-const debug = (...args) => console.debug(...args);
-
-const debugDisabled = () => {};
-
-const info = (...args) => console.info(...args);
-
-const infoDisabled = () => {};
-
-const warn = (...args) => console.warn(...args);
-
-const warnDisabled = () => {};
-
-const error = (...args) => console.error(...args);
-
-const errorDisabled = () => {};
-
 // duplicated from @jsenv/log to avoid the dependency
 const createDetailedMessage = (message, details = {}) => {
   let string = `${message}`;
@@ -2625,6 +2549,90 @@ const applyImportmapResolution = (
     throw e;
   }
 };
+
+const LOG_LEVEL_OFF = "off";
+const LOG_LEVEL_DEBUG = "debug";
+const LOG_LEVEL_INFO = "info";
+const LOG_LEVEL_WARN = "warn";
+const LOG_LEVEL_ERROR = "error";
+
+const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG) {
+    return {
+      level: "debug",
+      levels: { debug: true, info: true, warn: true, error: true },
+      debug,
+      info,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_INFO) {
+    return {
+      level: "info",
+      levels: { debug: false, info: true, warn: true, error: true },
+      debug: debugDisabled,
+      info,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_WARN) {
+    return {
+      level: "warn",
+      levels: { debug: false, info: false, warn: true, error: true },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_ERROR) {
+    return {
+      level: "error",
+      levels: { debug: false, info: false, warn: false, error: true },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_OFF) {
+    return {
+      level: "off",
+      levels: { debug: false, info: false, warn: false, error: false },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled,
+    };
+  }
+  throw new Error(`unexpected logLevel.
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`);
+};
+
+const debug = (...args) => console.debug(...args);
+
+const debugDisabled = () => {};
+
+const info = (...args) => console.info(...args);
+
+const infoDisabled = () => {};
+
+const warn = (...args) => console.warn(...args);
+
+const warnDisabled = () => {};
+
+const error = (...args) => console.error(...args);
+
+const errorDisabled = () => {};
 
 // https://github.com/benmosher/eslint-plugin-import/blob/master/resolvers/node/index.js
 // https://github.com/benmosher/eslint-plugin-import/tree/master/resolvers

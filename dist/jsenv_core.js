@@ -1,554 +1,24 @@
-import { readdir, chmod, stat, lstat, promises, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, createReadStream, lstatSync, readFile, existsSync, realpathSync } from "node:fs";
 import process$1 from "node:process";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { pathToFileURL, fileURLToPath } from "node:url";
+import { readdir, chmod, stat, lstat, promises, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, createReadStream, lstatSync, readFile, existsSync, realpathSync } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
-import net, { createServer, isIP } from "node:net";
 import cluster from "node:cluster";
-import { performance as performance$1 } from "node:perf_hooks";
-import http from "node:http";
+import net, { createServer, isIP } from "node:net";
 import { Readable, Stream, Writable } from "node:stream";
+import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
+import { performance as performance$1 } from "node:perf_hooks";
 import { lookup } from "node:dns";
-import { injectJsImport, visitJsAstUntil, applyBabelPlugins, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, parseJsUrls, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getHtmlNodeAttributePosition, parseSrcSet, getUrlForContentInsideHtml, removeHtmlNodeText, setHtmlNodeText, removeHtmlNode, parseCssUrls, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
+import { parseJsUrls, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, removeHtmlNode, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
-
-/*
- * Link to things doing pattern matching:
- * https://git-scm.com/docs/gitignore
- * https://github.com/kaelzhang/node-ignore
- */
-
-/** @module jsenv_url_meta **/
-/**
- * An object representing the result of applying a pattern to an url
- * @typedef {Object} MatchResult
- * @property {boolean} matched Indicates if url matched pattern
- * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
- * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
- * @property {Array} matchGroups Array of strings captured during pattern matching
- */
-
-/**
- * Apply a pattern to an url
- * @param {Object} applyPatternMatchingParams
- * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
- * @param {string} applyPatternMatchingParams.url a string representing an url
- * @return {MatchResult}
- */
-const applyPattern = ({ url, pattern }) => {
-  const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
-  const matchGroups = [];
-  let groupIndex = 0;
-  for (const group of groups) {
-    if (group.name) {
-      matchGroups[group.name] = group.string;
-    } else {
-      matchGroups[groupIndex] = group.string;
-      groupIndex++;
-    }
-  }
-  return {
-    matched,
-    patternIndex,
-    urlIndex: index,
-    matchGroups,
-  };
-};
-
-const applyMatching = (pattern, string) => {
-  const groups = [];
-  let patternIndex = 0;
-  let index = 0;
-  let remainingPattern = pattern;
-  let remainingString = string;
-  let restoreIndexes = true;
-
-  const consumePattern = (count) => {
-    const subpattern = remainingPattern.slice(0, count);
-    remainingPattern = remainingPattern.slice(count);
-    patternIndex += count;
-    return subpattern;
-  };
-  const consumeString = (count) => {
-    const substring = remainingString.slice(0, count);
-    remainingString = remainingString.slice(count);
-    index += count;
-    return substring;
-  };
-  const consumeRemainingString = () => {
-    return consumeString(remainingString.length);
-  };
-
-  let matched;
-  const iterate = () => {
-    const patternIndexBefore = patternIndex;
-    const indexBefore = index;
-    matched = matchOne();
-    if (matched === undefined) {
-      consumePattern(1);
-      consumeString(1);
-      iterate();
-      return;
-    }
-    if (matched === false && restoreIndexes) {
-      patternIndex = patternIndexBefore;
-      index = indexBefore;
-    }
-  };
-  const matchOne = () => {
-    // pattern consumed and string consumed
-    if (remainingPattern === "" && remainingString === "") {
-      return true; // string fully matched pattern
-    }
-    // pattern consumed, string not consumed
-    if (remainingPattern === "" && remainingString !== "") {
-      return false; // fails because string longer than expect
-    }
-    // -- from this point pattern is not consumed --
-    // string consumed, pattern not consumed
-    if (remainingString === "") {
-      if (remainingPattern === "**") {
-        // trailing "**" is optional
-        consumePattern(2);
-        return true;
-      }
-      if (remainingPattern === "*") {
-        groups.push({ string: "" });
-      }
-      return false; // fail because string shorter than expect
-    }
-    // -- from this point pattern and string are not consumed --
-    // fast path trailing slash
-    if (remainingPattern === "/") {
-      if (remainingString[0] === "/") {
-        // trailing slash match remaining
-        consumePattern(1);
-        groups.push({ string: consumeRemainingString() });
-        return true;
-      }
-      return false;
-    }
-    // fast path trailing '**'
-    if (remainingPattern === "**") {
-      consumePattern(2);
-      consumeRemainingString();
-      return true;
-    }
-    if (remainingPattern.slice(0, 4) === "/**/") {
-      consumePattern(3); // consumes "/**/"
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: true,
-      });
-      groups.push(...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeRemainingString();
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-    // pattern leading **
-    if (remainingPattern.slice(0, 2) === "**") {
-      consumePattern(2); // consumes "**"
-      let skipAllowed = true;
-      if (remainingPattern[0] === "/") {
-        consumePattern(1); // consumes "/"
-        // when remainingPattern was preceeded by "**/"
-        // and remainingString have no "/"
-        // then skip is not allowed, a regular match will be performed
-        if (!remainingString.includes("/")) {
-          skipAllowed = false;
-        }
-      }
-      // pattern ending with "**" or "**/" match remaining string
-      if (remainingPattern === "") {
-        consumeRemainingString();
-        return true;
-      }
-      if (skipAllowed) {
-        const skipResult = skipUntilMatch({
-          pattern: remainingPattern,
-          string: remainingString,
-          canSkipSlash: true,
-        });
-        groups.push(...skipResult.groups);
-        consumePattern(skipResult.patternIndex);
-        consumeRemainingString();
-        restoreIndexes = false;
-        return skipResult.matched;
-      }
-    }
-    if (remainingPattern[0] === "*") {
-      consumePattern(1); // consumes "*"
-      if (remainingPattern === "") {
-        // matches everything except "/"
-        const slashIndex = remainingString.indexOf("/");
-        if (slashIndex === -1) {
-          groups.push({ string: consumeRemainingString() });
-          return true;
-        }
-        groups.push({ string: consumeString(slashIndex) });
-        return false;
-      }
-      // the next char must not the one expect by remainingPattern[0]
-      // because * is greedy and expect to skip at least one char
-      if (remainingPattern[0] === remainingString[0]) {
-        groups.push({ string: "" });
-        patternIndex = patternIndex - 1;
-        return false;
-      }
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: false,
-      });
-      groups.push(skipResult.group, ...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeString(skipResult.index);
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-    if (remainingPattern[0] !== remainingString[0]) {
-      return false;
-    }
-    return undefined;
-  };
-  iterate();
-
-  return {
-    matched,
-    patternIndex,
-    index,
-    groups,
-  };
-};
-
-const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
-  let index = 0;
-  let remainingString = string;
-  let longestAttemptRange = null;
-  let isLastAttempt = false;
-
-  const failure = () => {
-    return {
-      matched: false,
-      patternIndex: longestAttemptRange.patternIndex,
-      index: longestAttemptRange.index + longestAttemptRange.length,
-      groups: longestAttemptRange.groups,
-      group: {
-        string: string.slice(0, longestAttemptRange.index),
-      },
-    };
-  };
-
-  const tryToMatch = () => {
-    const matchAttempt = applyMatching(pattern, remainingString);
-    if (matchAttempt.matched) {
-      return {
-        matched: true,
-        patternIndex: matchAttempt.patternIndex,
-        index: index + matchAttempt.index,
-        groups: matchAttempt.groups,
-        group: {
-          string:
-            remainingString === ""
-              ? string
-              : string.slice(0, -remainingString.length),
-        },
-      };
-    }
-    const attemptIndex = matchAttempt.index;
-    const attemptRange = {
-      patternIndex: matchAttempt.patternIndex,
-      index,
-      length: attemptIndex,
-      groups: matchAttempt.groups,
-    };
-    if (
-      !longestAttemptRange ||
-      longestAttemptRange.length < attemptRange.length
-    ) {
-      longestAttemptRange = attemptRange;
-    }
-    if (isLastAttempt) {
-      return failure();
-    }
-    const nextIndex = attemptIndex + 1;
-    if (nextIndex >= remainingString.length) {
-      return failure();
-    }
-    if (remainingString[0] === "/") {
-      if (!canSkipSlash) {
-        return failure();
-      }
-      // when it's the last slash, the next attempt is the last
-      if (remainingString.indexOf("/", 1) === -1) {
-        isLastAttempt = true;
-      }
-    }
-    // search against the next unattempted string
-    index += nextIndex;
-    remainingString = remainingString.slice(nextIndex);
-    return tryToMatch();
-  };
-  return tryToMatch();
-};
-
-const applyPatternMatching = ({ url, pattern }) => {
-  assertUrlLike(pattern, "pattern");
-  if (url && typeof url.href === "string") url = url.href;
-  assertUrlLike(url, "url");
-  return applyPattern({ url, pattern });
-};
-
-const resolveAssociations = (associations, baseUrl) => {
-  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
-  assertUrlLike(baseUrl, "baseUrl");
-
-  const associationsResolved = {};
-  for (const key of Object.keys(associations)) {
-    const value = associations[key];
-    if (typeof value === "object" && value !== null) {
-      const valueMapResolved = {};
-      for (const pattern of Object.keys(value)) {
-        const valueAssociated = value[pattern];
-        let patternResolved;
-        try {
-          patternResolved = String(new URL(pattern, baseUrl));
-        } catch (e) {
-          // it's not really an url, no need to perform url resolution nor encoding
-          patternResolved = pattern;
-        }
-
-        valueMapResolved[patternResolved] = valueAssociated;
-      }
-      associationsResolved[key] = valueMapResolved;
-    } else {
-      associationsResolved[key] = value;
-    }
-  }
-  return associationsResolved;
-};
-
-const asFlatAssociations = (associations) => {
-  if (!isPlainObject(associations)) {
-    throw new TypeError(
-      `associations must be a plain object, got ${associations}`,
-    );
-  }
-  const flatAssociations = {};
-  for (const associationName of Object.keys(associations)) {
-    const associationValue = associations[associationName];
-    if (!isPlainObject(associationValue)) {
-      continue;
-    }
-    for (const pattern of Object.keys(associationValue)) {
-      const patternValue = associationValue[pattern];
-      const previousValue = flatAssociations[pattern];
-      if (isPlainObject(previousValue)) {
-        flatAssociations[pattern] = {
-          ...previousValue,
-          [associationName]: patternValue,
-        };
-      } else {
-        flatAssociations[pattern] = {
-          [associationName]: patternValue,
-        };
-      }
-    }
-  }
-  return flatAssociations;
-};
-
-const applyAssociations = ({ url, associations }) => {
-  if (url && typeof url.href === "string") url = url.href;
-  assertUrlLike(url);
-  const flatAssociations = asFlatAssociations(associations);
-  let associatedValue = {};
-  for (const pattern of Object.keys(flatAssociations)) {
-    const { matched } = applyPatternMatching({
-      pattern,
-      url,
-    });
-    if (matched) {
-      const value = flatAssociations[pattern];
-      associatedValue = deepAssign(associatedValue, value);
-    }
-  }
-  return associatedValue;
-};
-
-const deepAssign = (firstValue, secondValue) => {
-  if (!isPlainObject(firstValue) || !isPlainObject(secondValue)) {
-    return secondValue;
-  }
-  for (const key of Object.keys(secondValue)) {
-    const leftValue = firstValue[key];
-    const rightValue = secondValue[key];
-    firstValue[key] = deepAssign(leftValue, rightValue);
-  }
-  return firstValue;
-};
-
-const urlChildMayMatch = ({ url, associations, predicate }) => {
-  if (url && typeof url.href === "string") url = url.href;
-  assertUrlLike(url, "url");
-  // the function was meants to be used on url ending with '/'
-  if (!url.endsWith("/")) {
-    throw new Error(`url should end with /, got ${url}`);
-  }
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-  const flatAssociations = asFlatAssociations(associations);
-  // for full match we must create an object to allow pattern to override previous ones
-  let fullMatchMeta = {};
-  let someFullMatch = false;
-  // for partial match, any meta satisfying predicate will be valid because
-  // we don't know for sure if pattern will still match for a file inside pathname
-  const partialMatchMetaArray = [];
-  for (const pattern of Object.keys(flatAssociations)) {
-    const value = flatAssociations[pattern];
-    const matchResult = applyPatternMatching({
-      pattern,
-      url,
-    });
-    if (matchResult.matched) {
-      someFullMatch = true;
-      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
-        fullMatchMeta = {
-          ...fullMatchMeta,
-          ...value,
-        };
-      } else {
-        fullMatchMeta = value;
-      }
-    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
-      partialMatchMetaArray.push(value);
-    }
-  }
-  if (someFullMatch) {
-    return Boolean(predicate(fullMatchMeta));
-  }
-  return partialMatchMetaArray.some((partialMatchMeta) =>
-    predicate(partialMatchMeta),
-  );
-};
-
-const applyAliases = ({ url, aliases }) => {
-  let aliasFullMatchResult;
-  const aliasMatchingKey = Object.keys(aliases).find((key) => {
-    const aliasMatchResult = applyPatternMatching({
-      pattern: key,
-      url,
-    });
-    if (aliasMatchResult.matched) {
-      aliasFullMatchResult = aliasMatchResult;
-      return true;
-    }
-    return false;
-  });
-  if (!aliasMatchingKey) {
-    return url;
-  }
-  const { matchGroups } = aliasFullMatchResult;
-  const alias = aliases[aliasMatchingKey];
-  const parts = alias.split("*");
-  let newUrl = "";
-  let index = 0;
-  for (const part of parts) {
-    newUrl += `${part}`;
-    if (index < parts.length - 1) {
-      newUrl += matchGroups[index];
-    }
-    index++;
-  }
-  return newUrl;
-};
-
-const matches = (url, patterns) => {
-  return Boolean(
-    applyAssociations({
-      url,
-      associations: {
-        yes: patterns,
-      },
-    }).yes,
-  );
-};
-
-// const assertSpecifierMetaMap = (value, checkComposition = true) => {
-//   if (!isPlainObject(value)) {
-//     throw new TypeError(
-//       `specifierMetaMap must be a plain object, got ${value}`,
-//     );
-//   }
-//   if (checkComposition) {
-//     const plainObject = value;
-//     Object.keys(plainObject).forEach((key) => {
-//       assertUrlLike(key, "specifierMetaMap key");
-//       const value = plainObject[key];
-//       if (value !== null && !isPlainObject(value)) {
-//         throw new TypeError(
-//           `specifierMetaMap value must be a plain object or null, got ${value} under key ${key}`,
-//         );
-//       }
-//     });
-//   }
-// };
-const assertUrlLike = (value, name = "url") => {
-  if (typeof value !== "string") {
-    throw new TypeError(`${name} must be a url string, got ${value}`);
-  }
-  if (isWindowsPathnameSpecifier(value)) {
-    throw new TypeError(
-      `${name} must be a url but looks like a windows pathname, got ${value}`,
-    );
-  }
-  if (!hasScheme$1(value)) {
-    throw new TypeError(
-      `${name} must be a url and no scheme found, got ${value}`,
-    );
-  }
-};
-const isPlainObject = (value) => {
-  if (value === null) {
-    return false;
-  }
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return false;
-    }
-    return true;
-  }
-  return false;
-};
-const isWindowsPathnameSpecifier = (specifier) => {
-  const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
-  const thirdChar = specifier[2];
-  return thirdChar === "/" || thirdChar === "\\";
-};
-const hasScheme$1 = (specifier) => /^[a-zA-Z]+:/.test(specifier);
-
-const URL_META = {
-  resolveAssociations,
-  applyAssociations,
-  applyAliases,
-  applyPatternMatching,
-  urlChildMayMatch,
-  matches,
-};
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -2544,50 +2014,6 @@ const extractDriveLetter = (resource) => {
   return null;
 };
 
-/*
- * See callback_race.md
- */
-
-const raceCallbacks = (raceDescription, winnerCallback) => {
-  let cleanCallbacks = [];
-  let status = "racing";
-
-  const clean = () => {
-    cleanCallbacks.forEach((clean) => {
-      clean();
-    });
-    cleanCallbacks = null;
-  };
-
-  const cancel = () => {
-    if (status !== "racing") {
-      return;
-    }
-    status = "cancelled";
-    clean();
-  };
-
-  Object.keys(raceDescription).forEach((candidateName) => {
-    const register = raceDescription[candidateName];
-    const returnValue = register((data) => {
-      if (status !== "racing") {
-        return;
-      }
-      status = "done";
-      clean();
-      winnerCallback({
-        name: candidateName,
-        data,
-      });
-    });
-    if (typeof returnValue === "function") {
-      cleanCallbacks.push(returnValue);
-    }
-  });
-
-  return cancel;
-};
-
 const createCallbackListNotifiedOnce = () => {
   let callbacks = [];
   let status = "waiting";
@@ -2699,6 +2125,50 @@ const emitCallbackDuplicationWarning = () => {
 };
 
 const removeNoop = () => {};
+
+/*
+ * See callback_race.md
+ */
+
+const raceCallbacks = (raceDescription, winnerCallback) => {
+  let cleanCallbacks = [];
+  let status = "racing";
+
+  const clean = () => {
+    cleanCallbacks.forEach((clean) => {
+      clean();
+    });
+    cleanCallbacks = null;
+  };
+
+  const cancel = () => {
+    if (status !== "racing") {
+      return;
+    }
+    status = "cancelled";
+    clean();
+  };
+
+  Object.keys(raceDescription).forEach((candidateName) => {
+    const register = raceDescription[candidateName];
+    const returnValue = register((data) => {
+      if (status !== "racing") {
+        return;
+      }
+      status = "done";
+      clean();
+      winnerCallback({
+        name: candidateName,
+        data,
+      });
+    });
+    if (typeof returnValue === "function") {
+      cleanCallbacks.push(returnValue);
+    }
+  });
+
+  return cancel;
+};
 
 /*
  * https://github.com/whatwg/dom/issues/920
@@ -3051,6 +2521,536 @@ const SIGINT_CALLBACK = {
       process.removeListener("SIGINT", cb);
     };
   },
+};
+
+/*
+ * Link to things doing pattern matching:
+ * https://git-scm.com/docs/gitignore
+ * https://github.com/kaelzhang/node-ignore
+ */
+
+/** @module jsenv_url_meta **/
+/**
+ * An object representing the result of applying a pattern to an url
+ * @typedef {Object} MatchResult
+ * @property {boolean} matched Indicates if url matched pattern
+ * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
+ * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
+ * @property {Array} matchGroups Array of strings captured during pattern matching
+ */
+
+/**
+ * Apply a pattern to an url
+ * @param {Object} applyPatternMatchingParams
+ * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
+ * @param {string} applyPatternMatchingParams.url a string representing an url
+ * @return {MatchResult}
+ */
+const applyPattern = ({ url, pattern }) => {
+  const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
+  const matchGroups = [];
+  let groupIndex = 0;
+  for (const group of groups) {
+    if (group.name) {
+      matchGroups[group.name] = group.string;
+    } else {
+      matchGroups[groupIndex] = group.string;
+      groupIndex++;
+    }
+  }
+  return {
+    matched,
+    patternIndex,
+    urlIndex: index,
+    matchGroups,
+  };
+};
+
+const applyMatching = (pattern, string) => {
+  const groups = [];
+  let patternIndex = 0;
+  let index = 0;
+  let remainingPattern = pattern;
+  let remainingString = string;
+  let restoreIndexes = true;
+
+  const consumePattern = (count) => {
+    const subpattern = remainingPattern.slice(0, count);
+    remainingPattern = remainingPattern.slice(count);
+    patternIndex += count;
+    return subpattern;
+  };
+  const consumeString = (count) => {
+    const substring = remainingString.slice(0, count);
+    remainingString = remainingString.slice(count);
+    index += count;
+    return substring;
+  };
+  const consumeRemainingString = () => {
+    return consumeString(remainingString.length);
+  };
+
+  let matched;
+  const iterate = () => {
+    const patternIndexBefore = patternIndex;
+    const indexBefore = index;
+    matched = matchOne();
+    if (matched === undefined) {
+      consumePattern(1);
+      consumeString(1);
+      iterate();
+      return;
+    }
+    if (matched === false && restoreIndexes) {
+      patternIndex = patternIndexBefore;
+      index = indexBefore;
+    }
+  };
+  const matchOne = () => {
+    // pattern consumed and string consumed
+    if (remainingPattern === "" && remainingString === "") {
+      return true; // string fully matched pattern
+    }
+    // pattern consumed, string not consumed
+    if (remainingPattern === "" && remainingString !== "") {
+      return false; // fails because string longer than expect
+    }
+    // -- from this point pattern is not consumed --
+    // string consumed, pattern not consumed
+    if (remainingString === "") {
+      if (remainingPattern === "**") {
+        // trailing "**" is optional
+        consumePattern(2);
+        return true;
+      }
+      if (remainingPattern === "*") {
+        groups.push({ string: "" });
+      }
+      return false; // fail because string shorter than expect
+    }
+    // -- from this point pattern and string are not consumed --
+    // fast path trailing slash
+    if (remainingPattern === "/") {
+      if (remainingString[0] === "/") {
+        // trailing slash match remaining
+        consumePattern(1);
+        groups.push({ string: consumeRemainingString() });
+        return true;
+      }
+      return false;
+    }
+    // fast path trailing '**'
+    if (remainingPattern === "**") {
+      consumePattern(2);
+      consumeRemainingString();
+      return true;
+    }
+    if (remainingPattern.slice(0, 4) === "/**/") {
+      consumePattern(3); // consumes "/**/"
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: true,
+      });
+      groups.push(...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeRemainingString();
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+    // pattern leading **
+    if (remainingPattern.slice(0, 2) === "**") {
+      consumePattern(2); // consumes "**"
+      let skipAllowed = true;
+      if (remainingPattern[0] === "/") {
+        consumePattern(1); // consumes "/"
+        // when remainingPattern was preceeded by "**/"
+        // and remainingString have no "/"
+        // then skip is not allowed, a regular match will be performed
+        if (!remainingString.includes("/")) {
+          skipAllowed = false;
+        }
+      }
+      // pattern ending with "**" or "**/" match remaining string
+      if (remainingPattern === "") {
+        consumeRemainingString();
+        return true;
+      }
+      if (skipAllowed) {
+        const skipResult = skipUntilMatch({
+          pattern: remainingPattern,
+          string: remainingString,
+          canSkipSlash: true,
+        });
+        groups.push(...skipResult.groups);
+        consumePattern(skipResult.patternIndex);
+        consumeRemainingString();
+        restoreIndexes = false;
+        return skipResult.matched;
+      }
+    }
+    if (remainingPattern[0] === "*") {
+      consumePattern(1); // consumes "*"
+      if (remainingPattern === "") {
+        // matches everything except "/"
+        const slashIndex = remainingString.indexOf("/");
+        if (slashIndex === -1) {
+          groups.push({ string: consumeRemainingString() });
+          return true;
+        }
+        groups.push({ string: consumeString(slashIndex) });
+        return false;
+      }
+      // the next char must not the one expect by remainingPattern[0]
+      // because * is greedy and expect to skip at least one char
+      if (remainingPattern[0] === remainingString[0]) {
+        groups.push({ string: "" });
+        patternIndex = patternIndex - 1;
+        return false;
+      }
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: false,
+      });
+      groups.push(skipResult.group, ...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeString(skipResult.index);
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+    if (remainingPattern[0] !== remainingString[0]) {
+      return false;
+    }
+    return undefined;
+  };
+  iterate();
+
+  return {
+    matched,
+    patternIndex,
+    index,
+    groups,
+  };
+};
+
+const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
+  let index = 0;
+  let remainingString = string;
+  let longestAttemptRange = null;
+  let isLastAttempt = false;
+
+  const failure = () => {
+    return {
+      matched: false,
+      patternIndex: longestAttemptRange.patternIndex,
+      index: longestAttemptRange.index + longestAttemptRange.length,
+      groups: longestAttemptRange.groups,
+      group: {
+        string: string.slice(0, longestAttemptRange.index),
+      },
+    };
+  };
+
+  const tryToMatch = () => {
+    const matchAttempt = applyMatching(pattern, remainingString);
+    if (matchAttempt.matched) {
+      return {
+        matched: true,
+        patternIndex: matchAttempt.patternIndex,
+        index: index + matchAttempt.index,
+        groups: matchAttempt.groups,
+        group: {
+          string:
+            remainingString === ""
+              ? string
+              : string.slice(0, -remainingString.length),
+        },
+      };
+    }
+    const attemptIndex = matchAttempt.index;
+    const attemptRange = {
+      patternIndex: matchAttempt.patternIndex,
+      index,
+      length: attemptIndex,
+      groups: matchAttempt.groups,
+    };
+    if (
+      !longestAttemptRange ||
+      longestAttemptRange.length < attemptRange.length
+    ) {
+      longestAttemptRange = attemptRange;
+    }
+    if (isLastAttempt) {
+      return failure();
+    }
+    const nextIndex = attemptIndex + 1;
+    if (nextIndex >= remainingString.length) {
+      return failure();
+    }
+    if (remainingString[0] === "/") {
+      if (!canSkipSlash) {
+        return failure();
+      }
+      // when it's the last slash, the next attempt is the last
+      if (remainingString.indexOf("/", 1) === -1) {
+        isLastAttempt = true;
+      }
+    }
+    // search against the next unattempted string
+    index += nextIndex;
+    remainingString = remainingString.slice(nextIndex);
+    return tryToMatch();
+  };
+  return tryToMatch();
+};
+
+const applyPatternMatching = ({ url, pattern }) => {
+  assertUrlLike(pattern, "pattern");
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url, "url");
+  return applyPattern({ url, pattern });
+};
+
+const resolveAssociations = (associations, baseUrl) => {
+  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
+  assertUrlLike(baseUrl, "baseUrl");
+
+  const associationsResolved = {};
+  for (const key of Object.keys(associations)) {
+    const value = associations[key];
+    if (typeof value === "object" && value !== null) {
+      const valueMapResolved = {};
+      for (const pattern of Object.keys(value)) {
+        const valueAssociated = value[pattern];
+        let patternResolved;
+        try {
+          patternResolved = String(new URL(pattern, baseUrl));
+        } catch (e) {
+          // it's not really an url, no need to perform url resolution nor encoding
+          patternResolved = pattern;
+        }
+
+        valueMapResolved[patternResolved] = valueAssociated;
+      }
+      associationsResolved[key] = valueMapResolved;
+    } else {
+      associationsResolved[key] = value;
+    }
+  }
+  return associationsResolved;
+};
+
+const asFlatAssociations = (associations) => {
+  if (!isPlainObject(associations)) {
+    throw new TypeError(
+      `associations must be a plain object, got ${associations}`,
+    );
+  }
+  const flatAssociations = {};
+  for (const associationName of Object.keys(associations)) {
+    const associationValue = associations[associationName];
+    if (!isPlainObject(associationValue)) {
+      continue;
+    }
+    for (const pattern of Object.keys(associationValue)) {
+      const patternValue = associationValue[pattern];
+      const previousValue = flatAssociations[pattern];
+      if (isPlainObject(previousValue)) {
+        flatAssociations[pattern] = {
+          ...previousValue,
+          [associationName]: patternValue,
+        };
+      } else {
+        flatAssociations[pattern] = {
+          [associationName]: patternValue,
+        };
+      }
+    }
+  }
+  return flatAssociations;
+};
+
+const applyAssociations = ({ url, associations }) => {
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url);
+  const flatAssociations = asFlatAssociations(associations);
+  let associatedValue = {};
+  for (const pattern of Object.keys(flatAssociations)) {
+    const { matched } = applyPatternMatching({
+      pattern,
+      url,
+    });
+    if (matched) {
+      const value = flatAssociations[pattern];
+      associatedValue = deepAssign(associatedValue, value);
+    }
+  }
+  return associatedValue;
+};
+
+const deepAssign = (firstValue, secondValue) => {
+  if (!isPlainObject(firstValue) || !isPlainObject(secondValue)) {
+    return secondValue;
+  }
+  for (const key of Object.keys(secondValue)) {
+    const leftValue = firstValue[key];
+    const rightValue = secondValue[key];
+    firstValue[key] = deepAssign(leftValue, rightValue);
+  }
+  return firstValue;
+};
+
+const urlChildMayMatch = ({ url, associations, predicate }) => {
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url, "url");
+  // the function was meants to be used on url ending with '/'
+  if (!url.endsWith("/")) {
+    throw new Error(`url should end with /, got ${url}`);
+  }
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+  const flatAssociations = asFlatAssociations(associations);
+  // for full match we must create an object to allow pattern to override previous ones
+  let fullMatchMeta = {};
+  let someFullMatch = false;
+  // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+  const partialMatchMetaArray = [];
+  for (const pattern of Object.keys(flatAssociations)) {
+    const value = flatAssociations[pattern];
+    const matchResult = applyPatternMatching({
+      pattern,
+      url,
+    });
+    if (matchResult.matched) {
+      someFullMatch = true;
+      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
+        fullMatchMeta = {
+          ...fullMatchMeta,
+          ...value,
+        };
+      } else {
+        fullMatchMeta = value;
+      }
+    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
+      partialMatchMetaArray.push(value);
+    }
+  }
+  if (someFullMatch) {
+    return Boolean(predicate(fullMatchMeta));
+  }
+  return partialMatchMetaArray.some((partialMatchMeta) =>
+    predicate(partialMatchMeta),
+  );
+};
+
+const applyAliases = ({ url, aliases }) => {
+  let aliasFullMatchResult;
+  const aliasMatchingKey = Object.keys(aliases).find((key) => {
+    const aliasMatchResult = applyPatternMatching({
+      pattern: key,
+      url,
+    });
+    if (aliasMatchResult.matched) {
+      aliasFullMatchResult = aliasMatchResult;
+      return true;
+    }
+    return false;
+  });
+  if (!aliasMatchingKey) {
+    return url;
+  }
+  const { matchGroups } = aliasFullMatchResult;
+  const alias = aliases[aliasMatchingKey];
+  const parts = alias.split("*");
+  let newUrl = "";
+  let index = 0;
+  for (const part of parts) {
+    newUrl += `${part}`;
+    if (index < parts.length - 1) {
+      newUrl += matchGroups[index];
+    }
+    index++;
+  }
+  return newUrl;
+};
+
+const matches = (url, patterns) => {
+  return Boolean(
+    applyAssociations({
+      url,
+      associations: {
+        yes: patterns,
+      },
+    }).yes,
+  );
+};
+
+// const assertSpecifierMetaMap = (value, checkComposition = true) => {
+//   if (!isPlainObject(value)) {
+//     throw new TypeError(
+//       `specifierMetaMap must be a plain object, got ${value}`,
+//     );
+//   }
+//   if (checkComposition) {
+//     const plainObject = value;
+//     Object.keys(plainObject).forEach((key) => {
+//       assertUrlLike(key, "specifierMetaMap key");
+//       const value = plainObject[key];
+//       if (value !== null && !isPlainObject(value)) {
+//         throw new TypeError(
+//           `specifierMetaMap value must be a plain object or null, got ${value} under key ${key}`,
+//         );
+//       }
+//     });
+//   }
+// };
+const assertUrlLike = (value, name = "url") => {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be a url string, got ${value}`);
+  }
+  if (isWindowsPathnameSpecifier(value)) {
+    throw new TypeError(
+      `${name} must be a url but looks like a windows pathname, got ${value}`,
+    );
+  }
+  if (!hasScheme$1(value)) {
+    throw new TypeError(
+      `${name} must be a url and no scheme found, got ${value}`,
+    );
+  }
+};
+const isPlainObject = (value) => {
+  if (value === null) {
+    return false;
+  }
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+};
+const isWindowsPathnameSpecifier = (specifier) => {
+  const firstChar = specifier[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = specifier[1];
+  if (secondChar !== ":") return false;
+  const thirdChar = specifier[2];
+  return thirdChar === "/" || thirdChar === "\\";
+};
+const hasScheme$1 = (specifier) => /^[a-zA-Z]+:/.test(specifier);
+
+const URL_META = {
+  resolveAssociations,
+  applyAssociations,
+  applyAliases,
+  applyPatternMatching,
+  urlChildMayMatch,
+  matches,
 };
 
 const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
@@ -3747,27 +3747,6 @@ const ensureEmptyDirectory = async (source) => {
   );
 };
 
-const guardTooFastSecondCallPerFile = (
-  callback,
-  cooldownBetweenFileEvents = 40,
-) => {
-  const previousCallMsMap = new Map();
-  return (fileEvent) => {
-    const { relativeUrl } = fileEvent;
-    const previousCallMs = previousCallMsMap.get(relativeUrl);
-    const nowMs = Date.now();
-    if (previousCallMs) {
-      const msEllapsed = nowMs - previousCallMs;
-      if (msEllapsed < cooldownBetweenFileEvents) {
-        previousCallMsMap.delete(relativeUrl);
-        return;
-      }
-    }
-    previousCallMsMap.set(relativeUrl, nowMs);
-    callback(fileEvent);
-  };
-};
-
 const isWindows = process.platform === "win32";
 
 const createWatcher = (sourcePath, options) => {
@@ -3796,6 +3775,27 @@ const createWatcher = (sourcePath, options) => {
   }
 
   return watcher;
+};
+
+const guardTooFastSecondCallPerFile = (
+  callback,
+  cooldownBetweenFileEvents = 40,
+) => {
+  const previousCallMsMap = new Map();
+  return (fileEvent) => {
+    const { relativeUrl } = fileEvent;
+    const previousCallMs = previousCallMsMap.get(relativeUrl);
+    const nowMs = Date.now();
+    if (previousCallMs) {
+      const msEllapsed = nowMs - previousCallMs;
+      if (msEllapsed < cooldownBetweenFileEvents) {
+        previousCallMsMap.delete(relativeUrl);
+        return;
+      }
+    }
+    previousCallMsMap.set(relativeUrl, nowMs);
+    callback(fileEvent);
+  };
 };
 
 const trackResources = () => {
@@ -4246,763 +4246,39 @@ const memoize = (compute) => {
   return fnWithMemoization;
 };
 
-const timeStart = (name) => {
-  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
-  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
-  const startTimestamp = performance$1.now();
-  const timeEnd = () => {
-    const endTimestamp = performance$1.now();
-    const timing = {
-      [name]: endTimestamp - startTimestamp,
-    };
-    return timing;
-  };
-  return timeEnd;
-};
-
-const timeFunction = (name, fn) => {
-  const timeEnd = timeStart(name);
-  const returnValue = fn();
-  if (returnValue && typeof returnValue.then === "function") {
-    return returnValue.then((value) => {
-      return [timeEnd(), value];
-    });
+const normalizeHeaderName = (headerName) => {
+  headerName = String(headerName);
+  if (/[^a-z0-9\-#$%&'*+.^_`|~]/i.test(headerName)) {
+    throw new TypeError("Invalid character in header field name");
   }
-  return [timeEnd(), returnValue];
+
+  return headerName.toLowerCase();
 };
 
-const HOOK_NAMES$1 = [
-  "serverListening",
-  "redirectRequest",
-  "handleRequest",
-  "handleWebsocket",
-  "handleError",
-  "onResponsePush",
-  "injectResponseHeaders",
-  "responseReady",
-  "serverStopped",
-];
-
-const createServiceController = (services) => {
-  const flatServices = flattenAndFilterServices(services);
-  const hookGroups = {};
-
-  const addService = (service) => {
-    Object.keys(service).forEach((key) => {
-      if (key === "name") return;
-      const isHook = HOOK_NAMES$1.includes(key);
-      if (!isHook) {
-        console.warn(
-          `Unexpected "${key}" property on "${service.name}" service`,
-        );
-      }
-      const hookName = key;
-      const hookValue = service[hookName];
-      if (hookValue) {
-        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
-        group.push({
-          service,
-          name: hookName,
-          value: hookValue,
-        });
-      }
-    });
-  };
-  flatServices.forEach((service) => {
-    addService(service);
-  });
-
-  let currentService = null;
-  let currentHookName = null;
-  const callHook = (hook, info, context) => {
-    const hookFn = hook.value;
-    if (!hookFn) {
-      return null;
-    }
-    currentService = hook.service;
-    currentHookName = hook.name;
-    let timeEnd;
-    if (context && context.timing) {
-      timeEnd = timeStart(
-        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
-      );
-    }
-    let valueReturned = hookFn(info, context);
-    if (context && context.timing) {
-      Object.assign(context.timing, timeEnd());
-    }
-    currentService = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-  const callAsyncHook = async (hook, info, context) => {
-    const hookFn = hook.value;
-    if (!hookFn) {
-      return null;
-    }
-    currentService = hook.service;
-    currentHookName = hook.name;
-    let timeEnd;
-    if (context && context.timing) {
-      timeEnd = timeStart(
-        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
-      );
-    }
-    let valueReturned = await hookFn(info, context);
-    if (context && context.timing) {
-      Object.assign(context.timing, timeEnd());
-    }
-    currentService = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-
-  const callHooks = (hookName, info, context, callback = () => {}) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
-        if (returnValue) {
-          callback(returnValue);
-        }
-      }
-    }
-  };
-  const callHooksUntil = (
-    hookName,
-    info,
-    context,
-    until = (returnValue) => returnValue,
-  ) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
-        const untilReturnValue = until(returnValue);
-        if (untilReturnValue) {
-          return untilReturnValue;
-        }
-      }
-    }
-    return null;
-  };
-  const callAsyncHooksUntil = (hookName, info, context) => {
-    const hooks = hookGroups[hookName];
-    if (!hooks) {
-      return null;
-    }
-    if (hooks.length === 0) {
-      return null;
-    }
-    return new Promise((resolve, reject) => {
-      const visit = (index) => {
-        if (index >= hooks.length) {
-          return resolve();
-        }
-        const hook = hooks[index];
-        const returnValue = callAsyncHook(hook, info, context);
-        return Promise.resolve(returnValue).then((output) => {
-          if (output) {
-            return resolve(output);
-          }
-          return visit(index + 1);
-        }, reject);
-      };
-      visit(0);
-    });
-  };
-
-  return {
-    services: flatServices,
-
-    callHooks,
-    callHooksUntil,
-    callAsyncHooksUntil,
-
-    getCurrentService: () => currentService,
-    getCurrentHookName: () => currentHookName,
-  };
+const normalizeHeaderValue = (headerValue) => {
+  return String(headerValue);
 };
 
-const flattenAndFilterServices = (services) => {
-  const flatServices = [];
-  const visitServiceEntry = (serviceEntry) => {
-    if (Array.isArray(serviceEntry)) {
-      serviceEntry.forEach((value) => visitServiceEntry(value));
-      return;
-    }
-    if (typeof serviceEntry === "object" && serviceEntry !== null) {
-      if (!serviceEntry.name) {
-        serviceEntry.name = "anonymous";
-      }
-      flatServices.push(serviceEntry);
-      return;
-    }
-    throw new Error(`services must be objects, got ${serviceEntry}`);
-  };
-  services.forEach((serviceEntry) => visitServiceEntry(serviceEntry));
-  return flatServices;
-};
-
-/**
-
- A multiple header is a header with multiple values like
-
- "text/plain, application/json;q=0.1"
-
- Each, means it's a new value (it's optionally followed by a space)
-
- Each; mean it's a property followed by =
- if "" is a string
- if not it's likely a number
- */
-
-const parseMultipleHeader = (
-  multipleHeaderString,
-  { validateName = () => true, validateProperty = () => true } = {},
-) => {
-  const values = multipleHeaderString.split(",");
-  const multipleHeader = {};
-  values.forEach((value) => {
-    const valueTrimmed = value.trim();
-    const valueParts = valueTrimmed.split(";");
-    const name = valueParts[0];
-    const nameValidation = validateName(name);
-    if (!nameValidation) {
-      return;
-    }
-
-    const properties = parseHeaderProperties(valueParts.slice(1), {
-      validateProperty,
-    });
-    multipleHeader[name] = properties;
-  });
-  return multipleHeader;
-};
-
-const parseHeaderProperties = (headerProperties, { validateProperty }) => {
-  const properties = headerProperties.reduce((previous, valuePart) => {
-    const [propertyName, propertyValueString] = valuePart.split("=");
-    const propertyValue = parseHeaderPropertyValue(propertyValueString);
-    const property = { name: propertyName, value: propertyValue };
-    const propertyValidation = validateProperty(property);
-    if (!propertyValidation) {
-      return previous;
-    }
-    return {
-      ...previous,
-      [property.name]: property.value,
-    };
-  }, {});
-  return properties;
-};
-
-const parseHeaderPropertyValue = (headerPropertyValueString) => {
-  const firstChar = headerPropertyValueString[0];
-  const lastChar =
-    headerPropertyValueString[headerPropertyValueString.length - 1];
-  if (firstChar === '"' && lastChar === '"') {
-    return headerPropertyValueString.slice(1, -1);
-  }
-  if (isNaN(headerPropertyValueString)) {
-    return headerPropertyValueString;
-  }
-  return parseFloat(headerPropertyValueString);
-};
-
-const stringifyMultipleHeader = (
-  multipleHeader,
-  { validateName = () => true, validateProperty = () => true } = {},
-) => {
-  return Object.keys(multipleHeader)
-    .filter((name) => {
-      const headerProperties = multipleHeader[name];
-      if (!headerProperties) {
-        return false;
-      }
-      if (typeof headerProperties !== "object") {
-        return false;
-      }
-      const nameValidation = validateName(name);
-      if (!nameValidation) {
-        return false;
-      }
-      return true;
-    })
-    .map((name) => {
-      const headerProperties = multipleHeader[name];
-      const headerPropertiesString = stringifyHeaderProperties(
-        headerProperties,
-        {
-          validateProperty,
-        },
-      );
-      if (headerPropertiesString.length) {
-        return `${name};${headerPropertiesString}`;
-      }
-      return name;
-    })
-    .join(", ");
-};
-
-const stringifyHeaderProperties = (headerProperties, { validateProperty }) => {
-  const headerPropertiesString = Object.keys(headerProperties)
-    .map((name) => {
-      const property = {
-        name,
-        value: headerProperties[name],
-      };
-      return property;
-    })
-    .filter((property) => {
-      const propertyValidation = validateProperty(property);
-      if (!propertyValidation) {
-        return false;
-      }
-      return true;
-    })
-    .map(stringifyHeaderProperty)
-    .join(";");
-  return headerPropertiesString;
-};
-
-const stringifyHeaderProperty = ({ name, value }) => {
-  if (typeof value === "string") {
-    return `${name}="${value}"`;
-  }
-  return `${name}=${value}`;
-};
-
-// to predict order in chrome devtools we should put a,b,c,d,e or something
-// because in chrome dev tools they are shown in alphabetic order
-// also we should manipulate a timing object instead of a header to facilitate
-// manipulation of the object so that the timing header response generation logic belongs to @jsenv/server
-// so response can return a new timing object
-// yes it's awful, feel free to PR with a better approach :)
-const timingToServerTimingResponseHeaders = (timing) => {
-  const serverTimingHeader = {};
-  Object.keys(timing).forEach((key, index) => {
-    const name = letters[index] || "zz";
-    serverTimingHeader[name] = {
-      desc: key,
-      dur: timing[key],
-    };
-  });
-  const serverTimingHeaderString =
-    stringifyServerTimingHeader(serverTimingHeader);
-
-  return { "server-timing": serverTimingHeaderString };
-};
-
-const stringifyServerTimingHeader = (serverTimingHeader) => {
-  return stringifyMultipleHeader(serverTimingHeader, {
-    validateName: validateServerTimingName,
-  });
-};
-
-// (),/:;<=>?@[\]{}" Don't allowed
-// Minimal length is one symbol
-// Digits, alphabet characters,
-// and !#$%&'*+-.^_`|~ are allowed
-// https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
-// https://tools.ietf.org/html/rfc7230#section-3.2.6
-const validateServerTimingName = (name) => {
-  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/i.test(name);
-  if (!valid) {
-    console.warn(`server timing contains invalid symbols`);
-    return false;
-  }
-  return true;
-};
-
-const letters = [
-  "a",
-  "b",
-  "c",
-  "d",
-  "e",
-  "f",
-  "g",
-  "h",
-  "i",
-  "j",
-  "k",
-  "l",
-  "m",
-  "n",
-  "o",
-  "p",
-  "q",
-  "r",
-  "s",
-  "t",
-  "u",
-  "v",
-  "w",
-  "x",
-  "y",
-  "z",
-];
-
-const listenEvent = (
-  objectWithEventEmitter,
-  eventName,
-  callback,
-  { once = false } = {},
-) => {
-  if (once) {
-    objectWithEventEmitter.once(eventName, callback);
-  } else {
-    objectWithEventEmitter.addListener(eventName, callback);
-  }
-  return () => {
-    objectWithEventEmitter.removeListener(eventName, callback);
-  };
-};
-
-/**
-
-https://stackoverflow.com/a/42019773/2634179
-
+/*
+https://developer.mozilla.org/en-US/docs/Web/API/Headers
+https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 */
 
 
-const createPolyglotServer = async ({
-  http2 = false,
-  http1Allowed = true,
-  certificate,
-  privateKey,
-}) => {
-  const httpServer = http.createServer();
-  const tlsServer = await createSecureServer({
-    certificate,
-    privateKey,
-    http2,
-    http1Allowed,
-  });
-  const netServer = net.createServer({
-    allowHalfOpen: false,
-  });
+const headersFromObject = (headersObject) => {
+  const headers = {};
 
-  listenEvent(netServer, "connection", (socket) => {
-    detectSocketProtocol(socket, (protocol) => {
-      if (protocol === "http") {
-        httpServer.emit("connection", socket);
-        return;
-      }
-
-      if (protocol === "tls") {
-        tlsServer.emit("connection", socket);
-        return;
-      }
-
-      const response = [
-        `HTTP/1.1 400 Bad Request`,
-        `Content-Length: 0`,
-        "",
-        "",
-      ].join("\r\n");
-      socket.write(response);
-      socket.end();
-      socket.destroy();
-      netServer.emit(
-        "clientError",
-        new Error("protocol error, Neither http, nor tls"),
-        socket,
-      );
-    });
-  });
-
-  netServer._httpServer = httpServer;
-  netServer._tlsServer = tlsServer;
-
-  return netServer;
-};
-
-// The async part is just to lazyly import "http2" or "https"
-// so that these module are parsed only if used.
-// https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions
-const createSecureServer = async ({
-  certificate,
-  privateKey,
-  http2,
-  http1Allowed,
-}) => {
-  if (http2) {
-    const { createSecureServer } = await import("node:http2");
-    return createSecureServer({
-      cert: certificate,
-      key: privateKey,
-      allowHTTP1: http1Allowed,
-    });
-  }
-
-  const { createServer } = await import("node:https");
-  return createServer({
-    cert: certificate,
-    key: privateKey,
-  });
-};
-
-const detectSocketProtocol = (socket, protocolDetectedCallback) => {
-  let removeOnceReadableListener = () => {};
-
-  const tryToRead = () => {
-    const buffer = socket.read(1);
-    if (buffer === null) {
-      removeOnceReadableListener = socket.once("readable", tryToRead);
+  Object.keys(headersObject).forEach((headerName) => {
+    if (headerName[0] === ":") {
+      // exclude http2 headers
       return;
     }
-
-    const firstByte = buffer[0];
-    socket.unshift(buffer);
-    if (firstByte === 22) {
-      protocolDetectedCallback("tls");
-      return;
-    }
-    if (firstByte > 32 && firstByte < 127) {
-      protocolDetectedCallback("http");
-      return;
-    }
-    protocolDetectedCallback(null);
-  };
-
-  tryToRead();
-
-  return () => {
-    removeOnceReadableListener();
-  };
-};
-
-const trackServerPendingConnections = (nodeServer, { http2 }) => {
-  if (http2) {
-    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
-    return trackHttp1ServerPendingConnections(nodeServer);
-  }
-  return trackHttp1ServerPendingConnections(nodeServer);
-};
-
-// const trackHttp2ServerPendingSessions = () => {}
-
-const trackHttp1ServerPendingConnections = (nodeServer) => {
-  const pendingConnections = new Set();
-
-  const removeConnectionListener = listenEvent(
-    nodeServer,
-    "connection",
-    (connection) => {
-      pendingConnections.add(connection);
-      listenEvent(
-        connection,
-        "close",
-        () => {
-          pendingConnections.delete(connection);
-        },
-        { once: true },
-      );
-    },
-  );
-
-  const stop = async (reason) => {
-    removeConnectionListener();
-    const pendingConnectionsArray = Array.from(pendingConnections);
-    pendingConnections.clear();
-
-    await Promise.all(
-      pendingConnectionsArray.map(async (pendingConnection) => {
-        await destroyConnection(pendingConnection, reason);
-      }),
+    headers[normalizeHeaderName(headerName)] = normalizeHeaderValue(
+      headersObject[headerName],
     );
-  };
-
-  return { stop };
-};
-
-const destroyConnection = (connection, reason) => {
-  return new Promise((resolve, reject) => {
-    connection.destroy(reason, (error) => {
-      if (error) {
-        if (error === reason || error.code === "ENOTCONN") {
-          resolve();
-        } else {
-          reject(error);
-        }
-      } else {
-        resolve();
-      }
-    });
   });
-};
 
-// export const trackServerPendingStreams = (nodeServer) => {
-//   const pendingClients = new Set()
-
-//   const streamListener = (http2Stream, headers, flags) => {
-//     const client = { http2Stream, headers, flags }
-
-//     pendingClients.add(client)
-//     http2Stream.on("close", () => {
-//       pendingClients.delete(client)
-//     })
-//   }
-
-//   nodeServer.on("stream", streamListener)
-
-//   const stop = ({
-//     status,
-//     // reason
-//   }) => {
-//     nodeServer.removeListener("stream", streamListener)
-
-//     return Promise.all(
-//       Array.from(pendingClients).map(({ http2Stream }) => {
-//         if (http2Stream.sentHeaders === false) {
-//           http2Stream.respond({ ":status": status }, { endStream: true })
-//         }
-
-//         return new Promise((resolve, reject) => {
-//           if (http2Stream.closed) {
-//             resolve()
-//           } else {
-//             http2Stream.close(NGHTTP2_NO_ERROR, (error) => {
-//               if (error) {
-//                 reject(error)
-//               } else {
-//                 resolve()
-//               }
-//             })
-//           }
-//         })
-//       }),
-//     )
-//   }
-
-//   return { stop }
-// }
-
-// export const trackServerPendingSessions = (nodeServer, { onSessionError }) => {
-//   const pendingSessions = new Set()
-
-//   const sessionListener = (session) => {
-//     session.on("close", () => {
-//       pendingSessions.delete(session)
-//     })
-//     session.on("error", onSessionError)
-//     pendingSessions.add(session)
-//   }
-
-//   nodeServer.on("session", sessionListener)
-
-//   const stop = async (reason) => {
-//     nodeServer.removeListener("session", sessionListener)
-
-//     await Promise.all(
-//       Array.from(pendingSessions).map((pendingSession) => {
-//         return new Promise((resolve, reject) => {
-//           pendingSession.close((error) => {
-//             if (error) {
-//               if (error === reason || error.code === "ENOTCONN") {
-//                 resolve()
-//               } else {
-//                 reject(error)
-//               }
-//             } else {
-//               resolve()
-//             }
-//           })
-//         })
-//       }),
-//     )
-//   }
-
-//   return { stop }
-// }
-
-const listenRequest = (nodeServer, requestCallback) => {
-  if (nodeServer._httpServer) {
-    const removeHttpRequestListener = listenEvent(
-      nodeServer._httpServer,
-      "request",
-      requestCallback,
-    );
-    const removeTlsRequestListener = listenEvent(
-      nodeServer._tlsServer,
-      "request",
-      requestCallback,
-    );
-    return () => {
-      removeHttpRequestListener();
-      removeTlsRequestListener();
-    };
-  }
-  return listenEvent(nodeServer, "request", requestCallback);
-};
-
-const trackServerPendingRequests = (nodeServer, { http2 }) => {
-  if (http2) {
-    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
-    return trackHttp1ServerPendingRequests(nodeServer);
-  }
-  return trackHttp1ServerPendingRequests(nodeServer);
-};
-
-const trackHttp1ServerPendingRequests = (nodeServer) => {
-  const pendingClients = new Set();
-
-  const removeRequestListener = listenRequest(
-    nodeServer,
-    (nodeRequest, nodeResponse) => {
-      const client = { nodeRequest, nodeResponse };
-      pendingClients.add(client);
-      nodeResponse.once("close", () => {
-        pendingClients.delete(client);
-      });
-    },
-  );
-
-  const stop = async ({ status, reason }) => {
-    removeRequestListener();
-    const pendingClientsArray = Array.from(pendingClients);
-    pendingClients.clear();
-    await Promise.all(
-      pendingClientsArray.map(({ nodeResponse }) => {
-        if (nodeResponse.headersSent === false) {
-          nodeResponse.writeHead(status, String(reason));
-        }
-
-        // http2
-        if (nodeResponse.close) {
-          return new Promise((resolve, reject) => {
-            if (nodeResponse.closed) {
-              resolve();
-            } else {
-              nodeResponse.close((error) => {
-                if (error) {
-                  reject(error);
-                } else {
-                  resolve();
-                }
-              });
-            }
-          });
-        }
-
-        // http
-        return new Promise((resolve) => {
-          if (nodeResponse.destroyed) {
-            resolve();
-          } else {
-            nodeResponse.once("close", () => {
-              resolve();
-            });
-            nodeResponse.destroy();
-          }
-        });
-      }),
-    );
-  };
-
-  return { stop };
+  return headers;
 };
 
 if ("observable" in Symbol === false) {
@@ -5153,41 +4429,6 @@ const onceReadableStreamUsedOrClosed = (readableStream, callback) => {
   };
   readableStream.on("data", dataOrCloseCallback);
   readableStream.once("close", dataOrCloseCallback);
-};
-
-const normalizeHeaderName = (headerName) => {
-  headerName = String(headerName);
-  if (/[^a-z0-9\-#$%&'*+.^_`|~]/i.test(headerName)) {
-    throw new TypeError("Invalid character in header field name");
-  }
-
-  return headerName.toLowerCase();
-};
-
-const normalizeHeaderValue = (headerValue) => {
-  return String(headerValue);
-};
-
-/*
-https://developer.mozilla.org/en-US/docs/Web/API/Headers
-https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-*/
-
-
-const headersFromObject = (headersObject) => {
-  const headers = {};
-
-  Object.keys(headersObject).forEach((headerName) => {
-    if (headerName[0] === ":") {
-      // exclude http2 headers
-      return;
-    }
-    headers[normalizeHeaderName(headerName)] = normalizeHeaderValue(
-      headersObject[headerName],
-    );
-  });
-
-  return headers;
 };
 
 const fromNodeRequest = (
@@ -5621,116 +4862,6 @@ const statusIsClientError = (status) => status >= 400 && status < 500;
 
 const statusIsServerError = (status) => status >= 500 && status < 600;
 
-const listen = async ({
-  signal = new AbortController().signal,
-  server,
-  port,
-  portHint,
-  hostname,
-}) => {
-  const listeningOperation = Abort.startOperation();
-
-  try {
-    listeningOperation.addAbortSignal(signal);
-
-    if (portHint) {
-      listeningOperation.throwIfAborted();
-      port = await findFreePort(portHint, {
-        signal: listeningOperation.signal,
-        hostname,
-      });
-    }
-    listeningOperation.throwIfAborted();
-    port = await startListening({ server, port, hostname });
-    listeningOperation.addAbortCallback(() => stopListening(server));
-    listeningOperation.throwIfAborted();
-
-    return port;
-  } finally {
-    await listeningOperation.end();
-  }
-};
-
-const findFreePort = async (
-  initialPort = 1,
-  {
-    signal = new AbortController().signal,
-    hostname = "127.0.0.1",
-    min = 1,
-    max = 65534,
-    next = (port) => port + 1,
-  } = {},
-) => {
-  const findFreePortOperation = Abort.startOperation();
-  try {
-    findFreePortOperation.addAbortSignal(signal);
-    findFreePortOperation.throwIfAborted();
-
-    const testUntil = async (port, host) => {
-      findFreePortOperation.throwIfAborted();
-      const free = await portIsFree(port, host);
-      if (free) {
-        return port;
-      }
-
-      const nextPort = next(port);
-      if (nextPort > max) {
-        throw new Error(
-          `${hostname} has no available port between ${min} and ${max}`,
-        );
-      }
-      return testUntil(nextPort, hostname);
-    };
-    const freePort = await testUntil(initialPort, hostname);
-    return freePort;
-  } finally {
-    await findFreePortOperation.end();
-  }
-};
-
-const portIsFree = async (port, hostname) => {
-  const server = createServer();
-
-  try {
-    await startListening({
-      server,
-      port,
-      hostname,
-    });
-  } catch (error) {
-    if (error && error.code === "EADDRINUSE") {
-      return false;
-    }
-    if (error && error.code === "EACCES") {
-      return false;
-    }
-    throw error;
-  }
-
-  await stopListening(server);
-  return true;
-};
-
-const startListening = ({ server, port, hostname }) => {
-  return new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("listening", () => {
-      // in case port is 0 (randomly assign an available port)
-      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-      resolve(server.address().port);
-    });
-    server.listen(port, hostname);
-  });
-};
-
-const stopListening = (server) => {
-  return new Promise((resolve, reject) => {
-    server.on("error", reject);
-    server.on("close", resolve);
-    server.close();
-  });
-};
-
 const composeTwoObjects = (
   firstObject,
   secondObject,
@@ -5901,23 +5032,150 @@ const HEADER_NAMES_COMPOSITION = {
   "vary": composeHeaderValues,
 };
 
-const composeTwoResponses = (firstResponse, secondResponse) => {
-  return composeTwoObjects(firstResponse, secondResponse, {
-    keysComposition: RESPONSE_KEYS_COMPOSITION,
-    strict: true,
+const listen = async ({
+  signal = new AbortController().signal,
+  server,
+  port,
+  portHint,
+  hostname,
+}) => {
+  const listeningOperation = Abort.startOperation();
+
+  try {
+    listeningOperation.addAbortSignal(signal);
+
+    if (portHint) {
+      listeningOperation.throwIfAborted();
+      port = await findFreePort(portHint, {
+        signal: listeningOperation.signal,
+        hostname,
+      });
+    }
+    listeningOperation.throwIfAborted();
+    port = await startListening({ server, port, hostname });
+    listeningOperation.addAbortCallback(() => stopListening(server));
+    listeningOperation.throwIfAborted();
+
+    return port;
+  } finally {
+    await listeningOperation.end();
+  }
+};
+
+const findFreePort = async (
+  initialPort = 1,
+  {
+    signal = new AbortController().signal,
+    hostname = "127.0.0.1",
+    min = 1,
+    max = 65534,
+    next = (port) => port + 1,
+  } = {},
+) => {
+  const findFreePortOperation = Abort.startOperation();
+  try {
+    findFreePortOperation.addAbortSignal(signal);
+    findFreePortOperation.throwIfAborted();
+
+    const testUntil = async (port, host) => {
+      findFreePortOperation.throwIfAborted();
+      const free = await portIsFree(port, host);
+      if (free) {
+        return port;
+      }
+
+      const nextPort = next(port);
+      if (nextPort > max) {
+        throw new Error(
+          `${hostname} has no available port between ${min} and ${max}`,
+        );
+      }
+      return testUntil(nextPort, hostname);
+    };
+    const freePort = await testUntil(initialPort, hostname);
+    return freePort;
+  } finally {
+    await findFreePortOperation.end();
+  }
+};
+
+const portIsFree = async (port, hostname) => {
+  const server = createServer();
+
+  try {
+    await startListening({
+      server,
+      port,
+      hostname,
+    });
+  } catch (error) {
+    if (error && error.code === "EADDRINUSE") {
+      return false;
+    }
+    if (error && error.code === "EACCES") {
+      return false;
+    }
+    throw error;
+  }
+
+  await stopListening(server);
+  return true;
+};
+
+const startListening = ({ server, port, hostname }) => {
+  return new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("listening", () => {
+      // in case port is 0 (randomly assign an available port)
+      // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
+      resolve(server.address().port);
+    });
+    server.listen(port, hostname);
   });
 };
 
-const RESPONSE_KEYS_COMPOSITION = {
-  status: (prevStatus, status) => status,
-  statusText: (prevStatusText, statusText) => statusText,
-  statusMessage: (prevStatusMessage, statusMessage) => statusMessage,
-  headers: composeTwoHeaders,
-  body: (prevBody, body) => body,
-  bodyEncoding: (prevEncoding, encoding) => encoding,
-  timing: (prevTiming, timing) => {
-    return { ...prevTiming, ...timing };
-  },
+const stopListening = (server) => {
+  return new Promise((resolve, reject) => {
+    server.on("error", reject);
+    server.on("close", resolve);
+    server.close();
+  });
+};
+
+const listenEvent = (
+  objectWithEventEmitter,
+  eventName,
+  callback,
+  { once = false } = {},
+) => {
+  if (once) {
+    objectWithEventEmitter.once(eventName, callback);
+  } else {
+    objectWithEventEmitter.addListener(eventName, callback);
+  }
+  return () => {
+    objectWithEventEmitter.removeListener(eventName, callback);
+  };
+};
+
+const listenRequest = (nodeServer, requestCallback) => {
+  if (nodeServer._httpServer) {
+    const removeHttpRequestListener = listenEvent(
+      nodeServer._httpServer,
+      "request",
+      requestCallback,
+    );
+    const removeTlsRequestListener = listenEvent(
+      nodeServer._tlsServer,
+      "request",
+      requestCallback,
+    );
+    return () => {
+      removeHttpRequestListener();
+      removeTlsRequestListener();
+    };
+  }
+  return listenEvent(nodeServer, "request", requestCallback);
 };
 
 const listenServerConnectionError = (
@@ -5968,6 +5226,748 @@ const listenServerConnectionError = (
   };
 };
 
+const composeTwoResponses = (firstResponse, secondResponse) => {
+  return composeTwoObjects(firstResponse, secondResponse, {
+    keysComposition: RESPONSE_KEYS_COMPOSITION,
+    strict: true,
+  });
+};
+
+const RESPONSE_KEYS_COMPOSITION = {
+  status: (prevStatus, status) => status,
+  statusText: (prevStatusText, statusText) => statusText,
+  statusMessage: (prevStatusMessage, statusMessage) => statusMessage,
+  headers: composeTwoHeaders,
+  body: (prevBody, body) => body,
+  bodyEncoding: (prevEncoding, encoding) => encoding,
+  timing: (prevTiming, timing) => {
+    return { ...prevTiming, ...timing };
+  },
+};
+
+/**
+
+https://stackoverflow.com/a/42019773/2634179
+
+*/
+
+
+const createPolyglotServer = async ({
+  http2 = false,
+  http1Allowed = true,
+  certificate,
+  privateKey,
+}) => {
+  const httpServer = http.createServer();
+  const tlsServer = await createSecureServer({
+    certificate,
+    privateKey,
+    http2,
+    http1Allowed,
+  });
+  const netServer = net.createServer({
+    allowHalfOpen: false,
+  });
+
+  listenEvent(netServer, "connection", (socket) => {
+    detectSocketProtocol(socket, (protocol) => {
+      if (protocol === "http") {
+        httpServer.emit("connection", socket);
+        return;
+      }
+
+      if (protocol === "tls") {
+        tlsServer.emit("connection", socket);
+        return;
+      }
+
+      const response = [
+        `HTTP/1.1 400 Bad Request`,
+        `Content-Length: 0`,
+        "",
+        "",
+      ].join("\r\n");
+      socket.write(response);
+      socket.end();
+      socket.destroy();
+      netServer.emit(
+        "clientError",
+        new Error("protocol error, Neither http, nor tls"),
+        socket,
+      );
+    });
+  });
+
+  netServer._httpServer = httpServer;
+  netServer._tlsServer = tlsServer;
+
+  return netServer;
+};
+
+// The async part is just to lazyly import "http2" or "https"
+// so that these module are parsed only if used.
+// https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions
+const createSecureServer = async ({
+  certificate,
+  privateKey,
+  http2,
+  http1Allowed,
+}) => {
+  if (http2) {
+    const { createSecureServer } = await import("node:http2");
+    return createSecureServer({
+      cert: certificate,
+      key: privateKey,
+      allowHTTP1: http1Allowed,
+    });
+  }
+
+  const { createServer } = await import("node:https");
+  return createServer({
+    cert: certificate,
+    key: privateKey,
+  });
+};
+
+const detectSocketProtocol = (socket, protocolDetectedCallback) => {
+  let removeOnceReadableListener = () => {};
+
+  const tryToRead = () => {
+    const buffer = socket.read(1);
+    if (buffer === null) {
+      removeOnceReadableListener = socket.once("readable", tryToRead);
+      return;
+    }
+
+    const firstByte = buffer[0];
+    socket.unshift(buffer);
+    if (firstByte === 22) {
+      protocolDetectedCallback("tls");
+      return;
+    }
+    if (firstByte > 32 && firstByte < 127) {
+      protocolDetectedCallback("http");
+      return;
+    }
+    protocolDetectedCallback(null);
+  };
+
+  tryToRead();
+
+  return () => {
+    removeOnceReadableListener();
+  };
+};
+
+const trackServerPendingConnections = (nodeServer, { http2 }) => {
+  if (http2) {
+    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
+    return trackHttp1ServerPendingConnections(nodeServer);
+  }
+  return trackHttp1ServerPendingConnections(nodeServer);
+};
+
+// const trackHttp2ServerPendingSessions = () => {}
+
+const trackHttp1ServerPendingConnections = (nodeServer) => {
+  const pendingConnections = new Set();
+
+  const removeConnectionListener = listenEvent(
+    nodeServer,
+    "connection",
+    (connection) => {
+      pendingConnections.add(connection);
+      listenEvent(
+        connection,
+        "close",
+        () => {
+          pendingConnections.delete(connection);
+        },
+        { once: true },
+      );
+    },
+  );
+
+  const stop = async (reason) => {
+    removeConnectionListener();
+    const pendingConnectionsArray = Array.from(pendingConnections);
+    pendingConnections.clear();
+
+    await Promise.all(
+      pendingConnectionsArray.map(async (pendingConnection) => {
+        await destroyConnection(pendingConnection, reason);
+      }),
+    );
+  };
+
+  return { stop };
+};
+
+const destroyConnection = (connection, reason) => {
+  return new Promise((resolve, reject) => {
+    connection.destroy(reason, (error) => {
+      if (error) {
+        if (error === reason || error.code === "ENOTCONN") {
+          resolve();
+        } else {
+          reject(error);
+        }
+      } else {
+        resolve();
+      }
+    });
+  });
+};
+
+// export const trackServerPendingStreams = (nodeServer) => {
+//   const pendingClients = new Set()
+
+//   const streamListener = (http2Stream, headers, flags) => {
+//     const client = { http2Stream, headers, flags }
+
+//     pendingClients.add(client)
+//     http2Stream.on("close", () => {
+//       pendingClients.delete(client)
+//     })
+//   }
+
+//   nodeServer.on("stream", streamListener)
+
+//   const stop = ({
+//     status,
+//     // reason
+//   }) => {
+//     nodeServer.removeListener("stream", streamListener)
+
+//     return Promise.all(
+//       Array.from(pendingClients).map(({ http2Stream }) => {
+//         if (http2Stream.sentHeaders === false) {
+//           http2Stream.respond({ ":status": status }, { endStream: true })
+//         }
+
+//         return new Promise((resolve, reject) => {
+//           if (http2Stream.closed) {
+//             resolve()
+//           } else {
+//             http2Stream.close(NGHTTP2_NO_ERROR, (error) => {
+//               if (error) {
+//                 reject(error)
+//               } else {
+//                 resolve()
+//               }
+//             })
+//           }
+//         })
+//       }),
+//     )
+//   }
+
+//   return { stop }
+// }
+
+// export const trackServerPendingSessions = (nodeServer, { onSessionError }) => {
+//   const pendingSessions = new Set()
+
+//   const sessionListener = (session) => {
+//     session.on("close", () => {
+//       pendingSessions.delete(session)
+//     })
+//     session.on("error", onSessionError)
+//     pendingSessions.add(session)
+//   }
+
+//   nodeServer.on("session", sessionListener)
+
+//   const stop = async (reason) => {
+//     nodeServer.removeListener("session", sessionListener)
+
+//     await Promise.all(
+//       Array.from(pendingSessions).map((pendingSession) => {
+//         return new Promise((resolve, reject) => {
+//           pendingSession.close((error) => {
+//             if (error) {
+//               if (error === reason || error.code === "ENOTCONN") {
+//                 resolve()
+//               } else {
+//                 reject(error)
+//               }
+//             } else {
+//               resolve()
+//             }
+//           })
+//         })
+//       }),
+//     )
+//   }
+
+//   return { stop }
+// }
+
+const trackServerPendingRequests = (nodeServer, { http2 }) => {
+  if (http2) {
+    // see http2.js: we rely on https://nodejs.org/api/http2.html#http2_compatibility_api
+    return trackHttp1ServerPendingRequests(nodeServer);
+  }
+  return trackHttp1ServerPendingRequests(nodeServer);
+};
+
+const trackHttp1ServerPendingRequests = (nodeServer) => {
+  const pendingClients = new Set();
+
+  const removeRequestListener = listenRequest(
+    nodeServer,
+    (nodeRequest, nodeResponse) => {
+      const client = { nodeRequest, nodeResponse };
+      pendingClients.add(client);
+      nodeResponse.once("close", () => {
+        pendingClients.delete(client);
+      });
+    },
+  );
+
+  const stop = async ({ status, reason }) => {
+    removeRequestListener();
+    const pendingClientsArray = Array.from(pendingClients);
+    pendingClients.clear();
+    await Promise.all(
+      pendingClientsArray.map(({ nodeResponse }) => {
+        if (nodeResponse.headersSent === false) {
+          nodeResponse.writeHead(status, String(reason));
+        }
+
+        // http2
+        if (nodeResponse.close) {
+          return new Promise((resolve, reject) => {
+            if (nodeResponse.closed) {
+              resolve();
+            } else {
+              nodeResponse.close((error) => {
+                if (error) {
+                  reject(error);
+                } else {
+                  resolve();
+                }
+              });
+            }
+          });
+        }
+
+        // http
+        return new Promise((resolve) => {
+          if (nodeResponse.destroyed) {
+            resolve();
+          } else {
+            nodeResponse.once("close", () => {
+              resolve();
+            });
+            nodeResponse.destroy();
+          }
+        });
+      }),
+    );
+  };
+
+  return { stop };
+};
+
+/**
+
+ A multiple header is a header with multiple values like
+
+ "text/plain, application/json;q=0.1"
+
+ Each, means it's a new value (it's optionally followed by a space)
+
+ Each; mean it's a property followed by =
+ if "" is a string
+ if not it's likely a number
+ */
+
+const parseMultipleHeader = (
+  multipleHeaderString,
+  { validateName = () => true, validateProperty = () => true } = {},
+) => {
+  const values = multipleHeaderString.split(",");
+  const multipleHeader = {};
+  values.forEach((value) => {
+    const valueTrimmed = value.trim();
+    const valueParts = valueTrimmed.split(";");
+    const name = valueParts[0];
+    const nameValidation = validateName(name);
+    if (!nameValidation) {
+      return;
+    }
+
+    const properties = parseHeaderProperties(valueParts.slice(1), {
+      validateProperty,
+    });
+    multipleHeader[name] = properties;
+  });
+  return multipleHeader;
+};
+
+const parseHeaderProperties = (headerProperties, { validateProperty }) => {
+  const properties = headerProperties.reduce((previous, valuePart) => {
+    const [propertyName, propertyValueString] = valuePart.split("=");
+    const propertyValue = parseHeaderPropertyValue(propertyValueString);
+    const property = { name: propertyName, value: propertyValue };
+    const propertyValidation = validateProperty(property);
+    if (!propertyValidation) {
+      return previous;
+    }
+    return {
+      ...previous,
+      [property.name]: property.value,
+    };
+  }, {});
+  return properties;
+};
+
+const parseHeaderPropertyValue = (headerPropertyValueString) => {
+  const firstChar = headerPropertyValueString[0];
+  const lastChar =
+    headerPropertyValueString[headerPropertyValueString.length - 1];
+  if (firstChar === '"' && lastChar === '"') {
+    return headerPropertyValueString.slice(1, -1);
+  }
+  if (isNaN(headerPropertyValueString)) {
+    return headerPropertyValueString;
+  }
+  return parseFloat(headerPropertyValueString);
+};
+
+const stringifyMultipleHeader = (
+  multipleHeader,
+  { validateName = () => true, validateProperty = () => true } = {},
+) => {
+  return Object.keys(multipleHeader)
+    .filter((name) => {
+      const headerProperties = multipleHeader[name];
+      if (!headerProperties) {
+        return false;
+      }
+      if (typeof headerProperties !== "object") {
+        return false;
+      }
+      const nameValidation = validateName(name);
+      if (!nameValidation) {
+        return false;
+      }
+      return true;
+    })
+    .map((name) => {
+      const headerProperties = multipleHeader[name];
+      const headerPropertiesString = stringifyHeaderProperties(
+        headerProperties,
+        {
+          validateProperty,
+        },
+      );
+      if (headerPropertiesString.length) {
+        return `${name};${headerPropertiesString}`;
+      }
+      return name;
+    })
+    .join(", ");
+};
+
+const stringifyHeaderProperties = (headerProperties, { validateProperty }) => {
+  const headerPropertiesString = Object.keys(headerProperties)
+    .map((name) => {
+      const property = {
+        name,
+        value: headerProperties[name],
+      };
+      return property;
+    })
+    .filter((property) => {
+      const propertyValidation = validateProperty(property);
+      if (!propertyValidation) {
+        return false;
+      }
+      return true;
+    })
+    .map(stringifyHeaderProperty)
+    .join(";");
+  return headerPropertiesString;
+};
+
+const stringifyHeaderProperty = ({ name, value }) => {
+  if (typeof value === "string") {
+    return `${name}="${value}"`;
+  }
+  return `${name}=${value}`;
+};
+
+// to predict order in chrome devtools we should put a,b,c,d,e or something
+// because in chrome dev tools they are shown in alphabetic order
+// also we should manipulate a timing object instead of a header to facilitate
+// manipulation of the object so that the timing header response generation logic belongs to @jsenv/server
+// so response can return a new timing object
+// yes it's awful, feel free to PR with a better approach :)
+const timingToServerTimingResponseHeaders = (timing) => {
+  const serverTimingHeader = {};
+  Object.keys(timing).forEach((key, index) => {
+    const name = letters[index] || "zz";
+    serverTimingHeader[name] = {
+      desc: key,
+      dur: timing[key],
+    };
+  });
+  const serverTimingHeaderString =
+    stringifyServerTimingHeader(serverTimingHeader);
+
+  return { "server-timing": serverTimingHeaderString };
+};
+
+const stringifyServerTimingHeader = (serverTimingHeader) => {
+  return stringifyMultipleHeader(serverTimingHeader, {
+    validateName: validateServerTimingName,
+  });
+};
+
+// (),/:;<=>?@[\]{}" Don't allowed
+// Minimal length is one symbol
+// Digits, alphabet characters,
+// and !#$%&'*+-.^_`|~ are allowed
+// https://www.w3.org/TR/2019/WD-server-timing-20190307/#the-server-timing-header-field
+// https://tools.ietf.org/html/rfc7230#section-3.2.6
+const validateServerTimingName = (name) => {
+  const valid = /^[!#$%&'*+\-.^_`|~0-9a-z]+$/i.test(name);
+  if (!valid) {
+    console.warn(`server timing contains invalid symbols`);
+    return false;
+  }
+  return true;
+};
+
+const letters = [
+  "a",
+  "b",
+  "c",
+  "d",
+  "e",
+  "f",
+  "g",
+  "h",
+  "i",
+  "j",
+  "k",
+  "l",
+  "m",
+  "n",
+  "o",
+  "p",
+  "q",
+  "r",
+  "s",
+  "t",
+  "u",
+  "v",
+  "w",
+  "x",
+  "y",
+  "z",
+];
+
+const timeStart = (name) => {
+  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
+  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
+  const startTimestamp = performance$1.now();
+  const timeEnd = () => {
+    const endTimestamp = performance$1.now();
+    const timing = {
+      [name]: endTimestamp - startTimestamp,
+    };
+    return timing;
+  };
+  return timeEnd;
+};
+
+const timeFunction = (name, fn) => {
+  const timeEnd = timeStart(name);
+  const returnValue = fn();
+  if (returnValue && typeof returnValue.then === "function") {
+    return returnValue.then((value) => {
+      return [timeEnd(), value];
+    });
+  }
+  return [timeEnd(), returnValue];
+};
+
+const HOOK_NAMES$1 = [
+  "serverListening",
+  "redirectRequest",
+  "handleRequest",
+  "handleWebsocket",
+  "handleError",
+  "onResponsePush",
+  "injectResponseHeaders",
+  "responseReady",
+  "serverStopped",
+];
+
+const createServiceController = (services) => {
+  const flatServices = flattenAndFilterServices(services);
+  const hookGroups = {};
+
+  const addService = (service) => {
+    Object.keys(service).forEach((key) => {
+      if (key === "name") return;
+      const isHook = HOOK_NAMES$1.includes(key);
+      if (!isHook) {
+        console.warn(
+          `Unexpected "${key}" property on "${service.name}" service`,
+        );
+      }
+      const hookName = key;
+      const hookValue = service[hookName];
+      if (hookValue) {
+        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
+        group.push({
+          service,
+          name: hookName,
+          value: hookValue,
+        });
+      }
+    });
+  };
+  flatServices.forEach((service) => {
+    addService(service);
+  });
+
+  let currentService = null;
+  let currentHookName = null;
+  const callHook = (hook, info, context) => {
+    const hookFn = hook.value;
+    if (!hookFn) {
+      return null;
+    }
+    currentService = hook.service;
+    currentHookName = hook.name;
+    let timeEnd;
+    if (context && context.timing) {
+      timeEnd = timeStart(
+        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
+      );
+    }
+    let valueReturned = hookFn(info, context);
+    if (context && context.timing) {
+      Object.assign(context.timing, timeEnd());
+    }
+    currentService = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+  const callAsyncHook = async (hook, info, context) => {
+    const hookFn = hook.value;
+    if (!hookFn) {
+      return null;
+    }
+    currentService = hook.service;
+    currentHookName = hook.name;
+    let timeEnd;
+    if (context && context.timing) {
+      timeEnd = timeStart(
+        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
+      );
+    }
+    let valueReturned = await hookFn(info, context);
+    if (context && context.timing) {
+      Object.assign(context.timing, timeEnd());
+    }
+    currentService = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+
+  const callHooks = (hookName, info, context, callback = () => {}) => {
+    const hooks = hookGroups[hookName];
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context);
+        if (returnValue) {
+          callback(returnValue);
+        }
+      }
+    }
+  };
+  const callHooksUntil = (
+    hookName,
+    info,
+    context,
+    until = (returnValue) => returnValue,
+  ) => {
+    const hooks = hookGroups[hookName];
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info, context);
+        const untilReturnValue = until(returnValue);
+        if (untilReturnValue) {
+          return untilReturnValue;
+        }
+      }
+    }
+    return null;
+  };
+  const callAsyncHooksUntil = (hookName, info, context) => {
+    const hooks = hookGroups[hookName];
+    if (!hooks) {
+      return null;
+    }
+    if (hooks.length === 0) {
+      return null;
+    }
+    return new Promise((resolve, reject) => {
+      const visit = (index) => {
+        if (index >= hooks.length) {
+          return resolve();
+        }
+        const hook = hooks[index];
+        const returnValue = callAsyncHook(hook, info, context);
+        return Promise.resolve(returnValue).then((output) => {
+          if (output) {
+            return resolve(output);
+          }
+          return visit(index + 1);
+        }, reject);
+      };
+      visit(0);
+    });
+  };
+
+  return {
+    services: flatServices,
+
+    callHooks,
+    callHooksUntil,
+    callAsyncHooksUntil,
+
+    getCurrentService: () => currentService,
+    getCurrentHookName: () => currentHookName,
+  };
+};
+
+const flattenAndFilterServices = (services) => {
+  const flatServices = [];
+  const visitServiceEntry = (serviceEntry) => {
+    if (Array.isArray(serviceEntry)) {
+      serviceEntry.forEach((value) => visitServiceEntry(value));
+      return;
+    }
+    if (typeof serviceEntry === "object" && serviceEntry !== null) {
+      if (!serviceEntry.name) {
+        serviceEntry.name = "anonymous";
+      }
+      flatServices.push(serviceEntry);
+      return;
+    }
+    throw new Error(`services must be objects, got ${serviceEntry}`);
+  };
+  services.forEach((serviceEntry) => visitServiceEntry(serviceEntry));
+  return flatServices;
+};
+
 const createReason = (reasonString) => {
   return {
     toString: () => reasonString,
@@ -5984,53 +5984,21 @@ const STOP_REASON_PROCESS_BEFORE_EXIT = createReason(
 const STOP_REASON_PROCESS_EXIT = createReason("process exit");
 const STOP_REASON_NOT_SPECIFIED = createReason("not specified");
 
-const createIpGetters = () => {
-  const networkAddresses = [];
-  const networkInterfaceMap = networkInterfaces();
-  for (const key of Object.keys(networkInterfaceMap)) {
-    for (const networkAddress of networkInterfaceMap[key]) {
-      networkAddresses.push(networkAddress);
-    }
-  }
-  return {
-    getFirstInternalIp: ({ preferIpv6 }) => {
-      const isPref = preferIpv6 ? isIpV6 : isIpV4;
-      let firstInternalIp;
-      for (const networkAddress of networkAddresses) {
-        if (networkAddress.internal) {
-          firstInternalIp = networkAddress.address;
-          if (isPref(networkAddress)) {
-            break;
-          }
-        }
+const applyDnsResolution = async (
+  hostname,
+  { verbatim = false } = {},
+) => {
+  const dnsResolution = await new Promise((resolve, reject) => {
+    lookup(hostname, { verbatim }, (error, address, family) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve({ address, family });
       }
-      return firstInternalIp;
-    },
-    getFirstExternalIp: ({ preferIpv6 }) => {
-      const isPref = preferIpv6 ? isIpV6 : isIpV4;
-      let firstExternalIp;
-      for (const networkAddress of networkAddresses) {
-        if (!networkAddress.internal) {
-          firstExternalIp = networkAddress.address;
-          if (isPref(networkAddress)) {
-            break;
-          }
-        }
-      }
-      return firstExternalIp;
-    },
-  };
+    });
+  });
+  return dnsResolution;
 };
-
-const isIpV4 = (networkAddress) => {
-  // node 18.5
-  if (typeof networkAddress.family === "number") {
-    return networkAddress.family === 4;
-  }
-  return networkAddress.family === "IPv4";
-};
-
-const isIpV6 = (networkAddress) => !isIpV4(networkAddress);
 
 const parseHostname = (hostname) => {
   if (hostname === "0.0.0.0") {
@@ -6079,21 +6047,53 @@ const parseHostname = (hostname) => {
   };
 };
 
-const applyDnsResolution = async (
-  hostname,
-  { verbatim = false } = {},
-) => {
-  const dnsResolution = await new Promise((resolve, reject) => {
-    lookup(hostname, { verbatim }, (error, address, family) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve({ address, family });
+const createIpGetters = () => {
+  const networkAddresses = [];
+  const networkInterfaceMap = networkInterfaces();
+  for (const key of Object.keys(networkInterfaceMap)) {
+    for (const networkAddress of networkInterfaceMap[key]) {
+      networkAddresses.push(networkAddress);
+    }
+  }
+  return {
+    getFirstInternalIp: ({ preferIpv6 }) => {
+      const isPref = preferIpv6 ? isIpV6 : isIpV4;
+      let firstInternalIp;
+      for (const networkAddress of networkAddresses) {
+        if (networkAddress.internal) {
+          firstInternalIp = networkAddress.address;
+          if (isPref(networkAddress)) {
+            break;
+          }
+        }
       }
-    });
-  });
-  return dnsResolution;
+      return firstInternalIp;
+    },
+    getFirstExternalIp: ({ preferIpv6 }) => {
+      const isPref = preferIpv6 ? isIpV6 : isIpV4;
+      let firstExternalIp;
+      for (const networkAddress of networkAddresses) {
+        if (!networkAddress.internal) {
+          firstExternalIp = networkAddress.address;
+          if (isPref(networkAddress)) {
+            break;
+          }
+        }
+      }
+      return firstExternalIp;
+    },
+  };
 };
+
+const isIpV4 = (networkAddress) => {
+  // node 18.5
+  if (typeof networkAddress.family === "number") {
+    return networkAddress.family === 4;
+  }
+  return networkAddress.family === "IPv4";
+};
+
+const isIpV6 = (networkAddress) => !isIpV4(networkAddress);
 
 const startServer = async ({
   signal = new AbortController().signal,
@@ -7139,112 +7139,6 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   exit: STOP_REASON_PROCESS_EXIT,
 };
 
-const isFileSystemPath = (value) => {
-  if (typeof value !== "string") {
-    throw new TypeError(
-      `isFileSystemPath first arg must be a string, got ${value}`,
-    );
-  }
-
-  if (value[0] === "/") {
-    return true;
-  }
-
-  return startsWithWindowsDriveLetter(value);
-};
-
-const startsWithWindowsDriveLetter = (string) => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-
-  return true;
-};
-
-const fileSystemPathToUrl = (value) => {
-  if (!isFileSystemPath(value)) {
-    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
-  }
-  return String(pathToFileURL(value));
-};
-
-const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
-
-const bufferToEtag = (buffer) => {
-  if (!Buffer.isBuffer(buffer)) {
-    throw new TypeError(`buffer expect,got ${buffer}`);
-  }
-
-  if (buffer.length === 0) {
-    return ETAG_FOR_EMPTY_CONTENT;
-  }
-
-  const hash = createHash("sha1");
-  hash.update(buffer, "utf8");
-
-  const hashBase64String = hash.digest("base64");
-  const hashBase64StringSubset = hashBase64String.slice(0, 27);
-  const length = buffer.length;
-
-  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
-};
-
-const convertFileSystemErrorToResponseProperties = (error) => {
-  // https://iojs.org/api/errors.html#errors_eacces_permission_denied
-  if (isErrorWithCode(error, "EACCES")) {
-    return {
-      status: 403,
-      statusText: `EACCES: No permission to read file at ${error.path}`,
-    };
-  }
-  if (isErrorWithCode(error, "EPERM")) {
-    return {
-      status: 403,
-      statusText: `EPERM: No permission to read file at ${error.path}`,
-    };
-  }
-  if (isErrorWithCode(error, "ENOENT")) {
-    return {
-      status: 404,
-      statusText: `ENOENT: File not found at ${error.path}`,
-    };
-  }
-  // file access may be temporarily blocked
-  // (by an antivirus scanning it because recently modified for instance)
-  if (isErrorWithCode(error, "EBUSY")) {
-    return {
-      status: 503,
-      statusText: `EBUSY: File is busy ${error.path}`,
-      headers: {
-        "retry-after": 0.01, // retry in 10ms
-      },
-    };
-  }
-  // emfile means there is too many files currently opened
-  if (isErrorWithCode(error, "EMFILE")) {
-    return {
-      status: 503,
-      statusText: "EMFILE: too many file opened",
-      headers: {
-        "retry-after": 0.1, // retry in 100ms
-      },
-    };
-  }
-  if (isErrorWithCode(error, "EISDIR")) {
-    return {
-      status: 500,
-      statusText: `EISDIR: Unexpected directory operation at ${error.path}`,
-    };
-  }
-  return null;
-};
-
-const isErrorWithCode = (error, code) => {
-  return typeof error === "object" && error.code === code;
-};
-
 const pickAcceptedContent = ({
   availables,
   accepteds,
@@ -7326,6 +7220,112 @@ const getEncodingAcceptanceScore = ({ value, quality }, availableEncoding) => {
   }
 
   return -1;
+};
+
+const convertFileSystemErrorToResponseProperties = (error) => {
+  // https://iojs.org/api/errors.html#errors_eacces_permission_denied
+  if (isErrorWithCode(error, "EACCES")) {
+    return {
+      status: 403,
+      statusText: `EACCES: No permission to read file at ${error.path}`,
+    };
+  }
+  if (isErrorWithCode(error, "EPERM")) {
+    return {
+      status: 403,
+      statusText: `EPERM: No permission to read file at ${error.path}`,
+    };
+  }
+  if (isErrorWithCode(error, "ENOENT")) {
+    return {
+      status: 404,
+      statusText: `ENOENT: File not found at ${error.path}`,
+    };
+  }
+  // file access may be temporarily blocked
+  // (by an antivirus scanning it because recently modified for instance)
+  if (isErrorWithCode(error, "EBUSY")) {
+    return {
+      status: 503,
+      statusText: `EBUSY: File is busy ${error.path}`,
+      headers: {
+        "retry-after": 0.01, // retry in 10ms
+      },
+    };
+  }
+  // emfile means there is too many files currently opened
+  if (isErrorWithCode(error, "EMFILE")) {
+    return {
+      status: 503,
+      statusText: "EMFILE: too many file opened",
+      headers: {
+        "retry-after": 0.1, // retry in 100ms
+      },
+    };
+  }
+  if (isErrorWithCode(error, "EISDIR")) {
+    return {
+      status: 500,
+      statusText: `EISDIR: Unexpected directory operation at ${error.path}`,
+    };
+  }
+  return null;
+};
+
+const isErrorWithCode = (error, code) => {
+  return typeof error === "object" && error.code === code;
+};
+
+const ETAG_FOR_EMPTY_CONTENT = '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
+
+const bufferToEtag = (buffer) => {
+  if (!Buffer.isBuffer(buffer)) {
+    throw new TypeError(`buffer expect,got ${buffer}`);
+  }
+
+  if (buffer.length === 0) {
+    return ETAG_FOR_EMPTY_CONTENT;
+  }
+
+  const hash = createHash("sha1");
+  hash.update(buffer, "utf8");
+
+  const hashBase64String = hash.digest("base64");
+  const hashBase64StringSubset = hashBase64String.slice(0, 27);
+  const length = buffer.length;
+
+  return `"${length.toString(16)}-${hashBase64StringSubset}"`;
+};
+
+const isFileSystemPath = (value) => {
+  if (typeof value !== "string") {
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    );
+  }
+
+  if (value[0] === "/") {
+    return true;
+  }
+
+  return startsWithWindowsDriveLetter(value);
+};
+
+const startsWithWindowsDriveLetter = (string) => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+
+  return true;
+};
+
+const fileSystemPathToUrl = (value) => {
+  if (!isFileSystemPath(value)) {
+    throw new Error(`received an invalid value for fileSystemPath: ${value}`);
+  }
+  return String(pathToFileURL(value));
 };
 
 const pickContentType = (request, availableContentTypes) => {
@@ -8136,233 +8136,6 @@ const generateAccessControlHeaders = ({
   };
 };
 
-const WEB_URL_CONVERTER = {
-  asWebUrl: (fileUrl, webServer) => {
-    if (urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
-      return moveUrl({
-        url: fileUrl,
-        from: webServer.rootDirectoryUrl,
-        to: `${webServer.origin}/`,
-      });
-    }
-    const fsRootUrl = ensureWindowsDriveLetter("file:///", fileUrl);
-    return `${webServer.origin}/@fs/${fileUrl.slice(fsRootUrl.length)}`;
-  },
-  asFileUrl: (webUrl, webServer) => {
-    const { pathname, search } = new URL(webUrl);
-    if (pathname.startsWith("/@fs/")) {
-      const fsRootRelativeUrl = pathname.slice("/@fs/".length);
-      return `file:///${fsRootRelativeUrl}${search}`;
-    }
-    return moveUrl({
-      url: webUrl,
-      from: `${webServer.origin}/`,
-      to: webServer.rootDirectoryUrl,
-    });
-  },
-};
-
-const watchSourceFiles = (
-  sourceDirectoryUrl,
-  callback,
-  { sourceFileConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
-) => {
-  // Project should use a dedicated directory (usually "src/")
-  // passed to the dev server via "sourceDirectoryUrl" param
-  // In that case all files inside the source directory should be watched
-  // But some project might want to use their root directory as source directory
-  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
-  // And jsenv should not consider these as source files and watch them (to not hurt performances)
-  const watchPatterns = {
-    "**/*": true, // by default watch everything inside the source directory
-    // line below is commented until @jsenv/url-meta fixes the fact that is matches
-    // any file with an extension
-    "**/.*": false, // file starting with a dot -> do not watch
-    "**/.*/": false, // directory starting with a dot -> do not watch
-    "**/node_modules/": false, // node_modules directory -> do not watch
-    ...sourceFileConfig,
-  };
-  const stopWatchingSourceFiles = registerDirectoryLifecycle(
-    sourceDirectoryUrl,
-    {
-      watchPatterns,
-      cooldownBetweenFileEvents,
-      keepProcessAlive,
-      recursive: true,
-      added: ({ relativeUrl }) => {
-        callback({
-          url: new URL(relativeUrl, sourceDirectoryUrl).href,
-          event: "added",
-        });
-      },
-      updated: ({ relativeUrl }) => {
-        callback({
-          url: new URL(relativeUrl, sourceDirectoryUrl).href,
-          event: "modified",
-        });
-      },
-      removed: ({ relativeUrl }) => {
-        callback({
-          url: new URL(relativeUrl, sourceDirectoryUrl).href,
-          event: "removed",
-        });
-      },
-    },
-  );
-  stopWatchingSourceFiles.watchPatterns = watchPatterns;
-  return stopWatchingSourceFiles;
-};
-
-const createEventEmitter = () => {
-  const callbackSet = new Set();
-  const on = (callback) => {
-    callbackSet.add(callback);
-    return () => {
-      callbackSet.delete(callback);
-    };
-  };
-  const off = (callback) => {
-    callbackSet.delete(callback);
-  };
-  const emit = (...args) => {
-    callbackSet.forEach((callback) => {
-      callback(...args);
-    });
-  };
-  return { on, off, emit };
-};
-
-const lookupPackageDirectory = (currentUrl) => {
-  if (currentUrl === "file:///") {
-    return null;
-  }
-  const packageJsonFileUrl = `${currentUrl}package.json`;
-  if (existsSync(new URL(packageJsonFileUrl))) {
-    return currentUrl;
-  }
-  return lookupPackageDirectory(getParentUrl$1(currentUrl));
-};
-
-const getParentUrl$1 = (url) => {
-  if (url.startsWith("file://")) {
-    // With node.js new URL('../', 'file:///C:/').href
-    // returns "file:///C:/" instead of "file:///"
-    const resource = url.slice("file://".length);
-    const slashLastIndex = resource.lastIndexOf("/");
-    if (slashLastIndex === -1) {
-      return url;
-    }
-    const lastCharIndex = resource.length - 1;
-    if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = resource.lastIndexOf(
-        "/",
-        slashLastIndex - 1,
-      );
-      if (slashBeforeLastIndex === -1) {
-        return url;
-      }
-      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
-    }
-    return `file://${resource.slice(0, slashLastIndex + 1)}`;
-  }
-  return new URL(url.endsWith("/") ? "../" : "./", url).href;
-};
-
-const createServerEventsDispatcher = () => {
-  const clients = [];
-  const MAX_CLIENTS = 100;
-
-  const addClient = (client) => {
-    clients.push(client);
-    if (clients.length >= MAX_CLIENTS) {
-      const firstClient = clients.shift();
-      firstClient.close();
-    }
-    const removeClient = () => {
-      const index = clients.indexOf(client);
-      if (index > -1) {
-        clients.splice(index, 1);
-      }
-    };
-    client.onclose = () => {
-      removeClient();
-    };
-    return () => {
-      client.close();
-    };
-  };
-
-  return {
-    addWebsocket: (websocket, request) => {
-      const client = {
-        request,
-        getReadystate: () => {
-          return websocket.readyState;
-        },
-        sendEvent: (event) => {
-          websocket.send(JSON.stringify(event));
-        },
-        close: (reason) => {
-          const closePromise = new Promise((resolve, reject) => {
-            websocket.onclose = () => {
-              websocket.onclose = null;
-              websocket.onerror = null;
-              resolve();
-            };
-            websocket.onerror = (e) => {
-              websocket.onclose = null;
-              websocket.onerror = null;
-              reject(e);
-            };
-          });
-          websocket.close(reason);
-          return closePromise;
-        },
-        destroy: () => {
-          websocket.terminate();
-        },
-      };
-      client.sendEvent({ type: "welcome" });
-      websocket.onclose = () => {
-        client.onclose();
-      };
-      client.onclose = () => {};
-      return addClient(client);
-    },
-    // we could add "addEventSource" and let clients connect using
-    // new WebSocket or new EventSource
-    // in practice the new EventSource won't be used
-    // so "serverEventsDispatcher.addEventSource" is not implemented
-    // addEventSource: (request) => {},
-    dispatch: (event) => {
-      clients.forEach((client) => {
-        if (client.getReadystate() === 1) {
-          client.sendEvent(event);
-        }
-      });
-    },
-    dispatchToClientsMatching: (event, predicate) => {
-      clients.forEach((client) => {
-        if (client.getReadystate() === 1 && predicate(client)) {
-          client.sendEvent(event);
-        }
-      });
-    },
-    close: async (reason) => {
-      await Promise.all(
-        clients.map(async (client) => {
-          await client.close(reason);
-        }),
-      );
-    },
-    destroy: () => {
-      clients.forEach((client) => {
-        client.destroy();
-      });
-    },
-  };
-};
-
 const fileUrlConverter = {
   asFilePath: (fileUrl) => {
     const filePath = urlToFileSystemPath(fileUrl);
@@ -8381,62 +8154,6 @@ const fileUrlConverter = {
 const stringifyQuery = (searchParams) => {
   const search = searchParams.toString();
   return search ? `?${search}` : "";
-};
-
-// Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
-const bundleCss = async (cssUrlInfos) => {
-  const bundledCssUrlInfos = {};
-  const { bundleAsync } = await import("lightningcss");
-  const targets = runtimeCompatToTargets$2(cssUrlInfos[0].context.runtimeCompat);
-  for (const cssUrlInfo of cssUrlInfos) {
-    const filename = fileUrlConverter.asFilePath(cssUrlInfo.originalUrl);
-    const { code, map } = await bundleAsync({
-      filename,
-      targets,
-      minify: false,
-      resolver: {
-        read: (specifier) => {
-          const fileUrlObject = fileUrlConverter.asFileUrl(specifier);
-          const fileUrl = String(fileUrlObject);
-          const urlInfo = cssUrlInfo.graph.getUrlInfo(fileUrl);
-          return urlInfo.content;
-        },
-        resolve(specifier, from) {
-          const fileUrlObject = new URL(specifier, pathToFileURL(from));
-          const filePath = fileURLToPath(fileUrlObject);
-          return filePath;
-        },
-      },
-    });
-    bundledCssUrlInfos[cssUrlInfo.url] = {
-      data: {
-        bundlerName: "lightningcss",
-      },
-      contentType: "text/css",
-      content: String(code),
-      sourcemap: map,
-    };
-  }
-  return bundledCssUrlInfos;
-};
-
-const runtimeCompatToTargets$2 = (runtimeCompat) => {
-  const targets = {};
-  ["chrome", "firefox", "ie", "opera", "safari"].forEach((runtimeName) => {
-    const version = runtimeCompat[runtimeName];
-    if (version) {
-      targets[runtimeName] = versionToBits$2(version);
-    }
-  });
-  return targets;
-};
-
-const versionToBits$2 = (version) => {
-  const [major, minor = 0, patch = 0] = version
-    .split("-")[0]
-    .split(".")
-    .map((v) => parseInt(v, 10));
-  return (major << 16) | (minor << 8) | patch;
 };
 
 const bundleJsModules = async (
@@ -8861,6 +8578,62 @@ const applyRollupPlugins = async ({
   return rollupOutputArray;
 };
 
+// Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
+const bundleCss = async (cssUrlInfos) => {
+  const bundledCssUrlInfos = {};
+  const { bundleAsync } = await import("lightningcss");
+  const targets = runtimeCompatToTargets$2(cssUrlInfos[0].context.runtimeCompat);
+  for (const cssUrlInfo of cssUrlInfos) {
+    const filename = fileUrlConverter.asFilePath(cssUrlInfo.originalUrl);
+    const { code, map } = await bundleAsync({
+      filename,
+      targets,
+      minify: false,
+      resolver: {
+        read: (specifier) => {
+          const fileUrlObject = fileUrlConverter.asFileUrl(specifier);
+          const fileUrl = String(fileUrlObject);
+          const urlInfo = cssUrlInfo.graph.getUrlInfo(fileUrl);
+          return urlInfo.content;
+        },
+        resolve(specifier, from) {
+          const fileUrlObject = new URL(specifier, pathToFileURL(from));
+          const filePath = fileURLToPath(fileUrlObject);
+          return filePath;
+        },
+      },
+    });
+    bundledCssUrlInfos[cssUrlInfo.url] = {
+      data: {
+        bundlerName: "lightningcss",
+      },
+      contentType: "text/css",
+      content: String(code),
+      sourcemap: map,
+    };
+  }
+  return bundledCssUrlInfos;
+};
+
+const runtimeCompatToTargets$2 = (runtimeCompat) => {
+  const targets = {};
+  ["chrome", "firefox", "ie", "opera", "safari"].forEach((runtimeName) => {
+    const version = runtimeCompat[runtimeName];
+    if (version) {
+      targets[runtimeName] = versionToBits$2(version);
+    }
+  });
+  return targets;
+};
+
+const versionToBits$2 = (version) => {
+  const [major, minor = 0, patch = 0] = version
+    .split("-")[0]
+    .split(".")
+    .map((v) => parseInt(v, 10));
+  return (major << 16) | (minor << 8) | patch;
+};
+
 const jsenvPluginBundling = ({
   css = {},
   js_classic = {},
@@ -8887,33 +8660,6 @@ const jsenvPluginBundling = ({
     appliesDuring: "build",
     bundle,
   };
-};
-
-// https://github.com/kangax/html-minifier#options-quick-reference
-const minifyHtml = (htmlUrlInfo, options = {}) => {
-  const require = createRequire(import.meta.url);
-  const { minify } = require("html-minifier");
-
-  const {
-    // usually HTML will contain a few markup, it's better to keep white spaces
-    // and line breaks to favor readability. A few white spaces means very few
-    // octets that won't impact performances. Removing whitespaces however will certainly
-    // decrease HTML readability
-    collapseWhitespace = false,
-    // saving a fewline breaks won't hurt performances
-    // but will help a lot readability
-    preserveLineBreaks = true,
-    removeComments = true,
-    conservativeCollapse = false,
-  } = options;
-
-  const htmlMinified = minify(htmlUrlInfo.content, {
-    collapseWhitespace,
-    conservativeCollapse,
-    removeComments,
-    preserveLineBreaks,
-  });
-  return htmlMinified;
 };
 
 const minifyCss = async (cssUrlInfo) => {
@@ -8949,6 +8695,33 @@ const versionToBits$1 = (version) => {
     .split(".")
     .map((v) => parseInt(v, 10));
   return (major << 16) | (minor << 8) | patch;
+};
+
+// https://github.com/kangax/html-minifier#options-quick-reference
+const minifyHtml = (htmlUrlInfo, options = {}) => {
+  const require = createRequire(import.meta.url);
+  const { minify } = require("html-minifier");
+
+  const {
+    // usually HTML will contain a few markup, it's better to keep white spaces
+    // and line breaks to favor readability. A few white spaces means very few
+    // octets that won't impact performances. Removing whitespaces however will certainly
+    // decrease HTML readability
+    collapseWhitespace = false,
+    // saving a fewline breaks won't hurt performances
+    // but will help a lot readability
+    preserveLineBreaks = true,
+    removeComments = true,
+    conservativeCollapse = false,
+  } = options;
+
+  const htmlMinified = minify(htmlUrlInfo.content, {
+    collapseWhitespace,
+    conservativeCollapse,
+    removeComments,
+    preserveLineBreaks,
+  });
+  return htmlMinified;
 };
 
 // https://github.com/terser-js/terser#minify-options
@@ -9043,345 +8816,673 @@ const jsenvPluginMinification = ({
   };
 };
 
-const isEscaped = (i, string) => {
-  let backslashBeforeCount = 0;
-  while (i--) {
-    const previousChar = string[i];
-    if (previousChar === "\\") {
-      backslashBeforeCount++;
-    }
-    break;
-  }
-  const isEven = backslashBeforeCount % 2 === 0;
-  return !isEven;
-};
-
-const JS_QUOTES = {
-  pickBest: (string, { canUseTemplateString, defaultQuote = DOUBLE } = {}) => {
-    // check default first, once tested do no re-test it
-    if (!string.includes(defaultQuote)) {
-      return defaultQuote;
-    }
-    if (defaultQuote !== DOUBLE && !string.includes(DOUBLE)) {
-      return DOUBLE;
-    }
-    if (defaultQuote !== SINGLE && !string.includes(SINGLE)) {
-      return SINGLE;
-    }
-    if (
-      canUseTemplateString &&
-      defaultQuote !== BACKTICK &&
-      !string.includes(BACKTICK)
-    ) {
-      return BACKTICK;
-    }
-    return defaultQuote;
-  },
-
-  escapeSpecialChars: (
-    string,
-    {
-      quote = "pickBest",
-      canUseTemplateString,
-      defaultQuote,
-      allowEscapeForVersioning = false,
+const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
+  return {
+    name: "jsenv:import_meta_resolve",
+    appliesDuring: "*",
+    init: (context) => {
+      if (context.isSupportedOnCurrentClients("import_meta_resolve")) {
+        return false;
+      }
+      if (needJsModuleFallback(context)) {
+        // will be handled by systemjs, keep it untouched
+        return false;
+      }
+      return true;
     },
-  ) => {
-    quote =
-      quote === "pickBest"
-        ? JS_QUOTES.pickBest(string, { canUseTemplateString, defaultQuote })
-        : quote;
-    const replacements = JS_QUOTE_REPLACEMENTS[quote];
-    let result = "";
-    let last = 0;
-    let i = 0;
-    while (i < string.length) {
-      const char = string[i];
-      i++;
-      if (isEscaped(i - 1, string)) continue;
-      const replacement = replacements[char];
-      if (replacement) {
-        if (
-          allowEscapeForVersioning &&
-          char === quote &&
-          string.slice(i, i + 6) === "+__v__"
-        ) {
-          let isVersioningConcatenation = false;
-          let j = i + 6; // start after the +
-          while (j < string.length) {
-            const lookAheadChar = string[j];
-            j++;
+    transformUrlContent: {
+      js_module: async (urlInfo) => {
+        const jsUrls = parseJsUrls({
+          js: urlInfo.content,
+          url: urlInfo.url,
+          isJsModule: true,
+        });
+        const magicSource = createMagicSource(urlInfo.content);
+        for (const jsUrl of jsUrls) {
+          if (jsUrl.subtype !== "import_meta_resolve") {
+            continue;
+          }
+          const { node } = jsUrl.astInfo;
+          let reference;
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
             if (
-              lookAheadChar === "+" &&
-              string[j] === quote &&
-              !isEscaped(j - 1, string)
+              referenceToOther.generatedSpecifier.slice(1, -1) ===
+              jsUrl.specifier
             ) {
-              isVersioningConcatenation = true;
+              reference = referenceToOther;
               break;
             }
           }
-          if (isVersioningConcatenation) {
-            // it's a concatenation
-            // skip until the end of concatenation (the second +)
-            // and resume from there
-            i = j + 1;
-            continue;
-          }
+          magicSource.replace({
+            start: node.start,
+            end: node.end,
+            replacement: `new URL(${reference.generatedSpecifier}, import.meta.url).href`,
+          });
         }
-        if (last === i - 1) {
-          result += replacement;
-        } else {
-          result += `${string.slice(last, i - 1)}${replacement}`;
-        }
-        last = i;
-      }
-    }
-    if (last !== string.length) {
-      result += string.slice(last);
-    }
-    return `${quote}${result}${quote}`;
-  },
-};
-
-const DOUBLE = `"`;
-const SINGLE = `'`;
-const BACKTICK = "`";
-const lineEndingEscapes = {
-  "\n": "\\n",
-  "\r": "\\r",
-  "\u2028": "\\u2028",
-  "\u2029": "\\u2029",
-};
-const JS_QUOTE_REPLACEMENTS = {
-  [DOUBLE]: {
-    '"': '\\"',
-    ...lineEndingEscapes,
-  },
-  [SINGLE]: {
-    "'": "\\'",
-    ...lineEndingEscapes,
-  },
-  [BACKTICK]: {
-    "`": "\\`",
-    "$": "\\$",
-  },
+        return magicSource.toContentAndSourcemap();
+      },
+    },
+  };
 };
 
 /*
- * Jsenv wont touch code where "specifier" or "type" is dynamic (see code below)
- * ```js
- * const file = "./style.css"
- * const type = "css"
- * import(file, { with: { type }})
- * ```
- * Jsenv could throw an error when it knows some browsers in runtimeCompat
- * do not support import attributes
- * But for now (as it is simpler) we let the browser throw the error
+ * - propagate "?js_module_fallback" query string param on urls
+ * - perform conversion from js module to js classic when url uses "?js_module_fallback"
  */
 
 
-const jsenvPluginImportAttributes = ({
-  json = "auto",
-  css = "auto",
-  text = "auto",
-}) => {
-  const transpilations = { json, css, text };
-  const markAsJsModuleProxy = (reference) => {
-    reference.expectedType = "js_module";
-    if (!reference.filenameHint) {
-      reference.filenameHint = `${urlToFilename$1(reference.url)}.js`;
+const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
+  const isReferencingJsModule = (reference) => {
+    if (
+      reference.type === "js_import" ||
+      reference.subtype === "system_register_arg" ||
+      reference.subtype === "system_import_arg"
+    ) {
+      return true;
     }
-  };
-  const turnIntoJsModuleProxy = (reference, type) => {
-    reference.mutation = (magicSource) => {
-      if (reference.subtype === "import_dynamic") {
-        const { importTypeAttributeNode } = reference.astInfo;
-        magicSource.remove({
-          start: importTypeAttributeNode.start,
-          end: importTypeAttributeNode.end,
-        });
-      } else {
-        const { importTypeAttributeNode } = reference.astInfo;
-        const content = reference.ownerUrlInfo.content;
-        const withKeywordStart = content.indexOf(
-          "with",
-          importTypeAttributeNode.start - " with { ".length,
-        );
-        const withKeywordEnd = content.indexOf(
-          "}",
-          importTypeAttributeNode.end,
-        );
-        magicSource.remove({
-          start: withKeywordStart,
-          end: withKeywordEnd + 1,
-        });
-      }
-    };
-    const newUrl = injectQueryParams(reference.url, {
-      [`as_${type}_module`]: "",
-    });
-    markAsJsModuleProxy(reference);
-    return newUrl;
+    if (reference.type === "js_url" && reference.expectedType === "js_module") {
+      return true;
+    }
+    return false;
   };
 
-  const createImportTypePlugin = ({ type, createUrlContent }) => {
-    return {
-      name: `jsenv:import_type_${type}`,
-      appliesDuring: "*",
-      init: (context) => {
-        // transpilation is forced during build so that
-        //   - avoid rollup to see import assertions
-        //     We would have to tell rollup to ignore import with assertion
-        //   - means rollup can bundle more js file together
-        //   - means url versioning can work for css inlined in js
-        if (context.build) {
-          return true;
-        }
-        const transpilation = transpilations[type];
-        if (transpilation === "auto") {
-          return !context.isSupportedOnCurrentClients(`import_type_${type}`);
-        }
-        return transpilation;
-      },
-      redirectReference: (reference) => {
-        if (!reference.importAttributes) {
-          return null;
-        }
-        const { searchParams } = reference;
-        if (searchParams.has(`as_${type}_module`)) {
-          markAsJsModuleProxy(reference);
-          return null;
-        }
-        // when search param is injected, it will be removed later
-        // by "getWithoutSearchParam". We don't want to redirect again
-        // (would create infinite recursion)
+  const shouldPropagateJsModuleConversion = (reference) => {
+    if (isReferencingJsModule(reference)) {
+      const insideJsClassic =
+        reference.ownerUrlInfo.searchParams.has("js_module_fallback");
+      return insideJsClassic;
+    }
+    return false;
+  };
+
+  const markAsJsClassicProxy = (reference) => {
+    reference.expectedType = "js_classic";
+    if (!reference.filenameHint) {
+      reference.filenameHint = generateJsClassicFilename(reference.url);
+    }
+  };
+
+  const turnIntoJsClassicProxy = (reference) => {
+    markAsJsClassicProxy(reference);
+    return injectQueryParams(reference.url, {
+      js_module_fallback: "",
+    });
+  };
+
+  return {
+    name: "jsenv:js_module_conversion",
+    appliesDuring: "*",
+    redirectReference: (reference) => {
+      if (reference.searchParams.has("js_module_fallback")) {
+        markAsJsClassicProxy(reference);
+        return null;
+      }
+      // when search param is injected, it will be removed later
+      // by "getWithoutSearchParam". We don't want to redirect again
+      // (would create infinite recursion)
+      if (
+        reference.prev &&
+        reference.prev.searchParams.has(`js_module_fallback`)
+      ) {
+        return null;
+      }
+      // We want to propagate transformation of js module to js classic to:
+      // - import specifier (static/dynamic import + re-export)
+      // - url specifier when inside System.register/_context.import()
+      //   (because it's the transpiled equivalent of static and dynamic imports)
+      // And not other references otherwise we could try to transform inline resources
+      // or specifiers inside new URL()...
+      if (shouldPropagateJsModuleConversion(reference)) {
+        return turnIntoJsClassicProxy(reference);
+      }
+      return null;
+    },
+    fetchUrlContent: async (urlInfo) => {
+      const jsModuleUrlInfo = urlInfo.getWithoutSearchParam(
+        "js_module_fallback",
+        {
+          // override the expectedType to "js_module"
+          // because when there is ?js_module_fallback it means the underlying resource
+          // is a js_module
+          expectedType: "js_module",
+        },
+      );
+      if (!jsModuleUrlInfo) {
+        return null;
+      }
+      await jsModuleUrlInfo.cook();
+      let outputFormat;
+      if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
+        // if it's an entry point without dependency (it does not use import)
+        // then we can use UMD
+        outputFormat = "umd";
+      } else {
+        // otherwise we have to use system in case it's imported
+        // by an other file (for entry points)
+        // or to be able to import when it uses import
+        outputFormat = "system";
+        urlInfo.type = "js_classic";
+        urlInfo.dependencies.foundSideEffectFile({
+          sideEffectFileUrl: systemJsClientFileUrlDefault,
+          expectedType: "js_classic",
+          line: 0,
+          column: 0,
+        });
+      }
+      const { content, sourcemap } = await convertJsModuleToJsClassic({
+        rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+        input: jsModuleUrlInfo.content,
+        inputIsEntryPoint: urlInfo.isEntryPoint,
+        inputSourcemap: jsModuleUrlInfo.sourcemap,
+        inputUrl: jsModuleUrlInfo.url,
+        outputUrl: urlInfo.url,
+        outputFormat,
+        remapImportSpecifier,
+      });
+      return {
+        content,
+        contentType: "text/javascript",
+        type: "js_classic",
+        originalUrl: jsModuleUrlInfo.originalUrl,
+        originalContent: jsModuleUrlInfo.originalContent,
+        sourcemap,
+        data: jsModuleUrlInfo.data,
+      };
+    },
+  };
+};
+
+const generateJsClassicFilename = (url) => {
+  const filename = urlToFilename$1(url);
+  let [basename, extension] = splitFileExtension$2(filename);
+  const { searchParams } = new URL(url);
+  if (
+    searchParams.has("as_json_module") ||
+    searchParams.has("as_css_module") ||
+    searchParams.has("as_text_module")
+  ) {
+    basename += extension;
+    extension = ".js";
+  }
+  return `${basename}.nomodule${extension}`;
+};
+
+const splitFileExtension$2 = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return [filename, ""];
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
+};
+
+/*
+ * when <script type="module"> cannot be used:
+ * - ?js_module_fallback is injected into the src of <script type="module">
+ * - js inside <script type="module"> is transformed into classic js
+ * - <link rel="modulepreload"> are converted to <link rel="preload">
+ */
+
+
+const jsenvPluginJsModuleFallbackInsideHtml = ({
+  needJsModuleFallback,
+}) => {
+  const turnIntoJsClassicProxy = (reference) => {
+    return injectQueryParams(reference.url, { js_module_fallback: "" });
+  };
+
+  return {
+    name: "jsenv:js_module_fallback_inside_html",
+    appliesDuring: "*",
+    init: needJsModuleFallback,
+    redirectReference: {
+      link_href: (reference) => {
         if (
           reference.prev &&
-          reference.prev.searchParams.has(`as_${type}_module`)
+          reference.prev.searchParams.has(`js_module_fallback`)
         ) {
           return null;
         }
-        if (reference.importAttributes.type === type) {
-          return turnIntoJsModuleProxy(reference, type);
+        if (reference.subtype === "modulepreload") {
+          return turnIntoJsClassicProxy(reference);
+        }
+        if (
+          reference.subtype === "preload" &&
+          reference.expectedType === "js_module"
+        ) {
+          return turnIntoJsClassicProxy(reference);
         }
         return null;
       },
-      fetchUrlContent: async (urlInfo) => {
-        const originalUrlInfo = urlInfo.getWithoutSearchParam(
-          `as_${type}_module`,
-          {
-            expectedType: "json",
-          },
-        );
-        if (!originalUrlInfo) {
+      script: (reference) => {
+        if (
+          reference.prev &&
+          reference.prev.searchParams.has(`js_module_fallback`)
+        ) {
           return null;
         }
-        await originalUrlInfo.cook();
-        return createUrlContent(originalUrlInfo);
+        if (reference.expectedType === "js_module") {
+          return turnIntoJsClassicProxy(reference);
+        }
+        return null;
+      },
+      js_url: (reference) => {
+        if (
+          reference.prev &&
+          reference.prev.searchParams.has(`js_module_fallback`)
+        ) {
+          return null;
+        }
+        if (reference.expectedType === "js_module") {
+          return turnIntoJsClassicProxy(reference);
+        }
+        return null;
+      },
+    },
+    finalizeUrlContent: {
+      html: async (urlInfo) => {
+        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
+        const mutations = [];
+        visitHtmlNodes(htmlAst, {
+          link: (node) => {
+            const rel = getHtmlNodeAttribute(node, "rel");
+            if (rel !== "modulepreload" && rel !== "preload") {
+              return;
+            }
+            const href = getHtmlNodeAttribute(node, "href");
+            if (!href) {
+              return;
+            }
+            let linkHintReference = null;
+            for (const referenceToOther of urlInfo.referenceToOthersSet) {
+              if (
+                referenceToOther.generatedSpecifier === href &&
+                referenceToOther.type === "link_href" &&
+                referenceToOther.subtype === rel
+              ) {
+                linkHintReference = referenceToOther;
+                break;
+              }
+            }
+            if (rel === "modulepreload") {
+              if (linkHintReference.expectedType === "js_classic") {
+                mutations.push(() => {
+                  setHtmlNodeAttributes(node, {
+                    rel: "preload",
+                    as: "script",
+                    crossorigin: undefined,
+                  });
+                });
+              }
+            }
+            if (
+              rel === "preload" &&
+              wasConvertedFromJsModule(linkHintReference)
+            ) {
+              mutations.push(() => {
+                setHtmlNodeAttributes(node, { crossorigin: undefined });
+              });
+            }
+          },
+          script: (node) => {
+            const { type } = analyzeScriptNode(node);
+            if (type !== "js_module") {
+              return;
+            }
+            const src = getHtmlNodeAttribute(node, "src");
+            const text = getHtmlNodeText(node);
+            let scriptReference = null;
+            for (const referenceToOther of urlInfo.referenceToOthersSet) {
+              if (referenceToOther.type !== "script") {
+                continue;
+              }
+              if (src && referenceToOther.generatedSpecifier === src) {
+                scriptReference = referenceToOther;
+                break;
+              }
+              if (text) {
+                if (referenceToOther.content === text) {
+                  scriptReference = referenceToOther;
+                  break;
+                }
+                if (referenceToOther.urlInfo.content === text) {
+                  scriptReference = referenceToOther;
+                  break;
+                }
+              }
+            }
+            if (!wasConvertedFromJsModule(scriptReference)) {
+              return;
+            }
+            mutations.push(() => {
+              setHtmlNodeAttributes(node, { type: undefined });
+            });
+          },
+        });
+        await Promise.all(mutations.map((mutation) => mutation()));
+        return stringifyHtmlAst(htmlAst, {
+          cleanupPositionAttributes: urlInfo.context.dev,
+        });
+      },
+    },
+  };
+};
+
+const wasConvertedFromJsModule = (reference) => {
+  if (reference.expectedType === "js_classic") {
+    // check if a prev version was using js module
+    if (reference.original) {
+      if (reference.original.expectedType === "js_module") {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+/*
+ * when {type: "module"} cannot be used on web workers:
+ * - new Worker("worker.js", { type: "module" })
+ *   transformed into
+ *   new Worker("worker.js?js_module_fallback", { type: " lassic" })
+ * - navigator.serviceWorker.register("service_worker.js", { type: "module" })
+ *   transformed into
+ *   navigator.serviceWorker.register("service_worker.js?js_module_fallback", { type: "classic" })
+ * - new SharedWorker("shared_worker.js", { type: "module" })
+ *   transformed into
+ *   new SharedWorker("shared_worker.js?js_module_fallback", { type: "classic" })
+ */
+
+
+const jsenvPluginJsModuleFallbackOnWorkers = () => {
+  const turnIntoJsClassicProxy = (reference) => {
+    reference.mutation = (magicSource) => {
+      const { typePropertyNode } = reference.astInfo;
+      magicSource.replace({
+        start: typePropertyNode.value.start,
+        end: typePropertyNode.value.end,
+        replacement: JSON.stringify("classic"),
+      });
+    };
+    return injectQueryParams(reference.url, { js_module_fallback: "" });
+  };
+
+  const createWorkerPlugin = (subtype) => {
+    return {
+      name: `jsenv:js_module_fallback_on_${subtype}`,
+      appliesDuring: "*",
+      init: (context) => {
+        if (Object.keys(context.runtimeCompat).toString() === "node") {
+          return false;
+        }
+        if (context.isSupportedOnCurrentClients(`${subtype}_type_module`)) {
+          return false;
+        }
+
+        return true;
+      },
+      redirectReference: {
+        js_url: (reference) => {
+          if (reference.expectedType !== "js_module") {
+            return null;
+          }
+          if (reference.expectedSubtype !== subtype) {
+            return null;
+          }
+          return turnIntoJsClassicProxy(reference);
+        },
       },
     };
   };
 
-  const asJsonModule = createImportTypePlugin({
-    type: "json",
-    createUrlContent: (jsonUrlInfo) => {
-      const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
-      let inlineContentCall;
-      // here we could `export default ${jsonText}`:
-      // but js engine are optimized to recognize JSON.parse
-      // and use a faster parsing strategy
-      if (jsonUrlInfo.context.dev) {
-        inlineContentCall = `JSON.parse(
-  ${jsonText},
-  //# inlinedFromUrl=${jsonUrlInfo.url}
-)`;
-      } else {
-        inlineContentCall = `JSON.parse(${jsonText})`;
-      }
-      return {
-        content: `export default ${inlineContentCall};`,
-        contentType: "text/javascript",
-        type: "js_module",
-        originalUrl: jsonUrlInfo.originalUrl,
-        originalContent: jsonUrlInfo.originalContent,
-        data: jsonUrlInfo.data,
-      };
-    },
-  });
+  return [
+    createWorkerPlugin("worker"),
+    createWorkerPlugin("service_worker"),
+    createWorkerPlugin("shared_worker"),
+  ];
+};
 
-  const asCssModule = createImportTypePlugin({
-    type: "css",
-    createUrlContent: (cssUrlInfo) => {
-      const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
-        // If template string is choosen and runtime do not support template literals
-        // it's ok because "jsenv:new_inline_content" plugin executes after this one
-        // and convert template strings into raw strings
-        canUseTemplateString: true,
+const require = createRequire(import.meta.url);
+
+const jsenvPluginTopLevelAwait = ({ needJsModuleFallback }) => {
+  return {
+    name: "jsenv:top_level_await",
+    appliesDuring: "*",
+    init: (context) => {
+      if (context.isSupportedOnCurrentClients("top_level_await")) {
+        return false;
+      }
+      if (needJsModuleFallback(context)) {
+        // will be handled by systemjs, keep it untouched
+        return false;
+      }
+      return true;
+    },
+    transformUrlContent: {
+      js_module: async (urlInfo) => {
+        const usesTLA = await usesTopLevelAwait(urlInfo);
+        if (!usesTLA) {
+          return null;
+        }
+        const { code, map } = await applyBabelPlugins({
+          babelPlugins: [
+            [
+              require("babel-plugin-transform-async-to-promises"),
+              {
+                // Maybe we could pass target: "es6" when we support arrow function
+                // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
+                topLevelAwait: "simple",
+                // enable once https://github.com/rpetrich/babel-plugin-transform-async-to-promises/pull/83
+                // externalHelpers: true,
+                // externalHelpersPath: JSON.parse(
+                //   context.referenceUtils.inject({
+                //     type: "js_import",
+                //     expectedType: "js_module",
+                //     specifier:
+                //       "babel-plugin-transform-async-to-promises/helpers.mjs",
+                //   })[0],
+                // ),
+              },
+            ],
+          ],
+          input: urlInfo.content,
+          inputIsJsModule: true,
+          inputUrl: urlInfo.originalUrl,
+          outputUrl: urlInfo.generatedUrl,
+        });
+        return {
+          content: code,
+          sourcemap: map,
+        };
+      },
+    },
+  };
+};
+
+const usesTopLevelAwait = async (urlInfo) => {
+  if (!urlInfo.content.includes("await ")) {
+    return false;
+  }
+  const { metadata } = await applyBabelPlugins({
+    babelPlugins: [babelPluginMetadataUsesTopLevelAwait],
+    input: urlInfo.content,
+    inputIsJsModule: true,
+    inputUrl: urlInfo.originalUrl,
+    outputUrl: urlInfo.generatedUrl,
+  });
+  return metadata.usesTopLevelAwait;
+};
+
+const babelPluginMetadataUsesTopLevelAwait = () => {
+  return {
+    name: "metadata-uses-top-level-await",
+    visitor: {
+      Program: (programPath, state) => {
+        let usesTopLevelAwait = false;
+        programPath.traverse({
+          AwaitExpression: (path) => {
+            const closestFunction = path.getFunctionParent();
+            if (!closestFunction || closestFunction.type === "Program") {
+              usesTopLevelAwait = true;
+              path.stop();
+            }
+          },
+        });
+        state.file.metadata.usesTopLevelAwait = usesTopLevelAwait;
+      },
+    },
+  };
+};
+
+const jsenvPluginJsModuleFallback = ({ remapImportSpecifier } = {}) => {
+  const needJsModuleFallback = (context) => {
+    if (Object.keys(context.clientRuntimeCompat).includes("node")) {
+      return false;
+    }
+    if (
+      context.versioning &&
+      context.versioningViaImportmap &&
+      !context.isSupportedOnCurrentClients("importmap")
+    ) {
+      return true;
+    }
+    if (
+      !context.isSupportedOnCurrentClients("script_type_module") ||
+      !context.isSupportedOnCurrentClients("import_dynamic") ||
+      !context.isSupportedOnCurrentClients("import_meta")
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  return [
+    jsenvPluginJsModuleFallbackInsideHtml({ needJsModuleFallback }),
+    jsenvPluginJsModuleFallbackOnWorkers(),
+    jsenvPluginJsModuleConversion({ remapImportSpecifier }),
+    // must come after jsModuleFallback because it's related to the module format
+    // so we want to want to know the module format before transforming things
+    // - top level await
+    // - import.meta.resolve()
+    jsenvPluginImportMetaResolve({ needJsModuleFallback }),
+    jsenvPluginTopLevelAwait({ needJsModuleFallback }),
+  ];
+};
+
+const convertJsClassicToJsModule = async ({
+  isWebWorker,
+  input,
+  inputSourcemap,
+  inputUrl,
+  outputUrl,
+}) => {
+  const { code, map } = await applyBabelPlugins({
+    babelPlugins: [[babelPluginReplaceTopLevelThis, { isWebWorker }]],
+    input,
+    inputIsJsModule: false,
+    inputUrl,
+    outputUrl,
+  });
+  const sourcemap = await composeTwoSourcemaps(inputSourcemap, map);
+  return {
+    content: code,
+    sourcemap,
+  };
+};
+
+const babelPluginReplaceTopLevelThis = () => {
+  return {
+    name: "replace-top-level-this",
+    visitor: {
+      Program: (programPath, state) => {
+        const { isWebWorker } = state.opts;
+        programPath.traverse({
+          ThisExpression: (path) => {
+            const closestFunction = path.getFunctionParent();
+            if (!closestFunction) {
+              path.replaceWithSourceString(isWebWorker ? "self" : "window");
+            }
+          },
+        });
+      },
+    },
+  };
+};
+
+/*
+ * Js modules might not be able to import js meant to be loaded by <script>
+ * Among other things this happens for a top level this:
+ * - With <script> this is window
+ * - With an import this is undefined
+ * Example of this: https://github.com/video-dev/hls.js/issues/2911
+ *
+ * This plugin fix this issue by rewriting top level this into window
+ * and can be used like this for instance import("hls?as_js_module")
+ */
+
+
+const jsenvPluginAsJsModule = () => {
+  const markAsJsModuleProxy = (reference) => {
+    reference.expectedType = "js_module";
+    if (!reference.filenameHint) {
+      const filename = urlToFilename$1(reference.url);
+      const [basename] = splitFileExtension$1(filename);
+      reference.filenameHint = `${basename}.mjs`;
+    }
+  };
+
+  return {
+    name: "jsenv:as_js_module",
+    appliesDuring: "*",
+    redirectReference: (reference) => {
+      if (reference.searchParams.has("as_js_module")) {
+        markAsJsModuleProxy(reference);
+      }
+    },
+    fetchUrlContent: async (urlInfo) => {
+      const jsClassicUrlInfo = urlInfo.getWithoutSearchParam("as_js_module", {
+        // override the expectedType to "js_classic"
+        // because when there is ?as_js_module it means the underlying resource
+        // is js_classic
+        expectedType: "js_classic",
       });
-      let inlineContentCall;
-      if (cssUrlInfo.context.dev) {
-        inlineContentCall = `new __InlineContent__(
-  ${cssText},
-  { type: "text/css" },
-  //# inlinedFromUrl=${cssUrlInfo.url}
-)`;
-      } else {
-        inlineContentCall = `new __InlineContent__(${cssText}, { type: "text/css" })`;
+      if (!jsClassicUrlInfo) {
+        return null;
       }
-      return {
-        content: `
-import ${JSON.stringify(cssUrlInfo.context.inlineContentClientFileUrl)};
-
-const inlineContent = ${inlineContentCall};
-const stylesheet = new CSSStyleSheet();
-stylesheet.replaceSync(inlineContent.text);
-
-export default stylesheet;`,
-        contentType: "text/javascript",
-        type: "js_module",
-        originalUrl: cssUrlInfo.originalUrl,
-        originalContent: cssUrlInfo.originalContent,
-        data: cssUrlInfo.data,
-      };
-    },
-  });
-
-  const asTextModule = createImportTypePlugin({
-    type: "text",
-    createUrlContent: (textUrlInfo) => {
-      const textPlain = JS_QUOTES.escapeSpecialChars(textUrlInfo.content, {
-        // If template string is choosen and runtime do not support template literals
-        // it's ok because "jsenv:new_inline_content" plugin executes after this one
-        // and convert template strings into raw strings
-        canUseTemplateString: true,
+      await jsClassicUrlInfo.cook();
+      const { content, sourcemap } = await convertJsClassicToJsModule({
+        input: jsClassicUrlInfo.content,
+        inputSourcemap: jsClassicUrlInfo.sourcemap,
+        inputUrl: jsClassicUrlInfo.url,
+        outputUrl: jsClassicUrlInfo.generatedUrl,
+        isWebWorker: isWebWorkerUrlInfo$1(urlInfo),
       });
-      let inlineContentCall;
-      if (textUrlInfo.context.dev) {
-        inlineContentCall = `new __InlineContent__(
-  ${textPlain},
-  { type: "text/plain"},
-  //# inlinedFromUrl=${textUrlInfo.url}
-)`;
-      } else {
-        inlineContentCall = `new __InlineContent__(${textPlain}, { type: "text/plain"})`;
-      }
       return {
-        content: `
-import ${JSON.stringify(textUrlInfo.context.inlineContentClientFileUrl)};
-
-const inlineContent = ${inlineContentCall};
-
-export default inlineContent.text;`,
+        content,
         contentType: "text/javascript",
         type: "js_module",
-        originalUrl: textUrlInfo.originalUrl,
-        originalContent: textUrlInfo.originalContent,
-        data: textUrlInfo.data,
+        originalUrl: jsClassicUrlInfo.originalUrl,
+        originalContent: jsClassicUrlInfo.originalContent,
+        sourcemap,
+        data: jsClassicUrlInfo.data,
       };
     },
-  });
+  };
+};
 
-  return [asJsonModule, asCssModule, asTextModule];
+const isWebWorkerUrlInfo$1 = (urlInfo) => {
+  return (
+    urlInfo.subtype === "worker" ||
+    urlInfo.subtype === "service_worker" ||
+    urlInfo.subtype === "shared_worker"
+  );
+};
+
+const splitFileExtension$1 = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return [filename, ""];
+  }
+  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
 };
 
 /*
@@ -9418,6 +9519,52 @@ const babelHelperNameFromUrl = (url) => {
     afterBabelHelperDirectory.indexOf("/"),
   );
   return babelHelperName;
+};
+
+// named import approach found here:
+// https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
+
+// for reference this is how it's done to reference
+// a global babel helper object instead of using
+// a named import
+// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
+
+const babelPluginBabelHelpersAsJsenvImports = (
+  babel,
+  { getImportSpecifier },
+) => {
+  return {
+    name: "babel-helper-as-jsenv-import",
+    pre: (file) => {
+      const cachedHelpers = {};
+      file.set("helperGenerator", (name) => {
+        // the list of possible helpers name
+        // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
+        if (!file.availableHelper(name)) {
+          return undefined;
+        }
+        if (cachedHelpers[name]) {
+          return cachedHelpers[name];
+        }
+        const filePath = file.opts.filename;
+        const fileUrl = pathToFileURL(filePath).href;
+        if (babelHelperNameFromUrl(fileUrl) === name) {
+          return undefined;
+        }
+        const babelHelperImportSpecifier = getBabelHelperFileUrl(name);
+        const helper = injectJsImport({
+          programPath: file.path,
+          from: getImportSpecifier(babelHelperImportSpecifier),
+          nameHint: `_${name}`,
+          // disable interop, useless as we work only with js modules
+          importedType: "es6",
+          // importedInterop: "uncompiled",
+        });
+        cachedHelpers[name] = helper;
+        return helper;
+      });
+    },
+  };
 };
 
 /* eslint-disable camelcase */
@@ -10034,78 +10181,6 @@ const getBaseBabelPluginStructure = ({
   return babelPluginStructure;
 };
 
-// named import approach found here:
-// https://github.com/rollup/rollup-plugin-babel/blob/18e4232a450f320f44c651aa8c495f21c74d59ac/src/helperPlugin.js#L1
-
-// for reference this is how it's done to reference
-// a global babel helper object instead of using
-// a named import
-// https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-plugin-external-helpers/src/index.js
-
-const babelPluginBabelHelpersAsJsenvImports = (
-  babel,
-  { getImportSpecifier },
-) => {
-  return {
-    name: "babel-helper-as-jsenv-import",
-    pre: (file) => {
-      const cachedHelpers = {};
-      file.set("helperGenerator", (name) => {
-        // the list of possible helpers name
-        // https://github.com/babel/babel/blob/99f4f6c3b03c7f3f67cf1b9f1a21b80cfd5b0224/packages/babel-helpers/src/helpers.js#L13
-        if (!file.availableHelper(name)) {
-          return undefined;
-        }
-        if (cachedHelpers[name]) {
-          return cachedHelpers[name];
-        }
-        const filePath = file.opts.filename;
-        const fileUrl = pathToFileURL(filePath).href;
-        if (babelHelperNameFromUrl(fileUrl) === name) {
-          return undefined;
-        }
-        const babelHelperImportSpecifier = getBabelHelperFileUrl(name);
-        const helper = injectJsImport({
-          programPath: file.path,
-          from: getImportSpecifier(babelHelperImportSpecifier),
-          nameHint: `_${name}`,
-          // disable interop, useless as we work only with js modules
-          importedType: "es6",
-          // importedInterop: "uncompiled",
-        });
-        cachedHelpers[name] = helper;
-        return helper;
-      });
-    },
-  };
-};
-
-const regeneratorRuntimeClientFileUrl = new URL(
-  "./js/regenerator_runtime.js",
-  import.meta.url,
-).href;
-
-const analyzeRegeneratorRuntimeUsage = (urlInfo) => {
-  if (urlInfo.url === regeneratorRuntimeClientFileUrl) {
-    return null;
-  }
-  const ast = urlInfo.contentAst;
-  const node = visitJsAstUntil(ast, {
-    Identifier: (node) => {
-      if (node.name === "regeneratorRuntime") {
-        return node;
-      }
-      return false;
-    },
-  });
-  return node
-    ? {
-        line: node.loc.start.line,
-        column: node.loc.start.column,
-      }
-    : null;
-};
-
 const injectSideEffectFileIntoBabelAst = ({
   programPath,
   sideEffectFileUrl,
@@ -10145,12 +10220,17 @@ const injectAstAfterImport = (programPath, ast) => {
   }
 };
 
-const babelPluginRegeneratorRuntimeInjector = (
+const newStylesheetClientFileUrl = new URL(
+  "./js/new_stylesheet.js",
+  import.meta.url,
+).href;
+
+const babelPluginNewStylesheetInjector = (
   babel,
   { babelHelpersAsImport, getImportSpecifier },
 ) => {
   return {
-    name: "regenerator-runtime-injector",
+    name: "new-stylesheet-injector",
     visitor: {
       Program: (path, state) => {
         const { sourceType } = state.file.opts.parserOpts;
@@ -10159,7 +10239,7 @@ const babelPluginRegeneratorRuntimeInjector = (
           programPath: path,
           isJsModule,
           asImport: babelHelpersAsImport,
-          sideEffectFileUrl: regeneratorRuntimeClientFileUrl,
+          sideEffectFileUrl: newStylesheetClientFileUrl,
           getSideEffectFileSpecifier: getImportSpecifier,
           babel,
         });
@@ -10167,11 +10247,6 @@ const babelPluginRegeneratorRuntimeInjector = (
     },
   };
 };
-
-const newStylesheetClientFileUrl = new URL(
-  "./js/new_stylesheet.js",
-  import.meta.url,
-).href;
 
 const analyzeConstructableStyleSheetUsage = (urlInfo) => {
   if (urlInfo.url === newStylesheetClientFileUrl) {
@@ -10283,12 +10358,17 @@ const getImportAttributes = (importNode) => {
   return importAttributes;
 };
 
-const babelPluginNewStylesheetInjector = (
+const regeneratorRuntimeClientFileUrl = new URL(
+  "./js/regenerator_runtime.js",
+  import.meta.url,
+).href;
+
+const babelPluginRegeneratorRuntimeInjector = (
   babel,
   { babelHelpersAsImport, getImportSpecifier },
 ) => {
   return {
-    name: "new-stylesheet-injector",
+    name: "regenerator-runtime-injector",
     visitor: {
       Program: (path, state) => {
         const { sourceType } = state.file.opts.parserOpts;
@@ -10297,13 +10377,34 @@ const babelPluginNewStylesheetInjector = (
           programPath: path,
           isJsModule,
           asImport: babelHelpersAsImport,
-          sideEffectFileUrl: newStylesheetClientFileUrl,
+          sideEffectFileUrl: regeneratorRuntimeClientFileUrl,
           getSideEffectFileSpecifier: getImportSpecifier,
           babel,
         });
       },
     },
   };
+};
+
+const analyzeRegeneratorRuntimeUsage = (urlInfo) => {
+  if (urlInfo.url === regeneratorRuntimeClientFileUrl) {
+    return null;
+  }
+  const ast = urlInfo.contentAst;
+  const node = visitJsAstUntil(ast, {
+    Identifier: (node) => {
+      if (node.name === "regeneratorRuntime") {
+        return node;
+      }
+      return false;
+    },
+  });
+  return node
+    ? {
+        line: node.loc.start.line,
+        column: node.loc.start.column,
+      }
+    : null;
 };
 
 const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
@@ -10404,675 +10505,6 @@ const jsenvPluginBabel = ({ babelHelpersAsImport = true } = {}) => {
   };
 };
 
-/*
- * - propagate "?js_module_fallback" query string param on urls
- * - perform conversion from js module to js classic when url uses "?js_module_fallback"
- */
-
-
-const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
-  const isReferencingJsModule = (reference) => {
-    if (
-      reference.type === "js_import" ||
-      reference.subtype === "system_register_arg" ||
-      reference.subtype === "system_import_arg"
-    ) {
-      return true;
-    }
-    if (reference.type === "js_url" && reference.expectedType === "js_module") {
-      return true;
-    }
-    return false;
-  };
-
-  const shouldPropagateJsModuleConversion = (reference) => {
-    if (isReferencingJsModule(reference)) {
-      const insideJsClassic =
-        reference.ownerUrlInfo.searchParams.has("js_module_fallback");
-      return insideJsClassic;
-    }
-    return false;
-  };
-
-  const markAsJsClassicProxy = (reference) => {
-    reference.expectedType = "js_classic";
-    if (!reference.filenameHint) {
-      reference.filenameHint = generateJsClassicFilename(reference.url);
-    }
-  };
-
-  const turnIntoJsClassicProxy = (reference) => {
-    markAsJsClassicProxy(reference);
-    return injectQueryParams(reference.url, {
-      js_module_fallback: "",
-    });
-  };
-
-  return {
-    name: "jsenv:js_module_conversion",
-    appliesDuring: "*",
-    redirectReference: (reference) => {
-      if (reference.searchParams.has("js_module_fallback")) {
-        markAsJsClassicProxy(reference);
-        return null;
-      }
-      // when search param is injected, it will be removed later
-      // by "getWithoutSearchParam". We don't want to redirect again
-      // (would create infinite recursion)
-      if (
-        reference.prev &&
-        reference.prev.searchParams.has(`js_module_fallback`)
-      ) {
-        return null;
-      }
-      // We want to propagate transformation of js module to js classic to:
-      // - import specifier (static/dynamic import + re-export)
-      // - url specifier when inside System.register/_context.import()
-      //   (because it's the transpiled equivalent of static and dynamic imports)
-      // And not other references otherwise we could try to transform inline resources
-      // or specifiers inside new URL()...
-      if (shouldPropagateJsModuleConversion(reference)) {
-        return turnIntoJsClassicProxy(reference);
-      }
-      return null;
-    },
-    fetchUrlContent: async (urlInfo) => {
-      const jsModuleUrlInfo = urlInfo.getWithoutSearchParam(
-        "js_module_fallback",
-        {
-          // override the expectedType to "js_module"
-          // because when there is ?js_module_fallback it means the underlying resource
-          // is a js_module
-          expectedType: "js_module",
-        },
-      );
-      if (!jsModuleUrlInfo) {
-        return null;
-      }
-      await jsModuleUrlInfo.cook();
-      let outputFormat;
-      if (urlInfo.isEntryPoint && !jsModuleUrlInfo.data.usesImport) {
-        // if it's an entry point without dependency (it does not use import)
-        // then we can use UMD
-        outputFormat = "umd";
-      } else {
-        // otherwise we have to use system in case it's imported
-        // by an other file (for entry points)
-        // or to be able to import when it uses import
-        outputFormat = "system";
-        urlInfo.type = "js_classic";
-        urlInfo.dependencies.foundSideEffectFile({
-          sideEffectFileUrl: systemJsClientFileUrlDefault,
-          expectedType: "js_classic",
-          line: 0,
-          column: 0,
-        });
-      }
-      const { content, sourcemap } = await convertJsModuleToJsClassic({
-        rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
-        input: jsModuleUrlInfo.content,
-        inputIsEntryPoint: urlInfo.isEntryPoint,
-        inputSourcemap: jsModuleUrlInfo.sourcemap,
-        inputUrl: jsModuleUrlInfo.url,
-        outputUrl: urlInfo.url,
-        outputFormat,
-        remapImportSpecifier,
-      });
-      return {
-        content,
-        contentType: "text/javascript",
-        type: "js_classic",
-        originalUrl: jsModuleUrlInfo.originalUrl,
-        originalContent: jsModuleUrlInfo.originalContent,
-        sourcemap,
-        data: jsModuleUrlInfo.data,
-      };
-    },
-  };
-};
-
-const generateJsClassicFilename = (url) => {
-  const filename = urlToFilename$1(url);
-  let [basename, extension] = splitFileExtension$2(filename);
-  const { searchParams } = new URL(url);
-  if (
-    searchParams.has("as_json_module") ||
-    searchParams.has("as_css_module") ||
-    searchParams.has("as_text_module")
-  ) {
-    basename += extension;
-    extension = ".js";
-  }
-  return `${basename}.nomodule${extension}`;
-};
-
-const splitFileExtension$2 = (filename) => {
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) {
-    return [filename, ""];
-  }
-  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
-};
-
-/*
- * when <script type="module"> cannot be used:
- * - ?js_module_fallback is injected into the src of <script type="module">
- * - js inside <script type="module"> is transformed into classic js
- * - <link rel="modulepreload"> are converted to <link rel="preload">
- */
-
-
-const jsenvPluginJsModuleFallbackInsideHtml = ({
-  needJsModuleFallback,
-}) => {
-  const turnIntoJsClassicProxy = (reference) => {
-    return injectQueryParams(reference.url, { js_module_fallback: "" });
-  };
-
-  return {
-    name: "jsenv:js_module_fallback_inside_html",
-    appliesDuring: "*",
-    init: needJsModuleFallback,
-    redirectReference: {
-      link_href: (reference) => {
-        if (
-          reference.prev &&
-          reference.prev.searchParams.has(`js_module_fallback`)
-        ) {
-          return null;
-        }
-        if (reference.subtype === "modulepreload") {
-          return turnIntoJsClassicProxy(reference);
-        }
-        if (
-          reference.subtype === "preload" &&
-          reference.expectedType === "js_module"
-        ) {
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      },
-      script: (reference) => {
-        if (
-          reference.prev &&
-          reference.prev.searchParams.has(`js_module_fallback`)
-        ) {
-          return null;
-        }
-        if (reference.expectedType === "js_module") {
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      },
-      js_url: (reference) => {
-        if (
-          reference.prev &&
-          reference.prev.searchParams.has(`js_module_fallback`)
-        ) {
-          return null;
-        }
-        if (reference.expectedType === "js_module") {
-          return turnIntoJsClassicProxy(reference);
-        }
-        return null;
-      },
-    },
-    finalizeUrlContent: {
-      html: async (urlInfo) => {
-        const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
-        const mutations = [];
-        visitHtmlNodes(htmlAst, {
-          link: (node) => {
-            const rel = getHtmlNodeAttribute(node, "rel");
-            if (rel !== "modulepreload" && rel !== "preload") {
-              return;
-            }
-            const href = getHtmlNodeAttribute(node, "href");
-            if (!href) {
-              return;
-            }
-            let linkHintReference = null;
-            for (const referenceToOther of urlInfo.referenceToOthersSet) {
-              if (
-                referenceToOther.generatedSpecifier === href &&
-                referenceToOther.type === "link_href" &&
-                referenceToOther.subtype === rel
-              ) {
-                linkHintReference = referenceToOther;
-                break;
-              }
-            }
-            if (rel === "modulepreload") {
-              if (linkHintReference.expectedType === "js_classic") {
-                mutations.push(() => {
-                  setHtmlNodeAttributes(node, {
-                    rel: "preload",
-                    as: "script",
-                    crossorigin: undefined,
-                  });
-                });
-              }
-            }
-            if (
-              rel === "preload" &&
-              wasConvertedFromJsModule(linkHintReference)
-            ) {
-              mutations.push(() => {
-                setHtmlNodeAttributes(node, { crossorigin: undefined });
-              });
-            }
-          },
-          script: (node) => {
-            const { type } = analyzeScriptNode(node);
-            if (type !== "js_module") {
-              return;
-            }
-            const src = getHtmlNodeAttribute(node, "src");
-            const text = getHtmlNodeText(node);
-            let scriptReference = null;
-            for (const referenceToOther of urlInfo.referenceToOthersSet) {
-              if (referenceToOther.type !== "script") {
-                continue;
-              }
-              if (src && referenceToOther.generatedSpecifier === src) {
-                scriptReference = referenceToOther;
-                break;
-              }
-              if (text) {
-                if (referenceToOther.content === text) {
-                  scriptReference = referenceToOther;
-                  break;
-                }
-                if (referenceToOther.urlInfo.content === text) {
-                  scriptReference = referenceToOther;
-                  break;
-                }
-              }
-            }
-            if (!wasConvertedFromJsModule(scriptReference)) {
-              return;
-            }
-            mutations.push(() => {
-              setHtmlNodeAttributes(node, { type: undefined });
-            });
-          },
-        });
-        await Promise.all(mutations.map((mutation) => mutation()));
-        return stringifyHtmlAst(htmlAst, {
-          cleanupPositionAttributes: urlInfo.context.dev,
-        });
-      },
-    },
-  };
-};
-
-const wasConvertedFromJsModule = (reference) => {
-  if (reference.expectedType === "js_classic") {
-    // check if a prev version was using js module
-    if (reference.original) {
-      if (reference.original.expectedType === "js_module") {
-        return true;
-      }
-    }
-  }
-  return false;
-};
-
-/*
- * when {type: "module"} cannot be used on web workers:
- * - new Worker("worker.js", { type: "module" })
- *   transformed into
- *   new Worker("worker.js?js_module_fallback", { type: " lassic" })
- * - navigator.serviceWorker.register("service_worker.js", { type: "module" })
- *   transformed into
- *   navigator.serviceWorker.register("service_worker.js?js_module_fallback", { type: "classic" })
- * - new SharedWorker("shared_worker.js", { type: "module" })
- *   transformed into
- *   new SharedWorker("shared_worker.js?js_module_fallback", { type: "classic" })
- */
-
-
-const jsenvPluginJsModuleFallbackOnWorkers = () => {
-  const turnIntoJsClassicProxy = (reference) => {
-    reference.mutation = (magicSource) => {
-      const { typePropertyNode } = reference.astInfo;
-      magicSource.replace({
-        start: typePropertyNode.value.start,
-        end: typePropertyNode.value.end,
-        replacement: JSON.stringify("classic"),
-      });
-    };
-    return injectQueryParams(reference.url, { js_module_fallback: "" });
-  };
-
-  const createWorkerPlugin = (subtype) => {
-    return {
-      name: `jsenv:js_module_fallback_on_${subtype}`,
-      appliesDuring: "*",
-      init: (context) => {
-        if (Object.keys(context.runtimeCompat).toString() === "node") {
-          return false;
-        }
-        if (context.isSupportedOnCurrentClients(`${subtype}_type_module`)) {
-          return false;
-        }
-
-        return true;
-      },
-      redirectReference: {
-        js_url: (reference) => {
-          if (reference.expectedType !== "js_module") {
-            return null;
-          }
-          if (reference.expectedSubtype !== subtype) {
-            return null;
-          }
-          return turnIntoJsClassicProxy(reference);
-        },
-      },
-    };
-  };
-
-  return [
-    createWorkerPlugin("worker"),
-    createWorkerPlugin("service_worker"),
-    createWorkerPlugin("shared_worker"),
-  ];
-};
-
-const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
-  return {
-    name: "jsenv:import_meta_resolve",
-    appliesDuring: "*",
-    init: (context) => {
-      if (context.isSupportedOnCurrentClients("import_meta_resolve")) {
-        return false;
-      }
-      if (needJsModuleFallback(context)) {
-        // will be handled by systemjs, keep it untouched
-        return false;
-      }
-      return true;
-    },
-    transformUrlContent: {
-      js_module: async (urlInfo) => {
-        const jsUrls = parseJsUrls({
-          js: urlInfo.content,
-          url: urlInfo.url,
-          isJsModule: true,
-        });
-        const magicSource = createMagicSource(urlInfo.content);
-        for (const jsUrl of jsUrls) {
-          if (jsUrl.subtype !== "import_meta_resolve") {
-            continue;
-          }
-          const { node } = jsUrl.astInfo;
-          let reference;
-          for (const referenceToOther of urlInfo.referenceToOthersSet) {
-            if (
-              referenceToOther.generatedSpecifier.slice(1, -1) ===
-              jsUrl.specifier
-            ) {
-              reference = referenceToOther;
-              break;
-            }
-          }
-          magicSource.replace({
-            start: node.start,
-            end: node.end,
-            replacement: `new URL(${reference.generatedSpecifier}, import.meta.url).href`,
-          });
-        }
-        return magicSource.toContentAndSourcemap();
-      },
-    },
-  };
-};
-
-const require = createRequire(import.meta.url);
-
-const jsenvPluginTopLevelAwait = ({ needJsModuleFallback }) => {
-  return {
-    name: "jsenv:top_level_await",
-    appliesDuring: "*",
-    init: (context) => {
-      if (context.isSupportedOnCurrentClients("top_level_await")) {
-        return false;
-      }
-      if (needJsModuleFallback(context)) {
-        // will be handled by systemjs, keep it untouched
-        return false;
-      }
-      return true;
-    },
-    transformUrlContent: {
-      js_module: async (urlInfo) => {
-        const usesTLA = await usesTopLevelAwait(urlInfo);
-        if (!usesTLA) {
-          return null;
-        }
-        const { code, map } = await applyBabelPlugins({
-          babelPlugins: [
-            [
-              require("babel-plugin-transform-async-to-promises"),
-              {
-                // Maybe we could pass target: "es6" when we support arrow function
-                // https://github.com/rpetrich/babel-plugin-transform-async-to-promises/blob/92755ff8c943c97596523e586b5fa515c2e99326/async-to-promises.ts#L55
-                topLevelAwait: "simple",
-                // enable once https://github.com/rpetrich/babel-plugin-transform-async-to-promises/pull/83
-                // externalHelpers: true,
-                // externalHelpersPath: JSON.parse(
-                //   context.referenceUtils.inject({
-                //     type: "js_import",
-                //     expectedType: "js_module",
-                //     specifier:
-                //       "babel-plugin-transform-async-to-promises/helpers.mjs",
-                //   })[0],
-                // ),
-              },
-            ],
-          ],
-          input: urlInfo.content,
-          inputIsJsModule: true,
-          inputUrl: urlInfo.originalUrl,
-          outputUrl: urlInfo.generatedUrl,
-        });
-        return {
-          content: code,
-          sourcemap: map,
-        };
-      },
-    },
-  };
-};
-
-const usesTopLevelAwait = async (urlInfo) => {
-  if (!urlInfo.content.includes("await ")) {
-    return false;
-  }
-  const { metadata } = await applyBabelPlugins({
-    babelPlugins: [babelPluginMetadataUsesTopLevelAwait],
-    input: urlInfo.content,
-    inputIsJsModule: true,
-    inputUrl: urlInfo.originalUrl,
-    outputUrl: urlInfo.generatedUrl,
-  });
-  return metadata.usesTopLevelAwait;
-};
-
-const babelPluginMetadataUsesTopLevelAwait = () => {
-  return {
-    name: "metadata-uses-top-level-await",
-    visitor: {
-      Program: (programPath, state) => {
-        let usesTopLevelAwait = false;
-        programPath.traverse({
-          AwaitExpression: (path) => {
-            const closestFunction = path.getFunctionParent();
-            if (!closestFunction || closestFunction.type === "Program") {
-              usesTopLevelAwait = true;
-              path.stop();
-            }
-          },
-        });
-        state.file.metadata.usesTopLevelAwait = usesTopLevelAwait;
-      },
-    },
-  };
-};
-
-const jsenvPluginJsModuleFallback = ({ remapImportSpecifier } = {}) => {
-  const needJsModuleFallback = (context) => {
-    if (Object.keys(context.clientRuntimeCompat).includes("node")) {
-      return false;
-    }
-    if (
-      context.versioning &&
-      context.versioningViaImportmap &&
-      !context.isSupportedOnCurrentClients("importmap")
-    ) {
-      return true;
-    }
-    if (
-      !context.isSupportedOnCurrentClients("script_type_module") ||
-      !context.isSupportedOnCurrentClients("import_dynamic") ||
-      !context.isSupportedOnCurrentClients("import_meta")
-    ) {
-      return true;
-    }
-    return false;
-  };
-
-  return [
-    jsenvPluginJsModuleFallbackInsideHtml({ needJsModuleFallback }),
-    jsenvPluginJsModuleFallbackOnWorkers(),
-    jsenvPluginJsModuleConversion({ remapImportSpecifier }),
-    // must come after jsModuleFallback because it's related to the module format
-    // so we want to want to know the module format before transforming things
-    // - top level await
-    // - import.meta.resolve()
-    jsenvPluginImportMetaResolve({ needJsModuleFallback }),
-    jsenvPluginTopLevelAwait({ needJsModuleFallback }),
-  ];
-};
-
-const convertJsClassicToJsModule = async ({
-  isWebWorker,
-  input,
-  inputSourcemap,
-  inputUrl,
-  outputUrl,
-}) => {
-  const { code, map } = await applyBabelPlugins({
-    babelPlugins: [[babelPluginReplaceTopLevelThis, { isWebWorker }]],
-    input,
-    inputIsJsModule: false,
-    inputUrl,
-    outputUrl,
-  });
-  const sourcemap = await composeTwoSourcemaps(inputSourcemap, map);
-  return {
-    content: code,
-    sourcemap,
-  };
-};
-
-const babelPluginReplaceTopLevelThis = () => {
-  return {
-    name: "replace-top-level-this",
-    visitor: {
-      Program: (programPath, state) => {
-        const { isWebWorker } = state.opts;
-        programPath.traverse({
-          ThisExpression: (path) => {
-            const closestFunction = path.getFunctionParent();
-            if (!closestFunction) {
-              path.replaceWithSourceString(isWebWorker ? "self" : "window");
-            }
-          },
-        });
-      },
-    },
-  };
-};
-
-/*
- * Js modules might not be able to import js meant to be loaded by <script>
- * Among other things this happens for a top level this:
- * - With <script> this is window
- * - With an import this is undefined
- * Example of this: https://github.com/video-dev/hls.js/issues/2911
- *
- * This plugin fix this issue by rewriting top level this into window
- * and can be used like this for instance import("hls?as_js_module")
- */
-
-
-const jsenvPluginAsJsModule = () => {
-  const markAsJsModuleProxy = (reference) => {
-    reference.expectedType = "js_module";
-    if (!reference.filenameHint) {
-      const filename = urlToFilename$1(reference.url);
-      const [basename] = splitFileExtension$1(filename);
-      reference.filenameHint = `${basename}.mjs`;
-    }
-  };
-
-  return {
-    name: "jsenv:as_js_module",
-    appliesDuring: "*",
-    redirectReference: (reference) => {
-      if (reference.searchParams.has("as_js_module")) {
-        markAsJsModuleProxy(reference);
-      }
-    },
-    fetchUrlContent: async (urlInfo) => {
-      const jsClassicUrlInfo = urlInfo.getWithoutSearchParam("as_js_module", {
-        // override the expectedType to "js_classic"
-        // because when there is ?as_js_module it means the underlying resource
-        // is js_classic
-        expectedType: "js_classic",
-      });
-      if (!jsClassicUrlInfo) {
-        return null;
-      }
-      await jsClassicUrlInfo.cook();
-      const { content, sourcemap } = await convertJsClassicToJsModule({
-        input: jsClassicUrlInfo.content,
-        inputSourcemap: jsClassicUrlInfo.sourcemap,
-        inputUrl: jsClassicUrlInfo.url,
-        outputUrl: jsClassicUrlInfo.generatedUrl,
-        isWebWorker: isWebWorkerUrlInfo$1(urlInfo),
-      });
-      return {
-        content,
-        contentType: "text/javascript",
-        type: "js_module",
-        originalUrl: jsClassicUrlInfo.originalUrl,
-        originalContent: jsClassicUrlInfo.originalContent,
-        sourcemap,
-        data: jsClassicUrlInfo.data,
-      };
-    },
-  };
-};
-
-const isWebWorkerUrlInfo$1 = (urlInfo) => {
-  return (
-    urlInfo.subtype === "worker" ||
-    urlInfo.subtype === "service_worker" ||
-    urlInfo.subtype === "shared_worker"
-  );
-};
-
-const splitFileExtension$1 = (filename) => {
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) {
-    return [filename, ""];
-  }
-  return [filename.slice(0, dotLastIndex), filename.slice(dotLastIndex)];
-};
-
 const applyCssTranspilation = async ({
   input,
   inputUrl,
@@ -11129,6 +10561,347 @@ const jsenvPluginCssTranspilation = () => {
   };
 };
 
+const isEscaped = (i, string) => {
+  let backslashBeforeCount = 0;
+  while (i--) {
+    const previousChar = string[i];
+    if (previousChar === "\\") {
+      backslashBeforeCount++;
+    }
+    break;
+  }
+  const isEven = backslashBeforeCount % 2 === 0;
+  return !isEven;
+};
+
+const JS_QUOTES = {
+  pickBest: (string, { canUseTemplateString, defaultQuote = DOUBLE } = {}) => {
+    // check default first, once tested do no re-test it
+    if (!string.includes(defaultQuote)) {
+      return defaultQuote;
+    }
+    if (defaultQuote !== DOUBLE && !string.includes(DOUBLE)) {
+      return DOUBLE;
+    }
+    if (defaultQuote !== SINGLE && !string.includes(SINGLE)) {
+      return SINGLE;
+    }
+    if (
+      canUseTemplateString &&
+      defaultQuote !== BACKTICK &&
+      !string.includes(BACKTICK)
+    ) {
+      return BACKTICK;
+    }
+    return defaultQuote;
+  },
+
+  escapeSpecialChars: (
+    string,
+    {
+      quote = "pickBest",
+      canUseTemplateString,
+      defaultQuote,
+      allowEscapeForVersioning = false,
+    },
+  ) => {
+    quote =
+      quote === "pickBest"
+        ? JS_QUOTES.pickBest(string, { canUseTemplateString, defaultQuote })
+        : quote;
+    const replacements = JS_QUOTE_REPLACEMENTS[quote];
+    let result = "";
+    let last = 0;
+    let i = 0;
+    while (i < string.length) {
+      const char = string[i];
+      i++;
+      if (isEscaped(i - 1, string)) continue;
+      const replacement = replacements[char];
+      if (replacement) {
+        if (
+          allowEscapeForVersioning &&
+          char === quote &&
+          string.slice(i, i + 6) === "+__v__"
+        ) {
+          let isVersioningConcatenation = false;
+          let j = i + 6; // start after the +
+          while (j < string.length) {
+            const lookAheadChar = string[j];
+            j++;
+            if (
+              lookAheadChar === "+" &&
+              string[j] === quote &&
+              !isEscaped(j - 1, string)
+            ) {
+              isVersioningConcatenation = true;
+              break;
+            }
+          }
+          if (isVersioningConcatenation) {
+            // it's a concatenation
+            // skip until the end of concatenation (the second +)
+            // and resume from there
+            i = j + 1;
+            continue;
+          }
+        }
+        if (last === i - 1) {
+          result += replacement;
+        } else {
+          result += `${string.slice(last, i - 1)}${replacement}`;
+        }
+        last = i;
+      }
+    }
+    if (last !== string.length) {
+      result += string.slice(last);
+    }
+    return `${quote}${result}${quote}`;
+  },
+};
+
+const DOUBLE = `"`;
+const SINGLE = `'`;
+const BACKTICK = "`";
+const lineEndingEscapes = {
+  "\n": "\\n",
+  "\r": "\\r",
+  "\u2028": "\\u2028",
+  "\u2029": "\\u2029",
+};
+const JS_QUOTE_REPLACEMENTS = {
+  [DOUBLE]: {
+    '"': '\\"',
+    ...lineEndingEscapes,
+  },
+  [SINGLE]: {
+    "'": "\\'",
+    ...lineEndingEscapes,
+  },
+  [BACKTICK]: {
+    "`": "\\`",
+    "$": "\\$",
+  },
+};
+
+/*
+ * Jsenv wont touch code where "specifier" or "type" is dynamic (see code below)
+ * ```js
+ * const file = "./style.css"
+ * const type = "css"
+ * import(file, { with: { type }})
+ * ```
+ * Jsenv could throw an error when it knows some browsers in runtimeCompat
+ * do not support import attributes
+ * But for now (as it is simpler) we let the browser throw the error
+ */
+
+
+const jsenvPluginImportAttributes = ({
+  json = "auto",
+  css = "auto",
+  text = "auto",
+}) => {
+  const transpilations = { json, css, text };
+  const markAsJsModuleProxy = (reference) => {
+    reference.expectedType = "js_module";
+    if (!reference.filenameHint) {
+      reference.filenameHint = `${urlToFilename$1(reference.url)}.js`;
+    }
+  };
+  const turnIntoJsModuleProxy = (reference, type) => {
+    reference.mutation = (magicSource) => {
+      if (reference.subtype === "import_dynamic") {
+        const { importTypeAttributeNode } = reference.astInfo;
+        magicSource.remove({
+          start: importTypeAttributeNode.start,
+          end: importTypeAttributeNode.end,
+        });
+      } else {
+        const { importTypeAttributeNode } = reference.astInfo;
+        const content = reference.ownerUrlInfo.content;
+        const withKeywordStart = content.indexOf(
+          "with",
+          importTypeAttributeNode.start - " with { ".length,
+        );
+        const withKeywordEnd = content.indexOf(
+          "}",
+          importTypeAttributeNode.end,
+        );
+        magicSource.remove({
+          start: withKeywordStart,
+          end: withKeywordEnd + 1,
+        });
+      }
+    };
+    const newUrl = injectQueryParams(reference.url, {
+      [`as_${type}_module`]: "",
+    });
+    markAsJsModuleProxy(reference);
+    return newUrl;
+  };
+
+  const createImportTypePlugin = ({ type, createUrlContent }) => {
+    return {
+      name: `jsenv:import_type_${type}`,
+      appliesDuring: "*",
+      init: (context) => {
+        // transpilation is forced during build so that
+        //   - avoid rollup to see import assertions
+        //     We would have to tell rollup to ignore import with assertion
+        //   - means rollup can bundle more js file together
+        //   - means url versioning can work for css inlined in js
+        if (context.build) {
+          return true;
+        }
+        const transpilation = transpilations[type];
+        if (transpilation === "auto") {
+          return !context.isSupportedOnCurrentClients(`import_type_${type}`);
+        }
+        return transpilation;
+      },
+      redirectReference: (reference) => {
+        if (!reference.importAttributes) {
+          return null;
+        }
+        const { searchParams } = reference;
+        if (searchParams.has(`as_${type}_module`)) {
+          markAsJsModuleProxy(reference);
+          return null;
+        }
+        // when search param is injected, it will be removed later
+        // by "getWithoutSearchParam". We don't want to redirect again
+        // (would create infinite recursion)
+        if (
+          reference.prev &&
+          reference.prev.searchParams.has(`as_${type}_module`)
+        ) {
+          return null;
+        }
+        if (reference.importAttributes.type === type) {
+          return turnIntoJsModuleProxy(reference, type);
+        }
+        return null;
+      },
+      fetchUrlContent: async (urlInfo) => {
+        const originalUrlInfo = urlInfo.getWithoutSearchParam(
+          `as_${type}_module`,
+          {
+            expectedType: "json",
+          },
+        );
+        if (!originalUrlInfo) {
+          return null;
+        }
+        await originalUrlInfo.cook();
+        return createUrlContent(originalUrlInfo);
+      },
+    };
+  };
+
+  const asJsonModule = createImportTypePlugin({
+    type: "json",
+    createUrlContent: (jsonUrlInfo) => {
+      const jsonText = JSON.stringify(jsonUrlInfo.content.trim());
+      let inlineContentCall;
+      // here we could `export default ${jsonText}`:
+      // but js engine are optimized to recognize JSON.parse
+      // and use a faster parsing strategy
+      if (jsonUrlInfo.context.dev) {
+        inlineContentCall = `JSON.parse(
+  ${jsonText},
+  //# inlinedFromUrl=${jsonUrlInfo.url}
+)`;
+      } else {
+        inlineContentCall = `JSON.parse(${jsonText})`;
+      }
+      return {
+        content: `export default ${inlineContentCall};`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: jsonUrlInfo.originalUrl,
+        originalContent: jsonUrlInfo.originalContent,
+        data: jsonUrlInfo.data,
+      };
+    },
+  });
+
+  const asCssModule = createImportTypePlugin({
+    type: "css",
+    createUrlContent: (cssUrlInfo) => {
+      const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
+        // If template string is choosen and runtime do not support template literals
+        // it's ok because "jsenv:new_inline_content" plugin executes after this one
+        // and convert template strings into raw strings
+        canUseTemplateString: true,
+      });
+      let inlineContentCall;
+      if (cssUrlInfo.context.dev) {
+        inlineContentCall = `new __InlineContent__(
+  ${cssText},
+  { type: "text/css" },
+  //# inlinedFromUrl=${cssUrlInfo.url}
+)`;
+      } else {
+        inlineContentCall = `new __InlineContent__(${cssText}, { type: "text/css" })`;
+      }
+      return {
+        content: `
+import ${JSON.stringify(cssUrlInfo.context.inlineContentClientFileUrl)};
+
+const inlineContent = ${inlineContentCall};
+const stylesheet = new CSSStyleSheet();
+stylesheet.replaceSync(inlineContent.text);
+
+export default stylesheet;`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: cssUrlInfo.originalUrl,
+        originalContent: cssUrlInfo.originalContent,
+        data: cssUrlInfo.data,
+      };
+    },
+  });
+
+  const asTextModule = createImportTypePlugin({
+    type: "text",
+    createUrlContent: (textUrlInfo) => {
+      const textPlain = JS_QUOTES.escapeSpecialChars(textUrlInfo.content, {
+        // If template string is choosen and runtime do not support template literals
+        // it's ok because "jsenv:new_inline_content" plugin executes after this one
+        // and convert template strings into raw strings
+        canUseTemplateString: true,
+      });
+      let inlineContentCall;
+      if (textUrlInfo.context.dev) {
+        inlineContentCall = `new __InlineContent__(
+  ${textPlain},
+  { type: "text/plain"},
+  //# inlinedFromUrl=${textUrlInfo.url}
+)`;
+      } else {
+        inlineContentCall = `new __InlineContent__(${textPlain}, { type: "text/plain"})`;
+      }
+      return {
+        content: `
+import ${JSON.stringify(textUrlInfo.context.inlineContentClientFileUrl)};
+
+const inlineContent = ${inlineContentCall};
+
+export default inlineContent.text;`,
+        contentType: "text/javascript",
+        type: "js_module",
+        originalUrl: textUrlInfo.originalUrl,
+        originalContent: textUrlInfo.originalContent,
+        data: textUrlInfo.data,
+      };
+    },
+  });
+
+  return [asJsonModule, asCssModule, asTextModule];
+};
+
 /*
  * Transforms code to make it compatible with browser that would not be able to
  * run it otherwise. For instance:
@@ -11169,240 +10942,1028 @@ const jsenvPluginTranspilation = ({
   ];
 };
 
-const GRAPH_VISITOR = {};
+const lookupPackageDirectory = (currentUrl) => {
+  if (currentUrl === "file:///") {
+    return null;
+  }
+  const packageJsonFileUrl = `${currentUrl}package.json`;
+  if (existsSync(new URL(packageJsonFileUrl))) {
+    return currentUrl;
+  }
+  return lookupPackageDirectory(getParentUrl$1(currentUrl));
+};
 
-GRAPH_VISITOR.map = (graph, callback) => {
-  const array = [];
-  graph.urlInfoMap.forEach((urlInfo) => {
-    array.push(callback(urlInfo));
-  });
-  return array;
-};
-GRAPH_VISITOR.forEach = (graph, callback) => {
-  graph.urlInfoMap.forEach(callback);
-};
-GRAPH_VISITOR.filter = (graph, callback) => {
-  const urlInfos = [];
-  graph.urlInfoMap.forEach((urlInfo) => {
-    if (callback(urlInfo)) {
-      urlInfos.push(urlInfo);
+const getParentUrl$1 = (url) => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
     }
-  });
-  return urlInfos;
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf(
+        "/",
+        slashLastIndex - 1,
+      );
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
 };
-GRAPH_VISITOR.find = (graph, callback) => {
-  let found = null;
-  for (const urlInfo of graph.urlInfoMap.values()) {
-    if (callback(urlInfo)) {
-      found = urlInfo;
+
+const watchSourceFiles = (
+  sourceDirectoryUrl,
+  callback,
+  { sourceFileConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
+) => {
+  // Project should use a dedicated directory (usually "src/")
+  // passed to the dev server via "sourceDirectoryUrl" param
+  // In that case all files inside the source directory should be watched
+  // But some project might want to use their root directory as source directory
+  // In that case source directory might contain files matching "node_modules/*" or ".git/*"
+  // And jsenv should not consider these as source files and watch them (to not hurt performances)
+  const watchPatterns = {
+    "**/*": true, // by default watch everything inside the source directory
+    // line below is commented until @jsenv/url-meta fixes the fact that is matches
+    // any file with an extension
+    "**/.*": false, // file starting with a dot -> do not watch
+    "**/.*/": false, // directory starting with a dot -> do not watch
+    "**/node_modules/": false, // node_modules directory -> do not watch
+    ...sourceFileConfig,
+  };
+  const stopWatchingSourceFiles = registerDirectoryLifecycle(
+    sourceDirectoryUrl,
+    {
+      watchPatterns,
+      cooldownBetweenFileEvents,
+      keepProcessAlive,
+      recursive: true,
+      added: ({ relativeUrl }) => {
+        callback({
+          url: new URL(relativeUrl, sourceDirectoryUrl).href,
+          event: "added",
+        });
+      },
+      updated: ({ relativeUrl }) => {
+        callback({
+          url: new URL(relativeUrl, sourceDirectoryUrl).href,
+          event: "modified",
+        });
+      },
+      removed: ({ relativeUrl }) => {
+        callback({
+          url: new URL(relativeUrl, sourceDirectoryUrl).href,
+          event: "removed",
+        });
+      },
+    },
+  );
+  stopWatchingSourceFiles.watchPatterns = watchPatterns;
+  return stopWatchingSourceFiles;
+};
+
+const jsenvPluginHtmlSyntaxErrorFallback = () => {
+  const htmlSyntaxErrorFileUrl = new URL(
+    "./html/html_syntax_error.html",
+    import.meta.url,
+  );
+
+  return {
+    mustStayFirst: true,
+    name: "jsenv:html_syntax_error_fallback",
+    appliesDuring: "dev",
+    transformUrlContent: {
+      html: (urlInfo) => {
+        try {
+          parseHtml({
+            html: urlInfo.content,
+            url: urlInfo.url,
+          });
+          return null;
+        } catch (e) {
+          if (e.code !== "PARSE_ERROR") {
+            return null;
+          }
+          const line = e.line;
+          const column = e.column;
+          const htmlErrorContentFrame = generateContentFrame({
+            content: urlInfo.content,
+            line,
+            column,
+          });
+          urlInfo.kitchen.context.logger
+            .error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
+${e.reasonCode}
+${urlInfo.url}:${line}:${column}
+${htmlErrorContentFrame}`);
+          const html = generateHtmlForSyntaxError(e, {
+            htmlUrl: urlInfo.url,
+            rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+            htmlErrorContentFrame,
+            htmlSyntaxErrorFileUrl,
+          });
+          return html;
+        }
+      },
+    },
+  };
+};
+
+const generateHtmlForSyntaxError = (
+  htmlSyntaxError,
+  { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame, htmlSyntaxErrorFileUrl },
+) => {
+  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
+  const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
+  const { line, column } = htmlSyntaxError;
+  const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
+  const replacers = {
+    fileRelativeUrl: htmlRelativeUrl,
+    reasonCode: htmlSyntaxError.reasonCode,
+    errorLinkHref: `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
+      urlWithLineAndColumn,
+    )}')`,
+    errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
+    syntaxError: escapeHtml(htmlErrorContentFrame),
+  };
+  const html = replacePlaceholders$2(htmlForSyntaxError, replacers);
+  return html;
+};
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+const replacePlaceholders$2 = (html, replacers) => {
+  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
+};
+
+const HOOK_NAMES = [
+  "init",
+  "serve", // is called only during dev/tests
+  "resolveReference",
+  "redirectReference",
+  "transformReferenceSearchParams",
+  "formatReference",
+  "fetchUrlContent",
+  "transformUrlContent",
+  "finalizeUrlContent",
+  "bundle", // is called only during build
+  "optimizeUrlContent", // is called only during build
+  "cooked",
+  "augmentResponse", // is called only during dev/tests
+  "destroy",
+];
+
+const createPluginController = (
+  kitchenContext,
+  initialPuginsMeta = {},
+) => {
+  const pluginsMeta = initialPuginsMeta;
+
+  kitchenContext.getPluginMeta = (id) => {
+    const value = pluginsMeta[id];
+    return value;
+  };
+
+  const plugins = [];
+  // precompute a list of hooks per hookName for one major reason:
+  // - When debugging, there is less iteration
+  // also it should increase perf as there is less work to do
+  const hookGroups = {};
+  const addPlugin = (plugin, { position = "end" }) => {
+    if (Array.isArray(plugin)) {
+      if (position === "start") {
+        plugin = plugin.slice().reverse();
+      }
+      plugin.forEach((plugin) => {
+        addPlugin(plugin, { position });
+      });
+      return;
+    }
+    if (plugin === null || typeof plugin !== "object") {
+      throw new TypeError(`plugin must be objects, got ${plugin}`);
+    }
+    if (!plugin.name) {
+      plugin.name = "anonymous";
+    }
+    if (!testAppliesDuring(plugin) || !initPlugin(plugin)) {
+      if (plugin.destroy) {
+        plugin.destroy();
+      }
+      return;
+    }
+    plugins.push(plugin);
+    for (const key of Object.keys(plugin)) {
+      if (key === "meta") {
+        const value = plugin[key];
+        if (typeof value !== "object" || value === null) {
+          console.warn(`plugin.meta must be an object, got ${value}`);
+          continue;
+        }
+        Object.assign(pluginsMeta, value);
+        // any extension/modification on plugin.meta
+        // won't be taken into account so we freeze object
+        // to throw in case it happen
+        Object.freeze(value);
+        continue;
+      }
+
+      if (
+        key === "name" ||
+        key === "appliesDuring" ||
+        key === "init" ||
+        key === "serverEvents" ||
+        key === "mustStayFirst"
+      ) {
+        continue;
+      }
+      const isHook = HOOK_NAMES.includes(key);
+      if (!isHook) {
+        console.warn(`Unexpected "${key}" property on "${plugin.name}" plugin`);
+        continue;
+      }
+      const hookName = key;
+      const hookValue = plugin[hookName];
+      if (hookValue) {
+        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
+        const hook = {
+          plugin,
+          name: hookName,
+          value: hookValue,
+        };
+        if (position === "start") {
+          let i = 0;
+          while (i < group.length) {
+            const before = group[i];
+            if (!before.plugin.mustStayFirst) {
+              break;
+            }
+            i++;
+          }
+          group.splice(i, 0, hook);
+        } else {
+          group.push(hook);
+        }
+      }
+    }
+  };
+  const testAppliesDuring = (plugin) => {
+    const { appliesDuring } = plugin;
+    if (appliesDuring === undefined) {
+      // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+      return true;
+    }
+    if (appliesDuring === "*") {
+      return true;
+    }
+    if (typeof appliesDuring === "string") {
+      if (appliesDuring !== "dev" && appliesDuring !== "build") {
+        throw new TypeError(
+          `"appliesDuring" must be "dev" or "build", got ${appliesDuring}`,
+        );
+      }
+      if (kitchenContext[appliesDuring]) {
+        return true;
+      }
+      return false;
+    }
+    if (typeof appliesDuring === "object") {
+      for (const key of Object.keys(appliesDuring)) {
+        if (!appliesDuring[key] && kitchenContext[key]) {
+          return false;
+        }
+        if (appliesDuring[key] && kitchenContext[key]) {
+          return true;
+        }
+      }
+      // throw new Error(`"appliesDuring" is empty`)
+      return false;
+    }
+    throw new TypeError(
+      `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
+    );
+  };
+  const initPlugin = (plugin) => {
+    if (plugin.init) {
+      const initReturnValue = plugin.init(kitchenContext, plugin);
+      if (initReturnValue === false) {
+        return false;
+      }
+      if (typeof initReturnValue === "function" && !plugin.destroy) {
+        plugin.destroy = initReturnValue;
+      }
+    }
+    return true;
+  };
+  const pushPlugin = (plugin) => {
+    addPlugin(plugin, { position: "end" });
+  };
+  const unshiftPlugin = (plugin) => {
+    addPlugin(plugin, { position: "start" });
+  };
+
+  let lastPluginUsed = null;
+  let currentPlugin = null;
+  let currentHookName = null;
+  const callHook = (hook, info) => {
+    const hookFn = getHookFunction(hook, info);
+    if (!hookFn) {
+      return null;
+    }
+    let startTimestamp;
+    if (info.timing) {
+      startTimestamp = performance$1.now();
+    }
+    lastPluginUsed = hook.plugin;
+    currentPlugin = hook.plugin;
+    currentHookName = hook.name;
+    let valueReturned = hookFn(info);
+    currentPlugin = null;
+    currentHookName = null;
+    if (info.timing) {
+      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
+        performance$1.now() - startTimestamp;
+    }
+    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
+    return valueReturned;
+  };
+  const callAsyncHook = async (hook, info) => {
+    const hookFn = getHookFunction(hook, info);
+    if (!hookFn) {
+      return null;
+    }
+
+    let startTimestamp;
+    if (info.timing) {
+      startTimestamp = performance$1.now();
+    }
+    lastPluginUsed = hook.plugin;
+    currentPlugin = hook.plugin;
+    currentHookName = hook.name;
+    let valueReturned = await hookFn(info);
+    currentPlugin = null;
+    currentHookName = null;
+    if (info.timing) {
+      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
+        performance$1.now() - startTimestamp;
+    }
+    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
+    return valueReturned;
+  };
+
+  const callHooks = (hookName, info, callback) => {
+    const hooks = hookGroups[hookName];
+    if (hooks) {
+      const setHookParams = (firstArg = info) => {
+        info = firstArg;
+      };
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info);
+        if (returnValue && callback) {
+          callback(returnValue, hook.plugin, setHookParams);
+        }
+      }
+    }
+  };
+  const callAsyncHooks = async (hookName, info, callback, options) => {
+    const hooks = hookGroups[hookName];
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = await callAsyncHook(hook, info);
+        if (returnValue && callback) {
+          await callback(returnValue, hook.plugin);
+        }
+      }
+    }
+  };
+
+  const callHooksUntil = (hookName, info) => {
+    const hooks = hookGroups[hookName];
+    if (hooks) {
+      for (const hook of hooks) {
+        const returnValue = callHook(hook, info);
+        if (returnValue) {
+          return returnValue;
+        }
+      }
+    }
+    return null;
+  };
+  const callAsyncHooksUntil = async (hookName, info, options) => {
+    const hooks = hookGroups[hookName];
+    if (!hooks) {
+      return null;
+    }
+    if (hooks.length === 0) {
+      return null;
+    }
+    let result;
+    let index = 0;
+    const visit = async () => {
+      if (index >= hooks.length) {
+        return;
+      }
+      const hook = hooks[index];
+      const returnValue = await callAsyncHook(hook, info);
+      if (returnValue) {
+        result = returnValue;
+        return;
+      }
+      index++;
+      await visit();
+    };
+    await visit();
+    return result;
+  };
+
+  return {
+    pluginsMeta,
+    plugins,
+    pushPlugin,
+    unshiftPlugin,
+    getHookFunction,
+    callHook,
+    callAsyncHook,
+
+    callHooks,
+    callHooksUntil,
+    callAsyncHooks,
+    callAsyncHooksUntil,
+
+    getLastPluginUsed: () => lastPluginUsed,
+    getCurrentPlugin: () => currentPlugin,
+    getCurrentHookName: () => currentHookName,
+  };
+};
+
+const getHookFunction = (
+  hook,
+  // can be undefined, reference, or urlInfo
+  info = {},
+) => {
+  const hookValue = hook.value;
+  if (typeof hookValue === "object") {
+    const hookForType = hookValue[info.type] || hookValue["*"];
+    if (!hookForType) {
+      return null;
+    }
+    return hookForType;
+  }
+  return hookValue;
+};
+
+const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
+  // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
+  if (returnValue === null || returnValue === undefined) {
+    return returnValue;
+  }
+  for (const returnValueAssertion of returnValueAssertions) {
+    if (!returnValueAssertion.appliesTo.includes(hook.name)) {
+      continue;
+    }
+    const assertionResult = returnValueAssertion.assertion(returnValue, info);
+    if (assertionResult !== undefined) {
+      // normalization
+      returnValue = assertionResult;
       break;
     }
   }
-  return found;
-};
-GRAPH_VISITOR.findDependent = (urlInfo, visitor) => {
-  const graph = urlInfo.graph;
-  const seen = new Set();
-  seen.add(urlInfo.url);
-  let found = null;
-  const visit = (dependentUrlInfo) => {
-    if (seen.has(dependentUrlInfo.url)) {
-      return false;
-    }
-    seen.add(dependentUrlInfo.url);
-    if (visitor(dependentUrlInfo)) {
-      found = dependentUrlInfo;
-    }
-    return true;
-  };
-  const iterate = (currentUrlInfo) => {
-    // When cookin html inline content, html dependencies are not yet updated
-    // consequently htmlUrlInfo.dependencies is empty
-    // and inlineContentUrlInfo.referenceFromOthersSet is empty as well
-    // in that case we resort to isInline + inlineUrlSite to establish the dependency
-    if (currentUrlInfo.isInline) {
-      const parentUrl = currentUrlInfo.inlineUrlSite.url;
-      const parentUrlInfo = graph.getUrlInfo(parentUrl);
-      visit(parentUrlInfo);
-      if (found) {
-        return;
-      }
-    }
-    for (const referenceFromOther of currentUrlInfo.referenceFromOthersSet) {
-      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-      if (visit(urlInfoReferencingThisOne)) {
-        if (found) {
-          break;
-        }
-        iterate(urlInfoReferencingThisOne);
-      }
-    }
-  };
-  iterate(urlInfo);
-  return found;
-};
-GRAPH_VISITOR.findDependency = (urlInfo, visitor) => {
-  const graph = urlInfo.graph;
-  const seen = new Set();
-  seen.add(urlInfo.url);
-  let found = null;
-  const visit = (dependencyUrlInfo) => {
-    if (seen.has(dependencyUrlInfo.url)) {
-      return false;
-    }
-    seen.add(dependencyUrlInfo.url);
-    if (visitor(dependencyUrlInfo)) {
-      found = dependencyUrlInfo;
-    }
-    return true;
-  };
-  const iterate = (currentUrlInfo) => {
-    for (const referenceToOther of currentUrlInfo.referenceToOthersSet) {
-      const referencedUrlInfo = graph.getUrlInfo(referenceToOther);
-      if (visit(referencedUrlInfo)) {
-        if (found) {
-          break;
-        }
-        iterate(referencedUrlInfo);
-      }
-    }
-  };
-  iterate(urlInfo);
-  return found;
+  return returnValue;
 };
 
-// This function will be used in "build.js"
-// by passing rootUrlInfo as first arg
-// -> this ensure we visit only urls with strong references
-// because we start from root and ignore weak ref
-// The alternative would be to iterate on urlInfoMap
-// and call urlInfo.isUsed() but that would be more expensive
-GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (initialUrlInfo, callback) => {
-  const seen = new Set();
-  seen.add(initialUrlInfo);
-  const iterateOnReferences = (urlInfo) => {
-    for (const referenceToOther of urlInfo.referenceToOthersSet) {
-      if (referenceToOther.isWeak) {
-        continue;
+const returnValueAssertions = [
+  {
+    name: "url_assertion",
+    appliesTo: ["resolveReference", "redirectReference"],
+    assertion: (valueReturned) => {
+      if (valueReturned instanceof URL) {
+        return valueReturned.href;
       }
-      if (referenceToOther.gotInlined()) {
-        continue;
+      if (typeof valueReturned === "string") {
+        return undefined;
       }
-      const referencedUrlInfo = referenceToOther.urlInfo;
-      if (seen.has(referencedUrlInfo)) {
-        continue;
+      throw new Error(
+        `Unexpected value returned by plugin: it must be a string; got ${valueReturned}`,
+      );
+    },
+  },
+  {
+    name: "content_assertion",
+    appliesTo: [
+      "fetchUrlContent",
+      "transformUrlContent",
+      "finalizeUrlContent",
+      "optimizeUrlContent",
+    ],
+    assertion: (valueReturned, urlInfo) => {
+      if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
+        return { content: valueReturned };
       }
-      seen.add(referencedUrlInfo);
-      callback(referencedUrlInfo);
-      iterateOnReferences(referencedUrlInfo);
-    }
+      if (typeof valueReturned === "object") {
+        const { content, body } = valueReturned;
+        if (urlInfo.url.startsWith("ignore:")) {
+          return undefined;
+        }
+        if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
+          throw new Error(
+            `Unexpected "content" returned by plugin: it must be a string or a buffer; got ${content}`,
+          );
+        }
+        return undefined;
+      }
+      throw new Error(
+        `Unexpected value returned by plugin: it must be a string, a buffer or an object; got ${valueReturned}`,
+      );
+    },
+  },
+];
+
+const createResolveUrlError = ({
+  pluginController,
+  reference,
+  error,
+}) => {
+  const createFailedToResolveUrlError = ({
+    code = error.code || "RESOLVE_URL_ERROR",
+    reason,
+    ...details
+  }) => {
+    const resolveError = new Error(
+      createDetailedMessage$1(
+        `Failed to resolve url reference
+${reference.trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
+    );
+    resolveError.name = "RESOLVE_URL_ERROR";
+    resolveError.code = code;
+    resolveError.reason = reason;
+    resolveError.asResponse = error.asResponse;
+    return resolveError;
   };
-  iterateOnReferences(initialUrlInfo);
-  seen.clear();
+  if (error.message === "NO_RESOLVE") {
+    return createFailedToResolveUrlError({
+      reason: `no plugin has handled the specifier during "resolveUrl" hook`,
+    });
+  }
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+    error.message = createDetailedMessage$1(error.message, {
+      "reference trace": reference.trace.message,
+    });
+    return error;
+  }
+  return createFailedToResolveUrlError({
+    reason: `An error occured during specifier resolution`,
+    ...detailsFromValueThrown(error),
+  });
 };
 
-const urlSpecifierEncoding = {
-  encode: (reference) => {
-    const { generatedSpecifier } = reference;
-    if (generatedSpecifier.then) {
-      return generatedSpecifier.then((value) => {
-        reference.generatedSpecifier = value;
-        return urlSpecifierEncoding.encode(reference);
+const createFetchUrlContentError = ({
+  pluginController,
+  urlInfo,
+  error,
+}) => {
+  const createFailedToFetchUrlContentError = ({
+    code = error.code || "FETCH_URL_CONTENT_ERROR",
+    reason,
+    ...details
+  }) => {
+    const reference = urlInfo.firstReference;
+    const fetchError = new Error(
+      createDetailedMessage$1(
+        `Failed to fetch url content
+${reference.trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
+    );
+    fetchError.name = "FETCH_URL_CONTENT_ERROR";
+    fetchError.code = code;
+    fetchError.reason = reason;
+    fetchError.url = urlInfo.url;
+    if (code === "PARSE_ERROR") {
+      fetchError.trace = error.trace;
+    } else {
+      fetchError.trace = reference.trace;
+    }
+    fetchError.asResponse = error.asResponse;
+    return fetchError;
+  };
+
+  if (error.code === "EPERM") {
+    return createFailedToFetchUrlContentError({
+      code: "NOT_ALLOWED",
+      reason: `not allowed to read entry on filesystem`,
+    });
+  }
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+    return createFailedToFetchUrlContentError({
+      code: "DIRECTORY_REFERENCE_NOT_ALLOWED",
+      reason: `found a directory on filesystem`,
+    });
+  }
+  if (error.code === "ENOENT") {
+    const urlTried = pathToFileURL(error.path).href;
+    // ensure ENOENT is caused by trying to read the urlInfo.url
+    // any ENOENT trying to read an other file should display the error.stack
+    // because it means some side logic has failed
+    if (urlInfo.url.startsWith(urlTried)) {
+      return createFailedToFetchUrlContentError({
+        code: "NOT_FOUND",
+        reason: "no entry on filesystem",
       });
     }
-    // allow plugin to return a function to bypas default formatting
-    // (which is to use JSON.stringify when url is referenced inside js)
-    if (typeof generatedSpecifier === "function") {
-      return generatedSpecifier();
-    }
-    const formatter = formatters[reference.type];
-    const value = formatter
-      ? formatter.encode(generatedSpecifier)
-      : generatedSpecifier;
-    if (reference.escape) {
-      return reference.escape(value);
-    }
-    return value;
-  },
-  decode: (reference) => {
-    const formatter = formatters[reference.type];
-    return formatter
-      ? formatter.decode(reference.generatedSpecifier)
-      : reference.generatedSpecifier;
-  },
-};
-const formatters = {
-  "js_import": { encode: JSON.stringify, decode: JSON.parse },
-  "js_url": { encode: JSON.stringify, decode: JSON.parse },
-  "css_@import": { encode: JSON.stringify, decode: JSON.stringify },
-  // https://github.com/webpack-contrib/css-loader/pull/627/files
-  "css_url": {
-    encode: (url) => {
-      // If url is already wrapped in quotes, remove them
-      url = formatters.css_url.decode(url);
-      // Should url be wrapped?
-      // See https://drafts.csswg.org/css-values-3/#urls
-      if (/["'() \t\n]/.test(url)) {
-        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
-      }
-      return url;
-    },
-    decode: (url) => {
-      const firstChar = url[0];
-      const lastChar = url[url.length - 1];
-      if (firstChar === `"` && lastChar === `"`) {
-        return url.slice(1, -1);
-      }
-      if (firstChar === `'` && lastChar === `'`) {
-        return url.slice(1, -1);
-      }
-      return url;
-    },
-  },
+  }
+  if (error.code === "PARSE_ERROR") {
+    return createFailedToFetchUrlContentError({
+      "code": "PARSE_ERROR",
+      "reason": error.reasonCode,
+      ...(error.cause ? { "parse error message": error.cause.message } : {}),
+      "parse error trace": error.trace?.message,
+    });
+  }
+  return createFailedToFetchUrlContentError({
+    reason: `An error occured during "fetchUrlContent"`,
+    ...detailsFromValueThrown(error),
+  });
 };
 
-// the following apis are creating js entry points:
-// - new Worker()
-// - new SharedWorker()
-// - navigator.serviceWorker.register()
-const isWebWorkerEntryPointReference = (reference) => {
-  if (reference.subtype === "new_url_first_arg") {
-    return ["worker", "service_worker", "shared_worker"].includes(
-      reference.expectedSubtype,
+const createTransformUrlContentError = ({
+  pluginController,
+  urlInfo,
+  error,
+}) => {
+  if (error.code === "MODULE_NOT_FOUND") {
+    return error;
+  }
+  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+    return error;
+  }
+  if (error.code === "PARSE_ERROR") {
+    const reference = urlInfo.firstReference;
+    let trace = reference.trace;
+    let line = error.line;
+    let column = error.column;
+    if (urlInfo.isInline) {
+      line = trace.line + line;
+      line = line - 1;
+      trace = {
+        ...trace,
+        line,
+        column,
+        codeFrame: generateContentFrame({
+          line,
+          column,
+          content: urlInfo.inlineUrlSite.content,
+        }),
+        message: stringifyUrlSite({
+          url: urlInfo.inlineUrlSite.url,
+          line,
+          column,
+          content: urlInfo.inlineUrlSite.content,
+        }),
+      };
+    } else {
+      trace = {
+        url: urlInfo.url,
+        line,
+        column: error.column,
+        codeFrame: generateContentFrame({
+          line,
+          column: error.column,
+          content: urlInfo.content,
+        }),
+        message: stringifyUrlSite({
+          url: urlInfo.url,
+          line,
+          column: error.column,
+          content: urlInfo.content,
+        }),
+      };
+    }
+    const transformError = new Error(
+      createDetailedMessage$1(
+        `parse error on "${urlInfo.type}"
+${trace.message}
+${error.message}`,
+        {
+          "first reference": `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`,
+          ...detailsFromFirstReference(reference),
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
+    );
+    transformError.cause = error;
+    transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
+    transformError.code = "PARSE_ERROR";
+    transformError.stack = error.stack;
+    transformError.reason = error.message;
+    transformError.trace = trace;
+    transformError.asResponse = error.asResponse;
+    return transformError;
+  }
+  const createFailedToTransformError = ({
+    code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
+    reason,
+    ...details
+  }) => {
+    const reference = urlInfo.firstReference;
+    let trace = reference.trace;
+    const transformError = new Error(
+      createDetailedMessage$1(
+        `"transformUrlContent" error on "${urlInfo.type}"
+${trace.message}
+${reason}`,
+        {
+          ...detailsFromFirstReference(reference),
+          ...details,
+          ...detailsFromPluginController(pluginController),
+        },
+      ),
+    );
+    transformError.cause = error;
+    transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
+    transformError.code = code;
+    transformError.reason = reason;
+    transformError.stack = error.stack;
+    transformError.url = urlInfo.url;
+    transformError.trace = trace;
+    transformError.asResponse = error.asResponse;
+    return transformError;
+  };
+  return createFailedToTransformError({
+    reason: `"transformUrlContent" error on "${urlInfo.type}"`,
+    ...detailsFromValueThrown(error),
+  });
+};
+
+const createFinalizeUrlContentError = ({
+  pluginController,
+  urlInfo,
+  error,
+}) => {
+  const reference = urlInfo.firstReference;
+  const finalizeError = new Error(
+    createDetailedMessage$1(
+      `"finalizeUrlContent" error on "${urlInfo.type}"
+${reference.trace.message}`,
+      {
+        ...detailsFromFirstReference(reference),
+        ...detailsFromValueThrown(error),
+        ...detailsFromPluginController(pluginController),
+      },
+    ),
+  );
+  if (error && error instanceof Error) {
+    finalizeError.cause = error;
+  }
+  finalizeError.name = "FINALIZE_URL_CONTENT_ERROR";
+  finalizeError.reason = `"finalizeUrlContent" error on "${urlInfo.type}"`;
+  finalizeError.asResponse = error.asResponse;
+  return finalizeError;
+};
+
+const detailsFromFirstReference = (reference) => {
+  const referenceInProject = getFirstReferenceInProject(reference);
+  if (referenceInProject === reference) {
+    return {};
+  }
+  return {
+    "first reference in project": `${referenceInProject.trace.url}:${referenceInProject.trace.line}:${referenceInProject.trace.column}`,
+  };
+};
+const getFirstReferenceInProject = (reference) => {
+  const ownerUrlInfo = reference.ownerUrlInfo;
+  if (!ownerUrlInfo.url.includes("/node_modules/")) {
+    return reference;
+  }
+  return getFirstReferenceInProject(ownerUrlInfo.firstReference);
+};
+
+const detailsFromPluginController = (pluginController) => {
+  const currentPlugin = pluginController.getCurrentPlugin();
+  if (!currentPlugin) {
+    return null;
+  }
+  return { "plugin name": `"${currentPlugin.name}"` };
+};
+
+const detailsFromValueThrown = (valueThrownByPlugin) => {
+  if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
+    if (
+      valueThrownByPlugin.code === "PARSE_ERROR" ||
+      valueThrownByPlugin.code === "MODULE_NOT_FOUND" ||
+      valueThrownByPlugin.name === "RESOLVE_URL_ERROR" ||
+      valueThrownByPlugin.name === "FETCH_URL_CONTENT_ERROR" ||
+      valueThrownByPlugin.name === "TRANSFORM_URL_CONTENT_ERROR" ||
+      valueThrownByPlugin.name === "FINALIZE_URL_CONTENT_ERROR"
+    ) {
+      return {
+        "error message": valueThrownByPlugin.message,
+      };
+    }
+    return {
+      "error stack": valueThrownByPlugin.stack,
+    };
+  }
+  if (valueThrownByPlugin === undefined) {
+    return {
+      error: "undefined",
+    };
+  }
+  return {
+    error: JSON.stringify(valueThrownByPlugin),
+  };
+};
+
+const isSupportedAlgorithm = (algo) => {
+  return SUPPORTED_ALGORITHMS.includes(algo);
+};
+
+// https://www.w3.org/TR/SRI/#priority
+const getPrioritizedHashFunction = (firstAlgo, secondAlgo) => {
+  const firstIndex = SUPPORTED_ALGORITHMS.indexOf(firstAlgo);
+  const secondIndex = SUPPORTED_ALGORITHMS.indexOf(secondAlgo);
+  if (firstIndex === secondIndex) {
+    return "";
+  }
+  if (firstIndex < secondIndex) {
+    return secondAlgo;
+  }
+  return firstAlgo;
+};
+
+const applyAlgoToRepresentationData = (algo, data) => {
+  const base64Value = crypto.createHash(algo).update(data).digest("base64");
+  return base64Value;
+};
+
+// keep this ordered by collision resistance as it is also used by "getPrioritizedHashFunction"
+const SUPPORTED_ALGORITHMS = ["sha256", "sha384", "sha512"];
+
+// see https://w3c.github.io/webappsec-subresource-integrity/#parse-metadata
+const parseIntegrity = (string) => {
+  const integrityMetadata = {};
+  string
+    .trim()
+    .split(/\s+/)
+    .forEach((token) => {
+      const { isValid, algo, base64Value, optionExpression } =
+        parseAsHashWithOptions(token);
+      if (!isValid) {
+        return;
+      }
+      if (!isSupportedAlgorithm(algo)) {
+        return;
+      }
+      const metadataList = integrityMetadata[algo];
+      const metadata = { base64Value, optionExpression };
+      integrityMetadata[algo] = metadataList
+        ? [...metadataList, metadata]
+        : [metadata];
+    });
+  return integrityMetadata;
+};
+
+// see https://w3c.github.io/webappsec-subresource-integrity/#the-integrity-attribute
+const parseAsHashWithOptions = (token) => {
+  const dashIndex = token.indexOf("-");
+  if (dashIndex === -1) {
+    return { isValid: false };
+  }
+  const beforeDash = token.slice(0, dashIndex);
+  const afterDash = token.slice(dashIndex + 1);
+  const questionIndex = afterDash.indexOf("?");
+  const algo = beforeDash;
+  if (questionIndex === -1) {
+    const base64Value = afterDash;
+    const isValid = BASE64_REGEX.test(afterDash);
+    return { isValid, algo, base64Value };
+  }
+  const base64Value = afterDash.slice(0, questionIndex);
+  const optionExpression = afterDash.slice(questionIndex + 1);
+  const isValid =
+    BASE64_REGEX.test(afterDash) && VCHAR_REGEX.test(optionExpression);
+  return { isValid, algo, base64Value, optionExpression };
+};
+
+const BASE64_REGEX = /^[A-Za-z0-9+/=]+$/;
+const VCHAR_REGEX = /^[\x21-\x7E]+$/;
+
+// https://www.w3.org/TR/SRI/#does-response-match-metadatalist
+const validateResponseIntegrity = (
+  { url, type, dataRepresentation },
+  integrity,
+) => {
+  if (!isResponseEligibleForIntegrityValidation({ type })) {
+    return false;
+  }
+  const integrityMetadata = parseIntegrity(integrity);
+  const algos = Object.keys(integrityMetadata);
+  if (algos.length === 0) {
+    return true;
+  }
+  let strongestAlgo = algos[0];
+  algos.slice(1).forEach((algoCandidate) => {
+    strongestAlgo =
+      getPrioritizedHashFunction(strongestAlgo, algoCandidate) || strongestAlgo;
+  });
+  const metadataList = integrityMetadata[strongestAlgo];
+  const actualBase64Value = applyAlgoToRepresentationData(
+    strongestAlgo,
+    dataRepresentation,
+  );
+  const acceptedBase64Values = metadataList.map(
+    (metadata) => metadata.base64Value,
+  );
+  const someIsMatching = acceptedBase64Values.includes(actualBase64Value);
+  if (someIsMatching) {
+    return true;
+  }
+  const error = new Error(
+    `Integrity validation failed for resource "${url}". The integrity found for this resource is "${strongestAlgo}-${actualBase64Value}"`,
+  );
+  error.code = "EINTEGRITY";
+  error.algorithm = strongestAlgo;
+  error.found = actualBase64Value;
+  throw error;
+};
+
+// https://www.w3.org/TR/SRI/#is-response-eligible-for-integrity-validation
+const isResponseEligibleForIntegrityValidation = (response) => {
+  return ["basic", "cors", "default"].includes(response.type);
+};
+
+const assertFetchedContentCompliance = ({ urlInfo, content }) => {
+  const { expectedContentType } = urlInfo.firstReference;
+  if (expectedContentType && urlInfo.contentType !== expectedContentType) {
+    throw new Error(
+      `Unexpected content-type on url: "${expectedContentType}" was expect but got "${urlInfo.contentType}`,
     );
   }
-  return [
-    "new_worker_first_arg",
-    "new_shared_worker_first_arg",
-    "service_worker_register_first_arg",
-  ].includes(reference.subtype);
+  const { expectedType } = urlInfo.firstReference;
+  if (expectedType && urlInfo.type !== expectedType) {
+    throw new Error(
+      `Unexpected type on url: "${expectedType}" was expect but got "${urlInfo.type}"`,
+    );
+  }
+  const { integrity } = urlInfo.firstReference;
+  if (integrity) {
+    validateResponseIntegrity({
+      url: urlInfo.url,
+      type: "basic",
+      dataRepresentation: content,
+    });
+  }
 };
 
-const isWebWorkerUrlInfo = (urlInfo) => {
-  return (
-    urlInfo.subtype === "worker" ||
-    urlInfo.subtype === "service_worker" ||
-    urlInfo.subtype === "shared_worker"
-  );
+const createEventEmitter = () => {
+  const callbackSet = new Set();
+  const on = (callback) => {
+    callbackSet.add(callback);
+    return () => {
+      callbackSet.delete(callback);
+    };
+  };
+  const off = (callback) => {
+    callbackSet.delete(callback);
+  };
+  const emit = (...args) => {
+    callbackSet.forEach((callback) => {
+      callback(...args);
+    });
+  };
+  return { on, off, emit };
 };
-
-// export const isEntryPoint = (urlInfo, urlGraph) => {
-//   if (urlInfo.data.isEntryPoint) {
-//     return true
-//   }
-//   if (isWebWorker(urlInfo)) {
-//     // - new Worker("a.js") -> "a.js" is an entry point
-//     // - self.importScripts("b.js") -> "b.js" is not an entry point
-//     // So the following logic applies to infer if the file is a web worker entry point
-//     // "When a non-webworker file references a worker file, the worker file is an entry point"
-//     const dependents = Array.from(urlInfo.dependents)
-//     return dependents.some((dependentUrl) => {
-//       const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl)
-//       return !isWebWorker(dependentUrlInfo)
-//     })
-//   }
-//   return false
-// }
 
 const prependContent = async (
   urlInfoReceivingCode,
@@ -11511,6 +12072,49 @@ const babelPluginPrependCodeInJsModule = (babel) => {
     },
   };
 };
+
+// the following apis are creating js entry points:
+// - new Worker()
+// - new SharedWorker()
+// - navigator.serviceWorker.register()
+const isWebWorkerEntryPointReference = (reference) => {
+  if (reference.subtype === "new_url_first_arg") {
+    return ["worker", "service_worker", "shared_worker"].includes(
+      reference.expectedSubtype,
+    );
+  }
+  return [
+    "new_worker_first_arg",
+    "new_shared_worker_first_arg",
+    "service_worker_register_first_arg",
+  ].includes(reference.subtype);
+};
+
+const isWebWorkerUrlInfo = (urlInfo) => {
+  return (
+    urlInfo.subtype === "worker" ||
+    urlInfo.subtype === "service_worker" ||
+    urlInfo.subtype === "shared_worker"
+  );
+};
+
+// export const isEntryPoint = (urlInfo, urlGraph) => {
+//   if (urlInfo.data.isEntryPoint) {
+//     return true
+//   }
+//   if (isWebWorker(urlInfo)) {
+//     // - new Worker("a.js") -> "a.js" is an entry point
+//     // - self.importScripts("b.js") -> "b.js" is not an entry point
+//     // So the following logic applies to infer if the file is a web worker entry point
+//     // "When a non-webworker file references a worker file, the worker file is an entry point"
+//     const dependents = Array.from(urlInfo.dependents)
+//     return dependents.some((dependentUrl) => {
+//       const dependentUrlInfo = urlGraph.getUrlInfo(dependentUrl)
+//       return !isWebWorker(dependentUrlInfo)
+//     })
+//   }
+//   return false
+// }
 
 let referenceId = 0;
 
@@ -12241,6 +12845,198 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   }
 };
 
+const GRAPH_VISITOR = {};
+
+GRAPH_VISITOR.map = (graph, callback) => {
+  const array = [];
+  graph.urlInfoMap.forEach((urlInfo) => {
+    array.push(callback(urlInfo));
+  });
+  return array;
+};
+GRAPH_VISITOR.forEach = (graph, callback) => {
+  graph.urlInfoMap.forEach(callback);
+};
+GRAPH_VISITOR.filter = (graph, callback) => {
+  const urlInfos = [];
+  graph.urlInfoMap.forEach((urlInfo) => {
+    if (callback(urlInfo)) {
+      urlInfos.push(urlInfo);
+    }
+  });
+  return urlInfos;
+};
+GRAPH_VISITOR.find = (graph, callback) => {
+  let found = null;
+  for (const urlInfo of graph.urlInfoMap.values()) {
+    if (callback(urlInfo)) {
+      found = urlInfo;
+      break;
+    }
+  }
+  return found;
+};
+GRAPH_VISITOR.findDependent = (urlInfo, visitor) => {
+  const graph = urlInfo.graph;
+  const seen = new Set();
+  seen.add(urlInfo.url);
+  let found = null;
+  const visit = (dependentUrlInfo) => {
+    if (seen.has(dependentUrlInfo.url)) {
+      return false;
+    }
+    seen.add(dependentUrlInfo.url);
+    if (visitor(dependentUrlInfo)) {
+      found = dependentUrlInfo;
+    }
+    return true;
+  };
+  const iterate = (currentUrlInfo) => {
+    // When cookin html inline content, html dependencies are not yet updated
+    // consequently htmlUrlInfo.dependencies is empty
+    // and inlineContentUrlInfo.referenceFromOthersSet is empty as well
+    // in that case we resort to isInline + inlineUrlSite to establish the dependency
+    if (currentUrlInfo.isInline) {
+      const parentUrl = currentUrlInfo.inlineUrlSite.url;
+      const parentUrlInfo = graph.getUrlInfo(parentUrl);
+      visit(parentUrlInfo);
+      if (found) {
+        return;
+      }
+    }
+    for (const referenceFromOther of currentUrlInfo.referenceFromOthersSet) {
+      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
+      if (visit(urlInfoReferencingThisOne)) {
+        if (found) {
+          break;
+        }
+        iterate(urlInfoReferencingThisOne);
+      }
+    }
+  };
+  iterate(urlInfo);
+  return found;
+};
+GRAPH_VISITOR.findDependency = (urlInfo, visitor) => {
+  const graph = urlInfo.graph;
+  const seen = new Set();
+  seen.add(urlInfo.url);
+  let found = null;
+  const visit = (dependencyUrlInfo) => {
+    if (seen.has(dependencyUrlInfo.url)) {
+      return false;
+    }
+    seen.add(dependencyUrlInfo.url);
+    if (visitor(dependencyUrlInfo)) {
+      found = dependencyUrlInfo;
+    }
+    return true;
+  };
+  const iterate = (currentUrlInfo) => {
+    for (const referenceToOther of currentUrlInfo.referenceToOthersSet) {
+      const referencedUrlInfo = graph.getUrlInfo(referenceToOther);
+      if (visit(referencedUrlInfo)) {
+        if (found) {
+          break;
+        }
+        iterate(referencedUrlInfo);
+      }
+    }
+  };
+  iterate(urlInfo);
+  return found;
+};
+
+// This function will be used in "build.js"
+// by passing rootUrlInfo as first arg
+// -> this ensure we visit only urls with strong references
+// because we start from root and ignore weak ref
+// The alternative would be to iterate on urlInfoMap
+// and call urlInfo.isUsed() but that would be more expensive
+GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (initialUrlInfo, callback) => {
+  const seen = new Set();
+  seen.add(initialUrlInfo);
+  const iterateOnReferences = (urlInfo) => {
+    for (const referenceToOther of urlInfo.referenceToOthersSet) {
+      if (referenceToOther.isWeak) {
+        continue;
+      }
+      if (referenceToOther.gotInlined()) {
+        continue;
+      }
+      const referencedUrlInfo = referenceToOther.urlInfo;
+      if (seen.has(referencedUrlInfo)) {
+        continue;
+      }
+      seen.add(referencedUrlInfo);
+      callback(referencedUrlInfo);
+      iterateOnReferences(referencedUrlInfo);
+    }
+  };
+  iterateOnReferences(initialUrlInfo);
+  seen.clear();
+};
+
+const urlSpecifierEncoding = {
+  encode: (reference) => {
+    const { generatedSpecifier } = reference;
+    if (generatedSpecifier.then) {
+      return generatedSpecifier.then((value) => {
+        reference.generatedSpecifier = value;
+        return urlSpecifierEncoding.encode(reference);
+      });
+    }
+    // allow plugin to return a function to bypas default formatting
+    // (which is to use JSON.stringify when url is referenced inside js)
+    if (typeof generatedSpecifier === "function") {
+      return generatedSpecifier();
+    }
+    const formatter = formatters[reference.type];
+    const value = formatter
+      ? formatter.encode(generatedSpecifier)
+      : generatedSpecifier;
+    if (reference.escape) {
+      return reference.escape(value);
+    }
+    return value;
+  },
+  decode: (reference) => {
+    const formatter = formatters[reference.type];
+    return formatter
+      ? formatter.decode(reference.generatedSpecifier)
+      : reference.generatedSpecifier;
+  },
+};
+const formatters = {
+  "js_import": { encode: JSON.stringify, decode: JSON.parse },
+  "js_url": { encode: JSON.stringify, decode: JSON.parse },
+  "css_@import": { encode: JSON.stringify, decode: JSON.stringify },
+  // https://github.com/webpack-contrib/css-loader/pull/627/files
+  "css_url": {
+    encode: (url) => {
+      // If url is already wrapped in quotes, remove them
+      url = formatters.css_url.decode(url);
+      // Should url be wrapped?
+      // See https://drafts.csswg.org/css-values-3/#urls
+      if (/["'() \t\n]/.test(url)) {
+        return `"${url.replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`;
+      }
+      return url;
+    },
+    decode: (url) => {
+      const firstChar = url[0];
+      const lastChar = url[url.length - 1];
+      if (firstChar === `"` && lastChar === `"`) {
+        return url.slice(1, -1);
+      }
+      if (firstChar === `'` && lastChar === `'`) {
+        return url.slice(1, -1);
+      }
+      return url;
+    },
+  },
+};
+
 const createUrlGraph = ({
   rootDirectoryUrl,
   kitchen,
@@ -12684,475 +13480,6 @@ ${urlInfo.url}`,
 
   // Object.preventExtensions(urlInfo) // useful to ensure all properties are declared here
   return urlInfo;
-};
-
-const HOOK_NAMES = [
-  "init",
-  "serve", // is called only during dev/tests
-  "resolveReference",
-  "redirectReference",
-  "transformReferenceSearchParams",
-  "formatReference",
-  "fetchUrlContent",
-  "transformUrlContent",
-  "finalizeUrlContent",
-  "bundle", // is called only during build
-  "optimizeUrlContent", // is called only during build
-  "cooked",
-  "augmentResponse", // is called only during dev/tests
-  "destroy",
-];
-
-const createPluginController = (
-  kitchenContext,
-  initialPuginsMeta = {},
-) => {
-  const pluginsMeta = initialPuginsMeta;
-
-  kitchenContext.getPluginMeta = (id) => {
-    const value = pluginsMeta[id];
-    return value;
-  };
-
-  const plugins = [];
-  // precompute a list of hooks per hookName for one major reason:
-  // - When debugging, there is less iteration
-  // also it should increase perf as there is less work to do
-  const hookGroups = {};
-  const addPlugin = (plugin, { position = "end" }) => {
-    if (Array.isArray(plugin)) {
-      if (position === "start") {
-        plugin = plugin.slice().reverse();
-      }
-      plugin.forEach((plugin) => {
-        addPlugin(plugin, { position });
-      });
-      return;
-    }
-    if (plugin === null || typeof plugin !== "object") {
-      throw new TypeError(`plugin must be objects, got ${plugin}`);
-    }
-    if (!plugin.name) {
-      plugin.name = "anonymous";
-    }
-    if (!testAppliesDuring(plugin) || !initPlugin(plugin)) {
-      if (plugin.destroy) {
-        plugin.destroy();
-      }
-      return;
-    }
-    plugins.push(plugin);
-    for (const key of Object.keys(plugin)) {
-      if (key === "meta") {
-        const value = plugin[key];
-        if (typeof value !== "object" || value === null) {
-          console.warn(`plugin.meta must be an object, got ${value}`);
-          continue;
-        }
-        Object.assign(pluginsMeta, value);
-        // any extension/modification on plugin.meta
-        // won't be taken into account so we freeze object
-        // to throw in case it happen
-        Object.freeze(value);
-        continue;
-      }
-
-      if (
-        key === "name" ||
-        key === "appliesDuring" ||
-        key === "init" ||
-        key === "serverEvents" ||
-        key === "mustStayFirst"
-      ) {
-        continue;
-      }
-      const isHook = HOOK_NAMES.includes(key);
-      if (!isHook) {
-        console.warn(`Unexpected "${key}" property on "${plugin.name}" plugin`);
-        continue;
-      }
-      const hookName = key;
-      const hookValue = plugin[hookName];
-      if (hookValue) {
-        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
-        const hook = {
-          plugin,
-          name: hookName,
-          value: hookValue,
-        };
-        if (position === "start") {
-          let i = 0;
-          while (i < group.length) {
-            const before = group[i];
-            if (!before.plugin.mustStayFirst) {
-              break;
-            }
-            i++;
-          }
-          group.splice(i, 0, hook);
-        } else {
-          group.push(hook);
-        }
-      }
-    }
-  };
-  const testAppliesDuring = (plugin) => {
-    const { appliesDuring } = plugin;
-    if (appliesDuring === undefined) {
-      // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
-      return true;
-    }
-    if (appliesDuring === "*") {
-      return true;
-    }
-    if (typeof appliesDuring === "string") {
-      if (appliesDuring !== "dev" && appliesDuring !== "build") {
-        throw new TypeError(
-          `"appliesDuring" must be "dev" or "build", got ${appliesDuring}`,
-        );
-      }
-      if (kitchenContext[appliesDuring]) {
-        return true;
-      }
-      return false;
-    }
-    if (typeof appliesDuring === "object") {
-      for (const key of Object.keys(appliesDuring)) {
-        if (!appliesDuring[key] && kitchenContext[key]) {
-          return false;
-        }
-        if (appliesDuring[key] && kitchenContext[key]) {
-          return true;
-        }
-      }
-      // throw new Error(`"appliesDuring" is empty`)
-      return false;
-    }
-    throw new TypeError(
-      `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
-    );
-  };
-  const initPlugin = (plugin) => {
-    if (plugin.init) {
-      const initReturnValue = plugin.init(kitchenContext, plugin);
-      if (initReturnValue === false) {
-        return false;
-      }
-      if (typeof initReturnValue === "function" && !plugin.destroy) {
-        plugin.destroy = initReturnValue;
-      }
-    }
-    return true;
-  };
-  const pushPlugin = (plugin) => {
-    addPlugin(plugin, { position: "end" });
-  };
-  const unshiftPlugin = (plugin) => {
-    addPlugin(plugin, { position: "start" });
-  };
-
-  let lastPluginUsed = null;
-  let currentPlugin = null;
-  let currentHookName = null;
-  const callHook = (hook, info) => {
-    const hookFn = getHookFunction(hook, info);
-    if (!hookFn) {
-      return null;
-    }
-    let startTimestamp;
-    if (info.timing) {
-      startTimestamp = performance$1.now();
-    }
-    lastPluginUsed = hook.plugin;
-    currentPlugin = hook.plugin;
-    currentHookName = hook.name;
-    let valueReturned = hookFn(info);
-    currentPlugin = null;
-    currentHookName = null;
-    if (info.timing) {
-      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
-        performance$1.now() - startTimestamp;
-    }
-    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
-    return valueReturned;
-  };
-  const callAsyncHook = async (hook, info) => {
-    const hookFn = getHookFunction(hook, info);
-    if (!hookFn) {
-      return null;
-    }
-
-    let startTimestamp;
-    if (info.timing) {
-      startTimestamp = performance$1.now();
-    }
-    lastPluginUsed = hook.plugin;
-    currentPlugin = hook.plugin;
-    currentHookName = hook.name;
-    let valueReturned = await hookFn(info);
-    currentPlugin = null;
-    currentHookName = null;
-    if (info.timing) {
-      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
-        performance$1.now() - startTimestamp;
-    }
-    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
-    return valueReturned;
-  };
-
-  const callHooks = (hookName, info, callback) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      const setHookParams = (firstArg = info) => {
-        info = firstArg;
-      };
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info);
-        if (returnValue && callback) {
-          callback(returnValue, hook.plugin, setHookParams);
-        }
-      }
-    }
-  };
-  const callAsyncHooks = async (hookName, info, callback, options) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = await callAsyncHook(hook, info);
-        if (returnValue && callback) {
-          await callback(returnValue, hook.plugin);
-        }
-      }
-    }
-  };
-
-  const callHooksUntil = (hookName, info) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info);
-        if (returnValue) {
-          return returnValue;
-        }
-      }
-    }
-    return null;
-  };
-  const callAsyncHooksUntil = async (hookName, info, options) => {
-    const hooks = hookGroups[hookName];
-    if (!hooks) {
-      return null;
-    }
-    if (hooks.length === 0) {
-      return null;
-    }
-    let result;
-    let index = 0;
-    const visit = async () => {
-      if (index >= hooks.length) {
-        return;
-      }
-      const hook = hooks[index];
-      const returnValue = await callAsyncHook(hook, info);
-      if (returnValue) {
-        result = returnValue;
-        return;
-      }
-      index++;
-      await visit();
-    };
-    await visit();
-    return result;
-  };
-
-  return {
-    pluginsMeta,
-    plugins,
-    pushPlugin,
-    unshiftPlugin,
-    getHookFunction,
-    callHook,
-    callAsyncHook,
-
-    callHooks,
-    callHooksUntil,
-    callAsyncHooks,
-    callAsyncHooksUntil,
-
-    getLastPluginUsed: () => lastPluginUsed,
-    getCurrentPlugin: () => currentPlugin,
-    getCurrentHookName: () => currentHookName,
-  };
-};
-
-const getHookFunction = (
-  hook,
-  // can be undefined, reference, or urlInfo
-  info = {},
-) => {
-  const hookValue = hook.value;
-  if (typeof hookValue === "object") {
-    const hookForType = hookValue[info.type] || hookValue["*"];
-    if (!hookForType) {
-      return null;
-    }
-    return hookForType;
-  }
-  return hookValue;
-};
-
-const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
-  // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
-  if (returnValue === null || returnValue === undefined) {
-    return returnValue;
-  }
-  for (const returnValueAssertion of returnValueAssertions) {
-    if (!returnValueAssertion.appliesTo.includes(hook.name)) {
-      continue;
-    }
-    const assertionResult = returnValueAssertion.assertion(returnValue, info);
-    if (assertionResult !== undefined) {
-      // normalization
-      returnValue = assertionResult;
-      break;
-    }
-  }
-  return returnValue;
-};
-
-const returnValueAssertions = [
-  {
-    name: "url_assertion",
-    appliesTo: ["resolveReference", "redirectReference"],
-    assertion: (valueReturned) => {
-      if (valueReturned instanceof URL) {
-        return valueReturned.href;
-      }
-      if (typeof valueReturned === "string") {
-        return undefined;
-      }
-      throw new Error(
-        `Unexpected value returned by plugin: it must be a string; got ${valueReturned}`,
-      );
-    },
-  },
-  {
-    name: "content_assertion",
-    appliesTo: [
-      "fetchUrlContent",
-      "transformUrlContent",
-      "finalizeUrlContent",
-      "optimizeUrlContent",
-    ],
-    assertion: (valueReturned, urlInfo) => {
-      if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
-        return { content: valueReturned };
-      }
-      if (typeof valueReturned === "object") {
-        const { content, body } = valueReturned;
-        if (urlInfo.url.startsWith("ignore:")) {
-          return undefined;
-        }
-        if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
-          throw new Error(
-            `Unexpected "content" returned by plugin: it must be a string or a buffer; got ${content}`,
-          );
-        }
-        return undefined;
-      }
-      throw new Error(
-        `Unexpected value returned by plugin: it must be a string, a buffer or an object; got ${valueReturned}`,
-      );
-    },
-  },
-];
-
-const jsenvPluginHtmlSyntaxErrorFallback = () => {
-  const htmlSyntaxErrorFileUrl = new URL(
-    "./html/html_syntax_error.html",
-    import.meta.url,
-  );
-
-  return {
-    mustStayFirst: true,
-    name: "jsenv:html_syntax_error_fallback",
-    appliesDuring: "dev",
-    transformUrlContent: {
-      html: (urlInfo) => {
-        try {
-          parseHtml({
-            html: urlInfo.content,
-            url: urlInfo.url,
-          });
-          return null;
-        } catch (e) {
-          if (e.code !== "PARSE_ERROR") {
-            return null;
-          }
-          const line = e.line;
-          const column = e.column;
-          const htmlErrorContentFrame = generateContentFrame({
-            content: urlInfo.content,
-            line,
-            column,
-          });
-          urlInfo.kitchen.context.logger
-            .error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
-${e.reasonCode}
-${urlInfo.url}:${line}:${column}
-${htmlErrorContentFrame}`);
-          const html = generateHtmlForSyntaxError(e, {
-            htmlUrl: urlInfo.url,
-            rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
-            htmlErrorContentFrame,
-            htmlSyntaxErrorFileUrl,
-          });
-          return html;
-        }
-      },
-    },
-  };
-};
-
-const generateHtmlForSyntaxError = (
-  htmlSyntaxError,
-  { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame, htmlSyntaxErrorFileUrl },
-) => {
-  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
-  const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
-  const { line, column } = htmlSyntaxError;
-  const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
-  const replacers = {
-    fileRelativeUrl: htmlRelativeUrl,
-    reasonCode: htmlSyntaxError.reasonCode,
-    errorLinkHref: `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
-      urlWithLineAndColumn,
-    )}')`,
-    errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
-    syntaxError: escapeHtml(htmlErrorContentFrame),
-  };
-  const html = replacePlaceholders$2(htmlForSyntaxError, replacers);
-  return html;
-};
-const escapeHtml = (string) => {
-  return string
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
-const replacePlaceholders$2 = (html, replacers) => {
-  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
-    const replacer = replacers[name];
-    if (replacer === undefined) {
-      return match;
-    }
-    if (typeof replacer === "function") {
-      return replacer();
-    }
-    return replacer;
-  });
 };
 
 const defineGettersOnPropertiesDerivedFromOriginalContent = (
@@ -13687,454 +14014,6 @@ const shouldHandleSourcemap = (urlInfo) => {
     return false;
   }
   return true;
-};
-
-const createResolveUrlError = ({
-  pluginController,
-  reference,
-  error,
-}) => {
-  const createFailedToResolveUrlError = ({
-    code = error.code || "RESOLVE_URL_ERROR",
-    reason,
-    ...details
-  }) => {
-    const resolveError = new Error(
-      createDetailedMessage$1(
-        `Failed to resolve url reference
-${reference.trace.message}
-${reason}`,
-        {
-          ...detailsFromFirstReference(reference),
-          ...details,
-          ...detailsFromPluginController(pluginController),
-        },
-      ),
-    );
-    resolveError.name = "RESOLVE_URL_ERROR";
-    resolveError.code = code;
-    resolveError.reason = reason;
-    resolveError.asResponse = error.asResponse;
-    return resolveError;
-  };
-  if (error.message === "NO_RESOLVE") {
-    return createFailedToResolveUrlError({
-      reason: `no plugin has handled the specifier during "resolveUrl" hook`,
-    });
-  }
-  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-    error.message = createDetailedMessage$1(error.message, {
-      "reference trace": reference.trace.message,
-    });
-    return error;
-  }
-  return createFailedToResolveUrlError({
-    reason: `An error occured during specifier resolution`,
-    ...detailsFromValueThrown(error),
-  });
-};
-
-const createFetchUrlContentError = ({
-  pluginController,
-  urlInfo,
-  error,
-}) => {
-  const createFailedToFetchUrlContentError = ({
-    code = error.code || "FETCH_URL_CONTENT_ERROR",
-    reason,
-    ...details
-  }) => {
-    const reference = urlInfo.firstReference;
-    const fetchError = new Error(
-      createDetailedMessage$1(
-        `Failed to fetch url content
-${reference.trace.message}
-${reason}`,
-        {
-          ...detailsFromFirstReference(reference),
-          ...details,
-          ...detailsFromPluginController(pluginController),
-        },
-      ),
-    );
-    fetchError.name = "FETCH_URL_CONTENT_ERROR";
-    fetchError.code = code;
-    fetchError.reason = reason;
-    fetchError.url = urlInfo.url;
-    if (code === "PARSE_ERROR") {
-      fetchError.trace = error.trace;
-    } else {
-      fetchError.trace = reference.trace;
-    }
-    fetchError.asResponse = error.asResponse;
-    return fetchError;
-  };
-
-  if (error.code === "EPERM") {
-    return createFailedToFetchUrlContentError({
-      code: "NOT_ALLOWED",
-      reason: `not allowed to read entry on filesystem`,
-    });
-  }
-  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-    return createFailedToFetchUrlContentError({
-      code: "DIRECTORY_REFERENCE_NOT_ALLOWED",
-      reason: `found a directory on filesystem`,
-    });
-  }
-  if (error.code === "ENOENT") {
-    const urlTried = pathToFileURL(error.path).href;
-    // ensure ENOENT is caused by trying to read the urlInfo.url
-    // any ENOENT trying to read an other file should display the error.stack
-    // because it means some side logic has failed
-    if (urlInfo.url.startsWith(urlTried)) {
-      return createFailedToFetchUrlContentError({
-        code: "NOT_FOUND",
-        reason: "no entry on filesystem",
-      });
-    }
-  }
-  if (error.code === "PARSE_ERROR") {
-    return createFailedToFetchUrlContentError({
-      "code": "PARSE_ERROR",
-      "reason": error.reasonCode,
-      ...(error.cause ? { "parse error message": error.cause.message } : {}),
-      "parse error trace": error.trace?.message,
-    });
-  }
-  return createFailedToFetchUrlContentError({
-    reason: `An error occured during "fetchUrlContent"`,
-    ...detailsFromValueThrown(error),
-  });
-};
-
-const createTransformUrlContentError = ({
-  pluginController,
-  urlInfo,
-  error,
-}) => {
-  if (error.code === "MODULE_NOT_FOUND") {
-    return error;
-  }
-  if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-    return error;
-  }
-  if (error.code === "PARSE_ERROR") {
-    const reference = urlInfo.firstReference;
-    let trace = reference.trace;
-    let line = error.line;
-    let column = error.column;
-    if (urlInfo.isInline) {
-      line = trace.line + line;
-      line = line - 1;
-      trace = {
-        ...trace,
-        line,
-        column,
-        codeFrame: generateContentFrame({
-          line,
-          column,
-          content: urlInfo.inlineUrlSite.content,
-        }),
-        message: stringifyUrlSite({
-          url: urlInfo.inlineUrlSite.url,
-          line,
-          column,
-          content: urlInfo.inlineUrlSite.content,
-        }),
-      };
-    } else {
-      trace = {
-        url: urlInfo.url,
-        line,
-        column: error.column,
-        codeFrame: generateContentFrame({
-          line,
-          column: error.column,
-          content: urlInfo.content,
-        }),
-        message: stringifyUrlSite({
-          url: urlInfo.url,
-          line,
-          column: error.column,
-          content: urlInfo.content,
-        }),
-      };
-    }
-    const transformError = new Error(
-      createDetailedMessage$1(
-        `parse error on "${urlInfo.type}"
-${trace.message}
-${error.message}`,
-        {
-          "first reference": `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`,
-          ...detailsFromFirstReference(reference),
-          ...detailsFromPluginController(pluginController),
-        },
-      ),
-    );
-    transformError.cause = error;
-    transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
-    transformError.code = "PARSE_ERROR";
-    transformError.stack = error.stack;
-    transformError.reason = error.message;
-    transformError.trace = trace;
-    transformError.asResponse = error.asResponse;
-    return transformError;
-  }
-  const createFailedToTransformError = ({
-    code = error.code || "TRANSFORM_URL_CONTENT_ERROR",
-    reason,
-    ...details
-  }) => {
-    const reference = urlInfo.firstReference;
-    let trace = reference.trace;
-    const transformError = new Error(
-      createDetailedMessage$1(
-        `"transformUrlContent" error on "${urlInfo.type}"
-${trace.message}
-${reason}`,
-        {
-          ...detailsFromFirstReference(reference),
-          ...details,
-          ...detailsFromPluginController(pluginController),
-        },
-      ),
-    );
-    transformError.cause = error;
-    transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
-    transformError.code = code;
-    transformError.reason = reason;
-    transformError.stack = error.stack;
-    transformError.url = urlInfo.url;
-    transformError.trace = trace;
-    transformError.asResponse = error.asResponse;
-    return transformError;
-  };
-  return createFailedToTransformError({
-    reason: `"transformUrlContent" error on "${urlInfo.type}"`,
-    ...detailsFromValueThrown(error),
-  });
-};
-
-const createFinalizeUrlContentError = ({
-  pluginController,
-  urlInfo,
-  error,
-}) => {
-  const reference = urlInfo.firstReference;
-  const finalizeError = new Error(
-    createDetailedMessage$1(
-      `"finalizeUrlContent" error on "${urlInfo.type}"
-${reference.trace.message}`,
-      {
-        ...detailsFromFirstReference(reference),
-        ...detailsFromValueThrown(error),
-        ...detailsFromPluginController(pluginController),
-      },
-    ),
-  );
-  if (error && error instanceof Error) {
-    finalizeError.cause = error;
-  }
-  finalizeError.name = "FINALIZE_URL_CONTENT_ERROR";
-  finalizeError.reason = `"finalizeUrlContent" error on "${urlInfo.type}"`;
-  finalizeError.asResponse = error.asResponse;
-  return finalizeError;
-};
-
-const detailsFromFirstReference = (reference) => {
-  const referenceInProject = getFirstReferenceInProject(reference);
-  if (referenceInProject === reference) {
-    return {};
-  }
-  return {
-    "first reference in project": `${referenceInProject.trace.url}:${referenceInProject.trace.line}:${referenceInProject.trace.column}`,
-  };
-};
-const getFirstReferenceInProject = (reference) => {
-  const ownerUrlInfo = reference.ownerUrlInfo;
-  if (!ownerUrlInfo.url.includes("/node_modules/")) {
-    return reference;
-  }
-  return getFirstReferenceInProject(ownerUrlInfo.firstReference);
-};
-
-const detailsFromPluginController = (pluginController) => {
-  const currentPlugin = pluginController.getCurrentPlugin();
-  if (!currentPlugin) {
-    return null;
-  }
-  return { "plugin name": `"${currentPlugin.name}"` };
-};
-
-const detailsFromValueThrown = (valueThrownByPlugin) => {
-  if (valueThrownByPlugin && valueThrownByPlugin instanceof Error) {
-    if (
-      valueThrownByPlugin.code === "PARSE_ERROR" ||
-      valueThrownByPlugin.code === "MODULE_NOT_FOUND" ||
-      valueThrownByPlugin.name === "RESOLVE_URL_ERROR" ||
-      valueThrownByPlugin.name === "FETCH_URL_CONTENT_ERROR" ||
-      valueThrownByPlugin.name === "TRANSFORM_URL_CONTENT_ERROR" ||
-      valueThrownByPlugin.name === "FINALIZE_URL_CONTENT_ERROR"
-    ) {
-      return {
-        "error message": valueThrownByPlugin.message,
-      };
-    }
-    return {
-      "error stack": valueThrownByPlugin.stack,
-    };
-  }
-  if (valueThrownByPlugin === undefined) {
-    return {
-      error: "undefined",
-    };
-  }
-  return {
-    error: JSON.stringify(valueThrownByPlugin),
-  };
-};
-
-const isSupportedAlgorithm = (algo) => {
-  return SUPPORTED_ALGORITHMS.includes(algo);
-};
-
-// https://www.w3.org/TR/SRI/#priority
-const getPrioritizedHashFunction = (firstAlgo, secondAlgo) => {
-  const firstIndex = SUPPORTED_ALGORITHMS.indexOf(firstAlgo);
-  const secondIndex = SUPPORTED_ALGORITHMS.indexOf(secondAlgo);
-  if (firstIndex === secondIndex) {
-    return "";
-  }
-  if (firstIndex < secondIndex) {
-    return secondAlgo;
-  }
-  return firstAlgo;
-};
-
-const applyAlgoToRepresentationData = (algo, data) => {
-  const base64Value = crypto.createHash(algo).update(data).digest("base64");
-  return base64Value;
-};
-
-// keep this ordered by collision resistance as it is also used by "getPrioritizedHashFunction"
-const SUPPORTED_ALGORITHMS = ["sha256", "sha384", "sha512"];
-
-// see https://w3c.github.io/webappsec-subresource-integrity/#parse-metadata
-const parseIntegrity = (string) => {
-  const integrityMetadata = {};
-  string
-    .trim()
-    .split(/\s+/)
-    .forEach((token) => {
-      const { isValid, algo, base64Value, optionExpression } =
-        parseAsHashWithOptions(token);
-      if (!isValid) {
-        return;
-      }
-      if (!isSupportedAlgorithm(algo)) {
-        return;
-      }
-      const metadataList = integrityMetadata[algo];
-      const metadata = { base64Value, optionExpression };
-      integrityMetadata[algo] = metadataList
-        ? [...metadataList, metadata]
-        : [metadata];
-    });
-  return integrityMetadata;
-};
-
-// see https://w3c.github.io/webappsec-subresource-integrity/#the-integrity-attribute
-const parseAsHashWithOptions = (token) => {
-  const dashIndex = token.indexOf("-");
-  if (dashIndex === -1) {
-    return { isValid: false };
-  }
-  const beforeDash = token.slice(0, dashIndex);
-  const afterDash = token.slice(dashIndex + 1);
-  const questionIndex = afterDash.indexOf("?");
-  const algo = beforeDash;
-  if (questionIndex === -1) {
-    const base64Value = afterDash;
-    const isValid = BASE64_REGEX.test(afterDash);
-    return { isValid, algo, base64Value };
-  }
-  const base64Value = afterDash.slice(0, questionIndex);
-  const optionExpression = afterDash.slice(questionIndex + 1);
-  const isValid =
-    BASE64_REGEX.test(afterDash) && VCHAR_REGEX.test(optionExpression);
-  return { isValid, algo, base64Value, optionExpression };
-};
-
-const BASE64_REGEX = /^[A-Za-z0-9+/=]+$/;
-const VCHAR_REGEX = /^[\x21-\x7E]+$/;
-
-// https://www.w3.org/TR/SRI/#does-response-match-metadatalist
-const validateResponseIntegrity = (
-  { url, type, dataRepresentation },
-  integrity,
-) => {
-  if (!isResponseEligibleForIntegrityValidation({ type })) {
-    return false;
-  }
-  const integrityMetadata = parseIntegrity(integrity);
-  const algos = Object.keys(integrityMetadata);
-  if (algos.length === 0) {
-    return true;
-  }
-  let strongestAlgo = algos[0];
-  algos.slice(1).forEach((algoCandidate) => {
-    strongestAlgo =
-      getPrioritizedHashFunction(strongestAlgo, algoCandidate) || strongestAlgo;
-  });
-  const metadataList = integrityMetadata[strongestAlgo];
-  const actualBase64Value = applyAlgoToRepresentationData(
-    strongestAlgo,
-    dataRepresentation,
-  );
-  const acceptedBase64Values = metadataList.map(
-    (metadata) => metadata.base64Value,
-  );
-  const someIsMatching = acceptedBase64Values.includes(actualBase64Value);
-  if (someIsMatching) {
-    return true;
-  }
-  const error = new Error(
-    `Integrity validation failed for resource "${url}". The integrity found for this resource is "${strongestAlgo}-${actualBase64Value}"`,
-  );
-  error.code = "EINTEGRITY";
-  error.algorithm = strongestAlgo;
-  error.found = actualBase64Value;
-  throw error;
-};
-
-// https://www.w3.org/TR/SRI/#is-response-eligible-for-integrity-validation
-const isResponseEligibleForIntegrityValidation = (response) => {
-  return ["basic", "cors", "default"].includes(response.type);
-};
-
-const assertFetchedContentCompliance = ({ urlInfo, content }) => {
-  const { expectedContentType } = urlInfo.firstReference;
-  if (expectedContentType && urlInfo.contentType !== expectedContentType) {
-    throw new Error(
-      `Unexpected content-type on url: "${expectedContentType}" was expect but got "${urlInfo.contentType}`,
-    );
-  }
-  const { expectedType } = urlInfo.firstReference;
-  if (expectedType && urlInfo.type !== expectedType) {
-    throw new Error(
-      `Unexpected type on url: "${expectedType}" was expect but got "${urlInfo.type}"`,
-    );
-  }
-  const { integrity } = urlInfo.firstReference;
-  if (integrity) {
-    validateResponseIntegrity({
-      url: urlInfo.url,
-      type: "basic",
-      dataRepresentation: content,
-    });
-  }
 };
 
 const inlineContentClientFileUrl = new URL(
@@ -15048,114 +14927,302 @@ const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
 - `)}`;
 };
 
-const jsenvPluginReferenceExpectedTypes = () => {
-  const redirectJsReference = (reference) => {
-    const urlObject = new URL(reference.url);
-    const { searchParams } = urlObject;
-
-    if (searchParams.has("entry_point")) {
-      reference.isEntryPoint = true;
-    }
-    if (searchParams.has("js_classic")) {
-      reference.expectedType = "js_classic";
-    } else if (searchParams.has("js_module")) {
-      reference.expectedType = "js_module";
-    }
-    // we need to keep these checks here because during versioning:
-    // - only reference anlysis plugin is executed
-    //   -> plugin about js transpilation don't apply and can't set expectedType: 'js_classic'
-    // - query params like ?js_module_fallback are still there
-    // - without this check build would throw as reference could expect js module and find js classic
-    else if (
-      searchParams.has("js_module_fallback") ||
-      searchParams.has("as_js_classic")
-    ) {
-      reference.expectedType = "js_classic";
-    } else if (searchParams.has("as_js_module")) {
-      reference.expectedType = "js_module";
-    }
-    // by default, js referenced by new URL is considered as "js_module"
-    // in case this is not desired code must use "?js_classic" like
-    // new URL('./file.js?js_classic', import.meta.url)
-    else if (
-      reference.type === "js_url" &&
-      reference.expectedType === undefined &&
-      CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript"
-    ) {
-      reference.expectedType = "js_module";
-    }
-
-    if (searchParams.has("worker")) {
-      reference.expectedSubtype = "worker";
-    } else if (searchParams.has("service_worker")) {
-      reference.expectedSubtype = "service_worker";
-    } else if (searchParams.has("shared_worker")) {
-      reference.expectedSubtype = "shared_worker";
-    }
-    return urlObject.href;
-  };
-
+const jsenvPluginInliningAsDataUrl = () => {
   return {
-    name: "jsenv:reference_expected_types",
+    name: "jsenv:inlining_as_data_url",
     appliesDuring: "*",
-    redirectReference: {
-      script: redirectJsReference,
-      js_url: redirectJsReference,
-      js_import: redirectJsReference,
+    // if the referenced url is a worker we could use
+    // https://www.oreilly.com/library/view/web-workers/9781449322120/ch04.html
+    // but maybe we should rather use ?object_url
+    // or people could do this:
+    // import workerText from './worker.js?text'
+    // const blob = new Blob(workerText, { type: 'text/javascript' })
+    // window.URL.createObjectURL(blob)
+    // in any case the recommended way is to use an url
+    // to benefit from shared worker and reuse worker between tabs
+    formatReference: (reference) => {
+      if (!reference.searchParams.has("inline")) {
+        return null;
+      }
+      if (reference.isInline) {
+        // happens when inlining file content into js
+        // (for instance import "style.css" with { type: "css" } )
+        // In that case the code generated look as follow
+        // new InlineContent(/* content of style.css */, { type: "text/css", inlinedFromUrl: "style.css" }).
+        // and during code analysis an inline reference is generated
+        // with the url "style.css?inline"
+        return null;
+      }
+      // when search param is injected, it will be removed later
+      // by "getWithoutSearchParam". We don't want to redirect again
+      // (would create infinite recursion)
+      if (reference.prev && reference.prev.searchParams.has("inline")) {
+        return null;
+      }
+      if (reference.type === "sourcemap_comment") {
+        return null;
+      }
+      // <link rel="stylesheet"> and <script> can be inlined in the html
+      if (
+        reference.type === "link_href" &&
+        reference.subtype === "stylesheet"
+      ) {
+        return null;
+      }
+      if (
+        reference.original &&
+        reference.original.type === "link_href" &&
+        reference.original.subtype === "stylesheet"
+      ) {
+        return null;
+      }
+      if (reference.type === "script") {
+        return null;
+      }
+      const specifierWithBase64Param = injectQueryParamsIntoSpecifier(
+        reference.specifier,
+        { as_base_64: "" },
+      );
+      const referenceInlined = reference.inline({
+        line: reference.line,
+        column: reference.column,
+        isOriginal: reference.isOriginal,
+        specifier: specifierWithBase64Param,
+      });
+      const urlInfoInlined = referenceInlined.urlInfo;
+      return (async () => {
+        await urlInfoInlined.cook();
+        const base64Url = DATA_URL.stringify({
+          contentType: urlInfoInlined.contentType,
+          base64Flag: true,
+          data: urlInfoInlined.data.base64Flag
+            ? urlInfoInlined.content
+            : dataToBase64$1(urlInfoInlined.content),
+        });
+        return base64Url;
+      })();
+    },
+    fetchUrlContent: async (urlInfo) => {
+      const withoutBase64ParamUrlInfo =
+        urlInfo.getWithoutSearchParam("as_base_64");
+      if (!withoutBase64ParamUrlInfo) {
+        return null;
+      }
+      await withoutBase64ParamUrlInfo.cook();
+      const contentAsBase64 = Buffer.from(
+        withoutBase64ParamUrlInfo.content,
+      ).toString("base64");
+      urlInfo.data.base64Flag = true;
+      return {
+        originalContent: withoutBase64ParamUrlInfo.originalContent,
+        content: contentAsBase64,
+        contentType: withoutBase64ParamUrlInfo.contentType,
+      };
     },
   };
 };
 
-const jsenvPluginDirectoryReferenceAnalysis = () => {
+const dataToBase64$1 = (data) => Buffer.from(data).toString("base64");
+
+const jsenvPluginInliningIntoHtml = () => {
   return {
-    name: "jsenv:directory_reference_analysis",
+    name: "jsenv:inlining_into_html",
+    appliesDuring: "*",
     transformUrlContent: {
-      directory: async (urlInfo) => {
-        const originalDirectoryReference =
-          findOriginalDirectoryReference(urlInfo);
-        const directoryRelativeUrl = urlToRelativeUrl(
-          urlInfo.url,
-          urlInfo.context.rootDirectoryUrl,
-        );
-        if (urlInfo.contentType !== "application/json") {
-          return null;
-        }
-        const entryNames = JSON.parse(urlInfo.content);
-        const newEntryNames = [];
-        for (const entryName of entryNames) {
-          const entryReference = urlInfo.dependencies.found({
-            type: "filesystem",
-            subtype: "directory_entry",
-            specifier: entryName,
-            trace: {
-              message: `"${directoryRelativeUrl}${entryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`,
-            },
+      html: async (urlInfo) => {
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
+        const mutations = [];
+        const actions = [];
+
+        const onLinkRelStyleSheet = (linkNode, { href }) => {
+          let linkReference = null;
+          for (const referenceToOther of urlInfo.referenceToOthersSet) {
+            if (
+              referenceToOther.generatedSpecifier === href &&
+              referenceToOther.type === "link_href" &&
+              referenceToOther.subtype === "stylesheet"
+            ) {
+              linkReference = referenceToOther;
+              break;
+            }
+          }
+          if (!linkReference.searchParams.has("inline")) {
+            return;
+          }
+          const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
+            preferOriginal: true,
           });
-          await entryReference.readGeneratedSpecifier();
-          const replacement = entryReference.generatedSpecifier;
-          newEntryNames.push(replacement);
+          const linkInlineUrl = getUrlForContentInsideHtml(linkNode, {
+            htmlUrl: urlInfo.url,
+            url: linkReference.url,
+          });
+          const linkReferenceInlined = linkReference.inline({
+            line,
+            column,
+            isOriginal,
+            specifier: linkInlineUrl,
+            type: "style",
+            expectedType: linkReference.expectedType,
+          });
+          const linkUrlInfoInlined = linkReferenceInlined.urlInfo;
+
+          actions.push(async () => {
+            await linkUrlInfoInlined.cook();
+            mutations.push(() => {
+              setHtmlNodeAttributes(linkNode, {
+                "inlined-from-href": linkReference.url,
+                "href": undefined,
+                "rel": undefined,
+                "type": undefined,
+                "as": undefined,
+                "crossorigin": undefined,
+                "integrity": undefined,
+                "jsenv-inlined-by": "jsenv:inlining_into_html",
+              });
+              linkNode.nodeName = "style";
+              linkNode.tagName = "style";
+              setHtmlNodeText(linkNode, linkUrlInfoInlined.content, {
+                indentation: "auto",
+              });
+            });
+          });
+        };
+        const onScriptWithSrc = (scriptNode, { src }) => {
+          let scriptReference;
+          for (const dependencyReference of urlInfo.referenceToOthersSet) {
+            if (
+              dependencyReference.generatedSpecifier === src &&
+              dependencyReference.type === "script"
+            ) {
+              scriptReference = dependencyReference;
+              break;
+            }
+          }
+          if (!scriptReference.searchParams.has("inline")) {
+            return;
+          }
+          const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
+            preferOriginal: true,
+          });
+          const scriptInlineUrl = getUrlForContentInsideHtml(scriptNode, {
+            htmlUrl: urlInfo.url,
+            url: scriptReference.url,
+          });
+          const scriptReferenceInlined = scriptReference.inline({
+            line,
+            column,
+            isOriginal,
+            specifier: scriptInlineUrl,
+            type: scriptReference.type,
+            subtype: scriptReference.subtype,
+            expectedType: scriptReference.expectedType,
+          });
+          const scriptUrlInfoInlined = scriptReferenceInlined.urlInfo;
+          actions.push(async () => {
+            await scriptUrlInfoInlined.cook();
+            mutations.push(() => {
+              setHtmlNodeAttributes(scriptNode, {
+                "inlined-from-src": src,
+                "src": undefined,
+                "crossorigin": undefined,
+                "integrity": undefined,
+                "jsenv-inlined-by": "jsenv:inlining_into_html",
+              });
+              setHtmlNodeText(scriptNode, scriptUrlInfoInlined.content, {
+                indentation: "auto",
+              });
+            });
+          });
+        };
+
+        visitHtmlNodes(htmlAst, {
+          link: (linkNode) => {
+            const rel = getHtmlNodeAttribute(linkNode, "rel");
+            if (rel !== "stylesheet") {
+              return;
+            }
+            const href = getHtmlNodeAttribute(linkNode, "href");
+            if (!href) {
+              return;
+            }
+            onLinkRelStyleSheet(linkNode, { href });
+          },
+          script: (scriptNode) => {
+            const { type } = analyzeScriptNode(scriptNode);
+            const scriptNodeText = getHtmlNodeText(scriptNode);
+            if (scriptNodeText) {
+              return;
+            }
+            const src = getHtmlNodeAttribute(scriptNode, "src");
+            if (!src) {
+              return;
+            }
+            onScriptWithSrc(scriptNode, { type, src });
+          },
+        });
+        if (actions.length > 0) {
+          await Promise.all(actions.map((action) => action()));
         }
-        return JSON.stringify(newEntryNames);
+        mutations.forEach((mutation) => mutation());
+        const htmlModified = stringifyHtmlAst(htmlAst);
+        return htmlModified;
       },
     },
   };
 };
 
-const findOriginalDirectoryReference = (urlInfo) => {
-  const findNonFileSystemAncestor = (urlInfo) => {
-    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-      if (urlInfoReferencingThisOne.type !== "directory") {
-        return referenceFromOther;
-      }
-      const found = findNonFileSystemAncestor(urlInfoReferencingThisOne);
-      if (found) {
-        return found;
-      }
-    }
-    return null;
+const jsenvPluginInlining = () => {
+  return [jsenvPluginInliningAsDataUrl(), jsenvPluginInliningIntoHtml()];
+};
+
+/*
+ * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
+ */
+
+
+const jsenvPluginCssReferenceAnalysis = () => {
+  return {
+    name: "jsenv:css_reference_analysis",
+    appliesDuring: "*",
+    transformUrlContent: {
+      css: parseAndTransformCssUrls,
+    },
   };
-  return findNonFileSystemAncestor(urlInfo);
+};
+
+const parseAndTransformCssUrls = async (urlInfo) => {
+  const cssUrls = await parseCssUrls({
+    css: urlInfo.content,
+    url: urlInfo.originalUrl,
+  });
+  const actions = [];
+  const magicSource = createMagicSource(urlInfo.content);
+  for (const cssUrl of cssUrls) {
+    const reference = urlInfo.dependencies.found({
+      type: cssUrl.type,
+      specifier: cssUrl.specifier,
+      specifierStart: cssUrl.start,
+      specifierEnd: cssUrl.end,
+      specifierLine: cssUrl.line,
+      specifierColumn: cssUrl.column,
+    });
+    actions.push(async () => {
+      await reference.readGeneratedSpecifier();
+      const replacement = reference.generatedSpecifier;
+      magicSource.replace({
+        start: cssUrl.start,
+        end: cssUrl.end,
+        replacement,
+      });
+    });
+  }
+  if (actions.length > 0) {
+    await Promise.all(actions.map((action) => action()));
+  }
+  return magicSource.toContentAndSourcemap();
 };
 
 const jsenvPluginDataUrlsAnalysis = () => {
@@ -15169,7 +15236,7 @@ const jsenvPluginDataUrlsAnalysis = () => {
       contentType: urlInfo.contentType,
       base64Flag: urlInfo.data.base64Flag,
       data: urlInfo.data.base64Flag
-        ? dataToBase64$1(urlInfo.content)
+        ? dataToBase64(urlInfo.content)
         : String(urlInfo.content),
     });
     return specifier;
@@ -15228,7 +15295,59 @@ const contentFromUrlData = ({ contentType, base64Flag, urlData }) => {
 const base64ToBuffer = (base64String) => Buffer.from(base64String, "base64");
 const base64ToString = (base64String) =>
   Buffer.from(base64String, "base64").toString("utf8");
-const dataToBase64$1 = (data) => Buffer.from(data).toString("base64");
+const dataToBase64 = (data) => Buffer.from(data).toString("base64");
+
+const jsenvPluginDirectoryReferenceAnalysis = () => {
+  return {
+    name: "jsenv:directory_reference_analysis",
+    transformUrlContent: {
+      directory: async (urlInfo) => {
+        const originalDirectoryReference =
+          findOriginalDirectoryReference(urlInfo);
+        const directoryRelativeUrl = urlToRelativeUrl(
+          urlInfo.url,
+          urlInfo.context.rootDirectoryUrl,
+        );
+        if (urlInfo.contentType !== "application/json") {
+          return null;
+        }
+        const entryNames = JSON.parse(urlInfo.content);
+        const newEntryNames = [];
+        for (const entryName of entryNames) {
+          const entryReference = urlInfo.dependencies.found({
+            type: "filesystem",
+            subtype: "directory_entry",
+            specifier: entryName,
+            trace: {
+              message: `"${directoryRelativeUrl}${entryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`,
+            },
+          });
+          await entryReference.readGeneratedSpecifier();
+          const replacement = entryReference.generatedSpecifier;
+          newEntryNames.push(replacement);
+        }
+        return JSON.stringify(newEntryNames);
+      },
+    },
+  };
+};
+
+const findOriginalDirectoryReference = (urlInfo) => {
+  const findNonFileSystemAncestor = (urlInfo) => {
+    for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
+      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
+      if (urlInfoReferencingThisOne.type !== "directory") {
+        return referenceFromOther;
+      }
+      const found = findNonFileSystemAncestor(urlInfoReferencingThisOne);
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  };
+  return findNonFileSystemAncestor(urlInfo);
+};
 
 // duplicated from @jsenv/log to avoid the dependency
 const createDetailedMessage = (message, details = {}) => {
@@ -16566,88 +16685,6 @@ const decideLinkExpectedType = (linkReference, htmlUrlInfo) => {
 //   return new URL(url, baseUrl).href;
 // };
 
-// css: parseAndTransformCssUrls,
-
-const jsenvPluginWebmanifestReferenceAnalysis = () => {
-  return {
-    name: "jsenv:webmanifest_reference_analysis",
-    appliesDuring: "*",
-    transformUrlContent: {
-      webmanifest: parseAndTransformWebmanifestUrls,
-    },
-  };
-};
-
-const parseAndTransformWebmanifestUrls = async (urlInfo) => {
-  const content = urlInfo.content;
-  const manifest = JSON.parse(content);
-  const actions = [];
-  const { icons = [] } = manifest;
-  icons.forEach((icon) => {
-    const iconReference = urlInfo.dependencies.found({
-      type: "webmanifest_icon_src",
-      specifier: icon.src,
-    });
-    actions.push(async () => {
-      await iconReference.readGeneratedSpecifier();
-      icon.src = iconReference.generatedSpecifier;
-    });
-  });
-
-  if (actions.length === 0) {
-    return null;
-  }
-  await Promise.all(actions.map((action) => action()));
-  return JSON.stringify(manifest, null, "  ");
-};
-
-/*
- * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
- */
-
-
-const jsenvPluginCssReferenceAnalysis = () => {
-  return {
-    name: "jsenv:css_reference_analysis",
-    appliesDuring: "*",
-    transformUrlContent: {
-      css: parseAndTransformCssUrls,
-    },
-  };
-};
-
-const parseAndTransformCssUrls = async (urlInfo) => {
-  const cssUrls = await parseCssUrls({
-    css: urlInfo.content,
-    url: urlInfo.originalUrl,
-  });
-  const actions = [];
-  const magicSource = createMagicSource(urlInfo.content);
-  for (const cssUrl of cssUrls) {
-    const reference = urlInfo.dependencies.found({
-      type: cssUrl.type,
-      specifier: cssUrl.specifier,
-      specifierStart: cssUrl.start,
-      specifierEnd: cssUrl.end,
-      specifierLine: cssUrl.line,
-      specifierColumn: cssUrl.column,
-    });
-    actions.push(async () => {
-      await reference.readGeneratedSpecifier();
-      const replacement = reference.generatedSpecifier;
-      magicSource.replace({
-        start: cssUrl.start,
-        end: cssUrl.end,
-        replacement,
-      });
-    });
-  }
-  if (actions.length > 0) {
-    await Promise.all(actions.map((action) => action()));
-  }
-  return magicSource.toContentAndSourcemap();
-};
-
 const jsenvPluginJsReferenceAnalysis = ({ inlineContent }) => {
   return [
     {
@@ -16803,6 +16840,99 @@ const parseAndTransformJsReferences = async (
   return { content, sourcemap };
 };
 
+const jsenvPluginReferenceExpectedTypes = () => {
+  const redirectJsReference = (reference) => {
+    const urlObject = new URL(reference.url);
+    const { searchParams } = urlObject;
+
+    if (searchParams.has("entry_point")) {
+      reference.isEntryPoint = true;
+    }
+    if (searchParams.has("js_classic")) {
+      reference.expectedType = "js_classic";
+    } else if (searchParams.has("js_module")) {
+      reference.expectedType = "js_module";
+    }
+    // we need to keep these checks here because during versioning:
+    // - only reference anlysis plugin is executed
+    //   -> plugin about js transpilation don't apply and can't set expectedType: 'js_classic'
+    // - query params like ?js_module_fallback are still there
+    // - without this check build would throw as reference could expect js module and find js classic
+    else if (
+      searchParams.has("js_module_fallback") ||
+      searchParams.has("as_js_classic")
+    ) {
+      reference.expectedType = "js_classic";
+    } else if (searchParams.has("as_js_module")) {
+      reference.expectedType = "js_module";
+    }
+    // by default, js referenced by new URL is considered as "js_module"
+    // in case this is not desired code must use "?js_classic" like
+    // new URL('./file.js?js_classic', import.meta.url)
+    else if (
+      reference.type === "js_url" &&
+      reference.expectedType === undefined &&
+      CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript"
+    ) {
+      reference.expectedType = "js_module";
+    }
+
+    if (searchParams.has("worker")) {
+      reference.expectedSubtype = "worker";
+    } else if (searchParams.has("service_worker")) {
+      reference.expectedSubtype = "service_worker";
+    } else if (searchParams.has("shared_worker")) {
+      reference.expectedSubtype = "shared_worker";
+    }
+    return urlObject.href;
+  };
+
+  return {
+    name: "jsenv:reference_expected_types",
+    appliesDuring: "*",
+    redirectReference: {
+      script: redirectJsReference,
+      js_url: redirectJsReference,
+      js_import: redirectJsReference,
+    },
+  };
+};
+
+// css: parseAndTransformCssUrls,
+
+const jsenvPluginWebmanifestReferenceAnalysis = () => {
+  return {
+    name: "jsenv:webmanifest_reference_analysis",
+    appliesDuring: "*",
+    transformUrlContent: {
+      webmanifest: parseAndTransformWebmanifestUrls,
+    },
+  };
+};
+
+const parseAndTransformWebmanifestUrls = async (urlInfo) => {
+  const content = urlInfo.content;
+  const manifest = JSON.parse(content);
+  const actions = [];
+  const { icons = [] } = manifest;
+  icons.forEach((icon) => {
+    const iconReference = urlInfo.dependencies.found({
+      type: "webmanifest_icon_src",
+      specifier: icon.src,
+    });
+    actions.push(async () => {
+      await iconReference.readGeneratedSpecifier();
+      icon.src = iconReference.generatedSpecifier;
+    });
+  });
+
+  if (actions.length === 0) {
+    return null;
+  }
+  await Promise.all(actions.map((action) => action()));
+  return JSON.stringify(manifest, null, "  ");
+};
+
 const jsenvPluginReferenceAnalysis = ({
   inlineContent = true,
   inlineConvertedScript = false,
@@ -16863,90 +16993,21 @@ const jsenvPluginInlineContentFetcher = () => {
   };
 };
 
-const isSpecifierForNodeBuiltin = (specifier) => {
-  return (
-    specifier.startsWith("node:") ||
-    NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
-  );
+// https://nodejs.org/api/packages.html#resolving-user-conditions
+const readCustomConditionsFromProcessArgs = () => {
+  const packageConditions = [];
+  process.execArgv.forEach((arg) => {
+    if (arg.includes("-C=")) {
+      const packageCondition = arg.slice(0, "-C=".length);
+      packageConditions.push(packageCondition);
+    }
+    if (arg.includes("--conditions=")) {
+      const packageCondition = arg.slice("--conditions=".length);
+      packageConditions.push(packageCondition);
+    }
+  });
+  return packageConditions;
 };
-
-const NODE_BUILTIN_MODULE_SPECIFIERS = [
-  "assert",
-  "assert/strict",
-  "async_hooks",
-  "buffer_ieee754",
-  "buffer",
-  "child_process",
-  "cluster",
-  "console",
-  "constants",
-  "crypto",
-  "_debugger",
-  "dgram",
-  "dns",
-  "domain",
-  "events",
-  "freelist",
-  "fs",
-  "fs/promises",
-  "_http_agent",
-  "_http_client",
-  "_http_common",
-  "_http_incoming",
-  "_http_outgoing",
-  "_http_server",
-  "http",
-  "http2",
-  "https",
-  "inspector",
-  "_linklist",
-  "module",
-  "net",
-  "node-inspect/lib/_inspect",
-  "node-inspect/lib/internal/inspect_client",
-  "node-inspect/lib/internal/inspect_repl",
-  "os",
-  "path",
-  "perf_hooks",
-  "process",
-  "punycode",
-  "querystring",
-  "readline",
-  "repl",
-  "smalloc",
-  "_stream_duplex",
-  "_stream_transform",
-  "_stream_wrap",
-  "_stream_passthrough",
-  "_stream_readable",
-  "_stream_writable",
-  "stream",
-  "stream/promises",
-  "string_decoder",
-  "sys",
-  "timers",
-  "_tls_common",
-  "_tls_legacy",
-  "_tls_wrap",
-  "tls",
-  "trace_events",
-  "tty",
-  "url",
-  "util",
-  "v8/tools/arguments",
-  "v8/tools/codemap",
-  "v8/tools/consarray",
-  "v8/tools/csvparser",
-  "v8/tools/logreader",
-  "v8/tools/profile_view",
-  "v8/tools/splaytree",
-  "v8",
-  "vm",
-  "worker_threads",
-  "zlib",
-  // global is special
-  "global",
-];
 
 const asDirectoryUrl = (url) => {
   const { pathname } = new URL(url);
@@ -17118,21 +17179,90 @@ const createPackageImportNotDefinedError = (
   return error;
 };
 
-// https://nodejs.org/api/packages.html#resolving-user-conditions
-const readCustomConditionsFromProcessArgs = () => {
-  const packageConditions = [];
-  process.execArgv.forEach((arg) => {
-    if (arg.includes("-C=")) {
-      const packageCondition = arg.slice(0, "-C=".length);
-      packageConditions.push(packageCondition);
-    }
-    if (arg.includes("--conditions=")) {
-      const packageCondition = arg.slice("--conditions=".length);
-      packageConditions.push(packageCondition);
-    }
-  });
-  return packageConditions;
+const isSpecifierForNodeBuiltin = (specifier) => {
+  return (
+    specifier.startsWith("node:") ||
+    NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
+  );
 };
+
+const NODE_BUILTIN_MODULE_SPECIFIERS = [
+  "assert",
+  "assert/strict",
+  "async_hooks",
+  "buffer_ieee754",
+  "buffer",
+  "child_process",
+  "cluster",
+  "console",
+  "constants",
+  "crypto",
+  "_debugger",
+  "dgram",
+  "dns",
+  "domain",
+  "events",
+  "freelist",
+  "fs",
+  "fs/promises",
+  "_http_agent",
+  "_http_client",
+  "_http_common",
+  "_http_incoming",
+  "_http_outgoing",
+  "_http_server",
+  "http",
+  "http2",
+  "https",
+  "inspector",
+  "_linklist",
+  "module",
+  "net",
+  "node-inspect/lib/_inspect",
+  "node-inspect/lib/internal/inspect_client",
+  "node-inspect/lib/internal/inspect_repl",
+  "os",
+  "path",
+  "perf_hooks",
+  "process",
+  "punycode",
+  "querystring",
+  "readline",
+  "repl",
+  "smalloc",
+  "_stream_duplex",
+  "_stream_transform",
+  "_stream_wrap",
+  "_stream_passthrough",
+  "_stream_readable",
+  "_stream_writable",
+  "stream",
+  "stream/promises",
+  "string_decoder",
+  "sys",
+  "timers",
+  "_tls_common",
+  "_tls_legacy",
+  "_tls_wrap",
+  "tls",
+  "trace_events",
+  "tty",
+  "url",
+  "util",
+  "v8/tools/arguments",
+  "v8/tools/codemap",
+  "v8/tools/consarray",
+  "v8/tools/csvparser",
+  "v8/tools/logreader",
+  "v8/tools/profile_view",
+  "v8/tools/splaytree",
+  "v8",
+  "vm",
+  "worker_threads",
+  "zlib",
+  // global is special
+  "global",
+];
 
 /*
  * https://nodejs.org/api/esm.html#resolver-algorithm-specification
@@ -18727,257 +18857,6 @@ return {
   return magicSource.toContentAndSourcemap();
 };
 
-const jsenvPluginInliningAsDataUrl = () => {
-  return {
-    name: "jsenv:inlining_as_data_url",
-    appliesDuring: "*",
-    // if the referenced url is a worker we could use
-    // https://www.oreilly.com/library/view/web-workers/9781449322120/ch04.html
-    // but maybe we should rather use ?object_url
-    // or people could do this:
-    // import workerText from './worker.js?text'
-    // const blob = new Blob(workerText, { type: 'text/javascript' })
-    // window.URL.createObjectURL(blob)
-    // in any case the recommended way is to use an url
-    // to benefit from shared worker and reuse worker between tabs
-    formatReference: (reference) => {
-      if (!reference.searchParams.has("inline")) {
-        return null;
-      }
-      if (reference.isInline) {
-        // happens when inlining file content into js
-        // (for instance import "style.css" with { type: "css" } )
-        // In that case the code generated look as follow
-        // new InlineContent(/* content of style.css */, { type: "text/css", inlinedFromUrl: "style.css" }).
-        // and during code analysis an inline reference is generated
-        // with the url "style.css?inline"
-        return null;
-      }
-      // when search param is injected, it will be removed later
-      // by "getWithoutSearchParam". We don't want to redirect again
-      // (would create infinite recursion)
-      if (reference.prev && reference.prev.searchParams.has("inline")) {
-        return null;
-      }
-      if (reference.type === "sourcemap_comment") {
-        return null;
-      }
-      // <link rel="stylesheet"> and <script> can be inlined in the html
-      if (
-        reference.type === "link_href" &&
-        reference.subtype === "stylesheet"
-      ) {
-        return null;
-      }
-      if (
-        reference.original &&
-        reference.original.type === "link_href" &&
-        reference.original.subtype === "stylesheet"
-      ) {
-        return null;
-      }
-      if (reference.type === "script") {
-        return null;
-      }
-      const specifierWithBase64Param = injectQueryParamsIntoSpecifier(
-        reference.specifier,
-        { as_base_64: "" },
-      );
-      const referenceInlined = reference.inline({
-        line: reference.line,
-        column: reference.column,
-        isOriginal: reference.isOriginal,
-        specifier: specifierWithBase64Param,
-      });
-      const urlInfoInlined = referenceInlined.urlInfo;
-      return (async () => {
-        await urlInfoInlined.cook();
-        const base64Url = DATA_URL.stringify({
-          contentType: urlInfoInlined.contentType,
-          base64Flag: true,
-          data: urlInfoInlined.data.base64Flag
-            ? urlInfoInlined.content
-            : dataToBase64(urlInfoInlined.content),
-        });
-        return base64Url;
-      })();
-    },
-    fetchUrlContent: async (urlInfo) => {
-      const withoutBase64ParamUrlInfo =
-        urlInfo.getWithoutSearchParam("as_base_64");
-      if (!withoutBase64ParamUrlInfo) {
-        return null;
-      }
-      await withoutBase64ParamUrlInfo.cook();
-      const contentAsBase64 = Buffer.from(
-        withoutBase64ParamUrlInfo.content,
-      ).toString("base64");
-      urlInfo.data.base64Flag = true;
-      return {
-        originalContent: withoutBase64ParamUrlInfo.originalContent,
-        content: contentAsBase64,
-        contentType: withoutBase64ParamUrlInfo.contentType,
-      };
-    },
-  };
-};
-
-const dataToBase64 = (data) => Buffer.from(data).toString("base64");
-
-const jsenvPluginInliningIntoHtml = () => {
-  return {
-    name: "jsenv:inlining_into_html",
-    appliesDuring: "*",
-    transformUrlContent: {
-      html: async (urlInfo) => {
-        const htmlAst = parseHtml({
-          html: urlInfo.content,
-          url: urlInfo.url,
-        });
-        const mutations = [];
-        const actions = [];
-
-        const onLinkRelStyleSheet = (linkNode, { href }) => {
-          let linkReference = null;
-          for (const referenceToOther of urlInfo.referenceToOthersSet) {
-            if (
-              referenceToOther.generatedSpecifier === href &&
-              referenceToOther.type === "link_href" &&
-              referenceToOther.subtype === "stylesheet"
-            ) {
-              linkReference = referenceToOther;
-              break;
-            }
-          }
-          if (!linkReference.searchParams.has("inline")) {
-            return;
-          }
-          const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
-            preferOriginal: true,
-          });
-          const linkInlineUrl = getUrlForContentInsideHtml(linkNode, {
-            htmlUrl: urlInfo.url,
-            url: linkReference.url,
-          });
-          const linkReferenceInlined = linkReference.inline({
-            line,
-            column,
-            isOriginal,
-            specifier: linkInlineUrl,
-            type: "style",
-            expectedType: linkReference.expectedType,
-          });
-          const linkUrlInfoInlined = linkReferenceInlined.urlInfo;
-
-          actions.push(async () => {
-            await linkUrlInfoInlined.cook();
-            mutations.push(() => {
-              setHtmlNodeAttributes(linkNode, {
-                "inlined-from-href": linkReference.url,
-                "href": undefined,
-                "rel": undefined,
-                "type": undefined,
-                "as": undefined,
-                "crossorigin": undefined,
-                "integrity": undefined,
-                "jsenv-inlined-by": "jsenv:inlining_into_html",
-              });
-              linkNode.nodeName = "style";
-              linkNode.tagName = "style";
-              setHtmlNodeText(linkNode, linkUrlInfoInlined.content, {
-                indentation: "auto",
-              });
-            });
-          });
-        };
-        const onScriptWithSrc = (scriptNode, { src }) => {
-          let scriptReference;
-          for (const dependencyReference of urlInfo.referenceToOthersSet) {
-            if (
-              dependencyReference.generatedSpecifier === src &&
-              dependencyReference.type === "script"
-            ) {
-              scriptReference = dependencyReference;
-              break;
-            }
-          }
-          if (!scriptReference.searchParams.has("inline")) {
-            return;
-          }
-          const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
-            preferOriginal: true,
-          });
-          const scriptInlineUrl = getUrlForContentInsideHtml(scriptNode, {
-            htmlUrl: urlInfo.url,
-            url: scriptReference.url,
-          });
-          const scriptReferenceInlined = scriptReference.inline({
-            line,
-            column,
-            isOriginal,
-            specifier: scriptInlineUrl,
-            type: scriptReference.type,
-            subtype: scriptReference.subtype,
-            expectedType: scriptReference.expectedType,
-          });
-          const scriptUrlInfoInlined = scriptReferenceInlined.urlInfo;
-          actions.push(async () => {
-            await scriptUrlInfoInlined.cook();
-            mutations.push(() => {
-              setHtmlNodeAttributes(scriptNode, {
-                "inlined-from-src": src,
-                "src": undefined,
-                "crossorigin": undefined,
-                "integrity": undefined,
-                "jsenv-inlined-by": "jsenv:inlining_into_html",
-              });
-              setHtmlNodeText(scriptNode, scriptUrlInfoInlined.content, {
-                indentation: "auto",
-              });
-            });
-          });
-        };
-
-        visitHtmlNodes(htmlAst, {
-          link: (linkNode) => {
-            const rel = getHtmlNodeAttribute(linkNode, "rel");
-            if (rel !== "stylesheet") {
-              return;
-            }
-            const href = getHtmlNodeAttribute(linkNode, "href");
-            if (!href) {
-              return;
-            }
-            onLinkRelStyleSheet(linkNode, { href });
-          },
-          script: (scriptNode) => {
-            const { type } = analyzeScriptNode(scriptNode);
-            const scriptNodeText = getHtmlNodeText(scriptNode);
-            if (scriptNodeText) {
-              return;
-            }
-            const src = getHtmlNodeAttribute(scriptNode, "src");
-            if (!src) {
-              return;
-            }
-            onScriptWithSrc(scriptNode, { type, src });
-          },
-        });
-        if (actions.length > 0) {
-          await Promise.all(actions.map((action) => action()));
-        }
-        mutations.forEach((mutation) => mutation());
-        const htmlModified = stringifyHtmlAst(htmlAst);
-        return htmlModified;
-      },
-    },
-  };
-};
-
-const jsenvPluginInlining = () => {
-  return [jsenvPluginInliningAsDataUrl(), jsenvPluginInliningIntoHtml()];
-};
-
 /*
  * Some code uses globals specific to Node.js in code meant to run in browsers...
  * This plugin will replace some node globals to things compatible with web:
@@ -19309,6 +19188,104 @@ const jsenvPluginNodeRuntime = ({ runtimeCompat }) => {
   };
 };
 
+// https://github.com/jamiebuilds/babel-handbook/blob/master/translations/en/plugin-handbook.md#toc-stages-of-babel
+// https://github.com/cfware/babel-plugin-bundled-import-meta/blob/master/index.js
+// https://github.com/babel/babel/blob/f4edf62f6beeab8ae9f2b7f0b82f1b3b12a581af/packages/babel-helper-module-imports/src/index.js#L7
+
+const babelPluginMetadataImportMetaHot = () => {
+  return {
+    name: "metadata-import-meta-hot",
+    visitor: {
+      Program(programPath, state) {
+        Object.assign(
+          state.file.metadata,
+          collectImportMetaProperties(programPath),
+        );
+      },
+    },
+  };
+};
+const collectImportMetaProperties = (programPath) => {
+  const importMetaHotPaths = [];
+  let hotDecline = false;
+  let hotAcceptSelf = false;
+  let hotAcceptDependencies = [];
+  programPath.traverse({
+    MemberExpression(path) {
+      const { node } = path;
+      const { object } = node;
+      if (object.type !== "MetaProperty") {
+        return;
+      }
+      const { property: objectProperty } = object;
+      if (objectProperty.name !== "meta") {
+        return;
+      }
+      const { property } = node;
+      const { name } = property;
+      if (name === "hot") {
+        importMetaHotPaths.push(path);
+      }
+    },
+    CallExpression(path) {
+      if (isImportMetaHotMethodCall(path, "accept")) {
+        const callNode = path.node;
+        const args = callNode.arguments;
+        if (args.length === 0) {
+          hotAcceptSelf = true;
+          return;
+        }
+        const firstArg = args[0];
+        if (firstArg.type === "StringLiteral") {
+          hotAcceptDependencies = [
+            {
+              specifierPath: path.get("arguments")[0],
+            },
+          ];
+          return;
+        }
+        if (firstArg.type === "ArrayExpression") {
+          const firstArgPath = path.get("arguments")[0];
+          hotAcceptDependencies = firstArg.elements.map((arrayNode, index) => {
+            if (arrayNode.type !== "StringLiteral") {
+              throw new Error(
+                `all array elements must be strings in "import.meta.hot.accept(array)"`,
+              );
+            }
+            return {
+              specifierPath: firstArgPath.get(String(index)),
+            };
+          });
+          return;
+        }
+        // accept first arg can be "anything" such as
+        // `const cb = () => {}; import.meta.accept(cb)`
+        hotAcceptSelf = true;
+      }
+      if (isImportMetaHotMethodCall(path, "decline")) {
+        hotDecline = true;
+      }
+    },
+  });
+  return {
+    importMetaHotPaths,
+    hotDecline,
+    hotAcceptSelf,
+    hotAcceptDependencies,
+  };
+};
+const isImportMetaHotMethodCall = (path, methodName) => {
+  const { property, object } = path.node.callee;
+  return (
+    property &&
+    property.name === methodName &&
+    object &&
+    object.property &&
+    object.property.name === "hot" &&
+    object.object.type === "MetaProperty"
+  );
+};
+
 // Some "smart" default applied to decide what should hot reload / fullreload:
 // By default:
 //   - hot reload on <img src="./image.png" />
@@ -19456,104 +19433,6 @@ const htmlNodeCanHotReload = (node) => {
   ].includes(node.nodeName);
 };
 
-// https://github.com/jamiebuilds/babel-handbook/blob/master/translations/en/plugin-handbook.md#toc-stages-of-babel
-// https://github.com/cfware/babel-plugin-bundled-import-meta/blob/master/index.js
-// https://github.com/babel/babel/blob/f4edf62f6beeab8ae9f2b7f0b82f1b3b12a581af/packages/babel-helper-module-imports/src/index.js#L7
-
-const babelPluginMetadataImportMetaHot = () => {
-  return {
-    name: "metadata-import-meta-hot",
-    visitor: {
-      Program(programPath, state) {
-        Object.assign(
-          state.file.metadata,
-          collectImportMetaProperties(programPath),
-        );
-      },
-    },
-  };
-};
-const collectImportMetaProperties = (programPath) => {
-  const importMetaHotPaths = [];
-  let hotDecline = false;
-  let hotAcceptSelf = false;
-  let hotAcceptDependencies = [];
-  programPath.traverse({
-    MemberExpression(path) {
-      const { node } = path;
-      const { object } = node;
-      if (object.type !== "MetaProperty") {
-        return;
-      }
-      const { property: objectProperty } = object;
-      if (objectProperty.name !== "meta") {
-        return;
-      }
-      const { property } = node;
-      const { name } = property;
-      if (name === "hot") {
-        importMetaHotPaths.push(path);
-      }
-    },
-    CallExpression(path) {
-      if (isImportMetaHotMethodCall(path, "accept")) {
-        const callNode = path.node;
-        const args = callNode.arguments;
-        if (args.length === 0) {
-          hotAcceptSelf = true;
-          return;
-        }
-        const firstArg = args[0];
-        if (firstArg.type === "StringLiteral") {
-          hotAcceptDependencies = [
-            {
-              specifierPath: path.get("arguments")[0],
-            },
-          ];
-          return;
-        }
-        if (firstArg.type === "ArrayExpression") {
-          const firstArgPath = path.get("arguments")[0];
-          hotAcceptDependencies = firstArg.elements.map((arrayNode, index) => {
-            if (arrayNode.type !== "StringLiteral") {
-              throw new Error(
-                `all array elements must be strings in "import.meta.hot.accept(array)"`,
-              );
-            }
-            return {
-              specifierPath: firstArgPath.get(String(index)),
-            };
-          });
-          return;
-        }
-        // accept first arg can be "anything" such as
-        // `const cb = () => {}; import.meta.accept(cb)`
-        hotAcceptSelf = true;
-      }
-      if (isImportMetaHotMethodCall(path, "decline")) {
-        hotDecline = true;
-      }
-    },
-  });
-  return {
-    importMetaHotPaths,
-    hotDecline,
-    hotAcceptSelf,
-    hotAcceptDependencies,
-  };
-};
-const isImportMetaHotMethodCall = (path, methodName) => {
-  const { property, object } = path.node.callee;
-  return (
-    property &&
-    property.name === methodName &&
-    object &&
-    object.property &&
-    object.property.name === "hot" &&
-    object.object.type === "MetaProperty"
-  );
-};
-
 const jsenvPluginImportMetaHot = () => {
   const importMetaHotClientFileUrl = new URL(
     "./js/import_meta_hot.js",
@@ -19666,86 +19545,6 @@ import.meta.hot = createImportMetaHot(import.meta.url);
 `,
   );
   return magicSource.toContentAndSourcemap();
-};
-
-/*
- * When client wants to hot reload, it wants to be sure it can reach the server
- * and bypass any cache. This is done thanks to "hot" search param
- * being injected by the client: file.js?hot=Date.now()
- * When it happens server must:
- * 1. Consider it's a regular request to "file.js" and not a variation
- * of it (not like file.js?as_js_classic that creates a separate urlInfo)
- * -> This is done by redirectReference deleting the search param.
- *
- * 2. Inject ?hot= into all urls referenced by this one
- * -> This is done by transformReferenceSearchParams
- */
-
-const jsenvPluginHotSearchParam = () => {
-  return {
-    name: "jsenv:hot_search_param",
-    appliesDuring: "dev",
-    redirectReference: (reference) => {
-      if (!reference.searchParams.has("hot")) {
-        return null;
-      }
-      const urlObject = new URL(reference.url);
-      // "hot" search param goal is to invalide url in browser cache:
-      // this goal is achieved when we reach this part of the code
-      // We get rid of this params so that urlGraph and other parts of the code
-      // recognize the url (it is not considered as a different url)
-      urlObject.searchParams.delete("hot");
-      return urlObject.href;
-    },
-    transformReferenceSearchParams: (reference) => {
-      if (reference.isImplicit) {
-        return null;
-      }
-      if (reference.original && reference.original.searchParams.has("hot")) {
-        return {
-          hot: reference.original.searchParams.get("hot"),
-        };
-      }
-      const request = reference.ownerUrlInfo.context.request;
-      const parentHotParam = request ? request.searchParams.get("hot") : null;
-      if (!parentHotParam) {
-        return null;
-      }
-      // At this stage the parent is using ?hot and we are going to decide if
-      // we propagate the search param to child.
-      const referencedUrlInfo = reference.urlInfo;
-      const {
-        modifiedTimestamp,
-        descendantModifiedTimestamp,
-        dereferencedTimestamp,
-      } = referencedUrlInfo;
-      if (
-        !modifiedTimestamp &&
-        !descendantModifiedTimestamp &&
-        !dereferencedTimestamp
-      ) {
-        return null;
-      }
-      // The goal is to send an url that will bypass client (the browser) cache
-      // more precisely the runtime cache of js modules, but also any http cache
-      // that could prevent re-execution of js code
-      // In order to achieve this, this plugin inject ?hot=timestamp
-      // - The browser will likely not have it in cache
-      //   and refetch latest version from server + re-execute it
-      // - If the browser have it in cache, he will not get it from server
-      // We use the latest timestamp to ensure it's fresh
-      // The dereferencedTimestamp is needed because when a js module is re-referenced
-      // browser must re-execute it, even if the code is not modified
-      const latestTimestamp = Math.max(
-        modifiedTimestamp,
-        descendantModifiedTimestamp,
-        dereferencedTimestamp,
-      );
-      return {
-        hot: latestTimestamp,
-      };
-    },
-  };
 };
 
 const jsenvPluginAutoreloadClient = () => {
@@ -20129,6 +19928,86 @@ const jsenvPluginAutoreloadServer = ({
   };
 };
 
+/*
+ * When client wants to hot reload, it wants to be sure it can reach the server
+ * and bypass any cache. This is done thanks to "hot" search param
+ * being injected by the client: file.js?hot=Date.now()
+ * When it happens server must:
+ * 1. Consider it's a regular request to "file.js" and not a variation
+ * of it (not like file.js?as_js_classic that creates a separate urlInfo)
+ * -> This is done by redirectReference deleting the search param.
+ *
+ * 2. Inject ?hot= into all urls referenced by this one
+ * -> This is done by transformReferenceSearchParams
+ */
+
+const jsenvPluginHotSearchParam = () => {
+  return {
+    name: "jsenv:hot_search_param",
+    appliesDuring: "dev",
+    redirectReference: (reference) => {
+      if (!reference.searchParams.has("hot")) {
+        return null;
+      }
+      const urlObject = new URL(reference.url);
+      // "hot" search param goal is to invalide url in browser cache:
+      // this goal is achieved when we reach this part of the code
+      // We get rid of this params so that urlGraph and other parts of the code
+      // recognize the url (it is not considered as a different url)
+      urlObject.searchParams.delete("hot");
+      return urlObject.href;
+    },
+    transformReferenceSearchParams: (reference) => {
+      if (reference.isImplicit) {
+        return null;
+      }
+      if (reference.original && reference.original.searchParams.has("hot")) {
+        return {
+          hot: reference.original.searchParams.get("hot"),
+        };
+      }
+      const request = reference.ownerUrlInfo.context.request;
+      const parentHotParam = request ? request.searchParams.get("hot") : null;
+      if (!parentHotParam) {
+        return null;
+      }
+      // At this stage the parent is using ?hot and we are going to decide if
+      // we propagate the search param to child.
+      const referencedUrlInfo = reference.urlInfo;
+      const {
+        modifiedTimestamp,
+        descendantModifiedTimestamp,
+        dereferencedTimestamp,
+      } = referencedUrlInfo;
+      if (
+        !modifiedTimestamp &&
+        !descendantModifiedTimestamp &&
+        !dereferencedTimestamp
+      ) {
+        return null;
+      }
+      // The goal is to send an url that will bypass client (the browser) cache
+      // more precisely the runtime cache of js modules, but also any http cache
+      // that could prevent re-execution of js code
+      // In order to achieve this, this plugin inject ?hot=timestamp
+      // - The browser will likely not have it in cache
+      //   and refetch latest version from server + re-execute it
+      // - If the browser have it in cache, he will not get it from server
+      // We use the latest timestamp to ensure it's fresh
+      // The dereferencedTimestamp is needed because when a js module is re-referenced
+      // browser must re-execute it, even if the code is not modified
+      const latestTimestamp = Math.max(
+        modifiedTimestamp,
+        descendantModifiedTimestamp,
+        dereferencedTimestamp,
+      );
+      return {
+        hot: latestTimestamp,
+      };
+    },
+  };
+};
+
 const jsenvPluginAutoreload = ({
   clientFileChangeEventEmitter,
   clientFileDereferencedEventEmitter,
@@ -20249,6 +20128,9 @@ const jsenvPluginCleanHTML = () => {
     },
   };
 };
+
+// tslint:disable:ordered-imports
+
 
 const getCorePlugins = ({
   rootDirectoryUrl,
@@ -22523,6 +22405,32 @@ build ${entryPointKeys.length} entry points`);
   return stopWatchingSourceFiles;
 };
 
+const WEB_URL_CONVERTER = {
+  asWebUrl: (fileUrl, webServer) => {
+    if (urlIsInsideOf(fileUrl, webServer.rootDirectoryUrl)) {
+      return moveUrl({
+        url: fileUrl,
+        from: webServer.rootDirectoryUrl,
+        to: `${webServer.origin}/`,
+      });
+    }
+    const fsRootUrl = ensureWindowsDriveLetter("file:///", fileUrl);
+    return `${webServer.origin}/@fs/${fileUrl.slice(fsRootUrl.length)}`;
+  },
+  asFileUrl: (webUrl, webServer) => {
+    const { pathname, search } = new URL(webUrl);
+    if (pathname.startsWith("/@fs/")) {
+      const fsRootRelativeUrl = pathname.slice("/@fs/".length);
+      return `file:///${fsRootRelativeUrl}${search}`;
+    }
+    return moveUrl({
+      url: webUrl,
+      from: `${webServer.origin}/`,
+      to: webServer.rootDirectoryUrl,
+    });
+  },
+};
+
 /*
  * This plugin is very special because it is here
  * to provide "serverEvents" used by other plugins
@@ -22556,6 +22464,101 @@ const jsenvPluginServerEventsClientInjection = ({ logs = true }) => {
         });
         return stringifyHtmlAst(htmlAst);
       },
+    },
+  };
+};
+
+const createServerEventsDispatcher = () => {
+  const clients = [];
+  const MAX_CLIENTS = 100;
+
+  const addClient = (client) => {
+    clients.push(client);
+    if (clients.length >= MAX_CLIENTS) {
+      const firstClient = clients.shift();
+      firstClient.close();
+    }
+    const removeClient = () => {
+      const index = clients.indexOf(client);
+      if (index > -1) {
+        clients.splice(index, 1);
+      }
+    };
+    client.onclose = () => {
+      removeClient();
+    };
+    return () => {
+      client.close();
+    };
+  };
+
+  return {
+    addWebsocket: (websocket, request) => {
+      const client = {
+        request,
+        getReadystate: () => {
+          return websocket.readyState;
+        },
+        sendEvent: (event) => {
+          websocket.send(JSON.stringify(event));
+        },
+        close: (reason) => {
+          const closePromise = new Promise((resolve, reject) => {
+            websocket.onclose = () => {
+              websocket.onclose = null;
+              websocket.onerror = null;
+              resolve();
+            };
+            websocket.onerror = (e) => {
+              websocket.onclose = null;
+              websocket.onerror = null;
+              reject(e);
+            };
+          });
+          websocket.close(reason);
+          return closePromise;
+        },
+        destroy: () => {
+          websocket.terminate();
+        },
+      };
+      client.sendEvent({ type: "welcome" });
+      websocket.onclose = () => {
+        client.onclose();
+      };
+      client.onclose = () => {};
+      return addClient(client);
+    },
+    // we could add "addEventSource" and let clients connect using
+    // new WebSocket or new EventSource
+    // in practice the new EventSource won't be used
+    // so "serverEventsDispatcher.addEventSource" is not implemented
+    // addEventSource: (request) => {},
+    dispatch: (event) => {
+      clients.forEach((client) => {
+        if (client.getReadystate() === 1) {
+          client.sendEvent(event);
+        }
+      });
+    },
+    dispatchToClientsMatching: (event, predicate) => {
+      clients.forEach((client) => {
+        if (client.getReadystate() === 1 && predicate(client)) {
+          client.sendEvent(event);
+        }
+      });
+    },
+    close: async (reason) => {
+      await Promise.all(
+        clients.map(async (client) => {
+          await client.close(reason);
+        }),
+      );
+    },
+    destroy: () => {
+      clients.forEach((client) => {
+        client.destroy();
+      });
     },
   };
 };

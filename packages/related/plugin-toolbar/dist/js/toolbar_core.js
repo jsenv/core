@@ -798,68 +798,140 @@ E(() => {
   }
 });
 
-const sendEventToParent = (name, data) => {
-  window.parent.postMessage({
-    __jsenv__: {
-      event: name,
-      data
-    }
-  }, "*");
+const changesTooltipOpenedSignal = d$1(false);
+
+const openChangesToolip = () => {
+  changesTooltipOpenedSignal.value = true;
 };
-const addExternalCommandCallback = (command, callback) => {
-  const messageEventCallback = messageEvent => {
-    const {
-      data
-    } = messageEvent;
-    if (typeof data !== "object") {
-      return;
-    }
-    const {
-      __jsenv__
-    } = data;
-    if (!__jsenv__) {
-      return;
-    }
-    if (__jsenv__.command !== command) {
-      return;
-    }
-    callback(...__jsenv__.args);
-  };
-  window.addEventListener("message", messageEventCallback);
-  return () => {
-    window.removeEventListener("message", messageEventCallback);
-  };
-};
-const enableAutoreload = () => {
-  parentWindowReloader.autoreload.enable();
-};
-const disableAutoreload = () => {
-  parentWindowReloader.autoreload.disable();
+const closeChangesToolip = () => {
+  changesTooltipOpenedSignal.value = false;
 };
 
-const serverTooltipOpenedSignal = d$1(false);
-const serverConnectionSignal = d$1("default");
-const serverEvents$1 = window.__server_events__;
-if (serverEvents$1) {
-  serverEvents$1.readyState.onchange = () => {
-    serverConnectionSignal.value = serverEvents$1.readyState.value;
+const autoreloadEnabledSignal = d$1(false);
+const reloaderStatusSignal = d$1("idle");
+const changesSignal = d$1(0);
+if (parentWindowReloader) {
+  autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
+  parentWindowReloader.autoreload.onchange = () => {
+    autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
   };
-  serverConnectionSignal.value = serverEvents$1.readyState.value;
+  reloaderStatusSignal.value = parentWindowReloader.status.value;
+  const onchange = parentWindowReloader.status.onchange;
+  parentWindowReloader.status.onchange = () => {
+    onchange();
+    reloaderStatusSignal.value = parentWindowReloader.status.value;
+  };
+  changesSignal.value = parentWindowReloader.changes.value;
+  parentWindowReloader.changes.onchange = () => {
+    changesSignal.value = [...parentWindowReloader.changes.value];
+  };
 }
 
-const openServerTooltip = () => {
-  serverTooltipOpenedSignal.value = true;
+const enableVariant = (rootNode, variables) => {
+  const nodesNotMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingACondition, "]")));
+  nodesNotMatching.forEach(nodeNotMatching => {
+    const conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition);
+    const matches = testCondition(conditionAttributeValue, variables);
+    if (matches) {
+      renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch);
+    }
+  });
+  const nodesMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingAMatch, "]")));
+  nodesMatching.forEach(nodeMatching => {
+    const conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch);
+    const matches = testCondition(conditionAttributeValue, variables);
+    if (!matches) {
+      renameAttribute(nodeMatching, attributeIndicatingAMatch, attributeIndicatingACondition);
+    }
+  });
 };
-const closeServerTooltip = () => {
-  serverTooltipOpenedSignal.value = false;
+const testCondition = (conditionAttributeValue, variables) => {
+  const condition = parseCondition(conditionAttributeValue);
+  return Object.keys(variables).some(key => {
+    if (condition.key !== key) {
+      return false;
+    }
+    // the condition do not specify a value, any value is ok
+    if (condition.value === undefined) {
+      return true;
+    }
+    if (condition.value === variables[key]) {
+      return true;
+    }
+    return false;
+  });
+};
+const parseCondition = conditionAttributeValue => {
+  const colonIndex = conditionAttributeValue.indexOf(":");
+  if (colonIndex === -1) {
+    return {
+      key: conditionAttributeValue,
+      value: undefined
+    };
+  }
+  return {
+    key: conditionAttributeValue.slice(0, colonIndex),
+    value: conditionAttributeValue.slice(colonIndex + 1)
+  };
+};
+const attributeIndicatingACondition = "data-when";
+const attributeIndicatingAMatch = "data-when-active";
+const renameAttribute = (node, name, newName) => {
+  node.setAttribute(newName, node.getAttribute(name));
+  node.removeAttribute(name);
 };
 
-const closeAllTooltips = () => {
-  closeExecutionTooltip();
-  closeServerTooltip();
+const changesIndicator = document.querySelector("#changes_indicator");
+const renderChangesIndicator = () => {
+  E(() => {
+    const autoreloadEnabled = autoreloadEnabledSignal.value;
+    const changes = changesSignal.value;
+    const changeCount = changes.length;
+    enableVariant(changesIndicator, {
+      changes: !autoreloadEnabled && changeCount ? "yes" : "no"
+    });
+    if (changeCount) {
+      changesIndicator.querySelector(".tooltip_text").innerHTML = computeTooltipText({
+        changes
+      });
+      changesIndicator.querySelector(".tooltip_text a").onclick = () => {
+        // eslint-disable-next-line no-alert
+        window.alert(JSON.stringify(changes, null, "  "));
+        console.log(changes);
+      };
+      changesIndicator.querySelector(".changes_text").innerHTML = changeCount;
+    }
+  });
+  changesIndicator.querySelector(".tooltip_action").onclick = () => {
+    parentWindowReloader.reload();
+  };
+  E(() => {
+    const changesTooltipOpened = changesTooltipOpenedSignal.value;
+    if (changesTooltipOpened) {
+      changesIndicator.setAttribute("data-tooltip-visible", "");
+    } else {
+      changesIndicator.removeAttribute("data-tooltip-visible");
+    }
+  });
+  const button = changesIndicator.querySelector("button");
+  button.onclick = () => {
+    const changesTooltipOpened = changesTooltipOpenedSignal.value;
+    if (changesTooltipOpened) {
+      closeChangesToolip();
+    } else {
+      openChangesToolip();
+    }
+  };
 };
-
-const openedSignal = d$1(typeof stateFromLocalStorage.opened === "boolean" ? stateFromLocalStorage.opened : typeof paramsFromParentWindow.opened === "boolean" ? paramsFromParentWindow.opened : false);
+const computeTooltipText = ({
+  changes
+}) => {
+  const changesCount = changes.length;
+  if (changesCount === 1) {
+    return "There is <a href=\"javascript:void(0)\">1</a> change to apply";
+  }
+  return "There is  <a href=\"javascript:void(0)\">".concat(changesCount, "<a> changes to apply");
+};
 
 const getToolbarIframe = () => {
   const iframes = Array.from(window.parent.document.querySelectorAll("iframe"));
@@ -899,114 +971,169 @@ const deactivateToolbarSection = element => {
   element.removeAttribute("data-active");
 };
 
-const startJavaScriptAnimation = ({
-  duration = 300,
-  timingFunction = t => t,
-  onProgress = () => {},
-  onCancel = () => {},
-  onComplete = () => {}
-}) => {
-  if (isNaN(duration)) {
-    // console.warn(`duration must be a number, received ${duration}`)
-    return () => {};
-  }
-  duration = parseInt(duration, 10);
-  const startMs = performance.now();
-  let currentRequestAnimationFrameId;
-  let done = false;
-  let rawProgress = 0;
-  let progress = 0;
-  const handler = () => {
-    currentRequestAnimationFrameId = null;
-    const nowMs = performance.now();
-    rawProgress = Math.min((nowMs - startMs) / duration, 1);
-    progress = timingFunction(rawProgress);
-    done = rawProgress === 1;
-    onProgress({
-      done,
-      rawProgress,
-      progress
-    });
-    if (done) {
-      onComplete();
-    } else {
-      currentRequestAnimationFrameId = window.requestAnimationFrame(handler);
-    }
-  };
-  handler();
-  const stop = () => {
-    if (currentRequestAnimationFrameId) {
-      window.cancelAnimationFrame(currentRequestAnimationFrameId);
-      currentRequestAnimationFrameId = null;
-    }
-    if (!done) {
-      done = true;
-      onCancel({
-        rawProgress,
-        progress
-      });
-    }
-  };
-  return stop;
-};
-
-const initToolbarOpening = () => {
+const executionIndicator = document.querySelector("#document_execution_indicator");
+const renderDocumentExecutionIndicator = async () => {
+  removeForceHideElement(document.querySelector("#document_execution_indicator"));
   E(() => {
-    const opened = openedSignal.value;
-    if (opened) {
-      showToolbar();
+    const execution = executionSignal.value;
+    updateExecutionIndicator(execution);
+  });
+  E(() => {
+    const executionTooltipOpened = executionTooltipOpenedSignal.value;
+    if (executionTooltipOpened) {
+      executionIndicator.setAttribute("data-tooltip-visible", "");
     } else {
-      hideToolbar();
+      executionIndicator.removeAttribute("data-tooltip-visible");
     }
   });
 };
-let restoreToolbarIframeParentStyles = () => {};
-let restoreToolbarIframeStyles = () => {};
-const hideToolbar = () => {
-  closeAllTooltips();
-  restoreToolbarIframeParentStyles();
-  restoreToolbarIframeStyles();
-  document.documentElement.removeAttribute("data-toolbar-visible");
+const updateExecutionIndicator = ({
+  status,
+  startTime,
+  endTime
+} = {}) => {
+  enableVariant(executionIndicator, {
+    execution: status
+  });
+  const variantNode = executionIndicator.querySelector("[data-when-active]");
+  variantNode.querySelector("button").onclick = () => {
+    const executionTooltipOpened = executionTooltipOpenedSignal.value;
+    if (executionTooltipOpened) {
+      closeExecutionTooltip();
+    } else {
+      openExecutionTooltip();
+    }
+  };
+  variantNode.querySelector(".tooltip").textContent = computeText({
+    status,
+    startTime,
+    endTime
+  });
 };
 
-// (by the way it might be cool to have the toolbar auto show when)
-// it has something to say (being disconnected from server)
-const showToolbar = () => {
-  const animationsEnabled = animationsEnabledSignal.peek();
-  document.documentElement.setAttribute("data-toolbar-visible", "");
-  const toolbarIframe = getToolbarIframe();
-  const toolbarIframeParent = toolbarIframe.parentNode;
-  const parentWindow = window.parent;
-  const parentDocumentElement = parentWindow.document.compatMode === "CSS1Compat" ? parentWindow.document.documentElement : parentWindow.document.body;
-  const scrollYMax = parentDocumentElement.scrollHeight - parentWindow.innerHeight;
-  const scrollY = parentDocumentElement.scrollTop;
-  const scrollYRemaining = scrollYMax - scrollY;
-  setStyles(toolbarIframeParent, {
-    "transition-property": "padding-bottom",
-    "transition-duration": animationsEnabled ? "300ms" : "0s"
-  });
-  // maybe we should use js animation here because we would not conflict with css
-  restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
-    "scroll-padding-bottom": "40px",
-    // same here we should add 40px
-    "padding-bottom": "40px" // if there is already one we should add 40px
-  });
-  restoreToolbarIframeStyles = setStyles(toolbarIframe, {
-    height: "40px",
-    visibility: "visible"
-  });
-  if (scrollYRemaining < 40 && scrollYMax > 0) {
-    const scrollEnd = scrollY + 40;
-    startJavaScriptAnimation({
-      duration: 300,
-      onProgress: ({
-        progress
-      }) => {
-        const value = scrollY + (scrollEnd - scrollY) * progress;
-        parentDocumentElement.scrollTop = value;
-      }
-    });
+// relative time: https://github.com/tc39/proposal-intl-relative-time/issues/118
+const computeText = ({
+  status,
+  startTime,
+  endTime
+}) => {
+  if (status === "completed") {
+    return "Execution completed in ".concat(endTime - startTime, "ms");
   }
+  if (status === "failed") {
+    return "Execution failed in ".concat(endTime - startTime, "ms");
+  }
+  if (status === "running") {
+    return "Executing...";
+  }
+  return "";
+};
+
+const setLinkHrefForParentWindow = (a, href) => {
+  a.href = href;
+  a.onclick = e => {
+    if (e.ctrlKey || e.metaKey) {
+      return;
+    }
+    e.preventDefault();
+    window.parent.location.href = href;
+  };
+};
+
+const renderDocumentIndexLink = () => {
+  setLinkHrefForParentWindow(document.querySelector("#document_index_link"), "/");
+};
+
+const serverTooltipOpenedSignal = d$1(false);
+const serverConnectionSignal = d$1("default");
+const serverEvents$1 = window.__server_events__;
+if (serverEvents$1) {
+  serverEvents$1.readyState.onchange = () => {
+    serverConnectionSignal.value = serverEvents$1.readyState.value;
+  };
+  serverConnectionSignal.value = serverEvents$1.readyState.value;
+}
+
+const openServerTooltip = () => {
+  serverTooltipOpenedSignal.value = true;
+};
+const closeServerTooltip = () => {
+  serverTooltipOpenedSignal.value = false;
+};
+
+const parentServerEvents = window.parent.__server_events__;
+const serverEvents = window.__server_events__;
+const serverIndicator = document.querySelector("#server_indicator");
+const renderServerIndicator = () => {
+  removeForceHideElement(document.querySelector("#server_indicator"));
+  E(() => {
+    const serverConnection = serverConnectionSignal.value;
+    updateServerIndicator(serverConnection);
+  });
+  E(() => {
+    const serverTooltipOpened = serverTooltipOpenedSignal.value;
+    if (serverTooltipOpened) {
+      serverIndicator.setAttribute("data-tooltip-visible", "");
+    } else {
+      serverIndicator.removeAttribute("data-tooltip-visible");
+    }
+  });
+};
+const updateServerIndicator = connectionState => {
+  enableVariant(serverIndicator, {
+    connectionState
+  });
+  const variantNode = document.querySelector("#server_indicator > [data-when-active]");
+  variantNode.querySelector("button").onclick = () => {
+    const serverTooltipOpened = serverTooltipOpenedSignal.value;
+    if (serverTooltipOpened) {
+      closeServerTooltip();
+    } else {
+      openServerTooltip();
+    }
+  };
+  if (connectionState === "connecting") {
+    variantNode.querySelector("a").onclick = () => {
+      if (parentServerEvents) {
+        parentServerEvents.disconnect();
+      }
+      serverEvents.disconnect();
+    };
+  } else if (connectionState === "closed") {
+    variantNode.querySelector("a").onclick = () => {
+      if (parentServerEvents) {
+        parentServerEvents.connect();
+      }
+      serverEvents.connect();
+    };
+  }
+};
+
+const openedSignal = d$1(typeof stateFromLocalStorage.opened === "boolean" ? stateFromLocalStorage.opened : typeof paramsFromParentWindow.opened === "boolean" ? paramsFromParentWindow.opened : false);
+
+const openToolbar = () => {
+  openedSignal.value = true;
+};
+const closeToolbar = () => {
+  openedSignal.value = false;
+};
+
+const renderToolbarCloseButton = () => {
+  // if user click enter or space quickly while closing toolbar
+  // it will cancel the closing
+  // that's why I used toggleToolbar and not hideToolbar
+  document.querySelector("#toolbar_close_button").onclick = () => {
+    if (openedSignal.value) {
+      closeToolbar();
+    } else {
+      openToolbar();
+    }
+  };
+};
+
+const closeAllTooltips = () => {
+  closeExecutionTooltip();
+  closeServerTooltip();
 };
 
 const createHorizontalBreakpoint = breakpointValue => {
@@ -1193,6 +1320,116 @@ const closeOverflowMenu = () => {
   document.querySelector("#menu_overflow").removeAttribute("data-animate");
 };
 
+const startJavaScriptAnimation = ({
+  duration = 300,
+  timingFunction = t => t,
+  onProgress = () => {},
+  onCancel = () => {},
+  onComplete = () => {}
+}) => {
+  if (isNaN(duration)) {
+    // console.warn(`duration must be a number, received ${duration}`)
+    return () => {};
+  }
+  duration = parseInt(duration, 10);
+  const startMs = performance.now();
+  let currentRequestAnimationFrameId;
+  let done = false;
+  let rawProgress = 0;
+  let progress = 0;
+  const handler = () => {
+    currentRequestAnimationFrameId = null;
+    const nowMs = performance.now();
+    rawProgress = Math.min((nowMs - startMs) / duration, 1);
+    progress = timingFunction(rawProgress);
+    done = rawProgress === 1;
+    onProgress({
+      done,
+      rawProgress,
+      progress
+    });
+    if (done) {
+      onComplete();
+    } else {
+      currentRequestAnimationFrameId = window.requestAnimationFrame(handler);
+    }
+  };
+  handler();
+  const stop = () => {
+    if (currentRequestAnimationFrameId) {
+      window.cancelAnimationFrame(currentRequestAnimationFrameId);
+      currentRequestAnimationFrameId = null;
+    }
+    if (!done) {
+      done = true;
+      onCancel({
+        rawProgress,
+        progress
+      });
+    }
+  };
+  return stop;
+};
+
+const initToolbarOpening = () => {
+  E(() => {
+    const opened = openedSignal.value;
+    if (opened) {
+      showToolbar();
+    } else {
+      hideToolbar();
+    }
+  });
+};
+let restoreToolbarIframeParentStyles = () => {};
+let restoreToolbarIframeStyles = () => {};
+const hideToolbar = () => {
+  closeAllTooltips();
+  restoreToolbarIframeParentStyles();
+  restoreToolbarIframeStyles();
+  document.documentElement.removeAttribute("data-toolbar-visible");
+};
+
+// (by the way it might be cool to have the toolbar auto show when)
+// it has something to say (being disconnected from server)
+const showToolbar = () => {
+  const animationsEnabled = animationsEnabledSignal.peek();
+  document.documentElement.setAttribute("data-toolbar-visible", "");
+  const toolbarIframe = getToolbarIframe();
+  const toolbarIframeParent = toolbarIframe.parentNode;
+  const parentWindow = window.parent;
+  const parentDocumentElement = parentWindow.document.compatMode === "CSS1Compat" ? parentWindow.document.documentElement : parentWindow.document.body;
+  const scrollYMax = parentDocumentElement.scrollHeight - parentWindow.innerHeight;
+  const scrollY = parentDocumentElement.scrollTop;
+  const scrollYRemaining = scrollYMax - scrollY;
+  setStyles(toolbarIframeParent, {
+    "transition-property": "padding-bottom",
+    "transition-duration": animationsEnabled ? "300ms" : "0s"
+  });
+  // maybe we should use js animation here because we would not conflict with css
+  restoreToolbarIframeParentStyles = setStyles(toolbarIframeParent, {
+    "scroll-padding-bottom": "40px",
+    // same here we should add 40px
+    "padding-bottom": "40px" // if there is already one we should add 40px
+  });
+  restoreToolbarIframeStyles = setStyles(toolbarIframe, {
+    height: "40px",
+    visibility: "visible"
+  });
+  if (scrollYRemaining < 40 && scrollYMax > 0) {
+    const scrollEnd = scrollY + 40;
+    startJavaScriptAnimation({
+      duration: 300,
+      onProgress: ({
+        progress
+      }) => {
+        const value = scrollY + (scrollEnd - scrollY) * progress;
+        parentDocumentElement.scrollTop = value;
+      }
+    });
+  }
+};
+
 const settingsOpenedSignal = d$1(false);
 
 const openSettings = () => {
@@ -1201,8 +1438,6 @@ const openSettings = () => {
 const closeSettings = () => {
   settingsOpenedSignal.value = false;
 };
-
-const changesTooltipOpenedSignal = d$1(false);
 
 const renderToolbarOverlay = () => {
   const toolbarOverlay = document.querySelector("#toolbar_overlay");
@@ -1265,258 +1500,69 @@ const disableIframeOverflowOnParentWindow = () => {
   }
 };
 
-const setLinkHrefForParentWindow = (a, href) => {
-  a.href = href;
-  a.onclick = e => {
-    if (e.ctrlKey || e.metaKey) {
+const enableAnimations = () => {
+  animationsEnabledSignal.value = true;
+};
+const disableAnimations = () => {
+  animationsEnabledSignal.value = false;
+};
+
+const renderToolbarAnimationSetting = () => {
+  const animCheckbox = document.querySelector("#toggle_anims");
+  E(() => {
+    const animationsEnabled = animationsEnabledSignal.value;
+    animCheckbox.checked = animationsEnabled;
+  });
+  animCheckbox.onchange = () => {
+    if (animCheckbox.checked) {
+      enableAnimations();
+    } else {
+      disableAnimations();
+    }
+  };
+  // enable toolbar transition only after first render
+  setTimeout(() => {
+    document.querySelector("#toolbar").setAttribute("data-animate", "");
+  });
+};
+
+const sendEventToParent = (name, data) => {
+  window.parent.postMessage({
+    __jsenv__: {
+      event: name,
+      data
+    }
+  }, "*");
+};
+const addExternalCommandCallback = (command, callback) => {
+  const messageEventCallback = messageEvent => {
+    const {
+      data
+    } = messageEvent;
+    if (typeof data !== "object") {
       return;
     }
-    e.preventDefault();
-    window.parent.location.href = href;
+    const {
+      __jsenv__
+    } = data;
+    if (!__jsenv__) {
+      return;
+    }
+    if (__jsenv__.command !== command) {
+      return;
+    }
+    callback(...__jsenv__.args);
+  };
+  window.addEventListener("message", messageEventCallback);
+  return () => {
+    window.removeEventListener("message", messageEventCallback);
   };
 };
-
-const renderDocumentIndexLink = () => {
-  setLinkHrefForParentWindow(document.querySelector("#document_index_link"), "/");
+const enableAutoreload = () => {
+  parentWindowReloader.autoreload.enable();
 };
-
-const enableVariant = (rootNode, variables) => {
-  const nodesNotMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingACondition, "]")));
-  nodesNotMatching.forEach(nodeNotMatching => {
-    const conditionAttributeValue = nodeNotMatching.getAttribute(attributeIndicatingACondition);
-    const matches = testCondition(conditionAttributeValue, variables);
-    if (matches) {
-      renameAttribute(nodeNotMatching, attributeIndicatingACondition, attributeIndicatingAMatch);
-    }
-  });
-  const nodesMatching = Array.from(rootNode.querySelectorAll("[".concat(attributeIndicatingAMatch, "]")));
-  nodesMatching.forEach(nodeMatching => {
-    const conditionAttributeValue = nodeMatching.getAttribute(attributeIndicatingAMatch);
-    const matches = testCondition(conditionAttributeValue, variables);
-    if (!matches) {
-      renameAttribute(nodeMatching, attributeIndicatingAMatch, attributeIndicatingACondition);
-    }
-  });
-};
-const testCondition = (conditionAttributeValue, variables) => {
-  const condition = parseCondition(conditionAttributeValue);
-  return Object.keys(variables).some(key => {
-    if (condition.key !== key) {
-      return false;
-    }
-    // the condition do not specify a value, any value is ok
-    if (condition.value === undefined) {
-      return true;
-    }
-    if (condition.value === variables[key]) {
-      return true;
-    }
-    return false;
-  });
-};
-const parseCondition = conditionAttributeValue => {
-  const colonIndex = conditionAttributeValue.indexOf(":");
-  if (colonIndex === -1) {
-    return {
-      key: conditionAttributeValue,
-      value: undefined
-    };
-  }
-  return {
-    key: conditionAttributeValue.slice(0, colonIndex),
-    value: conditionAttributeValue.slice(colonIndex + 1)
-  };
-};
-const attributeIndicatingACondition = "data-when";
-const attributeIndicatingAMatch = "data-when-active";
-const renameAttribute = (node, name, newName) => {
-  node.setAttribute(newName, node.getAttribute(name));
-  node.removeAttribute(name);
-};
-
-const executionIndicator = document.querySelector("#document_execution_indicator");
-const renderDocumentExecutionIndicator = async () => {
-  removeForceHideElement(document.querySelector("#document_execution_indicator"));
-  E(() => {
-    const execution = executionSignal.value;
-    updateExecutionIndicator(execution);
-  });
-  E(() => {
-    const executionTooltipOpened = executionTooltipOpenedSignal.value;
-    if (executionTooltipOpened) {
-      executionIndicator.setAttribute("data-tooltip-visible", "");
-    } else {
-      executionIndicator.removeAttribute("data-tooltip-visible");
-    }
-  });
-};
-const updateExecutionIndicator = ({
-  status,
-  startTime,
-  endTime
-} = {}) => {
-  enableVariant(executionIndicator, {
-    execution: status
-  });
-  const variantNode = executionIndicator.querySelector("[data-when-active]");
-  variantNode.querySelector("button").onclick = () => {
-    const executionTooltipOpened = executionTooltipOpenedSignal.value;
-    if (executionTooltipOpened) {
-      closeExecutionTooltip();
-    } else {
-      openExecutionTooltip();
-    }
-  };
-  variantNode.querySelector(".tooltip").textContent = computeText({
-    status,
-    startTime,
-    endTime
-  });
-};
-
-// relative time: https://github.com/tc39/proposal-intl-relative-time/issues/118
-const computeText = ({
-  status,
-  startTime,
-  endTime
-}) => {
-  if (status === "completed") {
-    return "Execution completed in ".concat(endTime - startTime, "ms");
-  }
-  if (status === "failed") {
-    return "Execution failed in ".concat(endTime - startTime, "ms");
-  }
-  if (status === "running") {
-    return "Executing...";
-  }
-  return "";
-};
-
-const autoreloadEnabledSignal = d$1(false);
-const reloaderStatusSignal = d$1("idle");
-const changesSignal = d$1(0);
-if (parentWindowReloader) {
-  autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
-  parentWindowReloader.autoreload.onchange = () => {
-    autoreloadEnabledSignal.value = parentWindowReloader.autoreload.enabled;
-  };
-  reloaderStatusSignal.value = parentWindowReloader.status.value;
-  const onchange = parentWindowReloader.status.onchange;
-  parentWindowReloader.status.onchange = () => {
-    onchange();
-    reloaderStatusSignal.value = parentWindowReloader.status.value;
-  };
-  changesSignal.value = parentWindowReloader.changes.value;
-  parentWindowReloader.changes.onchange = () => {
-    changesSignal.value = [...parentWindowReloader.changes.value];
-  };
-}
-
-const openChangesToolip = () => {
-  changesTooltipOpenedSignal.value = true;
-};
-const closeChangesToolip = () => {
-  changesTooltipOpenedSignal.value = false;
-};
-
-const changesIndicator = document.querySelector("#changes_indicator");
-const renderChangesIndicator = () => {
-  E(() => {
-    const autoreloadEnabled = autoreloadEnabledSignal.value;
-    const changes = changesSignal.value;
-    const changeCount = changes.length;
-    enableVariant(changesIndicator, {
-      changes: !autoreloadEnabled && changeCount ? "yes" : "no"
-    });
-    if (changeCount) {
-      changesIndicator.querySelector(".tooltip_text").innerHTML = computeTooltipText({
-        changes
-      });
-      changesIndicator.querySelector(".tooltip_text a").onclick = () => {
-        // eslint-disable-next-line no-alert
-        window.alert(JSON.stringify(changes, null, "  "));
-        console.log(changes);
-      };
-      changesIndicator.querySelector(".changes_text").innerHTML = changeCount;
-    }
-  });
-  changesIndicator.querySelector(".tooltip_action").onclick = () => {
-    parentWindowReloader.reload();
-  };
-  E(() => {
-    const changesTooltipOpened = changesTooltipOpenedSignal.value;
-    if (changesTooltipOpened) {
-      changesIndicator.setAttribute("data-tooltip-visible", "");
-    } else {
-      changesIndicator.removeAttribute("data-tooltip-visible");
-    }
-  });
-  const button = changesIndicator.querySelector("button");
-  button.onclick = () => {
-    const changesTooltipOpened = changesTooltipOpenedSignal.value;
-    if (changesTooltipOpened) {
-      closeChangesToolip();
-    } else {
-      openChangesToolip();
-    }
-  };
-};
-const computeTooltipText = ({
-  changes
-}) => {
-  const changesCount = changes.length;
-  if (changesCount === 1) {
-    return "There is <a href=\"javascript:void(0)\">1</a> change to apply";
-  }
-  return "There is  <a href=\"javascript:void(0)\">".concat(changesCount, "<a> changes to apply");
-};
-
-const parentServerEvents = window.parent.__server_events__;
-const serverEvents = window.__server_events__;
-const serverIndicator = document.querySelector("#server_indicator");
-const renderServerIndicator = () => {
-  removeForceHideElement(document.querySelector("#server_indicator"));
-  E(() => {
-    const serverConnection = serverConnectionSignal.value;
-    updateServerIndicator(serverConnection);
-  });
-  E(() => {
-    const serverTooltipOpened = serverTooltipOpenedSignal.value;
-    if (serverTooltipOpened) {
-      serverIndicator.setAttribute("data-tooltip-visible", "");
-    } else {
-      serverIndicator.removeAttribute("data-tooltip-visible");
-    }
-  });
-};
-const updateServerIndicator = connectionState => {
-  enableVariant(serverIndicator, {
-    connectionState
-  });
-  const variantNode = document.querySelector("#server_indicator > [data-when-active]");
-  variantNode.querySelector("button").onclick = () => {
-    const serverTooltipOpened = serverTooltipOpenedSignal.value;
-    if (serverTooltipOpened) {
-      closeServerTooltip();
-    } else {
-      openServerTooltip();
-    }
-  };
-  if (connectionState === "connecting") {
-    variantNode.querySelector("a").onclick = () => {
-      if (parentServerEvents) {
-        parentServerEvents.disconnect();
-      }
-      serverEvents.disconnect();
-    };
-  } else if (connectionState === "closed") {
-    variantNode.querySelector("a").onclick = () => {
-      if (parentServerEvents) {
-        parentServerEvents.connect();
-      }
-      serverEvents.connect();
-    };
-  }
+const disableAutoreload = () => {
+  parentWindowReloader.autoreload.disable();
 };
 
 const renderToolbarAutoreloadSetting = () => {
@@ -1583,32 +1629,6 @@ const disableAutoreloadSetting = () => {
 //   parentEventSourceClient.setAutoreloadPreference(autoreloadCheckbox.checked)
 //   updateEventSourceIndicator()
 // }
-
-const enableAnimations = () => {
-  animationsEnabledSignal.value = true;
-};
-const disableAnimations = () => {
-  animationsEnabledSignal.value = false;
-};
-
-const renderToolbarAnimationSetting = () => {
-  const animCheckbox = document.querySelector("#toggle_anims");
-  E(() => {
-    const animationsEnabled = animationsEnabledSignal.value;
-    animCheckbox.checked = animationsEnabled;
-  });
-  animCheckbox.onchange = () => {
-    if (animCheckbox.checked) {
-      enableAnimations();
-    } else {
-      disableAnimations();
-    }
-  };
-  // enable toolbar transition only after first render
-  setTimeout(() => {
-    document.querySelector("#toolbar").setAttribute("data-animate", "");
-  });
-};
 
 const notifCheckbox = document.querySelector("#toggle_notifs");
 const renderToolbarNotificationSetting = () => {
@@ -1678,27 +1698,6 @@ const applyNotificationNOTGrantedEffects = () => {
   };
 };
 
-const themeSignal = d$1(typeof stateFromLocalStorage.theme === "string" ? stateFromLocalStorage.theme : typeof paramsFromParentWindow.theme === "string" ? paramsFromParentWindow.theme : "dark");
-
-const switchToLightTheme = () => {
-  themeSignal.value = "light";
-};
-const switchToDefaultTheme = () => {
-  themeSignal.value = "dark";
-};
-
-const renderToolbarThemeSetting = () => {
-  const checkbox = document.querySelector("#checkbox_dark_theme");
-  checkbox.checked = themeSignal.value === "dark";
-  checkbox.onchange = () => {
-    if (checkbox.checked) {
-      switchToDefaultTheme();
-    } else {
-      switchToLightTheme();
-    }
-  };
-};
-
 const ribbonDisplayedSignal = d$1(typeof stateFromLocalStorage.ribbonDisplayed === "boolean" ? stateFromLocalStorage.ribbonDisplayed : true);
 
 const ribbonBox = document.querySelector("#ribbon_box");
@@ -1724,6 +1723,27 @@ const renderToolbarRibbonSetting = () => {
       }
     };
   }
+};
+
+const themeSignal = d$1(typeof stateFromLocalStorage.theme === "string" ? stateFromLocalStorage.theme : typeof paramsFromParentWindow.theme === "string" ? paramsFromParentWindow.theme : "dark");
+
+const switchToLightTheme = () => {
+  themeSignal.value = "light";
+};
+const switchToDefaultTheme = () => {
+  themeSignal.value = "dark";
+};
+
+const renderToolbarThemeSetting = () => {
+  const checkbox = document.querySelector("#checkbox_dark_theme");
+  checkbox.checked = themeSignal.value === "dark";
+  checkbox.onchange = () => {
+    if (checkbox.checked) {
+      switchToDefaultTheme();
+    } else {
+      switchToLightTheme();
+    }
+  };
 };
 
 const renderToolbarSettings = () => {
@@ -1756,26 +1776,6 @@ const disableWarningStyle = () => {
   enableVariant(document.querySelector("#settings_open_button"), {
     has_warning: "no"
   });
-};
-
-const openToolbar = () => {
-  openedSignal.value = true;
-};
-const closeToolbar = () => {
-  openedSignal.value = false;
-};
-
-const renderToolbarCloseButton = () => {
-  // if user click enter or space quickly while closing toolbar
-  // it will cancel the closing
-  // that's why I used toggleToolbar and not hideToolbar
-  document.querySelector("#toolbar_close_button").onclick = () => {
-    if (openedSignal.value) {
-      closeToolbar();
-    } else {
-      openToolbar();
-    }
-  };
 };
 
 const initToolbarUI = () => {

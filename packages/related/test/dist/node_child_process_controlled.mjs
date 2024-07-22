@@ -2,8 +2,8 @@ import { memoryUsage } from "node:process";
 import { createException } from "./js/exception.js";
 import { executeUsingDynamicImport } from "./js/execute_using_dynamic_import.js";
 import "node:fs";
-import "node:inspector";
 import "node:perf_hooks";
+import "node:inspector";
 
 let memoryHeapUsedAtStart;
 if (process.env.MEASURE_MEMORY_AT_START) {

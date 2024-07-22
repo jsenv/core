@@ -888,7 +888,8 @@ const inspectStringObject = (
   return inspectConstructor(`String(${stringSource})`, { useNew, parenthesis });
 };
 
-// primitives
+// tslint:disable:ordered-imports
+
 
 const humanize = (
   value,

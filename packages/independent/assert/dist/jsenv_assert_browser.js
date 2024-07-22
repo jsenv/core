@@ -1,22 +1,3 @@
-function ansiRegex({
-  onlyFirst = false
-} = {}) {
-  const pattern = ['[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)', '(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))'].join('|');
-  return new RegExp(pattern, onlyFirst ? undefined : 'g');
-}
-
-const regex = ansiRegex();
-function stripAnsi(string) {
-  if (typeof string !== 'string') {
-    throw new TypeError("Expected a `string`, got `".concat(typeof string, "`"));
-  }
-
-  // Even though the regex is global, we don't need to reset the `.lastIndex`
-  // because unlike `.exec()` and `.test()`, `.replace()` does it automatically
-  // and doing it manually has a performance penalty.
-  return string.replace(regex, '');
-}
-
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
@@ -132,6 +113,87 @@ const UNICODE = createUnicode({
   ANSI
 });
 
+function ansiRegex({
+  onlyFirst = false
+} = {}) {
+  const pattern = ['[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)', '(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))'].join('|');
+  return new RegExp(pattern, onlyFirst ? undefined : 'g');
+}
+
+const regex = ansiRegex();
+function stripAnsi(string) {
+  if (typeof string !== 'string') {
+    throw new TypeError("Expected a `string`, got `".concat(typeof string, "`"));
+  }
+
+  // Even though the regex is global, we don't need to reset the `.lastIndex`
+  // because unlike `.exec()` and `.test()`, `.replace()` does it automatically
+  // and doing it manually has a performance penalty.
+  return string.replace(regex, '');
+}
+
+// canParseDate can be called on any string
+// so we want to be sure it's a date before handling it as such
+// And Date.parse is super permissive
+// see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#non-standard_date_strings
+// So we'll restrict permissivness
+// A date like 1980/10/05 won't even be considered as a date
+
+const canParseDate = value => {
+  const dateParseResult = Date.parse(value);
+  // eslint-disable-next-line no-self-compare
+  if (dateParseResult !== dateParseResult) {
+    return false;
+  }
+  // Iso format
+  // "1995-12-04 00:12:00.000Z"
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:[+\-]\d{2}:\d{2}|Z)?$/.test(value)) {
+    return true;
+  }
+
+  // GMT format
+  // "Tue May 07 2024 11:27:04 GMT+0200 (Central European Summer Time)",
+  if (/^[a-zA-Z]{0,4} [a-z-A-Z]{0,4} [0-9]{2} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT(?:[+\-][0-9]{0,4})?(?: \(.*\))?$/.test(value)) {
+    return true;
+  }
+  // other format
+  // "Thu, 01 Jan 1970 00:00:00"
+  if (/^[a-zA-Z]{3}, [0-9]{2} [a-zA-Z]{3} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}$/.test(value)) {
+    return true;
+  }
+  return false;
+};
+const usesTimezone = value => {
+  if (value[value.length - 1] === "Z") {
+    return true;
+  }
+  if (value.includes("UTC")) {
+    return true;
+  }
+  if (value.includes("GMT")) {
+    return true;
+  }
+  if (/[+-]\d{2}:\d{2}$/.test(value)) {
+    return true;
+  }
+  return false;
+};
+
+const groupDigits = digitsAsString => {
+  const digitCount = digitsAsString.length;
+  if (digitCount < 4) {
+    return digitsAsString;
+  }
+  let digitsWithSeparator = digitsAsString.slice(-3);
+  let remainingDigits = digitsAsString.slice(0, -3);
+  while (remainingDigits.length) {
+    const group = remainingDigits.slice(-3);
+    remainingDigits = remainingDigits.slice(0, -3);
+    digitsWithSeparator = "".concat(group, "_").concat(digitsWithSeparator);
+  }
+  return digitsWithSeparator;
+};
+
 const isComposite = value => {
   if (value === null) return false;
   if (typeof value === "object") return true;
@@ -139,106 +201,15 @@ const isComposite = value => {
   return false;
 };
 
-const isValidPropertyIdentifier = propertyName => {
-  return typeof propertyName === "number" || !isNaN(propertyName) || isDotNotationAllowed(propertyName);
-};
-const isDotNotationAllowed = propertyName => {
-  return /^[a-z_$]+[0-9a-z_&]$/i.test(propertyName) || /^[a-z_$]$/i.test(propertyName);
-};
-
-const createValuePath = (parts = []) => {
-  return {
-    parts,
-    [Symbol.iterator]() {
-      return parts[Symbol.iterator]();
-    },
-    toString: () => parts.map(part => part.value).join(""),
-    valueOf: () => parts.map(part => part.value).join(""),
-    pop: () => {
-      return createValuePath(parts.slice(1));
-    },
-    append: (property, {
-      isIndexedEntry,
-      isPropertyDescriptor,
-      isMeta
-    } = {}) => {
-      let propertyKey = "";
-      let propertyKeyCanUseDot = false;
-      if (isIndexedEntry) {
-        propertyKey = "[".concat(property, "]");
-      } else if (typeof property === "symbol") {
-        propertyKey = humanizeSymbol(property);
-      } else if (typeof property === "string") {
-        if (
-        // first "property" is a "global" variable name that does not need to be wrapped
-        // in quotes
-        parts.length === 0 || isDotNotationAllowed(property)) {
-          propertyKey = property;
-          propertyKeyCanUseDot = true;
-        } else {
-          propertyKey = "\"".concat(property, "\""); // TODO: property escaping
-        }
-      } else {
-        propertyKey = String(property);
-        propertyKeyCanUseDot = true;
-      }
-      if (parts.length === 0) {
-        return createValuePath([{
-          type: "identifier",
-          value: propertyKey
-        }]);
-      }
-      if (isPropertyDescriptor || isMeta) {
-        return createValuePath([...parts, {
-          type: "property_open_delimiter",
-          value: "[["
-        }, {
-          type: "property_identifier",
-          value: propertyKey
-        }, {
-          type: "property_close_delimiter",
-          value: "]]"
-        }]);
-      }
-      if (propertyKeyCanUseDot) {
-        return createValuePath([...parts, {
-          type: "property_dot",
-          value: "."
-        }, {
-          type: "property_identifier",
-          value: propertyKey
-        }]);
-      }
-      return createValuePath([...parts, {
-        type: "property_open_delimiter",
-        value: "["
-      }, {
-        type: "property_identifier",
-        value: propertyKey
-      }, {
-        type: "property_close_delimiter",
-        value: "]"
-      }]);
-    }
-  };
-};
-const humanizeSymbol = symbol => {
-  const description = symbolToDescription$1(symbol);
-  if (description) {
-    const key = Symbol.keyFor(symbol);
-    if (key) {
-      return "Symbol.for(".concat(description, ")");
-    }
-    return "Symbol(".concat(description, ")");
-  }
-  return "Symbol()";
-};
-const symbolToDescription$1 = symbol => {
-  const toStringResult = symbol.toString();
-  const openingParenthesisIndex = toStringResult.indexOf("(");
-  const closingParenthesisIndex = toStringResult.indexOf(")");
-  return toStringResult.slice(openingParenthesisIndex + 1, closingParenthesisIndex);
-  // return symbol.description // does not work on node
+// under some rare and odd circumstances firefox Object.is(-0, -0)
+// returns false making test fail.
+// it is 100% reproductible with big.test.js.
+// However putting debugger or executing Object.is just before the
+// comparison prevent Object.is failure.
+// It makes me thing there is something strange inside firefox internals.
+// All this to say avoid relying on Object.is to test if the value is -0
+const getIsNegativeZero = value => {
+  return typeof value === "number" && 1 / value === -Infinity;
 };
 
 const getObjectTag = obj => {
@@ -270,6 +241,13 @@ function* objectPrototypeChainGenerator(obj) {
   }
 }
 const isUndetectableObject = v => typeof v === "undefined" && v !== undefined;
+
+const isValidPropertyIdentifier = propertyName => {
+  return typeof propertyName === "number" || !isNaN(propertyName) || isDotNotationAllowed(propertyName);
+};
+const isDotNotationAllowed = propertyName => {
+  return /^[a-z_$]+[0-9a-z_&]$/i.test(propertyName) || /^[a-z_$]$/i.test(propertyName);
+};
 
 const tokenizeFunction = fn => {
   const fnSource = String(fn);
@@ -544,77 +522,99 @@ const tokenizeUrlSearch = search => {
   return paramsMap;
 };
 
-// under some rare and odd circumstances firefox Object.is(-0, -0)
-// returns false making test fail.
-// it is 100% reproductible with big.test.js.
-// However putting debugger or executing Object.is just before the
-// comparison prevent Object.is failure.
-// It makes me thing there is something strange inside firefox internals.
-// All this to say avoid relying on Object.is to test if the value is -0
-const getIsNegativeZero = value => {
-  return typeof value === "number" && 1 / value === -Infinity;
+const createValuePath = (parts = []) => {
+  return {
+    parts,
+    [Symbol.iterator]() {
+      return parts[Symbol.iterator]();
+    },
+    toString: () => parts.map(part => part.value).join(""),
+    valueOf: () => parts.map(part => part.value).join(""),
+    pop: () => {
+      return createValuePath(parts.slice(1));
+    },
+    append: (property, {
+      isIndexedEntry,
+      isPropertyDescriptor,
+      isMeta
+    } = {}) => {
+      let propertyKey = "";
+      let propertyKeyCanUseDot = false;
+      if (isIndexedEntry) {
+        propertyKey = "[".concat(property, "]");
+      } else if (typeof property === "symbol") {
+        propertyKey = humanizeSymbol(property);
+      } else if (typeof property === "string") {
+        if (
+        // first "property" is a "global" variable name that does not need to be wrapped
+        // in quotes
+        parts.length === 0 || isDotNotationAllowed(property)) {
+          propertyKey = property;
+          propertyKeyCanUseDot = true;
+        } else {
+          propertyKey = "\"".concat(property, "\""); // TODO: property escaping
+        }
+      } else {
+        propertyKey = String(property);
+        propertyKeyCanUseDot = true;
+      }
+      if (parts.length === 0) {
+        return createValuePath([{
+          type: "identifier",
+          value: propertyKey
+        }]);
+      }
+      if (isPropertyDescriptor || isMeta) {
+        return createValuePath([...parts, {
+          type: "property_open_delimiter",
+          value: "[["
+        }, {
+          type: "property_identifier",
+          value: propertyKey
+        }, {
+          type: "property_close_delimiter",
+          value: "]]"
+        }]);
+      }
+      if (propertyKeyCanUseDot) {
+        return createValuePath([...parts, {
+          type: "property_dot",
+          value: "."
+        }, {
+          type: "property_identifier",
+          value: propertyKey
+        }]);
+      }
+      return createValuePath([...parts, {
+        type: "property_open_delimiter",
+        value: "["
+      }, {
+        type: "property_identifier",
+        value: propertyKey
+      }, {
+        type: "property_close_delimiter",
+        value: "]"
+      }]);
+    }
+  };
 };
-
-const groupDigits = digitsAsString => {
-  const digitCount = digitsAsString.length;
-  if (digitCount < 4) {
-    return digitsAsString;
+const humanizeSymbol = symbol => {
+  const description = symbolToDescription$1(symbol);
+  if (description) {
+    const key = Symbol.keyFor(symbol);
+    if (key) {
+      return "Symbol.for(".concat(description, ")");
+    }
+    return "Symbol(".concat(description, ")");
   }
-  let digitsWithSeparator = digitsAsString.slice(-3);
-  let remainingDigits = digitsAsString.slice(0, -3);
-  while (remainingDigits.length) {
-    const group = remainingDigits.slice(-3);
-    remainingDigits = remainingDigits.slice(0, -3);
-    digitsWithSeparator = "".concat(group, "_").concat(digitsWithSeparator);
-  }
-  return digitsWithSeparator;
+  return "Symbol()";
 };
-
-// canParseDate can be called on any string
-// so we want to be sure it's a date before handling it as such
-// And Date.parse is super permissive
-// see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/parse#non-standard_date_strings
-// So we'll restrict permissivness
-// A date like 1980/10/05 won't even be considered as a date
-
-const canParseDate = value => {
-  const dateParseResult = Date.parse(value);
-  // eslint-disable-next-line no-self-compare
-  if (dateParseResult !== dateParseResult) {
-    return false;
-  }
-  // Iso format
-  // "1995-12-04 00:12:00.000Z"
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:[+\-]\d{2}:\d{2}|Z)?$/.test(value)) {
-    return true;
-  }
-
-  // GMT format
-  // "Tue May 07 2024 11:27:04 GMT+0200 (Central European Summer Time)",
-  if (/^[a-zA-Z]{0,4} [a-z-A-Z]{0,4} [0-9]{2} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT(?:[+\-][0-9]{0,4})?(?: \(.*\))?$/.test(value)) {
-    return true;
-  }
-  // other format
-  // "Thu, 01 Jan 1970 00:00:00"
-  if (/^[a-zA-Z]{3}, [0-9]{2} [a-zA-Z]{3} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}$/.test(value)) {
-    return true;
-  }
-  return false;
-};
-const usesTimezone = value => {
-  if (value[value.length - 1] === "Z") {
-    return true;
-  }
-  if (value.includes("UTC")) {
-    return true;
-  }
-  if (value.includes("GMT")) {
-    return true;
-  }
-  if (/[+-]\d{2}:\d{2}$/.test(value)) {
-    return true;
-  }
-  return false;
+const symbolToDescription$1 = symbol => {
+  const toStringResult = symbol.toString();
+  const openingParenthesisIndex = toStringResult.indexOf("(");
+  const closingParenthesisIndex = toStringResult.indexOf(")");
+  return toStringResult.slice(openingParenthesisIndex + 1, closingParenthesisIndex);
+  // return symbol.description // does not work on node
 };
 
 /*
@@ -5692,29 +5692,6 @@ const generateHeaderValueParts = (headerValue, {
   part.end();
 };
 
-// see https://github.com/sindresorhus/string-width/issues/50
-let restore = () => {};
-if (typeof window.Intl.Segmenter !== "function") {
-  window.Intl.Segmenter = function () {
-    const segment = string => {
-      return string.split("").map(char => {
-        return {
-          segment: char
-        };
-      });
-    };
-    return {
-      segment
-    };
-  };
-  restore = () => {
-    window.Intl.Segmenter = undefined;
-  };
-}
-const cleanup = () => {
-  restore();
-};
-
 // Generated code.
 
 function isAmbiguous(x) {
@@ -5818,6 +5795,29 @@ function stringWidth(string, options = {}) {
   }
   return width;
 }
+
+// see https://github.com/sindresorhus/string-width/issues/50
+let restore = () => {};
+if (typeof window.Intl.Segmenter !== "function") {
+  window.Intl.Segmenter = function () {
+    const segment = string => {
+      return string.split("").map(char => {
+        return {
+          segment: char
+        };
+      });
+    };
+    return {
+      segment
+    };
+  };
+  restore = () => {
+    window.Intl.Segmenter = undefined;
+  };
+}
+const cleanup = () => {
+  restore();
+};
 
 cleanup();
 const measureStringWidth = stringWidth;
