@@ -5,6 +5,7 @@ import stripAnsi from "strip-ansi";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import {
+  parseSvgString,
   parseHtml,
   setHtmlNodeText,
   visitHtmlNodes,
@@ -26,9 +27,6 @@ export const replaceFluctuatingValues = (
     isWindows = process.platform === "win32",
   } = {},
 ) => {
-  if (removeAnsi) {
-    string = stripAnsi(string);
-  }
   rootDirectoryUrl = String(rootDirectoryUrl);
   if (rootDirectoryUrl[rootDirectoryUrl.length - 1] === "/") {
     rootDirectoryUrl = rootDirectoryUrl.slice(0, -1);
@@ -50,6 +48,9 @@ export const replaceFluctuatingValues = (
         return value.replaceAll(rootDirectoryPath, "cwd()");
       };
   const replaceThings = (value) => {
+    if (removeAnsi) {
+      value = stripAnsi(value);
+    }
     value = replaceFileUrls(value);
     value = replaceFilePaths(value);
     value = replaceHttpUrls(value);
@@ -60,7 +61,13 @@ export const replaceFluctuatingValues = (
     const extension = urlToExtension(fileUrl);
     if (extension === ".svg" || extension === ".html") {
       // do parse html
-      const htmlAst = parseHtml(string);
+      const htmlAst =
+        extension === ".svg"
+          ? parseSvgString(string)
+          : parseHtml({
+              html: string,
+              storeOriginalPositions: false,
+            });
       // for each attribute value
       // and each text node content
       visitHtmlNodes(htmlAst, {

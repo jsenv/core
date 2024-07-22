@@ -13,11 +13,7 @@ import {
 import { findHtmlChildNode, visitHtmlNodes } from "./html_search.js";
 import { getHtmlNodeText } from "./html_node_text.js";
 
-export const parseHtml = ({
-  html,
-  url,
-  storeOriginalPositions = true,
-} = {}) => {
+export const parseHtml = ({ html, url, storeOriginalPositions = true }) => {
   const htmlAst = parse(html, {
     sourceCodeLocationInfo: true,
     onParseError: (parse5Error) => {

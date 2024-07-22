@@ -5,6 +5,9 @@ export const getHtmlNodeAttribute = (htmlNode, attributeName) => {
 
 export const getHtmlNodeAttributes = (htmlNode) => {
   const { attrs } = htmlNode;
+  if (!attrs) {
+    return {};
+  }
   const attributes = {};
   for (const attr of attrs) {
     attributes[attr.name] = attr.value;

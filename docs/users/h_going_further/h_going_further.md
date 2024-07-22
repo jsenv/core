@@ -14,6 +14,7 @@ It represents the two JavaScript runtimes supported by jsenv.
 ![jsenv_logo_legend](https://github.com/jsenv/core/assets/443639/8317a70f-cd53-42c2-ba18-96c53669c2b4)
 
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+
 <table>
  <tr>
   <td width="2000px" align="left" nowrap>
@@ -24,4 +25,5 @@ It represents the two JavaScript runtimes supported by jsenv.
   </td>
  </tr>
 <table>
+
 <!-- PLACEHOLDER_END -->

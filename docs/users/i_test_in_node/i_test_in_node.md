@@ -285,6 +285,7 @@ Code coverage can be collected while executing test files.
 ![file js](https://github.com/jsenv/core/assets/443639/2bc5eb1d-c041-4f03-bd19-6a3db1a24883)
 
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+
 <table>
  <tr>
   <td width="2000px" align="left" nowrap>
@@ -295,4 +296,5 @@ Code coverage can be collected while executing test files.
   </td>
  </tr>
 <table>
+
 <!-- PLACEHOLDER_END -->

@@ -7,6 +7,7 @@ TODO:
 - [ ] Show various examples
 
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+
 <table>
  <tr>
   <td width="2000px" align="left" nowrap>
@@ -14,4 +15,5 @@ TODO:
   </td>
  </tr>
 <table></table>
+
 <!-- PLACEHOLDER_END -->

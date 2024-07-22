@@ -118,7 +118,7 @@ export const renderTerminalSvg = (
     "font-size": font.size,
     "width": computedWidth,
     "height": computedHeight,
-    backgroundColor,
+    "background-color": backgroundColor,
   });
 
   render_background: {
