@@ -35,7 +35,7 @@
   },
   "dependencies": {
     "@jsenv/assert": "4.1.4",
-    "@jsenv/ast": "6.2.3",
+    "@jsenv/ast": "6.2.4",
     "@jsenv/filesystem": "4.8.1",
     "@jsenv/urls": "2.3.0",
     "@jsenv/utils": "2.1.1",
