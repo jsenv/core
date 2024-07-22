@@ -44,7 +44,7 @@
         <text x="10" y="14.55" fill="#7f7f7f">-------------</text>
         <text x="127.62" y="14.55"> 1 execution ready </text>
         <text x="278.84" y="14.55" fill="#7f7f7f">-------------</text>
-        <text x="10" y="33.55">directory: cwd()users/d_test/demo</text>
+        <text x="10" y="33.55">directory: cwd()/users/d_test/demo</text>
         <text x="10" y="52.55" fill="#7f7f7f"
           >---------------------------------------------</text
         >
@@ -58,10 +58,10 @@
         <text x="270.44" y="90.55" fill="#7f7f7f">--------------</text>
         <text x="10" y="109.55">status: all </text>
         <text x="110.82" y="109.55" fill="#11bc79">completed</text>
-        <text x="10" y="128.55">duration: 2s </text>
+        <text x="10" y="128.55">duration: 3s </text>
         <text x="119.22" y="128.55" fill="#7f7f7f">(setup:</text>
-        <text x="186.43" y="128.55" fill="#7f7f7f">0.9s, execution:</text>
-        <text x="329.25" y="128.55" fill="#7f7f7f">1.9s, teardown:</text>
+        <text x="186.43" y="128.55" fill="#7f7f7f">1.9s, execution:</text>
+        <text x="329.25" y="128.55" fill="#7f7f7f">2.9s, teardown:</text>
         <text x="463.67" y="128.55" fill="#7f7f7f">0.1s)</text>
         <text x="10" y="147.55" fill="#7f7f7f"
           >---------------------------------------------</text

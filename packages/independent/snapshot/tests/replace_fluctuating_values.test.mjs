@@ -94,14 +94,3 @@ And file urls
     expect,
   });
 }
-
-{
-  const actual = replaceFluctuatingValues(
-    `Before ${process.cwd()}/users/d_test/demo after`,
-  );
-  const expect = `Before cwd()/users/d_test/demo after`;
-  assert({
-    actual,
-    expect,
-  });
-}

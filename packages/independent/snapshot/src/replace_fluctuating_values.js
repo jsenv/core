@@ -23,13 +23,16 @@ export const replaceFluctuatingValues = (
     removeAnsi = true,
     rootDirectoryUrl = pathToFileURL(process.cwd()),
     // for unit tests
-    rootDirectoryPath = fileURLToPath(rootDirectoryUrl),
+    rootDirectoryPath,
     isWindows = process.platform === "win32",
   } = {},
 ) => {
   rootDirectoryUrl = String(rootDirectoryUrl);
   if (rootDirectoryUrl[rootDirectoryUrl.length - 1] === "/") {
     rootDirectoryUrl = rootDirectoryUrl.slice(0, -1);
+  }
+  if (rootDirectoryPath === undefined) {
+    rootDirectoryPath = fileURLToPath(rootDirectoryUrl);
   }
   const replaceFileUrls = (value) => {
     return value.replaceAll(rootDirectoryUrl, "file:///cwd()");

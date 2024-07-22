@@ -48,11 +48,11 @@
         >
         <text x="10" y="71.55" fill="#11bc79">✔</text>
         <text x="26.8" y="71.55">
-          generate build graph (done in 0.005 second)</text
+          generate build graph (done in 0.006 second)</text
         >
         <text x="10" y="90.55" fill="#11bc79">✔</text>
         <text x="26.8" y="90.55">
-          write files in build directory (done in 0.002 second)</text
+          write files in build directory (done in 0.001 second)</text
         >
         <text x="10" y="109.55">--- build files --- </text>
         <text x="10" y="128.55">- </text>
