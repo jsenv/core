@@ -11,7 +11,7 @@ Best parts of jsenv tests:
 - [Isolated environment](#33-isolated-environment); each test file has a dedicated runtime
 - Test files can be executed in [Chrome, Firefox and Safari](#32-execute-on-more-browsers)
 - [Smart parallelism](#34-parallelism)
-- Logs are [nice](../../../../packages/related/test/tests/test_plan_execution/logs/snapshots/browsers/empty.spec.html.gif); dynamic, colorful and human friendly
+- Logs are [nice](../../../packages/related/test/tests/test_plan_execution/logs/snapshots/browsers/empty.spec.html.gif); dynamic, colorful and human friendly
 
 <!--
 When coding, we spend most of our time working on source files. At some point we switch from source files to test files. Suddenly things are different:
