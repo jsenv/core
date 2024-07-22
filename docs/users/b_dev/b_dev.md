@@ -5,7 +5,7 @@ This page documents how jsenv can be used to start a server for source files.
 Best parts of jsenv dev server:
 
 - Standard web server; no hidden constraints or behavior deviating from standards.
-- Autoreload on save with hot reloading; instruct browser to autoreload when a file is saved.
+- Autoreload on save; instruct browser to autoreload when a file is saved.
 - Error resilient; everything still works when you do a syntax error for instance.
 - Large [browser support](#21-browser-support); code served is compatible with main browsers of the market, even old versions.
 
