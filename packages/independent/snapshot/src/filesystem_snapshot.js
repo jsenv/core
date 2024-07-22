@@ -38,6 +38,7 @@ export const takeFileSnapshot = (fileUrl) => {
     ) => {
       if (mockFluctuatingValues) {
         content = replaceFluctuatingValues(content, {
+          fileUrl,
           cwdPath: rootDirectoryUrl
             ? fileURLToPath(rootDirectoryUrl)
             : undefined,

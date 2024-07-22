@@ -77,3 +77,31 @@ And file urls
 - file:///cwd()/directory/file.txt`;
   assert({ actual, expect });
 }
+
+{
+  const actual = replaceFluctuatingValues(
+    `<svg xmlns="http://www.w3.org/2000/svg">
+  <g test="${process.cwd()}/dir/file.js"></g>
+  <text>before ${process.cwd()}/ after</text>
+</svg>`,
+  );
+  const expect = `<svg xmlns="http://www.w3.org/2000/svg">
+  <g test="cwd()/dir/file.js"></g>
+  <text>before cwd()/ after</text>
+</svg>`;
+  assert({
+    actual,
+    expect,
+  });
+}
+
+{
+  const actual = replaceFluctuatingValues(
+    `Before ${process.cwd()}/users/d_test/demo after`,
+  );
+  const expect = `Before cwd()/users/d_test/demo after`;
+  assert({
+    actual,
+    expect,
+  });
+}
