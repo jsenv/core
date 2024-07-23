@@ -1,17 +1,19 @@
 // https://github.com/antfu/fs-spy/blob/main/src/index.ts
 // https://github.com/tschaub/mock-fs/tree/main
 
-import { readFileSync, statSync } from "node:fs";
+import { removeFileSync } from "@jsenv/filesystem/src/main.js";
+import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { spyMethod } from "./spy_method.js";
 
 export const spyFilesystemCalls = (
   { writeFile = () => {}, removeFile = () => {} },
-  { preventFilesystemSideEffects } = {},
+  { undoFilesystemSideEffects } = {},
 ) => {
   const _internalFs = process.binding("fs");
   const openFileInfoMap = new Map();
   const fileDescriptorPathMap = new Map();
+  const fileRestoreMap = new Map();
 
   const onWriteFileDone = (fileUrl, currentState, nowState) => {
     // we use same type because we don't want to differentiate between
@@ -23,6 +25,19 @@ export const spyFilesystemCalls = (
       currentState.content !== nowState.content ||
       currentState.mtimeMs !== nowState.mtimeMs
     ) {
+      if (undoFilesystemSideEffects) {
+        if (!fileRestoreMap.has(fileUrl)) {
+          if (currentState.found) {
+            fileRestoreMap.set(fileUrl, () => {
+              writeFileSync(fileUrl, currentState.content);
+            });
+          } else {
+            fileRestoreMap.set(fileUrl, () => {
+              removeFileSync(fileUrl, { allowUseless: true });
+            });
+          }
+        }
+      }
       writeFile(fileUrl, nowState.content);
       return;
     }
@@ -39,19 +54,22 @@ export const spyFilesystemCalls = (
         callback,
       ] = args;
       if (callback) {
+        const currentState = getFileState(filePath);
+        openFileInfoMap.set(filePath, currentState);
         const oncomplete = callback.oncomplete;
         callback.oncomplete = (error, fd) => {
           if (error) {
             oncomplete(error);
           } else {
             fileDescriptorPathMap.set(fd, filePath);
-            const currentState = getFileState(filePath);
-            openFileInfoMap.set(filePath, currentState);
+
             oncomplete(error, fd);
           }
         };
         return callOriginal();
       }
+      const currentState = getFileState(filePath);
+      openFileInfoMap.set(filePath, currentState);
       const fd = callOriginal();
       fileDescriptorPathMap.set(fd, filePath);
       return fd;
@@ -84,17 +102,8 @@ export const spyFilesystemCalls = (
       const [filePath] = args;
       const fileUrl = pathToFileURL(filePath);
       const currentState = getFileState(fileUrl);
-      let nowState;
-      if (preventFilesystemSideEffects) {
-        const content = args[1];
-        nowState = {
-          found: true,
-          content,
-        };
-      } else {
-        callOriginal();
-        nowState = getFileState(fileUrl);
-      }
+      callOriginal();
+      const nowState = getFileState(fileUrl);
       onWriteFileDone(fileUrl, currentState, nowState);
     },
     unlink: removeFile,
@@ -115,6 +124,10 @@ export const spyFilesystemCalls = (
         restoreCallback();
       }
       restoreCallbackSet.clear();
+      for (const [, restore] of fileRestoreMap) {
+        restore();
+      }
+      fileRestoreMap.clear();
     },
   };
 };

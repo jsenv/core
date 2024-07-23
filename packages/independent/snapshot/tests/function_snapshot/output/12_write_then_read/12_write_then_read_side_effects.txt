@@ -1,0 +1,5 @@
+1. write file "toto.txt"
+a
+
+2. return
+"a"

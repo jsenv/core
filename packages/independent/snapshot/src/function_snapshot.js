@@ -21,7 +21,7 @@ export const snapshotFunctionSideEffects = (
     rootDirectoryUrl = new URL("./", fnFileUrl),
     filesystemEffectsDirectory,
     preventConsoleSideEffects = true,
-    preventFilesystemSideEffects = true,
+    undoFilesystemSideEffects = true,
   } = {},
 ) => {
   if (executing) {
@@ -108,7 +108,9 @@ export const snapshotFunctionSideEffects = (
           }
         },
       },
-      { preventFilesystemSideEffects },
+      {
+        undoFilesystemSideEffects,
+      },
     );
     finallyCallbackSet.add(() => {
       filesystemSpy.restore();

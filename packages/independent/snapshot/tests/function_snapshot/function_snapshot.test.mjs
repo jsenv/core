@@ -78,10 +78,10 @@ await test("11_fs_write_file", async () => {
     });
   });
 });
-// test("12_write_then_read", () => {
-//   writeFileSync(new URL("./toto.txt", import.meta.url), "a");
-//   const value = String(readFileSync(new URL("./toto.txt", import.meta.url)));
-//   return value;
-// });
+test("12_write_then_read", () => {
+  writeFileSync(new URL("./toto.txt", import.meta.url), "a");
+  const value = String(readFileSync(new URL("./toto.txt", import.meta.url)));
+  return value;
+});
 // TODO: mkdir
 outputDirectorySnapshot.compare();
