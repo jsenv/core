@@ -16,6 +16,7 @@ export const moveEntrySync = ({
   overwrite = false,
   allowUseless = false,
   followLink = true,
+  noEntryEffect = "throw",
 }) => {
   const fromUrl = assertAndNormalizeFileUrl(from);
   const fromPath = urlToFileSystemPath(fromUrl);
@@ -27,7 +28,10 @@ export const moveEntrySync = ({
     followLink: false,
   });
   if (!sourceStats) {
-    throw new Error(`nothing to move from ${fromPath}`);
+    if (noEntryEffect === "throw") {
+      throw new Error(`nothing to move from ${fromPath}`);
+    }
+    return;
   }
 
   let destinationStats = readEntryStatSync(toUrl, {

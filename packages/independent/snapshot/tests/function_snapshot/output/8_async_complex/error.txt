@@ -1,0 +1,2 @@
+Error: in the end we throw
+    at test.filesystemRedirects (file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:60:11)
