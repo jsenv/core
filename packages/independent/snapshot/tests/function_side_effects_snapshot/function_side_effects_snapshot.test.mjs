@@ -105,7 +105,9 @@ test("14_mkdir_async", async () => {
 //     writeFileSync(new URL("./toto.txt", import.meta.url), "writeFileSync");
 //   },
 //   {
-//     filesystemEffectsDirectory: true,
+//     filesystemEffectsDirectory: "./fs/",
 //   },
 // );
+// TODO: ability to ignore some files
+// (will be used for jsenv build to ignore .jsenv files)
 outputDirectorySnapshot.compare();
