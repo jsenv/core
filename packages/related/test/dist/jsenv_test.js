@@ -4822,7 +4822,11 @@ const renderConsoleOutput = (consoleCalls) => {
   // and in that case the consoleCall is not suffixed with "\n"
   // we want to keep these calls together in the output
   const regroupedCalls = [];
+  let everyCallIsLog = true;
   consoleCalls.forEach((consoleCall, index) => {
+    if (everyCallIsLog && consoleCall.type !== "log") {
+      everyCallIsLog = false;
+    }
     if (index === 0) {
       regroupedCalls.push(consoleCall);
       return;
@@ -4844,30 +4848,38 @@ const renderConsoleOutput = (consoleCalls) => {
     const previousRegroupedCall = regroupedCalls[previousRegroupedCallIndex];
     previousRegroupedCall.text = `${previousRegroupedCall.text}${consoleCall.text}`;
   });
-
   let consoleOutput = ``;
-  regroupedCalls.forEach((regroupedCall, index) => {
+  let index = 0;
+  for (const regroupedCall of regroupedCalls) {
     const text = regroupedCall.text;
     const textFormatted = prefixFirstAndIndentRemainingLines({
-      prefix: CONSOLE_ICONS[regroupedCall.type],
+      prefix: everyCallIsLog ? "" : CONSOLE_ICONS[regroupedCall.type],
       text,
       trimLines: false,
       trimLastLine: index === regroupedCalls.length - 1,
     });
     consoleOutput += textFormatted;
-  });
+    index++;
+  }
   return consoleOutput;
 };
 const prefixFirstAndIndentRemainingLines = ({
   prefix,
-  indentation = "  ",
+  indentation,
   text,
   trimLines,
   trimLastLine,
 }) => {
   const lines = text.split(/\r?\n/);
   const firstLine = lines.shift();
-  let result = `${prefix} ${firstLine}`;
+  if (indentation === undefined) {
+    if (prefix) {
+      indentation = "  "; // prefix + space
+    } else {
+      indentation = "";
+    }
+  }
+  let result = prefix ? `${prefix} ${firstLine}` : firstLine;
   let i = 0;
   while (i < lines.length) {
     const line = trimLines ? lines[i].trim() : lines[i];
