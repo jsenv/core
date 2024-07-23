@@ -1,0 +1,5 @@
+1. write file "toto.txt"
+toto
+
+2. return
+undefined

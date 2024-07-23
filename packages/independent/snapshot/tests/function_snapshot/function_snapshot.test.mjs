@@ -65,4 +65,15 @@ await test(
     restoreFilesystem: true,
   },
 );
+await test(
+  "9_write_file_inline",
+  () => {
+    writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
+  },
+  {
+    filesystemEffects: ["./toto.txt"],
+    restoreFilesystem: true,
+    filesystemEffectsInline: true,
+  },
+);
 outputDirectorySnapshot.compare();

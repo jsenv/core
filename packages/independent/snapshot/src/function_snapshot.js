@@ -16,6 +16,7 @@ export const snapshotFunctionSideEffects = (
     rootDirectoryUrl = new URL("./", fnFileUrl),
     captureConsole = true,
     filesystemEffects,
+    filesystemEffectsInline,
     restoreFilesystem,
   } = {},
 ) => {
@@ -50,7 +51,10 @@ export const snapshotFunctionSideEffects = (
     }
     writeFileSync(
       sideEffectFileUrl,
-      stringifySideEffects(sideEffects, { rootDirectoryUrl }),
+      stringifySideEffects(sideEffects, {
+        rootDirectoryUrl,
+        filesystemEffectsInline,
+      }),
     );
     sideEffectDirectorySnapshot.compare();
   };
@@ -89,6 +93,7 @@ export const snapshotFunctionSideEffects = (
         if (atStartState.found && !nowState.found) {
           onFileSystemSideEffect({
             type: `remove file "${relativeUrl}"`,
+            value: atStartState.content,
           });
           if (restoreFilesystem) {
             writeFileSync(from, atStartState.content);
@@ -104,10 +109,18 @@ export const snapshotFunctionSideEffects = (
           atStartState.content !== nowState.content ||
           atStartState.mtimeMs !== nowState.mtimeMs
         ) {
-          writeFileSync(toUrl, nowState.content);
-          onFileSystemSideEffect({
-            type: `write file "./fs/${relativeUrl}"`,
-          });
+          if (filesystemEffectsInline) {
+            onFileSystemSideEffect({
+              type: `write file "${relativeUrl}"`,
+              value: nowState.content,
+            });
+          } else {
+            writeFileSync(toUrl, nowState.content);
+            onFileSystemSideEffect({
+              type: `write file "${relativeUrl}" (see ./fs/${relativeUrl})`,
+              value: nowState.content,
+            });
+          }
           if (restoreFilesystem) {
             if (atStartState.found) {
               if (atStartState.content !== nowState.content) {
@@ -152,7 +165,10 @@ export const snapshotFunctionSideEffects = (
   }
 };
 
-const stringifySideEffects = (sideEffects, { rootDirectoryUrl }) => {
+const stringifySideEffects = (
+  sideEffects,
+  { rootDirectoryUrl, filesystemEffectsInline },
+) => {
   let string = "";
   let index = 0;
   for (const sideEffect of sideEffects) {
@@ -172,6 +188,10 @@ const stringifySideEffects = (sideEffects, { rootDirectoryUrl }) => {
       sideEffect.type.startsWith("remove file") ||
       sideEffect.type.startsWith("write file")
     ) {
+      if (filesystemEffectsInline) {
+        string += "\n";
+        string += value;
+      }
     } else if (sideEffect.type === "throw") {
       value = replaceFluctuatingValues(value.stack, {
         stringType: "error",
