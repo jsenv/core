@@ -2,5 +2,5 @@
 
 2. reject
 Error: here
-  at file:///cwd()/function_snapshot.test.mjs:51:9
-  at async file:///cwd()/function_snapshot.test.mjs:49:1
+  at file:///cwd()/function_snapshot.test.mjs:52:9
+  at async file:///cwd()/function_snapshot.test.mjs:50:1

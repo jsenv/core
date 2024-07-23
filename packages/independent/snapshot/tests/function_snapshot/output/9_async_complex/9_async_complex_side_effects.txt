@@ -17,5 +17,5 @@ and an other warning
 
 7. reject
 Error: in the end we throw
-  at file:///cwd()/function_snapshot.test.mjs:65:9
-  at async file:///cwd()/function_snapshot.test.mjs:53:1
+  at file:///cwd()/function_snapshot.test.mjs:66:9
+  at async file:///cwd()/function_snapshot.test.mjs:54:1

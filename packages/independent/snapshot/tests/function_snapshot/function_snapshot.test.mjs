@@ -4,6 +4,7 @@ import {
 } from "@jsenv/snapshot";
 import {
   existsSync,
+  mkdir,
   mkdirSync,
   readFileSync,
   writeFile,
@@ -87,6 +88,17 @@ test("13_mkdir_sync", () => {
   mkdirSync(new URL("./dir/", import.meta.url));
   return existsSync(new URL("./dir/", import.meta.url));
 });
+test("14_mkdir_async", async () => {
+  await new Promise((resolve, reject) => {
+    mkdir(new URL("./dir/", import.meta.url), (error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+});
 // test(
 //   "15_fs_write_file_sync_and_directory",
 //   () => {
@@ -96,5 +108,4 @@ test("13_mkdir_sync", () => {
 //     filesystemEffectsDirectory: true,
 //   },
 // );
-// TODO: mkdir async
 outputDirectorySnapshot.compare();

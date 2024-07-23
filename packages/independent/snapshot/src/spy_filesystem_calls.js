@@ -16,7 +16,7 @@ export const spyFilesystemCalls = (
   { undoFilesystemSideEffects } = {},
 ) => {
   const _internalFs = process.binding("fs");
-  const openFileInfoMap = new Map();
+  const filesystemStateInfoMap = new Map();
   const fileDescriptorPathMap = new Map();
   const fileRestoreMap = new Map();
 
@@ -62,6 +62,34 @@ export const spyFilesystemCalls = (
     writeDirectory(directoryUrl);
   };
   const spies = {
+    mkdir: ({ callOriginal, args }) => {
+      // prettier-ignore
+      const [
+        directoryPath, 
+        /* mode */,
+        /* recursive */,
+        callback,
+      ] = args;
+      const directoryUrl = pathToFileURL(directoryPath);
+      if (callback) {
+        const stateBefore = getDirectoryState(directoryPath);
+        const oncomplete = callback.oncomplete;
+        callback.oncomplete = (error, fd) => {
+          if (error) {
+            oncomplete(error);
+          } else {
+            fileDescriptorPathMap.set(fd, directoryPath);
+            oncomplete();
+            onWriteDirectoryDone(directoryUrl, stateBefore, { found: true });
+          }
+        };
+        return callOriginal();
+      }
+      const stateBefore = getDirectoryState(directoryPath);
+      callOriginal();
+      onWriteDirectoryDone(directoryUrl, stateBefore, { found: true });
+      return undefined;
+    },
     open: ({ callOriginal, args }) => {
       // prettier-ignore
       const [
@@ -71,8 +99,8 @@ export const spyFilesystemCalls = (
         callback,
       ] = args;
       if (callback) {
-        const currentState = getFileState(filePath);
-        openFileInfoMap.set(filePath, currentState);
+        const stateBefore = getFileState(filePath);
+        filesystemStateInfoMap.set(filePath, stateBefore);
         const oncomplete = callback.oncomplete;
         callback.oncomplete = (error, fd) => {
           if (error) {
@@ -84,8 +112,8 @@ export const spyFilesystemCalls = (
         };
         return callOriginal();
       }
-      const currentState = getFileState(filePath);
-      openFileInfoMap.set(filePath, currentState);
+      const stateBefore = getFileState(filePath);
+      filesystemStateInfoMap.set(filePath, stateBefore);
       const fd = callOriginal();
       fileDescriptorPathMap.set(fd, filePath);
       return fd;
@@ -96,7 +124,7 @@ export const spyFilesystemCalls = (
       if (!filePath) {
         return callOriginal();
       }
-      const openInfo = openFileInfoMap.get(filePath);
+      const openInfo = filesystemStateInfoMap.get(filePath);
       if (!openInfo) {
         const returnValue = callOriginal();
         fileDescriptorPathMap.delete(fileDescriptor);
@@ -107,7 +135,7 @@ export const spyFilesystemCalls = (
       onWriteFileDone(fileUrl, openInfo, nowState);
       const returnValue = callOriginal();
       fileDescriptorPathMap.delete(fileDescriptor);
-      openFileInfoMap.delete(filePath);
+      filesystemStateInfoMap.delete(filePath);
       return returnValue;
     },
     // writeBuffer: ({ callOriginal, args }) => {
@@ -123,22 +151,6 @@ export const spyFilesystemCalls = (
       onWriteFileDone(fileUrl, stateBefore, stateAfter);
     },
     unlink: removeFile, // TODO eventually call remove directory
-    mkdir: ({ callOriginal, args }) => {
-      // prettier-ignore
-      const [
-        directoryPath, 
-        /* flags */,
-        /* mode */,
-        callback,
-      ] = args;
-      if (callback) {
-      }
-      const directoryUrl = pathToFileURL(directoryPath);
-      const stateBefore = getDirectoryState(directoryPath);
-      callOriginal();
-      const stateAfter = getDirectoryState(directoryPath);
-      onWriteDirectoryDone(directoryUrl, stateBefore, stateAfter);
-    },
   };
   const restoreCallbackSet = new Set();
   const unspy = spyMethods(_internalFs, spies, {

@@ -1,0 +1,6 @@
+1. write directory "dir/"
+
+2. return promise
+
+3. resolve
+undefined
