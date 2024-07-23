@@ -10,33 +10,75 @@ export const spyFilesystemCalls = (
   { preventFilesystemSideEffects } = {},
 ) => {
   const _internalFs = process.binding("fs");
-  // const openedMap = new Map();
-  // const fileDescriptorPathMap = new Map();
+  const openFileInfoMap = new Map();
+  const fileDescriptorPathMap = new Map();
+
+  const onWriteFileDone = (fileUrl, currentState, nowState) => {
+    // we use same type because we don't want to differentiate between
+    // - writing file for the 1st time
+    // - updating file content
+    // the important part is the file content in the end of the function execution
+    if (
+      (!currentState.found && nowState.found) ||
+      currentState.content !== nowState.content ||
+      currentState.mtimeMs !== nowState.mtimeMs
+    ) {
+      writeFile(fileUrl, nowState.content);
+      return;
+    }
+    // file is exactly the same
+    // function did not have any effect on the file
+  };
   const spies = {
-    // open: ({ callOriginal, args }) => {
+    open: ({ callOriginal, args }) => {
+      // prettier-ignore
+      const [
+        filePath, 
+        /* flags */,
+        /* mode */,
+        callback,
+      ] = args;
+      if (callback) {
+        const oncomplete = callback.oncomplete;
+        callback.oncomplete = (error, fd) => {
+          if (error) {
+            oncomplete(error);
+          } else {
+            fileDescriptorPathMap.set(fd, filePath);
+            const currentState = getFileState(filePath);
+            openFileInfoMap.set(filePath, currentState);
+            oncomplete(error, fd);
+          }
+        };
+        return callOriginal();
+      }
+      const fd = callOriginal();
+      fileDescriptorPathMap.set(fd, filePath);
+      return fd;
+    },
+    close: ({ callOriginal, args }) => {
+      const [fileDescriptor] = args;
+      const filePath = fileDescriptorPathMap.get(fileDescriptor);
+      if (!filePath) {
+        return callOriginal();
+      }
+      const openInfo = openFileInfoMap.get(filePath);
+      if (!openInfo) {
+        const returnValue = callOriginal();
+        fileDescriptorPathMap.delete(fileDescriptor);
+        return returnValue;
+      }
+      const fileUrl = pathToFileURL(filePath);
+      const nowState = getFileState(fileUrl);
+      onWriteFileDone(fileUrl, openInfo, nowState);
+      const returnValue = callOriginal();
+      fileDescriptorPathMap.delete(fileDescriptor);
+      openFileInfoMap.delete(filePath);
+      return returnValue;
+    },
+    // writeBuffer: ({ callOriginal, args }) => {
     //   const [filePath] = args;
-    //   openedMap.set(filePath, {});
-    //   const fd = callOriginal();
-    //   fileDescriptorPathMap.set(fd, filePath);
-    //   return fd;
-    // },
-    // close: ({ callOriginal, args }) => {
-    //   const [fileDescriptor] = args;
-    //   const filePath = fileDescriptorPathMap.get(fileDescriptor);
-    //   if (!filePath) {
-    //     return callOriginal();
-    //   }
-    //   const openInfo = openedMap.get(filePath);
-    //   if (!openInfo) {
-    //     const returnValue = callOriginal();
-    //     fileDescriptorPathMap.delete(fileDescriptor);
-    //     return returnValue;
-    //   }
-    //   writeFile(openInfo);
-    //   const returnValue = callOriginal();
-    //   fileDescriptorPathMap.delete(fileDescriptor);
-    //   openedMap.delete(filePath);
-    //   return returnValue;
+    //   debugger;
     // },
     writeFileUtf8: ({ callOriginal, args }) => {
       const [filePath] = args;
@@ -53,20 +95,7 @@ export const spyFilesystemCalls = (
         callOriginal();
         nowState = getFileState(fileUrl);
       }
-      // we use same type because we don't want to differentiate between
-      // - writing file for the 1st time
-      // - updating file content
-      // the important part is the file content in the end of the function execution
-      if (
-        (!currentState.found && nowState.found) ||
-        currentState.content !== nowState.content ||
-        currentState.mtimeMs !== nowState.mtimeMs
-      ) {
-        writeFile(fileUrl, nowState.content);
-        return;
-      }
-      // file is exactly the same
-      // function did not have any effect on the file
+      onWriteFileDone(fileUrl, currentState, nowState);
     },
     unlink: removeFile,
   };
@@ -90,10 +119,10 @@ export const spyFilesystemCalls = (
   };
 };
 
-const getFileState = (fileUrl) => {
+const getFileState = (fileUrlOrFileDescriptor) => {
   try {
-    const fileContent = readFileSync(fileUrl);
-    const { mtimeMs } = statSync(fileUrl);
+    const fileContent = readFileSync(fileUrlOrFileDescriptor);
+    const { mtimeMs } = statSync(fileUrlOrFileDescriptor);
     return {
       found: true,
       mtimeMs,

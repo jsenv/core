@@ -197,9 +197,12 @@ const stringifySideEffects = (
         string += value;
       }
     } else if (sideEffect.type === "throw" || sideEffect.type === "reject") {
-      value = replaceFluctuatingValues(value.stack, {
-        stringType: "error",
-      });
+      value = replaceFluctuatingValues(
+        value ? value.stack || value.message || value : String(value),
+        {
+          stringType: "error",
+        },
+      );
       string += "\n";
       string += value;
     } else if (sideEffect.type === "return" || sideEffect.type === "resolve") {
