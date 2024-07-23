@@ -1,7 +1,7 @@
 {
-  "name": "@jsenv/snapshot",
-  "version": "2.2.8",
-  "description": "Snapshot testing",
+  "name": "@jsenv/exception",
+  "version": "1.0.0",
+  "description": "Error and throw value wrapper",
   "license": "MIT",
   "author": {
     "name": "dmail",
@@ -10,11 +10,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/snapshot"
+    "directory": "packages/independent/exception"
   },
-  "bin": "./src/cli.mjs",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=16.13.0"
   },
   "publishConfig": {
     "access": "public"
@@ -34,14 +33,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/assert": "4.1.5",
-    "@jsenv/ast": "6.2.6",
-    "@jsenv/exception": "1.0.0",
-    "@jsenv/filesystem": "4.9.2",
-    "@jsenv/urls": "2.3.2",
-    "@jsenv/utils": "2.1.1",
-    "pixelmatch": "6.0.0",
-    "prettier": "3.3.3",
-    "strip-ansi": "7.1.0"
+    "@jsenv/url-meta": "8.4.2",
+    "errorstacks": "2.4.1"
   }
 }

@@ -1,3 +1,4 @@
+import { createException } from "@jsenv/exception";
 import { writeFileSync } from "@jsenv/filesystem";
 import {
   ensurePathnameTrailingSlash,
@@ -116,7 +117,7 @@ export const snapshotFunctionSideEffects = (
   const onError = (e, isAsync) => {
     sideEffects.push({
       type: isAsync ? "reject" : "throw",
-      value: e,
+      value: createException(e, { rootDirectoryUrl }),
     });
   };
   const onResult = (result, isAsync) => {

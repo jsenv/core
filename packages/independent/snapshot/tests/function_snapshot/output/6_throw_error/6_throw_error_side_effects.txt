@@ -1,9 +1,5 @@
 1. throw
 Error: here
-    at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:37:9
-    at snapshotFunctionSideEffects (file:///cwd()/packages/independent/snapshot/src/function_snapshot.js:145:25)
-    at test (file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:11:10)
-    at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:36:1
-    at ModuleJob.run (node:internal/modules/esm/module_job:262:25)
-    at async ModuleLoader.import (node:internal/modules/esm/loader:474:24)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:109:5)
+  at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:37:9
+  at test (file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:11:10)
+  at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:36:1

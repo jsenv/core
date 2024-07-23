@@ -1,6 +1,5 @@
+import { createException } from "@jsenv/exception";
 import { memoryUsage } from "node:process";
-
-import { createException } from "../execution/exception.js";
 import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
 
 let memoryHeapUsedAtStart;

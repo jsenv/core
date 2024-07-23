@@ -15,5 +15,5 @@ and an other warning
 
 6. reject
 Error: in the end we throw
-    at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:59:9
-    at async file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:47:1
+  at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:59:9
+  at async file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:47:1
