@@ -1,8 +1,7 @@
 1. console.log
 start
 
-2. write file "git_ignored/toto.txt"
-toto
+2. write file "./fs/toto.txt"
 
 3. throw
 Error: in the end we throw

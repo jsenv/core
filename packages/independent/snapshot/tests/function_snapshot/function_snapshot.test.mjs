@@ -11,7 +11,7 @@ const test = (scenario, fn, options) => {
   return snapshotFunctionSideEffects(
     fn,
     import.meta.url,
-    `./output/${scenario}.txt`,
+    `./output/${scenario}/`,
     options,
   );
 };
@@ -57,11 +57,12 @@ await test(
     });
     console.warn("a warning after 2nd timeout");
     console.warn("and an other warning");
-    writeFileSync(new URL("./git_ignored/toto.txt", import.meta.url), "toto");
+    writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
     throw new Error("in the end we throw");
   },
   {
-    filesystemEffects: ["./git_ignored/toto.txt"],
+    filesystemEffects: ["./toto.txt"],
+    restoreFilesystem: true,
   },
 );
 outputDirectorySnapshot.compare();

@@ -1,20 +1,35 @@
-import { readEntryStatSync, readFileSync } from "@jsenv/filesystem";
+import {
+  readEntryStatSync,
+  readFileSync,
+  removeFileSync,
+  writeFileSync,
+} from "@jsenv/filesystem";
 import { urlToRelativeUrl } from "@jsenv/urls/src/url_to_relative_url.js";
-import { takeFileSnapshot } from "./filesystem_snapshot.js";
+import { takeDirectorySnapshot } from "./filesystem_snapshot.js";
 import { replaceFluctuatingValues } from "./replace_fluctuating_values.js";
 
 export const snapshotFunctionSideEffects = (
   fn,
   fnFileUrl,
-  sideEffectFileRelativeUrl,
+  sideEffectDirectoryRelativeUrl,
   {
     rootDirectoryUrl = new URL("./", fnFileUrl),
     captureConsole = true,
     filesystemEffects,
+    restoreFilesystem,
   } = {},
 ) => {
-  const sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, fnFileUrl);
-  const sideEffectFileSnapshot = takeFileSnapshot(sideEffectFileUrl);
+  const sideEffectDirectoryUrl = new URL(
+    sideEffectDirectoryRelativeUrl,
+    fnFileUrl,
+  );
+  const sideEffectDirectorySnapshot = takeDirectorySnapshot(
+    sideEffectDirectoryUrl,
+  );
+  const sideEffectFileUrl = new URL(
+    "./side_effect.txt",
+    sideEffectDirectoryUrl,
+  );
   const sideEffects = [];
   const finallyCallbackSet = new Set();
   const onError = (e) => {
@@ -33,10 +48,11 @@ export const snapshotFunctionSideEffects = (
     for (const finallyCallback of finallyCallbackSet) {
       finallyCallback();
     }
-    sideEffectFileSnapshot.update(
+    writeFileSync(
+      sideEffectFileUrl,
       stringifySideEffects(sideEffects, { rootDirectoryUrl }),
     );
-    sideEffectFileSnapshot.compare();
+    sideEffectDirectorySnapshot.compare();
   };
   if (captureConsole) {
     const installConsoleSpy = (methodName) => {
@@ -57,9 +73,11 @@ export const snapshotFunctionSideEffects = (
     installConsoleSpy("log");
   }
   if (filesystemEffects) {
+    const fsSideEffectDirectoryUrl = new URL("./fs/", sideEffectDirectoryUrl);
     for (const filesystemEffect of filesystemEffects) {
       const from = new URL(filesystemEffect, fnFileUrl);
       const relativeUrl = urlToRelativeUrl(from, fnFileUrl);
+      const toUrl = new URL(relativeUrl, fsSideEffectDirectoryUrl);
       const atStartState = getFileState(from);
       const onFileSystemSideEffect = (fsSideEffect) => {
         const last = sideEffects.pop();
@@ -71,8 +89,10 @@ export const snapshotFunctionSideEffects = (
         if (atStartState.found && !nowState.found) {
           onFileSystemSideEffect({
             type: `remove file "${relativeUrl}"`,
-            value: atStartState.content,
           });
+          if (restoreFilesystem) {
+            writeFileSync(from, atStartState.content);
+          }
           return;
         }
         // we use same type because we don't want to differentiate between
@@ -84,10 +104,19 @@ export const snapshotFunctionSideEffects = (
           atStartState.content !== nowState.content ||
           atStartState.mtimeMs !== nowState.mtimeMs
         ) {
+          writeFileSync(toUrl, nowState.content);
           onFileSystemSideEffect({
-            type: `write file "${relativeUrl}"`,
-            value: nowState.content,
+            type: `write file "./fs/${relativeUrl}"`,
           });
+          if (restoreFilesystem) {
+            if (atStartState.found) {
+              if (atStartState.content !== nowState.content) {
+                writeFileSync(from, atStartState.content);
+              }
+            } else {
+              removeFileSync(from);
+            }
+          }
           return;
         }
         // file is exactly the same
@@ -131,12 +160,24 @@ const stringifySideEffects = (sideEffects, { rootDirectoryUrl }) => {
       string += "\n\n";
     }
     string += `${index + 1}. ${sideEffect.type}`;
-    string += "\n";
     let value = sideEffect.value;
-    if (sideEffect.type === "throw") {
+    if (sideEffect.type.startsWith("console.")) {
+      value = replaceFluctuatingValues(value, {
+        stringType: "console",
+        rootDirectoryUrl,
+      });
+      string += "\n";
+      string += value;
+    } else if (
+      sideEffect.type.startsWith("remove file") ||
+      sideEffect.type.startsWith("write file")
+    ) {
+    } else if (sideEffect.type === "throw") {
       value = replaceFluctuatingValues(value.stack, {
         stringType: "error",
       });
+      string += "\n";
+      string += value;
     } else if (sideEffect.type === "return") {
       value =
         value === undefined
@@ -145,13 +186,12 @@ const stringifySideEffects = (sideEffects, { rootDirectoryUrl }) => {
               stringType: "json",
               rootDirectoryUrl,
             });
-    } else if (sideEffect.type.startsWith("console.")) {
-      value = replaceFluctuatingValues(value, {
-        stringType: "console",
-        rootDirectoryUrl,
-      });
+      string += "\n";
+      string += value;
+    } else {
+      string += "\n";
+      string += value;
     }
-    string += value;
     index++;
   }
   return string;
