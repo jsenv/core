@@ -107,6 +107,12 @@ export const snapshotFunctionSideEffects = (
             });
           }
         },
+        writeDirectory: (url) => {
+          const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
+          onFileSystemSideEffect({
+            type: `write directory "${relativeUrl}"`,
+          });
+        },
       },
       {
         undoFilesystemSideEffects,

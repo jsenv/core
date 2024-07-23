@@ -2,7 +2,13 @@ import {
   snapshotFunctionSideEffects,
   takeDirectorySnapshot,
 } from "@jsenv/snapshot";
-import { readFileSync, writeFile, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFile,
+  writeFileSync,
+} from "node:fs";
 
 const outputDirectorySnapshot = takeDirectorySnapshot(
   new URL("./output/", import.meta.url),
@@ -58,15 +64,9 @@ await test("9_async_complex", async () => {
   writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
   throw new Error("in the end we throw");
 });
-test(
-  "10_fs_write_file_sync_and_directory",
-  () => {
-    writeFileSync(new URL("./toto.txt", import.meta.url), "writeFileSync");
-  },
-  {
-    filesystemEffectsDirectory: true,
-  },
-);
+test("10_fs_write_file_sync", () => {
+  writeFileSync(new URL("./toto.txt", import.meta.url), "writeFileSync");
+});
 await test("11_fs_write_file", async () => {
   await new Promise((resolve, reject) => {
     writeFile(new URL("./toto.txt", import.meta.url), "writeFile", (error) => {
@@ -83,5 +83,18 @@ test("12_write_then_read", () => {
   const value = String(readFileSync(new URL("./toto.txt", import.meta.url)));
   return value;
 });
-// TODO: mkdir
+test("13_mkdir_sync", () => {
+  mkdirSync(new URL("./dir/", import.meta.url));
+  return existsSync(new URL("./dir/", import.meta.url));
+});
+// test(
+//   "15_fs_write_file_sync_and_directory",
+//   () => {
+//     writeFileSync(new URL("./toto.txt", import.meta.url), "writeFileSync");
+//   },
+//   {
+//     filesystemEffectsDirectory: true,
+//   },
+// );
+// TODO: mkdir async
 outputDirectorySnapshot.compare();

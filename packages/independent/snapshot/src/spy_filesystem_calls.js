@@ -1,13 +1,18 @@
 // https://github.com/antfu/fs-spy/blob/main/src/index.ts
 // https://github.com/tschaub/mock-fs/tree/main
 
-import { removeFileSync } from "@jsenv/filesystem/src/main.js";
+import { removeDirectorySync, removeFileSync } from "@jsenv/filesystem";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { spyMethod } from "./spy_method.js";
+import { spyMethods } from "./spy_methods.js";
 
 export const spyFilesystemCalls = (
-  { writeFile = () => {}, removeFile = () => {} },
+  {
+    writeFile = () => {},
+    writeDirectory = () => {},
+    removeFile = () => {},
+    // removeDirectory = () => {},
+  },
   { undoFilesystemSideEffects } = {},
 ) => {
   const _internalFs = process.binding("fs");
@@ -15,34 +20,46 @@ export const spyFilesystemCalls = (
   const fileDescriptorPathMap = new Map();
   const fileRestoreMap = new Map();
 
-  const onWriteFileDone = (fileUrl, currentState, nowState) => {
+  const onWriteFileDone = (fileUrl, stateBefore, stateAfter) => {
     // we use same type because we don't want to differentiate between
     // - writing file for the 1st time
     // - updating file content
     // the important part is the file content in the end of the function execution
     if (
-      (!currentState.found && nowState.found) ||
-      currentState.content !== nowState.content ||
-      currentState.mtimeMs !== nowState.mtimeMs
+      (!stateBefore.found && stateAfter.found) ||
+      stateBefore.content !== stateAfter.content ||
+      stateBefore.mtimeMs !== stateAfter.mtimeMs
     ) {
-      if (undoFilesystemSideEffects) {
-        if (!fileRestoreMap.has(fileUrl)) {
-          if (currentState.found) {
-            fileRestoreMap.set(fileUrl, () => {
-              writeFileSync(fileUrl, currentState.content);
-            });
-          } else {
-            fileRestoreMap.set(fileUrl, () => {
-              removeFileSync(fileUrl, { allowUseless: true });
-            });
-          }
+      if (undoFilesystemSideEffects && !fileRestoreMap.has(fileUrl)) {
+        if (stateBefore.found) {
+          fileRestoreMap.set(fileUrl, () => {
+            writeFileSync(fileUrl, stateBefore.content);
+          });
+        } else {
+          fileRestoreMap.set(fileUrl, () => {
+            removeFileSync(fileUrl, { allowUseless: true });
+          });
         }
       }
-      writeFile(fileUrl, nowState.content);
+      writeFile(fileUrl, stateAfter.content);
       return;
     }
     // file is exactly the same
     // function did not have any effect on the file
+  };
+  const onWriteDirectoryDone = (directoryUrl, stateBefore) => {
+    if (stateBefore.found) {
+      return;
+    }
+    if (undoFilesystemSideEffects && !fileRestoreMap.has(directoryUrl)) {
+      fileRestoreMap.set(directoryUrl, () => {
+        removeDirectorySync(directoryUrl, {
+          allowUseless: true,
+          recursive: true,
+        });
+      });
+    }
+    writeDirectory(directoryUrl);
   };
   const spies = {
     open: ({ callOriginal, args }) => {
@@ -62,7 +79,6 @@ export const spyFilesystemCalls = (
             oncomplete(error);
           } else {
             fileDescriptorPathMap.set(fd, filePath);
-
             oncomplete(error, fd);
           }
         };
@@ -101,23 +117,36 @@ export const spyFilesystemCalls = (
     writeFileUtf8: ({ callOriginal, args }) => {
       const [filePath] = args;
       const fileUrl = pathToFileURL(filePath);
-      const currentState = getFileState(fileUrl);
+      const stateBefore = getFileState(fileUrl);
       callOriginal();
-      const nowState = getFileState(fileUrl);
-      onWriteFileDone(fileUrl, currentState, nowState);
+      const stateAfter = getFileState(fileUrl);
+      onWriteFileDone(fileUrl, stateBefore, stateAfter);
     },
-    unlink: removeFile,
+    unlink: removeFile, // TODO eventually call remove directory
+    mkdir: ({ callOriginal, args }) => {
+      // prettier-ignore
+      const [
+        directoryPath, 
+        /* flags */,
+        /* mode */,
+        callback,
+      ] = args;
+      if (callback) {
+      }
+      const directoryUrl = pathToFileURL(directoryPath);
+      const stateBefore = getDirectoryState(directoryPath);
+      callOriginal();
+      const stateAfter = getDirectoryState(directoryPath);
+      onWriteDirectoryDone(directoryUrl, stateBefore, stateAfter);
+    },
   };
   const restoreCallbackSet = new Set();
-  for (const methodName of Object.keys(spies)) {
-    const spy = spies[methodName];
-    const unspy = spyMethod(_internalFs, methodName, spy, {
-      preventCallToOriginal: true,
-    });
-    restoreCallbackSet.add(() => {
-      unspy();
-    });
-  }
+  const unspy = spyMethods(_internalFs, spies, {
+    preventCallToOriginal: true,
+  });
+  restoreCallbackSet.add(() => {
+    unspy();
+  });
   return {
     restore: () => {
       for (const restoreCallback of restoreCallbackSet) {
@@ -132,14 +161,30 @@ export const spyFilesystemCalls = (
   };
 };
 
-const getFileState = (fileUrlOrFileDescriptor) => {
+const getFileState = (file) => {
   try {
-    const fileContent = readFileSync(fileUrlOrFileDescriptor);
-    const { mtimeMs } = statSync(fileUrlOrFileDescriptor);
+    const fileContent = readFileSync(file);
+    const { mtimeMs } = statSync(file);
     return {
       found: true,
       mtimeMs,
       content: String(fileContent),
+    };
+  } catch (e) {
+    if (e.code === "ENOENT") {
+      return {
+        found: false,
+      };
+    }
+    throw e;
+  }
+};
+
+const getDirectoryState = (directory) => {
+  try {
+    statSync(directory);
+    return {
+      found: true,
     };
   } catch (e) {
     if (e.code === "ENOENT") {
