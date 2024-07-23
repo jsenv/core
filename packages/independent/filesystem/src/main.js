@@ -59,7 +59,10 @@ export { writeEntryModificationTimeSync } from "./read_write/stat/write_entry_mo
 
 // move
 export { moveDirectoryContent } from "./move/move_directory_content.js";
+export { moveFile } from "./move/move_file.js";
 export { moveEntry } from "./move/move_entry.js";
+export { moveFileSync } from "./move/move_file_sync.js";
+export { moveEntrySync } from "./move/move_entry_sync.js";
 
 // copy
 export { copyEntry } from "./copy/copy_entry.js";
