@@ -1,15 +1,9 @@
-import {
-  readEntryStatSync,
-  readFileSync,
-  removeFileSync,
-  writeFileSync,
-} from "@jsenv/filesystem";
+import { writeFileSync } from "@jsenv/filesystem";
 import {
   ensurePathnameTrailingSlash,
   urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
-import { pathToFileURL } from "node:url";
 import { takeDirectorySnapshot } from "./filesystem_snapshot.js";
 import { replaceFluctuatingValues } from "./replace_fluctuating_values.js";
 import { spyConsoleCalls } from "./spy_console_calls.js";
@@ -24,7 +18,7 @@ export const snapshotFunctionSideEffects = (
   {
     rootDirectoryUrl = new URL("./", fnFileUrl),
     filesystemEffectsDirectory,
-    restoreFilesystem = true,
+    preventFilesystemSideEffects = true,
   } = {},
 ) => {
   if (executing) {
@@ -87,51 +81,27 @@ export const snapshotFunctionSideEffects = (
         sideEffects.push(fsSideEffect);
       }
     };
-    const filesystemSpy = spyFilesystemCalls({
-      writeFile: ({ callOriginal, args }) => {
-        const [filePath] = args;
-        const fileUrl = pathToFileURL(filePath);
-        const relativeUrl = urlToRelativeUrl(fileUrl, fnFileUrl);
-        const toUrl = new URL(relativeUrl, fsSideEffectDirectoryUrl);
-        const currentState = getFileState(fileUrl);
-        callOriginal();
-        const nowState = getFileState(fileUrl);
-        // we use same type because we don't want to differentiate between
-        // - writing file for the 1st time
-        // - updating file content
-        // the important part is the file content in the end of the function execution
-        if (
-          (!currentState.found && nowState.found) ||
-          currentState.content !== nowState.content ||
-          currentState.mtimeMs !== nowState.mtimeMs
-        ) {
+    const filesystemSpy = spyFilesystemCalls(
+      {
+        writeFile: (url, content) => {
+          const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
+          const toUrl = new URL(relativeUrl, fsSideEffectDirectoryUrl);
           if (filesystemEffectsDirectory) {
-            writeFileSync(toUrl, nowState.content);
+            writeFileSync(toUrl, content);
             onFileSystemSideEffect({
               type: `write file "${relativeUrl}" (see ./${fsSideEffectsDirectoryRelativeUrl}${relativeUrl})`,
-              value: nowState.content,
+              value: content,
             });
           } else {
             onFileSystemSideEffect({
               type: `write file "${relativeUrl}"`,
-              value: nowState.content,
+              value: content,
             });
           }
-          if (restoreFilesystem) {
-            if (currentState.found) {
-              if (currentState.content !== nowState.content) {
-                writeFileSync(fileUrl, currentState.content);
-              }
-            } else {
-              removeFileSync(fileUrl);
-            }
-          }
-          return;
-        }
-        // file is exactly the same
-        // function did not have any effect on the file
+        },
       },
-    });
+      { preventFilesystemSideEffects },
+    );
     finallyCallbackSet.add(() => {
       filesystemSpy.restore();
     });
@@ -243,23 +213,4 @@ const stringifySideEffects = (
     index++;
   }
   return string;
-};
-
-const getFileState = (fileUrl) => {
-  try {
-    const fileContent = readFileSync(fileUrl);
-    const { mtimeMs } = readEntryStatSync(fileUrl);
-    return {
-      found: true,
-      mtimeMs,
-      content: String(fileContent),
-    };
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      return {
-        found: false,
-      };
-    }
-    throw e;
-  }
 };

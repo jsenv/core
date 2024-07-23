@@ -1,8 +1,8 @@
-import { writeFileSync } from "@jsenv/filesystem";
 import {
   snapshotFunctionSideEffects,
   takeDirectorySnapshot,
 } from "@jsenv/snapshot";
+import { writeFile, writeFileSync } from "node:fs";
 
 const outputDirectorySnapshot = takeDirectorySnapshot(
   new URL("./output/", import.meta.url),
@@ -44,36 +44,38 @@ await test("8_async_rejecting", async () => {
   await Promise.resolve();
   throw new Error("here");
 });
-await test(
-  "9_async_complex",
-  async () => {
-    console.log("start");
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
-    console.info("timeout done");
-    await new Promise((resolve) => {
-      setTimeout(resolve, 50);
-    });
-    console.warn("a warning after 2nd timeout");
-    console.warn("and an other warning");
-    writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
-    throw new Error("in the end we throw");
-  },
-  {
-    filesystemEffects: ["./toto.txt"],
-    restoreFilesystem: true,
-  },
-);
-await test(
-  "10_fs_side_effect_directory",
+await test("9_async_complex", async () => {
+  console.log("start");
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+  console.info("timeout done");
+  await new Promise((resolve) => {
+    setTimeout(resolve, 50);
+  });
+  console.warn("a warning after 2nd timeout");
+  console.warn("and an other warning");
+  writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
+  throw new Error("in the end we throw");
+});
+test(
+  "10_fs_write_file_sync_and_directory",
   () => {
-    writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
+    writeFileSync(new URL("./toto.txt", import.meta.url), "writeFileSync");
   },
   {
-    filesystemEffects: ["./toto.txt"],
-    restoreFilesystem: true,
     filesystemEffectsDirectory: true,
   },
 );
+await test("11_fs_write_file", async () => {
+  await new Promise((resolve, reject) => {
+    writeFile(new URL("./toto.txt", import.meta.url), "writeFile", (error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+});
 outputDirectorySnapshot.compare();

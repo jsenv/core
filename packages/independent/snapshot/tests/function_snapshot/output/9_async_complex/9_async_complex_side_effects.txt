@@ -7,13 +7,13 @@ timeout done
 3. console.warn
 a warning after 2nd timeout
 
-4. console.warn
-and an other warning
-
-5. write file "toto.txt"
+4. write file "toto.txt"
 toto
+
+5. console.warn
+and an other warning
 
 6. reject
 Error: in the end we throw
-    at test.filesystemEffects (file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:61:11)
+    at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:59:9
     at async file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:47:1
