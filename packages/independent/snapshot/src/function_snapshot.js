@@ -8,6 +8,8 @@ import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { takeDirectorySnapshot } from "./filesystem_snapshot.js";
 import { replaceFluctuatingValues } from "./replace_fluctuating_values.js";
 
+const consoleSpySymbol = Symbol.for("console_spy_for_jsenv_snapshot");
+
 export const snapshotFunctionSideEffects = (
   fn,
   fnFileUrl,
@@ -59,12 +61,17 @@ export const snapshotFunctionSideEffects = (
   if (captureConsole) {
     const installConsoleSpy = (methodName) => {
       const methodSpied = console[methodName];
-      console[methodName] = (message) => {
+      if (consoleSpySymbol in methodSpied) {
+        throw new Error("snapshotFunctionSideEffects already running");
+      }
+      const methodSpy = (message) => {
         sideEffects.push({
           type: `console.${methodName}`,
           value: message,
         });
       };
+      methodSpy[consoleSpySymbol] = true;
+      console[methodName] = methodSpy;
       finallyCallbackSet.add(() => {
         console[methodName] = methodSpied;
       });
@@ -139,8 +146,7 @@ export const snapshotFunctionSideEffects = (
   try {
     const returnValue = fn();
     if (returnValue && returnValue.then) {
-      returnedPromise = true;
-      returnValue.then(
+      returnedPromise = returnValue.then(
         (value) => {
           onResult(value);
           onFinally();
@@ -150,14 +156,16 @@ export const snapshotFunctionSideEffects = (
           onFinally();
         },
       );
-    } else {
-      onResult(returnValue);
+      return returnedPromise;
     }
+    onResult(returnValue);
+    return null;
   } catch (e) {
     onError(e);
+    return null;
   } finally {
     if (returnedPromise) {
-      return;
+      return returnedPromise;
     }
     onFinally();
   }
