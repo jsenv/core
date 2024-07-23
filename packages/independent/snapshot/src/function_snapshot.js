@@ -9,10 +9,13 @@ import {
   urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
+import { pathToFileURL } from "node:url";
 import { takeDirectorySnapshot } from "./filesystem_snapshot.js";
 import { replaceFluctuatingValues } from "./replace_fluctuating_values.js";
+import { spyConsoleCalls } from "./spy_console_calls.js";
+import { spyFilesystemCalls } from "./spy_filesystem_calls.js";
 
-const consoleSpySymbol = Symbol.for("console_spy_for_jsenv_snapshot");
+let executing = false;
 
 export const snapshotFunctionSideEffects = (
   fn,
@@ -20,12 +23,14 @@ export const snapshotFunctionSideEffects = (
   sideEffectDirectoryRelativeUrl = "./",
   {
     rootDirectoryUrl = new URL("./", fnFileUrl),
-    captureConsole = true,
-    filesystemEffects,
     filesystemEffectsDirectory,
     restoreFilesystem = true,
   } = {},
 ) => {
+  if (executing) {
+    throw new Error("snapshotFunctionSideEffects already running");
+  }
+  executing = true;
   if (filesystemEffectsDirectory === true) {
     filesystemEffectsDirectory = "./fs/";
   }
@@ -40,55 +45,32 @@ export const snapshotFunctionSideEffects = (
   const sideEffectFileUrl = new URL(sideEffectFilename, sideEffectDirectoryUrl);
   const sideEffects = [];
   const finallyCallbackSet = new Set();
-  const onError = (e, isAsync) => {
-    sideEffects.push({
-      type: isAsync ? "reject" : "throw",
-      value: e,
-    });
-  };
-  const onResult = (result, isAsync) => {
-    sideEffects.push({
-      type: isAsync ? "resolve" : "return",
-      value: result,
-    });
-  };
-  const onFinally = () => {
-    for (const finallyCallback of finallyCallbackSet) {
-      finallyCallback();
-    }
-    writeFileSync(
-      sideEffectFileUrl,
-      stringifySideEffects(sideEffects, {
-        rootDirectoryUrl,
-        filesystemEffectsDirectory,
-      }),
-    );
-    sideEffectDirectorySnapshot.compare();
-  };
-  if (captureConsole) {
-    const installConsoleSpy = (methodName) => {
-      const methodSpied = console[methodName];
-      if (consoleSpySymbol in methodSpied) {
-        throw new Error("snapshotFunctionSideEffects already running");
-      }
-      const methodSpy = (message) => {
-        sideEffects.push({
-          type: `console.${methodName}`,
-          value: message,
-        });
-      };
-      methodSpy[consoleSpySymbol] = true;
-      console[methodName] = methodSpy;
-      finallyCallbackSet.add(() => {
-        console[methodName] = methodSpied;
+  console_side_effects: {
+    const onConsole = (methodName, message) => {
+      sideEffects.push({
+        type: `console.${methodName}`,
+        value: message,
       });
     };
-    installConsoleSpy("error");
-    installConsoleSpy("warn");
-    installConsoleSpy("info");
-    installConsoleSpy("log");
+    const consoleSpy = spyConsoleCalls({
+      error: ({ args }) => {
+        onConsole("error", args[0]);
+      },
+      warn: ({ args }) => {
+        onConsole("warn", args[0]);
+      },
+      info: ({ args }) => {
+        onConsole("info", args[0]);
+      },
+      log: ({ args }) => {
+        onConsole("log", args[0]);
+      },
+    });
+    finallyCallbackSet.add(() => {
+      consoleSpy.restore();
+    });
   }
-  if (filesystemEffects) {
+  filesystem_side_effects: {
     const fsSideEffectDirectoryUrl = ensurePathnameTrailingSlash(
       new URL(filesystemEffectsDirectory, sideEffectDirectoryUrl),
     );
@@ -96,36 +78,32 @@ export const snapshotFunctionSideEffects = (
       fsSideEffectDirectoryUrl,
       sideEffectFileUrl,
     );
-    for (const filesystemEffect of filesystemEffects) {
-      const from = new URL(filesystemEffect, fnFileUrl);
-      const relativeUrl = urlToRelativeUrl(from, fnFileUrl);
-      const toUrl = new URL(relativeUrl, fsSideEffectDirectoryUrl);
-      const atStartState = getFileState(from);
-      const onFileSystemSideEffect = (fsSideEffect) => {
+    const onFileSystemSideEffect = (fsSideEffect) => {
+      if (sideEffects.length) {
         const last = sideEffects.pop();
         sideEffects.push(fsSideEffect);
         sideEffects.push(last);
-      };
-      finallyCallbackSet.add(() => {
-        const nowState = getFileState(from);
-        if (atStartState.found && !nowState.found) {
-          onFileSystemSideEffect({
-            type: `remove file "${relativeUrl}"`,
-            value: atStartState.content,
-          });
-          if (restoreFilesystem) {
-            writeFileSync(from, atStartState.content);
-          }
-          return;
-        }
+      } else {
+        sideEffects.push(fsSideEffect);
+      }
+    };
+    const filesystemSpy = spyFilesystemCalls({
+      writeFile: ({ callOriginal, args }) => {
+        const [filePath] = args;
+        const fileUrl = pathToFileURL(filePath);
+        const relativeUrl = urlToRelativeUrl(fileUrl, fnFileUrl);
+        const toUrl = new URL(relativeUrl, fsSideEffectDirectoryUrl);
+        const currentState = getFileState(fileUrl);
+        callOriginal();
+        const nowState = getFileState(fileUrl);
         // we use same type because we don't want to differentiate between
         // - writing file for the 1st time
         // - updating file content
         // the important part is the file content in the end of the function execution
         if (
-          (!atStartState.found && nowState.found) ||
-          atStartState.content !== nowState.content ||
-          atStartState.mtimeMs !== nowState.mtimeMs
+          (!currentState.found && nowState.found) ||
+          currentState.content !== nowState.content ||
+          currentState.mtimeMs !== nowState.mtimeMs
         ) {
           if (filesystemEffectsDirectory) {
             writeFileSync(toUrl, nowState.content);
@@ -140,21 +118,52 @@ export const snapshotFunctionSideEffects = (
             });
           }
           if (restoreFilesystem) {
-            if (atStartState.found) {
-              if (atStartState.content !== nowState.content) {
-                writeFileSync(from, atStartState.content);
+            if (currentState.found) {
+              if (currentState.content !== nowState.content) {
+                writeFileSync(fileUrl, currentState.content);
               }
             } else {
-              removeFileSync(from);
+              removeFileSync(fileUrl);
             }
           }
           return;
         }
         // file is exactly the same
         // function did not have any effect on the file
-      });
-    }
+      },
+    });
+    finallyCallbackSet.add(() => {
+      filesystemSpy.restore();
+    });
   }
+
+  const onError = (e, isAsync) => {
+    sideEffects.push({
+      type: isAsync ? "reject" : "throw",
+      value: e,
+    });
+  };
+  const onResult = (result, isAsync) => {
+    sideEffects.push({
+      type: isAsync ? "resolve" : "return",
+      value: result,
+    });
+  };
+  const onFinally = () => {
+    executing = false;
+    for (const finallyCallback of finallyCallbackSet) {
+      finallyCallback();
+    }
+    writeFileSync(
+      sideEffectFileUrl,
+      stringifySideEffects(sideEffects, {
+        rootDirectoryUrl,
+        filesystemEffectsDirectory,
+      }),
+    );
+    sideEffectDirectorySnapshot.compare();
+  };
+
   let returnedPromise = false;
   try {
     const returnValue = fn();
