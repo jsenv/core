@@ -95,7 +95,9 @@ export const snapshotFunctionSideEffects = (
           const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
           const toUrl = new URL(relativeUrl, fsSideEffectDirectoryUrl);
           if (filesystemEffectsDirectory) {
-            writeFileSync(toUrl, content);
+            finallyCallbackSet.add(() => {
+              writeFileSync(toUrl, content);
+            });
             onFileSystemSideEffect({
               type: `write file "${relativeUrl}" (see ./${fsSideEffectsDirectoryRelativeUrl}${relativeUrl})`,
               value: content,
