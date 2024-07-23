@@ -1,0 +1,26 @@
+1. console.log
+log_0
+
+2. console.info
+info_0
+
+3. console.warn
+warn_0
+
+4. console.error
+error_0
+
+5. console.log
+log_1
+
+6. console.info
+info_1
+
+7. console.warn
+warn_1
+
+8. console.error
+error_1
+
+9. return
+undefined

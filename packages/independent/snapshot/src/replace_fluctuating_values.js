@@ -19,6 +19,7 @@ import stripAnsi from "strip-ansi";
 export const replaceFluctuatingValues = (
   string,
   {
+    stringType,
     fileUrl,
     removeAnsi = true,
     rootDirectoryUrl = pathToFileURL(process.cwd()),
@@ -60,36 +61,41 @@ export const replaceFluctuatingValues = (
     return value;
   };
 
-  if (fileUrl) {
+  if (fileUrl && stringType === undefined) {
     const extension = urlToExtension(fileUrl);
-    if (extension === ".svg" || extension === ".html") {
-      // do parse html
-      const htmlAst =
-        extension === ".svg"
-          ? parseSvgString(string)
-          : parseHtml({
-              html: string,
-              storeOriginalPositions: false,
-            });
-      // for each attribute value
-      // and each text node content
-      visitHtmlNodes(htmlAst, {
-        "*": (node) => {
-          const htmlNodeText = getHtmlNodeText(node);
-          if (htmlNodeText) {
-            setHtmlNodeText(node, replaceThings(htmlNodeText));
-          }
-          const attributes = getHtmlNodeAttributes(node);
-          if (attributes) {
-            for (const name of Object.keys(attributes)) {
-              attributes[name] = replaceThings(attributes[name]);
-            }
-            setHtmlNodeAttributes(node, attributes);
-          }
-        },
-      });
-      return stringifyHtmlAst(htmlAst);
+    if (extension === ".html") {
+      stringType = "html";
+    } else if (extension === ".svg") {
+      stringType = "svg";
     }
+  }
+  if (stringType === "html") {
+    // do parse html
+    const htmlAst =
+      stringType === "svg"
+        ? parseSvgString(string)
+        : parseHtml({
+            html: string,
+            storeOriginalPositions: false,
+          });
+    // for each attribute value
+    // and each text node content
+    visitHtmlNodes(htmlAst, {
+      "*": (node) => {
+        const htmlNodeText = getHtmlNodeText(node);
+        if (htmlNodeText) {
+          setHtmlNodeText(node, replaceThings(htmlNodeText));
+        }
+        const attributes = getHtmlNodeAttributes(node);
+        if (attributes) {
+          for (const name of Object.keys(attributes)) {
+            attributes[name] = replaceThings(attributes[name]);
+          }
+          setHtmlNodeAttributes(node, attributes);
+        }
+      },
+    });
+    return stringifyHtmlAst(htmlAst);
   }
   return replaceThings(string);
 };

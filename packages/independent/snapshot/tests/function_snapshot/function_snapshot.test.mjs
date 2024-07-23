@@ -8,10 +8,12 @@ const outputDirectorySnapshot = takeDirectorySnapshot(
   new URL("./output/", import.meta.url),
 );
 const test = (scenario, fn, options) => {
-  return snapshotFunctionSideEffects(fn, import.meta.url, {
-    sideEffectDirectoryName: `output/${scenario}/`,
-    ...options,
-  });
+  return snapshotFunctionSideEffects(
+    fn,
+    import.meta.url,
+    `./output/${scenario}.txt`,
+    options,
+  );
 };
 test("0_no_op", () => {});
 test("1_return_undefined", () => undefined);
@@ -55,12 +57,11 @@ await test(
     });
     console.warn("a warning after 2nd timeout");
     console.warn("and an other warning");
-    writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
-
+    writeFileSync(new URL("./git_ignored/toto.txt", import.meta.url), "toto");
     throw new Error("in the end we throw");
   },
   {
-    filesystemEffects: ["./toto.txt"],
+    filesystemEffects: ["./git_ignored/toto.txt"],
   },
 );
 outputDirectorySnapshot.compare();

@@ -1,2 +1,0 @@
-Error: here
-    at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:43:9

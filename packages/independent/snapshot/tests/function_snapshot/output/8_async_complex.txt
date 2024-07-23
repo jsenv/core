@@ -1,0 +1,9 @@
+1. console.log
+start
+
+2. write file "git_ignored/toto.txt"
+toto
+
+3. throw
+Error: in the end we throw
+    at test.filesystemEffects (file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:61:11)
