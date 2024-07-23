@@ -8,7 +8,11 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { URL_META } from "@jsenv/url-meta";
-import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  ensurePathnameTrailingSlash,
+  urlToFilename,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -357,20 +361,21 @@ ${extraUrls.join("\n")}`);
       }
       const relativeUrl = urlToRelativeUrl(directoryItemUrl, directoryUrl);
       if (directoryItemStat.isDirectory()) {
-        if (!shouldIncludeFile(directoryUrl)) {
-          continue;
-        }
-        if (!shouldVisitDirectory(directoryUrl)) {
+        ensurePathnameTrailingSlash(directoryItemUrl);
+        if (!shouldVisitDirectory(directoryItemUrl)) {
           continue;
         }
         contentSnapshotNaturalOrder[relativeUrl] = createDirectorySnapshot(
-          new URL(`${directoryItemUrl}/`),
+          directoryItemUrl,
           {
             shouldVisitDirectory,
             shouldIncludeFile,
             clean,
           },
         );
+        if (clean) {
+          removeDirectorySync(directoryItemUrl);
+        }
         continue;
       }
       if (!shouldIncludeFile(directoryItemUrl)) {

@@ -23,7 +23,7 @@ test("4_log_and_return_42", () => {
   console.log("Hello");
   return 42;
 });
-test("4_multiple_console_calls", () => {
+test("5_multiple_console_calls", () => {
   console.log("log_0");
   console.info("info_0");
   console.warn("warn_0");
@@ -33,19 +33,19 @@ test("4_multiple_console_calls", () => {
   console.warn("warn_1");
   console.error("error_1");
 });
-test("5_throw_error", () => {
+test("6_throw_error", () => {
   throw new Error("here");
 });
-await test("6_async_resolving_to_42", async () => {
+await test("7_async_resolving_to_42", async () => {
   const value = await Promise.resolve(42);
   return value;
 });
-await test("7_async_rejecting", async () => {
+await test("8_async_rejecting", async () => {
   await Promise.resolve();
   throw new Error("here");
 });
 await test(
-  "8_async_complex",
+  "9_async_complex",
   async () => {
     console.log("start");
     await new Promise((resolve) => {
@@ -66,7 +66,7 @@ await test(
   },
 );
 await test(
-  "9_write_file_inline",
+  "10_write_file_inline",
   () => {
     writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
   },
