@@ -20,10 +20,10 @@ test("0_into_nothing", (scenarioDirectoryUrl) => {
   });
 });
 
-test("1_into_existing_file_and_override_enabled", (scenarioDirectoryUrl) => {
+test("1_into_existing_file_and_overwrite_enabled", (scenarioDirectoryUrl) => {
   moveFileSync({
     from: new URL("./a.txt", scenarioDirectoryUrl),
     to: new URL("./b.txt", scenarioDirectoryUrl),
-    override: true,
+    overwrite: true,
   });
 });
