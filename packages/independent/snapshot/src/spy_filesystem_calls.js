@@ -3,6 +3,7 @@
 
 import { readFileSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { spyMethod } from "./spy_method.js";
 
 export const spyFilesystemCalls = (
   { writeFile = () => {}, removeFile = () => {} },
@@ -72,28 +73,12 @@ export const spyFilesystemCalls = (
   const restoreCallbackSet = new Set();
   for (const methodName of Object.keys(spies)) {
     const spy = spies[methodName];
-    const original = _internalFs[methodName];
-    if (typeof original !== "function") {
-      continue;
-    }
-    restoreCallbackSet.add(() => {
-      _internalFs[methodName] = original;
+    const unspy = spyMethod(_internalFs, methodName, spy, {
+      preventCallToOriginal: true,
     });
-    let spyExecuting = false;
-    _internalFs[methodName] = (...args) => {
-      if (spyExecuting) {
-        return original(...args);
-      }
-      spyExecuting = true;
-      try {
-        return spy({
-          callOriginal: () => original(...args),
-          args,
-        });
-      } finally {
-        spyExecuting = false;
-      }
-    };
+    restoreCallbackSet.add(() => {
+      unspy();
+    });
   }
   return {
     restore: () => {

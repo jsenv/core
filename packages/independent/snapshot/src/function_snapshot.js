@@ -18,6 +18,7 @@ export const snapshotFunctionSideEffects = (
   {
     rootDirectoryUrl = new URL("./", fnFileUrl),
     filesystemEffectsDirectory,
+    preventConsoleSideEffects = true,
     preventFilesystemSideEffects = true,
   } = {},
 ) => {
@@ -46,20 +47,25 @@ export const snapshotFunctionSideEffects = (
         value: message,
       });
     };
-    const consoleSpy = spyConsoleCalls({
-      error: ({ args }) => {
-        onConsole("error", args[0]);
+    const consoleSpy = spyConsoleCalls(
+      {
+        error: ({ args }) => {
+          onConsole("error", args[0]);
+        },
+        warn: ({ args }) => {
+          onConsole("warn", args[0]);
+        },
+        info: ({ args }) => {
+          onConsole("info", args[0]);
+        },
+        log: ({ args }) => {
+          onConsole("log", args[0]);
+        },
       },
-      warn: ({ args }) => {
-        onConsole("warn", args[0]);
+      {
+        preventConsoleSideEffects,
       },
-      info: ({ args }) => {
-        onConsole("info", args[0]);
-      },
-      log: ({ args }) => {
-        onConsole("log", args[0]);
-      },
-    });
+    );
     finallyCallbackSet.add(() => {
       consoleSpy.restore();
     });

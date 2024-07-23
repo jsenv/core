@@ -1,4 +1,9 @@
-export const spyConsoleCalls = ({ error, warn, info, log, trace }) => {
+import { spyMethod } from "./spy_method.js";
+
+export const spyConsoleCalls = (
+  { error, warn, info, log, trace },
+  { preventConsoleSideEffects },
+) => {
   const restoreCallbackSet = new Set();
   const spies = {
     error,
@@ -12,19 +17,12 @@ export const spyConsoleCalls = ({ error, warn, info, log, trace }) => {
     if (!spy) {
       continue;
     }
-    const original = console[method];
-    if (typeof original !== "function") {
-      continue;
-    }
-    restoreCallbackSet.add(() => {
-      console[method] = original;
+    const unspy = spyMethod(console, method, spy, {
+      preventCallToOriginal: preventConsoleSideEffects,
     });
-    console[method] = (...args) => {
-      return spy({
-        callOriginal: () => original(...args),
-        args,
-      });
-    };
+    restoreCallbackSet.add(() => {
+      unspy();
+    });
   }
   return {
     restore: () => {
