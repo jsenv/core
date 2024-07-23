@@ -4,7 +4,7 @@ import {
   removeFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
-import { urlToRelativeUrl } from "@jsenv/urls/src/url_to_relative_url.js";
+import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import { takeDirectorySnapshot } from "./filesystem_snapshot.js";
 import { replaceFluctuatingValues } from "./replace_fluctuating_values.js";
 
@@ -17,7 +17,7 @@ export const snapshotFunctionSideEffects = (
     captureConsole = true,
     filesystemEffects,
     filesystemEffectsInline,
-    restoreFilesystem,
+    restoreFilesystem = true,
   } = {},
 ) => {
   const sideEffectDirectoryUrl = new URL(
@@ -27,10 +27,8 @@ export const snapshotFunctionSideEffects = (
   const sideEffectDirectorySnapshot = takeDirectorySnapshot(
     sideEffectDirectoryUrl,
   );
-  const sideEffectFileUrl = new URL(
-    "./side_effect.txt",
-    sideEffectDirectoryUrl,
-  );
+  const sideEffectFilename = `${urlToFilename(sideEffectDirectoryUrl)}_side_effects.txt`;
+  const sideEffectFileUrl = new URL(sideEffectFilename, sideEffectDirectoryUrl);
   const sideEffects = [];
   const finallyCallbackSet = new Set();
   const onError = (e) => {

@@ -144,7 +144,15 @@ export const setUrlExtension = (url, extension) => {
   const pathnameWithoutExtension = currentExtension
     ? pathname.slice(0, -currentExtension.length)
     : pathname;
-  const newPathname = `${pathnameWithoutExtension}${extension}`;
+  let newPathname;
+  if (pathnameWithoutExtension.endsWith("/")) {
+    newPathname = pathnameWithoutExtension.slice(0, -1);
+    newPathname += extension;
+    newPathname += "/";
+  } else {
+    newPathname = pathnameWithoutExtension;
+    newPathname += extension;
+  }
   return `${origin}${newPathname}${search ? `?${search}` : ""}`;
 };
 
