@@ -60,7 +60,7 @@ await test(
     throw new Error("in the end we throw");
   },
   {
-    filesystemRedirects: ["./toto.txt"],
+    filesystemEffects: ["./toto.txt"],
   },
 );
 outputDirectorySnapshot.compare();

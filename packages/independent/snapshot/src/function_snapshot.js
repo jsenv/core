@@ -14,7 +14,7 @@ export const snapshotFunctionSideEffects = (
     sideEffectDirectoryName = "output",
     rootDirectoryUrl = new URL("./", fnFileUrl),
     captureConsole = true,
-    filesystemRedirects,
+    filesystemEffects,
   } = {},
 ) => {
   const sideEffectDirectoryUrl = new URL(sideEffectDirectoryName, fnFileUrl);
@@ -91,14 +91,14 @@ export const snapshotFunctionSideEffects = (
       new URL("./console_logs.txt", sideEffectDirectoryUrl),
     );
   }
-  if (filesystemRedirects) {
+  if (filesystemEffects) {
     const filesystemEffectDirectoryUrl = new URL(
       "./fs/",
       sideEffectDirectoryUrl,
     );
-    for (const filesystemRedirect of filesystemRedirects) {
+    for (const filesystemEffect of filesystemEffects) {
       finallyCallbackSet.add(() => {
-        const from = new URL(filesystemRedirect, fnFileUrl);
+        const from = new URL(filesystemEffect, fnFileUrl);
         const relativeUrl = urlToRelativeUrl(from, fnFileUrl);
         moveEntrySync({
           from,
