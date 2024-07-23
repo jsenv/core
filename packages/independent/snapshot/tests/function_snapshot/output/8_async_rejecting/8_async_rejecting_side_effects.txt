@@ -1,4 +1,6 @@
-1. reject
+1. return promise
+
+2. reject
 Error: here
-  at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:45:9
-  at async file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:43:1
+  at file:///cwd()/function_snapshot.test.mjs:45:9
+  at async file:///cwd()/function_snapshot.test.mjs:43:1

@@ -1,19 +1,21 @@
 1. console.log
 start
 
-2. console.info
+2. return promise
+
+3. console.info
 timeout done
 
-3. console.warn
+4. console.warn
 a warning after 2nd timeout
 
-4. write file "toto.txt"
+5. write file "toto.txt"
 toto
 
-5. console.warn
+6. console.warn
 and an other warning
 
-6. reject
+7. reject
 Error: in the end we throw
-  at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:59:9
-  at async file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:47:1
+  at file:///cwd()/function_snapshot.test.mjs:59:9
+  at async file:///cwd()/function_snapshot.test.mjs:47:1

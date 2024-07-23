@@ -1,5 +1,5 @@
 1. throw
 Error: here
-  at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:37:9
-  at test (file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:11:10)
-  at file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:36:1
+  at file:///cwd()/function_snapshot.test.mjs:37:9
+  at test (file:///cwd()/function_snapshot.test.mjs:11:10)
+  at file:///cwd()/function_snapshot.test.mjs:36:1

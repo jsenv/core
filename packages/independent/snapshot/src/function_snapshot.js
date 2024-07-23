@@ -11,6 +11,7 @@ import { spyConsoleCalls } from "./spy_console_calls.js";
 import { spyFilesystemCalls } from "./spy_filesystem_calls.js";
 
 let executing = false;
+const RETURN_PROMISE = {};
 
 export const snapshotFunctionSideEffects = (
   fn,
@@ -114,16 +115,28 @@ export const snapshotFunctionSideEffects = (
     });
   }
 
-  const onError = (e, isAsync) => {
+  const onCatch = (valueThrow) => {
     sideEffects.push({
-      type: isAsync ? "reject" : "throw",
-      value: createException(e, { rootDirectoryUrl }),
+      type: "throw",
+      value: createException(valueThrow, { rootDirectoryUrl }),
     });
   };
-  const onResult = (result, isAsync) => {
+  const onReturn = (valueReturned) => {
     sideEffects.push({
-      type: isAsync ? "resolve" : "return",
-      value: result,
+      type: "return",
+      value: valueReturned,
+    });
+  };
+  const onResolve = (value) => {
+    sideEffects.push({
+      type: "resolve",
+      value,
+    });
+  };
+  const onReject = (reason) => {
+    sideEffects.push({
+      type: "reject",
+      value: createException(reason, { rootDirectoryUrl }),
     });
   };
   const onFinally = () => {
@@ -143,24 +156,25 @@ export const snapshotFunctionSideEffects = (
 
   let returnedPromise = false;
   try {
-    const returnValue = fn();
-    if (returnValue && returnValue.then) {
-      returnedPromise = returnValue.then(
+    const valueReturned = fn();
+    if (valueReturned && typeof valueReturned.then === "function") {
+      onReturn(RETURN_PROMISE);
+      returnedPromise = valueReturned.then(
         (value) => {
-          onResult(value, true);
+          onResolve(value);
           onFinally();
         },
         (e) => {
-          onError(e, true);
+          onReject(e, true);
           onFinally();
         },
       );
       return returnedPromise;
     }
-    onResult(returnValue);
+    onReturn(valueReturned);
     return null;
   } catch (e) {
-    onError(e);
+    onCatch(e);
     return null;
   } finally {
     if (returnedPromise) {
@@ -180,47 +194,61 @@ const stringifySideEffects = (
     if (string) {
       string += "\n\n";
     }
-    string += `${index + 1}. ${sideEffect.type}`;
+    let label = `${index + 1}. ${sideEffect.type}`;
     let value = sideEffect.value;
     if (sideEffect.type.startsWith("console.")) {
       value = replaceFluctuatingValues(value, {
         stringType: "console",
         rootDirectoryUrl,
       });
-      string += "\n";
-      string += value;
     } else if (
       sideEffect.type.startsWith("remove file") ||
       sideEffect.type.startsWith("write file")
     ) {
-      if (!filesystemEffectsDirectory) {
-        string += "\n";
-        string += value;
+      if (filesystemEffectsDirectory) {
+        value = "";
       }
-    } else if (sideEffect.type === "throw" || sideEffect.type === "reject") {
-      value = replaceFluctuatingValues(
-        value ? value.stack || value.message || value : String(value),
-        {
-          stringType: "error",
-        },
-      );
-      string += "\n";
-      string += value;
-    } else if (sideEffect.type === "return" || sideEffect.type === "resolve") {
-      value =
-        value === undefined
-          ? undefined
-          : replaceFluctuatingValues(JSON.stringify(value, null, "  "), {
-              stringType: "json",
-              rootDirectoryUrl,
-            });
-      string += "\n";
-      string += value;
-    } else {
+    } else if (sideEffect.type === "throw") {
+      value = renderValueThrownOrRejected(value, { rootDirectoryUrl });
+    } else if (sideEffect.type === "return") {
+      if (value === RETURN_PROMISE) {
+        label = `${index + 1}. return promise`;
+        value = "";
+      } else {
+        value = renderReturnValueOrResolveValue(value, { rootDirectoryUrl });
+      }
+    } else if (sideEffect.type === "reject") {
+      value = renderValueThrownOrRejected(value, { rootDirectoryUrl });
+    } else if (sideEffect.type === "resolve") {
+      value = renderReturnValueOrResolveValue(value, { rootDirectoryUrl });
+    }
+    string += label;
+    if (value) {
       string += "\n";
       string += value;
     }
     index++;
   }
   return string;
+};
+
+// @jsenv/humanize?
+const renderReturnValueOrResolveValue = (value, { rootDirectoryUrl }) => {
+  if (value === undefined) {
+    return "undefined";
+  }
+  return replaceFluctuatingValues(JSON.stringify(value, null, "  "), {
+    stringType: "json",
+    rootDirectoryUrl,
+  });
+};
+
+const renderValueThrownOrRejected = (value, { rootDirectoryUrl }) => {
+  return replaceFluctuatingValues(
+    value ? value.stack || value.message || value : String(value),
+    {
+      stringType: "error",
+      rootDirectoryUrl,
+    },
+  );
 };

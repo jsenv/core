@@ -2,7 +2,7 @@ import {
   snapshotFunctionSideEffects,
   takeDirectorySnapshot,
 } from "@jsenv/snapshot";
-import { writeFile, writeFileSync } from "node:fs";
+import { readFileSync, writeFile, writeFileSync } from "node:fs";
 
 const outputDirectorySnapshot = takeDirectorySnapshot(
   new URL("./output/", import.meta.url),
@@ -78,4 +78,10 @@ await test("11_fs_write_file", async () => {
     });
   });
 });
+// test("12_write_then_read", () => {
+//   writeFileSync(new URL("./toto.txt", import.meta.url), "a");
+//   const value = String(readFileSync(new URL("./toto.txt", import.meta.url)));
+//   return value;
+// });
+// TODO: mkdir
 outputDirectorySnapshot.compare();
