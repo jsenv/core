@@ -1,8 +1,19 @@
 1. console.log
 start
 
-2. write file "toto.txt" (see ./fs/toto.txt)
+2. console.info
+timeout done
 
-3. throw
+3. console.warn
+a warning after 2nd timeout
+
+4. console.warn
+and an other warning
+
+5. write file "toto.txt"
+toto
+
+6. reject
 Error: in the end we throw
     at test.filesystemEffects (file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:61:11)
+    at async file:///cwd()/packages/independent/snapshot/tests/function_snapshot/function_snapshot.test.mjs:47:1

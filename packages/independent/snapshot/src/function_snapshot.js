@@ -4,7 +4,11 @@ import {
   removeFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
-import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  ensurePathnameTrailingSlash,
+  urlToFilename,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 import { takeDirectorySnapshot } from "./filesystem_snapshot.js";
 import { replaceFluctuatingValues } from "./replace_fluctuating_values.js";
 
@@ -13,15 +17,18 @@ const consoleSpySymbol = Symbol.for("console_spy_for_jsenv_snapshot");
 export const snapshotFunctionSideEffects = (
   fn,
   fnFileUrl,
-  sideEffectDirectoryRelativeUrl,
+  sideEffectDirectoryRelativeUrl = "./",
   {
     rootDirectoryUrl = new URL("./", fnFileUrl),
     captureConsole = true,
     filesystemEffects,
-    filesystemEffectsInline,
+    filesystemEffectsDirectory,
     restoreFilesystem = true,
   } = {},
 ) => {
+  if (filesystemEffectsDirectory === true) {
+    filesystemEffectsDirectory = "./fs/";
+  }
   const sideEffectDirectoryUrl = new URL(
     sideEffectDirectoryRelativeUrl,
     fnFileUrl,
@@ -33,15 +40,15 @@ export const snapshotFunctionSideEffects = (
   const sideEffectFileUrl = new URL(sideEffectFilename, sideEffectDirectoryUrl);
   const sideEffects = [];
   const finallyCallbackSet = new Set();
-  const onError = (e) => {
+  const onError = (e, isAsync) => {
     sideEffects.push({
-      type: "throw",
+      type: isAsync ? "reject" : "throw",
       value: e,
     });
   };
-  const onResult = (result) => {
+  const onResult = (result, isAsync) => {
     sideEffects.push({
-      type: "return",
+      type: isAsync ? "resolve" : "return",
       value: result,
     });
   };
@@ -53,7 +60,7 @@ export const snapshotFunctionSideEffects = (
       sideEffectFileUrl,
       stringifySideEffects(sideEffects, {
         rootDirectoryUrl,
-        filesystemEffectsInline,
+        filesystemEffectsDirectory,
       }),
     );
     sideEffectDirectorySnapshot.compare();
@@ -82,7 +89,13 @@ export const snapshotFunctionSideEffects = (
     installConsoleSpy("log");
   }
   if (filesystemEffects) {
-    const fsSideEffectDirectoryUrl = new URL("./fs/", sideEffectDirectoryUrl);
+    const fsSideEffectDirectoryUrl = ensurePathnameTrailingSlash(
+      new URL(filesystemEffectsDirectory, sideEffectDirectoryUrl),
+    );
+    const fsSideEffectsDirectoryRelativeUrl = urlToRelativeUrl(
+      fsSideEffectDirectoryUrl,
+      sideEffectFileUrl,
+    );
     for (const filesystemEffect of filesystemEffects) {
       const from = new URL(filesystemEffect, fnFileUrl);
       const relativeUrl = urlToRelativeUrl(from, fnFileUrl);
@@ -114,15 +127,15 @@ export const snapshotFunctionSideEffects = (
           atStartState.content !== nowState.content ||
           atStartState.mtimeMs !== nowState.mtimeMs
         ) {
-          if (filesystemEffectsInline) {
+          if (filesystemEffectsDirectory) {
+            writeFileSync(toUrl, nowState.content);
             onFileSystemSideEffect({
-              type: `write file "${relativeUrl}"`,
+              type: `write file "${relativeUrl}" (see ./${fsSideEffectsDirectoryRelativeUrl}${relativeUrl})`,
               value: nowState.content,
             });
           } else {
-            writeFileSync(toUrl, nowState.content);
             onFileSystemSideEffect({
-              type: `write file "${relativeUrl}" (see ./fs/${relativeUrl})`,
+              type: `write file "${relativeUrl}"`,
               value: nowState.content,
             });
           }
@@ -148,11 +161,11 @@ export const snapshotFunctionSideEffects = (
     if (returnValue && returnValue.then) {
       returnedPromise = returnValue.then(
         (value) => {
-          onResult(value);
+          onResult(value, true);
           onFinally();
         },
         (e) => {
-          onError(e);
+          onError(e, true);
           onFinally();
         },
       );
@@ -173,7 +186,7 @@ export const snapshotFunctionSideEffects = (
 
 const stringifySideEffects = (
   sideEffects,
-  { rootDirectoryUrl, filesystemEffectsInline },
+  { rootDirectoryUrl, filesystemEffectsDirectory },
 ) => {
   let string = "";
   let index = 0;
@@ -194,17 +207,17 @@ const stringifySideEffects = (
       sideEffect.type.startsWith("remove file") ||
       sideEffect.type.startsWith("write file")
     ) {
-      if (filesystemEffectsInline) {
+      if (!filesystemEffectsDirectory) {
         string += "\n";
         string += value;
       }
-    } else if (sideEffect.type === "throw") {
+    } else if (sideEffect.type === "throw" || sideEffect.type === "reject") {
       value = replaceFluctuatingValues(value.stack, {
         stringType: "error",
       });
       string += "\n";
       string += value;
-    } else if (sideEffect.type === "return") {
+    } else if (sideEffect.type === "return" || sideEffect.type === "resolve") {
       value =
         value === undefined
           ? undefined

@@ -66,14 +66,14 @@ await test(
   },
 );
 await test(
-  "10_write_file_inline",
+  "10_fs_side_effect_directory",
   () => {
     writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
   },
   {
     filesystemEffects: ["./toto.txt"],
     restoreFilesystem: true,
-    filesystemEffectsInline: true,
+    filesystemEffectsDirectory: true,
   },
 );
 outputDirectorySnapshot.compare();

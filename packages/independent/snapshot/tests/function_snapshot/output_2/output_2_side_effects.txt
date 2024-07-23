@@ -1,2 +1,2 @@
-1. return
+1. resolve
 undefined
