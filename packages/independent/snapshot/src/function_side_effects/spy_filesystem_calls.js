@@ -128,8 +128,6 @@ export const spyFilesystemCalls = (
       }
       const fileUrl = pathToFileURL(filePath);
       const stateAfter = getFileState(fileUrl);
-      onWriteFileDone(fileUrl, stateBefore, stateAfter);
-
       if (callback) {
         const oncomplete = callback.oncomplete;
         callback.oncomplete = (error) => {
@@ -139,11 +137,13 @@ export const spyFilesystemCalls = (
             oncomplete.call(callback);
             fileDescriptorPathMap.delete(fileDescriptor);
             filesystemStateInfoMap.delete(filePath);
+            onWriteFileDone(fileUrl, stateBefore, stateAfter);
           }
         };
         closeSpy.callOriginal();
       } else {
         closeSpy.callOriginal();
+        onWriteFileDone(fileUrl, stateBefore, stateAfter);
         fileDescriptorPathMap.delete(fileDescriptor);
         filesystemStateInfoMap.delete(filePath);
       }
