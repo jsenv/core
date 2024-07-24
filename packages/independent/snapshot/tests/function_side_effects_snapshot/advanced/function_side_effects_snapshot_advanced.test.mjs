@@ -85,22 +85,22 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
   );
 }
 
-// // do read file twice
-// {
-//   await snapshotFunctionSideEffects(
-//     async () => {
-//       await readFile(import.meta.url, { as: "string" });
-//     },
-//     import.meta.url,
-//     "./output/6_read_file_first/",
-//   );
-//   setTimeout(() => {}, 1_000);
+// do read file twice
+{
+  await snapshotFunctionSideEffects(
+    async () => {
+      await readFile(import.meta.url, { as: "string" });
+    },
+    import.meta.url,
+    "./output/6_read_file_first/",
+  );
+  setTimeout(() => {}, 1_000);
 
-//   await snapshotFunctionSideEffects(
-//     async () => {
-//       await readFile(import.meta.url, { as: "string" });
-//     },
-//     import.meta.url,
-//     "./output/7_read_file_second/",
-//   );
-// }
+  await snapshotFunctionSideEffects(
+    async () => {
+      await readFile(import.meta.url, { as: "string" });
+    },
+    import.meta.url,
+    "./output/7_read_file_second/",
+  );
+}
