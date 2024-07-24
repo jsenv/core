@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert";
+import { writeFile } from "@jsenv/filesystem";
 import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
 
 // warn property restored
@@ -60,4 +61,26 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
   );
   await aPromise;
   await bPromise;
+}
+
+// write several files
+{
+  await snapshotFunctionSideEffects(
+    async () => {
+      await writeFile(new URL("./a.txt", import.meta.url), "a_1");
+      await writeFile(new URL("./b.txt", import.meta.url), "b_1");
+      await writeFile(new URL("./c.txt", import.meta.url), "c_1");
+    },
+    import.meta.url,
+    "./output/4_write_first/",
+  );
+  await snapshotFunctionSideEffects(
+    async () => {
+      await writeFile(new URL("./a.txt", import.meta.url), "a_2");
+      await writeFile(new URL("./b.txt", import.meta.url), "b_2");
+      await writeFile(new URL("./c.txt", import.meta.url), "c_2");
+    },
+    import.meta.url,
+    "./output/5_write_second/",
+  );
 }
