@@ -72,6 +72,9 @@ export const spyMethod = (object, method, spyCallback) => {
       return undefined;
     };
     addCallback = (spyCallback) => {
+      if (spyCallbackSet.size === 0) {
+        object[method] = spy;
+      }
       spyCallbackSet.add(spyCallback);
     };
     removeCallback = (spyCallback) => {

@@ -112,3 +112,20 @@ test("when spy is executing other spy do not know and call go through", () => {
     expect: ["a:start", "original:from_a", "b:start", "original:from_b"],
   });
 });
+test("callOriginal can be used", () => {
+  const calls = [];
+  const object = {
+    method: (value) => {
+      calls.push(`original:${value}`);
+    },
+  };
+  const spy = spyMethod(object, "method", (value) => {
+    calls.push(`a:${value}`);
+    spy.callOriginal();
+  });
+  object.method("start");
+  assert({
+    actual: calls,
+    expect: ["a:start", "original:start"],
+  });
+});

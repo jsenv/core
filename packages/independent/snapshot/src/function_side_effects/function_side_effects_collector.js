@@ -92,7 +92,7 @@ export const collectFunctionSideEffects = (
           return sideEffects;
         },
         (e) => {
-          onReject(e, true);
+          onReject(e);
           onFinally();
           return sideEffects;
         },
