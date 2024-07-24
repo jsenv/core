@@ -94,6 +94,8 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
     import.meta.url,
     "./output/6_read_file_first/",
   );
+  setTimeout(() => {}, 1_000);
+
   await snapshotFunctionSideEffects(
     async () => {
       await readFile(import.meta.url, { as: "string" });

@@ -93,13 +93,14 @@ export const spyFilesystemCalls = (
       if (callback) {
         const stateBefore = getFileState(filePath);
         filesystemStateInfoMap.set(filePath, stateBefore);
-        const oncomplete = callback.oncomplete;
-        callback.oncomplete = (error, fd) => {
+        const original = callback.oncomplete;
+        callback.oncomplete = function (...args) {
+          const [error, fd] = args;
           if (error) {
-            oncomplete.call(callback, error);
+            original.call(this, ...args);
           } else {
             fileDescriptorPathMap.set(fd, filePath);
-            oncomplete.call(callback, error, fd);
+            original.call(this, ...args);
           }
         };
         return openSpy.callOriginal();
@@ -127,26 +128,47 @@ export const spyFilesystemCalls = (
         return;
       }
       const fileUrl = pathToFileURL(filePath);
-      const stateAfter = getFileState(fileUrl);
       if (callback) {
-        const oncomplete = callback.oncomplete;
-        callback.oncomplete = (error) => {
+        const onCall = () => {
+          fileDescriptorPathMap.delete(fileDescriptor);
+          filesystemStateInfoMap.delete(filePath);
+          const stateAfter = getFileState(fileUrl);
+          onWriteFileDone(fileUrl, stateBefore, stateAfter);
+        };
+        if (callback.context) {
+          const original = callback.context.callback;
+          callback.context.callback = function (...args) {
+            callback.context.callback = original;
+            const [error] = args;
+            if (error) {
+              original.call(this, ...args);
+            } else {
+              original.call(this, ...args);
+              onCall();
+            }
+          };
+          closeSpy.callOriginal();
+          return;
+        }
+        const original = callback.oncomplete;
+        callback.oncomplete = function (...args) {
+          callback.oncomplete = original;
+          const [error] = args;
           if (error) {
-            oncomplete.call(callback, error);
+            original.call(this, ...args);
           } else {
-            oncomplete.call(callback);
-            fileDescriptorPathMap.delete(fileDescriptor);
-            filesystemStateInfoMap.delete(filePath);
-            onWriteFileDone(fileUrl, stateBefore, stateAfter);
+            original.call(this, ...args);
+            onCall();
           }
         };
         closeSpy.callOriginal();
-      } else {
-        closeSpy.callOriginal();
-        onWriteFileDone(fileUrl, stateBefore, stateAfter);
-        fileDescriptorPathMap.delete(fileDescriptor);
-        filesystemStateInfoMap.delete(filePath);
+        return;
       }
+      closeSpy.callOriginal();
+      const stateAfter = getFileState(fileUrl);
+      onWriteFileDone(fileUrl, stateBefore, stateAfter);
+      fileDescriptorPathMap.delete(fileDescriptor);
+      filesystemStateInfoMap.delete(filePath);
     },
   );
   const writeFileUtf8Spy = spyMethod(
