@@ -1,16 +1,19 @@
 // https://github.com/antfu/fs-spy/blob/main/src/index.ts
 // https://github.com/tschaub/mock-fs/tree/main
+// https://github.com/tschaub/mock-fs/blob/6e84d5bb320022624c7d770432e3322323ce043e/lib/binding.js#L353
+// https://github.com/tschaub/mock-fs/issues/348
 
 import { removeDirectorySync, removeFileSync } from "@jsenv/filesystem";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { spyMethod } from "./spy_method.js";
+import { disableSpiesWhileCalling, spyMethod } from "./spy_method.js";
 
 export const spyFilesystemCalls = (
   {
+    readFile = () => {}, // TODO
     writeFile = () => {},
     writeDirectory = () => {},
-    removeFile = () => {},
+    removeFile = () => {}, // TODO
     // removeDirectory = () => {},
   },
   { undoFilesystemSideEffects } = {},
@@ -61,6 +64,14 @@ export const spyFilesystemCalls = (
     writeDirectory(directoryUrl);
   };
   const restoreCallbackSet = new Set();
+
+  const getFileStateWithinSpy = (fileUrl) => {
+    return disableSpiesWhileCalling(
+      () => getFileState(fileUrl),
+      [openSpy, closeSpy],
+    );
+  };
+
   const mkdirSpy = spyMethod(
     _internalFs,
     "mkdir",
@@ -90,7 +101,7 @@ export const spyFilesystemCalls = (
     _internalFs,
     "open",
     (filePath, flags, mode, callback) => {
-      const stateBefore = getFileState(filePath);
+      const stateBefore = getFileStateWithinSpy(filePath);
       filesystemStateInfoMap.set(filePath, stateBefore);
       if (callback) {
         if (callback.context) {
@@ -101,7 +112,11 @@ export const spyFilesystemCalls = (
             if (error) {
               original.call(this, ...args);
             } else {
-              fileDescriptorPathMap.set(fd, filePath);
+              if (typeof fd === "number") {
+                fileDescriptorPathMap.set(fd, filePath);
+              } else {
+                // it's a buffer (happens for readFile)
+              }
               original.call(this, ...args);
             }
           };
@@ -123,7 +138,11 @@ export const spyFilesystemCalls = (
         return;
       }
       const fd = openSpy.callOriginal();
-      fileDescriptorPathMap.set(fd, filePath);
+      if (typeof fd === "number") {
+        fileDescriptorPathMap.set(fd, filePath);
+      } else {
+        // it's a buffer (happens for readFile)
+      }
     },
   );
   const closeSpy = spyMethod(
@@ -154,7 +173,8 @@ export const spyFilesystemCalls = (
               original.call(this, ...args);
               fileDescriptorPathMap.delete(fileDescriptor);
               filesystemStateInfoMap.delete(filePath);
-              const stateAfter = getFileState(fileUrl);
+              const stateAfter = getFileStateWithinSpy(fileUrl);
+              readFile(fileUrl);
               onWriteFileDone(fileUrl, stateBefore, stateAfter);
             }
           };
@@ -171,7 +191,7 @@ export const spyFilesystemCalls = (
             original.call(this, ...args);
             fileDescriptorPathMap.delete(fileDescriptor);
             filesystemStateInfoMap.delete(filePath);
-            const stateAfter = getFileState(fileUrl);
+            const stateAfter = getFileStateWithinSpy(fileUrl);
             onWriteFileDone(fileUrl, stateBefore, stateAfter);
           }
         };
@@ -181,7 +201,7 @@ export const spyFilesystemCalls = (
       closeSpy.callOriginal();
       fileDescriptorPathMap.delete(fileDescriptor);
       filesystemStateInfoMap.delete(filePath);
-      const stateAfter = getFileState(fileUrl);
+      const stateAfter = getFileStateWithinSpy(fileUrl);
       onWriteFileDone(fileUrl, stateBefore, stateAfter);
     },
   );
@@ -190,9 +210,9 @@ export const spyFilesystemCalls = (
     "writeFileUtf8",
     (filePath) => {
       const fileUrl = pathToFileURL(filePath);
-      const stateBefore = getFileState(fileUrl);
+      const stateBefore = getFileStateWithinSpy(fileUrl);
       writeFileUtf8Spy.callOriginal();
-      const stateAfter = getFileState(fileUrl);
+      const stateAfter = getFileStateWithinSpy(fileUrl);
       onWriteFileDone(fileUrl, stateBefore, stateAfter);
     },
   );

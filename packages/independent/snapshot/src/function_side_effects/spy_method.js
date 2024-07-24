@@ -54,13 +54,19 @@ export const spyMethod = (object, method, spyCallback) => {
       currentThis = this;
       currentArgs = args;
       someSpyUsedCallOriginal = false;
-      allSpyUsedPreventOriginalCall = true;
+      allSpyUsedPreventOriginalCall = undefined;
       for (const spyCallback of spyCallbackSet) {
+        if (spyCallback.disabled) {
+          continue;
+        }
         try {
           spyCallback(...args);
         } finally {
           if (preventOriginalCallCalled) {
             preventOriginalCallCalled = false;
+            if (allSpyUsedPreventOriginalCall === undefined) {
+              allSpyUsedPreventOriginalCall = true;
+            }
           } else {
             allSpyUsedPreventOriginalCall = false;
           }
@@ -106,9 +112,28 @@ export const spyMethod = (object, method, spyCallback) => {
   const spyHooks = {
     callOriginal,
     preventOriginalCall,
+    disable: () => {
+      spyCallback.disabled = true;
+    },
+    enable: () => {
+      spyCallback.disabled = false;
+    },
     remove: () => {
       removeCallback(spyCallback);
     },
   };
   return spyHooks;
+};
+
+export const disableSpiesWhileCalling = (fn, spyToDisableArray) => {
+  for (const spyToDisable of spyToDisableArray) {
+    spyToDisable.disable();
+  }
+  try {
+    return fn();
+  } finally {
+    for (const spyToEnable of spyToDisableArray) {
+      spyToEnable.enable();
+    }
+  }
 };
