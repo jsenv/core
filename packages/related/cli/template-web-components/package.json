@@ -19,8 +19,8 @@
     "@babel/plugin-syntax-import-assertions": "7.24.7",
     "@jsenv/custom-elements-redefine": "0.0.1",
     "@jsenv/assert": "4.1.6",
-    "@jsenv/core": "39.2.6",
-    "@jsenv/plugin-bundling": "2.6.19",
+    "@jsenv/core": "39.2.7",
+    "@jsenv/plugin-bundling": "2.7.0",
     "@jsenv/plugin-minification": "1.5.5",
     "@jsenv/eslint-config": "16.5.2",
     "@jsenv/eslint-import-resolver": "8.1.2",
@@ -29,7 +29,7 @@
     "eslint-plugin-html": "8.1.1",
     "eslint-plugin-import": "2.29.1",
     "open": "10.1.0",
-    "@playwright/browser-chromium": "1.45.2",
+    "@playwright/browser-chromium": "1.45.3",
     "prettier": "3.3.3"
   }
 }
