@@ -18,7 +18,7 @@ const startTesting = async (fn) => {
       await snapshotFunctionSideEffects(
         fn,
         import.meta.url,
-        `./output/${scenario}/`,
+        `./output/${scenario}.md`,
         options,
       );
     });
@@ -125,7 +125,7 @@ await startTesting(({ test }) => {
     },
     {
       filesystemEffects: {
-        outDirectory: "./fs/",
+        outDirectory: "./15_fs_write_file_sync_and_directory/",
       },
     },
   );

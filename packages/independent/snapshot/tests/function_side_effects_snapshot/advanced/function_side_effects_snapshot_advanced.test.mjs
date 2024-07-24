@@ -11,7 +11,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       console.warn("here");
     },
     import.meta.url,
-    "./output/0_warn_a/",
+    "./output/0_warn_a.md",
   );
   assert({ actual: console.warn, expect: warn });
   await snapshotFunctionSideEffects(
@@ -20,7 +20,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       console.warn("here");
     },
     import.meta.url,
-    "./output/1_warn_b/",
+    "./output/1_warn_b.md",
   );
   assert({ actual: console.warn, expect: warn });
 }
@@ -36,7 +36,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       console.log("a_after_timeout_200");
     },
     import.meta.url,
-    "./output/2_a_when_b_ends_before/",
+    "./output/2_a_when_b_ends_before.md",
     {
       filesystemEffects: {
         preserve: true,
@@ -52,7 +52,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       console.log("b_after_timeout_50");
     },
     import.meta.url,
-    "./output/3_b_when_b_ends_before/",
+    "./output/3_b_when_b_ends_before.md",
     {
       filesystemEffects: {
         preserve: true,
@@ -72,7 +72,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       await writeFile(new URL("./c.txt", import.meta.url), "c_1");
     },
     import.meta.url,
-    "./output/4_write_first/",
+    "./output/4_write_first.md",
   );
   await snapshotFunctionSideEffects(
     async () => {
@@ -81,7 +81,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       await writeFile(new URL("./c.txt", import.meta.url), "c_2");
     },
     import.meta.url,
-    "./output/5_write_second/",
+    "./output/5_write_second.md",
   );
 }
 
@@ -92,13 +92,13 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       await readFile(import.meta.url, { as: "string" });
     },
     import.meta.url,
-    "./output/6_read_file_first/",
+    "./output/6_read_file_first.md",
   );
   await snapshotFunctionSideEffects(
     async () => {
       await readFile(import.meta.url, { as: "string" });
     },
     import.meta.url,
-    "./output/7_read_file_second/",
+    "./output/7_read_file_second.md",
   );
 }

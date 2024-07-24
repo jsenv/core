@@ -2,10 +2,12 @@ import { writeFileSync } from "@jsenv/filesystem";
 import {
   ensurePathnameTrailingSlash,
   urlToExtension,
-  urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
-import { takeDirectorySnapshot } from "../filesystem_snapshot.js";
+import {
+  takeDirectorySnapshot,
+  takeFileSnapshot,
+} from "../filesystem_snapshot.js";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 import { collectFunctionSideEffects } from "./function_side_effects_collector.js";
 import {
@@ -26,9 +28,8 @@ const consoleEffectsDefault = {
 export const snapshotFunctionSideEffects = (
   fn,
   fnFileUrl,
-  sideEffectDirectoryRelativeUrl = "./",
+  sideEffectFileRelativeUrl,
   {
-    sideEffectFileBasename,
     rootDirectoryUrl = new URL("./", fnFileUrl),
     consoleEffects = true,
     filesystemEffects = true,
@@ -40,18 +41,8 @@ export const snapshotFunctionSideEffects = (
   if (filesystemEffects === true) {
     filesystemEffects = {};
   }
-  const sideEffectDirectoryUrl = new URL(
-    sideEffectDirectoryRelativeUrl,
-    fnFileUrl,
-  );
-  const sideEffectDirectorySnapshot = takeDirectorySnapshot(
-    sideEffectDirectoryUrl,
-  );
-  if (sideEffectFileBasename === undefined) {
-    sideEffectFileBasename = `${urlToFilename(sideEffectDirectoryUrl)}_side_effects`;
-  }
-  const sideEffectFilename = `${sideEffectFileBasename}.md`;
-  const sideEffectFileUrl = new URL(sideEffectFilename, sideEffectDirectoryUrl);
+  const sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, fnFileUrl);
+  const sideEffectFileSnapshot = takeFileSnapshot(sideEffectFileUrl);
   const callbackSet = new Set();
   const sideEffectDetectors = [
     ...(consoleEffects
@@ -114,16 +105,27 @@ export const snapshotFunctionSideEffects = (
               const { preserve, outDirectory } = filesystemEffects;
               if (outDirectory) {
                 const fsEffectsOutDirectoryUrl = ensurePathnameTrailingSlash(
-                  new URL(outDirectory, sideEffectDirectoryUrl),
+                  new URL(outDirectory, sideEffectFileUrl),
+                );
+                const fsEffectsOutDirectorySnapshot = takeDirectorySnapshot(
+                  fsEffectsOutDirectoryUrl,
                 );
                 const fsEffectsOutDirectoryRelativeUrl = urlToRelativeUrl(
                   fsEffectsOutDirectoryUrl,
                   sideEffectFileUrl,
                 );
+                const writeFileCallbackSet = new Set();
+                callbackSet.add(() => {
+                  for (const writeFileCallback of writeFileCallbackSet) {
+                    writeFileCallback();
+                  }
+                  writeFileCallbackSet.clear();
+                  fsEffectsOutDirectorySnapshot.compare();
+                });
                 writeFile = (url, content) => {
                   const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
                   const toUrl = new URL(relativeUrl, fsEffectsOutDirectoryUrl);
-                  callbackSet.add(() => {
+                  writeFileCallbackSet.add(() => {
                     writeFileSync(toUrl, content);
                   });
                   addSideEffect({
@@ -172,16 +174,15 @@ export const snapshotFunctionSideEffects = (
         ]
       : []),
   ];
-
   const onSideEffectsCollected = (sideEffects) => {
     for (const callback of callbackSet) {
       callback();
     }
     callbackSet.clear();
-    writeFileSync(sideEffectFileUrl, renderSideEffects(sideEffects));
-    sideEffectDirectorySnapshot.compare();
+    sideEffectFileSnapshot.update(renderSideEffects(sideEffects), {
+      mockFluctuatingValues: false,
+    });
   };
-
   const returnValue = collectFunctionSideEffects(fn, sideEffectDetectors, {
     rootDirectoryUrl,
   });
