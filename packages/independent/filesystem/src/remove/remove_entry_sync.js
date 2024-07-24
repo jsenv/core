@@ -1,4 +1,3 @@
-import { Abort } from "@jsenv/abort";
 import {
   ensurePathnameTrailingSlash,
   resolveUrl,
@@ -18,7 +17,6 @@ import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
 export const removeEntrySync = (
   source,
   {
-    signal = new AbortController().signal,
     allowUseless = false,
     recursive = false,
     maxRetries = 3,
@@ -27,51 +25,41 @@ export const removeEntrySync = (
   } = {},
 ) => {
   const sourceUrl = assertAndNormalizeFileUrl(source);
-
-  const removeOperation = Abort.startOperation();
-  removeOperation.addAbortSignal(signal);
-
-  try {
-    removeOperation.throwIfAborted();
-    const sourceStats = readEntryStatSync(sourceUrl, {
-      nullIfNotFound: true,
-      followLink: false,
-    });
-    if (!sourceStats) {
-      if (allowUseless) {
-        return;
-      }
-      throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+  const sourceStats = readEntryStatSync(sourceUrl, {
+    nullIfNotFound: true,
+    followLink: false,
+  });
+  if (!sourceStats) {
+    if (allowUseless) {
+      return;
     }
+    throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+  }
 
-    // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
-    // FIFO and socket are ignored, not sure what they are exactly and what to do with them
-    // other libraries ignore them, let's do the same.
-    if (
-      sourceStats.isFile() ||
-      sourceStats.isSymbolicLink() ||
-      sourceStats.isCharacterDevice() ||
-      sourceStats.isBlockDevice()
-    ) {
-      removeNonDirectory(
-        sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl,
-        {
-          maxRetries,
-          retryDelay,
-        },
-      );
-    } else if (sourceStats.isDirectory()) {
-      const directoryUrl = ensurePathnameTrailingSlash(sourceUrl);
-      removeDirectorySync(directoryUrl, {
-        signal: removeOperation.signal,
-        recursive,
+  // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
+  // FIFO and socket are ignored, not sure what they are exactly and what to do with them
+  // other libraries ignore them, let's do the same.
+  if (
+    sourceStats.isFile() ||
+    sourceStats.isSymbolicLink() ||
+    sourceStats.isCharacterDevice() ||
+    sourceStats.isBlockDevice()
+  ) {
+    removeNonDirectory(
+      sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl,
+      {
         maxRetries,
         retryDelay,
-        onlyContent,
-      });
-    }
-  } finally {
-    removeOperation.end();
+      },
+    );
+  } else if (sourceStats.isDirectory()) {
+    const directoryUrl = ensurePathnameTrailingSlash(sourceUrl);
+    removeDirectorySync(directoryUrl, {
+      recursive,
+      maxRetries,
+      retryDelay,
+      onlyContent,
+    });
   }
 };
 
@@ -106,13 +94,9 @@ const unlinkSyncNaive = (sourcePath, { handleTemporaryError = null } = {}) => {
 
 const removeDirectorySync = (
   rootDirectoryUrl,
-  { signal, maxRetries, retryDelay, recursive, onlyContent },
+  { maxRetries, retryDelay, recursive, onlyContent },
 ) => {
-  const removeDirectoryOperation = Abort.startOperation();
-  removeDirectoryOperation.addAbortSignal(signal);
-
   const visit = (sourceUrl) => {
-    removeDirectoryOperation.throwIfAborted();
     const sourceStats = readEntryStatSync(sourceUrl, {
       nullIfNotFound: true,
       followLink: false,
@@ -146,7 +130,6 @@ const removeDirectorySync = (
           },
         }
       : {};
-    removeDirectoryOperation.throwIfAborted();
     removeDirectorySyncNaive(directoryPath, {
       ...optionsFromRecursive,
       // Workaround for https://github.com/joyent/node/issues/4337
@@ -184,7 +167,6 @@ const removeDirectorySync = (
   };
 
   const removeDirectoryContent = (directoryUrl) => {
-    removeDirectoryOperation.throwIfAborted();
     const entryNames = readdirSync(new URL(directoryUrl));
     for (const entryName of entryNames) {
       const url = resolveUrl(entryName, directoryUrl);
@@ -200,14 +182,10 @@ const removeDirectorySync = (
     removeNonDirectory(symbolicLinkUrl, { maxRetries, retryDelay });
   };
 
-  try {
-    if (onlyContent) {
-      removeDirectoryContent(rootDirectoryUrl);
-    } else {
-      visitDirectory(rootDirectoryUrl);
-    }
-  } finally {
-    removeDirectoryOperation.end();
+  if (onlyContent) {
+    removeDirectoryContent(rootDirectoryUrl);
+  } else {
+    visitDirectory(rootDirectoryUrl);
   }
 };
 

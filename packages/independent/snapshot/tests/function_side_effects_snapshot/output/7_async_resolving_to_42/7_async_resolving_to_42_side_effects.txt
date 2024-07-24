@@ -1,0 +1,4 @@
+1. return promise
+
+2. resolve
+42

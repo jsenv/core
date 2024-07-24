@@ -3,7 +3,7 @@ import os, { cpus, release, totalmem, availableParallelism, freemem } from "node
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { URL_META, createException } from "./js/exception.js";
+import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
 import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, unlinkSync, readdirSync, rmdirSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
 import crypto from "node:crypto";
@@ -12,7 +12,7 @@ import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { createRequire } from "node:module";
 import { applyBabelPlugins } from "@jsenv/ast";
-import { filterV8Coverage } from "./js/v8_coverage.js";
+import { createException } from "@jsenv/exception";
 import { createServer } from "node:net";
 import { spawn, spawnSync, fork } from "node:child_process";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
@@ -2816,7 +2816,6 @@ const writeDirectorySync = (
 const removeEntrySync = (
   source,
   {
-    signal = new AbortController().signal,
     allowUseless = false,
     recursive = false,
     maxRetries = 3,
@@ -2825,51 +2824,36 @@ const removeEntrySync = (
   } = {},
 ) => {
   const sourceUrl = assertAndNormalizeFileUrl(source);
+  const sourceStats = readEntryStatSync(sourceUrl, {
+    nullIfNotFound: true,
+    followLink: false,
+  });
+  if (!sourceStats) {
+    if (allowUseless) {
+      return;
+    }
+    throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+  }
 
-  const removeOperation = Abort.startOperation();
-  removeOperation.addAbortSignal(signal);
-
-  try {
-    removeOperation.throwIfAborted();
-    const sourceStats = readEntryStatSync(sourceUrl, {
-      nullIfNotFound: true,
-      followLink: false,
+  // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
+  // FIFO and socket are ignored, not sure what they are exactly and what to do with them
+  // other libraries ignore them, let's do the same.
+  if (
+    sourceStats.isFile() ||
+    sourceStats.isSymbolicLink() ||
+    sourceStats.isCharacterDevice() ||
+    sourceStats.isBlockDevice()
+  ) {
+    removeNonDirectory(
+      sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl);
+  } else if (sourceStats.isDirectory()) {
+    const directoryUrl = ensurePathnameTrailingSlash(sourceUrl);
+    removeDirectorySync(directoryUrl, {
+      recursive,
+      maxRetries,
+      retryDelay,
+      onlyContent,
     });
-    if (!sourceStats) {
-      if (allowUseless) {
-        return;
-      }
-      throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
-    }
-
-    // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
-    // FIFO and socket are ignored, not sure what they are exactly and what to do with them
-    // other libraries ignore them, let's do the same.
-    if (
-      sourceStats.isFile() ||
-      sourceStats.isSymbolicLink() ||
-      sourceStats.isCharacterDevice() ||
-      sourceStats.isBlockDevice()
-    ) {
-      removeNonDirectory(
-        sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl,
-        {
-          maxRetries,
-          retryDelay,
-        },
-      );
-    } else if (sourceStats.isDirectory()) {
-      const directoryUrl = ensurePathnameTrailingSlash(sourceUrl);
-      removeDirectorySync(directoryUrl, {
-        signal: removeOperation.signal,
-        recursive,
-        maxRetries,
-        retryDelay,
-        onlyContent,
-      });
-    }
-  } finally {
-    removeOperation.end();
   }
 };
 
@@ -2904,13 +2888,9 @@ const unlinkSyncNaive = (sourcePath, { handleTemporaryError = null } = {}) => {
 
 const removeDirectorySync = (
   rootDirectoryUrl,
-  { signal, maxRetries, retryDelay, recursive, onlyContent },
+  { maxRetries, retryDelay, recursive, onlyContent },
 ) => {
-  const removeDirectoryOperation = Abort.startOperation();
-  removeDirectoryOperation.addAbortSignal(signal);
-
   const visit = (sourceUrl) => {
-    removeDirectoryOperation.throwIfAborted();
     const sourceStats = readEntryStatSync(sourceUrl, {
       nullIfNotFound: true,
       followLink: false,
@@ -2944,7 +2924,6 @@ const removeDirectorySync = (
           },
         }
       : {};
-    removeDirectoryOperation.throwIfAborted();
     removeDirectorySyncNaive(directoryPath, {
       ...optionsFromRecursive,
       // Workaround for https://github.com/joyent/node/issues/4337
@@ -2982,7 +2961,6 @@ const removeDirectorySync = (
   };
 
   const removeDirectoryContent = (directoryUrl) => {
-    removeDirectoryOperation.throwIfAborted();
     const entryNames = readdirSync(new URL(directoryUrl));
     for (const entryName of entryNames) {
       const url = resolveUrl(entryName, directoryUrl);
@@ -2998,14 +2976,10 @@ const removeDirectorySync = (
     removeNonDirectory(symbolicLinkUrl);
   };
 
-  try {
-    if (onlyContent) {
-      removeDirectoryContent(rootDirectoryUrl);
-    } else {
-      visitDirectory(rootDirectoryUrl);
-    }
-  } finally {
-    removeDirectoryOperation.end();
+  if (onlyContent) {
+    removeDirectoryContent(rootDirectoryUrl);
+  } else {
+    visitDirectory(rootDirectoryUrl);
   }
 };
 

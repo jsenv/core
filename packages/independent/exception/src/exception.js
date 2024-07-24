@@ -23,9 +23,14 @@ import { URL_META } from "@jsenv/url-meta";
 import { parseStackTrace } from "errorstacks";
 
 const isDev = process.execArgv.includes("--conditions=development");
-const jsenvCoreDirectoryUrl = new URL("../../../../../", import.meta.url);
 
-export const createException = (reason, { rootDirectoryUrl } = {}) => {
+export const createException = (
+  reason,
+  {
+    jsenvCoreDirectoryUrl = new URL("../../../../", import.meta.url),
+    rootDirectoryUrl,
+  } = {},
+) => {
   const exception = {
     isException: true,
     isError: false,
