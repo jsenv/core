@@ -50,7 +50,12 @@ const test = async ({ browserLauncher, browserName }) => {
   const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl, {
     [`**/**_${browserName}.*`]: true,
     // on linux do not compare screenshots
-    ...(process.platform === "linux" ? { "**/*.png": false } : {}),
+    ...(process.platform === "linux"
+      ? {
+          "./screenshots/": false,
+          "**/*.png": false,
+        }
+      : {}),
   });
   const browser = await browserLauncher.launch({ headless: true });
   const takeSnapshotsForStory = async (story) => {
