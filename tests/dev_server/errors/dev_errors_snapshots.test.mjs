@@ -9,9 +9,9 @@ if (process.platform === "win32") {
 
 process.env.GENERATING_SNAPSHOTS = "true"; // for dev sevrer
 const { devServer } = await import("./start_dev_server.mjs");
-const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
-const screenshotsDirectoryUrl = new URL(
-  `./snapshots/sceenshots/`,
+const htmlOutputDirectoryUrl = new URL(`./output/html/`, import.meta.url);
+const screenshotOutputDirectoryUrl = new URL(
+  `./output/sceenshots/`,
   import.meta.url,
 );
 const takePageSnapshots = async (page, scenario) => {
@@ -35,11 +35,11 @@ const takePageSnapshots = async (page, scenario) => {
     .locator("jsenv-error-overlay")
     .screenshot();
   writeFileSync(
-    new URL(`./${scenario}.png`, screenshotsDirectoryUrl),
+    new URL(`./${scenario}.png`, screenshotOutputDirectoryUrl),
     sceenshotBuffer,
   );
   writeFileSync(
-    new URL(`./${scenario}.html`, snapshotDirectoryUrl),
+    new URL(`./${scenario}.html`, htmlOutputDirectoryUrl),
     process.platform === "win32"
       ? htmlGenerated.replace(/\r\n/g, "\n")
       : htmlGenerated,
@@ -47,16 +47,18 @@ const takePageSnapshots = async (page, scenario) => {
 };
 
 const test = async ({ browserLauncher, browserName }) => {
-  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl, {
-    [`**/**_${browserName}.*`]: true,
-    // on linux do not compare screenshots
-    ...(process.platform === "linux"
-      ? {
-          "./screenshots/": false,
-          "**/*.png": false,
-        }
-      : {}),
-  });
+  const browserHtmlFilesSnapshot = takeDirectorySnapshot(
+    htmlOutputDirectoryUrl,
+    {
+      [`**/**_${browserName}.*`]: true,
+    },
+  );
+  const browserPngFilesSnapshot = takeDirectorySnapshot(
+    screenshotOutputDirectoryUrl,
+    {
+      [`**/**_${browserName}.*`]: process.platform === "darwin",
+    },
+  );
   const browser = await browserLauncher.launch({ headless: true });
   const takeSnapshotsForStory = async (story) => {
     const page = await browser.newPage();
@@ -117,7 +119,8 @@ const test = async ({ browserLauncher, browserName }) => {
   } finally {
     browser.close();
   }
-  directorySnapshot.compare();
+  browserHtmlFilesSnapshot.compare();
+  browserPngFilesSnapshot.compare();
 };
 
 try {
