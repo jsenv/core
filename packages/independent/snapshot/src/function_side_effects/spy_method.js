@@ -16,6 +16,7 @@ export const spyMethod = (object, method, spyCallback) => {
     preventOriginalCall = jsenvSpySymbolValue.preventOriginalCall;
   } else {
     const original = current;
+    let currentThis;
     let currentArgs;
     let originalCalled = false;
     let originalReturnValue;
@@ -32,24 +33,25 @@ export const spyMethod = (object, method, spyCallback) => {
         return originalReturnValue;
       }
       someSpyUsedCallOriginal = true;
-      onOriginalCall(original(...currentArgs));
+      onOriginalCall(original.call(currentThis, ...currentArgs));
       return originalReturnValue;
     };
     preventOriginalCall = () => {
       preventOriginalCallCalled = true;
     };
     const spyCallbackSet = new Set();
-    const spy = (...args) => {
+    const spy = function (...args) {
       if (spyExecuting) {
         // when a spy is executing
         // if it calls the method himself
         // then we want this call to go trough
         // and others spy should not know about it
-        onOriginalCall(original(...args));
+        onOriginalCall(original.call(this, ...args));
         return originalReturnValue;
       }
       spyExecuting = true;
       originalCalled = false;
+      currentThis = this;
       currentArgs = args;
       someSpyUsedCallOriginal = false;
       allSpyUsedPreventOriginalCall = true;
@@ -68,6 +70,7 @@ export const spyMethod = (object, method, spyCallback) => {
       if (!someSpyUsedCallOriginal && !allSpyUsedPreventOriginalCall) {
         callOriginal();
       }
+      currentThis = null;
       currentArgs = null;
       if (originalCalled) {
         originalCalled = false;
