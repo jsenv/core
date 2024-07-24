@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert";
-import { writeFile } from "@jsenv/filesystem";
+import { readFile, writeFile } from "@jsenv/filesystem";
 import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
 
 // warn property restored
@@ -84,3 +84,21 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
     "./output/5_write_second/",
   );
 }
+
+// do several operation on file twice
+// {
+//   await snapshotFunctionSideEffects(
+//     async () => {
+//       await readFile(import.meta.url, { as: "string" });
+//     },
+//     import.meta.url,
+//     "./output/6_read_file_first/",
+//   );
+//   await snapshotFunctionSideEffects(
+//     async () => {
+//       await readFile(import.meta.url, { as: "string" });
+//     },
+//     import.meta.url,
+//     "./output/7_read_file_second/",
+//   );
+// }

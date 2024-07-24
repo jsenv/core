@@ -111,25 +111,44 @@ export const spyFilesystemCalls = (
       return fd;
     },
   );
-  const closeSpy = spyMethod(_internalFs, "close", (fileDescriptor) => {
-    const filePath = fileDescriptorPathMap.get(fileDescriptor);
-    if (!filePath) {
-      return closeSpy.callOriginal();
-    }
-    const openInfo = filesystemStateInfoMap.get(filePath);
-    if (!openInfo) {
-      const returnValue = closeSpy.callOriginal();
-      fileDescriptorPathMap.delete(fileDescriptor);
-      return returnValue;
-    }
-    const fileUrl = pathToFileURL(filePath);
-    const nowState = getFileState(fileUrl);
-    onWriteFileDone(fileUrl, openInfo, nowState);
-    const returnValue = closeSpy.callOriginal();
-    fileDescriptorPathMap.delete(fileDescriptor);
-    filesystemStateInfoMap.delete(filePath);
-    return returnValue;
-  });
+  const closeSpy = spyMethod(
+    _internalFs,
+    "close",
+    (fileDescriptor, callback) => {
+      const filePath = fileDescriptorPathMap.get(fileDescriptor);
+      if (!filePath) {
+        closeSpy.callOriginal();
+        return;
+      }
+      const stateBefore = filesystemStateInfoMap.get(filePath);
+      if (!stateBefore) {
+        closeSpy.callOriginal();
+        fileDescriptorPathMap.delete(fileDescriptor);
+        return;
+      }
+      const fileUrl = pathToFileURL(filePath);
+      const stateAfter = getFileState(fileUrl);
+      onWriteFileDone(fileUrl, stateBefore, stateAfter);
+
+      if (callback) {
+        const oncomplete = callback.oncomplete;
+        callback.oncomplete = (error) => {
+          if (error) {
+            oncomplete.call(callback, error);
+          } else {
+            oncomplete.call(callback);
+            fileDescriptorPathMap.delete(fileDescriptor);
+            filesystemStateInfoMap.delete(filePath);
+          }
+        };
+        closeSpy.callOriginal();
+      } else {
+        closeSpy.callOriginal();
+        fileDescriptorPathMap.delete(fileDescriptor);
+        filesystemStateInfoMap.delete(filePath);
+      }
+    },
+  );
   const writeFileUtf8Spy = spyMethod(
     _internalFs,
     "writeFileUtf8",
