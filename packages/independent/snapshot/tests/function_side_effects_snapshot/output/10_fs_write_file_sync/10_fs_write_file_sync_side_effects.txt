@@ -1,5 +1,7 @@
 1. write file "toto.txt"
+--- content ---
 writeFileSync
+---------------
 
 2. return
 undefined

@@ -1,7 +1,9 @@
 1. return promise
 
 2. write file "toto.txt"
+--- content ---
 writeFile
+---------------
 
 3. resolve
 undefined

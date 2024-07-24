@@ -1,5 +1,7 @@
 1. write file "toto.txt"
+--- content ---
 a
+---------------
 
 2. return
 "a"

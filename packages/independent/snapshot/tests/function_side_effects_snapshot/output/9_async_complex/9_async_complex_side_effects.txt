@@ -13,7 +13,9 @@ a warning after 2nd timeout
 and an other warning
 
 6. write file "toto.txt"
+--- content ---
 toto
+---------------
 
 7. reject
 Error: in the end we throw

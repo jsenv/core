@@ -1,0 +1,36 @@
+1. console.log
+a_before_timeout_200
+
+2. return promise
+
+3. console.warn
+collectFunctionSideEffects called while other function(s) side effects are collected
+
+4. console.log
+b_before_timeout_50
+
+5. console.log
+b_after_timeout_50
+
+6. write file "output_2/3_b_when_b_ends_before/3_b_when_b_ends_before_side_effects.txt"
+--- content ---
+1. console.warn
+collectFunctionSideEffects called while other function(s) side effects are collected
+
+2. console.log
+b_before_timeout_50
+
+3. return promise
+
+4. console.log
+b_after_timeout_50
+
+5. resolve
+undefined
+---------------
+
+7. console.log
+a_after_timeout_200
+
+8. resolve
+undefined

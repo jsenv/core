@@ -3,15 +3,13 @@ import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 
 const RETURN_PROMISE = {};
 
-let executing = false;
+let functionExecutingCount = 0;
+
 export const collectFunctionSideEffects = (
   fn,
   sideEffectDetectors,
   { rootDirectoryUrl },
 ) => {
-  if (executing) {
-    throw new Error("collectFunctionSideEffects already running");
-  }
   const sideEffects = [];
   const addSideEffect = (sideEffect) => {
     sideEffects.push(sideEffect);
@@ -23,6 +21,13 @@ export const collectFunctionSideEffects = (
       uninstall();
     });
   }
+  if (functionExecutingCount) {
+    console.warn(
+      `collectFunctionSideEffects called while other function(s) side effects are collected`,
+    );
+  }
+  functionExecutingCount++;
+
   const onCatch = (valueThrow) => {
     sideEffects.push({
       type: "throw",
@@ -73,7 +78,7 @@ export const collectFunctionSideEffects = (
     });
   };
   const onFinally = () => {
-    executing = false;
+    functionExecutingCount--;
     for (const finallyCallback of finallyCallbackSet) {
       finallyCallback();
     }

@@ -1,0 +1,13 @@
+1. console.warn
+collectFunctionSideEffects called while other function(s) side effects are collected
+
+2. console.log
+b_before_timeout_50
+
+3. return promise
+
+4. console.log
+b_after_timeout_50
+
+5. resolve
+undefined
