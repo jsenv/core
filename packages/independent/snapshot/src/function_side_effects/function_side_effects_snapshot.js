@@ -11,6 +11,8 @@ import { renderSideEffects } from "./function_side_effects_renderer.js";
 import { spyConsoleCalls } from "./spy_console_calls.js";
 import { spyFilesystemCalls } from "./spy_filesystem_calls.js";
 
+let filesystemSideEffectInstalled;
+
 export const snapshotFunctionSideEffects = (
   fn,
   fnFileUrl,
@@ -77,6 +79,12 @@ export const snapshotFunctionSideEffects = (
     {
       name: "filesystem",
       install: (addSideEffect) => {
+        if (filesystemSideEffectInstalled) {
+          throw new Error(
+            "cannot collect filesystem side effects concurrently (already collecting side effect for an other function)",
+          );
+        }
+        filesystemSideEffectInstalled = true;
         const fsSideEffectDirectoryUrl = ensurePathnameTrailingSlash(
           new URL(filesystemEffectsDirectory, sideEffectDirectoryUrl),
         );
@@ -124,6 +132,7 @@ export const snapshotFunctionSideEffects = (
         );
         return () => {
           filesystemSpy.restore();
+          filesystemSideEffectInstalled = false;
         };
       },
     },

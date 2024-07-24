@@ -26,7 +26,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
 
 // logs works when b_ends_before_a
 {
-  const aPromise = snapshotFunctionSideEffects(
+  snapshotFunctionSideEffects(
     async () => {
       console.log("a_before_timeout_200");
       await new Promise((resolve) => {
@@ -37,19 +37,23 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
     import.meta.url,
     "./output_2/2_a_when_b_ends_before/",
   );
-  const bPromise = snapshotFunctionSideEffects(
-    async () => {
-      console.log("b_before_timeout_50");
-      await new Promise((resolve) => {
-        setTimeout(resolve, 50);
-      });
-      console.log("b_after_timeout_50");
-    },
-    import.meta.url,
-    "./output_2/3_b_when_b_ends_before/",
-  );
-  await aPromise;
-  await bPromise;
+  try {
+    snapshotFunctionSideEffects(
+      async () => {
+        console.log("b_before_timeout_50");
+        await new Promise((resolve) => {
+          setTimeout(resolve, 50);
+        });
+        console.log("b_after_timeout_50");
+      },
+      import.meta.url,
+      "./output_2/3_b_when_b_ends_before/",
+    );
+  } catch (e) {
+    const actual = e;
+    const expect = new Error(
+      "cannot collect filesystem side effects concurrently (already collecting side effect for an other function)",
+    );
+    assert({ actual, expect });
+  }
 }
-
-// TODO: a ends before b
