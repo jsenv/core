@@ -52,7 +52,7 @@ test("calling method inside spy", () => {
   object.method("start");
   assert({
     actual: calls,
-    expect: ["a:start", "original:from_a"],
+    expect: ["a:start", "original:from_a", "original:start"],
   });
 });
 test(`a and b uninstalled`, () => {
@@ -85,7 +85,7 @@ test(`a and b uninstalled`, () => {
       callsWithNothing,
     },
     expect: {
-      callsWithAB: ["a:first", "original:first", "b:first", "original:first"],
+      callsWithAB: ["a:first", "b:first", "original:first"],
       callsWithB: ["b:second", "original:second"],
       callsWithNothing: ["original:third"],
     },
@@ -109,7 +109,13 @@ test("when spy is executing other spy do not know and call go through", () => {
   object.method("start");
   assert({
     actual: calls,
-    expect: ["a:start", "original:from_a", "b:start", "original:from_b"],
+    expect: [
+      "a:start",
+      "original:from_a",
+      "b:start",
+      "original:from_b",
+      "original:start",
+    ],
   });
 });
 test("callOriginal can be used", () => {
@@ -145,5 +151,41 @@ test("callOriginal complex", () => {
   assert({
     actual: calls,
     expect: ["a:start", "original:from_a", "original:start"],
+  });
+});
+test("when method called on other spy", () => {
+  const calls = [];
+  const object = {
+    method: (value) => {
+      calls.push(`original:${value}`);
+    },
+  };
+  const spyA = spyMethod(object, "method", (value) => {
+    calls.push(`a:${value}`);
+    spyA.callOriginal();
+  });
+  const spyB = spyMethod(object, "method", (value) => {
+    calls.push(`b:${value}`);
+    spyB.callOriginal();
+  });
+  // let's assume this is a function body:
+  object.method("startA");
+  // and an other one:
+  object.method("startB");
+  // now let's assume the execution of B triggers an original call to the object
+  spyB.remove();
+  object.method("endB");
+  assert({
+    actual: calls,
+    expect: [
+      "a:startA",
+      "original:startA",
+      "b:startA",
+      "a:startB",
+      "original:startB",
+      "b:startB",
+      "a:endB",
+      "original:endB",
+    ],
   });
 });

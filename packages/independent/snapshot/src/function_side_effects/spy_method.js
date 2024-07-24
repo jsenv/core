@@ -21,11 +21,17 @@ export const spyMethod = (object, method, spyCallback) => {
     let originalReturnValue;
     let preventOriginalCallCalled;
     let spyExecuting;
+    let someSpyUsedCallOriginal;
+    let allSpyUsedPreventOriginalCall;
     onOriginalCall = (returnValue) => {
       originalCalled = true;
       originalReturnValue = returnValue;
     };
     callOriginal = () => {
+      if (someSpyUsedCallOriginal) {
+        return originalReturnValue;
+      }
+      someSpyUsedCallOriginal = true;
       onOriginalCall(original(...currentArgs));
       return originalReturnValue;
     };
@@ -34,7 +40,6 @@ export const spyMethod = (object, method, spyCallback) => {
     };
     const spyCallbackSet = new Set();
     const spy = (...args) => {
-      originalCalled = false;
       if (spyExecuting) {
         // when a spy is executing
         // if it calls the method himself
@@ -43,29 +48,29 @@ export const spyMethod = (object, method, spyCallback) => {
         onOriginalCall(original(...args));
         return originalReturnValue;
       }
-      currentArgs = args;
       spyExecuting = true;
+      originalCalled = false;
+      currentArgs = args;
+      someSpyUsedCallOriginal = false;
+      allSpyUsedPreventOriginalCall = true;
       for (const spyCallback of spyCallbackSet) {
-        const originalCalledCache = originalCalled;
-        originalCalled = false;
         try {
           spyCallback(...args);
         } finally {
-          if (originalCalled) {
-          }
-          // original not called by the spy
-          // should we call it ourselves
-          else if (preventOriginalCallCalled) {
-            originalCalled = originalCalledCache;
+          if (preventOriginalCallCalled) {
+            preventOriginalCallCalled = false;
           } else {
-            onOriginalCall(original(...args));
+            allSpyUsedPreventOriginalCall = false;
           }
-          preventOriginalCallCalled = false;
         }
       }
       spyExecuting = false;
+      if (!someSpyUsedCallOriginal && !allSpyUsedPreventOriginalCall) {
+        callOriginal();
+      }
       currentArgs = null;
       if (originalCalled) {
+        originalCalled = false;
         const value = originalReturnValue;
         originalReturnValue = undefined;
         return value;
