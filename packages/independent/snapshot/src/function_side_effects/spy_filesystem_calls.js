@@ -71,10 +71,10 @@ export const spyFilesystemCalls = (
         const oncomplete = callback.oncomplete;
         callback.oncomplete = (error, fd) => {
           if (error) {
-            oncomplete(error);
+            oncomplete.call(callback, error);
           } else {
             fileDescriptorPathMap.set(fd, directoryPath);
-            oncomplete();
+            oncomplete.call(callback);
             onWriteDirectoryDone(directoryUrl, stateBefore, { found: true });
           }
         };
@@ -96,10 +96,10 @@ export const spyFilesystemCalls = (
         const oncomplete = callback.oncomplete;
         callback.oncomplete = (error, fd) => {
           if (error) {
-            oncomplete(error);
+            oncomplete.call(callback, error);
           } else {
             fileDescriptorPathMap.set(fd, filePath);
-            oncomplete(error, fd);
+            oncomplete.call(callback, error, fd);
           }
         };
         return openSpy.callOriginal();
