@@ -1,7 +1,9 @@
 1. write file "toto.txt"
---- content ---
+```txt
 writeFileSync
----------------
+```
 
 2. return
+```js
 undefined
+```

@@ -1,5 +1,6 @@
 import { createException } from "@jsenv/exception";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
+import { wrapIntoMarkdownBlock } from "./function_side_effects_renderer.js";
 
 const RETURN_PROMISE = {};
 
@@ -42,9 +43,11 @@ export const collectFunctionSideEffects = (
       type: "throw",
       value: valueThrow,
       label: "throw",
-      text: renderValueThrownOrRejected(
-        createException(valueThrow, { rootDirectoryUrl }),
-        { rootDirectoryUrl },
+      text: wrapIntoMarkdownBlock(
+        renderValueThrownOrRejected(
+          createException(valueThrow, { rootDirectoryUrl }),
+          { rootDirectoryUrl },
+        ),
       ),
     });
   };
@@ -61,9 +64,12 @@ export const collectFunctionSideEffects = (
         type: "return",
         value: valueReturned,
         label: "return",
-        text: renderReturnValueOrResolveValue(valueReturned, {
-          rootDirectoryUrl,
-        }),
+        text: wrapIntoMarkdownBlock(
+          renderReturnValueOrResolveValue(valueReturned, {
+            rootDirectoryUrl,
+          }),
+          "js",
+        ),
       });
     }
   };
@@ -72,7 +78,10 @@ export const collectFunctionSideEffects = (
       type: "resolve",
       value,
       label: "resolve",
-      text: renderReturnValueOrResolveValue(value, { rootDirectoryUrl }),
+      text: wrapIntoMarkdownBlock(
+        renderReturnValueOrResolveValue(value, { rootDirectoryUrl }),
+        "js",
+      ),
     });
   };
   const onReject = (reason) => {
@@ -80,9 +89,11 @@ export const collectFunctionSideEffects = (
       type: "reject",
       value: reason,
       label: "reject",
-      text: renderValueThrownOrRejected(
-        createException(reason, { rootDirectoryUrl }),
-        { rootDirectoryUrl },
+      text: wrapIntoMarkdownBlock(
+        renderValueThrownOrRejected(
+          createException(reason, { rootDirectoryUrl }),
+          { rootDirectoryUrl },
+        ),
       ),
     });
   };

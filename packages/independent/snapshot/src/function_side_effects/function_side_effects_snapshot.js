@@ -1,13 +1,17 @@
 import { writeFileSync } from "@jsenv/filesystem";
 import {
   ensurePathnameTrailingSlash,
+  urlToExtension,
   urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { takeDirectorySnapshot } from "../filesystem_snapshot.js";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 import { collectFunctionSideEffects } from "./function_side_effects_collector.js";
-import { renderSideEffects } from "./function_side_effects_renderer.js";
+import {
+  renderSideEffects,
+  wrapIntoMarkdownBlock,
+} from "./function_side_effects_renderer.js";
 import { spyConsoleCalls } from "./spy_console_calls.js";
 import { spyFilesystemCalls } from "./spy_filesystem_calls.js";
 
@@ -32,7 +36,7 @@ export const snapshotFunctionSideEffects = (
   const sideEffectDirectorySnapshot = takeDirectorySnapshot(
     sideEffectDirectoryUrl,
   );
-  const sideEffectFilename = `${urlToFilename(sideEffectDirectoryUrl)}_side_effects.txt`;
+  const sideEffectFilename = `${urlToFilename(sideEffectDirectoryUrl)}_side_effects.md`;
   const sideEffectFileUrl = new URL(sideEffectFilename, sideEffectDirectoryUrl);
   const callbackSet = new Set();
   const sideEffectDetectors = [
@@ -44,10 +48,13 @@ export const snapshotFunctionSideEffects = (
             type: `console:${methodName}`,
             value: message,
             label: `console.${methodName}`,
-            text: replaceFluctuatingValues(message, {
-              stringType: "console",
-              rootDirectoryUrl,
-            }),
+            text: wrapIntoMarkdownBlock(
+              replaceFluctuatingValues(message, {
+                stringType: "console",
+                rootDirectoryUrl,
+              }),
+              "console",
+            ),
           });
         };
         const consoleSpy = spyConsoleCalls(
@@ -104,9 +111,10 @@ export const snapshotFunctionSideEffects = (
                   type: "fs:write_file",
                   value: { relativeUrl, content },
                   label: `write file "${relativeUrl}"`,
-                  text: `--- content ---
-${content}
----------------`,
+                  text: wrapIntoMarkdownBlock(
+                    content,
+                    urlToExtension(url).slice(1),
+                  ),
                 });
               }
             },

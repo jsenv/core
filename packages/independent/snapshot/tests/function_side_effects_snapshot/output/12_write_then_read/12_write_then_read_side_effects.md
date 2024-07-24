@@ -1,7 +1,9 @@
 1. write file "toto.txt"
---- content ---
+```txt
 a
----------------
+```
 
 2. return
+```js
 "a"
+```
