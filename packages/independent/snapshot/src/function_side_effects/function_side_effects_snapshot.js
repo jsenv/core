@@ -28,6 +28,7 @@ export const snapshotFunctionSideEffects = (
   fnFileUrl,
   sideEffectDirectoryRelativeUrl = "./",
   {
+    sideEffectbasename,
     rootDirectoryUrl = new URL("./", fnFileUrl),
     consoleEffects = true,
     filesystemEffects = true,
@@ -46,7 +47,10 @@ export const snapshotFunctionSideEffects = (
   const sideEffectDirectorySnapshot = takeDirectorySnapshot(
     sideEffectDirectoryUrl,
   );
-  const sideEffectFilename = `${urlToFilename(sideEffectDirectoryUrl)}_side_effects.md`;
+  if (sideEffectbasename === undefined) {
+    sideEffectbasename = `${urlToFilename(sideEffectDirectoryUrl)}_side_effects`;
+  }
+  const sideEffectFilename = `${sideEffectbasename}.md`;
   const sideEffectFileUrl = new URL(sideEffectFilename, sideEffectDirectoryUrl);
   const callbackSet = new Set();
   const sideEffectDetectors = [
