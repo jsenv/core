@@ -5449,10 +5449,15 @@ const canParseUrl = value => {
   if (value.includes("\n")) {
     return false;
   }
-  if (/^[a-z]*Error: /i.test(value)) {
-    return false;
+  // without this check something like "a:b" would be a valid url
+  const knownProtocols = ["ftp:", "http:", "https:", "file:", "wss:", "blob:", "data:", "mailto:"];
+  const valueLowerCase = value.toLowerCase();
+  for (const knownProtocol of knownProtocols) {
+    if (valueLowerCase.startsWith(knownProtocol)) {
+      return true;
+    }
   }
-  return true;
+  return false;
 };
 const canParseUrlNative = URL.canParse || (value => {
   try {

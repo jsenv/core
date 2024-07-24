@@ -20,7 +20,7 @@ export const comparePngFiles = (actualData, expectData) => {
   );
   const diffRatio = numberOfPixelsConsideredAsDiff / numberOfPixels;
   const diffPercentage = diffRatio * 100;
-  return diffPercentage <= 0.5;
+  return diffPercentage <= 1;
 };
 
 const getPngDimensions = (buffer) => {

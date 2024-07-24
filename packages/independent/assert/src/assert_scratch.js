@@ -5477,13 +5477,15 @@ const canParseUrl = (value) => {
     "ftp:",
     "http:",
     "https:",
+    "file:",
     "wss:",
     "blob:",
     "data:",
     "mailto:",
   ];
+  const valueLowerCase = value.toLowerCase();
   for (const knownProtocol of knownProtocols) {
-    if (value.startsWith(knownProtocol)) {
+    if (valueLowerCase.startsWith(knownProtocol)) {
       return true;
     }
   }

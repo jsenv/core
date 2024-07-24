@@ -1,6 +1,6 @@
+import { createException } from "@jsenv/exception";
 import { writeFileSync } from "node:fs";
 import { memoryUsage } from "node:process";
-import { createException } from "./exception.js";
 import { PerformanceObserver, performance } from "node:perf_hooks";
 import { Session } from "node:inspector";
 
@@ -163,7 +163,7 @@ const executeUsingDynamicImport = async ({
     finalizeCoverage = async () => {
       const [coverage, { filterV8Coverage }] = await Promise.all([
         stopJsCoverage(),
-        import("./v8_coverage.js"),
+        import("./v8_coverage.js").then(n => n.v8_coverage),
       ]);
       const coverageLight = await filterV8Coverage(coverage, {
         rootDirectoryUrl,
