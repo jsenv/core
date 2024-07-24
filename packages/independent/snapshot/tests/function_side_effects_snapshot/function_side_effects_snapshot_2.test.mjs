@@ -24,7 +24,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
   assert({ actual: console.warn, expect: warn });
 }
 
-// throw if called twice
+// throw if called while an other is running
 {
   snapshotFunctionSideEffects(async () => {}, import.meta.url, "./output_2/");
   try {
