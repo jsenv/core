@@ -13,8 +13,8 @@ https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
 */
 
 import "@xterm/addon-serialize?as_js_module";
-import "xterm";
-import "xterm-addon-webgl";
+import "@xterm/addon-webgl";
+import "@xterm/xterm";
 import { createGifEncoder } from "./gif_encoder.js";
 
 const { Terminal } = window;
@@ -49,7 +49,7 @@ export const initTerminal = ({
 
   log("init", { cols, rows, fontFamily, fontSize, convertEol, gif, video });
 
-  const cssUrl = new URL("xterm/css/xterm.css", import.meta.url);
+  const cssUrl = new URL("@xterm/xterm/css/xterm.css", import.meta.url);
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.href = cssUrl;

@@ -86,12 +86,21 @@
   cursor: crosshair;
 }
 
-.xterm .xterm-accessibility, .xterm .xterm-message {
+.xterm .xterm-accessibility:not(.debug), .xterm .xterm-message {
   z-index: 10;
   color: #0000;
   pointer-events: none;
   position: absolute;
   inset: 0;
+}
+
+.xterm .xterm-accessibility-tree:not(.debug) ::selection {
+  color: #0000;
+}
+
+.xterm .xterm-accessibility-tree {
+  user-select: text;
+  white-space: pre;
 }
 
 .xterm .live-region {

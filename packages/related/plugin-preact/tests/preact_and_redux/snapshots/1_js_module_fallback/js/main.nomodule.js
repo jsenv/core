@@ -101,7 +101,7 @@ System.register([], function (_export, _context) {
       w,
       _ = t && t.__k || p$2,
       g = l.length;
-    for (u.__d = e, $$1(u, l, _), e = u.__d, a = 0; a < g; a++) null != (y = u.__k[a]) && "boolean" != typeof y && "function" != typeof y && (v = -1 === y.__i ? h$1 : _[y.__i] || h$1, y.__i = a, O$1(n, y, v, i, o, r, f, e, c, s), d = y.__e, y.ref && v.ref != y.ref && (v.ref && N$1(v.ref, null, y), s.push(y.ref, y.__c || d, y)), null == w && null != d && (w = d), 65536 & y.__u || v.__k === y.__k ? (e && "string" == typeof y.type && !n.contains(e) && (e = x$2(v)), e = I$1(y, e, n)) : "function" == typeof y.type && void 0 !== y.__d ? e = y.__d : d && (e = d.nextSibling), y.__d = void 0, y.__u &= -196609);
+    for (u.__d = e, $$1(u, l, _), e = u.__d, a = 0; a < g; a++) null != (y = u.__k[a]) && "boolean" != typeof y && "function" != typeof y && (v = -1 === y.__i ? h$1 : _[y.__i] || h$1, y.__i = a, O$1(n, y, v, i, o, r, f, e, c, s), d = y.__e, y.ref && v.ref != y.ref && (v.ref && N$1(v.ref, null, y), s.push(y.ref, y.__c || d, y)), null == w && null != d && (w = d), 65536 & y.__u || v.__k === y.__k ? e = I$1(y, e, n) : "function" == typeof y.type && void 0 !== y.__d ? e = y.__d : d && (e = d.nextSibling), y.__d = void 0, y.__u &= -196609);
     u.__d = e, u.__e = w;
   }
   function $$1(n, l, u) {
@@ -125,7 +125,7 @@ System.register([], function (_export, _context) {
       for (t = n.__k, i = 0; t && i < t.length; i++) t[i] && (t[i].__ = n, l = I$1(t[i], l, u));
       return l;
     }
-    n.__e != l && (u.insertBefore(n.__e, l || null), l = n.__e);
+    n.__e != l && (l && n.type && !u.contains(l) && (l = x$2(n)), u.insertBefore(n.__e, l || null), l = n.__e);
     do {
       l = l && l.nextSibling;
     } while (null != l && 8 === l.nodeType);
@@ -223,7 +223,11 @@ System.register([], function (_export, _context) {
       } while (h.__d && ++I < 25);
       h.state = h.__s, null != h.getChildContext && (i = d$1(d$1({}, i), h.getChildContext())), x && !p && null != h.getSnapshotBeforeUpdate && (_ = h.getSnapshotBeforeUpdate(v, w)), S(n, y$1(L = null != a && a.type === k$2 && null == a.key ? a.props.children : a) ? L : [L], u, t, i, o, r, f, e, c, s), h.base = u.__e, u.__u &= -161, h.__h.length && f.push(h), g && (h.__E = h.__ = null);
     } catch (n) {
-      u.__v = null, c || null != r ? (u.__e = e, u.__u |= c ? 160 : 32, r[r.indexOf(e)] = null) : (u.__e = t.__e, u.__k = t.__k), l$1.__e(n, u, t);
+      if (u.__v = null, c || null != r) {
+        for (u.__u |= c ? 160 : 32; e && 8 === e.nodeType && e.nextSibling;) e = e.nextSibling;
+        r[r.indexOf(e)] = null, u.__e = e;
+      } else u.__e = t.__e, u.__k = t.__k;
+      l$1.__e(n, u, t);
     } else null == r && u.__v === t.__v ? (u.__k = t.__k, u.__e = t.__e) : u.__e = z$2(t.__e, u, t, i, o, r, f, c, s);
     (a = l$1.diffed) && a(u);
   }
@@ -273,7 +277,10 @@ System.register([], function (_export, _context) {
   }
   function N$1(n, u, t) {
     try {
-      "function" == typeof n ? n(u) : n.current = u;
+      if ("function" == typeof n) {
+        var i = "function" == typeof n.__u;
+        i && n.__u(), i && null == u || (n.__u = n(u));
+      } else n.current = u;
     } catch (n) {
       l$1.__e(n, t);
     }

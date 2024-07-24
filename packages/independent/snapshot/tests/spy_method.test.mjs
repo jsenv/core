@@ -163,7 +163,7 @@ test("when method called on other spy", () => {
   };
   const spyA = spyMethod(object, "method", (value) => {
     calls.push(`a:${value}`);
-    calls.push(`a.callOriginal():${spyA.callOriginal()}`);
+    calls.push(`a.callOriginal()>${spyA.callOriginal()}`);
   });
   const spyB = spyMethod(object, "method", (value) => {
     calls.push(`b:${value}`);
