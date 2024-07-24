@@ -4,7 +4,7 @@
 import { removeDirectorySync, removeFileSync } from "@jsenv/filesystem";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { spyMethods } from "./spy_methods.js";
+import { spyMethod } from "./spy_method.js";
 
 export const spyFilesystemCalls = (
   {
@@ -19,7 +19,6 @@ export const spyFilesystemCalls = (
   const filesystemStateInfoMap = new Map();
   const fileDescriptorPathMap = new Map();
   const fileRestoreMap = new Map();
-
   const onWriteFileDone = (fileUrl, stateBefore, stateAfter) => {
     // we use same type because we don't want to differentiate between
     // - writing file for the 1st time
@@ -61,15 +60,11 @@ export const spyFilesystemCalls = (
     }
     writeDirectory(directoryUrl);
   };
-  const spies = {
-    mkdir: ({ callOriginal, args }) => {
-      // prettier-ignore
-      const [
-        directoryPath, 
-        /* mode */,
-        /* recursive */,
-        callback,
-      ] = args;
+  const restoreCallbackSet = new Set();
+  const mkdirSpy = spyMethod(
+    _internalFs,
+    "mkdir",
+    (directoryPath, mode, recursive, callback) => {
       const directoryUrl = pathToFileURL(directoryPath);
       if (callback) {
         const stateBefore = getDirectoryState(directoryPath);
@@ -83,21 +78,18 @@ export const spyFilesystemCalls = (
             onWriteDirectoryDone(directoryUrl, stateBefore, { found: true });
           }
         };
-        return callOriginal();
+        return mkdirSpy.callOriginal();
       }
       const stateBefore = getDirectoryState(directoryPath);
-      callOriginal();
+      mkdirSpy.callOriginal();
       onWriteDirectoryDone(directoryUrl, stateBefore, { found: true });
       return undefined;
     },
-    open: ({ callOriginal, args }) => {
-      // prettier-ignore
-      const [
-        filePath, 
-        /* flags */,
-        /* mode */,
-        callback,
-      ] = args;
+  );
+  const openSpy = spyMethod(
+    _internalFs,
+    "open",
+    (filePath, flags, mode, callback) => {
       if (callback) {
         const stateBefore = getFileState(filePath);
         filesystemStateInfoMap.set(filePath, stateBefore);
@@ -110,54 +102,55 @@ export const spyFilesystemCalls = (
             oncomplete(error, fd);
           }
         };
-        return callOriginal();
+        return openSpy.callOriginal();
       }
       const stateBefore = getFileState(filePath);
       filesystemStateInfoMap.set(filePath, stateBefore);
-      const fd = callOriginal();
+      const fd = openSpy.callOriginal();
       fileDescriptorPathMap.set(fd, filePath);
       return fd;
     },
-    close: ({ callOriginal, args }) => {
-      const [fileDescriptor] = args;
-      const filePath = fileDescriptorPathMap.get(fileDescriptor);
-      if (!filePath) {
-        return callOriginal();
-      }
-      const openInfo = filesystemStateInfoMap.get(filePath);
-      if (!openInfo) {
-        const returnValue = callOriginal();
-        fileDescriptorPathMap.delete(fileDescriptor);
-        return returnValue;
-      }
-      const fileUrl = pathToFileURL(filePath);
-      const nowState = getFileState(fileUrl);
-      onWriteFileDone(fileUrl, openInfo, nowState);
-      const returnValue = callOriginal();
+  );
+  const closeSpy = spyMethod(_internalFs, "close", (fileDescriptor) => {
+    const filePath = fileDescriptorPathMap.get(fileDescriptor);
+    if (!filePath) {
+      return closeSpy.callOriginal();
+    }
+    const openInfo = filesystemStateInfoMap.get(filePath);
+    if (!openInfo) {
+      const returnValue = closeSpy.callOriginal();
       fileDescriptorPathMap.delete(fileDescriptor);
-      filesystemStateInfoMap.delete(filePath);
       return returnValue;
-    },
-    // writeBuffer: ({ callOriginal, args }) => {
-    //   const [filePath] = args;
-    //   debugger;
-    // },
-    writeFileUtf8: ({ callOriginal, args }) => {
-      const [filePath] = args;
+    }
+    const fileUrl = pathToFileURL(filePath);
+    const nowState = getFileState(fileUrl);
+    onWriteFileDone(fileUrl, openInfo, nowState);
+    const returnValue = closeSpy.callOriginal();
+    fileDescriptorPathMap.delete(fileDescriptor);
+    filesystemStateInfoMap.delete(filePath);
+    return returnValue;
+  });
+  const writeFileUtf8Spy = spyMethod(
+    _internalFs,
+    "writeFileUtf8",
+    (filePath) => {
       const fileUrl = pathToFileURL(filePath);
       const stateBefore = getFileState(fileUrl);
-      callOriginal();
+      writeFileUtf8Spy.callOriginal();
       const stateAfter = getFileState(fileUrl);
       onWriteFileDone(fileUrl, stateBefore, stateAfter);
     },
-    unlink: removeFile, // TODO eventually call remove directory
-  };
-  const restoreCallbackSet = new Set();
-  const unspy = spyMethods(_internalFs, spies, {
-    preventCallToOriginal: true,
+  );
+  const unlinkSpy = spyMethod(_internalFs, "unlink", (filePath) => {
+    unlinkSpy.callOriginal();
+    removeFile(filePath); // TODO eventually split in removeFile/removeDirectory
   });
   restoreCallbackSet.add(() => {
-    unspy();
+    mkdirSpy.remove();
+    openSpy.remove();
+    closeSpy.remove();
+    writeFileUtf8Spy.remove();
+    unlinkSpy.remove();
   });
   return {
     restore: () => {

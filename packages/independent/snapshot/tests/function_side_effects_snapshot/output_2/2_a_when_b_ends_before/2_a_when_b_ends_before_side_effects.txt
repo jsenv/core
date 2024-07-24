@@ -1,0 +1,28 @@
+1. console.log
+a_before_timeout_200
+
+2. return promise
+
+3. console.log
+b_before_timeout_50
+
+4. console.log
+b_after_timeout_50
+
+5. write file "output_2/3_b_when_b_ends_before/3_b_when_b_ends_before_side_effects.txt"
+1. console.log
+b_before_timeout_50
+
+2. return promise
+
+3. console.log
+b_after_timeout_50
+
+4. resolve
+undefined
+
+6. console.log
+a_after_timeout_200
+
+7. resolve
+undefined

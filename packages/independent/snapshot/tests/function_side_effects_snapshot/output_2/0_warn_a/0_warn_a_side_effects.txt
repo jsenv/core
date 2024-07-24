@@ -1,0 +1,7 @@
+1. return promise
+
+2. console.warn
+here
+
+3. resolve
+undefined

@@ -10,7 +10,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       console.warn("here");
     },
     import.meta.url,
-    "./output_2/",
+    "./output_2/0_warn_a/",
   );
   assert({ actual: console.warn, expect: warn });
   await snapshotFunctionSideEffects(
@@ -19,20 +19,37 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       console.warn("here");
     },
     import.meta.url,
-    "./output_2/",
+    "./output_2/1_warn_b/",
   );
   assert({ actual: console.warn, expect: warn });
 }
 
-// throw if called while an other is running
+// logs works when b_ends_before_a
 {
-  snapshotFunctionSideEffects(async () => {}, import.meta.url, "./output_2/");
-  try {
-    snapshotFunctionSideEffects(() => {}, import.meta.url, "./output_2/");
-    throw new Error("should throw");
-  } catch (e) {
-    const actual = e;
-    const expect = new Error("snapshotFunctionSideEffects already running");
-    assert({ actual, expect });
-  }
+  const aPromise = snapshotFunctionSideEffects(
+    async () => {
+      console.log("a_before_timeout_200");
+      await new Promise((resolve) => {
+        setTimeout(resolve, 200);
+      });
+      console.log("a_after_timeout_200");
+    },
+    import.meta.url,
+    "./output_2/2_a_when_b_ends_before/",
+  );
+  const bPromise = snapshotFunctionSideEffects(
+    async () => {
+      console.log("b_before_timeout_50");
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+      console.log("b_after_timeout_50");
+    },
+    import.meta.url,
+    "./output_2/3_b_when_b_ends_before/",
+  );
+  await aPromise;
+  await bPromise;
 }
+
+// TODO: a ends before b
