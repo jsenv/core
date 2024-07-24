@@ -129,3 +129,21 @@ test("callOriginal can be used", () => {
     expect: ["a:start", "original:start"],
   });
 });
+test("callOriginal complex", () => {
+  const calls = [];
+  const object = {
+    method: (value) => {
+      calls.push(`original:${value}`);
+    },
+  };
+  const spy = spyMethod(object, "method", (value) => {
+    calls.push(`a:${value}`);
+    object.method("from_a");
+    spy.callOriginal();
+  });
+  object.method("start");
+  assert({
+    actual: calls,
+    expect: ["a:start", "original:from_a", "original:start"],
+  });
+});

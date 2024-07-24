@@ -34,15 +34,16 @@ export const spyMethod = (object, method, spyCallback) => {
     };
     const spyCallbackSet = new Set();
     const spy = (...args) => {
-      currentArgs = args;
       originalCalled = false;
       if (spyExecuting) {
         // when a spy is executing
         // if it calls the method himself
         // then we want this call to go trough
         // and others spy should not know about it
-        return callOriginal();
+        onOriginalCall(original(...args));
+        return originalReturnValue;
       }
+      currentArgs = args;
       spyExecuting = true;
       for (const spyCallback of spyCallbackSet) {
         const originalCalledCache = originalCalled;
@@ -57,7 +58,7 @@ export const spyMethod = (object, method, spyCallback) => {
           else if (preventOriginalCallCalled) {
             originalCalled = originalCalledCache;
           } else {
-            callOriginal();
+            onOriginalCall(original(...args));
           }
           preventOriginalCallCalled = false;
         }

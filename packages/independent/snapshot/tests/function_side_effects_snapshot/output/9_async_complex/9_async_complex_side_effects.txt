@@ -9,11 +9,11 @@ timeout done
 4. console.warn
 a warning after 2nd timeout
 
-5. write file "toto.txt"
-toto
-
-6. console.warn
+5. console.warn
 and an other warning
+
+6. write file "toto.txt"
+toto
 
 7. reject
 Error: in the end we throw
