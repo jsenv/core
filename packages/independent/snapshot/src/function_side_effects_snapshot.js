@@ -1,3 +1,7 @@
+// TODO: allow to add side effect detector
+// TODO: a function solely responsible to collect side effects
+// this one will use afterwards
+
 import { createException } from "@jsenv/exception";
 import { writeFileSync } from "@jsenv/filesystem";
 import {
@@ -45,8 +49,13 @@ export const snapshotFunctionSideEffects = (
   console_side_effects: {
     const onConsole = (methodName, message) => {
       sideEffects.push({
-        type: `console.${methodName}`,
+        type: `console:${methodName}`,
         value: message,
+        label: `console.${methodName}`,
+        text: replaceFluctuatingValues(message, {
+          stringType: "console",
+          rootDirectoryUrl,
+        }),
       });
     };
     const consoleSpy = spyConsoleCalls(
@@ -99,20 +108,27 @@ export const snapshotFunctionSideEffects = (
               writeFileSync(toUrl, content);
             });
             onFileSystemSideEffect({
-              type: `write file "${relativeUrl}" (see ./${fsSideEffectsDirectoryRelativeUrl}${relativeUrl})`,
-              value: content,
+              type: "fs:write_file",
+              value: { relativeUrl, content },
+              label: `write file "${relativeUrl}" (see ./${fsSideEffectsDirectoryRelativeUrl}${relativeUrl})`,
+              text: null,
             });
           } else {
             onFileSystemSideEffect({
-              type: `write file "${relativeUrl}"`,
-              value: content,
+              type: "fs:write_file",
+              value: { relativeUrl, content },
+              label: `write file "${relativeUrl}"`,
+              text: content,
             });
           }
         },
         writeDirectory: (url) => {
           const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
           onFileSystemSideEffect({
-            type: `write directory "${relativeUrl}"`,
+            type: "fs:write_directory",
+            value: { relativeUrl },
+            label: `write directory "${relativeUrl}"`,
+            text: null,
           });
         },
       },
@@ -128,25 +144,50 @@ export const snapshotFunctionSideEffects = (
   const onCatch = (valueThrow) => {
     sideEffects.push({
       type: "throw",
-      value: createException(valueThrow, { rootDirectoryUrl }),
+      value: valueThrow,
+      label: "throw",
+      text: renderValueThrownOrRejected(
+        createException(valueThrow, { rootDirectoryUrl }),
+        { rootDirectoryUrl },
+      ),
     });
   };
   const onReturn = (valueReturned) => {
-    sideEffects.push({
-      type: "return",
-      value: valueReturned,
-    });
+    if (valueReturned === RETURN_PROMISE) {
+      sideEffects.push({
+        type: "return",
+        value: valueReturned,
+        label: "return promise",
+        text: null,
+      });
+    } else {
+      sideEffects.push({
+        type: "return",
+        value: valueReturned,
+        label: "return",
+        text: renderReturnValueOrResolveValue(valueReturned, {
+          rootDirectoryUrl,
+        }),
+      });
+    }
   };
   const onResolve = (value) => {
     sideEffects.push({
       type: "resolve",
       value,
+      label: "resolve",
+      text: renderReturnValueOrResolveValue(value, { rootDirectoryUrl }),
     });
   };
   const onReject = (reason) => {
     sideEffects.push({
       type: "reject",
-      value: createException(reason, { rootDirectoryUrl }),
+      value: reason,
+      label: "reject",
+      text: renderValueThrownOrRejected(
+        createException(reason, { rootDirectoryUrl }),
+        { rootDirectoryUrl },
+      ),
     });
   };
   const onFinally = () => {
@@ -154,13 +195,7 @@ export const snapshotFunctionSideEffects = (
     for (const finallyCallback of finallyCallbackSet) {
       finallyCallback();
     }
-    writeFileSync(
-      sideEffectFileUrl,
-      stringifySideEffects(sideEffects, {
-        rootDirectoryUrl,
-        filesystemEffectsDirectory,
-      }),
-    );
+    writeFileSync(sideEffectFileUrl, renderSideEffects(sideEffects));
     sideEffectDirectorySnapshot.compare();
   };
 
@@ -194,48 +229,19 @@ export const snapshotFunctionSideEffects = (
   }
 };
 
-const stringifySideEffects = (
-  sideEffects,
-  { rootDirectoryUrl, filesystemEffectsDirectory },
-) => {
+const renderSideEffects = (sideEffects) => {
   let string = "";
   let index = 0;
   for (const sideEffect of sideEffects) {
     if (string) {
       string += "\n\n";
     }
-    let label = `${index + 1}. ${sideEffect.type}`;
-    let value = sideEffect.value;
-    if (sideEffect.type.startsWith("console.")) {
-      value = replaceFluctuatingValues(value, {
-        stringType: "console",
-        rootDirectoryUrl,
-      });
-    } else if (
-      sideEffect.type.startsWith("remove file") ||
-      sideEffect.type.startsWith("write file")
-    ) {
-      if (filesystemEffectsDirectory) {
-        value = "";
-      }
-    } else if (sideEffect.type === "throw") {
-      value = renderValueThrownOrRejected(value, { rootDirectoryUrl });
-    } else if (sideEffect.type === "return") {
-      if (value === RETURN_PROMISE) {
-        label = `${index + 1}. return promise`;
-        value = "";
-      } else {
-        value = renderReturnValueOrResolveValue(value, { rootDirectoryUrl });
-      }
-    } else if (sideEffect.type === "reject") {
-      value = renderValueThrownOrRejected(value, { rootDirectoryUrl });
-    } else if (sideEffect.type === "resolve") {
-      value = renderReturnValueOrResolveValue(value, { rootDirectoryUrl });
-    }
+    let label = `${index + 1}. ${sideEffect.label}`;
+    let text = sideEffect.text;
     string += label;
-    if (value) {
+    if (text) {
       string += "\n";
-      string += value;
+      string += text;
     }
     index++;
   }
