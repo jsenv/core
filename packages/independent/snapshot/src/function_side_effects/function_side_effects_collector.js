@@ -22,6 +22,15 @@ export const collectFunctionSideEffects = (
     });
   }
   if (functionExecutingCount) {
+    // The reason for this warning:
+    // 1. fs side effect detectors is not yet fully compatible with that because
+    //    callback.oncomplete redefinition might be wrong for open, mkdir etc
+    //    (at least this is to be tested)
+    // 2. It's usually a sign code forgets to put await in front of
+    //    collectFunctionSideEffects or snapshotFunctionSideEffects
+    // 3. collectFunctionSideEffects is meant to collect a function side effect
+    //    during unit test. So in unit test the function being tested should be analyized
+    //    and should not in turn analyze an other one
     console.warn(
       `collectFunctionSideEffects called while other function(s) side effects are collected`,
     );
