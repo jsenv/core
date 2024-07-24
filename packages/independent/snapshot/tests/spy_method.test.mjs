@@ -158,15 +158,16 @@ test("when method called on other spy", () => {
   const object = {
     method: (value) => {
       calls.push(`original:${value}`);
+      return `original:${value}`;
     },
   };
   const spyA = spyMethod(object, "method", (value) => {
     calls.push(`a:${value}`);
-    spyA.callOriginal();
+    calls.push(`a.callOriginal():${spyA.callOriginal()}`);
   });
   const spyB = spyMethod(object, "method", (value) => {
     calls.push(`b:${value}`);
-    spyB.callOriginal();
+    calls.push(`b.callOriginal():${spyB.callOriginal()}`);
   });
   // let's assume this is a function body:
   object.method("startA");
@@ -180,12 +181,17 @@ test("when method called on other spy", () => {
     expect: [
       "a:startA",
       "original:startA",
+      "a.callOriginal():original:startA",
       "b:startA",
+      "b.callOriginal():original:startA",
       "a:startB",
       "original:startB",
+      "a.callOriginal():original:startB",
       "b:startB",
+      "b.callOriginal():original:startB",
       "a:endB",
       "original:endB",
+      "a.callOriginal():original:endB",
     ],
   });
 });
