@@ -20,7 +20,7 @@ b_before_timeout_50
 b_after_timeout_50
 ```
 
-6. write file "output_2/3_b_when_b_ends_before/3_b_when_b_ends_before_side_effects.md"
+6. write file "output/3_b_when_b_ends_before/3_b_when_b_ends_before_side_effects.md"
 ```md
 1. console.warn
 ```console

@@ -10,7 +10,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       console.warn("here");
     },
     import.meta.url,
-    "./output_2/0_warn_a/",
+    "./output/0_warn_a/",
   );
   assert({ actual: console.warn, expect: warn });
   await snapshotFunctionSideEffects(
@@ -19,7 +19,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       console.warn("here");
     },
     import.meta.url,
-    "./output_2/1_warn_b/",
+    "./output/1_warn_b/",
   );
   assert({ actual: console.warn, expect: warn });
 }
@@ -35,7 +35,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       console.log("a_after_timeout_200");
     },
     import.meta.url,
-    "./output_2/2_a_when_b_ends_before/",
+    "./output/2_a_when_b_ends_before/",
     {
       undoFilesystemSideEffects: false,
     },
@@ -49,7 +49,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       console.log("b_after_timeout_50");
     },
     import.meta.url,
-    "./output_2/3_b_when_b_ends_before/",
+    "./output/3_b_when_b_ends_before/",
     {
       undoFilesystemSideEffects: false,
     },
