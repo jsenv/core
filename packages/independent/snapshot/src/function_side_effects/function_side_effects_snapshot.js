@@ -15,19 +15,29 @@ import {
 import { spyConsoleCalls } from "./spy_console_calls.js";
 import { spyFilesystemCalls } from "./spy_filesystem_calls.js";
 
+const filesystemEffectsDefault = {
+  outDirectory: null,
+  preserve: false,
+};
+const consoleEffectsDefault = {
+  prevent: true,
+};
+
 export const snapshotFunctionSideEffects = (
   fn,
   fnFileUrl,
   sideEffectDirectoryRelativeUrl = "./",
   {
     rootDirectoryUrl = new URL("./", fnFileUrl),
-    filesystemEffectsDirectory,
-    preventConsoleSideEffects = true,
-    undoFilesystemSideEffects = true,
+    consoleEffects = true,
+    filesystemEffects = true,
   } = {},
 ) => {
-  if (filesystemEffectsDirectory === true) {
-    filesystemEffectsDirectory = "./fs/";
+  if (consoleEffects === true) {
+    consoleEffects = {};
+  }
+  if (filesystemEffects === true) {
+    filesystemEffects = {};
   }
   const sideEffectDirectoryUrl = new URL(
     sideEffectDirectoryRelativeUrl,
@@ -40,103 +50,123 @@ export const snapshotFunctionSideEffects = (
   const sideEffectFileUrl = new URL(sideEffectFilename, sideEffectDirectoryUrl);
   const callbackSet = new Set();
   const sideEffectDetectors = [
-    {
-      name: "console",
-      install: (addSideEffect) => {
-        const onConsole = (methodName, message) => {
-          addSideEffect({
-            type: `console:${methodName}`,
-            value: message,
-            label: `console.${methodName}`,
-            text: wrapIntoMarkdownBlock(
-              replaceFluctuatingValues(message, {
-                stringType: "console",
-                rootDirectoryUrl,
-              }),
-              "console",
-            ),
-          });
-        };
-        const consoleSpy = spyConsoleCalls(
+    ...(consoleEffects
+      ? [
           {
-            error: (message) => {
-              onConsole("error", message);
-            },
-            warn: (message) => {
-              onConsole("warn", message);
-            },
-            info: (message) => {
-              onConsole("info", message);
-            },
-            log: (message) => {
-              onConsole("log", message);
-            },
-          },
-          {
-            preventConsoleSideEffects,
-          },
-        );
-        return () => {
-          consoleSpy.restore();
-        };
-      },
-    },
-    {
-      name: "filesystem",
-      install: (addSideEffect) => {
-        const fsSideEffectDirectoryUrl = ensurePathnameTrailingSlash(
-          new URL(filesystemEffectsDirectory, sideEffectDirectoryUrl),
-        );
-        const fsSideEffectsDirectoryRelativeUrl = urlToRelativeUrl(
-          fsSideEffectDirectoryUrl,
-          sideEffectFileUrl,
-        );
-        const filesystemSpy = spyFilesystemCalls(
-          {
-            writeFile: (url, content) => {
-              const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
-              const toUrl = new URL(relativeUrl, fsSideEffectDirectoryUrl);
-              if (filesystemEffectsDirectory) {
-                callbackSet.add(() => {
-                  writeFileSync(toUrl, content);
-                });
+            name: "console",
+            install: (addSideEffect) => {
+              consoleEffects = { ...consoleEffectsDefault, ...consoleEffects };
+              const { prevent } = consoleEffects;
+              const onConsole = (methodName, message) => {
                 addSideEffect({
-                  type: "fs:write_file",
-                  value: { relativeUrl, content },
-                  label: `write file "${relativeUrl}" (see ./${fsSideEffectsDirectoryRelativeUrl}${relativeUrl})`,
-                  text: null,
-                });
-              } else {
-                addSideEffect({
-                  type: "fs:write_file",
-                  value: { relativeUrl, content },
-                  label: `write file "${relativeUrl}"`,
+                  type: `console:${methodName}`,
+                  value: message,
+                  label: `console.${methodName}`,
                   text: wrapIntoMarkdownBlock(
-                    content,
-                    urlToExtension(url).slice(1),
+                    replaceFluctuatingValues(message, {
+                      stringType: "console",
+                      rootDirectoryUrl,
+                    }),
+                    "console",
                   ),
                 });
-              }
-            },
-            writeDirectory: (url) => {
-              const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
-              addSideEffect({
-                type: "fs:write_directory",
-                value: { relativeUrl },
-                label: `write directory "${relativeUrl}"`,
-                text: null,
-              });
+              };
+              const consoleSpy = spyConsoleCalls(
+                {
+                  error: (message) => {
+                    onConsole("error", message);
+                  },
+                  warn: (message) => {
+                    onConsole("warn", message);
+                  },
+                  info: (message) => {
+                    onConsole("info", message);
+                  },
+                  log: (message) => {
+                    onConsole("log", message);
+                  },
+                },
+                {
+                  preventConsoleSideEffects: prevent,
+                },
+              );
+              return () => {
+                consoleSpy.restore();
+              };
             },
           },
+        ]
+      : []),
+    ...(filesystemEffects
+      ? [
           {
-            undoFilesystemSideEffects,
+            name: "filesystem",
+            install: (addSideEffect) => {
+              filesystemEffects = {
+                ...filesystemEffectsDefault,
+                ...filesystemEffects,
+              };
+              let writeFile;
+              const { preserve, outDirectory } = filesystemEffects;
+              if (outDirectory) {
+                const fsEffectsOutDirectoryUrl = ensurePathnameTrailingSlash(
+                  new URL(outDirectory, sideEffectDirectoryUrl),
+                );
+                const fsEffectsOutDirectoryRelativeUrl = urlToRelativeUrl(
+                  fsEffectsOutDirectoryUrl,
+                  sideEffectFileUrl,
+                );
+                writeFile = (url, content) => {
+                  const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
+                  const toUrl = new URL(relativeUrl, fsEffectsOutDirectoryUrl);
+                  callbackSet.add(() => {
+                    writeFileSync(toUrl, content);
+                  });
+                  addSideEffect({
+                    type: "fs:write_file",
+                    value: { relativeUrl, content },
+                    label: `write file "${relativeUrl}" (see ./${fsEffectsOutDirectoryRelativeUrl}${relativeUrl})`,
+                    text: null,
+                  });
+                };
+              } else {
+                writeFile = (url, content) => {
+                  const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
+                  addSideEffect({
+                    type: "fs:write_file",
+                    value: { relativeUrl, content },
+                    label: `write file "${relativeUrl}"`,
+                    text: wrapIntoMarkdownBlock(
+                      content,
+                      urlToExtension(url).slice(1),
+                    ),
+                  });
+                };
+              }
+              const filesystemSpy = spyFilesystemCalls(
+                {
+                  writeFile,
+                  writeDirectory: (url) => {
+                    const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
+                    addSideEffect({
+                      type: "fs:write_directory",
+                      value: { relativeUrl },
+                      label: `write directory "${relativeUrl}"`,
+                      text: null,
+                    });
+                  },
+                },
+                {
+                  undoFilesystemSideEffects: !preserve,
+                },
+              );
+              return () => {
+                filesystemSpy.restore();
+              };
+            },
           },
-        );
-        return () => {
-          filesystemSpy.restore();
-        };
-      },
-    },
+        ]
+      : []),
   ];
 
   const onSideEffectsCollected = (sideEffects) => {

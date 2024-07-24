@@ -124,7 +124,9 @@ await startTesting(({ test }) => {
       );
     },
     {
-      filesystemEffectsDirectory: "./fs/",
+      filesystemEffects: {
+        outDirectory: "./fs/",
+      },
     },
   );
   // TODO: ability to ignore some files

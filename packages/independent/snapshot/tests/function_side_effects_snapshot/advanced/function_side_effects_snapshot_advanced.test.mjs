@@ -37,7 +37,9 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
     import.meta.url,
     "./output/2_a_when_b_ends_before/",
     {
-      undoFilesystemSideEffects: false,
+      filesystemEffects: {
+        preserve: true,
+      },
     },
   );
   const bPromise = snapshotFunctionSideEffects(
@@ -51,7 +53,9 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
     import.meta.url,
     "./output/3_b_when_b_ends_before/",
     {
-      undoFilesystemSideEffects: false,
+      filesystemEffects: {
+        preserve: true,
+      },
     },
   );
   await aPromise;
