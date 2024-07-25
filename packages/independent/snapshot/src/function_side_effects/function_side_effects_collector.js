@@ -36,7 +36,6 @@ export const collectFunctionSideEffects = (
       `collectFunctionSideEffects called while other function(s) side effects are collected`,
     );
   }
-  functionExecutingCount++;
 
   const onCatch = (valueThrow) => {
     sideEffects.push({
@@ -98,6 +97,7 @@ export const collectFunctionSideEffects = (
     });
   };
   const onFinally = () => {
+    delete process.env.SNAPSHOTING_FUNCTION_SIDE_EFFECTS;
     functionExecutingCount--;
     for (const finallyCallback of finallyCallbackSet) {
       finallyCallback();
@@ -105,6 +105,8 @@ export const collectFunctionSideEffects = (
     finallyCallbackSet.clear();
   };
 
+  process.env.SNAPSHOTING_FUNCTION_SIDE_EFFECTS = "1";
+  functionExecutingCount++;
   let returnedPromise = false;
   try {
     const valueReturned = fn();

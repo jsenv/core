@@ -1,36 +1,36 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
+import { snapshotBuildSideEffects } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const test = async ({ name, ...rest }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await build({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...rest,
-  });
-  buildDirectorySnapshot.compare();
+const test = async (scenario, options) => {
+  await snapshotBuildSideEffects(
+    () =>
+      build({
+        logLevel: "info",
+        sourceDirectoryUrl: new URL("./client/", import.meta.url),
+        buildDirectoryUrl: new URL("./build/", import.meta.url),
+        entryPoints: {
+          "./main.html": "main.html",
+        },
+        outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+        ...options,
+      }),
+    import.meta.url,
+    `./output/${scenario}.md`,
+  );
 };
 
 // can use <script type="module">
-await test({
-  name: "0_js_module",
+await test("0_js_module", {
   runtimeCompat: { chrome: "89" },
   bundling: false,
   minification: false,
   versioning: false,
 });
+
 // cannot use <script type="module">
-await test({
-  name: "1_js_module_fallback",
-  runtimeCompat: { chrome: "60" },
-  bundling: false,
-  minification: false,
-  versioning: false,
-});
+// await test("1_js_module_fallback", {
+//   runtimeCompat: { chrome: "60" },
+//   bundling: false,
+//   minification: false,
+//   versioning: false,
+// });

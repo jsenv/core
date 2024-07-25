@@ -15,6 +15,9 @@ export const createTaskLog = (
       fail: () => {},
     };
   }
+  if (animated && process.env.SNAPSHOTING_FUNCTION_SIDE_EFFECTS) {
+    animated = false;
+  }
   const startMs = Date.now();
   const dynamicLog = createDynamicLog();
   let message = label;
