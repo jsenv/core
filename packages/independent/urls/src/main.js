@@ -14,6 +14,7 @@ export {
   setUrlExtension,
   setUrlFilename,
   ensurePathnameTrailingSlash,
+  removePathnameTrailingSlash,
   asUrlUntilPathname,
 } from "./url_utils.js";
 export {
