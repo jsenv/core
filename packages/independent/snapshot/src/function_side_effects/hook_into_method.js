@@ -1,139 +1,260 @@
-const jsenvSpySymbol = Symbol.for("jsenv_spy");
+const jsenvMethodProxySymbol = Symbol.for("jsenv_method_proxy");
 
-export const spyMethod = (object, method, spyCallback) => {
+export const hookIntoMethod = (
+  object,
+  method,
+  initCallback,
+  { execute = METHOD_EXECUTION_STANDARD } = {},
+) => {
   const current = object[method];
-  const jsenvSpySymbolValue = current[jsenvSpySymbol];
-  let addCallback;
-  let removeCallback;
-  let callOriginal;
-  let onOriginalCall;
-  let preventOriginalCall;
-  if (jsenvSpySymbolValue) {
-    addCallback = jsenvSpySymbolValue.addCallback;
-    removeCallback = jsenvSpySymbolValue.removeCallback;
-    callOriginal = jsenvSpySymbolValue.callOriginal;
-    onOriginalCall = jsenvSpySymbolValue.onOriginalCall;
-    preventOriginalCall = jsenvSpySymbolValue.preventOriginalCall;
+  const jsenvSymbolValue = current[jsenvMethodProxySymbol];
+  let addInitCallback;
+  let removeInitCallback;
+  if (jsenvSymbolValue) {
+    addInitCallback = jsenvSymbolValue.addInitCallback;
+    removeInitCallback = jsenvSymbolValue.removeInitCallback;
   } else {
     const original = current;
-    let currentThis;
-    let currentArgs;
-    let originalCalled = false;
-    let originalReturnValue;
-    let preventOriginalCallCalled;
-    let spyExecuting;
-    let someSpyUsedCallOriginal;
-    let allSpyUsedPreventOriginalCall;
-    onOriginalCall = (returnValue) => {
-      originalCalled = true;
-      originalReturnValue = returnValue;
-    };
-    callOriginal = () => {
-      if (someSpyUsedCallOriginal) {
-        return originalReturnValue;
+    let allWantsToPreventOriginalCall;
+    let hookExecuting;
+    const initCallbackSet = new Set();
+    const callHooks = (hookCallbackSet, ...args) => {
+      hookExecuting = true;
+      for (const hookCallback of hookCallbackSet) {
+        hookCallback(...args);
       }
-      someSpyUsedCallOriginal = true;
-      onOriginalCall(original.call(currentThis, ...currentArgs));
-      return originalReturnValue;
+      hookExecuting = false;
+      hookCallbackSet.clear();
     };
-    preventOriginalCall = () => {
-      preventOriginalCallCalled = true;
-    };
-    const spyCallbackSet = new Set();
-    const spy = function (...args) {
-      if (spyExecuting) {
+
+    const proxy = function (...args) {
+      if (hookExecuting) {
         // when a spy is executing
         // if it calls the method himself
         // then we want this call to go trough
         // and others spy should not know about it
-        onOriginalCall(original.call(this, ...args));
-        return originalReturnValue;
+        return original.call(this, ...args);
       }
-      spyExecuting = true;
-      originalCalled = false;
-      currentThis = this;
-      currentArgs = args;
-      someSpyUsedCallOriginal = false;
-      allSpyUsedPreventOriginalCall = undefined;
-      for (const spyCallback of spyCallbackSet) {
-        if (spyCallback.disabled) {
+      allWantsToPreventOriginalCall = undefined;
+      const returnPromiseCallbackSet = new Set();
+      const returnCallbackSet = new Set();
+      const catchCallbackSet = new Set();
+      const finallyCallbackSet = new Set();
+      hookExecuting = true;
+      for (const initCallback of initCallbackSet) {
+        if (initCallback.disabled) {
           continue;
         }
-        try {
-          spyCallback(...args);
-        } finally {
-          if (preventOriginalCallCalled) {
-            preventOriginalCallCalled = false;
-            if (allSpyUsedPreventOriginalCall === undefined) {
-              allSpyUsedPreventOriginalCall = true;
-            }
-          } else {
-            allSpyUsedPreventOriginalCall = false;
+        const hooks = initCallback(...args) || {};
+        if (hooks.preventOriginalCall) {
+          if (allWantsToPreventOriginalCall === undefined) {
+            allWantsToPreventOriginalCall = true;
           }
+        } else {
+          allWantsToPreventOriginalCall = false;
+        }
+        if (hooks.returnPromise) {
+          returnPromiseCallbackSet.add(hooks.returnPromise);
+        }
+        if (hooks.return) {
+          returnCallbackSet.add(hooks.return);
+        }
+        if (hooks.catch) {
+          catchCallbackSet.add(hooks.catch);
+        }
+        if (hooks.finally) {
+          finallyCallbackSet.add(hooks.catch);
         }
       }
-      spyExecuting = false;
-      if (!someSpyUsedCallOriginal && !allSpyUsedPreventOriginalCall) {
-        callOriginal();
+      hookExecuting = false;
+      const onCatch = (valueThrown) => {
+        returnCallbackSet.clear();
+        callHooks(catchCallbackSet, valueThrown);
+      };
+      const onReturn = (...values) => {
+        returnPromiseCallbackSet.clear();
+        catchCallbackSet.clear();
+        callHooks(returnCallbackSet, ...values);
+      };
+      const onReturnPromise = () => {
+        callHooks(returnPromiseCallbackSet);
+      };
+      const onFinally = () => {
+        callHooks(finallyCallbackSet);
+      };
+      if (allWantsToPreventOriginalCall) {
+        onReturn(undefined);
+        onFinally();
+        return undefined;
       }
-      currentThis = null;
-      currentArgs = null;
-      if (originalCalled) {
-        originalCalled = false;
-        const value = originalReturnValue;
-        originalReturnValue = undefined;
-        return value;
-      }
-      return undefined;
+      return execute({
+        original,
+        thisValue: this,
+        args,
+        onCatch,
+        onReturn,
+        onReturnPromise,
+        onFinally,
+      });
     };
-    addCallback = (spyCallback) => {
-      if (spyCallbackSet.size === 0) {
-        object[method] = spy;
+    addInitCallback = (initCallback) => {
+      if (initCallbackSet.size === 0) {
+        object[method] = proxy;
       }
-      spyCallbackSet.add(spyCallback);
+      initCallbackSet.add(initCallback);
     };
-    removeCallback = (spyCallback) => {
-      spyCallbackSet.delete(spyCallback);
-      if (spyCallbackSet.size === 0) {
+    removeInitCallback = (initCallback) => {
+      initCallbackSet.delete(initCallback);
+      if (initCallbackSet.size === 0) {
         object[method] = original;
       }
     };
-    spy[jsenvSpySymbol] = {
-      addCallback,
-      removeCallback,
+    proxy[jsenvMethodProxySymbol] = {
+      addInitCallback,
+      removeInitCallback,
       original,
-      callOriginal,
-      onOriginalCall,
-      preventOriginalCall,
     };
-    object[method] = spy;
+    object[method] = proxy;
   }
-  addCallback(spyCallback);
-  const spyHooks = {
-    callOriginal,
-    preventOriginalCall,
+  addInitCallback(initCallback);
+  const hook = {
     disable: () => {
-      spyCallback.disabled = true;
+      initCallback.disabled = true;
     },
     enable: () => {
-      spyCallback.disabled = false;
+      initCallback.disabled = false;
     },
     remove: () => {
-      removeCallback(spyCallback);
+      removeInitCallback(initCallback);
     },
   };
-  return spyHooks;
+  return hook;
+};
+export const METHOD_EXECUTION_STANDARD = ({
+  original,
+  thisValue,
+  args,
+  onCatch,
+  onFinally,
+  onReturnPromise,
+  onReturn,
+}) => {
+  let valueReturned;
+  let thrown = false;
+  let valueThrown;
+  try {
+    valueReturned = original.call(thisValue, ...args);
+  } catch (e) {
+    thrown = true;
+    valueThrown = e;
+  }
+  if (thrown) {
+    onCatch(valueThrown);
+    onFinally();
+    throw valueThrown;
+  }
+  if (valueReturned && typeof valueReturned.then === "function") {
+    onReturnPromise();
+    valueReturned.then(
+      (valueResolved) => {
+        onReturn(valueResolved);
+        onFinally();
+      },
+      (valueRejected) => {
+        onCatch(valueRejected);
+        onFinally();
+      },
+    );
+    return valueReturned;
+  }
+  onReturn(valueReturned);
+  onFinally();
+  return valueReturned;
+};
+export const METHOD_EXECUTION_NODE_CALLBACK = ({
+  original,
+  thisValue,
+  args,
+  onCatch,
+  onFinally,
+  onReturnPromise,
+  onReturn,
+}) => {
+  const lastArgIndex = args.length - 1;
+  const lastArg = args[lastArgIndex];
+  if (typeof lastArg !== "function") {
+    return METHOD_EXECUTION_STANDARD({
+      original,
+      thisValue,
+      args,
+      onCatch,
+      onFinally,
+      onReturnPromise,
+      onReturn,
+    });
+  }
+  let originalCallback;
+  let installCallbackProxy = () => {};
+  if (lastArg.context) {
+    originalCallback = lastArg.context.callback;
+    installCallbackProxy = (callbackProxy) => {
+      lastArg.context.callback = callbackProxy;
+      return () => {
+        lastArg.context.callback = originalCallback;
+      };
+    };
+  } else if (lastArg.oncomplete) {
+    originalCallback = lastArg.oncomplete;
+    installCallbackProxy = (callbackProxy) => {
+      lastArg.oncomplete = callbackProxy;
+      return () => {
+        lastArg.oncomplete = originalCallback;
+      };
+    };
+  } else {
+    originalCallback = lastArg;
+    installCallbackProxy = (callbackProxy) => {
+      args[lastArgIndex] = callbackProxy;
+      return () => {
+        // useless because are a copy of the args
+        // so the mutation we do above ( args[lastArgIndex] =)
+        // cannot be important for the method being proxied
+        args[lastArgIndex] = originalCallback;
+      };
+    };
+  }
+  const callbackProxy = function (...callbackArgs) {
+    uninstallCallbackProxy();
+    const [error, ...remainingArgs] = callbackArgs;
+    if (error) {
+      onCatch(error);
+      originalCallback.call(this, ...callbackArgs);
+      onFinally();
+      return;
+    }
+    onReturn(...remainingArgs);
+    originalCallback.call(this, ...callbackArgs);
+    onFinally();
+  };
+  const uninstallCallbackProxy = installCallbackProxy(callbackProxy);
+  try {
+    return original.call(thisValue, ...args);
+  } catch (e) {
+    onCatch(e);
+    onFinally();
+    throw e;
+  }
 };
 
-export const disableSpiesWhileCalling = (fn, spyToDisableArray) => {
-  for (const spyToDisable of spyToDisableArray) {
-    spyToDisable.disable();
+export const disableHooksWhileCalling = (fn, hookToDisableArray) => {
+  for (const toDisable of hookToDisableArray) {
+    toDisable.disable();
   }
   try {
     return fn();
   } finally {
-    for (const spyToEnable of spyToDisableArray) {
-      spyToEnable.enable();
+    for (const toEnable of hookToDisableArray) {
+      toEnable.enable();
     }
   }
 };
