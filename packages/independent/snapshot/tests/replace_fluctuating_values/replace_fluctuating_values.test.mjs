@@ -23,6 +23,7 @@ http://localhost:3457
 http://localhost:3457/`,
     {
       homedirDisabled: true,
+      ancestorPackagesDisabled: true,
     },
   );
   const expect = `A string with path inside:
@@ -65,6 +66,7 @@ And file urls
       cwdPath: "C:\\Users\\project",
       isWindows: true,
       homedirDisabled: true,
+      ancestorPackagesDisabled: true,
     },
   );
   const expect = `A string with many windows path inside:
@@ -90,6 +92,7 @@ And file urls
 </svg>`,
     {
       homedirDisabled: true,
+      ancestorPackagesDisabled: true,
     },
   );
   const expect = `<svg xmlns="http://www.w3.org/2000/svg">

@@ -11,8 +11,13 @@ import {
   stringifyHtmlAst,
   visitHtmlNodes,
 } from "@jsenv/ast";
-import { removePathnameTrailingSlash, urlToExtension } from "@jsenv/urls";
+import {
+  ensurePathnameTrailingSlash,
+  removePathnameTrailingSlash,
+  urlToExtension,
+} from "@jsenv/urls";
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import stripAnsi from "strip-ansi";
@@ -25,6 +30,8 @@ export const replaceFluctuatingValues = (
     removeAnsi = true,
     rootDirectoryUrl,
     // for unit tests
+    ancestorPackagesDisabled,
+    ancestorPackagesRootDirectoryUrl = "file:///",
     homedirDisabled,
     cwdPath = process.cwd(),
     cwdUrl,
@@ -47,7 +54,9 @@ export const replaceFluctuatingValues = (
       `${escapeRegexpSpecialChars(path)}(((?:\\\\(?:[\\w !#()-]+|[.]{1,2})+)*)(?:\\\\)?)`,
       "gm",
     );
-    const pathReplacement = replacement.slice("file:///".length);
+    const pathReplacement = replacement.startsWith("file:///")
+      ? replacement.slice("file:///".length)
+      : replacement;
     wellKnownPathArray.push({
       path,
       replacement: pathReplacement,
@@ -62,6 +71,57 @@ export const replaceFluctuatingValues = (
   };
   if (rootDirectoryUrl) {
     addWellKnownFileUrl(rootDirectoryUrl, "file:///<root>");
+  }
+  /*
+   * When running code inside a node project ancestor packages
+   * should make things super predictible because
+   * it will use a package.json name field
+   * to replace files urls
+   * And uses the highest ancestor package so that even if the file
+   * is executed once within a package then outside that package
+   * the replace value remains predictible as the highest package is used
+   * The highest package is used because it's pushed first by
+   * addWellKnownFileUrl
+   */
+  ancestor_packages: {
+    if (ancestorPackagesDisabled) {
+      break ancestor_packages;
+    }
+    const ancestorPackages = [];
+    const cwd = cwdPath || process.cwd();
+    const cwdUrl = ensurePathnameTrailingSlash(pathToFileURL(cwd));
+    let currentUrl = cwdUrl;
+    while (currentUrl.href !== ancestorPackagesRootDirectoryUrl) {
+      const packageFileUrl = new URL("package.json", currentUrl);
+      const packageDirectoryUrl = currentUrl;
+      currentUrl = new URL(getParentUrl(currentUrl));
+      let packageFileContent;
+      try {
+        packageFileContent = readFileSync(packageFileUrl);
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          continue;
+        }
+        throw e;
+      }
+      let packageObject;
+      try {
+        packageObject = JSON.parse(packageFileContent);
+      } catch (e) {
+        continue;
+      }
+      const packageName = packageObject.name;
+      ancestorPackages.unshift({
+        packageDirectoryUrl,
+        packageName,
+      });
+    }
+    for (const ancestorPackage of ancestorPackages) {
+      addWellKnownFileUrl(
+        ancestorPackage.packageDirectoryUrl,
+        ancestorPackage.packageName,
+      );
+    }
   }
   home_dir: {
     if (!homedirDisabled) {
@@ -142,6 +202,27 @@ export const replaceFluctuatingValues = (
     return stringifyHtmlAst(htmlAst);
   }
   return replaceThings(string);
+};
+
+const getParentUrl = (url) => {
+  url = String(url);
+  // With node.js new URL('../', 'file:///C:/').href
+  // returns "file:///C:/" instead of "file:///"
+  const resource = url.slice("file://".length);
+  const slashLastIndex = resource.lastIndexOf("/");
+  if (slashLastIndex === -1) {
+    return url;
+  }
+  const lastCharIndex = resource.length - 1;
+  if (slashLastIndex === lastCharIndex) {
+    const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
+    if (slashBeforeLastIndex === -1) {
+      return url;
+    }
+    return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+  }
+
+  return `file://${resource.slice(0, slashLastIndex + 1)}`;
 };
 
 const replaceHttpUrls = (source) => {
