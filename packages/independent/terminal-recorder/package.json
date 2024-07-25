@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/terminal-recorder",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "Record terminal output as .svg, .gif, .webm, .mp4",
   "license": "MIT",
   "repository": {
@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@jsenv/humanize": "1.2.5",
-    "@jsenv/server": "15.2.14",
+    "@jsenv/server": "15.2.15",
     "@playwright/browser-chromium": "1.45.3",
     "ansi-regex": "6.0.1",
     "he": "1.2.0",

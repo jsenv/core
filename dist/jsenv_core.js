@@ -3616,6 +3616,10 @@ const mediaTypeInfos = {
     extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
     isTextual: true,
   },
+  "text/markdown": {
+    extensions: ["md", "mdx"],
+    isTextual: true,
+  },
   "text/x-sass": {
     extensions: ["sass"],
     isTextual: true,
