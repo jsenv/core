@@ -182,68 +182,69 @@ export const METHOD_EXECUTION_NODE_CALLBACK = ({
 }) => {
   const lastArgIndex = args.length - 1;
   const lastArg = args[lastArgIndex];
-  if (typeof lastArg !== "function") {
-    return METHOD_EXECUTION_STANDARD({
-      original,
-      thisValue,
-      args,
-      onCatch,
-      onFinally,
-      onReturnPromise,
-      onReturn,
-    });
-  }
-  let originalCallback;
-  let installCallbackProxy = () => {};
-  if (lastArg.context) {
-    originalCallback = lastArg.context.callback;
-    installCallbackProxy = (callbackProxy) => {
-      lastArg.context.callback = callbackProxy;
-      return () => {
-        lastArg.context.callback = originalCallback;
-      };
+  const installProxyAndCall = (originalCallback, installCallbackProxy) => {
+    const callbackProxy = function (...callbackArgs) {
+      uninstallCallbackProxy();
+      const [error, ...remainingArgs] = callbackArgs;
+      if (error) {
+        onCatch(error);
+        originalCallback.call(this, ...callbackArgs);
+        onFinally();
+        return;
+      }
+      onReturn(...remainingArgs);
+      originalCallback.call(this, ...callbackArgs);
+      onFinally();
     };
-  } else if (lastArg.oncomplete) {
-    originalCallback = lastArg.oncomplete;
-    installCallbackProxy = (callbackProxy) => {
-      lastArg.oncomplete = callbackProxy;
-      return () => {
-        lastArg.oncomplete = originalCallback;
-      };
-    };
-  } else {
-    originalCallback = lastArg;
-    installCallbackProxy = (callbackProxy) => {
+    const uninstallCallbackProxy = installCallbackProxy(callbackProxy);
+    try {
+      return original.call(thisValue, ...args);
+    } catch (e) {
+      onCatch(e);
+      onFinally();
+      throw e;
+    }
+  };
+  if (typeof lastArg === "function") {
+    return installProxyAndCall(lastArg, (callbackProxy) => {
       args[lastArgIndex] = callbackProxy;
       return () => {
         // useless because are a copy of the args
         // so the mutation we do above ( args[lastArgIndex] =)
         // cannot be important for the method being proxied
-        args[lastArgIndex] = originalCallback;
+        args[lastArgIndex] = lastArg;
       };
-    };
+    });
   }
-  const callbackProxy = function (...callbackArgs) {
-    uninstallCallbackProxy();
-    const [error, ...remainingArgs] = callbackArgs;
-    if (error) {
-      onCatch(error);
-      originalCallback.call(this, ...callbackArgs);
-      onFinally();
-      return;
+  if (lastArg && typeof lastArg === "object") {
+    if (lastArg.context && typeof lastArg.context.callback === "function") {
+      const originalCallback = lastArg.context.callback;
+      return installProxyAndCall(originalCallback, (callbackProxy) => {
+        lastArg.context.callback = callbackProxy;
+        return () => {
+          lastArg.context.callback = originalCallback;
+        };
+      });
     }
-    onReturn(...remainingArgs);
-    originalCallback.call(this, ...callbackArgs);
-    onFinally();
-  };
-  const uninstallCallbackProxy = installCallbackProxy(callbackProxy);
-  try {
-    return original.call(thisValue, ...args);
-  } catch (e) {
-    onCatch(e);
-    onFinally();
-    throw e;
+    if (typeof lastArg.oncomplete === "function") {
+      const originalCallback = lastArg.oncomplete;
+      return installProxyAndCall(originalCallback, (callbackProxy) => {
+        lastArg.oncomplete = callbackProxy;
+        return () => {
+          lastArg.oncomplete = originalCallback;
+        };
+      });
+    }
   }
+  return METHOD_EXECUTION_STANDARD({
+    original,
+    thisValue,
+    args,
+    onCatch,
+    onFinally,
+    onReturnPromise,
+    onReturn,
+  });
 };
 
 export const disableHooksWhileCalling = (fn, hookToDisableArray) => {

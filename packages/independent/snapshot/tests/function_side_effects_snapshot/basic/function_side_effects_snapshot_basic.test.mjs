@@ -12,23 +12,28 @@ import {
 } from "node:fs";
 
 const startTesting = async (fn) => {
-  const testMap = new Map();
-  const test = async (scenario, fn, options) => {
-    testMap.set(scenario, async () => {
-      await snapshotFunctionSideEffects(
-        fn,
-        import.meta.url,
-        `./output/${scenario}.md`,
-        options,
-      );
-    });
+  const scenarioMap = new Map();
+  const onlyScenarioMap = new Map();
+  const test = (scenario, fn, options) => {
+    scenarioMap.set(scenario, { fn, options });
+  };
+  test.ONLY = (scenario, fn, options) => {
+    onlyScenarioMap.set(scenario, { fn, options });
   };
   fn({ test });
   const outputDirectorySnapshot = takeDirectorySnapshot(
     new URL("./output/", import.meta.url),
   );
-  for (const [, runIt] of testMap) {
-    await runIt();
+  const activeScenarioMap = onlyScenarioMap.size
+    ? onlyScenarioMap
+    : scenarioMap;
+  for (const [scenario, { fn, options }] of activeScenarioMap) {
+    await snapshotFunctionSideEffects(
+      fn,
+      import.meta.url,
+      `./output/${scenario}.md`,
+      options,
+    );
   }
   outputDirectorySnapshot.compare();
 };
