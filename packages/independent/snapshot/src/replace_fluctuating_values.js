@@ -11,8 +11,9 @@ import {
   stringifyHtmlAst,
   visitHtmlNodes,
 } from "@jsenv/ast";
-import { urlToExtension } from "@jsenv/urls";
+import { removePathnameTrailingSlash, urlToExtension } from "@jsenv/urls";
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
+import { homedir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import stripAnsi from "strip-ansi";
 
@@ -22,35 +23,78 @@ export const replaceFluctuatingValues = (
     stringType,
     fileUrl,
     removeAnsi = true,
-    rootDirectoryUrl = pathToFileURL(process.cwd()),
+    rootDirectoryUrl,
     // for unit tests
-    rootDirectoryPath,
+    homedirDisabled,
+    cwdPath = process.cwd(),
+    cwdUrl,
     isWindows = process.platform === "win32",
   } = {},
 ) => {
-  rootDirectoryUrl = String(rootDirectoryUrl);
-  if (rootDirectoryUrl[rootDirectoryUrl.length - 1] === "/") {
-    rootDirectoryUrl = rootDirectoryUrl.slice(0, -1);
+  const wellKownUrlArray = [];
+  const wellKnownPathArray = [];
+  const addWellKnownFileUrl = (url, replacement) => {
+    const urlWithoutTrailingSlash = removePathnameTrailingSlash(url);
+    wellKownUrlArray.push({
+      url: urlWithoutTrailingSlash,
+      replacement,
+      replace: (string) =>
+        string.replaceAll(urlWithoutTrailingSlash, replacement),
+    });
+    const path =
+      url === cwdUrl ? cwdPath : fileURLToPath(urlWithoutTrailingSlash);
+    const windowPathRegex = new RegExp(
+      `${escapeRegexpSpecialChars(path)}(((?:\\\\(?:[\\w !#()-]+|[.]{1,2})+)*)(?:\\\\)?)`,
+      "gm",
+    );
+    const pathReplacement = replacement.slice("file:///".length);
+    wellKnownPathArray.push({
+      path,
+      replacement: pathReplacement,
+      replace: isWindows
+        ? (string) => {
+            return string.replaceAll(windowPathRegex, (match, after) => {
+              return `${pathReplacement}${after.replaceAll("\\", "/")}`;
+            });
+          }
+        : (string) => string.replaceAll(path, pathReplacement),
+    });
+  };
+  if (rootDirectoryUrl) {
+    addWellKnownFileUrl(rootDirectoryUrl, "file:///<root>");
   }
-  if (rootDirectoryPath === undefined) {
-    rootDirectoryPath = fileURLToPath(rootDirectoryUrl);
+  home_dir: {
+    if (!homedirDisabled) {
+      const homedirPath = homedir();
+      const homedirUrl = pathToFileURL(homedirPath);
+      addWellKnownFileUrl(homedirUrl, "file:///~");
+    }
+  }
+  process_cwd: {
+    // we fallback on process.cwd()
+    // but it's brittle because a file might be execute from anywhere
+    // so it should be the last resort
+    cwdUrl = cwdUrl || pathToFileURL(cwdPath);
+    addWellKnownFileUrl(cwdUrl, "file:///cwd()");
   }
   const replaceFileUrls = (value) => {
-    return value.replaceAll(rootDirectoryUrl, "file:///cwd()");
-  };
-  const replaceFilePaths = isWindows
-    ? (value) => {
-        const windowPathRegex = new RegExp(
-          `${escapeRegexpSpecialChars(rootDirectoryPath)}(((?:\\\\(?:[\\w !#()-]+|[.]{1,2})+)*)(?:\\\\)?)`,
-          "gm",
-        );
-        return value.replaceAll(windowPathRegex, (match, afterCwd) => {
-          return `cwd()${afterCwd.replaceAll("\\", "/")}`;
-        });
+    for (const wellKownUrl of wellKownUrlArray) {
+      const replaceResult = wellKownUrl.replace(value);
+      if (replaceResult !== value) {
+        return replaceResult;
       }
-    : (value) => {
-        return value.replaceAll(rootDirectoryPath, "cwd()");
-      };
+    }
+    return value;
+  };
+  const replaceFilePaths = (value) => {
+    for (const wellKownPath of wellKnownPathArray) {
+      const replaceResult = wellKownPath.replace(value);
+      if (replaceResult !== value) {
+        return replaceResult;
+      }
+    }
+    return value;
+  };
   const replaceThings = (value) => {
     if (removeAnsi) {
       value = stripAnsi(value);

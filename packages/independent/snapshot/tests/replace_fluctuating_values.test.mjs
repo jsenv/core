@@ -21,6 +21,9 @@ http://localhost
 http://localhost/
 http://localhost:3457
 http://localhost:3457/`,
+    {
+      homedirDisabled: true,
+    },
   );
   const expect = `A string with path inside:
 - cwd()
@@ -58,9 +61,10 @@ And file urls
 - file:///C:/Users/project/directory/
 - file:///C:/Users/project/directory/file.txt`,
     {
-      rootDirectoryUrl: "file:///C:/Users/project",
-      rootDirectoryPath: "C:\\Users\\project",
+      cwdUrl: "file:///C:/Users/project",
+      cwdPath: "C:\\Users\\project",
       isWindows: true,
+      homedirDisabled: true,
     },
   );
   const expect = `A string with many windows path inside:
@@ -84,13 +88,13 @@ And file urls
   <g test="${process.cwd()}/dir/file.js"></g>
   <text>before ${process.cwd()}/ after</text>
 </svg>`,
+    {
+      homedirDisabled: true,
+    },
   );
   const expect = `<svg xmlns="http://www.w3.org/2000/svg">
   <g test="cwd()/dir/file.js"></g>
   <text>before cwd()/ after</text>
 </svg>`;
-  assert({
-    actual,
-    expect,
-  });
+  assert({ actual, expect });
 }
