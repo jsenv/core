@@ -6,7 +6,11 @@
 import { removeDirectorySync, removeFileSync } from "@jsenv/filesystem";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { disableSpiesWhileCalling, spyMethod } from "./spy_method.js";
+import {
+  disableHooksWhileCalling,
+  hookIntoMethod,
+  METHOD_EXECUTION_NODE_CALLBACK,
+} from "./hook_into_method.js";
 
 export const spyFilesystemCalls = (
   {
@@ -65,167 +69,101 @@ export const spyFilesystemCalls = (
   };
   const restoreCallbackSet = new Set();
 
-  const getFileStateWithinSpy = (fileUrl) => {
-    return disableSpiesWhileCalling(
+  const getFileStateWithinHook = (fileUrl) => {
+    return disableHooksWhileCalling(
       () => getFileState(fileUrl),
-      [openSpy, closeSpy],
+      [openHook, closeHook],
     );
   };
 
-  const mkdirSpy = spyMethod(
+  const mkdirHook = hookIntoMethod(
     _internalFs,
     "mkdir",
-    (directoryPath, mode, recursive, callback) => {
+    (directoryPath) => {
       const directoryUrl = pathToFileURL(directoryPath);
-      if (callback) {
-        const stateBefore = getDirectoryState(directoryPath);
-        const oncomplete = callback.oncomplete;
-        callback.oncomplete = (error, fd) => {
-          if (error) {
-            oncomplete.call(callback, error);
-          } else {
-            fileDescriptorPathMap.set(fd, directoryPath);
-            oncomplete.call(callback);
-            onWriteDirectoryDone(directoryUrl, stateBefore, { found: true });
-          }
-        };
-        return mkdirSpy.callOriginal();
-      }
       const stateBefore = getDirectoryState(directoryPath);
-      mkdirSpy.callOriginal();
-      onWriteDirectoryDone(directoryUrl, stateBefore, { found: true });
-      return undefined;
+      return {
+        return: (fd) => {
+          fileDescriptorPathMap.set(fd, directoryPath);
+          onWriteDirectoryDone(directoryUrl, stateBefore, { found: true });
+        },
+      };
     },
+    { execute: METHOD_EXECUTION_NODE_CALLBACK },
   );
-  const openSpy = spyMethod(
+  const openHook = hookIntoMethod(
     _internalFs,
     "open",
-    (filePath, flags, mode, callback) => {
-      const stateBefore = getFileStateWithinSpy(filePath);
+    (filePath) => {
+      const stateBefore = getFileStateWithinHook(filePath);
       filesystemStateInfoMap.set(filePath, stateBefore);
-      if (callback) {
-        if (callback.context) {
-          const original = callback.context.callback;
-          callback.context.callback = function (...args) {
-            callback.context.callback = original;
-            const [error, fd] = args;
-            if (error) {
-              original.call(this, ...args);
-            } else {
-              if (typeof fd === "number") {
-                fileDescriptorPathMap.set(fd, filePath);
-              } else {
-                // it's a buffer (happens for readFile)
-              }
-              original.call(this, ...args);
-            }
-          };
-          openSpy.callOriginal();
-          return;
-        }
-        const original = callback.oncomplete;
-        callback.oncomplete = function (...args) {
-          callback.oncomplete = original;
-          const [error, fd] = args;
-          if (error) {
-            original.call(this, ...args);
-          } else {
+      return {
+        return: (fd) => {
+          if (typeof fd === "number") {
             fileDescriptorPathMap.set(fd, filePath);
-            original.call(this, ...args);
+          } else {
+            // it's a buffer (happens for readFile)
           }
-        };
-        openSpy.callOriginal();
-        return;
-      }
-      const fd = openSpy.callOriginal();
-      if (typeof fd === "number") {
-        fileDescriptorPathMap.set(fd, filePath);
-      } else {
-        // it's a buffer (happens for readFile)
-      }
+        },
+      };
     },
+    { execute: METHOD_EXECUTION_NODE_CALLBACK },
   );
-  const closeSpy = spyMethod(
+  const closeHook = hookIntoMethod(
     _internalFs,
     "close",
-    (fileDescriptor, callback) => {
-      const filePath = fileDescriptorPathMap.get(fileDescriptor);
-      if (!filePath) {
-        closeSpy.callOriginal();
-        return;
-      }
-      const stateBefore = filesystemStateInfoMap.get(filePath);
-      if (!stateBefore) {
-        closeSpy.callOriginal();
-        fileDescriptorPathMap.delete(fileDescriptor);
-        return;
-      }
-      const fileUrl = pathToFileURL(filePath);
-      if (callback) {
-        if (callback.context) {
-          const original = callback.context.callback;
-          callback.context.callback = function (...args) {
-            callback.context.callback = original;
-            const [error] = args;
-            if (error) {
-              original.call(this, ...args);
-            } else {
-              original.call(this, ...args);
-              fileDescriptorPathMap.delete(fileDescriptor);
-              filesystemStateInfoMap.delete(filePath);
-              const stateAfter = getFileStateWithinSpy(fileUrl);
-              readFile(fileUrl);
-              onWriteFileDone(fileUrl, stateBefore, stateAfter);
-            }
-          };
-          closeSpy.callOriginal();
-          return;
-        }
-        const original = callback.oncomplete;
-        callback.oncomplete = function (...args) {
-          callback.oncomplete = original;
-          const [error] = args;
-          if (error) {
-            original.call(this, ...args);
-          } else {
-            original.call(this, ...args);
-            fileDescriptorPathMap.delete(fileDescriptor);
-            filesystemStateInfoMap.delete(filePath);
-            const stateAfter = getFileStateWithinSpy(fileUrl);
-            onWriteFileDone(fileUrl, stateBefore, stateAfter);
+    (fileDescriptor) => {
+      return {
+        return: (buffer) => {
+          const filePath = fileDescriptorPathMap.get(fileDescriptor);
+          if (!filePath) {
+            return;
           }
-        };
-        closeSpy.callOriginal();
-        return;
-      }
-      closeSpy.callOriginal();
-      fileDescriptorPathMap.delete(fileDescriptor);
-      filesystemStateInfoMap.delete(filePath);
-      const stateAfter = getFileStateWithinSpy(fileUrl);
-      onWriteFileDone(fileUrl, stateBefore, stateAfter);
+          const stateBefore = filesystemStateInfoMap.get(filePath);
+          if (!stateBefore) {
+            fileDescriptorPathMap.delete(fileDescriptor);
+            return;
+          }
+          const fileUrl = pathToFileURL(filePath);
+          if (buffer) {
+            readFile(fileUrl);
+          }
+          fileDescriptorPathMap.delete(fileDescriptor);
+          filesystemStateInfoMap.delete(filePath);
+          const stateAfter = getFileStateWithinHook(fileUrl);
+          onWriteFileDone(fileUrl, stateBefore, stateAfter);
+        },
+      };
     },
+    { execute: METHOD_EXECUTION_NODE_CALLBACK },
   );
-  const writeFileUtf8Spy = spyMethod(
+  const writeFileUtf8Hook = hookIntoMethod(
     _internalFs,
     "writeFileUtf8",
     (filePath) => {
       const fileUrl = pathToFileURL(filePath);
-      const stateBefore = getFileStateWithinSpy(fileUrl);
-      writeFileUtf8Spy.callOriginal();
-      const stateAfter = getFileStateWithinSpy(fileUrl);
-      onWriteFileDone(fileUrl, stateBefore, stateAfter);
+      const stateBefore = getFileStateWithinHook(fileUrl);
+      return {
+        return: () => {
+          const stateAfter = getFileStateWithinHook(fileUrl);
+          onWriteFileDone(fileUrl, stateBefore, stateAfter);
+        },
+      };
     },
   );
-  const unlinkSpy = spyMethod(_internalFs, "unlink", (filePath) => {
-    unlinkSpy.callOriginal();
-    removeFile(filePath); // TODO eventually split in removeFile/removeDirectory
+  const unlinkHook = hookIntoMethod(_internalFs, "unlink", (filePath) => {
+    return {
+      return: () => {
+        removeFile(filePath); // TODO eventually split in removeFile/removeDirectory
+      },
+    };
   });
   restoreCallbackSet.add(() => {
-    mkdirSpy.remove();
-    openSpy.remove();
-    closeSpy.remove();
-    writeFileUtf8Spy.remove();
-    unlinkSpy.remove();
+    mkdirHook.remove();
+    openHook.remove();
+    closeHook.remove();
+    writeFileUtf8Hook.remove();
+    unlinkHook.remove();
   });
   return {
     restore: () => {
