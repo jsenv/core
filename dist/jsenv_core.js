@@ -1561,11 +1561,12 @@ const setUrlFilename = (url, filename) => {
   return `${origin}${parentPathname}${filename}${search}${hash}`;
 };
 
-const ensurePathnameTrailingSlash = (url) => {
+const transformUrlPathname = (url, transformer) => {
   if (typeof url === "string") {
     const urlObject = new URL(url);
     const { pathname } = urlObject;
-    if (pathname.endsWith("/")) {
+    const pathnameTransformed = transformer(pathname);
+    if (pathnameTransformed === pathname) {
       return url;
     }
     let { origin } = urlObject;
@@ -1574,14 +1575,17 @@ const ensurePathnameTrailingSlash = (url) => {
       origin = "file://";
     }
     const { search, hash } = urlObject;
-    const urlWithTrailingSlash = `${origin}${pathname}/${search}${hash}`;
-    return urlWithTrailingSlash;
+    const urlWithPathnameTransformed = `${origin}${pathnameTransformed}${search}${hash}`;
+    return urlWithPathnameTransformed;
   }
-  if (url.pathname.endsWith("/")) {
-    return url;
-  }
-  url.pathname += "/";
+  const pathnameTransformed = transformer(url.pathname);
+  url.pathname = pathnameTransformed;
   return url;
+};
+const ensurePathnameTrailingSlash = (url) => {
+  return transformUrlPathname(url, (pathname) => {
+    return pathname.endsWith("/") ? pathname : `${pathname}/`;
+  });
 };
 
 const isFileSystemPath$1 = (value) => {

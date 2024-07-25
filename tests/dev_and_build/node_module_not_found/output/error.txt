@@ -1,11 +1,11 @@
 Failed to resolve url reference
-file:///cwd()/tests/dev_and_build/node_module_not_found/client/node_modules/foo/index.js:1:7
+@jsenv/core/tests/dev_and_build/node_module_not_found/client/node_modules/foo/index.js:1:7
 1 | import "not_found";
           ^
 An error occured during specifier resolution
 --- first reference in project ---
-file:///cwd()/tests/dev_and_build/node_module_not_found/client/main.js:1:7
+@jsenv/core/tests/dev_and_build/node_module_not_found/client/main.js:1:7
 --- error message ---
-Cannot find "not_found" imported from cwd()/tests/dev_and_build/node_module_not_found/client/node_modules/foo/index.js
+Cannot find "not_found" imported from @jsenv/core/tests/dev_and_build/node_module_not_found/client/node_modules/foo/index.js
 --- plugin name ---
 "jsenv:node_esm_resolution"

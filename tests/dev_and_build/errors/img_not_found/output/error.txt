@@ -1,5 +1,5 @@
 Failed to fetch url content
-file:///cwd()/tests/dev_and_build/errors/img_not_found/client/main.html:9:10
+@jsenv/core/tests/dev_and_build/errors/img_not_found/client/main.html:9:10
 6 |   </head>
 7 | 
 8 |   <body>

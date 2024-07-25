@@ -35,10 +35,10 @@
   },
   "dependencies": {
     "@jsenv/assert": "4.1.6",
-    "@jsenv/ast": "6.2.6",
+    "@jsenv/ast": "6.2.7",
     "@jsenv/exception": "1.0.0",
-    "@jsenv/filesystem": "4.9.3",
-    "@jsenv/urls": "2.3.2",
+    "@jsenv/filesystem": "4.9.4",
+    "@jsenv/urls": "2.4.0",
     "@jsenv/utils": "2.1.2",
     "pixelmatch": "6.0.0",
     "prettier": "3.3.3",

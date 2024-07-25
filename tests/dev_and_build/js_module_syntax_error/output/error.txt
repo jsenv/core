@@ -1,5 +1,5 @@
 parse error on "js_module"
-file:///cwd()/tests/dev_and_build/js_module_syntax_error/client/main_syntax_error.js:4:16
+@jsenv/core/tests/dev_and_build/js_module_syntax_error/client/main_syntax_error.js:4:16
 1 | // above 1
 2 | // above 2
 3 | // above 3
@@ -7,6 +7,6 @@ file:///cwd()/tests/dev_and_build/js_module_syntax_error/client/main_syntax_erro
                    ^
 Unexpected token (4:15)
 --- first reference ---
-file:///cwd()/tests/dev_and_build/js_module_syntax_error/client/main.html:9:27
+@jsenv/core/tests/dev_and_build/js_module_syntax_error/client/main.html:9:27
 --- plugin name ---
 "jsenv:js_reference_analysis"
