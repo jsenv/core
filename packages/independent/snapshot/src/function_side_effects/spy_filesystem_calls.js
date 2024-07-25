@@ -3,8 +3,12 @@
 // https://github.com/tschaub/mock-fs/blob/6e84d5bb320022624c7d770432e3322323ce043e/lib/binding.js#L353
 // https://github.com/tschaub/mock-fs/issues/348
 
-import { removeDirectorySync, removeFileSync } from "@jsenv/filesystem";
-import { readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  removeDirectorySync,
+  removeFileSync,
+  writeFileSync,
+} from "@jsenv/filesystem";
+import { readFileSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
   disableHooksWhileCalling,

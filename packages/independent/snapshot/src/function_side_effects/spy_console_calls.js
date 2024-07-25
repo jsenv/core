@@ -1,7 +1,7 @@
 import { hookIntoMethod } from "./hook_into_method.js";
 
 export const spyConsoleCalls = (
-  { error, warn, info, log, trace },
+  { error, warn, info, log, trace, stdout, stderr },
   { preventConsoleSideEffects },
 ) => {
   const restoreCallbackSet = new Set();
@@ -45,12 +45,38 @@ export const spyConsoleCalls = (
       },
     };
   });
+  const processStdouthook = hookIntoMethod(
+    process.stdout,
+    "write",
+    (message) => {
+      return {
+        preventOriginalCall: preventConsoleSideEffects,
+        return: () => {
+          stdout(message);
+        },
+      };
+    },
+  );
+  const processStderrHhook = hookIntoMethod(
+    process.stderr,
+    "write",
+    (message) => {
+      return {
+        preventOriginalCall: preventConsoleSideEffects,
+        return: () => {
+          stderr(message);
+        },
+      };
+    },
+  );
   restoreCallbackSet.add(() => {
     errorHook.remove();
     warnHook.remove();
     infoHook.remove();
     logHook.remove();
     traceHook.remove();
+    processStdouthook.remove();
+    processStderrHhook.remove();
   });
   return {
     restore: () => {

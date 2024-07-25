@@ -80,6 +80,34 @@ export const snapshotFunctionSideEffects = (
                   log: (message) => {
                     onConsole("log", message);
                   },
+                  stdout: (message) => {
+                    addSideEffect({
+                      type: `process:stdout`,
+                      value: message,
+                      label: `process.stdout`,
+                      text: wrapIntoMarkdownBlock(
+                        replaceFluctuatingValues(message, {
+                          stringType: "console",
+                          rootDirectoryUrl,
+                        }),
+                        "console",
+                      ),
+                    });
+                  },
+                  stderr: (message) => {
+                    addSideEffect({
+                      type: `process:stderr`,
+                      value: message,
+                      label: `process.stderr`,
+                      text: wrapIntoMarkdownBlock(
+                        replaceFluctuatingValues(message, {
+                          stringType: "console",
+                          rootDirectoryUrl,
+                        }),
+                        "console",
+                      ),
+                    });
+                  },
                 },
                 {
                   preventConsoleSideEffects: prevent,

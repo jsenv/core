@@ -134,6 +134,9 @@ await startTesting(({ test }) => {
       },
     },
   );
-  // TODO: ability to ignore some files
-  // (will be used for jsenv build to ignore .jsenv files)
+  test("16_console_log_and_process_stdout_write", () => {
+    console.log("before");
+    process.stdout.write("between");
+    console.log("after");
+  });
 });
