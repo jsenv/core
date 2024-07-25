@@ -7,6 +7,14 @@ export const hookIntoMethod = (
   { execute = METHOD_EXECUTION_STANDARD } = {},
 ) => {
   const current = object[method];
+  if (typeof current !== "function") {
+    console.warn(`"${method}" is not a function on object, found ${current}`);
+    return {
+      disable: () => {},
+      enable: () => {},
+      remove: () => {},
+    };
+  }
   const jsenvSymbolValue = current[jsenvMethodProxySymbol];
   let addInitCallback;
   let removeInitCallback;
