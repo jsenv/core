@@ -144,26 +144,8 @@ await startTesting(({ test }) => {
   }
   group_write_by_directory: {
     test(
-      "12_write_directory_two_groups",
+      "12_write_in_one_dir",
       async () => {
-        // want to see two 2 groups
-        writeFileSync(new URL("./a/a_1.txt", import.meta.url));
-        writeFileSync(new URL("./a/a_2.txt", import.meta.url));
-        writeFileSync(new URL("./b/b_1.txt", import.meta.url));
-        writeFileSync(new URL("./b/b_2.txt", import.meta.url));
-        writeFileSync(new URL("./b/b_3.txt", import.meta.url));
-      },
-      {
-        filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
-          outDirectory: "./12_write_directory_two_groups/",
-        },
-      },
-    );
-    test(
-      "13_write_directory_one_group",
-      async () => {
-        // want to see two 1 group
         writeFileSync(new URL("./shared/a/a_1.txt", import.meta.url));
         writeFileSync(new URL("./shared/a/a_2.txt", import.meta.url));
         writeFileSync(new URL("./shared/b/b_1.txt", import.meta.url));
@@ -173,7 +155,23 @@ await startTesting(({ test }) => {
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          outDirectory: "./13_write_directory_one_group/",
+          outDirectory: "./12_write_in_one_dir/",
+        },
+      },
+    );
+    test(
+      "13_write_in_2_dir",
+      async () => {
+        writeFileSync(new URL("./a/a_1.txt", import.meta.url));
+        writeFileSync(new URL("./a/a_2.txt", import.meta.url));
+        writeFileSync(new URL("./b/b_1.txt", import.meta.url));
+        writeFileSync(new URL("./b/b_2.txt", import.meta.url));
+        writeFileSync(new URL("./b/b_3.txt", import.meta.url));
+      },
+      {
+        filesystemEffects: {
+          baseDirectory: new URL("./", import.meta.url),
+          outDirectory: "./13_write_in_2_dir/",
         },
       },
     );

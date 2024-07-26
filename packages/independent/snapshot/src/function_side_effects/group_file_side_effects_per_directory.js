@@ -6,63 +6,88 @@ export const groupFileSideEffectsPerDirectory = (
   { getFilesystemActionInfo },
 ) => {
   const groupArray = groupFileTogether(sideEffects);
-  for (const writeFileSideEffectArray of groupArray) {
-    if (writeFileSideEffectArray.length < 2) {
+
+  const convertToPathname = (writeFileSideEffect) => {
+    return new URL(writeFileSideEffect.value.url).pathname;
+  };
+
+  for (const group of groupArray) {
+    if (group.id !== "file") {
+      continue;
+    }
+    const fileEffectArray = group.values;
+    if (fileEffectArray.length < 2) {
       continue;
     }
     const commonAncestorPath = findCommonAncestorPath(
-      writeFileSideEffectArray,
-      (writeFileSideEffect) => {
-        return new URL(writeFileSideEffect.value.url).pathname;
-      },
+      fileEffectArray,
+      convertToPathname,
     );
-    const firstWriteFileIndex = sideEffects.indexOf(
-      writeFileSideEffectArray[0],
-    );
-    for (const writeFileSideEffect of writeFileSideEffectArray) {
-      sideEffects.splice(sideEffects.indexOf(writeFileSideEffect), 1);
-    }
+    const firstEffect = fileEffectArray[0];
+    const firstEffectIndex = sideEffects.indexOf(firstEffect);
     const commonAncestorUrl = pathToFileURL(commonAncestorPath);
-    const numberOfFiles = writeFileSideEffectArray.length;
+    const numberOfFiles = fileEffectArray.length;
     const { label } = getFilesystemActionInfo(
       `write ${numberOfFiles} files into`,
       commonAncestorUrl,
     );
-    sideEffects.splice(firstWriteFileIndex, 0, {
+    for (const fileEffect of fileEffectArray) {
+      sideEffects.splice(sideEffects.indexOf(fileEffect), 1);
+    }
+    sideEffects.splice(firstEffectIndex, 0, {
       type: "fs:write_file",
       label,
     });
   }
 };
 
-const groupFileTogether = (sideEffects) => {
+const groupBy = (array, groupCallback) => {
   let i = 0;
   const groupArray = [];
-  let currentGroup;
-  while (i < sideEffects.length) {
-    const sideEffect = sideEffects[i];
+  let currentGroup = null;
+  while (i < array.length) {
+    const value = array[i];
     i++;
-    if (sideEffect.type === "fs:write_file") {
-      if (currentGroup === undefined) {
-        currentGroup = [];
-      }
-      currentGroup.push(sideEffect);
+    let ignoreCalled = false;
+    let ignore = () => {
+      ignoreCalled = true;
+    };
+    const groupId = groupCallback(value, { ignore });
+    if (ignoreCalled) {
       continue;
     }
-    if (sideEffect.type === "fs:write_directory") {
-      continue;
-    }
-    if (currentGroup !== undefined) {
+    if (currentGroup === null) {
+      currentGroup = {
+        id: groupId,
+        values: [value],
+      };
       groupArray.push(currentGroup);
-      currentGroup = undefined;
+      continue;
     }
-  }
-  if (currentGroup !== undefined) {
+    if (groupId === currentGroup.id) {
+      currentGroup.values.push(value);
+      continue;
+    }
+    currentGroup = {
+      id: groupId,
+      values: [value],
+    };
     groupArray.push(currentGroup);
-    currentGroup = undefined;
   }
   return groupArray;
 };
+
+const groupFileTogether = (sideEffects) =>
+  groupBy(sideEffects, (sideEffect, { ignore }) => {
+    if (sideEffect.type === "fs:write_directory") {
+      ignore();
+      return null;
+    }
+    if (sideEffect.type === "fs:write_file") {
+      return "file";
+    }
+    return "other";
+  });
 
 // const groups = groupFileTogether([
 //   {
