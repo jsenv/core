@@ -11,7 +11,7 @@ import {
 } from "../filesystem_snapshot.js";
 import {
   createReplaceFilesystemWellKnownValues,
-  WELL_KNOWN_ROOT,
+  createWellKnown,
 } from "../filesystem_well_known_values.js";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 import { collectFunctionSideEffects } from "./function_side_effects_collector.js";
@@ -133,17 +133,18 @@ export const snapshotFunctionSideEffects = (
                 ...filesystemEffects,
               };
               let writeFile;
-              const { include, preserve, rootDirectory, outDirectory } =
+              const { include, preserve, baseDirectory, outDirectory } =
                 filesystemEffects;
-              const fsEffectsRootDirectory = rootDirectory
-                ? new URL(rootDirectory, sideEffectFileUrl)
+              const fsEffectsBaseDirectoryUrl = baseDirectory
+                ? new URL(baseDirectory, sideEffectFileUrl)
                 : rootDirectoryUrl
                   ? rootDirectoryUrl
                   : pathToFileURL(process.cwd());
-              if (rootDirectory) {
+              if (baseDirectory) {
                 replaceFilesystemWellKnownValues.addWellKnownFileUrl(
-                  rootDirectory,
-                  WELL_KNOWN_ROOT,
+                  baseDirectory,
+                  createWellKnown("base"),
+                  { position: "start" },
                 );
               }
               if (outDirectory) {
@@ -164,7 +165,7 @@ export const snapshotFunctionSideEffects = (
                 writeFile = (url, content) => {
                   const relativeUrl = urlToRelativeUrl(
                     url,
-                    fsEffectsRootDirectory,
+                    fsEffectsBaseDirectoryUrl,
                   );
                   const toUrl = new URL(relativeUrl, fsEffectsOutDirectoryUrl);
                   writeFileCallbackSet.add(() => {

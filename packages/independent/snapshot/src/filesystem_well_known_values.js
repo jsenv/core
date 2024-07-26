@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 // remember this: https://stackoverflow.com/a/31976060/24573072
 // when deciding which replacement to use and willBeWrittenOnFilesystem is true
-export const WELL_KNOWN_ROOT = {
+const WELL_KNOWN_ROOT = {
   name: "root",
   getReplacement: ({ preferFileUrl }) => {
     if (preferFileUrl) {
@@ -48,6 +48,12 @@ const createWellKnownPackage = (name) => {
     getReplacement: () => name,
   };
 };
+export const createWellKnown = (name, replacement = name) => {
+  return {
+    name,
+    getReplacement: () => replacement,
+  };
+};
 
 export const createReplaceFilesystemWellKnownValues = ({
   rootDirectoryUrl,
@@ -63,7 +69,7 @@ export const createReplaceFilesystemWellKnownValues = ({
   const wellKownUrlArray = [];
   const wellKnownPathArray = [];
   const addWellKnownFileUrl = (url, wellKnown, { position = "end" } = {}) => {
-    const urlWithoutTrailingSlash = removePathnameTrailingSlash(url);
+    const urlWithoutTrailingSlash = String(removePathnameTrailingSlash(url));
     const wellKnownUrl = {
       url: urlWithoutTrailingSlash,
       replace: (string, { willBeWrittenOnFilesystem }) => {
@@ -75,7 +81,9 @@ export const createReplaceFilesystemWellKnownValues = ({
       },
     };
     const path =
-      url === cwdUrl ? cwdPath : fileURLToPath(urlWithoutTrailingSlash);
+      String(url) === String(cwdUrl)
+        ? cwdPath
+        : fileURLToPath(urlWithoutTrailingSlash);
     const windowPathRegex = new RegExp(
       `${escapeRegexpSpecialChars(path)}(((?:\\\\(?:[\\w !#()-]+|[.]{1,2})+)*)(?:\\\\)?)`,
       "gm",

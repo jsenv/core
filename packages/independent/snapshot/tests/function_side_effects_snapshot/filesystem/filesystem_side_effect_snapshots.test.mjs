@@ -46,20 +46,6 @@ await startTesting(({ test }) => {
         "0_write_file_sync",
       );
     });
-    test(
-      "1_write_sync_root_dir",
-      () => {
-        writeFileSync(
-          new URL("./toto.txt", import.meta.url),
-          "1_write_sync_root_dir",
-        );
-      },
-      {
-        filesystemEffects: {
-          rootDirectory: new URL("./", import.meta.url),
-        },
-      },
-    );
     test("1_write_then_read_sync", () => {
       writeFileSync(
         new URL("./toto.txt", import.meta.url),
@@ -67,30 +53,44 @@ await startTesting(({ test }) => {
       );
       return String(readFileSync(new URL("./toto.txt", import.meta.url)));
     });
+    test("2_write_sync_deep", () => {
+      writeFileSync(
+        new URL("./toto/toto.txt", import.meta.url),
+        "2_write_sync_deep",
+      );
+    });
+    test("3_write_async", async () => {
+      await writeFile(new URL("./toto.txt", import.meta.url), "3_write_async");
+    });
     test(
-      "2_write_sync_out_directory",
+      "4_write_sync_with_base",
       () => {
         writeFileSync(
           new URL("./toto.txt", import.meta.url),
-          "2_write_sync_out_directory",
+          "4_write_sync_with_base",
         );
       },
       {
         filesystemEffects: {
-          rootDirectory: new URL("./", import.meta.url),
-          outDirectory: "./2_write_sync_out_directory/",
+          baseDirectory: new URL("./", import.meta.url),
         },
       },
     );
-    test("3_write_sync_deep", () => {
-      writeFileSync(
-        new URL("./toto/toto.txt", import.meta.url),
-        "3_write_sync_deep",
-      );
-    });
-    test("4_write_async", async () => {
-      await writeFile(new URL("./toto.txt", import.meta.url), "4_write_async");
-    });
+    test(
+      "5_write_sync_dedicated_directory",
+      () => {
+        writeFileSync(
+          new URL("./toto.txt", import.meta.url),
+          "5_write_sync_dedicated_directory",
+        );
+      },
+      {
+        filesystemEffects: {
+          baseDirectory: new URL("./", import.meta.url),
+          outDirectory: "./5_write_sync_dedicated_directory/",
+        },
+      },
+    );
   }
   read_file: {
     // read file twice
