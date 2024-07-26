@@ -155,6 +155,16 @@ export const replaceFluctuatingValues = (
     }
     return value;
   };
+  const replaceDurations = (value) => {
+    // https://stackoverflow.com/a/59202307/24573072
+    value = value.replace(
+      /(?<!\d|\.)\d+(?:\.\d+)?(\s*(?:seconds|second|s))\b/g,
+      (match, spaceAndUnit) => {
+        return `<X>${spaceAndUnit}`;
+      },
+    );
+    return value;
+  };
   const replaceThings = (value) => {
     if (removeAnsi) {
       value = stripAnsi(value);
@@ -162,6 +172,7 @@ export const replaceFluctuatingValues = (
     value = replaceFileUrls(value);
     value = replaceFilePaths(value);
     value = replaceHttpUrls(value);
+    value = replaceDurations(value);
     return value;
   };
 

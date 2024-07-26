@@ -12,13 +12,13 @@ build "./main.html"
 
 3. return promise
 
-4. write file ".jsenv/craft/main.html" (see ./0_js_module/.jsenv/craft/main.html)
+4. write file "@jsenv/core/tests/build/basics/script_type_module_basic/.jsenv/craft/main.html" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/.jsenv/craft/main.html)
 
-5. write file ".jsenv/craft/main.js" (see ./0_js_module/.jsenv/craft/main.js)
+5. write file "@jsenv/core/tests/build/basics/script_type_module_basic/.jsenv/craft/main.js" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/.jsenv/craft/main.js)
 
 6. process.stdout
 ```console
-✔ generate source graph (done in 0.02 second)
+✔ generate source graph (done in 5.7 seconds)
 
 ```
 
@@ -28,17 +28,17 @@ build "./main.html"
 
 ```
 
-8. write file ".jsenv/shape/main.html" (see ./0_js_module/.jsenv/shape/main.html)
+8. write file "@jsenv/core/tests/build/basics/script_type_module_basic/.jsenv/shape/main.html" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/.jsenv/shape/main.html)
 
-9. write file ".jsenv/shape/main.js" (see ./0_js_module/.jsenv/shape/main.js)
+9. write file "@jsenv/core/tests/build/basics/script_type_module_basic/.jsenv/shape/main.js" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/.jsenv/shape/main.js)
 
 10. process.stdout
 ```console
-✔ generate build graph (done in 0.005 second)
+✔ generate build graph (done in 2.3 seconds)
 
 ```
 
-11. write file ".jsenv/shape/main.html" (see ./0_js_module/.jsenv/shape/main.html)
+11. write file "@jsenv/core/tests/build/basics/script_type_module_basic/.jsenv/shape/main.html" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/.jsenv/shape/main.html)
 
 12. process.stdout
 ```console
@@ -46,21 +46,19 @@ build "./main.html"
 
 ```
 
-13. write directory "build"
+13. write directory "@jsenv/core/tests/build/basics/script_type_module_basic/build/js/"
 
-14. write directory "build/js/"
+14. write file "@jsenv/core/tests/build/basics/script_type_module_basic/build/js/main.js" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/build/js/main.js)
 
-15. write file "build/js/main.js" (see ./0_js_module/build/js/main.js)
+15. write file "@jsenv/core/tests/build/basics/script_type_module_basic/build/main.html" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/build/main.html)
 
-16. write file "build/main.html" (see ./0_js_module/build/main.html)
-
-17. process.stdout
+16. process.stdout
 ```console
-✔ write files in build directory (done in 0.002 second)
+✔ write files in build directory (done in 0.004 second)
 
 ```
 
-18. console.info
+17. console.info
 ```console
 --- build files ---  
 - html : 1 (175 B / 91 %)
@@ -69,7 +67,7 @@ build "./main.html"
 --------------------
 ```
 
-19. resolve
+18. resolve
 ```js
 {
   "buildFileContents": {

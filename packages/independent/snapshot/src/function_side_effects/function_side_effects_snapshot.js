@@ -4,6 +4,7 @@ import {
   urlToExtension,
   urlToRelativeUrl,
 } from "@jsenv/urls";
+import { pathToFileURL } from "node:url";
 import {
   takeDirectorySnapshot,
   takeFileSnapshot,
@@ -27,13 +28,8 @@ const consoleEffectsDefault = {
 
 export const snapshotFunctionSideEffects = (
   fn,
-  fnFileUrl,
-  sideEffectFileRelativeUrl,
-  {
-    rootDirectoryUrl = new URL("./", fnFileUrl),
-    consoleEffects = true,
-    filesystemEffects = true,
-  } = {},
+  sideEffectFileUrl,
+  { consoleEffects = true, filesystemEffects = true, rootDirectoryUrl } = {},
 ) => {
   if (consoleEffects === true) {
     consoleEffects = {};
@@ -41,7 +37,6 @@ export const snapshotFunctionSideEffects = (
   if (filesystemEffects === true) {
     filesystemEffects = {};
   }
-  const sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, fnFileUrl);
   const sideEffectFileSnapshot = takeFileSnapshot(sideEffectFileUrl);
   const callbackSet = new Set();
   const sideEffectDetectors = [
@@ -130,17 +125,19 @@ export const snapshotFunctionSideEffects = (
                 ...filesystemEffects,
               };
               let writeFile;
-              const { preserve, outDirectory } = filesystemEffects;
+              const { preserve, rootDirectory, outDirectory } =
+                filesystemEffects;
+              const fsEffectsRootDirectory = rootDirectory
+                ? new URL(rootDirectory, sideEffectFileUrl)
+                : rootDirectoryUrl
+                  ? rootDirectoryUrl
+                  : pathToFileURL(process.cwd());
               if (outDirectory) {
                 const fsEffectsOutDirectoryUrl = ensurePathnameTrailingSlash(
                   new URL(outDirectory, sideEffectFileUrl),
                 );
                 const fsEffectsOutDirectorySnapshot = takeDirectorySnapshot(
                   fsEffectsOutDirectoryUrl,
-                );
-                const fsEffectsOutDirectoryRelativeUrl = urlToRelativeUrl(
-                  fsEffectsOutDirectoryUrl,
-                  sideEffectFileUrl,
                 );
                 const writeFileCallbackSet = new Set();
                 callbackSet.add(() => {
@@ -151,25 +148,32 @@ export const snapshotFunctionSideEffects = (
                   fsEffectsOutDirectorySnapshot.compare();
                 });
                 writeFile = (url, content) => {
-                  const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
+                  const relativeUrl = urlToRelativeUrl(
+                    url,
+                    fsEffectsRootDirectory,
+                  );
                   const toUrl = new URL(relativeUrl, fsEffectsOutDirectoryUrl);
                   writeFileCallbackSet.add(() => {
                     writeFileSync(toUrl, content);
                   });
                   addSideEffect({
                     type: "fs:write_file",
-                    value: { relativeUrl, content },
-                    label: `write file "${relativeUrl}" (see ./${fsEffectsOutDirectoryRelativeUrl}${relativeUrl})`,
+                    value: { url: String(url), content },
+                    label: replaceFluctuatingValues(
+                      `write file "${url}" (see ${toUrl})`,
+                      { rootDirectoryUrl },
+                    ),
                     text: null,
                   });
                 };
               } else {
                 writeFile = (url, content) => {
-                  const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
                   addSideEffect({
                     type: "fs:write_file",
-                    value: { relativeUrl, content },
-                    label: `write file "${relativeUrl}"`,
+                    value: { url: String(url), content },
+                    label: replaceFluctuatingValues(`write file "${url}"`, {
+                      rootDirectoryUrl,
+                    }),
                     text: wrapIntoMarkdownBlock(
                       content,
                       urlToExtension(url).slice(1),
@@ -181,11 +185,13 @@ export const snapshotFunctionSideEffects = (
                 {
                   writeFile,
                   writeDirectory: (url) => {
-                    const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
                     addSideEffect({
                       type: "fs:write_directory",
-                      value: { relativeUrl },
-                      label: `write directory "${relativeUrl}"`,
+                      value: { url: String(url) },
+                      label: replaceFluctuatingValues(
+                        `write directory "${url}"`,
+                        { rootDirectoryUrl },
+                      ),
                       text: null,
                     });
                   },

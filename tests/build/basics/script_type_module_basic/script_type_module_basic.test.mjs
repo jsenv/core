@@ -14,8 +14,12 @@ const test = async (scenario, options) => {
         outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
         ...options,
       }),
-    import.meta.url,
-    `./output/${scenario}.md`,
+    new URL(`./output/${scenario}.md`, import.meta.url),
+    {
+      filesystemEffects: {
+        rootDirectory: new URL("./", import.meta.url),
+      },
+    },
   );
 };
 

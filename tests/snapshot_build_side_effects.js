@@ -3,13 +3,12 @@ import { urlToBasename } from "@jsenv/urls";
 
 export const snapshotBuildSideEffects = async (
   fn,
-  fnFileUrl,
-  sideEffectFileRelativeUrl,
+  sideEffectFileUrl,
   options = {},
 ) => {
-  const sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, fnFileUrl);
   const sideEffectBasename = urlToBasename(sideEffectFileUrl);
-  await snapshotFunctionSideEffects(fn, fnFileUrl, sideEffectFileRelativeUrl, {
+  await snapshotFunctionSideEffects(fn, sideEffectFileUrl, {
+    ...options,
     filesystemEffects: {
       include: {
         "**/*": true,
@@ -18,6 +17,5 @@ export const snapshotBuildSideEffects = async (
       outDirectory: sideEffectBasename,
       ...options.filesystemEffects,
     },
-    ...options,
   });
 };
