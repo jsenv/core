@@ -130,6 +130,7 @@ await startTesting(({ test }) => {
     },
     {
       filesystemEffects: {
+        rootDirectory: new URL("./", import.meta.url),
         outDirectory: "./15_fs_write_file_sync_and_directory/",
       },
     },
