@@ -35,7 +35,7 @@ const syncMarkdownInDirectory = (
     },
     PREV_NEXT_NAV: () => {
       return generatePrevNextNav(
-        markdownFile.url,
+        markdownFile,
         previousDirectoryUrl,
         nextDirectoryUrl,
       );
@@ -204,7 +204,11 @@ ${"  ".repeat(indent + 2)}</a>`;
   }
   return tableOfContent;
 };
-const generatePrevNextNav = (url, prevDirectoryUrl, nextDirectoryUrl) => {
+const generatePrevNextNav = (
+  markdownFile,
+  prevDirectoryUrl,
+  nextDirectoryUrl,
+) => {
   // get previous url
   const prevMarkdownFile = prevDirectoryUrl
     ? getMainMarkdownFile(prevDirectoryUrl)
@@ -219,13 +223,17 @@ const generatePrevNextNav = (url, prevDirectoryUrl, nextDirectoryUrl) => {
   }
   // first
   if (!prevMarkdownFile && nextMarkdownFile) {
+    const currentTitle = extractMarkdownFileTitle(markdownFile);
     const nextTitle = extractMarkdownFileTitle(nextMarkdownFile);
     const nextUrlRelativeToCurrent = urlToRelativeUrl(
       nextMarkdownFile.url,
-      url,
+      markdownFile.url,
     );
     return `<table>
   <tr>
+    <td width="2000px" align="left" nowrap>
+      ${escapeHtml(currentTitle)}
+    </td>
     <td width="2000px" align="right" nowrap>
       <a href="${nextUrlRelativeToCurrent}">${NEXT_CHAR} ${escapeHtml(nextTitle)}</a>
     </td>
@@ -234,28 +242,42 @@ const generatePrevNextNav = (url, prevDirectoryUrl, nextDirectoryUrl) => {
   }
   // last
   if (prevMarkdownFile && !nextMarkdownFile) {
+    const currentTitle = extractMarkdownFileTitle(markdownFile);
     const prevTitle = extractMarkdownFileTitle(prevMarkdownFile);
     const prevUrlRelativeToCurrent = urlToRelativeUrl(
       prevMarkdownFile.url,
-      url,
+      markdownFile.url,
     );
     return `<table>
  <tr>
   <td width="2000px" align="left" nowrap>
    <a href="${prevUrlRelativeToCurrent}">${PREVIOUS_CHAR} ${escapeHtml(prevTitle)}</a>
   </td>
+  <td width="2000px" align="right" nowrap>
+    ${escapeHtml(currentTitle)}
+  </td>
  </tr>
 <table></table>`;
   }
   // between
+  const currentTitle = extractMarkdownFileTitle(markdownFile);
   const prevTitle = extractMarkdownFileTitle(prevMarkdownFile);
-  const prevUrlRelativeToCurrent = urlToRelativeUrl(prevMarkdownFile.url, url);
+  const prevUrlRelativeToCurrent = urlToRelativeUrl(
+    prevMarkdownFile.url,
+    markdownFile.url,
+  );
   const nextTitle = extractMarkdownFileTitle(nextMarkdownFile);
-  const nextUrlRelativeToCurrent = urlToRelativeUrl(nextMarkdownFile.url, url);
+  const nextUrlRelativeToCurrent = urlToRelativeUrl(
+    nextMarkdownFile.url,
+    markdownFile.url,
+  );
   return `<table>
  <tr>
   <td width="2000px" align="left" nowrap>
    <a href="${prevUrlRelativeToCurrent}">${PREVIOUS_CHAR} ${escapeHtml(prevTitle)}</a>
+  </td>
+  <td width="2000px" align="center" nowrap>
+    ${escapeHtml(currentTitle)}
   </td>
   <td width="2000px" align="right" nowrap>
    <a href="${nextUrlRelativeToCurrent}">${NEXT_CHAR} ${escapeHtml(nextTitle)}</a>

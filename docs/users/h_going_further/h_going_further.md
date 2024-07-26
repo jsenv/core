@@ -1,5 +1,23 @@
 # H) Going further
 
+<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+
+<table>
+ <tr>
+  <td width="2000px" align="left" nowrap>
+   <a href="../g_plugins/g_plugins.md">&lt; G) Plugins</a>
+  </td>
+  <td width="2000px" align="center" nowrap>
+    H) Going further
+  </td>
+  <td width="2000px" align="right" nowrap>
+   <a href="../i_test_in_node/i_test_in_node.md">&gt; I) Test in Node.js</a>
+  </td>
+ </tr>
+<table>
+
+<!-- PLACEHOLDER_END -->
+
 # 1. Name
 
 The name "jsenv" stands for JavaScript environments.<br />
@@ -19,6 +37,9 @@ It represents the two JavaScript runtimes supported by jsenv.
  <tr>
   <td width="2000px" align="left" nowrap>
    <a href="../g_plugins/g_plugins.md">&lt; G) Plugins</a>
+  </td>
+  <td width="2000px" align="center" nowrap>
+    H) Going further
   </td>
   <td width="2000px" align="right" nowrap>
    <a href="../i_test_in_node/i_test_in_node.md">&gt; I) Test in Node.js</a>

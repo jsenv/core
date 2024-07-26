@@ -1,5 +1,23 @@
 # D) Test
 
+<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+
+<table>
+ <tr>
+  <td width="2000px" align="left" nowrap>
+   <a href="../c_build/c_build.md">&lt; C) Build</a>
+  </td>
+  <td width="2000px" align="center" nowrap>
+    D) Test
+  </td>
+  <td width="2000px" align="right" nowrap>
+   <a href="../e_referencing_files/e_referencing_files.md">&gt; E) Referencing files</a>
+  </td>
+ </tr>
+<table>
+
+<!-- PLACEHOLDER_END -->
+
 This page documents how jsenv can be used to write and execute tests. The tests will be executed in a web browser.
 
 If you want to execute tests in Node.js go to [I) Test in Node.js](../i_test_in_node/test_in_node.md).
@@ -678,6 +696,9 @@ It contains all execution results and a few more infos
  <tr>
   <td width="2000px" align="left" nowrap>
    <a href="../c_build/c_build.md">&lt; C) Build</a>
+  </td>
+  <td width="2000px" align="center" nowrap>
+    D) Test
   </td>
   <td width="2000px" align="right" nowrap>
    <a href="../e_referencing_files/e_referencing_files.md">&gt; E) Referencing files</a>

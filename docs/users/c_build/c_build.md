@@ -1,5 +1,23 @@
 # C) Build
 
+<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+
+<table>
+ <tr>
+  <td width="2000px" align="left" nowrap>
+   <a href="../b_dev/b_dev.md">&lt; B) Dev</a>
+  </td>
+  <td width="2000px" align="center" nowrap>
+    C) Build
+  </td>
+  <td width="2000px" align="right" nowrap>
+   <a href="../d_test/d_test.md">&gt; D) Test</a>
+  </td>
+ </tr>
+<table>
+
+<!-- PLACEHOLDER_END -->
+
 This page documents how jsenv can be used to generate an optimized version of source files into a directory.
 
 Best parts of jsenv build:
@@ -721,6 +739,9 @@ Same as https in [B) Dev](../b_dev/b_dev.md#210-https)
  <tr>
   <td width="2000px" align="left" nowrap>
    <a href="../b_dev/b_dev.md">&lt; B) Dev</a>
+  </td>
+  <td width="2000px" align="center" nowrap>
+    C) Build
   </td>
   <td width="2000px" align="right" nowrap>
    <a href="../d_test/d_test.md">&gt; D) Test</a>

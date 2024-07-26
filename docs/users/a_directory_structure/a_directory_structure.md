@@ -1,5 +1,20 @@
 # A) Directory Structure
 
+<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+
+<table>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      A) Directory Structure
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../b_dev/b_dev.md">&gt; B) Dev</a>
+    </td>
+  </tr>
+</table>
+
+<!-- PLACEHOLDER_END -->
+
 Jsenv is compatible with any directory structure. It is also compatible with advanced use cases like [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
 
 This page shows how directory and files can be organized.
@@ -65,6 +80,9 @@ npm run test
 
 <table>
   <tr>
+    <td width="2000px" align="left" nowrap>
+      A) Directory Structure
+    </td>
     <td width="2000px" align="right" nowrap>
       <a href="../b_dev/b_dev.md">&gt; B) Dev</a>
     </td>
