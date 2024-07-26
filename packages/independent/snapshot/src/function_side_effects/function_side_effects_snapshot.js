@@ -152,10 +152,6 @@ export const snapshotFunctionSideEffects = (
                 const fsEffectsOutDirectoryUrl = ensurePathnameTrailingSlash(
                   new URL(outDirectory, sideEffectFileUrl),
                 );
-                const fsEffectsOutDirectoryRelativeUrl = urlToRelativeUrl(
-                  fsEffectsOutDirectoryUrl,
-                  sideEffectFileUrl,
-                );
                 const fsEffectsOutDirectorySnapshot = takeDirectorySnapshot(
                   fsEffectsOutDirectoryUrl,
                 );
@@ -168,28 +164,40 @@ export const snapshotFunctionSideEffects = (
                   fsEffectsOutDirectorySnapshot.compare();
                 });
                 writeFile = (url, content) => {
-                  const relativeUrl = urlToRelativeUrl(
-                    url,
-                    fsEffectsBaseDirectoryUrl,
-                  );
-                  const toUrl = new URL(relativeUrl, fsEffectsOutDirectoryUrl);
+                  let toUrl;
+                  let urlDisplayed = url;
+                  if (baseDirectory) {
+                    urlDisplayed = urlToRelativeUrl(
+                      url,
+                      fsEffectsBaseDirectoryUrl,
+                      {
+                        preferRelativeNotation: true,
+                      },
+                    );
+                    if (urlIsInsideOf(url, fsEffectsBaseDirectoryUrl)) {
+                      const toRelativeUrl = urlToRelativeUrl(
+                        url,
+                        fsEffectsBaseDirectoryUrl,
+                      );
+                      toUrl = new URL(toRelativeUrl, fsEffectsOutDirectoryUrl);
+                    } else {
+                      const toRelativeUrl =
+                        replaceFilesystemWellKnownValues(url);
+                      toUrl = new URL(toRelativeUrl, fsEffectsOutDirectoryUrl);
+                    }
+                    // otherwise we need to replace the url with well known
+                  } else {
+                    const toRelativeUrl = replaceFilesystemWellKnownValues(url);
+                    toUrl = new URL(toRelativeUrl, fsEffectsOutDirectoryUrl);
+                  }
                   writeFileCallbackSet.add(() => {
                     writeFileSync(toUrl, content);
                   });
-                  let urlDisplayed = url;
-                  if (
-                    baseDirectory &&
-                    urlIsInsideOf(url, fsEffectsBaseDirectoryUrl)
-                  ) {
-                    urlDisplayed = `./${urlToRelativeUrl(
-                      url,
-                      fsEffectsBaseDirectoryUrl,
-                    )}`;
-                  }
-                  let toUrlDisplayed = `./${fsEffectsOutDirectoryRelativeUrl}${urlToRelativeUrl(
+                  const toUrlDisplayed = urlToRelativeUrl(
                     toUrl,
-                    fsEffectsOutDirectoryUrl,
-                  )}`;
+                    sideEffectFileUrl,
+                    { preferRelativeNotation: true },
+                  );
                   addSideEffect({
                     type: "fs:write_file",
                     value: { url: String(url), content },

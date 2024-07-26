@@ -220,9 +220,6 @@ export const createReplaceFilesystemWellKnownValues = ({
     }
     string = replaceFileUrls(string, { willBeWrittenOnFilesystem });
     string = replaceFilePaths(string, { willBeWrittenOnFilesystem });
-    if (isUrl) {
-      return new URL(string);
-    }
     return string;
   };
   replaceFilesystemWellKnownValues.addWellKnownFileUrl = addWellKnownFileUrl;
