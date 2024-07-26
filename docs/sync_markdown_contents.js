@@ -1,9 +1,4 @@
-import {
-  findHtmlNode,
-  getHtmlNodeText,
-  parseHtml,
-  visitHtmlNodes,
-} from "@jsenv/ast";
+import { findHtmlNode, getHtmlNodeText, parseHtml } from "@jsenv/ast";
 import {
   readDirectorySync,
   readEntryStatSync,
@@ -94,22 +89,52 @@ const syncMarkdownContent = (markdownFile, replacers) => {
   writeFileSync(markdownFile.url, markdownFileContentReplaced);
 };
 const generateTableOfContents = (markdownFile) => {
-  const tableOfContents = [];
+  const tableOfContentRootNode = {
+    title: "Table of contents",
+    canCollapse: true,
+    defaultOpen: true,
+    children: [],
+  };
   const mdAsHtml = marked.parse(markdownFile.content);
   const htmlTree = parseHtml({ html: mdAsHtml });
-  visitHtmlNodes(htmlTree, {
-    h1: (node) => {
-      const text = getHtmlNodeText(node);
-      tableOfContents.push({
+  let isFirstH1 = true;
+  const body = htmlTree.childNodes[0].childNodes[1];
+  let currentHeadingLink = null;
+  for (const child of body) {
+    if (child.nodeName === "h1") {
+      const text = getHtmlNodeText(child);
+      if (isFirstH1) {
+        isFirstH1 = false;
+        tableOfContentRootNode.title = text;
+        continue;
+      }
+      currentHeadingLink = {
+        level: 1,
+        text,
+        href: new URL(markdownHrefFromText(text), markdownFile.url),
+        children: [],
+      };
+      continue;
+    }
+    if (child.nodeName === "h2") {
+      if (!currentHeadingLink || currentHeadingLink.level !== 1) {
+        continue;
+      }
+      const text = getHtmlNodeText(child);
+      currentHeadingLink.children.push({
+        level: 2,
         text,
         href: new URL(markdownHrefFromText(text), markdownFile.url),
       });
-    },
-  });
+    }
+    continue;
+  }
   // find all stuff and make a table
-  return renderTableOfContentsMarkdown(tableOfContents, markdownFile.url);
+  return renderTableOfContentsMarkdown(
+    tableOfContentRootNode,
+    markdownFile.url,
+  );
 };
-
 const markdownHrefFromText = (text) => {
   const markdownLink = anchor(text);
   const hrefStartIndex = markdownLink.indexOf("(#");
@@ -122,7 +147,10 @@ const generateDirectoryTableOfContents = (
   directoryContent,
   directoryUrl,
 ) => {
-  const tableOfContents = [];
+  const tableOfContentRootNode = {
+    title: "Table of contents",
+    children: [],
+  };
   for (const entryName of directoryContent) {
     const entryUrl = new URL(entryName, directoryUrl);
     const entryStat = readEntryStatSync(entryUrl);
@@ -136,20 +164,43 @@ const generateDirectoryTableOfContents = (
       continue;
     }
     const title = extractMarkdownFileTitle(mainMarkdownFile);
-    tableOfContents.push({
+    tableOfContentRootNode.children.push({
       href: mainMarkdownFile.url,
       text: title,
     });
   }
-  return renderTableOfContentsMarkdown(tableOfContents, markdownFile.url);
+  return renderTableOfContentsMarkdown(
+    tableOfContentRootNode,
+    markdownFile.url,
+  );
 };
-const renderTableOfContentsMarkdown = (tableOfContents, markdownFileUrl) => {
+const renderTableOfContentsMarkdown = (rootNode, markdownFileUrl) => {
   let tableOfContent = "";
-  for (const link of tableOfContents) {
-    if (tableOfContent) {
-      tableOfContent += "<br />\n";
+  let indent = 0;
+  if (rootNode.canCollapse) {
+    tableOfContent += `<details${rootNode.defaultOpen ? " open" : ""}>
+  <summary>${rootNode.title}</summary>
+`;
+    indent = 1;
+  }
+  const visit = (node, indent) => {
+    tableOfContent += `${"  ".repeat(indent)}<ul>`;
+    for (const childNode of node.children) {
+      tableOfContent += `${"  ".repeat(indent + 1)}`;
+      tableOfContent += `\n${"  ".repeat(indent + 1)}<li>`;
+      tableOfContent += `\n${"  ".repeat(indent + 2)}<a href="${urlToRelativeUrl(childNode.href, markdownFileUrl)}">
+${"  ".repeat(indent + 3)}${escapeHtml(childNode.text)}
+${"  ".repeat(indent + 2)}</a>`;
+      if (childNode.children?.length) {
+        visit(childNode, indent + 4);
+      }
+      tableOfContent += `\n${"  ".repeat(indent + 1)}</li>`;
     }
-    tableOfContent += `<a href="${urlToRelativeUrl(link.href, markdownFileUrl)}">${escapeHtml(link.text)}</a>`;
+    tableOfContent += `\n${"  ".repeat(indent)}</ul>`;
+  };
+  visit(rootNode, indent);
+  if (rootNode.canCollapse) {
+    tableOfContent += `\n</details>`;
   }
   return tableOfContent;
 };
@@ -237,7 +288,7 @@ const replacePlaceholders = (string, replacers) => {
     return generateReplacement(replacement, name);
   });
   string = string.replace(
-    /<!-- PLACEHOLDER_START:(\w+) -->[\s\S]*<!-- PLACEHOLDER_END -->/g,
+    /<!-- PLACEHOLDER_START:(\w+) -->[\s\S]*?<!-- PLACEHOLDER_END -->/g,
     (match, name) => {
       const replacer = replacers[name];
       if (replacer === undefined) {
