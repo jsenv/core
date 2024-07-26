@@ -1,5 +1,91 @@
 # E) Referencing files
 
+<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+
+<details open>
+  <summary>E) Referencing files</summary>
+  <ul>
+    <li>
+      <a href="#1-general-notes">
+        1. General notes
+      </a>
+        <ul>
+          <li>
+            <a href="#11-leading-slash">
+              1.1 Leading slash
+            </a>
+          </li>
+          <li>
+            <a href="#12-external-urls">
+              1.2 External urls
+            </a>
+          </li>
+          <li>
+            <a href="#13-browser-compatibility">
+              1.3 Browser compatibility
+            </a>
+          </li>
+        </ul>
+    </li>
+    <li>
+      <a href="#2-html">
+        2. HTML
+      </a>
+        <ul>
+          <li>
+            <a href="#21-inline">
+              2.1 Inline 
+            </a>
+          </li>
+        </ul>
+    </li>
+    <li>
+      <a href="#3-css">
+        3. CSS
+      </a>
+    </li>
+    <li>
+      <a href="#4-js-module">
+        4. JS module
+      </a>
+        <ul>
+          <li>
+            <a href="#41-css-import">
+              4.1 CSS import
+            </a>
+          </li>
+          <li>
+            <a href="#42-urls">
+              4.2 Urls
+            </a>
+          </li>
+          <li>
+            <a href="#43-worker-urls">
+              4.3 Worker urls
+            </a>
+          </li>
+          <li>
+            <a href="#45-json-import">
+              4.5 JSON import
+            </a>
+          </li>
+          <li>
+            <a href="#46-text-import">
+              4.6 Text import
+            </a>
+          </li>
+        </ul>
+    </li>
+    <li>
+      <a href="#5-js-classic">
+        5. JS classic
+      </a>
+    </li>
+  </ul>
+</details>
+
+<!-- PLACEHOLDER_END -->
+
 This page documents "how to reference files within a file".  
 For example, it documents how to reference a css file from a js module.
 

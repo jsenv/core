@@ -1,5 +1,89 @@
 # B) Dev
 
+<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+
+<details open>
+  <summary>B) Dev</summary>
+  <ul>
+    <li>
+      <a href="#1-usage">
+        1. Usage
+      </a>
+        <ul>
+          <li>
+            <a href="#11-project-file-structure">
+              1.1 Project file structure
+            </a>
+          </li>
+          <li>
+            <a href="#12-starting-the-server">
+              1.2 Starting the server
+            </a>
+          </li>
+        </ul>
+    </li>
+    <li>
+      <a href="#2-features">
+        2. Features
+      </a>
+        <ul>
+          <li>
+            <a href="#21-browser-support">
+              2.1 Browser support
+            </a>
+          </li>
+          <li>
+            <a href="#22-directory-structure-agnostic">
+              2.2 Directory structure agnostic
+            </a>
+          </li>
+          <li>
+            <a href="#23-root-url-equivalence">
+              2.3 Root url equivalence
+            </a>
+          </li>
+          <li>
+            <a href="#24-ribbon">
+              2.4 ribbon
+            </a>
+          </li>
+          <li>
+            <a href="#25-error-overlay">
+              2.5 Error overlay
+            </a>
+          </li>
+          <li>
+            <a href="#26-autoreload">
+              2.6 Autoreload
+            </a>
+          </li>
+          <li>
+            <a href="#27-compatibility-with-frameworks">
+              2.7 Compatibility with frameworks
+            </a>
+          </li>
+          <li>
+            <a href="#28-sourcemaps">
+              2.8 sourcemaps
+            </a>
+          </li>
+          <li>
+            <a href="#29-port">
+              2.9 port
+            </a>
+          </li>
+          <li>
+            <a href="#210-https">
+              2.10 https
+            </a>
+          </li>
+        </ul>
+    </li>
+  </ul>
+</details>
+
+<!-- PLACEHOLDER_END -->
+
 This page documents how jsenv can be used to start a server for source files.
 
 Best parts of jsenv dev server:

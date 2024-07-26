@@ -1,7 +1,5 @@
 # G) Plugins
 
-Official jsenv plugins written and maintained by jsenv.
-
 <!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
 
 <details open>
@@ -65,6 +63,8 @@ Official jsenv plugins written and maintained by jsenv.
 </details>
 
 <!-- PLACEHOLDER_END -->
+
+Official jsenv plugins written and maintained by jsenv.
 
 # 1. Dev, build, transversal
 

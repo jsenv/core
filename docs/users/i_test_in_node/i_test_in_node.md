@@ -1,5 +1,67 @@
 # I) Test in Node.js
 
+<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+
+<details open>
+  <summary>I) Test in Node.js</summary>
+  <ul>
+    <li>
+      <a href="#1-file-structure">
+        1. File structure
+      </a>
+    </li>
+    <li>
+      <a href="#2-writing-test">
+        2. Writing test
+      </a>
+    </li>
+    <li>
+      <a href="#3-executing-tests">
+        3. Executing tests
+      </a>
+    </li>
+    <li>
+      <a href="#4-executing-a-single-test">
+        4. Executing a single test
+      </a>
+    </li>
+    <li>
+      <a href="#5-features">
+        5. Features
+      </a>
+        <ul>
+          <li>
+            <a href="#51-processenv">
+              5.1 process.env
+            </a>
+          </li>
+          <li>
+            <a href="#52-command-line-options">
+              5.2 Command line options
+            </a>
+          </li>
+          <li>
+            <a href="#53-child-process">
+              5.3 child process
+            </a>
+          </li>
+          <li>
+            <a href="#54-importmap">
+              5.4 importmap
+            </a>
+          </li>
+          <li>
+            <a href="#55-code-coverage">
+              5.5 Code coverage
+            </a>
+          </li>
+        </ul>
+    </li>
+  </ul>
+</details>
+
+<!-- PLACEHOLDER_END -->
+
 This section demonstrates how to write and execute tests in Node.js.  
 If you want to execute tests in a browser go to [D) Test](../d_test/d_test.md).
 
