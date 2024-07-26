@@ -7,6 +7,19 @@ import {
   urlChildMayMatch,
 } from "./url_meta.js";
 
+const createFilter = (patterns, url) => {
+  const associations = resolveAssociations(
+    {
+      yes: patterns,
+    },
+    url,
+  );
+  return (url) => {
+    const meta = applyAssociations({ url, associations });
+    return Boolean(meta.yes);
+  };
+};
+
 export const URL_META = {
   resolveAssociations,
   applyAssociations,
@@ -14,4 +27,5 @@ export const URL_META = {
   applyPatternMatching,
   urlChildMayMatch,
   matches,
+  createFilter,
 };

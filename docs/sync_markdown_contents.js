@@ -6,6 +6,7 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import anchor from "anchor-markdown-header";
 import { marked } from "marked";
 
 const PREVIOUS_CHAR = "&lt;"; // "<"
@@ -23,7 +24,14 @@ const syncMarkdownInDirectory = (
   }
   syncMarkdownContent(markdownFile, {
     DIRECTORY_TABLE_OF_CONTENT: () => {
-      return generateTableOfContents(directoryContent, directoryUrl);
+      return generateDirectoryTableOfContents(
+        markdownFile,
+        directoryContent,
+        directoryUrl,
+      );
+    },
+    TABLE_OF_CONTENT: () => {
+      return generateTableOfContents(markdownFile);
     },
     PREV_NEXT_NAV: () => {
       return generatePrevNextNav(
@@ -80,8 +88,70 @@ const syncMarkdownContent = (markdownFile, replacers) => {
   );
   writeFileSync(markdownFile.url, markdownFileContentReplaced);
 };
-const generateTableOfContents = (directoryContent, directoryUrl) => {
-  let tableOfContent = "";
+const generateTableOfContents = (markdownFile) => {
+  const tableOfContentRootNode = {
+    title: "Table of contents",
+    canCollapse: true,
+    defaultOpen: true,
+    children: [],
+  };
+  const mdAsHtml = marked.parse(markdownFile.content);
+  const htmlTree = parseHtml({ html: mdAsHtml });
+  let isFirstH1 = true;
+  const body = htmlTree.childNodes[0].childNodes[1];
+  let currentHeadingLink = null;
+  for (const child of body.childNodes) {
+    if (child.nodeName === "h1") {
+      const text = getHtmlNodeText(child);
+      if (isFirstH1) {
+        isFirstH1 = false;
+        tableOfContentRootNode.title = text;
+        continue;
+      }
+      currentHeadingLink = {
+        level: 1,
+        text,
+        href: new URL(markdownHrefFromText(text), markdownFile.url),
+        children: [],
+      };
+      tableOfContentRootNode.children.push(currentHeadingLink);
+      continue;
+    }
+    if (child.nodeName === "h2") {
+      if (!currentHeadingLink || currentHeadingLink.level !== 1) {
+        continue;
+      }
+      const text = getHtmlNodeText(child);
+      currentHeadingLink.children.push({
+        level: 2,
+        text,
+        href: new URL(markdownHrefFromText(text), markdownFile.url),
+      });
+    }
+    continue;
+  }
+  // find all stuff and make a table
+  return renderTableOfContentsMarkdown(
+    tableOfContentRootNode,
+    markdownFile.url,
+  );
+};
+const markdownHrefFromText = (text) => {
+  const markdownLink = anchor(text);
+  const hrefStartIndex = markdownLink.indexOf("(#");
+  const hrefPart = markdownLink.slice(hrefStartIndex + 1, -1);
+  return hrefPart;
+};
+
+const generateDirectoryTableOfContents = (
+  markdownFile,
+  directoryContent,
+  directoryUrl,
+) => {
+  const tableOfContentRootNode = {
+    title: "Table of contents",
+    children: [],
+  };
   for (const entryName of directoryContent) {
     const entryUrl = new URL(entryName, directoryUrl);
     const entryStat = readEntryStatSync(entryUrl);
@@ -95,10 +165,42 @@ const generateTableOfContents = (directoryContent, directoryUrl) => {
       continue;
     }
     const title = extractMarkdownFileTitle(mainMarkdownFile);
-    if (tableOfContent) {
-      tableOfContent += "<br />\n";
+    tableOfContentRootNode.children.push({
+      href: mainMarkdownFile.url,
+      text: title,
+    });
+  }
+  return renderTableOfContentsMarkdown(
+    tableOfContentRootNode,
+    markdownFile.url,
+  );
+};
+const renderTableOfContentsMarkdown = (rootNode, markdownFileUrl) => {
+  let tableOfContent = "";
+  let indent = 0;
+  if (rootNode.canCollapse) {
+    tableOfContent += `<details${rootNode.defaultOpen ? " open" : ""}>
+  <summary>${rootNode.title}</summary>`;
+    indent = 1;
+  }
+  const visit = (node, indent) => {
+    if (tableOfContent) tableOfContent += "\n";
+    tableOfContent += `${"  ".repeat(indent)}<ul>`;
+    for (const childNode of node.children) {
+      tableOfContent += `\n${"  ".repeat(indent + 1)}<li>`;
+      tableOfContent += `\n${"  ".repeat(indent + 2)}<a href="${urlToRelativeUrl(childNode.href, markdownFileUrl)}">
+${"  ".repeat(indent + 3)}${escapeHtml(childNode.text)}
+${"  ".repeat(indent + 2)}</a>`;
+      if (childNode.children?.length) {
+        visit(childNode, indent + 3);
+      }
+      tableOfContent += `\n${"  ".repeat(indent + 1)}</li>`;
     }
-    tableOfContent += `<a href="./${urlToRelativeUrl(mainMarkdownFile.url, directoryUrl)}">${escapeHtml(title)}</a>`;
+    tableOfContent += `\n${"  ".repeat(indent)}</ul>`;
+  };
+  visit(rootNode, indent);
+  if (rootNode.canCollapse) {
+    tableOfContent += `\n</details>`;
   }
   return tableOfContent;
 };
@@ -186,7 +288,7 @@ const replacePlaceholders = (string, replacers) => {
     return generateReplacement(replacement, name);
   });
   string = string.replace(
-    /<!-- PLACEHOLDER_START:(\w+) -->[\s\S]*<!-- PLACEHOLDER_END -->/g,
+    /<!-- PLACEHOLDER_START:(\w+) -->[\s\S]*?<!-- PLACEHOLDER_END -->/g,
     (match, name) => {
       const replacer = replacers[name];
       if (replacer === undefined) {

@@ -1,5 +1,62 @@
 # F) Features
 
+<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+
+<details open>
+  <summary>F) Features</summary>
+  <ul>
+    <li>
+      <a href="#1-node-esm-resolution">
+        1. Node ESM resolution
+      </a>
+        <ul>
+          <li>
+            <a href="#11-node-module-files-during-dev">
+              1.1 Node module files during dev
+            </a>
+          </li>
+        </ul>
+    </li>
+    <li>
+      <a href="#2-magic-extensions">
+        2. Magic extensions
+      </a>
+    </li>
+    <li>
+      <a href="#3-importmetadev">
+        3. import.meta.dev
+      </a>
+    </li>
+    <li>
+      <a href="#4-injections">
+        4. Injections
+      </a>
+    </li>
+    <li>
+      <a href="#5-inlining">
+        5. Inlining
+      </a>
+    </li>
+    <li>
+      <a href="#6-importing-umd">
+        6. Importing UMD
+      </a>
+    </li>
+    <li>
+      <a href="#7-importing-commonjs">
+        7. Importing CommonJs
+      </a>
+    </li>
+    <li>
+      <a href="#8-loading-js-module-with">
+        8. Loading js module with 
+      </a>
+    </li>
+  </ul>
+</details>
+
+<!-- PLACEHOLDER_END -->
+
 # 1. Node ESM resolution
 
 Jsenv implements Node ESM resolution on js imports.

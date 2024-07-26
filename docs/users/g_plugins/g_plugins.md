@@ -1,5 +1,69 @@
 # G) Plugins
 
+<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+
+<details open>
+  <summary>G) Plugins</summary>
+  <ul>
+    <li>
+      <a href="#1-dev-build-transversal">
+        1. Dev, build, transversal
+      </a>
+    </li>
+    <li>
+      <a href="#2-transversal-plugins">
+        2. Transversal plugins
+      </a>
+        <ul>
+          <li>
+            <a href="#21-commonjs">
+              2.1 commonjs
+            </a>
+          </li>
+          <li>
+            <a href="#22-asjsclassic">
+              2.2 asJsClassic
+            </a>
+          </li>
+          <li>
+            <a href="#23-preact">
+              2.3 preact
+            </a>
+          </li>
+          <li>
+            <a href="#24-react">
+              2.4 react
+            </a>
+          </li>
+        </ul>
+    </li>
+    <li>
+      <a href="#3-dev-plugins">
+        3. Dev plugins
+      </a>
+        <ul>
+          <li>
+            <a href="#31-explorer">
+              3.1 explorer
+            </a>
+          </li>
+          <li>
+            <a href="#32-toolbar">
+              3.2 toolbar
+            </a>
+          </li>
+        </ul>
+    </li>
+    <li>
+      <a href="#4-build-plugins">
+        4. Build plugins
+      </a>
+    </li>
+  </ul>
+</details>
+
+<!-- PLACEHOLDER_END -->
+
 Official jsenv plugins written and maintained by jsenv.
 
 # 1. Dev, build, transversal

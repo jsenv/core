@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert";
-import { readFile, writeFile } from "@jsenv/filesystem";
+import { writeFile, writeFileSync } from "@jsenv/filesystem";
 import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
 
 // warn property restored
@@ -10,8 +10,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       await new Promise((resolve) => setTimeout(resolve, 100));
       console.warn("here");
     },
-    import.meta.url,
-    "./output/0_warn_a.md",
+    new URL("./output/0_warn_a.md", import.meta.url),
   );
   assert({ actual: console.warn, expect: warn });
   await snapshotFunctionSideEffects(
@@ -19,8 +18,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       await new Promise((resolve) => setTimeout(resolve, 100));
       console.warn("here");
     },
-    import.meta.url,
-    "./output/1_warn_b.md",
+    new URL("./output/1_warn_b.md", import.meta.url),
   );
   assert({ actual: console.warn, expect: warn });
 }
@@ -35,8 +33,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       });
       console.log("a_after_timeout_200");
     },
-    import.meta.url,
-    "./output/2_a_when_b_ends_before.md",
+    new URL("./output/2_a_when_b_ends_before.md", import.meta.url),
     {
       filesystemEffects: {
         preserve: true,
@@ -51,8 +48,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       });
       console.log("b_after_timeout_50");
     },
-    import.meta.url,
-    "./output/3_b_when_b_ends_before.md",
+    new URL("./output/3_b_when_b_ends_before.md", import.meta.url),
     {
       filesystemEffects: {
         preserve: true,
@@ -71,8 +67,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       await writeFile(new URL("./b.txt", import.meta.url), "b_1");
       await writeFile(new URL("./c.txt", import.meta.url), "c_1");
     },
-    import.meta.url,
-    "./output/4_write_first.md",
+    new URL("./output/4_write_first.md", import.meta.url),
   );
   await snapshotFunctionSideEffects(
     async () => {
@@ -80,25 +75,27 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       await writeFile(new URL("./b.txt", import.meta.url), "b_2");
       await writeFile(new URL("./c.txt", import.meta.url), "c_2");
     },
-    import.meta.url,
-    "./output/5_write_second.md",
+    new URL("./output/5_write_second.md", import.meta.url),
   );
 }
 
-// do read file twice
+// console and filesystem
 {
   await snapshotFunctionSideEffects(
     async () => {
-      await readFile(import.meta.url, { as: "string" });
+      console.log("start");
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+      console.info("timeout done");
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+      console.warn("a warning after 2nd timeout");
+      console.warn("and an other warning");
+      writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
+      throw new Error("in the end we throw");
     },
-    import.meta.url,
-    "./output/6_read_file_first.md",
-  );
-  await snapshotFunctionSideEffects(
-    async () => {
-      await readFile(import.meta.url, { as: "string" });
-    },
-    import.meta.url,
-    "./output/7_read_file_second.md",
+    new URL("./output/6_console_and_file.md", import.meta.url),
   );
 }

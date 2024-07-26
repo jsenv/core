@@ -1,6 +1,7 @@
-import { writeFileSync } from "@jsenv/filesystem";
+import { readDirectorySync, writeFileSync } from "@jsenv/filesystem";
 import {
   ensurePathnameTrailingSlash,
+  urlIsInsideOf,
   urlToExtension,
   urlToRelativeUrl,
 } from "@jsenv/urls";
@@ -8,12 +9,17 @@ import {
   takeDirectorySnapshot,
   takeFileSnapshot,
 } from "../filesystem_snapshot.js";
+import {
+  createReplaceFilesystemWellKnownValues,
+  createWellKnown,
+} from "../filesystem_well_known_values.js";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 import { collectFunctionSideEffects } from "./function_side_effects_collector.js";
 import {
   renderSideEffects,
   wrapIntoMarkdownBlock,
 } from "./function_side_effects_renderer.js";
+import { groupFileSideEffectsPerDirectory } from "./group_file_side_effects_per_directory.js";
 import { spyConsoleCalls } from "./spy_console_calls.js";
 import { spyFilesystemCalls } from "./spy_filesystem_calls.js";
 
@@ -27,13 +33,8 @@ const consoleEffectsDefault = {
 
 export const snapshotFunctionSideEffects = (
   fn,
-  fnFileUrl,
-  sideEffectFileRelativeUrl,
-  {
-    rootDirectoryUrl = new URL("./", fnFileUrl),
-    consoleEffects = true,
-    filesystemEffects = true,
-  } = {},
+  sideEffectFileUrl,
+  { consoleEffects = true, filesystemEffects = true, rootDirectoryUrl } = {},
 ) => {
   if (consoleEffects === true) {
     consoleEffects = {};
@@ -41,7 +42,10 @@ export const snapshotFunctionSideEffects = (
   if (filesystemEffects === true) {
     filesystemEffects = {};
   }
-  const sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, fnFileUrl);
+  const replaceFilesystemWellKnownValues =
+    createReplaceFilesystemWellKnownValues({
+      rootDirectoryUrl,
+    });
   const sideEffectFileSnapshot = takeFileSnapshot(sideEffectFileUrl);
   const callbackSet = new Set();
   const sideEffectDetectors = [
@@ -60,7 +64,7 @@ export const snapshotFunctionSideEffects = (
                   text: wrapIntoMarkdownBlock(
                     replaceFluctuatingValues(message, {
                       stringType: "console",
-                      rootDirectoryUrl,
+                      replaceFilesystemWellKnownValues,
                     }),
                     "console",
                   ),
@@ -79,6 +83,34 @@ export const snapshotFunctionSideEffects = (
                   },
                   log: (message) => {
                     onConsole("log", message);
+                  },
+                  stdout: (message) => {
+                    addSideEffect({
+                      type: `process:stdout`,
+                      value: message,
+                      label: `process.stdout`,
+                      text: wrapIntoMarkdownBlock(
+                        replaceFluctuatingValues(message, {
+                          stringType: "console",
+                          replaceFilesystemWellKnownValues,
+                        }),
+                        "console",
+                      ),
+                    });
+                  },
+                  stderr: (message) => {
+                    addSideEffect({
+                      type: `process:stderr`,
+                      value: message,
+                      label: `process.stderr`,
+                      text: wrapIntoMarkdownBlock(
+                        replaceFluctuatingValues(message, {
+                          stringType: "console",
+                          replaceFilesystemWellKnownValues,
+                        }),
+                        "console",
+                      ),
+                    });
                   },
                 },
                 {
@@ -102,7 +134,21 @@ export const snapshotFunctionSideEffects = (
                 ...filesystemEffects,
               };
               let writeFile;
-              const { preserve, outDirectory } = filesystemEffects;
+              const { include, preserve, baseDirectory, outDirectory } =
+                filesystemEffects;
+              if (baseDirectory) {
+                replaceFilesystemWellKnownValues.addWellKnownFileUrl(
+                  baseDirectory,
+                  createWellKnown("base"),
+                  { position: "start" },
+                );
+              }
+              const renderLabel = (label) => {
+                return replaceFluctuatingValues(label, {
+                  replaceFilesystemWellKnownValues,
+                });
+              };
+
               if (outDirectory) {
                 const fsEffectsOutDirectoryUrl = ensurePathnameTrailingSlash(
                   new URL(outDirectory, sideEffectFileUrl),
@@ -110,12 +156,53 @@ export const snapshotFunctionSideEffects = (
                 const fsEffectsOutDirectorySnapshot = takeDirectorySnapshot(
                   fsEffectsOutDirectoryUrl,
                 );
-                const fsEffectsOutDirectoryRelativeUrl = urlToRelativeUrl(
-                  fsEffectsOutDirectoryUrl,
-                  sideEffectFileUrl,
-                );
                 const writeFileCallbackSet = new Set();
-                callbackSet.add(() => {
+                const getFilesystemActionInfo = (action, url) => {
+                  let toUrl;
+                  let urlDisplayed = url;
+                  if (baseDirectory) {
+                    urlDisplayed = urlToRelativeUrl(url, baseDirectory, {
+                      preferRelativeNotation: true,
+                    });
+                    if (
+                      url.href === baseDirectory.href ||
+                      urlIsInsideOf(url, baseDirectory)
+                    ) {
+                      const toRelativeUrl = urlToRelativeUrl(
+                        url,
+                        baseDirectory,
+                      );
+                      toUrl = new URL(toRelativeUrl, fsEffectsOutDirectoryUrl);
+                    } else {
+                      const toRelativeUrl =
+                        replaceFilesystemWellKnownValues(url);
+                      toUrl = new URL(toRelativeUrl, fsEffectsOutDirectoryUrl);
+                    }
+                    // otherwise we need to replace the url with well known
+                  } else {
+                    const toRelativeUrl = replaceFilesystemWellKnownValues(url);
+                    toUrl = new URL(toRelativeUrl, fsEffectsOutDirectoryUrl);
+                  }
+                  const toUrlDisplayed = urlToRelativeUrl(
+                    toUrl,
+                    sideEffectFileUrl,
+                    { preferRelativeNotation: true },
+                  );
+                  return {
+                    toUrl,
+                    label: renderLabel(
+                      `${action} "${urlDisplayed}" (see ${toUrlDisplayed})`,
+                    ),
+                  };
+                };
+
+                callbackSet.add((sideEffects) => {
+                  // gather all file side effect next to each other
+                  // collapse them if they have a shared ancestor
+                  groupFileSideEffectsPerDirectory(sideEffects, {
+                    baseDirectory,
+                    getFilesystemActionInfo,
+                  });
                   for (const writeFileCallback of writeFileCallbackSet) {
                     writeFileCallback();
                   }
@@ -123,25 +210,32 @@ export const snapshotFunctionSideEffects = (
                   fsEffectsOutDirectorySnapshot.compare();
                 });
                 writeFile = (url, content) => {
-                  const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
-                  const toUrl = new URL(relativeUrl, fsEffectsOutDirectoryUrl);
+                  const { toUrl, label } = getFilesystemActionInfo(
+                    "write file",
+                    url,
+                  );
                   writeFileCallbackSet.add(() => {
                     writeFileSync(toUrl, content);
                   });
                   addSideEffect({
                     type: "fs:write_file",
-                    value: { relativeUrl, content },
-                    label: `write file "${relativeUrl}" (see ./${fsEffectsOutDirectoryRelativeUrl}${relativeUrl})`,
+                    value: { url: String(url), content },
+                    label,
                     text: null,
                   });
                 };
               } else {
                 writeFile = (url, content) => {
-                  const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
+                  let urlDisplayed = url;
+                  if (baseDirectory) {
+                    urlDisplayed = urlToRelativeUrl(url, baseDirectory, {
+                      preferRelativeNotation: true,
+                    });
+                  }
                   addSideEffect({
                     type: "fs:write_file",
-                    value: { relativeUrl, content },
-                    label: `write file "${relativeUrl}"`,
+                    value: { url: String(url), content },
+                    label: renderLabel(`write file "${urlDisplayed}"`),
                     text: wrapIntoMarkdownBlock(
                       content,
                       urlToExtension(url).slice(1),
@@ -153,16 +247,28 @@ export const snapshotFunctionSideEffects = (
                 {
                   writeFile,
                   writeDirectory: (url) => {
-                    const relativeUrl = urlToRelativeUrl(url, fnFileUrl);
-                    addSideEffect({
+                    const writeDirectorySideEffect = addSideEffect({
                       type: "fs:write_directory",
-                      value: { relativeUrl },
-                      label: `write directory "${relativeUrl}"`,
+                      value: { url: String(url) },
+                      label: renderLabel(`write directory "${url}"`),
                       text: null,
+                    });
+                    // if directory ends up with something inside we'll not report
+                    // this side effect because:
+                    // - it was likely created to write the file
+                    // - the file creation will be reported and implies directory creation
+                    filesystemSpy.addBeforeUndoCallback(() => {
+                      try {
+                        const dirContent = readDirectorySync(url);
+                        if (dirContent.length) {
+                          writeDirectorySideEffect.skippable = true;
+                        }
+                      } catch (e) {}
                     });
                   },
                 },
                 {
+                  include,
                   undoFilesystemSideEffects: !preserve,
                 },
               );
@@ -176,7 +282,7 @@ export const snapshotFunctionSideEffects = (
   ];
   const onSideEffectsCollected = (sideEffects) => {
     for (const callback of callbackSet) {
-      callback();
+      callback(sideEffects);
     }
     callbackSet.clear();
     sideEffectFileSnapshot.update(renderSideEffects(sideEffects), {

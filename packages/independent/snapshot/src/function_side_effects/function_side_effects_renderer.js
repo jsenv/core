@@ -2,6 +2,9 @@ export const renderSideEffects = (sideEffects) => {
   let string = "";
   let index = 0;
   for (const sideEffect of sideEffects) {
+    if (sideEffect.skippable) {
+      continue;
+    }
     if (string) {
       string += "\n\n";
     }
@@ -17,7 +20,7 @@ export const renderSideEffects = (sideEffects) => {
   return string;
 };
 
-export const wrapIntoMarkdownBlock = (value, blockName) => {
+export const wrapIntoMarkdownBlock = (value, blockName = "") => {
   const start = "```";
   const end = "```";
   return `${start}${blockName}

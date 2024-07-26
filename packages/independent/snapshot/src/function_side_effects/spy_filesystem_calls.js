@@ -3,8 +3,13 @@
 // https://github.com/tschaub/mock-fs/blob/6e84d5bb320022624c7d770432e3322323ce043e/lib/binding.js#L353
 // https://github.com/tschaub/mock-fs/issues/348
 
-import { removeDirectorySync, removeFileSync } from "@jsenv/filesystem";
-import { readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  removeDirectorySync,
+  removeFileSync,
+  writeFileSync,
+} from "@jsenv/filesystem";
+import { URL_META } from "@jsenv/url-meta";
+import { readFileSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
   disableHooksWhileCalling,
@@ -20,8 +25,12 @@ export const spyFilesystemCalls = (
     removeFile = () => {}, // TODO
     // removeDirectory = () => {},
   },
-  { undoFilesystemSideEffects } = {},
+  { include, undoFilesystemSideEffects } = {},
 ) => {
+  const shouldReport = include
+    ? URL_META.createFilter(include, "file:///")
+    : () => true;
+
   const _internalFs = process.binding("fs");
   const filesystemStateInfoMap = new Map();
   const fileDescriptorPathMap = new Map();
@@ -47,8 +56,10 @@ export const spyFilesystemCalls = (
           });
         }
       }
-      writeFile(fileUrl, stateAfter.content);
-      return;
+      if (shouldReport(fileUrl)) {
+        writeFile(fileUrl, stateAfter.content);
+        return;
+      }
     }
     // file is exactly the same
     // function did not have any effect on the file
@@ -65,8 +76,11 @@ export const spyFilesystemCalls = (
         });
       });
     }
-    writeDirectory(directoryUrl);
+    if (shouldReport(directoryUrl)) {
+      writeDirectory(directoryUrl);
+    }
   };
+  const beforeUndoCallbackSet = new Set();
   const restoreCallbackSet = new Set();
 
   const getFileStateWithinHook = (fileUrl) => {
@@ -166,11 +180,18 @@ export const spyFilesystemCalls = (
     unlinkHook.remove();
   });
   return {
+    addBeforeUndoCallback: (callback) => {
+      beforeUndoCallbackSet.add(callback);
+    },
     restore: () => {
       for (const restoreCallback of restoreCallbackSet) {
         restoreCallback();
       }
       restoreCallbackSet.clear();
+      for (const beforeUndoCallback of beforeUndoCallbackSet) {
+        beforeUndoCallback();
+      }
+      beforeUndoCallbackSet.clear();
       for (const [, restore] of fileRestoreMap) {
         restore();
       }

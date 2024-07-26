@@ -1775,7 +1775,11 @@ const getCommonPathname = (pathname, otherPathname) => {
   return commonPathname;
 };
 
-const urlToRelativeUrl = (url, baseUrl) => {
+const urlToRelativeUrl = (
+  url,
+  baseUrl,
+  { preferRelativeNotation } = {},
+) => {
   const urlObject = new URL(url);
   const baseUrlObject = new URL(baseUrl);
 
@@ -1819,7 +1823,7 @@ const urlToRelativeUrl = (url, baseUrl) => {
   }
 
   const relativeUrl = `${specificPathname}${search}${hash}`;
-  return relativeUrl;
+  return preferRelativeNotation ? `./${relativeUrl}` : relativeUrl;
 };
 
 const pathnameToParentPathname = (pathname) => {

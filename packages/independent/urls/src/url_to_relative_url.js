@@ -1,6 +1,10 @@
 import { getCommonPathname } from "./common_pathname.js";
 
-export const urlToRelativeUrl = (url, baseUrl) => {
+export const urlToRelativeUrl = (
+  url,
+  baseUrl,
+  { preferRelativeNotation } = {},
+) => {
   const urlObject = new URL(url);
   const baseUrlObject = new URL(baseUrl);
 
@@ -44,7 +48,7 @@ export const urlToRelativeUrl = (url, baseUrl) => {
   }
 
   const relativeUrl = `${specificPathname}${search}${hash}`;
-  return relativeUrl;
+  return preferRelativeNotation ? `./${relativeUrl}` : relativeUrl;
 };
 
 const pathnameToParentPathname = (pathname) => {

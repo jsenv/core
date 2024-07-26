@@ -40,3 +40,5 @@ export { urlToPathname } from "./url_to_pathname.js";
 export { urlToRelativeUrl } from "./url_to_relative_url.js";
 export { urlToResource } from "./url_to_resource.js";
 export { urlToScheme } from "./url_to_scheme.js";
+
+export { getCommonPathname } from "./common_pathname.js";

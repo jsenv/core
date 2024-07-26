@@ -81,8 +81,6 @@ export const defaultRuntimeCompat = {
  * @param {('none'|'inline'|'file'|'programmatic'} [buildParameters.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
  * @return {Object} buildReturnValue
- * @return {Object} buildReturnValue.buildFileContents
- *        Contains all build file paths relative to the build directory and their content
  * @return {Object} buildReturnValue.buildInlineContents
  *        Contains content that is inline into build files
  * @return {Object} buildReturnValue.buildManifest
@@ -654,7 +652,6 @@ build ${entryPointKeys.length} entry points`);
       }),
     );
     return {
-      buildFileContents,
       buildInlineContents,
       buildManifest,
     };

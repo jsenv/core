@@ -20,7 +20,7 @@ b_before_timeout_50
 b_after_timeout_50
 ```
 
-6. write file "output/3_b_when_b_ends_before.md"
+6. write file "@jsenv/core/packages/independent/snapshot/tests/function_side_effects_snapshot/advanced/output/3_b_when_b_ends_before.md"
 ```md
 1. console.warn
 ```console
