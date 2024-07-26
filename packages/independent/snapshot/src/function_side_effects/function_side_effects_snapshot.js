@@ -5,7 +5,6 @@ import {
   urlToExtension,
   urlToRelativeUrl,
 } from "@jsenv/urls";
-import { pathToFileURL } from "node:url";
 import {
   takeDirectorySnapshot,
   takeFileSnapshot,
@@ -137,11 +136,6 @@ export const snapshotFunctionSideEffects = (
               let writeFile;
               const { include, preserve, baseDirectory, outDirectory } =
                 filesystemEffects;
-              const fsEffectsBaseDirectoryUrl = baseDirectory
-                ? new URL(baseDirectory, sideEffectFileUrl)
-                : rootDirectoryUrl
-                  ? rootDirectoryUrl
-                  : pathToFileURL(process.cwd());
               if (baseDirectory) {
                 replaceFilesystemWellKnownValues.addWellKnownFileUrl(
                   baseDirectory,
@@ -163,25 +157,20 @@ export const snapshotFunctionSideEffects = (
                   fsEffectsOutDirectoryUrl,
                 );
                 const writeFileCallbackSet = new Set();
-
                 const getFilesystemActionInfo = (action, url) => {
                   let toUrl;
                   let urlDisplayed = url;
                   if (baseDirectory) {
-                    urlDisplayed = urlToRelativeUrl(
-                      url,
-                      fsEffectsBaseDirectoryUrl,
-                      {
-                        preferRelativeNotation: true,
-                      },
-                    );
+                    urlDisplayed = urlToRelativeUrl(url, baseDirectory, {
+                      preferRelativeNotation: true,
+                    });
                     if (
-                      url.href === fsEffectsBaseDirectoryUrl.href ||
-                      urlIsInsideOf(url, fsEffectsBaseDirectoryUrl)
+                      url.href === baseDirectory.href ||
+                      urlIsInsideOf(url, baseDirectory)
                     ) {
                       const toRelativeUrl = urlToRelativeUrl(
                         url,
-                        fsEffectsBaseDirectoryUrl,
+                        baseDirectory,
                       );
                       toUrl = new URL(toRelativeUrl, fsEffectsOutDirectoryUrl);
                     } else {
@@ -211,6 +200,7 @@ export const snapshotFunctionSideEffects = (
                   // gather all file side effect next to each other
                   // collapse them if they have a shared ancestor
                   groupFileSideEffectsPerDirectory(sideEffects, {
+                    baseDirectory,
                     getFilesystemActionInfo,
                   });
                   for (const writeFileCallback of writeFileCallbackSet) {
@@ -238,11 +228,9 @@ export const snapshotFunctionSideEffects = (
                 writeFile = (url, content) => {
                   let urlDisplayed = url;
                   if (baseDirectory) {
-                    urlDisplayed = urlToRelativeUrl(
-                      url,
-                      fsEffectsBaseDirectoryUrl,
-                      { preferRelativeNotation: true },
-                    );
+                    urlDisplayed = urlToRelativeUrl(url, baseDirectory, {
+                      preferRelativeNotation: true,
+                    });
                   }
                   addSideEffect({
                     type: "fs:write_file",

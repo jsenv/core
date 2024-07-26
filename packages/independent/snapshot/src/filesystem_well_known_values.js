@@ -69,6 +69,7 @@ export const createReplaceFilesystemWellKnownValues = ({
   const wellKownUrlArray = [];
   const wellKnownPathArray = [];
   const addWellKnownFileUrl = (url, wellKnown, { position = "end" } = {}) => {
+    url = new URL(url);
     const urlWithoutTrailingSlash = String(removePathnameTrailingSlash(url));
     const wellKnownUrl = {
       url: urlWithoutTrailingSlash,
