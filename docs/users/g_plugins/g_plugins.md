@@ -2,6 +2,9 @@
 
 Official jsenv plugins written and maintained by jsenv.
 
+<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+<!-- PLACEHOLDER_END -->
+
 # 1. Dev, build, transversal
 
 A plugin is either:

@@ -1,4 +1,9 @@
-import { findHtmlNode, getHtmlNodeText, parseHtml } from "@jsenv/ast";
+import {
+  findHtmlNode,
+  getHtmlNodeText,
+  parseHtml,
+  visitHtmlNodes,
+} from "@jsenv/ast";
 import {
   readDirectorySync,
   readEntryStatSync,
@@ -6,6 +11,7 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import anchor from "anchor-markdown-header";
 import { marked } from "marked";
 
 const PREVIOUS_CHAR = "&lt;"; // "<"
@@ -23,7 +29,14 @@ const syncMarkdownInDirectory = (
   }
   syncMarkdownContent(markdownFile, {
     DIRECTORY_TABLE_OF_CONTENT: () => {
-      return generateTableOfContents(directoryContent, directoryUrl);
+      return generateDirectoryTableOfContents(
+        markdownFile,
+        directoryContent,
+        directoryUrl,
+      );
+    },
+    TABLE_OF_CONTENT: () => {
+      return generateTableOfContents(markdownFile);
     },
     PREV_NEXT_NAV: () => {
       return generatePrevNextNav(
@@ -80,8 +93,36 @@ const syncMarkdownContent = (markdownFile, replacers) => {
   );
   writeFileSync(markdownFile.url, markdownFileContentReplaced);
 };
-const generateTableOfContents = (directoryContent, directoryUrl) => {
-  let tableOfContent = "";
+const generateTableOfContents = (markdownFile) => {
+  const tableOfContents = [];
+  const mdAsHtml = marked.parse(markdownFile.content);
+  const htmlTree = parseHtml({ html: mdAsHtml });
+  visitHtmlNodes(htmlTree, {
+    h1: (node) => {
+      const text = getHtmlNodeText(node);
+      tableOfContents.push({
+        text,
+        href: new URL(markdownHrefFromText(text), markdownFile.url),
+      });
+    },
+  });
+  // find all stuff and make a table
+  return renderTableOfContentsMarkdown(tableOfContents, markdownFile.url);
+};
+
+const markdownHrefFromText = (text) => {
+  const markdownLink = anchor(text);
+  const hrefStartIndex = markdownLink.indexOf("(#");
+  const hrefPart = markdownLink.slice(hrefStartIndex + 1, -1);
+  return hrefPart;
+};
+
+const generateDirectoryTableOfContents = (
+  markdownFile,
+  directoryContent,
+  directoryUrl,
+) => {
+  const tableOfContents = [];
   for (const entryName of directoryContent) {
     const entryUrl = new URL(entryName, directoryUrl);
     const entryStat = readEntryStatSync(entryUrl);
@@ -95,10 +136,20 @@ const generateTableOfContents = (directoryContent, directoryUrl) => {
       continue;
     }
     const title = extractMarkdownFileTitle(mainMarkdownFile);
+    tableOfContents.push({
+      href: mainMarkdownFile.url,
+      text: title,
+    });
+  }
+  return renderTableOfContentsMarkdown(tableOfContents, markdownFile.url);
+};
+const renderTableOfContentsMarkdown = (tableOfContents, markdownFileUrl) => {
+  let tableOfContent = "";
+  for (const link of tableOfContents) {
     if (tableOfContent) {
       tableOfContent += "<br />\n";
     }
-    tableOfContent += `<a href="./${urlToRelativeUrl(mainMarkdownFile.url, directoryUrl)}">${escapeHtml(title)}</a>`;
+    tableOfContent += `<a href="${urlToRelativeUrl(link.href, markdownFileUrl)}">${escapeHtml(link.text)}</a>`;
   }
   return tableOfContent;
 };

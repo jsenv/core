@@ -82,7 +82,8 @@
     "@jsenv/sourcemap": "1.2.19",
     "@jsenv/url-meta": "8.5.0",
     "@jsenv/urls": "2.4.1",
-    "@jsenv/utils": "2.1.2"
+    "@jsenv/utils": "2.1.2",
+    "anchor-markdown-header": "0.7.0"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.24.8",
