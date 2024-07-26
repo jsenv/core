@@ -196,3 +196,29 @@ AssertionError: actual and expect are different
 actual: [true]
 expect: MyArray [true]
 
+# added on third pos
+AssertionError: actual and expect are different
+
+actual: [
+  ↑ 1 value ↑
+  "b",
+]
+expect: [
+  "a",
+  "b",
+  "Z",
+]
+
+# added on thrid pos
+AssertionError: actual and expect are different
+
+actual: [
+  ↑ 3 values ↑
+  "d",
+]
+expect: [
+  ↑ 3 values ↑
+  "d",
+  "Z",
+]
+

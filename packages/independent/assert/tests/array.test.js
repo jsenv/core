@@ -169,4 +169,16 @@ await startSnapshotTesting("array", ({ test }) => {
       expect: new MyArray(true),
     });
   });
+  test("added on third pos", () => {
+    assert({
+      actual: ["a", "b"],
+      expect: ["a", "b", "Z"],
+    });
+  });
+  test("added on thrid pos", () => {
+    assert({
+      actual: ["a", "b", "c", "d"],
+      expect: ["a", "b", "c", "d", "Z"],
+    });
+  });
 });
