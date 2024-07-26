@@ -158,9 +158,10 @@ export const replaceFluctuatingValues = (
   const replaceDurations = (value) => {
     // https://stackoverflow.com/a/59202307/24573072
     value = value.replace(
-      /(?<!\d|\.)\d+(?:\.\d+)?(\s*(?:seconds|second|s))\b/g,
-      (match, spaceAndUnit) => {
-        return `<X>${spaceAndUnit}`;
+      /(?<!\d|\.)\d+(?:\.\d+)?(\s*)(seconds|second|s)\b/g,
+      (match, space, unit) => {
+        if (unit === "seconds") unit = "second";
+        return `<X>${space}${unit}`;
       },
     );
     return value;

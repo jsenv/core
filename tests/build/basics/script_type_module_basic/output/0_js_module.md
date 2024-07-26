@@ -18,7 +18,7 @@ build "./main.html"
 
 6. process.stdout
 ```console
-✔ generate source graph (done in 5.7 seconds)
+✔ generate source graph (done in <X> second)
 
 ```
 
@@ -34,7 +34,7 @@ build "./main.html"
 
 10. process.stdout
 ```console
-✔ generate build graph (done in 2.3 seconds)
+✔ generate build graph (done in <X> second)
 
 ```
 
@@ -46,19 +46,17 @@ build "./main.html"
 
 ```
 
-13. write directory "@jsenv/core/tests/build/basics/script_type_module_basic/build/js/"
+13. write file "@jsenv/core/tests/build/basics/script_type_module_basic/build/js/main.js" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/build/js/main.js)
 
-14. write file "@jsenv/core/tests/build/basics/script_type_module_basic/build/js/main.js" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/build/js/main.js)
+14. write file "@jsenv/core/tests/build/basics/script_type_module_basic/build/main.html" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/build/main.html)
 
-15. write file "@jsenv/core/tests/build/basics/script_type_module_basic/build/main.html" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/build/main.html)
-
-16. process.stdout
+15. process.stdout
 ```console
-✔ write files in build directory (done in 0.004 second)
+✔ write files in build directory (done in <X> second)
 
 ```
 
-17. console.info
+16. console.info
 ```console
 --- build files ---  
 - html : 1 (175 B / 91 %)
@@ -67,13 +65,9 @@ build "./main.html"
 --------------------
 ```
 
-18. resolve
+17. resolve
 ```js
 {
-  "buildFileContents": {
-    "js/main.js": "console.log(42);\n",
-    "main.html": "<!DOCTYPE html>\n<html>\n  <head>\n    <title>Title</title>\n    <meta charset=\"utf-8\">\n  </head>\n\n  <body>\n    <script type=\"module\" src=\"/js/main.js\"></script>\n  </body>\n</html>"
-  },
   "buildInlineContents": {},
   "buildManifest": {}
 }
