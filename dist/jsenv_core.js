@@ -1286,6 +1286,9 @@ const createTaskLog = (
       fail: () => {},
     };
   }
+  if (animated && process.env.SNAPSHOTING_FUNCTION_SIDE_EFFECTS) {
+    animated = false;
+  }
   const startMs = Date.now();
   const dynamicLog = createDynamicLog();
   let message = label;
@@ -1680,7 +1683,11 @@ const getCommonPathname = (pathname, otherPathname) => {
   return commonPathname;
 };
 
-const urlToRelativeUrl = (url, baseUrl) => {
+const urlToRelativeUrl = (
+  url,
+  baseUrl,
+  { preferRelativeNotation } = {},
+) => {
   const urlObject = new URL(url);
   const baseUrlObject = new URL(baseUrl);
 
@@ -1724,7 +1731,7 @@ const urlToRelativeUrl = (url, baseUrl) => {
   }
 
   const relativeUrl = `${specificPathname}${search}${hash}`;
-  return relativeUrl;
+  return preferRelativeNotation ? `./${relativeUrl}` : relativeUrl;
 };
 
 const pathnameToParentPathname$1 = (pathname) => {
@@ -3048,6 +3055,19 @@ const isWindowsPathnameSpecifier = (specifier) => {
 };
 const hasScheme$1 = (specifier) => /^[a-zA-Z]+:/.test(specifier);
 
+const createFilter = (patterns, url) => {
+  const associations = resolveAssociations(
+    {
+      yes: patterns,
+    },
+    url,
+  );
+  return (url) => {
+    const meta = applyAssociations({ url, associations });
+    return Boolean(meta.yes);
+  };
+};
+
 const URL_META = {
   resolveAssociations,
   applyAssociations,
@@ -3055,6 +3075,7 @@ const URL_META = {
   applyPatternMatching,
   urlChildMayMatch,
   matches,
+  createFilter,
 };
 
 const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
@@ -21759,8 +21780,6 @@ const defaultRuntimeCompat = {
  * @param {('none'|'inline'|'file'|'programmatic'} [buildParameters.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
  * @return {Object} buildReturnValue
- * @return {Object} buildReturnValue.buildFileContents
- *        Contains all build file paths relative to the build directory and their content
  * @return {Object} buildReturnValue.buildInlineContents
  *        Contains content that is inline into build files
  * @return {Object} buildReturnValue.buildManifest
@@ -22330,7 +22349,6 @@ build ${entryPointKeys.length} entry points`);
       }),
     );
     return {
-      buildFileContents,
       buildInlineContents,
       buildManifest,
     };

@@ -484,7 +484,9 @@ const getCommonPathname = (pathname, otherPathname) => {
   return commonPathname;
 };
 
-const urlToRelativeUrl = (url, baseUrl) => {
+const urlToRelativeUrl = (url, baseUrl, {
+  preferRelativeNotation
+} = {}) => {
   const urlObject = new URL(url);
   const baseUrlObject = new URL(baseUrl);
   if (urlObject.protocol !== baseUrlObject.protocol) {
@@ -519,7 +521,7 @@ const urlToRelativeUrl = (url, baseUrl) => {
     return relativeUrl;
   }
   const relativeUrl = "".concat(specificPathname).concat(search).concat(hash);
-  return relativeUrl;
+  return preferRelativeNotation ? "./".concat(relativeUrl) : relativeUrl;
 };
 const pathnameToParentPathname = pathname => {
   const slashLastIndex = pathname.lastIndexOf("/");

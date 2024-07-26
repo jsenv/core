@@ -519,6 +519,19 @@ const isWindowsPathnameSpecifier = (specifier) => {
 };
 const hasScheme = (specifier) => /^[a-zA-Z]+:/.test(specifier);
 
+const createFilter = (patterns, url) => {
+  const associations = resolveAssociations(
+    {
+      yes: patterns,
+    },
+    url,
+  );
+  return (url) => {
+    const meta = applyAssociations({ url, associations });
+    return Boolean(meta.yes);
+  };
+};
+
 const URL_META = {
   resolveAssociations,
   applyAssociations,
@@ -526,6 +539,7 @@ const URL_META = {
   applyPatternMatching,
   urlChildMayMatch,
   matches,
+  createFilter,
 };
 
 const filterV8Coverage = async (
