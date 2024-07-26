@@ -19592,7 +19592,7 @@ const jsenvPluginAutoreloadClient = () => {
           url: htmlUrlInfo.url,
         });
         const autoreloadClientReference = htmlUrlInfo.dependencies.inject({
-          type: "js_import",
+          type: "script",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: autoreloadClientFileUrl,
@@ -20117,7 +20117,7 @@ const jsenvPluginRibbon = ({
           url: urlInfo.url,
         });
         const ribbonClientFileReference = urlInfo.dependencies.inject({
-          type: "js_import",
+          type: "script",
           subtype: "js_module",
           expectedType: "js_module",
           specifier: ribbonClientFileUrl.href,

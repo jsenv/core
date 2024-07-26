@@ -63,7 +63,7 @@ export const injectJsenvScript = (
           "tagName": "script",
           "type": "module",
           "jsenv-injected-by": pluginName,
-          "children": `import { ${initCall.callee} } from ${src};
+          "children": `import { ${initCall.callee} } from ${JSON.stringify(src)};
     
 ${initCall.callee}({
   ${paramsSource}

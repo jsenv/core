@@ -83,7 +83,8 @@ export const jsenvPluginPreact = ({
         }
         const htmlAst = parseHtml({ html: urlInfo.content, url: urlInfo.url });
         const preactDevtoolsReference = urlInfo.dependencies.inject({
-          type: "js_import",
+          type: "script",
+          subtype: "js_module",
           expectedType: "js_module",
           specifier: urlInfo.context.dev ? "preact/debug" : "preact/devtools",
         });

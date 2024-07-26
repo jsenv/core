@@ -26,7 +26,8 @@ const jsenvPluginToolbar = ({
           url: urlInfo.url
         });
         const toolbarInjectorReference = urlInfo.dependencies.inject({
-          type: "js_import",
+          type: "script",
+          subtype: "js_module",
           expectedType: "js_module",
           specifier: toolbarInjectorClientFileUrl
         });
