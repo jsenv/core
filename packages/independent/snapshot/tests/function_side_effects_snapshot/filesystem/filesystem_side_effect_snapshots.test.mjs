@@ -63,11 +63,11 @@ await startTesting(({ test }) => {
       await writeFile(new URL("./toto.txt", import.meta.url), "3_write_async");
     });
     test(
-      "4_write_sync_with_base",
+      "4_write_inside_base",
       () => {
         writeFileSync(
           new URL("./toto.txt", import.meta.url),
-          "4_write_sync_with_base",
+          "4_write_inside_base",
         );
       },
       {
@@ -77,17 +77,31 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "5_write_sync_dedicated_directory",
+      "5_write_inside_base_and_out",
       () => {
         writeFileSync(
           new URL("./toto.txt", import.meta.url),
-          "5_write_sync_dedicated_directory",
+          "5_write_inside_base_and_out",
         );
       },
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          outDirectory: "./5_write_sync_dedicated_directory/",
+          outDirectory: "./5_write_inside_base_and_out/",
+        },
+      },
+    );
+    test(
+      "6_write_above_base",
+      () => {
+        writeFileSync(
+          new URL("../toto.txt", import.meta.url),
+          "6_write_above_base",
+        );
+      },
+      {
+        filesystemEffects: {
+          baseDirectory: new URL("./", import.meta.url),
         },
       },
     );
@@ -96,19 +110,19 @@ await startTesting(({ test }) => {
     // read file twice
     // there was a bug about this in a previous implementation
     // where second read file would never resolve
-    test("5_read_file_first", async () => {
+    test("7_read_file_first", async () => {
       await readFile(import.meta.url, { as: "string" });
     });
-    test("6_read_file_second", async () => {
+    test("8_read_file_second", async () => {
       await readFile(import.meta.url, { as: "string" });
     });
   }
   write_directory: {
-    test("7_write_directory_sync", () => {
+    test("9_write_directory_sync", () => {
       writeDirectorySync(new URL("./dir_sync/", import.meta.url));
       return existsSync(new URL("./dir_sync/", import.meta.url));
     });
-    test("8_write_directory_async", async () => {
+    test("10_write_directory_async", async () => {
       await writeDirectory(new URL("./dir_async/", import.meta.url));
       return existsSync(new URL("./dir_async/", import.meta.url));
     });

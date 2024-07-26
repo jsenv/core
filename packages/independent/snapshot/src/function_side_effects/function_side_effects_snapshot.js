@@ -203,14 +203,12 @@ export const snapshotFunctionSideEffects = (
               } else {
                 writeFile = (url, content) => {
                   let urlDisplayed = url;
-                  if (
-                    baseDirectory &&
-                    urlIsInsideOf(url, fsEffectsBaseDirectoryUrl)
-                  ) {
-                    urlDisplayed = `./${urlToRelativeUrl(
+                  if (baseDirectory) {
+                    urlDisplayed = urlToRelativeUrl(
                       url,
                       fsEffectsBaseDirectoryUrl,
-                    )}`;
+                      { preferRelativeNotation: true },
+                    );
                   }
                   addSideEffect({
                     type: "fs:write_file",
