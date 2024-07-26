@@ -4624,7 +4624,17 @@ const renderChildrenMultiline = (node, props) => {
       return true;
     };
     if (node.firstChildWithDiffKey === undefined) {
-      focusedChildIndex = 0;
+      const otherWithChildWithDiffKey = node.otherNode?.firstChildWithDiffKey;
+      if (otherWithChildWithDiffKey === undefined) {
+        focusedChildIndex = 0;
+      } else {
+        let otherNodeIndex = node.otherNode.childrenKeys.indexOf(otherWithChildWithDiffKey);
+        if (otherNodeIndex > childrenKeys.length - 1) {
+          focusedChildIndex = childrenKeys.length - 1;
+        } else {
+          focusedChildIndex = otherNodeIndex;
+        }
+      }
     } else {
       focusedChildIndex = childrenKeys.indexOf(node.firstChildWithDiffKey);
     }
