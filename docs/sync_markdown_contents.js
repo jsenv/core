@@ -100,7 +100,7 @@ const generateTableOfContents = (markdownFile) => {
   let isFirstH1 = true;
   const body = htmlTree.childNodes[0].childNodes[1];
   let currentHeadingLink = null;
-  for (const child of body) {
+  for (const child of body.childNodes) {
     if (child.nodeName === "h1") {
       const text = getHtmlNodeText(child);
       if (isFirstH1) {
@@ -114,6 +114,7 @@ const generateTableOfContents = (markdownFile) => {
         href: new URL(markdownHrefFromText(text), markdownFile.url),
         children: [],
       };
+      tableOfContentRootNode.children.push(currentHeadingLink);
       continue;
     }
     if (child.nodeName === "h2") {
@@ -179,20 +180,19 @@ const renderTableOfContentsMarkdown = (rootNode, markdownFileUrl) => {
   let indent = 0;
   if (rootNode.canCollapse) {
     tableOfContent += `<details${rootNode.defaultOpen ? " open" : ""}>
-  <summary>${rootNode.title}</summary>
-`;
+  <summary>${rootNode.title}</summary>`;
     indent = 1;
   }
   const visit = (node, indent) => {
+    if (tableOfContent) tableOfContent += "\n";
     tableOfContent += `${"  ".repeat(indent)}<ul>`;
     for (const childNode of node.children) {
-      tableOfContent += `${"  ".repeat(indent + 1)}`;
       tableOfContent += `\n${"  ".repeat(indent + 1)}<li>`;
       tableOfContent += `\n${"  ".repeat(indent + 2)}<a href="${urlToRelativeUrl(childNode.href, markdownFileUrl)}">
 ${"  ".repeat(indent + 3)}${escapeHtml(childNode.text)}
 ${"  ".repeat(indent + 2)}</a>`;
       if (childNode.children?.length) {
-        visit(childNode, indent + 4);
+        visit(childNode, indent + 3);
       }
       tableOfContent += `\n${"  ".repeat(indent + 1)}</li>`;
     }
