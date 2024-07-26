@@ -1,5 +1,3 @@
-# I) Test in Node.js
-
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
 
 <table>

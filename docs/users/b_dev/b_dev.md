@@ -1,5 +1,3 @@
-# B) Dev
-
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
 
 <table>

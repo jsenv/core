@@ -1,5 +1,3 @@
-# H) Going further
-
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
 
 <table>

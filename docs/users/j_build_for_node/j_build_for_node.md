@@ -1,5 +1,3 @@
-# J) Build for Node.js
-
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
 
 <table>

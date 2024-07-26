@@ -1,5 +1,3 @@
-# C) Build
-
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
 
 <table>

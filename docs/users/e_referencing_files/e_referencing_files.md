@@ -1,5 +1,3 @@
-# E) Referencing files
-
 <!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
 
 <table>
