@@ -1,5 +1,8 @@
 import { assert } from "@jsenv/assert";
-import { replaceFluctuatingValues } from "@jsenv/snapshot/src/replace_fluctuating_values.js";
+import {
+  createReplaceFilesystemWellKnownValues,
+  replaceFluctuatingValues,
+} from "@jsenv/snapshot";
 import { fileURLToPath } from "node:url";
 
 {
@@ -10,9 +13,11 @@ import { fileURLToPath } from "node:url";
 - grandparent: ${new URL("../../", import.meta.url)}
 `;
   const actual = replaceFluctuatingValues(source, {
-    cwdPath: fileURLToPath(new URL("./", import.meta.url)),
-    ancestorPackagesRootDirectoryUrl: new URL("../../../", import.meta.url)
-      .href,
+    replaceFilesystemWellKnownValues: createReplaceFilesystemWellKnownValues({
+      cwdPath: fileURLToPath(new URL("./", import.meta.url)),
+      ancestorPackagesRootDirectoryUrl: new URL("../../../", import.meta.url)
+        .href,
+    }),
   });
   const expect = `
 - file: root/parent/leaf/replace_with_parent_package.test.mjs
@@ -30,8 +35,10 @@ import { fileURLToPath } from "node:url";
 - parent: ${new URL("../", import.meta.url)}
   `;
   const actual = replaceFluctuatingValues(source, {
-    cwdPath: fileURLToPath(new URL("./", import.meta.url)),
-    ancestorPackagesRootDirectoryUrl: new URL("../../", import.meta.url).href,
+    replaceFilesystemWellKnownValues: createReplaceFilesystemWellKnownValues({
+      cwdPath: fileURLToPath(new URL("./", import.meta.url)),
+      ancestorPackagesRootDirectoryUrl: new URL("../../", import.meta.url).href,
+    }),
   });
   const expect = `
 - file: parent/leaf/replace_with_parent_package.test.mjs
@@ -47,8 +54,10 @@ import { fileURLToPath } from "node:url";
 - dir: ${new URL("./", import.meta.url)}
 `;
   const actual = replaceFluctuatingValues(source, {
-    cwdPath: fileURLToPath(new URL("./", import.meta.url)),
-    ancestorPackagesRootDirectoryUrl: new URL("../", import.meta.url).href,
+    replaceFilesystemWellKnownValues: createReplaceFilesystemWellKnownValues({
+      cwdPath: fileURLToPath(new URL("./", import.meta.url)),
+      ancestorPackagesRootDirectoryUrl: new URL("../", import.meta.url).href,
+    }),
   });
   const expect = `
 - file: leaf/replace_with_parent_package.test.mjs

@@ -1,4 +1,4 @@
-import { getCommonPathname } from "@jsenv/urls/src/common_pathname.js";
+import { getCommonPathname } from "@jsenv/urls";
 
 export const findCommonAncestorPath = (paths, castAsPath) => {
   return paths.reduce((a, b) => {
