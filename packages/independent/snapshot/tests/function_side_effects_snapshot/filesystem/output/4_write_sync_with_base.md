@@ -1,4 +1,4 @@
-1. write file "base/toto.txt"
+1. write file "./toto.txt"
 ```txt
 4_write_sync_with_base
 ```

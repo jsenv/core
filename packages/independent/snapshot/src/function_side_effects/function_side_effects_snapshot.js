@@ -1,6 +1,7 @@
 import { readDirectorySync, writeFileSync } from "@jsenv/filesystem";
 import {
   ensurePathnameTrailingSlash,
+  urlIsInsideOf,
   urlToExtension,
   urlToRelativeUrl,
 } from "@jsenv/urls";
@@ -183,12 +184,25 @@ export const snapshotFunctionSideEffects = (
                 };
               } else {
                 writeFile = (url, content) => {
+                  let urlDisplayed = url;
+                  if (
+                    baseDirectory &&
+                    urlIsInsideOf(url, fsEffectsBaseDirectoryUrl)
+                  ) {
+                    urlDisplayed = `./${urlToRelativeUrl(
+                      url,
+                      fsEffectsBaseDirectoryUrl,
+                    )}`;
+                  }
                   addSideEffect({
                     type: "fs:write_file",
                     value: { url: String(url), content },
-                    label: replaceFluctuatingValues(`write file "${url}"`, {
-                      replaceFilesystemWellKnownValues,
-                    }),
+                    label: replaceFluctuatingValues(
+                      `write file "${urlDisplayed}"`,
+                      {
+                        replaceFilesystemWellKnownValues,
+                      },
+                    ),
                     text: wrapIntoMarkdownBlock(
                       content,
                       urlToExtension(url).slice(1),
