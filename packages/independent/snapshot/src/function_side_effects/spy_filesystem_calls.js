@@ -8,6 +8,7 @@ import {
   removeFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
+import { URL_META } from "@jsenv/url-meta";
 import { readFileSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
@@ -24,8 +25,12 @@ export const spyFilesystemCalls = (
     removeFile = () => {}, // TODO
     // removeDirectory = () => {},
   },
-  { undoFilesystemSideEffects } = {},
+  { include, undoFilesystemSideEffects } = {},
 ) => {
+  const shouldReport = include
+    ? URL_META.createFilter(include, "file:///")
+    : () => true;
+
   const _internalFs = process.binding("fs");
   const filesystemStateInfoMap = new Map();
   const fileDescriptorPathMap = new Map();
@@ -51,8 +56,10 @@ export const spyFilesystemCalls = (
           });
         }
       }
-      writeFile(fileUrl, stateAfter.content);
-      return;
+      if (shouldReport(fileUrl)) {
+        writeFile(fileUrl, stateAfter.content);
+        return;
+      }
     }
     // file is exactly the same
     // function did not have any effect on the file
@@ -69,7 +76,9 @@ export const spyFilesystemCalls = (
         });
       });
     }
-    writeDirectory(directoryUrl);
+    if (shouldReport(directoryUrl)) {
+      writeDirectory(directoryUrl);
+    }
   };
   const beforeUndoCallbackSet = new Set();
   const restoreCallbackSet = new Set();

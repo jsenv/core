@@ -125,7 +125,7 @@ export const snapshotFunctionSideEffects = (
                 ...filesystemEffects,
               };
               let writeFile;
-              const { preserve, rootDirectory, outDirectory } =
+              const { include, preserve, rootDirectory, outDirectory } =
                 filesystemEffects;
               const fsEffectsRootDirectory = rootDirectory
                 ? new URL(rootDirectory, sideEffectFileUrl)
@@ -209,6 +209,7 @@ export const snapshotFunctionSideEffects = (
                   },
                 },
                 {
+                  include,
                   undoFilesystemSideEffects: !preserve,
                 },
               );
