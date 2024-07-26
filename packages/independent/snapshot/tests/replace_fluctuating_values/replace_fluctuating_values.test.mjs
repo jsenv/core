@@ -1,5 +1,6 @@
 import { assert } from "@jsenv/assert";
-import { replaceFluctuatingValues } from "@jsenv/snapshot/src/replace_fluctuating_values.js";
+import { replaceFluctuatingValues } from "@jsenv/snapshot";
+import { createReplaceFilesystemWellKnownValues } from "@jsenv/snapshot/src/filesystem_well_known_values.js";
 
 // current path and http urls
 if (process.platform !== "win32") {
@@ -22,8 +23,10 @@ http://localhost/
 http://localhost:3457
 http://localhost:3457/`,
     {
-      homedirDisabled: true,
-      ancestorPackagesDisabled: true,
+      replaceFilesystemWellKnownValues: createReplaceFilesystemWellKnownValues({
+        homedirDisabled: true,
+        ancestorPackagesDisabled: true,
+      }),
     },
   );
   const expect = `A string with path inside:
@@ -62,11 +65,13 @@ And file urls
 - file:///C:/Users/project/directory/
 - file:///C:/Users/project/directory/file.txt`,
     {
-      cwdUrl: "file:///C:/Users/project",
-      cwdPath: "C:\\Users\\project",
-      isWindows: true,
-      homedirDisabled: true,
-      ancestorPackagesDisabled: true,
+      replaceFilesystemWellKnownValues: createReplaceFilesystemWellKnownValues({
+        cwdUrl: "file:///C:/Users/project",
+        cwdPath: "C:\\Users\\project",
+        isWindows: true,
+        homedirDisabled: true,
+        ancestorPackagesDisabled: true,
+      }),
     },
   );
   const expect = `A string with many windows path inside:
@@ -91,8 +96,10 @@ And file urls
   <text>before ${process.cwd()}/ after</text>
 </svg>`,
     {
-      homedirDisabled: true,
-      ancestorPackagesDisabled: true,
+      replaceFilesystemWellKnownValues: createReplaceFilesystemWellKnownValues({
+        homedirDisabled: true,
+        ancestorPackagesDisabled: true,
+      }),
     },
   );
   const expect = `<svg xmlns="http://www.w3.org/2000/svg">

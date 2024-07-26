@@ -9,6 +9,7 @@ import {
   takeDirectorySnapshot,
   takeFileSnapshot,
 } from "../filesystem_snapshot.js";
+import { createReplaceFilesystemWellKnownValues } from "../filesystem_well_known_values.js";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 import { collectFunctionSideEffects } from "./function_side_effects_collector.js";
 import {
@@ -37,6 +38,10 @@ export const snapshotFunctionSideEffects = (
   if (filesystemEffects === true) {
     filesystemEffects = {};
   }
+  const replaceFilesystemWellKnownValues =
+    createReplaceFilesystemWellKnownValues({
+      rootDirectoryUrl,
+    });
   const sideEffectFileSnapshot = takeFileSnapshot(sideEffectFileUrl);
   const callbackSet = new Set();
   const sideEffectDetectors = [
@@ -55,7 +60,7 @@ export const snapshotFunctionSideEffects = (
                   text: wrapIntoMarkdownBlock(
                     replaceFluctuatingValues(message, {
                       stringType: "console",
-                      rootDirectoryUrl,
+                      replaceFilesystemWellKnownValues,
                     }),
                     "console",
                   ),
@@ -83,7 +88,7 @@ export const snapshotFunctionSideEffects = (
                       text: wrapIntoMarkdownBlock(
                         replaceFluctuatingValues(message, {
                           stringType: "console",
-                          rootDirectoryUrl,
+                          replaceFilesystemWellKnownValues,
                         }),
                         "console",
                       ),
@@ -97,7 +102,7 @@ export const snapshotFunctionSideEffects = (
                       text: wrapIntoMarkdownBlock(
                         replaceFluctuatingValues(message, {
                           stringType: "console",
-                          rootDirectoryUrl,
+                          replaceFilesystemWellKnownValues,
                         }),
                         "console",
                       ),
@@ -161,7 +166,7 @@ export const snapshotFunctionSideEffects = (
                     value: { url: String(url), content },
                     label: replaceFluctuatingValues(
                       `write file "${url}" (see ${toUrl})`,
-                      { rootDirectoryUrl },
+                      { replaceFilesystemWellKnownValues },
                     ),
                     text: null,
                   });
@@ -172,7 +177,7 @@ export const snapshotFunctionSideEffects = (
                     type: "fs:write_file",
                     value: { url: String(url), content },
                     label: replaceFluctuatingValues(`write file "${url}"`, {
-                      rootDirectoryUrl,
+                      replaceFilesystemWellKnownValues,
                     }),
                     text: wrapIntoMarkdownBlock(
                       content,
@@ -190,7 +195,7 @@ export const snapshotFunctionSideEffects = (
                       value: { url: String(url) },
                       label: replaceFluctuatingValues(
                         `write directory "${url}"`,
-                        { rootDirectoryUrl },
+                        { replaceFilesystemWellKnownValues },
                       ),
                       text: null,
                     });
