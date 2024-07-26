@@ -49,12 +49,14 @@ export const replaceFluctuatingValues = (
   };
   const replaceThings = (value) => {
     if (stringType === "filesystem") {
-      return replaceFilesystemWellKnownValues(value, { stringType });
+      return replaceFilesystemWellKnownValues(value);
     }
     if (removeAnsi) {
       value = stripAnsi(value);
     }
-    value = replaceFilesystemWellKnownValues(value, { stringType });
+    value = replaceFilesystemWellKnownValues(value, {
+      willBeWrittenOnFilesystem: false,
+    });
     value = replaceHttpUrls(value);
     value = replaceDurations(value);
     return value;

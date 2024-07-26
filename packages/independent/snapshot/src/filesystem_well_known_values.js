@@ -7,6 +7,48 @@ import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+// remember this: https://stackoverflow.com/a/31976060/24573072
+// when deciding which replacement to use and willBeWrittenOnFilesystem is true
+const WELL_KNOWN_ROOT = {
+  name: "root",
+  getReplacement: ({ preferFileUrl }) => {
+    if (preferFileUrl) {
+      return "file:///[root]";
+    }
+    return "[root]";
+  },
+};
+const WELL_KNOWN_HOMEDIR = {
+  name: "homedir",
+  getReplacement: ({ willBeWrittenOnFilesystem, preferFileUrl }) => {
+    if (willBeWrittenOnFilesystem) {
+      if (preferFileUrl) {
+        return "file:///[homedir]";
+      }
+      return "[homedir]";
+    }
+    if (preferFileUrl) {
+      return "file:///~";
+    }
+    return "~";
+  },
+};
+const WELL_KNOWN_CWD = {
+  name: "cwd",
+  getReplacement: ({ preferFileUrl }) => {
+    if (preferFileUrl) {
+      return "file:///cwd()";
+    }
+    return "cwd()";
+  },
+};
+const createWellKnownPackage = (name) => {
+  return {
+    name,
+    getReplacement: () => name,
+  };
+};
+
 export const createReplaceFilesystemWellKnownValues = ({
   rootDirectoryUrl,
   // for unit tests
@@ -20,18 +62,15 @@ export const createReplaceFilesystemWellKnownValues = ({
 } = {}) => {
   const wellKownUrlArray = [];
   const wellKnownPathArray = [];
-  const addWellKnownFileUrl = (url, urlReplacement) => {
-    const pathReplacement = urlReplacement.startsWith("file:///")
-      ? urlReplacement.slice("file:///".length)
-      : urlReplacement;
-    const filesystemReplacement =
-      pathReplacement === "~" ? "<homedir>" : pathReplacement;
+  const addWellKnownFileUrl = (url, wellKnown) => {
     const urlWithoutTrailingSlash = removePathnameTrailingSlash(url);
     wellKownUrlArray.push({
       url: urlWithoutTrailingSlash,
-      replace: (string, { stringType }) => {
-        const replacement =
-          stringType === "filesystem" ? filesystemReplacement : urlReplacement;
+      replace: (string, { willBeWrittenOnFilesystem }) => {
+        const replacement = wellKnown.getReplacement({
+          preferFileUrl: true,
+          willBeWrittenOnFilesystem,
+        });
         return string.replaceAll(urlWithoutTrailingSlash, replacement);
       },
     });
@@ -44,27 +83,24 @@ export const createReplaceFilesystemWellKnownValues = ({
     wellKnownPathArray.push({
       path,
       replace: isWindows
-        ? (string, { stringType }) => {
-            const replacement =
-              stringType === "filesystem"
-                ? filesystemReplacement
-                : pathReplacement;
+        ? (string, { willBeWrittenOnFilesystem }) => {
+            const replacement = wellKnown.getReplacement({
+              willBeWrittenOnFilesystem,
+            });
             return string.replaceAll(windowPathRegex, (match, after) => {
               return `${replacement}${after.replaceAll("\\", "/")}`;
             });
           }
-        : (string, { stringType }) => {
-            const replacement =
-              stringType === "filesystem"
-                ? filesystemReplacement
-                : pathReplacement;
+        : (string, { willBeWrittenOnFilesystem }) => {
+            const replacement = wellKnown.getReplacement({
+              willBeWrittenOnFilesystem,
+            });
             return string.replaceAll(path, replacement);
           },
     });
   };
-
   if (rootDirectoryUrl) {
-    addWellKnownFileUrl(rootDirectoryUrl, "file:///<root>");
+    addWellKnownFileUrl(rootDirectoryUrl, WELL_KNOWN_ROOT);
   }
   /*
    * When running code inside a node project ancestor packages
@@ -113,7 +149,7 @@ export const createReplaceFilesystemWellKnownValues = ({
     for (const ancestorPackage of ancestorPackages) {
       addWellKnownFileUrl(
         ancestorPackage.packageDirectoryUrl,
-        ancestorPackage.packageName,
+        createWellKnownPackage(ancestorPackage.packageName),
       );
     }
   }
@@ -123,7 +159,7 @@ export const createReplaceFilesystemWellKnownValues = ({
     }
     const homedirPath = homedir();
     const homedirUrl = pathToFileURL(homedirPath);
-    addWellKnownFileUrl(homedirUrl, "file:///~");
+    addWellKnownFileUrl(homedirUrl, WELL_KNOWN_HOMEDIR);
   }
   process_cwd: {
     if (cwdDisabled) {
@@ -133,21 +169,25 @@ export const createReplaceFilesystemWellKnownValues = ({
     // but it's brittle because a file might be execute from anywhere
     // so it should be the last resort
     cwdUrl = cwdUrl || pathToFileURL(cwdPath);
-    addWellKnownFileUrl(cwdUrl, "file:///cwd()");
+    addWellKnownFileUrl(cwdUrl, WELL_KNOWN_CWD);
   }
 
-  const replaceFileUrls = (string, { stringType }) => {
+  const replaceFileUrls = (string, { willBeWrittenOnFilesystem }) => {
     for (const wellKownUrl of wellKownUrlArray) {
-      const replaceResult = wellKownUrl.replace(string, { stringType });
+      const replaceResult = wellKownUrl.replace(string, {
+        willBeWrittenOnFilesystem,
+      });
       if (replaceResult !== string) {
         return replaceResult;
       }
     }
     return string;
   };
-  const replaceFilePaths = (string, { stringType }) => {
+  const replaceFilePaths = (string, { willBeWrittenOnFilesystem }) => {
     for (const wellKownPath of wellKnownPathArray) {
-      const replaceResult = wellKownPath.replace(string, { stringType });
+      const replaceResult = wellKownPath.replace(string, {
+        willBeWrittenOnFilesystem,
+      });
       if (replaceResult !== string) {
         return replaceResult;
       }
@@ -155,9 +195,16 @@ export const createReplaceFilesystemWellKnownValues = ({
     return string;
   };
 
-  return (string, { stringType } = {}) => {
-    string = replaceFileUrls(string, { stringType });
-    string = replaceFilePaths(string, { stringType });
+  return (string, { willBeWrittenOnFilesystem = true } = {}) => {
+    const isUrl = typeof string === "object" && typeof string.href === "string";
+    if (isUrl) {
+      string = string.href;
+    }
+    string = replaceFileUrls(string, { willBeWrittenOnFilesystem });
+    string = replaceFilePaths(string, { willBeWrittenOnFilesystem });
+    if (isUrl) {
+      return new URL(string);
+    }
     return string;
   };
 };
