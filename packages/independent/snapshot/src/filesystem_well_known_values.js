@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 // remember this: https://stackoverflow.com/a/31976060/24573072
 // when deciding which replacement to use and willBeWrittenOnFilesystem is true
-const WELL_KNOWN_ROOT = {
+export const WELL_KNOWN_ROOT = {
   name: "root",
   getReplacement: ({ preferFileUrl }) => {
     if (preferFileUrl) {
@@ -62,9 +62,9 @@ export const createReplaceFilesystemWellKnownValues = ({
 } = {}) => {
   const wellKownUrlArray = [];
   const wellKnownPathArray = [];
-  const addWellKnownFileUrl = (url, wellKnown) => {
+  const addWellKnownFileUrl = (url, wellKnown, { position = "end" } = {}) => {
     const urlWithoutTrailingSlash = removePathnameTrailingSlash(url);
-    wellKownUrlArray.push({
+    const wellKnownUrl = {
       url: urlWithoutTrailingSlash,
       replace: (string, { willBeWrittenOnFilesystem }) => {
         const replacement = wellKnown.getReplacement({
@@ -73,14 +73,14 @@ export const createReplaceFilesystemWellKnownValues = ({
         });
         return string.replaceAll(urlWithoutTrailingSlash, replacement);
       },
-    });
+    };
     const path =
       url === cwdUrl ? cwdPath : fileURLToPath(urlWithoutTrailingSlash);
     const windowPathRegex = new RegExp(
       `${escapeRegexpSpecialChars(path)}(((?:\\\\(?:[\\w !#()-]+|[.]{1,2})+)*)(?:\\\\)?)`,
       "gm",
     );
-    wellKnownPathArray.push({
+    const wellKnownPath = {
       path,
       replace: isWindows
         ? (string, { willBeWrittenOnFilesystem }) => {
@@ -97,7 +97,14 @@ export const createReplaceFilesystemWellKnownValues = ({
             });
             return string.replaceAll(path, replacement);
           },
-    });
+    };
+    if (position === "start") {
+      wellKownUrlArray.unshift(wellKnownUrl);
+      wellKnownPathArray.unshift(wellKnownPath);
+    } else {
+      wellKownUrlArray.push(wellKnownUrl);
+      wellKnownPathArray.push(wellKnownPath);
+    }
   };
   if (rootDirectoryUrl) {
     addWellKnownFileUrl(rootDirectoryUrl, WELL_KNOWN_ROOT);
@@ -195,7 +202,10 @@ export const createReplaceFilesystemWellKnownValues = ({
     return string;
   };
 
-  return (string, { willBeWrittenOnFilesystem = true } = {}) => {
+  const replaceFilesystemWellKnownValues = (
+    string,
+    { willBeWrittenOnFilesystem = true } = {},
+  ) => {
     const isUrl = typeof string === "object" && typeof string.href === "string";
     if (isUrl) {
       string = string.href;
@@ -207,6 +217,8 @@ export const createReplaceFilesystemWellKnownValues = ({
     }
     return string;
   };
+  replaceFilesystemWellKnownValues.addWellKnownFileUrl = addWellKnownFileUrl;
+  return replaceFilesystemWellKnownValues;
 };
 
 const getParentUrl = (url) => {

@@ -9,7 +9,10 @@ import {
   takeDirectorySnapshot,
   takeFileSnapshot,
 } from "../filesystem_snapshot.js";
-import { createReplaceFilesystemWellKnownValues } from "../filesystem_well_known_values.js";
+import {
+  createReplaceFilesystemWellKnownValues,
+  WELL_KNOWN_ROOT,
+} from "../filesystem_well_known_values.js";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 import { collectFunctionSideEffects } from "./function_side_effects_collector.js";
 import {
@@ -137,6 +140,12 @@ export const snapshotFunctionSideEffects = (
                 : rootDirectoryUrl
                   ? rootDirectoryUrl
                   : pathToFileURL(process.cwd());
+              if (rootDirectory) {
+                replaceFilesystemWellKnownValues.addWellKnownFileUrl(
+                  rootDirectory,
+                  WELL_KNOWN_ROOT,
+                );
+              }
               if (outDirectory) {
                 const fsEffectsOutDirectoryUrl = ensurePathnameTrailingSlash(
                   new URL(outDirectory, sideEffectFileUrl),

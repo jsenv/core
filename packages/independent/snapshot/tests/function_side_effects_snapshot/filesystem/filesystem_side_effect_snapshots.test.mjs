@@ -46,6 +46,20 @@ await startTesting(({ test }) => {
         "0_write_file_sync",
       );
     });
+    test(
+      "1_write_sync_root_dir",
+      () => {
+        writeFileSync(
+          new URL("./toto.txt", import.meta.url),
+          "1_write_sync_root_dir",
+        );
+      },
+      {
+        filesystemEffects: {
+          rootDirectory: new URL("./", import.meta.url),
+        },
+      },
+    );
     test("1_write_then_read_sync", () => {
       writeFileSync(
         new URL("./toto.txt", import.meta.url),
@@ -94,8 +108,8 @@ await startTesting(({ test }) => {
       writeDirectorySync(new URL("./dir_sync/", import.meta.url));
       return existsSync(new URL("./dir_sync/", import.meta.url));
     });
-    test("8_write_directory_async", () => {
-      writeDirectory(new URL("./dir_async/", import.meta.url));
+    test("8_write_directory_async", async () => {
+      await writeDirectory(new URL("./dir_async/", import.meta.url));
       return existsSync(new URL("./dir_async/", import.meta.url));
     });
   }
