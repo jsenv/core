@@ -2,8 +2,8 @@
 
 <!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
 
-<details open>
-  <summary>F) Features</summary>
+<details>
+  <summary>Table of contents</summary>
   <ul>
     <li>
       <a href="#1-node-esm-resolution">

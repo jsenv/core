@@ -1,9 +1,11 @@
 # G) Plugins
 
+Official jsenv plugins written and maintained by jsenv.
+
 <!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
 
-<details open>
-  <summary>G) Plugins</summary>
+<details>
+  <summary>Table of contents</summary>
   <ul>
     <li>
       <a href="#1-dev-build-transversal">
@@ -63,8 +65,6 @@
 </details>
 
 <!-- PLACEHOLDER_END -->
-
-Official jsenv plugins written and maintained by jsenv.
 
 # 1. Dev, build, transversal
 

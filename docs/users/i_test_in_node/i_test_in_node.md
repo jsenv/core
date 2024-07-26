@@ -1,9 +1,12 @@
 # I) Test in Node.js
 
+This section demonstrates how to write and execute tests in Node.js.  
+If you want to execute tests in a browser go to [D) Test](../d_test/d_test.md).
+
 <!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
 
-<details open>
-  <summary>I) Test in Node.js</summary>
+<details>
+  <summary>Table of contents</summary>
   <ul>
     <li>
       <a href="#1-file-structure">
@@ -61,9 +64,6 @@
 </details>
 
 <!-- PLACEHOLDER_END -->
-
-This section demonstrates how to write and execute tests in Node.js.  
-If you want to execute tests in a browser go to [D) Test](../d_test/d_test.md).
 
 # 1. File structure
 

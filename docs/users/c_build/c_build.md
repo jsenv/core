@@ -1,9 +1,26 @@
 # C) Build
 
+This page documents how jsenv can be used to generate an optimized version of source files into a directory.
+
+Best parts of jsenv build:
+
+- Large [browser support](#21-browser-support)
+- [Precise cache invalidation](#26-precise-cache-invalidation); versioning invalidates only what has changed.
+- Support and use `<script type="importmap">` with fallback if needed
+- Support top level `await`
+- Support `import.meta.url`, `import.meta.resolve`
+- Support module scripts: `<script type="module" src="./file.js">`
+- Support inline module scripts: `<script type="module">console.log("hello");</script>`
+- Support classic scripts: `<scrit src="./file.js">`
+- Support inline classic script: `<script>console.log("hello");</script>`
+- Support inline style: `<style>body: { color: orange; }</style>`
+- Support module workers: `new Worker("./file.js", { type: "module"});`
+- And many more things...
+
 <!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
 
-<details open>
-  <summary>C) Build</summary>
+<details>
+  <summary>Table of contents</summary>
   <ul>
     <li>
       <a href="#1-usage">
@@ -105,23 +122,6 @@
 </details>
 
 <!-- PLACEHOLDER_END -->
-
-This page documents how jsenv can be used to generate an optimized version of source files into a directory.
-
-Best parts of jsenv build:
-
-- Large [browser support](#21-browser-support)
-- [Precise cache invalidation](#26-precise-cache-invalidation); versioning invalidates only what has changed.
-- Support and use `<script type="importmap">` with fallback if needed
-- Support top level `await`
-- Support `import.meta.url`, `import.meta.resolve`
-- Support module scripts: `<script type="module" src="./file.js">`
-- Support inline module scripts: `<script type="module">console.log("hello");</script>`
-- Support classic scripts: `<scrit src="./file.js">`
-- Support inline classic script: `<script>console.log("hello");</script>`
-- Support inline style: `<style>body: { color: orange; }</style>`
-- Support module workers: `new Worker("./file.js", { type: "module"});`
-- And many more things...
 
 # 1. Usage
 

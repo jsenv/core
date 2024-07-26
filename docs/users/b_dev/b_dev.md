@@ -1,9 +1,18 @@
 # B) Dev
 
+This page documents how jsenv can be used to start a server for source files.
+
+Best parts of jsenv dev server:
+
+- Standard web server; no hidden constraints or behavior deviating from standards.
+- Autoreload on save; instruct browser to autoreload when a file is saved.
+- Error resilient; everything still works when you do a syntax error for instance.
+- Large [browser support](#21-browser-support); code served is compatible with main browsers of the market, even old versions.
+
 <!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
 
-<details open>
-  <summary>B) Dev</summary>
+<details>
+  <summary>Table of contents</summary>
   <ul>
     <li>
       <a href="#1-usage">
@@ -83,15 +92,6 @@
 </details>
 
 <!-- PLACEHOLDER_END -->
-
-This page documents how jsenv can be used to start a server for source files.
-
-Best parts of jsenv dev server:
-
-- Standard web server; no hidden constraints or behavior deviating from standards.
-- Autoreload on save; instruct browser to autoreload when a file is saved.
-- Error resilient; everything still works when you do a syntax error for instance.
-- Large [browser support](#21-browser-support); code served is compatible with main browsers of the market, even old versions.
 
 # 1. Usage
 

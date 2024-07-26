@@ -92,7 +92,7 @@ const generateTableOfContents = (markdownFile) => {
   const tableOfContentRootNode = {
     title: "Table of contents",
     canCollapse: true,
-    defaultOpen: true,
+    defaultOpen: false,
     children: [],
   };
   const mdAsHtml = marked.parse(markdownFile.content);
@@ -105,7 +105,7 @@ const generateTableOfContents = (markdownFile) => {
       const text = getHtmlNodeText(child);
       if (isFirstH1) {
         isFirstH1 = false;
-        tableOfContentRootNode.title = text;
+        // tableOfContentRootNode.title = text;
         continue;
       }
       currentHeadingLink = {

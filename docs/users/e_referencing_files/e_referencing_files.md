@@ -1,9 +1,14 @@
 # E) Referencing files
 
+This page documents "how to reference files within a file".  
+For example, it documents how to reference a css file from a js module.
+
+Jsenv relies on web standards to recognize references, consequently this documentation is just listing standard ways to reference files.
+
 <!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
 
-<details open>
-  <summary>E) Referencing files</summary>
+<details>
+  <summary>Table of contents</summary>
   <ul>
     <li>
       <a href="#1-general-notes">
@@ -85,11 +90,6 @@
 </details>
 
 <!-- PLACEHOLDER_END -->
-
-This page documents "how to reference files within a file".  
-For example, it documents how to reference a css file from a js module.
-
-Jsenv relies on web standards to recognize references, consequently this documentation is just listing standard ways to reference files.
 
 # 1. General notes
 

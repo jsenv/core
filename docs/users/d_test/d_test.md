@@ -1,9 +1,32 @@
 # D) Test
 
+This page documents how jsenv can be used to write and execute tests. The tests will be executed in a web browser.
+
+If you want to execute tests in Node.js go to [I) Test in Node.js](../i_test_in_node/test_in_node.md).
+
+Best parts of jsenv tests:
+
+- [debugging a test file === debugging a source file](#14-executing-a-single-test)
+- Test execution is standard; switching from source files to test files is easy
+- [Isolated environment](#33-isolated-environment); each test file has a dedicated runtime
+- Test files can be executed in [Chrome, Firefox and Safari](#32-execute-on-more-browsers)
+- [Smart parallelism](#34-parallelism)
+- Logs are [nice](../../../packages/related/test/tests/test_plan_execution/logs/snapshots/browsers/empty.spec.html.gif); dynamic, colorful and human friendly
+
+<!--
+When coding, we spend most of our time working on source files. At some point we switch from source files to test files. Suddenly things are different:
+
+- code does not execute as it would in source files
+- some tools are used differently in test files, some cannot be used at all
+- you are forced to code in a certain way that is completely different from the one in source files
+
+This huge gap between source files and test files creates a context switching costing a lot of cognitive energy.
+-->
+
 <!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
 
-<details open>
-  <summary>D) Test</summary>
+<details>
+  <summary>Table of contents</summary>
   <ul>
     <li>
       <a href="#1-usage">
@@ -100,29 +123,6 @@
 </details>
 
 <!-- PLACEHOLDER_END -->
-
-This page documents how jsenv can be used to write and execute tests. The tests will be executed in a web browser.
-
-If you want to execute tests in Node.js go to [I) Test in Node.js](../i_test_in_node/test_in_node.md).
-
-Best parts of jsenv tests:
-
-- [debugging a test file === debugging a source file](#14-executing-a-single-test)
-- Test execution is standard; switching from source files to test files is easy
-- [Isolated environment](#33-isolated-environment); each test file has a dedicated runtime
-- Test files can be executed in [Chrome, Firefox and Safari](#32-execute-on-more-browsers)
-- [Smart parallelism](#34-parallelism)
-- Logs are [nice](../../../packages/related/test/tests/test_plan_execution/logs/snapshots/browsers/empty.spec.html.gif); dynamic, colorful and human friendly
-
-<!--
-When coding, we spend most of our time working on source files. At some point we switch from source files to test files. Suddenly things are different:
-
-- code does not execute as it would in source files
-- some tools are used differently in test files, some cannot be used at all
-- you are forced to code in a certain way that is completely different from the one in source files
-
-This huge gap between source files and test files creates a context switching costing a lot of cognitive energy.
--->
 
 # 1. Usage
 
