@@ -1,8 +1,8 @@
 import { assert } from "@jsenv/assert";
-
 import { build } from "@jsenv/core";
+import { readFileSync } from "node:fs";
 
-const { buildFileContents } = await build({
+await build({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
@@ -14,7 +14,9 @@ const { buildFileContents } = await build({
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
 });
 const { start_url, icons } = JSON.parse(
-  buildFileContents["other/manifest.webmanifest"],
+  String(
+    readFileSync(new URL("./dist/other/manifest.webmanifest", import.meta.url)),
+  ),
 );
 const actual = {
   start_url,

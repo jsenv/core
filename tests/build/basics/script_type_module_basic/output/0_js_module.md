@@ -36,17 +36,15 @@ build "./main.html"
 
 ```
 
-8. write file "./build/js/main.js" (see ./0_js_module/build/js/main.js)
+8. write 2 files into "./build/" (see ./0_js_module/build/)
 
-9. write file "./build/main.html" (see ./0_js_module/build/main.html)
-
-10. process.stdout
+9. process.stdout
 ```console
 ✔ write files in build directory (done in <X> second)
 
 ```
 
-11. console.info
+10. console.info
 ```console
 --- build files ---  
 - html : 1 (175 B / 91 %)
@@ -55,7 +53,7 @@ build "./main.html"
 --------------------
 ```
 
-12. resolve
+11. resolve
 ```js
 {
   "buildInlineContents": {},
