@@ -14,6 +14,7 @@ export const collectFunctionSideEffects = (
   const sideEffects = [];
   const addSideEffect = (sideEffect) => {
     sideEffects.push(sideEffect);
+    return sideEffect;
   };
   const finallyCallbackSet = new Set();
   for (const sideEffectDetector of sideEffectDetectors) {

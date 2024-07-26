@@ -1,3 +1,4 @@
+import { writeFileSync } from "@jsenv/filesystem";
 import {
   snapshotFunctionSideEffects,
   takeDirectorySnapshot,
@@ -8,7 +9,7 @@ import {
   mkdirSync,
   readFileSync,
   writeFile,
-  writeFileSync,
+  writeFileSync as writeFileSyncNode,
 } from "node:fs";
 
 const startTesting = async (fn) => {
@@ -79,11 +80,11 @@ await startTesting(({ test }) => {
     });
     console.warn("a warning after 2nd timeout");
     console.warn("and an other warning");
-    writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
+    writeFileSyncNode(new URL("./toto.txt", import.meta.url), "toto");
     throw new Error("in the end we throw");
   });
   test("10_fs_write_file_sync", () => {
-    writeFileSync(new URL("./toto.txt", import.meta.url), "writeFileSync");
+    writeFileSyncNode(new URL("./toto.txt", import.meta.url), "writeFileSync");
   });
   test("11_fs_write_file", async () => {
     await new Promise((resolve, reject) => {
@@ -101,7 +102,7 @@ await startTesting(({ test }) => {
     });
   });
   test("12_write_then_read", () => {
-    writeFileSync(new URL("./toto.txt", import.meta.url), "a");
+    writeFileSyncNode(new URL("./toto.txt", import.meta.url), "a");
     const value = String(readFileSync(new URL("./toto.txt", import.meta.url)));
     return value;
   });
@@ -123,7 +124,7 @@ await startTesting(({ test }) => {
   test(
     "15_fs_write_file_sync_and_directory",
     () => {
-      writeFileSync(
+      writeFileSyncNode(
         new URL("./toto.txt", import.meta.url),
         "write_sync_in_dedicated_directory",
       );
@@ -138,5 +139,8 @@ await startTesting(({ test }) => {
     console.log("before");
     process.stdout.write("between");
     console.log("after");
+  });
+  test("17_write_sync_deep", () => {
+    writeFileSync(new URL("./toto/toto.txt", import.meta.url));
   });
 });

@@ -71,6 +71,7 @@ export const spyFilesystemCalls = (
     }
     writeDirectory(directoryUrl);
   };
+  const beforeUndoCallbackSet = new Set();
   const restoreCallbackSet = new Set();
 
   const getFileStateWithinHook = (fileUrl) => {
@@ -170,11 +171,18 @@ export const spyFilesystemCalls = (
     unlinkHook.remove();
   });
   return {
+    addBeforeUndoCallback: (callback) => {
+      beforeUndoCallbackSet.add(callback);
+    },
     restore: () => {
       for (const restoreCallback of restoreCallbackSet) {
         restoreCallback();
       }
       restoreCallbackSet.clear();
+      for (const beforeUndoCallback of beforeUndoCallbackSet) {
+        beforeUndoCallback();
+      }
+      beforeUndoCallbackSet.clear();
       for (const [, restore] of fileRestoreMap) {
         restore();
       }

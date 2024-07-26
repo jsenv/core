@@ -1,4 +1,4 @@
-import { writeFileSync } from "@jsenv/filesystem";
+import { readDirectorySync, writeFileSync } from "@jsenv/filesystem";
 import {
   ensurePathnameTrailingSlash,
   urlToExtension,
@@ -185,7 +185,7 @@ export const snapshotFunctionSideEffects = (
                 {
                   writeFile,
                   writeDirectory: (url) => {
-                    addSideEffect({
+                    const writeDirectorySideEffect = addSideEffect({
                       type: "fs:write_directory",
                       value: { url: String(url) },
                       label: replaceFluctuatingValues(
@@ -193,6 +193,18 @@ export const snapshotFunctionSideEffects = (
                         { rootDirectoryUrl },
                       ),
                       text: null,
+                    });
+                    // if directory ends up with something inside we'll not report
+                    // this side effect because:
+                    // - it was likely created to write the file
+                    // - the file creation will be reported and implies directory creation
+                    filesystemSpy.addBeforeUndoCallback(() => {
+                      try {
+                        const dirContent = readDirectorySync(url);
+                        if (dirContent.length) {
+                          writeDirectorySideEffect.skippable = true;
+                        }
+                      } catch (e) {}
                     });
                   },
                 },

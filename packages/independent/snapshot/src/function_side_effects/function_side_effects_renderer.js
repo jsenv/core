@@ -2,6 +2,9 @@ export const renderSideEffects = (sideEffects) => {
   let string = "";
   let index = 0;
   for (const sideEffect of sideEffects) {
+    if (sideEffect.skippable) {
+      continue;
+    }
     if (string) {
       string += "\n\n";
     }
