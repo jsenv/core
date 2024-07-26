@@ -152,6 +152,10 @@ export const snapshotFunctionSideEffects = (
                 const fsEffectsOutDirectoryUrl = ensurePathnameTrailingSlash(
                   new URL(outDirectory, sideEffectFileUrl),
                 );
+                const fsEffectsOutDirectoryRelativeUrl = urlToRelativeUrl(
+                  fsEffectsOutDirectoryUrl,
+                  sideEffectFileUrl,
+                );
                 const fsEffectsOutDirectorySnapshot = takeDirectorySnapshot(
                   fsEffectsOutDirectoryUrl,
                 );
@@ -172,11 +176,25 @@ export const snapshotFunctionSideEffects = (
                   writeFileCallbackSet.add(() => {
                     writeFileSync(toUrl, content);
                   });
+                  let urlDisplayed = url;
+                  if (
+                    baseDirectory &&
+                    urlIsInsideOf(url, fsEffectsBaseDirectoryUrl)
+                  ) {
+                    urlDisplayed = `./${urlToRelativeUrl(
+                      url,
+                      fsEffectsBaseDirectoryUrl,
+                    )}`;
+                  }
+                  let toUrlDisplayed = `./${fsEffectsOutDirectoryRelativeUrl}${urlToRelativeUrl(
+                    toUrl,
+                    fsEffectsOutDirectoryUrl,
+                  )}`;
                   addSideEffect({
                     type: "fs:write_file",
                     value: { url: String(url), content },
                     label: replaceFluctuatingValues(
-                      `write file "${url}" (see ${toUrl})`,
+                      `write file "${urlDisplayed}" (see ${toUrlDisplayed})`,
                       { replaceFilesystemWellKnownValues },
                     ),
                     text: null,
