@@ -3,7 +3,7 @@
 2. reject
 ```undefined
 Error: here
-  at file:///<root>/function_side_effects_snapshot_basic.test.mjs:69:11
-  at async startTesting (file:///<root>/function_side_effects_snapshot_basic.test.mjs:31:5)
-  at async file:///<root>/function_side_effects_snapshot_basic.test.mjs:41:1
+  at @jsenv/core/packages/independent/snapshot/tests/function_side_effects_snapshot/basic/function_side_effects_snapshot_basic.test.mjs:69:11
+  at async startTesting (@jsenv/core/packages/independent/snapshot/tests/function_side_effects_snapshot/basic/function_side_effects_snapshot_basic.test.mjs:32:5)
+  at async @jsenv/core/packages/independent/snapshot/tests/function_side_effects_snapshot/basic/function_side_effects_snapshot_basic.test.mjs:41:1
 ```

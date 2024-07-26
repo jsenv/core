@@ -31,8 +31,7 @@ const startTesting = async (fn) => {
   for (const [scenario, { fn, options }] of activeScenarioMap) {
     await snapshotFunctionSideEffects(
       fn,
-      import.meta.url,
-      `./output/${scenario}.md`,
+      new URL(`./output/${scenario}.md`, import.meta.url),
       options,
     );
   }
@@ -141,6 +140,9 @@ await startTesting(({ test }) => {
     console.log("after");
   });
   test("17_write_sync_deep", () => {
-    writeFileSync(new URL("./toto/toto.txt", import.meta.url));
+    writeFileSync(
+      new URL("./toto/toto.txt", import.meta.url),
+      "write_sync_deep",
+    );
   });
 });

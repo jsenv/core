@@ -20,7 +20,7 @@ a warning after 2nd timeout
 and an other warning
 ```
 
-6. write file "toto.txt"
+6. write file "@jsenv/core/packages/independent/snapshot/tests/function_side_effects_snapshot/basic/toto.txt"
 ```txt
 toto
 ```
@@ -28,7 +28,7 @@ toto
 7. reject
 ```undefined
 Error: in the end we throw
-  at file:///<root>/function_side_effects_snapshot_basic.test.mjs:83:11
-  at async startTesting (file:///<root>/function_side_effects_snapshot_basic.test.mjs:31:5)
-  at async file:///<root>/function_side_effects_snapshot_basic.test.mjs:41:1
+  at @jsenv/core/packages/independent/snapshot/tests/function_side_effects_snapshot/basic/function_side_effects_snapshot_basic.test.mjs:83:11
+  at async startTesting (@jsenv/core/packages/independent/snapshot/tests/function_side_effects_snapshot/basic/function_side_effects_snapshot_basic.test.mjs:32:5)
+  at async @jsenv/core/packages/independent/snapshot/tests/function_side_effects_snapshot/basic/function_side_effects_snapshot_basic.test.mjs:41:1
 ```
