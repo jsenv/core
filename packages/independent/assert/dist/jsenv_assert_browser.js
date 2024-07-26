@@ -4623,6 +4623,63 @@ const renderChildrenMultiline = (node, props) => {
       }
       return true;
     };
+    let childIndex;
+    let currentChildHasDiff;
+    const addAround = () => {
+      before: {
+        const beforeDiffRemainingCount = maxChildBeforeDiff;
+        if (beforeDiffRemainingCount < 1) {
+          break before;
+        }
+        let fromIndex = childIndex - beforeDiffRemainingCount;
+        let toIndex = childIndex;
+        if (fromIndex < 0) {
+          fromIndex = 0;
+        } else {
+          if (childIndexToDisplayArray.length) {
+            const previousChildIndexToDisplay = childIndexToDisplayArray[childIndexToDisplayArray.length - 1];
+            if (previousChildIndexToDisplay + 1 === fromIndex) {
+              // prevent skip length of 1
+              childIndexToDisplayArray.push(previousChildIndexToDisplay + 1);
+            }
+          }
+          if (fromIndex > 0) {
+            fromIndex++;
+          }
+        }
+        let index = fromIndex;
+        while (index !== toIndex) {
+          if (childIndexToDisplayArray.includes(index)) ; else {
+            visitChild(index);
+            childIndexToDisplayArray.push(index);
+          }
+          index++;
+        }
+      }
+      childIndexToDisplayArray.push(childIndex);
+      after: {
+        const afterDiffRemainingCount = maxChildAfterDiff;
+        if (afterDiffRemainingCount < 1) {
+          break after;
+        }
+        let fromIndex = childIndex + 1;
+        let toIndex = childIndex + 1 + afterDiffRemainingCount;
+        if (toIndex > childrenKeys.length) {
+          toIndex = childrenKeys.length;
+        } else if (toIndex !== childrenKeys.length) {
+          toIndex--;
+        }
+        let index = fromIndex;
+        while (index !== toIndex) {
+          if (childIndexToDisplayArray.includes(index)) ; else {
+            currentChildHasDiff = visitChild(index);
+            childIndexToDisplayArray.push(index);
+            childIndex = index;
+          }
+          index++;
+        }
+      }
+    };
     if (node.firstChildWithDiffKey === undefined) {
       const otherWithChildWithDiffKey = node.otherNode?.firstChildWithDiffKey;
       if (otherWithChildWithDiffKey === undefined) {
@@ -4634,69 +4691,20 @@ const renderChildrenMultiline = (node, props) => {
         } else {
           focusedChildIndex = otherNodeIndex;
         }
+        childIndex = focusedChildIndex;
+        addAround();
+        break index_to_display;
       }
     } else {
       focusedChildIndex = childrenKeys.indexOf(node.firstChildWithDiffKey);
     }
-    let childIndex = focusedChildIndex;
+    childIndex = focusedChildIndex;
     while (
     // eslint-disable-next-line no-unmodified-loop-condition
     diffCount < maxDiff) {
-      let currentChildHasDiff = visitChild(childIndex);
+      currentChildHasDiff = visitChild(childIndex);
       if (currentChildHasDiff) {
-        before: {
-          const beforeDiffRemainingCount = maxChildBeforeDiff;
-          if (beforeDiffRemainingCount < 1) {
-            break before;
-          }
-          let fromIndex = childIndex - beforeDiffRemainingCount;
-          let toIndex = childIndex;
-          if (fromIndex < 0) {
-            fromIndex = 0;
-          } else {
-            if (childIndexToDisplayArray.length) {
-              const previousChildIndexToDisplay = childIndexToDisplayArray[childIndexToDisplayArray.length - 1];
-              if (previousChildIndexToDisplay + 1 === fromIndex) {
-                // prevent skip length of 1
-                childIndexToDisplayArray.push(previousChildIndexToDisplay + 1);
-              }
-            }
-            if (fromIndex > 0) {
-              fromIndex++;
-            }
-          }
-          let index = fromIndex;
-          while (index !== toIndex) {
-            if (childIndexToDisplayArray.includes(index)) ; else {
-              visitChild(index);
-              childIndexToDisplayArray.push(index);
-            }
-            index++;
-          }
-        }
-        childIndexToDisplayArray.push(childIndex);
-        after: {
-          const afterDiffRemainingCount = maxChildAfterDiff;
-          if (afterDiffRemainingCount < 1) {
-            break after;
-          }
-          let fromIndex = childIndex + 1;
-          let toIndex = childIndex + 1 + afterDiffRemainingCount;
-          if (toIndex > childrenKeys.length) {
-            toIndex = childrenKeys.length;
-          } else if (toIndex !== childrenKeys.length) {
-            toIndex--;
-          }
-          let index = fromIndex;
-          while (index !== toIndex) {
-            if (childIndexToDisplayArray.includes(index)) ; else {
-              currentChildHasDiff = visitChild(index);
-              childIndexToDisplayArray.push(index);
-              childIndex = index;
-            }
-            index++;
-          }
-        }
+        addAround();
       } else if (childIndex === focusedChildIndex) {
         childIndexToDisplayArray.push(focusedChildIndex);
       }

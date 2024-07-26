@@ -175,10 +175,28 @@ await startSnapshotTesting("array", ({ test }) => {
       expect: ["a", "b", "Z"],
     });
   });
-  test("added on thrid pos", () => {
+  test("added on fifth pos", () => {
     assert({
       actual: ["a", "b", "c", "d"],
       expect: ["a", "b", "c", "d", "Z"],
+    });
+  });
+  test("2 added on fifth pos", () => {
+    assert({
+      actual: ["a", "b", "c", "d"],
+      expect: ["a", "b", "c", "d", "Z1", "Z2"],
+    });
+  });
+  test("3 added on fifth pos", () => {
+    assert({
+      actual: ["a", "b", "c", "d"],
+      expect: ["a", "b", "c", "d", "Z1", "Z2", "Z3"],
+    });
+  });
+  test("lot added on fifth pos", () => {
+    assert({
+      actual: ["a", "b", "c", "d"],
+      expect: ["a", "b", "c", "d", "Z1", "Z2", "Z3", "Z4", "Z5"],
     });
   });
 });

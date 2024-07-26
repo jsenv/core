@@ -265,7 +265,7 @@ assert({
 
 ![img](<./array/added_on_third_pos.svg>)
 
-# added on thrid pos
+# added on fifth pos
 
 ```js
 assert({
@@ -274,5 +274,38 @@ assert({
 });
 ```
 
-![img](<./array/added_on_thrid_pos.svg>)
+![img](<./array/added_on_fifth_pos.svg>)
+
+# 2 added on fifth pos
+
+```js
+assert({
+  actual: ["a", "b", "c", "d"],
+  expect: ["a", "b", "c", "d", "Z1", "Z2"],
+});
+```
+
+![img](<./array/2_added_on_fifth_pos.svg>)
+
+# 3 added on fifth pos
+
+```js
+assert({
+  actual: ["a", "b", "c", "d"],
+  expect: ["a", "b", "c", "d", "Z1", "Z2", "Z3"],
+});
+```
+
+![img](<./array/3_added_on_fifth_pos.svg>)
+
+# lot added on fifth pos
+
+```js
+assert({
+  actual: ["a", "b", "c", "d"],
+  expect: ["a", "b", "c", "d", "Z1", "Z2", "Z3", "Z4", "Z5"],
+});
+```
+
+![img](<./array/lot_added_on_fifth_pos.svg>)
 

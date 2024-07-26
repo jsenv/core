@@ -200,7 +200,7 @@ expect: MyArray [true]
 AssertionError: actual and expect are different
 
 actual: [
-  ↑ 1 value ↑
+  "a",
   "b",
 ]
 expect: [
@@ -209,16 +209,64 @@ expect: [
   "Z",
 ]
 
-# added on thrid pos
+# added on fifth pos
 AssertionError: actual and expect are different
 
 actual: [
-  ↑ 3 values ↑
+  ↑ 2 values ↑
+  "c",
   "d",
 ]
 expect: [
   ↑ 3 values ↑
   "d",
   "Z",
+]
+
+# 2 added on fifth pos
+AssertionError: actual and expect are different
+
+actual: [
+  ↑ 2 values ↑
+  "c",
+  "d",
+]
+expect: [
+  ↑ 3 values ↑
+  "d",
+  "Z1",
+  "Z2",
+]
+
+# 3 added on fifth pos
+AssertionError: actual and expect are different
+
+actual: [
+  ↑ 2 values ↑
+  "c",
+  "d",
+]
+expect: [
+  ↑ 3 values ↑
+  "d",
+  "Z1",
+  "Z2",
+  "Z3",
+]
+
+# lot added on fifth pos
+AssertionError: actual and expect are different
+
+actual: [
+  ↑ 2 values ↑
+  "c",
+  "d",
+]
+expect: [
+  ↑ 3 values ↑
+  "d",
+  "Z1",
+  "Z2",
+  ↓ 3 values ↓
 ]
 
