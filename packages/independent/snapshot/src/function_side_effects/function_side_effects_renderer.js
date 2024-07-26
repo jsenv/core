@@ -20,7 +20,7 @@ export const renderSideEffects = (sideEffects) => {
   return string;
 };
 
-export const wrapIntoMarkdownBlock = (value, blockName) => {
+export const wrapIntoMarkdownBlock = (value, blockName = "") => {
   const start = "```";
   const end = "```";
   return `${start}${blockName}

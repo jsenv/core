@@ -1,1 +1,0 @@
-write_sync_in_dedicated_directory
