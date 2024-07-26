@@ -105,24 +105,39 @@ await startTesting(({ test }) => {
         },
       },
     );
+    test(
+      "7_write_above_base_and_out",
+      () => {
+        writeFileSync(
+          new URL("../toto.txt", import.meta.url),
+          "7_write_above_base_and_out",
+        );
+      },
+      {
+        filesystemEffects: {
+          baseDirectory: new URL("./", import.meta.url),
+          outDirectory: "./7_write_above_base_and_out/",
+        },
+      },
+    );
   }
   read_file: {
     // read file twice
     // there was a bug about this in a previous implementation
     // where second read file would never resolve
-    test("7_read_file_first", async () => {
+    test("8_read_file_first", async () => {
       await readFile(import.meta.url, { as: "string" });
     });
-    test("8_read_file_second", async () => {
+    test("9_read_file_second", async () => {
       await readFile(import.meta.url, { as: "string" });
     });
   }
   write_directory: {
-    test("9_write_directory_sync", () => {
+    test("10_write_directory_sync", () => {
       writeDirectorySync(new URL("./dir_sync/", import.meta.url));
       return existsSync(new URL("./dir_sync/", import.meta.url));
     });
-    test("10_write_directory_async", async () => {
+    test("11_write_directory_async", async () => {
       await writeDirectory(new URL("./dir_async/", import.meta.url));
       return existsSync(new URL("./dir_async/", import.meta.url));
     });
