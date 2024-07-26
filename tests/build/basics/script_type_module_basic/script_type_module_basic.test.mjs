@@ -17,7 +17,7 @@ const test = async (scenario, options) => {
     new URL(`./output/${scenario}.md`, import.meta.url),
     {
       filesystemEffects: {
-        rootDirectory: new URL("./", import.meta.url),
+        baseDirectory: new URL("./", import.meta.url),
       },
     },
   );

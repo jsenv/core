@@ -36,9 +36,9 @@ build "./main.html"
 
 ```
 
-8. write file "@jsenv/core/tests/build/basics/script_type_module_basic/build/js/main.js" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/build/js/main.js)
+8. write file "./build/js/main.js" (see ./0_js_module/build/js/main.js)
 
-9. write file "@jsenv/core/tests/build/basics/script_type_module_basic/build/main.html" (see @jsenv/core/tests/build/basics/script_type_module_basic/output/0_js_module/build/main.html)
+9. write file "./build/main.html" (see ./0_js_module/build/main.html)
 
 10. process.stdout
 ```console
