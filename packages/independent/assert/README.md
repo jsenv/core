@@ -196,7 +196,7 @@ npm i --save-dev @jsenv/assert
 
 ```html
 <script type="module">
-  import { assert } from "https://unpkg.com/@jsenv/assert@latest/src/main.js";
+  import { assert } from "https://unpkg.com/@jsenv/assert@latest";
 
   assert({
     actual: true,

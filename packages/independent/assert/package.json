@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/assert",
-  "version": "4.1.9",
+  "version": "4.1.10",
   "description": "One assertion to test everything",
   "license": "MIT",
   "repository": {
@@ -29,7 +29,7 @@
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
+  "main": "./dist/jsenv_assert_browser.js",
   "files": [
     "/dist/",
     "/src/"
