@@ -1204,14 +1204,17 @@ const createXmlGenerator = ({
 
               for (const attributeName of attributeNames) {
                 let attributeValue = node.attributes[attributeName];
+                if (attributeValue === undefined) {
+                  continue;
+                }
                 if (typeof attributeValue === "number") {
                   attributeValue = round(attributeValue);
                 }
                 if (attributeName === "viewBox") {
                   attributeValue = attributeValue
-                    .split(",")
+                    .split(" ")
                     .map((v) => round(parseFloat(v.trim())))
-                    .join(", ");
+                    .join(" ");
                 }
                 attributesSingleLine += ` ${attributeName}="${attributeValue}"`;
                 attributesMultiLine += `\n  `;
@@ -1363,6 +1366,7 @@ const renderTerminalSvg = (
     height,
     maxWidth,
     maxHeight,
+    preserveAspectRatio, // "xMidYMid slice",
 
     head = true,
   } = {},
@@ -1416,8 +1420,9 @@ const renderTerminalSvg = (
     "xmlns": "http://www.w3.org/2000/svg",
     "font-family": font.family,
     "font-size": font.size,
-    "width": computedWidth,
-    "height": computedHeight,
+    "width": "100%",
+    "viewBox": `0 0 ${computedWidth} ${computedHeight}`,
+    preserveAspectRatio,
     "background-color": backgroundColor,
   });
 
