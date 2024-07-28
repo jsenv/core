@@ -786,7 +786,7 @@ export const createAssert = ({
       underline: false,
     });
     diff += " ";
-    diff += actualStartNode.render({
+    const actualDiff = actualStartNode.render({
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
       MAX_DIFF_INSIDE_VALUE,
@@ -796,13 +796,14 @@ export const createAssert = ({
       columnsRemaining: MAX_COLUMNS - "actual: ".length,
       startNode: actualStartNode,
     });
+    diff += actualDiff;
     diff += `\n`;
     diff += applyStyles(expectStartNode, "expect:", {
       color: sameColor,
       underline: false,
     });
     diff += " ";
-    diff += expectStartNode.render({
+    const expectDiff = expectStartNode.render({
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
       MAX_DIFF_INSIDE_VALUE,
@@ -812,6 +813,7 @@ export const createAssert = ({
       columnsRemaining: MAX_COLUMNS - "expect: ".length,
       startNode: expectStartNode,
     });
+    diff += expectDiff;
     if (details) {
       diff += "\n";
       diff += `--- details ---`;
@@ -832,10 +834,10 @@ export const createAssert = ({
       errorMessage += diff;
     }
     const assertionError = assert.createAssertionError(errorMessage);
-    Object.defineProperty(assertionError, "diff", {
-      configurable: true,
-      writable: true,
-      value: diff,
+    defineNonEnumerableProperties(assertionError, {
+      diff,
+      actualDiff,
+      expectDiff,
     });
     if (Error.captureStackTrace) {
       Error.captureStackTrace(assertionError, assert);
@@ -1086,6 +1088,16 @@ export const createAssert = ({
     ]);
   };
   return assert;
+};
+
+const defineNonEnumerableProperties = (assertionError, properties) => {
+  for (const key of Object.keys(properties)) {
+    Object.defineProperty(assertionError, key, {
+      configurable: true,
+      writable: true,
+      value: properties[key],
+    });
+  }
 };
 
 const comparerDefault = (actualNode, expectNode) => {
