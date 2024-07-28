@@ -57,14 +57,17 @@ export const createXmlGenerator = ({
 
               for (const attributeName of attributeNames) {
                 let attributeValue = node.attributes[attributeName];
+                if (attributeValue === undefined) {
+                  continue;
+                }
                 if (typeof attributeValue === "number") {
                   attributeValue = round(attributeValue);
                 }
                 if (attributeName === "viewBox") {
                   attributeValue = attributeValue
-                    .split(",")
+                    .split(" ")
                     .map((v) => round(parseFloat(v.trim())))
-                    .join(", ");
+                    .join(" ");
                 }
                 attributesSingleLine += ` ${attributeName}="${attributeValue}"`;
                 attributesMultiLine += `\n  `;
