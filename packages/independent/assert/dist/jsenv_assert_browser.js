@@ -5715,6 +5715,29 @@ const generateHeaderValueParts = (headerValue, {
   part.end();
 };
 
+// see https://github.com/sindresorhus/string-width/issues/50
+let restore = () => {};
+if (typeof window.Intl.Segmenter !== "function") {
+  window.Intl.Segmenter = function () {
+    const segment = string => {
+      return string.split("").map(char => {
+        return {
+          segment: char
+        };
+      });
+    };
+    return {
+      segment
+    };
+  };
+  restore = () => {
+    window.Intl.Segmenter = undefined;
+  };
+}
+const cleanup = () => {
+  restore();
+};
+
 // Generated code.
 
 function isAmbiguous(x) {
@@ -5819,29 +5842,7 @@ function stringWidth(string, options = {}) {
   return width;
 }
 
-// see https://github.com/sindresorhus/string-width/issues/50
-let restore = () => {};
-if (typeof window.Intl.Segmenter !== "function") {
-  window.Intl.Segmenter = function () {
-    const segment = string => {
-      return string.split("").map(char => {
-        return {
-          segment: char
-        };
-      });
-    };
-    return {
-      segment
-    };
-  };
-  restore = () => {
-    window.Intl.Segmenter = undefined;
-  };
-}
-const cleanup = () => {
-  restore();
-};
-
+// tslint:disable:ordered-imports (keep segmenter first)
 cleanup();
 const measureStringWidth = stringWidth;
 
