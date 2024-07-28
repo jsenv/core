@@ -2,8 +2,8 @@
   xmlns="http://www.w3.org/2000/svg"
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
-  width="482.08"
-  height="518.45"
+  width="100%"
+  viewBox="0 0 482.08 518.45"
   background-color="#282c34"
 >
   <g id="background">
