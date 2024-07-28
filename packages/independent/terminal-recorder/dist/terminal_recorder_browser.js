@@ -1612,4 +1612,4 @@ const leadingWhitespaceWidth = (text) => {
   return leadingSpace[0].length;
 };
 
-export { renderTerminalSvg };
+export { parseAnsi, renderTerminalSvg };
