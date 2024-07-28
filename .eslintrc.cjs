@@ -110,6 +110,7 @@ const eslintConfig = composeEslintConfig(
           "dev_exploring/**/*.js",
           "**/client/**/*.js",
           "**/browser/**/*.js",
+          "./docs/**/*.js",
           "**/babel_helpers/**/*.js",
           "test/dev_server/**/*.js",
           "./packages/**/pwa/**/*.js",
