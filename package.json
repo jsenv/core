@@ -52,7 +52,7 @@
     "monorepo:publish": "node ./scripts/monorepo/publish_packages.mjs",
     "monorepo:upgrade_versions": "node ./scripts/monorepo/upgrade_external_versions.mjs",
     "monorepo:node_modules_clear": "npx @jsenv/snapshot clear **/node_modules/",
-    "doc:build": "node ./docs/build.js",
+    "md:build": "node ./md/build.js",
     "performances": "node --expose-gc ./scripts/performance/generate_performance_report.mjs --log --once",
     "build:file_size": "node ./scripts/build/build_file_size.mjs --log",
     "prettier": "prettier --write .",
