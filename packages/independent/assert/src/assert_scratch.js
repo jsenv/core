@@ -4645,10 +4645,12 @@ const renderChildrenMultiline = (node, props) => {
       }
     };
     if (node.firstChildWithDiffKey === undefined) {
-      const otherWithChildWithDiffKey = node.otherNode?.firstChildWithDiffKey;
+      const otherWithChildWithDiffKey = node.otherNode.firstChildWithDiffKey;
       if (otherWithChildWithDiffKey === undefined) {
         focusedChildIndex = 0;
       } else {
+        // TODO: a priori il faut generer le index to display de l'autre et l'utiliser ici
+        // en excluant ce qui n'existe pas
         let otherNodeIndex = node.otherNode.childrenKeys.indexOf(
           otherWithChildWithDiffKey,
         );
