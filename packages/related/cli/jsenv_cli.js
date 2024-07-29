@@ -101,13 +101,18 @@ dir: {
   let { directory } = result;
   directoryUrl = ensurePathnameTrailingSlash(new URL(directory, cwdUrl));
 }
+const runWithChildProcess = (command) => {
+  console.log(command);
+  execSync(command, {
+    cwd: directoryUrl,
+    stdio: [0, 1, 2],
+  });
+};
 if (directoryUrl.href !== cwdUrl.href) {
   const dir = relative(fileURLToPath(cwdUrl), fileURLToPath(directoryUrl));
   commands.push({
     label: `cd ${dir}`,
-    run: () => {
-      process.chdir(dir);
-    },
+    run: () => {},
   });
 }
 let templateName;
@@ -167,7 +172,7 @@ write_files: {
     "package.json": (existingContent, templateContent) => {
       const existingPackage = JSON.parse(existingContent);
       const templatePackage = JSON.parse(templateContent);
-      const override = (left, right, allowedKeys) => {
+      const override = (left, right, { parentKey, allowedKeys }) => {
         if (right === null) {
           return left === undefined ? null : left;
         }
@@ -191,7 +196,16 @@ write_files: {
                 continue;
               }
               const leftValue = left[keyToVisit];
-              left[keyToVisit] = override(leftValue, rightValue);
+              const finalValue = override(leftValue, rightValue, {
+                parentKey: keyToVisit,
+              });
+              left[keyToVisit] = finalValue;
+              if (parentKey === "scripts" && keyToVisit === "start") {
+                commands.push({
+                  label: "npm start",
+                  run: () => runWithChildProcess("npm start"),
+                });
+              }
             }
             return left;
           }
@@ -205,11 +219,9 @@ write_files: {
       const existingDevDependencies = existingPackage.devDependencies
         ? { ...existingPackage.devDependencies }
         : {};
-      override(existingPackage, templatePackage, [
-        "scripts",
-        "dependencies",
-        "devDependencies",
-      ]);
+      override(existingPackage, templatePackage, {
+        allowedKeys: ["scripts", "dependencies", "devDependencies"],
+      });
       const finalDependencies = existingPackage.dependencies || {};
       const finalDevDependencies = existingPackage.devDependencies || {};
       if (
@@ -220,12 +232,7 @@ write_files: {
       ) {
         commands.push({
           label: "npm install",
-          run: () => {
-            console.log("npm install");
-            execSync("npm install", {
-              stdio: [0, 1, 2],
-            });
-          },
+          run: () => runWithChildProcess("npm install"),
         });
       }
       if (existingContent.startsWith("{\n")) {
@@ -287,12 +294,11 @@ write_files: {
         if (directoryEntryName === "package.json") {
           commands.push({
             label: "npm install",
-            run: () => {
-              console.log("npm install");
-              execSync("npm install", {
-                stdio: [0, 1, 2],
-              });
-            },
+            run: () => runWithChildProcess("npm install"),
+          });
+          commands.push({
+            label: "npm start",
+            run: () => runWithChildProcess("npm start"),
           });
         }
         writeFileSync(toUrl, readFileSync(fromUrl));
