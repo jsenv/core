@@ -2,6 +2,9 @@
 const a = () => {};
 a();
 
+# async arrow function
+console.log("async_body");
+
 # anonymous arrow default param arrow
 }) => {return a;
 

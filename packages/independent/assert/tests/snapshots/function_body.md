@@ -9,6 +9,16 @@ generateFunctionBody(() => {
 
 ![img](<./function_body/arrow_function_containing_arrow_function.svg>)
 
+# async arrow function
+
+```js
+generateFunctionBody(async () => {
+  console.log("async_body");
+});
+```
+
+![img](<./function_body/async_arrow_function.svg>)
+
 # anonymous arrow default param arrow
 
 ```js
@@ -102,7 +112,7 @@ generateFunctionBody(
       // prettier-ignore
       set   name ( value )  {
         value++
-        
+
       },
       /* eslint-enable accessor-pairs */
     },

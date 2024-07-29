@@ -16,6 +16,11 @@ await startSnapshotTesting("function_body", {
       a();
     });
   },
+  ["async arrow function"]: () => {
+    generateFunctionBody(async () => {
+      console.log("async_body");
+    });
+  },
   ["anonymous arrow default param arrow"]: () => {
     generateFunctionBody((a = () => {}) => {
       return a;
@@ -72,7 +77,7 @@ await startSnapshotTesting("function_body", {
           // prettier-ignore
           set   name ( value )  {
             value++
-            
+
           },
           /* eslint-enable accessor-pairs */
         },

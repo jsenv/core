@@ -21,7 +21,8 @@ export const parseFunction = (fn) => {
 
 const CANDIDATES = [
   (fnString, fn) => {
-    const ARROW_FUNCTION_BODY_REGEX = /^(\([\s\S]*?\))\s*=>\s*\{([\s\S]*)\}$/;
+    const ARROW_FUNCTION_BODY_REGEX =
+      /^(?:async\s*)?(\([\s\S]*?\))\s*=>\s*\{([\s\S]*)\}$/;
     const match = fnString.match(ARROW_FUNCTION_BODY_REGEX);
     if (match) {
       return {
