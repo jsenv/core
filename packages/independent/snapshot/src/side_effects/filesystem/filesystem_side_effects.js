@@ -85,9 +85,12 @@ export const filesystemSideEffects = (
                     if (outDirectory) {
                       const commonDirectoryOutUrl =
                         getToUrl(commonDirectoryUrl);
+                      const outDirectoryUrlDisplayed = getToUrlDisplayed(
+                        commonDirectoryOutUrl,
+                      );
                       return {
                         label: replace(
-                          `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}" (see ${getToUrlDisplayed(commonDirectoryOutUrl)})`,
+                          `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}" (see [${outDirectoryUrlDisplayed}](outDirectoryUrlDisplayed))`,
                         ),
                       };
                     }
@@ -98,7 +101,7 @@ export const filesystemSideEffects = (
                         if (text) {
                           text += "\n";
                         }
-                        text += `## ${getUrlDisplayed(fileSideEffect.value.url)}`;
+                        text += `## ${urlToRelativeUrl(fileSideEffect.value.url, commonDirectoryUrl)}`;
                         text += "\n\n";
                         text += renderWriteFileContentMd(
                           { replace },
@@ -141,9 +144,10 @@ export const filesystemSideEffects = (
             value: { url: String(url), content },
             render: {
               md: ({ replace }) => {
+                const outUrlDisplayed = getToUrlDisplayed(toUrl);
                 return {
                   label: replace(
-                    `write file "${getUrlDisplayed(url)}" (see ${getToUrlDisplayed(toUrl)})`,
+                    `write file "${getUrlDisplayed(url)}" (see [${outUrlDisplayed}](${outUrlDisplayed}))`,
                   ),
                 };
               },
