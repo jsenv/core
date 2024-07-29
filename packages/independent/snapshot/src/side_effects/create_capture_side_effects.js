@@ -1,3 +1,4 @@
+import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
 import { createException } from "@jsenv/exception";
 import { createReplaceFilesystemWellKnownValues } from "../filesystem_well_known_values.js";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
@@ -41,6 +42,20 @@ export const createCaptureSideEffects = ({
       sideEffects.push(sideEffect);
       return sideEffect;
     };
+
+    const sourceCode = parseFunction(fn).body;
+    addSideEffect({
+      type: "source_code",
+      value: sourceCode,
+      render: {
+        md: () => {
+          return {
+            text: wrapIntoMarkdownBlock(sourceCode, "js"),
+          };
+        },
+      },
+    });
+
     const finallyCallbackSet = new Set();
     const addFinallyCallback = (finallyCallback) => {
       finallyCallbackSet.add(finallyCallback);

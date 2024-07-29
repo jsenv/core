@@ -1,11 +1,11 @@
 import { assert } from "@jsenv/assert";
 import { writeFile, writeFileSync } from "@jsenv/filesystem";
-import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
+import { snapshotSideEffects } from "@jsenv/snapshot";
 
 // warn property restored
 {
   const warn = console.warn;
-  await snapshotFunctionSideEffects(
+  await snapshotSideEffects(
     async () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
       console.warn("here");
@@ -13,7 +13,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
     new URL("./output/0_warn_a.md", import.meta.url),
   );
   assert({ actual: console.warn, expect: warn });
-  await snapshotFunctionSideEffects(
+  await snapshotSideEffects(
     async () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
       console.warn("here");
@@ -25,7 +25,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
 
 // logs works when b_ends_before_a
 {
-  const aPromise = snapshotFunctionSideEffects(
+  const aPromise = snapshotSideEffects(
     async () => {
       console.log("a_before_timeout_200");
       await new Promise((resolve) => {
@@ -40,7 +40,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
       },
     },
   );
-  const bPromise = snapshotFunctionSideEffects(
+  const bPromise = snapshotSideEffects(
     async () => {
       console.log("b_before_timeout_50");
       await new Promise((resolve) => {
@@ -61,7 +61,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
 
 // write several files
 {
-  await snapshotFunctionSideEffects(
+  await snapshotSideEffects(
     async () => {
       await writeFile(new URL("./a.txt", import.meta.url), "a_1");
       await writeFile(new URL("./b.txt", import.meta.url), "b_1");
@@ -69,7 +69,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
     },
     new URL("./output/4_write_first.md", import.meta.url),
   );
-  await snapshotFunctionSideEffects(
+  await snapshotSideEffects(
     async () => {
       await writeFile(new URL("./a.txt", import.meta.url), "a_2");
       await writeFile(new URL("./b.txt", import.meta.url), "b_2");
@@ -81,7 +81,7 @@ import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
 
 // console and filesystem
 {
-  await snapshotFunctionSideEffects(
+  await snapshotSideEffects(
     async () => {
       console.log("start");
       await new Promise((resolve) => {
