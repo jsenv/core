@@ -16,7 +16,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
 import { ANSI, createTaskLog, UNICODE } from "@jsenv/humanize";
-import { ensurePathnameTrailingSlash, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  ensurePathnameTrailingSlash,
+  urlToFilename,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 import prompts from "prompts";
 
 // not using readdir to control order
@@ -301,7 +305,11 @@ write_files: {
             run: () => runWithChildProcess("npm start"),
           });
         }
-        writeFileSync(toUrl, readFileSync(fromUrl));
+        const packageTemplateString = String(readFileSync(fromUrl));
+        const packageTemplateObject = JSON.parse(packageTemplateString);
+        packageTemplateObject.name = urlToFilename(directoryUrl);
+        const packageString = JSON.stringify(packageTemplateObject, null, "  ");
+        writeFileSync(toUrl, packageString);
         continue;
       }
       const relativeUrl = urlToRelativeUrl(fromUrl, templateSourceDirectoryUrl);
