@@ -10,6 +10,7 @@ writeFileSync(
 ```
 
 # 1/2 write 2 files into "./dist/"
+
 <details>
   <summary>details</summary>
 

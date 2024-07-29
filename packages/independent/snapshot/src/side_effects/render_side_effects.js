@@ -77,7 +77,7 @@ export const renderSideEffects = (
         const shouldUseDetailsResult = shouldUseDetails(sideEffect, text);
         if (shouldUseDetailsResult) {
           const { open } = shouldUseDetailsResult;
-          markdown += "\n";
+          markdown += "\n\n";
           markdown += renderMarkdownDetails(text, {
             open,
             summary: "details",
@@ -104,24 +104,29 @@ const renderText = (text, { replace, rootDirectoryUrl }) => {
     if (text.type === "source_code") {
       return wrapIntoMarkdownBlock(text.value, "js");
     }
-    // TODO: "reason" is just an other use case of "js_value"
-    // -> we should detect when we deal with errors in the "js_value" if
-    if (text.type === "reason") {
-      const exception = createException(text.value, { rootDirectoryUrl });
-      const renderResult = replace(
-        exception
-          ? exception.stack || exception.message || exception
-          : String(exception),
-        {
-          stringType: "error",
-        },
-      );
-      return wrapIntoMarkdownBlock(renderResult);
-    }
     if (text.type === "js_value") {
       const value = text.value;
       if (value === undefined) {
         return wrapIntoMarkdownBlock("undefined", "js");
+      }
+      if (
+        value instanceof Error ||
+        (value &&
+          value.constructor &&
+          value.constructor.name.includes("Error") &&
+          value.stack &&
+          typeof value.stack === "string")
+      ) {
+        const exception = createException(text.value, { rootDirectoryUrl });
+        const exceptionText = replace(
+          exception
+            ? exception.stack || exception.message || exception
+            : String(exception),
+          {
+            stringType: "error",
+          },
+        );
+        return wrapIntoMarkdownBlock(exceptionText, "");
       }
       return wrapIntoMarkdownBlock(
         replace(JSON.stringify(value, null, "  "), {
@@ -145,10 +150,37 @@ const renderText = (text, { replace, rootDirectoryUrl }) => {
 
 export const renderFileContent = (text, { replace }) => {
   const { url } = text;
-  return wrapIntoMarkdownBlock(
-    replace(text.value, { fileUrl: url }),
-    urlToExtension(url).slice(1),
-  );
+  let content = text.value;
+  const extension = urlToExtension(url).slice(1);
+  if (extension === "md") {
+    let escaped = "";
+    for (const char of content.split("")) {
+      if (
+        [
+          "`",
+          "*",
+          "_",
+          "{",
+          "}",
+          "[",
+          "]",
+          "(",
+          ")",
+          "#",
+          "+",
+          "-",
+          ".",
+          "!",
+        ].includes(char)
+      ) {
+        escaped += `\\${char}`;
+      } else {
+        escaped += char;
+      }
+    }
+    content = escaped;
+  }
+  return wrapIntoMarkdownBlock(replace(content, { fileUrl: url }), extension);
 };
 
 export const renderMarkdownDetails = (text, { open, summary, indent = 0 }) => {

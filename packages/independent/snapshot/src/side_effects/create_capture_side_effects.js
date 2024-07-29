@@ -93,7 +93,7 @@ export const createCaptureSideEffects = ({
             return {
               label: "throw",
               text: {
-                type: "cause",
+                type: "js_value",
                 value: valueThrow,
               },
             };
@@ -158,7 +158,7 @@ export const createCaptureSideEffects = ({
             return {
               label: "reject",
               text: {
-                type: "cause",
+                type: "js_value",
                 value: reason,
               },
             };

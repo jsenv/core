@@ -6,7 +6,7 @@ import { assert } from "@jsenv/assert";
 import {
   hookIntoMethod,
   METHOD_EXECUTION_NODE_CALLBACK,
-} from "@jsenv/snapshot/src/function_side_effects/hook_into_method.js";
+} from "@jsenv/snapshot/src/side_effects/hook_into_method.js";
 
 const test = (scenario, fn) => {
   fn();
