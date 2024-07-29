@@ -1,20 +1,20 @@
 import { takeFileSnapshot } from "../filesystem_snapshot.js";
 import { createReplaceFilesystemWellKnownValues } from "../filesystem_well_known_values.js";
 import { captureSideEffects } from "./capture_side_effects.js";
-import { consoleSideEffects } from "./console/console_side_effects.js";
 import { filesystemSideEffects } from "./filesystem/filesystem_side_effects.js";
+import { logSideEffects } from "./log/log_side_effects.js";
 import { renderSideEffects } from "./render_side_effects.js";
 
 export const snapshotSideEffects = (
   fn,
   sideEffectFileUrl,
-  { consoleEffects = true, filesystemEffects = true, rootDirectoryUrl } = {},
+  { logEffects = true, filesystemEffects = true, rootDirectoryUrl } = {},
 ) => {
   const replaceFilesystemWellKnownValues =
     createReplaceFilesystemWellKnownValues({ rootDirectoryUrl });
   const sideEffectDetectors = [
-    ...(consoleEffects
-      ? [consoleSideEffects(consoleEffects === true ? {} : consoleEffects)]
+    ...(logEffects
+      ? [logSideEffects(logEffects === true ? {} : logEffects)]
       : []),
     ...(filesystemEffects
       ? [

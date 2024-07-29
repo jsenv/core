@@ -1,13 +1,13 @@
-import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
+import { snapshotSideEffects } from "@jsenv/snapshot";
 
-snapshotFunctionSideEffects(
+snapshotSideEffects(
   () => {
     console.log("Hello");
     return 42;
   },
   new URL("./output/0_log_and_return_42.md", import.meta.url),
 );
-snapshotFunctionSideEffects(
+snapshotSideEffects(
   () => {
     console.log("log_0");
     console.info("info_0");
@@ -20,7 +20,7 @@ snapshotFunctionSideEffects(
   },
   new URL("./output/1_multiple_console_calls.md", import.meta.url),
 );
-snapshotFunctionSideEffects(
+snapshotSideEffects(
   () => {
     console.log("before");
     process.stdout.write("between");

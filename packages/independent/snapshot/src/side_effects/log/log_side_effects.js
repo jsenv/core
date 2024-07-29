@@ -1,26 +1,42 @@
 import { hookIntoMethod } from "../hook_into_method.js";
+import { wrapIntoMarkdownBlock } from "../render_side_effects.js";
 
-const consoleSideEffectsOptionsDefault = {
+const logSideEffectsOptionsDefault = {
   prevent: true,
 };
 
-export const consoleSideEffects = (consoleSideEffectsOptions) => {
-  consoleSideEffectsOptions = {
-    ...consoleSideEffectsOptionsDefault,
-    ...consoleSideEffectsOptions,
+export const logSideEffects = (logSideEffectsOptions) => {
+  logSideEffectsOptions = {
+    ...logSideEffectsOptionsDefault,
+    ...logSideEffectsOptions,
   };
   return {
     name: "console",
     install: (addSideEffect) => {
-      const { prevent } = consoleSideEffectsOptions;
+      const { prevent } = logSideEffectsOptions;
+      const addLogSideEffect = (type, message) => {
+        addSideEffect({
+          type,
+          value: message,
+          render: {
+            md: ({ replace }) => {
+              return {
+                label: type,
+                text: wrapIntoMarkdownBlock(
+                  replace(message, { stringType: "console" }),
+                  "console",
+                ),
+              };
+            },
+          },
+        });
+      };
+
       const errorHook = hookIntoMethod(console, "error", (message) => {
         return {
           preventOriginalCall: prevent,
           return: () => {
-            addSideEffect({
-              type: `console:error`,
-              value: message,
-            });
+            addLogSideEffect("console.error", message);
           },
         };
       });
@@ -28,10 +44,7 @@ export const consoleSideEffects = (consoleSideEffectsOptions) => {
         return {
           preventOriginalCall: prevent,
           return: () => {
-            addSideEffect({
-              type: `console:warn`,
-              value: message,
-            });
+            addLogSideEffect("console.warn", message);
           },
         };
       });
@@ -39,10 +52,7 @@ export const consoleSideEffects = (consoleSideEffectsOptions) => {
         return {
           preventOriginalCall: prevent,
           return: () => {
-            addSideEffect({
-              type: `console:info`,
-              value: message,
-            });
+            addLogSideEffect("console.info", message);
           },
         };
       });
@@ -50,10 +60,7 @@ export const consoleSideEffects = (consoleSideEffectsOptions) => {
         return {
           preventOriginalCall: prevent,
           return: () => {
-            addSideEffect({
-              type: `console:log`,
-              value: message,
-            });
+            addLogSideEffect("console.log", message);
           },
         };
       });
@@ -61,10 +68,7 @@ export const consoleSideEffects = (consoleSideEffectsOptions) => {
         return {
           preventOriginalCall: prevent,
           return: () => {
-            addSideEffect({
-              type: `console:trace`,
-              value: message,
-            });
+            addLogSideEffect("console.trace", message);
           },
         };
       });
@@ -75,10 +79,7 @@ export const consoleSideEffects = (consoleSideEffectsOptions) => {
           return {
             preventOriginalCall: prevent,
             return: () => {
-              addSideEffect({
-                type: `process:stdout`,
-                value: message,
-              });
+              addLogSideEffect("process.stdout", message);
             },
           };
         },
@@ -90,10 +91,7 @@ export const consoleSideEffects = (consoleSideEffectsOptions) => {
           return {
             preventOriginalCall: prevent,
             return: () => {
-              addSideEffect({
-                type: `process:stderr`,
-                value: message,
-              });
+              addLogSideEffect("process.stderr", message);
             },
           };
         },

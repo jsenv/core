@@ -10,16 +10,11 @@ export const renderSideEffects = (
     }),
   },
 ) => {
-  const renderLabel = (label) => {
-    return replaceFluctuatingValues(label, {
+  const replace = (value, options) => {
+    return replaceFluctuatingValues(value, {
       replaceFilesystemWellKnownValues,
       rootDirectoryUrl,
-    });
-  };
-  const renderText = (text) => {
-    return replaceFluctuatingValues(text, {
-      replaceFilesystemWellKnownValues,
-      rootDirectoryUrl,
+      ...options,
     });
   };
 
@@ -33,13 +28,19 @@ export const renderSideEffects = (
       markdown += "\n\n";
     }
 
+    const { render } = sideEffect;
+    if (typeof render !== "object") {
+      throw new TypeError(
+        `sideEffect.render should be an object, got ${render} on side effect with type "${sideEffect.type}"`,
+      );
+    }
     const { md } = sideEffect.render;
-    const { label, text } = md({ rootDirectoryUrl });
-    let title = `${index + 1}. ${renderLabel(label)}`;
+    const { label, text } = md({ replace, rootDirectoryUrl });
+    let title = `${index + 1}. ${label}`;
     markdown += title;
     if (text) {
       markdown += "\n";
-      markdown += renderText(text);
+      markdown += text;
     }
     index++;
   }

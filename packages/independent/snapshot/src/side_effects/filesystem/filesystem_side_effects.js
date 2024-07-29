@@ -93,10 +93,11 @@ export const filesystemSideEffects = (
             type: "fs:write_file",
             value: { url: String(url), content },
             render: {
-              md: () => {
+              md: ({ replace }) => {
                 return {
-                  toUrl,
-                  label: `write file "${getUrlDisplayed(url)}" (see ${getToUrlDisplayed(toUrl)})`,
+                  label: replace(
+                    `write file "${getUrlDisplayed(url)}" (see ${getToUrlDisplayed(toUrl)})`,
+                  ),
                 };
               },
             },
@@ -108,11 +109,11 @@ export const filesystemSideEffects = (
             type: "fs:write_file",
             value: { url: String(url), content },
             render: {
-              md: () => {
+              md: ({ replace }) => {
                 return {
-                  label: `write file "${getUrlDisplayed(url)}"`,
+                  label: replace(`write file "${getUrlDisplayed(url)}"`),
                   text: wrapIntoMarkdownBlock(
-                    content,
+                    replace(content, { fileUrl: url }),
                     urlToExtension(url).slice(1),
                   ),
                 };
@@ -129,9 +130,9 @@ export const filesystemSideEffects = (
               type: "fs:write_directory",
               value: { url: String(url) },
               render: {
-                md: () => {
+                md: ({ replace }) => {
                   return {
-                    label: `write directory "${getUrlDisplayed(url)}"`,
+                    label: replace(`write directory "${getUrlDisplayed(url)}"`),
                   };
                 },
               },
