@@ -1,6 +1,5 @@
 ```js
-async () => {await writeFile(new URL("./toto.txt", import.meta.url), "3_write_async");
-}
+await writeFile(new URL("./toto.txt", import.meta.url), "3_write_async");
 ```
 
 # 1/3 return promise

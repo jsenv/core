@@ -1,7 +1,6 @@
 ```js
-async () => {const value = await Promise.resolve(42);
+const value = await Promise.resolve(42);
 return value;
-}
 ```
 
 # 1/2 return promise

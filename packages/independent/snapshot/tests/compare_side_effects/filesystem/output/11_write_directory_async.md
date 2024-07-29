@@ -1,7 +1,6 @@
 ```js
-async () => {await writeDirectory(new URL("./dir_async/", import.meta.url));
+await writeDirectory(new URL("./dir_async/", import.meta.url));
 return existsSync(new URL("./dir_async/", import.meta.url));
-}
 ```
 
 # 1/3 return promise

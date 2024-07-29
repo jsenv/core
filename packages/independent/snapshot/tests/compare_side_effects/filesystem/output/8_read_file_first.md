@@ -1,6 +1,5 @@
 ```js
-async () => {await readFile(import.meta.url, { as: "string" });
-}
+await readFile(import.meta.url, { as: "string" });
 ```
 
 # 1/2 return promise

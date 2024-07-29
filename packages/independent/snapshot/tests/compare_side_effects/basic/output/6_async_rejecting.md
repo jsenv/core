@@ -1,7 +1,6 @@
 ```js
-async () => {await Promise.resolve();
+await Promise.resolve();
 throw new Error("here");
-}
 ```
 
 # 1/2 return promise

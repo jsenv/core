@@ -1,5 +1,5 @@
 ```js
-async () => {console.log("start");
+console.log("start");
 await new Promise((resolve) => {
   setTimeout(resolve, 50);
 });
@@ -11,7 +11,6 @@ console.warn("a warning after 2nd timeout");
 console.warn("and an other warning");
 writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
 throw new Error("in the end we throw");
-}
 ```
 
 # 1/7 console.log

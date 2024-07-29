@@ -1,10 +1,9 @@
 ```js
-async () => {console.log("b_before_timeout_50");
+console.log("b_before_timeout_50");
 await new Promise((resolve) => {
   setTimeout(resolve, 50);
 });
 console.log("b_after_timeout_50");
-}
 ```
 
 # 1/4 console.log

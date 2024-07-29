@@ -1,7 +1,6 @@
 ```js
-async () => {await new Promise((resolve) => setTimeout(resolve, 100));
+await new Promise((resolve) => setTimeout(resolve, 100));
 console.warn("here");
-}
 ```
 
 # 1/3 return promise

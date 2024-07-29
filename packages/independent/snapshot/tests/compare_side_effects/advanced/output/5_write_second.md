@@ -1,8 +1,7 @@
 ```js
-async () => {await writeFile(new URL("./a.txt", import.meta.url), "a_2");
+await writeFile(new URL("./a.txt", import.meta.url), "a_2");
 await writeFile(new URL("./b.txt", import.meta.url), "b_2");
 await writeFile(new URL("./c.txt", import.meta.url), "c_2");
-}
 ```
 
 # 1/5 return promise
