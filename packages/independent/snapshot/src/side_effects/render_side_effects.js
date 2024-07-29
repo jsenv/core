@@ -1,6 +1,12 @@
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 
-export const renderSideEffects = (sideEffects, { titleLevel = 1 } = {}) => {
+export const createMaxLineCondition = (maxLines) => (sideEffect, text) =>
+  text.split("\n").length < maxLines;
+
+export const renderSideEffects = (
+  sideEffects,
+  { detailsShouldOpen = createMaxLineCondition(5) } = {},
+) => {
   const { rootDirectoryUrl, replaceFilesystemWellKnownValues } =
     sideEffects.options;
 
@@ -21,7 +27,6 @@ export const renderSideEffects = (sideEffects, { titleLevel = 1 } = {}) => {
     if (markdown) {
       markdown += "\n\n";
     }
-
     const { render } = sideEffect;
     if (typeof render !== "object") {
       throw new TypeError(
@@ -31,11 +36,17 @@ export const renderSideEffects = (sideEffects, { titleLevel = 1 } = {}) => {
     const { md } = sideEffect.render;
     const { label, text } = md({ replace, rootDirectoryUrl });
 
-    let title = `${"#".repeat(titleLevel)} ${index + 1}. ${label}`;
-    markdown += title;
+    const stepLabel = `${index + 1}. ${label}`;
     if (text) {
-      markdown += "\n\n";
-      markdown += text;
+      const shouldOpen = detailsShouldOpen(sideEffect, text);
+      let step = `<details${shouldOpen ? " open" : ""}>
+  <summary>${stepLabel}</summary>
+
+${text}
+</details>`;
+      markdown += step;
+    } else {
+      markdown += stepLabel;
     }
     index++;
   }

@@ -1,11 +1,15 @@
-# 1. write file "./toto.txt"
+<details open>
+  <summary>1. write file "./toto.txt"</summary>
 
 ```txt
 4_write_inside_base
 ```
+</details>
 
-# 2. return
+<details open>
+  <summary>2. return</summary>
 
 ```js
 undefined
 ```
+</details>

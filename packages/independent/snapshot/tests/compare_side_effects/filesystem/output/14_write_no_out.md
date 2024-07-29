@@ -1,4 +1,5 @@
-# 1. write 2 files into "./dist/"
+<details>
+  <summary>1. write 2 files into "./dist/"</summary>
 
 ## a_1.txt
 
@@ -10,9 +11,12 @@
 ```txt
 
 ```
+</details>
 
-# 2. return
+<details open>
+  <summary>2. return</summary>
 
 ```js
 undefined
 ```
+</details>

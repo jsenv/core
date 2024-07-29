@@ -1,7 +1,9 @@
-# 1. return promise
+1. return promise
 
-# 2. resolve
+<details open>
+  <summary>2. resolve</summary>
 
 ```js
 undefined
 ```
+</details>

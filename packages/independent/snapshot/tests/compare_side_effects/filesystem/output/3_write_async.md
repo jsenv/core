@@ -1,13 +1,17 @@
-# 1. return promise
+1. return promise
 
-# 2. write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/filesystem/toto.txt"
+<details open>
+  <summary>2. write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/filesystem/toto.txt"</summary>
 
 ```txt
 3_write_async
 ```
+</details>
 
-# 3. resolve
+<details open>
+  <summary>3. resolve</summary>
 
 ```js
 undefined
 ```
+</details>
