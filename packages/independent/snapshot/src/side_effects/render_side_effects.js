@@ -39,18 +39,25 @@ export const renderSideEffects = (
     const stepLabel = `${index + 1}. ${label}`;
     if (text) {
       const shouldOpen = detailsShouldOpen(sideEffect, text);
-      let step = `<details${shouldOpen ? " open" : ""}>
-  <summary>${stepLabel}</summary>
-
-${text}
-</details>`;
-      markdown += step;
+      markdown += renderMarkdownDetails(text, {
+        open: shouldOpen,
+        summary: stepLabel,
+      });
     } else {
       markdown += stepLabel;
     }
     index++;
   }
   return markdown;
+};
+
+export const renderMarkdownDetails = (text, { open, summary, indent = 0 }) => {
+  return `${"  ".repeat(indent)}<details${open ? " open" : ""}>
+${"  ".repeat(indent + 1)}<summary>${summary}</summary>
+
+${text}
+</details>`;
+  // ${"  ".repeat(indent)}</details>`;
 };
 
 export const wrapIntoMarkdownBlock = (value, blockName = "") => {

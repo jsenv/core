@@ -175,8 +175,14 @@ await startTesting(({ test }) => {
     test(
       "14_write_no_out",
       () => {
-        writeFileSync(new URL("./dist/a_1.txt", import.meta.url));
-        writeFileSync(new URL("./dist/a_2.txt", import.meta.url));
+        writeFileSync(
+          new URL("./dist/a_1.txt", import.meta.url),
+          "a_1_content",
+        );
+        writeFileSync(
+          new URL("./dist/a_2.txt", import.meta.url),
+          "a_2_content",
+        );
       },
       {
         filesystemEffects: {

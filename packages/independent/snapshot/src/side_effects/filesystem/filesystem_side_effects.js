@@ -3,7 +3,10 @@ import { urlIsInsideOf, urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
 import { pathToFileURL } from "node:url";
 import { takeDirectorySnapshot } from "../../filesystem_snapshot.js";
 import { createWellKnown } from "../../filesystem_well_known_values.js";
-import { wrapIntoMarkdownBlock } from "../render_side_effects.js";
+import {
+  renderMarkdownDetails,
+  wrapIntoMarkdownBlock,
+} from "../render_side_effects.js";
 import { groupFileSideEffectsPerDirectory } from "./group_file_side_effects_per_directory.js";
 import { spyFilesystemCalls } from "./spy_filesystem_calls.js";
 
@@ -96,18 +99,27 @@ export const filesystemSideEffects = (
                     }
 
                     const generateInlineFiles = () => {
+                      let ulIndent = 1;
+                      let liIndent = ulIndent + 1;
+                      let detailsIndent = ulIndent + 2;
                       let text = "";
+                      text += `\n${"  ".repeat(ulIndent)}<ul>`;
                       for (const fileSideEffect of fileSideEffectArray) {
-                        if (text) {
-                          text += "\n";
-                        }
-                        text += `## ${urlToRelativeUrl(fileSideEffect.value.url, commonDirectoryUrl)}`;
-                        text += "\n\n";
-                        text += renderWriteFileContentMd(
-                          { replace },
-                          fileSideEffect,
+                        text += `\n${"  ".repeat(liIndent)}<li>`;
+                        text += `\n`;
+                        text += renderMarkdownDetails(
+                          renderWriteFileContentMd({ replace }, fileSideEffect),
+                          {
+                            summary: urlToRelativeUrl(
+                              fileSideEffect.value.url,
+                              commonDirectoryUrl,
+                            ),
+                            indent: detailsIndent,
+                          },
                         );
+                        text += `\n${"  ".repeat(liIndent)}</li>`;
                       }
+                      text += `\n${"  ".repeat(ulIndent)}</ul>`;
                       return text;
                     };
                     // const fileGroupValue = {};

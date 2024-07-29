@@ -1,16 +1,27 @@
 <details>
   <summary>1. write 2 files into "./dist/"</summary>
 
-## a_1.txt
+
+  <ul>
+    <li>
+      <details>
+        <summary>a_1.txt</summary>
 
 ```txt
-
+a_1_content
 ```
-## a_2.txt
+</details>
+    </li>
+    <li>
+      <details>
+        <summary>a_2.txt</summary>
 
 ```txt
-
+a_2_content
 ```
+</details>
+    </li>
+  </ul>
 </details>
 
 <details open>
