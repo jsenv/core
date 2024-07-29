@@ -1,5 +1,6 @@
 import { readDirectorySync, writeFileSync } from "@jsenv/filesystem";
 import { urlIsInsideOf, urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
+import { pathToFileURL } from "node:url";
 import { takeDirectorySnapshot } from "../../filesystem_snapshot.js";
 import { createWellKnown } from "../../filesystem_well_known_values.js";
 import { wrapIntoMarkdownBlock } from "../render_side_effects.js";
@@ -27,7 +28,9 @@ export const filesystemSideEffects = (
       let writeFile;
       let { include, preserve, baseDirectory, outDirectory } =
         filesystemSideEffectsOptions;
-      outDirectory = new URL(outDirectory, sideEffectFileUrl);
+      if (outDirectory) {
+        outDirectory = new URL(outDirectory, sideEffectFileUrl);
+      }
 
       const getUrlDisplayed = (url) => {
         if (baseDirectory) {
@@ -67,6 +70,35 @@ export const filesystemSideEffects = (
           // gather all file side effect next to each other
           // collapse them if they have a shared ancestor
           groupFileSideEffectsPerDirectory(sideEffects, {
+            createWriteFileGroupSideEffect: (
+              fileSideEffectsArray,
+              commonDirectoryPath,
+            ) => {
+              return {
+                type: "fs:write_file_group",
+                value: {},
+                render: {
+                  md: () => {
+                    const numberOfFiles = fileSideEffectsArray.length;
+                    const commonDirectoryUrl =
+                      pathToFileURL(commonDirectoryPath);
+                    if (outDirectory) {
+                      const commonDirectoryOutUrl =
+                        getToUrl(commonDirectoryUrl);
+                      return {
+                        label: `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}" (see ${getToUrlDisplayed(commonDirectoryOutUrl)})`,
+                      };
+                    }
+                    // const fileGroupValue = {};
+                    // fileGroupValue[fileEffect.value.url] = fileEffect.value.content;
+                    return {
+                      label: `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}"`,
+                      text: ``, // TODO: write all files inline
+                    };
+                  },
+                },
+              };
+            },
             getUrlDisplayed,
             outDirectory,
             getToUrl,
@@ -74,15 +106,11 @@ export const filesystemSideEffects = (
           });
         });
       }
+      const writeFileCallbackSet = new Set();
       if (outDirectory) {
         const fsEffectsOutDirectorySnapshot =
           takeDirectorySnapshot(outDirectory);
-        const writeFileCallbackSet = new Set();
         addFinallyCallback(() => {
-          for (const writeFileCallback of writeFileCallbackSet) {
-            writeFileCallback();
-          }
-          writeFileCallbackSet.clear();
           fsEffectsOutDirectorySnapshot.compare();
         });
         writeFile = (url, content) => {
@@ -159,6 +187,10 @@ export const filesystemSideEffects = (
       );
       return () => {
         filesystemSpy.restore();
+        for (const writeFileCallback of writeFileCallbackSet) {
+          writeFileCallback();
+        }
+        writeFileCallbackSet.clear();
       };
     },
   };

@@ -1,4 +1,4 @@
-1. write directory "@jsenv/core/packages/independent/snapshot/tests/function_side_effects_snapshot/filesystem/dir_sync"
+1. write directory "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/filesystem/dir_sync"
 
 2. return
 ```js

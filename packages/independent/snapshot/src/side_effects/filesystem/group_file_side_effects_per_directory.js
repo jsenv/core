@@ -1,9 +1,8 @@
-import { pathToFileURL } from "node:url";
 import { findCommonAncestorPath } from "./common_ancestor_path.js";
 
 export const groupFileSideEffectsPerDirectory = (
   sideEffects,
-  { getUrlDisplayed, outDirectory, getToUrl, getToUrlDisplayed },
+  { createWriteFileGroupSideEffect },
 ) => {
   const groupArray = groupFileTogether(sideEffects);
 
@@ -19,33 +18,16 @@ export const groupFileSideEffectsPerDirectory = (
       fileEffectArray,
       convertToPathname,
     );
-    const fileGroupValue = {};
     const firstEffect = fileEffectArray[0];
     const firstEffectIndex = sideEffects.indexOf(firstEffect);
     for (const fileEffect of fileEffectArray) {
-      fileGroupValue[fileEffect.value.url] = fileEffect.value.content;
       sideEffects.splice(sideEffects.indexOf(fileEffect), 1);
     }
-    sideEffects.splice(firstEffectIndex, 0, {
-      type: "fs:write_file_group",
-      value: fileGroupValue,
-      render: {
-        md: () => {
-          const numberOfFiles = fileEffectArray.length;
-          const commonAncestorUrl = pathToFileURL(commonAncestorPath);
-          if (outDirectory) {
-            const commonAncestorToUrl = getToUrl(commonAncestorUrl);
-            return {
-              label: `write ${numberOfFiles} files into ${getUrlDisplayed(commonAncestorUrl)} (see ${getToUrlDisplayed(commonAncestorToUrl)})`,
-            };
-          }
-          return {
-            label: `write ${numberOfFiles} files into ${getUrlDisplayed(commonAncestorUrl)}`,
-            text: ``, // TODO: write all files inline
-          };
-        },
-      },
-    });
+    sideEffects.splice(
+      firstEffectIndex,
+      0,
+      createWriteFileGroupSideEffect(fileEffectArray, commonAncestorPath),
+    );
   }
 };
 
