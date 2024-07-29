@@ -15,7 +15,7 @@ import { relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
-import { createTaskLog, UNICODE } from "@jsenv/humanize";
+import { ANSI, createTaskLog, UNICODE } from "@jsenv/humanize";
 import { ensurePathnameTrailingSlash, urlToRelativeUrl } from "@jsenv/urls";
 import prompts from "prompts";
 
@@ -88,7 +88,7 @@ dir: {
     {
       type: "text",
       name: "directory",
-      message: "Enter a directory:",
+      message: `Directory: ${ANSI.color(`(Return to use current directory)`, ANSI.GREY)}`,
       initial: ".",
     },
     {
@@ -98,7 +98,8 @@ dir: {
       },
     },
   );
-  directoryUrl = ensurePathnameTrailingSlash(new URL(result.directory, cwdUrl));
+  let { directory } = result;
+  directoryUrl = ensurePathnameTrailingSlash(new URL(directory, cwdUrl));
 }
 if (directoryUrl.href !== cwdUrl.href) {
   const dir = relative(fileURLToPath(cwdUrl), fileURLToPath(directoryUrl));
