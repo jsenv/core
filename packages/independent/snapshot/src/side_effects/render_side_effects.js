@@ -1,15 +1,9 @@
-import { createReplaceFilesystemWellKnownValues } from "../filesystem_well_known_values.js";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 
-export const renderSideEffects = (
-  sideEffects,
-  {
-    rootDirectoryUrl,
-    replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
-      rootDirectoryUrl,
-    }),
-  },
-) => {
+export const renderSideEffects = (sideEffects) => {
+  const { rootDirectoryUrl, replaceFilesystemWellKnownValues } =
+    sideEffects.options;
+
   const replace = (value, options) => {
     return replaceFluctuatingValues(value, {
       replaceFilesystemWellKnownValues,
