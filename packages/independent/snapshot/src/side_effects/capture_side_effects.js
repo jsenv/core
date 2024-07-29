@@ -132,7 +132,7 @@ export const captureSideEffects = (fn, { sideEffectDetectors } = {}) => {
     delete process.env.SNAPSHOTING_FUNCTION_SIDE_EFFECTS;
     functionExecutingCount--;
     for (const finallyCallback of finallyCallbackSet) {
-      finallyCallback();
+      finallyCallback(sideEffects);
     }
     finallyCallbackSet.clear();
   };

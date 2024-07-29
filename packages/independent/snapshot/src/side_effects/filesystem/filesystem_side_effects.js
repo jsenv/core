@@ -25,8 +25,9 @@ export const filesystemSideEffects = (
     name: "filesystem",
     install: (addSideEffect, { addFinallyCallback }) => {
       let writeFile;
-      const { include, preserve, baseDirectory, outDirectory } =
+      let { include, preserve, baseDirectory, outDirectory } =
         filesystemSideEffectsOptions;
+      outDirectory = new URL(outDirectory, sideEffectFileUrl);
 
       const getUrlDisplayed = (url) => {
         if (baseDirectory) {
@@ -77,7 +78,7 @@ export const filesystemSideEffects = (
         const fsEffectsOutDirectorySnapshot =
           takeDirectorySnapshot(outDirectory);
         const writeFileCallbackSet = new Set();
-        addFinallyCallback.add(() => {
+        addFinallyCallback(() => {
           for (const writeFileCallback of writeFileCallbackSet) {
             writeFileCallback();
           }
@@ -85,7 +86,7 @@ export const filesystemSideEffects = (
           fsEffectsOutDirectorySnapshot.compare();
         });
         writeFile = (url, content) => {
-          const { toUrl } = getToUrl(url);
+          const toUrl = getToUrl(url);
           writeFileCallbackSet.add(() => {
             writeFileSync(toUrl, content);
           });
