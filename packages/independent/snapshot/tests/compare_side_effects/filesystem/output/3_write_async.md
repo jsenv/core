@@ -1,6 +1,6 @@
 1. return promise
 
-2. write file "@jsenv/core/packages/independent/snapshot/tests/function_side_effects_snapshot/filesystem/toto.txt"
+2. write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/filesystem/toto.txt"
 ```txt
 3_write_async
 ```
