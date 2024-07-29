@@ -1,6 +1,6 @@
 /*
  * Execute all test files
- * Read more in https://github.com/jsenv/core/wiki
+ * Read more in https://github.com/jsenv/core
  */
 
 import { executeTestPlan, chromium, nodeWorkerThread } from "@jsenv/test";
@@ -8,12 +8,12 @@ import { executeTestPlan, chromium, nodeWorkerThread } from "@jsenv/test";
 await executeTestPlan({
   rootDirectoryUrl: new URL("../", import.meta.url),
   testPlan: {
-    "./src/**/*.test.html": {
+    "./**/*.test.html": {
       chromium: {
         runtime: chromium(),
       },
     },
-    "./src/**/*.test.mjs": {
+    "./**/*.test.mjs": {
       node: {
         runtime: nodeWorkerThread(),
       },

@@ -1,6 +1,6 @@
 /*
- * Start a development server for files inside src/
- * Read more in https://github.com/jsenv/core/wiki
+ * Start a development server for files inside source directory
+ * Read more in https://github.com/jsenv/core
  */
 
 import open from "open";
