@@ -71,7 +71,7 @@ Options:
   process.exit(0);
 }
 
-console.log("Welcome in jsenv CLI");
+console.log("Welcome in jsenv CLI; this will install jsenv in a directory.");
 const commands = [];
 const cwdUrl = ensurePathnameTrailingSlash(pathToFileURL(process.cwd()));
 let directoryUrl;
@@ -89,6 +89,7 @@ dir: {
       type: "text",
       name: "directory",
       message: "Enter a directory:",
+      initial: ".",
     },
     {
       onCancel: () => {
