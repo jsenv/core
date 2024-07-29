@@ -1,6 +1,7 @@
-1. return promise
+# 1. return promise
 
-2. resolve
+# 2. resolve
+
 ```js
 undefined
 ```

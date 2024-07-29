@@ -71,29 +71,47 @@ export const filesystemSideEffects = (
           // collapse them if they have a shared ancestor
           groupFileSideEffectsPerDirectory(sideEffects, {
             createWriteFileGroupSideEffect: (
-              fileSideEffectsArray,
+              fileSideEffectArray,
               commonDirectoryPath,
             ) => {
               return {
                 type: "fs:write_file_group",
                 value: {},
                 render: {
-                  md: () => {
-                    const numberOfFiles = fileSideEffectsArray.length;
+                  md: ({ replace }) => {
+                    const numberOfFiles = fileSideEffectArray.length;
                     const commonDirectoryUrl =
                       pathToFileURL(commonDirectoryPath);
                     if (outDirectory) {
                       const commonDirectoryOutUrl =
                         getToUrl(commonDirectoryUrl);
                       return {
-                        label: `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}" (see ${getToUrlDisplayed(commonDirectoryOutUrl)})`,
+                        label: replace(
+                          `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}" (see ${getToUrlDisplayed(commonDirectoryOutUrl)})`,
+                        ),
                       };
                     }
+
+                    const generateInlineFiles = () => {
+                      let text = "";
+                      for (const fileSideEffect of fileSideEffectArray) {
+                        if (text) {
+                          text += "\n";
+                        }
+                        text += `## ${getUrlDisplayed(fileSideEffect.value.url)}`;
+                        text += "\n\n";
+                        text += renderWriteFileContentMd(
+                          { replace },
+                          fileSideEffect,
+                        );
+                      }
+                      return text;
+                    };
                     // const fileGroupValue = {};
                     // fileGroupValue[fileEffect.value.url] = fileEffect.value.content;
                     return {
                       label: `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}"`,
-                      text: ``, // TODO: write all files inline
+                      text: generateInlineFiles(),
                     };
                   },
                 },
@@ -134,21 +152,22 @@ export const filesystemSideEffects = (
         };
       } else {
         writeFile = (url, content) => {
-          addSideEffect({
+          const writeFileSideEffect = {
             type: "fs:write_file",
             value: { url: String(url), content },
             render: {
               md: ({ replace }) => {
                 return {
                   label: replace(`write file "${getUrlDisplayed(url)}"`),
-                  text: wrapIntoMarkdownBlock(
-                    replace(content, { fileUrl: url }),
-                    urlToExtension(url).slice(1),
+                  text: renderWriteFileContentMd(
+                    { replace },
+                    writeFileSideEffect,
                   ),
                 };
               },
             },
-          });
+          };
+          addSideEffect(writeFileSideEffect);
         };
       }
       const filesystemSpy = spyFilesystemCalls(
@@ -194,4 +213,12 @@ export const filesystemSideEffects = (
       };
     },
   };
+};
+
+const renderWriteFileContentMd = ({ replace }, fileSideEffect) => {
+  const { url, content } = fileSideEffect.value;
+  return wrapIntoMarkdownBlock(
+    replace(content, { fileUrl: url }),
+    urlToExtension(url).slice(1),
+  );
 };

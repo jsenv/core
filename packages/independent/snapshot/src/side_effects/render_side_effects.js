@@ -1,6 +1,6 @@
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 
-export const renderSideEffects = (sideEffects) => {
+export const renderSideEffects = (sideEffects, { titleLevel = 1 } = {}) => {
   const { rootDirectoryUrl, replaceFilesystemWellKnownValues } =
     sideEffects.options;
 
@@ -30,10 +30,11 @@ export const renderSideEffects = (sideEffects) => {
     }
     const { md } = sideEffect.render;
     const { label, text } = md({ replace, rootDirectoryUrl });
-    let title = `${index + 1}. ${label}`;
+
+    let title = `${"#".repeat(titleLevel)} ${index + 1}. ${label}`;
     markdown += title;
     if (text) {
-      markdown += "\n";
+      markdown += "\n\n";
       markdown += text;
     }
     index++;
