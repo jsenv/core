@@ -1,6 +1,6 @@
 /*
  * Optimize source files and write them into "./dist/"
- * Read more in https://github.com/jsenv/core/wiki
+ * Read more in https://github.com/jsenv/core
  */
 
 import { build } from "@jsenv/core";

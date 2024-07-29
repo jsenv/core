@@ -1,7 +1,6 @@
 /*
- * Start a server serving files into dist/.
- * Useful to test the files generated during the build
- * Read more in https://github.com/jsenv/core/wiki
+ * Start a server serving files into dist/
+ * Read more in https://github.com/jsenv/core
  */
 
 import open from "open";

@@ -15,8 +15,12 @@ import { relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
-import { createTaskLog, UNICODE } from "@jsenv/humanize";
-import { ensurePathnameTrailingSlash, urlToRelativeUrl } from "@jsenv/urls";
+import { ANSI, createTaskLog, UNICODE } from "@jsenv/humanize";
+import {
+  ensurePathnameTrailingSlash,
+  urlToFilename,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 import prompts from "prompts";
 
 // not using readdir to control order
@@ -71,7 +75,7 @@ Options:
   process.exit(0);
 }
 
-console.log("Welcome in jsenv CLI");
+console.log("Welcome in jsenv CLI; this will install jsenv in a directory.");
 const commands = [];
 const cwdUrl = ensurePathnameTrailingSlash(pathToFileURL(process.cwd()));
 let directoryUrl;
@@ -88,7 +92,8 @@ dir: {
     {
       type: "text",
       name: "directory",
-      message: "Enter a directory:",
+      message: `Directory: ${ANSI.color(`(Return to use current directory)`, ANSI.GREY)}`,
+      initial: ".",
     },
     {
       onCancel: () => {
@@ -97,15 +102,21 @@ dir: {
       },
     },
   );
-  directoryUrl = ensurePathnameTrailingSlash(new URL(result.directory, cwdUrl));
+  let { directory } = result;
+  directoryUrl = ensurePathnameTrailingSlash(new URL(directory, cwdUrl));
 }
+const runWithChildProcess = (command) => {
+  console.log(command);
+  execSync(command, {
+    cwd: directoryUrl,
+    stdio: [0, 1, 2],
+  });
+};
 if (directoryUrl.href !== cwdUrl.href) {
   const dir = relative(fileURLToPath(cwdUrl), fileURLToPath(directoryUrl));
   commands.push({
     label: `cd ${dir}`,
-    run: () => {
-      process.chdir(dir);
-    },
+    run: () => {},
   });
 }
 let templateName;
@@ -165,7 +176,7 @@ write_files: {
     "package.json": (existingContent, templateContent) => {
       const existingPackage = JSON.parse(existingContent);
       const templatePackage = JSON.parse(templateContent);
-      const override = (left, right, allowedKeys) => {
+      const override = (left, right, { parentKey, allowedKeys }) => {
         if (right === null) {
           return left === undefined ? null : left;
         }
@@ -189,7 +200,16 @@ write_files: {
                 continue;
               }
               const leftValue = left[keyToVisit];
-              left[keyToVisit] = override(leftValue, rightValue);
+              const finalValue = override(leftValue, rightValue, {
+                parentKey: keyToVisit,
+              });
+              left[keyToVisit] = finalValue;
+              if (parentKey === "scripts" && keyToVisit === "start") {
+                commands.push({
+                  label: "npm start",
+                  run: () => runWithChildProcess("npm start"),
+                });
+              }
             }
             return left;
           }
@@ -203,11 +223,9 @@ write_files: {
       const existingDevDependencies = existingPackage.devDependencies
         ? { ...existingPackage.devDependencies }
         : {};
-      override(existingPackage, templatePackage, [
-        "scripts",
-        "dependencies",
-        "devDependencies",
-      ]);
+      override(existingPackage, templatePackage, {
+        allowedKeys: ["scripts", "dependencies", "devDependencies"],
+      });
       const finalDependencies = existingPackage.dependencies || {};
       const finalDevDependencies = existingPackage.devDependencies || {};
       if (
@@ -218,12 +236,7 @@ write_files: {
       ) {
         commands.push({
           label: "npm install",
-          run: () => {
-            console.log("npm install");
-            execSync("npm install", {
-              stdio: [0, 1, 2],
-            });
-          },
+          run: () => runWithChildProcess("npm install"),
         });
       }
       if (existingContent.startsWith("{\n")) {
@@ -238,6 +251,18 @@ write_files: {
     `./template-${templateName}/`,
     import.meta.url,
   );
+  const isWebAndHaveRootHtmlFile = (() => {
+    if (!templateName.startsWith("web")) {
+      return false;
+    }
+    if (existsSync(new URL("./index.html", directoryUrl))) {
+      return true;
+    }
+    if (existsSync(new URL("./main.html", directoryUrl))) {
+      return true;
+    }
+    return false;
+  })();
   const copyDirectoryContent = (fromDirectoryUrl, toDirectoryUrl) => {
     if (!existsSync(toDirectoryUrl)) {
       mkdirSync(toDirectoryUrl, { recursive: true });
@@ -260,19 +285,14 @@ write_files: {
       const fromStat = statSync(fromUrl);
       if (fromStat.isDirectory()) {
         if (directoryEntryName === "src" || directoryEntryName === "tests") {
-          // copy src and tests if they don't exists
           if (existsSync(toUrl)) {
+            // copy src and tests if they don't exists
             continue;
           }
-          // for web the presence of index.html or main.html at the root
-          // prevent src/ content from being copied
-          if (templateName.startsWith("web")) {
-            if (existsSync(new URL("./index.html", directoryUrl))) {
-              continue;
-            }
-            if (existsSync(new URL("./main.html", directoryUrl))) {
-              continue;
-            }
+          if (isWebAndHaveRootHtmlFile) {
+            // for web the presence of index.html or main.html at the root
+            // prevent src/ content from being copied
+            continue;
           }
         }
         copyDirectoryContent(
@@ -281,19 +301,35 @@ write_files: {
         );
         continue;
       }
+      let templateFileContent = String(readFileSync(toUrl));
+      if (isWebAndHaveRootHtmlFile) {
+        if (directoryEntryName === ".eslintrc.cjs") {
+          templateFileContent = templateFileContent.replaceAll(
+            'files: ["./src/**"]',
+            'files: ["./index.html", "./src/**"]',
+          );
+        } else {
+          templateFileContent = templateFileContent.replaceAll(
+            'new URL("../src/", import.meta.url)',
+            'new URL("../", import.meta.url)',
+          );
+        }
+      }
       if (!existsSync(toUrl)) {
         if (directoryEntryName === "package.json") {
           commands.push({
             label: "npm install",
-            run: () => {
-              console.log("npm install");
-              execSync("npm install", {
-                stdio: [0, 1, 2],
-              });
-            },
+            run: () => runWithChildProcess("npm install"),
+          });
+          commands.push({
+            label: "npm start",
+            run: () => runWithChildProcess("npm start"),
           });
         }
-        writeFileSync(toUrl, readFileSync(fromUrl));
+        const packageTemplateObject = JSON.parse(templateFileContent);
+        packageTemplateObject.name = urlToFilename(directoryUrl);
+        const packageString = JSON.stringify(packageTemplateObject, null, "  ");
+        writeFileSync(toUrl, packageString);
         continue;
       }
       const relativeUrl = urlToRelativeUrl(fromUrl, templateSourceDirectoryUrl);
@@ -302,11 +338,10 @@ write_files: {
         // when there is no handler the file is kept as is
         continue;
       }
-      const existingContent = readFileSync(toUrl);
-      const templateContent = readFileSync(fromUrl);
+      const existingContent = String(readFileSync(toUrl));
       const finalContent = overrideHandler(
-        String(existingContent),
-        String(templateContent),
+        existingContent,
+        templateFileContent,
       );
       writeFileSync(toUrl, finalContent);
     }
