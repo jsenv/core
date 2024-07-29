@@ -1,9 +1,9 @@
 import { readDirectorySync, writeFileSync } from "@jsenv/filesystem";
-import { urlIsInsideOf, urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
+import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { pathToFileURL } from "node:url";
 import { takeDirectorySnapshot } from "../../filesystem_snapshot.js";
 import { createWellKnown } from "../../filesystem_well_known_values.js";
-import { wrapIntoMarkdownBlock } from "../render_side_effects.js";
+import { renderFileContent } from "../render_side_effects.js";
 import { groupFileSideEffectsPerDirectory } from "./group_file_side_effects_per_directory.js";
 import { spyFilesystemCalls } from "./spy_filesystem_calls.js";
 
@@ -89,9 +89,7 @@ export const filesystemSideEffects = (
                         commonDirectoryOutUrl,
                       );
                       return {
-                        label: replace(
-                          `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}" (see [${outDirectoryUrlDisplayed}](outDirectoryUrlDisplayed))`,
-                        ),
+                        label: `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}" (see [${outDirectoryUrlDisplayed}](outDirectoryUrlDisplayed))`,
                       };
                     }
 
@@ -103,9 +101,12 @@ export const filesystemSideEffects = (
                           commonDirectoryUrl,
                         )}`;
                         text += `\n`;
-                        text += renderWriteFileContentMd(
+                        text += renderFileContent(
+                          {
+                            url: fileSideEffect.value.url,
+                            value: fileSideEffect.value.content,
+                          },
                           { replace },
-                          fileSideEffect,
                         );
                       }
                       return text;
@@ -143,12 +144,10 @@ export const filesystemSideEffects = (
             type: "fs:write_file",
             value: { url: String(url), content },
             render: {
-              md: ({ replace }) => {
+              md: () => {
                 const outUrlDisplayed = getToUrlDisplayed(toUrl);
                 return {
-                  label: replace(
-                    `write file "${getUrlDisplayed(url)}" (see [${outUrlDisplayed}](${outUrlDisplayed}))`,
-                  ),
+                  label: `write file "${getUrlDisplayed(url)}" (see [${outUrlDisplayed}](${outUrlDisplayed}))`,
                 };
               },
             },
@@ -160,13 +159,14 @@ export const filesystemSideEffects = (
             type: "fs:write_file",
             value: { url: String(url), content },
             render: {
-              md: ({ replace }) => {
+              md: () => {
                 return {
-                  label: replace(`write file "${getUrlDisplayed(url)}"`),
-                  text: renderWriteFileContentMd(
-                    { replace },
-                    writeFileSideEffect,
-                  ),
+                  label: `write file "${getUrlDisplayed(url)}"`,
+                  text: {
+                    type: "file_content",
+                    url,
+                    value: writeFileSideEffect.value.content,
+                  },
                 };
               },
             },
@@ -182,9 +182,9 @@ export const filesystemSideEffects = (
               type: "fs:write_directory",
               value: { url: String(url) },
               render: {
-                md: ({ replace }) => {
+                md: () => {
                   return {
-                    label: replace(`write directory "${getUrlDisplayed(url)}"`),
+                    label: `write directory "${getUrlDisplayed(url)}"`,
                   };
                 },
               },
@@ -217,12 +217,4 @@ export const filesystemSideEffects = (
       };
     },
   };
-};
-
-const renderWriteFileContentMd = ({ replace }, fileSideEffect) => {
-  const { url, content } = fileSideEffect.value;
-  return wrapIntoMarkdownBlock(
-    replace(content, { fileUrl: url }),
-    urlToExtension(url).slice(1),
-  );
 };

@@ -3,6 +3,7 @@ import { takeFileSnapshot } from "../filesystem_snapshot.js";
 import { createCaptureSideEffects } from "./create_capture_side_effects.js";
 import { renderSideEffects } from "./render_side_effects.js";
 
+// TODO: write some jsdoc
 export const snapshotTests = async (
   fnRegisteringTest,
   snapshotFileUrl,

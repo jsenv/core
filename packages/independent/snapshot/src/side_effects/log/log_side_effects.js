@@ -1,5 +1,4 @@
 import { hookIntoMethod } from "../hook_into_method.js";
-import { wrapIntoMarkdownBlock } from "../render_side_effects.js";
 
 const logSideEffectsOptionsDefault = {
   prevent: true,
@@ -19,13 +18,13 @@ export const logSideEffects = (logSideEffectsOptions) => {
           type,
           value: message,
           render: {
-            md: ({ replace }) => {
+            md: () => {
               return {
                 label: type,
-                text: wrapIntoMarkdownBlock(
-                  replace(message, { stringType: "console" }),
-                  "console",
-                ),
+                text: {
+                  type: "console",
+                  value: message,
+                },
               };
             },
           },

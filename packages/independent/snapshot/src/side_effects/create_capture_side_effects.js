@@ -1,10 +1,7 @@
 import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
-import { createException } from "@jsenv/exception";
 import { createReplaceFilesystemWellKnownValues } from "../filesystem_well_known_values.js";
-import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 import { filesystemSideEffects } from "./filesystem/filesystem_side_effects.js";
 import { logSideEffects } from "./log/log_side_effects.js";
-import { wrapIntoMarkdownBlock } from "./render_side_effects.js";
 
 export const createCaptureSideEffects = ({
   logEffects = true,
@@ -50,7 +47,11 @@ export const createCaptureSideEffects = ({
       render: {
         md: () => {
           return {
-            text: wrapIntoMarkdownBlock(sourceCode, "js"),
+            type: "source_code",
+            text: {
+              type: "source_code",
+              value: sourceCode,
+            },
           };
         },
       },
@@ -88,17 +89,13 @@ export const createCaptureSideEffects = ({
         type: "throw",
         value: valueThrow,
         render: {
-          md: (options) => {
+          md: () => {
             return {
               label: "throw",
-              text: wrapIntoMarkdownBlock(
-                renderValueThrownOrRejected(
-                  createException(valueThrow, {
-                    rootDirectoryUrl: options.rootDirectoryUrl,
-                  }),
-                  options,
-                ),
-              ),
+              text: {
+                type: "cause",
+                value: valueThrow,
+              },
             };
           },
         },
@@ -122,13 +119,13 @@ export const createCaptureSideEffects = ({
           type: "return",
           value: valueReturned,
           render: {
-            md: (options) => {
+            md: () => {
               return {
                 label: "return",
-                text: wrapIntoMarkdownBlock(
-                  renderReturnValueOrResolveValue(valueReturned, options),
-                  "js",
-                ),
+                text: {
+                  type: "js_value",
+                  value: valueReturned,
+                },
               };
             },
           },
@@ -140,13 +137,13 @@ export const createCaptureSideEffects = ({
         type: "resolve",
         value,
         render: {
-          md: (options) => {
+          md: () => {
             return {
               label: "resolve",
-              text: wrapIntoMarkdownBlock(
-                renderReturnValueOrResolveValue(value, options),
-                "js",
-              ),
+              text: {
+                type: "js_value",
+                value,
+              },
             };
           },
         },
@@ -157,17 +154,13 @@ export const createCaptureSideEffects = ({
         type: "reject",
         value: reason,
         render: {
-          md: (options) => {
+          md: () => {
             return {
               label: "reject",
-              text: wrapIntoMarkdownBlock(
-                renderValueThrownOrRejected(
-                  createException(reason, {
-                    rootDirectoryUrl: options.rootDirectoryUrl,
-                  }),
-                  options,
-                ),
-              ),
+              text: {
+                type: "cause",
+                value: reason,
+              },
             };
           },
         },
@@ -215,26 +208,6 @@ export const createCaptureSideEffects = ({
     }
   };
   return capture;
-};
-
-const renderReturnValueOrResolveValue = (value, options) => {
-  if (value === undefined) {
-    return "undefined";
-  }
-  return replaceFluctuatingValues(JSON.stringify(value, null, "  "), {
-    stringType: "json",
-    ...options,
-  });
-};
-
-const renderValueThrownOrRejected = (value, options) => {
-  return replaceFluctuatingValues(
-    value ? value.stack || value.message || value : String(value),
-    {
-      stringType: "error",
-      ...options,
-    },
-  );
 };
 
 const RETURN_PROMISE = {};

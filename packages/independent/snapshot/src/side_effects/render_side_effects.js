@@ -1,3 +1,5 @@
+import { createException } from "@jsenv/exception";
+import { urlToExtension } from "@jsenv/urls";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 
 export const createDetailsOnMaxLineCondition =
@@ -58,12 +60,16 @@ export const renderSideEffects = (
       );
     }
     const { md } = sideEffect.render;
-    const { label, text } = md({ replace, rootDirectoryUrl });
+    let { label, text } = md({ replace, rootDirectoryUrl });
+    if (text) {
+      text = renderText(text, { replace, rootDirectoryUrl });
+    }
     if (sideEffect.type === "source_code") {
       markdown += text;
       continue;
     }
     if (label) {
+      label = replace(label);
       const sideEffectNumber = sideEffectNumberMap.get(sideEffect);
       const stepTitle = `${"#".repeat(titleLevel)} ${sideEffectNumber}/${lastSideEffectNumber} ${label}`;
       markdown += stepTitle;
@@ -91,6 +97,58 @@ export const renderSideEffects = (
     markdown += generatedByLink;
   }
   return markdown;
+};
+
+const renderText = (text, { replace, rootDirectoryUrl }) => {
+  if (text && typeof text === "object") {
+    if (text.type === "source_code") {
+      return wrapIntoMarkdownBlock(text.value, "js");
+    }
+    // TODO: "reason" is just an other use case of "js_value"
+    // -> we should detect when we deal with errors in the "js_value" if
+    if (text.type === "reason") {
+      const exception = createException(text.value, { rootDirectoryUrl });
+      const renderResult = replace(
+        exception
+          ? exception.stack || exception.message || exception
+          : String(exception),
+        {
+          stringType: "error",
+        },
+      );
+      return wrapIntoMarkdownBlock(renderResult);
+    }
+    if (text.type === "js_value") {
+      const value = text.value;
+      if (value === undefined) {
+        return wrapIntoMarkdownBlock("undefined", "js");
+      }
+      return wrapIntoMarkdownBlock(
+        replace(JSON.stringify(value, null, "  "), {
+          stringType: "json",
+        }),
+        "js",
+      );
+    }
+    if (text.type === "console") {
+      return wrapIntoMarkdownBlock(
+        replace(text.value, { stringType: "console" }),
+        "console",
+      );
+    }
+    if (text.type === "file_content") {
+      return renderFileContent(text, { replace });
+    }
+  }
+  return replace(text);
+};
+
+export const renderFileContent = (text, { replace }) => {
+  const { url } = text;
+  return wrapIntoMarkdownBlock(
+    replace(text.value, { fileUrl: url }),
+    urlToExtension(url).slice(1),
+  );
 };
 
 export const renderMarkdownDetails = (text, { open, summary, indent = 0 }) => {
