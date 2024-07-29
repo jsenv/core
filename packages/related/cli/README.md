@@ -30,7 +30,7 @@ Then you'll be prompted to select a template.
 ```
 
 A template is a project pre-configured with jsenv.  
-Selecting "web" would init [template-web/](./packages/related/cli/template-web/):
+Selecting "web" would init [template-web/](./template-web/):
 
 ```console
 > npx @jsenv/cli
