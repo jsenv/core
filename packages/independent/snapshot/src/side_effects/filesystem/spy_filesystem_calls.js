@@ -15,7 +15,7 @@ import {
   disableHooksWhileCalling,
   hookIntoMethod,
   METHOD_EXECUTION_NODE_CALLBACK,
-} from "./hook_into_method.js";
+} from "../hook_into_method.js";
 
 export const spyFilesystemCalls = (
   {

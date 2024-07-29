@@ -3,13 +3,9 @@ import { findCommonAncestorPath } from "./common_ancestor_path.js";
 
 export const groupFileSideEffectsPerDirectory = (
   sideEffects,
-  { getFilesystemActionInfo },
+  { getUrlDisplayed, outDirectory, getToUrl, getToUrlDisplayed },
 ) => {
   const groupArray = groupFileTogether(sideEffects);
-
-  const convertToPathname = (writeFileSideEffect) => {
-    return new URL(writeFileSideEffect.value.url).pathname;
-  };
 
   for (const group of groupArray) {
     if (group.id !== "file") {
@@ -23,22 +19,38 @@ export const groupFileSideEffectsPerDirectory = (
       fileEffectArray,
       convertToPathname,
     );
+    const fileGroupValue = {};
     const firstEffect = fileEffectArray[0];
     const firstEffectIndex = sideEffects.indexOf(firstEffect);
-    const commonAncestorUrl = pathToFileURL(commonAncestorPath);
-    const numberOfFiles = fileEffectArray.length;
-    const { label } = getFilesystemActionInfo(
-      `write ${numberOfFiles} files into`,
-      commonAncestorUrl,
-    );
     for (const fileEffect of fileEffectArray) {
+      fileGroupValue[fileEffect.value.url] = fileEffect.value.content;
       sideEffects.splice(sideEffects.indexOf(fileEffect), 1);
     }
     sideEffects.splice(firstEffectIndex, 0, {
-      type: "fs:write_file",
-      label,
+      type: "fs:write_file_group",
+      value: fileGroupValue,
+      render: {
+        md: () => {
+          const numberOfFiles = fileEffectArray.length;
+          const commonAncestorUrl = pathToFileURL(commonAncestorPath);
+          if (outDirectory) {
+            const commonAncestorToUrl = getToUrl(commonAncestorUrl);
+            return {
+              label: `write ${numberOfFiles} files into ${getUrlDisplayed(commonAncestorUrl)} (see ${getToUrlDisplayed(commonAncestorToUrl)})`,
+            };
+          }
+          return {
+            label: `write ${numberOfFiles} files into ${getUrlDisplayed(commonAncestorUrl)}`,
+            text: ``, // TODO: write all files inline
+          };
+        },
+      },
     });
   }
+};
+
+const convertToPathname = (writeFileSideEffect) => {
+  return new URL(writeFileSideEffect.value.url).pathname;
 };
 
 const groupBy = (array, groupCallback) => {

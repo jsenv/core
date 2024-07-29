@@ -1,7 +1,4 @@
-import {
-  snapshotFunctionSideEffects,
-  takeDirectorySnapshot,
-} from "@jsenv/snapshot";
+import { snapshotSideEffects, takeDirectorySnapshot } from "@jsenv/snapshot";
 
 const startTesting = async (fn) => {
   const scenarioMap = new Map();
@@ -20,7 +17,7 @@ const startTesting = async (fn) => {
     ? onlyScenarioMap
     : scenarioMap;
   for (const [scenario, { fn, options }] of activeScenarioMap) {
-    await snapshotFunctionSideEffects(
+    await snapshotSideEffects(
       fn,
       new URL(`./output/${scenario}.md`, import.meta.url),
       options,

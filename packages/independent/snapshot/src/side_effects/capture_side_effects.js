@@ -1,24 +1,24 @@
 import { createException } from "@jsenv/exception";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
-import { wrapIntoMarkdownBlock } from "./function_side_effects_renderer.js";
+import { wrapIntoMarkdownBlock } from "./render_side_effects.js";
 
 const RETURN_PROMISE = {};
-
 let functionExecutingCount = 0;
 
-export const collectFunctionSideEffects = (
-  fn,
-  sideEffectDetectors,
-  { rootDirectoryUrl },
-) => {
+export const captureSideEffects = (fn, { sideEffectDetectors } = {}) => {
   const sideEffects = [];
   const addSideEffect = (sideEffect) => {
     sideEffects.push(sideEffect);
     return sideEffect;
   };
   const finallyCallbackSet = new Set();
+  const addFinallyCallback = (finallyCallback) => {
+    finallyCallbackSet.add(finallyCallback);
+  };
   for (const sideEffectDetector of sideEffectDetectors) {
-    const uninstall = sideEffectDetector.install(addSideEffect);
+    const uninstall = sideEffectDetector.install(addSideEffect, {
+      addFinallyCallback,
+    });
     finallyCallbackSet.add(() => {
       uninstall();
     });
@@ -42,13 +42,21 @@ export const collectFunctionSideEffects = (
     sideEffects.push({
       type: "throw",
       value: valueThrow,
-      label: "throw",
-      text: wrapIntoMarkdownBlock(
-        renderValueThrownOrRejected(
-          createException(valueThrow, { rootDirectoryUrl }),
-          { rootDirectoryUrl },
-        ),
-      ),
+      render: {
+        md: (options) => {
+          return {
+            label: "throw",
+            text: wrapIntoMarkdownBlock(
+              renderValueThrownOrRejected(
+                createException(valueThrow, {
+                  rootDirectoryUrl: options.rootDirectoryUrl,
+                }),
+                options,
+              ),
+            ),
+          };
+        },
+      },
     });
   };
   const onReturn = (valueReturned) => {
@@ -56,20 +64,29 @@ export const collectFunctionSideEffects = (
       sideEffects.push({
         type: "return",
         value: valueReturned,
-        label: "return promise",
-        text: null,
+        render: {
+          md: () => {
+            return {
+              label: "return promise",
+            };
+          },
+        },
       });
     } else {
       sideEffects.push({
         type: "return",
         value: valueReturned,
-        label: "return",
-        text: wrapIntoMarkdownBlock(
-          renderReturnValueOrResolveValue(valueReturned, {
-            rootDirectoryUrl,
-          }),
-          "js",
-        ),
+        render: {
+          md: (options) => {
+            return {
+              label: "return",
+              text: wrapIntoMarkdownBlock(
+                renderReturnValueOrResolveValue(valueReturned, options),
+                "js",
+              ),
+            };
+          },
+        },
       });
     }
   };
@@ -77,24 +94,38 @@ export const collectFunctionSideEffects = (
     sideEffects.push({
       type: "resolve",
       value,
-      label: "resolve",
-      text: wrapIntoMarkdownBlock(
-        renderReturnValueOrResolveValue(value, { rootDirectoryUrl }),
-        "js",
-      ),
+      render: {
+        md: (options) => {
+          return {
+            label: "resolve",
+            text: wrapIntoMarkdownBlock(
+              renderReturnValueOrResolveValue(value, options),
+              "js",
+            ),
+          };
+        },
+      },
     });
   };
   const onReject = (reason) => {
     sideEffects.push({
       type: "reject",
       value: reason,
-      label: "reject",
-      text: wrapIntoMarkdownBlock(
-        renderValueThrownOrRejected(
-          createException(reason, { rootDirectoryUrl }),
-          { rootDirectoryUrl },
-        ),
-      ),
+      render: {
+        md: (options) => {
+          return {
+            label: "reject",
+            text: wrapIntoMarkdownBlock(
+              renderValueThrownOrRejected(
+                createException(reason, {
+                  rootDirectoryUrl: options.rootDirectoryUrl,
+                }),
+                options,
+              ),
+            ),
+          };
+        },
+      },
     });
   };
   const onFinally = () => {
@@ -139,22 +170,22 @@ export const collectFunctionSideEffects = (
   }
 };
 
-const renderReturnValueOrResolveValue = (value, { rootDirectoryUrl }) => {
+const renderReturnValueOrResolveValue = (value, options) => {
   if (value === undefined) {
     return "undefined";
   }
   return replaceFluctuatingValues(JSON.stringify(value, null, "  "), {
     stringType: "json",
-    rootDirectoryUrl,
+    ...options,
   });
 };
 
-const renderValueThrownOrRejected = (value, { rootDirectoryUrl }) => {
+const renderValueThrownOrRejected = (value, options) => {
   return replaceFluctuatingValues(
     value ? value.stack || value.message || value : String(value),
     {
       stringType: "error",
-      rootDirectoryUrl,
+      ...options,
     },
   );
 };
