@@ -11,15 +11,15 @@ writeFileSync(new URL("./b/b_3.txt", import.meta.url));
 <details>
   <summary>details</summary>
 
-## [a/a_1.txt](./13_write_in_2_dir/a/a_1.txt)
+## [a/a_1.txt](./1_write_in_2_dir/a/a_1.txt)
 
-## [a/a_2.txt](./13_write_in_2_dir/a/a_2.txt)
+## [a/a_2.txt](./1_write_in_2_dir/a/a_2.txt)
 
-## [b/b_1.txt](./13_write_in_2_dir/b/b_1.txt)
+## [b/b_1.txt](./1_write_in_2_dir/b/b_1.txt)
 
-## [b/b_2.txt](./13_write_in_2_dir/b/b_2.txt)
+## [b/b_2.txt](./1_write_in_2_dir/b/b_2.txt)
 
-## [b/b_3.txt](./13_write_in_2_dir/b/b_3.txt)
+## [b/b_3.txt](./1_write_in_2_dir/b/b_3.txt)
 
 </details>
 
