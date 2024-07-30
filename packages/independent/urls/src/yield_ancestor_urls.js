@@ -4,11 +4,17 @@ export function* yieldAncestorUrls(url, rootUrl, { yieldSelf } = {}) {
   url = String(url);
   if (rootUrl) rootUrl = ensurePathnameTrailingSlash(String(rootUrl));
   let currentUrl = url;
-  if (yieldSelf && currentUrl !== rootUrl) {
+  if (currentUrl === rootUrl || currentUrl === "file:///") {
+    return;
+  }
+  if (yieldSelf) {
     yield currentUrl;
   }
-  while (currentUrl !== rootUrl && currentUrl !== "file:///") {
+  while (true) {
     currentUrl = getParentUrl(currentUrl);
+    if (currentUrl === rootUrl || currentUrl === "file:///") {
+      break;
+    }
     yield currentUrl;
   }
 }
