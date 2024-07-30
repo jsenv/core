@@ -164,6 +164,20 @@ await startTesting(({ test }) => {
         },
       },
     );
+    test.ONLY(
+      "write_file/10_write_same_file_not_grouped.md",
+      () => {
+        writeFileSync(new URL("./toto.txt", import.meta.url), "first");
+        console.log("hey");
+        writeFileSync(new URL("./toto.txt", import.meta.url), "second");
+      },
+      {
+        filesystemEffects: {
+          baseDirectory: new URL("./", import.meta.url),
+          textualFilesIntoDirectory: true,
+        },
+      },
+    );
   }
   group_write_by_directory: {
     test(

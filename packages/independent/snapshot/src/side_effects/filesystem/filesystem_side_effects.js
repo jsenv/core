@@ -8,7 +8,7 @@
 // donc la logique out directory et snapshot elle remonte dans snapshotSideEffects
 
 import { readDirectorySync, writeFileSync } from "@jsenv/filesystem";
-import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import { setUrlBasename, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { pathToFileURL } from "node:url";
 import { createWellKnown } from "../../filesystem_well_known_values.js";
@@ -97,11 +97,17 @@ export const filesystemSideEffects = (
                         if (text) {
                           text += "\n\n";
                         }
-                        const { url, willBeInOutDirectory, content } =
+                        const { url, willBeInOutDirectory, content, index } =
                           fileSideEffect.value;
                         if (willBeInOutDirectory) {
                           const urlInsideOutDirectory =
                             getUrlInsideOutDirectory(url, outDirectoryUrl);
+                          if (index) {
+                            setUrlBasename(
+                              urlInsideOutDirectory,
+                              (basename) => `${basename}_${index}`,
+                            );
+                          }
                           writeFileSync(urlInsideOutDirectory, content);
                           const relativeUrl = urlToRelativeUrl(
                             url,
@@ -136,22 +142,26 @@ ${renderFileContent(
           });
         });
       }
+      const fileEffectIndexMap = new Map();
       const filesystemSpy = spyFilesystemCalls(
         {
-          writeFile: (url, content) => {
+          onWriteFile: (url, content) => {
             const contentType = CONTENT_TYPE.fromUrlExtension(url);
             const isTextual = CONTENT_TYPE.isTextual(contentType);
             const willBeInOutDirectory = isTextual
               ? textualFilesIntoDirectory
               : true;
+            let index = fileEffectIndexMap.get(url) || 0;
+            fileEffectIndexMap.set(url, index + 1);
             const writeFileSideEffect = {
               type: "fs:write_file",
               value: {
-                url: String(url),
+                url,
                 content,
                 contentType,
                 isTextual,
                 willBeInOutDirectory,
+                index,
               },
               render: {
                 md: ({ sideEffectFileUrl, outDirectoryUrl }) => {
@@ -160,6 +170,12 @@ ${renderFileContent(
                       url,
                       outDirectoryUrl,
                     );
+                    if (index) {
+                      setUrlBasename(
+                        urlInsideOutDirectory,
+                        (basename) => `${basename}_${index}`,
+                      );
+                    }
                     writeFileSync(urlInsideOutDirectory, content);
                     const outRelativeUrl = getUrlRelativeToOut(
                       urlInsideOutDirectory,
@@ -182,10 +198,10 @@ ${renderFileContent(
             };
             addSideEffect(writeFileSideEffect);
           },
-          writeDirectory: (url) => {
+          onWriteDirectory: (url) => {
             const writeDirectorySideEffect = addSideEffect({
               type: "fs:write_directory",
-              value: { url: String(url) },
+              value: { url },
               render: {
                 md: () => {
                   return {

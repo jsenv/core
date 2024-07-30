@@ -19,10 +19,10 @@ import {
 
 export const spyFilesystemCalls = (
   {
-    readFile = () => {}, // TODO
-    writeFile = () => {},
-    writeDirectory = () => {},
-    removeFile = () => {}, // TODO
+    onReadFile = () => {}, // TODO
+    onWriteFile = () => {},
+    onWriteDirectory = () => {},
+    onRemoveFile = () => {}, // TODO
     // removeDirectory = () => {},
   },
   { include, undoFilesystemSideEffects } = {},
@@ -57,7 +57,7 @@ export const spyFilesystemCalls = (
         }
       }
       if (shouldReport(fileUrl)) {
-        writeFile(fileUrl, stateAfter.content);
+        onWriteFile(fileUrl, stateAfter.content);
         return;
       }
     }
@@ -77,7 +77,7 @@ export const spyFilesystemCalls = (
       });
     }
     if (shouldReport(directoryUrl)) {
-      writeDirectory(directoryUrl);
+      onWriteDirectory(directoryUrl);
     }
   };
   const beforeUndoCallbackSet = new Set();
@@ -99,7 +99,9 @@ export const spyFilesystemCalls = (
       return {
         return: (fd) => {
           fileDescriptorPathMap.set(fd, directoryPath);
-          onWriteDirectoryDone(directoryUrl, stateBefore, { found: true });
+          onWriteDirectoryDone(String(directoryUrl), stateBefore, {
+            found: true,
+          });
         },
       };
     },
@@ -140,12 +142,12 @@ export const spyFilesystemCalls = (
           }
           const fileUrl = pathToFileURL(filePath);
           if (buffer) {
-            readFile(fileUrl);
+            onReadFile(String(fileUrl));
           }
           fileDescriptorPathMap.delete(fileDescriptor);
           filesystemStateInfoMap.delete(filePath);
           const stateAfter = getFileStateWithinHook(fileUrl);
-          onWriteFileDone(fileUrl, stateBefore, stateAfter);
+          onWriteFileDone(String(fileUrl), stateBefore, stateAfter);
         },
       };
     },
@@ -160,7 +162,7 @@ export const spyFilesystemCalls = (
       return {
         return: () => {
           const stateAfter = getFileStateWithinHook(fileUrl);
-          onWriteFileDone(fileUrl, stateBefore, stateAfter);
+          onWriteFileDone(String(fileUrl), stateBefore, stateAfter);
         },
       };
     },
@@ -168,7 +170,7 @@ export const spyFilesystemCalls = (
   const unlinkHook = hookIntoMethod(_internalFs, "unlink", (filePath) => {
     return {
       return: () => {
-        removeFile(filePath); // TODO eventually split in removeFile/removeDirectory
+        onRemoveFile(filePath); // TODO eventually split in removeFile/removeDirectory
       },
     };
   });
