@@ -5,9 +5,15 @@ import { urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
 import ansiRegex from "ansi-regex";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 
-export const createDetailsOnMaxLineCondition =
-  (maxLines) => (sideEffect, text) => {
-    if (text.split("\n").length > maxLines) {
+export const createDetailsOnMaxSizeCondition =
+  ({ maxLines, maxLength }) =>
+  (sideEffect, text) => {
+    if (maxLength && text.length > maxLength) {
+      return {
+        open: false,
+      };
+    }
+    if (maxLines && text.split("\n").length > maxLines) {
       return {
         open: false,
       };
@@ -22,7 +28,10 @@ export const renderSideEffects = (
     outDirectoryUrl,
     generatedBy = true,
     titleLevel = 1,
-    shouldUseDetails = createDetailsOnMaxLineCondition(5),
+    shouldUseDetails = createDetailsOnMaxSizeCondition({
+      maxLines: 10,
+      maxLength: 500,
+    }),
   } = {},
 ) => {
   const { rootDirectoryUrl, replaceFilesystemWellKnownValues } =

@@ -5,9 +5,6 @@ writeFileSync(new URL("./toto.txt", import.meta.url), "b");
 
 # 1/2 write 2 files into "./"
 
-<details>
-  <summary>details</summary>
-
 ## toto.txt
 ```txt
 a
@@ -17,8 +14,6 @@ a
 ```txt
 b
 ```
-
-</details>
 
 # 2/2 return
 

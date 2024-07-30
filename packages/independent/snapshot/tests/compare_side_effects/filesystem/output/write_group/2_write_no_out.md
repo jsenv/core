@@ -11,9 +11,6 @@ writeFileSync(
 
 # 1/2 write 2 files into "./dist/"
 
-<details>
-  <summary>details</summary>
-
 ## a_1.txt
 ```txt
 a_1_content
@@ -23,8 +20,6 @@ a_1_content
 ```txt
 a_2_content
 ```
-
-</details>
 
 # 2/2 return
 
