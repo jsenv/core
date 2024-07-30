@@ -1,7 +1,5 @@
 /*
- * TODO: possibilité de regrouper les logs
  * TODO: ajouter la possibilité de faire un .gif avec les logs
- * (dans ce cas tous les console, process, etc sont regroupé dans un seul side effect)
  * TODO: faire des cas ou la comparison fail (parce que le comportement de la fonction change)
  * et voir ce qu'on récupere dans ce cas
  *
@@ -11,8 +9,8 @@ import {
   fileSystemPathToUrl,
   isFileSystemPath,
   urlToFilename,
+  urlToRelativeUrl,
 } from "@jsenv/urls";
-import { urlToRelativeUrl } from "@jsenv/urls/src/url_to_relative_url.js";
 import {
   takeDirectorySnapshot,
   takeFileSnapshot,

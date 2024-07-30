@@ -1,4 +1,4 @@
-import { snapshotSideEffects } from "@jsenv/snapshot";
+import { renderLogsGif, snapshotSideEffects } from "@jsenv/snapshot";
 
 snapshotSideEffects(
   () => {
@@ -59,4 +59,16 @@ snapshotSideEffects(
       group: true,
     },
   },
+);
+
+const sideEffects = snapshotSideEffects(
+  () => {
+    console.log("a");
+    console.log("b");
+  },
+  new URL("./output/6_console_gif.md", import.meta.url),
+);
+await renderLogsGif(
+  sideEffects,
+  new URL("./output/6_console_gif/terminal.gif", import.meta.url),
 );

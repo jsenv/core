@@ -34,8 +34,9 @@ export const snapshotSideEffects = (
   if (returnValue && typeof returnValue.then === "function") {
     return returnValue.then((sideEffects) => {
       onSideEffects(sideEffects);
+      return sideEffects;
     });
   }
   onSideEffects(returnValue);
-  return undefined;
+  return returnValue;
 };

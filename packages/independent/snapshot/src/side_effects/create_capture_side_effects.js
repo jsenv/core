@@ -31,6 +31,7 @@ export const createCaptureSideEffects = ({
   };
   let functionExecutingCount = 0;
   const capture = (fn, { callSite } = {}) => {
+    const startMs = Date.now();
     const sideEffects = [];
     sideEffects.options = options;
     const effectIndexMap = new Map();
@@ -38,6 +39,7 @@ export const createCaptureSideEffects = ({
       let index = effectIndexMap.get(sideEffect.type) || 0;
       effectIndexMap.set(sideEffect.type, index + 1);
       sideEffect.index = index;
+      sideEffect.delay = Date.now() - startMs;
       sideEffects.push(sideEffect);
       return sideEffect;
     };
