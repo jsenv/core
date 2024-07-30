@@ -5,7 +5,9 @@ writeFileSync(
 );
 ```
 
-# 1/2 write file ["./toto.txt"](./5_write_inside_base_and_textual_out/toto.txt)
+# 1/2 write file "./toto.txt"
+
+[./toto.txt](./5_write_inside_base_and_textual_out/toto.txt)
 
 # 2/2 return
 

@@ -191,7 +191,7 @@ ${renderFileContent(
                 outDirectoryReason,
               },
               render: {
-                md: ({ sideEffectFileUrl, outDirectoryUrl }) => {
+                md: ({ outDirectoryUrl }) => {
                   const urlRelativeToBase = getUrlRelativeToBase(url);
                   if (outDirectoryReason) {
                     const urlInsideOutDirectory = getUrlInsideOutDirectory(
@@ -221,9 +221,7 @@ ${renderFileContent(
                       text: {
                         type: "file_content",
                         value: textValue,
-                        relativeUrl: urlToRelativeUrl(url, sideEffectFileUrl, {
-                          preferRelativeNotation: true,
-                        }),
+                        relativeUrl: urlRelativeToBase,
                         urlInsideOutDirectory,
                       },
                     };

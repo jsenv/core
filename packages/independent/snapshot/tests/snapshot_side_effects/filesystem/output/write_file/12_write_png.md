@@ -7,7 +7,7 @@ writeFileSync(
 
 # 1/2 write file "./jsenv.png"
 
-[../../jsenv.png](./12_write_png/jsenv.png)
+[./jsenv.png](./12_write_png/jsenv.png)
 
 # 2/2 return
 
