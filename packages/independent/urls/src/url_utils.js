@@ -157,14 +157,12 @@ export const setUrlExtension = (url, extension) => {
 };
 
 export const setUrlFilename = (url, filename) => {
-  const urlObject = new URL(url);
-  let { origin, search, hash } = urlObject;
-  // origin is "null" for "file://" urls with Node.js
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-  const parentPathname = new URL("./", urlObject).pathname;
-  return `${origin}${parentPathname}${filename}${search}${hash}`;
+  const parentPathname = new URL("./", url).pathname;
+  return transformUrlPathname(url, () => `${parentPathname}${filename}`);
+};
+
+export const setUrlBasename = (url, basename) => {
+  return setUrlFilename(url, `${basename}${urlToExtension(url)}`);
 };
 
 const transformUrlPathname = (url, transformer) => {
