@@ -6,9 +6,9 @@ throw new Error("here");
 
 ```
 Error: here
-  at @jsenv/core/packages/independent/snapshot/tests/compare_side_effects/basic/side_effects_basic.test.mjs:35:11
-  at startTesting (@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/basic/side_effects_basic.test.mjs:20:11)
-  at async @jsenv/core/packages/independent/snapshot/tests/compare_side_effects/basic/side_effects_basic.test.mjs:29:1
+  at @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/basic/side_effects_basic.test.mjs:35:11
+  at startTesting (@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/basic/side_effects_basic.test.mjs:20:11)
+  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/basic/side_effects_basic.test.mjs:29:1
 ```
 
 <sub>

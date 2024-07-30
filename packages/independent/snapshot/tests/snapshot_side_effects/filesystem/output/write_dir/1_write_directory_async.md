@@ -5,7 +5,7 @@ return existsSync(new URL("./dir_async/", import.meta.url));
 
 # 1/3 return promise
 
-# 2/3 write directory "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/filesystem/dir_async"
+# 2/3 write directory "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/filesystem/dir_async"
 
 # 3/3 resolve
 

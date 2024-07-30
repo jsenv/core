@@ -39,7 +39,7 @@ a warning after 2nd timeout
 and an other warning
 ```
 
-# 6/7 write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/advanced/toto.txt"
+# 6/7 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/toto.txt"
 
 ```txt
 toto
@@ -49,8 +49,8 @@ toto
 
 ```
 Error: in the end we throw
-  at @jsenv/core/packages/independent/snapshot/tests/compare_side_effects/advanced/side_effects_advanced.test.mjs:97:13
-  at async @jsenv/core/packages/independent/snapshot/tests/compare_side_effects/advanced/side_effects_advanced.test.mjs:84:3
+  at @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:97:13
+  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:84:3
 ```
 
 <sub>

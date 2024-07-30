@@ -6,19 +6,19 @@ await writeFile(new URL("./c.txt", import.meta.url), "c_2");
 
 # 1/5 return promise
 
-# 2/5 write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/advanced/a.txt"
+# 2/5 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/a.txt"
 
 ```txt
 a_2
 ```
 
-# 3/5 write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/advanced/b.txt"
+# 3/5 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/b.txt"
 
 ```txt
 b_2
 ```
 
-# 4/5 write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/advanced/c.txt"
+# 4/5 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/c.txt"
 
 ```txt
 c_2

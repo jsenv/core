@@ -6,7 +6,7 @@ writeFileSync(
 return String(readFileSync(new URL("./toto.txt", import.meta.url)));
 ```
 
-# 1/2 write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/filesystem/toto.txt"
+# 1/2 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/filesystem/toto.txt"
 
 ```txt
 1_write_then_read_sync

@@ -4,7 +4,7 @@ await writeFile(new URL("./toto.txt", import.meta.url), "3_write_async");
 
 # 1/3 return promise
 
-# 2/3 write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/filesystem/toto.txt"
+# 2/3 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/filesystem/toto.txt"
 
 ```txt
 3_write_async

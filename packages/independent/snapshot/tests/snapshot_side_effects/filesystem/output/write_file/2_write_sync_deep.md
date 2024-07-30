@@ -5,7 +5,7 @@ writeFileSync(
 );
 ```
 
-# 1/2 write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/filesystem/toto/toto.txt"
+# 1/2 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/filesystem/toto/toto.txt"
 
 ```txt
 2_write_sync_deep

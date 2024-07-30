@@ -26,7 +26,7 @@ b_before_timeout_50
 b_after_timeout_50
 ```
 
-# 5/7 write file "@jsenv/core/packages/independent/snapshot/tests/compare_side_effects/advanced/output/3_b_when_b_ends_before.md"
+# 5/7 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/output/3_b_when_b_ends_before.md"
 
 <details>
   <summary>details</summary>
