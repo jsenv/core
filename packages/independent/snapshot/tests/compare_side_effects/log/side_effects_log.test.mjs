@@ -31,3 +31,19 @@ snapshotSideEffects(
     import.meta.url,
   ),
 );
+snapshotSideEffects(
+  () => {
+    console.log(
+      "[31mred [39m[33myellow [39m[32mgreen [39m[36mcyan [39m[34mblue [39m[35mmagenta[39m",
+    );
+  },
+  new URL("./output/3_console_log_rainbow.md", import.meta.url),
+);
+
+snapshotSideEffects(
+  () => {
+    console.log("[31m_[39m");
+    console.log("🤖[31m DANGER[0m Will Robbinson");
+  },
+  new URL("./output/4_console_ansi_many.md", import.meta.url),
+);

@@ -33,13 +33,18 @@ export const createCaptureSideEffects = ({
   const capture = (fn) => {
     const sideEffects = [];
     sideEffects.options = options;
+    const effectIndexMap = new Map();
     const addSideEffect = (sideEffect) => {
+      let index = effectIndexMap.get(sideEffect.type) || 0;
+      effectIndexMap.set(sideEffect.type, index + 1);
+      sideEffect.index = index;
       sideEffects.push(sideEffect);
       return sideEffect;
     };
 
     const sourceCode = parseFunction(fn).body;
     addSideEffect({
+      code: "source_code",
       type: "source_code",
       value: sourceCode,
       render: {

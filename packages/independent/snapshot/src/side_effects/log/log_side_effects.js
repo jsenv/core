@@ -15,6 +15,7 @@ export const logSideEffects = (logSideEffectsOptions) => {
       const { prevent } = logSideEffectsOptions;
       const addLogSideEffect = (type, message) => {
         addSideEffect({
+          code: type,
           type,
           value: message,
           render: {

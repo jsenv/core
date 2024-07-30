@@ -1,5 +1,8 @@
 import { createException } from "@jsenv/exception";
-import { urlToExtension } from "@jsenv/urls";
+import { writeFileSync } from "@jsenv/filesystem";
+import { renderTerminalSvg } from "@jsenv/terminal-recorder";
+import { urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
+import ansiRegex from "ansi-regex";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 
 export const createDetailsOnMaxLineCondition =
@@ -39,7 +42,7 @@ export const renderSideEffects = (
     if (sideEffect.skippable) {
       continue;
     }
-    if (sideEffect.type === "source_code") {
+    if (sideEffect.code === "source_code") {
       continue;
     }
     sideEffectNumber++;
@@ -98,9 +101,15 @@ const renderOneSideEffect = (
     rootDirectoryUrl,
   });
   if (text) {
-    text = renderText(text, { replace, rootDirectoryUrl });
+    text = renderText(text, {
+      sideEffect,
+      sideEffectFileUrl,
+      outDirectoryUrl,
+      replace,
+      rootDirectoryUrl,
+    });
   }
-  if (sideEffect.type === "source_code") {
+  if (sideEffect.code === "source_code") {
     return text;
   }
   if (!label) {
@@ -138,11 +147,7 @@ ${renderMarkdownDetails(text, {
 // on utilisera renderTerminalSvg mais sans le header avec le titre
 const renderText = (
   text,
-  {
-    replace,
-    // outDirectoryUrl,
-    rootDirectoryUrl,
-  },
+  { sideEffect, sideEffectFileUrl, outDirectoryUrl, replace, rootDirectoryUrl },
 ) => {
   if (text && typeof text === "object") {
     if (text.type === "source_code") {
@@ -162,24 +167,35 @@ const renderText = (
           typeof value.stack === "string")
       ) {
         const exception = createException(text.value, { rootDirectoryUrl });
-        const exceptionText = replace(
-          exception
-            ? exception.stack || exception.message || exception
-            : String(exception),
-          {
-            stringType: "error",
-          },
+        const exceptionText = exception.stack || exception.message || exception;
+        const potentialAnsi = renderPotentialAnsi(exceptionText, {
+          sideEffect,
+          sideEffectFileUrl,
+          outDirectoryUrl,
+          replace,
+        });
+        if (potentialAnsi) {
+          return potentialAnsi;
+        }
+        return wrapIntoMarkdownBlock(
+          replace(exceptionText, { stringType: "error" }),
         );
-        return wrapIntoMarkdownBlock(exceptionText, "");
       }
       return wrapIntoMarkdownBlock(
-        replace(JSON.stringify(value, null, "  "), {
-          stringType: "json",
-        }),
+        replace(JSON.stringify(value, null, "  "), { stringType: "json" }),
         "js",
       );
     }
     if (text.type === "console") {
+      const potentialAnsi = renderPotentialAnsi(text.value, {
+        sideEffect,
+        sideEffectFileUrl,
+        outDirectoryUrl,
+        replace,
+      });
+      if (potentialAnsi) {
+        return potentialAnsi;
+      }
       return wrapIntoMarkdownBlock(
         replace(text.value, { stringType: "console" }),
         "console",
@@ -190,6 +206,31 @@ const renderText = (
     }
   }
   return replace(text);
+};
+
+const renderPotentialAnsi = (
+  string,
+  { sideEffect, sideEffectFileUrl, outDirectoryUrl, replace },
+) => {
+  if (!ansiRegex().test(string)) {
+    return null;
+  }
+  let svgFilename = sideEffect.type;
+  if (sideEffect.index) {
+    svgFilename += `_${sideEffect.index}`;
+  }
+  svgFilename += ".svg";
+  const svgFileUrl = new URL(`./${svgFilename}`, outDirectoryUrl);
+  let svgFileContent = renderTerminalSvg(string, {
+    head: false,
+    paddingTop: 10,
+    paddingBottom: 10,
+  });
+  svgFileContent = replace(svgFileContent, { fileUrl: svgFileUrl });
+  writeFileSync(svgFileUrl, svgFileContent);
+  const svgFileRelativeUrl = urlToRelativeUrl(svgFileUrl, sideEffectFileUrl);
+  return `![img](${svgFileRelativeUrl})`;
+  // we will write a svg file
 };
 
 export const renderFileContent = (text, { replace }) => {

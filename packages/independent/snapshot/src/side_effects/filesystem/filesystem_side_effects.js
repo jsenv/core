@@ -78,34 +78,37 @@ export const filesystemSideEffects = (
               fileSideEffectArray,
               commonPath,
             ) => {
+              let commonUrl = pathToFileURL(commonPath);
+              let commonDirectoryUrl;
+              if (commonUrl.href.endsWith("/")) {
+                commonDirectoryUrl = commonUrl;
+              } else {
+                commonDirectoryUrl = new URL("./", commonUrl);
+              }
+
               return {
-                type: "fs:write_file_group",
+                code: "fs:write_file_group",
+                type: `fs:write_file_group ${commonDirectoryUrl}`,
                 value: {},
                 render: {
                   md: ({ replace, sideEffectFileUrl, outDirectoryUrl }) => {
                     const numberOfFiles = fileSideEffectArray.length;
-                    let commonUrl = pathToFileURL(commonPath);
-                    let commonDirectoryUrl;
-                    if (commonUrl.href.endsWith("/")) {
-                      commonDirectoryUrl = commonUrl;
-                    } else {
-                      commonDirectoryUrl = new URL("./", commonUrl);
-                    }
                     const generateSideEffectGroup = () => {
                       let text = "";
                       for (const fileSideEffect of fileSideEffectArray) {
                         if (text) {
                           text += "\n\n";
                         }
-                        const { url, willBeInOutDirectory, buffer, index } =
+                        const { url, willBeInOutDirectory, buffer } =
                           fileSideEffect.value;
                         if (willBeInOutDirectory) {
                           const urlInsideOutDirectory =
                             getUrlInsideOutDirectory(url, outDirectoryUrl);
-                          if (index) {
+                          if (fileSideEffect.index) {
                             setUrlBasename(
                               urlInsideOutDirectory,
-                              (basename) => `${basename}_${index}`,
+                              (basename) =>
+                                `${basename}_${fileSideEffect.index}`,
                             );
                           }
                           writeFileSync(urlInsideOutDirectory, buffer);
@@ -142,7 +145,6 @@ ${renderFileContent(
           });
         });
       }
-      const fileEffectIndexMap = new Map();
       const filesystemSpy = spyFilesystemCalls(
         {
           onWriteFile: (url, buffer) => {
@@ -151,17 +153,15 @@ ${renderFileContent(
             const willBeInOutDirectory = isTextual
               ? textualFilesIntoDirectory
               : true;
-            let index = fileEffectIndexMap.get(url) || 0;
-            fileEffectIndexMap.set(url, index + 1);
             const writeFileSideEffect = {
-              type: "fs:write_file",
+              code: "write_file",
+              type: `write_file:${url}`,
               value: {
                 url,
                 buffer,
                 contentType,
                 isTextual,
                 willBeInOutDirectory,
-                index,
               },
               render: {
                 md: ({ sideEffectFileUrl, outDirectoryUrl }) => {
@@ -170,10 +170,11 @@ ${renderFileContent(
                       url,
                       outDirectoryUrl,
                     );
-                    if (index) {
+                    if (writeFileSideEffect.index) {
                       setUrlBasename(
                         urlInsideOutDirectory,
-                        (basename) => `${basename}_${index}`,
+                        (basename) =>
+                          `${basename}_${writeFileSideEffect.index}`,
                       );
                     }
                     writeFileSync(urlInsideOutDirectory, buffer);
@@ -200,7 +201,8 @@ ${renderFileContent(
           },
           onWriteDirectory: (url) => {
             const writeDirectorySideEffect = addSideEffect({
-              type: "fs:write_directory",
+              code: "write_directory",
+              type: `write_directory:${url}`,
               value: { url },
               render: {
                 md: () => {
