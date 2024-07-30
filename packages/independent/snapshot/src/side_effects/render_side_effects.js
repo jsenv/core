@@ -92,10 +92,16 @@ export const renderSideEffects = (
   return markdown;
 };
 
-export const renderSmallLink = (link, { prefix = "", indent } = {}) => {
-  return renderSubMarkdown(`${prefix}<a href="${link.href}">${link.text}</a>`, {
-    indent,
-  });
+export const renderSmallLink = (
+  link,
+  { prefix = "", suffix = "", indent } = {},
+) => {
+  return renderSubMarkdown(
+    `${prefix}<a href="${link.href}">${link.text}</a>${suffix}`,
+    {
+      indent,
+    },
+  );
 };
 
 const renderSubMarkdown = (content, { indent = 0 }) => {
