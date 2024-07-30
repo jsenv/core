@@ -10,6 +10,7 @@ export const createCaptureSideEffects = ({
   replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
     rootDirectoryUrl,
   }),
+  callSite,
 } = {}) => {
   const detectors = [];
   if (logEffects) {
@@ -46,14 +47,14 @@ export const createCaptureSideEffects = ({
     addSideEffect({
       code: "source_code",
       type: "source_code",
-      value: sourceCode,
+      value: { sourceCode, callSite },
       render: {
         md: () => {
           return {
             type: "source_code",
             text: {
               type: "source_code",
-              value: sourceCode,
+              value: { sourceCode, callSite },
             },
           };
         },
