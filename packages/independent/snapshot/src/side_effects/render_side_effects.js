@@ -5,17 +5,30 @@ import { urlToBasename, urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
 import ansiRegex from "ansi-regex";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 
-export const createDetailsOnMaxSizeCondition =
-  ({ maxLines, maxLength }) =>
+export const createBigSizeEffect =
+  ({ details, dedicatedFile }) =>
   (sideEffect, text) => {
-    if (maxLength && text.length > maxLength) {
+    if (text.length > details.length) {
       return {
+        type: "details",
         open: false,
       };
     }
-    if (maxLines && text.split("\n").length > maxLines) {
+    if (text.length > dedicatedFile.length) {
       return {
+        type: "dedicated_file",
+      };
+    }
+    const lineCount = text.split("\n").length;
+    if (lineCount > details.lines) {
+      return {
+        type: "details",
         open: false,
+      };
+    }
+    if (lineCount > dedicatedFile.lines) {
+      return {
+        type: "dedicated_file",
       };
     }
     return null;
@@ -28,9 +41,12 @@ export const renderSideEffects = (
     outDirectoryUrl,
     generatedBy = true,
     titleLevel = 1,
-    shouldUseDetails = createDetailsOnMaxSizeCondition({
-      maxLines: 15,
-      maxLength: 2000,
+    getBigSizeEffect = createBigSizeEffect({
+      details: { line: 15, length: 2000 },
+      // dedicated_file not implemented yet
+      // the idea is that some values like the return value can be big
+      // and in that case we might want to move it to an other file
+      dedicatedFile: { line: 50, length: 5000 },
     }),
     errorStackHidden,
   } = {},
@@ -72,7 +88,7 @@ export const renderSideEffects = (
       outDirectoryUrl,
       rootDirectoryUrl,
       titleLevel,
-      shouldUseDetails,
+      getBigSizeEffect,
       replace,
       errorStackHidden,
       lastSideEffectNumber,
@@ -119,7 +135,7 @@ const renderOneSideEffect = (
     outDirectoryUrl,
     rootDirectoryUrl,
     titleLevel,
-    shouldUseDetails,
+    getBigSizeEffect,
     replace,
     errorStackHidden,
     lastSideEffectNumber,
@@ -164,19 +180,19 @@ const renderOneSideEffect = (
   if (!text) {
     return stepTitle;
   }
-  const shouldUseDetailsResult = shouldUseDetails(sideEffect, text);
-  if (!shouldUseDetailsResult) {
+  const bigSizeEffect = getBigSizeEffect(sideEffect, text);
+  if (!bigSizeEffect) {
     return `${stepTitle}
 
 ${text}`;
   }
-  const { open } = shouldUseDetailsResult;
+  // for now we'll use details
+  const { open } = bigSizeEffect;
   return `${stepTitle}
-
-${renderMarkdownDetails(text, {
-  open,
-  summary: "details",
-})}`;
+  ${renderMarkdownDetails(text, {
+    open,
+    summary: "details",
+  })}`;
 };
 
 const renderText = (

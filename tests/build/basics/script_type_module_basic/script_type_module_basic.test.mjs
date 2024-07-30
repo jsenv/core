@@ -20,11 +20,11 @@ await snapshotBuildTests(
         runtimeCompat: { chrome: "89" },
       }));
     // cannot use <script type="module">
-    // test("1_js_module_fallback", () =>
-    //   build({
-    //     ...testParams,
-    //     runtimeCompat: { chrome: "60" },
-    //   }));
+    test("1_js_module_fallback", () =>
+      build({
+        ...testParams,
+        runtimeCompat: { chrome: "60" },
+      }));
   },
   new URL("./output/script_type_module_basic.md", import.meta.url),
 );

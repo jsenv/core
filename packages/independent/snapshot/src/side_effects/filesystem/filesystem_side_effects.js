@@ -181,9 +181,19 @@ ${renderFileContent(
           onWriteFile: (url, buffer) => {
             const contentType = CONTENT_TYPE.fromUrlExtension(url);
             const isTextual = CONTENT_TYPE.isTextual(contentType);
-            const willBeInOutDirectory = isTextual
-              ? textualFilesIntoDirectory
-              : true;
+            let willBeInOutDirectory;
+            if (isTextual) {
+              if (textualFilesIntoDirectory) {
+                willBeInOutDirectory = true;
+              } else if (buffer.size > 4000) {
+                willBeInOutDirectory = true;
+              } else if (String(buffer).split("\n").length > 50) {
+                willBeInOutDirectory = true;
+              }
+            } else {
+              willBeInOutDirectory = true;
+            }
+
             const writeFileSideEffect = {
               code: "write_file",
               type: `write_file:${url}`,
