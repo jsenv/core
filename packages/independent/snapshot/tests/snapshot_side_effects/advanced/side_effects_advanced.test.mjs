@@ -36,6 +36,7 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
     new URL("./output/2_a_when_b_ends_before.md", import.meta.url),
     {
       filesystemEffects: {
+        baseDirectory: new URL("./", import.meta.url),
         preserve: true,
       },
     },
@@ -51,6 +52,7 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
     new URL("./output/3_b_when_b_ends_before.md", import.meta.url),
     {
       filesystemEffects: {
+        baseDirectory: new URL("./", import.meta.url),
         preserve: true,
       },
     },
