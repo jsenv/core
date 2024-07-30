@@ -210,7 +210,7 @@ const renderText = (
   if (text && typeof text === "object") {
     if (text.type === "source_code") {
       const { sourceCode, callSite } = text.value;
-      let sourceMd = wrapIntoMarkdownBlock(sourceCode, "js");
+      let sourceMd = renderMarkdownBlock(sourceCode, "js");
       if (!callSite) {
         return sourceMd;
       }
@@ -231,7 +231,7 @@ const renderText = (
     if (text.type === "js_value") {
       const value = text.value;
       if (value === undefined) {
-        return wrapIntoMarkdownBlock("undefined", "js");
+        return renderMarkdownBlock("undefined", "js");
       }
       if (
         value instanceof Error ||
@@ -255,11 +255,11 @@ const renderText = (
         if (potentialAnsi) {
           return potentialAnsi;
         }
-        return wrapIntoMarkdownBlock(
+        return renderMarkdownBlock(
           replace(exceptionText, { stringType: "error" }),
         );
       }
-      return wrapIntoMarkdownBlock(
+      return renderMarkdownBlock(
         replace(JSON.stringify(value, null, "  "), { stringType: "json" }),
         "js",
       );
@@ -274,6 +274,9 @@ const renderText = (
     }
     if (text.type === "file_content") {
       return renderFileContent(text, { replace });
+    }
+    if (text.type === "link") {
+      return renderLinkMarkdown(text.value, { replace });
     }
   }
   return replace(text);
@@ -292,7 +295,7 @@ export const renderConsole = (
   if (potentialAnsi) {
     return potentialAnsi;
   }
-  return wrapIntoMarkdownBlock(
+  return renderMarkdownBlock(
     replace(string, { stringType: "console" }),
     "console",
   );
@@ -356,7 +359,11 @@ export const renderFileContent = (text, { replace }) => {
     }
     content = escaped;
   }
-  return wrapIntoMarkdownBlock(replace(content, { fileUrl: url }), extension);
+  return renderMarkdownBlock(replace(content, { fileUrl: url }), extension);
+};
+
+export const renderLinkMarkdown = ({ href, text }, { replace }) => {
+  return `[${replace(text)}](${replace(href)})`;
 };
 
 export const renderMarkdownDetails = (text, { open, summary, indent = 0 }) => {
@@ -368,7 +375,7 @@ ${text}
 ${"  ".repeat(indent)}</details>`;
 };
 
-export const wrapIntoMarkdownBlock = (value, blockName = "") => {
+export const renderMarkdownBlock = (value, blockName = "") => {
   const start = "```";
   const end = "```";
   return `${start}${blockName}
