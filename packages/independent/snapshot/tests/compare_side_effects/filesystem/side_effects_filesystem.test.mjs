@@ -56,6 +56,17 @@ await startTesting(({ test }) => {
       await writeDirectory(new URL("./dir_async/", import.meta.url));
       return existsSync(new URL("./dir_async/", import.meta.url));
     });
+    test(
+      "write_dir/2_write_dir_deep.md",
+      () => {
+        writeDirectorySync(new URL("./dir/a/b/c", import.meta.url));
+      },
+      {
+        filesystemEffects: {
+          baseDirectory: new URL("./", import.meta.url),
+        },
+      },
+    );
   }
   write_file: {
     test("write_file/0_write_sync.md", () => {

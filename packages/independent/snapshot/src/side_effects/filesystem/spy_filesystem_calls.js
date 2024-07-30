@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { URL_META } from "@jsenv/url-meta";
+import { yieldAncestorUrls } from "@jsenv/urls";
 import { readFileSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
@@ -64,10 +65,7 @@ export const spyFilesystemCalls = (
     // file is exactly the same
     // function did not have any effect on the file
   };
-  const onWriteDirectoryDone = (directoryUrl, stateBefore) => {
-    if (stateBefore.found) {
-      return;
-    }
+  const onWriteDirectoryDone = (directoryUrl) => {
     if (undoFilesystemSideEffects && !fileRestoreMap.has(directoryUrl)) {
       fileRestoreMap.set(directoryUrl, () => {
         removeDirectorySync(directoryUrl, {
@@ -93,15 +91,34 @@ export const spyFilesystemCalls = (
   const mkdirHook = hookIntoMethod(
     _internalFs,
     "mkdir",
-    (directoryPath) => {
+    (directoryPath, mode, recursive) => {
       const directoryUrl = pathToFileURL(directoryPath);
       const stateBefore = getDirectoryState(directoryPath);
+      if (!stateBefore.found && recursive) {
+        const ancestorNotFoundArray = [];
+        for (const ancestorUrl of yieldAncestorUrls(directoryUrl)) {
+          const ancestorState = getDirectoryState(new URL(ancestorUrl));
+          if (ancestorState.found) {
+            break;
+          }
+          ancestorNotFoundArray.unshift(ancestorUrl);
+        }
+        return {
+          return: (fd) => {
+            fileDescriptorPathMap.set(fd, directoryPath);
+            for (const ancestorNotFoundUrl of ancestorNotFoundArray) {
+              onWriteDirectoryDone(ancestorNotFoundUrl);
+            }
+            onWriteDirectoryDone(String(directoryUrl));
+          },
+        };
+      }
       return {
         return: (fd) => {
           fileDescriptorPathMap.set(fd, directoryPath);
-          onWriteDirectoryDone(String(directoryUrl), stateBefore, {
-            found: true,
-          });
+          if (!stateBefore.found) {
+            onWriteDirectoryDone(String(directoryUrl));
+          }
         },
       };
     },
