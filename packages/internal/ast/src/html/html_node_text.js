@@ -12,7 +12,12 @@ const getTextNode = (htmlNode) => {
   if (htmlNode.nodeName === "#text") {
     return null;
   }
-  const firstChild = htmlNode.childNodes[0];
+  const { childNodes } = htmlNode;
+  if (!childNodes) {
+    // happens for nodeName === "#documentType"
+    return null;
+  }
+  const firstChild = childNodes[0];
   const textNode =
     firstChild && firstChild.nodeName === "#text" ? firstChild : null;
   return textNode;

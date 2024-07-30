@@ -1,8 +1,3 @@
-/*
- * TODO: faire des cas ou la comparison fail (parce que le comportement de la fonction change)
- * et voir ce qu'on récupere dans ce cas
- */
-
 import {
   fileSystemPathToUrl,
   isFileSystemPath,
@@ -16,6 +11,14 @@ import {
 import { createCaptureSideEffects } from "./create_capture_side_effects.js";
 import { renderSideEffects, renderSmallLink } from "./render_side_effects.js";
 
+/**
+ * Generate a markdown file describing all test side effects. When executed in CI throw if there is a diff.
+ * @param {Function} fnRegisteringTest
+ * @param {URL} snapshotFileUrl
+ * @param {Object} snapshotTestsOptions
+ * @param {string|url} snapshotTestsOptions.sourceDirectoryUrl
+ * @return {Array.<Object>} sideEffects
+ */
 export const snapshotTests = async (
   fnRegisteringTest,
   snapshotFileUrl,
@@ -26,6 +29,7 @@ export const snapshotTests = async (
     linkToEachSource,
     errorStackHidden,
     logEffects,
+    filesystemEffects,
     throwWhenDiff = process.env.CI,
   } = {},
 ) => {
@@ -53,6 +57,7 @@ export const snapshotTests = async (
     const sideEffects = await captureSideEffects(fn, {
       callSite: linkToEachSource ? callSite : undefined,
       logEffects,
+      filesystemEffects,
     });
     const outDirectoryUrl = new URL(
       `./${asValidFilename(scenario)}/`,

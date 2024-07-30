@@ -1,20 +1,17 @@
-import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
-import { urlToBasename } from "@jsenv/urls";
+import { snapshotTests } from "@jsenv/snapshot";
 
-export const snapshotBuildSideEffects = async (
+export const snapshotBuildTests = async (
   fn,
   sideEffectFileUrl,
   options = {},
 ) => {
-  const sideEffectBasename = urlToBasename(sideEffectFileUrl);
-  await snapshotFunctionSideEffects(fn, sideEffectFileUrl, {
+  await snapshotTests(fn, sideEffectFileUrl, {
     ...options,
     filesystemEffects: {
       include: {
         "**/*": true,
         "**/.jsenv/": false,
       },
-      outDirectory: sideEffectBasename,
       ...options.filesystemEffects,
     },
   });
