@@ -1,9 +1,9 @@
 /*
- * TODO: tester avec jsenv assert et ajouter des otions pour obtenir ce qu'on veut
- * TODO: faire des cas ou la comparison fail (parce que le comportement de la fonction change)
- * et voir ce qu'on récupere dans ce cas
+ * TODO: possibilité de regrouper les logs
  * TODO: ajouter la possibilité de faire un .gif avec les logs
  * (dans ce cas tous les console, process, etc sont regroupé dans un seul side effect)
+ * TODO: faire des cas ou la comparison fail (parce que le comportement de la fonction change)
+ * et voir ce qu'on récupere dans ce cas
  *
  */
 
