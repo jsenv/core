@@ -77,7 +77,6 @@ await startSnapshotTesting("function_body", {
           // prettier-ignore
           set   name ( value )  {
             value++
-
           },
           /* eslint-enable accessor-pairs */
         },
