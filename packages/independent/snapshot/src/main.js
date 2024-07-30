@@ -5,3 +5,4 @@ export {
 export { createReplaceFilesystemWellKnownValues } from "./filesystem_well_known_values.js";
 export { replaceFluctuatingValues } from "./replace_fluctuating_values.js";
 export { snapshotSideEffects } from "./side_effects/snapshot_side_effects.js";
+export { snapshotTests } from "./side_effects/snapshot_tests.js";

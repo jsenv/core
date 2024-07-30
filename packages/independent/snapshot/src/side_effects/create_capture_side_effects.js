@@ -10,7 +10,6 @@ export const createCaptureSideEffects = ({
   replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
     rootDirectoryUrl,
   }),
-  callSite,
 } = {}) => {
   const detectors = [];
   if (logEffects) {
@@ -31,7 +30,7 @@ export const createCaptureSideEffects = ({
     replaceFilesystemWellKnownValues,
   };
   let functionExecutingCount = 0;
-  const capture = (fn) => {
+  const capture = (fn, { callSite } = {}) => {
     const sideEffects = [];
     sideEffects.options = options;
     const effectIndexMap = new Map();
