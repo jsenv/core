@@ -78,7 +78,31 @@ System.register([], function (_export, _context) {
 });
 ```
 
-## [main.html](./1_js_module_fallback/build/main.html)
+## main.html
+
+```
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <script>
+      /*
+       * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
+       * with the following changes:
+       *
+       * - Code can use aync/await, const, etc because this file is compiled (see dist/s.js)
+       * - Can use document.currentScript because we don't support IE
+       * - auto import inline System.register
+       * - auto import first System.register in web workers
+       * - queing events in web workers
+       * - no support for importmap because jsenv don't need it
+       */
+      
+      (function () {
+        /* eslint-env browser */
+```
+see [../build/main.html](./1_js_module_fallback/build/main.html) for more
 
 ### 3/4 logs
 

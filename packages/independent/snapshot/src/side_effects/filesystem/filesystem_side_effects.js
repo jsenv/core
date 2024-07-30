@@ -1,4 +1,3 @@
-import { writeFileSync } from "@jsenv/filesystem";
 import { setUrlBasename, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { pathToFileURL } from "node:url";
@@ -13,6 +12,8 @@ const filesystemSideEffectsOptionsDefault = {
   baseDirectory: "",
   textualFilesIntoDirectory: false,
 };
+const INLINE_MAX_LINES = 20;
+const INLINE_MAX_LENGTH = 2000;
 
 export const filesystemSideEffects = (
   filesystemSideEffectsOptions,
@@ -53,11 +54,6 @@ export const filesystemSideEffects = (
           });
         }
         return url;
-      };
-      const getUrlRelativeToOut = (toUrl, outDirectoryUrl) => {
-        return urlToRelativeUrl(toUrl, outDirectoryUrl, {
-          preferRelativeNotation: true,
-        });
       };
       const getUrlInsideOutDirectory = (url, outDirectoryUrl) => {
         if (baseDirectory) {
@@ -120,50 +116,35 @@ export const filesystemSideEffects = (
               type: `write_file_group ${commonDirectoryUrl}`,
               value: {},
               render: {
-                md: ({ replace, sideEffectFileUrl, outDirectoryUrl }) => {
+                md: (options) => {
                   const numberOfFiles = fileSideEffectArray.length;
                   const generateSideEffectGroup = () => {
-                    let text = "";
+                    let groupMd = "";
                     for (const fileSideEffect of fileSideEffectArray) {
-                      if (text) {
-                        text += "\n\n";
+                      if (groupMd) {
+                        groupMd += "\n\n";
                       }
-                      const { url, willBeInOutDirectory, buffer } =
-                        fileSideEffect.value;
-                      if (willBeInOutDirectory) {
-                        const urlInsideOutDirectory = getUrlInsideOutDirectory(
-                          url,
-                          outDirectoryUrl,
-                        );
-                        if (fileSideEffect.counter) {
-                          setUrlBasename(
-                            urlInsideOutDirectory,
-                            (basename) =>
-                              `${basename}_${fileSideEffect.counter}`,
-                          );
-                        }
-                        writeFileSync(urlInsideOutDirectory, buffer);
-                        const relativeUrl = urlToRelativeUrl(
-                          url,
-                          commonDirectoryUrl,
-                        );
-                        const outRelativeUrl = getUrlRelativeToOut(
-                          urlInsideOutDirectory,
-                          sideEffectFileUrl,
-                        );
-                        text += `${"#".repeat(2)} [${relativeUrl}](${outRelativeUrl})`;
+                      const { url, outDirectoryReason } = fileSideEffect.value;
+                      const { text } = fileSideEffect.render.md(options);
+                      const relativeUrl = urlToRelativeUrl(
+                        url,
+                        commonDirectoryUrl,
+                      );
+                      if (outDirectoryReason) {
+                        groupMd += `${"#".repeat(2)} ${relativeUrl}
+${renderFileContent(text, {
+  ...options,
+  sideEffect: fileSideEffect,
+})}`;
                         continue;
                       }
-                      text += `${"#".repeat(2)} ${urlToRelativeUrl(url, commonDirectoryUrl)}
-${renderFileContent(
-  {
-    url,
-    value: String(buffer),
-  },
-  { replace },
-)}`;
+                      groupMd += `${"#".repeat(2)} ${relativeUrl}
+${renderFileContent(text, {
+  ...options,
+  sideEffect: fileSideEffect,
+})}`;
                     }
-                    return text;
+                    return groupMd;
                   };
                   return {
                     label: `write ${numberOfFiles} files into "${getUrlRelativeToBase(commonDirectoryUrl)}"`,
@@ -181,19 +162,18 @@ ${renderFileContent(
           onWriteFile: (url, buffer) => {
             const contentType = CONTENT_TYPE.fromUrlExtension(url);
             const isTextual = CONTENT_TYPE.isTextual(contentType);
-            let willBeInOutDirectory;
+            let outDirectoryReason;
             if (isTextual) {
               if (textualFilesIntoDirectory) {
-                willBeInOutDirectory = true;
-              } else if (buffer.size > 4000) {
-                willBeInOutDirectory = true;
-              } else if (String(buffer).split("\n").length > 50) {
-                willBeInOutDirectory = true;
+                outDirectoryReason = "textual_in_directory_option";
+              } else if (String(buffer).split("\n").length > INLINE_MAX_LINES) {
+                outDirectoryReason = "lot_of_lines";
+              } else if (buffer.size > INLINE_MAX_LENGTH) {
+                outDirectoryReason = "lot_of_chars";
               }
             } else {
-              willBeInOutDirectory = true;
+              outDirectoryReason = "binary";
             }
-
             const writeFileSideEffect = {
               code: "write_file",
               type: `write_file:${url}`,
@@ -202,11 +182,12 @@ ${renderFileContent(
                 buffer,
                 contentType,
                 isTextual,
-                willBeInOutDirectory,
+                outDirectoryReason,
               },
               render: {
                 md: ({ sideEffectFileUrl, outDirectoryUrl }) => {
-                  if (willBeInOutDirectory) {
+                  const urlRelativeToBase = getUrlRelativeToBase(url);
+                  if (outDirectoryReason) {
                     const urlInsideOutDirectory = getUrlInsideOutDirectory(
                       url,
                       outDirectoryUrl,
@@ -218,20 +199,33 @@ ${renderFileContent(
                           `${basename}_${writeFileSideEffect.counter}`,
                       );
                     }
-                    writeFileSync(urlInsideOutDirectory, buffer);
-                    const outRelativeUrl = getUrlRelativeToOut(
-                      urlInsideOutDirectory,
-                      sideEffectFileUrl,
-                    );
+                    let textValue;
+                    if (outDirectoryReason === "lot_of_chars") {
+                      textValue = String(buffer.slice(0, INLINE_MAX_LENGTH));
+                    } else if (outDirectoryReason === "lot_of_lines") {
+                      textValue = String(buffer)
+                        .split("\n")
+                        .slice(0, INLINE_MAX_LINES)
+                        .join("\n");
+                    } else {
+                      textValue = buffer;
+                    }
                     return {
-                      label: `write file ["${getUrlRelativeToBase(url)}"](${outRelativeUrl})`,
+                      label: `write file "${urlRelativeToBase}"`,
+                      text: {
+                        type: "file_content",
+                        value: textValue,
+                        relativeUrl: urlToRelativeUrl(url, sideEffectFileUrl, {
+                          preferRelativeNotation: true,
+                        }),
+                        urlInsideOutDirectory,
+                      },
                     };
                   }
                   return {
-                    label: `write file "${getUrlRelativeToBase(url)}"`,
+                    label: `write file "${urlRelativeToBase}"`,
                     text: {
                       type: "file_content",
-                      url,
                       value: String(buffer),
                     },
                   };

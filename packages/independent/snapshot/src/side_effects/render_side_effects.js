@@ -273,7 +273,11 @@ const renderText = (
       });
     }
     if (text.type === "file_content") {
-      return renderFileContent(text, { replace });
+      return renderFileContent(text, {
+        sideEffect,
+        sideEffectFileUrl,
+        replace,
+      });
     }
     if (text.type === "link") {
       return renderLinkMarkdown(text.value, { replace });
@@ -327,9 +331,48 @@ const renderPotentialAnsi = (
   // we will write a svg file
 };
 
-export const renderFileContent = (text, { replace }) => {
-  const { url } = text;
-  let content = text.value;
+export const renderFileContent = (
+  text,
+  { sideEffect, sideEffectFileUrl, replace },
+) => {
+  const { url, buffer, outDirectoryReason } = sideEffect.value;
+  const { value, urlInsideOutDirectory, relativeUrl } = text;
+
+  if (outDirectoryReason) {
+    const outRelativeUrl = urlToRelativeUrl(
+      urlInsideOutDirectory,
+      sideEffectFileUrl,
+      { preferRelativeNotation: true },
+    );
+    writeFileSync(urlInsideOutDirectory, buffer);
+    let md = "";
+    if (
+      outDirectoryReason === "lot_of_chars" ||
+      outDirectoryReason === "lot_of_lines"
+    ) {
+      md += "\n";
+      md += renderMarkdownBlock(replace(value));
+      const fileLink = renderLinkMarkdown(
+        {
+          text: relativeUrl,
+          href: outRelativeUrl,
+        },
+        { replace },
+      );
+      md += `\nsee ${fileLink} for more`;
+      return md;
+    }
+    md += "\n";
+    md += renderLinkMarkdown(
+      {
+        text: relativeUrl,
+        href: outRelativeUrl,
+      },
+      { replace },
+    );
+    return md;
+  }
+  let content = value;
   const extension = urlToExtension(url).slice(1);
   if (extension === "md") {
     let escaped = "";
