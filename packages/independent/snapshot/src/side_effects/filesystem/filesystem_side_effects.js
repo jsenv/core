@@ -40,7 +40,7 @@ export const filesystemSideEffects = (
   return {
     name: "filesystem",
     setBaseDirectory,
-    install: (addSideEffect, { addFinallyCallback }) => {
+    install: (addSideEffect, { addSkippableHandler, addFinallyCallback }) => {
       let { include, preserve, textualFilesIntoDirectory } =
         filesystemSideEffectsOptions;
       if (filesystemSideEffectsOptions.baseDirectory) {
@@ -74,37 +74,32 @@ export const filesystemSideEffects = (
         return new URL(toRelativeUrl, outDirectoryUrl);
       };
 
-      addFinallyCallback((sideEffects) => {
+      addSkippableHandler((sideEffect) => {
         // if directory ends up with something inside we'll not report
         // this side effect because:
         // - it was likely created to write the file
         // - the file creation will be reported and implies directory creation
-        let i = 0;
-        while (i < sideEffects.length) {
-          const sideEffect = sideEffects[i];
-          i++;
-          if (sideEffect.code === "write_directory") {
-            let j = i;
-            while (j < sideEffects.length) {
-              const afterSideEffect = sideEffects[j];
-              j++;
-              if (
-                (afterSideEffect.code === "write_file" ||
-                  afterSideEffect.code === "write_directory") &&
-                urlIsInsideOf(afterSideEffect.value.url, sideEffect.value.url)
-              ) {
-                sideEffect.skippable = true;
-                break;
-              }
-              if (
-                afterSideEffect.code === "remove_directory" &&
-                afterSideEffect.value.url === sideEffect.value.url
-              ) {
-                break;
-              }
+        if (sideEffect.code === "write_directory") {
+          return (nextSideEffect, { skip, stop }) => {
+            if (
+              (nextSideEffect.code === "write_file" ||
+                nextSideEffect.code === "write_directory") &&
+              urlIsInsideOf(nextSideEffect.value.url, sideEffect.value.url)
+            ) {
+              skip();
+              stop();
+              return;
             }
-          }
+            if (
+              nextSideEffect.code === "remove_directory" &&
+              nextSideEffect.value.url === sideEffect.value.url
+            ) {
+              stop();
+              return;
+            }
+          };
         }
+        return null;
       });
 
       addFinallyCallback((sideEffects) => {

@@ -70,8 +70,64 @@ export const createCaptureSideEffects = ({
     const addFinallyCallback = (finallyCallback) => {
       finallyCallbackSet.add(finallyCallback);
     };
+    const skippableHandlerSet = new Set();
+    const addSkippableHandler = (skippableHandler) => {
+      skippableHandlerSet.add(skippableHandler);
+    };
+    addFinallyCallback((sideEffects) => {
+      let i = 0;
+      while (i < sideEffects.length) {
+        const sideEffect = sideEffects[i];
+        i++;
+        let skippableHandlerResult;
+        for (const skippableHandler of skippableHandlerSet) {
+          skippableHandlerResult = skippableHandler(sideEffect);
+          if (!skippableHandlerResult) {
+            continue;
+          }
+        }
+        if (skippableHandlerResult) {
+          let j = i;
+          while (j < sideEffects.length) {
+            const afterSideEffect = sideEffects[j];
+            j++;
+            let stopCalled = false;
+            let skipCalled = false;
+            const stop = () => {
+              stopCalled = true;
+            };
+            const skip = () => {
+              skipCalled = true;
+            };
+            skippableHandlerResult.next(afterSideEffect, { skip, stop });
+            if (skipCalled) {
+              sideEffect.skippable = true;
+              break;
+            }
+            if (stopCalled) {
+              break;
+            }
+          }
+        }
+      }
+    });
+    addSkippableHandler((sideEffect) => {
+      if (sideEffect.type === "return" && sideEffect.value === RETURN_PROMISE) {
+        return (nextSideEffect, { skip }) => {
+          if (
+            nextSideEffect.code === "resolve" ||
+            nextSideEffect.code === "reject"
+          ) {
+            skip();
+          }
+        };
+      }
+      return null;
+    });
+
     for (const detector of detectors) {
       const uninstall = detector.install(addSideEffect, {
+        addSkippableHandler,
         addFinallyCallback,
       });
       finallyCallbackSet.add(() => {
@@ -113,7 +169,7 @@ export const createCaptureSideEffects = ({
     };
     const onReturn = (valueReturned) => {
       if (valueReturned === RETURN_PROMISE) {
-        const returnPromiseSideEffect = addSideEffect({
+        addSideEffect({
           code: "return",
           type: "return",
           value: valueReturned,
@@ -124,19 +180,6 @@ export const createCaptureSideEffects = ({
               };
             },
           },
-        });
-        addFinallyCallback((sideEffects) => {
-          const returnPromiseIndex = sideEffects.indexOf(
-            returnPromiseSideEffect,
-          );
-          const nextSideEffect = sideEffects[returnPromiseIndex + 1];
-          if (
-            nextSideEffect &&
-            (nextSideEffect.code === "resolve" ||
-              nextSideEffect.code === "reject")
-          ) {
-            returnPromiseSideEffect.skippable = true;
-          }
         });
         return;
       }

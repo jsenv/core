@@ -4,6 +4,9 @@ export const groupSideEffectsPer = (
   { createGroupSideEffect },
 ) => {
   const groupArray = groupBy(allSideEffects, (sideEffect) => {
+    if (sideEffect.skippable) {
+      return IGNORE;
+    }
     const isInsideResult = isInsideGroup(sideEffect);
     if (isInsideResult === IGNORE) {
       return IGNORE;
@@ -18,11 +21,11 @@ export const groupSideEffectsPer = (
     if (sideEffectArray.length < 2) {
       continue;
     }
-    const firstEffect = sideEffectArray[0];
-    const firstEffectIndex = allSideEffects.indexOf(firstEffect);
     for (const sideEffect of sideEffectArray) {
       allSideEffects.splice(allSideEffects.indexOf(sideEffect), 1);
     }
+    const firstEffect = sideEffectArray[0];
+    const firstEffectIndex = allSideEffects.indexOf(firstEffect);
     allSideEffects.splice(
       firstEffectIndex,
       0,

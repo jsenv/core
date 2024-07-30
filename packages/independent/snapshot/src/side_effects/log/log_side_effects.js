@@ -48,7 +48,7 @@ export const logSideEffects = (logSideEffectsOptions) => {
                       return logGroupMd;
                     };
                     return {
-                      label: `terminal`,
+                      label: `logs`,
                       text: renderLogGroup(),
                     };
                   },
