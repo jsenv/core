@@ -150,7 +150,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "write_file/8_write_same_file_twice.md",
+      "write_file/8_write_same_file.md",
       () => {
         writeFileSync(new URL("./toto.txt", import.meta.url), "a");
         writeFileSync(new URL("./toto.txt", import.meta.url), "b");
@@ -177,6 +177,19 @@ await startTesting(({ test }) => {
     );
     test(
       "write_file/10_write_same_file_not_grouped.md",
+      () => {
+        writeFileSync(new URL("./toto.txt", import.meta.url), "first");
+        console.log("hey");
+        writeFileSync(new URL("./toto.txt", import.meta.url), "second");
+      },
+      {
+        filesystemEffects: {
+          baseDirectory: new URL("./", import.meta.url),
+        },
+      },
+    );
+    test(
+      "write_file/11_write_same_file_not_grouped_and_out.md",
       () => {
         writeFileSync(new URL("./toto.txt", import.meta.url), "first");
         console.log("hey");
