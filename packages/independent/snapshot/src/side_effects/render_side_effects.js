@@ -29,8 +29,8 @@ export const renderSideEffects = (
     generatedBy = true,
     titleLevel = 1,
     shouldUseDetails = createDetailsOnMaxSizeCondition({
-      maxLines: 10,
-      maxLength: 500,
+      maxLines: 15,
+      maxLength: 2000,
     }),
     errorStackHidden,
   } = {},

@@ -22,11 +22,30 @@ export const filesystemSideEffects = (
     ...filesystemSideEffectsOptionsDefault,
     ...filesystemSideEffectsOptions,
   };
+  let baseDirectory;
+  let removeBaseDirectoryWellKnown = () => {};
+  const setBaseDirectory = (value) => {
+    removeBaseDirectoryWellKnown();
+    baseDirectory = value;
+    if (baseDirectory) {
+      removeBaseDirectoryWellKnown =
+        replaceFilesystemWellKnownValues.addWellKnownFileUrl(
+          baseDirectory,
+          createWellKnown("base"),
+          { position: "start" },
+        );
+    }
+  };
+
   return {
     name: "filesystem",
+    setBaseDirectory,
     install: (addSideEffect, { addFinallyCallback }) => {
-      let { include, preserve, baseDirectory, textualFilesIntoDirectory } =
+      let { include, preserve, textualFilesIntoDirectory } =
         filesystemSideEffectsOptions;
+      if (filesystemSideEffectsOptions.baseDirectory) {
+        setBaseDirectory(filesystemSideEffectsOptions.baseDirectory);
+      }
       const getUrlRelativeToBase = (url) => {
         if (baseDirectory) {
           return urlToRelativeUrl(url, baseDirectory, {
@@ -88,66 +107,58 @@ export const filesystemSideEffects = (
         }
       });
 
-      if (baseDirectory) {
-        replaceFilesystemWellKnownValues.addWellKnownFileUrl(
-          baseDirectory,
-          createWellKnown("base"),
-          { position: "start" },
-        );
-        addFinallyCallback((sideEffects) => {
-          // gather all file side effect next to each other
-          // collapse them if they have a shared ancestor
-          groupFileSideEffectsPerDirectory(sideEffects, {
-            createWriteFileGroupSideEffect: (
-              fileSideEffectArray,
-              commonPath,
-            ) => {
-              let commonUrl = pathToFileURL(commonPath);
-              let commonDirectoryUrl;
-              if (commonUrl.href.endsWith("/")) {
-                commonDirectoryUrl = commonUrl;
-              } else {
-                commonDirectoryUrl = new URL("./", commonUrl);
-              }
+      addFinallyCallback((sideEffects) => {
+        // gather all file side effect next to each other
+        // collapse them if they have a shared ancestor
+        groupFileSideEffectsPerDirectory(sideEffects, {
+          createWriteFileGroupSideEffect: (fileSideEffectArray, commonPath) => {
+            let commonUrl = pathToFileURL(commonPath);
+            let commonDirectoryUrl;
+            if (commonUrl.href.endsWith("/")) {
+              commonDirectoryUrl = commonUrl;
+            } else {
+              commonDirectoryUrl = new URL("./", commonUrl);
+            }
 
-              return {
-                code: "write_file_group",
-                type: `write_file_group ${commonDirectoryUrl}`,
-                value: {},
-                render: {
-                  md: ({ replace, sideEffectFileUrl, outDirectoryUrl }) => {
-                    const numberOfFiles = fileSideEffectArray.length;
-                    const generateSideEffectGroup = () => {
-                      let text = "";
-                      for (const fileSideEffect of fileSideEffectArray) {
-                        if (text) {
-                          text += "\n\n";
-                        }
-                        const { url, willBeInOutDirectory, buffer } =
-                          fileSideEffect.value;
-                        if (willBeInOutDirectory) {
-                          const urlInsideOutDirectory =
-                            getUrlInsideOutDirectory(url, outDirectoryUrl);
-                          if (fileSideEffect.index) {
-                            setUrlBasename(
-                              urlInsideOutDirectory,
-                              (basename) =>
-                                `${basename}_${fileSideEffect.index}`,
-                            );
-                          }
-                          writeFileSync(urlInsideOutDirectory, buffer);
-                          const relativeUrl = urlToRelativeUrl(
-                            url,
-                            commonDirectoryUrl,
-                          );
-                          const outRelativeUrl = getUrlRelativeToOut(
+            return {
+              code: "write_file_group",
+              type: `write_file_group ${commonDirectoryUrl}`,
+              value: {},
+              render: {
+                md: ({ replace, sideEffectFileUrl, outDirectoryUrl }) => {
+                  const numberOfFiles = fileSideEffectArray.length;
+                  const generateSideEffectGroup = () => {
+                    let text = "";
+                    for (const fileSideEffect of fileSideEffectArray) {
+                      if (text) {
+                        text += "\n\n";
+                      }
+                      const { url, willBeInOutDirectory, buffer } =
+                        fileSideEffect.value;
+                      if (willBeInOutDirectory) {
+                        const urlInsideOutDirectory = getUrlInsideOutDirectory(
+                          url,
+                          outDirectoryUrl,
+                        );
+                        if (fileSideEffect.index) {
+                          setUrlBasename(
                             urlInsideOutDirectory,
-                            sideEffectFileUrl,
+                            (basename) => `${basename}_${fileSideEffect.index}`,
                           );
-                          text += `${"#".repeat(2)} [${relativeUrl}](${outRelativeUrl})`;
-                          continue;
                         }
-                        text += `${"#".repeat(2)} ${urlToRelativeUrl(url, commonDirectoryUrl)}
+                        writeFileSync(urlInsideOutDirectory, buffer);
+                        const relativeUrl = urlToRelativeUrl(
+                          url,
+                          commonDirectoryUrl,
+                        );
+                        const outRelativeUrl = getUrlRelativeToOut(
+                          urlInsideOutDirectory,
+                          sideEffectFileUrl,
+                        );
+                        text += `${"#".repeat(2)} [${relativeUrl}](${outRelativeUrl})`;
+                        continue;
+                      }
+                      text += `${"#".repeat(2)} ${urlToRelativeUrl(url, commonDirectoryUrl)}
 ${renderFileContent(
   {
     url,
@@ -155,20 +166,20 @@ ${renderFileContent(
   },
   { replace },
 )}`;
-                      }
-                      return text;
-                    };
-                    return {
-                      label: `write ${numberOfFiles} files into "${getUrlRelativeToBase(commonDirectoryUrl)}"`,
-                      text: generateSideEffectGroup(),
-                    };
-                  },
+                    }
+                    return text;
+                  };
+                  return {
+                    label: `write ${numberOfFiles} files into "${getUrlRelativeToBase(commonDirectoryUrl)}"`,
+                    text: generateSideEffectGroup(),
+                  };
                 },
-              };
-            },
-          });
+              },
+            };
+          },
         });
-      }
+      });
+
       const filesystemSpy = spyFilesystemCalls(
         {
           onWriteFile: (url, buffer) => {

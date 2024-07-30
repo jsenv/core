@@ -14,19 +14,17 @@ await snapshotBuildTests(
       versioning: false,
     };
     // can use <script type="module">
-    test("0_js_module", async () => {
-      await build({
+    test("0_js_module", () =>
+      build({
         ...testParams,
         runtimeCompat: { chrome: "89" },
-      });
-    });
+      }));
     // cannot use <script type="module">
-    test("1_js_module_fallback", async () => {
-      await build({
+    test("1_js_module_fallback", () =>
+      build({
         ...testParams,
         runtimeCompat: { chrome: "60" },
-      });
-    });
+      }));
   },
   new URL("./output/script_type_module_basic.md", import.meta.url),
 );

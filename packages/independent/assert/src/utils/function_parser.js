@@ -36,14 +36,14 @@ const CANDIDATES = [
   },
   (fnString, fn) => {
     const ARROW_FUNCTION_SHORTHAND_BODY_REGEX =
-      /^(\([\s\S]*?\))\s*=>\s*([\s\S]*)$/;
+      /^(\([\s\S]*?\))\s*=>([\s\S]*)$/;
     const match = fnString.match(ARROW_FUNCTION_SHORTHAND_BODY_REGEX);
     if (match) {
       return {
         type: "arrow",
         name: fn.name,
         argsSource: normalizeArgsSource(match[1]),
-        body: removeRootIndentation(match[2]),
+        body: removeRootIndentation(match[2], { isShortHand: true }),
       };
     }
     return null;
@@ -95,7 +95,7 @@ const removeRootIndentation = (text) => {
     const line = lines[i];
     const isFirstLine = i === 0;
     const isLastLine = i === lines.length - 1;
-    const isRootLine = (isFirstLine && line.length) || i === 1;
+    const isRootLine = lines[0] === "" ? i === 1 : isFirstLine;
     i++;
     if (isFirstLine && line === "") {
       // remove first line when empty

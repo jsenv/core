@@ -7,6 +7,10 @@ export const snapshotBuildTests = async (
 ) => {
   await snapshotTests(fn, sideEffectFileUrl, {
     ...options,
+    logEffects: {
+      group: true,
+      ...options.logEffects,
+    },
     filesystemEffects: {
       include: {
         "**/*": true,

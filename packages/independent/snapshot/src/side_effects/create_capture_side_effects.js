@@ -15,8 +15,9 @@ export const createCaptureSideEffects = ({
   if (logEffects) {
     detectors.push(logSideEffects(logEffects === true ? {} : logEffects));
   }
+  let filesystemSideEffectsDetector;
   if (filesystemEffects) {
-    const filesystemSideEffectsDetector = filesystemSideEffects(
+    filesystemSideEffectsDetector = filesystemSideEffects(
       filesystemEffects === true ? {} : filesystemEffects,
       {
         replaceFilesystemWellKnownValues,
@@ -30,7 +31,10 @@ export const createCaptureSideEffects = ({
     replaceFilesystemWellKnownValues,
   };
   let functionExecutingCount = 0;
-  const capture = (fn, { callSite } = {}) => {
+  const capture = (fn, { callSite, baseDirectory } = {}) => {
+    if (baseDirectory !== undefined && filesystemSideEffectsDetector) {
+      filesystemSideEffectsDetector.setBaseDirectory(baseDirectory);
+    }
     const startMs = Date.now();
     const sideEffects = [];
     sideEffects.options = options;
@@ -85,7 +89,7 @@ export const createCaptureSideEffects = ({
       //    during unit test. So in unit test the function being tested should be analyized
       //    and should not in turn analyze an other one
       console.warn(
-        `collectFunctionSideEffects called while other function(s) side effects are collected`,
+        `captureSideEffects called while other function(s) side effects are collected`,
       );
     }
 

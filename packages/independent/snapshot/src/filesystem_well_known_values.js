@@ -115,6 +115,16 @@ export const createReplaceFilesystemWellKnownValues = ({
       wellKownUrlArray.push(wellKnownUrl);
       wellKnownPathArray.push(wellKnownPath);
     }
+    return () => {
+      const urlIndex = wellKownUrlArray.indexOf(wellKnownUrl);
+      if (urlIndex > -1) {
+        wellKownUrlArray.splice(urlIndex, 1);
+      }
+      const pathIndex = wellKnownPathArray.indexOf(wellKnownPath);
+      if (pathIndex !== -1) {
+        wellKnownPathArray.splice(pathIndex, 1);
+      }
+    };
   };
   if (rootDirectoryUrl) {
     addWellKnownFileUrl(rootDirectoryUrl, WELL_KNOWN_ROOT);
