@@ -351,7 +351,7 @@ export const renderFileContent = (
       outDirectoryReason === "lot_of_lines"
     ) {
       md += "\n";
-      md += renderMarkdownBlock(escapeMarkdown(replace(value)));
+      md += renderMarkdownBlock(escapeMarkdownBlockContent(replace(value)));
       const fileLink = renderLinkMarkdown(
         {
           text: relativeUrl,
@@ -374,32 +374,15 @@ export const renderFileContent = (
   let content = value;
   const extension = urlToExtension(url).slice(1);
   if (extension === "md") {
-    content = escapeMarkdown(content);
+    content = escapeMarkdownBlockContent(content);
   }
   return renderMarkdownBlock(replace(content, { fileUrl: url }), extension);
 };
 
-const escapeMarkdown = (content) => {
+const escapeMarkdownBlockContent = (content) => {
   let escaped = "";
   for (const char of content.split("")) {
-    if (
-      [
-        "`",
-        "*",
-        "_",
-        "{",
-        "}",
-        "[",
-        "]",
-        "(",
-        ")",
-        "#",
-        "+",
-        "-",
-        ".",
-        "!",
-      ].includes(char)
-    ) {
+    if (["`"].includes(char)) {
       escaped += `\\${char}`;
     } else {
       escaped += char;
@@ -407,6 +390,35 @@ const escapeMarkdown = (content) => {
   }
   return escaped;
 };
+
+// const escapeMarkdown = (content) => {
+//   let escaped = "";
+//   for (const char of content.split("")) {
+//     if (
+//       [
+//         "`",
+//         "*",
+//         "_",
+//         "{",
+//         "}",
+//         "[",
+//         "]",
+//         "(",
+//         ")",
+//         "#",
+//         "+",
+//         "-",
+//         ".",
+//         "!",
+//       ].includes(char)
+//     ) {
+//       escaped += `\\${char}`;
+//     } else {
+//       escaped += char;
+//     }
+//   }
+//   return escaped;
+// };
 
 export const renderLinkMarkdown = ({ href, text }, { replace }) => {
   return `[${replace(text)}](${replace(href)})`;
