@@ -74,17 +74,17 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "5_write_inside_base_and_out",
+      "5_write_inside_base_and_textual_out",
       () => {
         writeFileSync(
           new URL("./toto.txt", import.meta.url),
-          "5_write_inside_base_and_out",
+          "5_write_inside_base_and_textual_out",
         );
       },
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          outDirectory: "./5_write_inside_base_and_out/",
+          textualFilesIntoDirectory: true,
         },
       },
     );
@@ -103,7 +103,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "7_write_above_base_and_out",
+      "7_write_above_base_and_textual_out",
       () => {
         writeFileSync(
           new URL("../toto.txt", import.meta.url),
@@ -113,7 +113,7 @@ await startTesting(({ test }) => {
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          outDirectory: "./7_write_above_base_and_out/",
+          textualFilesIntoDirectory: true,
         },
       },
     );
@@ -152,7 +152,7 @@ await startTesting(({ test }) => {
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          outDirectory: "./12_write_in_one_dir/",
+          textualFilesIntoDirectory: true,
         },
       },
     );
@@ -168,7 +168,7 @@ await startTesting(({ test }) => {
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          outDirectory: "./13_write_in_2_dir/",
+          textualFilesIntoDirectory: true,
         },
       },
     );

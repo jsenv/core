@@ -25,7 +25,7 @@ const filesystemSideEffectsOptionsDefault = {
 
 export const filesystemSideEffects = (
   filesystemSideEffectsOptions,
-  { replaceFilesystemWellKnownValues, sideEffectFileUrl },
+  { replaceFilesystemWellKnownValues },
 ) => {
   filesystemSideEffectsOptions = {
     ...filesystemSideEffectsOptionsDefault,
@@ -36,7 +36,7 @@ export const filesystemSideEffects = (
     install: (addSideEffect, { addFinallyCallback }) => {
       let { include, preserve, baseDirectory, textualFilesIntoDirectory } =
         filesystemSideEffectsOptions;
-      const getUrlDisplayed = (url) => {
+      const getUrlRelativeToBase = (url) => {
         if (baseDirectory) {
           return urlToRelativeUrl(url, baseDirectory, {
             preferRelativeNotation: true,
@@ -44,19 +44,19 @@ export const filesystemSideEffects = (
         }
         return url;
       };
-      const getToUrlDisplayed = (toUrl) => {
-        return urlToRelativeUrl(toUrl, sideEffectFileUrl, {
+      const getUrlRelativeToOut = (toUrl, outDirectoryUrl) => {
+        return urlToRelativeUrl(toUrl, outDirectoryUrl, {
           preferRelativeNotation: true,
         });
       };
-      const getToUrl = (url, outDirectoryUrl) => {
+      const getUrlInsideOutDirectory = (url, outDirectoryUrl) => {
         if (baseDirectory) {
           if (
             url.href === baseDirectory.href ||
             urlIsInsideOf(url, baseDirectory)
           ) {
-            const toRelativeUrl = urlToRelativeUrl(url, baseDirectory);
-            return new URL(toRelativeUrl, outDirectoryUrl);
+            const outRelativeUrl = urlToRelativeUrl(url, baseDirectory);
+            return new URL(outRelativeUrl, outDirectoryUrl);
           }
         }
         // otherwise we replace the url with well known
@@ -82,25 +82,34 @@ export const filesystemSideEffects = (
                 type: "fs:write_file_group",
                 value: {},
                 render: {
-                  md: ({ replace, outDirectoryUrl }) => {
+                  md: ({ replace, sideEffectFileUrl, outDirectoryUrl }) => {
                     const numberOfFiles = fileSideEffectArray.length;
                     const commonDirectoryUrl =
                       pathToFileURL(commonDirectoryPath);
                     const generateInlineFiles = () => {
                       let text = "";
                       for (const fileSideEffect of fileSideEffectArray) {
+                        if (text) {
+                          text += "\n\n";
+                        }
                         const { url, willBeInOutDirectory, content } =
                           fileSideEffect.value;
                         if (willBeInOutDirectory) {
-                          const toUrl = getToUrl(url, outDirectoryUrl);
-                          writeFileSync(toUrl, content);
-                          const outUrlDisplayed = getToUrlDisplayed(toUrl);
-                          text += `
-${"#".repeat(2)} ${urlToRelativeUrl(url, commonDirectoryUrl)} (see [${outUrlDisplayed}](${outUrlDisplayed}))`;
+                          const urlInsideOutDirectory =
+                            getUrlInsideOutDirectory(url, outDirectoryUrl);
+                          writeFileSync(urlInsideOutDirectory, content);
+                          const relativeUrl = urlToRelativeUrl(
+                            url,
+                            commonDirectoryUrl,
+                          );
+                          const outRelativeUrl = getUrlRelativeToOut(
+                            urlInsideOutDirectory,
+                            sideEffectFileUrl,
+                          );
+                          text += `${"#".repeat(2)} [${relativeUrl}](${outRelativeUrl})`;
                           continue;
                         }
-                        text += `
-${"#".repeat(2)} ${urlToRelativeUrl(url, commonDirectoryUrl)}
+                        text += `${"#".repeat(2)} ${urlToRelativeUrl(url, commonDirectoryUrl)}
 ${renderFileContent(
   {
     url: fileSideEffect.value.url,
@@ -112,7 +121,7 @@ ${renderFileContent(
                       return text;
                     };
                     return {
-                      label: `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}"`,
+                      label: `write ${numberOfFiles} files into "${getUrlRelativeToBase(commonDirectoryUrl)}"`,
                       text: generateInlineFiles(),
                     };
                   },
@@ -140,17 +149,23 @@ ${renderFileContent(
                 willBeInOutDirectory,
               },
               render: {
-                md: ({ outDirectoryUrl }) => {
+                md: ({ sideEffectFileUrl, outDirectoryUrl }) => {
                   if (willBeInOutDirectory) {
-                    const toUrl = getToUrl(url, outDirectoryUrl);
-                    writeFileSync(toUrl, content);
-                    const outUrlDisplayed = getToUrlDisplayed(toUrl);
+                    const urlInsideOutDirectory = getUrlInsideOutDirectory(
+                      url,
+                      outDirectoryUrl,
+                    );
+                    writeFileSync(urlInsideOutDirectory, content);
+                    const outRelativeUrl = getUrlRelativeToOut(
+                      urlInsideOutDirectory,
+                      sideEffectFileUrl,
+                    );
                     return {
-                      label: `write file "${getUrlDisplayed(url)}" (see [${outUrlDisplayed}](${outUrlDisplayed}))`,
+                      label: `write file ["${getUrlRelativeToBase(url)}"](${outRelativeUrl})`,
                     };
                   }
                   return {
-                    label: `write file "${getUrlDisplayed(url)}"`,
+                    label: `write file "${getUrlRelativeToBase(url)}"`,
                     text: {
                       type: "file_content",
                       url,
@@ -169,7 +184,7 @@ ${renderFileContent(
               render: {
                 md: () => {
                   return {
-                    label: `write directory "${getUrlDisplayed(url)}"`,
+                    label: `write directory "${getUrlRelativeToBase(url)}"`,
                   };
                 },
               },

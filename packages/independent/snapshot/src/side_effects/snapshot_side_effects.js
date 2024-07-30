@@ -18,6 +18,7 @@ export const snapshotSideEffects = (
   const sideEffectFileSnapshot = takeFileSnapshot(sideEffectFileUrl);
   const onSideEffects = (sideEffects) => {
     const sideEffectFileContent = renderSideEffects(sideEffects, {
+      sideEffectFileUrl,
       outDirectoryUrl,
     });
     sideEffectFileSnapshot.update(sideEffectFileContent, {

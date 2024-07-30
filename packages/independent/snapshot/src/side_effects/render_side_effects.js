@@ -15,6 +15,7 @@ export const createDetailsOnMaxLineCondition =
 export const renderSideEffects = (
   sideEffects,
   {
+    sideEffectFileUrl,
     outDirectoryUrl,
     generatedBy = true,
     titleLevel = 1,
@@ -54,6 +55,7 @@ export const renderSideEffects = (
       markdown += "\n\n";
     }
     markdown += renderOneSideEffect(sideEffect, {
+      sideEffectFileUrl,
       outDirectoryUrl,
       rootDirectoryUrl,
       titleLevel,
@@ -73,6 +75,7 @@ export const renderSideEffects = (
 const renderOneSideEffect = (
   sideEffect,
   {
+    sideEffectFileUrl,
     outDirectoryUrl,
     rootDirectoryUrl,
     titleLevel,
@@ -88,7 +91,12 @@ const renderOneSideEffect = (
     );
   }
   const { md } = sideEffect.render;
-  let { label, text } = md({ replace, outDirectoryUrl, rootDirectoryUrl });
+  let { label, text } = md({
+    sideEffectFileUrl,
+    outDirectoryUrl,
+    replace,
+    rootDirectoryUrl,
+  });
   if (text) {
     text = renderText(text, { replace, rootDirectoryUrl });
   }
@@ -224,8 +232,8 @@ export const renderMarkdownDetails = (text, { open, summary, indent = 0 }) => {
 ${"  ".repeat(indent + 1)}<summary>${summary}</summary>
 
 ${text}
-</details>`;
-  // ${"  ".repeat(indent)}</details>`;
+
+${"  ".repeat(indent)}</details>`;
 };
 
 export const wrapIntoMarkdownBlock = (value, blockName = "") => {
