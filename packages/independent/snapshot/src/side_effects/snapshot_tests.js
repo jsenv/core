@@ -1,13 +1,9 @@
-import {
-  fileSystemPathToUrl,
-  isFileSystemPath,
-  urlToFilename,
-  urlToRelativeUrl,
-} from "@jsenv/urls";
+import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import {
   takeDirectorySnapshot,
   takeFileSnapshot,
 } from "../filesystem_snapshot.js";
+import { getCallerLocation } from "../get_caller_location.js";
 import { createCaptureSideEffects } from "./create_capture_side_effects.js";
 import { renderSideEffects, renderSmallLink } from "./render_side_effects.js";
 
@@ -37,10 +33,10 @@ export const snapshotTests = async (
   const testMap = new Map();
   const onlyTestMap = new Map();
   const test = (scenario, fn, options) => {
-    testMap.set(scenario, { fn, options, callSite: getTestCallSite(2) });
+    testMap.set(scenario, { fn, options, callSite: getCallerLocation(2) });
   };
   test.ONLY = (scenario, fn, options) => {
-    onlyTestMap.set(scenario, { fn, options, callSite: getTestCallSite(2) });
+    onlyTestMap.set(scenario, { fn, options, callSite: getCallerLocation(2) });
   };
   fnRegisteringTest({ test });
 
@@ -106,27 +102,6 @@ const generateExecutingLink = (sourceFileUrl, snapshotFileUrl) => {
   const href = `${relativeUrl}`;
   const text = `${relativeUrl}`;
   return ` executing <a href="${href}">${text}</a>`;
-};
-
-const getTestCallSite = (callIndex) => {
-  const { prepareStackTrace } = Error;
-  Error.prepareStackTrace = (error, stack) => {
-    Error.prepareStackTrace = prepareStackTrace;
-    return stack;
-  };
-  const { stack } = new Error();
-  Error.prepareStackTrace = prepareStackTrace;
-  const callerCallsite = stack[callIndex];
-  const fileName = callerCallsite.getFileName();
-  const testCallSite = {
-    url:
-      fileName && isFileSystemPath(fileName)
-        ? fileSystemPathToUrl(fileName)
-        : fileName,
-    line: callerCallsite.getLineNumber(),
-    column: callerCallsite.getColumnNumber(),
-  };
-  return testCallSite;
 };
 
 // see https://github.com/parshap/node-sanitize-filename/blob/master/index.js
