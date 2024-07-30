@@ -141,6 +141,9 @@ export const renderUrlOrRelativeUrlFilename = (urlOrRelativeUrl, renderer) => {
 export const setUrlExtension = (url, extension) => {
   const origin = urlToOrigin(url);
   const currentExtension = urlToExtension(url);
+  if (typeof extension === "function") {
+    extension = extension(currentExtension);
+  }
   const resource = urlToResource(url);
   const [pathname, search] = resource.split("?");
   const pathnameWithoutExtension = currentExtension
