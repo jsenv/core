@@ -13,39 +13,37 @@ writeFileSync(new URL("./toto.txt", import.meta.url), "toto");
 throw new Error("in the end we throw");
 ```
 
-# 1/7 console.log
+# 1/6 console.log
 
 ```console
 start
 ```
 
-# 2/7 return promise
-
-# 3/7 console.info
+# 2/6 console.info
 
 ```console
 timeout done
 ```
 
-# 4/7 console.warn
+# 3/6 console.warn
 
 ```console
 a warning after 2nd timeout
 ```
 
-# 5/7 console.warn
+# 4/6 console.warn
 
 ```console
 and an other warning
 ```
 
-# 6/7 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/toto.txt"
+# 5/6 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/toto.txt"
 
 ```txt
 toto
 ```
 
-# 7/7 reject
+# 6/6 reject
 
 ```
 Error: in the end we throw

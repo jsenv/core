@@ -3,15 +3,13 @@ await new Promise((resolve) => setTimeout(resolve, 100));
 console.warn("here");
 ```
 
-# 1/3 return promise
-
-# 2/3 console.warn
+# 1/2 console.warn
 
 ```console
 here
 ```
 
-# 3/3 resolve
+# 2/2 resolve
 
 ```js
 undefined

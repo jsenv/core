@@ -6,27 +6,25 @@ await new Promise((resolve) => {
 console.log("a_after_timeout_200");
 ```
 
-# 1/7 console.log
+# 1/6 console.log
 
 ```console
 a_before_timeout_200
 ```
 
-# 2/7 return promise
-
-# 3/7 console.log
+# 2/6 console.log
 
 ```console
 b_before_timeout_50
 ```
 
-# 4/7 console.log
+# 3/6 console.log
 
 ```console
 b_after_timeout_50
 ```
 
-# 5/7 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/output/3_b_when_b_ends_before.md"
+# 4/6 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/output/3_b_when_b_ends_before.md"
 
 <details>
   <summary>details</summary>
@@ -40,21 +38,19 @@ await new Promise\(\(resolve\) => \{
 console\.log\("b\_after\_timeout\_50"\);
 \`\`\`
 
-\# 1/4 console\.log
+\# 1/3 console\.log
 
 \`\`\`console
 b\_before\_timeout\_50
 \`\`\`
 
-\# 2/4 return promise
-
-\# 3/4 console\.log
+\# 2/3 console\.log
 
 \`\`\`console
 b\_after\_timeout\_50
 \`\`\`
 
-\# 4/4 resolve
+\# 3/3 resolve
 
 \`\`\`js
 undefined
@@ -67,13 +63,13 @@ undefined
 
 </details>
 
-# 6/7 console.log
+# 5/6 console.log
 
 ```console
 a_after_timeout_200
 ```
 
-# 7/7 resolve
+# 6/6 resolve
 
 ```js
 undefined

@@ -82,8 +82,11 @@ export const createCaptureSideEffects = ({
         let skippableHandlerResult;
         for (const skippableHandler of skippableHandlerSet) {
           skippableHandlerResult = skippableHandler(sideEffect);
-          if (!skippableHandlerResult) {
-            continue;
+          if (skippableHandlerResult) {
+            // there is no skippable per sideEffect type today
+            // so even if the skippable doe not skip in the end
+            // we don't have to check if an other skippable handler could
+            break;
           }
         }
         if (skippableHandlerResult) {

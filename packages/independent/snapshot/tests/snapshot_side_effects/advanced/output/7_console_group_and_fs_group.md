@@ -17,7 +17,7 @@ console.info(`--- build files ---
 --------------------`);
 ```
 
-# 1/5 logs
+# 1/4 logs
 
 ```console
 build "./main.html"
@@ -29,7 +29,7 @@ build "./main.html"
 
 ```
 
-# 2/5 write 2 files into "./dist/"
+# 2/4 write 2 files into "./dist/"
 
 ## toto.txt
 ```txt
@@ -41,13 +41,11 @@ toto
 tata
 ```
 
-# 3/5 logs
+# 3/4 logs
 
 ![img](7_console_group_and_fs_group/7_console_group_and_fs_group_log_group.svg)
 
-# 4/5 return promise
-
-# 5/5 resolve
+# 4/4 resolve
 
 ```js
 undefined
