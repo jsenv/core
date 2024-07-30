@@ -1,7 +1,16 @@
+// - for non textual file content:
+//   write them into the out directory (it will default to urlToFilename(sideEffectFile))
+//   and an other option like textualFilesIntoOutDirectory = false
+// - on mettra les svgs dans out directory
+// - on fera toujours un directory snapshot du dossier out
+// - écrire des tests ou on log du ansi et voir le svg
+// !!! le fait de faire des svgs c'est pas spécifique au filesystem
+// donc la logique out directory et snapshot elle remonte dans snapshotSideEffects
+
 import { readDirectorySync, writeFileSync } from "@jsenv/filesystem";
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { pathToFileURL } from "node:url";
-import { takeDirectorySnapshot } from "../../filesystem_snapshot.js";
 import { createWellKnown } from "../../filesystem_well_known_values.js";
 import { renderFileContent } from "../render_side_effects.js";
 import { groupFileSideEffectsPerDirectory } from "./group_file_side_effects_per_directory.js";
@@ -11,7 +20,7 @@ const filesystemSideEffectsOptionsDefault = {
   include: null,
   preserve: false,
   baseDirectory: "",
-  outDirectory: "",
+  textualFilesIntoDirectory: false,
 };
 
 export const filesystemSideEffects = (
@@ -25,13 +34,8 @@ export const filesystemSideEffects = (
   return {
     name: "filesystem",
     install: (addSideEffect, { addFinallyCallback }) => {
-      let writeFile;
-      let { include, preserve, baseDirectory, outDirectory } =
+      let { include, preserve, baseDirectory, textualFilesIntoDirectory } =
         filesystemSideEffectsOptions;
-      if (outDirectory) {
-        outDirectory = new URL(outDirectory, sideEffectFileUrl);
-      }
-
       const getUrlDisplayed = (url) => {
         if (baseDirectory) {
           return urlToRelativeUrl(url, baseDirectory, {
@@ -45,19 +49,19 @@ export const filesystemSideEffects = (
           preferRelativeNotation: true,
         });
       };
-      const getToUrl = (url) => {
+      const getToUrl = (url, outDirectoryUrl) => {
         if (baseDirectory) {
           if (
             url.href === baseDirectory.href ||
             urlIsInsideOf(url, baseDirectory)
           ) {
             const toRelativeUrl = urlToRelativeUrl(url, baseDirectory);
-            return new URL(toRelativeUrl, outDirectory);
+            return new URL(toRelativeUrl, outDirectoryUrl);
           }
         }
         // otherwise we replace the url with well known
         const toRelativeUrl = replaceFilesystemWellKnownValues(url);
-        return new URL(toRelativeUrl, outDirectory);
+        return new URL(toRelativeUrl, outDirectoryUrl);
       };
 
       if (baseDirectory) {
@@ -78,41 +82,35 @@ export const filesystemSideEffects = (
                 type: "fs:write_file_group",
                 value: {},
                 render: {
-                  md: ({ replace }) => {
+                  md: ({ replace, outDirectoryUrl }) => {
                     const numberOfFiles = fileSideEffectArray.length;
                     const commonDirectoryUrl =
                       pathToFileURL(commonDirectoryPath);
-                    if (outDirectory) {
-                      const commonDirectoryOutUrl =
-                        getToUrl(commonDirectoryUrl);
-                      const outDirectoryUrlDisplayed = getToUrlDisplayed(
-                        commonDirectoryOutUrl,
-                      );
-                      return {
-                        label: `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}" (see [${outDirectoryUrlDisplayed}](outDirectoryUrlDisplayed))`,
-                      };
-                    }
-
                     const generateInlineFiles = () => {
                       let text = "";
                       for (const fileSideEffect of fileSideEffectArray) {
-                        text += `\n${"#".repeat(2)} ${urlToRelativeUrl(
-                          fileSideEffect.value.url,
-                          commonDirectoryUrl,
-                        )}`;
-                        text += `\n`;
-                        text += renderFileContent(
-                          {
-                            url: fileSideEffect.value.url,
-                            value: fileSideEffect.value.content,
-                          },
-                          { replace },
-                        );
+                        const { url, willBeInOutDirectory, content } =
+                          fileSideEffect.value;
+                        if (willBeInOutDirectory) {
+                          const toUrl = getToUrl(url, outDirectoryUrl);
+                          writeFileSync(toUrl, content);
+                          const outUrlDisplayed = getToUrlDisplayed(toUrl);
+                          text += `
+${"#".repeat(2)} ${urlToRelativeUrl(url, commonDirectoryUrl)} (see [${outUrlDisplayed}](${outUrlDisplayed}))`;
+                          continue;
+                        }
+                        text += `
+${"#".repeat(2)} ${urlToRelativeUrl(url, commonDirectoryUrl)}
+${renderFileContent(
+  {
+    url: fileSideEffect.value.url,
+    value: fileSideEffect.value.content,
+  },
+  { replace },
+)}`;
                       }
                       return text;
                     };
-                    // const fileGroupValue = {};
-                    // fileGroupValue[fileEffect.value.url] = fileEffect.value.content;
                     return {
                       label: `write ${numberOfFiles} files into "${getUrlDisplayed(commonDirectoryUrl)}"`,
                       text: generateInlineFiles(),
@@ -121,62 +119,49 @@ export const filesystemSideEffects = (
                 },
               };
             },
-            getUrlDisplayed,
-            outDirectory,
-            getToUrl,
-            getToUrlDisplayed,
           });
         });
-      }
-      const writeFileCallbackSet = new Set();
-      if (outDirectory) {
-        const fsEffectsOutDirectorySnapshot =
-          takeDirectorySnapshot(outDirectory);
-        addFinallyCallback(() => {
-          fsEffectsOutDirectorySnapshot.compare();
-        });
-        writeFile = (url, content) => {
-          const toUrl = getToUrl(url);
-          writeFileCallbackSet.add(() => {
-            writeFileSync(toUrl, content);
-          });
-          addSideEffect({
-            type: "fs:write_file",
-            value: { url: String(url), content },
-            render: {
-              md: () => {
-                const outUrlDisplayed = getToUrlDisplayed(toUrl);
-                return {
-                  label: `write file "${getUrlDisplayed(url)}" (see [${outUrlDisplayed}](${outUrlDisplayed}))`,
-                };
-              },
-            },
-          });
-        };
-      } else {
-        writeFile = (url, content) => {
-          const writeFileSideEffect = {
-            type: "fs:write_file",
-            value: { url: String(url), content },
-            render: {
-              md: () => {
-                return {
-                  label: `write file "${getUrlDisplayed(url)}"`,
-                  text: {
-                    type: "file_content",
-                    url,
-                    value: writeFileSideEffect.value.content,
-                  },
-                };
-              },
-            },
-          };
-          addSideEffect(writeFileSideEffect);
-        };
       }
       const filesystemSpy = spyFilesystemCalls(
         {
-          writeFile,
+          writeFile: (url, content) => {
+            const contentType = CONTENT_TYPE.fromUrlExtension(url);
+            const isTextual = CONTENT_TYPE.isTextual(contentType);
+            const willBeInOutDirectory = isTextual
+              ? textualFilesIntoDirectory
+              : true;
+            const writeFileSideEffect = {
+              type: "fs:write_file",
+              value: {
+                url: String(url),
+                content,
+                contentType,
+                isTextual,
+                willBeInOutDirectory,
+              },
+              render: {
+                md: ({ outDirectoryUrl }) => {
+                  if (willBeInOutDirectory) {
+                    const toUrl = getToUrl(url, outDirectoryUrl);
+                    writeFileSync(toUrl, content);
+                    const outUrlDisplayed = getToUrlDisplayed(toUrl);
+                    return {
+                      label: `write file "${getUrlDisplayed(url)}" (see [${outUrlDisplayed}](${outUrlDisplayed}))`,
+                    };
+                  }
+                  return {
+                    label: `write file "${getUrlDisplayed(url)}"`,
+                    text: {
+                      type: "file_content",
+                      url,
+                      value: content,
+                    },
+                  };
+                },
+              },
+            };
+            addSideEffect(writeFileSideEffect);
+          },
           writeDirectory: (url) => {
             const writeDirectorySideEffect = addSideEffect({
               type: "fs:write_directory",
@@ -210,10 +195,6 @@ export const filesystemSideEffects = (
       );
       return () => {
         filesystemSpy.restore();
-        for (const writeFileCallback of writeFileCallbackSet) {
-          writeFileCallback();
-        }
-        writeFileCallbackSet.clear();
       };
     },
   };

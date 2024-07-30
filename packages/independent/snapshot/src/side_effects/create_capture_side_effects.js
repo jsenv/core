@@ -6,7 +6,6 @@ import { logSideEffects } from "./log/log_side_effects.js";
 export const createCaptureSideEffects = ({
   logEffects = true,
   filesystemEffects = true,
-  sideEffectFileUrl,
   rootDirectoryUrl,
   replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
     rootDirectoryUrl,
@@ -21,7 +20,6 @@ export const createCaptureSideEffects = ({
       filesystemEffects === true ? {} : filesystemEffects,
       {
         replaceFilesystemWellKnownValues,
-        sideEffectFileUrl,
       },
     );
     detectors.push(filesystemSideEffectsDetector);
