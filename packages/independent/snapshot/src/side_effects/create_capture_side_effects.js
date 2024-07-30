@@ -38,15 +38,34 @@ export const createCaptureSideEffects = ({
     const startMs = Date.now();
     const sideEffects = [];
     sideEffects.options = options;
-    const effectIndexMap = new Map();
-    const addSideEffect = (sideEffect) => {
-      let index = effectIndexMap.get(sideEffect.type) || 0;
-      effectIndexMap.set(sideEffect.type, index + 1);
-      sideEffect.index = index;
+    const sideEffectTypeCounterMap = new Map();
+    const onSideEffectAdded = (sideEffect) => {
+      let counter = sideEffectTypeCounterMap.get(sideEffect.type) || 0;
+      sideEffectTypeCounterMap.set(sideEffect.type, counter + 1);
+      sideEffect.counter = counter;
       sideEffect.delay = Date.now() - startMs;
+    };
+    const onSideEffectRemoved = () => {};
+    const addSideEffect = (sideEffect) => {
       sideEffects.push(sideEffect);
+      onSideEffectAdded(sideEffect);
       return sideEffect;
     };
+    const replaceSideEffect = (existingSideEffect, newSideEffect) => {
+      const index = sideEffects.indexOf(existingSideEffect);
+      sideEffects[index] = newSideEffect;
+      onSideEffectRemoved(existingSideEffect);
+      onSideEffectAdded(newSideEffect);
+    };
+    const removeSideEffect = (sideEffect) => {
+      const index = sideEffects.indexOf(sideEffect);
+      if (index > -1) {
+        sideEffects.splice(index, 1);
+        onSideEffectRemoved(sideEffect);
+      }
+    };
+    sideEffects.replaceSideEffect = replaceSideEffect;
+    sideEffects.removeSideEffect = removeSideEffect;
 
     const sourceCode = parseFunction(fn).body;
     addSideEffect({

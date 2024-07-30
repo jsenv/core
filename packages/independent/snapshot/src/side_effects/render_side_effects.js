@@ -291,8 +291,8 @@ const renderPotentialAnsi = (
   }
   let svgFilename = urlToBasename(outDirectoryUrl);
   svgFilename += `_${sideEffect.code}`;
-  if (sideEffect.index) {
-    svgFilename += `_${sideEffect.index}`;
+  if (sideEffect.counter) {
+    svgFilename += `_${sideEffect.counter}`;
   }
   svgFilename += ".svg";
   const svgFileUrl = new URL(`./${svgFilename}`, outDirectoryUrl);

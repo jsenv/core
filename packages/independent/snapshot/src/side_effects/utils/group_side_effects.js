@@ -21,17 +21,12 @@ export const groupSideEffectsPer = (
     if (sideEffectArray.length < 2) {
       continue;
     }
+    const groupSideEffect = createGroupSideEffect(sideEffectArray);
     const firstEffect = sideEffectArray[0];
-    const firstEffectIndex = allSideEffects.indexOf(firstEffect);
-    for (const sideEffect of sideEffectArray) {
-      const indexToRemove = allSideEffects.indexOf(sideEffect);
-      allSideEffects.splice(indexToRemove, 1);
+    allSideEffects.replaceSideEffect(firstEffect, groupSideEffect);
+    for (const sideEffect of sideEffectArray.slice(1)) {
+      allSideEffects.removeSideEffect(sideEffect);
     }
-    allSideEffects.splice(
-      firstEffectIndex,
-      0,
-      createGroupSideEffect(sideEffectArray),
-    );
   }
 };
 

@@ -135,10 +135,11 @@ export const filesystemSideEffects = (
                           url,
                           outDirectoryUrl,
                         );
-                        if (fileSideEffect.index) {
+                        if (fileSideEffect.counter) {
                           setUrlBasename(
                             urlInsideOutDirectory,
-                            (basename) => `${basename}_${fileSideEffect.index}`,
+                            (basename) =>
+                              `${basename}_${fileSideEffect.counter}`,
                           );
                         }
                         writeFileSync(urlInsideOutDirectory, buffer);
@@ -200,11 +201,11 @@ ${renderFileContent(
                       url,
                       outDirectoryUrl,
                     );
-                    if (writeFileSideEffect.index) {
+                    if (writeFileSideEffect.counter) {
                       setUrlBasename(
                         urlInsideOutDirectory,
                         (basename) =>
-                          `${basename}_${writeFileSideEffect.index}`,
+                          `${basename}_${writeFileSideEffect.counter}`,
                       );
                     }
                     writeFileSync(urlInsideOutDirectory, buffer);
