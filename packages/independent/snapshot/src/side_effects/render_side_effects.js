@@ -1,7 +1,7 @@
 import { createException } from "@jsenv/exception";
 import { writeFileSync } from "@jsenv/filesystem";
 import { renderTerminalSvg } from "@jsenv/terminal-recorder";
-import { urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
+import { urlToBasename, urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
 import ansiRegex from "ansi-regex";
 import { replaceFluctuatingValues } from "../replace_fluctuating_values.js";
 
@@ -32,6 +32,7 @@ export const renderSideEffects = (
       maxLines: 10,
       maxLength: 500,
     }),
+    errorStackHidden,
   } = {},
 ) => {
   const { rootDirectoryUrl, replaceFilesystemWellKnownValues } =
@@ -73,6 +74,7 @@ export const renderSideEffects = (
       titleLevel,
       shouldUseDetails,
       replace,
+      errorStackHidden,
       lastSideEffectNumber,
     });
   }
@@ -119,6 +121,7 @@ const renderOneSideEffect = (
     titleLevel,
     shouldUseDetails,
     replace,
+    errorStackHidden,
     lastSideEffectNumber,
   },
 ) => {
@@ -142,6 +145,12 @@ const renderOneSideEffect = (
       outDirectoryUrl,
       replace,
       rootDirectoryUrl,
+      errorStackHidden,
+      onRenderError: () => {
+        if (sideEffect.number === 1 && lastSideEffectNumber === 1) {
+          label = null;
+        }
+      },
     });
   }
   if (sideEffect.code === "source_code") {
@@ -169,20 +178,17 @@ ${renderMarkdownDetails(text, {
 })}`;
 };
 
-// TODO: when text contains ANSI, we should generate a SVG
-// to properly reflect the output
-// the SVG would be written by default to urlToFilename(sideEffectFileUrl)/
-// et pour le nom du svg on mettra euhhh
-// ./error.svg
-// ./console_log_1.svg
-// ./console_log_2.svg
-// par example
-// pour les test on auras scenario avant genre
-// ./boolean/true_should_be_false_error.svg
-// on utilisera renderTerminalSvg mais sans le header avec le titre
 const renderText = (
   text,
-  { sideEffect, sideEffectFileUrl, outDirectoryUrl, replace, rootDirectoryUrl },
+  {
+    sideEffect,
+    sideEffectFileUrl,
+    outDirectoryUrl,
+    replace,
+    rootDirectoryUrl,
+    errorStackHidden,
+    onRenderError = () => {},
+  },
 ) => {
   if (text && typeof text === "object") {
     if (text.type === "source_code") {
@@ -218,8 +224,11 @@ const renderText = (
           value.stack &&
           typeof value.stack === "string")
       ) {
+        onRenderError();
         const exception = createException(text.value, { rootDirectoryUrl });
-        const exceptionText = exception.stack || exception.message || exception;
+        const exceptionText = errorStackHidden
+          ? `${exception.name}: ${exception.message}`
+          : exception.stack || exception.message || exception;
         const potentialAnsi = renderPotentialAnsi(exceptionText, {
           sideEffect,
           sideEffectFileUrl,
@@ -267,7 +276,8 @@ const renderPotentialAnsi = (
   if (!ansiRegex().test(string)) {
     return null;
   }
-  let svgFilename = sideEffect.code;
+  let svgFilename = urlToBasename(outDirectoryUrl);
+  svgFilename += `_${sideEffect.code}`;
   if (sideEffect.index) {
     svgFilename += `_${sideEffect.index}`;
   }

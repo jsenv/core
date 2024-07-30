@@ -88,7 +88,8 @@ export const createCaptureSideEffects = ({
     }
 
     const onCatch = (valueThrow) => {
-      sideEffects.push({
+      addSideEffect({
+        code: "throw",
         type: "throw",
         value: valueThrow,
         render: {
@@ -106,7 +107,8 @@ export const createCaptureSideEffects = ({
     };
     const onReturn = (valueReturned) => {
       if (valueReturned === RETURN_PROMISE) {
-        sideEffects.push({
+        addSideEffect({
+          code: "return",
           type: "return",
           value: valueReturned,
           render: {
@@ -117,26 +119,28 @@ export const createCaptureSideEffects = ({
             },
           },
         });
-      } else {
-        sideEffects.push({
-          type: "return",
-          value: valueReturned,
-          render: {
-            md: () => {
-              return {
-                label: "return",
-                text: {
-                  type: "js_value",
-                  value: valueReturned,
-                },
-              };
-            },
-          },
-        });
+        return;
       }
+      addSideEffect({
+        code: "return",
+        type: "return",
+        value: valueReturned,
+        render: {
+          md: () => {
+            return {
+              label: "return",
+              text: {
+                type: "js_value",
+                value: valueReturned,
+              },
+            };
+          },
+        },
+      });
     };
     const onResolve = (value) => {
-      sideEffects.push({
+      addSideEffect({
+        code: "resolve",
         type: "resolve",
         value,
         render: {
@@ -153,7 +157,8 @@ export const createCaptureSideEffects = ({
       });
     };
     const onReject = (reason) => {
-      sideEffects.push({
+      addSideEffect({
+        code: "reject",
         type: "reject",
         value: reason,
         render: {

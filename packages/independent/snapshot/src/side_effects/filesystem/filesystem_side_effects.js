@@ -1,12 +1,3 @@
-// - for non textual file content:
-//   write them into the out directory (it will default to urlToFilename(sideEffectFile))
-//   and an other option like textualFilesIntoOutDirectory = false
-// - on mettra les svgs dans out directory
-// - on fera toujours un directory snapshot du dossier out
-// - écrire des tests ou on log du ansi et voir le svg
-// !!! le fait de faire des svgs c'est pas spécifique au filesystem
-// donc la logique out directory et snapshot elle remonte dans snapshotSideEffects
-
 import { writeFileSync } from "@jsenv/filesystem";
 import { setUrlBasename, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";

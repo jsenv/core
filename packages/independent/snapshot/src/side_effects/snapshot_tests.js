@@ -1,4 +1,9 @@
 /*
+ * TODO: tester avec jsenv assert et ajouter des otions pour obtenir ce qu'on veut
+ * TODO: faire des cas ou la comparison fail (parce que le comportement de la fonction change)
+ * et voir ce qu'on récupere dans ce cas
+ * TODO: ajouter la possibilité de faire un .gif avec les logs
+ * (dans ce cas tous les console, process, etc sont regroupé dans un seul side effect)
  *
  */
 
@@ -8,7 +13,10 @@ import {
   urlToFilename,
 } from "@jsenv/urls";
 import { urlToRelativeUrl } from "@jsenv/urls/src/url_to_relative_url.js";
-import { takeFileSnapshot } from "../filesystem_snapshot.js";
+import {
+  takeDirectorySnapshot,
+  takeFileSnapshot,
+} from "../filesystem_snapshot.js";
 import { createCaptureSideEffects } from "./create_capture_side_effects.js";
 import { renderSideEffects, renderSmallLink } from "./render_side_effects.js";
 
@@ -20,6 +28,7 @@ export const snapshotTests = async (
     generatedBy = true,
     linkToSource = true,
     linkToEachSource,
+    errorStackHidden,
   } = {},
 ) => {
   const callSite = getTestCallSite();
@@ -39,22 +48,26 @@ export const snapshotTests = async (
   });
   let markdown = "";
   markdown += `# ${urlToFilename(snapshotFileUrl)}`;
-  markdown += "\n\n";
   for (const [scenario, { fn, callSite }] of activeTestMap) {
+    markdown += "\n\n";
     markdown += `## ${scenario}`;
     markdown += "\n\n";
     const sideEffects = await captureSideEffects(fn, {
       callSite: linkToEachSource ? callSite : undefined,
     });
+    const outDirectoryUrl = new URL(
+      `./${asValidFilename(scenario)}/`,
+      snapshotFileUrl,
+    );
+    const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl);
     const sideEffectsMarkdown = renderSideEffects(sideEffects, {
       sideEffectFileUrl: snapshotFileUrl,
-      outDirectoryUrl: new URL(
-        `./${asValidFilename(scenario)}/`,
-        snapshotFileUrl,
-      ),
+      outDirectoryUrl,
       generatedBy: false,
       titleLevel: 3,
+      errorStackHidden,
     });
+    outDirectorySnapshot.compare();
     markdown += sideEffectsMarkdown;
   }
   const sideEffectFileSnapshot = takeFileSnapshot(snapshotFileUrl);
@@ -83,7 +96,7 @@ const generateExecutingLink = (callSite, snapshotFileUrl) => {
   });
   const href = `${relativeUrl}#L${callSite.line}`;
   const text = `${relativeUrl}:${callSite.line}:${callSite.column}`;
-  return `executing <a href="${href}">${text}</a>`;
+  return ` executing <a href="${href}">${text}</a>`;
 };
 
 const getTestCallSite = () => {

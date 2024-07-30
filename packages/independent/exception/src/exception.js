@@ -36,8 +36,8 @@ export const createException = (
     isError: false,
     name: "",
     message: "",
-    stack: "",
     stackTrace: "",
+    stack: "",
     stackFrames: undefined,
     site: null,
   };
