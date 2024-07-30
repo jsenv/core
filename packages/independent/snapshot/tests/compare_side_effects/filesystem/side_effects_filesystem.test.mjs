@@ -202,6 +202,20 @@ await startTesting(({ test }) => {
         },
       },
     );
+    test(
+      "write_file/12_write_png.md",
+      () => {
+        writeFileSync(
+          new URL("./jsenv.png", import.meta.url),
+          readFileSync(new URL("./input/jsenv.png", import.meta.url)),
+        );
+      },
+      {
+        filesystemEffects: {
+          baseDirectory: new URL("./", import.meta.url),
+        },
+      },
+    );
   }
   group_write_by_directory: {
     test(

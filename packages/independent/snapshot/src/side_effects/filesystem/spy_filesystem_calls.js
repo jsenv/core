@@ -41,15 +41,19 @@ export const spyFilesystemCalls = (
     // - writing file for the 1st time
     // - updating file content
     // the important part is the file content in the end of the function execution
-    if (
-      (!stateBefore.found && stateAfter.found) ||
-      stateBefore.content !== stateAfter.content ||
-      stateBefore.mtimeMs !== stateAfter.mtimeMs
-    ) {
+    const reason =
+      !stateBefore.found && stateAfter.found
+        ? "created"
+        : Buffer.compare(stateBefore.buffer, stateAfter.buffer)
+          ? "content_modified"
+          : stateBefore.mtimeMs === stateAfter.mtimeMs
+            ? ""
+            : "mtime_modified";
+    if (reason) {
       if (undoFilesystemSideEffects && !fileRestoreMap.has(fileUrl)) {
         if (stateBefore.found) {
           fileRestoreMap.set(fileUrl, () => {
-            writeFileSync(fileUrl, stateBefore.content);
+            writeFileSync(fileUrl, stateBefore.buffer);
           });
         } else {
           fileRestoreMap.set(fileUrl, () => {
@@ -58,7 +62,7 @@ export const spyFilesystemCalls = (
         }
       }
       if (shouldReport(fileUrl)) {
-        onWriteFile(fileUrl, stateAfter.content);
+        onWriteFile(fileUrl, stateAfter.buffer, reason);
         return;
       }
     }
@@ -221,12 +225,12 @@ export const spyFilesystemCalls = (
 
 const getFileState = (file) => {
   try {
-    const fileContent = readFileSync(file);
+    const fileBuffer = readFileSync(file);
     const { mtimeMs } = statSync(file);
     return {
       found: true,
       mtimeMs,
-      content: String(fileContent),
+      buffer: fileBuffer,
     };
   } catch (e) {
     if (e.code === "ENOENT") {

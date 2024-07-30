@@ -97,7 +97,7 @@ export const filesystemSideEffects = (
                         if (text) {
                           text += "\n\n";
                         }
-                        const { url, willBeInOutDirectory, content, index } =
+                        const { url, willBeInOutDirectory, buffer, index } =
                           fileSideEffect.value;
                         if (willBeInOutDirectory) {
                           const urlInsideOutDirectory =
@@ -108,7 +108,7 @@ export const filesystemSideEffects = (
                               (basename) => `${basename}_${index}`,
                             );
                           }
-                          writeFileSync(urlInsideOutDirectory, content);
+                          writeFileSync(urlInsideOutDirectory, buffer);
                           const relativeUrl = urlToRelativeUrl(
                             url,
                             commonDirectoryUrl,
@@ -123,8 +123,8 @@ export const filesystemSideEffects = (
                         text += `${"#".repeat(2)} ${urlToRelativeUrl(url, commonDirectoryUrl)}
 ${renderFileContent(
   {
-    url: fileSideEffect.value.url,
-    value: fileSideEffect.value.content,
+    url,
+    value: String(buffer),
   },
   { replace },
 )}`;
@@ -145,7 +145,7 @@ ${renderFileContent(
       const fileEffectIndexMap = new Map();
       const filesystemSpy = spyFilesystemCalls(
         {
-          onWriteFile: (url, content) => {
+          onWriteFile: (url, buffer) => {
             const contentType = CONTENT_TYPE.fromUrlExtension(url);
             const isTextual = CONTENT_TYPE.isTextual(contentType);
             const willBeInOutDirectory = isTextual
@@ -157,7 +157,7 @@ ${renderFileContent(
               type: "fs:write_file",
               value: {
                 url,
-                content,
+                buffer,
                 contentType,
                 isTextual,
                 willBeInOutDirectory,
@@ -176,7 +176,7 @@ ${renderFileContent(
                         (basename) => `${basename}_${index}`,
                       );
                     }
-                    writeFileSync(urlInsideOutDirectory, content);
+                    writeFileSync(urlInsideOutDirectory, buffer);
                     const outRelativeUrl = getUrlRelativeToOut(
                       urlInsideOutDirectory,
                       sideEffectFileUrl,
@@ -190,7 +190,7 @@ ${renderFileContent(
                     text: {
                       type: "file_content",
                       url,
-                      value: content,
+                      value: String(buffer),
                     },
                   };
                 },
