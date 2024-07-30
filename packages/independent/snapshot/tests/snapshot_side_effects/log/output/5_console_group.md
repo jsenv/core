@@ -6,7 +6,8 @@ console.info("b");
 # 1/2 terminal
 
 ```console
-ab
+a
+b
 ```
 
 # 2/2 return

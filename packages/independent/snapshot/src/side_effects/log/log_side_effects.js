@@ -28,9 +28,18 @@ export const logSideEffects = (logSideEffectsOptions) => {
                   md: (options) => {
                     const renderLogGroup = () => {
                       let logs = "";
-                      for (const logSideEffect of logSideEffectArray) {
+                      let i = 0;
+                      while (i < logSideEffectArray.length) {
+                        const logSideEffect = logSideEffectArray[i];
+                        i++;
                         const { text } = logSideEffect.render.md(options);
                         logs += text.value;
+                        if (
+                          i !== logSideEffectArray.length &&
+                          logSideEffect.type.startsWith("console")
+                        ) {
+                          logs += "\n";
+                        }
                       }
                       const logGroupMd = renderConsole(logs, {
                         sideEffect: logGroupSideEffect,

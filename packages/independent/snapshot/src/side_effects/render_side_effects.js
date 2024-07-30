@@ -137,6 +137,7 @@ const renderOneSideEffect = (
     outDirectoryUrl,
     replace,
     rootDirectoryUrl,
+    lastSideEffectNumber,
   });
   if (text) {
     text = renderText(text, {
