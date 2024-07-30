@@ -1,20 +1,35 @@
 ```js
-console.log("before_1");
-console.log("before_2");
-writeFileSync(new URL("./dit/toto.txt", import.meta.url), "toto");
-writeFileSync(new URL("./dit/tata.txt", import.meta.url), "tata");
-console.log("after_1");
-console.log("after_2");
+console.info(`build "./main.html"`);
+process.stdout.write("⠋ generate source graph\n");
+process.stdout.write("✔ generate source graph (done in 0.02 second)\n");
+process.stdout.write("⠋ generate build graph\n");
+process.stdout.write("✔ generate build graph (done in 0.005 second)\n");
+process.stdout.write("⠋ write files in build directory\n");
+writeFileSync(new URL("./dist/toto.txt", import.meta.url), "toto");
+writeFileSync(new URL("./dist/tata.txt", import.meta.url), "tata");
+process.stdout.write(
+  "✔ write files in build directory (done in 0.002 second)\n",
+);
+console.info(`--- build files ---  
+- [90mhtml :[0m 1 (175 B / 91 %)
+- [90mjs   :[0m 1 (17 B / 9 %)
+- [90mtotal:[0m 2 (192 B / 100 %)
+--------------------`);
 ```
 
-# 1/4 terminal
+# 1/5 logs
 
 ```console
-before_1
-before_2
+build "./main.html"
+⠋ generate source graph
+✔ generate source graph (done in <X> second)
+⠋ generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
+
 ```
 
-# 2/4 write 2 files into "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/dit/"
+# 2/5 write 2 files into "./dist/"
 
 ## toto.txt
 ```txt
@@ -26,14 +41,13 @@ toto
 tata
 ```
 
-# 3/4 terminal
+# 3/5 logs
 
-```console
-after_1
-after_2
-```
+![img](7_console_group_and_fs_group/7_console_group_and_fs_group_log_group.svg)
 
-# 4/4 return
+# 4/5 return promise
+
+# 5/5 resolve
 
 ```js
 undefined

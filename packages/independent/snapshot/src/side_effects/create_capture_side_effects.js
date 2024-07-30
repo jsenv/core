@@ -99,7 +99,7 @@ export const createCaptureSideEffects = ({
             const skip = () => {
               skipCalled = true;
             };
-            skippableHandlerResult.next(afterSideEffect, { skip, stop });
+            skippableHandlerResult(afterSideEffect, { skip, stop });
             if (skipCalled) {
               sideEffect.skippable = true;
               break;

@@ -21,11 +21,12 @@ export const groupSideEffectsPer = (
     if (sideEffectArray.length < 2) {
       continue;
     }
-    for (const sideEffect of sideEffectArray) {
-      allSideEffects.splice(allSideEffects.indexOf(sideEffect), 1);
-    }
     const firstEffect = sideEffectArray[0];
     const firstEffectIndex = allSideEffects.indexOf(firstEffect);
+    for (const sideEffect of sideEffectArray) {
+      const indexToRemove = allSideEffects.indexOf(sideEffect);
+      allSideEffects.splice(indexToRemove, 1);
+    }
     allSideEffects.splice(
       firstEffectIndex,
       0,

@@ -102,16 +102,29 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
 
 // console grouped and fs
 snapshotSideEffects(
-  () => {
-    console.log("before_1");
-    console.log("before_2");
-    writeFileSync(new URL("./dit/toto.txt", import.meta.url), "toto");
-    writeFileSync(new URL("./dit/tata.txt", import.meta.url), "tata");
-    console.log("after_1");
-    console.log("after_2");
+  async () => {
+    console.info(`build "./main.html"`);
+    process.stdout.write("⠋ generate source graph\n");
+    process.stdout.write("✔ generate source graph (done in 0.02 second)\n");
+    process.stdout.write("⠋ generate build graph\n");
+    process.stdout.write("✔ generate build graph (done in 0.005 second)\n");
+    process.stdout.write("⠋ write files in build directory\n");
+    writeFileSync(new URL("./dist/toto.txt", import.meta.url), "toto");
+    writeFileSync(new URL("./dist/tata.txt", import.meta.url), "tata");
+    process.stdout.write(
+      "✔ write files in build directory (done in 0.002 second)\n",
+    );
+    console.info(`--- build files ---  
+- [90mhtml :[0m 1 (175 B / 91 %)
+- [90mjs   :[0m 1 (17 B / 9 %)
+- [90mtotal:[0m 2 (192 B / 100 %)
+--------------------`);
   },
   new URL("./output/7_console_group_and_fs_group.md", import.meta.url),
   {
+    filesystemEffects: {
+      baseDirectory: new URL("./", import.meta.url),
+    },
     logEffects: {
       group: true,
     },
