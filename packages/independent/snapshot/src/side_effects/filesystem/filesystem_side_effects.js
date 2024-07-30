@@ -7,7 +7,7 @@
 // !!! le fait de faire des svgs c'est pas spécifique au filesystem
 // donc la logique out directory et snapshot elle remonte dans snapshotSideEffects
 
-import { readDirectorySync, writeFileSync } from "@jsenv/filesystem";
+import { writeFileSync } from "@jsenv/filesystem";
 import { setUrlBasename, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { pathToFileURL } from "node:url";
@@ -63,6 +63,39 @@ export const filesystemSideEffects = (
         const toRelativeUrl = replaceFilesystemWellKnownValues(url);
         return new URL(toRelativeUrl, outDirectoryUrl);
       };
+
+      addFinallyCallback((sideEffects) => {
+        // if directory ends up with something inside we'll not report
+        // this side effect because:
+        // - it was likely created to write the file
+        // - the file creation will be reported and implies directory creation
+        let i = 0;
+        while (i < sideEffects.length) {
+          const sideEffect = sideEffects[i];
+          i++;
+          if (sideEffect.code === "write_directory") {
+            let j = i;
+            while (j < sideEffects.length) {
+              const afterSideEffect = sideEffects[j];
+              j++;
+              if (
+                (afterSideEffect.code === "write_file" ||
+                  afterSideEffect.code === "write_directory") &&
+                urlIsInsideOf(afterSideEffect.value.url, sideEffect.value.url)
+              ) {
+                sideEffect.skippable = true;
+                break;
+              }
+              if (
+                afterSideEffect.code === "remove_directory" &&
+                afterSideEffect.value.url === sideEffect.value.url
+              ) {
+                break;
+              }
+            }
+          }
+        }
+      });
 
       if (baseDirectory) {
         replaceFilesystemWellKnownValues.addWellKnownFileUrl(
@@ -200,7 +233,7 @@ ${renderFileContent(
             addSideEffect(writeFileSideEffect);
           },
           onWriteDirectory: (url) => {
-            const writeDirectorySideEffect = addSideEffect({
+            addSideEffect({
               code: "write_directory",
               type: `write_directory:${url}`,
               value: { url },
@@ -211,18 +244,6 @@ ${renderFileContent(
                   };
                 },
               },
-            });
-            // if directory ends up with something inside we'll not report
-            // this side effect because:
-            // - it was likely created to write the file
-            // - the file creation will be reported and implies directory creation
-            filesystemSpy.addBeforeUndoCallback(() => {
-              try {
-                const dirContent = readDirectorySync(url);
-                if (dirContent.length) {
-                  writeDirectorySideEffect.skippable = true;
-                }
-              } catch (e) {}
             });
           },
         },
