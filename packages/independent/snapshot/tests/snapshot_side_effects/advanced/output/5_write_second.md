@@ -4,27 +4,26 @@ await writeFile(new URL("./b.txt", import.meta.url), "b_2");
 await writeFile(new URL("./c.txt", import.meta.url), "c_2");
 ```
 
-# 1/5 return promise
+# 1/3 return promise
 
-# 2/5 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/a.txt"
+# 2/3 write 3 files into "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/"
 
+## a.txt
 ```txt
 a_2
 ```
 
-# 3/5 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/b.txt"
-
+## b.txt
 ```txt
 b_2
 ```
 
-# 4/5 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/c.txt"
-
+## c.txt
 ```txt
 c_2
 ```
 
-# 5/5 resolve
+# 3/3 resolve
 
 ```js
 undefined

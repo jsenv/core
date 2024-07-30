@@ -99,3 +99,21 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
     new URL("./output/6_console_and_file.md", import.meta.url),
   );
 }
+
+// console grouped and fs
+snapshotSideEffects(
+  () => {
+    console.log("before_1");
+    console.log("before_2");
+    writeFileSync(new URL("./dit/toto.txt", import.meta.url), "toto");
+    writeFileSync(new URL("./dit/tata.txt", import.meta.url), "tata");
+    console.log("after_1");
+    console.log("after_2");
+  },
+  new URL("./output/7_console_group_and_fs_group.md", import.meta.url),
+  {
+    logEffects: {
+      group: true,
+    },
+  },
+);
