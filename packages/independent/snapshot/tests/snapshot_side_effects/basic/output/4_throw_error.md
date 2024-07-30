@@ -2,8 +2,6 @@
 throw new Error("here");
 ```
 
-# 1/1 throw
-
 ```
 Error: here
   at @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/basic/side_effects_basic.test.mjs:35:11

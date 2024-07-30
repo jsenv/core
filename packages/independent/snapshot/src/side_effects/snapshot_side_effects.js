@@ -9,7 +9,7 @@ import { renderSideEffects } from "./render_side_effects.js";
 export const snapshotSideEffects = (
   fn,
   sideEffectFileUrl,
-  { outDirectoryUrl, ...captureOptions } = {},
+  { outDirectoryUrl, errorStackHidden, ...captureOptions } = {},
 ) => {
   const captureSideEffects = createCaptureSideEffects(captureOptions);
   if (outDirectoryUrl === undefined) {
@@ -24,6 +24,7 @@ export const snapshotSideEffects = (
     const sideEffectFileContent = renderSideEffects(sideEffects, {
       sideEffectFileUrl,
       outDirectoryUrl,
+      errorStackHidden,
     });
     sideEffectFileSnapshot.update(sideEffectFileContent, {
       mockFluctuatingValues: false,

@@ -3,10 +3,6 @@ await Promise.resolve();
 throw new Error("here");
 ```
 
-# 1/2 return promise
-
-# 2/2 reject
-
 ```
 Error: here
   at @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/basic/side_effects_basic.test.mjs:43:11

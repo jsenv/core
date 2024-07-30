@@ -2,9 +2,7 @@
 await readFile(import.meta.url, { as: "string" });
 ```
 
-# 1/2 return promise
-
-# 2/2 resolve
+# 1/1 resolve
 
 ```js
 undefined

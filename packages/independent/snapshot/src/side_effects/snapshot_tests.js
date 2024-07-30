@@ -1,8 +1,6 @@
 /*
- * TODO: ajouter la possibilité de faire un .gif avec les logs
  * TODO: faire des cas ou la comparison fail (parce que le comportement de la fonction change)
  * et voir ce qu'on récupere dans ce cas
- *
  */
 
 import {
@@ -28,6 +26,7 @@ export const snapshotTests = async (
     linkToEachSource,
     errorStackHidden,
     logEffects,
+    throwWhenDiff = process.env.CI,
   } = {},
 ) => {
   const callSite = getTestCallSite();
@@ -67,7 +66,7 @@ export const snapshotTests = async (
       titleLevel: 3,
       errorStackHidden,
     });
-    outDirectorySnapshot.compare();
+    outDirectorySnapshot.compare(throwWhenDiff);
     markdown += sideEffectsMarkdown;
   }
   const sideEffectFileSnapshot = takeFileSnapshot(snapshotFileUrl);
@@ -87,7 +86,10 @@ export const snapshotTests = async (
     markdown += "\n\n";
     markdown += generatedByLink;
   }
-  sideEffectFileSnapshot.update(markdown, { mockFluctuatingValues: false });
+  sideEffectFileSnapshot.update(markdown, {
+    mockFluctuatingValues: false,
+    throwWhenDiff,
+  });
 };
 
 const generateExecutingLink = (callSite, snapshotFileUrl) => {

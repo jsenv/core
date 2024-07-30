@@ -109,7 +109,7 @@ export const createCaptureSideEffects = ({
     };
     const onReturn = (valueReturned) => {
       if (valueReturned === RETURN_PROMISE) {
-        addSideEffect({
+        const returnPromiseSideEffect = addSideEffect({
           code: "return",
           type: "return",
           value: valueReturned,
@@ -120,6 +120,19 @@ export const createCaptureSideEffects = ({
               };
             },
           },
+        });
+        addFinallyCallback((sideEffects) => {
+          const returnPromiseIndex = sideEffects.indexOf(
+            returnPromiseSideEffect,
+          );
+          const nextSideEffect = sideEffects[returnPromiseIndex + 1];
+          if (
+            nextSideEffect &&
+            (nextSideEffect.code === "resolve" ||
+              nextSideEffect.code === "reject")
+          ) {
+            returnPromiseSideEffect.skippable = true;
+          }
         });
         return;
       }
