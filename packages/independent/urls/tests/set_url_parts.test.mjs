@@ -14,3 +14,14 @@ import { setUrlBasename, setUrlFilename } from "@jsenv/urls";
   const expect = "http://example.com/dir/youhou.js?a=a&b=b#hash";
   assert({ actual, expect });
 }
+
+{
+  const urlObject = new URL("http://example.com/dir/file.js?a=a&b=b#hash");
+  setUrlBasename(urlObject, "youhou");
+  const actual = setUrlBasename(
+    "file:///dir/file.js",
+    (basename) => `BEFORE_${basename}_AFTER`,
+  );
+  const expect = "file:///dir/BEFORE_file_AFTER.js";
+  assert({ actual, expect });
+}
