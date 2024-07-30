@@ -215,7 +215,7 @@ const renderPotentialAnsi = (
   if (!ansiRegex().test(string)) {
     return null;
   }
-  let svgFilename = sideEffect.type;
+  let svgFilename = sideEffect.code;
   if (sideEffect.index) {
     svgFilename += `_${sideEffect.index}`;
   }

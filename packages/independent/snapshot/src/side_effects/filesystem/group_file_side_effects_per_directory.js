@@ -73,11 +73,11 @@ const groupBy = (array, groupCallback) => {
 
 const groupFileTogether = (sideEffects) =>
   groupBy(sideEffects, (sideEffect, { ignore }) => {
-    if (sideEffect.type === "fs:write_directory") {
+    if (sideEffect.code === "write_directory") {
       ignore();
       return null;
     }
-    if (sideEffect.type === "fs:write_file") {
+    if (sideEffect.code === "write_file") {
       return "file";
     }
     return "other";
