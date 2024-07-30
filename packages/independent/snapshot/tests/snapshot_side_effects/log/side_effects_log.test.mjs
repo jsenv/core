@@ -72,3 +72,15 @@ await renderLogsGif(
   sideEffects,
   new URL("./output/6_console_gif/terminal.gif", import.meta.url),
 );
+
+snapshotSideEffects(
+  () => {
+    console.log("[31m Hi[0m <toto>");
+  },
+  new URL("./output/7_console_color_and_html_special_char.md", import.meta.url),
+  {
+    logEffects: {
+      group: true,
+    },
+  },
+);
