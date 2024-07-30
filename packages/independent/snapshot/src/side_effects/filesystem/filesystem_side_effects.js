@@ -111,8 +111,8 @@ export const filesystemSideEffects = (
               }
 
               return {
-                code: "fs:write_file_group",
-                type: `fs:write_file_group ${commonDirectoryUrl}`,
+                code: "write_file_group",
+                type: `write_file_group ${commonDirectoryUrl}`,
                 value: {},
                 render: {
                   md: ({ replace, sideEffectFileUrl, outDirectoryUrl }) => {

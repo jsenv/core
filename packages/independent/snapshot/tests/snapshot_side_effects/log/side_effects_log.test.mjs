@@ -47,3 +47,16 @@ snapshotSideEffects(
   },
   new URL("./output/4_console_ansi_many.md", import.meta.url),
 );
+
+snapshotSideEffects(
+  () => {
+    console.log("a");
+    console.info("b");
+  },
+  new URL("./output/5_console_group.md", import.meta.url),
+  {
+    logEffects: {
+      group: true,
+    },
+  },
+);

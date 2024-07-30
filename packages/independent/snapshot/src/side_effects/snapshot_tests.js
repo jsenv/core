@@ -29,6 +29,7 @@ export const snapshotTests = async (
     linkToSource = true,
     linkToEachSource,
     errorStackHidden,
+    logEffects,
   } = {},
 ) => {
   const callSite = getTestCallSite();
@@ -54,6 +55,7 @@ export const snapshotTests = async (
     markdown += "\n\n";
     const sideEffects = await captureSideEffects(fn, {
       callSite: linkToEachSource ? callSite : undefined,
+      logEffects,
     });
     const outDirectoryUrl = new URL(
       `./${asValidFilename(scenario)}/`,

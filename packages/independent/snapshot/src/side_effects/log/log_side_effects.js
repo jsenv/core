@@ -1,7 +1,10 @@
 import { hookIntoMethod } from "../hook_into_method.js";
+import { renderConsole } from "../render_side_effects.js";
+import { groupLogSideEffects } from "./group_log_side_effects.js";
 
 const logSideEffectsOptionsDefault = {
   prevent: true,
+  group: false,
 };
 
 export const logSideEffects = (logSideEffectsOptions) => {
@@ -11,8 +14,42 @@ export const logSideEffects = (logSideEffectsOptions) => {
   };
   return {
     name: "console",
-    install: (addSideEffect) => {
-      const { prevent } = logSideEffectsOptions;
+    install: (addSideEffect, { addFinallyCallback }) => {
+      const { prevent, group } = logSideEffectsOptions;
+      if (group) {
+        addFinallyCallback((sideEffects) => {
+          groupLogSideEffects(sideEffects, {
+            createLogGroupSideEffect: (logSideEffectArray) => {
+              const logGroupSideEffect = {
+                code: "log_group",
+                type: `log_group`,
+                value: {},
+                render: {
+                  md: (options) => {
+                    const renderLogGroup = () => {
+                      let logs = "";
+                      for (const logSideEffect of logSideEffectArray) {
+                        const { text } = logSideEffect.render.md(options);
+                        logs += text.value;
+                      }
+                      const logGroupMd = renderConsole(logs, {
+                        sideEffect: logGroupSideEffect,
+                        ...options,
+                      });
+                      return logGroupMd;
+                    };
+                    return {
+                      label: `terminal`,
+                      text: renderLogGroup(),
+                    };
+                  },
+                },
+              };
+              return logGroupSideEffect;
+            },
+          });
+        });
+      }
       const addLogSideEffect = (type, message) => {
         addSideEffect({
           code: type,

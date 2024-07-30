@@ -5,11 +5,11 @@ console.log("🤖[31m DANGER[0m Will Robbinson");
 
 # 1/3 console.log
 
-![img](4_console_ansi_many/console.log.svg)
+![img](4_console_ansi_many/4_console_ansi_many_console.log.svg)
 
 # 2/3 console.log
 
-![img](4_console_ansi_many/console.log_1.svg)
+![img](4_console_ansi_many/4_console_ansi_many_console.log_1.svg)
 
 # 3/3 return
 

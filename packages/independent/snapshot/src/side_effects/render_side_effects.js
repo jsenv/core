@@ -248,25 +248,37 @@ const renderText = (
       );
     }
     if (text.type === "console") {
-      const potentialAnsi = renderPotentialAnsi(text.value, {
+      return renderConsole(text.value, {
         sideEffect,
         sideEffectFileUrl,
         outDirectoryUrl,
         replace,
       });
-      if (potentialAnsi) {
-        return potentialAnsi;
-      }
-      return wrapIntoMarkdownBlock(
-        replace(text.value, { stringType: "console" }),
-        "console",
-      );
     }
     if (text.type === "file_content") {
       return renderFileContent(text, { replace });
     }
   }
   return replace(text);
+};
+
+export const renderConsole = (
+  string,
+  { sideEffect, sideEffectFileUrl, outDirectoryUrl, replace },
+) => {
+  const potentialAnsi = renderPotentialAnsi(string, {
+    sideEffect,
+    sideEffectFileUrl,
+    outDirectoryUrl,
+    replace,
+  });
+  if (potentialAnsi) {
+    return potentialAnsi;
+  }
+  return wrapIntoMarkdownBlock(
+    replace(string, { stringType: "console" }),
+    "console",
+  );
 };
 
 const renderPotentialAnsi = (

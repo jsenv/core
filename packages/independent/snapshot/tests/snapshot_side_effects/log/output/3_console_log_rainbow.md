@@ -6,7 +6,7 @@ console.log(
 
 # 1/2 console.log
 
-![img](3_console_log_rainbow/console.log.svg)
+![img](3_console_log_rainbow/3_console_log_rainbow_console.log.svg)
 
 # 2/2 return
 
