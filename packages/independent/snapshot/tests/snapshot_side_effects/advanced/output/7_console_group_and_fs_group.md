@@ -43,7 +43,7 @@ tata
 
 # 3/4 logs
 
-![img](7_console_group_and_fs_group/7_console_group_and_fs_group_log_group.svg)
+![img](7_console_group_and_fs_group/7_console_group_and_fs_group_log_group_1.svg)
 
 # 4/4 resolve
 

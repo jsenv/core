@@ -132,17 +132,23 @@ export const filesystemSideEffects = (
                       );
                       if (outDirectoryReason) {
                         groupMd += `${"#".repeat(2)} ${relativeUrl}
-${renderFileContent(text, {
-  ...options,
-  sideEffect: fileSideEffect,
-})}`;
+${renderFileContent(
+  { ...text, relativeUrl },
+  {
+    ...options,
+    sideEffect: fileSideEffect,
+  },
+)}`;
                         continue;
                       }
                       groupMd += `${"#".repeat(2)} ${relativeUrl}
-${renderFileContent(text, {
-  ...options,
-  sideEffect: fileSideEffect,
-})}`;
+${renderFileContent(
+  { ...text, relativeUrl },
+  {
+    ...options,
+    sideEffect: fileSideEffect,
+  },
+)}`;
                     }
                     return groupMd;
                   };

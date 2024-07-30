@@ -7,9 +7,6 @@ writeFileSync(new URL("./dist/c.txt", import.meta.url), "c");
 
 # 1/2 write 4 files into "./dist/"
 
-<details>
-  <summary>details</summary>
-
 ## a.txt
 ```txt
 a
@@ -29,8 +26,6 @@ b
 ```txt
 c
 ```
-
-</details>
 
 # 2/2 return
 

@@ -362,7 +362,6 @@ export const renderFileContent = (
       md += `\nsee ${fileLink} for more`;
       return md;
     }
-    md += "\n";
     md += renderLinkMarkdown(
       {
         text: relativeUrl,

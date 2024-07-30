@@ -3,7 +3,7 @@ console.log("a");
 console.info("b");
 ```
 
-# 1/2 terminal
+# 1/2 logs
 
 ```console
 a

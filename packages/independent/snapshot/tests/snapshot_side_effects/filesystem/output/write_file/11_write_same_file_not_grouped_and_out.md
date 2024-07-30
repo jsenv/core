@@ -4,7 +4,9 @@ console.log("hey");
 writeFileSync(new URL("./toto.txt", import.meta.url), "second");
 ```
 
-# 1/4 write file ["./toto.txt"](./11_write_same_file_not_grouped_and_out/toto.txt)
+# 1/4 write file "./toto.txt"
+
+[../../toto.txt](./11_write_same_file_not_grouped_and_out/toto.txt)
 
 # 2/4 console.log
 
@@ -12,7 +14,9 @@ writeFileSync(new URL("./toto.txt", import.meta.url), "second");
 hey
 ```
 
-# 3/4 write file ["./toto.txt"](./11_write_same_file_not_grouped_and_out/toto_1.txt)
+# 3/4 write file "./toto.txt"
+
+[../../toto.txt](./11_write_same_file_not_grouped_and_out/toto_1.txt)
 
 # 4/4 return
 
