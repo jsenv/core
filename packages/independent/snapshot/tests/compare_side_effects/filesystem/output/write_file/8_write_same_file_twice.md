@@ -3,17 +3,17 @@ writeFileSync(new URL("./toto.txt", import.meta.url), "a");
 writeFileSync(new URL("./toto.txt", import.meta.url), "b");
 ```
 
-# 1/2 write 2 files into "./toto.txt"
+# 1/2 write 2 files into "./"
 
 <details>
   <summary>details</summary>
 
-## 
+## toto.txt
 ```txt
 a
 ```
 
-## 
+## toto.txt
 ```txt
 b
 ```

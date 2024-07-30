@@ -76,7 +76,7 @@ export const filesystemSideEffects = (
           groupFileSideEffectsPerDirectory(sideEffects, {
             createWriteFileGroupSideEffect: (
               fileSideEffectArray,
-              commonDirectoryPath,
+              commonPath,
             ) => {
               return {
                 type: "fs:write_file_group",
@@ -84,9 +84,14 @@ export const filesystemSideEffects = (
                 render: {
                   md: ({ replace, sideEffectFileUrl, outDirectoryUrl }) => {
                     const numberOfFiles = fileSideEffectArray.length;
-                    const commonDirectoryUrl =
-                      pathToFileURL(commonDirectoryPath);
-                    const generateInlineFiles = () => {
+                    let commonUrl = pathToFileURL(commonPath);
+                    let commonDirectoryUrl;
+                    if (commonUrl.href.endsWith("/")) {
+                      commonDirectoryUrl = commonUrl;
+                    } else {
+                      commonDirectoryUrl = new URL("./", commonUrl);
+                    }
+                    const generateSideEffectGroup = () => {
                       let text = "";
                       for (const fileSideEffect of fileSideEffectArray) {
                         if (text) {
@@ -122,7 +127,7 @@ ${renderFileContent(
                     };
                     return {
                       label: `write ${numberOfFiles} files into "${getUrlRelativeToBase(commonDirectoryUrl)}"`,
-                      text: generateInlineFiles(),
+                      text: generateSideEffectGroup(),
                     };
                   },
                 },

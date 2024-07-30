@@ -150,6 +150,20 @@ await startTesting(({ test }) => {
         },
       },
     );
+    test(
+      "write_file/9_write_same_file_again.md",
+      () => {
+        writeFileSync(new URL("./dist/a.txt", import.meta.url), "a");
+        writeFileSync(new URL("./dist/b.txt", import.meta.url), "b");
+        writeFileSync(new URL("./dist/b.txt", import.meta.url), "b");
+        writeFileSync(new URL("./dist/c.txt", import.meta.url), "c");
+      },
+      {
+        filesystemEffects: {
+          baseDirectory: new URL("./", import.meta.url),
+        },
+      },
+    );
   }
   group_write_by_directory: {
     test(
