@@ -246,21 +246,20 @@ const renderText = (
         const exceptionText = errorStackHidden
           ? `${exception.name}: ${exception.message}`
           : exception.stack || exception.message || exception;
-        const potentialAnsi = renderPotentialAnsi(exceptionText, {
+        return renderPotentialAnsi(exceptionText, {
+          stringType: "error",
           sideEffect,
           sideEffectFileUrl,
           outDirectoryUrl,
           replace,
         });
-        if (potentialAnsi) {
-          return potentialAnsi;
-        }
-        return renderMarkdownBlock(
-          replace(exceptionText, { stringType: "error" }),
-        );
       }
+
       return renderMarkdownBlock(
-        replace(JSON.stringify(value, null, "  "), { stringType: "json" }),
+        replace(
+          typeof value === "string" ? value : JSON.stringify(value, null, "  "),
+          { stringType: "json" },
+        ),
         "js",
       );
     }
@@ -290,27 +289,24 @@ export const renderConsole = (
   string,
   { sideEffect, sideEffectFileUrl, outDirectoryUrl, replace },
 ) => {
-  const potentialAnsi = renderPotentialAnsi(string, {
+  return renderPotentialAnsi(string, {
+    stringType: "console",
     sideEffect,
     sideEffectFileUrl,
     outDirectoryUrl,
     replace,
   });
-  if (potentialAnsi) {
-    return potentialAnsi;
-  }
-  return renderMarkdownBlock(
-    replace(string, { stringType: "console" }),
-    "console",
-  );
 };
 
 const renderPotentialAnsi = (
   string,
-  { sideEffect, sideEffectFileUrl, outDirectoryUrl, replace },
+  { stringType, sideEffect, sideEffectFileUrl, outDirectoryUrl, replace },
 ) => {
-  if (!ansiRegex().test(string)) {
-    return null;
+  // for assert we want ideally hummm
+  // colored in details block?
+  const includesAnsi = ansiRegex().test(string);
+  if (!includesAnsi) {
+    return renderMarkdownBlock(replace(string, { stringType }), "console");
   }
   let svgFilename = urlToBasename(outDirectoryUrl);
   svgFilename += `_${sideEffect.code}`;
