@@ -4,7 +4,7 @@ console.log("[31m Hi[0m <toto>");
 
 # 1/2 console.log
 
-![img](7_console_color_and_html_special_char/7_console_color_and_html_special_char_console.log.svg)
+![img](7_console_color_and_html_special_char/console.log.svg)
 
 # 2/2 return
 

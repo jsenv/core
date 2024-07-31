@@ -13,6 +13,8 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
     },
     {
       sideEffectFileUrl: new URL("./output/0_warn_a.md", import.meta.url),
+      outDirectoryUrl: new URL("./output/0_warn_a/", import.meta.url),
+      outFilePattern: "./output/0_warn_a/[filename]",
     },
   );
   assert({ actual: console.warn, expect: warn });
@@ -24,6 +26,8 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
     },
     {
       sideEffectFileUrl: new URL("./output/1_warn_b.md", import.meta.url),
+      outDirectoryUrl: new URL("./output/1_warn_b/", import.meta.url),
+      outFilePattern: "./output/1_warn_b/[filename]",
     },
   );
   assert({ actual: console.warn, expect: warn });
@@ -45,6 +49,11 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
         "./output/2_a_when_b_ends_before.md",
         import.meta.url,
       ),
+      outDirectoryUrl: new URL(
+        "./output/2_a_when_b_ends_before/",
+        import.meta.url,
+      ),
+      outFilePattern: "./output/2_a_when_b_ends_before/[filename]",
       filesystemEffects: {
         baseDirectory: new URL("./", import.meta.url),
         preserve: true,
@@ -65,6 +74,11 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
         "./output/3_b_when_b_ends_before.md",
         import.meta.url,
       ),
+      outDirectoryUrl: new URL(
+        "./output/3_b_when_b_ends_before/",
+        import.meta.url,
+      ),
+      outFilePattern: "./output/3_b_when_b_ends_before/[filename]",
       filesystemEffects: {
         baseDirectory: new URL("./", import.meta.url),
         preserve: true,
@@ -86,6 +100,8 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
     },
     {
       sideEffectFileUrl: new URL("./output/4_write_first.md", import.meta.url),
+      outDirectoryUrl: new URL("./output/4_write_first/", import.meta.url),
+      outFilePattern: "./output/4_write_first/[filename]",
     },
   );
   await snapshotSideEffects(
@@ -97,6 +113,8 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
     },
     {
       sideEffectFileUrl: new URL("./output/5_write_second.md", import.meta.url),
+      outDirectoryUrl: new URL("./output/5_write_second/", import.meta.url),
+      outFilePattern: "./output/5_write_second/[filename]",
     },
   );
 }
@@ -124,12 +142,14 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
         "./output/6_console_and_file.md",
         import.meta.url,
       ),
+      outDirectoryUrl: new URL("./output/6_console_and_file/", import.meta.url),
+      outFilePattern: "./output/6_console_and_file/[filename]",
     },
   );
 }
 
 // console grouped and fs
-snapshotSideEffects(
+await snapshotSideEffects(
   import.meta.url,
   async () => {
     console.info(`build "./main.html"`);
@@ -154,6 +174,11 @@ snapshotSideEffects(
       "./output/7_console_group_and_fs_group.md",
       import.meta.url,
     ),
+    outDirectoryUrl: new URL(
+      "./output/7_console_group_and_fs_group/",
+      import.meta.url,
+    ),
+    outFilePattern: "./output/7_console_group_and_fs_group/[filename]",
     filesystemEffects: {
       baseDirectory: new URL("./", import.meta.url),
     },

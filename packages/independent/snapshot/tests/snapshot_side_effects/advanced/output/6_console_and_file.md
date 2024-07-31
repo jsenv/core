@@ -45,10 +45,10 @@ toto
 
 # 6/6 reject
 
-```
+```console
 Error: in the end we throw
-  at snapshotSideEffects.sideEffectFileUrl (@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:120:13)
-  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:106:3
+  at snapshotSideEffects.sideEffectFileUrl (@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:138:13)
+  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:124:3
 ```
 
 <sub>
