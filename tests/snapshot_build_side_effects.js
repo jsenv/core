@@ -1,4 +1,4 @@
-import { getCallerLocation, snapshotTests } from "@jsenv/snapshot";
+import { snapshotTests } from "@jsenv/snapshot";
 
 export const snapshotBuildTests = async (
   fn,
@@ -27,6 +27,5 @@ export const snapshotBuildTests = async (
               ? {}
               : options.filesystemEffects),
           },
-    sourceFileUrl: getCallerLocation(2).url,
   });
 };
