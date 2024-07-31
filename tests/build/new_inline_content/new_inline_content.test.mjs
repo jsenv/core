@@ -1,78 +1,78 @@
 import { assert } from "@jsenv/assert";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+import { readFileSync } from "@jsenv/filesystem";
 
-const test = async (params) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  const { buildManifest } = await build({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    transpilation: { css: false },
-    bundling: false,
-    minification: false,
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
-  });
-  buildDirectorySnapshot.compare();
+await snapshotBuildTests(
+  ({ test }) => {
+    test("0_js_module", () =>
+      build({
+        sourceDirectoryUrl: new URL("./client/", import.meta.url),
+        buildDirectoryUrl: new URL("./build/", import.meta.url),
+        entryPoints: { "./main.html": "main.html" },
+        bundling: false,
+        minification: false,
+        transpilation: { css: false },
+        runtimeCompat: { chrome: "89" },
+        assetManifest: true,
+      }));
+  },
+  new URL("./output/new_inline_content.md", import.meta.url),
+);
 
-  const server = await startFileServer({
-    rootDirectoryUrl: snapshotDirectoryUrl,
-  });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
+const buildManifest = readFileSync(
+  new URL("./output/0_js_module/build/asset-manifest.json", import.meta.url),
+  { as: "json" },
+);
+const actual = await executeBuildHtmlInBrowser(
+  new URL("./output/0_js_module/build/", import.meta.url),
+  "main.html",
+  {
     /* eslint-disable no-undef */
     pageFunction: async (jsRelativeUrl) => {
       const namespace = await import(jsRelativeUrl);
       // let 500ms for the background image to load
       await new Promise((resolve) => setTimeout(resolve, 500));
-      const bodyBackgroundImage = getComputedStyle(
-        document.body,
-      ).backgroundImage;
+      bodyBackgroundImage = getComputedStyle(document.body).backgroundImage;
+      bodyBackgroundImage = bodyBackgroundImage.replace(
+        window.location.origin,
+        "",
+      );
       return {
         ...namespace,
         bodyBackgroundImage,
       };
     },
     /* eslint-enable no-undef */
-    pageArguments: [`./${buildManifest["js/main.js"]}`],
-  });
-  const actual = returnValue;
-  const expect = {
-    complexInsideDoubleQuotes: `\n'😀'\n`,
-    complexInsideSingleQuotes: `\n"😀"\n`,
-    cssAndTemplate: `
+    pageFunctionArg: `./${buildManifest["js/main.js"]}`,
+  },
+);
+const jsenvPngVersioned = buildManifest["other/jsenv.png"];
+const expect = {
+  complexInsideDoubleQuotes: `\n'😀'\n`,
+  complexInsideSingleQuotes: `\n"😀"\n`,
+  cssAndTemplate: `
 body {
-  background-image: url(/other/jsenv.png?v=467b6542);
-  background-image: url(/other/jsenv.png?v=467b6542);
-  background-image: url(/other/jsenv.png?v=467b6542);
+  background-image: url(/${jsenvPngVersioned});
+  background-image: url(/${jsenvPngVersioned});
+  background-image: url(/${jsenvPngVersioned});
 }
 `,
-    cssTextWithUrl: `\nbody { background-image: url(/other/jsenv.png?v=467b6542); }\n`,
-    cssTextWithUrl2: `\nbody { background-image: url(/other/jsenv.png?v=467b6542); }\n`,
-    doubleQuote: `"`,
-    doubleQuoteEscaped: `"`,
-    fromTemplate: `"`,
-    fromTemplate2: `'`,
-    fromTemplate3: `\n'"`,
-    fromTemplate4: `
+  cssTextWithUrl: `\nbody { background-image: url(/${jsenvPngVersioned}); }\n`,
+  cssTextWithUrl2: `\nbody { background-image: url(/${jsenvPngVersioned}); }\n`,
+  doubleQuote: `"`,
+  doubleQuoteEscaped: `"`,
+  fromTemplate: `"`,
+  fromTemplate2: `'`,
+  fromTemplate3: `\n'"`,
+  fromTemplate4: `
 '"
 `,
-    lineEnding: `\n`,
-    lineEnding2: `\n`,
-    singleQuote: `'`,
-    singleQuoteEscaped: `'`,
-    bodyBackgroundImage: `url("${server.origin}/other/jsenv.png?v=467b6542")`,
-  };
-  assert({ actual, expect });
+  lineEnding: `\n`,
+  lineEnding2: `\n`,
+  singleQuote: `'`,
+  singleQuoteEscaped: `'`,
+  bodyBackgroundImage: `url("/${jsenvPngVersioned}")`,
 };
-
-// script type module can be used
-await test({ runtimeCompat: { chrome: "89" } });
+assert({ actual, expect });
