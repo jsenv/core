@@ -15,7 +15,7 @@ build({
 })
 ```
 
-### 1/4 logs
+### 1/2 logs
 
 ![img](0_basic/log_group.svg)
 
@@ -31,37 +31,16 @@ build "./main.js"
 ✔ bundle "js_module" (done in <X> second)
 ⠋ generate build graph
 ✔ generate build graph (done in <X> second)
-⠋ write files in build directory
 
 ```
 
 </details>
 
 
-### 2/4 write 4 files into "./build/"
-
-see [./0_basic/build/](./0_basic/build/)
-
-### 3/4 logs
-
-![img](0_basic/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
+### 2/2 reject
 
 ```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- js   : 4 (600 B / 100 %)
-- total: 4 (600 B / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
-
-```js
-{}
+TypeError: The "buf2" argument must be an instance of Buffer or Uint8Array. Received undefined
+  at async snapshotBuildTests (file://@jsenv/core/tests/snapshot_build_side_effects.js:8:3)
+  at async base/bundling_js_module.test.mjs:4:1
 ```

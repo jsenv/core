@@ -318,11 +318,14 @@ const renderPotentialAnsi = (
   }
   const svgFilename = `${sideEffect.code}${sideEffect.counter ? `_${sideEffect.counter}` : ""}.svg`;
   const svgFileUrl = generateOutFileUrl(svgFilename);
-  let svgFileContent = renderTerminalSvg(string, {
-    head: false,
-    paddingTop: 10,
-    paddingBottom: 10,
-  });
+  let svgFileContent = renderTerminalSvg(
+    replace(string, { stringType: "console", preserveAnsi: true }),
+    {
+      head: false,
+      paddingTop: 10,
+      paddingBottom: 10,
+    },
+  );
   svgFileContent = replace(svgFileContent, { fileUrl: svgFileUrl });
   writeFileSync(svgFileUrl, svgFileContent);
   const svgFileRelativeUrl = urlToRelativeUrl(svgFileUrl, sideEffectFileUrl);
