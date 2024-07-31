@@ -1,0 +1,5 @@
+{
+  "src/": "src/?v=8b42b03f",
+  "src/sub/": "src/sub/?v=8b42b03f",
+  "src/sub/file.js": "src/sub/file.js?v=5f9baf7f"
+}

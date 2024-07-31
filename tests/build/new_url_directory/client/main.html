@@ -14,9 +14,9 @@
     <script type="module">
       const directoryUrl = new URL("./src/", import.meta.url).href;
 
-      window.resolveResultPromise({
-        directoryUrl,
-      });
+      window.resolveResultPromise(
+        directoryUrl.replace(window.origin, "window.origin"),
+      );
     </script>
   </body>
 </html>

@@ -78,8 +78,10 @@ export const defaultRuntimeCompat = {
  *        Use versioning on files written in the build directory
  * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
  *        Controls how url are versioned in the build directory
- * @param {('none'|'inline'|'file'|'programmatic'} [buildParameters.sourcemaps="none"]
+ * @param {('none'|'inline'|'file'|'programmatic')} [buildParameters.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
+ * @param {('error'|'copy'|'preserve')|function} [buildParameters.directoryReferenceEffect="error"]
+ *        What to do when a reference leads to a directory on the filesystem
  * @return {Object} buildReturnValue
  * @return {Object} buildReturnValue.buildInlineContents
  *        Contains content that is inline into build files
