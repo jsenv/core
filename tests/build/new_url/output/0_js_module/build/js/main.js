@@ -13,9 +13,15 @@ const windowOriginRelativeUrl = new URL(__v__("/other/file.txt"), window.origin)
 const absoluteBaseUrl = new URL("http://jsenv.dev/file.txt", "http://jsenv.dev/").href;
 
 window.resolveResultPromise({
-  textFileUrl,
+  textFileUrl: textFileUrl.replace(window.origin, "window.origin"),
   absoluteUrl,
-  windowLocationRelativeUrl,
-  windowOriginRelativeUrl,
-  absoluteBaseUrl,
+  windowLocationRelativeUrl: windowLocationRelativeUrl.replace(
+    window.origin,
+    "window.origin",
+  ),
+  windowOriginRelativeUrl: windowOriginRelativeUrl.replace(
+    window.origin,
+    "window.origin",
+  ),
+  absoluteBaseUrl: absoluteBaseUrl.replace(window.origin, "window.origin"),
 });

@@ -1,45 +1,33 @@
 import { assert } from "@jsenv/assert";
-import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
-import { copyFileSync } from "node:fs";
-
 import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+import { copyFileSync } from "@jsenv/filesystem";
+import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
-const test = async (params) => {
-  await build({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    entryPoints: {
-      "./main.js?as_js_classic": "main.js",
-    },
-    assetsDirectory: "foo/",
-    plugins: [jsenvPluginAsJsClassic()],
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
-  });
-  copyFileSync(
-    new URL("./main.html", import.meta.url),
-    new URL("./dist/main.html", import.meta.url),
-  );
-  const server = await startFileServer({
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
-  });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
-  const actual = returnValue;
-  const expect = `${server.origin}/foo/other/file.txt?v=ead31da8`;
-  assert({ actual, expect });
-};
+await snapshotBuildTests(
+  ({ test }) => {
+    test("0_basic", () =>
+      build({
+        sourceDirectoryUrl: new URL("./client/", import.meta.url),
+        buildDirectoryUrl: new URL("./build/", import.meta.url),
+        entryPoints: { "./main.js?as_js_classic": "main.js" },
+        assetsDirectory: "foo/",
+        runtimeCompat: { chrome: "66" },
+        bundling: false,
+        minification: false,
+        plugins: [jsenvPluginAsJsClassic()],
+      }));
+  },
+  new URL("./output/new_url_and_js_classic.md", import.meta.url),
+);
 
-// support for <script type="module">
-await test({
-  runtimeCompat: { chrome: "66" },
-  bundling: false,
-  minification: false,
+copyFileSync({
+  from: new URL("./client/main.html", import.meta.url),
+  to: new URL("./output/0_basic/build/main.html", import.meta.url),
 });
+const actual = await executeBuildHtmlInBrowser(
+  new URL("./output/0_basic/build/", import.meta.url),
+);
+const expect = `window.origin/foo/other/file.txt?v=ead31da8`;
+assert({ actual, expect });

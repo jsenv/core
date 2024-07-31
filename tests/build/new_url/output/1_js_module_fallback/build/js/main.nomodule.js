@@ -15,11 +15,11 @@ System.register([__v__("/js/file.nomodule.js")], function (_export, _context) {
       windowOriginRelativeUrl = new URL(__v__("/other/file.txt"), window.origin).href;
       absoluteBaseUrl = new URL("http://jsenv.dev/file.txt", "http://jsenv.dev/").href;
       window.resolveResultPromise({
-        textFileUrl,
+        textFileUrl: textFileUrl.replace(window.origin, "window.origin"),
         absoluteUrl,
-        windowLocationRelativeUrl,
-        windowOriginRelativeUrl,
-        absoluteBaseUrl
+        windowLocationRelativeUrl: windowLocationRelativeUrl.replace(window.origin, "window.origin"),
+        windowOriginRelativeUrl: windowOriginRelativeUrl.replace(window.origin, "window.origin"),
+        absoluteBaseUrl: absoluteBaseUrl.replace(window.origin, "window.origin")
       });
     }
   };
