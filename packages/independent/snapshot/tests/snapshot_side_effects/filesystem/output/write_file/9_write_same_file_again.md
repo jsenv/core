@@ -5,16 +5,11 @@ writeFileSync(new URL("./dist/b.txt", import.meta.url), "b");
 writeFileSync(new URL("./dist/c.txt", import.meta.url), "c");
 ```
 
-# 1/2 write 4 files into "./dist/"
+# 1/2 write 3 files into "./dist/"
 
 ## a.txt
 ```txt
 a
-```
-
-## b.txt
-```txt
-b
 ```
 
 ## b.txt

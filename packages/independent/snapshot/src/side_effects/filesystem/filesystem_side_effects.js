@@ -97,6 +97,27 @@ export const filesystemSideEffects = (
         }
         return null;
       });
+      addSkippableHandler((sideEffect) => {
+        // on llinux writing to a file with the same content
+        // is ignored somehow
+        // let's make this consistent on other platforms
+        if (sideEffect.code === "write_file") {
+          return (nextSideEffect, { skip, stop }) => {
+            if (
+              nextSideEffect.code === "write_file" &&
+              nextSideEffect.value.url === sideEffect.value.url &&
+              !Buffer.compare(
+                nextSideEffect.value.buffer,
+                sideEffect.value.buffer,
+              )
+            ) {
+              skip();
+            }
+            stop();
+          };
+        }
+        return null;
+      });
 
       addFinallyCallback((sideEffects) => {
         // gather all file side effect next to each other
