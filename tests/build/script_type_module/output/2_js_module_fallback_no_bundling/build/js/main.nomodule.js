@@ -11,7 +11,7 @@ System.register([__v__("/js/file.nomodule.js")], function (_export, _context) {
         const url = _context.meta.url;
         window.resolveResultPromise({
           answer,
-          url
+          url: url.replace(window.origin, "window.origin")
         });
       }, 100);
     }
