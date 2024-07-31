@@ -6,6 +6,16 @@ console.log("[31m Hi[0m <toto>");
 
 ![img](7_console_color_and_html_special_char/console.log.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+ Hi[0m <toto>
+```
+
+</details>
+
+
 # 2/2 return
 
 ```js

@@ -7,9 +7,29 @@ console.log("🤖[31m DANGER[0m Will Robbinson");
 
 ![img](4_console_ansi_many/console.log.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+_
+```
+
+</details>
+
+
 # 2/3 console.log
 
 ![img](4_console_ansi_many/console.log_1.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+🤖 DANGER Will Robbinson
+```
+
+</details>
+
 
 # 3/3 return
 

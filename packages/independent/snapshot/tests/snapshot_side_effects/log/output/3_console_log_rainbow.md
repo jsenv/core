@@ -8,6 +8,16 @@ console.log(
 
 ![img](3_console_log_rainbow/console.log.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+red yellow green cyan blue magenta
+```
+
+</details>
+
+
 # 2/2 return
 
 ```js

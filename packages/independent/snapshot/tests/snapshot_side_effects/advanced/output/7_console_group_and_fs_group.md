@@ -45,6 +45,21 @@ tata
 
 ![img](7_console_group_and_fs_group/log_group_1.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (175 B / 91 %)
+- js   : 1 (17 B / 9 %)
+- total: 2 (192 B / 100 %)
+--------------------
+```
+
+</details>
+
+
 # 4/4 resolve
 
 ```js
