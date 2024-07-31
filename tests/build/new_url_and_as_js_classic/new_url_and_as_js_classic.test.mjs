@@ -5,22 +5,19 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 import { copyFileSync } from "@jsenv/filesystem";
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
-await snapshotBuildTests(
-  ({ test }) => {
-    test("0_basic", () =>
-      build({
-        sourceDirectoryUrl: new URL("./client/", import.meta.url),
-        buildDirectoryUrl: new URL("./build/", import.meta.url),
-        entryPoints: { "./main.js?as_js_classic": "main.js" },
-        assetsDirectory: "foo/",
-        runtimeCompat: { chrome: "66" },
-        bundling: false,
-        minification: false,
-        plugins: [jsenvPluginAsJsClassic()],
-      }));
-  },
-  new URL("./output/new_url_and_js_classic.md", import.meta.url),
-);
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_basic", () =>
+    build({
+      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      entryPoints: { "./main.js?as_js_classic": "main.js" },
+      assetsDirectory: "foo/",
+      runtimeCompat: { chrome: "66" },
+      bundling: false,
+      minification: false,
+      plugins: [jsenvPluginAsJsClassic()],
+    }));
+});
 
 copyFileSync({
   from: new URL("./client/main.html", import.meta.url),

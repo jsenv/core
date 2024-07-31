@@ -4,31 +4,28 @@ import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-await snapshotBuildTests(
-  ({ test }) => {
-    const testParams = {
-      sourceDirectoryUrl: new URL("./client/", import.meta.url),
-      buildDirectoryUrl: new URL("./build/", import.meta.url),
-      entryPoints: { "./main.js": "main.js" },
-      minification: false,
-      versioning: false,
-      base: "./",
-    };
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  const testParams = {
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.js": "main.js" },
+    minification: false,
+    versioning: false,
+    base: "./",
+  };
 
-    test("0_with_bundling", () =>
-      build({
-        ...testParams,
-        bundling: true,
-      }));
+  test("0_with_bundling", () =>
+    build({
+      ...testParams,
+      bundling: true,
+    }));
 
-    test("1_without_bundling", () =>
-      build({
-        ...testParams,
-        bundling: false,
-      }));
-  },
-  new URL("./output/import_circular.md", import.meta.url),
-);
+  test("1_without_bundling", () =>
+    build({
+      ...testParams,
+      bundling: false,
+    }));
+});
 
 // with bundling (default)
 {

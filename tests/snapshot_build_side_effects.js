@@ -1,11 +1,11 @@
 import { snapshotTests } from "@jsenv/snapshot";
 
 export const snapshotBuildTests = async (
-  fn,
-  sideEffectFileUrl,
+  testFileUrl,
+  fnRegisteringTests,
   options = {},
 ) => {
-  await snapshotTests(fn, sideEffectFileUrl, {
+  await snapshotTests(testFileUrl, fnRegisteringTests, {
     ...options,
     logEffects:
       options.logEffects === false
