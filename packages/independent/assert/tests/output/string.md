@@ -13,17 +13,17 @@ assert({
 });
 ```
 
+![img](string/string_single_char_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "a"
 expect: "b"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/string_single_char_throw.svg" alt="img" />
 
 </details>
 
@@ -37,17 +37,17 @@ assert({
 });
 ```
 
+![img](string/diff_end_of_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "hello world"
 expect: "hello france"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_end_of_string_throw.svg" alt="img" />
 
 </details>
 
@@ -61,17 +61,17 @@ assert({
 });
 ```
 
+![img](string/one_char_should_be_empty_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "a"
 expect: ""
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/one_char_should_be_empty_throw.svg" alt="img" />
 
 </details>
 
@@ -85,17 +85,17 @@ assert({
 });
 ```
 
+![img](string/empty_should_be_one_char_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: ""
 expect: "a"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/empty_should_be_one_char_throw.svg" alt="img" />
 
 </details>
 
@@ -109,17 +109,17 @@ assert({
 });
 ```
 
+![img](string/tab_vs_space_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "\t"
 expect: "  "
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/tab_vs_space_throw.svg" alt="img" />
 
 </details>
 
@@ -133,17 +133,17 @@ assert({
 });
 ```
 
+![img](string/blank_char_should_be_empty_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "\x7F"
 expect: ""
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/blank_char_should_be_empty_throw.svg" alt="img" />
 
 </details>
 
@@ -157,17 +157,17 @@ assert({
 });
 ```
 
+![img](string/blank_char_should_be_empty_2_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "\x00"
 expect: ""
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/blank_char_should_be_empty_2_throw.svg" alt="img" />
 
 </details>
 
@@ -181,17 +181,17 @@ assert({
 });
 ```
 
+![img](string/diff_unicode_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "⚫️"
 expect: "⚪️"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_unicode_throw.svg" alt="img" />
 
 </details>
 
@@ -205,17 +205,17 @@ assert({
 });
 ```
 
+![img](string/diff_emoticon_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "👨‍👩‍👧‍👧"
 expect: "😍"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_emoticon_throw.svg" alt="img" />
 
 </details>
 
@@ -229,17 +229,17 @@ assert({
 });
 ```
 
+![img](string/diff_special_char_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "ñ"
 expect: "n"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_special_char_throw.svg" alt="img" />
 
 </details>
 
@@ -253,17 +253,17 @@ assert({
 });
 ```
 
+![img](string/special_char_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: ""
 expect: ""
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/special_char_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -277,17 +277,17 @@ assert({
 });
 ```
 
+![img](string/more_special_char_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "!'#$%&'()*+,-./:;<=>"
 expect: "?@^[\\]_`{|}~"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/more_special_char_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -301,17 +301,17 @@ assert({
 });
 ```
 
+![img](string/diff_blackslash_and_ellipsis_special_chars_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "\\"
 expect: ""
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_blackslash_and_ellipsis_special_chars_throw.svg" alt="img" />
 
 </details>
 
@@ -325,17 +325,17 @@ assert({
 });
 ```
 
+![img](string/diff_single_space_with_2_space_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: " "
 expect: "  "
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_single_space_with_2_space_throw.svg" alt="img" />
 
 </details>
 
@@ -349,17 +349,17 @@ assert({
 });
 ```
 
+![img](string/added_char_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "ab"
 expect: "a"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/added_char_throw.svg" alt="img" />
 
 </details>
 
@@ -373,17 +373,17 @@ assert({
 });
 ```
 
+![img](string/removed_char_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "a"
 expect: "ab"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/removed_char_throw.svg" alt="img" />
 
 </details>
 
@@ -398,17 +398,17 @@ assert({
 });
 ```
 
+![img](string/diff_at_end_of_long_string__start_truncated_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: …"efghijk"
 expect: …"efghijj"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_at_end_of_long_string__start_truncated_throw.svg" alt="img" />
 
 </details>
 
@@ -423,17 +423,17 @@ assert({
 });
 ```
 
+![img](string/diff_at_start_of_long_string__end_truncated_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "a2cdefg"…
 expect: "a3cdefg"…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_at_start_of_long_string__end_truncated_throw.svg" alt="img" />
 
 </details>
 
@@ -448,17 +448,17 @@ assert({
 });
 ```
 
+![img](string/many_diff_in_long_string__only_first_is_shown_truncated_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "a2cdefZ"…
 expect: "a3cdefY"…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/many_diff_in_long_string__only_first_is_shown_truncated_throw.svg" alt="img" />
 
 </details>
 
@@ -473,17 +473,17 @@ assert({
 });
 ```
 
+![img](string/diff_at_middle_of_long_string__start_+_end_truncated_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: …"gh5"…
 expect: …"gh6"…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_at_middle_of_long_string__start_+_end_truncated_throw.svg" alt="img" />
 
 </details>
 
@@ -497,17 +497,17 @@ assert({
 });
 ```
 
+![img](string/diff_new_string_value_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: String("a")
 expect: String("b")
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_new_string_value_throw.svg" alt="img" />
 
 </details>
 
@@ -521,17 +521,17 @@ assert({
 });
 ```
 
+![img](string/diff_string_object_vs_literal_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: String("abc")
 expect: "a2"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/diff_string_object_vs_literal_throw.svg" alt="img" />
 
 </details>
 
@@ -551,6 +551,11 @@ assert({
 });
 ```
 
+![img](string/new_string_collapsed_with_overview_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -563,11 +568,6 @@ expect: {
   b: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/new_string_collapsed_with_overview_throw.svg" alt="img" />
 
 </details>
 
@@ -590,6 +590,11 @@ assert({
 });
 ```
 
+![img](string/new_string_collapsed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -605,11 +610,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/new_string_collapsed_throw.svg" alt="img" />
-
 </details>
 
 
@@ -622,6 +622,11 @@ assert({
 });
 ```
 
+![img](string/new_string_prop_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -632,10 +637,5 @@ expect: String("b") {
   foo: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string/new_string_prop_throw.svg" alt="img" />
 
 </details>

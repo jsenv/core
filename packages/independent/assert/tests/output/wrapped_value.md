@@ -17,6 +17,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/symbol_toprimitive_added_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -25,11 +30,6 @@ actual: {
 }
 expect: {}
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/symbol_toprimitive_added_throw.svg" alt="img" />
 
 </details>
 
@@ -47,6 +47,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/symbol_toprimitive_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -55,11 +60,6 @@ expect: {
   [Symbol.toPrimitive()]: "10",
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/symbol_toprimitive_removed_throw.svg" alt="img" />
 
 </details>
 
@@ -77,6 +77,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/symbol_toprimitive_vs_primitive_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -85,11 +90,6 @@ actual: {
 }
 expect: 10
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/symbol_toprimitive_vs_primitive_throw.svg" alt="img" />
 
 </details>
 
@@ -107,6 +107,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/primitive_vs_symbol_toprimitive_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -115,11 +120,6 @@ expect: {
   [Symbol.toPrimitive()]: "10",
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/primitive_vs_symbol_toprimitive_throw.svg" alt="img" />
 
 </details>
 
@@ -137,6 +137,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/valueof(%7B_a_true_%7D)_vs_%7B_a_true_%7D_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -149,11 +154,6 @@ expect: {
   a: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/valueof(%7B_a_true_%7D)_vs_%7B_a_true_%7D_throw.svg" alt="img" />
 
 </details>
 
@@ -169,6 +169,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/10_vs_valueof(10)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -177,11 +182,6 @@ expect: {
   valueOf(): 10,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/10_vs_valueof(10)_throw.svg" alt="img" />
 
 </details>
 
@@ -197,6 +197,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/valueof(10)_vs_10_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -205,11 +210,6 @@ actual: {
 }
 expect: 10
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/valueof(10)_vs_10_throw.svg" alt="img" />
 
 </details>
 
@@ -227,6 +227,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/valueof(10)_vs_valueof(11)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -237,11 +242,6 @@ expect: {
   valueOf(): 11,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/valueof(10)_vs_valueof(11)_throw.svg" alt="img" />
 
 </details>
 
@@ -261,6 +261,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/valueof(10)_vs_valueof(10)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -273,11 +278,6 @@ expect: {
   valueOf(): 10,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/valueof(10)_vs_valueof(10)_throw.svg" alt="img" />
 
 </details>
 
@@ -296,17 +296,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/valueof_with_object_tag_vs_primitive_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Signal(10)
 expect: false
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/valueof_with_object_tag_vs_primitive_throw.svg" alt="img" />
 
 </details>
 
@@ -330,17 +330,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/valueof_with_object_tag_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Signal(10)
 expect: Signal(11)
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/valueof_with_object_tag_throw.svg" alt="img" />
 
 </details>
 
@@ -366,6 +366,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/no_diff_on_valueof_in_constructor_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -376,11 +381,6 @@ expect: Signal(10) {
   a: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/no_diff_on_valueof_in_constructor_throw.svg" alt="img" />
 
 </details>
 
@@ -400,17 +400,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/signal(true)_and_signal(false)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Signal(true)
 expect: Signal(false)
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/signal(true)_and_signal(false)_throw.svg" alt="img" />
 
 </details>
 
@@ -427,17 +427,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/signal(true)_and_true_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Signal(true)
 expect: true
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/signal(true)_and_true_throw.svg" alt="img" />
 
 </details>
 
@@ -454,17 +454,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/true_and_signal(true)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: true
 expect: Signal(true)
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/true_and_signal(true)_throw.svg" alt="img" />
 
 </details>
 
@@ -481,17 +481,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/true_and_signal(false)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: true
 expect: Signal(false)
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/true_and_signal(false)_throw.svg" alt="img" />
 
 </details>
 
@@ -508,17 +508,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/signal(true)_and_false_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Signal(true)
 expect: false
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/signal(true)_and_false_throw.svg" alt="img" />
 
 </details>
 
@@ -535,17 +535,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/signal(true)_and_1_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Signal(true)
 expect: 1
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/signal(true)_and_1_throw.svg" alt="img" />
 
 </details>
 
@@ -565,6 +565,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/signal(%7B_foo_true_%7D)_and_signal(%7B_foo_false_%7D)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -575,11 +580,6 @@ expect: Signal({
   foo: false,
 })
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/signal(%7B_foo_true_%7D)_and_signal(%7B_foo_false_%7D)_throw.svg" alt="img" />
 
 </details>
 
@@ -601,6 +601,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/signal([true])_and_signal([false])_with_props_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -615,11 +620,6 @@ expect: Signal([
   a: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/signal([true])_and_signal([false])_with_props_throw.svg" alt="img" />
 
 </details>
 
@@ -636,6 +636,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/signal([true])_and_[true]_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -646,11 +651,6 @@ expect: [
   true,
 ]
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/signal([true])_and_[true]_throw.svg" alt="img" />
 
 </details>
 
@@ -667,6 +667,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/[true]_and_signal([true])_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -677,11 +682,6 @@ expect: Signal([
   true,
 ])
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/[true]_and_signal([true])_throw.svg" alt="img" />
 
 </details>
 
@@ -698,6 +698,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/[true]_and_signal([false])_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -708,11 +713,6 @@ expect: Signal([
   false,
 ])
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/[true]_and_signal([false])_throw.svg" alt="img" />
 
 </details>
 
@@ -729,6 +729,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/signal([true])_and_[false]_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -739,11 +744,6 @@ expect: [
   false,
 ]
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/signal([true])_and_[false]_throw.svg" alt="img" />
 
 </details>
 
@@ -763,17 +763,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/signal(string)_and_signal(string)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Signal("ab")
 expect: Signal("a")
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/signal(string)_and_signal(string)_throw.svg" alt="img" />
 
 </details>
 
@@ -790,17 +790,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/signal(string)_and_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Signal("a")
 expect: "a"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/signal(string)_and_string_throw.svg" alt="img" />
 
 </details>
 
@@ -817,17 +817,17 @@ assert({
 });
 ```
 
+![img](wrapped_value/string_and_signal(string)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "a"
 expect: Signal("a")
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/string_and_signal(string)_throw.svg" alt="img" />
 
 </details>
 
@@ -849,6 +849,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/both_valueof_return_object_itself_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -861,11 +866,6 @@ expect: {
   valueOf(): expect,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/both_valueof_return_object_itself_throw.svg" alt="img" />
 
 </details>
 
@@ -881,6 +881,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/valueof_self_and_valueof_10_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -891,11 +896,6 @@ expect: {
   valueOf(): 10,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/valueof_self_and_valueof_10_throw.svg" alt="img" />
 
 </details>
 
@@ -911,6 +911,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/valueof_10_and_valueof_self_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -921,11 +926,6 @@ expect: {
   valueOf(): expect,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/valueof_10_and_valueof_self_throw.svg" alt="img" />
 
 </details>
 
@@ -947,6 +947,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/own_valueof_order_respected_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -961,11 +966,6 @@ expect: {
   b: true,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/own_valueof_order_respected_throw.svg" alt="img" />
 
 </details>
 
@@ -988,6 +988,11 @@ assert({
 });
 ```
 
+![img](wrapped_value/valueof_inherited_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -998,10 +1003,5 @@ expect: Signal("b") {
   foo: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="wrapped_value/valueof_inherited_throw.svg" alt="img" />
 
 </details>

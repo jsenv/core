@@ -14,17 +14,17 @@ assert({
 });
 ```
 
+![img](max_columns/at_removed_char_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "str"
 expect: "str_"…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/at_removed_char_throw.svg" alt="img" />
 
 </details>
 
@@ -39,17 +39,17 @@ assert({
 });
 ```
 
+![img](max_columns/at_added_char_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "str_"…
 expect: "str"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/at_added_char_throw.svg" alt="img" />
 
 </details>
 
@@ -64,17 +64,17 @@ assert({
 });
 ```
 
+![img](max_columns/at_removed_char_2_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "a_long_string"
 expect: "a_long_string_12345"…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/at_removed_char_2_throw.svg" alt="img" />
 
 </details>
 
@@ -89,17 +89,17 @@ assert({
 });
 ```
 
+![img](max_columns/at_added_char_2_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "a_long_string_12345"…
 expect: "a_long_string"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/at_added_char_2_throw.svg" alt="img" />
 
 </details>
 
@@ -114,17 +114,17 @@ assert({
 });
 ```
 
+![img](max_columns/at_removed_char_3_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: …"ng_string"
 expect: …"ng_string_"…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/at_removed_char_3_throw.svg" alt="img" />
 
 </details>
 
@@ -139,17 +139,17 @@ assert({
 });
 ```
 
+![img](max_columns/at_added_char_3_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: …"ng_string_"…
 expect: …"ng_string"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/at_added_char_3_throw.svg" alt="img" />
 
 </details>
 
@@ -164,17 +164,17 @@ assert({
 });
 ```
 
+![img](max_columns/string_at_9_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: …
 expect: …
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/string_at_9_throw.svg" alt="img" />
 
 </details>
 
@@ -189,17 +189,17 @@ assert({
 });
 ```
 
+![img](max_columns/string_at_10_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: …
 expect: …
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/string_at_10_throw.svg" alt="img" />
 
 </details>
 
@@ -214,17 +214,17 @@ assert({
 });
 ```
 
+![img](max_columns/string_at_11_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: …
 expect: …
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/string_at_11_throw.svg" alt="img" />
 
 </details>
 
@@ -239,17 +239,17 @@ assert({
 });
 ```
 
+![img](max_columns/string_at_12_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "a"…
 expect: "A"…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/string_at_12_throw.svg" alt="img" />
 
 </details>
 
@@ -264,17 +264,17 @@ assert({
 });
 ```
 
+![img](max_columns/string_at_13_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "ab"…
 expect: "AB"…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/string_at_13_throw.svg" alt="img" />
 
 </details>
 
@@ -289,17 +289,17 @@ assert({
 });
 ```
 
+![img](max_columns/string_at_19_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "abcdefgh"…
 expect: "ABCDEFGH"…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/string_at_19_throw.svg" alt="img" />
 
 </details>
 
@@ -314,17 +314,17 @@ assert({
 });
 ```
 
+![img](max_columns/string_at_20_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "abcdefghij"
 expect: "ABCDEFGHIJ"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/string_at_20_throw.svg" alt="img" />
 
 </details>
 
@@ -339,17 +339,17 @@ assert({
 });
 ```
 
+![img](max_columns/number_at_9_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: …
 expect: …
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/number_at_9_throw.svg" alt="img" />
 
 </details>
 
@@ -364,17 +364,17 @@ assert({
 });
 ```
 
+![img](max_columns/number_at_10_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 1…
 expect: 1…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/number_at_10_throw.svg" alt="img" />
 
 </details>
 
@@ -389,17 +389,17 @@ assert({
 });
 ```
 
+![img](max_columns/number_at_12_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 123…
 expect: 123…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/number_at_12_throw.svg" alt="img" />
 
 </details>
 
@@ -414,17 +414,17 @@ assert({
 });
 ```
 
+![img](max_columns/number_at_13_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 123_…
 expect: 123_…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/number_at_13_throw.svg" alt="img" />
 
 </details>
 
@@ -439,17 +439,17 @@ assert({
 });
 ```
 
+![img](max_columns/number_at_14_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 123_4…
 expect: 123_4…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/number_at_14_throw.svg" alt="img" />
 
 </details>
 
@@ -464,17 +464,17 @@ assert({
 });
 ```
 
+![img](max_columns/number_at_16_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 123_456…
 expect: 123_450…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/number_at_16_throw.svg" alt="img" />
 
 </details>
 
@@ -489,17 +489,17 @@ assert({
 });
 ```
 
+![img](max_columns/number_at_18_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 123_456_7…
 expect: 123_450_7…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/number_at_18_throw.svg" alt="img" />
 
 </details>
 
@@ -514,17 +514,17 @@ assert({
 });
 ```
 
+![img](max_columns/number_at_19_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 123_456_789
 expect: 123_450_789
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/number_at_19_throw.svg" alt="img" />
 
 </details>
 
@@ -543,6 +543,11 @@ assert({
 });
 ```
 
+![img](max_columns/boolean_in_property_at_10_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -553,11 +558,6 @@ expect: {
   abcdef…,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/boolean_in_property_at_10_throw.svg" alt="img" />
 
 </details>
 
@@ -576,6 +576,11 @@ assert({
 });
 ```
 
+![img](max_columns/boolean_in_property_at_11_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -586,11 +591,6 @@ expect: {
   abcdefgh,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/boolean_in_property_at_11_throw.svg" alt="img" />
 
 </details>
 
@@ -609,6 +609,11 @@ assert({
 });
 ```
 
+![img](max_columns/boolean_in_property_at_12_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -619,11 +624,6 @@ expect: {
   abcdefgh,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/boolean_in_property_at_12_throw.svg" alt="img" />
 
 </details>
 
@@ -642,6 +642,11 @@ assert({
 });
 ```
 
+![img](max_columns/boolean_in_property_at_13_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -652,11 +657,6 @@ expect: {
   abcdefgh,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/boolean_in_property_at_13_throw.svg" alt="img" />
 
 </details>
 
@@ -675,6 +675,11 @@ assert({
 });
 ```
 
+![img](max_columns/boolean_in_property_at_14_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -685,11 +690,6 @@ expect: {
   abcdefgh: …,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/boolean_in_property_at_14_throw.svg" alt="img" />
 
 </details>
 
@@ -708,6 +708,11 @@ assert({
 });
 ```
 
+![img](max_columns/boolean_in_property_at_15_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -718,11 +723,6 @@ expect: {
   abcdefgh: f…,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/boolean_in_property_at_15_throw.svg" alt="img" />
 
 </details>
 
@@ -749,6 +749,11 @@ assert({
 });
 ```
 
+![img](max_columns/array_in_property_at_20_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -761,11 +766,6 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/array_in_property_at_20_throw.svg" alt="img" />
 
 </details>
 
@@ -792,6 +792,11 @@ assert({
 });
 ```
 
+![img](max_columns/array_in_property_at_21_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -804,11 +809,6 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/array_in_property_at_21_throw.svg" alt="img" />
 
 </details>
 
@@ -835,6 +835,11 @@ assert({
 });
 ```
 
+![img](max_columns/array_in_property_at_22_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -847,11 +852,6 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/array_in_property_at_22_throw.svg" alt="img" />
 
 </details>
 
@@ -878,6 +878,11 @@ assert({
 });
 ```
 
+![img](max_columns/array_in_property_at_23_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -890,11 +895,6 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/array_in_property_at_23_throw.svg" alt="img" />
 
 </details>
 
@@ -921,6 +921,11 @@ assert({
 });
 ```
 
+![img](max_columns/array_in_property_at_24_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -933,11 +938,6 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/array_in_property_at_24_throw.svg" alt="img" />
 
 </details>
 
@@ -964,6 +964,11 @@ assert({
 });
 ```
 
+![img](max_columns/array_in_property_at_25_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -976,11 +981,6 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/array_in_property_at_25_throw.svg" alt="img" />
 
 </details>
 
@@ -1007,6 +1007,11 @@ assert({
 });
 ```
 
+![img](max_columns/array_in_property_at_26_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1019,11 +1024,6 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/array_in_property_at_26_throw.svg" alt="img" />
 
 </details>
 
@@ -1050,6 +1050,11 @@ assert({
 });
 ```
 
+![img](max_columns/array_in_property_at_27_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1062,11 +1067,6 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/array_in_property_at_27_throw.svg" alt="img" />
 
 </details>
 
@@ -1093,6 +1093,11 @@ assert({
 });
 ```
 
+![img](max_columns/array_in_property_at_28_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1105,11 +1110,6 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/array_in_property_at_28_throw.svg" alt="img" />
 
 </details>
 
@@ -1136,6 +1136,11 @@ assert({
 });
 ```
 
+![img](max_columns/array_in_property_at_29_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1148,11 +1153,6 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/array_in_property_at_29_throw.svg" alt="img" />
 
 </details>
 
@@ -1171,6 +1171,11 @@ assert({
 });
 ```
 
+![img](max_columns/on_property_at_15_and_value_width_is_1_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1181,11 +1186,6 @@ expect: {
   abcdefgh: 1,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/on_property_at_15_and_value_width_is_1_throw.svg" alt="img" />
 
 </details>
 
@@ -1204,6 +1204,11 @@ assert({
 });
 ```
 
+![img](max_columns/on_middle_of_property_key_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1214,11 +1219,6 @@ expect: {
   "a quite long property key that wil"…,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/on_middle_of_property_key_throw.svg" alt="img" />
 
 </details>
 
@@ -1233,17 +1233,17 @@ assert({
 });
 ```
 
+![img](max_columns/max_column_exactly_on_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: …"c"
 expect: …"C"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/max_column_exactly_on_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -1258,17 +1258,17 @@ assert({
 });
 ```
 
+![img](max_columns/double_slash_and_truncate_line_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "…e_modules/@jsenv/assert/src/internal/s…"
 expect: "…e_modules/@jsenv/assert/src/internal//…"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/double_slash_and_truncate_line_throw.svg" alt="img" />
 
 </details>
 
@@ -1283,17 +1283,17 @@ assert({
 });
 ```
 
+![img](max_columns/url_search_param_modified__middle_of_long_params_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "…?this_is_rel…&foo=a"
 expect: "…?this_is_rel…&foo=b"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/url_search_param_modified__middle_of_long_params_throw.svg" alt="img" />
 
 </details>
 
@@ -1308,17 +1308,17 @@ assert({
 });
 ```
 
+![img](max_columns/long_url_diff_at_end_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "…example_that_is…/dir/file.txt"
 expect: "…example_that_is…/dir/file.css"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/long_url_diff_at_end_throw.svg" alt="img" />
 
 </details>
 
@@ -1333,17 +1333,17 @@ assert({
 });
 ```
 
+![img](max_columns/long_url_diff_at_start_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "http://example_that_is_quite_/…"
 expect: "file://example_that_is_quite_…"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/long_url_diff_at_start_throw.svg" alt="img" />
 
 </details>
 
@@ -1358,17 +1358,17 @@ assert({
 });
 ```
 
+![img](max_columns/long_url_diff_in_the_middle_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "…example_that_is_quite_long.c…"
 expect: "…example_that_aa_quite_long.c…"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/long_url_diff_in_the_middle_throw.svg" alt="img" />
 
 </details>
 
@@ -1383,17 +1383,17 @@ assert({
 });
 ```
 
+![img](max_columns/long_url_diff_start_middle_end_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "http://example_that_is_quite_/…"
 expect: "file://example_that_aa_quite_…"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/long_url_diff_start_middle_end_throw.svg" alt="img" />
 
 </details>
 
@@ -1412,6 +1412,11 @@ abcdefghZjkl`,
 });
 ```
 
+![img](max_columns/lines_around_start_partially_truncated_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1422,11 +1427,6 @@ expect: 1|
         2| …789
         3| …ghZ…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/lines_around_start_partially_truncated_throw.svg" alt="img" />
 
 </details>
 
@@ -1445,6 +1445,11 @@ abcZ`,
 });
 ```
 
+![img](max_columns/lines_around_start_fully_truncated_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1455,11 +1460,6 @@ expect: 1|
         2| …
         3| …cZ
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/lines_around_start_fully_truncated_throw.svg" alt="img" />
 
 </details>
 
@@ -1478,6 +1478,11 @@ abcdeZgh`,
 });
 ```
 
+![img](max_columns/lines_around_start_fully_truncated_2_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1488,11 +1493,6 @@ expect: 1|
         2| …
         3| …deZ…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/lines_around_start_fully_truncated_2_throw.svg" alt="img" />
 
 </details>
 
@@ -1513,6 +1513,11 @@ Zbcdef
 });
 ```
 
+![img](max_columns/lines_around_end_is_truncated_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1525,11 +1530,6 @@ expect: 1|
         3| Zbc…
         4| 123…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/lines_around_end_is_truncated_throw.svg" alt="img" />
 
 </details>
 
@@ -1550,6 +1550,11 @@ abcdZfghi
 });
 ```
 
+![img](max_columns/lines_around_end_is_truncated_2_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1562,10 +1567,5 @@ expect: 1|
         3| abcdZf…
         4| 123456…
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="max_columns/lines_around_end_is_truncated_2_throw.svg" alt="img" />
 
 </details>

@@ -18,6 +18,11 @@ assert({
 });
 ```
 
+![img](ref/reference_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -26,11 +31,6 @@ expect: {
   self: expect,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/reference_removed_throw.svg" alt="img" />
 
 </details>
 
@@ -49,6 +49,11 @@ assert({
 });
 ```
 
+![img](ref/reference_added_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -57,11 +62,6 @@ actual: {
 }
 expect: {}
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/reference_added_throw.svg" alt="img" />
 
 </details>
 
@@ -85,6 +85,11 @@ assert({
 });
 ```
 
+![img](ref/same_ref_to_self_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -97,11 +102,6 @@ expect: {
   self: expect,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/same_ref_to_self_throw.svg" alt="img" />
 
 </details>
 
@@ -130,6 +130,11 @@ expect.object.self2 = expect;
 assert({ actual, expect });
 ```
 
+![img](ref/same_ref_to_self_2_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -142,11 +147,6 @@ expect: {
   object: { self: expect, self2: expect },
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/same_ref_to_self_2_throw.svg" alt="img" />
 
 </details>
 
@@ -171,6 +171,11 @@ expect.object.parent = expect;
 assert({ actual, expect });
 ```
 
+![img](ref/same_ref_to_parent_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -183,11 +188,6 @@ expect: {
   object: { parent: expect },
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/same_ref_to_parent_throw.svg" alt="img" />
 
 </details>
 
@@ -213,6 +213,11 @@ assert({
 });
 ```
 
+![img](ref/same_ref_to_value_after_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -227,11 +232,6 @@ expect: {
   toto: expect.b,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/same_ref_to_value_after_throw.svg" alt="img" />
 
 </details>
 
@@ -257,6 +257,11 @@ assert({
 });
 ```
 
+![img](ref/same_ref_to_value_before_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -271,11 +276,6 @@ expect: {
   b: expect.toto,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/same_ref_to_value_before_throw.svg" alt="img" />
 
 </details>
 
@@ -298,6 +298,11 @@ expect.object.self = expect.object;
 assert({ actual, expect });
 ```
 
+![img](ref/ref_changed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -312,11 +317,6 @@ expect: {
   },
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/ref_changed_throw.svg" alt="img" />
 
 </details>
 
@@ -337,6 +337,11 @@ assert({
 });
 ```
 
+![img](ref/true_should_be_a_ref_to_self_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -347,11 +352,6 @@ expect: {
   self: expect,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/true_should_be_a_ref_to_self_throw.svg" alt="img" />
 
 </details>
 
@@ -372,6 +372,11 @@ assert({
 });
 ```
 
+![img](ref/ref_to_self_should_be_true_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -382,11 +387,6 @@ expect: {
   self: true,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/ref_to_self_should_be_true_throw.svg" alt="img" />
 
 </details>
 
@@ -404,6 +404,11 @@ assert({
 });
 ```
 
+![img](ref/true_should_be_object_using_ref_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -415,10 +420,5 @@ expect: {
   bar: expect.foo,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="ref/true_should_be_object_using_ref_throw.svg" alt="img" />
 
 </details>

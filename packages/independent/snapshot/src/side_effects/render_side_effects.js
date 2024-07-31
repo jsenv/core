@@ -316,7 +316,6 @@ const renderPotentialAnsi = (
   if (!includesAnsi) {
     return rawTextBlock;
   }
-  let md = rawTextBlock;
   const svgFilename = `${sideEffect.code}${sideEffect.counter ? `_${sideEffect.counter}` : ""}.svg`;
   const svgFileUrl = generateOutFileUrl(svgFilename);
   let svgFileContent = renderTerminalSvg(string, {
@@ -327,13 +326,11 @@ const renderPotentialAnsi = (
   svgFileContent = replace(svgFileContent, { fileUrl: svgFileUrl });
   writeFileSync(svgFileUrl, svgFileContent);
   const svgFileRelativeUrl = urlToRelativeUrl(svgFileUrl, sideEffectFileUrl);
+  let md = `![img](${svgFileRelativeUrl})`;
   md += "\n\n";
-  md += renderMarkdownDetails(
-    `  <img src="${svgFileRelativeUrl}" alt="img" />`,
-    {
-      summary: "see colored",
-    },
-  );
+  md += renderMarkdownDetails(`${rawTextBlock}`, {
+    summary: "see without style",
+  });
   md += "\n";
   return md;
 };

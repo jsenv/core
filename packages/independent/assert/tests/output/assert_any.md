@@ -13,17 +13,17 @@ assert({
 });
 ```
 
+![img](assert_any/10_and_any(string)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 10
 expect: assert.any(String)
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_any/10_and_any(string)_throw.svg" alt="img" />
 
 </details>
 
@@ -43,6 +43,11 @@ assert({
 });
 ```
 
+![img](assert_any/foo_and_any(string)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -56,11 +61,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_any/foo_and_any(string)_throw.svg" alt="img" />
-
 </details>
 
 
@@ -73,17 +73,17 @@ assert({
 });
 ```
 
+![img](assert_any/foo_and_not(any(string))_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "foo"
 expect: assert.not(assert.any(String))
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_any/foo_and_not(any(string))_throw.svg" alt="img" />
 
 </details>
 
@@ -103,6 +103,11 @@ assert({
 });
 ```
 
+![img](assert_any/10_is_any_number_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -115,11 +120,6 @@ expect: {
   b: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_any/10_is_any_number_throw.svg" alt="img" />
 
 </details>
 
@@ -139,6 +139,11 @@ assert({
 });
 ```
 
+![img](assert_any/0_is_any_number_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -151,11 +156,6 @@ expect: {
   b: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_any/0_is_any_number_throw.svg" alt="img" />
 
 </details>
 
@@ -175,6 +175,11 @@ assert({
 });
 ```
 
+![img](assert_any/any_error_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -187,10 +192,5 @@ expect: {
   b: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_any/any_error_throw.svg" alt="img" />
 
 </details>

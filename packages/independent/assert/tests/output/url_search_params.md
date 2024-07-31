@@ -13,6 +13,11 @@ assert({
 });
 ```
 
+![img](url_search_params/foo_added_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -23,11 +28,6 @@ actual: URLSearchParams(
 )
 expect: URLSearchParams()
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="url_search_params/foo_added_throw.svg" alt="img" />
 
 </details>
 
@@ -41,6 +41,11 @@ assert({
 });
 ```
 
+![img](url_search_params/foo_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -51,11 +56,6 @@ expect: URLSearchParams(
   ],
 )
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="url_search_params/foo_removed_throw.svg" alt="img" />
 
 </details>
 
@@ -69,6 +69,11 @@ assert({
 });
 ```
 
+![img](url_search_params/foo_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -83,11 +88,6 @@ expect: URLSearchParams(
   ],
 )
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="url_search_params/foo_modified_throw.svg" alt="img" />
 
 </details>
 
@@ -101,6 +101,11 @@ assert({
 });
 ```
 
+![img](url_search_params/foo_second_value_added_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -116,11 +121,6 @@ expect: URLSearchParams(
   ],
 )
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="url_search_params/foo_second_value_added_throw.svg" alt="img" />
 
 </details>
 
@@ -134,6 +134,11 @@ assert({
 });
 ```
 
+![img](url_search_params/foo_second_value_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -149,11 +154,6 @@ expect: URLSearchParams(
   ],
 )
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="url_search_params/foo_second_value_removed_throw.svg" alt="img" />
 
 </details>
 
@@ -167,6 +167,11 @@ assert({
 });
 ```
 
+![img](url_search_params/foo_second_value_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -183,11 +188,6 @@ expect: URLSearchParams(
   ],
 )
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="url_search_params/foo_second_value_modified_throw.svg" alt="img" />
 
 </details>
 
@@ -201,6 +201,11 @@ assert({
 });
 ```
 
+![img](url_search_params/param_order_modified_and_value_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -221,10 +226,5 @@ expect: URLSearchParams(
   ],
 )
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="url_search_params/param_order_modified_and_value_modified_throw.svg" alt="img" />
 
 </details>

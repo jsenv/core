@@ -13,17 +13,17 @@ assert({
 });
 ```
 
+![img](date/year_month_day_minutes_diff_on_iso_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "1970-01-01 00:00:00Z"
 expect: "1995-12-04 00:12:00Z"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/year_month_day_minutes_diff_on_iso_throw.svg" alt="img" />
 
 </details>
 
@@ -37,17 +37,17 @@ assert({
 });
 ```
 
+![img](date/millisecond_only_diff_on_iso_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "1970-01-01 00:00:00.000Z"
 expect: "1970-01-01 00:00:00.020Z"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/millisecond_only_diff_on_iso_throw.svg" alt="img" />
 
 </details>
 
@@ -61,17 +61,17 @@ assert({
 });
 ```
 
+![img](date/gmt+5_vs_z_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "1970-01-01 07:00:00Z"
 expect: "1970-01-01 00:00:00Z"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/gmt+5_vs_z_throw.svg" alt="img" />
 
 </details>
 
@@ -85,17 +85,17 @@ assert({
 });
 ```
 
+![img](date/gmt+2_vs_iso_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "2024-05-07 09:27:04Z"
 expect: "1970-01-01 00:00:00Z"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/gmt+2_vs_iso_throw.svg" alt="img" />
 
 </details>
 
@@ -109,17 +109,17 @@ assert({
 });
 ```
 
+![img](date/simplified_date_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "1970-01-01 10:00:00"
 expect: "1970-01-01 10:00:00Z"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/simplified_date_throw.svg" alt="img" />
 
 </details>
 
@@ -133,17 +133,17 @@ assert({
 });
 ```
 
+![img](date/+2_hour_on_timezone_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "1970-01-01 07:00:00Z"
 expect: "1970-01-01 09:00:00Z"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/+2_hour_on_timezone_throw.svg" alt="img" />
 
 </details>
 
@@ -157,17 +157,17 @@ assert({
 });
 ```
 
+![img](date/-2_hour_on_timezone_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "1970-01-01 13:00:00Z"
 expect: "1970-01-01 11:00:00Z"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/-2_hour_on_timezone_throw.svg" alt="img" />
 
 </details>
 
@@ -181,17 +181,17 @@ assert({
 });
 ```
 
+![img](date/+1h30_on_timezone_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "1970-01-01 08:30:00Z"
 expect: "1970-01-01 10:00:00Z"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/+1h30_on_timezone_throw.svg" alt="img" />
 
 </details>
 
@@ -205,17 +205,17 @@ assert({
 });
 ```
 
+![img](date/-1h30_on_timezone_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "1970-01-01 11:30:00Z"
 expect: "1970-01-01 10:00:00Z"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/-1h30_on_timezone_throw.svg" alt="img" />
 
 </details>
 
@@ -229,17 +229,17 @@ assert({
 });
 ```
 
+![img](date/+0h30_on_timezone_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "1970-01-01 09:30:00Z"
 expect: "1970-01-01 10:00:00Z"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/+0h30_on_timezone_throw.svg" alt="img" />
 
 </details>
 
@@ -253,17 +253,17 @@ assert({
 });
 ```
 
+![img](date/date_objects_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Date("1970-01-01 10:00:00Z")
 expect: Date("1970-01-01 08:00:00Z")
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/date_objects_throw.svg" alt="img" />
 
 </details>
 
@@ -277,17 +277,17 @@ assert({
 });
 ```
 
+![img](date/date_object_vs_date_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Date("1970-01-01")
 expect: "1970-01-01"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/date_object_vs_date_string_throw.svg" alt="img" />
 
 </details>
 
@@ -301,6 +301,11 @@ assert({
 });
 ```
 
+![img](date/date_object_prop_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -311,11 +316,6 @@ expect: Date("1970-01-01") {
   foo: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/date_object_prop_throw.svg" alt="img" />
 
 </details>
 
@@ -329,16 +329,16 @@ assert({
 });
 ```
 
+![img](date/incorrect_date_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: "0"
 expect: "70/01/01"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="date/incorrect_date_string_throw.svg" alt="img" />
 
 </details>

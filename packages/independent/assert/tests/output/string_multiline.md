@@ -13,6 +13,11 @@ assert({
 });
 ```
 
+![img](string_multiline/add_empty_line_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -20,11 +25,6 @@ actual: 1|
         2| 
 expect: 1| 
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/add_empty_line_throw.svg" alt="img" />
 
 </details>
 
@@ -38,6 +38,11 @@ assert({
 });
 ```
 
+![img](string_multiline/remove_empty_line_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -45,11 +50,6 @@ actual: 1|
 expect: 1| 
         2| 
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/remove_empty_line_throw.svg" alt="img" />
 
 </details>
 
@@ -65,6 +65,11 @@ file:///file.txt`,
 });
 ```
 
+![img](string_multiline/two_line_url_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -73,11 +78,6 @@ actual: 1| a
 expect: 1| b
         2| file:///file.txt
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/two_line_url_throw.svg" alt="img" />
 
 </details>
 
@@ -92,6 +92,11 @@ world`,
 });
 ```
 
+![img](string_multiline/one_line_vs_two_lines_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -99,11 +104,6 @@ actual: 1| Hel
 expect: 1| Hello
         2| world
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/one_line_vs_two_lines_throw.svg" alt="img" />
 
 </details>
 
@@ -118,6 +118,11 @@ world`,
 });
 ```
 
+![img](string_multiline/two_line_vs_one_line_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -125,11 +130,6 @@ actual: 1| Hello
         2| world
 expect: 1| Hello
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/two_line_vs_one_line_throw.svg" alt="img" />
 
 </details>
 
@@ -151,6 +151,11 @@ and my brother is joe`,
 });
 ```
 
+![img](string_multiline/second_line_contains_extra_chars_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -166,11 +171,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/second_line_contains_extra_chars_throw.svg" alt="img" />
-
 </details>
 
 
@@ -185,6 +185,11 @@ france`,
 });
 ```
 
+![img](string_multiline/second_line_differs_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -193,11 +198,6 @@ actual: 1| Hello
 expect: 1| Hello
         2| france
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/second_line_differs_throw.svg" alt="img" />
 
 </details>
 
@@ -225,6 +225,11 @@ seven/1`,
 });
 ```
 
+![img](string_multiline/too_many_lines_before_and_after_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -239,11 +244,6 @@ expect: ↑ 2 lines ↑
         5| five
         ↓ 2 lines ↓
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/too_many_lines_before_and_after_throw.svg" alt="img" />
 
 </details>
 
@@ -261,6 +261,11 @@ five six`,
 });
 ```
 
+![img](string_multiline/many_lines_added_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -271,11 +276,6 @@ actual: 1| one
         5| five six
 expect: 1| one
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/many_lines_added_throw.svg" alt="img" />
 
 </details>
 
@@ -293,6 +293,11 @@ five six`,
 });
 ```
 
+![img](string_multiline/many_lines_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -303,11 +308,6 @@ expect: 1| one
         4| four
         5| five six
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/many_lines_removed_throw.svg" alt="img" />
 
 </details>
 
@@ -329,6 +329,11 @@ assert({
 });
 ```
 
+![img](string_multiline/prop_before_and_after_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -345,11 +350,6 @@ expect: {
   c: true,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/prop_before_and_after_throw.svg" alt="img" />
 
 </details>
 
@@ -369,6 +369,11 @@ assert({
 });
 ```
 
+![img](string_multiline/new_line_escaped_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -381,11 +386,6 @@ expect: {
   b: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/new_line_escaped_throw.svg" alt="img" />
 
 </details>
 
@@ -405,6 +405,11 @@ assert({
 });
 ```
 
+![img](string_multiline/multiline_without_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -419,11 +424,6 @@ expect: {
   b: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/multiline_without_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -445,6 +445,11 @@ Hello europa
 });
 ```
 
+![img](string_multiline/many_lines_around_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -459,11 +464,6 @@ expect: 1| 1abcdefghijklmnopqrstuvwx
         4| 3abcdefghijklmnopqrstuvwxy
         5| 4abcdefghijklmnopqrstuvwxy
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/many_lines_around_throw.svg" alt="img" />
 
 </details>
 
@@ -487,6 +487,11 @@ assert({
 });
 ```
 
+![img](string_multiline/many_lines_before_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -500,11 +505,6 @@ expect: ↑ 3 lines ↑
         6| [Hello france]abcdefghijklmnopqrstuvwxyz
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/many_lines_before_throw.svg" alt="img" />
-
 </details>
 
 
@@ -517,6 +517,11 @@ assert({
 });
 ```
 
+![img](string_multiline/exactly_on_line_break_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -524,11 +529,6 @@ actual: 1| abc
 expect: 1| ab
         2| c
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/exactly_on_line_break_throw.svg" alt="img" />
 
 </details>
 
@@ -546,6 +546,11 @@ c`,
 });
 ```
 
+![img](string_multiline/space_added_end_of_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -556,10 +561,5 @@ expect: 1| a
         2| b
         3| c
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="string_multiline/space_added_end_of_string_throw.svg" alt="img" />
 
 </details>

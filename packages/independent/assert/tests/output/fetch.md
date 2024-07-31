@@ -15,6 +15,11 @@ assert({
 });
 ```
 
+![img](fetch/abort_signal_pending_vs_aborted_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -24,11 +29,6 @@ expect: AbortSignal {
   reason: "toto",
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="fetch/abort_signal_pending_vs_aborted_throw.svg" alt="img" />
 
 </details>
 
@@ -42,17 +42,17 @@ assert({
 });
 ```
 
+![img](fetch/request_url_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Request("https://foo.com/")
 expect: Request("https://bar.com/")
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="fetch/request_url_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -91,6 +91,11 @@ assert({
 });
 ```
 
+![img](fetch/request_with_custom_options_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -110,11 +115,6 @@ expect: Request("http://example.com/", {
 })
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="fetch/request_with_custom_options_throw.svg" alt="img" />
-
 </details>
 
 
@@ -133,6 +133,11 @@ assert({
 });
 ```
 
+![img](fetch/request_abort_signal_pending_vs_aborted_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -144,11 +149,6 @@ expect: Request("http://example.com/", {
   },
 })
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="fetch/request_abort_signal_pending_vs_aborted_throw.svg" alt="img" />
 
 </details>
 
@@ -168,6 +168,11 @@ assert({
 });
 ```
 
+![img](fetch/response_body_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -180,11 +185,6 @@ expect: {
   b: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="fetch/response_body_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -202,6 +202,11 @@ assert({
 });
 ```
 
+![img](fetch/response_status_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -212,11 +217,6 @@ expect: Response(ReadableStream, {
   status: 400,
 })
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="fetch/response_status_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -243,6 +243,11 @@ assert({
 });
 ```
 
+![img](fetch/response_prop_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -261,11 +266,6 @@ expect: Response(ReadableStream, {
 })
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="fetch/response_prop_diff_throw.svg" alt="img" />
-
 </details>
 
 
@@ -277,6 +277,11 @@ assert({
   expect: Response.redirect("http://example.com"),
 });
 ```
+
+![img](fetch/redirected_response_throw.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
 AssertionError: actual and expect are different
@@ -294,10 +299,5 @@ expect: Response(null, {
   status: 302,
 })
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="fetch/redirected_response_throw.svg" alt="img" />
 
 </details>

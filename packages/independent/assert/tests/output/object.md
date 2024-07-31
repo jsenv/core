@@ -17,6 +17,11 @@ assert({
 });
 ```
 
+![img](object/basic_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -27,11 +32,6 @@ expect: {
   foo: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/basic_throw.svg" alt="img" />
 
 </details>
 
@@ -51,6 +51,11 @@ assert({
 });
 ```
 
+![img](object/property_are_different_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -63,11 +68,6 @@ expect: {
   },
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/property_are_different_throw.svg" alt="img" />
 
 </details>
 
@@ -86,6 +86,11 @@ assert({
 });
 ```
 
+![img](object/property_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -97,11 +102,6 @@ expect: {
   should_be_there: true,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/property_removed_throw.svg" alt="img" />
 
 </details>
 
@@ -120,6 +120,11 @@ assert({
 });
 ```
 
+![img](object/property_added_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -131,11 +136,6 @@ expect: {
   a: true,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/property_added_throw.svg" alt="img" />
 
 </details>
 
@@ -149,6 +149,11 @@ assert({
 });
 ```
 
+![img](object/false_should_be_an_object_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -157,11 +162,6 @@ expect: {
   foo: true,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/false_should_be_an_object_throw.svg" alt="img" />
 
 </details>
 
@@ -177,6 +177,11 @@ assert({
 });
 ```
 
+![img](object/object_should_be_false_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -187,11 +192,6 @@ actual: {
 }
 expect: false
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/object_should_be_false_throw.svg" alt="img" />
 
 </details>
 
@@ -209,6 +209,11 @@ assert({
 });
 ```
 
+![img](object/false_should_be_an_object_at_property_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -221,11 +226,6 @@ expect: {
   },
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/false_should_be_an_object_at_property_throw.svg" alt="img" />
 
 </details>
 
@@ -243,6 +243,11 @@ assert({
 });
 ```
 
+![img](object/object_should_be_false_at_property_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -255,11 +260,6 @@ expect: {
   foo: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/object_should_be_false_at_property_throw.svg" alt="img" />
 
 </details>
 
@@ -313,6 +313,11 @@ assert({
 });
 ```
 
+![img](object/max_depth_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -342,11 +347,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_depth_throw.svg" alt="img" />
-
 </details>
 
 
@@ -373,6 +373,11 @@ assert({
 });
 ```
 
+![img](object/max_depth_inside_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -387,11 +392,6 @@ expect: {
   },
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_depth_inside_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -419,6 +419,11 @@ assert({
 });
 ```
 
+![img](object/max_diff_per_object_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -441,11 +446,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_diff_per_object_throw.svg" alt="img" />
-
 </details>
 
 
@@ -466,6 +466,11 @@ assert({
 });
 ```
 
+![img](object/max_2_context_after_diff_(there_is_2)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -480,11 +485,6 @@ expect: {
   c: true,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_2_context_after_diff_(there_is_2)_throw.svg" alt="img" />
 
 </details>
 
@@ -508,6 +508,11 @@ assert({
 });
 ```
 
+![img](object/max_2_context_after_diff_(there_is_3)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -524,11 +529,6 @@ expect: {
   d: true,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_2_context_after_diff_(there_is_3)_throw.svg" alt="img" />
 
 </details>
 
@@ -554,6 +554,11 @@ assert({
 });
 ```
 
+![img](object/max_2_context_after_diff_(there_is_4)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -568,11 +573,6 @@ expect: {
   ↓ 3 props ↓
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_2_context_after_diff_(there_is_4)_throw.svg" alt="img" />
 
 </details>
 
@@ -594,6 +594,11 @@ assert({
 });
 ```
 
+![img](object/max_2_context_before_diff_(there_is_2)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -608,11 +613,6 @@ expect: {
   c: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_2_context_before_diff_(there_is_2)_throw.svg" alt="img" />
 
 </details>
 
@@ -636,6 +636,11 @@ assert({
 });
 ```
 
+![img](object/max_2_context_before_diff_(there_is_3)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -650,11 +655,6 @@ expect: {
   d: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_2_context_before_diff_(there_is_3)_throw.svg" alt="img" />
 
 </details>
 
@@ -680,6 +680,11 @@ assert({
 });
 ```
 
+![img](object/max_2_context_before_diff_(there_is_4)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -694,11 +699,6 @@ expect: {
   e: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_2_context_before_diff_(there_is_4)_throw.svg" alt="img" />
 
 </details>
 
@@ -747,6 +747,11 @@ assert({
 });
 ```
 
+![img](object/max_2_context_around_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -782,11 +787,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_2_context_around_diff_throw.svg" alt="img" />
-
 </details>
 
 
@@ -809,6 +809,11 @@ assert({
 });
 ```
 
+![img](object/max_1_context_around_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -823,11 +828,6 @@ expect: {
   a: true,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_1_context_around_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -851,6 +851,11 @@ assert({
 });
 ```
 
+![img](object/max_0_context_around_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -865,11 +870,6 @@ expect: {
   ↓ 1 prop ↓
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/max_0_context_around_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -899,6 +899,11 @@ assert({
 });
 ```
 
+![img](object/property_should_be_there_and_is_big_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -916,11 +921,6 @@ expect: {
   },
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/property_should_be_there_and_is_big_throw.svg" alt="img" />
 
 </details>
 
@@ -947,6 +947,11 @@ assert({
 });
 ```
 
+![img](object/many_props_should_not_be_there_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -967,11 +972,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/many_props_should_not_be_there_throw.svg" alt="img" />
-
 </details>
 
 
@@ -986,17 +986,17 @@ assert({
 });
 ```
 
+![img](object/object_vs_user_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: {}
 expect: User {}
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/object_vs_user_throw.svg" alt="img" />
 
 </details>
 
@@ -1016,6 +1016,11 @@ assert({
 });
 ```
 
+![img](object/collapsed_with_overview_when_no_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1028,11 +1033,6 @@ expect: {
   b: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/collapsed_with_overview_when_no_diff_throw.svg" alt="img" />
 
 </details>
 
@@ -1052,6 +1052,11 @@ assert({
 });
 ```
 
+![img](object/one_prop_no_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -1064,10 +1069,5 @@ expect: {
   z: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="object/one_prop_no_diff_throw.svg" alt="img" />
 
 </details>

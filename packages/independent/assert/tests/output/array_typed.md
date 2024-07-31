@@ -13,6 +13,11 @@ assert({
 });
 ```
 
+![img](array_typed/buffer_from()_vs_buffer_from(a)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -21,11 +26,6 @@ expect: Buffer [
   97,
 ]
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/buffer_from()_vs_buffer_from(a)_throw.svg" alt="img" />
 
 </details>
 
@@ -39,6 +39,11 @@ assert({
 });
 ```
 
+![img](array_typed/buffer_from(a)_vs_buffer_from()_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -47,11 +52,6 @@ actual: Buffer [
 ]
 expect: Buffer []
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/buffer_from(a)_vs_buffer_from()_throw.svg" alt="img" />
 
 </details>
 
@@ -71,6 +71,11 @@ assert({
 });
 ```
 
+![img](array_typed/buffer_without_diff_are_collapsed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -84,11 +89,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/buffer_without_diff_are_collapsed_throw.svg" alt="img" />
-
 </details>
 
 
@@ -100,6 +100,11 @@ assert({
   expect: Buffer.from("hello, my name is daZ"),
 });
 ```
+
+![img](array_typed/same_length_buffer_diff_at_the_end_throw.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
 AssertionError: actual and expect are different
@@ -115,11 +120,6 @@ expect: Buffer [
   90,
 ]
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/same_length_buffer_diff_at_the_end_throw.svg" alt="img" />
 
 </details>
 
@@ -133,6 +133,11 @@ assert({
 });
 ```
 
+![img](array_typed/same_length_buffer_diff_at_start_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -147,11 +152,6 @@ expect: Buffer [
   ↓ 19 values ↓
 ]
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/same_length_buffer_diff_at_start_throw.svg" alt="img" />
 
 </details>
 
@@ -165,6 +165,11 @@ assert({
 });
 ```
 
+![img](array_typed/same_length_buffer_diff_at_middle_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -184,11 +189,6 @@ expect: Buffer [
 ]
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/same_length_buffer_diff_at_middle_throw.svg" alt="img" />
-
 </details>
 
 
@@ -200,6 +200,11 @@ assert({
   expect: Buffer.from("Zello, my nZme is daZ"),
 });
 ```
+
+![img](array_typed/same_length_buffer_diff_start__middle__end_throw.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
 AssertionError: actual and expect are different
@@ -224,11 +229,6 @@ expect: Buffer [
 ]
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/same_length_buffer_diff_start__middle__end_throw.svg" alt="img" />
-
 </details>
 
 
@@ -241,6 +241,11 @@ assert({
 });
 ```
 
+![img](array_typed/buffer_vs_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -249,11 +254,6 @@ actual: Buffer [
 ]
 expect: "a"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/buffer_vs_string_throw.svg" alt="img" />
 
 </details>
 
@@ -273,6 +273,11 @@ assert({
 });
 ```
 
+![img](array_typed/buffer_vs_array_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -290,11 +295,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/buffer_vs_array_throw.svg" alt="img" />
-
 </details>
 
 
@@ -307,17 +307,17 @@ assert({
 });
 ```
 
+![img](array_typed/buffer_from_vs_uint8array_from_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Buffer [97]
 expect: Uint8Array [97]
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/buffer_from_vs_uint8array_from_throw.svg" alt="img" />
 
 </details>
 
@@ -331,16 +331,16 @@ assert({
 });
 ```
 
+![img](array_typed/uint8array_vs_array_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Uint8Array
 expect: Array
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="array_typed/uint8array_vs_array_throw.svg" alt="img" />
 
 </details>

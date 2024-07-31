@@ -13,17 +13,17 @@ assert({
 });
 ```
 
+![img](assert_not/42_and_not(42)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 42
 expect: assert.not(42)
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_not/42_and_not(42)_throw.svg" alt="img" />
 
 </details>
 
@@ -43,6 +43,11 @@ assert({
 });
 ```
 
+![img](assert_not/41_and_not(42)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -56,11 +61,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_not/41_and_not(42)_throw.svg" alt="img" />
-
 </details>
 
 
@@ -73,17 +73,17 @@ assert({
 });
 ```
 
+![img](assert_not/object_and_not_(object)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: { a: true }
 expect: assert.not({ a: true })
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_not/object_and_not_(object)_throw.svg" alt="img" />
 
 </details>
 
@@ -103,6 +103,11 @@ assert({
 });
 ```
 
+![img](assert_not/object_and_not(object)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -119,10 +124,5 @@ expect: {
   }),
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_not/object_and_not(object)_throw.svg" alt="img" />
 
 </details>

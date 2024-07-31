@@ -15,6 +15,11 @@ assert({
 });
 ```
 
+![img](map/map_entry_added_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -23,11 +28,6 @@ actual: Map(
 )
 expect: Map()
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="map/map_entry_added_throw.svg" alt="img" />
 
 </details>
 
@@ -43,6 +43,11 @@ assert({
 });
 ```
 
+![img](map/map_entry_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -51,11 +56,6 @@ expect: Map(
   "a" => true,
 )
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="map/map_entry_removed_throw.svg" alt="img" />
 
 </details>
 
@@ -73,6 +73,11 @@ assert({
 });
 ```
 
+![img](map/map_value_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -83,10 +88,5 @@ expect: Map(
   "a" => false,
 )
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="map/map_value_modified_throw.svg" alt="img" />
 
 </details>

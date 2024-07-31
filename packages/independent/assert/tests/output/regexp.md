@@ -13,17 +13,17 @@ assert({
 });
 ```
 
+![img](regexp/a_vs_b_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: /a/
 expect: /b/
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="regexp/a_vs_b_throw.svg" alt="img" />
 
 </details>
 
@@ -37,17 +37,17 @@ assert({
 });
 ```
 
+![img](regexp/i_flag_vs_no_flag_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: /a/i
 expect: /a/
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="regexp/i_flag_vs_no_flag_throw.svg" alt="img" />
 
 </details>
 
@@ -68,6 +68,11 @@ assert({
 });
 ```
 
+![img](regexp/gi_flag_vs_ig_flag_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -81,11 +86,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="regexp/gi_flag_vs_ig_flag_throw.svg" alt="img" />
-
 </details>
 
 
@@ -98,17 +98,17 @@ assert({
 });
 ```
 
+![img](regexp/special_char_parenthesis_vs_dot_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: /^\($/g
 expect: /^\.$/g
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="regexp/special_char_parenthesis_vs_dot_throw.svg" alt="img" />
 
 </details>
 
@@ -125,6 +125,11 @@ assert({
 });
 ```
 
+![img](regexp/last_index_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -135,11 +140,6 @@ expect: /a/ {
   lastIndex: 10,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="regexp/last_index_throw.svg" alt="img" />
 
 </details>
 
@@ -153,16 +153,16 @@ assert({
 });
 ```
 
+![img](regexp/regex_and_string_representing_the_same_regex_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: /a/
 expect: "/a/"
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="regexp/regex_and_string_representing_the_same_regex_throw.svg" alt="img" />
 
 </details>

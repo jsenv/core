@@ -13,17 +13,17 @@ assert({
 });
 ```
 
+![img](prototype/error_vs_typeerror_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: Error
 expect: TypeError
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="prototype/error_vs_typeerror_throw.svg" alt="img" />
 
 </details>
 
@@ -40,6 +40,11 @@ assert({
   }),
 });
 ```
+
+![img](prototype/object_with_different_prototypes_throw.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
 AssertionError: actual and expect are different
@@ -58,11 +63,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="prototype/object_with_different_prototypes_throw.svg" alt="img" />
-
 </details>
 
 
@@ -75,6 +75,11 @@ assert({
 });
 ```
 
+![img](prototype/object_create(null)_and_%7B%7D_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -83,11 +88,6 @@ actual: {
 }
 expect: {}
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="prototype/object_create(null)_and_%7B%7D_throw.svg" alt="img" />
 
 </details>
 
@@ -101,6 +101,11 @@ assert({
 });
 ```
 
+![img](prototype/object_create(null)_and_[]_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -109,11 +114,6 @@ actual: {
 }
 expect: []
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="prototype/object_create(null)_and_[]_throw.svg" alt="img" />
 
 </details>
 
@@ -134,6 +134,11 @@ assert({
 });
 ```
 
+![img](prototype/object_vs_custom_proto_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -144,11 +149,6 @@ expect: {
   name: "bob",
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="prototype/object_vs_custom_proto_throw.svg" alt="img" />
 
 </details>
 
@@ -171,6 +171,11 @@ assert({
 });
 ```
 
+![img](prototype/object_vs_instance_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -185,10 +190,5 @@ expect: {
   },
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="prototype/object_vs_instance_throw.svg" alt="img" />
 
 </details>

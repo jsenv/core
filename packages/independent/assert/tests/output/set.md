@@ -29,6 +29,11 @@ assert({
 });
 ```
 
+![img](set/set_value_added_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -44,11 +49,6 @@ expect: Set(
 )
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="set/set_value_added_throw.svg" alt="img" />
-
 </details>
 
 
@@ -61,6 +61,11 @@ assert({
 });
 ```
 
+![img](set/compare_set_and_map_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -71,11 +76,6 @@ expect: Set(
   "a",
 )
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="set/compare_set_and_map_throw.svg" alt="img" />
 
 </details>
 
@@ -89,6 +89,11 @@ assert({
 });
 ```
 
+![img](set/compare_set_and_array_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -99,11 +104,6 @@ expect: Set(
   "a",
 )
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="set/compare_set_and_array_throw.svg" alt="img" />
 
 </details>
 
@@ -125,6 +125,11 @@ assert({
 });
 ```
 
+![img](set/set_collapsed_various_cases_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -143,11 +148,6 @@ expect: {
   ),
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="set/set_collapsed_various_cases_throw.svg" alt="img" />
 
 </details>
 
@@ -171,6 +171,11 @@ assert({
 });
 ```
 
+![img](set/set_collapsed_deep_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -191,10 +196,5 @@ expect: {
   },
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="set/set_collapsed_deep_throw.svg" alt="img" />
 
 </details>

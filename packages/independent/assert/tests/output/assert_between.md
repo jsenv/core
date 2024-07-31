@@ -13,17 +13,17 @@ assert({
 });
 ```
 
+![img](assert_between/below_or_equals_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 50
 expect: assert.belowOrEquals(25)
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_between/below_or_equals_throw.svg" alt="img" />
 
 </details>
 
@@ -39,6 +39,11 @@ assert({
 });
 ```
 
+![img](assert_between/below_or_equals_when_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -47,11 +52,6 @@ expect: {
   a: assert.belowOrEquals(25),
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_between/below_or_equals_when_removed_throw.svg" alt="img" />
 
 </details>
 
@@ -71,6 +71,11 @@ assert({
 });
 ```
 
+![img](assert_between/below_or_equals_ok_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -84,11 +89,6 @@ expect: {
 }
 ```
 
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_between/below_or_equals_ok_throw.svg" alt="img" />
-
 </details>
 
 
@@ -101,17 +101,17 @@ assert({
 });
 ```
 
+![img](assert_between/50_is_too_small_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
 actual: 50
 expect: assert.between(100, 200)
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_between/50_is_too_small_throw.svg" alt="img" />
 
 </details>
 
@@ -131,6 +131,11 @@ assert({
 });
 ```
 
+![img](assert_between/3500_is_between_3000_and_5000_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
 AssertionError: actual and expect are different
 
@@ -143,10 +148,5 @@ expect: {
   b: false,
 }
 ```
-
-<details>
-  <summary>see colored</summary>
-
-  <img src="assert_between/3500_is_between_3000_and_5000_throw.svg" alt="img" />
 
 </details>
