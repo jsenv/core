@@ -1,9 +1,9 @@
 // https://developer.mozilla.org/en-US/docs/Web/API/Request/Request
 
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("fetch", ({ test }) => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
   test("abort signal pending vs aborted", () => {
     const expectAbortController = new AbortController();
     expectAbortController.abort("toto");

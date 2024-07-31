@@ -18,9 +18,9 @@
  */
 
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("function", ({ test }) => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
   test("async arrow function vs arrow function", () => {
     const anonymousAsyncArrowFunction = (function () {
       return async () => {};

@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("number", ({ test }) => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
   test("-0 and 0", () => {
     assert({
       actual: -0,

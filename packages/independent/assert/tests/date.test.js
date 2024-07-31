@@ -2,9 +2,9 @@
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format
 
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("date", ({ test }) => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
   test("year month day minutes diff on iso", () => {
     assert({
       actual: "1970-01-01 00:00:00.000Z",

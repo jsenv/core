@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("object", ({ test }) => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
   test("basic", () => {
     assert({
       actual: {
@@ -410,7 +410,7 @@ await startSnapshotTesting("object", ({ test }) => {
   });
 });
 
-// await startSnapshotTesting("object", {
+// await snapshotAssertTests("object", {
 //   ["false should be an object at property"]: () => {
 //     assert({
 //       actual: {

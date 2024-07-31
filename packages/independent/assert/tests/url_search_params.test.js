@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("url_search_params", ({ test }) => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
   test("foo added", () => {
     assert({
       actual: new URLSearchParams("foo=a"),

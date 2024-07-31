@@ -1,8 +1,8 @@
 /* eslint-disable no-sparse-arrays */
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("array", ({ test }) => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
   test("array first item diff", () => {
     assert({
       actual: [true],

@@ -1,8 +1,8 @@
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("set", {
-  ["set value added"]: () => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
+  test("set value added", () => {
     assert({
       actual: new Set([
         "a",
@@ -23,20 +23,20 @@ await startSnapshotTesting("set", {
       MAX_DIFF_INSIDE_VALUE: 4,
       MAX_CONTEXT_BEFORE_DIFF: 2,
     });
-  },
-  ["compare set and map"]: () => {
+  });
+  test("compare set and map", () => {
     assert({
       actual: new Map([[0, "a"]]),
       expect: new Set(["a"]),
     });
-  },
-  ["compare set and array"]: () => {
+  });
+  test("compare set and array", () => {
     assert({
       actual: ["a"],
       expect: new Set(["a"]),
     });
-  },
-  ["set collapsed various cases"]: () => {
+  });
+  test("set collapsed various cases", () => {
     assert({
       actual: {
         a: true,
@@ -49,8 +49,8 @@ await startSnapshotTesting("set", {
         set_with_added: new Set(["b"]),
       },
     });
-  },
-  ["set collapsed deep"]: () => {
+  });
+  test("set collapsed deep", () => {
     assert({
       actual: {
         a: {
@@ -65,5 +65,5 @@ await startSnapshotTesting("set", {
         },
       },
     });
-  },
+  });
 });

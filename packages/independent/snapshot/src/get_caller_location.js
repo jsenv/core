@@ -9,6 +9,9 @@ export const getCallerLocation = (callIndex = 1) => {
   const { stack } = new Error();
   Error.prepareStackTrace = prepareStackTrace;
   const callerCallsite = stack[callIndex];
+  if (!callerCallsite) {
+    return null;
+  }
   const fileName = callerCallsite.getFileName();
   const testCallSite = {
     url:

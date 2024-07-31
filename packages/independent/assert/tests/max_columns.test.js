@@ -1,8 +1,8 @@
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
 // TODO: at property when rendered on single line
-await startSnapshotTesting("max_columns", ({ test }) => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
   test("at removed char", () => {
     assert({
       actual: "str",

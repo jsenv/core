@@ -2,9 +2,9 @@
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format
 
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("regexp", ({ test }) => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
   test("a vs b", () => {
     assert({
       actual: /a/,

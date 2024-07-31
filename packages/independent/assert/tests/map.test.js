@@ -1,24 +1,24 @@
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("map", {
-  ["map entry added"]: () => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
+  test("map entry added", () => {
     assert({
       actual: new Map(
         [["a", true]], //
       ),
       expect: new Map(),
     });
-  },
-  ["map entry removed"]: () => {
+  });
+  test("map entry removed", () => {
     assert({
       actual: new Map(),
       expect: new Map([
         ["a", true], //
       ]),
     });
-  },
-  ["map value modified"]: () => {
+  });
+  test("map value modified", () => {
     assert({
       actual: new Map([
         ["a", true], //
@@ -27,7 +27,7 @@ await startSnapshotTesting("map", {
         ["a", false], //
       ]),
     });
-  },
+  });
   // ["map key is an object"]: () => {
   //   const object = { name: "test" };
   //   assert({

@@ -1,7 +1,7 @@
 import { assert } from "@jsenv/assert";
-import { startSnapshotTesting } from "./utils/start_snapshot_testing.js";
+import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-await startSnapshotTesting("assert_close_to", ({ test }) => {
+await snapshotAssertTests(import.meta.url, ({ test }) => {
   test("0.1 + 0.2 is close to 0.3", () => {
     assert({
       actual: {
