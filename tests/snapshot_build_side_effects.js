@@ -1,21 +1,32 @@
-import { snapshotFunctionSideEffects } from "@jsenv/snapshot";
-import { urlToBasename } from "@jsenv/urls";
+import { getCallerLocation, snapshotTests } from "@jsenv/snapshot";
 
-export const snapshotBuildSideEffects = async (
+export const snapshotBuildTests = async (
   fn,
   sideEffectFileUrl,
   options = {},
 ) => {
-  const sideEffectBasename = urlToBasename(sideEffectFileUrl);
-  await snapshotFunctionSideEffects(fn, sideEffectFileUrl, {
+  await snapshotTests(fn, sideEffectFileUrl, {
     ...options,
-    filesystemEffects: {
-      include: {
-        "**/*": true,
-        "**/.jsenv/": false,
-      },
-      outDirectory: sideEffectBasename,
-      ...options.filesystemEffects,
-    },
+    logEffects:
+      options.logEffects === false
+        ? false
+        : {
+            group: true,
+            ...(options.logEffects === true ? {} : options.logEffects),
+          },
+    filesystemEffects:
+      options.filesystemEffects === false
+        ? false
+        : {
+            textualFilesIntoDirectory: true,
+            include: {
+              "**/*": true,
+              "**/.jsenv/": false,
+            },
+            ...(options.filesystemEffects === true
+              ? {}
+              : options.filesystemEffects),
+          },
+    sourceFileUrl: getCallerLocation(2).url,
   });
 };

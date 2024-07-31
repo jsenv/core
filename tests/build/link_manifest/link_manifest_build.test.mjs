@@ -1,35 +1,16 @@
-import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
-import { readFileSync } from "node:fs";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-await build({
-  logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  entryPoints: {
-    "./src/main.html": "main.html",
+await snapshotBuildTests(
+  ({ test }) => {
+    test("0_basic", () =>
+      build({
+        sourceDirectoryUrl: new URL("./client/", import.meta.url),
+        buildDirectoryUrl: new URL("./build/", import.meta.url),
+        entryPoints: { "./src/main.html": "main.html" },
+        bundling: false,
+        minification: false,
+      }));
   },
-  bundling: false,
-  minification: false,
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-});
-const { start_url, icons } = JSON.parse(
-  String(
-    readFileSync(new URL("./dist/other/manifest.webmanifest", import.meta.url)),
-  ),
+  new URL("./output/link_manifest.md", import.meta.url),
 );
-const actual = {
-  start_url,
-  icons,
-};
-const expect = {
-  start_url: "/",
-  icons: [
-    {
-      src: "/other/pwa.icon.png?v=eece115e",
-      sizes: "192x192",
-      type: "image/png",
-    },
-  ],
-};
-assert({ actual, expect });

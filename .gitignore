@@ -8,9 +8,10 @@
 !/packages/**/tests/**/node_modules/
 /packages/**/tests/**/dist/
 /scripts/**/dist/
+/tests/**/dist/
+!/tests/**/output/**/dist/
 /secrets.json
 /yarn.lock
 .DS_STORE
 todo.txt
-/tests/**/dist/
 **/tests/**/git_ignored/

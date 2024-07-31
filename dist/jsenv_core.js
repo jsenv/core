@@ -1401,6 +1401,35 @@ const resourceToPathname = (resource) => {
   return resource;
 };
 
+const urlToFilename$1 = (url) => {
+  const pathname = urlToPathname$1(url);
+  return pathnameToFilename(pathname);
+};
+
+const pathnameToFilename = (pathname) => {
+  const pathnameBeforeLastSlash = pathname.endsWith("/")
+    ? pathname.slice(0, -1)
+    : pathname;
+  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1
+      ? pathnameBeforeLastSlash
+      : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
+  return filename;
+};
+
+const urlToBasename = (url) => {
+  const filename = urlToFilename$1(url);
+  return filenameToBasename(filename);
+};
+
+const filenameToBasename = (filename) => {
+  const dotLastIndex = filename.lastIndexOf(".");
+  const basename =
+    dotLastIndex === -1 ? filename : filename.slice(0, dotLastIndex);
+  return basename;
+};
+
 const urlToExtension$1 = (url) => {
   const pathname = urlToPathname$1(url);
   return pathnameToExtension$1(pathname);
@@ -1554,14 +1583,13 @@ const renderUrlOrRelativeUrlFilename = (urlOrRelativeUrl, renderer) => {
 };
 
 const setUrlFilename = (url, filename) => {
-  const urlObject = new URL(url);
-  let { origin, search, hash } = urlObject;
-  // origin is "null" for "file://" urls with Node.js
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-  const parentPathname = new URL("./", urlObject).pathname;
-  return `${origin}${parentPathname}${filename}${search}${hash}`;
+  const parentPathname = new URL("./", url).pathname;
+  return transformUrlPathname(url, (pathname) => {
+    if (typeof filename === "function") {
+      filename = filename(pathnameToFilename(pathname));
+    }
+    return `${parentPathname}${filename}`;
+  });
 };
 
 const transformUrlPathname = (url, transformer) => {
@@ -1771,27 +1799,6 @@ const urlIsInsideOf = (url, otherUrl) => {
 
   const isInside = urlPathname.startsWith(otherUrlPathname);
   return isInside;
-};
-
-const urlToFilename$1 = (url) => {
-  const pathname = urlToPathname$1(url);
-  const pathnameBeforeLastSlash = pathname.endsWith("/")
-    ? pathname.slice(0, -1)
-    : pathname;
-  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
-  const filename =
-    slashLastIndex === -1
-      ? pathnameBeforeLastSlash
-      : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
-  return filename;
-};
-
-const urlToBasename = (url) => {
-  const filename = urlToFilename$1(url);
-  const dotLastIndex = filename.lastIndexOf(".");
-  const basename =
-    dotLastIndex === -1 ? filename : filename.slice(0, dotLastIndex);
-  return basename;
 };
 
 const urlToFileSystemPath = (url) => {
@@ -3283,6 +3290,203 @@ const writeDirectory = async (
   }
 };
 
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json", "map"],
+    isTextual: true,
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true,
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true,
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"],
+  },
+  "application/xml": {
+    extensions: ["xml"],
+    isTextual: true,
+  },
+  "application/x-gzip": {
+    extensions: ["gz"],
+  },
+  "application/wasm": {
+    extensions: ["wasm"],
+  },
+  "application/zip": {
+    extensions: ["zip"],
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"],
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"],
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"],
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"],
+  },
+  "audio/webm": {
+    extensions: ["weba"],
+  },
+  "audio/x-wav": {
+    extensions: ["wav"],
+  },
+  "font/ttf": {
+    extensions: ["ttf"],
+  },
+  "font/woff": {
+    extensions: ["woff"],
+  },
+  "font/woff2": {
+    extensions: ["woff2"],
+  },
+  "image/png": {
+    extensions: ["png"],
+  },
+  "image/gif": {
+    extensions: ["gif"],
+  },
+  "image/jpeg": {
+    extensions: ["jpg"],
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true,
+  },
+  "text/plain": {
+    extensions: ["txt"],
+    isTextual: true,
+  },
+  "text/html": {
+    extensions: ["html"],
+    isTextual: true,
+  },
+  "text/css": {
+    extensions: ["css"],
+    isTextual: true,
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+    isTextual: true,
+  },
+  "text/markdown": {
+    extensions: ["md", "mdx"],
+    isTextual: true,
+  },
+  "text/x-sass": {
+    extensions: ["sass"],
+    isTextual: true,
+  },
+  "text/x-scss": {
+    extensions: ["scss"],
+    isTextual: true,
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"],
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"],
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
+  },
+  "video/ogg": {
+    extensions: ["ogv"],
+  },
+  "video/webm": {
+    extensions: ["webm"],
+  },
+};
+
+const CONTENT_TYPE = {
+  parse: (string) => {
+    const [mediaType, charset] = string.split(";");
+    return { mediaType: normalizeMediaType(mediaType), charset };
+  },
+
+  stringify: ({ mediaType, charset }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+    return mediaType;
+  },
+
+  asMediaType: (value) => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
+    }
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+    return null;
+  },
+
+  isJson: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return (
+      mediaType === "application/json" ||
+      /^application\/\w+\+json$/.test(mediaType)
+    );
+  },
+
+  isTextual: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    }
+    // catch things like application/manifest+json, application/importmap+json
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+    return false;
+  },
+
+  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
+
+  asFileExtension: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+
+  fromUrlExtension: (url) => {
+    const { pathname } = new URL(url);
+    const extensionWithDot = extname(pathname);
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+    const extension = extensionWithDot.slice(1);
+    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
+      const mediaTypeInfo = mediaTypeInfos[mediaType];
+      return (
+        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
+      );
+    });
+    return mediaTypeFound || "application/octet-stream";
+  },
+};
+
+const normalizeMediaType = (value) => {
+  if (value === "application/javascript") {
+    return "text/javascript";
+  }
+  return value;
+};
+
 const writeFileSync = (destination, content = "") => {
   const destinationUrl = assertAndNormalizeFileUrl(destination);
   const destinationUrlObject = new URL(destinationUrl);
@@ -3551,203 +3755,6 @@ const removeDirectoryNaive = (
 process.platform === "win32";
 
 process.platform === "win32";
-
-const mediaTypeInfos = {
-  "application/json": {
-    extensions: ["json", "map"],
-    isTextual: true,
-  },
-  "application/importmap+json": {
-    extensions: ["importmap"],
-    isTextual: true,
-  },
-  "application/manifest+json": {
-    extensions: ["webmanifest"],
-    isTextual: true,
-  },
-  "application/octet-stream": {},
-  "application/pdf": {
-    extensions: ["pdf"],
-  },
-  "application/xml": {
-    extensions: ["xml"],
-    isTextual: true,
-  },
-  "application/x-gzip": {
-    extensions: ["gz"],
-  },
-  "application/wasm": {
-    extensions: ["wasm"],
-  },
-  "application/zip": {
-    extensions: ["zip"],
-  },
-  "audio/basic": {
-    extensions: ["au", "snd"],
-  },
-  "audio/mpeg": {
-    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
-  },
-  "audio/midi": {
-    extensions: ["midi", "mid", "kar", "rmi"],
-  },
-  "audio/mp4": {
-    extensions: ["m4a", "mp4a"],
-  },
-  "audio/ogg": {
-    extensions: ["oga", "ogg", "spx"],
-  },
-  "audio/webm": {
-    extensions: ["weba"],
-  },
-  "audio/x-wav": {
-    extensions: ["wav"],
-  },
-  "font/ttf": {
-    extensions: ["ttf"],
-  },
-  "font/woff": {
-    extensions: ["woff"],
-  },
-  "font/woff2": {
-    extensions: ["woff2"],
-  },
-  "image/png": {
-    extensions: ["png"],
-  },
-  "image/gif": {
-    extensions: ["gif"],
-  },
-  "image/jpeg": {
-    extensions: ["jpg"],
-  },
-  "image/svg+xml": {
-    extensions: ["svg", "svgz"],
-    isTextual: true,
-  },
-  "text/plain": {
-    extensions: ["txt"],
-    isTextual: true,
-  },
-  "text/html": {
-    extensions: ["html"],
-    isTextual: true,
-  },
-  "text/css": {
-    extensions: ["css"],
-    isTextual: true,
-  },
-  "text/javascript": {
-    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
-    isTextual: true,
-  },
-  "text/markdown": {
-    extensions: ["md", "mdx"],
-    isTextual: true,
-  },
-  "text/x-sass": {
-    extensions: ["sass"],
-    isTextual: true,
-  },
-  "text/x-scss": {
-    extensions: ["scss"],
-    isTextual: true,
-  },
-  "text/cache-manifest": {
-    extensions: ["appcache"],
-  },
-  "video/mp4": {
-    extensions: ["mp4", "mp4v", "mpg4"],
-  },
-  "video/mpeg": {
-    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
-  },
-  "video/ogg": {
-    extensions: ["ogv"],
-  },
-  "video/webm": {
-    extensions: ["webm"],
-  },
-};
-
-const CONTENT_TYPE = {
-  parse: (string) => {
-    const [mediaType, charset] = string.split(";");
-    return { mediaType: normalizeMediaType(mediaType), charset };
-  },
-
-  stringify: ({ mediaType, charset }) => {
-    if (charset) {
-      return `${mediaType};${charset}`;
-    }
-    return mediaType;
-  },
-
-  asMediaType: (value) => {
-    if (typeof value === "string") {
-      return CONTENT_TYPE.parse(value).mediaType;
-    }
-    if (typeof value === "object") {
-      return value.mediaType;
-    }
-    return null;
-  },
-
-  isJson: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    return (
-      mediaType === "application/json" ||
-      /^application\/\w+\+json$/.test(mediaType)
-    );
-  },
-
-  isTextual: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    if (mediaType.startsWith("text/")) {
-      return true;
-    }
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
-      return true;
-    }
-    // catch things like application/manifest+json, application/importmap+json
-    if (/^application\/\w+\+json$/.test(mediaType)) {
-      return true;
-    }
-    return false;
-  },
-
-  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
-
-  asFileExtension: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
-  },
-
-  fromUrlExtension: (url) => {
-    const { pathname } = new URL(url);
-    const extensionWithDot = extname(pathname);
-    if (!extensionWithDot || extensionWithDot === ".") {
-      return "application/octet-stream";
-    }
-    const extension = extensionWithDot.slice(1);
-    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
-      const mediaTypeInfo = mediaTypeInfos[mediaType];
-      return (
-        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
-      );
-    });
-    return mediaTypeFound || "application/octet-stream";
-  },
-};
-
-const normalizeMediaType = (value) => {
-  if (value === "application/javascript") {
-    return "text/javascript";
-  }
-  return value;
-};
 
 const ensureEmptyDirectory = async (source) => {
   const stats = await readEntryStat(source, {
@@ -21777,8 +21784,10 @@ const defaultRuntimeCompat = {
  *        Use versioning on files written in the build directory
  * @param {('search_param'|'filename')} [buildParameters.versioningMethod="search_param"]
  *        Controls how url are versioned in the build directory
- * @param {('none'|'inline'|'file'|'programmatic'} [buildParameters.sourcemaps="none"]
+ * @param {('none'|'inline'|'file'|'programmatic')} [buildParameters.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
+ * @param {('error'|'copy'|'preserve')|function} [buildParameters.directoryReferenceEffect="error"]
+ *        What to do when a reference leads to a directory on the filesystem
  * @return {Object} buildReturnValue
  * @return {Object} buildReturnValue.buildInlineContents
  *        Contains content that is inline into build files
@@ -21825,6 +21834,8 @@ const build = async ({
   outDirectoryUrl,
   assetManifest = versioningMethod === "filename",
   assetManifestFileRelativeUrl = "asset-manifest.json",
+  returnBuildInlineContents,
+  returnBuildManifest,
   ...rest
 }) => {
   // param validation
@@ -22349,8 +22360,8 @@ build ${entryPointKeys.length} entry points`);
       }),
     );
     return {
-      buildInlineContents,
-      buildManifest,
+      ...(returnBuildInlineContents ? { buildInlineContents } : {}),
+      ...(returnBuildManifest ? { buildManifest } : {}),
     };
   };
 

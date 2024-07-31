@@ -1,4 +1,6 @@
+import { filenameToBasename } from "./url_to_basename.js";
 import { urlToExtension } from "./url_to_extension.js";
+import { pathnameToFilename } from "./url_to_filename.js";
 import { urlToOrigin } from "./url_to_origin.js";
 import { urlToResource } from "./url_to_resource.js";
 
@@ -139,6 +141,9 @@ export const renderUrlOrRelativeUrlFilename = (urlOrRelativeUrl, renderer) => {
 export const setUrlExtension = (url, extension) => {
   const origin = urlToOrigin(url);
   const currentExtension = urlToExtension(url);
+  if (typeof extension === "function") {
+    extension = extension(currentExtension);
+  }
   const resource = urlToResource(url);
   const [pathname, search] = resource.split("?");
   const pathnameWithoutExtension = currentExtension
@@ -157,14 +162,22 @@ export const setUrlExtension = (url, extension) => {
 };
 
 export const setUrlFilename = (url, filename) => {
-  const urlObject = new URL(url);
-  let { origin, search, hash } = urlObject;
-  // origin is "null" for "file://" urls with Node.js
-  if (origin === "null" && urlObject.href.startsWith("file:")) {
-    origin = "file://";
-  }
-  const parentPathname = new URL("./", urlObject).pathname;
-  return `${origin}${parentPathname}${filename}${search}${hash}`;
+  const parentPathname = new URL("./", url).pathname;
+  return transformUrlPathname(url, (pathname) => {
+    if (typeof filename === "function") {
+      filename = filename(pathnameToFilename(pathname));
+    }
+    return `${parentPathname}${filename}`;
+  });
+};
+
+export const setUrlBasename = (url, basename) => {
+  return setUrlFilename(url, (filename) => {
+    if (typeof basename === "function") {
+      basename = basename(filenameToBasename(filename));
+    }
+    return `${basename}${urlToExtension(url)}`;
+  });
 };
 
 const transformUrlPathname = (url, transformer) => {

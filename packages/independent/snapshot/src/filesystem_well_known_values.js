@@ -1,6 +1,7 @@
 import {
   ensurePathnameTrailingSlash,
   removePathnameTrailingSlash,
+  yieldAncestorUrls,
 } from "@jsenv/urls";
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import { readFileSync } from "node:fs";
@@ -114,6 +115,16 @@ export const createReplaceFilesystemWellKnownValues = ({
       wellKownUrlArray.push(wellKnownUrl);
       wellKnownPathArray.push(wellKnownPath);
     }
+    return () => {
+      const urlIndex = wellKownUrlArray.indexOf(wellKnownUrl);
+      if (urlIndex > -1) {
+        wellKownUrlArray.splice(urlIndex, 1);
+      }
+      const pathIndex = wellKnownPathArray.indexOf(wellKnownPath);
+      if (pathIndex !== -1) {
+        wellKnownPathArray.splice(pathIndex, 1);
+      }
+    };
   };
   if (rootDirectoryUrl) {
     addWellKnownFileUrl(rootDirectoryUrl, WELL_KNOWN_ROOT);
@@ -136,11 +147,13 @@ export const createReplaceFilesystemWellKnownValues = ({
     const ancestorPackages = [];
     const cwd = cwdPath || process.cwd();
     const cwdUrl = ensurePathnameTrailingSlash(pathToFileURL(cwd));
-    let currentUrl = cwdUrl;
-    while (currentUrl.href !== ancestorPackagesRootDirectoryUrl) {
-      const packageFileUrl = new URL("package.json", currentUrl);
-      const packageDirectoryUrl = currentUrl;
-      currentUrl = new URL(getParentUrl(currentUrl));
+    for (const ancestorUrl of yieldAncestorUrls(
+      cwdUrl,
+      ancestorPackagesRootDirectoryUrl,
+      { yieldSelf: true },
+    )) {
+      const packageFileUrl = new URL("package.json", ancestorUrl);
+      const packageDirectoryUrl = ancestorUrl;
       let packageFileContent;
       try {
         packageFileContent = readFileSync(packageFileUrl);
@@ -225,25 +238,4 @@ export const createReplaceFilesystemWellKnownValues = ({
   };
   replaceFilesystemWellKnownValues.addWellKnownFileUrl = addWellKnownFileUrl;
   return replaceFilesystemWellKnownValues;
-};
-
-const getParentUrl = (url) => {
-  url = String(url);
-  // With node.js new URL('../', 'file:///C:/').href
-  // returns "file:///C:/" instead of "file:///"
-  const resource = url.slice("file://".length);
-  const slashLastIndex = resource.lastIndexOf("/");
-  if (slashLastIndex === -1) {
-    return url;
-  }
-  const lastCharIndex = resource.length - 1;
-  if (slashLastIndex === lastCharIndex) {
-    const slashBeforeLastIndex = resource.lastIndexOf("/", slashLastIndex - 1);
-    if (slashBeforeLastIndex === -1) {
-      return url;
-    }
-    return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
-  }
-
-  return `file://${resource.slice(0, slashLastIndex + 1)}`;
 };

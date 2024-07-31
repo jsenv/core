@@ -258,24 +258,19 @@ export const initTerminal = ({
           repeat: repeat === true ? 0 : repeat === false ? -1 : repeat,
           quality,
         });
-
-        const startTime = Date.now();
-        let previousTime = startTime;
-
-        frameCallbackSet.add(() => {
-          const now = Date.now();
-          const msSincePreviousFrame = now - previousTime;
-          previousTime = now;
-          log(`add frame to gif with delay of ${msSincePreviousFrame}ms`);
-          gifEncoder.addFrame(context, { delay: msSincePreviousFrame });
+        frameCallbackSet.add(({ delay }) => {
+          log(`add frame to gif with delay of ${delay}ms`);
+          gifEncoder.addFrame(context, { delay });
         });
         stopCallbackSet.add(async () => {
+          const now = Date.now();
+          drawFrame({
+            delay: now - previousTime,
+          });
           if (msAddedAtTheEnd) {
-            drawFrame();
-            previousTime = Date.now() - msAddedAtTheEnd;
-            drawFrame();
-          } else {
-            drawFrame();
+            drawFrame({
+              delay: now - msAddedAtTheEnd,
+            });
           }
           gifEncoder.finish();
           log("gif recording stopped");
@@ -285,9 +280,12 @@ export const initTerminal = ({
         log("gif recorder started");
       }
 
-      const drawFrame = () => {
+      const startTime = Date.now();
+      let previousTime = startTime;
+      let isFirstDraw = true;
+      const drawFrame = (options) => {
         for (const frameCallback of frameCallbackSet) {
-          frameCallback();
+          frameCallback(options);
         }
       };
 
@@ -306,16 +304,24 @@ export const initTerminal = ({
       };
 
       replicateXterm();
-      drawFrame();
 
       return {
-        writeIntoTerminal: async (data) => {
+        writeIntoTerminal: async (data, options = {}) => {
+          if (isFirstDraw) {
+            isFirstDraw = false;
+            drawFrame({ delay: 0 });
+          }
+          let { delay } = options;
+          if (delay === undefined) {
+            const now = Date.now();
+            delay = now - previousTime;
+          }
           writePromise = new Promise((resolve) => {
             log(`write data:`, data);
             term.write(data, () => {
               term._core._renderService._renderDebouncer._innerRefresh();
               replicateXterm();
-              drawFrame();
+              drawFrame({ delay });
               resolve();
             });
           });

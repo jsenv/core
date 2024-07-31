@@ -1,35 +1,39 @@
 // https://github.com/rollup/rollup/tree/dba6f13132a1d7dac507d5056399d8af0eed6375/test/function/samples/preserve-modules-circular-order
 
 import { assert } from "@jsenv/assert";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const test = async ({ name, ...params }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await build({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.js": "main.js",
-    },
-    ...params,
-  });
-  buildDirectorySnapshot.compare();
-};
+await snapshotBuildTests(
+  ({ test }) => {
+    const testParams = {
+      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      entryPoints: { "./main.js": "main.js" },
+      minification: false,
+      versioning: false,
+      base: "./",
+    };
 
-// default (with bundling)
+    test("0_with_bundling", () =>
+      build({
+        ...testParams,
+        bundling: true,
+      }));
+
+    test("1_without_bundling", () =>
+      build({
+        ...testParams,
+        bundling: false,
+      }));
+  },
+  new URL("./output/import_circular.md", import.meta.url),
+);
+
+// with bundling (default)
 {
-  await test({
-    name: "0_with_bundling",
-    base: "./",
-    minification: false,
-    versioning: false,
-  });
   // eslint-disable-next-line import/no-unresolved
-  const namespace = await import("./snapshots/0_with_bundling/main.js");
+  const namespace = await import("./output/0_with_bundling/build/main.js");
   const actual = { ...namespace };
   const expect = {
     executionOrder: ["index", "tag", "data", "main: Tag: Tag data Tag data"],
@@ -39,15 +43,8 @@ const test = async ({ name, ...params }) => {
 
 // without bundling
 {
-  await test({
-    name: "1_without_bundling",
-    base: "./",
-    bundling: false,
-    minification: false,
-    versioning: false,
-  });
   // eslint-disable-next-line import/no-unresolved
-  const namespace = await import("./snapshots/1_without_bundling/main.js");
+  const namespace = await import("./output/1_without_bundling/build/main.js");
   const actual = { ...namespace };
   const expect = {
     executionOrder: ["index", "tag", "data", "main: Tag: Tag data Tag data"],

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/file.js": "/js/file.js?v=6793a18c"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module">
+      import { answer } from "/js/file.js";
+
+      setTimeout(() => {
+        const url = import.meta.url;
+        window.resolveResultPromise({
+          answer,
+          url: url.replace(window.origin, "window.origin"),
+        });
+      }, 100);
+    </script>
+  </body>
+</html>

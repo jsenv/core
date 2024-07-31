@@ -133,13 +133,13 @@ export const startTerminalRecording = async ({
     },
     /* eslint-env node */
   );
-  writeCallbackSet.add(async (data) => {
+  writeCallbackSet.add(async (data, options) => {
     await page.evaluate(
       /* eslint-env browser */
-      async (data) => {
-        await window.terminalRecording.writeIntoTerminal(data);
+      async ({ data, options }) => {
+        await window.terminalRecording.writeIntoTerminal(data, options);
       },
-      data,
+      { data, options },
       /* eslint-env node */
     );
   });
@@ -181,13 +181,13 @@ export const startTerminalRecording = async ({
   });
   let stopped = false;
   return {
-    write: async (data) => {
+    write: async (data, options) => {
       if (stopped) {
         throw new Error("write after stop()");
       }
       const promises = [];
       for (const writeCallback of writeCallbackSet) {
-        promises.push(writeCallback(data));
+        promises.push(writeCallback(data, options));
       }
       await Promise.all(promises);
     },

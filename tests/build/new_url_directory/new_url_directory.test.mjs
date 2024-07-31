@@ -1,64 +1,40 @@
 import { assert } from "@jsenv/assert";
-import { takeDirectorySnapshot, takeFileSnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+import { readFileSync } from "@jsenv/filesystem";
 
-const test = async ({ buildDirectoryUrl, directoryReferenceEffect }) => {
-  const { buildManifest } = await build({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    runtimeCompat: { chrome: "98" },
-    bundling: false,
-    minification: false,
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    directoryReferenceEffect,
-  });
-  const server = await startFileServer({
-    rootDirectoryUrl: buildDirectoryUrl,
-  });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
-  const actual = {
-    returnValue,
-  };
-  const expect = {
-    returnValue: {
-      directoryUrl: `${server.origin}/${buildManifest["src/"]}`,
-    },
-  };
-  assert({ actual, expect });
-};
+await snapshotBuildTests(
+  ({ test }) => {
+    const testParams = {
+      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      entryPoints: { "./main.html": "main.html" },
+      bundling: false,
+      minification: false,
+      runtimeCompat: { chrome: "98" },
+      assetManifest: true,
+    };
 
-// by default referencing a directory throw an error
-try {
-  await test({
-    buildDirectoryUrl: new URL("./output/0_default/", import.meta.url),
-  });
-  throw new Error("should throw");
-} catch (e) {
-  const errorFileSnapshot = takeFileSnapshot(
-    new URL("./output/0_default/error.txt", import.meta.url),
-  );
-  errorFileSnapshot.update(e.message);
-}
-
-// but it can be allowed explicitely and it will copy the directory content
-// in the build directory and update the url accoringly
-const outputDirectorySnapshot = takeDirectorySnapshot(
-  new URL("./output/1_copy/", import.meta.url),
+    test("0_error", () =>
+      build({
+        ...testParams,
+        directoryReferenceEffect: "error",
+      }));
+    test("1_copy", () =>
+      build({
+        ...testParams,
+        directoryReferenceEffect: "copy",
+      }));
+  },
+  new URL("./output/new_url_directory.md", import.meta.url),
 );
-await test({
-  buildDirectoryUrl: new URL("./output/1_copy/", import.meta.url),
-  directoryReferenceEffect: "copy",
-});
-outputDirectorySnapshot.compare();
+
+const buildManifest = readFileSync(
+  new URL("./output/1_copy/build/asset-manifest.json", import.meta.url),
+);
+const actual = await executeBuildHtmlInBrowser(
+  new URL("./output/1_copy/build/", import.meta.url),
+);
+const expect = `window.origin/${buildManifest["src/"]}`;
+assert({ actual, expect });

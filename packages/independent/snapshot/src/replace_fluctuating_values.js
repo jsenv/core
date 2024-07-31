@@ -61,7 +61,7 @@ export const replaceFluctuatingValues = (
     value = replaceDurations(value);
     return value;
   };
-  if (stringType === "html") {
+  if (stringType === "html" || stringType === "svg") {
     // do parse html
     const htmlAst =
       stringType === "svg"
