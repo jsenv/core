@@ -6,7 +6,6 @@ export const snapshotBuildTests = async (
   options = {},
 ) => {
   await snapshotTests(testFileUrl, fnRegisteringTests, {
-    sideEffectFilePattern: "./output/<basename>.md",
     ...options,
     logEffects:
       options.logEffects === false

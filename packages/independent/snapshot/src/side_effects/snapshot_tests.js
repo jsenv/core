@@ -22,9 +22,9 @@ export const snapshotTests = async (
   {
     testName = urlToBasename(testFileUrl, true),
     sideEffectFileUrl,
-    sideEffectFilePattern = "./output/[test_name]/[test_name].md",
+    sideEffectFilePattern = "./output/[test_name].md",
     outDirectoryPattern = "./output/[test_name]/",
-    outFilePattern = "./output/[test_name]/[test_scenario]_[filename]",
+    outFilePattern = "./output/[test_scenario]/[filename]",
     rootDirectoryUrl,
     generatedBy = true,
     linkToSource = true,
