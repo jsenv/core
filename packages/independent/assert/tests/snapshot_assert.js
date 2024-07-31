@@ -1,11 +1,11 @@
 import { snapshotTests } from "@jsenv/snapshot";
 
 export const snapshotAssertTests = async (
-  sourceFileUrl,
+  testFileUrl,
   fnRegisteringTest,
   options,
 ) => {
-  await snapshotTests(sourceFileUrl, fnRegisteringTest, {
+  await snapshotTests(testFileUrl, fnRegisteringTest, {
     snapshotFilePattern: "./<basename>/<basename>.md",
     errorStackHidden: true,
     ...options,
