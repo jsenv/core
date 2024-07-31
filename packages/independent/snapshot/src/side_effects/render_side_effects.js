@@ -246,6 +246,7 @@ const renderText = (
           typeof value.stack === "string")
       ) {
         onRenderError();
+        // return renderMarkdownBlock(text.value.stack);
         const exception = createException(text.value, { rootDirectoryUrl });
         const exceptionText = errorStackHidden
           ? `${exception.name}: ${exception.message}`

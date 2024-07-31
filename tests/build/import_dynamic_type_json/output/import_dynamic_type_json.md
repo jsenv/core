@@ -72,7 +72,7 @@ build({
 })
 ```
 
-### 1/2 logs
+### 1/4 logs
 
 ![img](1_js_module_fallback/log_group.svg)
 
@@ -85,15 +85,39 @@ build "./main.html"
 ⠋ generate source graph
 ✔ generate source graph (done in <X> second)
 ⠋ generate build graph
-✖ failed to generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
 
 ```
 
 </details>
 
 
-### 2/2 reject
+### 2/4 write 3 files into "./build/"
+
+see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
+
+### 3/4 logs
+
+![img](1_js_module_fallback/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
-Error: ENOENT: no such file or directory, scandir '@jsenv/core/.jsenv/shape/src/'
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (16.8 kB / 95 %)
+- js   : 1 (841 B / 5 %)
+- total: 2 (17.6 kB / 100 %)
+--------------------
+```
+
+</details>
+
+
+### 4/4 resolve
+
+```js
+{}
 ```
