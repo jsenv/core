@@ -25,14 +25,14 @@ writeFileStructureSync(
   new URL("./git_ignored/", import.meta.url),
   new URL("./output/0_basic/build/", import.meta.url),
 );
-copyFileSync(
-  new URL("./client/a.html", import.meta.url),
-  new URL("./git_ignored/a.html", import.meta.url),
-);
-copyFileSync(
-  new URL("./client/b.html", import.meta.url),
-  new URL("./git_ignored/b.html", import.meta.url),
-);
+copyFileSync({
+  from: new URL("./client/a.html", import.meta.url),
+  to: new URL("./git_ignored/a.html", import.meta.url),
+});
+copyFileSync({
+  from: new URL("./client/b.html", import.meta.url),
+  to: new URL("./git_ignored/b.html", import.meta.url),
+});
 const actual = {
   aExecutionResult: await executeBuildHtmlInBrowser(
     new URL(`./git_ignored/`, import.meta.url),

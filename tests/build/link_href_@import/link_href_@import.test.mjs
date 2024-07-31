@@ -1,47 +1,41 @@
 import { assert } from "@jsenv/assert";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const test = async ({ name, ...params }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await build({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
-  });
-  buildDirectorySnapshot.compare();
+await snapshotBuildTests(
+  ({ test }) => {
+    const testParams = {
+      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      entryPoints: { "./main.html": "main.html" },
+      runtimeCompat: { chrome: "89" },
+      minification: false,
+    };
+    test("0_versioning", () =>
+      build({
+        ...testParams,
+        versioning: true,
+      }));
+    test("1_versioning_disabled", () =>
+      build({
+        ...testParams,
+        versioning: false,
+      }));
+  },
+  new URL("./output/link_href_import.md", import.meta.url),
+);
 
-  const server = await startFileServer({
-    rootDirectoryUrl: snapshotDirectoryUrl,
-  });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.namespacePromise,
-    /* eslint-enable no-undef */
-  });
-  const actual = returnValue;
-  const expect = { bodyBackgroundColor: "rgb(255, 0, 0)" };
-  assert({ actual, expect });
+const actual = {
+  versioningResult: await executeBuildHtmlInBrowser(
+    new URL(`./output/0_versioning/build/`, import.meta.url),
+  ),
+  versioningDisabledResult: await executeBuildHtmlInBrowser(
+    new URL(`./output/1_versioning_disabled/build/`, import.meta.url),
+  ),
 };
-
-await test({
-  name: "default",
-  runtimeCompat: { chrome: "89" },
-  minification: false,
-});
-await test({
-  name: "no_versioning",
-  runtimeCompat: { chrome: "89" },
-  minification: false,
-  versioning: false,
-});
+const expect = {
+  versioningResult: { bodyBackgroundColor: "rgb(255, 0, 0)" },
+  versioningDisabledResult: { bodyBackgroundColor: "rgb(255, 0, 0)" },
+};
+assert({ actual, expect });

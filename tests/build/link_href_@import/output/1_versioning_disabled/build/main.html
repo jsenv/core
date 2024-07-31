@@ -3,20 +3,20 @@
   <head>
     <title>Title</title>
     <meta charset="utf-8">
-    <link rel="stylesheet" href="/css/main.css?v=e1275614">
+    <link rel="stylesheet" href="/css/main.css">
   </head>
 
   <body>
     <script>
-      window.namespacePromise = new Promise((resolve) => {
-        window.resolveNamespacePromise = resolve;
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
       });
     </script>
     <script type="module">
       const bodyBackgroundColor = getComputedStyle(
         document.body,
       ).backgroundColor;
-      window.resolveNamespacePromise({
+      window.resolveResultPromise({
         bodyBackgroundColor,
       });
     </script>
