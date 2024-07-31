@@ -34,6 +34,6 @@
   },
   "dependencies": {
     "@jsenv/fetch": "1.1.69",
-    "@jsenv/humanize": "1.2.6"
+    "@jsenv/humanize": "1.2.7"
   }
 }

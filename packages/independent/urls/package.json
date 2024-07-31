@@ -28,6 +28,6 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/humanize": "1.2.6"
+    "@jsenv/humanize": "1.2.7"
   }
 }

@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@jsenv/filesystem": "4.9.6",
-    "@jsenv/humanize": "1.2.6",
+    "@jsenv/humanize": "1.2.7",
     "@jsenv/url-meta": "8.5.0",
     "@jsenv/urls": "2.5.0",
     "@rollup/plugin-commonjs": "26.0.1",
