@@ -126,6 +126,8 @@ export const build = async ({
   outDirectoryUrl,
   assetManifest = versioningMethod === "filename",
   assetManifestFileRelativeUrl = "asset-manifest.json",
+  returnBuildInlineContents,
+  returnBuildManifest,
   ...rest
 }) => {
   // param validation
@@ -652,8 +654,8 @@ build ${entryPointKeys.length} entry points`);
       }),
     );
     return {
-      buildInlineContents,
-      buildManifest,
+      ...(returnBuildInlineContents ? { buildInlineContents } : {}),
+      ...(returnBuildManifest ? { buildManifest } : {}),
     };
   };
 
