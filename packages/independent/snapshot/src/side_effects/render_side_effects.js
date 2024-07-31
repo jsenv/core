@@ -306,12 +306,17 @@ const renderPotentialAnsi = (
   string,
   { stringType, sideEffect, sideEffectFileUrl, generateOutFileUrl, replace },
 ) => {
+  const rawTextBlock = renderMarkdownBlock(
+    replace(string, { stringType }),
+    "console",
+  );
   // for assert we want ideally hummm
   // colored in details block?
   const includesAnsi = ansiRegex().test(string);
   if (!includesAnsi) {
-    return renderMarkdownBlock(replace(string, { stringType }), "console");
+    return rawTextBlock;
   }
+  let md = rawTextBlock;
   const svgFilename = `${sideEffect.code}${sideEffect.counter ? `_${sideEffect.counter}` : ""}.svg`;
   const svgFileUrl = generateOutFileUrl(svgFilename);
   let svgFileContent = renderTerminalSvg(string, {
@@ -322,8 +327,15 @@ const renderPotentialAnsi = (
   svgFileContent = replace(svgFileContent, { fileUrl: svgFileUrl });
   writeFileSync(svgFileUrl, svgFileContent);
   const svgFileRelativeUrl = urlToRelativeUrl(svgFileUrl, sideEffectFileUrl);
-  return `![img](${svgFileRelativeUrl})`;
-  // we will write a svg file
+  md += "\n\n";
+  md += renderMarkdownDetails(
+    `  <img src="${svgFileRelativeUrl}" alt="img" />`,
+    {
+      summary: "see colored",
+    },
+  );
+  md += "\n";
+  return md;
 };
 
 export const renderFileContent = (text, { sideEffect, replace }) => {

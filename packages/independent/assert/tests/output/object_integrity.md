@@ -13,7 +13,20 @@ assert({
 });
 ```
 
-![img](object_integrity/frozen_vs_not_frozen_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Object.freeze({ a: true })
+expect: { a: true }
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/frozen_vs_not_frozen_throw.svg" alt="img" />
+
+</details>
+
 
 ## not frozen vs frozen
 
@@ -24,7 +37,20 @@ assert({
 });
 ```
 
-![img](object_integrity/not_frozen_vs_frozen_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: { a: true }
+expect: Object.freeze({ a: true })
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/not_frozen_vs_frozen_throw.svg" alt="img" />
+
+</details>
+
 
 ## sealed vs not sealed
 
@@ -35,7 +61,20 @@ assert({
 });
 ```
 
-![img](object_integrity/sealed_vs_not_sealed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Object.seal({ a: true })
+expect: { a: true }
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/sealed_vs_not_sealed_throw.svg" alt="img" />
+
+</details>
+
 
 ## not sealed vs sealed
 
@@ -46,7 +85,20 @@ assert({
 });
 ```
 
-![img](object_integrity/not_sealed_vs_sealed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: { a: true }
+expect: Object.seal({ a: true })
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/not_sealed_vs_sealed_throw.svg" alt="img" />
+
+</details>
+
 
 ## frozen vs sealed
 
@@ -57,7 +109,20 @@ assert({
 });
 ```
 
-![img](object_integrity/frozen_vs_sealed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Object.freeze({ a: true })
+expect: Object.seal({ a: true })
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/frozen_vs_sealed_throw.svg" alt="img" />
+
+</details>
+
 
 ## sealed vs frozen
 
@@ -68,7 +133,20 @@ assert({
 });
 ```
 
-![img](object_integrity/sealed_vs_frozen_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Object.seal({ a: true })
+expect: Object.freeze({ a: true })
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/sealed_vs_frozen_throw.svg" alt="img" />
+
+</details>
+
 
 ## extensible vs non extensible
 
@@ -79,7 +157,20 @@ assert({
 });
 ```
 
-![img](object_integrity/extensible_vs_non_extensible_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: { a: true }
+expect: Object.preventExtensions({ a: true })
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/extensible_vs_non_extensible_throw.svg" alt="img" />
+
+</details>
+
 
 ## non extensible vs extensible
 
@@ -90,7 +181,20 @@ assert({
 });
 ```
 
-![img](object_integrity/non_extensible_vs_extensible_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Object.preventExtensions({ a: true })
+expect: { a: true }
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/non_extensible_vs_extensible_throw.svg" alt="img" />
+
+</details>
+
 
 ## sealed vs non extensible
 
@@ -101,7 +205,20 @@ assert({
 });
 ```
 
-![img](object_integrity/sealed_vs_non_extensible_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Object.seal({ a: true })
+expect: Object.preventExtensions({ a: true })
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/sealed_vs_non_extensible_throw.svg" alt="img" />
+
+</details>
+
 
 ## non extensible vs frozen
 
@@ -112,7 +229,20 @@ assert({
 });
 ```
 
-![img](object_integrity/non_extensible_vs_frozen_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Object.preventExtensions({ a: true })
+expect: Object.freeze({ a: true })
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/non_extensible_vs_frozen_throw.svg" alt="img" />
+
+</details>
+
 
 ## frozen array vs frozen function
 
@@ -123,7 +253,24 @@ assert({
 });
 ```
 
-![img](object_integrity/frozen_array_vs_frozen_function_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Object.freeze([
+  "a",
+])
+expect: Object.freeze(() => {
+  [source code],
+})
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/frozen_array_vs_frozen_function_throw.svg" alt="img" />
+
+</details>
+
 
 ## both sealed, diff is elsewhere
 
@@ -140,4 +287,22 @@ assert({
 });
 ```
 
-![img](object_integrity/both_sealed__diff_is_elsewhere_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: Object.freeze({ a: true }),
+  b: true,
+}
+expect: {
+  a: Object.freeze({ a: true }),
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object_integrity/both_sealed__diff_is_elsewhere_throw.svg" alt="img" />
+
+</details>

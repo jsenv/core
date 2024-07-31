@@ -13,7 +13,20 @@ assert({
 });
 ```
 
-![img](prototype/error_vs_typeerror_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error
+expect: TypeError
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="prototype/error_vs_typeerror_throw.svg" alt="img" />
+
+</details>
+
 
 ## object with different prototypes
 
@@ -28,7 +41,30 @@ assert({
 });
 ```
 
-![img](prototype/object_with_different_prototypes_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  __proto__: {
+    a: true,
+  },
+}
+expect: {
+  __proto__: {
+    a: {
+      b: true,
+    },
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="prototype/object_with_different_prototypes_throw.svg" alt="img" />
+
+</details>
+
 
 ## Object.create(null) and {}
 
@@ -39,7 +75,22 @@ assert({
 });
 ```
 
-![img](prototype/object_create(null)_and_%7B%7D_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  __proto__: null,
+}
+expect: {}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="prototype/object_create(null)_and_%7B%7D_throw.svg" alt="img" />
+
+</details>
+
 
 ## Object.create(null) and []
 
@@ -50,7 +101,22 @@ assert({
 });
 ```
 
-![img](prototype/object_create(null)_and_[]_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  __proto__: null,
+}
+expect: []
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="prototype/object_create(null)_and_[]_throw.svg" alt="img" />
+
+</details>
+
 
 ## object vs custom proto
 
@@ -68,7 +134,24 @@ assert({
 });
 ```
 
-![img](prototype/object_vs_custom_proto_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: User {
+  name: "dam",
+}
+expect: {
+  name: "bob",
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="prototype/object_vs_custom_proto_throw.svg" alt="img" />
+
+</details>
+
 
 ## object vs instance
 
@@ -88,4 +171,24 @@ assert({
 });
 ```
 
-![img](prototype/object_vs_instance_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: User {
+    name: "dam",
+  },
+}
+expect: {
+  a: {
+    name: "bob",
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="prototype/object_vs_instance_throw.svg" alt="img" />
+
+</details>

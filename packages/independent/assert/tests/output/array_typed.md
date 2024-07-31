@@ -13,7 +13,22 @@ assert({
 });
 ```
 
-![img](array_typed/buffer_from()_vs_buffer_from(a)_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Buffer []
+expect: Buffer [
+  97,
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/buffer_from()_vs_buffer_from(a)_throw.svg" alt="img" />
+
+</details>
+
 
 ## buffer.from("a") vs buffer.from("")
 
@@ -24,7 +39,22 @@ assert({
 });
 ```
 
-![img](array_typed/buffer_from(a)_vs_buffer_from()_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Buffer [
+  97,
+]
+expect: Buffer []
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/buffer_from(a)_vs_buffer_from()_throw.svg" alt="img" />
+
+</details>
+
 
 ## buffer without diff are collapsed
 
@@ -41,7 +71,26 @@ assert({
 });
 ```
 
-![img](array_typed/buffer_without_diff_are_collapsed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: Buffer [97],
+  b: true,
+}
+expect: {
+  a: Buffer [97],
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/buffer_without_diff_are_collapsed_throw.svg" alt="img" />
+
+</details>
+
 
 ## same length buffer diff at the end
 
@@ -52,7 +101,28 @@ assert({
 });
 ```
 
-![img](array_typed/same_length_buffer_diff_at_the_end_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Buffer [
+  ↑ 19 values ↑
+  97,
+  109,
+]
+expect: Buffer [
+  ↑ 19 values ↑
+  97,
+  90,
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/same_length_buffer_diff_at_the_end_throw.svg" alt="img" />
+
+</details>
+
 
 ## same length buffer diff at start
 
@@ -63,7 +133,28 @@ assert({
 });
 ```
 
-![img](array_typed/same_length_buffer_diff_at_start_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Buffer [
+  104,
+  101,
+  ↓ 19 values ↓
+]
+expect: Buffer [
+  90,
+  101,
+  ↓ 19 values ↓
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/same_length_buffer_diff_at_start_throw.svg" alt="img" />
+
+</details>
+
 
 ## same length buffer diff at middle
 
@@ -74,7 +165,32 @@ assert({
 });
 ```
 
-![img](array_typed/same_length_buffer_diff_at_middle_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Buffer [
+  ↑ 10 values ↑
+  110,
+  97,
+  109,
+  ↓ 8 values ↓
+]
+expect: Buffer [
+  ↑ 10 values ↑
+  110,
+  90,
+  109,
+  ↓ 8 values ↓
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/same_length_buffer_diff_at_middle_throw.svg" alt="img" />
+
+</details>
+
 
 ## same length buffer diff start, middle, end
 
@@ -85,7 +201,36 @@ assert({
 });
 ```
 
-![img](array_typed/same_length_buffer_diff_start__middle__end_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Buffer [
+  104,
+  101,
+  ↕ 8 values ↕
+  110,
+  97,
+  109,
+  ↓ 8 values ↓ (1 modified)
+]
+expect: Buffer [
+  90,
+  101,
+  ↕ 8 values ↕
+  110,
+  90,
+  109,
+  ↓ 8 values ↓ (1 modified)
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/same_length_buffer_diff_start__middle__end_throw.svg" alt="img" />
+
+</details>
+
 
 ## buffer vs string
 
@@ -96,7 +241,22 @@ assert({
 });
 ```
 
-![img](array_typed/buffer_vs_string_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Buffer [
+  97,
+]
+expect: "a"
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/buffer_vs_string_throw.svg" alt="img" />
+
+</details>
+
 
 ## buffer vs array
 
@@ -113,7 +273,30 @@ assert({
 });
 ```
 
-![img](array_typed/buffer_vs_array_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: Buffer [97],
+  b: Buffer [
+    97,
+  ],
+}
+expect: {
+  a: [97],
+  b: [
+    61,
+  ],
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/buffer_vs_array_throw.svg" alt="img" />
+
+</details>
+
 
 ## buffer.from vs Uint8Array.from
 
@@ -124,7 +307,20 @@ assert({
 });
 ```
 
-![img](array_typed/buffer_from_vs_uint8array_from_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Buffer [97]
+expect: Uint8Array [97]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/buffer_from_vs_uint8array_from_throw.svg" alt="img" />
+
+</details>
+
 
 ## Uint8Array vs Array
 
@@ -135,4 +331,16 @@ assert({
 });
 ```
 
-![img](array_typed/uint8array_vs_array_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Uint8Array
+expect: Array
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array_typed/uint8array_vs_array_throw.svg" alt="img" />
+
+</details>

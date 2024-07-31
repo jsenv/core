@@ -13,7 +13,24 @@ assert({
 });
 ```
 
-![img](array/array_first_item_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  true,
+]
+expect: [
+  false,
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/array_first_item_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## array expect, object received
 
@@ -24,7 +41,20 @@ assert({
 });
 ```
 
-![img](array/array_expect__object_received_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {}
+expect: []
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/array_expect__object_received_throw.svg" alt="img" />
+
+</details>
+
 
 ## object expect, array received
 
@@ -35,7 +65,20 @@ assert({
 });
 ```
 
-![img](array/object_expect__array_received_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: []
+expect: {}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/object_expect__array_received_throw.svg" alt="img" />
+
+</details>
+
 
 ## array without diff
 
@@ -52,7 +95,26 @@ assert({
 });
 ```
 
-![img](array/array_without_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: [0],
+  z: true,
+}
+expect: {
+  a: [0],
+  z: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/array_without_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## diff in the middle of big array
 
@@ -63,7 +125,32 @@ assert({
 });
 ```
 
-![img](array/diff_in_the_middle_of_big_array_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  ↑ 2 values ↑
+  "c",
+  "Z",
+  "e",
+  ↓ 3 values ↓
+]
+expect: [
+  ↑ 2 values ↑
+  "c",
+  "d",
+  "e",
+  ↓ 3 values ↓
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/diff_in_the_middle_of_big_array_throw.svg" alt="img" />
+
+</details>
+
 
 ## big array collapsed because diff is elsewhere
 
@@ -81,7 +168,26 @@ assert({
 });
 ```
 
-![img](array/big_array_collapsed_because_diff_is_elsewhere_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: ["a", "b", "c", "d", "e", …],
+  b: true,
+}
+expect: {
+  a: ["a", "b", "c", "d", "e", …],
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/big_array_collapsed_because_diff_is_elsewhere_throw.svg" alt="img" />
+
+</details>
+
 
 ## undefined vs empty
 
@@ -92,7 +198,24 @@ assert({
 });
 ```
 
-![img](array/undefined_vs_empty_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  empty,
+]
+expect: [
+  undefined,
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/undefined_vs_empty_throw.svg" alt="img" />
+
+</details>
+
 
 ## empty added
 
@@ -103,7 +226,22 @@ assert({
 });
 ```
 
-![img](array/empty_added_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  empty,
+]
+expect: []
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/empty_added_throw.svg" alt="img" />
+
+</details>
+
 
 ## empty removed
 
@@ -114,7 +252,22 @@ assert({
 });
 ```
 
-![img](array/empty_removed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: []
+expect: [
+  empty,
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/empty_removed_throw.svg" alt="img" />
+
+</details>
+
 
 ## false should be an array
 
@@ -125,7 +278,20 @@ assert({
 });
 ```
 
-![img](array/false_should_be_an_array_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: false
+expect: []
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/false_should_be_an_array_throw.svg" alt="img" />
+
+</details>
+
 
 ## associative array expect, object received
 
@@ -140,7 +306,20 @@ assert({
 });
 ```
 
-![img](array/associative_array_expect__object_received_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [] { foo: true }
+expect: { foo: true }
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/associative_array_expect__object_received_throw.svg" alt="img" />
+
+</details>
+
 
 ## diff on associate array.foo and object.foo
 
@@ -155,7 +334,24 @@ assert({
 });
 ```
 
-![img](array/diff_on_associate_array_foo_and_object_foo_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [] {
+  foo: true,
+}
+expect: {
+  foo: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/diff_on_associate_array_foo_and_object_foo_throw.svg" alt="img" />
+
+</details>
+
 
 ## diff on associate array deep property and object deep property
 
@@ -172,7 +368,28 @@ assert({
 });
 ```
 
-![img](array/diff_on_associate_array_deep_property_and_object_deep_property_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [] {
+  user: {
+    name: "bob",
+  },
+}
+expect: {
+  user: {
+    name: "alice",
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/diff_on_associate_array_deep_property_and_object_deep_property_throw.svg" alt="img" />
+
+</details>
+
 
 ## diff on collapsed array
 
@@ -202,7 +419,41 @@ assert({
 });
 ```
 
-![img](array/diff_on_collapsed_array_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: {
+    same: [true],
+    a: [
+      false,
+      false,
+    ],
+    r: [],
+    ↓ 3 props ↓
+  },
+}
+expect: {
+  a: {
+    same: [true],
+    a: [],
+    r: [
+      true,
+      true,
+      true,
+    ],
+    ↓ 3 props ↓
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/diff_on_collapsed_array_throw.svg" alt="img" />
+
+</details>
+
 
 ## string and array of chars
 
@@ -213,7 +464,24 @@ assert({
 });
 ```
 
-![img](array/string_and_array_of_chars_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: "hello world"
+expect: [
+  "h",
+  "e",
+  ↓ 9 values ↓
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/string_and_array_of_chars_throw.svg" alt="img" />
+
+</details>
+
 
 ## associative array with values
 
@@ -228,7 +496,30 @@ assert({
 });
 ```
 
-![img](array/associative_array_with_values_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  "a",
+  "b",
+] {
+  user: "bob",
+}
+expect: [
+  "Z",
+  "b",
+] {
+  user: "alice",
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/associative_array_with_values_throw.svg" alt="img" />
+
+</details>
+
 
 ## array like and array
 
@@ -246,7 +537,27 @@ assert({
 });
 ```
 
-![img](array/array_like_and_array_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  0: "Z",
+  1: "b",
+  length: 2,
+}
+expect: [
+  "a",
+  "b",
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/array_like_and_array_throw.svg" alt="img" />
+
+</details>
+
 
 ## array subclass
 
@@ -258,7 +569,20 @@ assert({
 });
 ```
 
-![img](array/array_subclass_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [true]
+expect: MyArray [true]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/array_subclass_throw.svg" alt="img" />
+
+</details>
+
 
 ## added on third pos
 
@@ -269,7 +593,27 @@ assert({
 });
 ```
 
-![img](array/added_on_third_pos_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  "a",
+  "b",
+]
+expect: [
+  "a",
+  "b",
+  "Z",
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/added_on_third_pos_throw.svg" alt="img" />
+
+</details>
+
 
 ## added on fifth pos
 
@@ -280,7 +624,28 @@ assert({
 });
 ```
 
-![img](array/added_on_fifth_pos_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  ↑ 2 values ↑
+  "c",
+  "d",
+]
+expect: [
+  ↑ 3 values ↑
+  "d",
+  "Z",
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/added_on_fifth_pos_throw.svg" alt="img" />
+
+</details>
+
 
 ## 2 added on fifth pos
 
@@ -291,7 +656,29 @@ assert({
 });
 ```
 
-![img](array/2_added_on_fifth_pos_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  ↑ 2 values ↑
+  "c",
+  "d",
+]
+expect: [
+  ↑ 3 values ↑
+  "d",
+  "Z1",
+  "Z2",
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/2_added_on_fifth_pos_throw.svg" alt="img" />
+
+</details>
+
 
 ## 3 added on fifth pos
 
@@ -302,7 +689,30 @@ assert({
 });
 ```
 
-![img](array/3_added_on_fifth_pos_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  ↑ 2 values ↑
+  "c",
+  "d",
+]
+expect: [
+  ↑ 3 values ↑
+  "d",
+  "Z1",
+  "Z2",
+  "Z3",
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/3_added_on_fifth_pos_throw.svg" alt="img" />
+
+</details>
+
 
 ## lot added on fifth pos
 
@@ -313,4 +723,26 @@ assert({
 });
 ```
 
-![img](array/lot_added_on_fifth_pos_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  ↑ 2 values ↑
+  "c",
+  "d",
+]
+expect: [
+  ↑ 3 values ↑
+  "d",
+  "Z1",
+  "Z2",
+  ↓ 3 values ↓
+]
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="array/lot_added_on_fifth_pos_throw.svg" alt="img" />
+
+</details>

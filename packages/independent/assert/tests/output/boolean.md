@@ -13,7 +13,20 @@ assert({
 });
 ```
 
-![img](boolean/true_should_be_false_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: true
+expect: false
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="boolean/true_should_be_false_throw.svg" alt="img" />
+
+</details>
+
 
 ## false should be true
 
@@ -24,7 +37,20 @@ assert({
 });
 ```
 
-![img](boolean/false_should_be_true_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: false
+expect: true
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="boolean/false_should_be_true_throw.svg" alt="img" />
+
+</details>
+
 
 ## true should be 1
 
@@ -35,7 +61,20 @@ assert({
 });
 ```
 
-![img](boolean/true_should_be_1_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: true
+expect: 1
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="boolean/true_should_be_1_throw.svg" alt="img" />
+
+</details>
+
 
 ## false should be 0
 
@@ -46,4 +85,16 @@ assert({
 });
 ```
 
-![img](boolean/false_should_be_0_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: false
+expect: 0
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="boolean/false_should_be_0_throw.svg" alt="img" />
+
+</details>

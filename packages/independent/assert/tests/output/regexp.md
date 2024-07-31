@@ -13,7 +13,20 @@ assert({
 });
 ```
 
-![img](regexp/a_vs_b_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: /a/
+expect: /b/
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="regexp/a_vs_b_throw.svg" alt="img" />
+
+</details>
+
 
 ## i flag vs no flag
 
@@ -24,7 +37,20 @@ assert({
 });
 ```
 
-![img](regexp/i_flag_vs_no_flag_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: /a/i
+expect: /a/
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="regexp/i_flag_vs_no_flag_throw.svg" alt="img" />
+
+</details>
+
 
 ## gi flag vs ig flag
 
@@ -42,7 +68,26 @@ assert({
 });
 ```
 
-![img](regexp/gi_flag_vs_ig_flag_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: /a/gi,
+  b: true,
+}
+expect: {
+  a: /a/gi,
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="regexp/gi_flag_vs_ig_flag_throw.svg" alt="img" />
+
+</details>
+
 
 ## special char: parenthesis vs dot
 
@@ -53,7 +98,20 @@ assert({
 });
 ```
 
-![img](regexp/special_char_parenthesis_vs_dot_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: /^\($/g
+expect: /^\.$/g
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="regexp/special_char_parenthesis_vs_dot_throw.svg" alt="img" />
+
+</details>
+
 
 ## last index
 
@@ -67,7 +125,24 @@ assert({
 });
 ```
 
-![img](regexp/last_index_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: /a/ {
+  lastIndex: 0,
+}
+expect: /a/ {
+  lastIndex: 10,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="regexp/last_index_throw.svg" alt="img" />
+
+</details>
+
 
 ## regex and string representing the same regex
 
@@ -78,4 +153,16 @@ assert({
 });
 ```
 
-![img](regexp/regex_and_string_representing_the_same_regex_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: /a/
+expect: "/a/"
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="regexp/regex_and_string_representing_the_same_regex_throw.svg" alt="img" />
+
+</details>

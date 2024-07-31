@@ -19,7 +19,20 @@ assert({
 });
 ```
 
-![img](function/async_arrow_function_vs_arrow_function_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: async () => { [source code] }
+expect: () => { [source code] }
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/async_arrow_function_vs_arrow_function_throw.svg" alt="img" />
+
+</details>
+
 
 ## arrow function source modified, name same
 
@@ -36,7 +49,24 @@ assert({
 });
 ```
 
-![img](function/arrow_function_source_modified__name_same_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: () => {
+  [source code],
+}
+expect: () => {
+  [source code],
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/arrow_function_source_modified__name_same_throw.svg" alt="img" />
+
+</details>
+
 
 ## async function vs function
 
@@ -53,7 +83,20 @@ assert({
 });
 ```
 
-![img](function/async_function_vs_function_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: async function () { [source code] }
+expect: function () { [source code] }
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/async_function_vs_function_throw.svg" alt="img" />
+
+</details>
+
 
 ## function vs arrow function
 
@@ -70,7 +113,24 @@ assert({
 });
 ```
 
-![img](function/function_vs_arrow_function_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: function () {
+  [source code],
+}
+expect: () => {
+  [source code],
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/function_vs_arrow_function_throw.svg" alt="img" />
+
+</details>
+
 
 ## function source modified, name same
 
@@ -91,7 +151,24 @@ assert({
 });
 ```
 
-![img](function/function_source_modified__name_same_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: function () {
+  [source code],
+}
+expect: function () {
+  [source code],
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/function_source_modified__name_same_throw.svg" alt="img" />
+
+</details>
+
 
 ## function source same, name modified
 
@@ -102,7 +179,20 @@ assert({
 });
 ```
 
-![img](function/function_source_same__name_modified_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: function foo () { [source code] }
+expect: function bar () { [source code] }
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/function_source_same__name_modified_throw.svg" alt="img" />
+
+</details>
+
 
 ## anonymous function vs named function
 
@@ -117,7 +207,20 @@ assert({
 });
 ```
 
-![img](function/anonymous_function_vs_named_function_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: function () { [source code] }
+expect: function foo () { [source code] }
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/anonymous_function_vs_named_function_throw.svg" alt="img" />
+
+</details>
+
 
 ## number of diff when comparing async function and function
 
@@ -140,7 +243,26 @@ assert({
 });
 ```
 
-![img](function/number_of_diff_when_comparing_async_function_and_function_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: async function () { [source code] },
+  b: true,
+}
+expect: {
+  a: function () { [source code] },
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/number_of_diff_when_comparing_async_function_and_function_throw.svg" alt="img" />
+
+</details>
+
 
 ## function prototype modified
 
@@ -157,7 +279,32 @@ assert({
 });
 ```
 
-![img](function/function_prototype_modified_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: function Foo () {
+  [source code],
+  prototype: {
+    a: true,
+    b: false,
+  },
+}
+expect: function Bar () {
+  [source code],
+  prototype: {
+    a: true,
+    b: true,
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/function_prototype_modified_throw.svg" alt="img" />
+
+</details>
+
 
 ## function prototype added
 
@@ -171,7 +318,27 @@ assert({
 });
 ```
 
-![img](function/function_prototype_added_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: function Foo () {
+  [source code],
+}
+expect: function Bar () {
+  [source code],
+  prototype: {
+    a: true,
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/function_prototype_added_throw.svg" alt="img" />
+
+</details>
+
 
 ## class vs function
 
@@ -182,7 +349,24 @@ assert({
 });
 ```
 
-![img](function/class_vs_function_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class actual {
+  [source code];
+}
+expect: function expect () {
+  [source code],
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_vs_function_throw.svg" alt="img" />
+
+</details>
+
 
 ## class Animal vs class Robot
 
@@ -193,7 +377,20 @@ assert({
 });
 ```
 
-![img](function/class_animal_vs_class_robot_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class Animal { [source code] }
+expect: class Robot { [source code] }
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_animal_vs_class_robot_throw.svg" alt="img" />
+
+</details>
+
 
 ## extends Animal vs extend Robot
 
@@ -214,7 +411,26 @@ assert({
 });
 ```
 
-![img](function/extends_animal_vs_extend_robot_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class Human extends Animal {
+  [source code];
+  static type = "human_actual";
+}
+expect: class Human extends Robot {
+  [source code];
+  static type = "human_expected";
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/extends_animal_vs_extend_robot_throw.svg" alt="img" />
+
+</details>
+
 
 ## class static property modified
 
@@ -229,7 +445,26 @@ assert({
 });
 ```
 
-![img](function/class_static_property_modified_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class A {
+  [source code];
+  static a = true;
+}
+expect: class A {
+  [source code];
+  static a = false;
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_static_property_modified_throw.svg" alt="img" />
+
+</details>
+
 
 ## class static property added
 
@@ -242,7 +477,25 @@ assert({
 });
 ```
 
-![img](function/class_static_property_added_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class A {
+  [source code];
+  static a = true;
+}
+expect: class A {
+  [source code];
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_static_property_added_throw.svg" alt="img" />
+
+</details>
+
 
 ## class static property removed
 
@@ -255,7 +508,25 @@ assert({
 });
 ```
 
-![img](function/class_static_property_removed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class A {
+  [source code];
+}
+expect: class A {
+  [source code];
+  static a = false;
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_static_property_removed_throw.svg" alt="img" />
+
+</details>
+
 
 ## class method diff source
 
@@ -280,7 +551,30 @@ assert({
 });
 ```
 
-![img](function/class_method_diff_source_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class {
+  [source code];
+  a() {
+    [source code],
+  };
+}
+expect: class {
+  [source code];
+  a() {
+    [source code],
+  };
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_method_diff_source_throw.svg" alt="img" />
+
+</details>
+
 
 ## class method added
 
@@ -293,7 +587,27 @@ assert({
 });
 ```
 
-![img](function/class_method_added_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class A {
+  [source code];
+  a() {
+    [source code],
+  };
+}
+expect: class A {
+  [source code];
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_method_added_throw.svg" alt="img" />
+
+</details>
+
 
 ## class method removed
 
@@ -306,7 +620,27 @@ assert({
 });
 ```
 
-![img](function/class_method_removed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class A {
+  [source code];
+}
+expect: class A {
+  [source code];
+  a() {
+    [source code],
+  };
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_method_removed_throw.svg" alt="img" />
+
+</details>
+
 
 ## class constructor modified
 
@@ -325,7 +659,24 @@ assert({
 });
 ```
 
-![img](function/class_constructor_modified_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class actual {
+  [source code];
+}
+expect: class expect {
+  [source code];
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_constructor_modified_throw.svg" alt="img" />
+
+</details>
+
 
 ## arrow function source same, name modified
 
@@ -344,7 +695,26 @@ assert({
 });
 ```
 
-![img](function/arrow_function_source_same__name_modified_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: () => { [source code] },
+  b: true,
+}
+expect: {
+  a: () => { [source code] },
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/arrow_function_source_same__name_modified_throw.svg" alt="img" />
+
+</details>
+
 
 ## arrow function source same, name same
 
@@ -362,7 +732,26 @@ assert({
 });
 ```
 
-![img](function/arrow_function_source_same__name_same_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: () => { [source code] },
+  b: true,
+}
+expect: {
+  a: () => { [source code] },
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/arrow_function_source_same__name_same_throw.svg" alt="img" />
+
+</details>
+
 
 ## class constructor added
 
@@ -377,7 +766,24 @@ assert({
 });
 ```
 
-![img](function/class_constructor_added_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class actual {
+  [source code];
+}
+expect: class expect {
+  [source code];
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_constructor_added_throw.svg" alt="img" />
+
+</details>
+
 
 ## class constructor removed
 
@@ -392,7 +798,24 @@ assert({
 });
 ```
 
-![img](function/class_constructor_removed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class actual {
+  [source code];
+}
+expect: class expect {
+  [source code];
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_constructor_removed_throw.svg" alt="img" />
+
+</details>
+
 
 ## static property value modified
 
@@ -415,7 +838,26 @@ assert({
 });
 ```
 
-![img](function/static_property_value_modified_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class {
+  [source code];
+  static a = "a_static";
+}
+expect: class {
+  [source code];
+  static a = "a_static_2";
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/static_property_value_modified_throw.svg" alt="img" />
+
+</details>
+
 
 ## static method return value modified
 
@@ -440,7 +882,30 @@ assert({
 });
 ```
 
-![img](function/static_method_return_value_modified_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class {
+  [source code];
+  a() {
+    [source code],
+  };
+}
+expect: class {
+  [source code];
+  a() {
+    [source code],
+  };
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/static_method_return_value_modified_throw.svg" alt="img" />
+
+</details>
+
 
 ## class static property and object property
 
@@ -457,7 +922,27 @@ assert({
 });
 ```
 
-![img](function/class_static_property_and_object_property_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class actual {
+  [source code];
+  static a = true;
+  static b = true;
+}
+expect: {
+  a: true,
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_static_property_and_object_property_throw.svg" alt="img" />
+
+</details>
+
 
 ## class static prop and function prop
 
@@ -472,7 +957,26 @@ assert({
 });
 ```
 
-![img](function/class_static_prop_and_function_prop_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class actual {
+  [source code];
+  static a = true;
+}
+expect: function () {
+  [source code],
+  a: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_static_prop_and_function_prop_throw.svg" alt="img" />
+
+</details>
+
 
 ## class prototype method vs function prototype method
 
@@ -489,7 +993,34 @@ assert({
 });
 ```
 
-![img](function/class_prototype_method_vs_function_prototype_method_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class actual {
+  [source code];
+  b() {
+    [source code],
+  };
+  static a = true;
+}
+expect: function toto () {
+  [source code],
+  prototype: {
+    b: () => {
+      [source code],
+    },
+  },
+  a: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_prototype_method_vs_function_prototype_method_throw.svg" alt="img" />
+
+</details>
+
 
 ## class constructor vs function
 
@@ -506,4 +1037,20 @@ assert({
 });
 ```
 
-![img](function/class_constructor_vs_function_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: class actual {
+  [source code];
+}
+expect: function expect () {
+  [source code],
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="function/class_constructor_vs_function_throw.svg" alt="img" />
+
+</details>

@@ -13,7 +13,20 @@ assert({
 });
 ```
 
-![img](error/error_message_added_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error: foo
+expect: Error
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_message_added_throw.svg" alt="img" />
+
+</details>
+
 
 ## error message removed
 
@@ -24,7 +37,20 @@ assert({
 });
 ```
 
-![img](error/error_message_removed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error
+expect: Error: bar
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_message_removed_throw.svg" alt="img" />
+
+</details>
+
 
 ## error message modified
 
@@ -35,7 +61,20 @@ assert({
 });
 ```
 
-![img](error/error_message_modified_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error: foo
+expect: Error: bar
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_message_modified_throw.svg" alt="img" />
+
+</details>
+
 
 ## error message vs object with message
 
@@ -46,7 +85,22 @@ assert({
 });
 ```
 
-![img](error/error_message_vs_object_with_message_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error: foo
+expect: {
+  message: "foo",
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_message_vs_object_with_message_throw.svg" alt="img" />
+
+</details>
+
 
 ## error stack vs object with stack
 
@@ -57,7 +111,22 @@ assert({
 });
 ```
 
-![img](error/error_stack_vs_object_with_stack_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error: message
+expect: {
+  stack: "stack",
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_stack_vs_object_with_stack_throw.svg" alt="img" />
+
+</details>
+
 
 ## error message multiline
 
@@ -70,7 +139,22 @@ france`),
 });
 ```
 
-![img](error/error_message_multiline_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error: Hello
+world
+expect: Error: Hello
+france
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_message_multiline_throw.svg" alt="img" />
+
+</details>
+
 
 ## error prop added
 
@@ -81,7 +165,22 @@ assert({
 });
 ```
 
-![img](error/error_prop_added_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error: message {
+  a: true,
+}
+expect: Error: message
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_prop_added_throw.svg" alt="img" />
+
+</details>
+
 
 ## error prop removed
 
@@ -92,7 +191,22 @@ assert({
 });
 ```
 
-![img](error/error_prop_removed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error: message
+expect: Error: message {
+  a: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_prop_removed_throw.svg" alt="img" />
+
+</details>
+
 
 ## error prop modified
 
@@ -103,7 +217,24 @@ assert({
 });
 ```
 
-![img](error/error_prop_modified_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error: message {
+  a: true,
+}
+expect: Error: message {
+  a: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_prop_modified_throw.svg" alt="img" />
+
+</details>
+
 
 ## error vs typeError
 
@@ -114,7 +245,20 @@ assert({
 });
 ```
 
-![img](error/error_vs_typeerror_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error
+expect: TypeError
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_vs_typeerror_throw.svg" alt="img" />
+
+</details>
+
 
 ## error vs CustomError
 
@@ -126,7 +270,20 @@ assert({
 });
 ```
 
-![img](error/error_vs_customerror_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error
+expect: ValidationError
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/error_vs_customerror_throw.svg" alt="img" />
+
+</details>
+
 
 ## actual message multiline, expect single
 
@@ -139,4 +296,18 @@ file:///Users/damien.maillard/dev/perso/jsenv-core/packages/related/test/tests/t
 });
 ```
 
-![img](error/actual_message_multiline__expect_single_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Error: snapshot comparison
+b
+@jsenv/core/packages/related/test/tests/test_plan_execution/…
+expect: Error: snapshot comparison
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="error/actual_message_multiline__expect_single_throw.svg" alt="img" />
+
+</details>

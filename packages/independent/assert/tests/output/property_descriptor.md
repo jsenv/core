@@ -21,7 +21,26 @@ assert({
 });
 ```
 
-![img](property_descriptor/enumerable_and_configurable_and_value_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: "a",
+}
+expect: {
+  a: "b",
+  enumerable a: false,
+  configurable a: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/enumerable_and_configurable_and_value_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## non enumerable hidden when value same
 
@@ -38,7 +57,26 @@ assert({
 });
 ```
 
-![img](property_descriptor/non_enumerable_hidden_when_value_same_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: "b",
+}
+expect: {
+  a: false,
+  b: "b",
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/non_enumerable_hidden_when_value_same_throw.svg" alt="img" />
+
+</details>
+
 
 ## non enumerable displayed when value modified
 
@@ -59,7 +97,24 @@ assert({
 });
 ```
 
-![img](property_descriptor/non_enumerable_displayed_when_value_modified_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  b: "b",
+}
+expect: {
+  b: "c",
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/non_enumerable_displayed_when_value_modified_throw.svg" alt="img" />
+
+</details>
+
 
 ## enumerable diff
 
@@ -80,7 +135,25 @@ assert({
 });
 ```
 
-![img](property_descriptor/enumerable_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: "a",
+}
+expect: {
+  a: "a",
+  enumerable a: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/enumerable_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## enumerable and value diff
 
@@ -101,7 +174,25 @@ assert({
 });
 ```
 
-![img](property_descriptor/enumerable_and_value_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: "a",
+  enumerable a: false,
+}
+expect: {
+  a: "b",
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/enumerable_and_value_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## getter and value
 
@@ -118,7 +209,26 @@ assert({
 });
 ```
 
-![img](property_descriptor/getter_and_value_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  get a() {
+    [source code],
+  },
+}
+expect: {
+  a: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/getter_and_value_throw.svg" alt="img" />
+
+</details>
+
 
 ## getter/setter and value
 
@@ -136,7 +246,29 @@ assert({
 });
 ```
 
-![img](property_descriptor/gettersetter_and_value_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  get a() {
+    [source code],
+  },
+  set a() {
+    [source code],
+  },
+}
+expect: {
+  a: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/gettersetter_and_value_throw.svg" alt="img" />
+
+</details>
+
 
 ## getter only and setter only
 
@@ -153,7 +285,28 @@ assert({
 });
 ```
 
-![img](property_descriptor/getter_only_and_setter_only_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  get a() {
+    [source code],
+  },
+}
+expect: {
+  set a() {
+    [source code],
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/getter_only_and_setter_only_throw.svg" alt="img" />
+
+</details>
+
 
 ## setter only and getter only
 
@@ -170,7 +323,28 @@ assert({
 });
 ```
 
-![img](property_descriptor/setter_only_and_getter_only_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  set a() {
+    [source code],
+  },
+}
+expect: {
+  get a() {
+    [source code],
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/setter_only_and_getter_only_throw.svg" alt="img" />
+
+</details>
+
 
 ## getter source code same
 
@@ -191,7 +365,26 @@ assert({
 });
 ```
 
-![img](property_descriptor/getter_source_code_same_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  get a() { [source code] },
+  b: true,
+}
+expect: {
+  get a() { [source code] },
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/getter_source_code_same_throw.svg" alt="img" />
+
+</details>
+
 
 ## getter source code diff
 
@@ -210,4 +403,24 @@ assert({
 });
 ```
 
-![img](property_descriptor/getter_source_code_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  get a() {
+    [source code],
+  },
+}
+expect: {
+  get a() {
+    [source code],
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="property_descriptor/getter_source_code_diff_throw.svg" alt="img" />
+
+</details>

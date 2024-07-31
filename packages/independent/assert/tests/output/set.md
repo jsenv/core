@@ -29,7 +29,28 @@ assert({
 });
 ```
 
-![img](set/set_value_added_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Set(
+  ↑ 3 values ↑
+  "d",
+  "Y",
+)
+expect: Set(
+  ↑ 3 values ↑
+  "c",
+  "Z",
+)
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="set/set_value_added_throw.svg" alt="img" />
+
+</details>
+
 
 ## compare set and map
 
@@ -40,7 +61,24 @@ assert({
 });
 ```
 
-![img](set/compare_set_and_map_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Map(
+  0 => "a",
+)
+expect: Set(
+  "a",
+)
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="set/compare_set_and_map_throw.svg" alt="img" />
+
+</details>
+
 
 ## compare set and array
 
@@ -51,7 +89,24 @@ assert({
 });
 ```
 
-![img](set/compare_set_and_array_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: [
+  "a",
+]
+expect: Set(
+  "a",
+)
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="set/compare_set_and_array_throw.svg" alt="img" />
+
+</details>
+
 
 ## set collapsed various cases
 
@@ -70,7 +125,32 @@ assert({
 });
 ```
 
-![img](set/set_collapsed_various_cases_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  set_without_diff: Set("a", "b"),
+  set_with_added: Set(
+    "a",
+  ),
+}
+expect: {
+  a: false,
+  set_without_diff: Set("b", "a"),
+  set_with_added: Set(
+    "b",
+  ),
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="set/set_collapsed_various_cases_throw.svg" alt="img" />
+
+</details>
+
 
 ## set collapsed deep
 
@@ -91,4 +171,30 @@ assert({
 });
 ```
 
-![img](set/set_collapsed_deep_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: {
+    set_without_diff: Set("a", "b"),
+    set_with_added: Set(
+      "a",
+    ),
+  },
+}
+expect: {
+  a: {
+    set_without_diff: Set("b", "a"),
+    set_with_added: Set(
+      "b",
+    ),
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="set/set_collapsed_deep_throw.svg" alt="img" />
+
+</details>

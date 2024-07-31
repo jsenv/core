@@ -19,7 +19,26 @@ assert({
 });
 ```
 
-![img](assert_starts_with/no_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: "AABB",
+  b: true,
+}
+expect: {
+  a: assert.startsWith("AAB"),
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="assert_starts_with/no_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## does not start with
 
@@ -30,4 +49,16 @@ assert({
 });
 ```
 
-![img](assert_starts_with/does_not_start_with_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: "AABB"
+expect: assert.startsWith("AB")
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="assert_starts_with/does_not_start_with_throw.svg" alt="img" />
+
+</details>

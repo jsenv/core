@@ -17,7 +17,24 @@ assert({
 });
 ```
 
-![img](object/basic_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  foo: true,
+}
+expect: {
+  foo: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/basic_throw.svg" alt="img" />
+
+</details>
+
 
 ## property are different
 
@@ -34,7 +51,26 @@ assert({
 });
 ```
 
-![img](object/property_are_different_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+}
+expect: {
+  a: {
+    b: true,
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/property_are_different_throw.svg" alt="img" />
+
+</details>
+
 
 ## property removed
 
@@ -50,7 +86,25 @@ assert({
 });
 ```
 
-![img](object/property_removed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+}
+expect: {
+  a: true,
+  should_be_there: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/property_removed_throw.svg" alt="img" />
+
+</details>
+
 
 ## property added
 
@@ -66,7 +120,25 @@ assert({
 });
 ```
 
-![img](object/property_added_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  should_not_be_there: true,
+}
+expect: {
+  a: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/property_added_throw.svg" alt="img" />
+
+</details>
+
 
 ## false should be an object
 
@@ -77,7 +149,22 @@ assert({
 });
 ```
 
-![img](object/false_should_be_an_object_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: false
+expect: {
+  foo: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/false_should_be_an_object_throw.svg" alt="img" />
+
+</details>
+
 
 ## object should be false
 
@@ -90,7 +177,24 @@ assert({
 });
 ```
 
-![img](object/object_should_be_false_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  foo: {
+    a: {},
+  },
+}
+expect: false
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/object_should_be_false_throw.svg" alt="img" />
+
+</details>
+
 
 ## false should be an object at property
 
@@ -105,7 +209,26 @@ assert({
 });
 ```
 
-![img](object/false_should_be_an_object_at_property_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  foo: false,
+}
+expect: {
+  foo: {
+    a: true,
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/false_should_be_an_object_at_property_throw.svg" alt="img" />
+
+</details>
+
 
 ## object should be false at property
 
@@ -120,7 +243,26 @@ assert({
 });
 ```
 
-![img](object/object_should_be_false_at_property_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  foo: {
+    a: true,
+  },
+}
+expect: {
+  foo: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/object_should_be_false_at_property_throw.svg" alt="img" />
+
+</details>
+
 
 ## max depth
 
@@ -171,7 +313,42 @@ assert({
 });
 ```
 
-![img](object/max_depth_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+ℹ diff starts at the.nesting.is.very
+
+actual: {
+  deep: {
+    in: {
+      this: {
+        one: {
+          foo: Object(2),
+        },
+      },
+    },
+  },
+}
+expect: {
+  deep: {
+    in: {
+      this: {
+        one: {
+          foo: false,
+        },
+      },
+    },
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_depth_throw.svg" alt="img" />
+
+</details>
+
 
 ## max depth inside diff
 
@@ -196,7 +373,28 @@ assert({
 });
 ```
 
-![img](object/max_depth_inside_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  foo: { foo_a: { foo_a2: Object(1) }, foo_b: { foo_b2: Object(1) } },
+  bar: true,
+}
+expect: {
+  foo: { foo_a: { foo_a2: Object(1) }, foo_b: { foo_b2: Object(1) } },
+  bar: {
+    bar_a: Object(1),
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_depth_inside_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## max diff per object
 
@@ -221,7 +419,35 @@ assert({
 });
 ```
 
-![img](object/max_diff_per_object_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: {
+    a: {
+      y: true,
+      z: true,
+    },
+  },
+  c: true,
+}
+expect: {
+  c: true,
+  b: {
+    a: false,
+  },
+  a: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_diff_per_object_throw.svg" alt="img" />
+
+</details>
+
 
 ## max 2 context after diff (there is 2)
 
@@ -240,7 +466,28 @@ assert({
 });
 ```
 
-![img](object/max_2_context_after_diff_(there_is_2)_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: true,
+  c: true,
+}
+expect: {
+  a: false,
+  b: true,
+  c: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_2_context_after_diff_(there_is_2)_throw.svg" alt="img" />
+
+</details>
+
 
 ## max 2 context after diff (there is 3)
 
@@ -261,7 +508,30 @@ assert({
 });
 ```
 
-![img](object/max_2_context_after_diff_(there_is_3)_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: true,
+  c: true,
+  e: true,
+}
+expect: {
+  a: false,
+  b: true,
+  c: true,
+  d: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_2_context_after_diff_(there_is_3)_throw.svg" alt="img" />
+
+</details>
+
 
 ## max 2 context after diff (there is 4)
 
@@ -284,7 +554,28 @@ assert({
 });
 ```
 
-![img](object/max_2_context_after_diff_(there_is_4)_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: true,
+  ↓ 3 props ↓
+}
+expect: {
+  a: false,
+  b: true,
+  ↓ 3 props ↓
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_2_context_after_diff_(there_is_4)_throw.svg" alt="img" />
+
+</details>
+
 
 ## max 2 context before diff (there is 2)
 
@@ -303,7 +594,28 @@ assert({
 });
 ```
 
-![img](object/max_2_context_before_diff_(there_is_2)_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: true,
+  c: true,
+}
+expect: {
+  a: true,
+  b: true,
+  c: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_2_context_before_diff_(there_is_2)_throw.svg" alt="img" />
+
+</details>
+
 
 ## max 2 context before diff (there is 3)
 
@@ -324,7 +636,28 @@ assert({
 });
 ```
 
-![img](object/max_2_context_before_diff_(there_is_3)_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  ↑ 2 props ↑
+  c: true,
+  d: true,
+}
+expect: {
+  ↑ 2 props ↑
+  c: true,
+  d: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_2_context_before_diff_(there_is_3)_throw.svg" alt="img" />
+
+</details>
+
 
 ## max 2 context before diff (there is 4)
 
@@ -347,7 +680,28 @@ assert({
 });
 ```
 
-![img](object/max_2_context_before_diff_(there_is_4)_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  ↑ 3 props ↑
+  d: true,
+  e: true,
+}
+expect: {
+  ↑ 3 props ↑
+  d: true,
+  e: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_2_context_before_diff_(there_is_4)_throw.svg" alt="img" />
+
+</details>
+
 
 ## max 2 context around diff
 
@@ -393,7 +747,48 @@ assert({
 });
 ```
 
-![img](object/max_2_context_around_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  ↑ 2 props ↑
+  c: true,
+  d: true,
+  e: true,
+  f: true,
+  g: true,
+  h: true,
+  i: true,
+  ↕ 2 props ↕
+  l: true,
+  m: true,
+  n: true,
+  ↓ 2 props ↓
+}
+expect: {
+  ↑ 2 props ↑
+  c: true,
+  d: false,
+  e: true,
+  f: true,
+  g: true,
+  h: false,
+  i: true,
+  ↕ 2 props ↕
+  l: true,
+  m: false,
+  n: true,
+  ↓ 2 props ↓
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_2_context_around_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## max 1 context around diff
 
@@ -414,7 +809,28 @@ assert({
 });
 ```
 
-![img](object/max_1_context_around_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: true,
+  c: true,
+}
+expect: {
+  c: true,
+  b: false,
+  a: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_1_context_around_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## max 0 context around diff
 
@@ -435,7 +851,28 @@ assert({
 });
 ```
 
-![img](object/max_0_context_around_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  ↑ 1 prop ↑
+  b: true,
+  ↓ 1 prop ↓
+}
+expect: {
+  ↑ 1 prop ↑
+  b: false,
+  ↓ 1 prop ↓
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/max_0_context_around_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## property should be there and is big
 
@@ -462,7 +899,31 @@ assert({
 });
 ```
 
-![img](object/property_should_be_there_and_is_big_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+}
+expect: {
+  a: true,
+  should_be_there: {
+    a: true,
+    b: true,
+    item: Object(3),
+    c: true,
+    ↓ 4 props ↓
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/property_should_be_there_and_is_big_throw.svg" alt="img" />
+
+</details>
+
 
 ## many props should not be there
 
@@ -486,7 +947,33 @@ assert({
 });
 ```
 
-![img](object/many_props_should_not_be_there_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: true,
+  c: {
+    an_object: true,
+    and: true,
+  },
+  d: true,
+  e: true,
+  ↓ 3 props ↓
+}
+expect: {
+  a: true,
+  c: {},
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/many_props_should_not_be_there_throw.svg" alt="img" />
+
+</details>
+
 
 ## object vs user
 
@@ -499,7 +986,20 @@ assert({
 });
 ```
 
-![img](object/object_vs_user_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {}
+expect: User {}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/object_vs_user_throw.svg" alt="img" />
+
+</details>
+
 
 ## collapsed with overview when no diff
 
@@ -516,7 +1016,26 @@ assert({
 });
 ```
 
-![img](object/collapsed_with_overview_when_no_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: { foo: true, bar: true, baz: { t: 1 } },
+  b: true,
+}
+expect: {
+  a: { foo: true, bar: true, baz: { t: 1 } },
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/collapsed_with_overview_when_no_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## one prop no diff
 
@@ -533,4 +1052,22 @@ assert({
 });
 ```
 
-![img](object/one_prop_no_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: { foo: true },
+  z: true,
+}
+expect: {
+  a: { foo: true },
+  z: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="object/one_prop_no_diff_throw.svg" alt="img" />
+
+</details>

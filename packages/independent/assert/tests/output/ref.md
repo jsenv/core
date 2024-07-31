@@ -18,7 +18,22 @@ assert({
 });
 ```
 
-![img](ref/reference_removed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {}
+expect: {
+  self: expect,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/reference_removed_throw.svg" alt="img" />
+
+</details>
+
 
 ## reference added
 
@@ -34,7 +49,22 @@ assert({
 });
 ```
 
-![img](ref/reference_added_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  self: actual,
+}
+expect: {}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/reference_added_throw.svg" alt="img" />
+
+</details>
+
 
 ## same ref to self
 
@@ -55,7 +85,26 @@ assert({
 });
 ```
 
-![img](ref/same_ref_to_self_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  self: actual,
+}
+expect: {
+  a: false,
+  self: expect,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/same_ref_to_self_throw.svg" alt="img" />
+
+</details>
+
 
 ## same ref to self 2
 
@@ -81,7 +130,26 @@ expect.object.self2 = expect;
 assert({ actual, expect });
 ```
 
-![img](ref/same_ref_to_self_2_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  object: { self: actual, self2: actual },
+}
+expect: {
+  a: false,
+  object: { self: expect, self2: expect },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/same_ref_to_self_2_throw.svg" alt="img" />
+
+</details>
+
 
 ## same ref to parent
 
@@ -103,7 +171,26 @@ expect.object.parent = expect;
 assert({ actual, expect });
 ```
 
-![img](ref/same_ref_to_parent_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  object: { parent: actual },
+}
+expect: {
+  a: false,
+  object: { parent: expect },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/same_ref_to_parent_throw.svg" alt="img" />
+
+</details>
+
 
 ## same ref to value after
 
@@ -126,7 +213,28 @@ assert({
 });
 ```
 
-![img](ref/same_ref_to_value_after_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: {},
+  toto: actual.b,
+}
+expect: {
+  a: false,
+  b: {},
+  toto: expect.b,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/same_ref_to_value_after_throw.svg" alt="img" />
+
+</details>
+
 
 ## same ref to value before
 
@@ -149,7 +257,28 @@ assert({
 });
 ```
 
-![img](ref/same_ref_to_value_before_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  toto: {},
+  b: actual.toto,
+}
+expect: {
+  a: false,
+  toto: {},
+  b: expect.toto,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/same_ref_to_value_before_throw.svg" alt="img" />
+
+</details>
+
 
 ## ref changed
 
@@ -169,7 +298,28 @@ expect.object.self = expect.object;
 assert({ actual, expect });
 ```
 
-![img](ref/ref_changed_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  object: {
+    self: actual,
+  },
+}
+expect: {
+  object: {
+    self: expect.object,
+  },
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/ref_changed_throw.svg" alt="img" />
+
+</details>
+
 
 ## true should be a ref to self
 
@@ -187,7 +337,24 @@ assert({
 });
 ```
 
-![img](ref/true_should_be_a_ref_to_self_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  self: true,
+}
+expect: {
+  self: expect,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/true_should_be_a_ref_to_self_throw.svg" alt="img" />
+
+</details>
+
 
 ## ref to self should be true
 
@@ -205,7 +372,24 @@ assert({
 });
 ```
 
-![img](ref/ref_to_self_should_be_true_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  self: actual,
+}
+expect: {
+  self: true,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/ref_to_self_should_be_true_throw.svg" alt="img" />
+
+</details>
+
 
 ## true should be object using ref
 
@@ -220,4 +404,21 @@ assert({
 });
 ```
 
-![img](ref/true_should_be_object_using_ref_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: true
+expect: {
+  foo: {
+    id: "a",
+  },
+  bar: expect.foo,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="ref/true_should_be_object_using_ref_throw.svg" alt="img" />
+
+</details>

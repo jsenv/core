@@ -19,7 +19,26 @@ assert({
 });
 ```
 
-![img](assert_close_to/0_1_+_0_2_is_close_to_0_3_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: 0.30_000_000_000_000_004,
+  b: true,
+}
+expect: {
+  a: assert.closeTo(0.3),
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="assert_close_to/0_1_+_0_2_is_close_to_0_3_throw.svg" alt="img" />
+
+</details>
+
 
 ## on a string
 
@@ -30,7 +49,20 @@ assert({
 });
 ```
 
-![img](assert_close_to/on_a_string_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: "toto"
+expect: assert.closeTo(0.4)
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="assert_close_to/on_a_string_throw.svg" alt="img" />
+
+</details>
+
 
 ## 0.3 and 0.4
 
@@ -41,4 +73,16 @@ assert({
 });
 ```
 
-![img](assert_close_to/0_3_and_0_4_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: 0.30_000_000_000_000_004
+expect: assert.closeTo(0.4)
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="assert_close_to/0_3_and_0_4_throw.svg" alt="img" />
+
+</details>

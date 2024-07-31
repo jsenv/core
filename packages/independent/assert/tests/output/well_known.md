@@ -13,7 +13,20 @@ assert({
 });
 ```
 
-![img](well_known/string_and_object_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: String
+expect: Object
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="well_known/string_and_object_throw.svg" alt="img" />
+
+</details>
+
 
 ## Number.MAX_VALUE and Number.MIN_VALUE
 
@@ -24,7 +37,20 @@ assert({
 });
 ```
 
-![img](well_known/number_max_value_and_number_min_value_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: 1_797_693_134_862_315_730_800_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_0…
+expect: 0.0_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000…
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="well_known/number_max_value_and_number_min_value_throw.svg" alt="img" />
+
+</details>
+
 
 ## Symbol.iterator and Symbol.toPrimitive
 
@@ -35,7 +61,20 @@ assert({
 });
 ```
 
-![img](well_known/symbol_iterator_and_symbol_toprimitive_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Symbol.iterator
+expect: Symbol.toPrimitive
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="well_known/symbol_iterator_and_symbol_toprimitive_throw.svg" alt="img" />
+
+</details>
+
 
 ## Symbol.for("a") and Symbol.for("b")
 
@@ -46,7 +85,20 @@ assert({
 });
 ```
 
-![img](well_known/symbol_for(a)_and_symbol_for(b)_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Symbol.for("a")
+expect: Symbol.for("b")
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="well_known/symbol_for(a)_and_symbol_for(b)_throw.svg" alt="img" />
+
+</details>
+
 
 ## Object.prototype.toString vs Object.prototype.hasOwnProperty
 
@@ -57,7 +109,20 @@ assert({
 });
 ```
 
-![img](well_known/object_prototype_tostring_vs_object_prototype_hasownproperty_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Object.prototype.toString
+expect: Object.prototype.hasOwnProperty
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="well_known/object_prototype_tostring_vs_object_prototype_hasownproperty_throw.svg" alt="img" />
+
+</details>
+
 
 ## null and Array.prototype
 
@@ -68,4 +133,16 @@ assert({
 });
 ```
 
-![img](well_known/null_and_array_prototype_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: null
+expect: Array.prototype
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="well_known/null_and_array_prototype_throw.svg" alt="img" />
+
+</details>

@@ -15,7 +15,23 @@ assert({
 });
 ```
 
-![img](fetch/abort_signal_pending_vs_aborted_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: AbortSignal
+expect: AbortSignal {
+  aborted: true,
+  reason: "toto",
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="fetch/abort_signal_pending_vs_aborted_throw.svg" alt="img" />
+
+</details>
+
 
 ## request url diff
 
@@ -26,7 +42,20 @@ assert({
 });
 ```
 
-![img](fetch/request_url_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Request("https://foo.com/")
+expect: Request("https://bar.com/")
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="fetch/request_url_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## request with custom options
 
@@ -62,7 +91,32 @@ assert({
 });
 ```
 
-![img](fetch/request_with_custom_options_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Request("http://example.com/")
+expect: Request("http://example.com/", {
+  body: ReadableStream,
+  cache: "no-store",
+  credentials: "omit",
+  headers: Headers(
+    "from" => "developer@example.org",
+  ),
+  method: "POST",
+  mode: "same-origin",
+  redirect: "manual",
+  referrerPolicy: "strict-origin",
+  referrer: "http://google.com/",
+})
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="fetch/request_with_custom_options_throw.svg" alt="img" />
+
+</details>
+
 
 ## request abort signal pending vs aborted
 
@@ -79,7 +133,25 @@ assert({
 });
 ```
 
-![img](fetch/request_abort_signal_pending_vs_aborted_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Request("http://example.com/")
+expect: Request("http://example.com/", {
+  signal: AbortSignal {
+    aborted: true,
+    reason: "toto",
+  },
+})
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="fetch/request_abort_signal_pending_vs_aborted_throw.svg" alt="img" />
+
+</details>
+
 
 ## response body diff
 
@@ -96,7 +168,26 @@ assert({
 });
 ```
 
-![img](fetch/response_body_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: Response(ReadableStream, { status: 200 }),
+  b: true,
+}
+expect: {
+  a: Response(ReadableStream, { status: 200 }),
+  b: false,
+}
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="fetch/response_body_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## response status diff
 
@@ -111,7 +202,24 @@ assert({
 });
 ```
 
-![img](fetch/response_status_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Response(ReadableStream, {
+  status: 200,
+})
+expect: Response(ReadableStream, {
+  status: 400,
+})
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="fetch/response_status_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## response prop diff
 
@@ -135,7 +243,31 @@ assert({
 });
 ```
 
-![img](fetch/response_prop_diff_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Response(ReadableStream, {
+  headers: Headers(
+    "content-type" => "text/plain;charset=UTF-8",
+  ),
+  status: 200,
+})
+expect: Response(ReadableStream, {
+  headers: Headers(
+    "content-length" => "0"
+  ),
+  status: 400,
+  statusText: "Bad request",
+})
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="fetch/response_prop_diff_throw.svg" alt="img" />
+
+</details>
+
 
 ## redirected response
 
@@ -146,4 +278,26 @@ assert({
 });
 ```
 
-![img](fetch/redirected_response_throw.svg)
+```console
+AssertionError: actual and expect are different
+
+actual: Response(ReadableStream, {
+  headers: Headers(
+    "content-type" => "text/plain;charset=UTF-8",
+  ),
+  status: 200,
+})
+expect: Response(null, {
+  headers: Headers(
+    "location" => "http://example.com/",
+  ),
+  status: 302,
+})
+```
+
+<details>
+  <summary>see colored</summary>
+
+  <img src="fetch/redirected_response_throw.svg" alt="img" />
+
+</details>
