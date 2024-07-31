@@ -117,44 +117,72 @@ export const filesystemSideEffects = (
               value: {},
               render: {
                 md: (options) => {
-                  const numberOfFiles = fileSideEffectArray.length;
-                  const generateSideEffectGroup = () => {
-                    let groupMd = "";
-                    for (const fileSideEffect of fileSideEffectArray) {
-                      if (groupMd) {
-                        groupMd += "\n\n";
-                      }
-                      const { url, outDirectoryReason } = fileSideEffect.value;
-                      const { text } = fileSideEffect.render.md(options);
-                      const relativeUrl = urlToRelativeUrl(
-                        url,
-                        commonDirectoryUrl,
-                      );
-                      if (outDirectoryReason) {
-                        groupMd += `${"#".repeat(2)} ${relativeUrl}
-${renderFileContent(
-  { ...text, relativeUrl },
-  {
-    ...options,
-    sideEffect: fileSideEffect,
-  },
-)}`;
-                        continue;
-                      }
-                      groupMd += `${"#".repeat(2)} ${relativeUrl}
-${renderFileContent(
-  { ...text, relativeUrl },
-  {
-    ...options,
-    sideEffect: fileSideEffect,
-  },
-)}`;
+                  let allFilesInsideOutDirectory = true;
+                  let groupMd = "";
+                  let numberOfFiles = 0;
+                  for (const fileSideEffect of fileSideEffectArray) {
+                    numberOfFiles++;
+                    if (groupMd) {
+                      groupMd += "\n\n";
                     }
-                    return groupMd;
-                  };
+                    const { url, outDirectoryReason } = fileSideEffect.value;
+                    const { text } = fileSideEffect.render.md(options);
+                    const urlRelativeToCommonDirectory = urlToRelativeUrl(
+                      url,
+                      commonDirectoryUrl,
+                    );
+                    if (outDirectoryReason) {
+                      const outUrlRelativeToCommonDirectory = urlToRelativeUrl(
+                        text.urlInsideOutDirectory,
+                        options.sideEffectFileUrl,
+                      );
+                      groupMd += `${"#".repeat(2)} ${urlRelativeToCommonDirectory}
+${renderFileContent(
+  {
+    ...text,
+    relativeUrl: urlRelativeToCommonDirectory,
+    outRelativeUrl: outUrlRelativeToCommonDirectory,
+  },
+  {
+    ...options,
+    sideEffect: fileSideEffect,
+  },
+)}`;
+                      continue;
+                    }
+                    allFilesInsideOutDirectory = false;
+                    groupMd += `${"#".repeat(2)} ${urlRelativeToCommonDirectory}
+${renderFileContent(
+  {
+    ...text,
+    relativeUrl: urlRelativeToCommonDirectory,
+  },
+  {
+    ...options,
+    sideEffect: fileSideEffect,
+  },
+)}`;
+                  }
+                  const commonDirectoryRelativeUrl =
+                    getUrlRelativeToBase(commonDirectoryUrl);
+                  if (allFilesInsideOutDirectory) {
+                    const commonDirectoryOutUrl = getUrlInsideOutDirectory(
+                      commonDirectoryUrl,
+                      options.outDirectoryUrl,
+                    );
+                    const commonDirectoryOutRelativeUrl = urlToRelativeUrl(
+                      commonDirectoryOutUrl,
+                      options.sideEffectFileUrl,
+                      { preferRelativeNotation: true },
+                    );
+                    return {
+                      label: `write ${numberOfFiles} files into "${commonDirectoryRelativeUrl}"`,
+                      text: `see [${commonDirectoryOutRelativeUrl}](${commonDirectoryOutRelativeUrl})`,
+                    };
+                  }
                   return {
-                    label: `write ${numberOfFiles} files into "${getUrlRelativeToBase(commonDirectoryUrl)}"`,
-                    text: generateSideEffectGroup(),
+                    label: `write ${numberOfFiles} files into "${commonDirectoryRelativeUrl}"`,
+                    text: groupMd,
                   };
                 },
               },
@@ -191,7 +219,7 @@ ${renderFileContent(
                 outDirectoryReason,
               },
               render: {
-                md: ({ outDirectoryUrl }) => {
+                md: ({ sideEffectFileUrl, outDirectoryUrl }) => {
                   const urlRelativeToBase = getUrlRelativeToBase(url);
                   if (outDirectoryReason) {
                     const urlInsideOutDirectory = getUrlInsideOutDirectory(
@@ -216,12 +244,20 @@ ${renderFileContent(
                     } else {
                       textValue = buffer;
                     }
+                    const outRelativeUrl = urlToRelativeUrl(
+                      urlInsideOutDirectory,
+                      sideEffectFileUrl,
+                      {
+                        preferRelativeNotation: true,
+                      },
+                    );
                     return {
                       label: `write file "${urlRelativeToBase}"`,
                       text: {
                         type: "file_content",
                         value: textValue,
                         relativeUrl: urlRelativeToBase,
+                        outRelativeUrl,
                         urlInsideOutDirectory,
                       },
                     };

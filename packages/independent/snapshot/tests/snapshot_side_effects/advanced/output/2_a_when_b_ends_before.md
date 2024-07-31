@@ -29,27 +29,27 @@ b_after_timeout_50
 
 ```
 \`\`\`js
-console\.log\("b\_before\_timeout\_50"\);
-await new Promise\(\(resolve\) => \{
-  setTimeout\(resolve, 50\);
-\}\);
-console\.log\("b\_after\_timeout\_50"\);
+console.log("b_before_timeout_50");
+await new Promise((resolve) => {
+  setTimeout(resolve, 50);
+});
+console.log("b_after_timeout_50");
 \`\`\`
 
-\# 1/3 console\.log
+# 1/3 console.log
 
 \`\`\`console
-b\_before\_timeout\_50
+b_before_timeout_50
 \`\`\`
 
-\# 2/3 console\.log
+# 2/3 console.log
 
 \`\`\`console
-b\_after\_timeout\_50
+b_after_timeout_50
 \`\`\`
 
 ```
-see [./output/3_b_when_b_ends_before.md](./2_a_when_b_ends_before/output/3_b_when_b_ends_before.md) for more
+see [./2_a_when_b_ends_before/output/3_b_when_b_ends_before.md](./2_a_when_b_ends_before/output/3_b_when_b_ends_before.md) for more
 
 # 5/6 console.log
 

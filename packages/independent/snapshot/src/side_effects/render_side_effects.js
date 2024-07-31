@@ -331,19 +331,10 @@ const renderPotentialAnsi = (
   // we will write a svg file
 };
 
-export const renderFileContent = (
-  text,
-  { sideEffect, sideEffectFileUrl, replace },
-) => {
+export const renderFileContent = (text, { sideEffect, replace }) => {
   const { url, buffer, outDirectoryReason } = sideEffect.value;
-  const { value, urlInsideOutDirectory, relativeUrl } = text;
-
   if (outDirectoryReason) {
-    const outRelativeUrl = urlToRelativeUrl(
-      urlInsideOutDirectory,
-      sideEffectFileUrl,
-      { preferRelativeNotation: true },
-    );
+    const { value, outRelativeUrl, urlInsideOutDirectory } = text;
     writeFileSync(urlInsideOutDirectory, buffer);
     let md = "";
     if (
@@ -354,7 +345,7 @@ export const renderFileContent = (
       md += renderMarkdownBlock(escapeMarkdownBlockContent(replace(value)));
       const fileLink = renderLinkMarkdown(
         {
-          text: relativeUrl,
+          text: outRelativeUrl,
           href: outRelativeUrl,
         },
         { replace },
@@ -362,15 +353,17 @@ export const renderFileContent = (
       md += `\nsee ${fileLink} for more`;
       return md;
     }
+    md += `see `;
     md += renderLinkMarkdown(
       {
-        text: relativeUrl,
+        text: outRelativeUrl,
         href: outRelativeUrl,
       },
       { replace },
     );
     return md;
   }
+  const { value } = text;
   let content = value;
   const extension = urlToExtension(url).slice(1);
   if (extension === "md") {
