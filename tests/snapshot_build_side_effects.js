@@ -1,11 +1,12 @@
-import { getCallerLocation, snapshotTests } from "@jsenv/snapshot";
+import { snapshotTests } from "@jsenv/snapshot";
 
 export const snapshotBuildTests = async (
-  fn,
-  sideEffectFileUrl,
+  testFileUrl,
+  fnRegisteringTests,
   options = {},
 ) => {
-  await snapshotTests(fn, sideEffectFileUrl, {
+  await snapshotTests(testFileUrl, fnRegisteringTests, {
+    sideEffectFilePattern: "./output/<basename>.md",
     ...options,
     logEffects:
       options.logEffects === false
@@ -27,6 +28,5 @@ export const snapshotBuildTests = async (
               ? {}
               : options.filesystemEffects),
           },
-    sourceFileUrl: getCallerLocation(2).url,
   });
 };

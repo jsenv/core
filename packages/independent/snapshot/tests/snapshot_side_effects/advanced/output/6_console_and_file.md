@@ -47,8 +47,8 @@ toto
 
 ```
 Error: in the end we throw
-  at @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:99:13
-  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:86:3
+  at snapshotSideEffects.sideEffectFileUrl (@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:120:13)
+  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:106:3
 ```
 
 <sub>

@@ -1,12 +1,13 @@
 ```js
 await snapshotTests(
+  import.meta.url,
   ({ test }) => {
     test("something", () => {
       console.log("bonjour");
     });
   },
-  new URL("./output/1_log_hello.md", import.meta.url),
   {
+    sideEffectFileUrl: "./output/1_log_hello.md",
     throwWhenDiff: true,
   },
 );

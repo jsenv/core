@@ -4,22 +4,19 @@ import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 import { readFileSync } from "@jsenv/filesystem";
 
-await snapshotBuildTests(
-  ({ test }) => {
-    test("0_js_module", () =>
-      build({
-        sourceDirectoryUrl: new URL("./client/", import.meta.url),
-        buildDirectoryUrl: new URL("./build/", import.meta.url),
-        entryPoints: { "./main.html": "main.html" },
-        bundling: false,
-        minification: false,
-        transpilation: { css: false },
-        runtimeCompat: { chrome: "89" },
-        assetManifest: true,
-      }));
-  },
-  new URL("./output/new_inline_content.md", import.meta.url),
-);
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_js_module", () =>
+    build({
+      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      entryPoints: { "./main.html": "main.html" },
+      bundling: false,
+      minification: false,
+      transpilation: { css: false },
+      runtimeCompat: { chrome: "89" },
+      assetManifest: true,
+    }));
+});
 
 const buildManifest = readFileSync(
   new URL("./output/0_js_module/build/asset-manifest.json", import.meta.url),

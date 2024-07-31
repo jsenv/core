@@ -1418,9 +1418,12 @@ const pathnameToFilename = (pathname) => {
   return filename;
 };
 
-const urlToBasename = (url) => {
+const urlToBasename = (url, removeAllExtensions) => {
   const filename = urlToFilename$1(url);
-  return filenameToBasename(filename);
+  const basename = filenameToBasename(filename);
+  {
+    return basename;
+  }
 };
 
 const filenameToBasename = (filename) => {

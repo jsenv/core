@@ -7,10 +7,27 @@ import { createCaptureSideEffects } from "./create_capture_side_effects.js";
 import { renderSideEffects } from "./render_side_effects.js";
 
 export const snapshotSideEffects = (
+  sourceFileUrl,
   fn,
-  sideEffectFileUrl,
-  { outDirectoryUrl, errorStackHidden, ...captureOptions } = {},
+  {
+    sideEffectFileUrl,
+    sideEffectFilePattern = "./output/<basename>.md",
+    outDirectoryUrl,
+    errorStackHidden,
+    ...captureOptions
+  } = {},
 ) => {
+  if (sideEffectFileUrl === undefined) {
+    const basename = urlToBasename(sourceFileUrl, true);
+    const sideEffectFileRelativeUrl = sideEffectFilePattern.replaceAll(
+      "<basename>",
+      basename,
+    );
+    sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, sourceFileUrl);
+  } else {
+    sideEffectFileUrl = new URL(sideEffectFileUrl, sourceFileUrl);
+  }
+
   const captureSideEffects = createCaptureSideEffects(captureOptions);
   if (outDirectoryUrl === undefined) {
     outDirectoryUrl = new URL(

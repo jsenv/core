@@ -17,11 +17,10 @@ const startTesting = async (fn) => {
     ? onlyScenarioMap
     : scenarioMap;
   for (const [scenario, { fn, options }] of activeScenarioMap) {
-    await snapshotSideEffects(
-      fn,
-      new URL(`./output/${scenario}.md`, import.meta.url),
-      options,
-    );
+    await snapshotSideEffects(import.meta.url, fn, {
+      sideEffectFileUrl: new URL(`./output/${scenario}.md`, import.meta.url),
+      ...options,
+    });
   }
   outputDirectorySnapshot.compare();
 };

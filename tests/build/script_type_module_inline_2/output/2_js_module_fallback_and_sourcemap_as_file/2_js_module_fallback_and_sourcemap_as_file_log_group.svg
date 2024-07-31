@@ -3,7 +3,7 @@
     <rect x="1" y="1" width="638" height="211.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
   <foreignObject id="body" y="0" width="100%" height="223.45" overflow="hidden">
-    <svg width="398.06" height="213.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+    <svg width="406.46" height="213.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="43.55">build "./main.html"</text>
         <text x="10" y="62.55">⠋ generate source graph</text>

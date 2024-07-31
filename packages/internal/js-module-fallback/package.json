@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/js-module-fallback",
-  "version": "1.3.32",
+  "version": "1.3.33",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -31,9 +31,9 @@
     "@babel/plugin-transform-modules-umd": "7.24.7",
     "@babel/plugin-transform-modules-systemjs": "7.24.7",
     "babel-plugin-transform-async-to-promises": "0.8.18",
-    "@jsenv/ast": "6.2.11",
-    "@jsenv/sourcemap": "1.2.20",
-    "@jsenv/urls": "2.5.0"
+    "@jsenv/ast": "6.2.12",
+    "@jsenv/sourcemap": "1.2.21",
+    "@jsenv/urls": "2.5.1"
   },
   "scripts": {
     "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",

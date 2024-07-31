@@ -1,8 +1,20 @@
 import { urlToFilename } from "./url_to_filename.js";
 
-export const urlToBasename = (url) => {
+export const urlToBasename = (url, removeAllExtensions) => {
   const filename = urlToFilename(url);
-  return filenameToBasename(filename);
+  const basename = filenameToBasename(filename);
+  if (!removeAllExtensions) {
+    return basename;
+  }
+  let currentBasename = basename;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const nextBasename = filenameToBasename(basename);
+    if (nextBasename === currentBasename) {
+      return currentBasename;
+    }
+    currentBasename = nextBasename;
+  }
 };
 
 export const filenameToBasename = (filename) => {
