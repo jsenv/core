@@ -15,6 +15,19 @@ assert({
 
 ![img](boolean/true_should_be_false_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: true
+expect: false
+```
+
+</details>
+
+
 ## false should be true
 
 ```js
@@ -25,6 +38,19 @@ assert({
 ```
 
 ![img](boolean/false_should_be_true_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: false
+expect: true
+```
+
+</details>
+
 
 ## true should be 1
 
@@ -37,6 +63,19 @@ assert({
 
 ![img](boolean/true_should_be_1_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: true
+expect: 1
+```
+
+</details>
+
+
 ## false should be 0
 
 ```js
@@ -47,3 +86,15 @@ assert({
 ```
 
 ![img](boolean/false_should_be_0_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: false
+expect: 0
+```
+
+</details>

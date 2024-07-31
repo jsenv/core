@@ -15,6 +15,19 @@ assert({
 
 ![img](number/-0_and_0_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: -0
+expect:  0
+```
+
+</details>
+
+
 ## 1 and -0
 
 ```js
@@ -25,6 +38,19 @@ assert({
 ```
 
 ![img](number/1_and_-0_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual:  1
+expect: -0
+```
+
+</details>
+
 
 ## -1 and 1
 
@@ -37,6 +63,19 @@ assert({
 
 ![img](number/-1_and_1_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: -1
+expect:  1
+```
+
+</details>
+
+
 ## 10.45 and 10.456
 
 ```js
@@ -47,6 +86,19 @@ assert({
 ```
 
 ![img](number/10_45_and_10_456_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 10.45
+expect: 10.456
+```
+
+</details>
+
 
 ## -Infinity and Infinity
 
@@ -59,6 +111,19 @@ assert({
 
 ![img](number/-infinity_and_infinity_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: -Infinity
+expect:  Infinity
+```
+
+</details>
+
+
 ## NaN and Infinity
 
 ```js
@@ -69,6 +134,19 @@ assert({
 ```
 
 ![img](number/nan_and_infinity_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: NaN
+expect: Infinity
+```
+
+</details>
+
 
 ## decimals using exponent
 
@@ -81,6 +159,19 @@ assert({
 
 ![img](number/decimals_using_exponent_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 0.000_002
+expect: 0.00_000_002
+```
+
+</details>
+
+
 ## decimals using exponent v2
 
 ```js
@@ -91,6 +182,19 @@ assert({
 ```
 
 ![img](number/decimals_using_exponent_v2_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 0.00_000_002
+expect: 0.000_000_002
+```
+
+</details>
+
 
 ## exponent integer
 
@@ -103,6 +207,19 @@ assert({
 
 ![img](number/exponent_integer_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 10_000_000_000_000
+expect:  1_000_000_000_000
+```
+
+</details>
+
+
 ## exponent negative integer
 
 ```js
@@ -113,6 +230,19 @@ assert({
 ```
 
 ![img](number/exponent_negative_integer_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual:  10_000_000_000_000
+expect: -10_000_000_000_000
+```
+
+</details>
+
 
 ## 1235 and 67_000
 
@@ -125,6 +255,19 @@ assert({
 
 ![img](number/1235_and_67_000_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual:  1_235
+expect: 67_000
+```
+
+</details>
+
+
 ## 149_600_000 and 1_464_301
 
 ```js
@@ -135,6 +278,19 @@ assert({
 ```
 
 ![img](number/149_600_000_and_1_464_301_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 149_600_000
+expect:   1_464_301
+```
+
+</details>
+
 
 ## 1_001 and 2_002
 
@@ -147,6 +303,19 @@ assert({
 
 ![img](number/1_001_and_2_002_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1_001
+expect: 2_002
+```
+
+</details>
+
+
 ## 2_200_002 and 1_100_001
 
 ```js
@@ -157,6 +326,19 @@ assert({
 ```
 
 ![img](number/2_200_002_and_1_100_001_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 2_200_002
+expect: 1_100_001
+```
+
+</details>
+
 
 ## 1234.56 and 12_345.67
 
@@ -169,6 +351,19 @@ assert({
 
 ![img](number/1234_56_and_12_345_67_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual:  1_234.56
+expect: 12_345.67
+```
+
+</details>
+
+
 ## -0.120_123 and -1_000_001
 
 ```js
@@ -179,6 +374,19 @@ assert({
 ```
 
 ![img](number/-0_120_123_and_-1_000_001_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual:         -0.120_123
+expect: -1_000_001
+```
+
+</details>
+
 
 ## -1.23456e15 and -1200000e5
 
@@ -191,6 +399,19 @@ assert({
 
 ![img](number/-1_23456e15_and_-1200000e5_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: -1_234_560_000_000_000
+expect:       -120_000_000_000
+```
+
+</details>
+
+
 ## 1.8e307 and 1.8e308
 
 ```js
@@ -201,6 +422,19 @@ assert({
 ```
 
 ![img](number/1_8e307_and_1_8e308_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 183_070_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000_000…
+expect: Infinity
+```
+
+</details>
+
 
 ## special notations
 
@@ -226,6 +460,29 @@ assert({
 
 ![img](number/special_notations_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: 3_654_320_000_000,
+  b: 10_922,
+  c: 10_922,
+  d: 262_926_349,
+  e: 11_259_375,
+  f: 1_090_785_345,
+  g: 1_090_785_345,
+}
+expect: {
+  a: 365_673_200,
+}
+```
+
+</details>
+
+
 ## 10 and "10"
 
 ```js
@@ -236,6 +493,19 @@ assert({
 ```
 
 ![img](number/10_and_10_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 10
+expect: "10"
+```
+
+</details>
+
 
 ## BigInt(1) and BigInt(2)
 
@@ -248,6 +518,19 @@ assert({
 
 ![img](number/bigint(1)_and_bigint(2)_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1n
+expect: 2n
+```
+
+</details>
+
+
 ## BigInt(1) and "1n"
 
 ```js
@@ -258,3 +541,15 @@ assert({
 ```
 
 ![img](number/bigint(1)_and_1n_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1n
+expect: "1n"
+```
+
+</details>

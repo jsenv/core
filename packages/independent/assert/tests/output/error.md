@@ -15,6 +15,19 @@ assert({
 
 ![img](error/error_message_added_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error: foo
+expect: Error
+```
+
+</details>
+
+
 ## error message removed
 
 ```js
@@ -25,6 +38,19 @@ assert({
 ```
 
 ![img](error/error_message_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error
+expect: Error: bar
+```
+
+</details>
+
 
 ## error message modified
 
@@ -37,6 +63,19 @@ assert({
 
 ![img](error/error_message_modified_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error: foo
+expect: Error: bar
+```
+
+</details>
+
+
 ## error message vs object with message
 
 ```js
@@ -48,6 +87,21 @@ assert({
 
 ![img](error/error_message_vs_object_with_message_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error: foo
+expect: {
+  message: "foo",
+}
+```
+
+</details>
+
+
 ## error stack vs object with stack
 
 ```js
@@ -58,6 +112,21 @@ assert({
 ```
 
 ![img](error/error_stack_vs_object_with_stack_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error: message
+expect: {
+  stack: "stack",
+}
+```
+
+</details>
+
 
 ## error message multiline
 
@@ -72,6 +141,21 @@ france`),
 
 ![img](error/error_message_multiline_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error: Hello
+world
+expect: Error: Hello
+france
+```
+
+</details>
+
+
 ## error prop added
 
 ```js
@@ -82,6 +166,21 @@ assert({
 ```
 
 ![img](error/error_prop_added_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error: message {
+  a: true,
+}
+expect: Error: message
+```
+
+</details>
+
 
 ## error prop removed
 
@@ -94,6 +193,21 @@ assert({
 
 ![img](error/error_prop_removed_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error: message
+expect: Error: message {
+  a: true,
+}
+```
+
+</details>
+
+
 ## error prop modified
 
 ```js
@@ -105,6 +219,23 @@ assert({
 
 ![img](error/error_prop_modified_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error: message {
+  a: true,
+}
+expect: Error: message {
+  a: false,
+}
+```
+
+</details>
+
+
 ## error vs typeError
 
 ```js
@@ -115,6 +246,19 @@ assert({
 ```
 
 ![img](error/error_vs_typeerror_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error
+expect: TypeError
+```
+
+</details>
+
 
 ## error vs CustomError
 
@@ -128,6 +272,19 @@ assert({
 
 ![img](error/error_vs_customerror_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error
+expect: ValidationError
+```
+
+</details>
+
+
 ## actual message multiline, expect single
 
 ```js
@@ -140,3 +297,17 @@ file:///Users/damien.maillard/dev/perso/jsenv-core/packages/related/test/tests/t
 ```
 
 ![img](error/actual_message_multiline__expect_single_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error: snapshot comparison
+b
+@jsenv/core/packages/related/test/tests/test_plan_execution/…
+expect: Error: snapshot comparison
+```
+
+</details>

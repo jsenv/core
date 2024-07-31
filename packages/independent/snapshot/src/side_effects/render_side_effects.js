@@ -246,6 +246,7 @@ const renderText = (
           typeof value.stack === "string")
       ) {
         onRenderError();
+        // return renderMarkdownBlock(text.value.stack);
         const exception = createException(text.value, { rootDirectoryUrl });
         const exceptionText = errorStackHidden
           ? `${exception.name}: ${exception.message}`
@@ -306,24 +307,36 @@ const renderPotentialAnsi = (
   string,
   { stringType, sideEffect, sideEffectFileUrl, generateOutFileUrl, replace },
 ) => {
+  const rawTextBlock = renderMarkdownBlock(
+    replace(string, { stringType }),
+    "console",
+  );
   // for assert we want ideally hummm
   // colored in details block?
   const includesAnsi = ansiRegex().test(string);
   if (!includesAnsi) {
-    return renderMarkdownBlock(replace(string, { stringType }), "console");
+    return rawTextBlock;
   }
   const svgFilename = `${sideEffect.code}${sideEffect.counter ? `_${sideEffect.counter}` : ""}.svg`;
   const svgFileUrl = generateOutFileUrl(svgFilename);
-  let svgFileContent = renderTerminalSvg(string, {
-    head: false,
-    paddingTop: 10,
-    paddingBottom: 10,
-  });
+  let svgFileContent = renderTerminalSvg(
+    replace(string, { stringType: "console", preserveAnsi: true }),
+    {
+      head: false,
+      paddingTop: 10,
+      paddingBottom: 10,
+    },
+  );
   svgFileContent = replace(svgFileContent, { fileUrl: svgFileUrl });
   writeFileSync(svgFileUrl, svgFileContent);
   const svgFileRelativeUrl = urlToRelativeUrl(svgFileUrl, sideEffectFileUrl);
-  return `![img](${svgFileRelativeUrl})`;
-  // we will write a svg file
+  let md = `![img](${svgFileRelativeUrl})`;
+  md += "\n\n";
+  md += renderMarkdownDetails(`${rawTextBlock}`, {
+    summary: "see without style",
+  });
+  md += "\n";
+  return md;
 };
 
 export const renderFileContent = (text, { sideEffect, replace }) => {

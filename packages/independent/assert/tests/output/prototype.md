@@ -15,6 +15,19 @@ assert({
 
 ![img](prototype/error_vs_typeerror_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Error
+expect: TypeError
+```
+
+</details>
+
+
 ## object with different prototypes
 
 ```js
@@ -30,6 +43,29 @@ assert({
 
 ![img](prototype/object_with_different_prototypes_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  __proto__: {
+    a: true,
+  },
+}
+expect: {
+  __proto__: {
+    a: {
+      b: true,
+    },
+  },
+}
+```
+
+</details>
+
+
 ## Object.create(null) and {}
 
 ```js
@@ -41,6 +77,21 @@ assert({
 
 ![img](prototype/object_create(null)_and_%7B%7D_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  __proto__: null,
+}
+expect: {}
+```
+
+</details>
+
+
 ## Object.create(null) and []
 
 ```js
@@ -51,6 +102,21 @@ assert({
 ```
 
 ![img](prototype/object_create(null)_and_[]_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  __proto__: null,
+}
+expect: []
+```
+
+</details>
+
 
 ## object vs custom proto
 
@@ -69,6 +135,23 @@ assert({
 ```
 
 ![img](prototype/object_vs_custom_proto_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: User {
+  name: "dam",
+}
+expect: {
+  name: "bob",
+}
+```
+
+</details>
+
 
 ## object vs instance
 
@@ -89,3 +172,23 @@ assert({
 ```
 
 ![img](prototype/object_vs_instance_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: User {
+    name: "dam",
+  },
+}
+expect: {
+  a: {
+    name: "bob",
+  },
+}
+```
+
+</details>

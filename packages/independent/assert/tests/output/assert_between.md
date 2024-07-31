@@ -15,6 +15,19 @@ assert({
 
 ![img](assert_between/below_or_equals_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 50
+expect: assert.belowOrEquals(25)
+```
+
+</details>
+
+
 ## below or equals when removed
 
 ```js
@@ -27,6 +40,21 @@ assert({
 ```
 
 ![img](assert_between/below_or_equals_when_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {}
+expect: {
+  a: assert.belowOrEquals(25),
+}
+```
+
+</details>
+
 
 ## below or equals ok
 
@@ -45,6 +73,25 @@ assert({
 
 ![img](assert_between/below_or_equals_ok_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: 25,
+}
+expect: {
+  a: false,
+  b: assert.belowOrEquals(25),
+}
+```
+
+</details>
+
+
 ## 50 is too small
 
 ```js
@@ -55,6 +102,19 @@ assert({
 ```
 
 ![img](assert_between/50_is_too_small_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 50
+expect: assert.between(100, 200)
+```
+
+</details>
+
 
 ## 3500 is between 3000 and 5000
 
@@ -72,3 +132,21 @@ assert({
 ```
 
 ![img](assert_between/3500_is_between_3000_and_5000_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: 3_500,
+  b: true,
+}
+expect: {
+  a: assert.between(3_000, 5_000),
+  b: false,
+}
+```
+
+</details>

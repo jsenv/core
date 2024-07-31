@@ -15,6 +15,19 @@ assert({
 
 ![img](assert_any/10_and_any(string)_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 10
+expect: assert.any(String)
+```
+
+</details>
+
+
 ## "foo" and any(String)
 
 ```js
@@ -32,6 +45,25 @@ assert({
 
 ![img](assert_any/foo_and_any(string)_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: "foo",
+}
+expect: {
+  a: false,
+  b: assert.any(String),
+}
+```
+
+</details>
+
+
 ## "foo" and not(any(String))
 
 ```js
@@ -42,6 +74,19 @@ assert({
 ```
 
 ![img](assert_any/foo_and_not(any(string))_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "foo"
+expect: assert.not(assert.any(String))
+```
+
+</details>
+
 
 ## 10 is any Number
 
@@ -60,6 +105,25 @@ assert({
 
 ![img](assert_any/10_is_any_number_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: 10,
+  b: true,
+}
+expect: {
+  a: assert.any(Number),
+  b: false,
+}
+```
+
+</details>
+
+
 ## 0 is any number
 
 ```js
@@ -77,6 +141,25 @@ assert({
 
 ![img](assert_any/0_is_any_number_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: 0,
+  b: true,
+}
+expect: {
+  a: assert.any(Number),
+  b: false,
+}
+```
+
+</details>
+
+
 ## any Error
 
 ```js
@@ -93,3 +176,21 @@ assert({
 ```
 
 ![img](assert_any/any_error_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: Error,
+  b: true,
+}
+expect: {
+  a: assert.any(Error),
+  b: false,
+}
+```
+
+</details>

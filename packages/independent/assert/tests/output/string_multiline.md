@@ -15,6 +15,20 @@ assert({
 
 ![img](string_multiline/add_empty_line_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| 
+        2| 
+expect: 1| 
+```
+
+</details>
+
+
 ## remove empty line
 
 ```js
@@ -25,6 +39,20 @@ assert({
 ```
 
 ![img](string_multiline/remove_empty_line_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| 
+expect: 1| 
+        2| 
+```
+
+</details>
+
 
 ## two line url
 
@@ -39,6 +67,21 @@ file:///file.txt`,
 
 ![img](string_multiline/two_line_url_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| a
+        2| file:///file.txt
+expect: 1| b
+        2| file:///file.txt
+```
+
+</details>
+
+
 ## one line vs two lines
 
 ```js
@@ -51,6 +94,20 @@ world`,
 
 ![img](string_multiline/one_line_vs_two_lines_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| Hel
+expect: 1| Hello
+        2| world
+```
+
+</details>
+
+
 ## two line vs one line
 
 ```js
@@ -62,6 +119,20 @@ world`,
 ```
 
 ![img](string_multiline/two_line_vs_one_line_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| Hello 
+        2| world
+expect: 1| Hello
+```
+
+</details>
+
 
 ## second line contains extra chars
 
@@ -82,6 +153,27 @@ and my brother is joe`,
 
 ![img](string_multiline/second_line_contains_extra_chars_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  foo: 1| Hello,
+       2| my name is Benjamin
+       3| and my brother is joe
+}
+expect: {
+  foo: 1| Hello,
+       2| my name is Ben
+       3| and my brother is joe
+}
+```
+
+</details>
+
+
 ## second line differs
 
 ```js
@@ -94,6 +186,21 @@ france`,
 ```
 
 ![img](string_multiline/second_line_differs_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| Hello
+        2| world
+expect: 1| Hello
+        2| france
+```
+
+</details>
+
 
 ## too many lines before and after
 
@@ -120,6 +227,27 @@ seven/1`,
 
 ![img](string_multiline/too_many_lines_before_and_after_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: ↑ 2 lines ↑
+        3| three
+        4| four/true
+        5| five
+        ↓ 2 lines ↓
+expect: ↑ 2 lines ↑
+        3| three
+        4| four/false
+        5| five
+        ↓ 2 lines ↓
+```
+
+</details>
+
+
 ## many lines added
 
 ```js
@@ -135,6 +263,23 @@ five six`,
 
 ![img](string_multiline/many_lines_added_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| one
+        2| two
+        3| three
+        4| four
+        5| five six
+expect: 1| one
+```
+
+</details>
+
+
 ## many lines removed
 
 ```js
@@ -149,6 +294,23 @@ five six`,
 ```
 
 ![img](string_multiline/many_lines_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| one
+expect: 1| one
+        2| two
+        3| three
+        4| four
+        5| five six
+```
+
+</details>
+
 
 ## prop before and after
 
@@ -169,6 +331,29 @@ assert({
 
 ![img](string_multiline/prop_before_and_after_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: 1| a
+     2| b
+  c: true,
+}
+expect: {
+  a: true,
+  b: 1| a
+     2| c
+  c: true,
+}
+```
+
+</details>
+
+
 ## new line escaped
 
 ```js
@@ -186,6 +371,25 @@ assert({
 
 ![img](string_multiline/new_line_escaped_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: "\\n",
+  b: true,
+}
+expect: {
+  a: "\\n",
+  b: false,
+}
+```
+
+</details>
+
+
 ## multiline without diff
 
 ```js
@@ -202,6 +406,27 @@ assert({
 ```
 
 ![img](string_multiline/multiline_without_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: 1| a
+     ↓ 1 line ↓
+  b: true,
+}
+expect: {
+  a: 1| a
+     ↓ 1 line ↓
+  b: false,
+}
+```
+
+</details>
+
 
 ## many lines around
 
@@ -221,6 +446,27 @@ Hello europa
 ```
 
 ![img](string_multiline/many_lines_around_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| 1abcdefghijklmnopqrstuvwx
+        2| 2abcdefghijklmnopqrstuvwxy
+        3| Hello world
+        4| 3abcdefghijklmnopqrstuvwxy
+        5| 4abcdefghijklmnopqrstuvwxy
+expect: 1| 1abcdefghijklmnopqrstuvwx
+        2| 2abcdefghijklmnopqrstuvwxy
+        3| Hello europa
+        4| 3abcdefghijklmnopqrstuvwxy
+        5| 4abcdefghijklmnopqrstuvwxy
+```
+
+</details>
+
 
 ## many lines before
 
@@ -243,6 +489,25 @@ assert({
 
 ![img](string_multiline/many_lines_before_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: ↑ 3 lines ↑
+        4| 4abcdefghijklmnopqrstuvwxy
+        5| 5abcdefghijklmnopqrstuvwxy
+        6| [Hello world]abcdefghijklmnopqrstuvwxyz
+expect: ↑ 3 lines ↑
+        4| 4abcdefghijklmnopqrstuvwxy
+        5| 5abcdefghijklmnopqrstuvwxy
+        6| [Hello france]abcdefghijklmnopqrstuvwxyz
+```
+
+</details>
+
+
 ## exactly on line break
 
 ```js
@@ -253,6 +518,20 @@ assert({
 ```
 
 ![img](string_multiline/exactly_on_line_break_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| abc
+expect: 1| ab
+        2| c
+```
+
+</details>
+
 
 ## space added end of string
 
@@ -268,3 +547,19 @@ c`,
 ```
 
 ![img](string_multiline/space_added_end_of_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 1| a
+        2| b 
+        3| c
+expect: 1| a
+        2| b
+        3| c
+```
+
+</details>

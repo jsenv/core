@@ -15,6 +15,23 @@ assert({
 
 ![img](url_search_params/foo_added_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+)
+expect: URLSearchParams()
+```
+
+</details>
+
+
 ## foo removed
 
 ```js
@@ -25,6 +42,23 @@ assert({
 ```
 
 ![img](url_search_params/foo_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URLSearchParams()
+expect: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+)
+```
+
+</details>
+
 
 ## foo modified
 
@@ -37,6 +71,27 @@ assert({
 
 ![img](url_search_params/foo_modified_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+)
+expect: URLSearchParams(
+  "foo" => [
+    "b",
+  ],
+)
+```
+
+</details>
+
+
 ## foo second value added
 
 ```js
@@ -47,6 +102,28 @@ assert({
 ```
 
 ![img](url_search_params/foo_second_value_added_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+    "a",
+  ],
+)
+expect: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+)
+```
+
+</details>
+
 
 ## foo second value removed
 
@@ -59,6 +136,28 @@ assert({
 
 ![img](url_search_params/foo_second_value_removed_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+)
+expect: URLSearchParams(
+  "foo" => [
+    "a",
+    "a",
+  ],
+)
+```
+
+</details>
+
+
 ## foo second value modified
 
 ```js
@@ -70,6 +169,29 @@ assert({
 
 ![img](url_search_params/foo_second_value_modified_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+    "b",
+  ],
+)
+expect: URLSearchParams(
+  "foo" => [
+    "a",
+    "a",
+  ],
+)
+```
+
+</details>
+
+
 ## param order modified and value modified
 
 ```js
@@ -80,3 +202,29 @@ assert({
 ```
 
 ![img](url_search_params/param_order_modified_and_value_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URLSearchParams(
+  "foo" => [
+    "a",
+  ],
+  "bar" => [
+    "a",
+  ],
+)
+expect: URLSearchParams(
+  "bar" => [
+    "b",
+  ],
+  "foo" => [
+    "b",
+  ],
+)
+```
+
+</details>

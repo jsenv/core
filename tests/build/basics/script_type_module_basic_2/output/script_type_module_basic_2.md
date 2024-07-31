@@ -15,7 +15,24 @@ build({
 
 ### 1/4 logs
 
-![img](0_js_module/0_js_module_log_group.svg)
+![img](0_js_module/log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+
+build "./main.html"
+⠋ generate source graph
+✔ generate source graph (done in <X> second)
+⠋ generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
+
+```
+
+</details>
+
 
 ### 2/4 write 3 files into "./build/"
 
@@ -23,7 +40,22 @@ see [./0_js_module/build/](./0_js_module/build/)
 
 ### 3/4 logs
 
-![img](0_js_module/0_js_module_log_group_1.svg)
+![img](0_js_module/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (327 B / 79 %)
+- js   : 2 (86 B / 21 %)
+- total: 3 (413 B / 100 %)
+--------------------
+```
+
+</details>
+
 
 ### 4/4 resolve
 
@@ -42,7 +74,24 @@ build({
 
 ### 1/4 logs
 
-![img](1_js_module_fallback/1_js_module_fallback_log_group.svg)
+![img](1_js_module_fallback/log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+
+build "./main.html"
+⠋ generate source graph
+✔ generate source graph (done in <X> second)
+⠋ generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
+
+```
+
+</details>
+
 
 ### 2/4 write 3 files into "./build/"
 
@@ -50,7 +99,22 @@ see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 
 ### 3/4 logs
 
-![img](1_js_module_fallback/1_js_module_fallback_log_group_1.svg)
+![img](1_js_module_fallback/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (17 kB / 97 %)
+- js   : 2 (453 B / 3 %)
+- total: 3 (17.4 kB / 100 %)
+--------------------
+```
+
+</details>
+
 
 ### 4/4 resolve
 
@@ -70,7 +134,24 @@ build({
 
 ### 1/4 logs
 
-![img](2_js_module_sourcemaps_file/2_js_module_sourcemaps_file_log_group.svg)
+![img](2_js_module_sourcemaps_file/log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+
+build "./main.html"
+⠋ generate source graph
+✔ generate source graph (done in <X> second)
+⠋ generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
+
+```
+
+</details>
+
 
 ### 2/4 write 4 files into "./build/"
 
@@ -78,7 +159,22 @@ see [./2_js_module_sourcemaps_file/build/](./2_js_module_sourcemaps_file/build/)
 
 ### 3/4 logs
 
-![img](2_js_module_sourcemaps_file/2_js_module_sourcemaps_file_log_group_1.svg)
+![img](2_js_module_sourcemaps_file/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (327 B / 73 %)
+- js   : 2 (120 B / 27 %)
+- total: 3 (447 B / 100 %)
+--------------------
+```
+
+</details>
+
 
 ### 4/4 resolve
 

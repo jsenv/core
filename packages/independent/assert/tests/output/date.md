@@ -15,6 +15,19 @@ assert({
 
 ![img](date/year_month_day_minutes_diff_on_iso_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "1970-01-01 00:00:00Z"
+expect: "1995-12-04 00:12:00Z"
+```
+
+</details>
+
+
 ## millisecond only diff on iso
 
 ```js
@@ -25,6 +38,19 @@ assert({
 ```
 
 ![img](date/millisecond_only_diff_on_iso_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "1970-01-01 00:00:00.000Z"
+expect: "1970-01-01 00:00:00.020Z"
+```
+
+</details>
+
 
 ## GMT+5 vs Z
 
@@ -37,6 +63,19 @@ assert({
 
 ![img](date/gmt+5_vs_z_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "1970-01-01 07:00:00Z"
+expect: "1970-01-01 00:00:00Z"
+```
+
+</details>
+
+
 ## GMT+2 vs iso
 
 ```js
@@ -47,6 +86,19 @@ assert({
 ```
 
 ![img](date/gmt+2_vs_iso_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "2024-05-07 09:27:04Z"
+expect: "1970-01-01 00:00:00Z"
+```
+
+</details>
+
 
 ## simplified date
 
@@ -59,6 +111,19 @@ assert({
 
 ![img](date/simplified_date_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "1970-01-01 10:00:00"
+expect: "1970-01-01 10:00:00Z"
+```
+
+</details>
+
+
 ## +2 hour on timezone
 
 ```js
@@ -69,6 +134,19 @@ assert({
 ```
 
 ![img](date/+2_hour_on_timezone_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "1970-01-01 07:00:00Z"
+expect: "1970-01-01 09:00:00Z"
+```
+
+</details>
+
 
 ## -2 hour on timezone
 
@@ -81,6 +159,19 @@ assert({
 
 ![img](date/-2_hour_on_timezone_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "1970-01-01 13:00:00Z"
+expect: "1970-01-01 11:00:00Z"
+```
+
+</details>
+
+
 ## +1h30 on timezone
 
 ```js
@@ -91,6 +182,19 @@ assert({
 ```
 
 ![img](date/+1h30_on_timezone_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "1970-01-01 08:30:00Z"
+expect: "1970-01-01 10:00:00Z"
+```
+
+</details>
+
 
 ## -1h30 on timezone
 
@@ -103,6 +207,19 @@ assert({
 
 ![img](date/-1h30_on_timezone_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "1970-01-01 11:30:00Z"
+expect: "1970-01-01 10:00:00Z"
+```
+
+</details>
+
+
 ## +0h30 on timezone
 
 ```js
@@ -113,6 +230,19 @@ assert({
 ```
 
 ![img](date/+0h30_on_timezone_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "1970-01-01 09:30:00Z"
+expect: "1970-01-01 10:00:00Z"
+```
+
+</details>
+
 
 ## date objects
 
@@ -125,6 +255,19 @@ assert({
 
 ![img](date/date_objects_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Date("1970-01-01 10:00:00Z")
+expect: Date("1970-01-01 08:00:00Z")
+```
+
+</details>
+
+
 ## date object vs date string
 
 ```js
@@ -135,6 +278,19 @@ assert({
 ```
 
 ![img](date/date_object_vs_date_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Date("1970-01-01")
+expect: "1970-01-01"
+```
+
+</details>
+
 
 ## date object prop
 
@@ -147,6 +303,23 @@ assert({
 
 ![img](date/date_object_prop_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Date("1970-01-01") {
+  foo: true,
+}
+expect: Date("1970-01-01") {
+  foo: false,
+}
+```
+
+</details>
+
+
 ## incorrect date string
 
 ```js
@@ -157,3 +330,15 @@ assert({
 ```
 
 ![img](date/incorrect_date_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "0"
+expect: "70/01/01"
+```
+
+</details>

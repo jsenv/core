@@ -17,6 +17,21 @@ assert({
 
 ![img](headers/content-type_added_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "content-type" => "text/xml",
+)
+expect: Headers()
+```
+
+</details>
+
+
 ## content-type removed
 
 ```js
@@ -29,6 +44,21 @@ assert({
 ```
 
 ![img](headers/content-type_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers()
+expect: Headers(
+  "content-type" => "text/xml",
+)
+```
+
+</details>
+
 
 ## content-type modified
 
@@ -45,6 +75,23 @@ assert({
 
 ![img](headers/content-type_modified_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "content-type" => "text/css",
+)
+expect: Headers(
+  "content-type" => "text/xml",
+)
+```
+
+</details>
+
+
 ## content-type multi diff
 
 ```js
@@ -59,6 +106,23 @@ assert({
 ```
 
 ![img](headers/content-type_multi_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "content-type" => "text/xml, text/css",
+)
+expect: Headers(
+  "content-type" => "text/xml, text/html",
+)
+```
+
+</details>
+
 
 ## content-type spacing diff
 
@@ -75,6 +139,23 @@ assert({
 
 ![img](headers/content-type_spacing_diff_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "content-type" => "text/xml,text/css",
+)
+expect: Headers(
+  "content-type" => "text/xml, text/css",
+)
+```
+
+</details>
+
+
 ## set cookie added
 
 ```js
@@ -88,6 +169,21 @@ assert({
 
 ![img](headers/set_cookie_added_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "set-cookie" => "a=1"
+)
+expect: Headers()
+```
+
+</details>
+
+
 ## set cookie removed
 
 ```js
@@ -100,6 +196,21 @@ assert({
 ```
 
 ![img](headers/set_cookie_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers()
+expect: Headers(
+  "set-cookie" => "a=1"
+)
+```
+
+</details>
+
 
 ## cookie added
 
@@ -116,6 +227,23 @@ assert({
 
 ![img](headers/cookie_added_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "set-cookie" => "a=1,b=2"
+)
+expect: Headers(
+  "set-cookie" => "a=1"
+)
+```
+
+</details>
+
+
 ## cookie removed
 
 ```js
@@ -130,6 +258,23 @@ assert({
 ```
 
 ![img](headers/cookie_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "set-cookie" => "a=1"
+)
+expect: Headers(
+  "set-cookie" => "a=1,b=2"
+)
+```
+
+</details>
+
 
 ## cookie order modified
 
@@ -146,6 +291,23 @@ assert({
 
 ![img](headers/cookie_order_modified_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "set-cookie" => "a=1,b=2"
+)
+expect: Headers(
+  "set-cookie" => "b=2,a=1"
+)
+```
+
+</details>
+
+
 ## cookie name used several times
 
 ```js
@@ -160,6 +322,23 @@ assert({
 ```
 
 ![img](headers/cookie_name_used_several_times_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "set-cookie" => "a=1,a=2"
+)
+expect: Headers(
+  "set-cookie" => "a=9,a=8"
+)
+```
+
+</details>
+
 
 ## cookie becomes secure
 
@@ -176,6 +355,23 @@ assert({
 
 ![img](headers/cookie_becomes_secure_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "set-cookie" => "a=1; Secure"
+)
+expect: Headers(
+  "set-cookie" => "a=1"
+)
+```
+
+</details>
+
+
 ## accept
 
 ```js
@@ -190,6 +386,23 @@ assert({
 ```
 
 ![img](headers/accept_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "accept" => "text/html, application/xml;q=0.9, */*;q=0.8"
+)
+expect: Headers(
+  "accept" => "text/html, application/xml;q=0.8, */*;q=0.7, text/css"
+)
+```
+
+</details>
+
 
 ## accept diff on non standard attribute
 
@@ -206,6 +419,23 @@ assert({
 
 ![img](headers/accept_diff_on_non_standard_attribute_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "accept" => "text/html; a=1; b=2"
+)
+expect: Headers(
+  "accept" => "text/html; a=9; b=9"
+)
+```
+
+</details>
+
+
 ## add accepted encoding
 
 ```js
@@ -220,6 +450,23 @@ assert({
 ```
 
 ![img](headers/add_accepted_encoding_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "accept-encoding" => "deflate, gzip, br"
+)
+expect: Headers(
+  "accept-encoding" => "deflate, gzip"
+)
+```
+
+</details>
+
 
 ## remove accepted encoding
 
@@ -236,6 +483,23 @@ assert({
 
 ![img](headers/remove_accepted_encoding_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "accept-encoding" => "deflate, gzip"
+)
+expect: Headers(
+  "accept-encoding" => "deflate, gzip, br"
+)
+```
+
+</details>
+
+
 ## accept-encoding diff on q
 
 ```js
@@ -250,6 +514,23 @@ assert({
 ```
 
 ![img](headers/accept-encoding_diff_on_q_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "accept-encoding" => "deflate, gzip;q=1.0, *;q=0.5"
+)
+expect: Headers(
+  "accept-encoding" => "deflate, gzip;q=0.9, *;q=0.4"
+)
+```
+
+</details>
+
 
 ## accept-language
 
@@ -266,6 +547,23 @@ assert({
 
 ![img](headers/accept-language_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "accept-language" => "fr-CH, fr;q=0.9, en;q=0.8, de;q=0.7, *;q=0.5"
+)
+expect: Headers(
+  "accept-language" => "en-US,en;q=0.5"
+)
+```
+
+</details>
+
+
 ## add metric in server timing
 
 ```js
@@ -280,6 +578,23 @@ assert({
 ```
 
 ![img](headers/add_metric_in_server_timing_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "server-timing" => "cpu;dur=2.4, app;dur=47.2"
+)
+expect: Headers(
+  "server-timing" => "cpu;dur=2.4"
+)
+```
+
+</details>
+
 
 ## remove metric in server timing
 
@@ -296,6 +611,23 @@ assert({
 
 ![img](headers/remove_metric_in_server_timing_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "server-timing" => "cpu;dur=2.4"
+)
+expect: Headers(
+  "server-timing" => "cpu;dur=2.4, app;dur=47.2"
+)
+```
+
+</details>
+
+
 ## add description to a metric
 
 ```js
@@ -311,6 +643,23 @@ assert({
 
 ![img](headers/add_description_to_a_metric_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "server-timing" => "cache;dur=23.2"
+)
+expect: Headers(
+  "server-timing" => 'cache;desc="Cache Read";dur=23.2'
+)
+```
+
+</details>
+
+
 ## content length diff
 
 ```js
@@ -325,3 +674,19 @@ assert({
 ```
 
 ![img](headers/content_length_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Headers(
+  "content-length" => "1456"
+)
+expect: Headers(
+  "content-length" => "1356"
+)
+```
+
+</details>

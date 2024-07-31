@@ -15,6 +15,19 @@ assert({
 
 ![img](url/url_object_port_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/")
+expect: URL("http://example.com:9999/")
+```
+
+</details>
+
+
 ## url string port
 
 ```js
@@ -25,6 +38,19 @@ assert({
 ```
 
 ![img](url/url_string_port_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/"
+expect: "http://example.com:9999/"
+```
+
+</details>
+
 
 ## url string vs url object port
 
@@ -37,6 +63,19 @@ assert({
 
 ![img](url/url_string_vs_url_object_port_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/"
+expect: URL("http://example.com:9999/")
+```
+
+</details>
+
+
 ## url search param modified
 
 ```js
@@ -47,6 +86,19 @@ assert({
 ```
 
 ![img](url/url_search_param_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/?foo=a")
+expect: URL("http://example.com/?foo=b")
+```
+
+</details>
+
 
 ## url search param added
 
@@ -59,6 +111,19 @@ assert({
 
 ![img](url/url_search_param_added_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/?foo=a")
+expect: URL("http://example.com/")
+```
+
+</details>
+
+
 ## url search param added 2
 
 ```js
@@ -69,6 +134,19 @@ assert({
 ```
 
 ![img](url/url_search_param_added_2_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/?foo=a&bar=b")
+expect: URL("http://example.com/?foo=a")
+```
+
+</details>
+
 
 ## url search param removed
 
@@ -81,6 +159,19 @@ assert({
 
 ![img](url/url_search_param_removed_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/")
+expect: URL("http://example.com/?foo=a")
+```
+
+</details>
+
+
 ## url search param removed 2
 
 ```js
@@ -91,6 +182,19 @@ assert({
 ```
 
 ![img](url/url_search_param_removed_2_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/?foo=a")
+expect: URL("http://example.com/?foo=a&bar=b")
+```
+
+</details>
+
 
 ## multi search param 2nd value modified
 
@@ -103,6 +207,19 @@ assert({
 
 ![img](url/multi_search_param_2nd_value_modified_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/?foo=a&foo=b&foo=a"
+expect: "http://example.com/?foo=a&foo=a&foo=a"
+```
+
+</details>
+
+
 ## adding multi search
 
 ```js
@@ -113,6 +230,19 @@ assert({
 ```
 
 ![img](url/adding_multi_search_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/?foo=a&foo=b"
+expect: "http://example.com/?foo=a"
+```
+
+</details>
+
 
 ## multi search adding a 3rd param
 
@@ -125,6 +255,19 @@ assert({
 
 ![img](url/multi_search_adding_a_3rd_param_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/?foo=a&foo=a&foo=a"
+expect: "http://example.com/?foo=a&foo=a"
+```
+
+</details>
+
+
 ## multi search removing a 3rd param
 
 ```js
@@ -136,6 +279,19 @@ assert({
 
 ![img](url/multi_search_removing_a_3rd_param_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/?foo=a&foo=a"
+expect: "http://example.com/?foo=a&foo=a&foo=a"
+```
+
+</details>
+
+
 ## removing multi search
 
 ```js
@@ -146,6 +302,19 @@ assert({
 ```
 
 ![img](url/removing_multi_search_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/?foo=a"
+expect: "http://example.com/?foo=a&foo=b"
+```
+
+</details>
+
 
 ## url search param + vs space
 
@@ -164,6 +333,25 @@ assert({
 
 ![img](url/url_search_param_+_vs_space_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: "http://example.com/?a=+&b=1",
+  b: true,
+}
+expect: {
+  a: "http://example.com/?a= &b=1",
+  b: false,
+}
+```
+
+</details>
+
+
 ## param order modified and value modified
 
 ```js
@@ -174,6 +362,19 @@ assert({
 ```
 
 ![img](url/param_order_modified_and_value_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/?foo=a&bar=a"
+expect: "http://example.com/?bar=b&foo=b"
+```
+
+</details>
+
 
 ## param order modified and value modified 2
 
@@ -186,6 +387,19 @@ assert({
 
 ![img](url/param_order_modified_and_value_modified_2_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/?foo=foo_1&foo=foo_2&bar=bar_1&bar=bar_2"
+expect: "http://example.com/?bar=BAR_1&bar=BAR_2&foo=FOO_1&foo=FOO_2"
+```
+
+</details>
+
+
 ## url hash modified
 
 ```js
@@ -196,6 +410,19 @@ assert({
 ```
 
 ![img](url/url_hash_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/#foo")
+expect: URL("http://example.com/#bar")
+```
+
+</details>
+
 
 ## url hash removed
 
@@ -208,6 +435,19 @@ assert({
 
 ![img](url/url_hash_removed_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/")
+expect: URL("http://example.com/#bar")
+```
+
+</details>
+
+
 ## url and url string
 
 ```js
@@ -218,6 +458,19 @@ assert({
 ```
 
 ![img](url/url_and_url_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/")
+expect: "http://example.com:9999/"
+```
+
+</details>
+
 
 ## url string and url string
 
@@ -230,6 +483,19 @@ assert({
 
 ![img](url/url_string_and_url_string_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/"
+expect: "http://example.com:9999/"
+```
+
+</details>
+
+
 ## url and non url string
 
 ```js
@@ -240,6 +506,19 @@ assert({
 ```
 
 ![img](url/url_and_non_url_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/")
+expect: "totoabcexample.com"
+```
+
+</details>
+
 
 ## non url string and url
 
@@ -252,6 +531,19 @@ assert({
 
 ![img](url/non_url_string_and_url_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "totoabcexample.com"
+expect: URL("http://example.com/")
+```
+
+</details>
+
+
 ## url and boolean
 
 ```js
@@ -262,6 +554,19 @@ assert({
 ```
 
 ![img](url/url_and_boolean_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com/")
+expect: true
+```
+
+</details>
+
 
 ## url string inside a prop
 
@@ -280,6 +585,25 @@ assert({
 
 ![img](url/url_string_inside_a_prop_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: "http://example.com/",
+  b: true,
+}
+expect: {
+  a: "http://example.com/",
+  b: false,
+}
+```
+
+</details>
+
+
 ## url string and object with href
 
 ```js
@@ -292,6 +616,21 @@ assert({
 ```
 
 ![img](url/url_string_and_object_with_href_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example.com/"
+expect: {
+  href: "http://example.com/",
+}
+```
+
+</details>
+
 
 ## url object port and object with port
 
@@ -306,6 +645,21 @@ assert({
 
 ![img](url/url_object_port_and_object_with_port_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: URL("http://example.com:9999/")
+expect: {
+  port: 45,
+}
+```
+
+</details>
+
+
 ## file protocol vs http protocol
 
 ```js
@@ -316,6 +670,19 @@ assert({
 ```
 
 ![img](url/file_protocol_vs_http_protocol_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "http://example/file.txt"
+expect: "file://example/file.js"
+```
+
+</details>
+
 
 ## url origin is case insensitive
 
@@ -334,6 +701,25 @@ assert({
 
 ![img](url/url_origin_is_case_insensitive_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: "http://example.com/page",
+  b: true,
+}
+expect: {
+  a: "http://example.com/PAGE",
+  b: false,
+}
+```
+
+</details>
+
+
 ## internal string vs url object
 
 ```js
@@ -347,6 +733,19 @@ assert({
 ```
 
 ![img](url/internal_string_vs_url_object_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Signal("toto")
+expect: URL("http://toto.com/")
+```
+
+</details>
+
 
 ## internal url string vs url string
 
@@ -362,6 +761,19 @@ assert({
 
 ![img](url/internal_url_string_vs_url_string_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Signal("http://a.com/")
+expect: "http://b.com/"
+```
+
+</details>
+
+
 ## file url inside array
 
 ```js
@@ -372,3 +784,15 @@ assert({
 ```
 
 ![img](url/file_url_inside_array_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "file:///dir/a.js"
+expect: "file:///dir/b.js"
+```
+
+</details>

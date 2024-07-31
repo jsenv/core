@@ -17,6 +17,21 @@ assert({
 
 ![img](symbol/named_symbol()_property_added_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  Symbol("foo"): true,
+}
+expect: {}
+```
+
+</details>
+
+
 ## named Symbol() property removed
 
 ```js
@@ -29,6 +44,21 @@ assert({
 ```
 
 ![img](symbol/named_symbol()_property_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {}
+expect: {
+  Symbol("foo"): true,
+}
+```
+
+</details>
+
 
 ## Symbol.for() property value modified
 
@@ -44,6 +74,23 @@ assert({
 ```
 
 ![img](symbol/symbol_for()_property_value_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  Symbol.for("foo"): true,
+}
+expect: {
+  Symbol.for("foo"): false,
+}
+```
+
+</details>
+
 
 ## Symbol.for() property no diff
 
@@ -62,6 +109,23 @@ assert({
 
 ![img](symbol/symbol_for()_property_no_diff_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+}
+expect: {
+  a: false,
+}
+```
+
+</details>
+
+
 ## named Symbol() property value modified
 
 ```js
@@ -76,6 +140,23 @@ assert({
 ```
 
 ![img](symbol/named_symbol()_property_value_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  Symbol("foo"): true,
+}
+expect: {
+  Symbol("foo"): false,
+}
+```
+
+</details>
+
 
 ## named Symbol() property no diff
 
@@ -94,6 +175,25 @@ assert({
 
 ![img](symbol/named_symbol()_property_no_diff_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  Symbol("foo"): true,
+  a: true,
+}
+expect: {
+  Symbol("foo"): true,
+  a: false,
+}
+```
+
+</details>
+
+
 ## anonymous Symbol() property value modified
 
 ```js
@@ -108,6 +208,23 @@ assert({
 ```
 
 ![img](symbol/anonymous_symbol()_property_value_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  Symbol(): true,
+}
+expect: {
+  Symbol(): false,
+}
+```
+
+</details>
+
 
 ## Symbol.iterator property value modified
 
@@ -124,6 +241,23 @@ assert({
 
 ![img](symbol/symbol_iterator_property_value_modified_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  Symbol.iterator: true,
+}
+expect: {
+  Symbol.iterator: false,
+}
+```
+
+</details>
+
+
 ## Symbol.toStringTag property value modified
 
 ```js
@@ -139,6 +273,19 @@ assert({
 
 ![img](symbol/symbol_tostringtag_property_value_modified_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: a
+expect: b
+```
+
+</details>
+
+
 ## well known symbol diff
 
 ```js
@@ -149,6 +296,19 @@ assert({
 ```
 
 ![img](symbol/well_known_symbol_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Symbol.iterator
+expect: Symbol.toStringTag
+```
+
+</details>
+
 
 ## Symbol() description modified
 
@@ -161,6 +321,19 @@ assert({
 
 ![img](symbol/symbol()_description_modified_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Symbol("a")
+expect: Symbol("b")
+```
+
+</details>
+
+
 ## Symbol.for() key modified
 
 ```js
@@ -171,6 +344,19 @@ assert({
 ```
 
 ![img](symbol/symbol_for()_key_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Symbol.for("a")
+expect: Symbol.for("b")
+```
+
+</details>
+
 
 ## named Symbol() vs anonymous symbol
 
@@ -183,6 +369,19 @@ assert({
 
 ![img](symbol/named_symbol()_vs_anonymous_symbol_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Symbol("a")
+expect: Symbol()
+```
+
+</details>
+
+
 ## anonymous symbol vs named Symbol()
 
 ```js
@@ -193,6 +392,19 @@ assert({
 ```
 
 ![img](symbol/anonymous_symbol_vs_named_symbol()_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Symbol()
+expect: Symbol("b")
+```
+
+</details>
+
 
 ## named Symbol() vs Symbol.for()
 
@@ -205,6 +417,19 @@ assert({
 
 ![img](symbol/named_symbol()_vs_symbol_for()_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Symbol("a")
+expect: Symbol.for("a")
+```
+
+</details>
+
+
 ## Symbol.for() vs named Symbol()
 
 ```js
@@ -215,6 +440,19 @@ assert({
 ```
 
 ![img](symbol/symbol_for()_vs_named_symbol()_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Symbol.for("b")
+expect: Symbol("a")
+```
+
+</details>
+
 
 ## symbol diff comes first
 
@@ -232,3 +470,21 @@ assert({
 ```
 
 ![img](symbol/symbol_diff_comes_first_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  Symbol.for("a"): true,
+  a: true,
+}
+expect: {
+  Symbol.for("a"): false,
+  a: false,
+}
+```
+
+</details>

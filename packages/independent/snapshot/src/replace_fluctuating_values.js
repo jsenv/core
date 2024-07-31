@@ -21,7 +21,7 @@ export const replaceFluctuatingValues = (
     stringType,
     rootDirectoryUrl,
     fileUrl,
-    removeAnsi = true,
+    preserveAnsi,
     // for unit test
     replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
       rootDirectoryUrl,
@@ -51,7 +51,7 @@ export const replaceFluctuatingValues = (
     if (stringType === "filesystem") {
       return replaceFilesystemWellKnownValues(value);
     }
-    if (removeAnsi) {
+    if (!preserveAnsi) {
       value = stripAnsi(value);
     }
     value = replaceFilesystemWellKnownValues(value, {

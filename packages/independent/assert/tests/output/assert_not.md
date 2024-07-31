@@ -15,6 +15,19 @@ assert({
 
 ![img](assert_not/42_and_not(42)_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: 42
+expect: assert.not(42)
+```
+
+</details>
+
+
 ## 41 and not(42)
 
 ```js
@@ -32,6 +45,25 @@ assert({
 
 ![img](assert_not/41_and_not(42)_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: 41,
+}
+expect: {
+  a: false,
+  b: assert.not(42),
+}
+```
+
+</details>
+
+
 ## object and not (object)
 
 ```js
@@ -42,6 +74,19 @@ assert({
 ```
 
 ![img](assert_not/object_and_not_(object)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: { a: true }
+expect: assert.not({ a: true })
+```
+
+</details>
+
 
 ## object and not(object)
 
@@ -59,3 +104,25 @@ assert({
 ```
 
 ![img](assert_not/object_and_not(object)_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: {
+    b2: true,
+  },
+}
+expect: {
+  a: false,
+  b: assert.not({
+    b2: false,
+  }),
+}
+```
+
+</details>

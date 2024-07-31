@@ -17,6 +17,21 @@ assert({
 
 ![img](map/map_entry_added_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Map(
+  "a" => true,
+)
+expect: Map()
+```
+
+</details>
+
+
 ## map entry removed
 
 ```js
@@ -29,6 +44,21 @@ assert({
 ```
 
 ![img](map/map_entry_removed_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Map()
+expect: Map(
+  "a" => true,
+)
+```
+
+</details>
+
 
 ## map value modified
 
@@ -44,3 +74,19 @@ assert({
 ```
 
 ![img](map/map_value_modified_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: Map(
+  "a" => true,
+)
+expect: Map(
+  "a" => false,
+)
+```
+
+</details>

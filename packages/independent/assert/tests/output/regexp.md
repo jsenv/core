@@ -15,6 +15,19 @@ assert({
 
 ![img](regexp/a_vs_b_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: /a/
+expect: /b/
+```
+
+</details>
+
+
 ## i flag vs no flag
 
 ```js
@@ -25,6 +38,19 @@ assert({
 ```
 
 ![img](regexp/i_flag_vs_no_flag_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: /a/i
+expect: /a/
+```
+
+</details>
+
 
 ## gi flag vs ig flag
 
@@ -44,6 +70,25 @@ assert({
 
 ![img](regexp/gi_flag_vs_ig_flag_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: /a/gi,
+  b: true,
+}
+expect: {
+  a: /a/gi,
+  b: false,
+}
+```
+
+</details>
+
+
 ## special char: parenthesis vs dot
 
 ```js
@@ -54,6 +99,19 @@ assert({
 ```
 
 ![img](regexp/special_char_parenthesis_vs_dot_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: /^\($/g
+expect: /^\.$/g
+```
+
+</details>
+
 
 ## last index
 
@@ -69,6 +127,23 @@ assert({
 
 ![img](regexp/last_index_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: /a/ {
+  lastIndex: 0,
+}
+expect: /a/ {
+  lastIndex: 10,
+}
+```
+
+</details>
+
+
 ## regex and string representing the same regex
 
 ```js
@@ -79,3 +154,15 @@ assert({
 ```
 
 ![img](regexp/regex_and_string_representing_the_same_regex_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: /a/
+expect: "/a/"
+```
+
+</details>

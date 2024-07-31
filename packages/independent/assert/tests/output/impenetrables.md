@@ -21,6 +21,25 @@ assert({
 
 ![img](impenetrables/promise_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: Promise,
+}
+expect: {
+  a: false,
+  b: Promise,
+}
+```
+
+</details>
+
+
 ## weakset
 
 ```js
@@ -37,6 +56,25 @@ assert({
 ```
 
 ![img](impenetrables/weakset_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: WeakSet,
+}
+expect: {
+  a: false,
+  b: WeakSet,
+}
+```
+
+</details>
+
 
 ## weakmap
 
@@ -58,3 +96,21 @@ assert({
 ```
 
 ![img](impenetrables/weakmap_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: true,
+  b: WeakMap,
+}
+expect: {
+  a: false,
+  b: WeakMap,
+}
+```
+
+</details>

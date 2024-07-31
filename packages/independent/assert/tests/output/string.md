@@ -15,6 +15,19 @@ assert({
 
 ![img](string/string_single_char_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "a"
+expect: "b"
+```
+
+</details>
+
+
 ## diff end of string
 
 ```js
@@ -25,6 +38,19 @@ assert({
 ```
 
 ![img](string/diff_end_of_string_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "hello world"
+expect: "hello france"
+```
+
+</details>
+
 
 ## one char should be empty
 
@@ -37,6 +63,19 @@ assert({
 
 ![img](string/one_char_should_be_empty_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "a"
+expect: ""
+```
+
+</details>
+
+
 ## empty should be one char
 
 ```js
@@ -47,6 +86,19 @@ assert({
 ```
 
 ![img](string/empty_should_be_one_char_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: ""
+expect: "a"
+```
+
+</details>
+
 
 ## tab vs space
 
@@ -59,6 +111,19 @@ assert({
 
 ![img](string/tab_vs_space_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "\t"
+expect: "  "
+```
+
+</details>
+
+
 ## blank char should be empty
 
 ```js
@@ -69,6 +134,19 @@ assert({
 ```
 
 ![img](string/blank_char_should_be_empty_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "\x7F"
+expect: ""
+```
+
+</details>
+
 
 ## blank char should be empty 2
 
@@ -81,6 +159,19 @@ assert({
 
 ![img](string/blank_char_should_be_empty_2_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "\x00"
+expect: ""
+```
+
+</details>
+
+
 ## diff unicode
 
 ```js
@@ -91,6 +182,19 @@ assert({
 ```
 
 ![img](string/diff_unicode_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "⚫️"
+expect: "⚪️"
+```
+
+</details>
+
 
 ## diff emoticon
 
@@ -103,6 +207,19 @@ assert({
 
 ![img](string/diff_emoticon_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "👨‍👩‍👧‍👧"
+expect: "😍"
+```
+
+</details>
+
+
 ## diff special char
 
 ```js
@@ -113,6 +230,19 @@ assert({
 ```
 
 ![img](string/diff_special_char_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "ñ"
+expect: "n"
+```
+
+</details>
+
 
 ## special char diff
 
@@ -125,6 +255,19 @@ assert({
 
 ![img](string/special_char_diff_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: ""
+expect: ""
+```
+
+</details>
+
+
 ## more special char diff
 
 ```js
@@ -135,6 +278,19 @@ assert({
 ```
 
 ![img](string/more_special_char_diff_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "!'#$%&'()*+,-./:;<=>"
+expect: "?@^[\\]_`{|}~"
+```
+
+</details>
+
 
 ## diff blackslash and ellipsis special chars
 
@@ -147,6 +303,19 @@ assert({
 
 ![img](string/diff_blackslash_and_ellipsis_special_chars_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "\\"
+expect: ""
+```
+
+</details>
+
+
 ## diff single space with 2 space
 
 ```js
@@ -157,6 +326,19 @@ assert({
 ```
 
 ![img](string/diff_single_space_with_2_space_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: " "
+expect: "  "
+```
+
+</details>
+
 
 ## added char
 
@@ -169,6 +351,19 @@ assert({
 
 ![img](string/added_char_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "ab"
+expect: "a"
+```
+
+</details>
+
+
 ## removed char
 
 ```js
@@ -179,6 +374,19 @@ assert({
 ```
 
 ![img](string/removed_char_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "a"
+expect: "ab"
+```
+
+</details>
+
 
 ## diff at end of long string, start truncated
 
@@ -192,6 +400,19 @@ assert({
 
 ![img](string/diff_at_end_of_long_string__start_truncated_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: …"efghijk"
+expect: …"efghijj"
+```
+
+</details>
+
+
 ## diff at start of long string, end truncated
 
 ```js
@@ -203,6 +424,19 @@ assert({
 ```
 
 ![img](string/diff_at_start_of_long_string__end_truncated_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "a2cdefg"…
+expect: "a3cdefg"…
+```
+
+</details>
+
 
 ## many diff in long string, only first is shown truncated
 
@@ -216,6 +450,19 @@ assert({
 
 ![img](string/many_diff_in_long_string__only_first_is_shown_truncated_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "a2cdefZ"…
+expect: "a3cdefY"…
+```
+
+</details>
+
+
 ## diff at middle of long string, start + end truncated
 
 ```js
@@ -228,6 +475,19 @@ assert({
 
 ![img](string/diff_at_middle_of_long_string__start_+_end_truncated_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: …"gh5"…
+expect: …"gh6"…
+```
+
+</details>
+
+
 ## diff new String value
 
 ```js
@@ -239,6 +499,19 @@ assert({
 
 ![img](string/diff_new_string_value_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: String("a")
+expect: String("b")
+```
+
+</details>
+
+
 ## diff String object vs literal
 
 ```js
@@ -249,6 +522,19 @@ assert({
 ```
 
 ![img](string/diff_string_object_vs_literal_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: String("abc")
+expect: "a2"
+```
+
+</details>
+
 
 ## new String collapsed with overview
 
@@ -266,6 +552,25 @@ assert({
 ```
 
 ![img](string/new_string_collapsed_with_overview_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: String("toto"),
+  b: true,
+}
+expect: {
+  a: String("toto"),
+  b: false,
+}
+```
+
+</details>
+
 
 ## new String collapsed
 
@@ -287,6 +592,27 @@ assert({
 
 ![img](string/new_string_collapsed_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  foo: {
+    a: String(4),
+  },
+}
+expect: {
+  bar: {
+    a: String(4),
+  },
+}
+```
+
+</details>
+
+
 ## new String prop
 
 ```js
@@ -297,3 +623,19 @@ assert({
 ```
 
 ![img](string/new_string_prop_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: String("a") {
+  foo: true,
+}
+expect: String("b") {
+  foo: false,
+}
+```
+
+</details>

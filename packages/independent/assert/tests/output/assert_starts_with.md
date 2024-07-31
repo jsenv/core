@@ -21,6 +21,25 @@ assert({
 
 ![img](assert_starts_with/no_diff_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: "AABB",
+  b: true,
+}
+expect: {
+  a: assert.startsWith("AAB"),
+  b: false,
+}
+```
+
+</details>
+
+
 ## does not start with
 
 ```js
@@ -31,3 +50,15 @@ assert({
 ```
 
 ![img](assert_starts_with/does_not_start_with_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "AABB"
+expect: assert.startsWith("AB")
+```
+
+</details>

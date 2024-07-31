@@ -15,11 +15,25 @@ build({
 
 ### 1/2 logs
 
-![img](0_error/0_error_log_group.svg)
+![img](0_error/log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+
+build "./main.html"
+⠋ generate source graph
+✖ failed to generate source graph
+
+```
+
+</details>
+
 
 ### 2/2 reject
 
-```
+```console
 Error: Reference leads to a directory
 --- reference trace ---
 base/client/main.html:15:40
@@ -51,7 +65,24 @@ build({
 
 ### 1/4 logs
 
-![img](1_copy/1_copy_log_group.svg)
+![img](1_copy/log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+
+build "./main.html"
+⠋ generate source graph
+✔ generate source graph (done in <X> second)
+⠋ generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
+
+```
+
+</details>
+
 
 ### 2/4 write 3 files into "./build/"
 
@@ -59,7 +90,23 @@ see [./1_copy/build/](./1_copy/build/)
 
 ### 3/4 logs
 
-![img](1_copy/1_copy_log_group_1.svg)
+![img](1_copy/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (746 B / 91 %)
+- js   : 1 (22 B / 3 %)
+- other: 2 (55 B / 6 %)
+- total: 4 (823 B / 100 %)
+--------------------
+```
+
+</details>
+
 
 ### 4/4 resolve
 

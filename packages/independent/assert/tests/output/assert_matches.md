@@ -21,6 +21,25 @@ assert({
 
 ![img](assert_matches/works_throw.svg)
 
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: {
+  a: "expired <X> second ago",
+  b: true,
+}
+expect: {
+  a: assert.matches(/expired \d seconds ago/),
+  b: false,
+}
+```
+
+</details>
+
+
 ## does not
 
 ```js
@@ -31,3 +50,15 @@ assert({
 ```
 
 ![img](assert_matches/does_not_throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+AssertionError: actual and expect are different
+
+actual: "expired n seconds ago"
+expect: assert.matches(/expired \d seconds ago/)
+```
+
+</details>
