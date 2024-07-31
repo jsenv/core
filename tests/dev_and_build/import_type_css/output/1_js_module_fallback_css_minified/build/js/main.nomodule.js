@@ -65,7 +65,7 @@ System.register([], function (_export, _context) {
           });
           window.resolveResultPromise({
             bodyBackgroundColor,
-            bodyBackgroundImage
+            bodyBackgroundImage: bodyBackgroundImage.replace(window.origin, "window.origin")
           });
         });
       });

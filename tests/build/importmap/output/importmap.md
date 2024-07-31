@@ -16,20 +16,12 @@ build({
 })
 ```
 
-### 1/4 logs
+### 1/2 logs
 
 ![img](0_basic/0_basic_log_group.svg)
 
-### 2/4 write file "./build/main.html"
+### 2/2 reject
 
-see [./0_basic/build/main.html](./0_basic/build/main.html)
-
-### 3/4 logs
-
-![img](0_basic/0_basic_log_group_1.svg)
-
-### 4/4 resolve
-
-```js
-{}
+```
+Error: ENOENT: no such file or directory, scandir '@jsenv/core/.jsenv/shape/@fs@jsenv/core/packages/internal/js-module-fallback/'
 ```

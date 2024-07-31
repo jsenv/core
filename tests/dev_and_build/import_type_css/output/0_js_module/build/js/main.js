@@ -35,5 +35,8 @@ console.log({ bodyBackgroundImage });
 
 window.resolveResultPromise({
   bodyBackgroundColor,
-  bodyBackgroundImage,
+  bodyBackgroundImage: bodyBackgroundImage.replace(
+    window.origin,
+    "window.origin",
+  ),
 });
