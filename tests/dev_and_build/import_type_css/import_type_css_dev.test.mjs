@@ -24,7 +24,7 @@ const test = async ({ browserLauncher }) => {
     const actual = result;
     const expect = {
       bodyBackgroundColor: "rgb(255, 0, 0)",
-      bodyBackgroundImage: `url("${devServer.origin}/src/jsenv.png")`,
+      bodyBackgroundImage: `url("window.origin/src/jsenv.png")`,
     };
     assert({ actual, expect });
   } finally {

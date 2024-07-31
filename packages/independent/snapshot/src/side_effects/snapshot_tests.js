@@ -78,7 +78,12 @@ export const snapshotTests = async (
       `./${asValidFilename(scenario)}/`,
       snapshotFileUrl,
     );
-    const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl);
+    const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl, {
+      pattern: {
+        "**/*": true,
+        "**/*.svg": "presence_only",
+      },
+    });
     const sideEffectsMarkdown = renderSideEffects(sideEffects, {
       sideEffectFileUrl: snapshotFileUrl,
       outDirectoryUrl,

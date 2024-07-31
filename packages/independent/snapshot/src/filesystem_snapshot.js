@@ -170,27 +170,35 @@ export const takeDirectorySnapshot = (
   directoryUrl = new URL(directoryUrl);
   const associations = URL_META.resolveAssociations(
     {
-      included: pattern,
+      action: pattern,
     },
     directoryUrl,
   );
-  const predicate = ({ included }) => included;
-  const shouldVisitDirectory = (url) =>
-    URL_META.urlChildMayMatch({
+  const shouldVisitDirectory = (url) => {
+    return URL_META.urlChildMayMatch({
       url,
       associations,
-      predicate,
+      predicate: (meta) => Boolean(meta.action),
     });
-  const shouldIncludeFile = (url) =>
-    predicate(
-      URL_META.applyAssociations({
-        url,
-        associations,
-      }),
-    );
+  };
+  const shouldIncludeFile = (url) => {
+    const meta = URL_META.applyAssociations({
+      url,
+      associations,
+    });
+    return meta.action === true || meta.action === "presence_only";
+  };
+  const shouldCompareFile = (url) => {
+    const meta = URL_META.applyAssociations({
+      url,
+      associations,
+    });
+    return meta.action === true || meta.action === "compare";
+  };
   const directorySnapshot = createDirectorySnapshot(directoryUrl, {
     shouldVisitDirectory,
     shouldIncludeFile,
+    shouldCompareFile,
     clean: true,
   });
   return {
@@ -199,6 +207,7 @@ export const takeDirectorySnapshot = (
       const nextDirectorySnapshot = createDirectorySnapshot(directoryUrl, {
         shouldVisitDirectory,
         shouldIncludeFile,
+        shouldCompareFile,
       });
       directorySnapshot.compare(nextDirectorySnapshot, { throwWhenDiff });
     },
@@ -226,7 +235,7 @@ export const takeDirectorySnapshot = (
 };
 const createDirectorySnapshot = (
   directoryUrl,
-  { shouldVisitDirectory, shouldIncludeFile, clean },
+  { shouldVisitDirectory, shouldIncludeFile, shouldCompareFile, clean },
 ) => {
   const directorySnapshot = {
     type: "directory",
@@ -311,6 +320,9 @@ ${extraUrls.join("\n")}`);
       // content
       {
         for (const relativeUrl of relativeUrls) {
+          if (!shouldCompareFile(new URL(relativeUrl, directoryUrl))) {
+            continue;
+          }
           const snapshot = directoryContentSnapshot[relativeUrl];
           const nextSnapshot = nextDirectoryContentSnapshot[relativeUrl];
           if (nextSnapshot) {
@@ -370,6 +382,7 @@ ${extraUrls.join("\n")}`);
           {
             shouldVisitDirectory,
             shouldIncludeFile,
+            shouldCompareFile,
             clean,
           },
         );
