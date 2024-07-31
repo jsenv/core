@@ -1,16 +1,15 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
-const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-await build({
-  logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: snapshotDirectoryUrl,
-  entryPoints: {
-    "./main.js": "main.js",
+await snapshotBuildTests(
+  ({ test }) => {
+    test("0_basic", () =>
+      build({
+        sourceDirectoryUrl: new URL("./client/", import.meta.url),
+        buildDirectoryUrl: new URL("./build/", import.meta.url),
+        entryPoints: { "./main.js": "main.js" },
+        minification: false,
+      }));
   },
-  minification: false,
-});
-buildDirectorySnapshot.compare();
+  new URL("./output/bundling_css_in_html.md", import.meta.url),
+);
