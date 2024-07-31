@@ -25,6 +25,7 @@ await snapshotBuildTests(
 copyFileSync({
   from: new URL("./client/main.html", import.meta.url),
   to: new URL("./output/0_basic/build/main.html", import.meta.url),
+  overwrite: true,
 });
 const actual = await executeBuildHtmlInBrowser(
   new URL("./output/0_basic/build/", import.meta.url),
