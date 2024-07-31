@@ -8,7 +8,6 @@ await snapshotBuildTests(
       buildDirectoryUrl: new URL("./build/", import.meta.url),
       entryPoints: { "./main.html": "main.html" },
       outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-      runtimeCompat: { chrome: "89" },
       bundling: false,
       minification: false,
       versioning: false,
