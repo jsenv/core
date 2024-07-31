@@ -1,27 +1,36 @@
 import { assert } from "@jsenv/assert";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 
-const test = async ({ name, expectedFilename, ...params }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await build({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
-  });
-  buildDirectorySnapshot.compare();
+await snapshotBuildTests(
+  ({ test }) => {
+    const testParams = {
+      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      entryPoints: { "./main.html": "main.html" },
+      bundling: false,
+      minification: false,
+      versioning: false,
+    };
+    test("0_js_module", () =>
+      build({
+        ...testParams,
+        runtimeCompat: { chrome: "89" },
+      }));
+    test("1_js_module_fallback", () =>
+      build({
+        ...testParams,
+        runtimeCompat: { chrome: "62" },
+      }));
+  },
+  new URL("./output/import_dynamic.md", import.meta.url),
+);
 
+const testWindowResult = async (scenario, expectedFilename) => {
   const server = await startFileServer({
-    rootDirectoryUrl: snapshotDirectoryUrl,
+    rootDirectoryUrl: new URL(`./output/${scenario}/build/`, import.meta.url),
   });
   const { returnValue } = await executeInBrowser({
     url: `${server.origin}/main.html`,
@@ -32,26 +41,13 @@ const test = async ({ name, expectedFilename, ...params }) => {
   const actual = returnValue;
   const expect = {
     answer: 42,
-    nestedFeatureUrl: `${server.origin}/js/${expectedFilename}`,
+    nestedFeatureUrl: `${server.origin}${expectedFilename}`,
   };
   assert({ actual, expect });
 };
 
-// can use <script type="module">
-await test({
-  name: "0_js_module",
-  expectedFilename: `nested_feature.js`,
-  runtimeCompat: { chrome: "89" },
-  bundling: false,
-  minification: false,
-  versioning: false,
-});
-// cannot use <script type="module">
-await test({
-  name: "1_js_module_fallback",
-  expectedFilename: `nested_feature.nomodule.js`,
-  runtimeCompat: { chrome: "62" },
-  bundling: false,
-  minification: false,
-  versioning: false,
-});
+await testWindowResult("0_js_module", "/js/nested_feature.js");
+await testWindowResult(
+  "1_js_module_fallback",
+  "/js/nested_feature.nomodule.js",
+);
