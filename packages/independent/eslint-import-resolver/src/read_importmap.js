@@ -30,7 +30,7 @@ ${fileURLToPath(rootDirectoryUrl)}`);
   }
   let importmapFileBuffer;
   try {
-    importmapFileBuffer = readFileSync(importmapFileUrl);
+    importmapFileBuffer = readFileSync(importmapFileUrl, { as: "buffer" });
   } catch (e) {
     if (e && e.code === "ENOENT") {
       logger.error(`importmap file not found at ${importmapFileUrl}`);
