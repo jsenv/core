@@ -7,7 +7,7 @@ export const snapshotAssertTests = async (
 ) => {
   await snapshotTests(testFileUrl, fnRegisteringTest, {
     sideEffectFilePattern: "./output/[test_name].md",
-    outFilePattern: "./output/[test_name]/[test_scenario][filename]",
+    outFilePattern: "./output/[test_name]/[test_scenario]_[filename]",
     errorStackHidden: true,
     ...options,
   });

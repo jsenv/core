@@ -100,17 +100,18 @@ export const snapshotTests = async (
         "**/*.svg": "presence_only",
       },
     });
-    const getenerateOutFileUrl = (filename) => {
+    const generateOutFileUrl = (filename) => {
       const outFileRelativeUrl = outFilePattern
         .replaceAll("[test_name]", testName)
         .replaceAll("[test_scenario]", testScenario)
         .replaceAll("[filename]", filename);
-      return new URL(outFileRelativeUrl, outDirectoryUrl);
+      const outFileUrl = new URL(outFileRelativeUrl, testFileUrl).href;
+      return outFileUrl;
     };
     const sideEffectsMarkdown = renderSideEffects(sideEffects, {
       sideEffectFileUrl,
       outDirectoryUrl,
-      getenerateOutFileUrl,
+      generateOutFileUrl,
       generatedBy: false,
       titleLevel: 3,
       errorStackHidden,
