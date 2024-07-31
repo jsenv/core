@@ -6,7 +6,9 @@ a();
 console.log("async_body");
 
 # anonymous arrow default param arrow
-}) => {return a;
+}) => {
+      return a;
+    
 
 # anonymous arrow returning string
 return "yo";
