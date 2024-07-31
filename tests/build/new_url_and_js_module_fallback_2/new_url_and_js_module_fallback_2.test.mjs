@@ -15,11 +15,11 @@ await snapshotBuildTests(
         runtimeCompat: { chrome: "60" },
       }));
   },
-  new URL("./output/new_url_and_js_module_fallback.md", import.meta.url),
+  new URL("./output/new_url_and_js_module_fallback_2.md", import.meta.url),
 );
 
 const actual = await executeBuildHtmlInBrowser(
   new URL("./output/0_basic/build/", import.meta.url),
 );
-const expect = `window.origin/other/file.txt?v=ead31da8`;
+const expect = `window.origin/js/main.nomodule.js?v=9798f172`;
 assert({ actual, expect });

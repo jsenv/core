@@ -3,11 +3,11 @@
   <head>
     <title>Title</title>
     <meta charset="utf-8">
-    <link rel="preload" href="/js/main.nomodule.js?v=9798f172" as="script">
+    <link rel="preload" href="/other/file.txt?v=ead31da8" as="fetch" crossorigin="">
     <script>
       ;(function() {
         var __versionMappings__ = {
-          "/js/main.nomodule.js": "/js/main.nomodule.js?v=9798f172"
+          "/other/file.txt": "/other/file.txt?v=ead31da8"
         };
         window.__v__ = function (specifier) {
           return __versionMappings__[specifier] || specifier
@@ -437,8 +437,8 @@
   return {
     setters: [],
     execute: function () {
-      urlObject = new URL(__v__("/js/main.nomodule.js"), _context.meta.url);
-      window.resolveResultPromise(urlObject.href);
+      urlObject = new URL(__v__("/other/file.txt"), _context.meta.url);
+      window.resolveResultPromise(urlObject.href.replace(window.origin, "window.origin"));
     }
   };
 });</script>

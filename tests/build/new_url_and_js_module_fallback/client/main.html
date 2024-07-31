@@ -15,7 +15,9 @@
     <script type="module">
       const urlObject = new URL("./file.txt", import.meta.url);
 
-      window.resolveResultPromise(urlObject.href);
+      window.resolveResultPromise(
+        urlObject.href.replace(window.origin, "window.origin"),
+      );
     </script>
   </body>
 </html>
