@@ -27,7 +27,8 @@ const startTesting = async (fn) => {
     : scenarioMap;
   for (const [scenario, { fn, options }] of activeScenarioMap) {
     await snapshotSideEffects(import.meta.url, fn, {
-      sideEffectFileUrl: new URL(`./output/${scenario}`, import.meta.url),
+      sideEffectFileUrl: new URL(`./output/${scenario}.md`, import.meta.url),
+      outFilePattern: `./output/${scenario}/[filename]`,
       ...options,
     });
   }
@@ -39,24 +40,24 @@ await startTesting(({ test }) => {
     // read file twice
     // there was a bug about this in a previous implementation
     // where second read file would never resolve
-    test("read_file/0_read_file_first.md", async () => {
+    test("read_file/0_read_file_first", async () => {
       await readFile(import.meta.url, { as: "string" });
     });
-    test("read_file/1_read_file_second.md", async () => {
+    test("read_file/1_read_file_second", async () => {
       await readFile(import.meta.url, { as: "string" });
     });
   }
   write_directory: {
-    test("write_dir/0_write_directory_sync.md", () => {
+    test("write_dir/0_write_directory_sync", () => {
       writeDirectorySync(new URL("./dir_sync/", import.meta.url));
       return existsSync(new URL("./dir_sync/", import.meta.url));
     });
-    test("write_dir/1_write_directory_async.md", async () => {
+    test("write_dir/1_write_directory_async", async () => {
       await writeDirectory(new URL("./dir_async/", import.meta.url));
       return existsSync(new URL("./dir_async/", import.meta.url));
     });
     test(
-      "write_dir/2_write_dir_deep.md",
+      "write_dir/2_write_dir_deep",
       () => {
         writeDirectorySync(new URL("./dir/a/b/c", import.meta.url));
       },
@@ -68,30 +69,30 @@ await startTesting(({ test }) => {
     );
   }
   write_file: {
-    test("write_file/0_write_sync.md", () => {
+    test("write_file/0_write_sync", () => {
       writeFileSync(
         new URL("./toto.txt", import.meta.url),
         "0_write_file_sync",
       );
     });
-    test("write_file/1_write_then_read_sync.md", () => {
+    test("write_file/1_write_then_read_sync", () => {
       writeFileSync(
         new URL("./toto.txt", import.meta.url),
         "1_write_then_read_sync",
       );
       return String(readFileSync(new URL("./toto.txt", import.meta.url)));
     });
-    test("write_file/2_write_sync_deep.md", () => {
+    test("write_file/2_write_sync_deep", () => {
       writeFileSync(
         new URL("./toto/toto.txt", import.meta.url),
         "2_write_sync_deep",
       );
     });
-    test("write_file/3_write_async.md", async () => {
+    test("write_file/3_write_async", async () => {
       await writeFile(new URL("./toto.txt", import.meta.url), "3_write_async");
     });
     test(
-      "write_file/4_write_inside_base.md",
+      "write_file/4_write_inside_base",
       () => {
         writeFileSync(
           new URL("./toto.txt", import.meta.url),
@@ -105,7 +106,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "write_file/5_write_inside_base_and_textual_out.md",
+      "write_file/5_write_inside_base_and_textual_out",
       () => {
         writeFileSync(
           new URL("./toto.txt", import.meta.url),
@@ -120,7 +121,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "write_file/6_write_above_base.md",
+      "write_file/6_write_above_base",
       () => {
         writeFileSync(
           new URL("../toto.txt", import.meta.url),
@@ -134,7 +135,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "write_file/7_write_above_base_and_textual_out.md",
+      "write_file/7_write_above_base_and_textual_out",
       () => {
         writeFileSync(
           new URL("../toto.txt", import.meta.url),
@@ -149,7 +150,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "write_file/8_write_same_file.md",
+      "write_file/8_write_same_file",
       () => {
         writeFileSync(new URL("./toto.txt", import.meta.url), "a");
         writeFileSync(new URL("./toto.txt", import.meta.url), "b");
@@ -161,7 +162,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "write_file/9_write_same_file_again.md",
+      "write_file/9_write_same_file_again",
       () => {
         writeFileSync(new URL("./dist/a.txt", import.meta.url), "a");
         writeFileSync(new URL("./dist/b.txt", import.meta.url), "b");
@@ -176,7 +177,7 @@ await startTesting(({ test }) => {
     );
 
     test(
-      "write_file/10_write_same_file_not_grouped.md",
+      "write_file/10_write_same_file_not_grouped",
       () => {
         writeFileSync(new URL("./toto.txt", import.meta.url), "first");
         console.log("hey");
@@ -189,7 +190,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "write_file/11_write_same_file_not_grouped_and_out.md",
+      "write_file/11_write_same_file_not_grouped_and_out",
       () => {
         writeFileSync(new URL("./toto.txt", import.meta.url), "first");
         console.log("hey");
@@ -203,7 +204,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "write_file/12_write_png.md",
+      "write_file/12_write_png",
       () => {
         writeFileSync(
           new URL("./jsenv.png", import.meta.url),
@@ -219,7 +220,7 @@ await startTesting(({ test }) => {
   }
   group_write_by_directory: {
     test(
-      "write_group/0_write_in_one_dir.md",
+      "write_group/0_write_in_one_dir",
       () => {
         writeFileSync(new URL("./shared/a/a_1.txt", import.meta.url));
         writeFileSync(new URL("./shared/a/a_2.txt", import.meta.url));
@@ -235,7 +236,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "write_group/1_write_in_2_dir.md",
+      "write_group/1_write_in_2_dir",
       () => {
         writeFileSync(new URL("./a/a_1.txt", import.meta.url));
         writeFileSync(new URL("./a/a_2.txt", import.meta.url));
@@ -251,7 +252,7 @@ await startTesting(({ test }) => {
       },
     );
     test(
-      "write_group/2_write_no_out.md",
+      "write_group/2_write_no_out",
       () => {
         writeFileSync(
           new URL("./dist/a_1.txt", import.meta.url),

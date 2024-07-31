@@ -20,9 +20,11 @@ export const snapshotTests = async (
   testFileUrl,
   fnRegisteringTest,
   {
+    testName = urlToBasename(testFileUrl, true),
     sideEffectFileUrl,
-    sideEffectFilePattern = "./<basename>/<basename>.md",
-    outDirectoryPattern = "./<basename>/",
+    sideEffectFilePattern = "./output/[test_name]/[test_name].md",
+    outDirectoryPattern = "./output/[test_name]/",
+    outFilePattern = "./output/[test_name]/[test_scenario]_[filename]",
     rootDirectoryUrl,
     generatedBy = true,
     linkToSource = true,
@@ -33,11 +35,10 @@ export const snapshotTests = async (
     throwWhenDiff = process.env.CI,
   } = {},
 ) => {
-  const basename = urlToBasename(testFileUrl, true);
   if (sideEffectFileUrl === undefined) {
     const sideEffectFileRelativeUrl = sideEffectFilePattern.replaceAll(
-      "<basename>",
-      basename,
+      "[test_name]",
+      testName,
     );
     sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, testFileUrl);
   } else {
@@ -88,9 +89,10 @@ export const snapshotTests = async (
       callSite: linkToEachSource ? callSite : undefined,
       baseDirectory: String(new URL("./", callSite.url)),
     });
+    const testScenario = asValidFilename(scenario);
     let outDirectoryRelativeUrl = outDirectoryPattern
-      .replaceAll("<basename>", basename)
-      .replaceAll("<scenario>", asValidFilename(scenario));
+      .replaceAll("[test_name]", testName)
+      .replaceAll("[test_scenario]", testScenario);
     const outDirectoryUrl = new URL(outDirectoryRelativeUrl, testFileUrl);
     const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl, {
       pattern: {
@@ -98,9 +100,17 @@ export const snapshotTests = async (
         "**/*.svg": "presence_only",
       },
     });
+    const getenerateOutFileUrl = (filename) => {
+      const outFileRelativeUrl = outFilePattern
+        .replaceAll("[test_name]", testName)
+        .replaceAll("[test_scenario]", testScenario)
+        .replaceAll("[filename]", filename);
+      return new URL(outFileRelativeUrl, outDirectoryUrl);
+    };
     const sideEffectsMarkdown = renderSideEffects(sideEffects, {
       sideEffectFileUrl,
       outDirectoryUrl,
+      getenerateOutFileUrl,
       generatedBy: false,
       titleLevel: 3,
       errorStackHidden,
