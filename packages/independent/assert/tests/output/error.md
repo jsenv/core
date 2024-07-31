@@ -291,7 +291,7 @@ expect: ValidationError
 assert({
   actual: new Error(`snapshot comparison
 b
-file:///Users/damien.maillard/dev/perso/jsenv-core/packages/related/test/tests/test_plan_execution/snapshot_comparison/node_client/my_snapshots/file.txt`),
+http://example.com/dir/file.txt`),
   expect: new Error(`snapshot comparison`),
 });
 ```
@@ -306,7 +306,7 @@ AssertionError: actual and expect are different
 
 actual: Error: snapshot comparison
 b
-@jsenv/core/packages/related/test/tests/test_plan_execution/…
+http://example.com/dir/file.txt
 expect: Error: snapshot comparison
 ```
 
