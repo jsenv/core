@@ -1,31 +1,26 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const test = async (filename, { runtimeCompat }) => {
-  const snapshotDirectoryUrl = new URL(
-    `./snapshots/${filename}/`,
-    import.meta.url,
-  );
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await build({
-    logLevel: "warn",
-    ignore: {
-      "./node_modules/bar/": true,
-    },
-    sourceDirectoryUrl: new URL("./node_client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./index.js": "index.js",
-    },
-    runtimeCompat,
-  });
-  buildDirectorySnapshot.compare();
-};
-
-await test("node_not_supported", {
-  runtimeCompat: { node: "19" },
-});
-await test("node_supported", {
-  runtimeCompat: { node: "20" },
-});
+await snapshotBuildTests(
+  ({ test }) => {
+    const testParams = {
+      sourceDirectoryUrl: new URL("./node_client/", import.meta.url),
+      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      entryPoints: { "./index.js": "index.js" },
+      ignore: {
+        "./node_modules/bar/": true,
+      },
+    };
+    test("node_0_import_meta_resolve", () =>
+      build({
+        ...testParams,
+        runtimeCompat: { node: "20" },
+      }));
+    test("node_1_import_meta_resolve_fallback", () =>
+      build({
+        ...testParams,
+        runtimeCompat: { node: "19" },
+      }));
+  },
+  new URL("./output/import_meta_resolve_node.md", import.meta.url),
+);
