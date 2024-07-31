@@ -5,7 +5,7 @@
 # 1/1 return
 
 ```js
-"hello world"
+hello world
 ```
 
 <sub>

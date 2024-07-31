@@ -55,19 +55,19 @@ export const filesystemSideEffects = (
         }
         return url;
       };
-      const getUrlInsideOutDirectory = (url, outDirectoryUrl) => {
+      const getUrlInsideOutDirectory = (url, generateOutFileUrl) => {
         if (baseDirectory) {
           if (
             url.href === baseDirectory.href ||
             urlIsInsideOf(url, baseDirectory)
           ) {
             const outRelativeUrl = urlToRelativeUrl(url, baseDirectory);
-            return new URL(outRelativeUrl, outDirectoryUrl);
+            return generateOutFileUrl(outRelativeUrl);
           }
         }
         // otherwise we replace the url with well known
         const toRelativeUrl = replaceFilesystemWellKnownValues(url);
-        return new URL(toRelativeUrl, outDirectoryUrl);
+        return generateOutFileUrl(toRelativeUrl);
       };
 
       addSkippableHandler((sideEffect) => {
@@ -189,7 +189,7 @@ ${renderFileContent(
                   if (allFilesInsideOutDirectory) {
                     const commonDirectoryOutUrl = getUrlInsideOutDirectory(
                       commonDirectoryUrl,
-                      options.outDirectoryUrl,
+                      options.generateOutFileUrl,
                     );
                     const commonDirectoryOutRelativeUrl = urlToRelativeUrl(
                       commonDirectoryOutUrl,
@@ -240,15 +240,15 @@ ${renderFileContent(
                 outDirectoryReason,
               },
               render: {
-                md: ({ sideEffectFileUrl, outDirectoryUrl }) => {
+                md: ({ sideEffectFileUrl, generateOutFileUrl }) => {
                   const urlRelativeToBase = getUrlRelativeToBase(url);
                   if (outDirectoryReason) {
-                    const urlInsideOutDirectory = getUrlInsideOutDirectory(
+                    let urlInsideOutDirectory = getUrlInsideOutDirectory(
                       url,
-                      outDirectoryUrl,
+                      generateOutFileUrl,
                     );
                     if (writeFileSideEffect.counter) {
-                      setUrlBasename(
+                      urlInsideOutDirectory = setUrlBasename(
                         urlInsideOutDirectory,
                         (basename) =>
                           `${basename}_${writeFileSideEffect.counter}`,
