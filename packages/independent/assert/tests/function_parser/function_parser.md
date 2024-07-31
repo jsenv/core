@@ -10,11 +10,14 @@
 generateFunctionBody(() => {
   const a = () => {};
   a();
-});
+})
 ```
 
-```
-Error: 
+### 1/1 return
+
+```js
+const a = () => {};
+a();
 ```
 
 ## async arrow function
@@ -22,11 +25,13 @@ Error:
 ```js
 generateFunctionBody(async () => {
   console.log("async_body");
-});
+})
 ```
 
-```
-Error: 
+### 1/1 return
+
+```js
+console.log("async_body");
 ```
 
 ## anonymous arrow default param arrow
@@ -34,11 +39,15 @@ Error:
 ```js
 generateFunctionBody((a = () => {}) => {
   return a;
-});
+})
 ```
 
-```
-Error: 
+### 1/1 return
+
+```js
+}) => {
+      return a;
+    
 ```
 
 ## anonymous arrow returning string
@@ -46,21 +55,25 @@ Error:
 ```js
 generateFunctionBody(() => {
   return "yo";
-});
+})
 ```
 
-```
-Error: 
+### 1/1 return
+
+```js
+return "yo";
 ```
 
 ## anonymous arrow one liner object notation
 
 ```js
-generateFunctionBody(() => ({}));
+generateFunctionBody(() => ({}))
 ```
 
-```
-Error: 
+### 1/1 return
+
+```js
+({})
 ```
 
 ## anonymous function returning a + b
@@ -68,11 +81,13 @@ Error:
 ```js
 generateFunctionBody(function (a, b) {
   return a + b;
-});
+})
 ```
 
-```
-Error: 
+### 1/1 return
+
+```js
+return a + b;
 ```
 
 ## named arrow function
@@ -84,17 +99,19 @@ generateFunctionBody(
       console.log(10);
     },
   }.a,
-);
+)
 ```
 
-```
-Error: 
+### 1/1 return
+
+```js
+console.log(10);
 ```
 
 ## named function returning a + b
 
 ```js
-generateFunctionBody(
+return generateFunctionBody(
   // prettier-ignore
   function name  ( a,  b )   {
     return a + b;
@@ -102,8 +119,10 @@ generateFunctionBody(
 );
 ```
 
-```
-Error: 
+### 1/1 return
+
+```js
+return a + b;
 ```
 
 ## getter returning 10
@@ -119,11 +138,13 @@ generateFunctionBody(
     },
     "a",
   ).get,
-);
+)
 ```
 
-```
-Error: 
+### 1/1 return
+
+```js
+return 10;
 ```
 
 ## setter incrementing value
@@ -141,9 +162,11 @@ generateFunctionBody(
     },
     "name",
   ).set,
-);
+)
 ```
 
-```
-Error: 
+### 1/1 return
+
+```js
+value++
 ```

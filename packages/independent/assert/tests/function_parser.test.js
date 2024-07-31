@@ -1,62 +1,52 @@
 import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
-
 import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
 const generateFunctionBody = (fn) => {
   const body = parseFunction(fn).body;
-  const error = new Error();
-  error.stack = body;
-  throw error;
+  return body;
 };
 
 await snapshotAssertTests(import.meta.url, ({ test }) => {
-  test("arrow function containing arrow function", () => {
+  test("arrow function containing arrow function", () =>
     generateFunctionBody(() => {
       const a = () => {};
       a();
-    });
-  });
-  test("async arrow function", () => {
+    }));
+  test("async arrow function", () =>
     generateFunctionBody(async () => {
       console.log("async_body");
-    });
-  });
-  test("anonymous arrow default param arrow", () => {
+    }));
+  test("anonymous arrow default param arrow", () =>
     generateFunctionBody((a = () => {}) => {
       return a;
-    });
-  });
-  test("anonymous arrow returning string", () => {
+    }));
+  test("anonymous arrow returning string", () =>
     generateFunctionBody(() => {
       return "yo";
-    });
-  });
-  test("anonymous arrow one liner object notation", () => {
-    generateFunctionBody(() => ({}));
-  });
-  test("anonymous function returning a + b", () => {
+    }));
+  test("anonymous arrow one liner object notation", () =>
+    generateFunctionBody(() => ({})));
+  test("anonymous function returning a + b", () =>
     generateFunctionBody(function (a, b) {
       return a + b;
-    });
-  });
-  test("named arrow function", () => {
+    }));
+  test("named arrow function", () =>
     generateFunctionBody(
       {
         a: () => {
           console.log(10);
         },
       }.a,
-    );
-  });
+    ));
   test("named function returning a + b", () => {
-    generateFunctionBody(
+    return generateFunctionBody(
       // prettier-ignore
       function name  ( a,  b )   {
         return a + b;
       },
     );
   });
-  test("getter returning 10", () => {
+  test("getter returning 10", () =>
     generateFunctionBody(
       Object.getOwnPropertyDescriptor(
         {
@@ -67,9 +57,8 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
         },
         "a",
       ).get,
-    );
-  });
-  test("setter incrementing value", () => {
+    ));
+  test("setter incrementing value", () =>
     generateFunctionBody(
       Object.getOwnPropertyDescriptor(
         {
@@ -82,6 +71,5 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
         },
         "name",
       ).set,
-    );
-  });
+    ));
 });
