@@ -15,11 +15,25 @@ build({
 
 ### 1/2 logs
 
-![img](0_error/0_error_log_group.svg)
+![img](0_error/log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+
+build "./main.html"
+⠋ generate source graph
+✖ failed to generate source graph
+
+```
+
+</details>
+
 
 ### 2/2 reject
 
-```
+```console
 Error: Reference leads to a directory
 --- reference trace ---
 base/client/main.html:15:40
@@ -49,20 +63,28 @@ build({
 })
 ```
 
-### 1/4 logs
+### 1/2 logs
 
-![img](1_copy/1_copy_log_group.svg)
+![img](1_copy/log_group.svg)
 
-### 2/4 write 3 files into "./build/"
+<details>
+  <summary>see without style</summary>
 
-see [./1_copy/build/](./1_copy/build/)
+```console
 
-### 3/4 logs
+build "./main.html"
+⠋ generate source graph
+✔ generate source graph (done in <X> second)
+⠋ generate build graph
+✖ failed to generate build graph
 
-![img](1_copy/1_copy_log_group_1.svg)
+```
 
-### 4/4 resolve
+</details>
 
-```js
-{}
+
+### 2/2 reject
+
+```console
+Error: ENOENT: no such file or directory, scandir '@jsenv/core/.jsenv/shape/@fs@jsenv/core/packages/internal/'
 ```

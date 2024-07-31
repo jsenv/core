@@ -15,7 +15,26 @@ build({
 
 ### 1/4 logs
 
-![img](chrome_0_import_meta_resolve/chrome_0_import_meta_resolve_log_group.svg)
+![img](chrome_0_import_meta_resolve/log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+
+build "./index.js"
+⠋ generate source graph
+✔ generate source graph (done in <X> second)
+⠋ bundle "js_module"
+✔ bundle "js_module" (done in <X> second)
+⠋ generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
+
+```
+
+</details>
+
 
 ### 2/4 write 2 files into "./build/"
 
@@ -23,7 +42,22 @@ see [./chrome_0_import_meta_resolve/build/](./chrome_0_import_meta_resolve/build
 
 ### 3/4 logs
 
-![img](chrome_0_import_meta_resolve/chrome_0_import_meta_resolve_log_group_1.svg)
+![img](chrome_0_import_meta_resolve/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- js   : 1 (411 B / 77 %)
+- json : 1 (122 B / 23 %)
+- total: 2 (533 B / 100 %)
+--------------------
+```
+
+</details>
+
 
 ### 4/4 resolve
 
@@ -42,7 +76,26 @@ build({
 
 ### 1/4 logs
 
-![img](chrome_1_import_meta_resolve_fallback/chrome_1_import_meta_resolve_fallback_log_group.svg)
+![img](chrome_1_import_meta_resolve_fallback/log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+
+build "./index.js"
+⠋ generate source graph
+✔ generate source graph (done in <X> second)
+⠋ bundle "js_module"
+✔ bundle "js_module" (done in <X> second)
+⠋ generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
+
+```
+
+</details>
+
 
 ### 2/4 write 2 files into "./build/"
 
@@ -50,7 +103,22 @@ see [./chrome_1_import_meta_resolve_fallback/build/](./chrome_1_import_meta_reso
 
 ### 3/4 logs
 
-![img](chrome_1_import_meta_resolve_fallback/chrome_1_import_meta_resolve_fallback_log_group_1.svg)
+![img](chrome_1_import_meta_resolve_fallback/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- js   : 1 (431 B / 78 %)
+- json : 1 (122 B / 22 %)
+- total: 2 (553 B / 100 %)
+--------------------
+```
+
+</details>
+
 
 ### 4/4 resolve
 

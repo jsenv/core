@@ -15,7 +15,26 @@ build({
 
 ### 1/4 logs
 
-![img](0_versioning/0_versioning_log_group.svg)
+![img](0_versioning/log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+
+build "./main.html"
+⠋ generate source graph
+✔ generate source graph (done in <X> second)
+⠋ bundle "css"
+✔ bundle "css" (done in <X> second)
+⠋ generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
+
+```
+
+</details>
+
 
 ### 2/4 write 2 files into "./build/"
 
@@ -23,7 +42,22 @@ see [./0_versioning/build/](./0_versioning/build/)
 
 ### 3/4 logs
 
-![img](0_versioning/0_versioning_log_group_1.svg)
+![img](0_versioning/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (537 B / 94 %)
+- css  : 1 (34 B / 6 %)
+- total: 2 (571 B / 100 %)
+--------------------
+```
+
+</details>
+
 
 ### 4/4 resolve
 
@@ -42,7 +76,26 @@ build({
 
 ### 1/4 logs
 
-![img](1_versioning_disabled/1_versioning_disabled_log_group.svg)
+![img](1_versioning_disabled/log_group.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+
+build "./main.html"
+⠋ generate source graph
+✔ generate source graph (done in <X> second)
+⠋ bundle "css"
+✔ bundle "css" (done in <X> second)
+⠋ generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
+
+```
+
+</details>
+
 
 ### 2/4 write 2 files into "./build/"
 
@@ -50,7 +103,22 @@ see [./1_versioning_disabled/build/](./1_versioning_disabled/build/)
 
 ### 3/4 logs
 
-![img](1_versioning_disabled/1_versioning_disabled_log_group_1.svg)
+![img](1_versioning_disabled/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
+
+```console
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (526 B / 94 %)
+- css  : 1 (34 B / 6 %)
+- total: 2 (560 B / 100 %)
+--------------------
+```
+
+</details>
+
 
 ### 4/4 resolve
 
