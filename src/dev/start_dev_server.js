@@ -105,7 +105,9 @@ export const startDevServer = async ({
       sourceDirectoryUrl,
     );
     if (outDirectoryUrl === undefined) {
-      if (!process.env.CI) {
+      if (process.env.CAPTURING_SIDE_EFFECTS) {
+        outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
+      } else {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
         if (packageDirectoryUrl) {
           outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;

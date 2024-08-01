@@ -1286,7 +1286,7 @@ const createTaskLog = (
       fail: () => {},
     };
   }
-  if (animated && process.env.SNAPSHOTING_FUNCTION_SIDE_EFFECTS) {
+  if (animated && process.env.CAPTURING_SIDE_EFFECTS) {
     animated = false;
   }
   const startMs = Date.now();
@@ -21858,7 +21858,9 @@ const build = async ({
       "buildDirectoryUrl",
     );
     if (outDirectoryUrl === undefined) {
-      if (!process.env.CI) {
+      if (process.env.CAPTURING_SIDE_EFFECTS) {
+        outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
+      } else {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
         if (packageDirectoryUrl) {
           outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;
@@ -22722,7 +22724,9 @@ const startDevServer = async ({
       sourceDirectoryUrl,
     );
     if (outDirectoryUrl === undefined) {
-      if (!process.env.CI) {
+      if (process.env.CAPTURING_SIDE_EFFECTS) {
+        outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
+      } else {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
         if (packageDirectoryUrl) {
           outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;

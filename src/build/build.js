@@ -149,7 +149,9 @@ export const build = async ({
       "buildDirectoryUrl",
     );
     if (outDirectoryUrl === undefined) {
-      if (!process.env.CI) {
+      if (process.env.CAPTURING_SIDE_EFFECTS) {
+        outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
+      } else {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
         if (packageDirectoryUrl) {
           outDirectoryUrl = `${packageDirectoryUrl}.jsenv/`;

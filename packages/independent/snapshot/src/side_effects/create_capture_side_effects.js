@@ -259,7 +259,7 @@ export const createCaptureSideEffects = ({
       });
     };
     const onFinally = () => {
-      delete process.env.SNAPSHOTING_FUNCTION_SIDE_EFFECTS;
+      delete process.env.CAPTURING_SIDE_EFFECTS;
       functionExecutingCount--;
       for (const finallyCallback of finallyCallbackSet) {
         finallyCallback(sideEffects);
@@ -267,7 +267,7 @@ export const createCaptureSideEffects = ({
       finallyCallbackSet.clear();
     };
 
-    process.env.SNAPSHOTING_FUNCTION_SIDE_EFFECTS = "1";
+    process.env.CAPTURING_SIDE_EFFECTS = "1";
     functionExecutingCount++;
     let returnedPromise = false;
     try {

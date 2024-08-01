@@ -72,7 +72,7 @@ build({
 })
 ```
 
-### 1/2 logs
+### 1/4 logs
 
 ![img](import_dynamic_type_json/1_js_module_fallback/log_group.svg)
 
@@ -83,15 +83,41 @@ build({
 
 build "./main.html"
 ⠋ generate source graph
-✖ failed to generate source graph
+✔ generate source graph (done in <X> second)
+⠋ generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
 
 ```
 
 </details>
 
 
-### 2/2 reject
+### 2/4 write 3 files into "./build/"
+
+see [./import_dynamic_type_json/1_js_module_fallback/build/](./import_dynamic_type_json/1_js_module_fallback/build/)
+
+### 3/4 logs
+
+![img](import_dynamic_type_json/1_js_module_fallback/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
-Error: ENOENT: no such file or directory, scandir '@jsenv/core/.jsenv/craft/feature/'
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (17 kB / 95 %)
+- js   : 1 (841 B / 5 %)
+- total: 2 (18 kB / 100 %)
+--------------------
+```
+
+</details>
+
+
+### 4/4 resolve
+
+```js
+{}
 ```
