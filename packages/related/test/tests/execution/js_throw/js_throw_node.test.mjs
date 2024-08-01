@@ -1,47 +1,22 @@
-import { assert } from "@jsenv/assert";
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
+import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
-const test = async (params) => {
-  const { errors } = await execute({
-    // logLevel: "debug"
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    fileRelativeUrl: `./main.js`,
-    // keepRunning: true,
-    mirrorConsole: false,
-    collectConsole: true,
-    ignoreError: true,
-    ...params,
-  });
-  const [error] = errors;
-  const clientDirectoryUrl = new URL("./client", import.meta.url).href;
-  const actual = {
-    isException: error.isException,
-    isError: error.isError,
-    name: error.name,
-    message: error.message,
-    stack: error.stack,
-    site: error.site,
+await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
+  const run = async ({ runtime }) => {
+    await execute({
+      rootDirectoryUrl: new URL("./client/", import.meta.url),
+      fileRelativeUrl: `./main.js`,
+      mirrorConsole: false,
+      collectConsole: true,
+      runtime,
+    });
   };
-  const expect = {
-    isException: true,
-    isError: true,
-    name: "Error",
-    message: "SPECIAL_STRING_UNLIKELY_TO_COLLIDE",
-    stack: assert.startsWith(`Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-  at triggerError (${clientDirectoryUrl}/trigger_error.js:2:9)
-  at ${clientDirectoryUrl}/main.js:3:1`),
-    site: {
-      url: `${clientDirectoryUrl}/trigger_error.js`,
-      line: 2,
-      column: 9,
-    },
-  };
-  assert({ actual, expect });
-};
-
-await test({
-  runtime: nodeChildProcess(),
-});
-await test({
-  runtime: nodeWorkerThread(),
+  test("0_worker_thread", () =>
+    run({
+      runtime: nodeWorkerThread(),
+    }));
+  test("0_child_process", () =>
+    run({
+      runtime: nodeChildProcess(),
+    }));
 });

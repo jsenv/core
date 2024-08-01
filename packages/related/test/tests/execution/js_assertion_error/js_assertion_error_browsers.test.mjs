@@ -1,8 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
-import stripAnsi from "strip-ansi";
-
 import { chromium, execute, firefox, webkit } from "@jsenv/test";
+import stripAnsi from "strip-ansi";
 
 if (process.env.CI) {
   // disabled on CI because generates the following warning
