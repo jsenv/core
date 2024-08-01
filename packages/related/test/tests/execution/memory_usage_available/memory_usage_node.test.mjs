@@ -2,10 +2,9 @@ import { assert } from "@jsenv/assert";
 
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
 
-const test = async (params) => {
+const run = async ({ runtime }) => {
   let memoryUsageAfter3s;
   await execute({
-    // logLevel: "debug",
     rootDirectoryUrl: new URL("./node_client/", import.meta.url),
     fileRelativeUrl: `./main.js`,
     onMeasureMemoryAvailable: async (takeMemoryUsage) => {
@@ -14,16 +13,22 @@ const test = async (params) => {
       const after3s = await takeMemoryUsage();
       memoryUsageAfter3s = after3s - atStart;
     },
-    ...params,
+    runtime,
   });
-  const actual = memoryUsageAfter3s;
-  const expect = assert.between(7_000_000, 10_000_000); // around 7MB
-  assert({ actual, expect });
+  return memoryUsageAfter3s;
 };
 
-await test({
-  runtime: nodeChildProcess(),
-});
-await test({
-  runtime: nodeWorkerThread(),
+assert({
+  actual: {
+    nodeWorkerThread: await run({
+      runtime: nodeWorkerThread(),
+    }),
+    nodeChildProcess: await run({
+      runtime: nodeChildProcess(),
+    }),
+  },
+  expect: {
+    nodeWorkerThread: assert.between(7_000_000, 10_000_000), // around 7MB
+    nodeChildProcess: assert.between(7_000_000, 10_000_000), // around 7MB
+  },
 });

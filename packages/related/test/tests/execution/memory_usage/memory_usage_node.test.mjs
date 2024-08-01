@@ -21,7 +21,7 @@ assert({
     }),
   },
   expect: {
-    nodeWorkerThread: assert.between(5_000_000, 9_000_000), // around 7MB
-    nodeChildProcess: assert.between(5_000_000, 9_000_000), // around 7MB
+    nodeWorkerThread: assert.between(7_000_000, 10_000_000), // around 7MB
+    nodeChildProcess: assert.between(7_000_000, 10_000_000), // around 7MB
   },
 });

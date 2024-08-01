@@ -1,25 +1,21 @@
-import { assert } from "@jsenv/assert";
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
+import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
-const test = async (params) => {
-  const { status } = await execute({
-    // logLevel: "debug"
-    rootDirectoryUrl: new URL("./", import.meta.url),
-    fileRelativeUrl: `./node_process_exit.js`,
-    // keepRunning: true,
-    mirrorConsole: false,
-    collectConsole: true,
-    ignoreError: true,
-    ...params,
-  });
-  const actual = status;
-  const expect = "completed";
-  assert({ actual, expect });
-};
-
-await test({
-  runtime: nodeChildProcess(),
-});
-await test({
-  runtime: nodeWorkerThread(),
+await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
+  const run = async ({ runtime }) => {
+    const { status } = await execute({
+      rootDirectoryUrl: new URL("./", import.meta.url),
+      fileRelativeUrl: `./node_process_exit.js`,
+      runtime,
+    });
+    return { status };
+  };
+  test("0_worker_thread", () =>
+    run({
+      runtime: nodeWorkerThread(),
+    }));
+  test("0_child_process", () =>
+    run({
+      runtime: nodeChildProcess(),
+    }));
 });
