@@ -69,13 +69,12 @@ Add "${key}" in that file.
 --- suggestion b ---
 Fix eventual typo in "${key}"?
 --- suggestion c ---
-Mark injection as optional using INJECTIONS.optional()
-
+Mark injection as optional using INJECTIONS.optional():
 import { INJECTIONS } from "@jsenv/core";
 
 return {
   "${key}": INJECTIONS.optional(${JSON.stringify(value)}),
-}`,
+};`,
         );
       }
       continue;

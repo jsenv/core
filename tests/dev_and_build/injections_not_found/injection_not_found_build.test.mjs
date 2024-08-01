@@ -1,20 +1,13 @@
-import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
 
-const test = async (params) => {
-  const consoleWarnings = [];
-  const { warn } = console;
-  console.warn = (warning) => {
-    consoleWarnings.push(warning);
-  };
-  try {
-    await build({
-      logLevel: "warn",
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_injection", () =>
+    build({
       sourceDirectoryUrl: new URL("./client/", import.meta.url),
-      buildDirectoryUrl: new URL("./dist/", import.meta.url),
-      entryPoints: {
-        "./main.html": "main.html",
-      },
+      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      entryPoints: { "./main.html": "main.html" },
       injections: {
         "./main.html": () => {
           return {
@@ -22,32 +15,5 @@ const test = async (params) => {
           };
         },
       },
-      ...params,
-    });
-  } finally {
-    console.warn = warn;
-  }
-  const actual = consoleWarnings;
-  const fileUrl = new URL("./client/main.html", import.meta.url).href;
-  const expect = [
-    `placeholder "__DEMO__" not found in ${fileUrl}.
---- suggestion a ---
-Add "__DEMO__" in that file.
---- suggestion b ---
-Fix eventual typo in "__DEMO__"?
---- suggestion c ---
-Mark injection as optional using INJECTIONS.optional()
-
-import { INJECTIONS } from "@jsenv/core";
-
-return {
-  "__DEMO__": INJECTIONS.optional("foo"),
-}`,
-  ];
-  assert({ actual, expect });
-};
-
-await test({
-  bundling: false,
-  minification: false,
+    }));
 });
