@@ -1,74 +1,45 @@
-import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
-
 import { chromium, execute, firefox, webkit } from "@jsenv/test";
+import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
-const test = async (params) => {
-  const devServer = await startDevServer({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    keepProcessAlive: false,
-    port: 0,
-    clientAutoreload: {
-      clientServerEventsConfig: {
-        logs: false,
+await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
+  const run = async ({ runtime }) => {
+    const devServer = await startDevServer({
+      logLevel: "warn",
+      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      keepProcessAlive: false,
+      port: 0,
+      clientAutoreload: {
+        clientServerEventsConfig: { logs: false },
       },
-    },
-  });
-  const { status, namespace, consoleCalls } = await execute({
-    // logLevel: "debug",
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-    webServer: {
-      origin: devServer.origin,
+    });
+    const { consoleCalls } = await execute({
       rootDirectoryUrl: new URL("./client/", import.meta.url),
-    },
-    fileRelativeUrl: `./main.html`,
-    // keepRunning: true,
-    mirrorConsole: false,
-    collectConsole: true,
-    ...params,
-  });
-  devServer.stop();
-  const actual = {
-    status,
-    namespace,
-    consoleCalls,
+      webServer: {
+        origin: devServer.origin,
+        rootDirectoryUrl: new URL("./client/", import.meta.url),
+      },
+      fileRelativeUrl: `./main.html`,
+      runtime,
+      mirrorConsole: false,
+      collectConsole: true,
+    });
+    devServer.stop();
+    return { consoleCalls };
   };
-  const expect = {
-    status: "completed",
-    namespace: {
-      "/main.js": {
-        status: "completed",
-        exception: null,
-        value: null,
-        timings: {
-          start: assert.any(Number),
-          end: assert.any(Number),
-        },
-      },
-    },
-    consoleCalls: [
-      {
-        type: "log",
-        text: `foo\n`,
-      },
-      {
-        type: "log",
-        text: `bar\n`,
-      },
-    ],
-  };
-  assert({ actual, expect });
-};
 
-await test({
-  runtime: chromium(),
-});
-await test({
-  runtime: firefox({
-    disableOnWindowsBecauseFlaky: false,
-  }),
-});
-await test({
-  runtime: webkit(),
+  test("0_chromium", () =>
+    run({
+      runtime: chromium(),
+    }));
+  test("1_firefox", () =>
+    run({
+      runtime: firefox({
+        disableOnWindowsBecauseFlaky: false,
+      }),
+    }));
+  test("2_webkit", () =>
+    run({
+      runtime: webkit(),
+    }));
 });

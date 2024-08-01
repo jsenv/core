@@ -259,12 +259,8 @@ const renderText = (
           replace,
         });
       }
-
       return renderMarkdownBlock(
-        replace(
-          typeof value === "string" ? value : JSON.stringify(value, null, "  "),
-          { stringType: "json" },
-        ),
+        replace(stringifyJsValue(value), { stringType: "json" }),
         "js",
       );
     }
@@ -288,6 +284,50 @@ const renderText = (
     }
   }
   return replace(text);
+};
+
+const stringifyJsValue = (value) => {
+  if (typeof value === "string") {
+    return value;
+  }
+  const deepCopy = (value, { parentKey, propertyKey, allowedKeys } = {}) => {
+    if (value === null) {
+      return null;
+    }
+    if (Array.isArray(value)) {
+      const copy = [];
+      let i = 0;
+      while (i < value.length) {
+        copy[i] = deepCopy(value[i], {
+          parentKey: propertyKey,
+          propertyKey: i,
+        });
+        i++;
+      }
+      return copy;
+    }
+    if (typeof value === "object") {
+      const copy = {};
+      const keysToVisit = allowedKeys || Object.keys(value);
+      for (const keyToVisit of keysToVisit) {
+        const nestedValue = value[keyToVisit];
+        copy[keyToVisit] = deepCopy(nestedValue, {
+          parentKey: propertyKey,
+          propertyKey: keyToVisit,
+        });
+      }
+      return copy;
+    }
+    if (typeof value === "number") {
+      if (parentKey === "timings") {
+        return "<X>";
+      }
+      return value;
+    }
+    return value;
+  };
+  const copy = deepCopy(value);
+  return JSON.stringify(copy, null, "  ");
 };
 
 export const renderConsole = (
