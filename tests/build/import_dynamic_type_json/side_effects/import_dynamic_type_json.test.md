@@ -83,9 +83,7 @@ build({
 
 build "./main.html"
 ⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✖ failed to generate build graph
+✖ failed to generate source graph
 
 ```
 
@@ -95,5 +93,5 @@ build "./main.html"
 ### 2/2 reject
 
 ```console
-Error: ENOENT: no such file or directory, scandir '@jsenv/core/.jsenv/shape/src/'
+Error: ENOENT: no such file or directory, scandir '@jsenv/core/.jsenv/craft/feature/'
 ```
