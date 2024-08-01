@@ -1,58 +1,60 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import {
   executeTestPlan,
   nodeChildProcess,
   nodeWorkerThread,
-  reportAsJson,
+  reportCoverageAsHtml,
+  reportCoverageAsJson,
 } from "@jsenv/test";
+import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
-const test = async (name, params) => {
-  const testPlanResult = await executeTestPlan({
-    logs: {
-      level: "warn",
-    },
-    rootDirectoryUrl: new URL("./", import.meta.url),
-    testPlan: {
-      "./node_client/main.js": {
-        node: {
-          collectConsole: false,
-          ...params,
+await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
+  const run = async ({ runtime }) => {
+    const testPlanResult = await executeTestPlan({
+      logs: {
+        level: "warn",
+      },
+      rootDirectoryUrl: new URL("./", import.meta.url),
+      testPlan: {
+        "./node_client/main.js": {
+          node: {
+            collectConsole: false,
+            runtime,
+          },
         },
       },
-    },
-    coverage: {
-      include: {
-        "./node_client/file.js": true,
+      coverage: {
+        include: {
+          "./node_client/file.js": true,
+        },
+        includeMissing: false,
+        methodForNodeJs: "Profiler",
       },
-      includeMissing: false,
-      methodForNodeJs: "Profiler",
-    },
-    githubCheck: false,
-  });
-  const snapshotDirectoryUrl = new URL(
-    `./output/${name}/snapshots/`,
-    import.meta.url,
-  );
-  const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  reportAsJson(
-    testPlanResult,
-    new URL("./test_plan_result.json", snapshotDirectoryUrl),
-    {
-      mockFluctuatingValues: true,
-    },
-  );
-  await takeCoverageSnapshots(testPlanResult, {
-    testOutputDirectoryUrl: new URL(`./output/${name}/`, import.meta.url),
-    fileRelativeUrls: ["file.js"],
-  });
-  directorySnapshot.compare();
-};
+      githubCheck: false,
+    });
+    reportCoverageAsJson(
+      testPlanResult,
+      new URL("./coverage.json", import.meta.url),
+    );
+    reportCoverageAsHtml(
+      testPlanResult,
+      new URL("./.coverage/", import.meta.url),
+    );
+    await takeCoverageSnapshots(
+      new URL("./.coverage/", import.meta.url),
+      ["file.js"],
+      {
+        screenshotDirectoryUrl: new URL("./", import.meta.url),
+      },
+    );
+  };
 
-await test("child_process", {
-  runtime: nodeChildProcess(),
-});
-await test("worker_thread", {
-  runtime: nodeWorkerThread(),
+  test("0_worker_thread", () =>
+    run({
+      runtime: nodeWorkerThread(),
+    }));
+  test("1_child_process", () =>
+    run({
+      runtime: nodeChildProcess(),
+    }));
 });

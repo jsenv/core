@@ -6,8 +6,8 @@ The following versions support security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 38.x.x  | :white_check_mark: |
-| < 38.0  | :x:                |
+| 39.x.x  | :white_check_mark: |
+| < 39.0  | :x:                |
 
 ## Reporting a Vulnerability
 

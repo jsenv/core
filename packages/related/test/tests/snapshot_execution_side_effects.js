@@ -29,7 +29,7 @@ export const snapshotFileExecutionSideEffects = async (
           },
   });
 
-export const snapshotTestPlanExecutionSideEffects = async (
+export const snapshotTestPlanSideEffects = async (
   testFileUrl,
   fnRegisteringTests,
   options = {},
@@ -51,6 +51,7 @@ export const snapshotTestPlanExecutionSideEffects = async (
             include: {
               "**/*": true,
               "**/.jsenv/": false,
+              "**/.coverage/": false,
             },
             ...(options.filesystemEffects === true
               ? {}
