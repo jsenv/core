@@ -22,9 +22,9 @@ export const snapshotTests = async (
   {
     testName = urlToBasename(testFileUrl, true),
     sideEffectFileUrl,
-    sideEffectFilePattern = "./output/[test_name].md",
-    outDirectoryPattern = "./output/[test_name]/",
-    outFilePattern = "./output/[test_scenario]/[filename]",
+    outDirectoryPattern = "./side_effects/",
+    sideEffectFilePattern = "./side_effects/[test_basename].md",
+    outFilePattern = "./side_effects/[test_name]/[test_scenario]/[filename]",
     rootDirectoryUrl,
     generatedBy = true,
     linkToSource = true,
@@ -35,11 +35,11 @@ export const snapshotTests = async (
     throwWhenDiff = process.env.CI,
   } = {},
 ) => {
+  const testBasename = urlToBasename(testFileUrl);
   if (sideEffectFileUrl === undefined) {
-    const sideEffectFileRelativeUrl = sideEffectFilePattern.replaceAll(
-      "[test_name]",
-      testName,
-    );
+    const sideEffectFileRelativeUrl = sideEffectFilePattern
+      .replaceAll("[test_name]", testName)
+      .replaceAll("[test_basename]", testBasename);
     sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, testFileUrl);
   } else {
     sideEffectFileUrl = new URL(sideEffectFileUrl, testFileUrl);
@@ -103,6 +103,7 @@ export const snapshotTests = async (
     const generateOutFileUrl = (filename) => {
       const outFileRelativeUrl = outFilePattern
         .replaceAll("[test_name]", testName)
+        .replaceAll("[test_basename]", testBasename)
         .replaceAll("[test_scenario]", testScenario)
         .replaceAll("[filename]", filename);
       const outFileUrl = new URL(outFileRelativeUrl, testFileUrl).href;

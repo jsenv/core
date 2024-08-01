@@ -11,21 +11,21 @@ export const snapshotSideEffects = (
   fn,
   {
     sideEffectFileUrl,
-    sideEffectFilePattern = "./output/[basename].md",
-    outDirectoryPattern = "./output/[basename]/",
-    outFilePattern = "./output/[basename]/[filename]",
+    outDirectoryPattern = "./side_effects/",
+    sideEffectFilePattern = "./side_effects/[basename].md",
+    outFilePattern = "./side_effects/[name]/[filename]",
     generateOutFileUrl,
     outDirectoryUrl,
     errorStackHidden,
     ...captureOptions
   } = {},
 ) => {
-  const basename = urlToBasename(sourceFileUrl, true);
+  const name = urlToBasename(sourceFileUrl, true);
+  const basename = urlToBasename(sourceFileUrl);
   if (sideEffectFileUrl === undefined) {
-    const sideEffectFileRelativeUrl = sideEffectFilePattern.replaceAll(
-      "[basename]",
-      basename,
-    );
+    const sideEffectFileRelativeUrl = sideEffectFilePattern
+      .replaceAll("[basename]", basename)
+      .replaceAll("[name]", name);
     sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, sourceFileUrl);
   } else {
     sideEffectFileUrl = new URL(sideEffectFileUrl, sourceFileUrl);
@@ -42,6 +42,7 @@ export const snapshotSideEffects = (
   if (generateOutFileUrl === undefined) {
     generateOutFileUrl = (filename) => {
       const outRelativeUrl = outFilePattern
+        .replaceAll("[name]", name)
         .replaceAll("[basename]", basename)
         .replaceAll("[filename]", filename);
       const outFileUrl = new URL(outRelativeUrl, new URL("./", sourceFileUrl))

@@ -37,10 +37,6 @@ export const spyFilesystemCalls = (
   const fileDescriptorPathMap = new Map();
   const fileRestoreMap = new Map();
   const onWriteFileDone = (fileUrl, stateBefore, stateAfter) => {
-    if (!stateAfter.found) {
-      // not suppoed to happen but could apparently
-      return;
-    }
     // we use same type because we don't want to differentiate between
     // - writing file for the 1st time
     // - updating file content
