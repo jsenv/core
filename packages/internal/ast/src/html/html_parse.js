@@ -91,6 +91,7 @@ export const stringifyHtmlAst = (
     preserveLineBreaks = true,
     cleanupJsenvAttributes = false,
     cleanupPositionAttributes = false,
+    here,
   } = {},
 ) => {
   if (cleanupJsenvAttributes || cleanupPositionAttributes) {
@@ -130,52 +131,71 @@ export const stringifyHtmlAst = (
   }
   if (preserveLineBreaks) {
     // ensure body and html have \n
-    ensureLineBreaksBetweenHtmlNodes(htmlAst);
+    ensureLineBreaksBetweenHtmlNodes(htmlAst, here);
   }
   const htmlString = serialize(htmlAst);
   return htmlString;
 };
 
-const ensureLineBreaksBetweenHtmlNodes = (rootNode) => {
-  const mutations = [];
-
+const ensureLineBreaksBetweenHtmlNodes = (rootNode, here) => {
+  const mutationCallbackSet = new Set();
   const documentType = rootNode.childNodes[0];
+  const ensureChildrenSurroundedByLinebreaks = (headOrBody) => {
+    const { childNodes } = headOrBody;
+    const firstChild = childNodes[0];
+    if (firstChild.nodeName !== "#text") {
+      mutationCallbackSet.add(() => {
+        insertHtmlNodeBefore(
+          { nodeName: "#text", value: "\n    " },
+          firstChild,
+        );
+      });
+    }
+    const lastChild = childNodes[childNodes.length - 1];
+    if (lastChild.nodeName === "#text") {
+      if (headOrBody.nodeName === "head" && lastChild.value === "\n    ") {
+        lastChild.value = "\n  ";
+      }
+    } else {
+      mutationCallbackSet.add(() => {
+        insertHtmlNodeAfter({ nodeName: "#text", value: "\n  " }, lastChild);
+      });
+    }
+    if (
+      lastChild.nodeName === "#text" &&
+      lastChild.value[lastChild.value.length - 1] === "\n"
+    ) {
+      lastChild.value = lastChild.value.slice(0, -1);
+    }
+  };
+
   if (documentType.nodeName === "#documentType") {
     const html = rootNode.childNodes[1];
     if (html.nodeName === "html") {
-      mutations.push(() => {
+      mutationCallbackSet.add(() => {
         insertHtmlNodeAfter({ nodeName: "#text", value: "\n" }, documentType);
       });
-
-      const head = html.childNodes[0];
-      if (head.nodeName === "head") {
-        mutations.push(() => {
+      const htmlChildNodes = html.childNodes;
+      const head = htmlChildNodes.find((node) => node.nodeName === "head");
+      if (head) {
+        mutationCallbackSet.add(() => {
           insertHtmlNodeBefore({ nodeName: "#text", value: "\n  " }, head);
         });
+        ensureChildrenSurroundedByLinebreaks(head);
       }
-
-      const body = html.childNodes.find((node) => node.nodeName === "body");
+      const body = htmlChildNodes.find((node) => node.nodeName === "body");
       if (body) {
-        const bodyLastChild = body.childNodes[body.childNodes.length - 1];
-        if (bodyLastChild.nodeName !== "#text") {
-          mutations.push(() => {
-            insertHtmlNodeAfter(
-              { nodeName: "#text", value: "\n  " },
-              bodyLastChild,
-            );
+        const nodeBeforeBody = htmlChildNodes[htmlChildNodes.indexOf(body) - 1];
+        if (nodeBeforeBody && nodeBeforeBody.nodeName !== "#text") {
+          mutationCallbackSet.add(() => {
+            insertHtmlNodeBefore({ nodeName: "#text", value: "\n  " }, body);
           });
         }
-        if (
-          bodyLastChild.nodeName === "#text" &&
-          bodyLastChild.value[bodyLastChild.value.length - 1] === "\n"
-        ) {
-          bodyLastChild.value = bodyLastChild.value.slice(0, -1);
-        }
+        ensureChildrenSurroundedByLinebreaks(body);
       }
-
       const htmlLastChild = html.childNodes[html.childNodes.length - 1];
       if (htmlLastChild.nodeName !== "#text") {
-        mutations.push(() => {
+        mutationCallbackSet.add(() => {
           insertHtmlNodeAfter(
             { nodeName: "#text", value: "\n" },
             htmlLastChild,
@@ -184,8 +204,9 @@ const ensureLineBreaksBetweenHtmlNodes = (rootNode) => {
       }
     }
   }
-
-  mutations.forEach((m) => m());
+  for (const mutationCallback of mutationCallbackSet) {
+    mutationCallback();
+  }
 };
 
 export const parseSvgString = (svgString) => {
