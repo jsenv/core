@@ -36,7 +36,7 @@ function outputDiff(diffActual, diffExpect) {
 }
 
 function removeSvgWhitespaces(svg) {
-  const replaced = svg.replace(/\s*(<text.*<\/text>)\s*/gm, "$1");
+  const replaced = svg.replace(/\s*(<text.*<\/text>)\s*/g, "$1");
   return replaced;
 }
 
