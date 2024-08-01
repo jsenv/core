@@ -45,12 +45,20 @@ export const snapshotTests = async (
     sideEffectFileUrl = new URL(sideEffectFileUrl, testFileUrl);
   }
 
+  const dirUrlMap = new Map();
+  const sideEffectsMap = new Map();
   const testMap = new Map();
   const onlyTestMap = new Map();
   const test = (scenario, fn, options) => {
+    if (testMap.has(scenario) || onlyTestMap.has(scenario)) {
+      console.warn(`test override "${scenario}"`);
+    }
     testMap.set(scenario, { fn, options, callSite: getCallerLocation(2) });
   };
   test.ONLY = (scenario, fn, options) => {
+    if (testMap.has(scenario) || onlyTestMap.has(scenario)) {
+      console.warn(`test override "${scenario}"`);
+    }
     onlyTestMap.set(scenario, { fn, options, callSite: getCallerLocation(2) });
   };
   fnRegisteringTest({ test });
@@ -89,6 +97,7 @@ export const snapshotTests = async (
       callSite: linkToEachSource ? callSite : undefined,
       baseDirectory: String(new URL("./", callSite.url)),
     });
+    sideEffectsMap.set(scenario, sideEffects);
     const testScenario = asValidFilename(scenario);
     let outDirectoryRelativeUrl = outDirectoryPattern
       .replaceAll("[test_name]", testName)
@@ -109,6 +118,8 @@ export const snapshotTests = async (
       const outFileUrl = new URL(outFileRelativeUrl, testFileUrl).href;
       return outFileUrl;
     };
+    const outFileDirectoryUrl = generateOutFileUrl("");
+    dirUrlMap.set(scenario, outFileDirectoryUrl);
     const sideEffectsMarkdown = renderSideEffects(sideEffects, {
       sideEffectFileUrl,
       outDirectoryUrl,
@@ -125,6 +136,8 @@ export const snapshotTests = async (
     mockFluctuatingValues: false,
     throwWhenDiff,
   });
+
+  return { dirUrlMap, sideEffectsMap };
 };
 
 const generateExecutingLink = (sourceFileUrl, sideEffectFileUrl) => {
