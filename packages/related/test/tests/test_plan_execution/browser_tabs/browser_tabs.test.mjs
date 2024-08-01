@@ -3,43 +3,45 @@
  */
 
 import { startDevServer } from "@jsenv/core";
-import { takeFileSnapshot } from "@jsenv/snapshot";
-
 import { chromium, executeTestPlan, reportAsJson } from "@jsenv/test";
+import { snapshotTestPlanExecutionSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
-const testResultJsonFileUrl = new URL(
-  "./snapshots/test_result.json",
+await snapshotTestPlanExecutionSideEffects(
   import.meta.url,
+  async ({ test }) => {
+    const run = async ({ testPlan }) => {
+      const devServer = await startDevServer({
+        logLevel: "warn",
+        sourceDirectoryUrl: new URL("./client/", import.meta.url),
+        keepProcessAlive: false,
+        port: 0,
+      });
+      const result = await executeTestPlan({
+        logs: {
+          level: "warn",
+        },
+        rootDirectoryUrl: new URL("./", import.meta.url),
+        testPlan,
+        webServer: {
+          origin: devServer.origin,
+          rootDirectoryUrl: new URL("./client/", import.meta.url),
+        },
+        githubCheck: false,
+      });
+      reportAsJson(result, new URL("./result.json", import.meta.url));
+    };
+    test("0_basic", () =>
+      run({
+        testPlan: {
+          "./client/*.html": {
+            a: {
+              runtime: chromium(),
+            },
+            b: {
+              runtime: chromium(),
+            },
+          },
+        },
+      }));
+  },
 );
-const testResultJsonSnapshot = takeFileSnapshot(testResultJsonFileUrl);
-const devServer = await startDevServer({
-  logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  keepProcessAlive: false,
-  port: 0,
-});
-const result = await executeTestPlan({
-  logs: {
-    level: "warn",
-  },
-  rootDirectoryUrl: new URL("./", import.meta.url),
-  testPlan: {
-    "./client/*.html": {
-      a: {
-        runtime: chromium(),
-      },
-      b: {
-        runtime: chromium(),
-      },
-    },
-  },
-  webServer: {
-    origin: devServer.origin,
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
-  },
-  githubCheck: false,
-});
-reportAsJson(result, testResultJsonFileUrl, {
-  mockFluctuatingValues: true,
-});
-testResultJsonSnapshot.compare();
