@@ -293,7 +293,7 @@ const stringifyJsValue = (value) => {
   if (typeof value === "string") {
     return value;
   }
-  const deepCopy = (value, { parentKey, propertyKey, allowedKeys } = {}) => {
+  const deepCopy = (value, { isInsideTimingOrPerformanceObject } = {}) => {
     if (value === null) {
       return null;
     }
@@ -301,28 +301,27 @@ const stringifyJsValue = (value) => {
       const copy = [];
       let i = 0;
       while (i < value.length) {
-        copy[i] = deepCopy(value[i], {
-          parentKey: propertyKey,
-          propertyKey: i,
-        });
+        copy[i] = deepCopy(value[i], { isInsideTimingOrPerformanceObject });
         i++;
       }
       return copy;
     }
     if (typeof value === "object") {
       const copy = {};
-      const keysToVisit = allowedKeys || Object.keys(value);
+      const keysToVisit = Object.keys(value);
       for (const keyToVisit of keysToVisit) {
         const nestedValue = value[keyToVisit];
         copy[keyToVisit] = deepCopy(nestedValue, {
-          parentKey: propertyKey,
-          propertyKey: keyToVisit,
+          isInsideTimingOrPerformanceObject:
+            isInsideTimingOrPerformanceObject ||
+            keyToVisit === "timings" ||
+            keyToVisit === "performance",
         });
       }
       return copy;
     }
     if (typeof value === "number") {
-      if (parentKey === "timings") {
+      if (isInsideTimingOrPerformanceObject) {
         return "<X>";
       }
       return value;

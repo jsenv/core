@@ -1,38 +1,23 @@
-import { assert } from "@jsenv/assert";
-
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
+import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
-const test = async (params) => {
-  const { namespace, performance } = await execute({
-    // logLevel: "debug",
-    rootDirectoryUrl: new URL("./node_client/", import.meta.url),
-    fileRelativeUrl: `./main.js`,
-    mirrorConsole: false,
-    collectPerformance: true,
-    keepRunning: true, // node will naturally exit
-    ...params,
-  });
-  const actual = {
-    namespace,
-    performance,
+await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
+  const run = async ({ runtime }) => {
+    const { performance } = await execute({
+      rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+      fileRelativeUrl: `./main.js`,
+      collectPerformance: true,
+      keepRunning: true, // node will naturally exit
+      runtime,
+    });
+    return { performance };
   };
-  const expect = {
-    namespace: { answer: 42 },
-    performance: {
-      nodeTiming: assert.any(Object),
-      timeOrigin: assert.any(Number),
-      eventLoopUtilization: assert.any(Object),
-      measures: {
-        "a to b": assert.any(Number),
-      },
-    },
-  };
-  assert({ actual, expect });
-};
-
-await test({
-  runtime: nodeChildProcess(),
-});
-await test({
-  runtime: nodeWorkerThread(),
+  test("0_worker_thread", () =>
+    run({
+      runtime: nodeWorkerThread(),
+    }));
+  test("1_child_process", () =>
+    run({
+      runtime: nodeChildProcess(),
+    }));
 });
