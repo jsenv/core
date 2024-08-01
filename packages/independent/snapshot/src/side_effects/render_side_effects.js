@@ -161,12 +161,12 @@ const renderOneSideEffect = (
   });
   if (text) {
     if (
-      (sideEffect.number === 1 &&
-        lastSideEffectNumber === 1 &&
-        sideEffect.code === "return") ||
-      sideEffect.code === "throw" ||
-      sideEffect.code === "resolve" ||
-      sideEffect.code === "reject"
+      sideEffect.number === 1 &&
+      lastSideEffectNumber === 1 &&
+      (sideEffect.code === "return" ||
+        sideEffect.code === "throw" ||
+        sideEffect.code === "resolve" ||
+        sideEffect.code === "reject")
     ) {
       label = null;
     }
