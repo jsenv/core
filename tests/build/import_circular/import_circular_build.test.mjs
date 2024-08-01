@@ -4,33 +4,38 @@ import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-await snapshotBuildTests(import.meta.url, ({ test }) => {
-  const testParams = {
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./main.js": "main.js" },
-    minification: false,
-    versioning: false,
-    base: "./",
-  };
+const { getScenarioBuildUrl } = await snapshotBuildTests(
+  import.meta.url,
+  ({ test }) => {
+    const testParams = {
+      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      entryPoints: { "./main.js": "main.js" },
+      minification: false,
+      versioning: false,
+      base: "./",
+    };
 
-  test("0_with_bundling", () =>
-    build({
-      ...testParams,
-      bundling: true,
-    }));
+    test("0_with_bundling", () =>
+      build({
+        ...testParams,
+        bundling: true,
+      }));
 
-  test("1_without_bundling", () =>
-    build({
-      ...testParams,
-      bundling: false,
-    }));
-});
+    test("1_without_bundling", () =>
+      build({
+        ...testParams,
+        bundling: false,
+      }));
+  },
+);
 
 // with bundling (default)
 {
   // eslint-disable-next-line import/no-unresolved
-  const namespace = await import("./output/0_with_bundling/build/main.js");
+  const namespace = await import(
+    new URL("main.js", getScenarioBuildUrl("0_with_bundling"))
+  );
   const actual = { ...namespace };
   const expect = {
     executionOrder: ["index", "tag", "data", "main: Tag: Tag data Tag data"],
@@ -41,7 +46,9 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
 // without bundling
 {
   // eslint-disable-next-line import/no-unresolved
-  const namespace = await import("./output/1_without_bundling/build/main.js");
+  const namespace = await import(
+    new URL("main.js", getScenarioBuildUrl("1_without_bundling"))
+  );
   const actual = { ...namespace };
   const expect = {
     executionOrder: ["index", "tag", "data", "main: Tag: Tag data Tag data"],

@@ -1,4 +1,4 @@
-import { urlToBasename, urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
+import { urlToBasename, urlToRelativeUrl } from "@jsenv/urls";
 import {
   takeDirectorySnapshot,
   takeFileSnapshot,
@@ -62,7 +62,7 @@ export const snapshotTests = async (
     filesystemEffects,
   });
   let markdown = "";
-  markdown += `# ${urlToFilename(sideEffectFileUrl)}`;
+  markdown += `# ${testName}`;
   if (generatedBy) {
     let generatedByLink = renderSmallLink(
       {
