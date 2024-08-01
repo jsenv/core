@@ -34,9 +34,7 @@ await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
     }));
   test("1_firefox", () =>
     run({
-      runtime: firefox({
-        disableOnWindowsBecauseFlaky: false,
-      }),
+      runtime: firefox({ disableOnWindowsBecauseFlaky: false }),
     }));
   test("2_webkit", () =>
     run({
