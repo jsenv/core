@@ -28,7 +28,9 @@ try {
     /* eslint-enable no-undef */
   });
   const serverWarnings = warnCalls
-    .map((warnCall) => replaceFluctuatingValues(warnCall))
+    .map((warnCall) =>
+      replaceFluctuatingValues(warnCall, { localhostUrl: devServer.origin }),
+    )
     .join("\n");
   const serverWarningsFileUrl = new URL(
     "./output/server_warnings.txt",

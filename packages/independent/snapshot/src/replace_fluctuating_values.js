@@ -21,11 +21,13 @@ export const replaceFluctuatingValues = (
   {
     stringType,
     rootDirectoryUrl,
+    localhostUrl,
     fileUrl,
     preserveAnsi,
     // for unit test
     replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
       rootDirectoryUrl,
+      localhostUrl,
     }),
   } = {},
 ) => {

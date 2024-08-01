@@ -1,4 +1,4 @@
-GET http://localhost:60403/not_found.js
+GET http://localhost/not_found.js
   404 Failed to fetch url content
   @jsenv/core/tests/dev_and_build/errors/js_import_not_found/client/intermediate.js:2:7
   1 | // eslint-disable-next-line import/no-unresolved
