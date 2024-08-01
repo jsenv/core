@@ -15,11 +15,11 @@ const { values, positionals } = parseArgs({
 });
 
 if (values.help || positionals.length === 0) {
-  console.log(`snapshot: Manage snapshot files generated during tests.
+  console.log(`filesystem: Manage files generated during tests.
 
-Usage: npx @jsenv/snapshot clear [pattern]
+Usage: npx @jsenv/filesystem clear [pattern]
 
-https://github.com/jsenv/core/tree/main/packages/independent/snapshot
+https://github.com/jsenv/core/tree/main/packages/independent/filesystem
 
 pattern: files matching this pattern will be removed; can use "*" and "**"
 `);
