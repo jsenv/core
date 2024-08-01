@@ -8,6 +8,23 @@ const injectToolbar = async ({
   animationsEnabled,
   notificationsEnabled
 }) => {
+  let iframe;
+  let resolveToolbarReadyPromise;
+  const toolbarReadyPromise = new Promise(resolve => {
+    resolveToolbarReadyPromise = resolve;
+  });
+  const openToolbar = async () => {
+    await toolbarReadyPromise;
+    sendCommandToToolbar(iframe, "openToolbar");
+  };
+  const closeToolbar = async () => {
+    await toolbarReadyPromise;
+    sendCommandToToolbar(iframe, "closeToolbar");
+  };
+  window.__jsenv_toolbar__ = {
+    open: openToolbar,
+    close: closeToolbar
+  };
   if (document.readyState !== "complete") {
     await new Promise(resolve => {
       window.addEventListener("load", resolve);
@@ -23,7 +40,7 @@ const injectToolbar = async ({
     }
   });
   const jsenvToolbar = document.createElement("jsenv-toolbar");
-  const iframe = createIframeNode();
+  iframe = createIframeNode();
   const toolbarTriggerNode = createToolbarTriggerNode();
   jsenvToolbar.appendChild(iframe);
   jsenvToolbar.appendChild(toolbarTriggerNode);
@@ -65,7 +82,7 @@ const injectToolbar = async ({
     collapseToolbarTrigger();
   };
   toolbarTriggerNode.onclick = () => {
-    sendCommandToToolbar(iframe, "openToolbar");
+    openToolbar();
   };
   const showToolbarTrigger = () => {
     toolbarTriggerNode.style.display = "block";
@@ -109,6 +126,7 @@ const injectToolbar = async ({
     });
   });
   await iframeLoadedPromise;
+  resolveToolbarReadyPromise();
   iframe.removeAttribute("tabindex");
   return iframe;
 };

@@ -1,24 +1,25 @@
 /*
  * The goal of this file is to:
  * - See the effect of using jsenv dev server on source files
+ *
+ * consider https://testrigor.com/blog/websocketerror-in-playwright/
  */
 
+import { startDevServer } from "@jsenv/core";
 import { ensureEmptyDirectory, writeFileSync } from "@jsenv/filesystem";
+import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import prettier from "prettier";
-
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 import { launchBrowserPage } from "../../launch_browser_page.js";
 
 const debug = false;
 await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
 const devServer = await startDevServer({
   sourcemaps: "none",
-  logLevel: "off",
-  serverLogLevel: "off",
+  logLevel: "warn",
+  serverLogLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   keepProcessAlive: false,
