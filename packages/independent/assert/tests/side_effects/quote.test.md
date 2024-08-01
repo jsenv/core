@@ -263,8 +263,8 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: 'http://a.com/?fo%22=true'
-expect: 'http://a.com/?fo%22=false'
+actual: 'http://a.com/?fo"=true'
+expect: 'http://a.com/?fo"=false'
 ```
 
 </details>
@@ -287,8 +287,8 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: 'http://a.com/?foo=%22dam"'
-expect: 'http://a.com/?foo=%22seb"'
+actual: 'http://a.com/?foo="dam"'
+expect: 'http://a.com/?foo="seb"'
 ```
 
 </details>
@@ -311,8 +311,8 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: 'http://a.com/dir/%22dam"'
-expect: 'http://b.com/dir/%22dam"'
+actual: 'http://a.com/dir/"dam"'
+expect: 'http://b.com/dir/"dam"'
 ```
 
 </details>
@@ -359,8 +359,8 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: 'http://example.com/?name=%22dam"'
-expect: 'http://example.com/?name=%22seb"'
+actual: 'http://example.com/?name="dam"'
+expect: 'http://example.com/?name="seb"'
 ```
 
 </details>

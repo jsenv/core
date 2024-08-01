@@ -22,7 +22,7 @@ assert({
 AssertionError: actual and expect are different
 
 actual: URL("http://example.com/")
-expect: URL("http://example.com:9999/")
+expect: URL("http://example.com:8000/")
 ```
 
 </details>
@@ -46,7 +46,7 @@ assert({
 AssertionError: actual and expect are different
 
 actual: "http://example.com/"
-expect: "http://example.com:9999/"
+expect: "http://example.com:8000/"
 ```
 
 </details>
@@ -70,7 +70,7 @@ assert({
 AssertionError: actual and expect are different
 
 actual: "http://example.com/"
-expect: URL("http://example.com:9999/")
+expect: URL("http://example.com:8000/")
 ```
 
 </details>
@@ -466,7 +466,7 @@ assert({
 AssertionError: actual and expect are different
 
 actual: URL("http://example.com/")
-expect: "http://example.com:9999/"
+expect: "http://example.com:8000/"
 ```
 
 </details>
@@ -490,7 +490,7 @@ assert({
 AssertionError: actual and expect are different
 
 actual: "http://example.com/"
-expect: "http://example.com:9999/"
+expect: "http://example.com:8000/"
 ```
 
 </details>
@@ -651,7 +651,7 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: URL("http://example.com:9999/")
+actual: URL("http://example.com:45/")
 expect: {
   port: 45,
 }

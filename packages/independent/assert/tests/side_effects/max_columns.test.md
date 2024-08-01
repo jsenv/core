@@ -1341,7 +1341,7 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: "http://example_that_is_quite_/…"
+actual: "http://example_that_is_quite_…"
 expect: "file://example_that_is_quite_…"
 ```
 
@@ -1391,7 +1391,7 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: "http://example_that_is_quite_/…"
+actual: "http://example_that_is_quite_…"
 expect: "file://example_that_aa_quite_…"
 ```
 
