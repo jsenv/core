@@ -53,27 +53,31 @@ export const spyFilesystemCalls = (
           : stateBefore.mtimeMs === stateAfter.mtimeMs
             ? ""
             : "mtime_modified";
-    if (reason) {
-      if (undoFilesystemSideEffects && !fileRestoreMap.has(fileUrl)) {
-        if (stateBefore.found) {
-          fileRestoreMap.set(fileUrl, () => {
-            writeFileSync(fileUrl, stateBefore.buffer);
-          });
-        } else {
-          fileRestoreMap.set(fileUrl, () => {
-            removeFileSync(fileUrl, { allowUseless: true });
-          });
-        }
-      }
-      if (shouldReport(fileUrl)) {
-        onWriteFile(fileUrl, stateAfter.buffer, reason);
-        return;
+    if (!reason) {
+      // file is exactly the same
+      // function did not have any effect on the file
+      return;
+    }
+    if (!shouldReport(fileUrl)) {
+      return;
+    }
+    if (undoFilesystemSideEffects && !fileRestoreMap.has(fileUrl)) {
+      if (stateBefore.found) {
+        fileRestoreMap.set(fileUrl, () => {
+          writeFileSync(fileUrl, stateBefore.buffer);
+        });
+      } else {
+        fileRestoreMap.set(fileUrl, () => {
+          removeFileSync(fileUrl, { allowUseless: true });
+        });
       }
     }
-    // file is exactly the same
-    // function did not have any effect on the file
+    onWriteFile(fileUrl, stateAfter.buffer, reason);
   };
   const onWriteDirectoryDone = (directoryUrl) => {
+    if (!shouldReport(directoryUrl)) {
+      return;
+    }
     if (undoFilesystemSideEffects && !fileRestoreMap.has(directoryUrl)) {
       fileRestoreMap.set(directoryUrl, () => {
         removeDirectorySync(directoryUrl, {
@@ -82,9 +86,7 @@ export const spyFilesystemCalls = (
         });
       });
     }
-    if (shouldReport(directoryUrl)) {
-      onWriteDirectory(directoryUrl);
-    }
+    onWriteDirectory(directoryUrl);
   };
   const restoreCallbackSet = new Set();
 
