@@ -29,6 +29,7 @@ export const createException = (
   {
     jsenvCoreDirectoryUrl = new URL("../../../../", import.meta.url),
     rootDirectoryUrl,
+    errorMessageTransform = (message) => message,
   } = {},
 ) => {
   const exception = {
@@ -168,7 +169,7 @@ export const createException = (
     reason.stackTrace = stackTrace;
     let stack = "";
     const name = getErrorName(reason);
-    const message = reason.message || "";
+    const message = errorMessageTransform(reason.message || "");
     stack += `${name}: ${message}`;
     if (stackTrace) {
       stack += `\n${stackTrace}`;
@@ -199,7 +200,7 @@ export const createException = (
     // getOwnPropertyNames is not enough to copy .name and .message
     // on error instances
     exception.name = getErrorName(reason);
-    exception.message = reason.message;
+    exception.message = errorMessageTransform(reason.message);
   }
   return exception;
 };

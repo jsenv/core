@@ -50,6 +50,7 @@ export const renderSideEffects = (
       dedicatedFile: { line: 50, length: 5000 },
     }),
     errorStackHidden,
+    errorMessageTransform,
   } = {},
 ) => {
   const { rootDirectoryUrl, replaceFilesystemWellKnownValues } =
@@ -93,6 +94,7 @@ export const renderSideEffects = (
       getBigSizeEffect,
       replace,
       errorStackHidden,
+      errorMessageTransform,
       lastSideEffectNumber,
     });
   }
@@ -141,6 +143,7 @@ const renderOneSideEffect = (
     getBigSizeEffect,
     replace,
     errorStackHidden,
+    errorMessageTransform,
     lastSideEffectNumber,
   },
 ) => {
@@ -177,6 +180,7 @@ const renderOneSideEffect = (
       replace,
       rootDirectoryUrl,
       errorStackHidden,
+      errorMessageTransform,
     });
   }
   if (sideEffect.code === "source_code") {
@@ -213,6 +217,7 @@ const renderText = (
     replace,
     rootDirectoryUrl,
     errorStackHidden,
+    errorMessageTransform,
   },
 ) => {
   if (text && typeof text === "object") {
@@ -250,7 +255,10 @@ const renderText = (
           typeof jsValue.stack === "string")
       ) {
         // return renderMarkdownBlock(text.value.stack);
-        const exception = createException(jsValue, { rootDirectoryUrl });
+        const exception = createException(jsValue, {
+          rootDirectoryUrl,
+          errorMessageTransform,
+        });
         const exceptionText = errorStackHidden
           ? `${exception.name}: ${exception.message}`
           : exception.stack || exception.message || exception;

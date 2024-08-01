@@ -30,6 +30,7 @@ export const snapshotTests = async (
     linkToSource = true,
     linkToEachSource,
     errorStackHidden,
+    errorMessageTransform,
     logEffects,
     filesystemEffects,
     throwWhenDiff = process.env.CI,
@@ -127,6 +128,7 @@ export const snapshotTests = async (
       generatedBy: false,
       titleLevel: 3,
       errorStackHidden,
+      errorMessageTransform,
     });
     outDirectorySnapshot.compare(throwWhenDiff);
     markdown += sideEffectsMarkdown;

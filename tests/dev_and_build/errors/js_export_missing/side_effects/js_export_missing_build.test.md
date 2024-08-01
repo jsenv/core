@@ -40,8 +40,5 @@ build "./main.html"
 Error: tests/dev_and_build/errors/js_export_missing/client/main.js (2:9): "answer" is not exported by "tests/dev_and_build/errors/js_export_missing/client/file.js", imported by "tests/dev_and_build/errors/js_export_missing/client/main.js".
 --- frame ---
 1: // eslint-disable-next-line import/named
-2: import { answer } from "@jsenv/core/tests/dev_and_build/errors/js_export_missi...
-            ^
-3: console.log(answer);
   at async base/js_export_missing_build.test.mjs:4:1
 ```
