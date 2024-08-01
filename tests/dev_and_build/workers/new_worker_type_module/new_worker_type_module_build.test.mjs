@@ -1,72 +1,82 @@
 import { assert } from "@jsenv/assert";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const test = async ({ name, ...params }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await build({
-    logLevel: "warn",
+const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
+  const testParams = {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
-  });
-  buildDirectorySnapshot.compare();
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    minification: false,
+  };
+  test("0_worker_type_module", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "89" },
+    }));
+  test("1_worker_type_module_no_bundling", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "89" },
+      bundling: false,
+      versioning: false,
+    }));
+  test("2_worker_type_module_fallback", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "79" },
+    }));
+  test("3_worker_type_module_fallback_no_bundling", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "79" },
+      bundling: false,
+    }));
+  test("4_js_module_fallback", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "62" },
+    }));
+});
 
-  const server = await startFileServer({
-    rootDirectoryUrl: snapshotDirectoryUrl,
-  });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
-  const actual = returnValue;
-  const expect = {
+const actual = {
+  workerTypeModule: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("0_worker_type_module")}build/`,
+  ),
+  workerTypeModuleNoBundling: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("1_worker_type_module_no_bundling")}build/`,
+  ),
+  workerTypeModuleFallback: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("2_worker_type_module_fallback")}build/`,
+  ),
+  workerTypeModuleFallbackNoBundling: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("3_worker_type_module_fallback_no_bundling")}build/`,
+  ),
+  jsModuleFallback: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("4_js_module_fallback")}build/`,
+  ),
+};
+const expect = {
+  workerTypeModule: {
     workerResponse: "pong",
     worker2Response: "pong",
-  };
-  assert({ actual, expect });
+  },
+  workerTypeModuleNoBundling: {
+    workerResponse: "pong",
+    worker2Response: "pong",
+  },
+  workerTypeModuleFallback: {
+    workerResponse: "pong",
+    worker2Response: "pong",
+  },
+  workerTypeModuleFallbackNoBundling: {
+    workerResponse: "pong",
+    worker2Response: "pong",
+  },
+  jsModuleFallback: {
+    workerResponse: "pong",
+    worker2Response: "pong",
+  },
 };
-
-// support for {type: "module"} in new Worker
-await test({
-  name: "0_worker_type_module",
-  runtimeCompat: { chrome: "89" },
-  minification: false,
-});
-// no support for {type: "module"} in new Worker
-await test({
-  name: "1_worker_type_module_not_supported",
-  runtimeCompat: { chrome: "79" },
-  minification: false,
-});
-// no support for <script type="modue">
-await test({
-  name: "2_script_type_module_not_supported",
-  runtimeCompat: { chrome: "62" },
-  minification: false,
-});
-// support + no bundling
-await test({
-  name: "3_worker_type_module_no_bundling",
-  runtimeCompat: { chrome: "89" },
-  bundling: false,
-  minification: false,
-  versioning: false,
-});
-// no support + no bundling
-await test({
-  name: "4_worker_type_module_not_supported_no_bundling",
-  runtimeCompat: { chrome: "79" },
-  bundling: false,
-  minification: false,
-});
+assert({ actual, expect });
