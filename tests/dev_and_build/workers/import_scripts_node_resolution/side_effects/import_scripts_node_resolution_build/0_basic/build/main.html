@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <script>
+      ;(function() {
+        var __versionMappings__ = {
+          "/js/index.js": "/js/index.js?v=ec8d3df4"
+        };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
+    </script>
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module" src="/js/main.js?v=2ed7e538"></script>
+  </body>
+</html>

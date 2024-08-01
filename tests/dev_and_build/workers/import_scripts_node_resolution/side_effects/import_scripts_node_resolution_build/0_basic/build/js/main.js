@@ -12,11 +12,4 @@ const testWorker = async (worker) => {
 
 const worker = new Worker("/worker.js");
 const workerResponse = await testWorker(worker);
-
-const worker2 = new Worker(new URL("./worker.js", import.meta.url));
-const worker2Response = await testWorker(worker2);
-
-window.resolveResultPromise({
-  workerResponse,
-  worker2Response,
-});
+window.resolveResultPromise(workerResponse);
