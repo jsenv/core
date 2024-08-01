@@ -217,6 +217,30 @@ await startTesting(({ test }) => {
         },
       },
     );
+    test(
+      "write_file/13_write_json",
+      () => {
+        writeFileSync(
+          new URL("./data.json", import.meta.url),
+          JSON.stringify(
+            {
+              url: import.meta.url,
+              timings: {
+                a: 100,
+              },
+            },
+            null,
+            "  ",
+          ),
+        );
+      },
+      {
+        filesystemEffects: {
+          textualFilesIntoDirectory: true,
+          baseDirectory: new URL("./", import.meta.url),
+        },
+      },
+    );
   }
   group_write_by_directory: {
     test(

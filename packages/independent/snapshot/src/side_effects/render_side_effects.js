@@ -262,10 +262,7 @@ const renderText = (
           replace,
         });
       }
-      return renderMarkdownBlock(
-        replace(stringifyJsValue(value), { stringType: "json" }),
-        "js",
-      );
+      return renderMarkdownBlock(replace(value), "js");
     }
     if (text.type === "console") {
       return renderConsole(text.value, {
@@ -278,7 +275,6 @@ const renderText = (
     if (text.type === "file_content") {
       return renderFileContent(text, {
         sideEffect,
-        sideEffectFileUrl,
         replace,
       });
     }
@@ -287,49 +283,6 @@ const renderText = (
     }
   }
   return replace(text);
-};
-
-const stringifyJsValue = (value) => {
-  if (typeof value === "string") {
-    return value;
-  }
-  const deepCopy = (value, { isInsideTimingOrPerformanceObject } = {}) => {
-    if (value === null) {
-      return null;
-    }
-    if (Array.isArray(value)) {
-      const copy = [];
-      let i = 0;
-      while (i < value.length) {
-        copy[i] = deepCopy(value[i], { isInsideTimingOrPerformanceObject });
-        i++;
-      }
-      return copy;
-    }
-    if (typeof value === "object") {
-      const copy = {};
-      const keysToVisit = Object.keys(value);
-      for (const keyToVisit of keysToVisit) {
-        const nestedValue = value[keyToVisit];
-        copy[keyToVisit] = deepCopy(nestedValue, {
-          isInsideTimingOrPerformanceObject:
-            isInsideTimingOrPerformanceObject ||
-            keyToVisit === "timings" ||
-            keyToVisit === "performance",
-        });
-      }
-      return copy;
-    }
-    if (typeof value === "number") {
-      if (isInsideTimingOrPerformanceObject) {
-        return "<X>";
-      }
-      return value;
-    }
-    return value;
-  };
-  const copy = deepCopy(value);
-  return JSON.stringify(copy, null, "  ");
 };
 
 export const renderConsole = (
@@ -383,16 +336,18 @@ const renderPotentialAnsi = (
 
 export const renderFileContent = (text, { sideEffect, replace }) => {
   const { url, buffer, outDirectoryReason } = sideEffect.value;
+  const { value } = text;
+  let content = value;
   if (outDirectoryReason) {
-    const { value, outRelativeUrl, urlInsideOutDirectory } = text;
-    writeFileSync(urlInsideOutDirectory, buffer);
+    const { outRelativeUrl, urlInsideOutDirectory } = text;
+    writeFileSync(urlInsideOutDirectory, replace(buffer, { fileUrl: url }));
     let md = "";
     if (
       outDirectoryReason === "lot_of_chars" ||
       outDirectoryReason === "lot_of_lines"
     ) {
       md += "\n";
-      md += renderMarkdownBlock(escapeMarkdownBlockContent(replace(value)));
+      md += renderMarkdownBlock(escapeMarkdownBlockContent(replace(content)));
       const fileLink = renderLinkMarkdown(
         {
           text: outRelativeUrl,
@@ -413,13 +368,14 @@ export const renderFileContent = (text, { sideEffect, replace }) => {
     );
     return md;
   }
-  const { value } = text;
-  let content = value;
-  const extension = urlToExtension(url).slice(1);
-  if (extension === "md") {
+  const extension = urlToExtension(url);
+  if (extension === ".md") {
     content = escapeMarkdownBlockContent(content);
   }
-  return renderMarkdownBlock(replace(content, { fileUrl: url }), extension);
+  return renderMarkdownBlock(
+    replace(content, { fileUrl: url }),
+    extension.slice(1),
+  );
 };
 
 const escapeMarkdownBlockContent = (content) => {
