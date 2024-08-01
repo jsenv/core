@@ -1,34 +1,36 @@
 import { assert } from "@jsenv/assert";
-
 import { execute, nodeChildProcess, nodeWorkerThread } from "@jsenv/test";
 
-const test = async (params) => {
+const run = async ({ runtime }) => {
   const startMs = Date.now();
-  const result = await execute({
-    logLevel: "warn",
+  const { status } = await execute({
     rootDirectoryUrl: new URL("./node_client/", import.meta.url),
     fileRelativeUrl: `./main.js`,
     mirrorConsole: false,
-    collectConsole: true,
     allocatedMs: 2_000,
-    ...params,
+    runtime,
   });
   const endMs = Date.now();
   const duration = endMs - startMs;
-  const actual = {
-    status: result.status,
-    duration,
-  };
-  const expect = {
-    status: "timedout",
-    duration: assert.between(2_000, 5_000),
-  };
-  assert({ actual, expect });
+  return { status, duration };
 };
 
-await test({
-  runtime: nodeChildProcess(),
-});
-await test({
-  runtime: nodeWorkerThread(),
-});
+const actual = {
+  nodeWorkerThread: await run({
+    runtime: nodeWorkerThread(),
+  }),
+  nodeChildProcess: await run({
+    runtime: nodeChildProcess(),
+  }),
+};
+const expect = {
+  nodeWorkerThread: {
+    status: "timedout",
+    duration: assert.between(2_000, 5_000),
+  },
+  nodeChildProcess: {
+    status: "timedout",
+    duration: assert.between(2_000, 5_000),
+  },
+};
+assert({ actual, expect });
