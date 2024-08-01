@@ -168,67 +168,67 @@ TypeError: base/client/a.js: Cannot export after a top-level await when using to
   3 | window.executionOrder.push("a_after_timeout");
 > 4 | export const answer = 42;
     | ^^^^^^^^^^^^^^^^^^^^^^^^^
-    at File.buildCodeFrameError (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/core/lib/transformation/file/file.js:195:12)
-    at NodePath.buildCodeFrameError (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/path/index.js:116:21)
-    at PluginPass.exit (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js:3597:36)
-    at newFn (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/visitors.js:160:14)
-    at NodePath._call (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/path/context.js:47:20)
-    at NodePath.call (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/path/context.js:37:18)
-    at NodePath.visit (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/path/context.js:91:8)
-    at TraversalContext.visitQueue (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:89:16)
-    at TraversalContext.visitMultiple (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:61:17)
-    at TraversalContext.visit (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:110:19)
-    at traverseNode (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/traverse-node.js:22:17)
-    at NodePath.visit (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/path/context.js:89:52)
-    at TraversalContext.visitQueue (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:89:16)
-    at TraversalContext.visitSingle (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:65:19)
-    at TraversalContext.visit (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:112:19)
-    at traverseNode (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/traverse-node.js:22:17)
-    at traverse (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/index.js:52:34)
-    at transformFile (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/core/lib/transformation/index.js:82:31)
+    at File.buildCodeFrameError (@jsenv/core/node_modules/@babel/core/lib/transformation/file/file.js:195:12)
+    at NodePath.buildCodeFrameError (@jsenv/core/node_modules/@babel/traverse/lib/path/index.js:116:21)
+    at PluginPass.exit (@jsenv/core/node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js:3597:36)
+    at newFn (@jsenv/core/node_modules/@babel/traverse/lib/visitors.js:160:14)
+    at NodePath._call (@jsenv/core/node_modules/@babel/traverse/lib/path/context.js:47:20)
+    at NodePath.call (@jsenv/core/node_modules/@babel/traverse/lib/path/context.js:37:18)
+    at NodePath.visit (@jsenv/core/node_modules/@babel/traverse/lib/path/context.js:91:8)
+    at TraversalContext.visitQueue (@jsenv/core/node_modules/@babel/traverse/lib/context.js:89:16)
+    at TraversalContext.visitMultiple (@jsenv/core/node_modules/@babel/traverse/lib/context.js:61:17)
+    at TraversalContext.visit (@jsenv/core/node_modules/@babel/traverse/lib/context.js:110:19)
+    at traverseNode (@jsenv/core/node_modules/@babel/traverse/lib/traverse-node.js:22:17)
+    at NodePath.visit (@jsenv/core/node_modules/@babel/traverse/lib/path/context.js:89:52)
+    at TraversalContext.visitQueue (@jsenv/core/node_modules/@babel/traverse/lib/context.js:89:16)
+    at TraversalContext.visitSingle (@jsenv/core/node_modules/@babel/traverse/lib/context.js:65:19)
+    at TraversalContext.visit (@jsenv/core/node_modules/@babel/traverse/lib/context.js:112:19)
+    at traverseNode (@jsenv/core/node_modules/@babel/traverse/lib/traverse-node.js:22:17)
+    at traverse (@jsenv/core/node_modules/@babel/traverse/lib/index.js:52:34)
+    at transformFile (@jsenv/core/node_modules/@babel/core/lib/transformation/index.js:82:31)
     at transformFile.next (<anonymous>)
-    at run (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/core/lib/transformation/index.js:24:12)
+    at run (@jsenv/core/node_modules/@babel/core/lib/transformation/index.js:24:12)
     at run.next (<anonymous>)
-    at transform (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/core/lib/transform.js:22:33)
+    at transform (@jsenv/core/node_modules/@babel/core/lib/transform.js:22:33)
     at transform.next (<anonymous>)
-    at step (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:261:32)
-    at /Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:273:13
-    at async.call.result.err.err (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:223:11)
-    at /Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:189:28
-    at /Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
-    at /Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:113:33
-    at step (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:287:14)
-    at /Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:273:13
-    at async.call.result.err.err (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:223:11)
-    at File.buildCodeFrameError (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/core/lib/transformation/file/file.js:195:12)
-    at NodePath.buildCodeFrameError (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/path/index.js:116:21)
-    at PluginPass.exit (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js:3597:36)
-    at newFn (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/visitors.js:160:14)
-    at NodePath._call (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/path/context.js:47:20)
-    at NodePath.call (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/path/context.js:37:18)
-    at NodePath.visit (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/path/context.js:91:8)
-    at TraversalContext.visitQueue (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:89:16)
-    at TraversalContext.visitMultiple (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:61:17)
-    at TraversalContext.visit (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:110:19)
-    at traverseNode (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/traverse-node.js:22:17)
-    at NodePath.visit (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/path/context.js:89:52)
-    at TraversalContext.visitQueue (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:89:16)
-    at TraversalContext.visitSingle (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:65:19)
-    at TraversalContext.visit (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/context.js:112:19)
-    at traverseNode (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/traverse-node.js:22:17)
-    at traverse (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/traverse/lib/index.js:52:34)
-    at transformFile (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/core/lib/transformation/index.js:82:31)
-    at run (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/core/lib/transformation/index.js:24:12)
-    at transform (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/core/lib/transform.js:22:33)
-    at step (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:261:32)
-    at /Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:273:13
-    at async.call.result.err.err (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:223:11)
-    at /Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:189:28
-    at /Users/damien.maillard/dev/perso/jsenv-core/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
-    at /Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:113:33
-    at step (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:287:14)
-    at /Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:273:13
-    at async.call.result.err.err (/Users/damien.maillard/dev/perso/jsenv-core/node_modules/gensync/index.js:223:11)
+    at step (@jsenv/core/node_modules/gensync/index.js:261:32)
+    at @jsenv/core/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (@jsenv/core/node_modules/gensync/index.js:223:11)
+    at @jsenv/core/node_modules/gensync/index.js:189:28
+    at @jsenv/core/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
+    at @jsenv/core/node_modules/gensync/index.js:113:33
+    at step (@jsenv/core/node_modules/gensync/index.js:287:14)
+    at @jsenv/core/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (@jsenv/core/node_modules/gensync/index.js:223:11)
+    at File.buildCodeFrameError (@jsenv/core/node_modules/@babel/core/lib/transformation/file/file.js:195:12)
+    at NodePath.buildCodeFrameError (@jsenv/core/node_modules/@babel/traverse/lib/path/index.js:116:21)
+    at PluginPass.exit (@jsenv/core/node_modules/babel-plugin-transform-async-to-promises/async-to-promises.js:3597:36)
+    at newFn (@jsenv/core/node_modules/@babel/traverse/lib/visitors.js:160:14)
+    at NodePath._call (@jsenv/core/node_modules/@babel/traverse/lib/path/context.js:47:20)
+    at NodePath.call (@jsenv/core/node_modules/@babel/traverse/lib/path/context.js:37:18)
+    at NodePath.visit (@jsenv/core/node_modules/@babel/traverse/lib/path/context.js:91:8)
+    at TraversalContext.visitQueue (@jsenv/core/node_modules/@babel/traverse/lib/context.js:89:16)
+    at TraversalContext.visitMultiple (@jsenv/core/node_modules/@babel/traverse/lib/context.js:61:17)
+    at TraversalContext.visit (@jsenv/core/node_modules/@babel/traverse/lib/context.js:110:19)
+    at traverseNode (@jsenv/core/node_modules/@babel/traverse/lib/traverse-node.js:22:17)
+    at NodePath.visit (@jsenv/core/node_modules/@babel/traverse/lib/path/context.js:89:52)
+    at TraversalContext.visitQueue (@jsenv/core/node_modules/@babel/traverse/lib/context.js:89:16)
+    at TraversalContext.visitSingle (@jsenv/core/node_modules/@babel/traverse/lib/context.js:65:19)
+    at TraversalContext.visit (@jsenv/core/node_modules/@babel/traverse/lib/context.js:112:19)
+    at traverseNode (@jsenv/core/node_modules/@babel/traverse/lib/traverse-node.js:22:17)
+    at traverse (@jsenv/core/node_modules/@babel/traverse/lib/index.js:52:34)
+    at transformFile (@jsenv/core/node_modules/@babel/core/lib/transformation/index.js:82:31)
+    at run (@jsenv/core/node_modules/@babel/core/lib/transformation/index.js:24:12)
+    at transform (@jsenv/core/node_modules/@babel/core/lib/transform.js:22:33)
+    at step (@jsenv/core/node_modules/gensync/index.js:261:32)
+    at @jsenv/core/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (@jsenv/core/node_modules/gensync/index.js:223:11)
+    at @jsenv/core/node_modules/gensync/index.js:189:28
+    at @jsenv/core/node_modules/@babel/core/lib/gensync-utils/async.js:67:7
+    at @jsenv/core/node_modules/gensync/index.js:113:33
+    at step (@jsenv/core/node_modules/gensync/index.js:287:14)
+    at @jsenv/core/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (@jsenv/core/node_modules/gensync/index.js:223:11)
 ```
 
 </details>

@@ -203,23 +203,17 @@ export const createReplaceFilesystemWellKnownValues = ({
 
   const replaceFileUrls = (string, { willBeWrittenOnFilesystem }) => {
     for (const wellKownUrl of wellKownUrlArray) {
-      const replaceResult = wellKownUrl.replace(string, {
+      string = wellKownUrl.replace(string, {
         willBeWrittenOnFilesystem,
       });
-      if (replaceResult !== string) {
-        return replaceResult;
-      }
     }
     return string;
   };
   const replaceFilePaths = (string, { willBeWrittenOnFilesystem }) => {
     for (const wellKownPath of wellKnownPathArray) {
-      const replaceResult = wellKownPath.replace(string, {
+      string = wellKownPath.replace(string, {
         willBeWrittenOnFilesystem,
       });
-      if (replaceResult !== string) {
-        return replaceResult;
-      }
     }
     return string;
   };
