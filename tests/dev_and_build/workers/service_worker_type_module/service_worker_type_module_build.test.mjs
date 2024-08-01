@@ -1,48 +1,39 @@
 import { build } from "@jsenv/core";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const test = async ({ name, ...params }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await build({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    ...params,
-  });
-  buildDirectorySnapshot.compare();
-};
-
-if (process.platform === "darwin") {
-  // support + bundling
-  await test({
-    name: "1",
-    runtimeCompat: { chrome: "80" },
-    minification: false,
-    versioning: false, // to prevent importmap forcing fallback on js classic
-  });
-  // support + no bundling
-  await test({
-    name: "2",
-    runtimeCompat: { chrome: "80" },
-    bundling: false,
-    minification: false,
-    versioning: false, // to prevent importmap forcing fallback on js classic
-  });
-  // no support for { type: "module" } on service worker
-  await test({
-    name: "3",
-    runtimeCompat: { chrome: "79" },
-    minification: false,
-  });
-  // no support for { type: "module" } on service worker + no bundling
-  await test({
-    name: "4",
-    runtimeCompat: { chrome: "79" },
-    bundling: false,
-    minification: false,
-  });
+if (process.platform !== "darwin") {
+  process.exit(0);
 }
+
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  const testParams = {
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    minification: false,
+  };
+  test("0_sw_type_module", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "80" },
+      versioning: false, // to prevent importmap forcing fallback on js classic
+    }));
+  test("1_sw_type_module_no_bundling", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "80" },
+      versioning: false, // to prevent importmap forcing fallback on js classic
+      bundling: false,
+    }));
+  test("2_sw_type_module_fallback", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "79" },
+    }));
+  test("3_sw_type_module_fallback_no_bundling", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "79" },
+      bundling: false,
+    }));
+});
