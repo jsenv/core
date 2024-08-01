@@ -29,6 +29,9 @@ export const hookIntoMethod = (
     const callHooks = (hookCallbackSet, ...args) => {
       hookExecuting = true;
       for (const hookCallback of hookCallbackSet) {
+        if (!hookCallback.initCallback.installed) {
+          continue;
+        }
         hookCallback(...args);
       }
       hookExecuting = false;
@@ -62,15 +65,19 @@ export const hookIntoMethod = (
           allWantsToPreventOriginalCall = false;
         }
         if (hooks.returnPromise) {
+          hooks.returnPromise.initCallback = initCallback;
           returnPromiseCallbackSet.add(hooks.returnPromise);
         }
         if (hooks.return) {
+          hooks.return.initCallback = initCallback;
           returnCallbackSet.add(hooks.return);
         }
         if (hooks.catch) {
+          hooks.catch.initCallback = initCallback;
           catchCallbackSet.add(hooks.catch);
         }
         if (hooks.finally) {
+          hooks.finally.initCallback = initCallback;
           finallyCallbackSet.add(hooks.catch);
         }
       }
@@ -124,6 +131,7 @@ export const hookIntoMethod = (
     };
     object[method] = proxy;
   }
+  initCallback.installed = true;
   addInitCallback(initCallback);
   const hook = {
     disable: () => {
@@ -133,6 +141,7 @@ export const hookIntoMethod = (
       initCallback.disabled = false;
     },
     remove: () => {
+      initCallback.installed = false;
       removeInitCallback(initCallback);
     },
   };
@@ -220,7 +229,9 @@ export const METHOD_EXECUTION_NODE_CALLBACK = ({
         // useless because are a copy of the args
         // so the mutation we do above ( args[lastArgIndex] =)
         // cannot be important for the method being proxied
-        args[lastArgIndex] = lastArg;
+        if (args[lastArgIndex] === callbackProxy) {
+          args[lastArgIndex] = lastArg;
+        }
       };
     });
   }
@@ -230,7 +241,9 @@ export const METHOD_EXECUTION_NODE_CALLBACK = ({
       return installProxyAndCall(originalCallback, (callbackProxy) => {
         lastArg.context.callback = callbackProxy;
         return () => {
-          lastArg.context.callback = originalCallback;
+          if (lastArg.context.callback === callbackProxy) {
+            lastArg.context.callback = originalCallback;
+          }
         };
       });
     }
@@ -239,7 +252,9 @@ export const METHOD_EXECUTION_NODE_CALLBACK = ({
       return installProxyAndCall(originalCallback, (callbackProxy) => {
         lastArg.oncomplete = callbackProxy;
         return () => {
-          lastArg.oncomplete = originalCallback;
+          if (lastArg.oncomplete === callbackProxy) {
+            lastArg.oncomplete = originalCallback;
+          }
         };
       });
     }
