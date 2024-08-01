@@ -34,6 +34,7 @@
     "/dist/",
     "/src/"
   ],
+  "sideEffects": false,
   "scripts": {
     "dev": "node ./scripts/start_dev_server.mjs",
     "test": "node ./scripts/test.mjs",

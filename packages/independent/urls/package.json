@@ -24,6 +24,7 @@
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "scripts": {
     "test": "node --conditions=development ./scripts/test.mjs"
   },
