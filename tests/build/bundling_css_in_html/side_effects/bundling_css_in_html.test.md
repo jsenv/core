@@ -15,7 +15,7 @@ build({
 })
 ```
 
-### 1/2 logs
+### 1/4 logs
 
 ![img](bundling_css_in_html/0_basic/log_group.svg)
 
@@ -32,61 +32,41 @@ build "./main.js"
 ⠋ bundle "js_module"
 ✔ bundle "js_module" (done in <X> second)
 ⠋ generate build graph
-✖ failed to generate build graph
+✔ generate build graph (done in <X> second)
+⠋ write files in build directory
 
 ```
 
 </details>
 
 
-### 2/2 reject
-  <details>
-  <summary>details</summary>
+### 2/4 write 5 files into "./build/"
+
+see [./bundling_css_in_html/0_basic/build/](./bundling_css_in_html/0_basic/build/)
+
+### 3/4 logs
+
+![img](bundling_css_in_html/0_basic/log_group_1.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
-Error: "finalizeUrlContent" error on "other"
-base/client/main.css:6:19
-3 | }
-4 | 
-5 | .water {
-6 |   background: url("base/client/water/log…
-                      ^
---- error stack ---
-Error: ENOENT: no such file or directory, open '@jsenv/core/.jsenv/shape/water/logo.png'
-    at METHOD_EXECUTION_STANDARD (file://@jsenv/core/packages/independent/snapshot/src/side_effects/hook_into_method.js:163:30)
-    at METHOD_EXECUTION_NODE_CALLBACK (file://@jsenv/core/packages/independent/snapshot/src/side_effects/hook_into_method.js:262:10)
-    at Object.proxy [as open] (file://@jsenv/core/packages/independent/snapshot/src/side_effects/hook_into_method.js:105:14)
-    at Object.openSync (node:fs:573:18)
-    at writeFileSync (node:fs:2361:35)
-    at writeFileSync (file://@jsenv/core/packages/independent/filesystem/src/read_write/write_file_sync.js:22:7)
-    at writeInsideOutDirectory (file://@jsenv/core/src/kitchen/url_graph/url_info_transformations.js:295:7)
-    at applyContentEffects (file://@jsenv/core/src/kitchen/url_graph/url_info_transformations.js:256:5)
-    at Object.endTransformations (file://@jsenv/core/src/kitchen/url_graph/url_info_transformations.js:401:5)
-    at Object.finalizeUrlContent (file://@jsenv/core/src/kitchen/kitchen.js:442:26)
-    at async file://@jsenv/core/src/kitchen/kitchen.js:481:11
-    at async Object.startCollecting (file://@jsenv/core/src/kitchen/url_graph/references.js:30:7)
-    at async file://@jsenv/core/src/kitchen/kitchen.js:473:9
-    at async Object.cook (file://@jsenv/core/src/kitchen/kitchen.js:658:5)
-    at async cookSelfThenDependencies (file://@jsenv/core/src/kitchen/kitchen.js:548:7)
-    at async Promise.all (index 1)
-    at async startCookingDependencies (file://@jsenv/core/src/kitchen/kitchen.js:582:7)
-    at async cookSelfThenDependencies (file://@jsenv/core/src/kitchen/kitchen.js:549:7)
-    at async Promise.all (index 1)
-    at async startCookingDependencies (file://@jsenv/core/src/kitchen/kitchen.js:582:7)
-    at async cookSelfThenDependencies (file://@jsenv/core/src/kitchen/kitchen.js:549:7)
-    at async Promise.all (index 0)
-    at async startCookingDependencies (file://@jsenv/core/src/kitchen/kitchen.js:582:7)
-    at async cookSelfThenDependencies (file://@jsenv/core/src/kitchen/kitchen.js:549:7)
-    at async Promise.all (index 0)
-    at async startCookingDependencies (file://@jsenv/core/src/kitchen/kitchen.js:582:7)
-    at async Object.cookDependencies (file://@jsenv/core/src/kitchen/kitchen.js:585:5)
-    at async runBuild (file://@jsenv/core/src/build/build.js:571:9)
-    at async build (file://@jsenv/core/src/build/build.js:666:22)
-    at async snapshotTests (file://@jsenv/core/packages/independent/snapshot/src/side_effects/snapshot_tests.js:88:25)
-    at async snapshotBuildTests (file://@jsenv/core/tests/snapshot_build_side_effects.js:9:3)
-    at async base/bundling_css_in_html.test.mjs:4:1
-  at async snapshotBuildTests (file://@jsenv/core/tests/snapshot_build_side_effects.js:9:3)
-  at async base/bundling_css_in_html.test.mjs:4:1
+✔ write files in build directory (done in <X> second)
+--- build files ---  
+- html : 1 (302 B / 2.1 %)
+- css  : 1 (117 B / 0.8 %)
+- js   : 1 (300 B / 2.1 %)
+- other: 2 (13.7 kB / 95 %)
+- total: 5 (14.4 kB / 100 %)
+--------------------
 ```
 
 </details>
+
+
+### 4/4 resolve
+
+```js
+{}
+```
