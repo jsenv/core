@@ -56,7 +56,7 @@
     "performances": "node --expose-gc ./scripts/performance/generate_performance_report.mjs --log --once",
     "build:file_size": "node ./scripts/build/build_file_size.mjs --log",
     "prettier": "prettier --write .",
-    "test:snapshot_clear": "npx @jsenv/snapshot clear **/side_effects/**",
+    "test:snapshot_clear": "npx @jsenv/snapshot clear **/tests/**/side_effects/**",
     "test:ci": "CI=1 npm run test",
     "test:only_dev_server_errors": "node --conditions=development ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",
     "workspace:test:ci": "CI=1 npm run workspace:test",
