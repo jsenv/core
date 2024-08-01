@@ -25,7 +25,8 @@ await snapshotDevSideEffects(import.meta.url, ({ test }) => {
       keepProcessAlive: false,
       port: 0,
       plugins: [jsenvPluginToolbar()],
-      clientAutoreload: true,
+      // ribbon: false,
+      // clientAutoreload: false,
     });
     const browser = await chromium.launch({ headless: !debug });
     const page = await launchBrowserPage(browser, { pageErrorEffect: "log" });

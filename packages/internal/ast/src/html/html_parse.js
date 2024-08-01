@@ -91,7 +91,6 @@ export const stringifyHtmlAst = (
     preserveLineBreaks = true,
     cleanupJsenvAttributes = false,
     cleanupPositionAttributes = false,
-    here,
   } = {},
 ) => {
   if (cleanupJsenvAttributes || cleanupPositionAttributes) {
@@ -131,13 +130,13 @@ export const stringifyHtmlAst = (
   }
   if (preserveLineBreaks) {
     // ensure body and html have \n
-    ensureLineBreaksBetweenHtmlNodes(htmlAst, here);
+    ensureLineBreaksBetweenHtmlNodes(htmlAst);
   }
   const htmlString = serialize(htmlAst);
   return htmlString;
 };
 
-const ensureLineBreaksBetweenHtmlNodes = (rootNode, here) => {
+const ensureLineBreaksBetweenHtmlNodes = (rootNode) => {
   const mutationCallbackSet = new Set();
   const documentType = rootNode.childNodes[0];
   const ensureChildrenSurroundedByLinebreaks = (headOrBody) => {
