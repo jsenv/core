@@ -4,59 +4,40 @@
  */
 
 import { assert } from "@jsenv/assert";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const test = async ({ name, ...rest }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await build({
-    logLevel: "warn",
+const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
+  const testParams = {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...rest,
-  });
-  // 1. snapshots
-  buildDirectorySnapshot.compare();
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    bundling: false,
+    minification: false,
+  };
+  test("0_importmap", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "89" },
+    }));
+  test("1_importmap_fallback", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "88" },
+    }));
+});
 
-  // 2. Ensure file executes properly
-  const server = await startFileServer({
-    rootDirectoryUrl: snapshotDirectoryUrl,
-  });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
-  assert({
-    actual: returnValue,
-    expect: {
-      ping: "pong",
-      workerResponse: "pong",
-    },
-  });
+const actual = {
+  importmap: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("0_importmap")}build/`,
+  ),
+  importmapFallback: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("1_importmap_fallback")}build/`,
+  ),
 };
-
-// support importmap
-await test({
-  name: "importmap",
-  runtimeCompat: { chrome: "89" },
-  bundling: false,
-  minification: false,
-});
-
-// does not support importmap
-await test({
-  name: "systemjs",
-  runtimeCompat: { chrome: "88" },
-  bundling: false,
-  minification: false,
-});
+const expect = {
+  importmap: { ping: "pong", workerResponse: "pong" },
+  importmapFallback: { ping: "pong", workerResponse: "pong" },
+};
+assert({ actual, expect });
