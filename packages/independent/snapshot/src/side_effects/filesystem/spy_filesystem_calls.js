@@ -151,6 +151,13 @@ export const spyFilesystemCalls = (
     },
     { execute: METHOD_EXECUTION_NODE_CALLBACK },
   );
+  /*
+   * Relying on open/close to detect writes is done to be able to catch
+   * write done async, not sure how to distinguish open/close done to write
+   * from open/close done to read file stat
+   * open/close for file stat are excluded because we compare stateBefore/stateAfter
+   * but ideally we would early return by detecting open/close is not for write operations
+   */
   const closeHook = hookIntoMethod(
     _internalFs,
     "close",
