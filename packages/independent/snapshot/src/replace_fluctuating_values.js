@@ -47,6 +47,18 @@ export const replaceFluctuatingValues = (
     );
     return value;
   };
+  const replaceSizes = (value) => {
+    // the size of files might slighly differ from an OS to an other
+    // we round the floats to make them predictable
+    // (happens for HTML files where one char is added on linux)
+    value = value.replace(
+      /(?<!\d|\.)(\d+(?:\.\d+)?)(\s*)(B|kB|MB)\b/g,
+      (match, size, space, unit) => {
+        return `${Math.round(parseFloat(size))}${space}${unit}`;
+      },
+    );
+    return value;
+  };
   const replaceThings = (value) => {
     if (stringType === "filesystem") {
       return replaceFilesystemWellKnownValues(value);
@@ -59,6 +71,7 @@ export const replaceFluctuatingValues = (
     });
     value = replaceHttpUrls(value);
     value = replaceDurations(value);
+    value = replaceSizes(value);
     return value;
   };
   if (stringType === "html" || stringType === "svg") {
