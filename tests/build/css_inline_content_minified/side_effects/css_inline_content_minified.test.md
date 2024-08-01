@@ -68,9 +68,9 @@ see [./css_inline_content_minified/0_basic/build/](./css_inline_content_minified
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (5.7 kB / 26 %)
+- html : 1 (6 kB / 26 %)
 - js   : 2 (575 B / 3 %)
-- other: 1 (15.7 kB / 71 %)
+- other: 1 (16 kB / 71 %)
 - total: 4 (22 kB / 100 %)
 --------------------
 ```

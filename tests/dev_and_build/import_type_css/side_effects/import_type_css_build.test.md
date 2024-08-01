@@ -52,9 +52,9 @@ see [./import_type_css_build/0_js_module/build/](./import_type_css_build/0_js_mo
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
 - html : 1 (669 B / 7 %)
-- js   : 1 (1.7 kB / 18 %)
-- other: 1 (6.8 kB / 75 %)
-- total: 3 (9.2 kB / 100 %)
+- js   : 1 (2 kB / 18 %)
+- other: 1 (7 kB / 75 %)
+- total: 3 (9 kB / 100 %)
 --------------------
 ```
 
@@ -118,10 +118,10 @@ see [./import_type_css_build/1_js_module_fallback_css_minified/build/](./import_
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17.8 kB / 65 %)
-- js   : 1 (2.7 kB / 10 %)
-- other: 1 (6.8 kB / 25 %)
-- total: 3 (27.3 kB / 100 %)
+- html : 1 (18 kB / 65 %)
+- js   : 1 (3 kB / 10 %)
+- other: 1 (7 kB / 25 %)
+- total: 3 (27 kB / 100 %)
 --------------------
 ```
 
@@ -181,10 +181,10 @@ see [./import_type_css_build/2_js_module_fallback/build/](./import_type_css_buil
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17.2 kB / 43 %)
-- js   : 1 (16.3 kB / 40 %)
-- other: 1 (6.8 kB / 17 %)
-- total: 3 (40.3 kB / 100 %)
+- html : 1 (17 kB / 43 %)
+- js   : 1 (16 kB / 40 %)
+- other: 1 (7 kB / 17 %)
+- total: 3 (40 kB / 100 %)
 --------------------
 ```
 
@@ -243,10 +243,10 @@ see [./import_type_css_build/3_js_module_fallback_no_bundling/build/](./import_t
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (5.6 kB / 30 %)
-- js   : 1 (6.3 kB / 34 %)
-- other: 1 (6.8 kB / 36 %)
-- total: 3 (18.8 kB / 100 %)
+- html : 1 (6 kB / 30 %)
+- js   : 1 (6 kB / 34 %)
+- other: 1 (7 kB / 36 %)
+- total: 3 (19 kB / 100 %)
 --------------------
 ```
 

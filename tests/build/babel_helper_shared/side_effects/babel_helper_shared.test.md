@@ -52,7 +52,7 @@ see [./babel_helper_shared/0_js_module/dist/](./babel_helper_shared/0_js_module/
 --- build files ---  
 - html : 1 (674 B / 60 %)
 - js   : 3 (441 B / 40 %)
-- total: 4 (1.1 kB / 100 %)
+- total: 4 (1 kB / 100 %)
 --------------------
 ```
 
@@ -116,9 +116,9 @@ see [./babel_helper_shared/1_js_module_fallback/dist/](./babel_helper_shared/1_j
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (21.6 kB / 74 %)
-- js   : 4 (7.5 kB / 26 %)
-- total: 5 (29.2 kB / 100 %)
+- html : 1 (22 kB / 74 %)
+- js   : 4 (8 kB / 26 %)
+- total: 5 (29 kB / 100 %)
 --------------------
 ```
 

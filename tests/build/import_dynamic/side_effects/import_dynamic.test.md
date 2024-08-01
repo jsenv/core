@@ -50,7 +50,7 @@ see [./import_dynamic/0_js_module/build/](./import_dynamic/0_js_module/build/)
 --- build files ---  
 - html : 1 (730 B / 62 %)
 - js   : 3 (446 B / 38 %)
-- total: 4 (1.2 kB / 100 %)
+- total: 4 (1 kB / 100 %)
 --------------------
 ```
 
@@ -107,9 +107,9 @@ see [./import_dynamic/1_js_module_fallback/build/](./import_dynamic/1_js_module_
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17.4 kB / 94 %)
-- js   : 3 (1.1 kB / 6 %)
-- total: 4 (18.5 kB / 100 %)
+- html : 1 (17 kB / 94 %)
+- js   : 3 (1 kB / 6 %)
+- total: 4 (19 kB / 100 %)
 --------------------
 ```
 

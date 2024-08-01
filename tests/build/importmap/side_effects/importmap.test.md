@@ -16,7 +16,7 @@ build({
 })
 ```
 
-### 1/4 logs
+### 1/2 logs
 
 ![img](importmap/0_basic/log_group.svg)
 
@@ -29,38 +29,15 @@ build "./main.html"
 ⠋ generate source graph
 ✔ generate source graph (done in <X> second)
 ⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
+✖ failed to generate build graph
 
 ```
 
 </details>
 
 
-### 2/4 write file "./build/main.html"
-
-see [./importmap/0_basic/build/main.html](./importmap/0_basic/build/main.html)
-
-### 3/4 logs
-
-![img](importmap/0_basic/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
+### 2/2 reject
 
 ```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (159 B / 100 %)
-- total: 1 (159 B / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
-
-```js
-{}
+Error: ENOENT: no such file or directory, scandir '@jsenv/core/.jsenv/shape/@fs/Users/damien.maillard/'
 ```

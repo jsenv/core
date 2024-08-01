@@ -51,9 +51,9 @@ see [./html_inside_directory/0_basic/build/](./html_inside_directory/0_basic/bui
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17.2 kB / 98 %)
+- html : 1 (17 kB / 98 %)
 - js   : 2 (392 B / 2 %)
-- total: 3 (17.6 kB / 100 %)
+- total: 3 (18 kB / 100 %)
 --------------------
 ```
 

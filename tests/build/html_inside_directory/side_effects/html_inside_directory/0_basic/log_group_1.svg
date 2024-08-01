@@ -10,13 +10,13 @@
         <text x="10" y="43.55">--- build files ---  </text>
         <text x="10" y="62.55">- </text>
         <text x="26.8" y="62.55" fill="#7f7f7f">html :</text>
-        <text x="85.61" y="62.55"> 1 (17.2 kB / 98 %)</text>
+        <text x="85.61" y="62.55"> 1 (17 kB / 98 %)</text>
         <text x="10" y="81.55">- </text>
         <text x="26.8" y="81.55" fill="#7f7f7f">js   :</text>
         <text x="85.61" y="81.55"> 2 (392 B / 2 %)</text>
         <text x="10" y="100.55">- </text>
         <text x="26.8" y="100.55" fill="#7f7f7f">total:</text>
-        <text x="85.61" y="100.55"> 3 (17.6 kB / 100 %)</text>
+        <text x="85.61" y="100.55"> 3 (18 kB / 100 %)</text>
         <text x="10" y="119.55">--------------------</text>
       </g>
     </svg>

@@ -53,7 +53,7 @@ see [./css_entry/0_basic/build/](./css_entry/0_basic/build/)
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
 - css  : 1 (150 B / 2 %)
-- other: 1 (6.8 kB / 98 %)
+- other: 1 (7 kB / 98 %)
 - total: 2 (7 kB / 100 %)
 --------------------
 ```

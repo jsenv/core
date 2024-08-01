@@ -52,7 +52,7 @@ see [./script_type_module_inline_2/0_js_module/build/](./script_type_module_inli
 --- build files ---  
 - html : 1 (969 B / 86 %)
 - js   : 2 (154 B / 14 %)
-- total: 3 (1.1 kB / 100 %)
+- total: 3 (1 kB / 100 %)
 --------------------
 ```
 
@@ -111,9 +111,9 @@ see [./script_type_module_inline_2/1_js_module_fallback/build/](./script_type_mo
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (18.2 kB / 97 %)
+- html : 1 (18 kB / 97 %)
 - js   : 2 (550 B / 3 %)
-- total: 3 (18.7 kB / 100 %)
+- total: 3 (19 kB / 100 %)
 --------------------
 ```
 
@@ -173,9 +173,9 @@ see [./script_type_module_inline_2/2_js_module_fallback_and_sourcemap_as_file/bu
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (18.6 kB / 97 %)
+- html : 1 (19 kB / 97 %)
 - js   : 2 (636 B / 3 %)
-- total: 3 (19.2 kB / 100 %)
+- total: 3 (19 kB / 100 %)
 --------------------
 ```
 

@@ -57,8 +57,8 @@ see [./bundling_css_in_html/0_basic/build/](./bundling_css_in_html/0_basic/build
 - html : 1 (302 B / 2.1 %)
 - css  : 1 (117 B / 0.8 %)
 - js   : 1 (300 B / 2.1 %)
-- other: 2 (13.7 kB / 95 %)
-- total: 5 (14.4 kB / 100 %)
+- other: 2 (14 kB / 95 %)
+- total: 5 (14 kB / 100 %)
 --------------------
 ```
 

@@ -52,8 +52,8 @@ see [./link_manifest_build/0_basic/build/](./link_manifest_build/0_basic/build/)
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
 - html : 1 (179 B / 0.8 %)
-- other: 2 (22.4 kB / 99.2 %)
-- total: 3 (22.6 kB / 100 %)
+- other: 2 (22 kB / 99.2 %)
+- total: 3 (23 kB / 100 %)
 --------------------
 ```
 

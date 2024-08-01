@@ -109,7 +109,7 @@ see [./script_type_module_basic_2/1_js_module_fallback/build/](./script_type_mod
 --- build files ---  
 - html : 1 (17 kB / 97 %)
 - js   : 2 (453 B / 3 %)
-- total: 3 (17.4 kB / 100 %)
+- total: 3 (17 kB / 100 %)
 --------------------
 ```
 
