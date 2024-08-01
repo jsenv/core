@@ -60,12 +60,12 @@ export const replaceFluctuatingValues = (
     // the size of files might slighly differ from an OS to an other
     // we round the floats to make them predictable
     // (happens for HTML files where one char is added on linux)
-    string = string.replace(
-      /(?<!\d|\.)(\d+(?:\.\d+)?)(\s*)(B|kB|MB)\b/g,
-      (match, size, space, unit) => {
-        return `${Math.round(parseFloat(size))}${space}${unit}`;
-      },
-    );
+    // string = string.replace(
+    //   /(?<!\d|\.)(\d+(?:\.\d+)?)(\s*)(B|kB|MB)\b/g,
+    //   (match, size, space, unit) => {
+    //     return `${Math.round(parseFloat(size))}${space}${unit}`;
+    //   },
+    // );
     return string;
   };
   const replaceThings = (string) => {
@@ -189,25 +189,26 @@ const replaceInObject = (object, { replace }) => {
 };
 
 const replaceHttpUrls = (source) => {
-  return source.replace(/(?:https?|ftp):\/\/\S+[\w/]/g, (match) => {
-    const lastChar = match[match.length - 1];
-    // hotfix because our url regex sucks a bit
-    const endsWithSeparationChar = lastChar === ")" || lastChar === ":";
-    if (endsWithSeparationChar) {
-      match = match.slice(0, -1);
-    }
-    try {
-      const urlObject = new URL(match);
-      if (urlObject.hostname === "www.w3.org") {
-        return match;
-      }
-      if (urlObject.port) {
-        urlObject.port = 9999;
-      }
-      const url = urlObject.href;
-      return url;
-    } catch (e) {
-      return match;
-    }
-  });
+  return source;
+  // return source.replace(/(?:https?|ftp):\/\/\S+[\w/]/g, (match) => {
+  //   const lastChar = match[match.length - 1];
+  //   // hotfix because our url regex sucks a bit
+  //   const endsWithSeparationChar = lastChar === ")" || lastChar === ":";
+  //   if (endsWithSeparationChar) {
+  //     match = match.slice(0, -1);
+  //   }
+  //   try {
+  //     const urlObject = new URL(match);
+  //     if (urlObject.hostname === "www.w3.org") {
+  //       return match;
+  //     }
+  //     if (urlObject.port) {
+  //       urlObject.port = 9999;
+  //     }
+  //     const url = urlObject.href;
+  //     return url;
+  //   } catch (e) {
+  //     return match;
+  //   }
+  // });
 };

@@ -108,8 +108,8 @@ see [./import_circular_build/1_without_bundling/build/](./import_circular_build/
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- js   : 5 (1 kB / 100 %)
-- total: 5 (1 kB / 100 %)
+- js   : 5 (1.1 kB / 100 %)
+- total: 5 (1.1 kB / 100 %)
 --------------------
 ```
 

@@ -52,8 +52,8 @@ see [./css_background_url_build/0_basic/build/](./css_background_url_build/0_bas
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
 - css  : 1 (77 B / 1 %)
-- other: 1 (7 kB / 99 %)
-- total: 2 (7 kB / 100 %)
+- other: 1 (6.8 kB / 99 %)
+- total: 2 (6.9 kB / 100 %)
 --------------------
 ```
 

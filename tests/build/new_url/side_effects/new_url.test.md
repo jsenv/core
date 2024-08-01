@@ -51,7 +51,7 @@ see [./new_url/0_js_module/build/](./new_url/0_js_module/build/)
 - html : 1 (750 B / 44 %)
 - js   : 2 (952 B / 56 %)
 - other: 1 (11 B / 0 %)
-- total: 4 (2 kB / 100 %)
+- total: 4 (1.7 kB / 100 %)
 --------------------
 ```
 
@@ -108,10 +108,10 @@ see [./new_url/1_js_module_fallback/build/](./new_url/1_js_module_fallback/build
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 92 %)
-- js   : 2 (1 kB / 8 %)
+- html : 1 (17.2 kB / 92 %)
+- js   : 2 (1.4 kB / 8 %)
 - other: 1 (11 B / 0 %)
-- total: 4 (19 kB / 100 %)
+- total: 4 (18.6 kB / 100 %)
 --------------------
 ```
 

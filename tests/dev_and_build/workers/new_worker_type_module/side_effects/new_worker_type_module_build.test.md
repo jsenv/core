@@ -113,7 +113,7 @@ see [./new_worker_type_module_build/1_worker_type_module_no_bundling/build/](./n
 --- build files ---  
 - html : 1 (315 B / 29 %)
 - js   : 3 (774 B / 71 %)
-- total: 4 (1 kB / 100 %)
+- total: 4 (1.1 kB / 100 %)
 --------------------
 ```
 
@@ -172,9 +172,9 @@ see [./new_worker_type_module_build/2_worker_type_module_fallback/build/](./new_
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (18 kB / 89 %)
-- js   : 2 (2 kB / 11 %)
-- total: 3 (20 kB / 100 %)
+- html : 1 (17.5 kB / 89 %)
+- js   : 2 (2.1 kB / 11 %)
+- total: 3 (19.6 kB / 100 %)
 --------------------
 ```
 
@@ -232,9 +232,9 @@ see [./new_worker_type_module_build/3_worker_type_module_fallback_no_bundling/bu
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (18 kB / 51 %)
-- js   : 3 (17 kB / 49 %)
-- total: 4 (35 kB / 100 %)
+- html : 1 (17.8 kB / 51 %)
+- js   : 3 (16.8 kB / 49 %)
+- total: 4 (34.6 kB / 100 %)
 --------------------
 ```
 
@@ -293,9 +293,9 @@ see [./new_worker_type_module_build/4_js_module_fallback/build/](./new_worker_ty
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 89 %)
-- js   : 2 (2 kB / 11 %)
-- total: 3 (19 kB / 100 %)
+- html : 1 (16.8 kB / 89 %)
+- js   : 2 (2.1 kB / 11 %)
+- total: 3 (18.9 kB / 100 %)
 --------------------
 ```
 

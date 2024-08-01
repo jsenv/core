@@ -42,10 +42,10 @@ And file urls
 - file:///cwd()/directory/
 - file:///cwd()/directory/file.txt
 And http urls
+http://localhost
 http://localhost/
-http://localhost/
-http://localhost:9999/
-http://localhost:9999/`;
+http://localhost:3457
+http://localhost:3457/`;
   assert({ actual, expect });
 }
 
@@ -106,5 +106,11 @@ And file urls
   <g test="cwd()/dir/file.js"></g>
   <text>before cwd()/ after</text>
 </svg>`;
+  assert({ actual, expect });
+}
+
+{
+  const actual = replaceFluctuatingValues(`"http://jsenv.dev/").href`);
+  const expect = `"http://jsenv.dev/").href`;
   assert({ actual, expect });
 }

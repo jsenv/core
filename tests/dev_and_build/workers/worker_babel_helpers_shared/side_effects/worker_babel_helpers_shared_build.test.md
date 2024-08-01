@@ -49,9 +49,9 @@ see [./worker_babel_helpers_shared_build/0_basic/build/](./worker_babel_helpers_
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 47 %)
-- js   : 3 (19 kB / 53 %)
-- total: 4 (36 kB / 100 %)
+- html : 1 (17.2 kB / 47 %)
+- js   : 3 (19.3 kB / 53 %)
+- total: 4 (36.4 kB / 100 %)
 --------------------
 ```
 

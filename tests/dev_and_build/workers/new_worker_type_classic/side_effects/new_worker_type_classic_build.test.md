@@ -49,8 +49,8 @@ see [./new_worker_type_classic_build/0_basic/build/](./new_worker_type_classic_b
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 90 %)
-- js   : 3 (2 kB / 10 %)
+- html : 1 (17.1 kB / 90 %)
+- js   : 3 (1.8 kB / 10 %)
 - total: 4 (19 kB / 100 %)
 --------------------
 ```
@@ -108,8 +108,8 @@ see [./new_worker_type_classic_build/1_no_bundling/build/](./new_worker_type_cla
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 90 %)
-- js   : 3 (2 kB / 10 %)
+- html : 1 (17.1 kB / 90 %)
+- js   : 3 (1.8 kB / 10 %)
 - total: 4 (19 kB / 100 %)
 --------------------
 ```

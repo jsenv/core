@@ -54,8 +54,8 @@ see [./inlining_build/0_inlining/build/](./inlining_build/0_inlining/build/)
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
 - html : 1 (493 B / 7 %)
-- other: 1 (7 kB / 93 %)
-- total: 2 (7 kB / 100 %)
+- other: 1 (6.8 kB / 93 %)
+- total: 2 (7.3 kB / 100 %)
 --------------------
 ```
 

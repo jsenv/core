@@ -55,10 +55,10 @@ see [./service_worker_type_module_build/0_sw_type_module/build/](./service_worke
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (2 kB / 78 %)
+- html : 1 (1.7 kB / 78 %)
 - css  : 1 (24 B / 1 %)
 - js   : 1 (467 B / 21 %)
-- total: 3 (2 kB / 100 %)
+- total: 3 (2.2 kB / 100 %)
 --------------------
 ```
 
@@ -119,10 +119,10 @@ see [./service_worker_type_module_build/1_sw_type_module_no_bundling/build/](./s
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (2 kB / 73 %)
+- html : 1 (1.7 kB / 73 %)
 - css  : 1 (24 B / 1 %)
 - js   : 3 (597 B / 26 %)
-- total: 5 (2 kB / 100 %)
+- total: 5 (2.3 kB / 100 %)
 --------------------
 ```
 
@@ -187,8 +187,8 @@ see [./service_worker_type_module_build/2_sw_type_module_fallback/build/](./serv
 --- build files ---  
 - html : 1 (19 kB / 92.5 %)
 - css  : 1 (24 B / 0.1 %)
-- js   : 1 (2 kB / 7.4 %)
-- total: 3 (21 kB / 100 %)
+- js   : 1 (1.5 kB / 7.4 %)
+- total: 3 (20.6 kB / 100 %)
 --------------------
 ```
 
@@ -248,10 +248,10 @@ see [./service_worker_type_module_build/3_sw_type_module_fallback_no_bundling/bu
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (19 kB / 54.65 %)
+- html : 1 (19.4 kB / 54.65 %)
 - css  : 1 (24 B / 0.068 %)
 - js   : 3 (16 kB / 45.28 %)
-- total: 5 (35 kB / 100 %)
+- total: 5 (35.4 kB / 100 %)
 --------------------
 ```
 

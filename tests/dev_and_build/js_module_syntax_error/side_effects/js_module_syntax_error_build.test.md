@@ -47,14 +47,14 @@ Unexpected token (4:15)
 base/client/main.html:9:27
 --- plugin name ---
 "jsenv:js_reference_analysis"
-    at createJsParseError (file://@jsenv/core/packages/internal/ast/src/js/js_parse_error.js:8:22)
-    at parseJsWithAcorn (file://@jsenv/core/packages/internal/ast/src/js/parse_js_with_acorn.js:31:13)
-    at getContentAst (file://@jsenv/core/src/kitchen/url_graph/url_content.js:88:12)
-    at file://@jsenv/core/src/kitchen/url_graph/url_content.js:13:14
-    at Object.get [as originalContentAst] (file://@jsenv/core/src/kitchen/url_graph/url_content.js:78:21)
-    at file://@jsenv/core/src/kitchen/url_graph/url_content.js:44:24
-    at Object.get [as contentAst] (file://@jsenv/core/src/kitchen/url_graph/url_content.js:78:21)
-    at parseAndTransformJsReferences (file://@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:140:18)
-    at js_module (file://@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:22:18)
-    at callAsyncHook (file://@jsenv/core/src/plugins/plugin_controller.js:206:31)
+    at createJsParseError (@jsenv/core/packages/internal/ast/src/js/js_parse_error.js:8:22)
+    at parseJsWithAcorn (@jsenv/core/packages/internal/ast/src/js/parse_js_with_acorn.js:31:13)
+    at getContentAst (@jsenv/core/src/kitchen/url_graph/url_content.js:88:12)
+    at @jsenv/core/src/kitchen/url_graph/url_content.js:13:14
+    at Object.get [as originalContentAst] (@jsenv/core/src/kitchen/url_graph/url_content.js:78:21)
+    at @jsenv/core/src/kitchen/url_graph/url_content.js:44:24
+    at Object.get [as contentAst] (@jsenv/core/src/kitchen/url_graph/url_content.js:78:21)
+    at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:140:18)
+    at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:22:18)
+    at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:206:31)
 ```

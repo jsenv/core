@@ -107,9 +107,9 @@ see [./import_dynamic_type_json/1_js_module_fallback/build/](./import_dynamic_ty
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 95 %)
+- html : 1 (16.8 kB / 95 %)
 - js   : 1 (841 B / 5 %)
-- total: 2 (18 kB / 100 %)
+- total: 2 (17.6 kB / 100 %)
 --------------------
 ```
 

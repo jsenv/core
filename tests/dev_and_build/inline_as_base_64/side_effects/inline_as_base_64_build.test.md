@@ -53,8 +53,8 @@ see [./inline_as_base_64_build/0_inline_base64/build/main.html](./inline_as_base
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (10 kB / 100 %)
-- total: 1 (10 kB / 100 %)
+- html : 1 (9.6 kB / 100 %)
+- total: 1 (9.6 kB / 100 %)
 --------------------
 ```
 

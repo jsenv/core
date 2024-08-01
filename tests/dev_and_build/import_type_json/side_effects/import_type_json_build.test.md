@@ -171,9 +171,9 @@ see [./import_type_json_build/2_js_module_fallback/build/](./import_type_json_bu
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 98 %)
+- html : 1 (16.8 kB / 98 %)
 - js   : 1 (259 B / 2 %)
-- total: 2 (17 kB / 100 %)
+- total: 2 (17.1 kB / 100 %)
 --------------------
 ```
 
@@ -231,9 +231,9 @@ see [./import_type_json_build/3_js_module_fallback_no_bundling/build/](./import_
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 98 %)
+- html : 1 (17.1 kB / 98 %)
 - js   : 1 (330 B / 2 %)
-- total: 2 (17 kB / 100 %)
+- total: 2 (17.4 kB / 100 %)
 --------------------
 ```
 

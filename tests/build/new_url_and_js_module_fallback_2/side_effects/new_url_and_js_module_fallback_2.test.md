@@ -54,9 +54,9 @@ see [./new_url_and_js_module_fallback_2/0_basic/build/](./new_url_and_js_module_
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (18 kB / 99.1 %)
+- html : 1 (17.5 kB / 99.1 %)
 - js   : 1 (160 B / 0.9 %)
-- total: 2 (18 kB / 100 %)
+- total: 2 (17.6 kB / 100 %)
 --------------------
 ```
 

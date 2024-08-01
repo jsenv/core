@@ -111,9 +111,9 @@ see [./import_meta_build/1_js_module_fallback/build/](./import_meta_build/1_js_m
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 96 %)
+- html : 1 (16.8 kB / 96 %)
 - js   : 1 (741 B / 4 %)
-- total: 2 (18 kB / 100 %)
+- total: 2 (17.6 kB / 100 %)
 --------------------
 ```
 

@@ -50,7 +50,7 @@ see [./worker_versioning_importmap_build/0_importmap/build/](./worker_versioning
 --- build files ---  
 - html : 1 (467 B / 42 %)
 - js   : 3 (644 B / 58 %)
-- total: 4 (1 kB / 100 %)
+- total: 4 (1.1 kB / 100 %)
 --------------------
 ```
 
@@ -107,9 +107,9 @@ see [./worker_versioning_importmap_build/1_importmap_fallback/build/](./worker_v
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (18 kB / 52 %)
-- js   : 3 (17 kB / 48 %)
-- total: 4 (34 kB / 100 %)
+- html : 1 (17.8 kB / 52 %)
+- js   : 3 (16.5 kB / 48 %)
+- total: 4 (34.3 kB / 100 %)
 --------------------
 ```
 

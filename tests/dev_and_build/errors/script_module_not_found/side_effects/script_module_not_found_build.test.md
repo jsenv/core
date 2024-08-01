@@ -45,14 +45,14 @@ base/client/main.html:10:27
 no entry on filesystem
 --- plugin name ---
 "jsenv:file_url_fetching"
-  at createFailedToFetchUrlContentError (file://@jsenv/core/src/kitchen/errors.js:61:24)
-  at createFetchUrlContentError (file://@jsenv/core/src/kitchen/errors.js:104:14)
-  at Object.fetchUrlContent (file://@jsenv/core/src/kitchen/kitchen.js:402:13)
-  at async file://@jsenv/core/src/kitchen/kitchen.js:475:11
-  at async Object.startCollecting (file://@jsenv/core/src/kitchen/url_graph/references.js:30:7)
-  at async file://@jsenv/core/src/kitchen/kitchen.js:473:9
-  at async Object.cook (file://@jsenv/core/src/kitchen/kitchen.js:658:5)
-  at async cookSelfThenDependencies (file://@jsenv/core/src/kitchen/kitchen.js:548:7)
+  at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:61:24)
+  at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:104:14)
+  at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:402:13)
+  at async @jsenv/core/src/kitchen/kitchen.js:475:11
+  at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)
+  at async @jsenv/core/src/kitchen/kitchen.js:473:9
+  at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:658:5)
+  at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:548:7)
   at async Promise.all (index 0)
-  at async startCookingDependencies (file://@jsenv/core/src/kitchen/kitchen.js:582:7)
+  at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:582:7)
 ```

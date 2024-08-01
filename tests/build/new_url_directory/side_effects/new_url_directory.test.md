@@ -42,16 +42,16 @@ base/client/main.html:15:40
 14 |     <script type="module">
 15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
                                             ^
-  at redirectReference (file://@jsenv/core/src/plugins/protocol_file/jsenv_plugin_protocol_file.js:138:27)
-  at callHook (file://@jsenv/core/src/plugins/plugin_controller.js:183:25)
-  at Object.callHooks (file://@jsenv/core/src/plugins/plugin_controller.js:224:29)
-  at Object.resolveReference (file://@jsenv/core/src/kitchen/kitchen.js:209:26)
-  at reference.resolve (file://@jsenv/core/src/kitchen/url_graph/references.js:368:38)
-  at createResolveAndFinalize (file://@jsenv/core/src/kitchen/url_graph/references.js:42:41)
-  at Object.found (file://@jsenv/core/src/kitchen/url_graph/references.js:57:23)
-  at onExternalReference (file://@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:102:44)
-  at parseAndTransformJsReferences (file://@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:150:7)
-  at js_module (file://@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:22:18)
+  at redirectReference (@jsenv/core/src/plugins/protocol_file/jsenv_plugin_protocol_file.js:138:27)
+  at callHook (@jsenv/core/src/plugins/plugin_controller.js:183:25)
+  at Object.callHooks (@jsenv/core/src/plugins/plugin_controller.js:224:29)
+  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:209:26)
+  at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:368:38)
+  at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:42:41)
+  at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:57:23)
+  at onExternalReference (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:102:44)
+  at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:150:7)
+  at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:22:18)
 ```
 
 ## 1_copy

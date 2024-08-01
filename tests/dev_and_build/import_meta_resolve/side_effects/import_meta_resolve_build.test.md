@@ -109,7 +109,7 @@ see [./import_meta_resolve_build/1_import_meta_resolve_fallback/build/](./import
 --- build files ---  
 - html : 1 (349 B / 30 %)
 - js   : 2 (822 B / 70 %)
-- total: 3 (1 kB / 100 %)
+- total: 3 (1.2 kB / 100 %)
 --------------------
 ```
 
@@ -166,9 +166,9 @@ see [./import_meta_resolve_build/2_js_module_fallback/build/](./import_meta_reso
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 92 %)
-- js   : 2 (1 kB / 8 %)
-- total: 3 (18 kB / 100 %)
+- html : 1 (16.8 kB / 92 %)
+- js   : 2 (1.4 kB / 8 %)
+- total: 3 (18.2 kB / 100 %)
 --------------------
 ```
 

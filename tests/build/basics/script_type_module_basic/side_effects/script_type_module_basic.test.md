@@ -107,9 +107,9 @@ see [./script_type_module_basic/1_js_module_fallback/build/](./script_type_modul
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (17 kB / 99.1 %)
+- html : 1 (16.7 kB / 99.1 %)
 - js   : 1 (160 B / 0.9 %)
-- total: 2 (17 kB / 100 %)
+- total: 2 (16.8 kB / 100 %)
 --------------------
 ```
 

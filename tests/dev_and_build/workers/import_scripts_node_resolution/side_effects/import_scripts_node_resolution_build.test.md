@@ -54,7 +54,7 @@ see [./import_scripts_node_resolution_build/0_basic/build/](./import_scripts_nod
 --- build files ---  
 - html : 1 (603 B / 44 %)
 - js   : 3 (757 B / 56 %)
-- total: 4 (1 kB / 100 %)
+- total: 4 (1.4 kB / 100 %)
 --------------------
 ```
 

@@ -53,8 +53,8 @@ see [./bundling_css/0_basic/build/](./bundling_css/0_basic/build/)
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
 - css  : 1 (117 B / 0.8 %)
-- other: 2 (14 kB / 99.2 %)
-- total: 3 (14 kB / 100 %)
+- other: 2 (13.7 kB / 99.2 %)
+- total: 3 (13.8 kB / 100 %)
 --------------------
 ```
 

@@ -106,8 +106,8 @@ see [./top_level_await_build/1_top_level_await_fallback/build/main.html](./top_l
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (18 kB / 100 %)
-- total: 1 (18 kB / 100 %)
+- html : 1 (17.5 kB / 100 %)
+- total: 1 (17.5 kB / 100 %)
 --------------------
 ```
 

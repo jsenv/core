@@ -13,13 +13,13 @@
         <text x="85.61" y="62.55"> 1 (632 B / 6 %)</text>
         <text x="10" y="81.55">- </text>
         <text x="26.8" y="81.55" fill="#7f7f7f">js   :</text>
-        <text x="85.61" y="81.55"> 2 (3 kB / 27 %)</text>
+        <text x="85.61" y="81.55"> 2 (2.8 kB / 27 %)</text>
         <text x="10" y="100.55">- </text>
         <text x="26.8" y="100.55" fill="#7f7f7f">other:</text>
-        <text x="85.61" y="100.55"> 1 (7 kB / 67 %)</text>
+        <text x="85.61" y="100.55"> 1 (6.8 kB / 67 %)</text>
         <text x="10" y="119.55">- </text>
         <text x="26.8" y="119.55" fill="#7f7f7f">total:</text>
-        <text x="85.61" y="119.55"> 4 (10 kB / 100 %)</text>
+        <text x="85.61" y="119.55"> 4 (10.3 kB / 100 %)</text>
         <text x="10" y="138.55">--------------------</text>
       </g>
     </svg>

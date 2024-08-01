@@ -51,10 +51,10 @@ see [./service_worker_type_classic_build/0_basic/build/](./service_worker_type_c
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (19 kB / 93.9 %)
+- html : 1 (18.7 kB / 93.9 %)
 - css  : 1 (24 B / 0.1 %)
-- js   : 3 (1 kB / 6 %)
-- total: 5 (20 kB / 100 %)
+- js   : 3 (1.2 kB / 6 %)
+- total: 5 (19.9 kB / 100 %)
 --------------------
 ```
 

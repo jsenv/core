@@ -55,9 +55,9 @@ see [./new_inline_content/0_js_module/build/](./new_inline_content/0_js_module/b
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
 - html : 1 (632 B / 6 %)
-- js   : 2 (3 kB / 27 %)
-- other: 1 (7 kB / 67 %)
-- total: 4 (10 kB / 100 %)
+- js   : 2 (2.8 kB / 27 %)
+- other: 1 (6.8 kB / 67 %)
+- total: 4 (10.3 kB / 100 %)
 --------------------
 ```
 
