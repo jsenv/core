@@ -16,6 +16,7 @@ node_modules/
 **/tests/**/**syntax_error**/main.html
 **/tests/**/snapshots/
 **/tests/**/output/
+**/tests/**/side_effects/
 /packages/**/server/tests/internal_error/snapshots/
 /packages/internal/plugin-transpilation/src/babel/babel_helper_directory/
 /**/dist/**

@@ -1,4 +1,5 @@
-# @jsenv/core 
+# @jsenv/core
+
 [![npm package](https://img.shields.io/npm/v/@jsenv/core.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/core)
 
 Jsenv is a suite of tools that can be used in projects involving JavaScript.
