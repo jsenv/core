@@ -126,7 +126,8 @@ export const replaceFluctuatingValues = (
     if (Buffer.isBuffer(value)) {
       return value;
     }
-    return replaceInObject(value, { replace: replaceThings });
+    const jsValueReplaced = replaceInObject(value, { replace: replaceThings });
+    return JSON.stringify(jsValueReplaced, null, "  ");
   }
   return value;
 };

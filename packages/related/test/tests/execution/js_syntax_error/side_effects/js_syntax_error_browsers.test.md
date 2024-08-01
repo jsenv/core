@@ -20,7 +20,7 @@ SyntaxError: Unexpected end of input
 
 ```js
 run({
-  runtime: firefox(),
+  runtime: firefox({ disableOnWindowsBecauseFlaky: false }),
 })
 ```
 

@@ -31,9 +31,7 @@ run({
 
 ```js
 run({
-  runtime: firefox({
-    disableOnWindowsBecauseFlaky: false,
-  }),
+  runtime: firefox({ disableOnWindowsBecauseFlaky: false }),
 })
 ```
 

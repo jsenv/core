@@ -237,20 +237,20 @@ const renderText = (
       return sourceMd;
     }
     if (text.type === "js_value") {
-      const value = text.value;
-      if (value === undefined) {
+      const jsValue = text.value;
+      if (jsValue === undefined) {
         return renderMarkdownBlock("undefined", "js");
       }
       if (
-        value instanceof Error ||
-        (value &&
-          value.constructor &&
-          value.constructor.name.includes("Error") &&
-          value.stack &&
-          typeof value.stack === "string")
+        jsValue instanceof Error ||
+        (jsValue &&
+          jsValue.constructor &&
+          jsValue.constructor.name.includes("Error") &&
+          jsValue.stack &&
+          typeof jsValue.stack === "string")
       ) {
         // return renderMarkdownBlock(text.value.stack);
-        const exception = createException(text.value, { rootDirectoryUrl });
+        const exception = createException(jsValue, { rootDirectoryUrl });
         const exceptionText = errorStackHidden
           ? `${exception.name}: ${exception.message}`
           : exception.stack || exception.message || exception;
@@ -262,7 +262,7 @@ const renderText = (
           replace,
         });
       }
-      return renderMarkdownBlock(replace(value), "js");
+      return renderMarkdownBlock(replace(jsValue), "js");
     }
     if (text.type === "console") {
       return renderConsole(text.value, {
