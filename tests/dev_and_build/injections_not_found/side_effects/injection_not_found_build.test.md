@@ -38,13 +38,12 @@ Add "__DEMO__" in that file.
 --- suggestion b ---
 Fix eventual typo in "__DEMO__"?
 --- suggestion c ---
-Mark injection as optional using INJECTIONS.optional()
-
+Mark injection as optional using INJECTIONS.optional():
 import { INJECTIONS } from "@jsenv/core";
 
 return {
   "__DEMO__": INJECTIONS.optional("foo"),
-}
+};
 ✔ generate source graph (done in <X> second)
 ⠋ generate build graph
 ✔ generate build graph (done in <X> second)
