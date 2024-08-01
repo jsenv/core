@@ -13,8 +13,6 @@ generateFunctionBody(() => {
 })
 ```
 
-### 1/1 return
-
 ```js
 const a = () => {};
 a();
@@ -28,8 +26,6 @@ generateFunctionBody(async () => {
 })
 ```
 
-### 1/1 return
-
 ```js
 console.log("async_body");
 ```
@@ -41,8 +37,6 @@ generateFunctionBody((a = () => {}) => {
   return a;
 })
 ```
-
-### 1/1 return
 
 ```js
 }) => {
@@ -58,8 +52,6 @@ generateFunctionBody(() => {
 })
 ```
 
-### 1/1 return
-
 ```js
 return "yo";
 ```
@@ -69,8 +61,6 @@ return "yo";
 ```js
 generateFunctionBody(() => ({}))
 ```
-
-### 1/1 return
 
 ```js
 ({})
@@ -83,8 +73,6 @@ generateFunctionBody(function (a, b) {
   return a + b;
 })
 ```
-
-### 1/1 return
 
 ```js
 return a + b;
@@ -102,8 +90,6 @@ generateFunctionBody(
 )
 ```
 
-### 1/1 return
-
 ```js
 console.log(10);
 ```
@@ -118,8 +104,6 @@ return generateFunctionBody(
   },
 );
 ```
-
-### 1/1 return
 
 ```js
 return a + b;
@@ -140,8 +124,6 @@ generateFunctionBody(
   ).get,
 )
 ```
-
-### 1/1 return
 
 ```js
 return 10;
@@ -164,8 +146,6 @@ generateFunctionBody(
   ).set,
 )
 ```
-
-### 1/1 return
 
 ```js
 value++
