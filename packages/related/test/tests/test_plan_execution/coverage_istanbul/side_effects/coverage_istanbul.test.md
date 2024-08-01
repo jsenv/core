@@ -7,24 +7,7 @@
 ## 0_basic
 
 ```js
-const devServer = await startDevServer({
-  logLevel: "warn",
-  sourceDirectoryUrl: new URL("./", import.meta.url),
-  keepProcessAlive: false,
-  port: 0,
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-  clientAutoreload: false,
-  ribbon: false,
-});
-
-const testPlanResult = await executeTestPlan({
-  logs: {
-    level: "warn",
-  },
-  rootDirectoryUrl: new URL("./", import.meta.url),
-  webServer: {
-    origin: devServer.origin,
-  },
+await run({
   testPlan: {
     "./client/main.test.html": {
       chromium: {
@@ -40,25 +23,7 @@ const testPlanResult = await executeTestPlan({
       },
     },
   },
-  coverage: {
-    include: {
-      "./client/file.js": true,
-    },
-    methodForBrowsers: "istanbul",
-  },
 });
-
-reportCoverageAsHtml(
-  testPlanResult,
-  new URL("./.coverage/", import.meta.url),
-);
-await takeCoverageSnapshots(
-  new URL("./.coverage/", import.meta.url),
-  ["file.js"],
-  {
-    screenshotDirectoryUrl: new URL("./", import.meta.url),
-  },
-);
 ```
 
 ### 1/2 write file "./file.js.png"

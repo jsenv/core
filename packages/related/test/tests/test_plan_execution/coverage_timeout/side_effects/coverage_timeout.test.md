@@ -7,11 +7,7 @@
 ## 0_basic
 
 ```js
-const testPlanResult = await executeTestPlan({
-  logs: {
-    level: "error",
-  },
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+await run({
   testPlan: {
     "main.js": {
       node: {
@@ -23,32 +19,16 @@ const testPlanResult = await executeTestPlan({
       },
     },
   },
-  coverage: {
-    include: {
-      "main.js": true,
-    },
-    coverageAndExecutionAllowed: true,
-  },
-  githubCheck: false,
 });
-reportCoverageAsHtml(
-  testPlanResult,
-  new URL("./.coverage/", import.meta.url),
-);
-await takeCoverageSnapshots(
-  new URL("./.coverage/", import.meta.url),
-  ["main.js"],
-  {
-    screenshotDirectoryUrl: new URL("./", import.meta.url),
-  },
-);
 ```
 
-### 1/2 write file "./main.js.png"
+### 1/3 write directory "./.coverage"
+
+### 2/3 write file "./main.js.png"
 
 see [./coverage_timeout/0_basic/main.js.png](./coverage_timeout/0_basic/main.js.png)
 
-### 2/2 resolve
+### 3/3 resolve
 
 ```js
 undefined

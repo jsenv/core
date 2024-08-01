@@ -15,7 +15,7 @@ if (process.platform === "win32") {
 }
 
 await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
-  test("0_basic", async () => {
+  const run = async ({ testPlan }) => {
     const devServer = await startDevServer({
       logLevel: "warn",
       sourceDirectoryUrl: new URL("./", import.meta.url),
@@ -25,7 +25,6 @@ await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
       clientAutoreload: false,
       ribbon: false,
     });
-
     const testPlanResult = await executeTestPlan({
       logs: {
         level: "warn",
@@ -34,6 +33,29 @@ await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
       webServer: {
         origin: devServer.origin,
       },
+      testPlan,
+      coverage: {
+        include: {
+          "./client/file.js": true,
+        },
+        methodForBrowsers: "istanbul",
+      },
+    });
+    reportCoverageAsHtml(
+      testPlanResult,
+      new URL("./.coverage/", import.meta.url),
+    );
+    await takeCoverageSnapshots(
+      new URL("./.coverage/", import.meta.url),
+      ["file.js"],
+      {
+        screenshotDirectoryUrl: new URL("./", import.meta.url),
+      },
+    );
+  };
+
+  test("0_basic", async () => {
+    await run({
       testPlan: {
         "./client/main.test.html": {
           chromium: {
@@ -49,24 +71,6 @@ await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
           },
         },
       },
-      coverage: {
-        include: {
-          "./client/file.js": true,
-        },
-        methodForBrowsers: "istanbul",
-      },
     });
-
-    reportCoverageAsHtml(
-      testPlanResult,
-      new URL("./.coverage/", import.meta.url),
-    );
-    await takeCoverageSnapshots(
-      new URL("./.coverage/", import.meta.url),
-      ["file.js"],
-      {
-        screenshotDirectoryUrl: new URL("./", import.meta.url),
-      },
-    );
   });
 });

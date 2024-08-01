@@ -12,24 +12,13 @@ import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_executio
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
 await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
-  test("0_basic", async () => {
+  const run = async ({ testPlan }) => {
     const testPlanResult = await executeTestPlan({
       logs: {
         level: "warn",
       },
       rootDirectoryUrl: new URL("./node_client/", import.meta.url),
-      testPlan: {
-        "./main.js": {
-          node: {
-            runtime: nodeWorkerThread({
-              env: { FOO: true },
-            }),
-          },
-          node2: {
-            runtime: nodeWorkerThread(),
-          },
-        },
-      },
+      testPlan,
       coverage: {
         include: {
           "./file.js": true,
@@ -48,5 +37,22 @@ await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
         screenshotDirectoryUrl: new URL("./", import.meta.url),
       },
     );
+  };
+
+  test("0_basic", async () => {
+    await run({
+      testPlan: {
+        "./main.js": {
+          node: {
+            runtime: nodeWorkerThread({
+              env: { FOO: true },
+            }),
+          },
+          node2: {
+            runtime: nodeWorkerThread(),
+          },
+        },
+      },
+    });
   });
 });

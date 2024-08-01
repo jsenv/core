@@ -7,23 +7,13 @@ import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_executio
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
 await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
-  test("0_basic", async () => {
+  const run = async ({ testPlan }) => {
     const testPlanResult = await executeTestPlan({
       logs: {
         level: "error",
       },
       rootDirectoryUrl: new URL("./node_client/", import.meta.url),
-      testPlan: {
-        "main.js": {
-          node: {
-            runtime: nodeWorkerThread({
-              gracefulStopAllocatedMs: 1_000,
-              env: { AWAIT_FOREVER: true },
-            }),
-            allocatedMs: 3_000,
-          },
-        },
-      },
+      testPlan,
       coverage: {
         include: {
           "main.js": true,
@@ -43,5 +33,21 @@ await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
         screenshotDirectoryUrl: new URL("./", import.meta.url),
       },
     );
+  };
+
+  test("0_basic", async () => {
+    await run({
+      testPlan: {
+        "main.js": {
+          node: {
+            runtime: nodeWorkerThread({
+              gracefulStopAllocatedMs: 1_000,
+              env: { AWAIT_FOREVER: true },
+            }),
+            allocatedMs: 3_000,
+          },
+        },
+      },
+    });
   });
 });

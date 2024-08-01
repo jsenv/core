@@ -7,11 +7,7 @@
 ## 0_basic
 
 ```js
-const testPlanResult = await executeTestPlan({
-  logs: {
-    level: "warn",
-  },
-  rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+await run({
   testPlan: {
     "./main.js": {
       node: {
@@ -24,24 +20,7 @@ const testPlanResult = await executeTestPlan({
       },
     },
   },
-  coverage: {
-    include: {
-      "./file.js": true,
-    },
-    methodForNodeJs: "Profiler",
-  },
 });
-reportCoverageAsHtml(
-  testPlanResult,
-  new URL("./.coverage/", import.meta.url),
-);
-await takeCoverageSnapshots(
-  new URL("./.coverage/", import.meta.url),
-  ["file.js"],
-  {
-    screenshotDirectoryUrl: new URL("./", import.meta.url),
-  },
-);
 ```
 
 ### 1/2 write file "./file.js.png"
