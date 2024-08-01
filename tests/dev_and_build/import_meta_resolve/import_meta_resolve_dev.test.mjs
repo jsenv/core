@@ -22,8 +22,8 @@ const test = async ({ browserLauncher }) => {
   });
   const actual = returnValue;
   const expect = {
-    importMetaResolveReturnValue: `${devServer.origin}/node_modules/foo/foo.js?js_classic&v=0.0.1`,
-    __TEST__: `${devServer.origin}/node_modules/foo/foo.js?js_classic&v=0.0.1`,
+    importMetaResolveReturnValue: `window.origin/node_modules/foo/foo.js?js_classic&v=0.0.1`,
+    __TEST__: `window.origin/node_modules/foo/foo.js?js_classic&v=0.0.1`,
   };
   assert({ actual, expect });
 };

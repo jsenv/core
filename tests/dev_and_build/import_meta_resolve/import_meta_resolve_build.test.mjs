@@ -1,63 +1,58 @@
 import { assert } from "@jsenv/assert";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const test = async ({ name, ...params }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await build({
-    logLevel: "warn",
+const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
+  const testParams = {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
-  });
-  buildDirectorySnapshot.compare();
-
-  const server = await startFileServer({
-    rootDirectoryUrl: snapshotDirectoryUrl,
-  });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
-  const actual = returnValue;
-  const expect = {
-    importMetaResolveReturnValue: `${server.origin}/js/foo.js`,
-    __TEST__: `${server.origin}/js/foo.js`,
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    bundling: false,
+    minification: false,
+    versioning: false,
   };
-  assert({ actual, expect });
-};
 
-// import.meta.resolve supported
-await test({
-  name: "0_supported",
-  runtimeCompat: { chrome: "107" },
-  bundling: false,
-  minification: false,
-  versioning: false,
+  test("0_import_meta_resolve", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "107" }, // import.meta.resolve supported
+    }));
+  test("1_import_meta_resolve_fallback", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "80" }, // module supported but import.meta.resolve is not
+    }));
+  test("2_js_module_fallback", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "60" },
+    }));
 });
-// module supported but import.meta.resolve is not
-await test({
-  name: "1_not_supported",
-  runtimeCompat: { chrome: "80" },
-  bundling: false,
-  minification: false,
-  versioning: false,
-});
-// script module not supported
-await test({
-  name: "2_js_module_not_supported",
-  runtimeCompat: { chrome: "60" },
-  bundling: false,
-  minification: false,
-  versioning: false,
-});
+
+const actual = {
+  importMetaResolveResult: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("0_import_meta_resolve")}build/`,
+  ),
+  importMetaResolveFallbackResult: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("1_import_meta_resolve_fallback")}build/`,
+  ),
+  jsModuleFallbackResult: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("2_js_module_fallback")}build/`,
+  ),
+};
+const expect = {
+  importMetaResolveResult: {
+    importMetaResolveReturnValue: `window.origin/js/foo.js`,
+    __TEST__: `window.origin/js/foo.js`,
+  },
+  importMetaResolveFallbackResult: {
+    importMetaResolveReturnValue: `window.origin/js/foo.js`,
+    __TEST__: `window.origin/js/foo.js`,
+  },
+  jsModuleFallbackResult: {
+    importMetaResolveReturnValue: `window.origin/js/foo.js`,
+    __TEST__: `window.origin/js/foo.js`,
+  },
+};
+assert({ actual, expect });

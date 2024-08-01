@@ -37,8 +37,8 @@ System.register([], function (_export, _context) {
       document.head.appendChild(script);
       return _await(scriptLoadPromise, function () {
         window.resolveResultPromise({
-          importMetaResolveReturnValue,
-          __TEST__: window.__TEST__
+          importMetaResolveReturnValue: importMetaResolveReturnValue.replace(window.origin, "window.origin"),
+          __TEST__: window.__TEST__.replace(window.origin, "window.origin")
         });
       });
     }

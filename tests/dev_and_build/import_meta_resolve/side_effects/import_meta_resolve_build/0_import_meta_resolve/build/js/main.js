@@ -12,6 +12,9 @@ document.head.appendChild(script);
 await scriptLoadPromise;
 
 window.resolveResultPromise({
-  importMetaResolveReturnValue,
-  __TEST__: window.__TEST__,
+  importMetaResolveReturnValue: importMetaResolveReturnValue.replace(
+    window.origin,
+    "window.origin",
+  ),
+  __TEST__: window.__TEST__.replace(window.origin, "window.origin"),
 });
