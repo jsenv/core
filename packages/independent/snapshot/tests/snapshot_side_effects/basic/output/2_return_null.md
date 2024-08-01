@@ -2,8 +2,6 @@
 null
 ```
 
-# 1/1 return
-
 ```js
 null
 ```

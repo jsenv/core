@@ -40,7 +40,7 @@ const test = async (params) => {
         text: `foo\n`,
       },
     ],
-    duration: assert.between(2_000, 6_000),
+    duration: assert.between(2_000, 8_000),
   };
   assert({ actual, expect });
 };

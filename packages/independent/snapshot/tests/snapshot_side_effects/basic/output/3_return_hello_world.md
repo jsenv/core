@@ -2,8 +2,6 @@
 "hello world"
 ```
 
-# 1/1 return
-
 ```js
 hello world
 ```

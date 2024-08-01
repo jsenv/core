@@ -2,8 +2,6 @@
 await readFile(import.meta.url, { as: "string" });
 ```
 
-# 1/1 resolve
-
 ```js
 undefined
 ```

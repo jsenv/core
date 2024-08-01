@@ -3,8 +3,6 @@ const value = await Promise.resolve(42);
 return value;
 ```
 
-# 1/1 resolve
-
 ```js
 42
 ```

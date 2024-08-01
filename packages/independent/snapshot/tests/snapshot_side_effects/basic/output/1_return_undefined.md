@@ -2,8 +2,6 @@
 undefined
 ```
 
-# 1/1 return
-
 ```js
 undefined
 ```
