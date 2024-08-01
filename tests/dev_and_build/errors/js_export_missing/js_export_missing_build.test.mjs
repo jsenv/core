@@ -1,22 +1,11 @@
-import { assert } from "@jsenv/assert";
-
 import { build } from "@jsenv/core";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-try {
-  await build({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-  });
-  throw new Error("should throw");
-} catch (e) {
-  const expect = `tests/dev_and_build/errors/js_export_missing/client/main.js (2:9): "answer" is not exported by "tests/dev_and_build/errors/js_export_missing/client/file.js", imported by "tests/dev_and_build/errors/js_export_missing/client/main.js".
---- frame ---
-1: // eslint-disable-next-line import/named
-2: import { answer } from`;
-  const actual = e.message.slice(0, expect.length);
-  assert({ actual, expect });
-}
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_basic", () =>
+    build({
+      sourceDirectoryUrl: new URL("./client/", import.meta.url),
+      buildDirectoryUrl: new URL("./build/", import.meta.url),
+      entryPoints: { "./main.html": "main.html" },
+    }));
+});

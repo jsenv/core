@@ -1,8 +1,0 @@
-Failed to fetch url content
-@jsenv/core/tests/dev_and_build/errors/js_import_not_found/client/intermediate.js:2:7
-1 | // eslint-disable-next-line import/no-unresolved
-2 | import "./not_found.js";
-          ^
-no entry on filesystem
---- plugin name ---
-"jsenv:file_url_fetching"
