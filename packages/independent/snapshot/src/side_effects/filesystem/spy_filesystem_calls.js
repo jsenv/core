@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { URL_META } from "@jsenv/url-meta";
-import { yieldAncestorUrls } from "@jsenv/urls";
+import { ensurePathnameTrailingSlash, yieldAncestorUrls } from "@jsenv/urls";
 import { readFileSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
@@ -101,7 +101,9 @@ export const spyFilesystemCalls = (
     _internalFs,
     "mkdir",
     (directoryPath, mode, recursive) => {
-      const directoryUrl = pathToFileURL(directoryPath);
+      const directoryUrl = ensurePathnameTrailingSlash(
+        pathToFileURL(directoryPath),
+      );
       const stateBefore = getDirectoryState(directoryPath);
       if (!stateBefore.found && recursive) {
         const ancestorNotFoundArray = [];
@@ -110,7 +112,9 @@ export const spyFilesystemCalls = (
           if (ancestorState.found) {
             break;
           }
-          ancestorNotFoundArray.unshift(ancestorUrl);
+          ancestorNotFoundArray.unshift(
+            ensurePathnameTrailingSlash(ancestorUrl),
+          );
         }
         return {
           return: (fd) => {
