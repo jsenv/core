@@ -18,8 +18,14 @@ const CONTROLLED_WORKER_THREAD_URL = new URL(
   import.meta.url,
 ).href;
 
+/**
+ * Create a runtime object capable to execute a file with Node.js
+ * @param {Object} nodeWorkerThreadParameters
+ * @param {string|url} nodeWorkerThreadParameters.importmap
+ *       An object to remap import
+ */
 export const nodeWorkerThread = ({
-  importMap,
+  importmap,
   env,
   debugPort,
   debugMode,
@@ -68,8 +74,8 @@ export const nodeWorkerThread = ({
       if (onMeasureMemoryAvailable) {
         env.MEASURE_MEMORY_AT_START = "1";
       }
-      if (importMap) {
-        env.IMPORT_MAP = JSON.stringify(importMap);
+      if (importmap) {
+        env.IMPORT_MAP = JSON.stringify(importmap);
         env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
         commandLineOptions.push(`--import=${IMPORTMAP_NODE_LOADER_FILE_URL}`);
         commandLineOptions.push(

@@ -12,8 +12,6 @@ run({
 })
 ```
 
-### 1/1 resolve
-
 ```js
 {
   "consoleCalls": [
@@ -39,8 +37,6 @@ run({
 })
 ```
 
-### 1/1 resolve
-
 ```js
 {
   "consoleCalls": [
@@ -63,8 +59,6 @@ run({
   runtime: webkit(),
 })
 ```
-
-### 1/1 resolve
 
 ```js
 {

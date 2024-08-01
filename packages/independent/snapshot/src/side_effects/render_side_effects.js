@@ -160,6 +160,16 @@ const renderOneSideEffect = (
     lastSideEffectNumber,
   });
   if (text) {
+    if (
+      (sideEffect.number === 1 &&
+        lastSideEffectNumber === 1 &&
+        sideEffect.code === "return") ||
+      sideEffect.code === "throw" ||
+      sideEffect.code === "resolve" ||
+      sideEffect.code === "reject"
+    ) {
+      label = null;
+    }
     text = renderText(text, {
       sideEffect,
       sideEffectFileUrl,
@@ -167,11 +177,6 @@ const renderOneSideEffect = (
       replace,
       rootDirectoryUrl,
       errorStackHidden,
-      onRenderError: () => {
-        if (sideEffect.number === 1 && lastSideEffectNumber === 1) {
-          label = null;
-        }
-      },
     });
   }
   if (sideEffect.code === "source_code") {
@@ -208,7 +213,6 @@ const renderText = (
     replace,
     rootDirectoryUrl,
     errorStackHidden,
-    onRenderError = () => {},
   },
 ) => {
   if (text && typeof text === "object") {
@@ -245,7 +249,6 @@ const renderText = (
           value.stack &&
           typeof value.stack === "string")
       ) {
-        onRenderError();
         // return renderMarkdownBlock(text.value.stack);
         const exception = createException(text.value, { rootDirectoryUrl });
         const exceptionText = errorStackHidden

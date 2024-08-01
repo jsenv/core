@@ -18,7 +18,7 @@ const CONTROLLED_CHILD_PROCESS_URL = new URL(
 
 export const nodeChildProcess = ({
   logProcessCommand = false,
-  importMap,
+  importmap,
   gracefulStopAllocatedMs = 4000,
   env,
   debugPort,
@@ -81,8 +81,8 @@ export const nodeChildProcess = ({
           commandLineOptions.push("--expose-gc");
         }
       }
-      if (importMap) {
-        env.IMPORT_MAP = JSON.stringify(importMap);
+      if (importmap) {
+        env.IMPORT_MAP = JSON.stringify(importmap);
         env.IMPORT_MAP_BASE_URL = rootDirectoryUrl;
         commandLineOptions.push(
           `--experimental-loader=${IMPORTMAP_NODE_LOADER_FILE_URL}`,
