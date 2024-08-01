@@ -123,6 +123,8 @@ ${fileUrl}`);
         expect: fileContent,
         details: fileUrl,
         forceMultilineDiff: true,
+        MAX_CONTEXT_BEFORE_DIFF: 10,
+        MAX_CONTEXT_AFTER_DIFF: 10,
       });
     },
   };
