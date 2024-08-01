@@ -1,60 +1,59 @@
 import { assert } from "@jsenv/assert";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
 import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const test = async (name, { expectedBuildPath, ...rest }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-  await build({
-    logLevel: "warn",
+const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
+  const testParams = {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    ...rest,
-  });
-  buildDirectorySnapshot.compare();
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    minification: false,
+    versioning: false,
+  };
 
-  const server = await startFileServer({
-    rootDirectoryUrl: snapshotDirectoryUrl,
-  });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
-  const actual = returnValue;
-  const expect = {
+  test("0_js_module", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "89" },
+    }));
+  test("1_js_module_fallback", () =>
+    build({
+      ...testParams,
+      runtimeCompat: { chrome: "60" },
+    }));
+});
+
+const actual = {
+  jsModuleResult: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("0_js_module")}build/`,
+  ),
+  jsModuleFallbackResult: await executeBuildHtmlInBrowser(
+    `${dirUrlMap.get("1_js_module_fallback")}build/`,
+  ),
+};
+const expect = {
+  jsModuleResult: {
     meta: {
-      url: `${server.origin}${expectedBuildPath}`,
+      url: `window.origin/js/main.js`,
       resolve: undefined,
     },
-    url: `${server.origin}${expectedBuildPath}`,
-    urlDestructured: `${server.origin}${expectedBuildPath}`,
+    url: `window.origin/js/main.js`,
+    urlDestructured: `window.origin/js/main.js`,
     importMetaDev: undefined,
     importMetaTest: undefined,
     importMetaBuild: true,
-  };
-
-  assert({ actual, expect });
+  },
+  jsModuleFallbackResult: {
+    meta: {
+      url: `window.origin/js/main.nomodule.js`,
+      resolve: undefined,
+    },
+    url: `window.origin/js/main.nomodule.js`,
+    urlDestructured: `window.origin/js/main.nomodule.js`,
+    importMetaDev: undefined,
+    importMetaTest: undefined,
+    importMetaBuild: true,
+  },
 };
-
-// can use <script type="module">
-await test("0_js_module", {
-  expectedBuildPath: "/js/main.js",
-  runtimeCompat: { chrome: "89" },
-  minification: false,
-  versioning: false,
-});
-// cannot use <script type="module">
-await test("1_js_module_fallback", {
-  expectedBuildPath: "/js/main.nomodule.js",
-  runtimeCompat: { chrome: "60" },
-  minification: false,
-  versioning: false,
-});
+assert({ actual, expect });

@@ -14,7 +14,7 @@
     <a id="link" href="#toto"></a>
     <script>
       const { href } = document.querySelector("#link");
-      window.resolveResultPromise(href);
+      window.resolveResultPromise(href.replace(window.origin, "window.origin"));
     </script>
   </body>
 </html>

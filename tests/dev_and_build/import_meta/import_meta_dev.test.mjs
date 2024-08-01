@@ -20,7 +20,7 @@ const test = async (params) => {
   const actual = returnValue;
   const expect = {
     meta: {
-      url: `${devServer.origin}/main.js`,
+      url: `window.origin/main.js`,
       resolve: undefined,
       hot: {
         data: {},
@@ -30,8 +30,8 @@ const test = async (params) => {
         invalidate: undefined,
       },
     },
-    url: `${devServer.origin}/main.js`,
-    urlDestructured: `${devServer.origin}/main.js`,
+    url: `window.origin/main.js`,
+    urlDestructured: `window.origin/main.js`,
     importMetaDev: true,
     importMetaTest: undefined,
     importMetaBuild: undefined,

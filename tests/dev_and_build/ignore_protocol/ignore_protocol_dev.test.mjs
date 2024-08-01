@@ -20,7 +20,7 @@ const test = async (params) => {
   });
   const actual = returnValue;
   const expect = {
-    ignoreAJsHref: `${devServer.origin}/a.js`,
+    ignoreAJsHref: `window.origin/a.js`,
     ignoreIgnoreBJsHref: `ignore:b.js`,
   };
   assert({ actual, expect });

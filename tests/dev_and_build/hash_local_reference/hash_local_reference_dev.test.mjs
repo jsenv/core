@@ -18,7 +18,7 @@ const test = async (params) => {
     /* eslint-enable no-undef */
   });
   const actual = returnValue;
-  const expect = `${devServer.origin}/main.html#toto`;
+  const expect = `window.origin/main.html#toto`;
   assert({ actual, expect });
 };
 
