@@ -2,7 +2,7 @@
 writeDirectorySync(new URL("./dir/a/b/c", import.meta.url));
 ```
 
-# 1/2 write directory "./dir/a/b/c"
+# 1/2 write directory "./dir/a/b/c/"
 
 # 2/2 return
 
