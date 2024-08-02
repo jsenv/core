@@ -26,9 +26,15 @@ const injectToolbar = async ({
     close: closeToolbar
   };
   if (document.readyState !== "complete") {
+    if (logLevel === "debug") {
+      console.debug('toolbar injection: wait for window "load"');
+    }
     await new Promise(resolve => {
       window.addEventListener("load", resolve);
     });
+  }
+  if (logLevel === "debug") {
+    console.debug("toolbar injection: wait idleCallback");
   }
   await new Promise(resolve => {
     if (window.requestIdleCallback) {
@@ -40,10 +46,15 @@ const injectToolbar = async ({
     }
   });
   const jsenvToolbar = document.createElement("jsenv-toolbar");
+  console.debug("toolbar injection: create iframe");
   iframe = createIframeNode();
   const toolbarTriggerNode = createToolbarTriggerNode();
-  jsenvToolbar.appendChild(iframe);
-  jsenvToolbar.appendChild(toolbarTriggerNode);
+  appendIntoRespectingLineBreaksAndIndentation(iframe, jsenvToolbar, {
+    indent: 3
+  });
+  appendIntoRespectingLineBreaksAndIndentation(toolbarTriggerNode, jsenvToolbar, {
+    indent: 3
+  });
   const iframeLoadedPromise = iframeToLoadedPromise(iframe);
   const toolbarUrlObject = new URL(toolbarUrl, window.location.href);
   toolbarUrlObject.searchParams.set("logLevel", logLevel);
@@ -96,6 +107,7 @@ const injectToolbar = async ({
   const collapseToolbarTrigger = () => {
     toolbarTriggerNode.removeAttribute("data-expanded", "");
   };
+  console.debug("toolbar injection: inject iframe in document");
   const placeholder = getToolbarPlaceholder();
   placeholder.parentNode.replaceChild(jsenvToolbar, placeholder);
   const listenToolbarStateChange = callback => {
@@ -126,8 +138,10 @@ const injectToolbar = async ({
     });
   });
   await iframeLoadedPromise;
+  console.debug("toolbar injection: iframe loaded");
   resolveToolbarReadyPromise();
-  iframe.removeAttribute("tabindex");
+  iframe.removeAttribute("tabindex"); // why so late? and not when creating the iframe?
+
   return iframe;
 };
 const createIframeNode = () => {
@@ -151,9 +165,28 @@ const createIframeNode = () => {
   });
   return iframe;
 };
+const appendIntoRespectingLineBreaksAndIndentation = (node, parentNode, {
+  indent = 2
+} = {}) => {
+  const indentMinusOne = "  ".repeat(indent - 1);
+  const desiredIndent = "  ".repeat(indent);
+  const previousSibling = parentNode.childNodes[parentNode.childNodes.length - 1];
+  if (previousSibling && previousSibling.nodeName === "#text") {
+    if (previousSibling.nodeValue === "\n".concat(indentMinusOne)) {
+      previousSibling.nodeValue = "\n".concat(desiredIndent);
+    }
+    if (previousSibling.nodeValue !== "\n".concat(desiredIndent)) {
+      previousSibling.nodeValue = "\n".concat(desiredIndent);
+    }
+  } else {
+    parentNode.appendChild(document.createTextNode("\n".concat(desiredIndent)));
+  }
+  parentNode.appendChild(node);
+  parentNode.appendChild(document.createTextNode("\n".concat(indentMinusOne)));
+};
 const createToolbarTriggerNode = () => {
   const div = document.createElement("div");
-  div.innerHTML = "\n<div id=\"jsenv_toolbar_trigger\" style=\"display:none\">\n  <svg id=\"jsenv_toolbar_trigger_icon\">\n    <use xlink:href=\"".concat(jsenvLogoSvgUrl, "#jsenv_logo\"></use>\n  </svg>\n  <style>\n    #jsenv_toolbar_trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv_toolbar_trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv_toolbar_trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv_toolbar_trigger_icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {\n      opacity: 1;\n    }\n  </style>\n</div>");
+  div.innerHTML = "<div id=\"jsenv_toolbar_trigger\" style=\"display:none\">\n        <svg id=\"jsenv_toolbar_trigger_icon\">\n          <use xlink:href=\"".concat(jsenvLogoSvgUrl, "#jsenv_logo\"></use>\n        </svg>\n        <style>\n          #jsenv_toolbar_trigger {\n            display: block;\n            overflow: hidden;\n            position: fixed;\n            z-index: 1000;\n            bottom: -32px;\n            right: 20px;\n            height: 40px;\n            width: 40px;\n            padding: 0;\n            margin: 0;\n            border-radius: 5px 5px 0 0;\n            border: 1px solid rgba(0, 0, 0, 0.33);\n            border-bottom: none;\n            box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n            background: transparent;\n            text-align: center;\n            transition: 600ms;\n          }\n\n          #jsenv_toolbar_trigger:hover {\n            cursor: pointer;\n          }\n\n          #jsenv_toolbar_trigger[data-expanded] {\n            bottom: 0;\n          }\n\n          #jsenv_toolbar_trigger_icon {\n            width: 35px;\n            height: 35px;\n            opacity: 0;\n            transition: 600ms;\n          }\n\n          #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {\n            opacity: 1;\n          }\n        </style>\n      </div>");
   const toolbarTrigger = div.firstElementChild;
   return toolbarTrigger;
 };
@@ -206,7 +239,7 @@ const queryPlaceholder = () => {
 };
 const createTooolbarPlaceholder = () => {
   const jsenvToolbar = document.createElement("jsenv-toolbar");
-  document.body.appendChild(jsenvToolbar);
+  appendIntoRespectingLineBreaksAndIndentation(jsenvToolbar, document.body);
   return jsenvToolbar;
 };
 const iframeToLoadedPromise = iframe => {
