@@ -1,4 +1,4 @@
-import { urlToBasename, urlToRelativeUrl } from "@jsenv/urls";
+import { urlToBasename, urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import {
   takeDirectorySnapshot,
   takeFileSnapshot,
@@ -22,8 +22,8 @@ export const snapshotTests = async (
   {
     testName = urlToBasename(testFileUrl, true),
     sideEffectFileUrl,
-    sideEffectFilePattern = "./side_effects/[test_basename]/[test_basename].md",
-    outFilePattern = "./side_effects/[test_basename]/[test_scenario]/[filename]",
+    sideEffectFilePattern = "./side_effects/[filename]/[filename].md",
+    outFilePattern = "./side_effects/[filename]/[test_scenario]/[out_filename]",
     rootDirectoryUrl,
     generatedBy = true,
     linkToSource = true,
@@ -36,10 +36,12 @@ export const snapshotTests = async (
   } = {},
 ) => {
   const testBasename = urlToBasename(testFileUrl);
+  const testFilename = urlToFilename(testFileUrl);
   if (sideEffectFileUrl === undefined) {
     const sideEffectFileRelativeUrl = sideEffectFilePattern
-      .replaceAll("[test_name]", testName)
-      .replaceAll("[test_basename]", testBasename);
+      .replaceAll("[name]", testName)
+      .replaceAll("[basename]", testBasename)
+      .replaceAll("[filename]", testFilename);
     sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, testFileUrl);
   } else {
     sideEffectFileUrl = new URL(sideEffectFileUrl, testFileUrl);
@@ -102,10 +104,11 @@ export const snapshotTests = async (
     const testScenario = asValidFilename(scenario);
     const generateOutFileUrl = (filename) => {
       const outFileRelativeUrl = outFilePattern
-        .replaceAll("[test_name]", testName)
-        .replaceAll("[test_basename]", testBasename)
+        .replaceAll("[name]", testName)
+        .replaceAll("[basename]", testBasename)
+        .replaceAll("[filename]", testFilename)
         .replaceAll("[test_scenario]", testScenario)
-        .replaceAll("[filename]", filename);
+        .replaceAll("[out_filename]", filename);
       const outFileUrl = new URL(outFileRelativeUrl, testFileUrl).href;
       return outFileUrl;
     };

@@ -1,4 +1,4 @@
-import { urlToBasename } from "@jsenv/urls";
+import { urlToBasename, urlToFilename } from "@jsenv/urls";
 import {
   takeDirectorySnapshot,
   takeFileSnapshot,
@@ -11,18 +11,20 @@ export const snapshotSideEffects = (
   fn,
   {
     sideEffectFileUrl,
-    sideEffectFilePattern = "./side_effects/[basename].md",
-    outFilePattern = "./side_effects/[basename]/[filename]",
+    sideEffectFilePattern = "./side_effects/[filename].md",
+    outFilePattern = "./side_effects/[filename]/[out_filename]",
     errorStackHidden,
     ...captureOptions
   } = {},
 ) => {
-  const name = urlToBasename(sourceFileUrl, true);
-  const basename = urlToBasename(sourceFileUrl);
+  const sourceName = urlToBasename(sourceFileUrl, true);
+  const sourceBasename = urlToBasename(sourceFileUrl);
+  const sourceFilename = urlToFilename(sourceFileUrl);
   if (sideEffectFileUrl === undefined) {
     const sideEffectFileRelativeUrl = sideEffectFilePattern
-      .replaceAll("[name]", name)
-      .replaceAll("[basename]", basename);
+      .replaceAll("[name]", sourceName)
+      .replaceAll("[basename]", sourceBasename)
+      .replaceAll("[filename]", sourceFilename);
     sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, sourceFileUrl);
   } else {
     sideEffectFileUrl = new URL(sideEffectFileUrl, sourceFileUrl);
@@ -31,9 +33,10 @@ export const snapshotSideEffects = (
   const captureSideEffects = createCaptureSideEffects(captureOptions);
   const generateOutFileUrl = (filename) => {
     const outRelativeUrl = outFilePattern
-      .replaceAll("[name]", name)
-      .replaceAll("[basename]", basename)
-      .replaceAll("[filename]", filename);
+      .replaceAll("[name]", sourceName)
+      .replaceAll("[basename]", sourceBasename)
+      .replaceAll("[filename]", sourceFilename)
+      .replaceAll("[out_filename]", filename);
     const outFileUrl = new URL(outRelativeUrl, new URL("./", sourceFileUrl))
       .href;
     return outFileUrl;
