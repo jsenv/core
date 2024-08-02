@@ -105,10 +105,8 @@ export const snapshotTests = async (
       .replaceAll("[test_scenario]", testScenario);
     const outDirectoryUrl = new URL(outDirectoryRelativeUrl, testFileUrl);
     const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl, {
-      pattern: {
-        "**/*": true,
-        "**/*.svg": "presence_only",
-      },
+      "**/*": true,
+      "**/*.svg": "presence_only",
     });
     const generateOutFileUrl = (filename) => {
       const outFileRelativeUrl = outFilePattern

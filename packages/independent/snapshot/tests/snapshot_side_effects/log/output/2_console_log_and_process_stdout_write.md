@@ -4,25 +4,14 @@ process.stdout.write("between");
 console.log("after");
 ```
 
-# 1/4 console.log
+# 1/2 logs
 
 ```console
 before
+betweenafter
 ```
 
-# 2/4 process.stdout
-
-```console
-between
-```
-
-# 3/4 console.log
-
-```console
-after
-```
-
-# 4/4 return
+# 2/2 return
 
 ```js
 undefined

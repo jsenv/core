@@ -3,35 +3,22 @@ console.log("[31m_[39m");
 console.log("🤖[31m DANGER[0m Will Robbinson");
 ```
 
-# 1/3 console.log
+# 1/2 logs
 
-![img](4_console_ansi_many/console.log.svg)
+![img](4_console_ansi_many/log_group.svg)
 
 <details>
   <summary>see without style</summary>
 
 ```console
 _
-```
-
-</details>
-
-
-# 2/3 console.log
-
-![img](4_console_ansi_many/console.log_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
 🤖 DANGER Will Robbinson
 ```
 
 </details>
 
 
-# 3/3 return
+# 2/2 return
 
 ```js
 undefined
