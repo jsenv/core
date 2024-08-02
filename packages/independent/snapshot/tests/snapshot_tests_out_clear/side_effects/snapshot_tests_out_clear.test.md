@@ -7,12 +7,12 @@
 ## 0_first
 
 ```js
-writeFileSync(new URL("./tata.txt", import.meta.url));
+writeFileSync(new URL("./dir/deep/tata.txt", import.meta.url));
 ```
 
-### 1/2 write file "./tata.txt"
+### 1/2 write file "./dir/deep/tata.txt"
 
-see [./snapshot_tests_out_clear/0_first/tata.txt](./snapshot_tests_out_clear/0_first/tata.txt)
+see [./snapshot_tests_out_clear/0_first/dir/deep/tata.txt](./snapshot_tests_out_clear/0_first/dir/deep/tata.txt)
 
 ### 2/2 return
 

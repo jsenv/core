@@ -1,6 +1,7 @@
 import { assert } from "@jsenv/assert";
 import { readFileStructureSync, writeFileSync } from "@jsenv/filesystem";
 import { snapshotTests } from "@jsenv/snapshot";
+import { existsSync } from "node:fs";
 
 await snapshotTests(
   import.meta.url,
@@ -52,5 +53,26 @@ await snapshotTests(
   const expect = {
     "0_first/tata.txt": "",
   };
+  assert({ actual, expect });
+}
+
+// writing a deep directory gets undone
+await snapshotTests(
+  import.meta.url,
+  ({ test }) => {
+    test("0_first", () => {
+      writeFileSync(new URL("./dir/deep/tata.txt", import.meta.url));
+    });
+  },
+  {
+    throwWhenDiff: false,
+    filesystemEffects: {
+      textualFilesIntoDirectory: true,
+    },
+  },
+);
+{
+  const actual = existsSync(new URL("./dir/", import.meta.url));
+  const expect = false;
   assert({ actual, expect });
 }

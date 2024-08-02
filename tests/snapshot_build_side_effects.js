@@ -13,7 +13,7 @@ export const snapshotBuildTests = async (
         : {
             textualFilesIntoDirectory: true,
             include: {
-              "**/*": true,
+              "**": true,
               "**/.jsenv/": false,
             },
             ...(options.filesystemEffects === true
