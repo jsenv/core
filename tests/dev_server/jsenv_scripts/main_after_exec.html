@@ -1,23 +1,21 @@
-<!DOCTYPE html>
-<html>
-  <head>
+<!DOCTYPE html><html><head>
     <title>Title</title>
     <meta charset="utf-8">
     <link rel="icon" href="data:,">
   </head>
   <body>
     <jsenv-scripts>
-      <script src="/@fs@jsenv/core/src/plugins/server_events/client/server_events_client.js" jsenv-injected-by="jsenv:server_events_client_injection"></script>
+      <script src="/@fs/Users/damien.maillard/dev/perso/jsenv-core/src/plugins/server_events/client/server_events_client.js" jsenv-injected-by="jsenv:server_events_client_injection"></script>
       <script jsenv-injected-by="jsenv:server_events_client_injection" content-indented="" jsenv-cooked-by="jsenv:html_inline_content_analysis">
         window.__server_events__.setup({
           "logs": true
         });
       </script>
       <script type="module" jsenv-injected-by="jsenv:toolbar" content-indented="" jsenv-cooked-by="jsenv:html_inline_content_analysis">
-        import { injectToolbar } from "/@fs@jsenv/core/packages/related/plugin-toolbar/src/client/toolbar_injector.js";
+        import { injectToolbar } from "/@fs/Users/damien.maillard/dev/perso/jsenv-core/packages/related/plugin-toolbar/src/client/toolbar_injector.js";
             
         injectToolbar({
-          "toolbarUrl": "/@fs@jsenv/core/packages/related/plugin-toolbar/src/client/toolbar.html",
+          "toolbarUrl": "/@fs/Users/damien.maillard/dev/perso/jsenv-core/packages/related/plugin-toolbar/src/client/toolbar.html",
           "logLevel": "debug",
           "theme": "dark",
           "opened": false,
@@ -26,7 +24,7 @@
           "notificationsEnabled": true
         });
       </script>
-      <script src="/@fs@jsenv/core/packages/internal/plugin-supervisor/src/client/supervisor.js" jsenv-injected-by="jsenv:supervisor"></script>
+      <script src="/@fs/Users/damien.maillard/dev/perso/jsenv-core/packages/internal/plugin-supervisor/src/client/supervisor.js" jsenv-injected-by="jsenv:supervisor"></script>
       <script jsenv-injected-by="jsenv:supervisor" content-indented="">
         window.__supervisor__.setup({
           "logs": false,
@@ -34,7 +32,7 @@
           "errorOverlay": true,
           "openInEditor": true,
           "serverIsJsenvDevServer": true,
-          "rootDirectoryUrl": "base/client/",
+          "rootDirectoryUrl": "file:///Users/damien.maillard/dev/perso/jsenv-core/tests/dev_server/jsenv_scripts/client/",
           "scriptInfos": [
             {
               "type": "js_module",
@@ -44,14 +42,14 @@
         });
       </script>
       <script type="module" jsenv-injected-by="jsenv:autoreload_client" content-indented="">
-        import { initAutoreload } from "/@fs@jsenv/core/src/plugins/autoreload/client/autoreload.js";
+        import { initAutoreload } from "/@fs/Users/damien.maillard/dev/perso/jsenv-core/src/plugins/autoreload/client/autoreload.js";
             
         initAutoreload({
           "mainFilePath": "/index.html"
         });
       </script>
       <script type="module" jsenv-injected-by="jsenv:ribbon" content-indented="">
-        import { injectRibbon } from "/@fs@jsenv/core/src/plugins/ribbon/client/ribbon.js";
+        import { injectRibbon } from "/@fs/Users/damien.maillard/dev/perso/jsenv-core/src/plugins/ribbon/client/ribbon.js";
             
         injectRibbon({
           "text": "DEV"
@@ -65,10 +63,10 @@
     <script type="module" content-indented="" src="http://localhost:57621/main.js"></script>
     <jsenv-ribbon></jsenv-ribbon>
     <jsenv-toolbar>
-      <iframe allowtransparency="true" src="http://localhost:57621/@fs@jsenv/core/packages/related/plugin-toolbar/src/client/toolbar.html?logLevel=debug&amp;theme=dark&amp;autoreload=&amp;animationsEnabled=&amp;notificationsEnabled=" name="jsenv toolbar" style="position: fixed; z-index: 1000; bottom: 0px; left: 0px; width: 100%; height: 0px; visibility: hidden; transition-property: height, visibility; border: none; transition-duration: 300ms;"></iframe>
+      <iframe allowtransparency="true" src="http://localhost:57621/@fs/Users/damien.maillard/dev/perso/jsenv-core/packages/related/plugin-toolbar/src/client/toolbar.html?logLevel=debug&amp;theme=dark&amp;autoreload=&amp;animationsEnabled=&amp;notificationsEnabled=" name="jsenv toolbar" style="position: fixed; z-index: 1000; bottom: 0px; left: 0px; width: 100%; height: 0px; visibility: hidden; transition-property: height, visibility; border: none; transition-duration: 300ms;"></iframe>
       <div id="jsenv_toolbar_trigger" style="display: block;">
         <svg id="jsenv_toolbar_trigger_icon">
-          <use xlink:href="http://localhost:57621/@fs@jsenv/core/packages/related/plugin-toolbar/src/client/ui/jsenv_logo.svg#jsenv_logo"></use>
+          <use xlink:href="http://localhost:57621/@fs/Users/damien.maillard/dev/perso/jsenv-core/packages/related/plugin-toolbar/src/client/ui/jsenv_logo.svg#jsenv_logo"></use>
         </svg>
         <style>
           #jsenv_toolbar_trigger {
@@ -112,5 +110,4 @@
         </style>
       </div>
     </jsenv-toolbar>
-  </body>
-</html>
+  </body></html>

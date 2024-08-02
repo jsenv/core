@@ -7,7 +7,7 @@
 ## 0_basic
 
 ```js
-await run();
+run()
 ```
 
 ### 1/2 write 4 files into "./"

@@ -28,9 +28,15 @@ export const injectToolbar = async ({
   };
 
   if (document.readyState !== "complete") {
+    if (logLevel === "debug") {
+      console.debug('toolbar injection: wait for window "load"');
+    }
     await new Promise((resolve) => {
       window.addEventListener("load", resolve);
     });
+  }
+  if (logLevel === "debug") {
+    console.debug("toolbar injection: wait idleCallback");
   }
   await new Promise((resolve) => {
     if (window.requestIdleCallback) {
@@ -40,10 +46,19 @@ export const injectToolbar = async ({
     }
   });
   const jsenvToolbar = document.createElement("jsenv-toolbar");
+  console.debug("toolbar injection: create iframe");
   iframe = createIframeNode();
   const toolbarTriggerNode = createToolbarTriggerNode();
-  jsenvToolbar.appendChild(iframe);
-  jsenvToolbar.appendChild(toolbarTriggerNode);
+  appendIntoRespectingLineBreaksAndIndentation(iframe, jsenvToolbar, {
+    indent: 3,
+  });
+  appendIntoRespectingLineBreaksAndIndentation(
+    toolbarTriggerNode,
+    jsenvToolbar,
+    {
+      indent: 3,
+    },
+  );
   const iframeLoadedPromise = iframeToLoadedPromise(iframe);
   const toolbarUrlObject = new URL(toolbarUrl, window.location.href);
   toolbarUrlObject.searchParams.set("logLevel", logLevel);
@@ -102,6 +117,7 @@ export const injectToolbar = async ({
     toolbarTriggerNode.removeAttribute("data-expanded", "");
   };
 
+  console.debug("toolbar injection: inject iframe in document");
   const placeholder = getToolbarPlaceholder();
   placeholder.parentNode.replaceChild(jsenvToolbar, placeholder);
 
@@ -136,8 +152,9 @@ export const injectToolbar = async ({
   );
 
   await iframeLoadedPromise;
+  console.debug("toolbar injection: iframe loaded");
   resolveToolbarReadyPromise();
-  iframe.removeAttribute("tabindex");
+  iframe.removeAttribute("tabindex"); // why so late? and not when creating the iframe?
 
   return iframe;
 };
@@ -164,54 +181,76 @@ const createIframeNode = () => {
   return iframe;
 };
 
+const appendIntoRespectingLineBreaksAndIndentation = (
+  node,
+  parentNode,
+  { indent = 2 } = {},
+) => {
+  const indentMinusOne = "  ".repeat(indent - 1);
+  const desiredIndent = "  ".repeat(indent);
+  const previousSibling =
+    parentNode.childNodes[parentNode.childNodes.length - 1];
+  if (previousSibling && previousSibling.nodeName === "#text") {
+    if (previousSibling.nodeValue === `\n${indentMinusOne}`) {
+      previousSibling.nodeValue = `\n${desiredIndent}`;
+    }
+    if (previousSibling.nodeValue !== `\n${desiredIndent}`) {
+      previousSibling.nodeValue = `\n${desiredIndent}`;
+    }
+  } else {
+    parentNode.appendChild(document.createTextNode(`\n${desiredIndent}`));
+  }
+  parentNode.appendChild(node);
+  parentNode.appendChild(document.createTextNode(`\n${indentMinusOne}`));
+};
+
 const createToolbarTriggerNode = () => {
   const div = document.createElement("div");
-  div.innerHTML = `
-<div id="jsenv_toolbar_trigger" style="display:none">
-  <svg id="jsenv_toolbar_trigger_icon">
-    <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
-  </svg>
-  <style>
-    #jsenv_toolbar_trigger {
-      display: block;
-      overflow: hidden;
-      position: fixed;
-      z-index: 1000;
-      bottom: -32px;
-      right: 20px;
-      height: 40px;
-      width: 40px;
-      padding: 0;
-      margin: 0;
-      border-radius: 5px 5px 0 0;
-      border: 1px solid rgba(0, 0, 0, 0.33);
-      border-bottom: none;
-      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
-      background: transparent;
-      text-align: center;
-      transition: 600ms;
-    }
+  div.innerHTML = `<div id="jsenv_toolbar_trigger" style="display:none">
+        <svg id="jsenv_toolbar_trigger_icon">
+          <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
+        </svg>
+        <style>
+          #jsenv_toolbar_trigger {
+            display: block;
+            overflow: hidden;
+            position: fixed;
+            z-index: 1000;
+            bottom: -32px;
+            right: 20px;
+            height: 40px;
+            width: 40px;
+            padding: 0;
+            margin: 0;
+            border-radius: 5px 5px 0 0;
+            border: 1px solid rgba(0, 0, 0, 0.33);
+            border-bottom: none;
+            box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
+            background: transparent;
+            text-align: center;
+            transition: 600ms;
+          }
 
-    #jsenv_toolbar_trigger:hover {
-      cursor: pointer;
-    }
+          #jsenv_toolbar_trigger:hover {
+            cursor: pointer;
+          }
 
-    #jsenv_toolbar_trigger[data-expanded] {
-      bottom: 0;
-    }
+          #jsenv_toolbar_trigger[data-expanded] {
+            bottom: 0;
+          }
 
-    #jsenv_toolbar_trigger_icon {
-      width: 35px;
-      height: 35px;
-      opacity: 0;
-      transition: 600ms;
-    }
+          #jsenv_toolbar_trigger_icon {
+            width: 35px;
+            height: 35px;
+            opacity: 0;
+            transition: 600ms;
+          }
 
-    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
-      opacity: 1;
-    }
-  </style>
-</div>`;
+          #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
+            opacity: 1;
+          }
+        </style>
+      </div>`;
   const toolbarTrigger = div.firstElementChild;
   return toolbarTrigger;
 };
@@ -270,7 +309,7 @@ const queryPlaceholder = () => {
 
 const createTooolbarPlaceholder = () => {
   const jsenvToolbar = document.createElement("jsenv-toolbar");
-  document.body.appendChild(jsenvToolbar);
+  appendIntoRespectingLineBreaksAndIndentation(jsenvToolbar, document.body);
   return jsenvToolbar;
 };
 
