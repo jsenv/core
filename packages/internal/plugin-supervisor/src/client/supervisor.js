@@ -900,7 +900,34 @@ window.__supervisor__ = (() => {
           .forEach((node) => {
             node.parentNode.removeChild(node);
           });
-        document.body.appendChild(jsenvErrorOverlay);
+
+        const appendIntoRespectingLineBreaksAndIndentation = (
+          node,
+          parentNode,
+          { indent = 2 } = {},
+        ) => {
+          const indentMinusOne = "  ".repeat(indent - 1);
+          const desiredIndent = "  ".repeat(indent);
+          const previousSibling =
+            parentNode.childNodes[parentNode.childNodes.length - 1];
+          if (previousSibling && previousSibling.nodeName === "#text") {
+            if (previousSibling.nodeValue === `\n${indentMinusOne}`) {
+              previousSibling.nodeValue = `\n${desiredIndent}`;
+            }
+            if (previousSibling.nodeValue !== `\n${desiredIndent}`) {
+              previousSibling.nodeValue = `\n${desiredIndent}`;
+            }
+          } else {
+            parentNode.appendChild(
+              document.createTextNode(`\n${desiredIndent}`),
+            );
+          }
+          parentNode.appendChild(node);
+        };
+        appendIntoRespectingLineBreaksAndIndentation(
+          jsenvErrorOverlay,
+          document.body,
+        );
         const removeErrorOverlay = () => {
           if (jsenvErrorOverlay && jsenvErrorOverlay.parentNode) {
             document.body.removeChild(jsenvErrorOverlay);

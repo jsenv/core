@@ -205,54 +205,67 @@ const appendIntoRespectingLineBreaksAndIndentation = (
 };
 
 const createToolbarTriggerNode = () => {
-  const div = document.createElement("div");
-  div.innerHTML = `<div id="jsenv_toolbar_trigger" style="display:none">
-        <svg id="jsenv_toolbar_trigger_icon">
-          <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
-        </svg>
-        <style>
-          #jsenv_toolbar_trigger {
-            display: block;
-            overflow: hidden;
-            position: fixed;
-            z-index: 1000;
-            bottom: -32px;
-            right: 20px;
-            height: 40px;
-            width: 40px;
-            padding: 0;
-            margin: 0;
-            border-radius: 5px 5px 0 0;
-            border: 1px solid rgba(0, 0, 0, 0.33);
-            border-bottom: none;
-            box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
-            background: transparent;
-            text-align: center;
-            transition: 600ms;
-          }
+  const css = /* css */ `
+    #jsenv_toolbar_trigger {
+      display: block;
+      overflow: hidden;
+      position: fixed;
+      z-index: 1000;
+      bottom: -32px;
+      right: 20px;
+      height: 40px;
+      width: 40px;
+      padding: 0;
+      margin: 0;
+      border-radius: 5px 5px 0 0;
+      border: 1px solid rgba(0, 0, 0, 0.33);
+      border-bottom: none;
+      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);
+      background: transparent;
+      text-align: center;
+      transition: 600ms;
+    }
 
-          #jsenv_toolbar_trigger:hover {
-            cursor: pointer;
-          }
+    #jsenv_toolbar_trigger:hover {
+      cursor: pointer;
+    }
 
-          #jsenv_toolbar_trigger[data-expanded] {
-            bottom: 0;
-          }
+    #jsenv_toolbar_trigger[data-expanded] {
+      bottom: 0;
+    }
 
-          #jsenv_toolbar_trigger_icon {
-            width: 35px;
-            height: 35px;
-            opacity: 0;
-            transition: 600ms;
-          }
+    #jsenv_toolbar_trigger_icon {
+      width: 35px;
+      height: 35px;
+      opacity: 0;
+      transition: 600ms;
+    }
 
-          #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
-            opacity: 1;
-          }
-        </style>
-      </div>`;
-  const toolbarTrigger = div.firstElementChild;
-  return toolbarTrigger;
+    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
+      opacity: 1;
+    }`;
+  const html = /* html */ ` <div id="jsenv_toolbar_trigger" style="display:none">
+    <style>${css}</style>
+    <svg id="jsenv_toolbar_trigger_icon">
+      <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
+    </svg>
+  </div>`;
+
+  class JsenvToolbarTriggerHtmlElement extends HTMLElement {
+    constructor() {
+      super();
+      const root = this.attachShadow({ mode: "open" });
+      root.innerHTML = html;
+    }
+  }
+  if (customElements && !customElements.get("jsenv-toolbar-trigger")) {
+    customElements.define(
+      "jsenv-toolbar-trigger",
+      JsenvToolbarTriggerHtmlElement,
+    );
+  }
+  const jsenvToolbarTriggerElement = new JsenvToolbarTriggerHtmlElement();
+  return jsenvToolbarTriggerElement;
 };
 
 const addToolbarEventCallback = (iframe, eventName, callback) => {

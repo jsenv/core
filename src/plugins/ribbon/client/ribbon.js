@@ -35,8 +35,7 @@ export const injectRibbon = ({ text }) => {
         text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
         text-align: center;
         user-select: none;
-      }
-    `;
+      }`;
   const html = /* html */ `<div id="jsenv_ribbon_container">
       <style>${css}</style>
       <div id="jsenv_ribbon">
