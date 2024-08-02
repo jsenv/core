@@ -36,9 +36,9 @@ build "./index.js"
 </details>
 
 
-### 2/4 write 3 files into "./build/"
+### 2/4 write 3 files into "./node_build/"
 
-see [./import_meta_resolve_node/node_0_import_meta_resolve/build/](./import_meta_resolve_node/node_0_import_meta_resolve/build/)
+see [./import_meta_resolve_node/node_0_import_meta_resolve/node_build/](./import_meta_resolve_node/node_0_import_meta_resolve/node_build/)
 
 ### 3/4 logs
 
@@ -97,9 +97,9 @@ build "./index.js"
 </details>
 
 
-### 2/4 write 3 files into "./build/"
+### 2/4 write 3 files into "./node_build/"
 
-see [./import_meta_resolve_node/node_1_import_meta_resolve_fallback/build/](./import_meta_resolve_node/node_1_import_meta_resolve_fallback/build/)
+see [./import_meta_resolve_node/node_1_import_meta_resolve_fallback/node_build/](./import_meta_resolve_node/node_1_import_meta_resolve_fallback/node_build/)
 
 ### 3/4 logs
 

@@ -4,7 +4,7 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   const testParams = {
     sourceDirectoryUrl: new URL("./node_client/", import.meta.url),
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    buildDirectoryUrl: new URL("./node_build/", import.meta.url),
     entryPoints: { "./index.js": "index.js" },
     ignore: {
       "./node_modules/bar/": true,
