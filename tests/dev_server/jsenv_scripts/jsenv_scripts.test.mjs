@@ -57,18 +57,6 @@ const run = async () => {
   }
 };
 
-if (debug) {
-  await run();
-} else {
-  await snapshotDevSideEffects(
-    import.meta.url,
-    ({ test }) => {
-      test("0_basic", () => run());
-    },
-    {
-      filesystemEffects: {
-        preserve: true,
-      },
-    },
-  );
-}
+await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+  test("0_basic", () => run());
+});
