@@ -7,8 +7,7 @@
 ## chrome_0_import_meta_resolve
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "107" },
 })
 ```
@@ -68,8 +67,7 @@ see [./import_meta_resolve_browser/chrome_0_import_meta_resolve/build/](./import
 ## chrome_1_import_meta_resolve_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "106" },
 })
 ```
