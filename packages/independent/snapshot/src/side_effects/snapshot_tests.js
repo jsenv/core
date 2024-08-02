@@ -95,10 +95,7 @@ export const snapshotTests = async (
     testName,
   );
   const outDirectoryUrl = new URL(outDirectoryRelativeUrl, testFileUrl);
-  const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl, {
-    "**/*": true,
-    "**/*.svg": "presence_only",
-  });
+  const outFileDirectorySnapshots = [];
   for (const [scenario, { fn, callSite }] of activeTestMap) {
     markdown += "\n\n";
     markdown += `## ${scenario}`;
@@ -119,6 +116,14 @@ export const snapshotTests = async (
       return outFileUrl;
     };
     const outFileDirectoryUrl = generateOutFileUrl("");
+    const outFileDirectorySnapshot = takeDirectorySnapshot(
+      outFileDirectoryUrl,
+      {
+        "**/*": true,
+        "**/*.svg": "presence_only",
+      },
+    );
+    outFileDirectorySnapshots.push(outFileDirectorySnapshot);
     dirUrlMap.set(scenario, outFileDirectoryUrl);
     const sideEffectsMarkdown = renderSideEffects(sideEffects, {
       sideEffectFileUrl,
@@ -136,7 +141,9 @@ export const snapshotTests = async (
     mockFluctuatingValues: false,
     throwWhenDiff,
   });
-  outDirectorySnapshot.compare(throwWhenDiff);
+  for (const outFileDirectorySnapshot of outFileDirectorySnapshots) {
+    outFileDirectorySnapshot.compare(throwWhenDiff);
+  }
 
   return { dirUrlMap, sideEffectsMap };
 };
