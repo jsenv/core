@@ -52,7 +52,7 @@ export const snapshotTestPlanSideEffects = async (
               "**/*": true,
               "**/.jsenv/": false,
               "**/.coverage/": false,
-              "**/*.png": !process.env.CI,
+              "**/*.png": process.env.CI ? "presence_only" : true,
             },
             ...(options.filesystemEffects === true
               ? {}
