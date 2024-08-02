@@ -6,25 +6,15 @@ await new Promise((resolve) => {
 console.log("a_after_timeout_200");
 ```
 
-# 1/6 console.log
+# 1/4 logs
 
 ```console
 a_before_timeout_200
-```
-
-# 2/6 console.log
-
-```console
 b_before_timeout_50
-```
-
-# 3/6 console.log
-
-```console
 b_after_timeout_50
 ```
 
-# 4/6 write file "./output/3_b_when_b_ends_before.md"
+# 2/4 write file "./output/3_b_when_b_ends_before.md"
 
 
 ```
@@ -36,28 +26,28 @@ await new Promise((resolve) => {
 console.log("b_after_timeout_50");
 \`\`\`
 
-# 1/3 console.log
+# 1/2 logs
 
 \`\`\`console
 b_before_timeout_50
-\`\`\`
-
-# 2/3 console.log
-
-\`\`\`console
 b_after_timeout_50
 \`\`\`
 
+# 2/2 resolve
+
+\`\`\`js
+undefined
+\`\`\`
 ```
 see [./2_a_when_b_ends_before/output/3_b_when_b_ends_before.md](./2_a_when_b_ends_before/output/3_b_when_b_ends_before.md) for more
 
-# 5/6 console.log
+# 3/4 console.log
 
 ```console
 a_after_timeout_200
 ```
 
-# 6/6 resolve
+# 4/4 resolve
 
 ```js
 undefined

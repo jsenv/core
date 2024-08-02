@@ -90,6 +90,15 @@ export const snapshotTests = async (
     markdown += generatedByLink;
   }
 
+  const outDirectoryRelativeUrl = outDirectoryPattern.replaceAll(
+    "[test_name]",
+    testName,
+  );
+  const outDirectoryUrl = new URL(outDirectoryRelativeUrl, testFileUrl);
+  const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl, {
+    "**/*": true,
+    "**/*.svg": "presence_only",
+  });
   for (const [scenario, { fn, callSite }] of activeTestMap) {
     markdown += "\n\n";
     markdown += `## ${scenario}`;
@@ -100,16 +109,6 @@ export const snapshotTests = async (
     });
     sideEffectsMap.set(scenario, sideEffects);
     const testScenario = asValidFilename(scenario);
-    let outDirectoryRelativeUrl = outDirectoryPattern
-      .replaceAll("[test_name]", testName)
-      .replaceAll("[test_scenario]", testScenario);
-    const outDirectoryUrl = new URL(outDirectoryRelativeUrl, testFileUrl);
-    const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl, {
-      pattern: {
-        "**/*": true,
-        "**/*.svg": "presence_only",
-      },
-    });
     const generateOutFileUrl = (filename) => {
       const outFileRelativeUrl = outFilePattern
         .replaceAll("[test_name]", testName)
@@ -130,7 +129,6 @@ export const snapshotTests = async (
       errorStackHidden,
       errorMessageTransform,
     });
-    outDirectorySnapshot.compare(throwWhenDiff);
     markdown += sideEffectsMarkdown;
   }
   const sideEffectFileSnapshot = takeFileSnapshot(sideEffectFileUrl);
@@ -138,6 +136,7 @@ export const snapshotTests = async (
     mockFluctuatingValues: false,
     throwWhenDiff,
   });
+  outDirectorySnapshot.compare(throwWhenDiff);
 
   return { dirUrlMap, sideEffectsMap };
 };

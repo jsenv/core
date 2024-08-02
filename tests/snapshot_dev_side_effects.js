@@ -20,7 +20,7 @@ export const snapshotDevSideEffects = async (
         : {
             textualFilesIntoDirectory: true,
             include: {
-              "**/*": true,
+              "**": true,
               "**/.jsenv/**/@fs/**": false,
               "**/.jsenv/**/*.html@*": false,
             },

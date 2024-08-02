@@ -35,8 +35,7 @@ export const injectRibbon = ({ text }) => {
         text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
         text-align: center;
         user-select: none;
-      }
-    `;
+      }`;
   const html = /* html */ `<div id="jsenv_ribbon_container">
       <style>${css}</style>
       <div id="jsenv_ribbon">
@@ -64,5 +63,31 @@ export const injectRibbon = ({ text }) => {
   const jsenvRibbonElement = new JsenvRibbonHtmlElement({
     hidden: toolbarStateInLocalStorage.ribbonDisplayed === false,
   });
-  document.body.appendChild(jsenvRibbonElement);
+  appendIntoRespectingLineBreaksAndIndentation(
+    jsenvRibbonElement,
+    document.body,
+  );
+};
+
+const appendIntoRespectingLineBreaksAndIndentation = (
+  node,
+  parentNode,
+  { indent = 2 } = {},
+) => {
+  const indentMinusOne = "  ".repeat(indent - 1);
+  const desiredIndent = "  ".repeat(indent);
+  const previousSibling =
+    parentNode.childNodes[parentNode.childNodes.length - 1];
+  if (previousSibling && previousSibling.nodeName === "#text") {
+    if (previousSibling.nodeValue === `\n${indentMinusOne}`) {
+      previousSibling.nodeValue = `\n${desiredIndent}`;
+    }
+    if (previousSibling.nodeValue !== `\n${desiredIndent}`) {
+      previousSibling.nodeValue = `\n${desiredIndent}`;
+    }
+  } else {
+    parentNode.appendChild(document.createTextNode(`\n${desiredIndent}`));
+  }
+  parentNode.appendChild(node);
+  parentNode.appendChild(document.createTextNode(`\n${indentMinusOne}`));
 };

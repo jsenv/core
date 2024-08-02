@@ -6,19 +6,14 @@ await new Promise((resolve) => {
 console.log("b_after_timeout_50");
 ```
 
-# 1/3 console.log
+# 1/2 logs
 
 ```console
 b_before_timeout_50
-```
-
-# 2/3 console.log
-
-```console
 b_after_timeout_50
 ```
 
-# 3/3 resolve
+# 2/2 resolve
 
 ```js
 undefined

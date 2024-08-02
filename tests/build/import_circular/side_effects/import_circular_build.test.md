@@ -7,8 +7,7 @@
 ## 0_with_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   bundling: true,
 })
 ```
@@ -67,8 +66,7 @@ see [./import_circular_build/0_with_bundling/build/main.js](./import_circular_bu
 ## 1_without_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   bundling: false,
 })
 ```

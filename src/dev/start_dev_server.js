@@ -561,6 +561,9 @@ ${e.trace?.message}`);
         }
       },
       handleWebsocket: (websocket, { request }) => {
+        // if (true || logLevel === "debug") {
+        //   console.log("handleWebsocket", websocket, request.headers);
+        // }
         if (request.headers["sec-websocket-protocol"] === "jsenv") {
           serverEventsDispatcher.addWebsocket(websocket, request);
         }

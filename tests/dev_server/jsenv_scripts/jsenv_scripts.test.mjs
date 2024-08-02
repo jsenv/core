@@ -19,34 +19,44 @@ if (process.env.CI) {
   // that would fail the test
 }
 
-await snapshotDevSideEffects(import.meta.url, ({ test }) => {
-  const run = async () => {
-    const debug = false;
-    await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
-    const devServer = await startDevServer({
-      sourcemaps: "none",
-      logLevel: "warn",
-      serverLogLevel: "warn",
-      sourceDirectoryUrl: new URL("./client/", import.meta.url),
-      outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-      keepProcessAlive: false,
-      port: 0,
-      plugins: [jsenvPluginToolbar()],
-      // ribbon: false,
-      // clientAutoreload: false,
-    });
-    const browser = await chromium.launch({ headless: !debug });
-    const page = await launchBrowserPage(browser, { pageErrorEffect: "log" });
-    await page.goto(`${devServer.origin}/main.html`);
-    const html = await page.content();
-    writeFileSync(new URL("./main_after_exec.html", import.meta.url), html);
-    if (!debug) {
-      browser.close();
-      devServer.stop(); // required because for some reason the rooms are kept alive
-    }
-  };
-
-  test("0_basic", async () => {
-    await run();
+let debug = false;
+const run = async () => {
+  await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
+  const devServer = await startDevServer({
+    sourcemaps: "none",
+    logLevel: "warn",
+    serverLogLevel: "warn",
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    keepProcessAlive: true,
+    port: 8888,
+    plugins: [jsenvPluginToolbar({ logLevel: "debug" })],
+    // ribbon: false,
+    // clientAutoreload: false,
   });
+  const browser = await chromium.launch({
+    ignoreHTTPSErrors: true,
+    headless: !debug,
+  });
+  const page = await launchBrowserPage(browser, { pageErrorEffect: "log" });
+  if (debug) {
+    page.on("websocket", (websocket) => {
+      websocket.on("close", () => console.log("WebSocket closed"));
+      websocket.on("error", (error) =>
+        console.error("WebSocket error:", error.message),
+      );
+    });
+  }
+  await page.goto(`${devServer.origin}/main.html`);
+  await new Promise((resolve) => setTimeout(resolve, 500)); // wait a bit for toolbar injection
+  const html = await page.content();
+  writeFileSync(new URL("./main_after_exec.html", import.meta.url), html);
+  if (!debug) {
+    browser.close();
+    devServer.stop(); // required because for some reason the rooms are kept alive
+  }
+};
+
+await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+  test("0_basic", () => run());
 });

@@ -9,55 +9,20 @@ console.warn("warn_1");
 console.error("error_1");
 ```
 
-# 1/9 console.log
+# 1/2 logs
 
 ```console
 log_0
-```
-
-# 2/9 console.info
-
-```console
 info_0
-```
-
-# 3/9 console.warn
-
-```console
 warn_0
-```
-
-# 4/9 console.error
-
-```console
 error_0
-```
-
-# 5/9 console.log
-
-```console
 log_1
-```
-
-# 6/9 console.info
-
-```console
 info_1
-```
-
-# 7/9 console.warn
-
-```console
 warn_1
-```
-
-# 8/9 console.error
-
-```console
 error_1
 ```
 
-# 9/9 return
+# 2/2 return
 
 ```js
 undefined

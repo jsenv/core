@@ -28,9 +28,15 @@ export const injectToolbar = async ({
   };
 
   if (document.readyState !== "complete") {
+    if (logLevel === "debug") {
+      console.debug('toolbar injection: wait for window "load"');
+    }
     await new Promise((resolve) => {
       window.addEventListener("load", resolve);
     });
+  }
+  if (logLevel === "debug") {
+    console.debug("toolbar injection: wait idleCallback");
   }
   await new Promise((resolve) => {
     if (window.requestIdleCallback) {
@@ -40,10 +46,19 @@ export const injectToolbar = async ({
     }
   });
   const jsenvToolbar = document.createElement("jsenv-toolbar");
+  console.debug("toolbar injection: create iframe");
   iframe = createIframeNode();
   const toolbarTriggerNode = createToolbarTriggerNode();
-  jsenvToolbar.appendChild(iframe);
-  jsenvToolbar.appendChild(toolbarTriggerNode);
+  appendIntoRespectingLineBreaksAndIndentation(iframe, jsenvToolbar, {
+    indent: 3,
+  });
+  appendIntoRespectingLineBreaksAndIndentation(
+    toolbarTriggerNode,
+    jsenvToolbar,
+    {
+      indent: 3,
+    },
+  );
   const iframeLoadedPromise = iframeToLoadedPromise(iframe);
   const toolbarUrlObject = new URL(toolbarUrl, window.location.href);
   toolbarUrlObject.searchParams.set("logLevel", logLevel);
@@ -102,6 +117,7 @@ export const injectToolbar = async ({
     toolbarTriggerNode.removeAttribute("data-expanded", "");
   };
 
+  console.debug("toolbar injection: inject iframe in document");
   const placeholder = getToolbarPlaceholder();
   placeholder.parentNode.replaceChild(jsenvToolbar, placeholder);
 
@@ -136,8 +152,9 @@ export const injectToolbar = async ({
   );
 
   await iframeLoadedPromise;
+  console.debug("toolbar injection: iframe loaded");
   resolveToolbarReadyPromise();
-  iframe.removeAttribute("tabindex");
+  iframe.removeAttribute("tabindex"); // why so late? and not when creating the iframe?
 
   return iframe;
 };
@@ -164,14 +181,31 @@ const createIframeNode = () => {
   return iframe;
 };
 
+const appendIntoRespectingLineBreaksAndIndentation = (
+  node,
+  parentNode,
+  { indent = 2 } = {},
+) => {
+  const indentMinusOne = "  ".repeat(indent - 1);
+  const desiredIndent = "  ".repeat(indent);
+  const previousSibling =
+    parentNode.childNodes[parentNode.childNodes.length - 1];
+  if (previousSibling && previousSibling.nodeName === "#text") {
+    if (previousSibling.nodeValue === `\n${indentMinusOne}`) {
+      previousSibling.nodeValue = `\n${desiredIndent}`;
+    }
+    if (previousSibling.nodeValue !== `\n${desiredIndent}`) {
+      previousSibling.nodeValue = `\n${desiredIndent}`;
+    }
+  } else {
+    parentNode.appendChild(document.createTextNode(`\n${desiredIndent}`));
+  }
+  parentNode.appendChild(node);
+  parentNode.appendChild(document.createTextNode(`\n${indentMinusOne}`));
+};
+
 const createToolbarTriggerNode = () => {
-  const div = document.createElement("div");
-  div.innerHTML = `
-<div id="jsenv_toolbar_trigger" style="display:none">
-  <svg id="jsenv_toolbar_trigger_icon">
-    <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
-  </svg>
-  <style>
+  const css = /* css */ `
     #jsenv_toolbar_trigger {
       display: block;
       overflow: hidden;
@@ -209,11 +243,29 @@ const createToolbarTriggerNode = () => {
 
     #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {
       opacity: 1;
+    }`;
+  const html = /* html */ ` <div id="jsenv_toolbar_trigger" style="display:none">
+    <style>${css}</style>
+    <svg id="jsenv_toolbar_trigger_icon">
+      <use xlink:href="${jsenvLogoSvgUrl}#jsenv_logo"></use>
+    </svg>
+  </div>`;
+
+  class JsenvToolbarTriggerHtmlElement extends HTMLElement {
+    constructor() {
+      super();
+      const root = this.attachShadow({ mode: "open" });
+      root.innerHTML = html;
     }
-  </style>
-</div>`;
-  const toolbarTrigger = div.firstElementChild;
-  return toolbarTrigger;
+  }
+  if (customElements && !customElements.get("jsenv-toolbar-trigger")) {
+    customElements.define(
+      "jsenv-toolbar-trigger",
+      JsenvToolbarTriggerHtmlElement,
+    );
+  }
+  const jsenvToolbarTriggerElement = new JsenvToolbarTriggerHtmlElement();
+  return jsenvToolbarTriggerElement;
 };
 
 const addToolbarEventCallback = (iframe, eventName, callback) => {
@@ -270,7 +322,7 @@ const queryPlaceholder = () => {
 
 const createTooolbarPlaceholder = () => {
   const jsenvToolbar = document.createElement("jsenv-toolbar");
-  document.body.appendChild(jsenvToolbar);
+  appendIntoRespectingLineBreaksAndIndentation(jsenvToolbar, document.body);
   return jsenvToolbar;
 };
 

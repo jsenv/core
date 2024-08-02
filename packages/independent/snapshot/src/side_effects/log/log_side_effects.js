@@ -4,7 +4,7 @@ import { groupLogSideEffects } from "./group_log_side_effects.js";
 
 const logSideEffectsOptionsDefault = {
   prevent: true,
-  group: false,
+  group: true,
 };
 
 export const logSideEffects = (logSideEffectsOptions) => {
