@@ -7,8 +7,7 @@
 ## node_0_import_meta_resolve
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { node: "20" },
 })
 ```
@@ -68,8 +67,7 @@ see [./import_meta_resolve_node/node_0_import_meta_resolve/node_build/](./import
 ## node_1_import_meta_resolve_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { node: "19" },
 })
 ```
