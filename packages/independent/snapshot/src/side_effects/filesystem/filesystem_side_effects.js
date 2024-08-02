@@ -225,6 +225,8 @@ ${renderFileContent(
                 } else if (buffer.size > INLINE_MAX_LENGTH) {
                   outDirectoryReason = "lot_of_chars";
                 }
+              } else {
+                outDirectoryReason = "text";
               }
             } else {
               outDirectoryReason = "binary";
