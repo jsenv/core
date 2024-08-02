@@ -24,6 +24,10 @@ export const snapshotTests = async (
     sideEffectFileUrl,
     sideEffectFilePattern = "./side_effects/[filename]/[filename].md",
     outFilePattern = "./side_effects/[filename]/[test_scenario]/[out_filename]",
+    filesystemActions = {
+      "**": "compare",
+      // "**/*.svg": "compare_presence_only",
+    },
     rootDirectoryUrl,
     generatedBy = true,
     linkToSource = true,
@@ -115,10 +119,7 @@ export const snapshotTests = async (
     const outFileDirectoryUrl = generateOutFileUrl("");
     const outFileDirectorySnapshot = takeDirectorySnapshot(
       outFileDirectoryUrl,
-      {
-        "**/*": true,
-        "**/*.svg": "presence_only",
-      },
+      filesystemActions,
     );
     outFileDirectorySnapshots.push(outFileDirectorySnapshot);
     dirUrlMap.set(scenario, outFileDirectoryUrl);

@@ -10,7 +10,7 @@ const filesystemSideEffectsOptionsDefault = {
   include: null,
   preserve: false,
   baseDirectory: "",
-  textualFilesIntoDirectory: false,
+  textualFilesInline: false,
 };
 const INLINE_MAX_LINES = 20;
 const INLINE_MAX_LENGTH = 2000;
@@ -42,7 +42,7 @@ export const filesystemSideEffects = (
     name: "filesystem",
     setBaseDirectory,
     install: (addSideEffect, { addSkippableHandler, addFinallyCallback }) => {
-      let { include, preserve, textualFilesIntoDirectory } =
+      let { include, preserve, textualFilesInline } =
         filesystemSideEffectsOptions;
       if (filesystemSideEffectsOptions.baseDirectory) {
         setBaseDirectory(filesystemSideEffectsOptions.baseDirectory);
@@ -219,12 +219,12 @@ ${renderFileContent(
             const isTextual = CONTENT_TYPE.isTextual(contentType);
             let outDirectoryReason;
             if (isTextual) {
-              if (textualFilesIntoDirectory) {
-                outDirectoryReason = "textual_in_directory_option";
-              } else if (String(buffer).split("\n").length > INLINE_MAX_LINES) {
-                outDirectoryReason = "lot_of_lines";
-              } else if (buffer.size > INLINE_MAX_LENGTH) {
-                outDirectoryReason = "lot_of_chars";
+              if (textualFilesInline) {
+                if (String(buffer).split("\n").length > INLINE_MAX_LINES) {
+                  outDirectoryReason = "lot_of_lines";
+                } else if (buffer.size > INLINE_MAX_LENGTH) {
+                  outDirectoryReason = "lot_of_chars";
+                }
               }
             } else {
               outDirectoryReason = "binary";

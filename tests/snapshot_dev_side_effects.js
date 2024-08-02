@@ -6,26 +6,10 @@ export const snapshotDevSideEffects = async (
   options = {},
 ) =>
   snapshotTests(testFileUrl, fnRegisteringTests, {
+    filesystemActions: {
+      "**": "compare",
+      "**/.jsenv/**/@fs/**": "ignore",
+      "**/.jsenv/**/*.html@*": "ignore",
+    },
     ...options,
-    logEffects:
-      options.logEffects === false
-        ? false
-        : {
-            group: true,
-            ...(options.logEffects === true ? {} : options.logEffects),
-          },
-    filesystemEffects:
-      options.filesystemEffects === false
-        ? false
-        : {
-            textualFilesIntoDirectory: true,
-            include: {
-              "**": true,
-              "**/.jsenv/**/@fs/**": false,
-              "**/.jsenv/**/*.html@*": false,
-            },
-            ...(options.filesystemEffects === true
-              ? {}
-              : options.filesystemEffects),
-          },
   });

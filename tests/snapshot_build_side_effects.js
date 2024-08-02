@@ -6,18 +6,9 @@ export const snapshotBuildTests = async (
   options = {},
 ) =>
   snapshotTests(testFileUrl, fnRegisteringTests, {
+    filesystemActions: {
+      "**": "compare",
+      "**/.jsenv/": "ignore",
+    },
     ...options,
-    filesystemEffects:
-      options.filesystemEffects === false
-        ? false
-        : {
-            textualFilesIntoDirectory: true,
-            include: {
-              "**": true,
-              "**/.jsenv/": false,
-            },
-            ...(options.filesystemEffects === true
-              ? {}
-              : options.filesystemEffects),
-          },
   });

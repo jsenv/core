@@ -69,28 +69,63 @@ await startTesting(({ test }) => {
     );
   }
   write_file: {
-    test("write_file/0_write_sync", () => {
-      writeFileSync(
-        new URL("./toto.txt", import.meta.url),
-        "0_write_file_sync",
-      );
-    });
-    test("write_file/1_write_then_read_sync", () => {
-      writeFileSync(
-        new URL("./toto.txt", import.meta.url),
-        "1_write_then_read_sync",
-      );
-      return String(readFileSync(new URL("./toto.txt", import.meta.url)));
-    });
-    test("write_file/2_write_sync_deep", () => {
-      writeFileSync(
-        new URL("./toto/toto.txt", import.meta.url),
-        "2_write_sync_deep",
-      );
-    });
-    test("write_file/3_write_async", async () => {
-      await writeFile(new URL("./toto.txt", import.meta.url), "3_write_async");
-    });
+    test(
+      "write_file/0_write_sync",
+      () => {
+        writeFileSync(
+          new URL("./toto.txt", import.meta.url),
+          "0_write_file_sync",
+        );
+      },
+      {
+        filesystemEffects: {
+          textualFilesInline: true,
+        },
+      },
+    );
+    test(
+      "write_file/1_write_then_read_sync",
+      () => {
+        writeFileSync(
+          new URL("./toto.txt", import.meta.url),
+          "1_write_then_read_sync",
+        );
+        return String(readFileSync(new URL("./toto.txt", import.meta.url)));
+      },
+      {
+        filesystemEffects: {
+          textualFilesInline: true,
+        },
+      },
+    );
+    test(
+      "write_file/2_write_sync_deep",
+      () => {
+        writeFileSync(
+          new URL("./toto/toto.txt", import.meta.url),
+          "2_write_sync_deep",
+        );
+      },
+      {
+        filesystemEffects: {
+          textualFilesInline: true,
+        },
+      },
+    );
+    test(
+      "write_file/3_write_async",
+      async () => {
+        await writeFile(
+          new URL("./toto.txt", import.meta.url),
+          "3_write_async",
+        );
+      },
+      {
+        filesystemEffects: {
+          textualFilesInline: true,
+        },
+      },
+    );
     test(
       "write_file/4_write_inside_base",
       () => {
@@ -101,6 +136,7 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
+          textualFilesInline: true,
           baseDirectory: new URL("./", import.meta.url),
         },
       },
@@ -116,7 +152,6 @@ await startTesting(({ test }) => {
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          textualFilesIntoDirectory: true,
         },
       },
     );
@@ -130,6 +165,7 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
+          textualFilesInline: true,
           baseDirectory: new URL("./", import.meta.url),
         },
       },
@@ -145,7 +181,6 @@ await startTesting(({ test }) => {
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          textualFilesIntoDirectory: true,
         },
       },
     );
@@ -157,6 +192,7 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
+          textualFilesInline: true,
           baseDirectory: new URL("./", import.meta.url),
         },
       },
@@ -171,6 +207,7 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
+          textualFilesInline: true,
           baseDirectory: new URL("./", import.meta.url),
         },
       },
@@ -185,6 +222,7 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
+          textualFilesInline: true,
           baseDirectory: new URL("./", import.meta.url),
         },
       },
@@ -199,7 +237,6 @@ await startTesting(({ test }) => {
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          textualFilesIntoDirectory: true,
         },
       },
     );
@@ -236,7 +273,6 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
-          textualFilesIntoDirectory: true,
           baseDirectory: new URL("./", import.meta.url),
         },
       },
@@ -255,7 +291,6 @@ await startTesting(({ test }) => {
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          textualFilesIntoDirectory: true,
         },
       },
     );
@@ -271,7 +306,6 @@ await startTesting(({ test }) => {
       {
         filesystemEffects: {
           baseDirectory: new URL("./", import.meta.url),
-          textualFilesIntoDirectory: true,
         },
       },
     );
@@ -289,6 +323,7 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
+          textualFilesInline: true,
           baseDirectory: new URL("./", import.meta.url),
         },
       },

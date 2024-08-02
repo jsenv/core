@@ -180,7 +180,7 @@ export const takeDirectorySnapshot = (
     return URL_META.urlChildMayMatch({
       url,
       associations,
-      predicate: (meta) => Boolean(meta.action),
+      predicate: (meta) => meta.action && meta.action !== "ignore",
     });
   };
   const shouldIncludeFile = (url) => {
@@ -188,7 +188,7 @@ export const takeDirectorySnapshot = (
       url,
       associations,
     });
-    return meta.action === true || meta.action === "presence_only";
+    return meta.action === true || meta.action === "compare_presence_only";
   };
   const shouldCompareFile = (url) => {
     const meta = URL_META.applyAssociations({
