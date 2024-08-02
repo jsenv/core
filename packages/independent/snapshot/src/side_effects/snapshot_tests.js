@@ -1,3 +1,8 @@
+import {
+  readDirectorySync,
+  readEntryStatSync,
+  removeDirectorySync,
+} from "@jsenv/filesystem";
 import { urlToBasename, urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import {
   takeDirectorySnapshot,
@@ -96,6 +101,7 @@ export const snapshotTests = async (
   }
 
   const outFileDirectorySnapshots = [];
+  const scenarioDirs = [];
   for (const [scenario, { fn, callSite }] of activeTestMap) {
     markdown += "\n\n";
     markdown += `## ${scenario}`;
@@ -106,6 +112,7 @@ export const snapshotTests = async (
     });
     sideEffectsMap.set(scenario, sideEffects);
     const testScenario = asValidFilename(scenario);
+    scenarioDirs.push(testScenario);
     const generateOutFileUrl = (filename) => {
       const outFileRelativeUrl = outFilePattern
         .replaceAll("[name]", testName)
@@ -132,6 +139,22 @@ export const snapshotTests = async (
       errorMessageTransform,
     });
     markdown += sideEffectsMarkdown;
+  }
+  if (sideEffectFilePattern === "./side_effects/[filename]/[filename].md") {
+    const scenarioParentDirUrl = new URL("./", sideEffectFileUrl);
+    const dirContent = readDirectorySync(scenarioParentDirUrl);
+    for (const entry of dirContent) {
+      const entryUrl = new URL(entry, scenarioParentDirUrl);
+      if (!readEntryStatSync(entryUrl).isDirectory()) {
+        continue;
+      }
+      if (scenarioDirs.includes(entry)) {
+        continue;
+      }
+      removeDirectorySync(entryUrl, {
+        recursive: true,
+      });
+    }
   }
   for (const outFileDirectorySnapshot of outFileDirectorySnapshots) {
     outFileDirectorySnapshot.compare(throwWhenDiff);

@@ -2,7 +2,6 @@ import { assert } from "@jsenv/assert";
 import {
   clearDirectorySync,
   readFileStructureSync,
-  removeFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
 import { snapshotTests } from "@jsenv/snapshot";
@@ -22,18 +21,19 @@ await snapshotTests(
   },
   {
     throwWhenDiff: false,
-    filesystemEffects: {
-      textualFilesIntoDirectory: true,
-    },
   },
 );
 {
   const actual = readFileStructureSync(
-    new URL("./side_effects/snapshot_tests_out_clear/", import.meta.url),
+    new URL(
+      "./side_effects/snapshot_tests_out_clear.test.mjs/",
+      import.meta.url,
+    ),
   );
   const expect = {
     "0_first/first.txt": "",
     "1_second/second.txt": "",
+    "snapshot_tests_out_clear.test.mjs.md": assert.any(String),
   };
   assert({ actual, expect });
 }
@@ -48,28 +48,20 @@ await snapshotTests(
   },
   {
     throwWhenDiff: false,
-    filesystemEffects: {
-      textualFilesIntoDirectory: true,
-    },
   },
 );
 {
   const actual = readFileStructureSync(
-    new URL("./side_effects/snapshot_tests_out_clear/", import.meta.url),
-  );
-  const expect = {
-    "0_first/tata.txt": "",
-    "1_second/second.txt": "",
-  };
-  assert({ actual, expect });
-  // we have to clean this scenario ourselve for now
-  // ideally we would auto remove the file but for @jsenv/assert this is problematic
-  removeFileSync(
     new URL(
-      "./side_effects/snapshot_tests_out_clear/1_second/second.txt",
+      "./side_effects/snapshot_tests_out_clear.test.mjs/",
       import.meta.url,
     ),
   );
+  const expect = {
+    "0_first/tata.txt": "",
+    "snapshot_tests_out_clear.test.mjs.md": assert.any(String),
+  };
+  assert({ actual, expect });
 }
 
 // writing a deep directory gets undone
@@ -81,10 +73,10 @@ await snapshotTests(
     });
   },
   {
-    throwWhenDiff: false,
     filesystemEffects: {
-      textualFilesIntoDirectory: true,
+      textualFilesInline: true,
     },
+    throwWhenDiff: false,
   },
 );
 {

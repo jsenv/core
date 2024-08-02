@@ -188,9 +188,13 @@ export const takeDirectorySnapshot = (
       url,
       associations,
     });
-    return meta.action === true || meta.action === "compare_presence_only";
+    return (
+      meta.action === true ||
+      meta.action === "compare" ||
+      meta.action === "compare_presence_only"
+    );
   };
-  const shouldCompareFile = (url) => {
+  const shouldCompareFileContent = (url) => {
     const meta = URL_META.applyAssociations({
       url,
       associations,
@@ -200,7 +204,7 @@ export const takeDirectorySnapshot = (
   const directorySnapshot = createDirectorySnapshot(directoryUrl, {
     shouldVisitDirectory,
     shouldIncludeFile,
-    shouldCompareFile,
+    shouldCompareFileContent,
     clean: true,
   });
   return {
@@ -209,7 +213,7 @@ export const takeDirectorySnapshot = (
       const nextDirectorySnapshot = createDirectorySnapshot(directoryUrl, {
         shouldVisitDirectory,
         shouldIncludeFile,
-        shouldCompareFile,
+        shouldCompareFileContent,
       });
       directorySnapshot.compare(nextDirectorySnapshot, { throwWhenDiff });
     },
@@ -237,7 +241,7 @@ export const takeDirectorySnapshot = (
 };
 const createDirectorySnapshot = (
   directoryUrl,
-  { shouldVisitDirectory, shouldIncludeFile, shouldCompareFile, clean },
+  { shouldVisitDirectory, shouldIncludeFile, shouldCompareFileContent, clean },
 ) => {
   const directorySnapshot = {
     type: "directory",
@@ -322,7 +326,7 @@ ${extraUrls.join("\n")}`);
       // content
       {
         for (const relativeUrl of relativeUrls) {
-          if (!shouldCompareFile(new URL(relativeUrl, directoryUrl))) {
+          if (!shouldCompareFileContent(new URL(relativeUrl, directoryUrl))) {
             continue;
           }
           const snapshot = directoryContentSnapshot[relativeUrl];
@@ -384,7 +388,7 @@ ${extraUrls.join("\n")}`);
           {
             shouldVisitDirectory,
             shouldIncludeFile,
-            shouldCompareFile,
+            shouldCompareFileContent,
             clean,
           },
         );
