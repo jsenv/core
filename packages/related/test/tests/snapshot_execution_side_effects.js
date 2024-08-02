@@ -50,9 +50,9 @@ export const snapshotTestPlanSideEffects = async (
             textualFilesIntoDirectory: true,
             include: {
               "**/*": true,
+              "**/*.png": process.env.CI ? "presence_only" : true,
               "**/.jsenv/": false,
               "**/.coverage/": false,
-              "**/*.png": process.env.CI ? "presence_only" : true,
             },
             ...(options.filesystemEffects === true
               ? {}
