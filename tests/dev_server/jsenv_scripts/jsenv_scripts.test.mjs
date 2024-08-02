@@ -29,7 +29,7 @@ const run = async () => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     keepProcessAlive: true,
-    port: 0,
+    port: 8888,
     plugins: [jsenvPluginToolbar({ logLevel: "debug" })],
     // ribbon: false,
     // clientAutoreload: false,
