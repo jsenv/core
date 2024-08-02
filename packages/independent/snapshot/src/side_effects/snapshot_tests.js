@@ -22,9 +22,8 @@ export const snapshotTests = async (
   {
     testName = urlToBasename(testFileUrl, true),
     sideEffectFileUrl,
-    outDirectoryPattern = "./side_effects/",
-    sideEffectFilePattern = "./side_effects/[test_basename].md",
-    outFilePattern = "./side_effects/[test_name]/[test_scenario]/[filename]",
+    sideEffectFilePattern = "./side_effects/[test_basename]/[test_basename].md",
+    outFilePattern = "./side_effects/[test_basename]/[test_scenario]/[filename]",
     rootDirectoryUrl,
     generatedBy = true,
     linkToSource = true,
@@ -90,11 +89,6 @@ export const snapshotTests = async (
     markdown += generatedByLink;
   }
 
-  const outDirectoryRelativeUrl = outDirectoryPattern.replaceAll(
-    "[test_name]",
-    testName,
-  );
-  const outDirectoryUrl = new URL(outDirectoryRelativeUrl, testFileUrl);
   const outFileDirectorySnapshots = [];
   for (const [scenario, { fn, callSite }] of activeTestMap) {
     markdown += "\n\n";
@@ -127,7 +121,6 @@ export const snapshotTests = async (
     dirUrlMap.set(scenario, outFileDirectoryUrl);
     const sideEffectsMarkdown = renderSideEffects(sideEffects, {
       sideEffectFileUrl,
-      outDirectoryUrl,
       generateOutFileUrl,
       generatedBy: false,
       titleLevel: 3,
@@ -136,14 +129,14 @@ export const snapshotTests = async (
     });
     markdown += sideEffectsMarkdown;
   }
+  for (const outFileDirectorySnapshot of outFileDirectorySnapshots) {
+    outFileDirectorySnapshot.compare(throwWhenDiff);
+  }
   const sideEffectFileSnapshot = takeFileSnapshot(sideEffectFileUrl);
   sideEffectFileSnapshot.update(markdown, {
     mockFluctuatingValues: false,
     throwWhenDiff,
   });
-  for (const outFileDirectorySnapshot of outFileDirectorySnapshots) {
-    outFileDirectorySnapshot.compare(throwWhenDiff);
-  }
 
   return { dirUrlMap, sideEffectsMap };
 };

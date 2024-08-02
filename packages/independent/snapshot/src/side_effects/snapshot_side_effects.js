@@ -11,11 +11,8 @@ export const snapshotSideEffects = (
   fn,
   {
     sideEffectFileUrl,
-    outDirectoryPattern = "./side_effects/",
     sideEffectFilePattern = "./side_effects/[basename].md",
-    outFilePattern = "./side_effects/[name]/[filename]",
-    generateOutFileUrl,
-    outDirectoryUrl,
+    outFilePattern = "./side_effects/[basename]/[filename]",
     errorStackHidden,
     ...captureOptions
   } = {},
@@ -24,39 +21,29 @@ export const snapshotSideEffects = (
   const basename = urlToBasename(sourceFileUrl);
   if (sideEffectFileUrl === undefined) {
     const sideEffectFileRelativeUrl = sideEffectFilePattern
-      .replaceAll("[basename]", basename)
-      .replaceAll("[name]", name);
+      .replaceAll("[name]", name)
+      .replaceAll("[basename]", basename);
     sideEffectFileUrl = new URL(sideEffectFileRelativeUrl, sourceFileUrl);
   } else {
     sideEffectFileUrl = new URL(sideEffectFileUrl, sourceFileUrl);
   }
 
   const captureSideEffects = createCaptureSideEffects(captureOptions);
-  if (outDirectoryUrl === undefined) {
-    const outDirectoryRelativeUrl = outDirectoryPattern.replaceAll(
-      "[basename]",
-      basename,
-    );
-    outDirectoryUrl = new URL(outDirectoryRelativeUrl, sideEffectFileUrl);
-  }
-  if (generateOutFileUrl === undefined) {
-    generateOutFileUrl = (filename) => {
-      const outRelativeUrl = outFilePattern
-        .replaceAll("[name]", name)
-        .replaceAll("[basename]", basename)
-        .replaceAll("[filename]", filename);
-      const outFileUrl = new URL(outRelativeUrl, new URL("./", sourceFileUrl))
-        .href;
-      return outFileUrl;
-    };
-  }
-
+  const generateOutFileUrl = (filename) => {
+    const outRelativeUrl = outFilePattern
+      .replaceAll("[name]", name)
+      .replaceAll("[basename]", basename)
+      .replaceAll("[filename]", filename);
+    const outFileUrl = new URL(outRelativeUrl, new URL("./", sourceFileUrl))
+      .href;
+    return outFileUrl;
+  };
+  const outDirectoryUrl = generateOutFileUrl("");
   const sideEffectFileSnapshot = takeFileSnapshot(sideEffectFileUrl);
   const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl);
   const onSideEffects = (sideEffects) => {
     const sideEffectFileContent = renderSideEffects(sideEffects, {
       sideEffectFileUrl,
-      outDirectoryUrl,
       generateOutFileUrl,
       errorStackHidden,
     });

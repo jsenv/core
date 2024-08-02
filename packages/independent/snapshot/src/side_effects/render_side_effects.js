@@ -38,7 +38,6 @@ export const renderSideEffects = (
   sideEffects,
   {
     sideEffectFileUrl,
-    outDirectoryUrl,
     generateOutFileUrl,
     generatedBy = true,
     titleLevel = 1,
@@ -87,7 +86,6 @@ export const renderSideEffects = (
     }
     markdown += renderOneSideEffect(sideEffect, {
       sideEffectFileUrl,
-      outDirectoryUrl,
       generateOutFileUrl,
       rootDirectoryUrl,
       titleLevel,
@@ -136,7 +134,6 @@ const renderOneSideEffect = (
   sideEffect,
   {
     sideEffectFileUrl,
-    outDirectoryUrl,
     generateOutFileUrl,
     rootDirectoryUrl,
     titleLevel,
@@ -156,7 +153,6 @@ const renderOneSideEffect = (
   const { md } = sideEffect.render;
   let { label, text } = md({
     sideEffectFileUrl,
-    outDirectoryUrl,
     generateOutFileUrl,
     replace,
     rootDirectoryUrl,
