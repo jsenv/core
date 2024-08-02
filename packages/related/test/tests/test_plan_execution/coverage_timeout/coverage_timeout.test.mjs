@@ -6,35 +6,35 @@ import {
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 import { takeCoverageSnapshots } from "../take_coverage_snapshots.js";
 
-await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
-  const run = async ({ testPlan }) => {
-    const testPlanResult = await executeTestPlan({
-      logs: {
-        level: "error",
+const run = async ({ testPlan }) => {
+  const testPlanResult = await executeTestPlan({
+    logs: {
+      level: "error",
+    },
+    rootDirectoryUrl: new URL("./node_client/", import.meta.url),
+    testPlan,
+    coverage: {
+      include: {
+        "main.js": true,
       },
-      rootDirectoryUrl: new URL("./node_client/", import.meta.url),
-      testPlan,
-      coverage: {
-        include: {
-          "main.js": true,
-        },
-        coverageAndExecutionAllowed: true,
-      },
-      githubCheck: false,
-    });
-    reportCoverageAsHtml(
-      testPlanResult,
-      new URL("./.coverage/", import.meta.url),
-    );
-    await takeCoverageSnapshots(
-      new URL("./.coverage/", import.meta.url),
-      ["main.js"],
-      {
-        screenshotDirectoryUrl: new URL("./", import.meta.url),
-      },
-    );
-  };
+      coverageAndExecutionAllowed: true,
+    },
+    githubCheck: false,
+  });
+  reportCoverageAsHtml(
+    testPlanResult,
+    new URL("./.coverage/", import.meta.url),
+  );
+  await takeCoverageSnapshots(
+    new URL("./.coverage/", import.meta.url),
+    ["main.js"],
+    {
+      screenshotDirectoryUrl: new URL("./", import.meta.url),
+    },
+  );
+};
 
+await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
   test("0_basic", async () => {
     await run({
       testPlan: {

@@ -22,13 +22,11 @@ await run({
 });
 ```
 
-### 1/3 write directory "./.coverage"
-
-### 2/3 write file "./main.js.png"
+### 1/2 write file "./main.js.png"
 
 see [./coverage_timeout/0_basic/main.js.png](./coverage_timeout/0_basic/main.js.png)
 
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 undefined
