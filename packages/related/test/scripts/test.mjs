@@ -24,5 +24,4 @@ await executeTestPlan({
       },
     },
   },
-  githubCheck: false,
 });
