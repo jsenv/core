@@ -304,7 +304,7 @@
     }
     var _import2 = function _import(specifier, parentUrl) {
       var url = resolveUrl(specifier, parentUrl);
-      var load = getOrCreateLoad(url, parentUrl);
+      var load = _getOrCreateLoad(url, parentUrl);
       if (load.completionPromise) {
         if (load.completionPromise === load.namespace) {
           return Promise.resolve(load.namespace);
@@ -313,7 +313,7 @@
       }
       return startExecution(load, parentUrl);
     };
-    var getOrCreateLoad = function getOrCreateLoad(url, firstParentUrl) {
+    var _getOrCreateLoad = function getOrCreateLoad(url, firstParentUrl) {
       var existingLoad = loadRegistry[url];
       if (existingLoad) {
         return existingLoad;
@@ -411,7 +411,7 @@
           return _await(Promise.all(load.deps.map(_async(function (dep, index) {
             var setter = load.setters[index];
             var dependencyUrl = resolveUrl(dep, url);
-            var dependencyLoad = getOrCreateLoad(dependencyUrl, url);
+            var dependencyLoad = _getOrCreateLoad(dependencyUrl, url);
             return _invoke(function () {
               if (dependencyLoad.instantiatePromise) {
                 return _awaitIgnored(dependencyLoad.instantiatePromise);
@@ -435,7 +435,7 @@
     var startExecution = _async(function (load, importerUrl) {
       load.completionPromise = function () {
         return _await(instantiateAll(load, load, {}), function () {
-          return _await(postOrderExec(load, importerUrl ? [importerUrl] : []), function () {
+          return _await(_postOrderExec(load, importerUrl ? [importerUrl] : []), function () {
             return load.namespace;
           });
         });
@@ -466,7 +466,7 @@
         throw error;
       });
     });
-    var postOrderExec = function postOrderExec(load, importStack) {
+    var _postOrderExec = function postOrderExec(load, importStack) {
       if (importStack.indexOf(load.url) > -1) {
         return undefined;
       }
@@ -488,7 +488,7 @@
         try {
           var depImportStack = importStack.slice();
           depImportStack.push(load.url);
-          var depLoadPromise = postOrderExec(dependencyLoad, depImportStack);
+          var depLoadPromise = _postOrderExec(dependencyLoad, depImportStack);
           if (depLoadPromise) {
             depLoadPromises.push(depLoadPromise);
           }
