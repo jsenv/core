@@ -13,7 +13,7 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
     },
     {
       sideEffectMdFileUrl: new URL("./output/0_warn_a.md", import.meta.url),
-      outFilePattern: "./output/0_warn_a/[out_filename]",
+      outFilePattern: "./output/0_warn_a/[filename]",
     },
   );
   assert({ actual: console.warn, expect: warn });
@@ -25,7 +25,7 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
     },
     {
       sideEffectMdFileUrl: new URL("./output/1_warn_b.md", import.meta.url),
-      outFilePattern: "./output/1_warn_b/[out_filename]",
+      outFilePattern: "./output/1_warn_b/[filename]",
     },
   );
   assert({ actual: console.warn, expect: warn });
@@ -47,7 +47,7 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
         "./output/2_a_when_b_ends_before.md",
         import.meta.url,
       ),
-      outFilePattern: "./output/2_a_when_b_ends_before/[out_filename]",
+      outFilePattern: "./output/2_a_when_b_ends_before/[filename]",
       filesystemEffects: {
         preserve: true,
         textualFilesInline: true,
@@ -68,7 +68,7 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
         "./output/3_b_when_b_ends_before.md",
         import.meta.url,
       ),
-      outFilePattern: "./output/3_b_when_b_ends_before/[out_filename]",
+      outFilePattern: "./output/3_b_when_b_ends_before/[filename]",
       filesystemEffects: {
         preserve: true,
         textualFilesInline: true,
@@ -93,7 +93,7 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
         "./output/4_write_first.md",
         import.meta.url,
       ),
-      outFilePattern: "./output/4_write_first/[out_filename]",
+      outFilePattern: "./output/4_write_first/[filename]",
       filesystemEffects: {
         textualFilesInline: true,
       },
@@ -111,7 +111,7 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
         "./output/5_write_second.md",
         import.meta.url,
       ),
-      outFilePattern: "./output/5_write_second/[out_filename]",
+      outFilePattern: "./output/5_write_second/[filename]",
       filesystemEffects: {
         textualFilesInline: true,
       },
@@ -142,7 +142,7 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
         "./output/6_console_and_file.md",
         import.meta.url,
       ),
-      outFilePattern: "./output/6_console_and_file/[out_filename]",
+      outFilePattern: "./output/6_console_and_file/[filename]",
       filesystemEffects: {
         textualFilesInline: true,
       },
@@ -176,7 +176,7 @@ await snapshotSideEffects(
       "./output/7_console_group_and_fs_group.md",
       import.meta.url,
     ),
-    outFilePattern: "./output/7_console_group_and_fs_group/[out_filename]",
+    outFilePattern: "./output/7_console_group_and_fs_group/[filename]",
     filesystemEffects: {
       textualFilesInline: true,
     },
