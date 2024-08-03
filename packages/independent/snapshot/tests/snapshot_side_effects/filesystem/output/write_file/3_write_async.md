@@ -1,8 +1,11 @@
 ```js
-await writeFile(new URL("./toto.txt", import.meta.url), "3_write_async");
+await writeFile(
+  new URL("./toto.txt", import.meta.url),
+  "3_write_async",
+);
 ```
 
-# 1/2 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/filesystem/toto.txt"
+# 1/2 write file "./toto.txt"
 
 ```txt
 3_write_async

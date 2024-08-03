@@ -28,9 +28,20 @@ export const spyFilesystemCalls = (
   },
   { include, undoFilesystemSideEffects } = {},
 ) => {
-  const shouldReport = include
-    ? URL_META.createFilter(include, "file:///")
-    : () => true;
+  const getAction = include
+    ? (() => {
+        const associations = URL_META.resolveAssociations(
+          {
+            action: include,
+          },
+          "file:///",
+        );
+        return (url) => {
+          const meta = URL_META.applyAssociations({ url, associations });
+          return meta.action;
+        };
+      })()
+    : () => "compare";
 
   const _internalFs = process.binding("fs");
   const filesystemStateInfoMap = new Map();
@@ -58,35 +69,49 @@ export const spyFilesystemCalls = (
       // function did not have any effect on the file
       return;
     }
-    if (!shouldReport(fileUrl)) {
-      return;
+    const action = getAction(fileUrl);
+    const shouldCompare =
+      action === "compare" ||
+      action === "compare_presence_only" ||
+      action === true;
+    if (action === "undo" || shouldCompare) {
+      if (undoFilesystemSideEffects && !fileRestoreMap.has(fileUrl)) {
+        if (stateBefore.found) {
+          fileRestoreMap.set(fileUrl, () => {
+            writeFileSync(fileUrl, stateBefore.buffer);
+          });
+        } else {
+          fileRestoreMap.set(fileUrl, () => {
+            removeFileSync(fileUrl, { allowUseless: true });
+          });
+        }
+      }
     }
-    if (undoFilesystemSideEffects && !fileRestoreMap.has(fileUrl)) {
-      if (stateBefore.found) {
-        fileRestoreMap.set(fileUrl, () => {
-          writeFileSync(fileUrl, stateBefore.buffer);
-        });
-      } else {
-        fileRestoreMap.set(fileUrl, () => {
-          removeFileSync(fileUrl, { allowUseless: true });
+    if (shouldCompare) {
+      onWriteFile(fileUrl, stateAfter.buffer, reason);
+    }
+    // "ignore", false, anything else
+  };
+  const onWriteDirectoryDone = (directoryUrl) => {
+    const action = getAction(directoryUrl);
+    const shouldCompare =
+      action === "compare" ||
+      action === "compare_presence_only" ||
+      action === true;
+    if (action === "undo" || shouldCompare) {
+      if (undoFilesystemSideEffects && !fileRestoreMap.has(directoryUrl)) {
+        fileRestoreMap.set(directoryUrl, () => {
+          removeDirectorySync(directoryUrl, {
+            allowUseless: true,
+            recursive: true,
+          });
         });
       }
     }
-    onWriteFile(fileUrl, stateAfter.buffer, reason);
-  };
-  const onWriteDirectoryDone = (directoryUrl) => {
-    if (!shouldReport(directoryUrl)) {
-      return;
+    if (shouldCompare) {
+      onWriteDirectory(directoryUrl);
     }
-    if (undoFilesystemSideEffects && !fileRestoreMap.has(directoryUrl)) {
-      fileRestoreMap.set(directoryUrl, () => {
-        removeDirectorySync(directoryUrl, {
-          allowUseless: true,
-          recursive: true,
-        });
-      });
-    }
-    onWriteDirectory(directoryUrl);
+    // "ignore", false, anything else
   };
   const restoreCallbackSet = new Set();
 

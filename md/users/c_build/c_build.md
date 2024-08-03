@@ -1,4 +1,6 @@
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- TITLE: C) Build -->
+
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>
@@ -33,7 +35,7 @@ Best parts of jsenv build:
 - Support module workers: `new Worker("./file.js", { type: "module"});`
 - And many more things...
 
-<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+<!-- PLACEHOLDER_START:TOC -->
 
 <details>
   <summary>Table of contents</summary>
@@ -731,7 +733,7 @@ Number listened by the build server (default is 9779). `0` listen a random avail
 
 Same as https in [B) Dev](../b_dev/b_dev.md#210-https)
 
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>

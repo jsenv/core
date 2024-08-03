@@ -1,4 +1,6 @@
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- TITLE: I) Test in Node.js -->
+
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>
@@ -19,7 +21,7 @@
 This section demonstrates how to write and execute tests in Node.js.  
 If you want to execute tests in a browser go to [D) Test](../d_test/d_test.md).
 
-<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+<!-- PLACEHOLDER_START:TOC -->
 
 <details>
   <summary>Table of contents</summary>
@@ -362,7 +364,7 @@ Code coverage can be collected while executing test files.
 
 ![file js](https://github.com/jsenv/core/assets/443639/2bc5eb1d-c041-4f03-bd19-6a3db1a24883)
 
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>

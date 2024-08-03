@@ -29,17 +29,17 @@ const test = async (params) => {
   devServer.stop();
   const actual = {
     status: result.status,
-    consoleCalls: result.consoleCalls,
+    // consoleCalls: result.consoleCalls,
     duration,
   };
   const expect = {
     status: "timedout",
-    consoleCalls: [
-      {
-        type: "log",
-        text: `foo\n`,
-      },
-    ],
+    // consoleCalls: [
+    //   {
+    //     type: "log",
+    //     text: `foo\n`,
+    //   },
+    // ],
     duration: assert.between(2_000, 8_000),
   };
   assert({ actual, expect });

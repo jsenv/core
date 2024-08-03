@@ -185,10 +185,22 @@ const appendIntoRespectingLineBreaksAndIndentation = (node, parentNode, {
   parentNode.appendChild(document.createTextNode("\n".concat(indentMinusOne)));
 };
 const createToolbarTriggerNode = () => {
-  const div = document.createElement("div");
-  div.innerHTML = "<div id=\"jsenv_toolbar_trigger\" style=\"display:none\">\n        <svg id=\"jsenv_toolbar_trigger_icon\">\n          <use xlink:href=\"".concat(jsenvLogoSvgUrl, "#jsenv_logo\"></use>\n        </svg>\n        <style>\n          #jsenv_toolbar_trigger {\n            display: block;\n            overflow: hidden;\n            position: fixed;\n            z-index: 1000;\n            bottom: -32px;\n            right: 20px;\n            height: 40px;\n            width: 40px;\n            padding: 0;\n            margin: 0;\n            border-radius: 5px 5px 0 0;\n            border: 1px solid rgba(0, 0, 0, 0.33);\n            border-bottom: none;\n            box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n            background: transparent;\n            text-align: center;\n            transition: 600ms;\n          }\n\n          #jsenv_toolbar_trigger:hover {\n            cursor: pointer;\n          }\n\n          #jsenv_toolbar_trigger[data-expanded] {\n            bottom: 0;\n          }\n\n          #jsenv_toolbar_trigger_icon {\n            width: 35px;\n            height: 35px;\n            opacity: 0;\n            transition: 600ms;\n          }\n\n          #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {\n            opacity: 1;\n          }\n        </style>\n      </div>");
-  const toolbarTrigger = div.firstElementChild;
-  return toolbarTrigger;
+  const css = /* css */"\n    #jsenv_toolbar_trigger {\n      display: block;\n      overflow: hidden;\n      position: fixed;\n      z-index: 1000;\n      bottom: -32px;\n      right: 20px;\n      height: 40px;\n      width: 40px;\n      padding: 0;\n      margin: 0;\n      border-radius: 5px 5px 0 0;\n      border: 1px solid rgba(0, 0, 0, 0.33);\n      border-bottom: none;\n      box-shadow: 0px 0px 6px 2px rgba(0, 0, 0, 0.46);\n      background: transparent;\n      text-align: center;\n      transition: 600ms;\n    }\n\n    #jsenv_toolbar_trigger:hover {\n      cursor: pointer;\n    }\n\n    #jsenv_toolbar_trigger[data-expanded] {\n      bottom: 0;\n    }\n\n    #jsenv_toolbar_trigger_icon {\n      width: 35px;\n      height: 35px;\n      opacity: 0;\n      transition: 600ms;\n    }\n\n    #jsenv_toolbar_trigger[data-expanded] #jsenv_toolbar_trigger_icon {\n      opacity: 1;\n    }";
+  const html = /* html */" <div id=\"jsenv_toolbar_trigger\" style=\"display:none\">\n    <style>".concat(css, "</style>\n    <svg id=\"jsenv_toolbar_trigger_icon\">\n      <use xlink:href=\"").concat(jsenvLogoSvgUrl, "#jsenv_logo\"></use>\n    </svg>\n  </div>");
+  class JsenvToolbarTriggerHtmlElement extends HTMLElement {
+    constructor() {
+      super();
+      const root = this.attachShadow({
+        mode: "open"
+      });
+      root.innerHTML = html;
+    }
+  }
+  if (customElements && !customElements.get("jsenv-toolbar-trigger")) {
+    customElements.define("jsenv-toolbar-trigger", JsenvToolbarTriggerHtmlElement);
+  }
+  const jsenvToolbarTriggerElement = new JsenvToolbarTriggerHtmlElement();
+  return jsenvToolbarTriggerElement;
 };
 const addToolbarEventCallback = (iframe, eventName, callback) => {
   const messageEventCallback = messageEvent => {

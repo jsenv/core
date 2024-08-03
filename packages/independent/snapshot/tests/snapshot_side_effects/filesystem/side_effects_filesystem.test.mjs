@@ -27,7 +27,7 @@ const startTesting = async (fn) => {
     : scenarioMap;
   for (const [scenario, { fn, options }] of activeScenarioMap) {
     await snapshotSideEffects(import.meta.url, fn, {
-      sideEffectFileUrl: new URL(`./output/${scenario}.md`, import.meta.url),
+      sideEffectMdFileUrl: new URL(`./output/${scenario}.md`, import.meta.url),
       outFilePattern: `./output/${scenario}/[filename]`,
       ...options,
     });
@@ -56,41 +56,68 @@ await startTesting(({ test }) => {
       await writeDirectory(new URL("./dir_async/", import.meta.url));
       return existsSync(new URL("./dir_async/", import.meta.url));
     });
+    test("write_dir/2_write_dir_deep", () => {
+      writeDirectorySync(new URL("./dir/a/b/c", import.meta.url));
+    });
+  }
+  write_file: {
     test(
-      "write_dir/2_write_dir_deep",
+      "write_file/0_write_sync",
       () => {
-        writeDirectorySync(new URL("./dir/a/b/c", import.meta.url));
+        writeFileSync(
+          new URL("./toto.txt", import.meta.url),
+          "0_write_file_sync",
+        );
       },
       {
         filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
+          textualFilesInline: true,
         },
       },
     );
-  }
-  write_file: {
-    test("write_file/0_write_sync", () => {
-      writeFileSync(
-        new URL("./toto.txt", import.meta.url),
-        "0_write_file_sync",
-      );
-    });
-    test("write_file/1_write_then_read_sync", () => {
-      writeFileSync(
-        new URL("./toto.txt", import.meta.url),
-        "1_write_then_read_sync",
-      );
-      return String(readFileSync(new URL("./toto.txt", import.meta.url)));
-    });
-    test("write_file/2_write_sync_deep", () => {
-      writeFileSync(
-        new URL("./toto/toto.txt", import.meta.url),
-        "2_write_sync_deep",
-      );
-    });
-    test("write_file/3_write_async", async () => {
-      await writeFile(new URL("./toto.txt", import.meta.url), "3_write_async");
-    });
+    test(
+      "write_file/1_write_then_read_sync",
+      () => {
+        writeFileSync(
+          new URL("./toto.txt", import.meta.url),
+          "1_write_then_read_sync",
+        );
+        return String(readFileSync(new URL("./toto.txt", import.meta.url)));
+      },
+      {
+        filesystemEffects: {
+          textualFilesInline: true,
+        },
+      },
+    );
+    test(
+      "write_file/2_write_sync_deep",
+      () => {
+        writeFileSync(
+          new URL("./toto/toto.txt", import.meta.url),
+          "2_write_sync_deep",
+        );
+      },
+      {
+        filesystemEffects: {
+          textualFilesInline: true,
+        },
+      },
+    );
+    test(
+      "write_file/3_write_async",
+      async () => {
+        await writeFile(
+          new URL("./toto.txt", import.meta.url),
+          "3_write_async",
+        );
+      },
+      {
+        filesystemEffects: {
+          textualFilesInline: true,
+        },
+      },
+    );
     test(
       "write_file/4_write_inside_base",
       () => {
@@ -101,25 +128,16 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
+          textualFilesInline: true,
         },
       },
     );
-    test(
-      "write_file/5_write_inside_base_and_textual_out",
-      () => {
-        writeFileSync(
-          new URL("./toto.txt", import.meta.url),
-          "5_write_inside_base_and_textual_out",
-        );
-      },
-      {
-        filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
-          textualFilesIntoDirectory: true,
-        },
-      },
-    );
+    test("write_file/5_write_inside_base_and_textual_out", () => {
+      writeFileSync(
+        new URL("./toto.txt", import.meta.url),
+        "5_write_inside_base_and_textual_out",
+      );
+    });
     test(
       "write_file/6_write_above_base",
       () => {
@@ -130,25 +148,16 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
+          textualFilesInline: true,
         },
       },
     );
-    test(
-      "write_file/7_write_above_base_and_textual_out",
-      () => {
-        writeFileSync(
-          new URL("../toto.txt", import.meta.url),
-          "7_write_above_base_and_out",
-        );
-      },
-      {
-        filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
-          textualFilesIntoDirectory: true,
-        },
-      },
-    );
+    test("write_file/7_write_above_base_and_textual_out", () => {
+      writeFileSync(
+        new URL("../toto.txt", import.meta.url),
+        "7_write_above_base_and_out",
+      );
+    });
     test(
       "write_file/8_write_same_file",
       () => {
@@ -157,7 +166,7 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
+          textualFilesInline: true,
         },
       },
     );
@@ -171,7 +180,7 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
+          textualFilesInline: true,
         },
       },
     );
@@ -185,96 +194,52 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
+          textualFilesInline: true,
         },
       },
     );
-    test(
-      "write_file/11_write_same_file_not_grouped_and_out",
-      () => {
-        writeFileSync(new URL("./toto.txt", import.meta.url), "first");
-        console.log("hey");
-        writeFileSync(new URL("./toto.txt", import.meta.url), "second");
-      },
-      {
-        filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
-          textualFilesIntoDirectory: true,
-        },
-      },
-    );
-    test(
-      "write_file/12_write_png",
-      () => {
-        writeFileSync(
-          new URL("./jsenv.png", import.meta.url),
-          readFileSync(new URL("./input/jsenv.png", import.meta.url)),
-        );
-      },
-      {
-        filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
-        },
-      },
-    );
-    test(
-      "write_file/13_write_json",
-      () => {
-        writeFileSync(
-          new URL("./data.json", import.meta.url),
-          JSON.stringify(
-            {
-              url: import.meta.url,
-              timings: {
-                a: 100,
-              },
+    test("write_file/11_write_same_file_not_grouped_and_out", () => {
+      writeFileSync(new URL("./toto.txt", import.meta.url), "first");
+      console.log("hey");
+      writeFileSync(new URL("./toto.txt", import.meta.url), "second");
+    });
+    test("write_file/12_write_png", () => {
+      writeFileSync(
+        new URL("./jsenv.png", import.meta.url),
+        readFileSync(new URL("./input/jsenv.png", import.meta.url)),
+      );
+    });
+    test("write_file/13_write_json", () => {
+      writeFileSync(
+        new URL("./data.json", import.meta.url),
+        JSON.stringify(
+          {
+            url: import.meta.url,
+            timings: {
+              a: 100,
             },
-            null,
-            "  ",
-          ),
-        );
-      },
-      {
-        filesystemEffects: {
-          textualFilesIntoDirectory: true,
-          baseDirectory: new URL("./", import.meta.url),
-        },
-      },
-    );
+          },
+          null,
+          "  ",
+        ),
+      );
+    });
   }
   group_write_by_directory: {
-    test(
-      "write_group/0_write_in_one_dir",
-      () => {
-        writeFileSync(new URL("./shared/a/a_1.txt", import.meta.url));
-        writeFileSync(new URL("./shared/a/a_2.txt", import.meta.url));
-        writeFileSync(new URL("./shared/b/b_1.txt", import.meta.url));
-        writeFileSync(new URL("./shared/b/b_2.txt", import.meta.url));
-        writeFileSync(new URL("./shared/b/b_3.txt", import.meta.url));
-      },
-      {
-        filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
-          textualFilesIntoDirectory: true,
-        },
-      },
-    );
-    test(
-      "write_group/1_write_in_2_dir",
-      () => {
-        writeFileSync(new URL("./a/a_1.txt", import.meta.url));
-        writeFileSync(new URL("./a/a_2.txt", import.meta.url));
-        writeFileSync(new URL("./b/b_1.txt", import.meta.url));
-        writeFileSync(new URL("./b/b_2.txt", import.meta.url));
-        writeFileSync(new URL("./b/b_3.txt", import.meta.url));
-      },
-      {
-        filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
-          textualFilesIntoDirectory: true,
-        },
-      },
-    );
+    test("write_group/0_write_in_one_dir", () => {
+      writeFileSync(new URL("./shared/a/a_1.txt", import.meta.url));
+      writeFileSync(new URL("./shared/a/a_2.txt", import.meta.url));
+      writeFileSync(new URL("./shared/b/b_1.txt", import.meta.url));
+      writeFileSync(new URL("./shared/b/b_2.txt", import.meta.url));
+      writeFileSync(new URL("./shared/b/b_3.txt", import.meta.url));
+    });
+    test("write_group/1_write_in_2_dir", () => {
+      writeFileSync(new URL("./a/a_1.txt", import.meta.url));
+      writeFileSync(new URL("./a/a_2.txt", import.meta.url));
+      writeFileSync(new URL("./b/b_1.txt", import.meta.url));
+      writeFileSync(new URL("./b/b_2.txt", import.meta.url));
+      writeFileSync(new URL("./b/b_3.txt", import.meta.url));
+    });
     test(
       "write_group/2_write_no_out",
       () => {
@@ -289,7 +254,7 @@ await startTesting(({ test }) => {
       },
       {
         filesystemEffects: {
-          baseDirectory: new URL("./", import.meta.url),
+          textualFilesInline: true,
         },
       },
     );

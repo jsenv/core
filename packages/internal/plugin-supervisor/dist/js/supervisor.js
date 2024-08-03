@@ -919,7 +919,25 @@ window.__supervisor__ = (() => {
         document.querySelectorAll(JSENV_ERROR_OVERLAY_TAGNAME).forEach(node => {
           node.parentNode.removeChild(node);
         });
-        document.body.appendChild(jsenvErrorOverlay);
+        const appendIntoRespectingLineBreaksAndIndentation = (node, parentNode, {
+          indent = 2
+        } = {}) => {
+          const indentMinusOne = "  ".repeat(indent - 1);
+          const desiredIndent = "  ".repeat(indent);
+          const previousSibling = parentNode.childNodes[parentNode.childNodes.length - 1];
+          if (previousSibling && previousSibling.nodeName === "#text") {
+            if (previousSibling.nodeValue === "\n".concat(indentMinusOne)) {
+              previousSibling.nodeValue = "\n".concat(desiredIndent);
+            }
+            if (previousSibling.nodeValue !== "\n".concat(desiredIndent)) {
+              previousSibling.nodeValue = "\n".concat(desiredIndent);
+            }
+          } else {
+            parentNode.appendChild(document.createTextNode("\n".concat(desiredIndent)));
+          }
+          parentNode.appendChild(node);
+        };
+        appendIntoRespectingLineBreaksAndIndentation(jsenvErrorOverlay, document.body);
         const removeErrorOverlay = () => {
           if (jsenvErrorOverlay && jsenvErrorOverlay.parentNode) {
             document.body.removeChild(jsenvErrorOverlay);

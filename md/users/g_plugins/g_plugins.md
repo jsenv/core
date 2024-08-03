@@ -1,4 +1,6 @@
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- TITLE: G) Plugins -->
+
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>
@@ -18,7 +20,7 @@
 
 Official jsenv plugins written and maintained by jsenv.
 
-<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+<!-- PLACEHOLDER_START:TOC -->
 
 <details>
   <summary>Table of contents</summary>
@@ -385,7 +387,7 @@ await startDevServer({
 
 There is no plugin specific to build for now.
 
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>

@@ -1,4 +1,6 @@
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- TITLE: F) Features -->
+
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>
@@ -16,7 +18,7 @@
 
 <!-- PLACEHOLDER_END -->
 
-<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+<!-- PLACEHOLDER_START:TOC -->
 
 <details>
   <summary>Table of contents</summary>
@@ -462,7 +464,7 @@ However in specific cases we want things from both worlds:
 
 It's possible to obtain this thanks to `jsenvPluginAsJsClassic` documented in [G) Plugins#asJsClassic](../g_plugins/g_plugins.md#22-asjsclassic).
 
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>

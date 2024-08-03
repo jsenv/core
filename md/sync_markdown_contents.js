@@ -12,31 +12,50 @@ import { marked } from "marked";
 const PREVIOUS_CHAR = "&lt;"; // "<"
 const NEXT_CHAR = "&gt;"; // ">"
 
-const syncMarkdownInDirectory = (
-  directoryUrl,
-  previousDirectoryUrl,
-  nextDirectoryUrl,
-) => {
-  const directoryContent = readDirectorySync(directoryUrl);
-  const markdownFile = getMainMarkdownFile(directoryUrl);
+const syncMarkdown = (markdownFileUrl) => {
+  const markdownFile = createMarkdownFile(markdownFileUrl);
   if (!markdownFile) {
     return;
   }
+  const directoryUrl = new URL("./", markdownFileUrl);
+  syncMarkdownFile(markdownFile, {
+    directoryUrl,
+  });
+};
+const createMarkdownFile = (markdownFileUrl) => {
+  try {
+    const markdownFileContent = String(readFileSync(markdownFileUrl));
+    return {
+      url: markdownFileUrl,
+      content: markdownFileContent,
+    };
+  } catch (e) {
+    if (e && e.code === "ENOENT") {
+      return null;
+    }
+    throw e;
+  }
+};
+const syncMarkdownFile = (
+  markdownFile,
+  { directoryUrl, prevDirectoryUrl, nextDirectoryUrl },
+) => {
+  const directoryContent = readDirectorySync(directoryUrl);
   syncMarkdownContent(markdownFile, {
-    DIRECTORY_TABLE_OF_CONTENT: () => {
+    TOC: () => {
+      return generateTableOfContents(markdownFile);
+    },
+    TOC_DIRECTORY: () => {
       return generateDirectoryTableOfContents(
         markdownFile,
         directoryContent,
         directoryUrl,
       );
     },
-    TABLE_OF_CONTENT: () => {
-      return generateTableOfContents(markdownFile);
-    },
-    PREV_NEXT_NAV: () => {
+    NAV_PREV_NEXT: () => {
       return generatePrevNextNav(
         markdownFile,
-        previousDirectoryUrl,
+        prevDirectoryUrl,
         nextDirectoryUrl,
       );
     },
@@ -56,29 +75,44 @@ const syncMarkdownInDirectory = (
   let i = 0;
   while (i < directoryUrls.length) {
     const directoryUrl = directoryUrls[i];
-    syncMarkdownInDirectory(
-      directoryUrl,
-      directoryUrls[i - 1],
-      directoryUrls[i + 1],
-    );
+    const directoryMarkdownFile = getEntryMarkdownFile(directoryUrl);
+    if (directoryMarkdownFile) {
+      syncMarkdownFile(directoryMarkdownFile, {
+        directoryUrl,
+        prevDirectoryUrl: directoryUrls[i - 1],
+        nextDirectoryUrl: directoryUrls[i + 1],
+      });
+    }
     i++;
   }
 };
-const getMainMarkdownFile = (directoryUrl) => {
-  const directoryName = urlToFilename(directoryUrl);
-  const markdownFileUrl = new URL(`./${directoryName}.md`, directoryUrl);
-  try {
-    const markdownFileContent = String(readFileSync(markdownFileUrl));
-    return {
-      url: markdownFileUrl,
-      content: markdownFileContent,
-    };
-  } catch (e) {
-    if (e && e.code === "ENOENT") {
-      return null;
+const getEntryMarkdownFile = (directoryUrl) => {
+  readme: {
+    const readmeMdFileUrl = new URL(`./readme.md`, directoryUrl);
+    const readmeMdFile = createMarkdownFile(readmeMdFileUrl);
+    if (readmeMdFile) {
+      return readmeMdFile;
     }
-    throw e;
   }
+  dirname: {
+    const directoryName = urlToFilename(directoryUrl);
+    const dirMdFileUrl = new URL(`./${directoryName}.md`, directoryUrl);
+    const dirMdFile = createMarkdownFile(dirMdFileUrl);
+    if (dirMdFile) {
+      return dirMdFile;
+    }
+    if (directoryName[0] === "_") {
+      const dirWithoutLeadingUnderscoreUrl = new URL(
+        `./${directoryName.slice(1)}.md`,
+        directoryUrl,
+      );
+      const dirMdFile = createMarkdownFile(dirWithoutLeadingUnderscoreUrl);
+      if (dirMdFile) {
+        return dirMdFile;
+      }
+    }
+  }
+  return null;
 };
 const syncMarkdownContent = (markdownFile, replacers) => {
   const mardownFileContent = markdownFile.content;
@@ -95,10 +129,11 @@ const generateTableOfContents = (markdownFile) => {
     defaultOpen: false,
     children: [],
   };
-  const mdAsHtml = marked.parse(markdownFile.content);
-  const htmlTree = parseHtml({ html: mdAsHtml });
+  const mdHtml = mdFileAsHtml(markdownFile);
+  const htmlTree = parseHtml({ html: mdHtml });
   let isFirstH1 = true;
-  const body = htmlTree.childNodes[0].childNodes[1];
+  const htmlNode = htmlTree.childNodes.find((node) => node.nodeName === "html");
+  const body = htmlNode.childNodes.find((node) => node.nodeName === "body");
   let currentHeadingLink = null;
   for (const child of body.childNodes) {
     if (child.nodeName === "h1") {
@@ -106,7 +141,7 @@ const generateTableOfContents = (markdownFile) => {
       if (isFirstH1) {
         isFirstH1 = false;
         // tableOfContentRootNode.title = text;
-        continue;
+        // continue;
       }
       currentHeadingLink = {
         level: 1,
@@ -160,7 +195,10 @@ const generateDirectoryTableOfContents = (
     }
     entryUrl.pathname += "/";
     const subDirectoryContent = readDirectorySync(entryUrl);
-    const mainMarkdownFile = getMainMarkdownFile(entryUrl, subDirectoryContent);
+    const mainMarkdownFile = getEntryMarkdownFile(
+      entryUrl,
+      subDirectoryContent,
+    );
     if (!mainMarkdownFile) {
       continue;
     }
@@ -211,10 +249,10 @@ const generatePrevNextNav = (
 ) => {
   // get previous url
   const prevMarkdownFile = prevDirectoryUrl
-    ? getMainMarkdownFile(prevDirectoryUrl)
+    ? getEntryMarkdownFile(prevDirectoryUrl)
     : null;
   const nextMarkdownFile = nextDirectoryUrl
-    ? getMainMarkdownFile(nextDirectoryUrl)
+    ? getEntryMarkdownFile(nextDirectoryUrl)
     : null;
 
   // single
@@ -285,12 +323,32 @@ const generatePrevNextNav = (
  </tr>
 <table>`;
 };
-const extractMarkdownFileTitle = (markdownFile) => {
+const mdFileAsHtml = (markdownFile) => {
   const mdAsHtml = marked.parse(markdownFile.content);
-  const htmlTree = parseHtml({ html: mdAsHtml });
-  const h1 = findHtmlNode(htmlTree, (node) => node.nodeName === "h1");
-  const title = h1 ? getHtmlNodeText(h1) : urlToFilename(markdownFile.url);
-  return title;
+  // eslint-disable-next-line no-control-regex
+  const mdSafe = mdAsHtml.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+  return mdSafe;
+};
+const extractMarkdownFileTitle = (markdownFile) => {
+  const mdHtml = mdFileAsHtml(markdownFile);
+  const htmlTree = parseHtml({ html: mdHtml });
+  let title;
+  findHtmlNode(htmlTree, (node) => {
+    if (node.nodeName === "#comment") {
+      const data = node.data;
+      const match = data.match(/ TITLE: (.+) /);
+      if (match) {
+        title = match[1];
+        return true;
+      }
+    }
+    if (node.nodeName === "h1") {
+      title = getHtmlNodeText(node);
+      return true;
+    }
+    return false;
+  });
+  return title || urlToFilename(markdownFile.url);
 };
 const generateReplacement = (value, placeholder) => {
   let replacementWithMarkers = `<!-- PLACEHOLDER_START:${placeholder} -->
@@ -331,4 +389,7 @@ const escapeHtml = (string) => {
     .replace(/'/g, "&#039;");
 };
 
-syncMarkdownInDirectory(new URL("./users/", import.meta.url));
+syncMarkdown(new URL("./users/users.md", import.meta.url));
+syncMarkdown(
+  new URL("../packages/independent/assert/tests/readme.md", import.meta.url),
+);

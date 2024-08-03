@@ -1,4 +1,6 @@
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- TITLE: E) Referencing files -->
+
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>
@@ -21,7 +23,7 @@ For example, it documents how to reference a css file from a js module.
 
 Jsenv relies on web standards to recognize references, consequently this documentation is just listing standard ways to reference files.
 
-<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+<!-- PLACEHOLDER_START:TOC -->
 
 <details>
   <summary>Table of contents</summary>
@@ -358,7 +360,7 @@ When js is inlined between `<script>` tags inside html `window.location` must be
 
 It is because in this situation `document.currentScript.src` would be `undefined`.
 
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>

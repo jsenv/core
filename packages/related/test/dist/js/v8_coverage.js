@@ -519,7 +519,7 @@ const isWindowsPathnameSpecifier = (specifier) => {
 };
 const hasScheme = (specifier) => /^[a-zA-Z]+:/.test(specifier);
 
-const createFilter = (patterns, url) => {
+const createFilter = (patterns, url, map = (v) => v) => {
   const associations = resolveAssociations(
     {
       yes: patterns,
@@ -528,7 +528,7 @@ const createFilter = (patterns, url) => {
   );
   return (url) => {
     const meta = applyAssociations({ url, associations });
-    return Boolean(meta.yes);
+    return Boolean(map(meta.yes));
   };
 };
 

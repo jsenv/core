@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "2.8.4",
+  "version": "2.8.6",
   "description": "Snapshot testing",
   "license": "MIT",
   "author": {
@@ -34,10 +34,10 @@
   },
   "dependencies": {
     "@jsenv/assert": "4.1.15",
-    "@jsenv/ast": "6.2.14",
-    "@jsenv/exception": "1.0.1",
-    "@jsenv/filesystem": "4.9.9",
-    "@jsenv/terminal-recorder": "1.4.3",
+    "@jsenv/ast": "6.2.15",
+    "@jsenv/exception": "1.0.2",
+    "@jsenv/filesystem": "4.9.10",
+    "@jsenv/terminal-recorder": "1.4.4",
     "@jsenv/urls": "2.5.2",
     "@jsenv/utils": "2.1.2",
     "ansi-regex": "6.0.1",

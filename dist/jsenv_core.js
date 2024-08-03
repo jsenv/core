@@ -3065,7 +3065,7 @@ const isWindowsPathnameSpecifier = (specifier) => {
 };
 const hasScheme$1 = (specifier) => /^[a-zA-Z]+:/.test(specifier);
 
-const createFilter = (patterns, url) => {
+const createFilter = (patterns, url, map = (v) => v) => {
   const associations = resolveAssociations(
     {
       yes: patterns,
@@ -3074,7 +3074,7 @@ const createFilter = (patterns, url) => {
   );
   return (url) => {
     const meta = applyAssociations({ url, associations });
-    return Boolean(meta.yes);
+    return Boolean(map(meta.yes));
   };
 };
 
@@ -23179,6 +23179,9 @@ ${e.trace?.message}`);
         }
       },
       handleWebsocket: (websocket, { request }) => {
+        // if (true || logLevel === "debug") {
+        //   console.log("handleWebsocket", websocket, request.headers);
+        // }
         if (request.headers["sec-websocket-protocol"] === "jsenv") {
           serverEventsDispatcher.addWebsocket(websocket, request);
         }

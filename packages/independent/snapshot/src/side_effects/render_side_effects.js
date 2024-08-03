@@ -37,8 +37,7 @@ export const createBigSizeEffect =
 export const renderSideEffects = (
   sideEffects,
   {
-    sideEffectFileUrl,
-    outDirectoryUrl,
+    sideEffectMdFileUrl,
     generateOutFileUrl,
     generatedBy = true,
     titleLevel = 1,
@@ -86,8 +85,7 @@ export const renderSideEffects = (
       markdown += "\n\n";
     }
     markdown += renderOneSideEffect(sideEffect, {
-      sideEffectFileUrl,
-      outDirectoryUrl,
+      sideEffectMdFileUrl,
       generateOutFileUrl,
       rootDirectoryUrl,
       titleLevel,
@@ -135,8 +133,7 @@ ${"  ".repeat(indent)}</sub>`;
 const renderOneSideEffect = (
   sideEffect,
   {
-    sideEffectFileUrl,
-    outDirectoryUrl,
+    sideEffectMdFileUrl,
     generateOutFileUrl,
     rootDirectoryUrl,
     titleLevel,
@@ -155,8 +152,7 @@ const renderOneSideEffect = (
   }
   const { md } = sideEffect.render;
   let { label, text } = md({
-    sideEffectFileUrl,
-    outDirectoryUrl,
+    sideEffectMdFileUrl,
     generateOutFileUrl,
     replace,
     rootDirectoryUrl,
@@ -175,7 +171,7 @@ const renderOneSideEffect = (
     }
     text = renderText(text, {
       sideEffect,
-      sideEffectFileUrl,
+      sideEffectMdFileUrl,
       generateOutFileUrl,
       replace,
       rootDirectoryUrl,
@@ -212,7 +208,7 @@ const renderText = (
   text,
   {
     sideEffect,
-    sideEffectFileUrl,
+    sideEffectMdFileUrl,
     generateOutFileUrl,
     replace,
     rootDirectoryUrl,
@@ -229,7 +225,7 @@ const renderText = (
       }
       const callSiteRelativeUrl = urlToRelativeUrl(
         callSite.url,
-        sideEffectFileUrl,
+        sideEffectMdFileUrl,
         { preferRelativeNotation: true },
       );
       const sourceCodeLinkText = `${callSiteRelativeUrl}:${callSite.line}:${callSite.column}`;
@@ -265,7 +261,7 @@ const renderText = (
         return renderPotentialAnsi(exceptionText, {
           stringType: "error",
           sideEffect,
-          sideEffectFileUrl,
+          sideEffectMdFileUrl,
           generateOutFileUrl,
           replace,
         });
@@ -275,7 +271,7 @@ const renderText = (
     if (text.type === "console") {
       return renderConsole(text.value, {
         sideEffect,
-        sideEffectFileUrl,
+        sideEffectMdFileUrl,
         generateOutFileUrl,
         replace,
       });
@@ -295,12 +291,12 @@ const renderText = (
 
 export const renderConsole = (
   string,
-  { sideEffect, sideEffectFileUrl, generateOutFileUrl, replace },
+  { sideEffect, sideEffectMdFileUrl, generateOutFileUrl, replace },
 ) => {
   return renderPotentialAnsi(string, {
     stringType: "console",
     sideEffect,
-    sideEffectFileUrl,
+    sideEffectMdFileUrl,
     generateOutFileUrl,
     replace,
   });
@@ -308,7 +304,7 @@ export const renderConsole = (
 
 const renderPotentialAnsi = (
   string,
-  { stringType, sideEffect, sideEffectFileUrl, generateOutFileUrl, replace },
+  { stringType, sideEffect, sideEffectMdFileUrl, generateOutFileUrl, replace },
 ) => {
   const rawTextBlock = renderMarkdownBlock(
     replace(string, { stringType }),
@@ -332,7 +328,7 @@ const renderPotentialAnsi = (
   );
   svgFileContent = replace(svgFileContent, { fileUrl: svgFileUrl });
   writeFileSync(svgFileUrl, svgFileContent);
-  const svgFileRelativeUrl = urlToRelativeUrl(svgFileUrl, sideEffectFileUrl);
+  const svgFileRelativeUrl = urlToRelativeUrl(svgFileUrl, sideEffectMdFileUrl);
   let md = `![img](${svgFileRelativeUrl})`;
   md += "\n\n";
   md += renderMarkdownDetails(`${rawTextBlock}`, {

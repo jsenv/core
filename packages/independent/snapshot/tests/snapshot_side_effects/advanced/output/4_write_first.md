@@ -4,7 +4,7 @@ await writeFile(new URL("./b.txt", import.meta.url), "b_1");
 await writeFile(new URL("./c.txt", import.meta.url), "c_1");
 ```
 
-# 1/2 write 3 files into "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/"
+# 1/2 write 3 files into "./"
 
 ## a.txt
 ```txt

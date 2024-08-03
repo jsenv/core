@@ -23,9 +23,9 @@ assert({
 });
 ```
 
-![img](./tests/side_effects/object/basic/throw.svg)
+![img](./tests/_object.test.js/basic/throw.svg)
 
-There is 200+ examples in [./tests/side_effects/](./tests/side_effects/readme.md#Array)
+There is 200+ examples in [./tests/side_effects/](./tests/readme.md)
 
 ## How it works
 
@@ -53,7 +53,7 @@ assert({
 });
 ```
 
-![img](./tests/side_effects/number/149_600_000_and_1_464_301/throw.svg)
+![img](./tests/_number.test.js/149_600_000_and_1_464_301/throw.svg)
 
 This includes things like comparison on url parts, date parts, http headers and many more.
 
@@ -74,7 +74,7 @@ and my brother is joe`,
 });
 ```
 
-![img](./tests/side_effects/string_multline/second_line_contains_extra_chars/throw.svg)
+![img](./tests/_string_multiline.test.js/second_line_contains_extra_chars/throw.svg)
 
 ### Keep long diff readable
 
@@ -85,7 +85,7 @@ assert({
 });
 ```
 
-![img](./tests/side_effects/max_columns/long_url_diff_at_end/throw.svg)
+![img](./tests/_max_columns.test.js/long_url_diff_at_end/throw.svg)
 
 ### Keep nested diff readable
 
@@ -137,7 +137,7 @@ assert({
 });
 ```
 
-![img](./tests/side_effects/object/max_depth/throw.svg)
+![img](./tests/_object.test.js/max_depth/throw.svg)
 
 ### Custom assertions
 
@@ -148,7 +148,7 @@ assert({
 });
 ```
 
-![img](./tests/side_effects/assert_between/50_is_too_small/throw.svg)
+![img](./tests/_assert_between.test.js/50_is_too_small/throw.svg)
 
 ### And much more
 

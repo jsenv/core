@@ -22,7 +22,7 @@ a warning after 2nd timeout
 and an other warning
 ```
 
-# 2/3 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/toto.txt"
+# 2/3 write file "./toto.txt"
 
 ```txt
 toto
@@ -32,8 +32,8 @@ toto
 
 ```console
 Error: in the end we throw
-  at snapshotSideEffects.sideEffectFileUrl (@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:138:13)
-  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/advanced/side_effects_advanced.test.mjs:124:3
+  at snapshotSideEffects.sideEffectMdFileUrl (base/side_effects_advanced.test.mjs:138:13)
+  at async base/side_effects_advanced.test.mjs:124:3
 ```
 
 <sub>

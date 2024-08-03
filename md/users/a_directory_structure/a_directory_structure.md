@@ -1,4 +1,6 @@
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- TITLE: A) Directory Structure -->
+
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
   <tr>
@@ -74,7 +76,7 @@ npm run build
 npm run test
 ```
 
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
   <tr>

@@ -43,7 +43,10 @@ const eslintConfig = composeEslintConfig(
       // https://github.com/import-js/eslint-plugin-import/issues/1753
       "import/ignore": ["node_modules/playwright/"],
     },
-    rules: jsenvEslintRulesForImport,
+    rules: {
+      ...jsenvEslintRulesForImport,
+      "import/no-duplicates": ["off"], // already handled by prettier-plugin-organize-imports
+    },
   },
 
   {

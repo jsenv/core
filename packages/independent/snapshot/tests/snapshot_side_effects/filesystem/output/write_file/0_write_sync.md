@@ -5,7 +5,7 @@ writeFileSync(
 );
 ```
 
-# 1/2 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/filesystem/toto.txt"
+# 1/2 write file "./toto.txt"
 
 ```txt
 0_write_file_sync

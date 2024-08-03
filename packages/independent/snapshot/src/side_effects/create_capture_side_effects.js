@@ -4,13 +4,15 @@ import { filesystemSideEffects } from "./filesystem/filesystem_side_effects.js";
 import { logSideEffects } from "./log/log_side_effects.js";
 
 export const createCaptureSideEffects = ({
+  sourceFileUrl,
   logEffects = true,
   filesystemEffects = true,
+  filesystemActions,
   rootDirectoryUrl,
   replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
     rootDirectoryUrl,
   }),
-} = {}) => {
+}) => {
   const detectors = [];
   if (logEffects) {
     detectors.push(logSideEffects(logEffects === true ? {} : logEffects));
@@ -20,7 +22,9 @@ export const createCaptureSideEffects = ({
     filesystemSideEffectsDetector = filesystemSideEffects(
       filesystemEffects === true ? {} : filesystemEffects,
       {
+        sourceFileUrl,
         replaceFilesystemWellKnownValues,
+        filesystemActions,
       },
     );
     detectors.push(filesystemSideEffectsDetector);

@@ -7,17 +7,16 @@ import { groupFileSideEffectsPerDirectory } from "./group_file_side_effects_per_
 import { spyFilesystemCalls } from "./spy_filesystem_calls.js";
 
 const filesystemSideEffectsOptionsDefault = {
-  include: null,
   preserve: false,
   baseDirectory: "",
-  textualFilesIntoDirectory: false,
+  textualFilesInline: false,
 };
 const INLINE_MAX_LINES = 20;
 const INLINE_MAX_LENGTH = 2000;
 
 export const filesystemSideEffects = (
   filesystemSideEffectsOptions,
-  { replaceFilesystemWellKnownValues },
+  { sourceFileUrl, filesystemActions, replaceFilesystemWellKnownValues },
 ) => {
   filesystemSideEffectsOptions = {
     ...filesystemSideEffectsOptionsDefault,
@@ -42,10 +41,11 @@ export const filesystemSideEffects = (
     name: "filesystem",
     setBaseDirectory,
     install: (addSideEffect, { addSkippableHandler, addFinallyCallback }) => {
-      let { include, preserve, textualFilesIntoDirectory } =
-        filesystemSideEffectsOptions;
+      let { preserve, textualFilesInline } = filesystemSideEffectsOptions;
       if (filesystemSideEffectsOptions.baseDirectory) {
         setBaseDirectory(filesystemSideEffectsOptions.baseDirectory);
+      } else if (sourceFileUrl) {
+        setBaseDirectory(new URL("./", sourceFileUrl));
       }
       const getUrlRelativeToBase = (url) => {
         if (baseDirectory) {
@@ -155,7 +155,7 @@ export const filesystemSideEffects = (
                     if (outDirectoryReason) {
                       const outUrlRelativeToCommonDirectory = urlToRelativeUrl(
                         text.urlInsideOutDirectory,
-                        options.sideEffectFileUrl,
+                        options.sideEffectMdFileUrl,
                       );
                       groupMd += `${"#".repeat(2)} ${urlRelativeToCommonDirectory}
 ${renderFileContent(
@@ -193,7 +193,7 @@ ${renderFileContent(
                     );
                     const commonDirectoryOutRelativeUrl = urlToRelativeUrl(
                       commonDirectoryOutUrl,
-                      options.sideEffectFileUrl,
+                      options.sideEffectMdFileUrl,
                       { preferRelativeNotation: true },
                     );
                     return {
@@ -219,12 +219,14 @@ ${renderFileContent(
             const isTextual = CONTENT_TYPE.isTextual(contentType);
             let outDirectoryReason;
             if (isTextual) {
-              if (textualFilesIntoDirectory) {
-                outDirectoryReason = "textual_in_directory_option";
-              } else if (String(buffer).split("\n").length > INLINE_MAX_LINES) {
-                outDirectoryReason = "lot_of_lines";
-              } else if (buffer.size > INLINE_MAX_LENGTH) {
-                outDirectoryReason = "lot_of_chars";
+              if (textualFilesInline) {
+                if (String(buffer).split("\n").length > INLINE_MAX_LINES) {
+                  outDirectoryReason = "lot_of_lines";
+                } else if (buffer.size > INLINE_MAX_LENGTH) {
+                  outDirectoryReason = "lot_of_chars";
+                }
+              } else {
+                outDirectoryReason = "text";
               }
             } else {
               outDirectoryReason = "binary";
@@ -240,7 +242,7 @@ ${renderFileContent(
                 outDirectoryReason,
               },
               render: {
-                md: ({ sideEffectFileUrl, generateOutFileUrl }) => {
+                md: ({ sideEffectMdFileUrl, generateOutFileUrl }) => {
                   const urlRelativeToBase = getUrlRelativeToBase(url);
                   if (outDirectoryReason) {
                     let urlInsideOutDirectory = getUrlInsideOutDirectory(
@@ -267,7 +269,7 @@ ${renderFileContent(
                     }
                     const outRelativeUrl = urlToRelativeUrl(
                       urlInsideOutDirectory,
-                      sideEffectFileUrl,
+                      sideEffectMdFileUrl,
                       {
                         preferRelativeNotation: true,
                       },
@@ -311,7 +313,7 @@ ${renderFileContent(
           },
         },
         {
-          include,
+          include: filesystemActions,
           undoFilesystemSideEffects: !preserve,
         },
       );
