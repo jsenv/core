@@ -1,3 +1,6 @@
+<!-- PLACEHOLDER_START:TOC_DIRECTORY -->
+<!-- PLACEHOLDER_END -->
+
 # Array
 
 ```js

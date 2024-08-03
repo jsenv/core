@@ -12,16 +12,35 @@ import { marked } from "marked";
 const PREVIOUS_CHAR = "&lt;"; // "<"
 const NEXT_CHAR = "&gt;"; // ">"
 
-const syncMarkdownInDirectory = (
-  directoryUrl,
-  previousDirectoryUrl,
-  nextDirectoryUrl,
-) => {
-  const directoryContent = readDirectorySync(directoryUrl);
-  const markdownFile = getMainMarkdownFile(directoryUrl);
+const syncMarkdown = (markdownFileUrl) => {
+  const markdownFile = createMarkdownFile(markdownFileUrl);
   if (!markdownFile) {
     return;
   }
+  const directoryUrl = new URL("./", import.meta.url);
+  syncMarkdownFile(markdownFile, {
+    directoryUrl,
+  });
+};
+const createMarkdownFile = (markdownFileUrl) => {
+  try {
+    const markdownFileContent = String(readFileSync(markdownFileUrl));
+    return {
+      url: markdownFileUrl,
+      content: markdownFileContent,
+    };
+  } catch (e) {
+    if (e && e.code === "ENOENT") {
+      return null;
+    }
+    throw e;
+  }
+};
+const syncMarkdownFile = (
+  markdownFile,
+  { directoryUrl, prevDirectoryUrl, nextDirectoryUrl },
+) => {
+  const directoryContent = readDirectorySync(directoryUrl);
   syncMarkdownContent(markdownFile, {
     TOC: () => {
       return generateTableOfContents(markdownFile);
@@ -36,7 +55,7 @@ const syncMarkdownInDirectory = (
     NAV_PREV_NEXT: () => {
       return generatePrevNextNav(
         markdownFile,
-        previousDirectoryUrl,
+        prevDirectoryUrl,
         nextDirectoryUrl,
       );
     },
@@ -56,29 +75,21 @@ const syncMarkdownInDirectory = (
   let i = 0;
   while (i < directoryUrls.length) {
     const directoryUrl = directoryUrls[i];
-    syncMarkdownInDirectory(
-      directoryUrl,
-      directoryUrls[i - 1],
-      directoryUrls[i + 1],
-    );
+    const directoryMarkdownFile = getEntryMarkdownFile(directoryUrl);
+    if (directoryMarkdownFile) {
+      syncMarkdownFile(directoryMarkdownFile, {
+        directoryUrl,
+        prevDirectoryUrl: directoryUrls[i - 1],
+        nextDirectoryUrl: directoryUrls[i + 1],
+      });
+    }
     i++;
   }
 };
-const getMainMarkdownFile = (directoryUrl) => {
+const getEntryMarkdownFile = (directoryUrl) => {
   const directoryName = urlToFilename(directoryUrl);
   const markdownFileUrl = new URL(`./${directoryName}.md`, directoryUrl);
-  try {
-    const markdownFileContent = String(readFileSync(markdownFileUrl));
-    return {
-      url: markdownFileUrl,
-      content: markdownFileContent,
-    };
-  } catch (e) {
-    if (e && e.code === "ENOENT") {
-      return null;
-    }
-    throw e;
-  }
+  return createMarkdownFile(markdownFileUrl);
 };
 const syncMarkdownContent = (markdownFile, replacers) => {
   const mardownFileContent = markdownFile.content;
@@ -160,7 +171,10 @@ const generateDirectoryTableOfContents = (
     }
     entryUrl.pathname += "/";
     const subDirectoryContent = readDirectorySync(entryUrl);
-    const mainMarkdownFile = getMainMarkdownFile(entryUrl, subDirectoryContent);
+    const mainMarkdownFile = getEntryMarkdownFile(
+      entryUrl,
+      subDirectoryContent,
+    );
     if (!mainMarkdownFile) {
       continue;
     }
@@ -211,10 +225,10 @@ const generatePrevNextNav = (
 ) => {
   // get previous url
   const prevMarkdownFile = prevDirectoryUrl
-    ? getMainMarkdownFile(prevDirectoryUrl)
+    ? getEntryMarkdownFile(prevDirectoryUrl)
     : null;
   const nextMarkdownFile = nextDirectoryUrl
-    ? getMainMarkdownFile(nextDirectoryUrl)
+    ? getEntryMarkdownFile(nextDirectoryUrl)
     : null;
 
   // single
@@ -331,4 +345,7 @@ const escapeHtml = (string) => {
     .replace(/'/g, "&#039;");
 };
 
-syncMarkdownInDirectory(new URL("./users/", import.meta.url));
+syncMarkdown(new URL("./users/users.md", import.meta.url));
+syncMarkdown(
+  new URL("../packages/independent/assert/tests/readme.md", import.meta.url),
+);
