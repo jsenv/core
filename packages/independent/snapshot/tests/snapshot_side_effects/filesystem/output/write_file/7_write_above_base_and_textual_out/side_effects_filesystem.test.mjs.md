@@ -7,7 +7,7 @@ writeFileSync(
 
 # 1/2 write file "../toto.txt"
 
-see [./7_write_above_base_and_textual_out/@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/toto.txt](./7_write_above_base_and_textual_out/@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/toto.txt)
+see [./@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/toto.txt](./@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/toto.txt)
 
 # 2/2 return
 

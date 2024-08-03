@@ -7,7 +7,7 @@ writeFileSync(
 
 # 1/2 write file "./toto.txt"
 
-see [./5_write_inside_base_and_textual_out/toto.txt](./5_write_inside_base_and_textual_out/toto.txt)
+see [./toto.txt](./toto.txt)
 
 # 2/2 return
 

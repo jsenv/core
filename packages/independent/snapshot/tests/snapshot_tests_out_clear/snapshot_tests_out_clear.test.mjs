@@ -7,7 +7,9 @@ import {
 import { snapshotTests } from "@jsenv/snapshot";
 import { existsSync } from "node:fs";
 
-clearDirectorySync(new URL("./side_effects/", import.meta.url));
+clearDirectorySync(
+  new URL("./_snapshot_tests_out_clear.test.mjs/", import.meta.url),
+);
 
 await snapshotTests(
   import.meta.url,
@@ -25,7 +27,7 @@ await snapshotTests(
 );
 {
   const actual = readFileStructureSync(
-    new URL("./snapshot_tests_out_clear.test.mjs/", import.meta.url),
+    new URL("./_snapshot_tests_out_clear.test.mjs/", import.meta.url),
   );
   const expect = {
     "0_first/first.txt": "",
@@ -49,7 +51,7 @@ await snapshotTests(
 );
 {
   const actual = readFileStructureSync(
-    new URL("./snapshot_tests_out_clear.test.mjs/", import.meta.url),
+    new URL("./_snapshot_tests_out_clear.test.mjs/", import.meta.url),
   );
   const expect = {
     "0_first/tata.txt": "",

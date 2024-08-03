@@ -16,7 +16,7 @@ writeFileSync(
 
 # 1/2 write file "./data.json"
 
-see [./13_write_json/data.json](./13_write_json/data.json)
+see [./data.json](./data.json)
 
 # 2/2 return
 

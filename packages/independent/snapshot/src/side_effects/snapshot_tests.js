@@ -19,7 +19,7 @@ export const snapshotTests = async (
   fnRegisteringTest,
   {
     testName = urlToBasename(testFileUrl, true),
-    outFilePattern = "./[filename]/[out_filename]",
+    outFilePattern = "./_[filename]/[out_filename]",
     filesystemActions = {
       "**": "compare",
       // "**/*.svg": "compare_presence_only",

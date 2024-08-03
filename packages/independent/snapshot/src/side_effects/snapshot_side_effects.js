@@ -8,7 +8,7 @@ export const snapshotSideEffects = (
   sourceFileUrl,
   fn,
   {
-    outFilePattern = "[filename]/[out_filename]",
+    outFilePattern = "_[filename]/[out_filename]",
     errorStackHidden,
     throwWhenDiff,
     ...captureOptions
@@ -37,7 +37,7 @@ export const snapshotSideEffects = (
       generateOutFileUrl,
       errorStackHidden,
     });
-    writeFileSync(sideEffectFileContent, sideEffectFileContent);
+    writeFileSync(sideEffectMdFileUrl, sideEffectFileContent);
     outDirectorySnapshot.compare(throwWhenDiff);
   };
   const returnValue = captureSideEffects(fn);
