@@ -7,17 +7,12 @@
 ## 0_basic
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./elements.css": "elements.css" },
-  minification: false,
-})
+run()
 ```
 
 ### 1/4 logs
 
-![img](bundling_css/0_basic/log_group.svg)
+![img](0_basic/log_group.svg)
 
 <details>
   <summary>see without style</summary>
@@ -40,11 +35,11 @@ build "./elements.css"
 
 ### 2/4 write 3 files into "./build/"
 
-see [./bundling_css/0_basic/build/](./bundling_css/0_basic/build/)
+see [./0_basic/build/](./0_basic/build/)
 
 ### 3/4 logs
 
-![img](bundling_css/0_basic/log_group_1.svg)
+![img](0_basic/log_group_1.svg)
 
 <details>
   <summary>see without style</summary>
