@@ -12,6 +12,9 @@ import { renderSideEffects, renderSmallLink } from "./render_side_effects.js";
  * @param {Object} snapshotTestsOptions
  * @param {string|url} snapshotTestsOptions.outFilePattern
  * @param {string|url} snapshotTestsOptions.rootDirectoryUrl
+ * @param {Object} [snapshotTestsOptions.filesystemActions]
+ *        Control what to do when there is a file side effect
+ *        "compare", "compare_presence_only", "undo", "ignore"
  * @param {Object|boolean} [snapshotTestsOptions.filesystemEffects]
  * @param {boolean} [snapshotTestsOptions.filesystemEffects.textualFilesInline=false]
  *        Put textual files content in the markdown (instead of separate files).
@@ -43,6 +46,11 @@ export const snapshotTests = async (
     throwWhenDiff = process.env.CI,
   } = {},
 ) => {
+  filesystemActions = {
+    ...filesystemActions,
+    "**/*.svg": "presence_only",
+  };
+
   const sourceName = urlToBasename(sourceFileUrl, true);
   const sourceBasename = urlToBasename(sourceFileUrl);
   const sourceFilename = urlToFilename(sourceFileUrl);
