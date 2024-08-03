@@ -1,4 +1,4 @@
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>
@@ -358,7 +358,7 @@ When js is inlined between `<script>` tags inside html `window.location` must be
 
 It is because in this situation `document.currentScript.src` would be `undefined`.
 
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>

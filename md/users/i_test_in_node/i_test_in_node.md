@@ -1,4 +1,4 @@
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>
@@ -362,7 +362,7 @@ Code coverage can be collected while executing test files.
 
 ![file js](https://github.com/jsenv/core/assets/443639/2bc5eb1d-c041-4f03-bd19-6a3db1a24883)
 
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>

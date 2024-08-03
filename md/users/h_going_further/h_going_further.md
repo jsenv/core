@@ -1,4 +1,4 @@
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>
@@ -29,7 +29,7 @@ It represents the two JavaScript runtimes supported by jsenv.
 
 ![jsenv_logo_legend](https://github.com/jsenv/core/assets/443639/8317a70f-cd53-42c2-ba18-96c53669c2b4)
 
-<!-- PLACEHOLDER_START:PREV_NEXT_NAV -->
+<!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
  <tr>

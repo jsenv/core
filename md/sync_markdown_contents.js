@@ -33,7 +33,7 @@ const syncMarkdownInDirectory = (
     TABLE_OF_CONTENT: () => {
       return generateTableOfContents(markdownFile);
     },
-    PREV_NEXT_NAV: () => {
+    NAV_PREV_NEXT: () => {
       return generatePrevNextNav(
         markdownFile,
         previousDirectoryUrl,
