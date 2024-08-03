@@ -7,7 +7,6 @@ import { groupFileSideEffectsPerDirectory } from "./group_file_side_effects_per_
 import { spyFilesystemCalls } from "./spy_filesystem_calls.js";
 
 const filesystemSideEffectsOptionsDefault = {
-  include: null,
   preserve: false,
   baseDirectory: "",
   textualFilesInline: false,
@@ -17,7 +16,7 @@ const INLINE_MAX_LENGTH = 2000;
 
 export const filesystemSideEffects = (
   filesystemSideEffectsOptions,
-  { sourceFileUrl, replaceFilesystemWellKnownValues },
+  { sourceFileUrl, filesystemActions, replaceFilesystemWellKnownValues },
 ) => {
   filesystemSideEffectsOptions = {
     ...filesystemSideEffectsOptionsDefault,
@@ -42,8 +41,7 @@ export const filesystemSideEffects = (
     name: "filesystem",
     setBaseDirectory,
     install: (addSideEffect, { addSkippableHandler, addFinallyCallback }) => {
-      let { include, preserve, textualFilesInline } =
-        filesystemSideEffectsOptions;
+      let { preserve, textualFilesInline } = filesystemSideEffectsOptions;
       if (filesystemSideEffectsOptions.baseDirectory) {
         setBaseDirectory(filesystemSideEffectsOptions.baseDirectory);
       } else if (sourceFileUrl) {
@@ -315,7 +313,7 @@ ${renderFileContent(
           },
         },
         {
-          include,
+          include: filesystemActions,
           undoFilesystemSideEffects: !preserve,
         },
       );

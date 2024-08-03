@@ -29,7 +29,11 @@ export const spyFilesystemCalls = (
   { include, undoFilesystemSideEffects } = {},
 ) => {
   const shouldReport = include
-    ? URL_META.createFilter(include, "file:///")
+    ? URL_META.createFilter(
+        include,
+        "file:///",
+        (v) => v === "compare" || v === "compare_presence_only" || v === true,
+      )
     : () => true;
 
   const _internalFs = process.binding("fs");

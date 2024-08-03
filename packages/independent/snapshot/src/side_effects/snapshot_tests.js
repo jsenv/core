@@ -86,6 +86,7 @@ export const snapshotTests = async (
     rootDirectoryUrl,
     logEffects,
     filesystemEffects,
+    filesystemActions,
   });
   let markdown = "";
   markdown += `# ${sourceName}`;

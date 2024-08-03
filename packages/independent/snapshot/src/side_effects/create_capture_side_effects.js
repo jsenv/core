@@ -7,6 +7,7 @@ export const createCaptureSideEffects = ({
   sourceFileUrl,
   logEffects = true,
   filesystemEffects = true,
+  filesystemActions,
   rootDirectoryUrl,
   replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
     rootDirectoryUrl,
@@ -23,6 +24,7 @@ export const createCaptureSideEffects = ({
       {
         sourceFileUrl,
         replaceFilesystemWellKnownValues,
+        filesystemActions,
       },
     );
     detectors.push(filesystemSideEffectsDetector);
