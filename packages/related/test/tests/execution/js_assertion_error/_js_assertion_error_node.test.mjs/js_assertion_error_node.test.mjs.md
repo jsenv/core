@@ -12,7 +12,7 @@ run({
 })
 ```
 
-![img](js_assertion_error_node/0_worker_thread/reject.svg)
+![img](0_worker_thread/reject.svg)
 
 <details>
   <summary>see without style</summary>
@@ -36,7 +36,7 @@ run({
 })
 ```
 
-![img](js_assertion_error_node/0_child_process/reject.svg)
+![img](0_child_process/reject.svg)
 
 <details>
   <summary>see without style</summary>

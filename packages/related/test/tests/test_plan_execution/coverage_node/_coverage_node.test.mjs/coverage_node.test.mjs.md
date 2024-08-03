@@ -14,7 +14,7 @@ run({
 
 ### 1/2 write 2 files into "./"
 
-see [./coverage_node/0_worker_thread/base/](./coverage_node/0_worker_thread/base/)
+see [./0_worker_thread/](./0_worker_thread/)
 
 ### 2/2 resolve
 
@@ -32,7 +32,7 @@ run({
 
 ### 1/2 write 2 files into "./"
 
-see [./coverage_node/1_child_process/base/](./coverage_node/1_child_process/base/)
+see [./1_child_process/](./1_child_process/)
 
 ### 2/2 resolve
 

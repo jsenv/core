@@ -21,7 +21,7 @@ await run({
 
 ### 1/2 write file "./file.js.png"
 
-see [./coverage_chromium_v8/0_basic/file.js.png](./coverage_chromium_v8/0_basic/file.js.png)
+see [./0_basic/file.js.png](./0_basic/file.js.png)
 
 ### 2/2 resolve
 

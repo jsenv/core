@@ -24,7 +24,7 @@ await run({
 
 ### 1/2 write file "./main.js.png"
 
-see [./coverage_timeout/0_basic/main.js.png](./coverage_timeout/0_basic/main.js.png)
+see [./0_basic/main.js.png](./0_basic/main.js.png)
 
 ### 2/2 resolve
 

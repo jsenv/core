@@ -8,7 +8,7 @@ export const snapshotFileExecutionSideEffects = async (
   snapshotTests(testFileUrl, fnRegisteringTests, {
     filesystemActions: {
       "**": "compare",
-      "**/.jsenv/": "ignore",
+      "**/.jsenv/": "undo",
     },
     ...options,
   });
@@ -22,7 +22,7 @@ export const snapshotTestPlanSideEffects = async (
     filesystemActions: {
       "**": "compare",
       "**/*.png": process.env.CI ? "compare_presence_only" : "compare",
-      "**/.jsenv/": "ignore",
+      "**/.jsenv/": "undo",
       "**/.coverage/": "ignore",
     },
     ...options,

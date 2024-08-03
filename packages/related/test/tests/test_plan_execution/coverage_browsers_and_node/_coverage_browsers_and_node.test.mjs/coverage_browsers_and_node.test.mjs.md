@@ -36,7 +36,7 @@ await run({
 
 ### 1/2 write file "./file.js.png"
 
-see [./coverage_browsers_and_node/0_basic/file.js.png](./coverage_browsers_and_node/0_basic/file.js.png)
+see [./0_basic/file.js.png](./0_basic/file.js.png)
 
 ### 2/2 resolve
 

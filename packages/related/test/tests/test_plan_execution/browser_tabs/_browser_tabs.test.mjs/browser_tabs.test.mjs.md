@@ -23,7 +23,7 @@ run({
 
 ### 1/2 write file "./result.json"
 
-see [./browser_tabs/0_basic/result.json](./browser_tabs/0_basic/result.json)
+see [./0_basic/result.json](./0_basic/result.json)
 
 ### 2/2 resolve
 
