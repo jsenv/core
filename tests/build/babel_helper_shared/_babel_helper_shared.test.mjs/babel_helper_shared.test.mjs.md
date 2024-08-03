@@ -36,9 +36,9 @@ build "./main.html"
 </details>
 
 
-### 2/4 write 4 files into "./dist/"
+### 2/4 write 4 files into "./build/"
 
-see [./0_js_module/dist/](./0_js_module/dist/)
+see [./0_js_module/build/](./0_js_module/build/)
 
 ### 3/4 logs
 
@@ -102,9 +102,9 @@ build "./main.html"
 </details>
 
 
-### 2/4 write 5 files into "./dist/"
+### 2/4 write 5 files into "./build/"
 
-see [./1_js_module_fallback/dist/](./1_js_module_fallback/dist/)
+see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 
 ### 3/4 logs
 

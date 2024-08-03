@@ -5,7 +5,7 @@ import { build } from "@jsenv/core";
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   const testParams = {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     minification: false,
