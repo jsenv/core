@@ -27,7 +27,8 @@ const startTesting = async (fn) => {
     : scenarioMap;
   for (const [scenario, { fn, options }] of activeScenarioMap) {
     await snapshotSideEffects(import.meta.url, fn, {
-      outFilePattern: `./output/${scenario}/[out_filename]`,
+      sideEffectMdFileUrl: new URL(`./output/${scenario}.md`, import.meta.url),
+      outFilePattern: `./output/${scenario}/[filename]`,
       ...options,
     });
   }

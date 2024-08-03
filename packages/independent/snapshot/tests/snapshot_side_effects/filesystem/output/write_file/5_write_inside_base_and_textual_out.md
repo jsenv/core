@@ -1,15 +1,13 @@
 ```js
 writeFileSync(
   new URL("./toto.txt", import.meta.url),
-  "0_write_file_sync",
+  "5_write_inside_base_and_textual_out",
 );
 ```
 
-# 1/2 write file "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/filesystem/toto.txt"
+# 1/2 write file "./toto.txt"
 
-```txt
-0_write_file_sync
-```
+see [./5_write_inside_base_and_textual_out/toto.txt](./5_write_inside_base_and_textual_out/toto.txt)
 
 # 2/2 return
 

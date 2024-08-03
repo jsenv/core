@@ -6,10 +6,13 @@ import { renderSideEffects } from "./render_side_effects.js";
 /**
  * Generate a markdown file describing code side effects. When executed in CI throw if there is a diff.
  * @param {URL} sourceFileUrl
+ *        Url where the function is located (import.meta.url)
  * @param {Function} fn
+ *        Function to snapshot
  * @param {Object} snapshotSideEffectsOptions
  * @param {string|url} snapshotSideEffectsOptions.outFilePattern
  * @param {string|url} snapshotSideEffectsOptions.sideEffectMdFileUrl
+ *        Where to write the markdown file. Defaults to ./[]
  * @param {string|url} snapshotSideEffectsOptions.rootDirectoryUrl
  * @param {Object|boolean} [snapshotSideEffectsOptions.filesystemEffects]
  * @param {boolean} [snapshotSideEffectsOptions.filesystemEffects.textualFilesInline=false]
@@ -28,7 +31,7 @@ export const snapshotSideEffects = (
   fn,
   {
     sideEffectMdFileUrl,
-    outFilePattern = "_[filename]/[out_filename]",
+    outFilePattern = "_[source_filename]/[filename]",
     errorStackHidden,
     throwWhenDiff,
     ...captureOptions
@@ -37,12 +40,12 @@ export const snapshotSideEffects = (
   const sourceName = urlToBasename(sourceFileUrl, true);
   const sourceBasename = urlToBasename(sourceFileUrl);
   const sourceFilename = urlToFilename(sourceFileUrl);
-  const generateOutFileUrl = (outFilename) => {
+  const generateOutFileUrl = (filename) => {
     const outRelativeUrl = outFilePattern
-      .replaceAll("[name]", sourceName)
-      .replaceAll("[basename]", sourceBasename)
-      .replaceAll("[filename]", sourceFilename)
-      .replaceAll("[out_filename]", outFilename);
+      .replaceAll("[source_name]", sourceName)
+      .replaceAll("[source_basename]", sourceBasename)
+      .replaceAll("[source_filename]", sourceFilename)
+      .replaceAll("[filename]", filename);
     const outFileUrl = new URL(outRelativeUrl, new URL("./", sourceFileUrl))
       .href;
     return outFileUrl;

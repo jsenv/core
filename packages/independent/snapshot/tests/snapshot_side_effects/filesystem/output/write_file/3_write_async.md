@@ -1,15 +1,17 @@
 ```js
-writeFileSync(
+await writeFile(
   new URL("./toto.txt", import.meta.url),
-  "5_write_inside_base_and_textual_out",
+  "3_write_async",
 );
 ```
 
 # 1/2 write file "./toto.txt"
 
-see [./toto.txt](./toto.txt)
+```txt
+3_write_async
+```
 
-# 2/2 return
+# 2/2 resolve
 
 ```js
 undefined

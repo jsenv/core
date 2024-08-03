@@ -27,7 +27,6 @@ export const snapshotTests = async (
   sourceFileUrl,
   fnRegisteringTest,
   {
-    testName = urlToBasename(sourceFileUrl, true),
     outFilePattern = "./_[source_filename]/[filename]",
     filesystemActions = {
       "**": "compare",
@@ -44,14 +43,15 @@ export const snapshotTests = async (
     throwWhenDiff = process.env.CI,
   } = {},
 ) => {
-  const testBasename = urlToBasename(sourceFileUrl);
-  const testFilename = urlToFilename(sourceFileUrl);
+  const sourceName = urlToBasename(sourceFileUrl, true);
+  const sourceBasename = urlToBasename(sourceFileUrl);
+  const sourceFilename = urlToFilename(sourceFileUrl);
   const generateOutFileUrl = (outFilename) => {
     const outFileRelativeUrl = outFilePattern
-      .replaceAll("[name]", testName)
-      .replaceAll("[basename]", testBasename)
-      .replaceAll("[filename]", testFilename)
-      .replaceAll("[out_filename]", outFilename);
+      .replaceAll("[source_name]", sourceName)
+      .replaceAll("[source_basename]", sourceBasename)
+      .replaceAll("[source_filename]", sourceFilename)
+      .replaceAll("[filename]", outFilename);
     const outFileUrl = new URL(outFileRelativeUrl, sourceFileUrl).href;
     return outFileUrl;
   };
@@ -60,7 +60,7 @@ export const snapshotTests = async (
     outDirectoryUrl,
     filesystemActions,
   );
-  const sideEffectMdFileUrl = generateOutFileUrl(`${testFilename}.md`);
+  const sideEffectMdFileUrl = generateOutFileUrl(`${sourceFilename}.md`);
 
   const dirUrlMap = new Map();
   const sideEffectsMap = new Map();
@@ -88,7 +88,7 @@ export const snapshotTests = async (
     filesystemEffects,
   });
   let markdown = "";
-  markdown += `# ${testName}`;
+  markdown += `# ${sourceName}`;
   if (generatedBy) {
     let generatedByLink = renderSmallLink(
       {

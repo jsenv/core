@@ -8,7 +8,7 @@ writeFileSync(new URL("./b/b_3.txt", import.meta.url));
 
 # 1/2 write 5 files into "./"
 
-see [./](./)
+see [./1_write_in_2_dir/](./1_write_in_2_dir/)
 
 # 2/2 return
 

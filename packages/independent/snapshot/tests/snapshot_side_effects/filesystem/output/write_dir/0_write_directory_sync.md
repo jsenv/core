@@ -3,7 +3,7 @@ writeDirectorySync(new URL("./dir_sync/", import.meta.url));
 return existsSync(new URL("./dir_sync/", import.meta.url));
 ```
 
-# 1/2 write directory "@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/filesystem/dir_sync/"
+# 1/2 write directory "./dir_sync/"
 
 # 2/2 return
 

@@ -6,7 +6,7 @@ writeFileSync(new URL("./toto.txt", import.meta.url), "second");
 
 # 1/4 write file "./toto.txt"
 
-see [./toto.txt](./toto.txt)
+see [./11_write_same_file_not_grouped_and_out/toto.txt](./11_write_same_file_not_grouped_and_out/toto.txt)
 
 # 2/4 console.log
 
@@ -16,7 +16,7 @@ hey
 
 # 3/4 write file "./toto.txt"
 
-see [./toto_1.txt](./toto_1.txt)
+see [./11_write_same_file_not_grouped_and_out/toto_1.txt](./11_write_same_file_not_grouped_and_out/toto_1.txt)
 
 # 4/4 return
 
