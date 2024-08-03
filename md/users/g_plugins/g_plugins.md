@@ -18,7 +18,7 @@
 
 Official jsenv plugins written and maintained by jsenv.
 
-<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+<!-- PLACEHOLDER_START:TOC -->
 
 <details>
   <summary>Table of contents</summary>

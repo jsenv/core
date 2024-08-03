@@ -25,7 +25,7 @@ Best parts of jsenv dev server:
 - Error resilient; everything still works when you do a syntax error for instance.
 - Large [browser support](#21-browser-support); code served is compatible with main browsers of the market, even old versions.
 
-<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+<!-- PLACEHOLDER_START:TOC -->
 
 <details>
   <summary>Table of contents</summary>

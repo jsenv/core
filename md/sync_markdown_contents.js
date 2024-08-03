@@ -23,15 +23,15 @@ const syncMarkdownInDirectory = (
     return;
   }
   syncMarkdownContent(markdownFile, {
-    DIRECTORY_TABLE_OF_CONTENT: () => {
+    TOC: () => {
+      return generateTableOfContents(markdownFile);
+    },
+    TOC_DIRECTORY: () => {
       return generateDirectoryTableOfContents(
         markdownFile,
         directoryContent,
         directoryUrl,
       );
-    },
-    TABLE_OF_CONTENT: () => {
-      return generateTableOfContents(markdownFile);
     },
     NAV_PREV_NEXT: () => {
       return generatePrevNextNav(

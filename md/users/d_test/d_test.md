@@ -39,7 +39,7 @@ When coding, we spend most of our time working on source files. At some point we
 This huge gap between source files and test files creates a context switching costing a lot of cognitive energy.
 -->
 
-<!-- PLACEHOLDER_START:TABLE_OF_CONTENT -->
+<!-- PLACEHOLDER_START:TOC -->
 
 <details>
   <summary>Table of contents</summary>
