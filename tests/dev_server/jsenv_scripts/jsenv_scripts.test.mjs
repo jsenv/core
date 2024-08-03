@@ -48,7 +48,7 @@ const run = async () => {
     });
   }
   await page.goto(`${devServer.origin}/main.html`);
-  await new Promise((resolve) => setTimeout(resolve, 500)); // wait a bit for toolbar injection
+  await new Promise((resolve) => setTimeout(resolve, 800)); // wait a bit for toolbar injection
   const html = await page.content();
   writeFileSync(new URL("./main_after_exec.html", import.meta.url), html);
   if (!debug) {
