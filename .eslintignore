@@ -19,8 +19,7 @@ git_ignored/
 **/tests/**/**syntax_error**/main.html
 **/tests/**/snapshots/
 **/tests/**/output/
-**/tests/**/_*/*/build/
-**/tests/**/_*/*.html
+**/tests/**/_*test.*/
 
 /**/*.nomodule.js
 /**/*.jsx
