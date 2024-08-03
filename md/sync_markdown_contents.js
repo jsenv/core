@@ -17,7 +17,7 @@ const syncMarkdown = (markdownFileUrl) => {
   if (!markdownFile) {
     return;
   }
-  const directoryUrl = new URL("./", import.meta.url);
+  const directoryUrl = new URL("./", markdownFileUrl);
   syncMarkdownFile(markdownFile, {
     directoryUrl,
   });
@@ -109,7 +109,8 @@ const generateTableOfContents = (markdownFile) => {
   const mdAsHtml = marked.parse(markdownFile.content);
   const htmlTree = parseHtml({ html: mdAsHtml });
   let isFirstH1 = true;
-  const body = htmlTree.childNodes[0].childNodes[1];
+  const htmlNode = htmlTree.childNodes.find((node) => node.nodeName === "html");
+  const body = htmlNode.childNodes.find((node) => node.nodeName === "body");
   let currentHeadingLink = null;
   for (const child of body.childNodes) {
     if (child.nodeName === "h1") {
@@ -117,7 +118,7 @@ const generateTableOfContents = (markdownFile) => {
       if (isFirstH1) {
         isFirstH1 = false;
         // tableOfContentRootNode.title = text;
-        continue;
+        // continue;
       }
       currentHeadingLink = {
         level: 1,
@@ -302,9 +303,23 @@ const generatePrevNextNav = (
 const extractMarkdownFileTitle = (markdownFile) => {
   const mdAsHtml = marked.parse(markdownFile.content);
   const htmlTree = parseHtml({ html: mdAsHtml });
-  const h1 = findHtmlNode(htmlTree, (node) => node.nodeName === "h1");
-  const title = h1 ? getHtmlNodeText(h1) : urlToFilename(markdownFile.url);
-  return title;
+  let title;
+  findHtmlNode(htmlTree, (node) => {
+    if (node.nodeName === "#comment") {
+      const data = node.data;
+      const match = data.match(/ TITLE: (.+) /);
+      if (match) {
+        title = match[1];
+        return true;
+      }
+    }
+    if (node.nodeName === "h1") {
+      title = getHtmlNodeText(node);
+      return true;
+    }
+    return false;
+  });
+  return title || urlToFilename(markdownFile.url);
 };
 const generateReplacement = (value, placeholder) => {
   let replacementWithMarkers = `<!-- PLACEHOLDER_START:${placeholder} -->
@@ -346,6 +361,6 @@ const escapeHtml = (string) => {
 };
 
 syncMarkdown(new URL("./users/users.md", import.meta.url));
-syncMarkdown(
-  new URL("../packages/independent/assert/tests/readme.md", import.meta.url),
-);
+// syncMarkdown(
+//   new URL("../packages/independent/assert/tests/readme.md", import.meta.url),
+// );
