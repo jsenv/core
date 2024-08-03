@@ -17,7 +17,7 @@ const INLINE_MAX_LENGTH = 2000;
 
 export const filesystemSideEffects = (
   filesystemSideEffectsOptions,
-  { replaceFilesystemWellKnownValues },
+  { sourceFileUrl, replaceFilesystemWellKnownValues },
 ) => {
   filesystemSideEffectsOptions = {
     ...filesystemSideEffectsOptionsDefault,
@@ -46,6 +46,8 @@ export const filesystemSideEffects = (
         filesystemSideEffectsOptions;
       if (filesystemSideEffectsOptions.baseDirectory) {
         setBaseDirectory(filesystemSideEffectsOptions.baseDirectory);
+      } else if (sourceFileUrl) {
+        setBaseDirectory(new URL("./", sourceFileUrl));
       }
       const getUrlRelativeToBase = (url) => {
         if (baseDirectory) {

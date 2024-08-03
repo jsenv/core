@@ -12,9 +12,8 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
       console.warn("here");
     },
     {
-      sideEffectFileUrl: new URL("./output/0_warn_a.md", import.meta.url),
-      outDirectoryUrl: new URL("./output/0_warn_a/", import.meta.url),
-      outFilePattern: "./output/0_warn_a/[filename]",
+      sideEffectMdFileUrl: new URL("./output/0_warn_a.md", import.meta.url),
+      outFilePattern: "./output/0_warn_a/[out_filename]",
     },
   );
   assert({ actual: console.warn, expect: warn });
@@ -25,9 +24,8 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
       console.warn("here");
     },
     {
-      sideEffectFileUrl: new URL("./output/1_warn_b.md", import.meta.url),
-      outDirectoryUrl: new URL("./output/1_warn_b/", import.meta.url),
-      outFilePattern: "./output/1_warn_b/[filename]",
+      sideEffectMdFileUrl: new URL("./output/1_warn_b.md", import.meta.url),
+      outFilePattern: "./output/1_warn_b/[out_filename]",
     },
   );
   assert({ actual: console.warn, expect: warn });
@@ -45,18 +43,14 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
       console.log("a_after_timeout_200");
     },
     {
-      sideEffectFileUrl: new URL(
+      sideEffectMdFileUrl: new URL(
         "./output/2_a_when_b_ends_before.md",
         import.meta.url,
       ),
-      outDirectoryUrl: new URL(
-        "./output/2_a_when_b_ends_before/",
-        import.meta.url,
-      ),
-      outFilePattern: "./output/2_a_when_b_ends_before/[filename]",
+      outFilePattern: "./output/2_a_when_b_ends_before/[out_filename]",
       filesystemEffects: {
-        baseDirectory: new URL("./", import.meta.url),
         preserve: true,
+        textualFilesInline: true,
       },
     },
   );
@@ -70,18 +64,14 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
       console.log("b_after_timeout_50");
     },
     {
-      sideEffectFileUrl: new URL(
+      sideEffectMdFileUrl: new URL(
         "./output/3_b_when_b_ends_before.md",
         import.meta.url,
       ),
-      outDirectoryUrl: new URL(
-        "./output/3_b_when_b_ends_before/",
-        import.meta.url,
-      ),
-      outFilePattern: "./output/3_b_when_b_ends_before/[filename]",
+      outFilePattern: "./output/3_b_when_b_ends_before/[out_filename]",
       filesystemEffects: {
-        baseDirectory: new URL("./", import.meta.url),
         preserve: true,
+        textualFilesInline: true,
       },
     },
   );
@@ -99,9 +89,14 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
       await writeFile(new URL("./c.txt", import.meta.url), "c_1");
     },
     {
-      sideEffectFileUrl: new URL("./output/4_write_first.md", import.meta.url),
-      outDirectoryUrl: new URL("./output/4_write_first/", import.meta.url),
-      outFilePattern: "./output/4_write_first/[filename]",
+      sideEffectMdFileUrl: new URL(
+        "./output/4_write_first.md",
+        import.meta.url,
+      ),
+      outFilePattern: "./output/4_write_first/[out_filename]",
+      filesystemEffects: {
+        textualFilesInline: true,
+      },
     },
   );
   await snapshotSideEffects(
@@ -112,9 +107,14 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
       await writeFile(new URL("./c.txt", import.meta.url), "c_2");
     },
     {
-      sideEffectFileUrl: new URL("./output/5_write_second.md", import.meta.url),
-      outDirectoryUrl: new URL("./output/5_write_second/", import.meta.url),
-      outFilePattern: "./output/5_write_second/[filename]",
+      sideEffectMdFileUrl: new URL(
+        "./output/5_write_second.md",
+        import.meta.url,
+      ),
+      outFilePattern: "./output/5_write_second/[out_filename]",
+      filesystemEffects: {
+        textualFilesInline: true,
+      },
     },
   );
 }
@@ -138,12 +138,14 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
       throw new Error("in the end we throw");
     },
     {
-      sideEffectFileUrl: new URL(
+      sideEffectMdFileUrl: new URL(
         "./output/6_console_and_file.md",
         import.meta.url,
       ),
-      outDirectoryUrl: new URL("./output/6_console_and_file/", import.meta.url),
-      outFilePattern: "./output/6_console_and_file/[filename]",
+      outFilePattern: "./output/6_console_and_file/[out_filename]",
+      filesystemEffects: {
+        textualFilesInline: true,
+      },
     },
   );
 }
@@ -158,8 +160,8 @@ await snapshotSideEffects(
     process.stdout.write("⠋ generate build graph\n");
     process.stdout.write("✔ generate build graph (done in 0.005 second)\n");
     process.stdout.write("⠋ write files in build directory\n");
-    writeFileSync(new URL("./dist/toto.txt", import.meta.url), "toto");
-    writeFileSync(new URL("./dist/tata.txt", import.meta.url), "tata");
+    writeFileSync(new URL("./build/toto.txt", import.meta.url), "toto");
+    writeFileSync(new URL("./build/tata.txt", import.meta.url), "tata");
     process.stdout.write(
       "✔ write files in build directory (done in 0.002 second)\n",
     );
@@ -170,20 +172,13 @@ await snapshotSideEffects(
 --------------------`);
   },
   {
-    sideEffectFileUrl: new URL(
+    sideEffectMdFileUrl: new URL(
       "./output/7_console_group_and_fs_group.md",
       import.meta.url,
     ),
-    outDirectoryUrl: new URL(
-      "./output/7_console_group_and_fs_group/",
-      import.meta.url,
-    ),
-    outFilePattern: "./output/7_console_group_and_fs_group/[filename]",
+    outFilePattern: "./output/7_console_group_and_fs_group/[out_filename]",
     filesystemEffects: {
-      baseDirectory: new URL("./", import.meta.url),
-    },
-    logEffects: {
-      group: true,
+      textualFilesInline: true,
     },
   },
 );

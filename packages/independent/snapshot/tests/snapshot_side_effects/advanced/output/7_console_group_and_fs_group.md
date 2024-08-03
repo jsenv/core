@@ -5,8 +5,8 @@ process.stdout.write("✔ generate source graph (done in 0.02 second)\n");
 process.stdout.write("⠋ generate build graph\n");
 process.stdout.write("✔ generate build graph (done in 0.005 second)\n");
 process.stdout.write("⠋ write files in build directory\n");
-writeFileSync(new URL("./dist/toto.txt", import.meta.url), "toto");
-writeFileSync(new URL("./dist/tata.txt", import.meta.url), "tata");
+writeFileSync(new URL("./build/toto.txt", import.meta.url), "toto");
+writeFileSync(new URL("./build/tata.txt", import.meta.url), "tata");
 process.stdout.write(
   "✔ write files in build directory (done in 0.002 second)\n",
 );
@@ -29,7 +29,7 @@ build "./main.html"
 
 ```
 
-# 2/4 write 2 files into "./dist/"
+# 2/4 write 2 files into "./build/"
 
 ## toto.txt
 ```txt

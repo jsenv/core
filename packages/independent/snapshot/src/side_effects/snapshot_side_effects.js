@@ -3,11 +3,31 @@ import { urlToBasename, urlToFilename } from "@jsenv/urls";
 import { takeDirectorySnapshot } from "../filesystem_snapshot.js";
 import { createCaptureSideEffects } from "./create_capture_side_effects.js";
 import { renderSideEffects } from "./render_side_effects.js";
-
+/**
+ * Generate a markdown file describing code side effects. When executed in CI throw if there is a diff.
+ * @param {URL} sourceFileUrl
+ * @param {Function} fn
+ * @param {Object} snapshotSideEffectsOptions
+ * @param {string|url} snapshotSideEffectsOptions.outFilePattern
+ * @param {string|url} snapshotSideEffectsOptions.sideEffectMdFileUrl
+ * @param {string|url} snapshotSideEffectsOptions.rootDirectoryUrl
+ * @param {Object|boolean} [snapshotSideEffectsOptions.filesystemEffects]
+ * @param {boolean} [snapshotSideEffectsOptions.filesystemEffects.textualFilesInline=false]
+ *        Put textual files content in the markdown (instead of separate files).
+ *        Big files will still be put in dedicated files.
+ * @param {boolean} [snapshotSideEffectsOptions.filesystemEffects.preserve=false]
+ *        Preserve filesystem side effect when function ends. By default
+ *        filesystem effects are undone when function ends
+ * @param {url} [snapshotSideEffectsOptions.filesystemEffects.baseDirectory]
+ *        Urls of filesystem side effects will be relative to this base directory
+ *        Default to the directory containing @sourceFileUrl
+ * @return {Array.<Object>} sideEffects
+ */
 export const snapshotSideEffects = (
   sourceFileUrl,
   fn,
   {
+    sideEffectMdFileUrl,
     outFilePattern = "_[filename]/[out_filename]",
     errorStackHidden,
     throwWhenDiff,
@@ -17,19 +37,23 @@ export const snapshotSideEffects = (
   const sourceName = urlToBasename(sourceFileUrl, true);
   const sourceBasename = urlToBasename(sourceFileUrl);
   const sourceFilename = urlToFilename(sourceFileUrl);
-  const generateOutFileUrl = (outfilename) => {
+  const generateOutFileUrl = (outFilename) => {
     const outRelativeUrl = outFilePattern
       .replaceAll("[name]", sourceName)
       .replaceAll("[basename]", sourceBasename)
       .replaceAll("[filename]", sourceFilename)
-      .replaceAll("[out_filename]", outfilename);
+      .replaceAll("[out_filename]", outFilename);
     const outFileUrl = new URL(outRelativeUrl, new URL("./", sourceFileUrl))
       .href;
     return outFileUrl;
   };
   const outDirectoryUrl = generateOutFileUrl("");
-  const sideEffectMdFileUrl = generateOutFileUrl(`${sourceFilename}.md`);
-  const captureSideEffects = createCaptureSideEffects(captureOptions);
+  sideEffectMdFileUrl =
+    sideEffectMdFileUrl || generateOutFileUrl(`${sourceFilename}.md`);
+  const captureSideEffects = createCaptureSideEffects({
+    ...captureOptions,
+    sourceFileUrl,
+  });
   const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl);
   const onSideEffects = (sideEffects) => {
     const sideEffectFileContent = renderSideEffects(sideEffects, {
