@@ -87,9 +87,32 @@ const syncMarkdownFile = (
   }
 };
 const getEntryMarkdownFile = (directoryUrl) => {
-  const directoryName = urlToFilename(directoryUrl);
-  const markdownFileUrl = new URL(`./${directoryName}.md`, directoryUrl);
-  return createMarkdownFile(markdownFileUrl);
+  readme: {
+    const readmeMdFileUrl = new URL(`./readme.md`, directoryUrl);
+    const readmeMdFile = createMarkdownFile(readmeMdFileUrl);
+    if (readmeMdFile) {
+      return readmeMdFile;
+    }
+  }
+  dirname: {
+    const directoryName = urlToFilename(directoryUrl);
+    const dirMdFileUrl = new URL(`./${directoryName}.md`, directoryUrl);
+    const dirMdFile = createMarkdownFile(dirMdFileUrl);
+    if (dirMdFile) {
+      return dirMdFile;
+    }
+    if (directoryName[0] === "_") {
+      const dirWithoutLeadingUnderscoreUrl = new URL(
+        `./${directoryName.slice(1)}.md`,
+        directoryUrl,
+      );
+      const dirMdFile = createMarkdownFile(dirWithoutLeadingUnderscoreUrl);
+      if (dirMdFile) {
+        return dirMdFile;
+      }
+    }
+  }
+  return null;
 };
 const syncMarkdownContent = (markdownFile, replacers) => {
   const mardownFileContent = markdownFile.content;
@@ -106,8 +129,8 @@ const generateTableOfContents = (markdownFile) => {
     defaultOpen: false,
     children: [],
   };
-  const mdAsHtml = marked.parse(markdownFile.content);
-  const htmlTree = parseHtml({ html: mdAsHtml });
+  const mdHtml = mdFileAsHtml(markdownFile);
+  const htmlTree = parseHtml({ html: mdHtml });
   let isFirstH1 = true;
   const htmlNode = htmlTree.childNodes.find((node) => node.nodeName === "html");
   const body = htmlNode.childNodes.find((node) => node.nodeName === "body");
@@ -300,9 +323,15 @@ const generatePrevNextNav = (
  </tr>
 <table>`;
 };
-const extractMarkdownFileTitle = (markdownFile) => {
+const mdFileAsHtml = (markdownFile) => {
   const mdAsHtml = marked.parse(markdownFile.content);
-  const htmlTree = parseHtml({ html: mdAsHtml });
+  // eslint-disable-next-line no-control-regex
+  const mdSafe = mdAsHtml.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
+  return mdSafe;
+};
+const extractMarkdownFileTitle = (markdownFile) => {
+  const mdHtml = mdFileAsHtml(markdownFile);
+  const htmlTree = parseHtml({ html: mdHtml });
   let title;
   findHtmlNode(htmlTree, (node) => {
     if (node.nodeName === "#comment") {
@@ -361,6 +390,6 @@ const escapeHtml = (string) => {
 };
 
 syncMarkdown(new URL("./users/users.md", import.meta.url));
-// syncMarkdown(
-//   new URL("../packages/independent/assert/tests/readme.md", import.meta.url),
-// );
+syncMarkdown(
+  new URL("../packages/independent/assert/tests/readme.md", import.meta.url),
+);
