@@ -4,9 +4,9 @@ throw new Error("here");
 
 ```console
 Error: here
-  at @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/basic/side_effects_basic.test.mjs:34:11
-  at startTesting (@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/basic/side_effects_basic.test.mjs:20:11)
-  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/basic/side_effects_basic.test.mjs:28:1
+  at base/side_effects_basic.test.mjs:34:11
+  at startTesting (base/side_effects_basic.test.mjs:20:11)
+  at async base/side_effects_basic.test.mjs:28:1
 ```
 
 <sub>
