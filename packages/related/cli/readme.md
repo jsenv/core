@@ -8,7 +8,7 @@ _@jsenv/cli_ is a NPM package meant to run via the command below:
 npx @jsenv/cli
 ```
 
-> If you don't have `npx` command you must [install Node.js](https://nodejs.org/en/download/package-manager)
+> If you have Node.js you can use  `npx` command. Otherwise you must [install Node.js](https://nodejs.org/en/download/package-manager)
 
 The command init jsenv in a directory. It can be a new directory or an existing one.
 
