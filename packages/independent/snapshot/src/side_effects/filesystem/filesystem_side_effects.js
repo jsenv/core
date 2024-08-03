@@ -155,7 +155,7 @@ export const filesystemSideEffects = (
                     if (outDirectoryReason) {
                       const outUrlRelativeToCommonDirectory = urlToRelativeUrl(
                         text.urlInsideOutDirectory,
-                        options.sideEffectFileUrl,
+                        options.sideEffectMdFileUrl,
                       );
                       groupMd += `${"#".repeat(2)} ${urlRelativeToCommonDirectory}
 ${renderFileContent(
@@ -193,7 +193,7 @@ ${renderFileContent(
                     );
                     const commonDirectoryOutRelativeUrl = urlToRelativeUrl(
                       commonDirectoryOutUrl,
-                      options.sideEffectFileUrl,
+                      options.sideEffectMdFileUrl,
                       { preferRelativeNotation: true },
                     );
                     return {
@@ -242,7 +242,7 @@ ${renderFileContent(
                 outDirectoryReason,
               },
               render: {
-                md: ({ sideEffectFileUrl, generateOutFileUrl }) => {
+                md: ({ sideEffectMdFileUrl, generateOutFileUrl }) => {
                   const urlRelativeToBase = getUrlRelativeToBase(url);
                   if (outDirectoryReason) {
                     let urlInsideOutDirectory = getUrlInsideOutDirectory(
@@ -269,7 +269,7 @@ ${renderFileContent(
                     }
                     const outRelativeUrl = urlToRelativeUrl(
                       urlInsideOutDirectory,
-                      sideEffectFileUrl,
+                      sideEffectMdFileUrl,
                       {
                         preferRelativeNotation: true,
                       },

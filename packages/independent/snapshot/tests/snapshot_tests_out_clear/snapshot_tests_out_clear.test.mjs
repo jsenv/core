@@ -25,10 +25,7 @@ await snapshotTests(
 );
 {
   const actual = readFileStructureSync(
-    new URL(
-      "./side_effects/snapshot_tests_out_clear.test.mjs/",
-      import.meta.url,
-    ),
+    new URL("./snapshot_tests_out_clear.test.mjs/", import.meta.url),
   );
   const expect = {
     "0_first/first.txt": "",
@@ -52,10 +49,7 @@ await snapshotTests(
 );
 {
   const actual = readFileStructureSync(
-    new URL(
-      "./side_effects/snapshot_tests_out_clear.test.mjs/",
-      import.meta.url,
-    ),
+    new URL("./snapshot_tests_out_clear.test.mjs/", import.meta.url),
   );
   const expect = {
     "0_first/tata.txt": "",
