@@ -8,7 +8,7 @@ export const snapshotBuildTests = async (
   snapshotTests(testFileUrl, fnRegisteringTests, {
     filesystemActions: {
       "**": "compare",
-      "**/.jsenv/": "ignore",
+      "**/.jsenv/": "undo",
     },
     ...options,
   });

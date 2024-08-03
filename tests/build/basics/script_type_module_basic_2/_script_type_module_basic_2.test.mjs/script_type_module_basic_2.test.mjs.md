@@ -7,15 +7,14 @@
 ## 0_js_module
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
 
 ### 1/4 logs
 
-![img](script_type_module_basic_2/0_js_module/log_group.svg)
+![img](0_js_module/log_group.svg)
 
 <details>
   <summary>see without style</summary>
@@ -36,11 +35,11 @@ build "./main.html"
 
 ### 2/4 write 3 files into "./build/"
 
-see [./script_type_module_basic_2/0_js_module/build/](./script_type_module_basic_2/0_js_module/build/)
+see [./0_js_module/build/](./0_js_module/build/)
 
 ### 3/4 logs
 
-![img](script_type_module_basic_2/0_js_module/log_group_1.svg)
+![img](0_js_module/log_group_1.svg)
 
 <details>
   <summary>see without style</summary>
@@ -66,15 +65,14 @@ see [./script_type_module_basic_2/0_js_module/build/](./script_type_module_basic
 ## 1_js_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "60" },
 })
 ```
 
 ### 1/4 logs
 
-![img](script_type_module_basic_2/1_js_module_fallback/log_group.svg)
+![img](1_js_module_fallback/log_group.svg)
 
 <details>
   <summary>see without style</summary>
@@ -95,11 +93,11 @@ build "./main.html"
 
 ### 2/4 write 3 files into "./build/"
 
-see [./script_type_module_basic_2/1_js_module_fallback/build/](./script_type_module_basic_2/1_js_module_fallback/build/)
+see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 
 ### 3/4 logs
 
-![img](script_type_module_basic_2/1_js_module_fallback/log_group_1.svg)
+![img](1_js_module_fallback/log_group_1.svg)
 
 <details>
   <summary>see without style</summary>
@@ -125,8 +123,7 @@ see [./script_type_module_basic_2/1_js_module_fallback/build/](./script_type_mod
 ## 2_js_module_sourcemaps_file
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
   sourcemaps: "file",
 })
@@ -134,7 +131,7 @@ build({
 
 ### 1/4 logs
 
-![img](script_type_module_basic_2/2_js_module_sourcemaps_file/log_group.svg)
+![img](2_js_module_sourcemaps_file/log_group.svg)
 
 <details>
   <summary>see without style</summary>
@@ -155,11 +152,11 @@ build "./main.html"
 
 ### 2/4 write 4 files into "./build/"
 
-see [./script_type_module_basic_2/2_js_module_sourcemaps_file/build/](./script_type_module_basic_2/2_js_module_sourcemaps_file/build/)
+see [./2_js_module_sourcemaps_file/build/](./2_js_module_sourcemaps_file/build/)
 
 ### 3/4 logs
 
-![img](script_type_module_basic_2/2_js_module_sourcemaps_file/log_group_1.svg)
+![img](2_js_module_sourcemaps_file/log_group_1.svg)
 
 <details>
   <summary>see without style</summary>
