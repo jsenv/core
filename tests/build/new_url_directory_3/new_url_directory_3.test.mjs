@@ -1,16 +1,20 @@
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const run = ({ sourceDirectoryUrl, directoryReferenceEffect }) => {
+const run = ({
+  sourceDirectoryUrl,
+  directoryReferenceEffect,
+  runtimeCompat = { chrome: "98" },
+}) => {
   return build({
     sourceDirectoryUrl,
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.js": "main.js" },
     bundling: false,
     minification: false,
-    runtimeCompat: { chrome: "98" },
     assetManifest: true,
     directoryReferenceEffect,
+    runtimeCompat,
   });
 };
 
@@ -57,6 +61,14 @@ await snapshotBuildTests(
           import.meta.url,
         ),
         directoryReferenceEffect: "copy",
+      }));
+    test("8_resolve_ancestor", () =>
+      run({
+        sourceDirectoryUrl: new URL("./fixtures/4_ancestor/", import.meta.url),
+        directoryReferenceEffect: "resolve",
+        runtimeCompat: {
+          node: "16.14",
+        },
       }));
   },
   {

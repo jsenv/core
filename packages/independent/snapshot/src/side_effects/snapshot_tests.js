@@ -64,10 +64,6 @@ export const snapshotTests = async (
     return outFileUrl;
   };
   const outDirectoryUrl = generateOutFileUrl("");
-  const outDirectorySnapshot = takeDirectorySnapshot(
-    outDirectoryUrl,
-    filesystemActions,
-  );
   const sideEffectMdFileUrl = generateOutFileUrl(`${sourceFilename}.md`);
 
   const dirUrlMap = new Map();
@@ -88,7 +84,26 @@ export const snapshotTests = async (
   };
   const fnReturnValue = await fnRegisteringTest({ test });
 
-  const activeTestMap = onlyTestMap.size ? onlyTestMap : testMap;
+  let activeTestMap;
+  const toIgnoreActions = {};
+  if (onlyTestMap.size) {
+    activeTestMap = onlyTestMap;
+    for (const [scenario] of testMap) {
+      const testScenario = asValidFilename(scenario);
+      const generateScenarioOutFileUrl = (outfilename) => {
+        return generateOutFileUrl(`${testScenario}/${outfilename}`);
+      };
+      const scenarioOutDirectoryUrl = generateScenarioOutFileUrl("");
+      toIgnoreActions[scenarioOutDirectoryUrl] = "ignore";
+    }
+  } else {
+    activeTestMap = testMap;
+  }
+  // ignore tout ceux aui sont désactivé
+  const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl, {
+    ...filesystemActions,
+    ...toIgnoreActions,
+  });
   const captureSideEffects = createCaptureSideEffects({
     sourceFileUrl,
     rootDirectoryUrl,
