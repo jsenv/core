@@ -67,6 +67,9 @@ export const getCorePlugins = ({
     jsenvPluginProtocolFile({
       magicExtensions,
       magicDirectoryIndex,
+      directoryReferenceEffect: referenceAnalysis
+        ? referenceAnalysis.directoryReferenceEffect
+        : undefined,
     }),
     jsenvPluginProtocolHttp(),
     ...(nodeEsmResolution

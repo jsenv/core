@@ -10,6 +10,7 @@ import { pickContentType } from "@jsenv/server";
 import {
   ensurePathnameTrailingSlash,
   urlIsInsideOf,
+  urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
@@ -34,6 +35,7 @@ const html404AndParentDirFileUrl = new URL(
 const htmlFileUrlForDirectory = new URL("./directory.html", import.meta.url);
 
 export const jsenvPluginProtocolFile = ({
+  directoryReferenceEffect = "error",
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
@@ -50,11 +52,6 @@ export const jsenvPluginProtocolFile = ({
         if (reference.isInline) {
           return null;
         }
-        // ignore root file url
-        if (reference.url === "file:///" || reference.url === "file://") {
-          reference.leadsToADirectory = true;
-          return `ignore:file:///`;
-        }
         // ignore "./" on new URL("./")
         // if (
         //   reference.subtype === "new_url_first_arg" &&
@@ -62,10 +59,6 @@ export const jsenvPluginProtocolFile = ({
         // ) {
         //   return `ignore:${reference.url}`;
         // }
-        // ignore all new URL second arg
-        if (reference.subtype === "new_url_second_arg") {
-          return `ignore:${reference.url}`;
-        }
 
         const urlObject = new URL(reference.url);
         let stat;
@@ -116,6 +109,59 @@ export const jsenvPluginProtocolFile = ({
           return null;
         }
         reference.leadsToADirectory = stat && stat.isDirectory();
+        if (reference.url === "file:///" || reference.url === "file://") {
+          reference.leadsToADirectory = true;
+          return `ignore:file:///`;
+        }
+        // ignore all new URL second arg
+        if (reference.subtype === "new_url_second_arg") {
+          return `ignore:${reference.url}`;
+        }
+
+        if (reference.ownerUrlInfo.type === "directory") {
+          reference.dirnameHint = reference.ownerUrlInfo.filenameHint;
+        }
+        if (!reference.url.startsWith("file:")) {
+          return null;
+        }
+        pathname = new URL(url).pathname;
+        if (pathname[pathname.length - 1] !== "/") {
+          return null;
+        }
+        // we know we are referencing a directory, now what?
+        reference.expectedType = "directory";
+        if (reference.type === "filesystem") {
+          reference.filenameHint = `${
+            reference.ownerUrlInfo.filenameHint
+          }${urlToFilename(reference.url)}/`;
+        } else {
+          reference.filenameHint = `${urlToFilename(reference.url)}/`;
+        }
+        let actionForDirectory;
+        if (reference.type === "a_href") {
+          actionForDirectory = "copy";
+        } else if (reference.type === "filesystem") {
+          actionForDirectory = "copy";
+        } else if (typeof directoryReferenceEffect === "string") {
+          actionForDirectory = directoryReferenceEffect;
+        } else if (typeof directoryReferenceEffect === "function") {
+          actionForDirectory = directoryReferenceEffect(reference);
+        } else {
+          actionForDirectory = "error";
+        }
+        reference.actionForDirectory = actionForDirectory;
+        if (actionForDirectory !== "copy") {
+          reference.isWeak = true;
+        }
+        if (actionForDirectory === "error") {
+          const error = new Error("Reference leads to a directory");
+          error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
+          throw error;
+        }
+        if (actionForDirectory === "preserve") {
+          return `ignore:${reference.specifier}`;
+        }
+
         const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
         const resolvedUrl = `${urlRaw}${search}${hash}`;
         return resolvedUrl;
