@@ -21,13 +21,11 @@ export const replaceFluctuatingValues = (
   {
     stringType,
     rootDirectoryUrl,
-    localhostUrl,
     fileUrl,
     preserveAnsi,
     // for unit test
     replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
       rootDirectoryUrl,
-      localhostUrl,
     }),
   } = {},
 ) => {
@@ -191,6 +189,12 @@ const replaceInObject = (object, { replace }) => {
 };
 
 const replaceHttpUrls = (source) => {
+  source = source.replace(/(https?):\/\/localhost:\d+/, (match, protocol) => {
+    return `${protocol}://localhost`;
+  });
+  source = source.replace(/(https?):\/\/\[::1\]:\d+/, (match, protocol) => {
+    return `${protocol}://[::1]`;
+  });
   return source;
   // return source.replace(/(?:https?|ftp):\/\/\S+[\w/]/g, (match) => {
   //   const lastChar = match[match.length - 1];

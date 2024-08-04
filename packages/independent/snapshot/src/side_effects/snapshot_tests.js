@@ -86,7 +86,7 @@ export const snapshotTests = async (
     }
     onlyTestMap.set(scenario, { fn, options, callSite: getCallerLocation(2) });
   };
-  fnRegisteringTest({ test });
+  const fnReturnValue = await fnRegisteringTest({ test });
 
   const activeTestMap = onlyTestMap.size ? onlyTestMap : testMap;
   const captureSideEffects = createCaptureSideEffects({
@@ -115,7 +115,6 @@ export const snapshotTests = async (
     markdown += "\n\n";
     markdown += generatedByLink;
   }
-
   const scenarioDirs = [];
   for (const [scenario, { fn, callSite }] of activeTestMap) {
     markdown += "\n\n";
@@ -142,6 +141,9 @@ export const snapshotTests = async (
       errorMessageTransform,
     });
     markdown += sideEffectsMarkdown;
+  }
+  if (typeof fnReturnValue === "function") {
+    await fnReturnValue();
   }
   // if (sideEffectFilePattern === "./side_effects/[filename]/[filename].md") {
   //   const scenarioParentDirUrl = new URL("./", sideEffectFileUrl);

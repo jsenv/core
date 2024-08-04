@@ -58,7 +58,6 @@ export const createWellKnown = (name, replacement = name) => {
 
 export const createReplaceFilesystemWellKnownValues = ({
   rootDirectoryUrl,
-  localhostUrl,
   // for unit tests
   isWindows = process.platform === "win32",
   ancestorPackagesDisabled,
@@ -127,31 +126,8 @@ export const createReplaceFilesystemWellKnownValues = ({
       }
     };
   };
-  const addWellKnownUrl = (url, replacement) => {
-    const wellKnownUrl = {
-      url,
-      replace: (string) => {
-        return string.replaceAll(url, replacement);
-      },
-    };
-    wellKownUrlArray.push(wellKnownUrl);
-    return () => {
-      const urlIndex = wellKownUrlArray.indexOf(wellKnownUrl);
-      if (urlIndex > -1) {
-        wellKownUrlArray.splice(urlIndex, 1);
-      }
-    };
-  };
   if (rootDirectoryUrl) {
     addWellKnownFileUrl(rootDirectoryUrl, WELL_KNOWN_ROOT);
-  }
-  if (localhostUrl) {
-    addWellKnownUrl(
-      localhostUrl,
-      localhostUrl.startsWith("https")
-        ? "https://localhost"
-        : "http://localhost",
-    );
   }
   /*
    * When running code inside a node project ancestor packages

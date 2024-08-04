@@ -13,7 +13,7 @@ import {
 } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
 import { URL_META } from "@jsenv/url-meta";
-import { urlToRelativeUrl } from "@jsenv/urls";
+import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, readFileSync } from "node:fs";
 
 import { defaultRuntimeCompat } from "../build/build.js";
@@ -26,6 +26,8 @@ import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events/jsenv_plugin_server_events_client_injection.js";
 import { createServerEventsDispatcher } from "../plugins/server_events/server_events_dispatcher.js";
 import { parseUserAgentHeader } from "./user_agent.js";
+
+const jsenvCoreDirectoryUrl = new URL("../../", import.meta.url);
 
 /**
  * Start a server for source files:
@@ -105,7 +107,10 @@ export const startDevServer = async ({
       sourceDirectoryUrl,
     );
     if (outDirectoryUrl === undefined) {
-      if (process.env.CAPTURING_SIDE_EFFECTS) {
+      if (
+        process.env.CAPTURING_SIDE_EFFECTS ||
+        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl)
+      ) {
         outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
       } else {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);

@@ -30,9 +30,7 @@ try {
     },
   );
   const serverWarnings = warnCalls
-    .map((warnCall) =>
-      replaceFluctuatingValues(warnCall, { localhostUrl: devServer.origin }),
-    )
+    .map((warnCall) => replaceFluctuatingValues(warnCall))
     .join("\n");
   const serverWarningsFileUrl = new URL(
     "./output/server_warnings.txt",
