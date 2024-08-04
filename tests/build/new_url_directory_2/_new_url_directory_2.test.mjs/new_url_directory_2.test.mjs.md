@@ -47,9 +47,9 @@ see [./0_copy/build/](./0_copy/build/)
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- js   : 3 (150 B / 76 %)
-- other: 2 (48 B / 24 %)
-- total: 5 (198 B / 100 %)
+- js   : 3 (150 B / 82 %)
+- other: 2 (34 B / 18 %)
+- total: 5 (184 B / 100 %)
 --------------------
 ```
 

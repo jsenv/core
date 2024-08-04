@@ -41,7 +41,7 @@ base/client/main.html:15:40
 14 |     <script type="module">
 15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
                                             ^
-  at redirectReference (@jsenv/core/src/plugins/protocol_file/jsenv_plugin_protocol_file.js:157:25)
+  at redirectReference (@jsenv/core/src/plugins/directory_reference_effect/jsenv_plugin_directory_reference_effect.js:53:23)
   at callHook (@jsenv/core/src/plugins/plugin_controller.js:183:25)
   at Object.callHooks (@jsenv/core/src/plugins/plugin_controller.js:224:29)
   at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:209:26)

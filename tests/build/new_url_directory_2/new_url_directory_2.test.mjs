@@ -8,9 +8,7 @@ const run = () => {
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.js": "main.js" },
     runtimeCompat: { node: "19" },
-    referenceAnalysis: {
-      directoryReferenceEffect: "copy",
-    },
+    directoryReferenceEffect: "copy",
   });
 };
 
