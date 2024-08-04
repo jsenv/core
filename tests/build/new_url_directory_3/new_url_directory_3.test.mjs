@@ -19,19 +19,26 @@ const run = ({ sourceDirectoryUrl, directoryReferenceEffect }) => {
 await snapshotBuildTests(
   import.meta.url,
   ({ test }) => {
-    test("0_resolve_root_dir", () =>
+    test("0_resolve_root", () =>
       run({
         sourceDirectoryUrl: new URL("./fixtures/0_root/", import.meta.url),
         directoryReferenceEffect: "resolve",
       }));
-    test("1_resolve_root_and_foo", () =>
+    test("1_resolve_foo", () =>
+      run({
+        sourceDirectoryUrl: new URL("./fixtures/1_foo/", import.meta.url),
+        directoryReferenceEffect: "resolve",
+      }));
+    test("2_resolve_root_and_foo", () =>
       run({
         sourceDirectoryUrl: new URL(
-          "./fixtures/1_root_and_foo/",
+          "./fixtures/2_root_and_foo/",
           import.meta.url,
         ),
         directoryReferenceEffect: "resolve",
       }));
+    // TODO: foo is then referenced to copy
+
     // test("1_preserve", () =>
     //   run({
     //     directoryReferenceEffect: "preserve",

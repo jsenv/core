@@ -17,6 +17,8 @@ export const jsenvPluginDirectoryReferenceAnalysis = ({
       if (pathname[pathname.length - 1] !== "/") {
         return null;
       }
+      // we know we are referencing a directory, now what?
+      reference.expectedType = "directory";
       if (reference.type === "filesystem") {
         reference.filenameHint = `${
           reference.ownerUrlInfo.filenameHint
@@ -24,20 +26,12 @@ export const jsenvPluginDirectoryReferenceAnalysis = ({
       } else {
         reference.filenameHint = `${urlToFilename(reference.url)}/`;
       }
-
-      reference.expectedType = "directory";
-      // we know we are referencing a directory, now what?
-      if (reference.type === "a_href") {
-        reference.actionForDirectory = "ignore";
-        reference.isWeak = true;
-        return null;
-      }
-      if (reference.type === "filesystem") {
-        reference.actionForDirectory = "copy";
-        return null;
-      }
       let actionForDirectory;
-      if (typeof directoryReferenceEffect === "string") {
+      if (reference.type === "a_href") {
+        actionForDirectory = "copy";
+      } else if (reference.type === "filesystem") {
+        actionForDirectory = "copy";
+      } else if (typeof directoryReferenceEffect === "string") {
         actionForDirectory = directoryReferenceEffect;
       } else if (typeof directoryReferenceEffect === "function") {
         actionForDirectory = directoryReferenceEffect(reference);
@@ -63,18 +57,10 @@ export const jsenvPluginDirectoryReferenceAnalysis = ({
         if (urlInfo.contentType !== "application/json") {
           return null;
         }
-        if (urlInfo.context.dev) {
-          return null;
-        }
-        const isShapeBuildStep = urlInfo.kitchen.context.buildStep === "shape";
-        let originalDirectoryReference;
-        if (isShapeBuildStep) {
-          originalDirectoryReference = urlInfo.firstReference;
-        } else {
-          let firstReferenceCopy = urlInfo.firstReference;
-          originalDirectoryReference =
-            findOriginalDirectoryReference(firstReferenceCopy);
-        }
+        // const isShapeBuildStep = urlInfo.kitchen.context.buildStep === "shape";
+        const originalDirectoryReference = findOriginalDirectoryReference(
+          urlInfo.firstReference,
+        );
         const directoryRelativeUrl = urlToRelativeUrl(
           urlInfo.url,
           urlInfo.context.rootDirectoryUrl,
@@ -101,7 +87,7 @@ export const jsenvPluginDirectoryReferenceAnalysis = ({
   };
 };
 
-const findOriginalDirectoryReference = (firstReferenceAskingCopy) => {
+const findOriginalDirectoryReference = (firstReference) => {
   const findNonFileSystemAncestor = (urlInfo) => {
     for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
       if (referenceFromOther.type !== "filesystem") {
@@ -111,8 +97,8 @@ const findOriginalDirectoryReference = (firstReferenceAskingCopy) => {
     }
     return null;
   };
-  if (firstReferenceAskingCopy.type !== "filesystem") {
-    return firstReferenceAskingCopy;
+  if (firstReference.type !== "filesystem") {
+    return firstReference;
   }
-  return findNonFileSystemAncestor(firstReferenceAskingCopy.ownerUrlInfo);
+  return findNonFileSystemAncestor(firstReference.ownerUrlInfo);
 };

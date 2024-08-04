@@ -16,6 +16,7 @@ import {
   ensurePathnameTrailingSlash,
   injectQueryParamIntoSpecifierWithoutEncoding,
   renderUrlOrRelativeUrlFilename,
+  urlIsInsideOf,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
@@ -465,6 +466,9 @@ export const createBuildSpecifierManager = ({
     if (reference.type === "sourcemap_comment") {
       return false;
     }
+    if (reference.expectedType === "directory") {
+      return true;
+    }
     // specifier comes from "normalize" hook done a bit earlier in this file
     // we want to get back their build url to access their infos
     const referencedUrlInfo = reference.urlInfo;
@@ -477,6 +481,7 @@ export const createBuildSpecifierManager = ({
   const prepareVersioning = () => {
     const contentOnlyVersionMap = new Map();
     const urlInfoToContainedPlaceholderSetMap = new Map();
+    const directoryUrlInfoSet = new Set();
     generate_content_only_versions: {
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
@@ -532,6 +537,9 @@ export const createBuildSpecifierManager = ({
           );
           const contentVersion = generateVersion([content], versionLength);
           contentOnlyVersionMap.set(urlInfo, contentVersion);
+        },
+        {
+          directoryUrlInfoSet,
         },
       );
     }
@@ -609,6 +617,35 @@ export const createBuildSpecifierManager = ({
         }
       }
     }
+
+    generate_directory_versions: {
+      // we should grab all the files inside this directory
+      // they will influence his versioning
+      for (const directoryUrlInfo of directoryUrlInfoSet) {
+        const directoryUrl = directoryUrlInfo.url;
+        // const urlInfoInsideThisDirectorySet = new Set();
+        const versionsInfluencingThisDirectorySet = new Set();
+        for (const [url, urlInfo] of finalKitchen.graph.urlInfoMap) {
+          if (!urlIsInsideOf(url, directoryUrl)) {
+            continue;
+          }
+          // ideally we should exclude eventual directories as the are redundant
+          // with the file they contains
+          const version = versionMap.get(urlInfo);
+          if (version !== undefined) {
+            versionsInfluencingThisDirectorySet.add(version);
+          }
+        }
+        const contentVersion =
+          versionsInfluencingThisDirectorySet.size === 0
+            ? "empty"
+            : generateVersion(
+                versionsInfluencingThisDirectorySet,
+                versionLength,
+              );
+        versionMap.set(directoryUrlInfo, contentVersion);
+      }
+    }
   };
 
   const applyVersioningOnBuildSpecifier = (buildSpecifier, reference) => {
@@ -620,6 +657,9 @@ export const createBuildSpecifierManager = ({
       return buildSpecifier;
     }
     const version = versionMap.get(reference.urlInfo);
+    if (version === undefined) {
+      return buildSpecifier;
+    }
     const buildSpecifierVersioned = injectVersionIntoBuildSpecifier({
       buildSpecifier,
       versioningMethod,
