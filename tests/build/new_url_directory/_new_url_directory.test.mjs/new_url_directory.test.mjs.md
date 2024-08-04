@@ -7,8 +7,7 @@
 ## 0_error
 
 ```js
-build({
-  ...testParams,
+run({
   directoryReferenceEffect: "error",
 })
 ```
@@ -42,7 +41,7 @@ base/client/main.html:15:40
 14 |     <script type="module">
 15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
                                             ^
-  at redirectReference (@jsenv/core/src/plugins/protocol_file/jsenv_plugin_protocol_file.js:138:27)
+  at redirectReference (@jsenv/core/src/plugins/protocol_file/jsenv_plugin_protocol_file.js:142:27)
   at callHook (@jsenv/core/src/plugins/plugin_controller.js:183:25)
   at Object.callHooks (@jsenv/core/src/plugins/plugin_controller.js:224:29)
   at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:209:26)
@@ -57,8 +56,7 @@ base/client/main.html:15:40
 ## 1_copy
 
 ```js
-build({
-  ...testParams,
+run({
   directoryReferenceEffect: "copy",
 })
 ```

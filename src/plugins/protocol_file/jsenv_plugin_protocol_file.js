@@ -98,9 +98,9 @@ export const jsenvPluginProtocolFile = ({
         }
 
         let url = urlObject.href;
-        const shouldApplyDilesystemMagicResolution =
+        const shouldApplyFilesystemMagicResolution =
           reference.type === "js_import";
-        if (shouldApplyDilesystemMagicResolution) {
+        if (shouldApplyFilesystemMagicResolution) {
           const filesystemResolution = applyFileSystemMagicResolution(url, {
             fileStat: stat,
             magicDirectoryIndex,
@@ -134,13 +134,17 @@ export const jsenvPluginProtocolFile = ({
           } else {
             actionForDirectory = "error";
           }
+          reference.actionForDirectory = actionForDirectory;
+          if (actionForDirectory !== "copy") {
+            reference.isWeak = true;
+          }
           if (actionForDirectory === "error") {
             const error = new Error("Reference leads to a directory");
             error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
             throw error;
           }
           if (actionForDirectory === "preserve") {
-            return `ignore:${url}${search}${hash}`;
+            return `ignore:${reference.specifier}`;
           }
         }
         const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
@@ -197,18 +201,19 @@ export const jsenvPluginProtocolFile = ({
           return null;
         }
         const urlObject = new URL(urlInfo.url);
-        if (urlInfo.firstReference.leadsToADirectory) {
+        const { firstReference } = urlInfo;
+        if (firstReference.leadsToADirectory) {
           if (!urlInfo.filenameHint) {
-            if (urlInfo.firstReference.type === "filesystem") {
+            if (firstReference.type === "filesystem") {
               urlInfo.filenameHint = `${
-                urlInfo.firstReference.ownerUrlInfo.filenameHint
+                firstReference.ownerUrlInfo.filenameHint
               }${urlToFilename(urlInfo.url)}/`;
             } else {
               urlInfo.filenameHint = `${urlToFilename(urlInfo.url)}/`;
             }
           }
           const directoryContentArray = readdirSync(urlObject);
-          if (urlInfo.firstReference.type === "filesystem") {
+          if (firstReference.type === "filesystem") {
             const content = JSON.stringify(directoryContentArray, null, "  ");
             return {
               type: "directory",
@@ -238,10 +243,9 @@ export const jsenvPluginProtocolFile = ({
         }
         if (
           !urlInfo.dirnameHint &&
-          urlInfo.firstReference.ownerUrlInfo.type === "directory"
+          firstReference.ownerUrlInfo.type === "directory"
         ) {
-          urlInfo.dirnameHint =
-            urlInfo.firstReference.ownerUrlInfo.filenameHint;
+          urlInfo.dirnameHint = firstReference.ownerUrlInfo.filenameHint;
         }
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
         if (contentType === "text/html") {
