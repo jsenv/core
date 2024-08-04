@@ -13,7 +13,9 @@ const run = ({ directoryReferenceEffect }) => {
     minification: false,
     runtimeCompat: { chrome: "98" },
     assetManifest: true,
-    directoryReferenceEffect,
+    referenceAnalysis: {
+      directoryReferenceEffect,
+    },
   });
 };
 

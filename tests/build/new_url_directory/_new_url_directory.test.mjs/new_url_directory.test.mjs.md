@@ -41,7 +41,7 @@ base/client/main.html:15:40
 14 |     <script type="module">
 15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
                                             ^
-  at redirectReference (@jsenv/core/src/plugins/protocol_file/jsenv_plugin_protocol_file.js:142:27)
+  at redirectReference (@jsenv/core/src/plugins/reference_analysis/directory/jsenv_plugin_directory_reference_analysis.js:46:23)
   at callHook (@jsenv/core/src/plugins/plugin_controller.js:183:25)
   at Object.callHooks (@jsenv/core/src/plugins/plugin_controller.js:224:29)
   at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:209:26)
@@ -98,8 +98,8 @@ see [./1_copy/build/](./1_copy/build/)
 --- build files ---  
 - html : 1 (746 B / 91 %)
 - js   : 1 (22 B / 3 %)
-- other: 2 (55 B / 6 %)
-- total: 4 (823 B / 100 %)
+- other: 2 (50 B / 6 %)
+- total: 4 (818 B / 100 %)
 --------------------
 ```
 
