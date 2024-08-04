@@ -1,26 +1,41 @@
 import { build } from "@jsenv/core";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const run = ({ directoryReferenceEffect }) => {
+const run = ({ sourceDirectoryUrl, directoryReferenceEffect }) => {
   return build({
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl,
     buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./main.html": "main.html" },
+    entryPoints: { "./main.js": "main.js" },
     bundling: false,
     minification: false,
     runtimeCompat: { chrome: "98" },
     assetManifest: true,
-    directoryReferenceEffect,
+    referenceAnalysis: {
+      directoryReferenceEffect,
+    },
   });
 };
 
-await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_resolve", () =>
-    run({
-      directoryReferenceEffect: "resolve",
-    }));
-  // test("1_preserve", () =>
-  //   run({
-  //     directoryReferenceEffect: "preserve",
-  //   }));
-});
+await snapshotBuildTests(
+  import.meta.url,
+  ({ test }) => {
+    test("0_resolve_root_dir", () =>
+      run({
+        sourceDirectoryUrl: new URL("./fixtures/0_root/", import.meta.url),
+        directoryReferenceEffect: "resolve",
+      }));
+    test("1_resolve_root_and_foo", () =>
+      run({
+        sourceDirectoryUrl: new URL(
+          "./fixtures/1_root_and_foo/",
+          import.meta.url,
+        ),
+        directoryReferenceEffect: "resolve",
+      }));
+    // test("1_preserve", () =>
+    //   run({
+    //     directoryReferenceEffect: "preserve",
+    //   }));
+  },
+  {},
+);

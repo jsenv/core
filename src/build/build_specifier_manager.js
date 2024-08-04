@@ -203,9 +203,6 @@ export const createBuildSpecifierManager = ({
       if (!generatedUrl.startsWith("file:")) {
         return null;
       }
-      if (reference.isWeak) {
-        return null;
-      }
       if (reference.type === "sourcemap_comment") {
         return null;
       }
@@ -582,24 +579,34 @@ export const createBuildSpecifierManager = ({
         }
         return setOfUrlInfluencingVersion;
       };
-      for (const [urlInfo, contentOnlyVersion] of contentOnlyVersionMap) {
-        const setOfUrlInfoInfluencingVersion =
-          getSetOfUrlInfoInfluencingVersion(urlInfo);
-        const versionPartSet = new Set();
-        versionPartSet.add(contentOnlyVersion);
-        for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
-          const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
-            urlInfoInfluencingVersion,
-          );
-          if (!otherUrlInfoContentVersion) {
-            throw new Error(
-              `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${urlInfo.url})`,
+      if (contentOnlyVersionMap.size === 1) {
+        const [contentOnlyUrlInfo, contentOnlyVersion] =
+          contentOnlyVersionMap[Symbol.iterator]().next().value;
+        const version = generateVersion([contentOnlyVersion], versionLength);
+        versionMap.set(contentOnlyUrlInfo, version);
+      } else {
+        for (const [
+          contentOnlyUrlInfo,
+          contentOnlyVersion,
+        ] of contentOnlyVersionMap) {
+          const setOfUrlInfoInfluencingVersion =
+            getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
+          const versionPartSet = new Set();
+          versionPartSet.add(contentOnlyVersion);
+          for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
+            const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
+              urlInfoInfluencingVersion,
             );
+            if (!otherUrlInfoContentVersion) {
+              throw new Error(
+                `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
+              );
+            }
+            versionPartSet.add(otherUrlInfoContentVersion);
           }
-          versionPartSet.add(otherUrlInfoContentVersion);
+          const version = generateVersion(versionPartSet, versionLength);
+          versionMap.set(contentOnlyUrlInfo, version);
         }
-        const version = generateVersion(versionPartSet, versionLength);
-        versionMap.set(urlInfo, version);
       }
     }
   };
@@ -722,9 +729,9 @@ export const createBuildSpecifierManager = ({
             generateReplacement(urlInfo.firstReference);
           }
           if (urlInfo.firstReference.type === "side_effect_file") {
+            // side effect stuff must be generated too
             generateReplacement(urlInfo.firstReference);
           }
-          // side effect stuff must be generated too
           if (mayUsePlaceholder(urlInfo)) {
             const contentBeforeReplace = urlInfo.content;
             const { content, sourcemap } = placeholderAPI.replaceAll(

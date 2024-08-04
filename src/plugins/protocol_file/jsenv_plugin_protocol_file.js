@@ -10,7 +10,6 @@ import { pickContentType } from "@jsenv/server";
 import {
   ensurePathnameTrailingSlash,
   urlIsInsideOf,
-  urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
@@ -38,7 +37,6 @@ export const jsenvPluginProtocolFile = ({
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
-  directoryReferenceEffect = "error",
 }) => {
   return [
     {
@@ -58,12 +56,12 @@ export const jsenvPluginProtocolFile = ({
           return `ignore:file:///`;
         }
         // ignore "./" on new URL("./")
-        if (
-          reference.subtype === "new_url_first_arg" &&
-          reference.specifier === "./"
-        ) {
-          return `ignore:${reference.url}`;
-        }
+        // if (
+        //   reference.subtype === "new_url_first_arg" &&
+        //   reference.specifier === "./"
+        // ) {
+        //   return `ignore:${reference.url}`;
+        // }
         // ignore all new URL second arg
         if (reference.subtype === "new_url_second_arg") {
           return `ignore:${reference.url}`;
@@ -118,35 +116,6 @@ export const jsenvPluginProtocolFile = ({
           return null;
         }
         reference.leadsToADirectory = stat && stat.isDirectory();
-        if (reference.leadsToADirectory) {
-          let actionForDirectory;
-          if (reference.type === "a_href") {
-            actionForDirectory = "ignore";
-          } else if (
-            reference.type === "http_request" ||
-            reference.type === "filesystem"
-          ) {
-            actionForDirectory = "copy";
-          } else if (typeof directoryReferenceEffect === "string") {
-            actionForDirectory = directoryReferenceEffect;
-          } else if (typeof directoryReferenceEffect === "function") {
-            actionForDirectory = directoryReferenceEffect(reference);
-          } else {
-            actionForDirectory = "error";
-          }
-          reference.actionForDirectory = actionForDirectory;
-          if (actionForDirectory !== "copy") {
-            reference.isWeak = true;
-          }
-          if (actionForDirectory === "error") {
-            const error = new Error("Reference leads to a directory");
-            error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
-            throw error;
-          }
-          if (actionForDirectory === "preserve") {
-            return `ignore:${reference.specifier}`;
-          }
-        }
         const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
         const resolvedUrl = `${urlRaw}${search}${hash}`;
         return resolvedUrl;
@@ -203,15 +172,6 @@ export const jsenvPluginProtocolFile = ({
         const urlObject = new URL(urlInfo.url);
         const { firstReference } = urlInfo;
         if (firstReference.leadsToADirectory) {
-          if (!urlInfo.filenameHint) {
-            if (firstReference.type === "filesystem") {
-              urlInfo.filenameHint = `${
-                firstReference.ownerUrlInfo.filenameHint
-              }${urlToFilename(urlInfo.url)}/`;
-            } else {
-              urlInfo.filenameHint = `${urlToFilename(urlInfo.url)}/`;
-            }
-          }
           const directoryContentArray = readdirSync(urlObject);
           if (firstReference.type === "filesystem") {
             const content = JSON.stringify(directoryContentArray, null, "  ");
@@ -240,12 +200,6 @@ export const jsenvPluginProtocolFile = ({
             contentType: "application/json",
             content: JSON.stringify(directoryContentArray, null, "  "),
           };
-        }
-        if (
-          !urlInfo.dirnameHint &&
-          firstReference.ownerUrlInfo.type === "directory"
-        ) {
-          urlInfo.dirnameHint = firstReference.ownerUrlInfo.filenameHint;
         }
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
         if (contentType === "text/html") {

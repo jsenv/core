@@ -1,8 +1,63 @@
-import { urlToRelativeUrl } from "@jsenv/urls";
+import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 
-export const jsenvPluginDirectoryReferenceAnalysis = () => {
+export const jsenvPluginDirectoryReferenceAnalysis = ({
+  directoryReferenceEffect = "error",
+}) => {
   return {
     name: "jsenv:directory_reference_analysis",
+    redirectReference: (reference) => {
+      if (reference.ownerUrlInfo.type === "directory") {
+        reference.dirnameHint = reference.ownerUrlInfo.filenameHint;
+      }
+
+      const { pathname } = new URL(reference.url);
+      if (!reference.url.startsWith("file:")) {
+        return null;
+      }
+      if (pathname[pathname.length - 1] !== "/") {
+        return null;
+      }
+      if (reference.type === "filesystem") {
+        reference.filenameHint = `${
+          reference.ownerUrlInfo.filenameHint
+        }${urlToFilename(reference.url)}/`;
+      } else {
+        reference.filenameHint = `${urlToFilename(reference.url)}/`;
+      }
+
+      reference.expectedType = "directory";
+      // we know we are referencing a directory, now what?
+      if (reference.type === "a_href") {
+        reference.actionForDirectory = "ignore";
+        reference.isWeak = true;
+        return null;
+      }
+      if (reference.type === "filesystem") {
+        reference.actionForDirectory = "copy";
+        return null;
+      }
+      let actionForDirectory;
+      if (typeof directoryReferenceEffect === "string") {
+        actionForDirectory = directoryReferenceEffect;
+      } else if (typeof directoryReferenceEffect === "function") {
+        actionForDirectory = directoryReferenceEffect(reference);
+      } else {
+        actionForDirectory = "error";
+      }
+      reference.actionForDirectory = actionForDirectory;
+      if (actionForDirectory !== "copy") {
+        reference.isWeak = true;
+      }
+      if (actionForDirectory === "error") {
+        const error = new Error("Reference leads to a directory");
+        error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
+        throw error;
+      }
+      if (actionForDirectory === "preserve") {
+        return `ignore:${reference.specifier}`;
+      }
+      return null;
+    },
     transformUrlContent: {
       directory: async (urlInfo) => {
         if (urlInfo.contentType !== "application/json") {

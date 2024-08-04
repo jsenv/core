@@ -31,7 +31,6 @@ export const getCorePlugins = ({
   nodeEsmResolution = {},
   magicExtensions,
   magicDirectoryIndex,
-  directoryReferenceEffect,
   supervisor,
   injections,
   transpilation = true,
@@ -66,7 +65,6 @@ export const getCorePlugins = ({
        - All the rest uses web standard url resolution
      */
     jsenvPluginProtocolFile({
-      directoryReferenceEffect,
       magicExtensions,
       magicDirectoryIndex,
     }),

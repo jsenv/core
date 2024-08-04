@@ -105,7 +105,6 @@ export const build = async ({
   nodeEsmResolution,
   magicExtensions,
   magicDirectoryIndex,
-  directoryReferenceEffect,
   scenarioPlaceholders,
   injections,
   transpilation = {},
@@ -295,7 +294,6 @@ build ${entryPointKeys.length} entry points`);
           nodeEsmResolution,
           magicExtensions,
           magicDirectoryIndex,
-          directoryReferenceEffect,
           injections,
           transpilation: {
             babelHelpersAsImport: !explicitJsModuleConversion,
