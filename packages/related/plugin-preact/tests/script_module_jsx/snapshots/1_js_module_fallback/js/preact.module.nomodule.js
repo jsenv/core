@@ -341,10 +341,7 @@ System.register([], function (_export, _context) {
   return {
     setters: [],
     execute: function () {
-      h = {};
-      p = [];
-      v = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i;
-      y = Array.isArray;
+      h = {}, p = [], v = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i, y = Array.isArray;
       n = p.slice, _export("options", l = {
         __e: function (n, l, u, t) {
           for (var i, o, r; l = l.__;) if ((i = l.__c) && !i.__) try {

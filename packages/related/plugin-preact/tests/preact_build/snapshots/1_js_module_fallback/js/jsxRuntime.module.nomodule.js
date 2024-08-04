@@ -103,11 +103,8 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
     }],
     execute: function () {
       t = /["&<]/;
-      o = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i;
-      f = 0;
-      i = Array.isArray;
-      c = {};
-      p = /[A-Z]/g;
+      o = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i, f = 0, i = Array.isArray;
+      c = {}, p = /[A-Z]/g;
     }
   };
 });

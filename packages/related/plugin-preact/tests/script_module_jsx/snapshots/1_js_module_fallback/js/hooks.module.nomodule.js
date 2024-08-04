@@ -159,15 +159,7 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
       n = _distPreactModuleJs.options;
     }],
     execute: function () {
-      o = 0;
-      f = [];
-      c = n;
-      e = c.__b;
-      a = c.__r;
-      v = c.diffed;
-      l = c.__c;
-      m = c.unmount;
-      s = c.__;
+      o = 0, f = [], c = n, e = c.__b, a = c.__r, v = c.diffed, l = c.__c, m = c.unmount, s = c.__;
       c.__b = function (n) {
         r = null, e && e(n);
       }, c.__ = function (n, t) {

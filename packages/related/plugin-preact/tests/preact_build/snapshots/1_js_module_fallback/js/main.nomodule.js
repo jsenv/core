@@ -31,8 +31,7 @@ System.register([__v__("/js/preact.module.nomodule.js"), __v__("/js/jsxRuntime.m
     }],
     execute: async function () {
       return _await(_context.import(__v__("/js/app.nomodule.js")), function (_context$import) {
-        _await$import = _context$import;
-        App = _await$import.App;
+        _await$import = _context$import, App = _await$import.App;
         render(_jsx(App, {}), document.querySelector("#app"));
         window.resolveResultPromise({
           spanContent: document.querySelector("#app span").innerHTML
