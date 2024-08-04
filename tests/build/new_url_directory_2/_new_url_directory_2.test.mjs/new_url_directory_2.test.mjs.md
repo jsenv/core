@@ -7,13 +7,7 @@
 ## 0_copy
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.js": "main.js" },
-  runtimeCompat: { node: "19" },
-  directoryReferenceEffect: "copy",
-})
+run()
 ```
 
 ### 1/4 logs
@@ -53,9 +47,9 @@ see [./0_copy/build/](./0_copy/build/)
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- js   : 3 (150 B / 82 %)
-- other: 2 (34 B / 18 %)
-- total: 5 (184 B / 100 %)
+- js   : 3 (150 B / 76 %)
+- other: 2 (48 B / 24 %)
+- total: 5 (198 B / 100 %)
 --------------------
 ```
 

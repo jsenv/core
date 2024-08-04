@@ -14,14 +14,13 @@
  */
 
 import { assert } from "@jsenv/assert";
+import { build } from "@jsenv/core";
+import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
+import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import { copyDirectorySync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
-
-import { build } from "@jsenv/core";
-import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 
 const test = async ({ name, ...rest }) => {
   const generateDist = async (step) => {
