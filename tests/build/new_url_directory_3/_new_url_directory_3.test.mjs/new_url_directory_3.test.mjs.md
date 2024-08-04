@@ -83,7 +83,7 @@ see [./3_preserve_root/build/main.js](./3_preserve_root/build/main.js)
 {}
 ```
 
-## 4_copy_root
+## 5_copy_root
 
 ```js
 run({
@@ -94,7 +94,7 @@ run({
 
 ### 1/2 write file "./build/0_root/main.js"
 
-see [./4_copy_root/build/0_root/main.js](./4_copy_root/build/0_root/main.js)
+see [./5_copy_root/build/0_root/main.js](./5_copy_root/build/0_root/main.js)
 
 ### 2/2 resolve
 
@@ -102,7 +102,7 @@ see [./4_copy_root/build/0_root/main.js](./4_copy_root/build/0_root/main.js)
 {}
 ```
 
-## 5_copy_foo
+## 6_copy_foo
 
 ```js
 run({
@@ -113,7 +113,29 @@ run({
 
 ### 1/2 write 3 files into "./build/"
 
-see [./5_copy_foo/build/](./5_copy_foo/build/)
+see [./6_copy_foo/build/](./6_copy_foo/build/)
+
+### 2/2 resolve
+
+```js
+{}
+```
+
+## 7_copy_fs_root
+
+```js
+run({
+  sourceDirectoryUrl: new URL(
+    "./fixtures/3_filesystem_root/",
+    import.meta.url,
+  ),
+  directoryReferenceEffect: "copy",
+})
+```
+
+### 1/2 write file "./build/main.js"
+
+see [./7_copy_fs_root/build/main.js](./7_copy_fs_root/build/main.js)
 
 ### 2/2 resolve
 
