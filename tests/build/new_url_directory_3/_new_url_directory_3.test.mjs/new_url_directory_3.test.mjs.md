@@ -13,50 +13,11 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](0_resolve_root/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.js"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write file "./build/main.js"
+### 1/2 write file "./build/main.js"
 
 see [./0_resolve_root/build/main.js](./0_resolve_root/build/main.js)
 
-### 3/4 logs
-
-![img](0_resolve_root/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- js   : 1 (257 B / 100 %)
-- total: 1 (257 B / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {}
@@ -71,50 +32,11 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](1_resolve_foo/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.js"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write file "./build/main.js"
+### 1/2 write file "./build/main.js"
 
 see [./1_resolve_foo/build/main.js](./1_resolve_foo/build/main.js)
 
-### 3/4 logs
-
-![img](1_resolve_foo/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- js   : 1 (265 B / 100 %)
-- total: 1 (265 B / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {}
@@ -132,50 +54,68 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](2_resolve_root_and_foo/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.js"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write file "./build/main.js"
+### 1/2 write file "./build/main.js"
 
 see [./2_resolve_root_and_foo/build/main.js](./2_resolve_root_and_foo/build/main.js)
 
-### 3/4 logs
+### 2/2 resolve
 
-![img](2_resolve_root_and_foo/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- js   : 1 (365 B / 100 %)
-- total: 1 (365 B / 100 %)
---------------------
+```js
+{}
 ```
 
-</details>
+## 3_preserve_root
 
+```js
+run({
+  sourceDirectoryUrl: new URL("./fixtures/0_root/", import.meta.url),
+  directoryReferenceEffect: "preserve",
+})
+```
 
-### 4/4 resolve
+### 1/2 write file "./build/main.js"
+
+see [./3_preserve_root/build/main.js](./3_preserve_root/build/main.js)
+
+### 2/2 resolve
+
+```js
+{}
+```
+
+## 4_copy_root
+
+```js
+run({
+  sourceDirectoryUrl: new URL("./fixtures/0_root/", import.meta.url),
+  directoryReferenceEffect: "copy",
+})
+```
+
+### 1/2 write file "./build/0_root/main.js"
+
+see [./4_copy_root/build/0_root/main.js](./4_copy_root/build/0_root/main.js)
+
+### 2/2 resolve
+
+```js
+{}
+```
+
+## 5_copy_foo
+
+```js
+run({
+  sourceDirectoryUrl: new URL("./fixtures/1_foo/", import.meta.url),
+  directoryReferenceEffect: "copy",
+})
+```
+
+### 1/2 write 3 files into "./build/"
+
+see [./5_copy_foo/build/](./5_copy_foo/build/)
+
+### 2/2 resolve
 
 ```js
 {}

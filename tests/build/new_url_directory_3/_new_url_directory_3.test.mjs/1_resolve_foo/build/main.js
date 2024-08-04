@@ -1,10 +1,8 @@
 ;
 (function () {
-  var __versionMappings__ = {
-    "/foo/": "/foo/?v=empty"
-  };
+  var __versionMappings__ = {};
   window.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier;
   };
 })();
-export const fooDirectoryUrl = new URL(__v__("/foo/"), import.meta.url).href;
+export const fooDirectoryUrl = new URL("/foo/", import.meta.url).href;

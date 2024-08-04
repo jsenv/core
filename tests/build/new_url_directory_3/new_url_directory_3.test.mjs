@@ -37,12 +37,23 @@ await snapshotBuildTests(
         ),
         directoryReferenceEffect: "resolve",
       }));
-    // TODO: foo is then referenced to copy
-
-    // test("1_preserve", () =>
-    //   run({
-    //     directoryReferenceEffect: "preserve",
-    //   }));
+    test("3_preserve_root", () =>
+      run({
+        sourceDirectoryUrl: new URL("./fixtures/0_root/", import.meta.url),
+        directoryReferenceEffect: "preserve",
+      }));
+    test("4_copy_root", () =>
+      run({
+        sourceDirectoryUrl: new URL("./fixtures/0_root/", import.meta.url),
+        directoryReferenceEffect: "copy",
+      }));
+    test("5_copy_foo", () =>
+      run({
+        sourceDirectoryUrl: new URL("./fixtures/1_foo/", import.meta.url),
+        directoryReferenceEffect: "copy",
+      }));
   },
-  {},
+  {
+    logEffects: { ignore: true },
+  },
 );

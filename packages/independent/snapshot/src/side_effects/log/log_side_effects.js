@@ -5,6 +5,7 @@ import { groupLogSideEffects } from "./group_log_side_effects.js";
 const logSideEffectsOptionsDefault = {
   prevent: true,
   group: true,
+  ignore: false,
 };
 
 export const logSideEffects = (logSideEffectsOptions) => {
@@ -15,7 +16,7 @@ export const logSideEffects = (logSideEffectsOptions) => {
   return {
     name: "console",
     install: (addSideEffect, { addFinallyCallback }) => {
-      const { prevent, group } = logSideEffectsOptions;
+      const { prevent, group, ignore } = logSideEffectsOptions;
       if (group) {
         addFinallyCallback((sideEffects) => {
           groupLogSideEffects(sideEffects, {
@@ -60,6 +61,9 @@ export const logSideEffects = (logSideEffectsOptions) => {
         });
       }
       const addLogSideEffect = (type, message) => {
+        if (ignore) {
+          return;
+        }
         addSideEffect({
           code: type,
           type,
