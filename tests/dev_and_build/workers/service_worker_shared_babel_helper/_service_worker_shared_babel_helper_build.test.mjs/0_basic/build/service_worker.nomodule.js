@@ -3,12 +3,12 @@ self.resourcesFromJsenvBuild = {
     "version": "bd11033c"
   },
   "/js/app_loader.nomodule.js": {
-    "version": "96bb4e80",
-    "versionedUrl": "/js/app_loader.nomodule.js?v=96bb4e80"
+    "version": "8988849e",
+    "versionedUrl": "/js/app_loader.nomodule.js?v=8988849e"
   },
   "/js/app.nomodule.js": {
-    "version": "b83f150a",
-    "versionedUrl": "/js/app.nomodule.js?v=b83f150a"
+    "version": "b3742180",
+    "versionedUrl": "/js/app.nomodule.js?v=b3742180"
   },
   "/js/objectSpread2.nomodule.js": {
     "version": "fb1dc9f4",
@@ -55,10 +55,10 @@ self.resourcesFromJsenvBuild = {
 
 ;(function() {
   var __versionMappings__ = {
-    "/js/app_loader.nomodule.js": "/js/app_loader.nomodule.js?v=96bb4e80",
+    "/js/app_loader.nomodule.js": "/js/app_loader.nomodule.js?v=8988849e",
     "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=fb1dc9f4",
     "/js/slicedToArray.nomodule.js": "/js/slicedToArray.nomodule.js?v=77f40001",
-    "/js/app.nomodule.js": "/js/app.nomodule.js?v=b83f150a",
+    "/js/app.nomodule.js": "/js/app.nomodule.js?v=b3742180",
     "/js/defineProperty.nomodule.js": "/js/defineProperty.nomodule.js?v=5743374f",
     "/js/toPropertyKey.nomodule.js": "/js/toPropertyKey.nomodule.js?v=0c871ea1",
     "/js/toPrimitive.nomodule.js": "/js/toPrimitive.nomodule.js?v=08f0d945",
@@ -572,9 +572,7 @@ System.register([__v__("/js/objectSpread2.nomodule.js"), __v__("/js/slicedToArra
       getResponse = () => {
         return [42];
       };
-      _getResponse = getResponse();
-      _getResponse2 = _slicedToArray(_getResponse, 1);
-      answer = _getResponse2[0];
+      _getResponse = getResponse(), _getResponse2 = _slicedToArray(_getResponse, 1), answer = _getResponse2[0];
       console.log(_objectSpread({}, {
         answer
       }));

@@ -13,9 +13,7 @@ System.register([__v__("/js/objectSpread2.nomodule.js"), __v__("/js/slicedToArra
       getResponse = () => {
         return [42];
       };
-      _getResponse = getResponse();
-      _getResponse2 = _slicedToArray(_getResponse, 1);
-      answer = _getResponse2[0];
+      _getResponse = getResponse(), _getResponse2 = _slicedToArray(_getResponse, 1), answer = _getResponse2[0];
       console.log(_objectSpread({}, {
         answer
       }));

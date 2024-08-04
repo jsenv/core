@@ -7,9 +7,7 @@
 ## 0_basic
 
 ```js
-build({
-  ...testParams,
-})
+run()
 ```
 
 ### 1/4 logs
