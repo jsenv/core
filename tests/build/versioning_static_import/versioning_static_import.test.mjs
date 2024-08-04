@@ -130,14 +130,14 @@ const test = async ({ name, ...rest }) => {
   }
 };
 
-// importmap are not supported
-await test({
-  name: "systemjs",
-  runtimeCompat: { chrome: "88" },
-});
-
 // importmap supported
 await test({
   name: "importmap",
   runtimeCompat: { chrome: "89" },
+});
+
+// importmap are not supported
+await test({
+  name: "systemjs",
+  runtimeCompat: { chrome: "88" },
 });

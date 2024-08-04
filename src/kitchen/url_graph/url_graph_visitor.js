@@ -125,14 +125,13 @@ GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (
       ) {
         directoryUrlInfoSet.add(referencedUrlInfo);
       }
+      if (referenceToOther.isWeak) {
+        continue;
+      }
       if (seen.has(referencedUrlInfo)) {
         continue;
       }
       seen.add(referencedUrlInfo);
-
-      if (referenceToOther.isWeak) {
-        continue;
-      }
       callback(referencedUrlInfo);
       iterateOnReferences(referencedUrlInfo);
     }
