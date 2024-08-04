@@ -80,7 +80,7 @@ export const defaultRuntimeCompat = {
  *        Controls how url are versioned in the build directory
  * @param {('none'|'inline'|'file'|'programmatic')} [buildParameters.sourcemaps="none"]
  *        Generate sourcemaps in the build directory
- * @param {('error'|'copy'|'preserve')|function} [buildParameters.referenceAnalysis.directoryReferenceEffect="error"]
+ * @param {('error'|'copy'|'preserve')|function} [buildParameters.directoryReferenceEffect="error"]
  *        What to do when a reference leads to a directory on the filesystem
  * @return {Object} buildReturnValue
  * @return {Object} buildReturnValue.buildInlineContents
@@ -105,6 +105,7 @@ export const build = async ({
   nodeEsmResolution,
   magicExtensions,
   magicDirectoryIndex,
+  directoryReferenceEffect,
   scenarioPlaceholders,
   injections,
   transpilation = {},
@@ -294,6 +295,7 @@ build ${entryPointKeys.length} entry points`);
           nodeEsmResolution,
           magicExtensions,
           magicDirectoryIndex,
+          directoryReferenceEffect,
           injections,
           transpilation: {
             babelHelpersAsImport: !explicitJsModuleConversion,
