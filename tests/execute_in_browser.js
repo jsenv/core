@@ -11,12 +11,14 @@ export const executeInBrowser = async (
     pageArguments = [],
     collectConsole = false,
     collectErrors = false,
+    mirrorConsole = false,
     debug = false,
     headless = !debug,
     autoStop = !debug,
   } = {},
 ) => {
   const browser = await browserLauncher.launch({ headless });
+  const browserName = browser._name;
   const page = await browser.newPage({ ignoreHTTPSErrors: true });
 
   const consoleOutput = {
@@ -36,12 +38,14 @@ export const executeInBrowser = async (
     error: consoleOutput.errors,
   };
   page.on("console", (message) => {
+    const type = message.type();
     if (collectConsole) {
-      const type = message.type();
       const text = message.text();
       logTypes[type].push(text);
       consoleOutput.raw += text;
-    } else if (message.type() === "error") {
+    } else if (mirrorConsole) {
+      console[type](`${browserName} console.${type} > ${message.text()}`);
+    } else if (type === "error") {
       console.error(message.text());
     }
   });

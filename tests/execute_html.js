@@ -13,6 +13,7 @@ export const executeHtml = async (
   const { returnValue } = await executeInBrowser(htmlUrl, {
     pageFunction,
     pageArguments: [pageFunctionArg],
+    mirrorConsole: true,
     ...options,
   });
   return returnValue;

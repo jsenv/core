@@ -1,58 +1,23 @@
-import { assert } from "@jsenv/assert";
-
 import { startDevServer } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
+import { chromium } from "playwright";
 
-const test = async (params) => {
-  let consoleErrorCalls = [];
-  const error = console.error;
-  console.error = (...args) => {
-    consoleErrorCalls.push(args.join(""));
-  };
-  try {
-    const sourceDirectoryUrl = new URL("./client/", import.meta.url);
-    const devServer = await startDevServer({
-      logLevel: "error",
-      sourceDirectoryUrl,
-      keepProcessAlive: false,
-      clientAutoreload: {
-        clientServerEventsConfig: {
-          logs: false,
-        },
+const run = async () => {
+  const sourceDirectoryUrl = new URL("./client/", import.meta.url);
+  const devServer = await startDevServer({
+    sourceDirectoryUrl,
+    keepProcessAlive: false,
+    clientAutoreload: {
+      clientServerEventsConfig: {
+        logs: false,
       },
-      port: 0,
-      ...params,
-    });
-    const htmlServerUrl = `${devServer.origin}/main.html`;
-    const htmFileUrl = new URL("./main.html", sourceDirectoryUrl).href;
-    const { pageErrors, consoleOutput } = await executeInBrowser(
-      htmlServerUrl,
-      {
-        collectConsole: true,
-        collectErrors: true,
-      },
-    );
-    const actual = {
-      consoleErrorOutput: consoleErrorCalls.join("\n"),
-      pageErrors,
-      consoleOutputRaw: consoleOutput.raw,
-    };
-    const expect = {
-      consoleErrorOutput: `Error while handling ${htmlServerUrl}:
-invalid-first-character-of-tag-name
-${htmFileUrl}:5:12
-2 | <html lang="en">
-3 |   <body>
-4 |     <pre>
-5 |       foo <=> baz;
-               ^`,
-      pageErrors: [],
-      consoleOutputRaw: "",
-    };
-    assert({ actual, expect });
-  } finally {
-    console.error = error;
-  }
+    },
+    port: 0,
+  });
+  return executeHtml(`${devServer.origin}/main.html`);
 };
 
-await test();
+await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+  test("0_chromium", () => run({ browserLauncher: chromium }));
+});
