@@ -204,6 +204,9 @@ export const createBuildSpecifierManager = ({
       if (!generatedUrl.startsWith("file:")) {
         return null;
       }
+      if (reference.isWeak && reference.expectedType !== "directory") {
+        return null;
+      }
       if (reference.type === "sourcemap_comment") {
         return null;
       }
