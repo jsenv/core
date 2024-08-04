@@ -44,8 +44,8 @@ And file urls
 And http urls
 http://localhost
 http://localhost/
-http://localhost:3457
-http://localhost:3457/`;
+http://localhost
+http://localhost/`;
   assert({ actual, expect });
 }
 

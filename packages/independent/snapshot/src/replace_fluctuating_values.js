@@ -189,10 +189,10 @@ const replaceInObject = (object, { replace }) => {
 };
 
 const replaceHttpUrls = (source) => {
-  source = source.replace(/(https?):\/\/localhost:\d+/, (match, protocol) => {
+  source = source.replace(/(https?):\/\/localhost:\d+/g, (match, protocol) => {
     return `${protocol}://localhost`;
   });
-  source = source.replace(/(https?):\/\/\[::1\]:\d+/, (match, protocol) => {
+  source = source.replace(/(https?):\/\/\[::1\]:\d+/g, (match, protocol) => {
     return `${protocol}://[::1]`;
   });
   return source;
