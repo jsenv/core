@@ -36,7 +36,6 @@ export const jsenvPluginFsRedirection = ({
       // ) {
       //   return `ignore:${reference.url}`;
       // }
-
       const urlObject = new URL(reference.url);
       let stat;
       try {
@@ -48,46 +47,54 @@ export const jsenvPluginFsRedirection = ({
           throw e;
         }
       }
-
       const { search, hash } = urlObject;
-      let { pathname } = urlObject;
-      const pathnameUsesTrailingSlash = pathname.endsWith("/");
       urlObject.search = "";
       urlObject.hash = "";
-      // force trailing slash on directories
-      if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
-        urlObject.pathname = `${pathname}/`;
-      }
-      // otherwise remove trailing slash if any
-      if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
-        // a warning here? (because it's strange to reference a file with a trailing slash)
-        urlObject.pathname = pathname.slice(0, -1);
-      }
-      let url = urlObject.href;
+      applyStatEffectsOnUrlObject(urlObject, stat);
       const shouldApplyFilesystemMagicResolution =
         reference.type === "js_import";
       if (shouldApplyFilesystemMagicResolution) {
-        const filesystemResolution = applyFileSystemMagicResolution(url, {
-          fileStat: stat,
-          magicDirectoryIndex,
-          magicExtensions: getExtensionsToTry(
-            magicExtensions,
-            reference.ownerUrlInfo.url,
-          ),
-        });
+        const filesystemResolution = applyFileSystemMagicResolution(
+          urlObject.href,
+          {
+            fileStat: stat,
+            magicDirectoryIndex,
+            magicExtensions: getExtensionsToTry(
+              magicExtensions,
+              reference.ownerUrlInfo.url,
+            ),
+          },
+        );
         if (filesystemResolution.stat) {
           stat = filesystemResolution.stat;
-          url = filesystemResolution.url;
+          urlObject.href = filesystemResolution.url;
+          applyStatEffectsOnUrlObject(urlObject, stat);
         }
       }
       if (!stat) {
         return null;
       }
-      const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
+      const urlRaw = preserveSymlinks
+        ? urlObject.href
+        : resolveSymlink(urlObject.href);
       const resolvedUrl = `${urlRaw}${search}${hash}`;
       return resolvedUrl;
     },
   };
+};
+
+const applyStatEffectsOnUrlObject = (urlObject, stat) => {
+  const { pathname } = urlObject;
+  const pathnameUsesTrailingSlash = pathname.endsWith("/");
+  // force trailing slash on directories
+  if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
+    urlObject.pathname = `${pathname}/`;
+  }
+  // otherwise remove trailing slash if any
+  if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
+    // a warning here? (because it's strange to reference a file with a trailing slash)
+    urlObject.pathname = pathname.slice(0, -1);
+  }
 };
 
 const resolveSymlink = (fileUrl) => {

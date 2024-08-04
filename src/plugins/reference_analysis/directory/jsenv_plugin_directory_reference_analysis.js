@@ -27,7 +27,6 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
               message: `"${directoryRelativeUrl}${entryName}" entry in directory referenced by ${originalDirectoryReference.trace.message}`,
             },
           });
-          entryReference.actionForDirectory = "copy";
           await entryReference.readGeneratedSpecifier();
           const replacement = entryReference.generatedSpecifier;
           newEntryNames.push(replacement);
