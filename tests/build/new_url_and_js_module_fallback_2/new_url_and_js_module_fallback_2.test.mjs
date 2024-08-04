@@ -5,7 +5,6 @@ import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effect
 
 const run = () => {
   return build({
-    logLevel: "debug",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
@@ -15,16 +14,9 @@ const run = () => {
   });
 };
 
-const { dirUrlMap } = await snapshotBuildTests(
-  import.meta.url,
-  ({ test }) => {
-    test("0_basic", () => run());
-  },
-  {
-    logs: false,
-    filesystemEffects: false,
-  },
-);
+const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_basic", () => run());
+});
 
 const actual = {
   basic: await executeBuildHtmlInBrowser(`${dirUrlMap.get("0_basic")}build/`),

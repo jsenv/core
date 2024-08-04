@@ -654,9 +654,9 @@ export const createBuildSpecifierManager = ({
       return buildSpecifier;
     }
     const version = versionMap.get(reference.urlInfo);
-    // if (version === undefined) {
-    //   return buildSpecifier;
-    // }
+    if (version === undefined) {
+      return buildSpecifier;
+    }
     const buildSpecifierVersioned = injectVersionIntoBuildSpecifier({
       buildSpecifier,
       versioningMethod,
