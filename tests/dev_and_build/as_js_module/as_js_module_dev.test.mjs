@@ -1,8 +1,7 @@
 import { assert } from "@jsenv/assert";
-import { chromium, firefox } from "playwright";
-
 import { startDevServer } from "@jsenv/core";
-import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { chromium, firefox } from "playwright";
 
 const devServer = await startDevServer({
   logLevel: "warn",
@@ -11,25 +10,16 @@ const devServer = await startDevServer({
   port: 0,
 });
 
-const test = async ({ browserLauncher }) => {
-  const browser = await browserLauncher.launch({ headless: true });
-  try {
-    const page = await launchBrowserPage(browser);
-    await page.goto(`${devServer.origin}/main.html`);
-    const result = await page.evaluate(
-      /* eslint-disable no-undef */
-      () => window.resultPromise,
-      /* eslint-enable no-undef */
-    );
-    const actual = result;
-    const expect = 42;
-    assert({ actual, expect });
-  } finally {
-    browser.close();
-  }
+const actual = {
+  chromium: await executeHtml(`${devServer.origin}/main.html`, {
+    browserLauncher: chromium,
+  }),
+  firefox: await executeHtml(`${devServer.origin}/main.html`, {
+    browserLauncher: firefox,
+  }),
 };
-
-await test({ browserLauncher: chromium });
-if (process.platform !== "win32") {
-  await test({ browserLauncher: firefox });
-}
+const expect = {
+  chromium: 42,
+  firefox: 42,
+};
+assert({ actual, expect });

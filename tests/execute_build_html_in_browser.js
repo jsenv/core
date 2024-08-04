@@ -1,23 +1,11 @@
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { executeHtml } from "./execute_html.js";
 
 export const executeBuildHtmlInBrowser = async (
   rootDirectoryUrl,
   htmlFileRelativeUrl = "main.html",
-  {
-    /* eslint-disable no-undef */
-    pageFunction = () => window.resultPromise,
-    /* eslint-enable no-undef */
-    pageFunctionArg = undefined,
-  } = {},
+  options,
 ) => {
-  const server = await startFileServer({
-    rootDirectoryUrl,
-  });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/${htmlFileRelativeUrl}`,
-    pageFunction,
-    pageArguments: [pageFunctionArg],
-  });
-  return returnValue;
+  const server = await startFileServer({ rootDirectoryUrl });
+  return executeHtml(`${server.origin}/${htmlFileRelativeUrl}`, options);
 };

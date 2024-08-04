@@ -13,13 +13,10 @@ const devServer = await startDevServer({
 });
 
 const test = async ({ browserLauncher }) => {
-  const { returnValue } = await executeInBrowser({
-    browserLauncher,
-    url: `${devServer.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
+  const { returnValue } = await executeInBrowser(
+    `${devServer.origin}/main.html`,
+    { browserLauncher },
+  );
   const actual = returnValue;
   const expect = {
     importMetaResolveReturnValue: `window.origin/node_modules/foo/foo.js?js_classic&v=0.0.1`,

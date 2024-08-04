@@ -19,12 +19,7 @@ const test = async (params) => {
   const server = await startFileServer({
     rootDirectoryUrl: new URL("./dist/", import.meta.url),
   });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
+  const { returnValue } = await executeInBrowser(`${server.origin}/main.html`);
   const actual = returnValue;
   const expect = {
     url: `http://127.0.0.1:9999/constants.js?foo=bar`,

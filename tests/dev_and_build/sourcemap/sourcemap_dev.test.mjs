@@ -21,8 +21,7 @@ const test = async (params) => {
       port: 0,
       ...params,
     });
-    await executeInBrowser({
-      url: `${devServer.origin}/main.html`,
+    await executeInBrowser(`${devServer.origin}/main.html`, {
       /* eslint-disable no-undef */
       pageFunction: () => {
         return window.sourcemapFetchPromise;

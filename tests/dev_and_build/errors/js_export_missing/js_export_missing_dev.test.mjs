@@ -16,14 +16,16 @@ const test = async (params) => {
     port: 0,
     ...params,
   });
-  const { returnValue, pageErrors, consoleOutput } = await executeInBrowser({
-    collectErrors: true,
-    collectConsole: true,
-    url: `${devServer.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
-    /* eslint-enable no-undef */
-  });
+  const { returnValue, pageErrors, consoleOutput } = await executeInBrowser(
+    `${devServer.origin}/main.html`,
+    {
+      collectErrors: true,
+      collectConsole: true,
+      /* eslint-disable no-undef */
+      pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
+      /* eslint-enable no-undef */
+    },
+  );
   const actual = {
     pageErrors,
     errorMessage: returnValue.executionResults["/main.js"].exception.message,

@@ -12,12 +12,9 @@ const test = async (params) => {
     port: 0,
     ...params,
   });
-  const { returnValue } = await executeInBrowser({
-    url: `${devServer.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
+  const { returnValue } = await executeInBrowser(
+    `${devServer.origin}/main.html`,
+  );
   const actual = returnValue;
   const expect = {
     ignoreAJsHref: `window.origin/a.js`,

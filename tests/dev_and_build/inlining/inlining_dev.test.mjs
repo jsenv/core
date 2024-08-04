@@ -15,12 +15,9 @@ const test = async () => {
     supervisor: false,
     port: 0,
   });
-  const { returnValue } = await executeInBrowser({
-    url: `${devServer.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
+  const { returnValue } = await executeInBrowser(
+    `${devServer.origin}/main.html`,
+  );
   const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
   copyDirectorySync({
     from: new URL(`./.jsenv/${runtimeId}/`, import.meta.url),

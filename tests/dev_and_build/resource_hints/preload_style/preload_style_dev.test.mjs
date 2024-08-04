@@ -14,13 +14,15 @@ const devServer = await startDevServer({
     },
   },
 });
-const { consoleOutput, pageErrors } = await executeInBrowser({
-  url: `${devServer.origin}/main.html`,
-  /* eslint-disable no-undef */
-  pageFunction: () => window.namespacePromise,
-  /* eslint-enable no-undef */
-  collectConsole: true,
-});
+const { consoleOutput, pageErrors } = await executeInBrowser(
+  `${devServer.origin}/main.html`,
+  {
+    /* eslint-disable no-undef */
+    pageFunction: () => window.namespacePromise,
+    /* eslint-enable no-undef */
+    collectConsole: true,
+  },
+);
 const actual = {
   consoleOutputRaw: consoleOutput.raw,
   pageErrors,

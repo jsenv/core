@@ -25,13 +25,12 @@ const test = async ({ name, ...params }) => {
     buildDirectoryUrl: snapshotDirectoryUrl,
     port: 0,
   });
-  const { returnValue, consoleOutput } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-    collectConsole: true,
-  });
+  const { returnValue, consoleOutput } = await executeInBrowser(
+    `${server.origin}/main.html`,
+    {
+      collectConsole: true,
+    },
+  );
   const actual = {
     returnValue,
     consoleLogs: consoleOutput.logs,

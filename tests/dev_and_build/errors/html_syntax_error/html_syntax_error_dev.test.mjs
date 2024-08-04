@@ -25,11 +25,13 @@ const test = async (params) => {
     });
     const htmlServerUrl = `${devServer.origin}/main.html`;
     const htmFileUrl = new URL("./main.html", sourceDirectoryUrl).href;
-    const { pageErrors, consoleOutput } = await executeInBrowser({
-      url: htmlServerUrl,
-      collectConsole: true,
-      collectErrors: true,
-    });
+    const { pageErrors, consoleOutput } = await executeInBrowser(
+      htmlServerUrl,
+      {
+        collectConsole: true,
+        collectErrors: true,
+      },
+    );
     const actual = {
       consoleErrorOutput: consoleErrorCalls.join("\n"),
       pageErrors,

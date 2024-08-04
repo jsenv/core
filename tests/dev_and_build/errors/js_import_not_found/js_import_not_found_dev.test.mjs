@@ -19,14 +19,16 @@ try {
     keepProcessAlive: false,
     port: 0,
   });
-  const { returnValue, pageErrors, consoleOutput } = await executeInBrowser({
-    url: `${devServer.origin}/main.html`,
-    collectConsole: true,
-    collectErrors: true,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
-    /* eslint-enable no-undef */
-  });
+  const { returnValue, pageErrors, consoleOutput } = await executeInBrowser(
+    `${devServer.origin}/main.html`,
+    {
+      collectConsole: true,
+      collectErrors: true,
+      /* eslint-disable no-undef */
+      pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
+      /* eslint-enable no-undef */
+    },
+  );
   const serverWarnings = warnCalls
     .map((warnCall) =>
       replaceFluctuatingValues(warnCall, { localhostUrl: devServer.origin }),

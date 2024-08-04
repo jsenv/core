@@ -20,16 +20,18 @@ try {
     keepProcessAlive: false,
     port: 0,
   });
-  const { consoleOutput } = await executeInBrowser({
-    url: `${devServer.origin}/main.html`,
-    collectConsole: true,
-    headless: false,
-    pageFunction: async () => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 500);
-      });
+  const { consoleOutput } = await executeInBrowser(
+    `${devServer.origin}/main.html`,
+    {
+      collectConsole: true,
+      headless: false,
+      pageFunction: async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 500);
+        });
+      },
     },
-  });
+  );
   const actual = {
     warnCalls,
     consoleErrors: consoleOutput.errors,

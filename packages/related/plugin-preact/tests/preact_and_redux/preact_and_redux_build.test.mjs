@@ -52,12 +52,7 @@ const test = async ({ name, ...params }) => {
   const server = await startFileServer({
     rootDirectoryUrl: snapshotDirectoryUrl,
   });
-  const { returnValue } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
+  const { returnValue } = await executeInBrowser(`${server.origin}/main.html`);
   const actual = returnValue;
   const expect = {
     spanContentAfterIncrement: "1",

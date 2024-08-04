@@ -24,13 +24,12 @@ const test = async (params) => {
     keepProcessAlive: false,
     port: 0,
   });
-  const { returnValue, consoleOutput } = await executeInBrowser({
-    url: `${server.origin}/main.html`,
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-    collectConsole: true,
-  });
+  const { returnValue, consoleOutput } = await executeInBrowser(
+    `${server.origin}/main.html`,
+    {
+      collectConsole: true,
+    },
+  );
   const actual = {
     returnValue,
     consoleOutputRaw: consoleOutput.raw,

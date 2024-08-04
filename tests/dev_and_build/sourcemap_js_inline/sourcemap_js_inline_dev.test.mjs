@@ -19,8 +19,8 @@ const test = async (params) => {
     port: 0,
     ...params,
   });
-  await executeInBrowser({
-    url: `${devServer.origin}/main.html`,
+  await executeInBrowser(`${devServer.origin}/main.html`, {
+    pageFunction: null,
   });
   const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
   copyDirectorySync({

@@ -1,17 +1,21 @@
 import { chromium } from "playwright";
 
-export const executeInBrowser = async ({
-  browserLauncher = chromium,
+export const executeInBrowser = async (
   url,
-  headScriptUrl,
-  pageFunction,
-  pageArguments = [],
-  collectConsole = false,
-  collectErrors = false,
-  debug = false,
-  headless = !debug,
-  autoStop = !debug,
-}) => {
+  {
+    browserLauncher = chromium,
+    headScriptUrl,
+    /* eslint-disable no-undef */
+    pageFunction = () => window.resultPromise,
+    /* eslint-enable no-undef */
+    pageArguments = [],
+    collectConsole = false,
+    collectErrors = false,
+    debug = false,
+    headless = !debug,
+    autoStop = !debug,
+  } = {},
+) => {
   const browser = await browserLauncher.launch({ headless });
   const page = await browser.newPage({ ignoreHTTPSErrors: true });
 

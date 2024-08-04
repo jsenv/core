@@ -11,12 +11,7 @@ const devServer = await startDevServer({
   plugins: [jsenvPluginPreact()],
   port: 0,
 });
-const { returnValue } = await executeInBrowser({
-  url: `${devServer.origin}/main.html`,
-  /* eslint-disable no-undef */
-  pageFunction: () => window.resultPromise,
-  /* eslint-enable no-undef */
-});
+const { returnValue } = await executeInBrowser(`${devServer.origin}/main.html`);
 const actual = returnValue;
 const expect = "Hello world";
 assert({ actual, expect });
