@@ -8,6 +8,7 @@ export const snapshotDevSideEffects = async (
   snapshotTests(testFileUrl, fnRegisteringTests, {
     filesystemActions: {
       "**": "compare",
+      "**/.jsenv": "ignore", // ignore the directory presence, not its content (there is no trailing slash)
       "**/.jsenv/**/@fs/**": "ignore",
       "**/.jsenv/**/*.html@*": "ignore",
     },
