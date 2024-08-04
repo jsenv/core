@@ -139,18 +139,7 @@ System.register([], function (_export, _context) {
        * This source code is licensed under the MIT license found in the
        * LICENSE file in the root directory of this source tree.
        */
-      l = Symbol.for("react.element");
-      n = Symbol.for("react.portal");
-      p = Symbol.for("react.fragment");
-      q = Symbol.for("react.strict_mode");
-      r = Symbol.for("react.profiler");
-      t = Symbol.for("react.provider");
-      u = Symbol.for("react.context");
-      v = Symbol.for("react.forward_ref");
-      w = Symbol.for("react.suspense");
-      x = Symbol.for("react.memo");
-      y = Symbol.for("react.lazy");
-      z = Symbol.iterator;
+      l = Symbol.for("react.element"), n = Symbol.for("react.portal"), p = Symbol.for("react.fragment"), q = Symbol.for("react.strict_mode"), r = Symbol.for("react.profiler"), t = Symbol.for("react.provider"), u = Symbol.for("react.context"), v = Symbol.for("react.forward_ref"), w = Symbol.for("react.suspense"), x = Symbol.for("react.memo"), y = Symbol.for("react.lazy"), z = Symbol.iterator;
       B = {
         isMounted: function isMounted() {
           return !1;
@@ -158,9 +147,7 @@ System.register([], function (_export, _context) {
         enqueueForceUpdate: function enqueueForceUpdate() {},
         enqueueReplaceState: function enqueueReplaceState() {},
         enqueueSetState: function enqueueSetState() {}
-      };
-      C = Object.assign;
-      D = {};
+      }, C = Object.assign, D = {};
       E.prototype.isReactComponent = {};
       E.prototype.setState = function (a, b) {
         if ("object" !== typeof a && "function" !== typeof a && null != a) throw Error("setState(...): takes an object of state variables to update or a function which returns an object of state variables.");
@@ -174,12 +161,9 @@ System.register([], function (_export, _context) {
       H.constructor = G;
       C(H, E.prototype);
       H.isPureReactComponent = !0;
-      I = Array.isArray;
-      J = Object.prototype.hasOwnProperty;
-      K = {
+      I = Array.isArray, J = Object.prototype.hasOwnProperty, K = {
         current: null
-      };
-      L = {
+      }, L = {
         key: !0,
         ref: !0,
         __self: !0,
@@ -188,11 +172,9 @@ System.register([], function (_export, _context) {
       P = /\/+/g;
       U = {
         current: null
-      };
-      V = {
+      }, V = {
         transition: null
-      };
-      W = {
+      }, W = {
         ReactCurrentDispatcher: U,
         ReactCurrentBatchConfig: V,
         ReactCurrentOwner: K
