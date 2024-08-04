@@ -204,12 +204,9 @@ export const createBuildSpecifierManager = ({
       if (!generatedUrl.startsWith("file:")) {
         return null;
       }
-      if (reference.isWeak) {
+      if (reference.isWeak && reference.expectedType !== "directory") {
         return null;
       }
-      // if (reference.isWeak && reference.expectedType !== "directory") {
-      //   return null;
-      // }
       if (reference.type === "sourcemap_comment") {
         return null;
       }
@@ -472,9 +469,9 @@ export const createBuildSpecifierManager = ({
     if (reference.type === "sourcemap_comment") {
       return false;
     }
-    // if (reference.expectedType === "directory") {
-    //   return true;
-    // }
+    if (reference.expectedType === "directory") {
+      return true;
+    }
     // specifier comes from "normalize" hook done a bit earlier in this file
     // we want to get back their build url to access their infos
     const referencedUrlInfo = reference.urlInfo;
@@ -545,7 +542,7 @@ export const createBuildSpecifierManager = ({
           contentOnlyVersionMap.set(urlInfo, contentVersion);
         },
         {
-          // directoryUrlInfoSet,
+          directoryUrlInfoSet,
         },
       );
     }

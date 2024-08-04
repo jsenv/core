@@ -115,6 +115,12 @@ GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (
   seen.add(initialUrlInfo);
   const iterateOnReferences = (urlInfo) => {
     for (const referenceToOther of urlInfo.referenceToOthersSet) {
+      if (referenceToOther.gotInlined()) {
+        continue;
+      }
+      if (referenceToOther.isWeak) {
+        continue;
+      }
       const referencedUrlInfo = referenceToOther.urlInfo;
       if (seen.has(referencedUrlInfo)) {
         continue;
@@ -125,12 +131,6 @@ GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (
         referenceToOther.expectedType === "directory"
       ) {
         directoryUrlInfoSet.add(referencedUrlInfo);
-      }
-      if (referenceToOther.isWeak) {
-        continue;
-      }
-      if (referenceToOther.gotInlined()) {
-        continue;
       }
       callback(referencedUrlInfo);
       iterateOnReferences(referencedUrlInfo);
