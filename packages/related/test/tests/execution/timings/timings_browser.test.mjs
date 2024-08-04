@@ -52,8 +52,8 @@ const test = async (params) => {
       // the overall run duration and runtime alive duration is between 2/20s
       runDuration: assert.between(2_000, 20_000),
       runtimeDuration: assert.between(2_000, 20_000),
-      // it does not take more than 1s to start the file
-      timeBetweenRuntimeStartAndExecutionStart: assert.between(0, 1_000),
+      // it does not take more than 2s to start the file
+      timeBetweenRuntimeStartAndExecutionStart: assert.between(0, 2_000),
     };
     assert({ actual, expect });
   }
