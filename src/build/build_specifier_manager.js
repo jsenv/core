@@ -204,9 +204,12 @@ export const createBuildSpecifierManager = ({
       if (!generatedUrl.startsWith("file:")) {
         return null;
       }
-      if (reference.isWeak && reference.expectedType !== "directory") {
+      if (reference.isWeak) {
         return null;
       }
+      // if (reference.isWeak && reference.expectedType !== "directory") {
+      //   return null;
+      // }
       if (reference.type === "sourcemap_comment") {
         return null;
       }
@@ -469,9 +472,9 @@ export const createBuildSpecifierManager = ({
     if (reference.type === "sourcemap_comment") {
       return false;
     }
-    if (reference.expectedType === "directory") {
-      return true;
-    }
+    // if (reference.expectedType === "directory") {
+    //   return true;
+    // }
     // specifier comes from "normalize" hook done a bit earlier in this file
     // we want to get back their build url to access their infos
     const referencedUrlInfo = reference.urlInfo;
@@ -542,7 +545,7 @@ export const createBuildSpecifierManager = ({
           contentOnlyVersionMap.set(urlInfo, contentVersion);
         },
         {
-          directoryUrlInfoSet,
+          // directoryUrlInfoSet,
         },
       );
     }
@@ -590,34 +593,28 @@ export const createBuildSpecifierManager = ({
         }
         return setOfUrlInfluencingVersion;
       };
-      if (contentOnlyVersionMap.size === 1) {
-        const [contentOnlyUrlInfo, contentOnlyVersion] =
-          contentOnlyVersionMap[Symbol.iterator]().next().value;
-        const version = generateVersion([contentOnlyVersion], versionLength);
-        versionMap.set(contentOnlyUrlInfo, version);
-      } else {
-        for (const [
-          contentOnlyUrlInfo,
-          contentOnlyVersion,
-        ] of contentOnlyVersionMap) {
-          const setOfUrlInfoInfluencingVersion =
-            getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
-          const versionPartSet = new Set();
-          versionPartSet.add(contentOnlyVersion);
-          for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
-            const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
-              urlInfoInfluencingVersion,
+
+      for (const [
+        contentOnlyUrlInfo,
+        contentOnlyVersion,
+      ] of contentOnlyVersionMap) {
+        const setOfUrlInfoInfluencingVersion =
+          getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
+        const versionPartSet = new Set();
+        versionPartSet.add(contentOnlyVersion);
+        for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
+          const otherUrlInfoContentVersion = contentOnlyVersionMap.get(
+            urlInfoInfluencingVersion,
+          );
+          if (!otherUrlInfoContentVersion) {
+            throw new Error(
+              `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
             );
-            if (!otherUrlInfoContentVersion) {
-              throw new Error(
-                `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
-              );
-            }
-            versionPartSet.add(otherUrlInfoContentVersion);
           }
-          const version = generateVersion(versionPartSet, versionLength);
-          versionMap.set(contentOnlyUrlInfo, version);
+          versionPartSet.add(otherUrlInfoContentVersion);
         }
+        const version = generateVersion(versionPartSet, versionLength);
+        versionMap.set(contentOnlyUrlInfo, version);
       }
     }
 
@@ -660,9 +657,9 @@ export const createBuildSpecifierManager = ({
       return buildSpecifier;
     }
     const version = versionMap.get(reference.urlInfo);
-    if (version === undefined) {
-      return buildSpecifier;
-    }
+    // if (version === undefined) {
+    //   return buildSpecifier;
+    // }
     const buildSpecifierVersioned = injectVersionIntoBuildSpecifier({
       buildSpecifier,
       versioningMethod,
