@@ -27,7 +27,7 @@ import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events
 import { createServerEventsDispatcher } from "../plugins/server_events/server_events_dispatcher.js";
 import { parseUserAgentHeader } from "./user_agent.js";
 
-const jsenvCoreDirectoryUrl = new URL("../../", import.meta.url);
+const jsenvCoreDirectoryUrl = new URL("../../../", import.meta.url);
 
 /**
  * Start a server for source files:

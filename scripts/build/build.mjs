@@ -32,17 +32,15 @@ await build({
     "file://**/node_modules/supports-color/": false,
     "file://**/node_modules/environment/": false,
   },
-  referenceAnalysis: {
-    directoryReferenceEffect: (reference) => {
-      // jsenv core directory url
-      if (reference.url === new URL("../../", import.meta.url).href) {
-        return "resolve";
-      }
-      if (reference.url.includes("/babel_helpers/")) {
-        return "copy";
-      }
-      return "error";
-    },
+  directoryReferenceEffect: (reference) => {
+    // jsenv core directory url
+    if (reference.url === new URL("../../", import.meta.url).href) {
+      return "resolve";
+    }
+    if (reference.url.includes("/babel_helpers/")) {
+      return "copy";
+    }
+    return "error";
   },
   runtimeCompat: {
     node: "16.14",

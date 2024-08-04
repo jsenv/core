@@ -6,16 +6,14 @@ await build({
   entryPoints: {
     "./main.js": "jsenv_test.js",
   },
-  referenceAnalysis: {
-    directoryReferenceEffect: (reference) => {
-      if (
-        reference.type === "js_url" &&
-        reference.ownerUrlInfo.url.endsWith("/exception.js")
-      ) {
-        return "preserve";
-      }
-      return "error";
-    },
+  directoryReferenceEffect: (reference) => {
+    if (
+      reference.type === "js_url" &&
+      reference.ownerUrlInfo.url.endsWith("/exception.js")
+    ) {
+      return "preserve";
+    }
+    return "error";
   },
   ignore: {
     "file://**/node_modules/": true,
