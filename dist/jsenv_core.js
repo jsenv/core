@@ -11068,6 +11068,8 @@ const watchSourceFiles = (
   return stopWatchingSourceFiles;
 };
 
+const jsenvCoreDirectoryUrl = new URL("./jsenv-core/", import.meta.url);
+
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = new URL(
     "./html/html_syntax_error.html",
@@ -11337,13 +11339,13 @@ const createPluginController = (
     currentPlugin = hook.plugin;
     currentHookName = hook.name;
     let valueReturned = hookFn(info);
-    currentPlugin = null;
-    currentHookName = null;
     if (info.timing) {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
         performance$1.now() - startTimestamp;
     }
     valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
+    currentPlugin = null;
+    currentHookName = null;
     return valueReturned;
   };
   const callAsyncHook = async (hook, info) => {
@@ -11360,13 +11362,13 @@ const createPluginController = (
     currentPlugin = hook.plugin;
     currentHookName = hook.name;
     let valueReturned = await hookFn(info);
-    currentPlugin = null;
-    currentHookName = null;
     if (info.timing) {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
         performance$1.now() - startTimestamp;
     }
     valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
+    currentPlugin = null;
+    currentHookName = null;
     return valueReturned;
   };
 
@@ -12873,6 +12875,9 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   if (reference.filenameHint && !referencedUrlInfo.filenameHint) {
     referencedUrlInfo.filenameHint = reference.filenameHint;
   }
+  if (reference.dirnameHint && !referencedUrlInfo.dirnameHint) {
+    referencedUrlInfo.dirnameHint = reference.dirnameHint;
+  }
   if (reference.debug) {
     referencedUrlInfo.debug = true;
   }
@@ -12992,18 +12997,28 @@ GRAPH_VISITOR.findDependency = (urlInfo, visitor) => {
 // because we start from root and ignore weak ref
 // The alternative would be to iterate on urlInfoMap
 // and call urlInfo.isUsed() but that would be more expensive
-GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (initialUrlInfo, callback) => {
+GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (
+  initialUrlInfo,
+  callback,
+  { directoryUrlInfoSet } = {},
+) => {
   const seen = new Set();
   seen.add(initialUrlInfo);
   const iterateOnReferences = (urlInfo) => {
     for (const referenceToOther of urlInfo.referenceToOthersSet) {
-      if (referenceToOther.isWeak) {
-        continue;
-      }
       if (referenceToOther.gotInlined()) {
         continue;
       }
       const referencedUrlInfo = referenceToOther.urlInfo;
+      if (
+        directoryUrlInfoSet &&
+        referenceToOther.expectedType === "directory"
+      ) {
+        directoryUrlInfoSet.add(referencedUrlInfo);
+      }
+      if (referenceToOther.isWeak) {
+        continue;
+      }
       if (seen.has(referencedUrlInfo)) {
         continue;
       }
@@ -14966,6 +14981,68 @@ const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
 - `)}`;
 };
 
+const jsenvPluginDirectoryReferenceEffect = (
+  directoryReferenceEffect = "error",
+) => {
+  return {
+    name: "jsenv:directory_reference_effect",
+    appliesDuring: "*",
+    redirectReference: (reference) => {
+      // http, https, data, about, ...
+      if (!reference.url.startsWith("file:")) {
+        return null;
+      }
+      if (reference.isInline) {
+        return null;
+      }
+      if (reference.ownerUrlInfo.type === "directory") {
+        reference.dirnameHint = reference.ownerUrlInfo.filenameHint;
+      }
+      const { pathname } = new URL(reference.url);
+      if (pathname[pathname.length - 1] !== "/") {
+        return null;
+      }
+      reference.leadsToADirectory = true;
+      reference.expectedType = "directory";
+      if (reference.ownerUrlInfo.type === "directory") {
+        reference.dirnameHint = reference.ownerUrlInfo.filenameHint;
+      }
+      if (reference.type === "filesystem") {
+        reference.filenameHint = `${
+          reference.ownerUrlInfo.filenameHint
+        }${urlToFilename$1(reference.url)}/`;
+      } else {
+        reference.filenameHint = `${urlToFilename$1(reference.url)}/`;
+      }
+      let actionForDirectory;
+      if (reference.type === "a_href") {
+        actionForDirectory = "copy";
+      } else if (reference.type === "filesystem") {
+        actionForDirectory = "copy";
+      } else if (typeof directoryReferenceEffect === "string") {
+        actionForDirectory = directoryReferenceEffect;
+      } else if (typeof directoryReferenceEffect === "function") {
+        actionForDirectory = directoryReferenceEffect(reference);
+      } else {
+        actionForDirectory = "error";
+      }
+      reference.actionForDirectory = actionForDirectory;
+      if (actionForDirectory !== "copy") {
+        reference.isWeak = true;
+      }
+      if (actionForDirectory === "error") {
+        const error = new Error("Reference leads to a directory");
+        error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
+        throw error;
+      }
+      if (actionForDirectory === "preserve") {
+        return `ignore:${reference.specifier}`;
+      }
+      return null;
+    },
+  };
+};
+
 const jsenvPluginInliningAsDataUrl = () => {
   return {
     name: "jsenv:inlining_as_data_url",
@@ -15341,15 +15418,17 @@ const jsenvPluginDirectoryReferenceAnalysis = () => {
     name: "jsenv:directory_reference_analysis",
     transformUrlContent: {
       directory: async (urlInfo) => {
-        const originalDirectoryReference =
-          findOriginalDirectoryReference(urlInfo);
+        if (urlInfo.contentType !== "application/json") {
+          return null;
+        }
+        // const isShapeBuildStep = urlInfo.kitchen.context.buildStep === "shape";
+        const originalDirectoryReference = findOriginalDirectoryReference(
+          urlInfo.firstReference,
+        );
         const directoryRelativeUrl = urlToRelativeUrl(
           urlInfo.url,
           urlInfo.context.rootDirectoryUrl,
         );
-        if (urlInfo.contentType !== "application/json") {
-          return null;
-        }
         const entryNames = JSON.parse(urlInfo.content);
         const newEntryNames = [];
         for (const entryName of entryNames) {
@@ -15371,21 +15450,20 @@ const jsenvPluginDirectoryReferenceAnalysis = () => {
   };
 };
 
-const findOriginalDirectoryReference = (urlInfo) => {
+const findOriginalDirectoryReference = (firstReference) => {
   const findNonFileSystemAncestor = (urlInfo) => {
     for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-      if (urlInfoReferencingThisOne.type !== "directory") {
+      if (referenceFromOther.type !== "filesystem") {
         return referenceFromOther;
       }
-      const found = findNonFileSystemAncestor(urlInfoReferencingThisOne);
-      if (found) {
-        return found;
-      }
+      return findNonFileSystemAncestor(referenceFromOther.ownerUrlInfo);
     }
     return null;
   };
-  return findNonFileSystemAncestor(urlInfo);
+  if (firstReference.type !== "filesystem") {
+    return firstReference;
+  }
+  return findNonFileSystemAncestor(firstReference.ownerUrlInfo);
 };
 
 // duplicated from @jsenv/log to avoid the dependency
@@ -16976,6 +17054,7 @@ const jsenvPluginReferenceAnalysis = ({
   inlineContent = true,
   inlineConvertedScript = false,
   fetchInlineUrls = true,
+  directoryReferenceEffect,
 }) => {
   return [
     jsenvPluginDirectoryReferenceAnalysis(),
@@ -18406,6 +18485,108 @@ const jsenvPluginVersionSearchParam = () => {
   };
 };
 
+const jsenvPluginFsRedirection = ({
+  magicExtensions = ["inherit", ".js"],
+  magicDirectoryIndex = true,
+  preserveSymlinks = false,
+}) => {
+  return {
+    name: "jsenv:fs_redirection",
+    appliesDuring: "*",
+    redirectReference: (reference) => {
+      // http, https, data, about, ...
+      if (!reference.url.startsWith("file:")) {
+        return null;
+      }
+      if (reference.isInline) {
+        return null;
+      }
+      if (reference.url === "file:///" || reference.url === "file://") {
+        reference.leadsToADirectory = true;
+        return `ignore:file:///`;
+      }
+      // ignore all new URL second arg
+      if (reference.subtype === "new_url_second_arg") {
+        return `ignore:${reference.url}`;
+      }
+      // ignore "./" on new URL("./")
+      // if (
+      //   reference.subtype === "new_url_first_arg" &&
+      //   reference.specifier === "./"
+      // ) {
+      //   return `ignore:${reference.url}`;
+      // }
+      const urlObject = new URL(reference.url);
+      let stat;
+      try {
+        stat = statSync(urlObject);
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          stat = null;
+        } else {
+          throw e;
+        }
+      }
+      const { search, hash } = urlObject;
+      urlObject.search = "";
+      urlObject.hash = "";
+      applyStatEffectsOnUrlObject(urlObject, stat);
+      const shouldApplyFilesystemMagicResolution =
+        reference.type === "js_import";
+      if (shouldApplyFilesystemMagicResolution) {
+        const filesystemResolution = applyFileSystemMagicResolution(
+          urlObject.href,
+          {
+            fileStat: stat,
+            magicDirectoryIndex,
+            magicExtensions: getExtensionsToTry(
+              magicExtensions,
+              reference.ownerUrlInfo.url,
+            ),
+          },
+        );
+        if (filesystemResolution.stat) {
+          stat = filesystemResolution.stat;
+          urlObject.href = filesystemResolution.url;
+          applyStatEffectsOnUrlObject(urlObject, stat);
+        }
+      }
+      if (!stat) {
+        return null;
+      }
+      const urlRaw = preserveSymlinks
+        ? urlObject.href
+        : resolveSymlink(urlObject.href);
+      const resolvedUrl = `${urlRaw}${search}${hash}`;
+      return resolvedUrl;
+    },
+  };
+};
+
+const applyStatEffectsOnUrlObject = (urlObject, stat) => {
+  const { pathname } = urlObject;
+  const pathnameUsesTrailingSlash = pathname.endsWith("/");
+  // force trailing slash on directories
+  if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
+    urlObject.pathname = `${pathname}/`;
+  }
+  // otherwise remove trailing slash if any
+  if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
+    // a warning here? (because it's strange to reference a file with a trailing slash)
+    urlObject.pathname = pathname.slice(0, -1);
+  }
+};
+
+const resolveSymlink = (fileUrl) => {
+  const urlObject = new URL(fileUrl);
+  const realpath = realpathSync(urlObject);
+  const realUrlObject = pathToFileURL(realpath);
+  if (urlObject.pathname.endsWith("/")) {
+    realUrlObject.pathname += `/`;
+  }
+  return realUrlObject.href;
+};
+
 const html404AndParentDirIsEmptyFileUrl = new URL(
   "./html/html_404_and_parent_dir_is_empty.html",
   import.meta.url,
@@ -18417,119 +18598,16 @@ const html404AndParentDirFileUrl = new URL(
 const htmlFileUrlForDirectory = new URL("./html/directory.html", import.meta.url);
 
 const jsenvPluginProtocolFile = ({
-  magicExtensions = ["inherit", ".js"],
-  magicDirectoryIndex = true,
-  preserveSymlinks = false,
-  directoryReferenceEffect = "error",
+  magicExtensions,
+  magicDirectoryIndex,
+  preserveSymlinks,
 }) => {
   return [
-    {
-      name: "jsenv:fs_redirection",
-      appliesDuring: "*",
-      redirectReference: (reference) => {
-        // http, https, data, about, ...
-        if (!reference.url.startsWith("file:")) {
-          return null;
-        }
-        if (reference.isInline) {
-          return null;
-        }
-        // ignore root file url
-        if (reference.url === "file:///" || reference.url === "file://") {
-          reference.leadsToADirectory = true;
-          return `ignore:file:///`;
-        }
-        // ignore "./" on new URL("./")
-        if (
-          reference.subtype === "new_url_first_arg" &&
-          reference.specifier === "./"
-        ) {
-          return `ignore:${reference.url}`;
-        }
-        // ignore all new URL second arg
-        if (reference.subtype === "new_url_second_arg") {
-          return `ignore:${reference.url}`;
-        }
-
-        const urlObject = new URL(reference.url);
-        let stat;
-        try {
-          stat = statSync(urlObject);
-        } catch (e) {
-          if (e.code === "ENOENT") {
-            stat = null;
-          } else {
-            throw e;
-          }
-        }
-
-        const { search, hash } = urlObject;
-        let { pathname } = urlObject;
-        const pathnameUsesTrailingSlash = pathname.endsWith("/");
-        urlObject.search = "";
-        urlObject.hash = "";
-
-        // force trailing slash on directories
-        if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
-          urlObject.pathname = `${pathname}/`;
-        }
-        // otherwise remove trailing slash if any
-        if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
-          // a warning here? (because it's strange to reference a file with a trailing slash)
-          urlObject.pathname = pathname.slice(0, -1);
-        }
-
-        let url = urlObject.href;
-        const shouldApplyDilesystemMagicResolution =
-          reference.type === "js_import";
-        if (shouldApplyDilesystemMagicResolution) {
-          const filesystemResolution = applyFileSystemMagicResolution(url, {
-            fileStat: stat,
-            magicDirectoryIndex,
-            magicExtensions: getExtensionsToTry(
-              magicExtensions,
-              reference.ownerUrlInfo.url,
-            ),
-          });
-          if (filesystemResolution.stat) {
-            stat = filesystemResolution.stat;
-            url = filesystemResolution.url;
-          }
-        }
-        if (!stat) {
-          return null;
-        }
-        reference.leadsToADirectory = stat && stat.isDirectory();
-        if (reference.leadsToADirectory) {
-          let actionForDirectory;
-          if (reference.type === "a_href") {
-            actionForDirectory = "ignore";
-          } else if (
-            reference.type === "http_request" ||
-            reference.type === "filesystem"
-          ) {
-            actionForDirectory = "copy";
-          } else if (typeof directoryReferenceEffect === "string") {
-            actionForDirectory = directoryReferenceEffect;
-          } else if (typeof directoryReferenceEffect === "function") {
-            actionForDirectory = directoryReferenceEffect(reference);
-          } else {
-            actionForDirectory = "error";
-          }
-          if (actionForDirectory === "error") {
-            const error = new Error("Reference leads to a directory");
-            error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
-            throw error;
-          }
-          if (actionForDirectory === "preserve") {
-            return `ignore:${url}${search}${hash}`;
-          }
-        }
-        const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
-        const resolvedUrl = `${urlRaw}${search}${hash}`;
-        return resolvedUrl;
-      },
-    },
+    jsenvPluginFsRedirection({
+      magicExtensions,
+      magicDirectoryIndex,
+      preserveSymlinks,
+    }),
     {
       name: "jsenv:fs_resolution",
       appliesDuring: "*",
@@ -18579,18 +18657,10 @@ const jsenvPluginProtocolFile = ({
           return null;
         }
         const urlObject = new URL(urlInfo.url);
-        if (urlInfo.firstReference.leadsToADirectory) {
-          if (!urlInfo.filenameHint) {
-            if (urlInfo.firstReference.type === "filesystem") {
-              urlInfo.filenameHint = `${
-                urlInfo.firstReference.ownerUrlInfo.filenameHint
-              }${urlToFilename$1(urlInfo.url)}/`;
-            } else {
-              urlInfo.filenameHint = `${urlToFilename$1(urlInfo.url)}/`;
-            }
-          }
+        const { firstReference } = urlInfo;
+        if (firstReference.leadsToADirectory) {
           const directoryContentArray = readdirSync(urlObject);
-          if (urlInfo.firstReference.type === "filesystem") {
+          if (firstReference.type === "filesystem") {
             const content = JSON.stringify(directoryContentArray, null, "  ");
             return {
               type: "directory",
@@ -18617,13 +18687,6 @@ const jsenvPluginProtocolFile = ({
             contentType: "application/json",
             content: JSON.stringify(directoryContentArray, null, "  "),
           };
-        }
-        if (
-          !urlInfo.dirnameHint &&
-          urlInfo.firstReference.ownerUrlInfo.type === "directory"
-        ) {
-          urlInfo.dirnameHint =
-            urlInfo.firstReference.ownerUrlInfo.filenameHint;
         }
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
         if (contentType === "text/html") {
@@ -18768,16 +18831,6 @@ const replacePlaceholders$1 = (html, replacers) => {
     }
     return replacer;
   });
-};
-
-const resolveSymlink = (fileUrl) => {
-  const urlObject = new URL(fileUrl);
-  const realpath = realpathSync(urlObject);
-  const realUrlObject = pathToFileURL(realpath);
-  if (urlObject.pathname.endsWith("/")) {
-    realUrlObject.pathname += `/`;
-  }
-  return realUrlObject.href;
 };
 
 const jsenvPluginProtocolHttp = () => {
@@ -20213,7 +20266,6 @@ const getCorePlugins = ({
        - All the rest uses web standard url resolution
      */
     jsenvPluginProtocolFile({
-      directoryReferenceEffect,
       magicExtensions,
       magicDirectoryIndex,
     }),
@@ -20222,6 +20274,7 @@ const getCorePlugins = ({
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),
     jsenvPluginWebResolution(),
+    jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
 
     jsenvPluginVersionSearchParam(),
     jsenvPluginCommonJsGlobals(),
@@ -20238,46 +20291,6 @@ const getCorePlugins = ({
     ...(ribbon ? [jsenvPluginRibbon({ rootDirectoryUrl, ...ribbon })] : []),
     jsenvPluginCleanHTML(),
   ];
-};
-
-const ensureUnixLineBreaks = (stringOrBuffer) => {
-  if (typeof stringOrBuffer === "string") {
-    const stringWithLinuxBreaks = stringOrBuffer.replace(/\r\n/g, "\n");
-    return stringWithLinuxBreaks;
-  }
-  return ensureUnixLineBreaksOnBuffer(stringOrBuffer);
-};
-
-// https://github.com/nodejs/help/issues/1738#issuecomment-458460503
-const ensureUnixLineBreaksOnBuffer = (buffer) => {
-  const int32Array = new Int32Array(buffer, 0, buffer.length);
-  const int32ArrayWithLineBreaksNormalized = int32Array.filter(
-    (element, index, typedArray) => {
-      if (element === 0x0d) {
-        if (typedArray[index + 1] === 0x0a) {
-          // Windows -> Unix
-          return false;
-        }
-        // Mac OS -> Unix
-        typedArray[index] = 0x0a;
-      }
-      return true;
-    },
-  );
-  return Buffer.from(int32ArrayWithLineBreaksNormalized);
-};
-
-const jsenvPluginLineBreakNormalization = () => {
-  return {
-    name: "jsenv:line_break_normalizer",
-    appliesDuring: "build",
-    transformUrlContent: (urlInfo) => {
-      if (CONTENT_TYPE.isTextual(urlInfo.contentType)) {
-        return ensureUnixLineBreaks(urlInfo.content);
-      }
-      return null;
-    },
-  };
 };
 
 const escapeChars = (string, replacements) => {
@@ -20357,9 +20370,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     if (buildUrlFromCache) {
       return buildUrlFromCache;
     }
-    if (urlInfo.type === "directory") {
+    if (
+      urlInfo.type === "directory" ||
+      (urlInfo.type === undefined && urlInfo.typeHint === "directory")
+    ) {
       let directoryPath;
-      if (urlInfo.filenameHint) {
+      if (url === sourceDirectoryUrl) {
+        directoryPath = "";
+      } else if (urlInfo.filenameHint) {
         directoryPath = urlInfo.filenameHint;
       } else {
         directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
@@ -20732,7 +20750,7 @@ const createBuildSpecifierManager = ({
       if (!generatedUrl.startsWith("file:")) {
         return null;
       }
-      if (reference.isWeak) {
+      if (reference.isWeak && reference.expectedType !== "directory") {
         return null;
       }
       if (reference.type === "sourcemap_comment") {
@@ -20997,6 +21015,9 @@ const createBuildSpecifierManager = ({
     if (reference.type === "sourcemap_comment") {
       return false;
     }
+    if (reference.expectedType === "directory") {
+      return true;
+    }
     // specifier comes from "normalize" hook done a bit earlier in this file
     // we want to get back their build url to access their infos
     const referencedUrlInfo = reference.urlInfo;
@@ -21009,6 +21030,7 @@ const createBuildSpecifierManager = ({
   const prepareVersioning = () => {
     const contentOnlyVersionMap = new Map();
     const urlInfoToContainedPlaceholderSetMap = new Map();
+    const directoryUrlInfoSet = new Set();
     {
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
@@ -21065,6 +21087,9 @@ const createBuildSpecifierManager = ({
           const contentVersion = generateVersion([content], versionLength);
           contentOnlyVersionMap.set(urlInfo, contentVersion);
         },
+        {
+          directoryUrlInfoSet,
+        },
       );
     }
 
@@ -21111,9 +21136,13 @@ const createBuildSpecifierManager = ({
         }
         return setOfUrlInfluencingVersion;
       };
-      for (const [urlInfo, contentOnlyVersion] of contentOnlyVersionMap) {
+
+      for (const [
+        contentOnlyUrlInfo,
+        contentOnlyVersion,
+      ] of contentOnlyVersionMap) {
         const setOfUrlInfoInfluencingVersion =
-          getSetOfUrlInfoInfluencingVersion(urlInfo);
+          getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
         const versionPartSet = new Set();
         versionPartSet.add(contentOnlyVersion);
         for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
@@ -21122,13 +21151,42 @@ const createBuildSpecifierManager = ({
           );
           if (!otherUrlInfoContentVersion) {
             throw new Error(
-              `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${urlInfo.url})`,
+              `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
             );
           }
           versionPartSet.add(otherUrlInfoContentVersion);
         }
         const version = generateVersion(versionPartSet, versionLength);
-        versionMap.set(urlInfo, version);
+        versionMap.set(contentOnlyUrlInfo, version);
+      }
+    }
+
+    {
+      // we should grab all the files inside this directory
+      // they will influence his versioning
+      for (const directoryUrlInfo of directoryUrlInfoSet) {
+        const directoryUrl = directoryUrlInfo.url;
+        // const urlInfoInsideThisDirectorySet = new Set();
+        const versionsInfluencingThisDirectorySet = new Set();
+        for (const [url, urlInfo] of finalKitchen.graph.urlInfoMap) {
+          if (!urlIsInsideOf(url, directoryUrl)) {
+            continue;
+          }
+          // ideally we should exclude eventual directories as the are redundant
+          // with the file they contains
+          const version = versionMap.get(urlInfo);
+          if (version !== undefined) {
+            versionsInfluencingThisDirectorySet.add(version);
+          }
+        }
+        const contentVersion =
+          versionsInfluencingThisDirectorySet.size === 0
+            ? "empty"
+            : generateVersion(
+                versionsInfluencingThisDirectorySet,
+                versionLength,
+              );
+        versionMap.set(directoryUrlInfo, contentVersion);
       }
     }
   };
@@ -21142,6 +21200,9 @@ const createBuildSpecifierManager = ({
       return buildSpecifier;
     }
     const version = versionMap.get(reference.urlInfo);
+    if (version === undefined) {
+      return buildSpecifier;
+    }
     const buildSpecifierVersioned = injectVersionIntoBuildSpecifier({
       buildSpecifier,
       versioningMethod,
@@ -21251,9 +21312,9 @@ const createBuildSpecifierManager = ({
             generateReplacement(urlInfo.firstReference);
           }
           if (urlInfo.firstReference.type === "side_effect_file") {
+            // side effect stuff must be generated too
             generateReplacement(urlInfo.firstReference);
           }
-          // side effect stuff must be generated too
           if (mayUsePlaceholder(urlInfo)) {
             const contentBeforeReplace = urlInfo.content;
             const { content, sourcemap } = placeholderAPI.replaceAll(
@@ -21729,6 +21790,46 @@ const asBuildUrlVersioned = ({
   return `${buildDirectoryUrl}${pathname}${search}${hash}`;
 };
 
+const ensureUnixLineBreaks = (stringOrBuffer) => {
+  if (typeof stringOrBuffer === "string") {
+    const stringWithLinuxBreaks = stringOrBuffer.replace(/\r\n/g, "\n");
+    return stringWithLinuxBreaks;
+  }
+  return ensureUnixLineBreaksOnBuffer(stringOrBuffer);
+};
+
+// https://github.com/nodejs/help/issues/1738#issuecomment-458460503
+const ensureUnixLineBreaksOnBuffer = (buffer) => {
+  const int32Array = new Int32Array(buffer, 0, buffer.length);
+  const int32ArrayWithLineBreaksNormalized = int32Array.filter(
+    (element, index, typedArray) => {
+      if (element === 0x0d) {
+        if (typedArray[index + 1] === 0x0a) {
+          // Windows -> Unix
+          return false;
+        }
+        // Mac OS -> Unix
+        typedArray[index] = 0x0a;
+      }
+      return true;
+    },
+  );
+  return Buffer.from(int32ArrayWithLineBreaksNormalized);
+};
+
+const jsenvPluginLineBreakNormalization = () => {
+  return {
+    name: "jsenv:line_break_normalizer",
+    appliesDuring: "build",
+    transformUrlContent: (urlInfo) => {
+      if (CONTENT_TYPE.isTextual(urlInfo.contentType)) {
+        return ensureUnixLineBreaks(urlInfo.content);
+      }
+      return null;
+    },
+  };
+};
+
 /*
  * Build is split in 3 steps:
  * 1. craft
@@ -21857,7 +21958,10 @@ const build = async ({
       "buildDirectoryUrl",
     );
     if (outDirectoryUrl === undefined) {
-      if (process.env.CAPTURING_SIDE_EFFECTS) {
+      if (
+        process.env.CAPTURING_SIDE_EFFECTS ||
+        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl)
+      ) {
         outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
       } else {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
@@ -22071,6 +22175,7 @@ build ${entryPointKeys.length} entry points`);
           fetchInlineUrls: false,
           // inlineContent: false,
         }),
+        jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
         ...(lineBreakNormalization
           ? [jsenvPluginLineBreakNormalization()]
           : []),
@@ -22723,7 +22828,10 @@ const startDevServer = async ({
       sourceDirectoryUrl,
     );
     if (outDirectoryUrl === undefined) {
-      if (process.env.CAPTURING_SIDE_EFFECTS) {
+      if (
+        process.env.CAPTURING_SIDE_EFFECTS ||
+        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl)
+      ) {
         outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
       } else {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);

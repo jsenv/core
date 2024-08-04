@@ -33,9 +33,14 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     if (buildUrlFromCache) {
       return buildUrlFromCache;
     }
-    if (urlInfo.type === "directory") {
+    if (
+      urlInfo.type === "directory" ||
+      (urlInfo.type === undefined && urlInfo.typeHint === "directory")
+    ) {
       let directoryPath;
-      if (urlInfo.filenameHint) {
+      if (url === sourceDirectoryUrl) {
+        directoryPath = "";
+      } else if (urlInfo.filenameHint) {
         directoryPath = urlInfo.filenameHint;
       } else {
         directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);

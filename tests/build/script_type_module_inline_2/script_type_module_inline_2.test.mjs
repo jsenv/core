@@ -10,23 +10,26 @@ if (process.platform !== "darwin") {
   // we need to understand this at some point
 }
 
-const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
-  const testParams = {
+const run = ({ runtimeCompat, sourcemaps }) => {
+  return build({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     minification: false,
     bundling: false,
-  };
+    runtimeCompat,
+    sourcemaps,
+  });
+};
+
+const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_js_module", () =>
-    build({
-      ...testParams,
+    run({
       runtimeCompat: { chrome: "89" },
     }));
   test("1_js_module_fallback", () =>
-    build({
-      ...testParams,
+    run({
       runtimeCompat: { chrome: "64" },
     }));
   // At some point generating sourcemap in this scenario was throwing an error
@@ -36,8 +39,7 @@ const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
   // should not appear in the url graph.
   // We generate sourcemap here to ensure there won't be a regression on that
   test("2_js_module_fallback_and_sourcemap_as_file", () =>
-    build({
-      ...testParams,
+    run({
       runtimeCompat: { chrome: "60" },
       sourcemaps: "file",
     }));

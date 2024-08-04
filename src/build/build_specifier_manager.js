@@ -16,6 +16,7 @@ import {
   ensurePathnameTrailingSlash,
   injectQueryParamIntoSpecifierWithoutEncoding,
   renderUrlOrRelativeUrlFilename,
+  urlIsInsideOf,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
@@ -203,7 +204,7 @@ export const createBuildSpecifierManager = ({
       if (!generatedUrl.startsWith("file:")) {
         return null;
       }
-      if (reference.isWeak) {
+      if (reference.isWeak && reference.expectedType !== "directory") {
         return null;
       }
       if (reference.type === "sourcemap_comment") {
@@ -468,6 +469,9 @@ export const createBuildSpecifierManager = ({
     if (reference.type === "sourcemap_comment") {
       return false;
     }
+    if (reference.expectedType === "directory") {
+      return true;
+    }
     // specifier comes from "normalize" hook done a bit earlier in this file
     // we want to get back their build url to access their infos
     const referencedUrlInfo = reference.urlInfo;
@@ -480,6 +484,7 @@ export const createBuildSpecifierManager = ({
   const prepareVersioning = () => {
     const contentOnlyVersionMap = new Map();
     const urlInfoToContainedPlaceholderSetMap = new Map();
+    const directoryUrlInfoSet = new Set();
     generate_content_only_versions: {
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
@@ -536,6 +541,9 @@ export const createBuildSpecifierManager = ({
           const contentVersion = generateVersion([content], versionLength);
           contentOnlyVersionMap.set(urlInfo, contentVersion);
         },
+        {
+          directoryUrlInfoSet,
+        },
       );
     }
 
@@ -582,9 +590,13 @@ export const createBuildSpecifierManager = ({
         }
         return setOfUrlInfluencingVersion;
       };
-      for (const [urlInfo, contentOnlyVersion] of contentOnlyVersionMap) {
+
+      for (const [
+        contentOnlyUrlInfo,
+        contentOnlyVersion,
+      ] of contentOnlyVersionMap) {
         const setOfUrlInfoInfluencingVersion =
-          getSetOfUrlInfoInfluencingVersion(urlInfo);
+          getSetOfUrlInfoInfluencingVersion(contentOnlyUrlInfo);
         const versionPartSet = new Set();
         versionPartSet.add(contentOnlyVersion);
         for (const urlInfoInfluencingVersion of setOfUrlInfoInfluencingVersion) {
@@ -593,13 +605,42 @@ export const createBuildSpecifierManager = ({
           );
           if (!otherUrlInfoContentVersion) {
             throw new Error(
-              `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${urlInfo.url})`,
+              `cannot find content version for ${urlInfoInfluencingVersion.url} (used by ${contentOnlyUrlInfo.url})`,
             );
           }
           versionPartSet.add(otherUrlInfoContentVersion);
         }
         const version = generateVersion(versionPartSet, versionLength);
-        versionMap.set(urlInfo, version);
+        versionMap.set(contentOnlyUrlInfo, version);
+      }
+    }
+
+    generate_directory_versions: {
+      // we should grab all the files inside this directory
+      // they will influence his versioning
+      for (const directoryUrlInfo of directoryUrlInfoSet) {
+        const directoryUrl = directoryUrlInfo.url;
+        // const urlInfoInsideThisDirectorySet = new Set();
+        const versionsInfluencingThisDirectorySet = new Set();
+        for (const [url, urlInfo] of finalKitchen.graph.urlInfoMap) {
+          if (!urlIsInsideOf(url, directoryUrl)) {
+            continue;
+          }
+          // ideally we should exclude eventual directories as the are redundant
+          // with the file they contains
+          const version = versionMap.get(urlInfo);
+          if (version !== undefined) {
+            versionsInfluencingThisDirectorySet.add(version);
+          }
+        }
+        const contentVersion =
+          versionsInfluencingThisDirectorySet.size === 0
+            ? "empty"
+            : generateVersion(
+                versionsInfluencingThisDirectorySet,
+                versionLength,
+              );
+        versionMap.set(directoryUrlInfo, contentVersion);
       }
     }
   };
@@ -613,6 +654,9 @@ export const createBuildSpecifierManager = ({
       return buildSpecifier;
     }
     const version = versionMap.get(reference.urlInfo);
+    if (version === undefined) {
+      return buildSpecifier;
+    }
     const buildSpecifierVersioned = injectVersionIntoBuildSpecifier({
       buildSpecifier,
       versioningMethod,
@@ -722,9 +766,9 @@ export const createBuildSpecifierManager = ({
             generateReplacement(urlInfo.firstReference);
           }
           if (urlInfo.firstReference.type === "side_effect_file") {
+            // side effect stuff must be generated too
             generateReplacement(urlInfo.firstReference);
           }
-          // side effect stuff must be generated too
           if (mayUsePlaceholder(urlInfo)) {
             const contentBeforeReplace = urlInfo.content;
             const { content, sourcemap } = placeholderAPI.replaceAll(

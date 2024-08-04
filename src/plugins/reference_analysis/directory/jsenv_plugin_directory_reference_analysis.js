@@ -5,15 +5,17 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
     name: "jsenv:directory_reference_analysis",
     transformUrlContent: {
       directory: async (urlInfo) => {
-        const originalDirectoryReference =
-          findOriginalDirectoryReference(urlInfo);
+        if (urlInfo.contentType !== "application/json") {
+          return null;
+        }
+        // const isShapeBuildStep = urlInfo.kitchen.context.buildStep === "shape";
+        const originalDirectoryReference = findOriginalDirectoryReference(
+          urlInfo.firstReference,
+        );
         const directoryRelativeUrl = urlToRelativeUrl(
           urlInfo.url,
           urlInfo.context.rootDirectoryUrl,
         );
-        if (urlInfo.contentType !== "application/json") {
-          return null;
-        }
         const entryNames = JSON.parse(urlInfo.content);
         const newEntryNames = [];
         for (const entryName of entryNames) {
@@ -35,19 +37,18 @@ export const jsenvPluginDirectoryReferenceAnalysis = () => {
   };
 };
 
-const findOriginalDirectoryReference = (urlInfo) => {
+const findOriginalDirectoryReference = (firstReference) => {
   const findNonFileSystemAncestor = (urlInfo) => {
     for (const referenceFromOther of urlInfo.referenceFromOthersSet) {
-      const urlInfoReferencingThisOne = referenceFromOther.ownerUrlInfo;
-      if (urlInfoReferencingThisOne.type !== "directory") {
+      if (referenceFromOther.type !== "filesystem") {
         return referenceFromOther;
       }
-      const found = findNonFileSystemAncestor(urlInfoReferencingThisOne);
-      if (found) {
-        return found;
-      }
+      return findNonFileSystemAncestor(referenceFromOther.ownerUrlInfo);
     }
     return null;
   };
-  return findNonFileSystemAncestor(urlInfo);
+  if (firstReference.type !== "filesystem") {
+    return firstReference;
+  }
+  return findNonFileSystemAncestor(firstReference.ownerUrlInfo);
 };

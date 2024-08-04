@@ -7,8 +7,7 @@
 ## 0_js_module
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
@@ -68,8 +67,7 @@ see [./0_js_module/build/](./0_js_module/build/)
 ## 1_js_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "64" },
 })
 ```
@@ -129,8 +127,7 @@ see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 ## 2_js_module_fallback_and_sourcemap_as_file
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "60" },
   sourcemaps: "file",
 })

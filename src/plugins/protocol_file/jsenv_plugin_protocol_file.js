@@ -2,27 +2,15 @@ import {
   assertAndNormalizeDirectoryUrl,
   comparePathnames,
 } from "@jsenv/filesystem";
-import {
-  applyFileSystemMagicResolution,
-  getExtensionsToTry,
-} from "@jsenv/node-esm-resolution";
 import { pickContentType } from "@jsenv/server";
 import {
   ensurePathnameTrailingSlash,
   urlIsInsideOf,
-  urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import {
-  existsSync,
-  lstatSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-} from "node:fs";
-import { pathToFileURL } from "node:url";
+import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
+import { jsenvPluginFsRedirection } from "./jsenv_plugin_fs_redirection.js";
 
 const html404AndParentDirIsEmptyFileUrl = new URL(
   "./html_404_and_parent_dir_is_empty.html",
@@ -35,119 +23,16 @@ const html404AndParentDirFileUrl = new URL(
 const htmlFileUrlForDirectory = new URL("./directory.html", import.meta.url);
 
 export const jsenvPluginProtocolFile = ({
-  magicExtensions = ["inherit", ".js"],
-  magicDirectoryIndex = true,
-  preserveSymlinks = false,
-  directoryReferenceEffect = "error",
+  magicExtensions,
+  magicDirectoryIndex,
+  preserveSymlinks,
 }) => {
   return [
-    {
-      name: "jsenv:fs_redirection",
-      appliesDuring: "*",
-      redirectReference: (reference) => {
-        // http, https, data, about, ...
-        if (!reference.url.startsWith("file:")) {
-          return null;
-        }
-        if (reference.isInline) {
-          return null;
-        }
-        // ignore root file url
-        if (reference.url === "file:///" || reference.url === "file://") {
-          reference.leadsToADirectory = true;
-          return `ignore:file:///`;
-        }
-        // ignore "./" on new URL("./")
-        if (
-          reference.subtype === "new_url_first_arg" &&
-          reference.specifier === "./"
-        ) {
-          return `ignore:${reference.url}`;
-        }
-        // ignore all new URL second arg
-        if (reference.subtype === "new_url_second_arg") {
-          return `ignore:${reference.url}`;
-        }
-
-        const urlObject = new URL(reference.url);
-        let stat;
-        try {
-          stat = statSync(urlObject);
-        } catch (e) {
-          if (e.code === "ENOENT") {
-            stat = null;
-          } else {
-            throw e;
-          }
-        }
-
-        const { search, hash } = urlObject;
-        let { pathname } = urlObject;
-        const pathnameUsesTrailingSlash = pathname.endsWith("/");
-        urlObject.search = "";
-        urlObject.hash = "";
-
-        // force trailing slash on directories
-        if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
-          urlObject.pathname = `${pathname}/`;
-        }
-        // otherwise remove trailing slash if any
-        if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
-          // a warning here? (because it's strange to reference a file with a trailing slash)
-          urlObject.pathname = pathname.slice(0, -1);
-        }
-
-        let url = urlObject.href;
-        const shouldApplyDilesystemMagicResolution =
-          reference.type === "js_import";
-        if (shouldApplyDilesystemMagicResolution) {
-          const filesystemResolution = applyFileSystemMagicResolution(url, {
-            fileStat: stat,
-            magicDirectoryIndex,
-            magicExtensions: getExtensionsToTry(
-              magicExtensions,
-              reference.ownerUrlInfo.url,
-            ),
-          });
-          if (filesystemResolution.stat) {
-            stat = filesystemResolution.stat;
-            url = filesystemResolution.url;
-          }
-        }
-        if (!stat) {
-          return null;
-        }
-        reference.leadsToADirectory = stat && stat.isDirectory();
-        if (reference.leadsToADirectory) {
-          let actionForDirectory;
-          if (reference.type === "a_href") {
-            actionForDirectory = "ignore";
-          } else if (
-            reference.type === "http_request" ||
-            reference.type === "filesystem"
-          ) {
-            actionForDirectory = "copy";
-          } else if (typeof directoryReferenceEffect === "string") {
-            actionForDirectory = directoryReferenceEffect;
-          } else if (typeof directoryReferenceEffect === "function") {
-            actionForDirectory = directoryReferenceEffect(reference);
-          } else {
-            actionForDirectory = "error";
-          }
-          if (actionForDirectory === "error") {
-            const error = new Error("Reference leads to a directory");
-            error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
-            throw error;
-          }
-          if (actionForDirectory === "preserve") {
-            return `ignore:${url}${search}${hash}`;
-          }
-        }
-        const urlRaw = preserveSymlinks ? url : resolveSymlink(url);
-        const resolvedUrl = `${urlRaw}${search}${hash}`;
-        return resolvedUrl;
-      },
-    },
+    jsenvPluginFsRedirection({
+      magicExtensions,
+      magicDirectoryIndex,
+      preserveSymlinks,
+    }),
     {
       name: "jsenv:fs_resolution",
       appliesDuring: "*",
@@ -197,18 +82,10 @@ export const jsenvPluginProtocolFile = ({
           return null;
         }
         const urlObject = new URL(urlInfo.url);
-        if (urlInfo.firstReference.leadsToADirectory) {
-          if (!urlInfo.filenameHint) {
-            if (urlInfo.firstReference.type === "filesystem") {
-              urlInfo.filenameHint = `${
-                urlInfo.firstReference.ownerUrlInfo.filenameHint
-              }${urlToFilename(urlInfo.url)}/`;
-            } else {
-              urlInfo.filenameHint = `${urlToFilename(urlInfo.url)}/`;
-            }
-          }
+        const { firstReference } = urlInfo;
+        if (firstReference.leadsToADirectory) {
           const directoryContentArray = readdirSync(urlObject);
-          if (urlInfo.firstReference.type === "filesystem") {
+          if (firstReference.type === "filesystem") {
             const content = JSON.stringify(directoryContentArray, null, "  ");
             return {
               type: "directory",
@@ -235,13 +112,6 @@ export const jsenvPluginProtocolFile = ({
             contentType: "application/json",
             content: JSON.stringify(directoryContentArray, null, "  "),
           };
-        }
-        if (
-          !urlInfo.dirnameHint &&
-          urlInfo.firstReference.ownerUrlInfo.type === "directory"
-        ) {
-          urlInfo.dirnameHint =
-            urlInfo.firstReference.ownerUrlInfo.filenameHint;
         }
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
         if (contentType === "text/html") {
@@ -386,14 +256,4 @@ const replacePlaceholders = (html, replacers) => {
     }
     return replacer;
   });
-};
-
-const resolveSymlink = (fileUrl) => {
-  const urlObject = new URL(fileUrl);
-  const realpath = realpathSync(urlObject);
-  const realUrlObject = pathToFileURL(realpath);
-  if (urlObject.pathname.endsWith("/")) {
-    realUrlObject.pathname += `/`;
-  }
-  return realUrlObject.href;
 };

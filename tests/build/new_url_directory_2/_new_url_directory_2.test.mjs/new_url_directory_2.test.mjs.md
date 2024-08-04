@@ -7,13 +7,7 @@
 ## 0_copy
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.js": "main.js" },
-  runtimeCompat: { node: "19" },
-  directoryReferenceEffect: "copy",
-})
+run()
 ```
 
 ### 1/4 logs

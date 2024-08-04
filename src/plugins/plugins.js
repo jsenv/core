@@ -9,6 +9,7 @@ import { jsenvPluginWebResolution } from "./resolution_web/jsenv_plugin_web_reso
 import { jsenvPluginVersionSearchParam } from "./version_search_param/jsenv_plugin_version_search_param.js";
 import { jsenvPluginProtocolFile } from "./protocol_file/jsenv_plugin_protocol_file.js";
 import { jsenvPluginProtocolHttp } from "./protocol_http/jsenv_plugin_protocol_http.js";
+import { jsenvPluginDirectoryReferenceEffect } from "./directory_reference_effect/jsenv_plugin_directory_reference_effect.js";
 import { jsenvPluginInjections } from "./injections/jsenv_plugin_injections.js";
 import { jsenvPluginInlining } from "./inlining/jsenv_plugin_inlining.js";
 import { jsenvPluginCommonJsGlobals } from "./commonjs_globals/jsenv_plugin_commonjs_globals.js";
@@ -66,7 +67,6 @@ export const getCorePlugins = ({
        - All the rest uses web standard url resolution
      */
     jsenvPluginProtocolFile({
-      directoryReferenceEffect,
       magicExtensions,
       magicDirectoryIndex,
     }),
@@ -75,6 +75,7 @@ export const getCorePlugins = ({
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),
     jsenvPluginWebResolution(),
+    jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
 
     jsenvPluginVersionSearchParam(),
     jsenvPluginCommonJsGlobals(),

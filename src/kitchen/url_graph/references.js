@@ -728,6 +728,9 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   if (reference.filenameHint && !referencedUrlInfo.filenameHint) {
     referencedUrlInfo.filenameHint = reference.filenameHint;
   }
+  if (reference.dirnameHint && !referencedUrlInfo.dirnameHint) {
+    referencedUrlInfo.dirnameHint = reference.dirnameHint;
+  }
   if (reference.debug) {
     referencedUrlInfo.debug = true;
   }

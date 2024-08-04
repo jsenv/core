@@ -181,13 +181,13 @@ export const createPluginController = (
     currentPlugin = hook.plugin;
     currentHookName = hook.name;
     let valueReturned = hookFn(info);
-    currentPlugin = null;
-    currentHookName = null;
     if (info.timing) {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
         performance.now() - startTimestamp;
     }
     valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
+    currentPlugin = null;
+    currentHookName = null;
     return valueReturned;
   };
   const callAsyncHook = async (hook, info) => {
@@ -204,13 +204,13 @@ export const createPluginController = (
     currentPlugin = hook.plugin;
     currentHookName = hook.name;
     let valueReturned = await hookFn(info);
-    currentPlugin = null;
-    currentHookName = null;
     if (info.timing) {
       info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
         performance.now() - startTimestamp;
     }
     valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
+    currentPlugin = null;
+    currentHookName = null;
     return valueReturned;
   };
 
