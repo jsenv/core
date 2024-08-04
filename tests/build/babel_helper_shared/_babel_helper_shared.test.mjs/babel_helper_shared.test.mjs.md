@@ -7,8 +7,7 @@
 ## 0_js_module
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
@@ -68,8 +67,7 @@ see [./0_js_module/build/](./0_js_module/build/)
 ## 1_js_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: {
     chrome: "55",
     edge: "14",
@@ -118,7 +116,7 @@ see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 --- build files ---  
 - html : 1 (21.6 kB / 74 %)
 - js   : 4 (7.5 kB / 26 %)
-- total: 5 (29.2 kB / 100 %)
+- total: 5 (29.1 kB / 100 %)
 --------------------
 ```
 
