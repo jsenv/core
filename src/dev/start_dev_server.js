@@ -21,13 +21,12 @@ import { createEventEmitter } from "../helpers/event_emitter.js";
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
+import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events/jsenv_plugin_server_events_client_injection.js";
 import { createServerEventsDispatcher } from "../plugins/server_events/server_events_dispatcher.js";
 import { parseUserAgentHeader } from "./user_agent.js";
-
-const jsenvCoreDirectoryUrl = new URL("../../../", import.meta.url);
 
 /**
  * Start a server for source files:

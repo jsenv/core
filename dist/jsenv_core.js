@@ -11068,6 +11068,8 @@ const watchSourceFiles = (
   return stopWatchingSourceFiles;
 };
 
+const jsenvCoreDirectoryUrl = new URL("./jsenv-core/", import.meta.url);
+
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = new URL(
     "./html/html_syntax_error.html",
@@ -21956,7 +21958,10 @@ const build = async ({
       "buildDirectoryUrl",
     );
     if (outDirectoryUrl === undefined) {
-      if (process.env.CAPTURING_SIDE_EFFECTS) {
+      if (
+        process.env.CAPTURING_SIDE_EFFECTS ||
+        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl)
+      ) {
         outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
       } else {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
@@ -22744,8 +22749,6 @@ const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {
       family === "Other" ? "unknown" : `${major}.${minor}${patch}`,
   };
 });
-
-const jsenvCoreDirectoryUrl = new URL("./jsenv-core/", import.meta.url);
 
 /**
  * Start a server for source files:

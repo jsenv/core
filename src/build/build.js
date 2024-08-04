@@ -27,8 +27,10 @@ import { createLogger, createTaskLog } from "@jsenv/humanize";
 import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
+import { urlIsInsideOf } from "@jsenv/urls";
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
+import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js";
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
@@ -148,7 +150,10 @@ export const build = async ({
       "buildDirectoryUrl",
     );
     if (outDirectoryUrl === undefined) {
-      if (process.env.CAPTURING_SIDE_EFFECTS) {
+      if (
+        process.env.CAPTURING_SIDE_EFFECTS ||
+        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl)
+      ) {
         outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
       } else {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
