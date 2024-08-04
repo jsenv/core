@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert";
-import { writeFileStructureSync } from "@jsenv/filesystem";
+import { replaceFileStructureSync } from "@jsenv/filesystem";
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium, firefox } from "playwright";
 
@@ -103,10 +103,10 @@ const test = async ({
   const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
   const jsFileUrl = new URL("./main.js", sourceDirectoryUrl);
   const cssFileUrl = new URL("./style.css", sourceDirectoryUrl);
-  writeFileStructureSync(
-    sourceDirectoryUrl,
-    new URL("./0_at_start/", import.meta.url),
-  );
+  replaceFileStructureSync({
+    from: new URL("./0_at_start/", import.meta.url),
+    to: sourceDirectoryUrl,
+  });
   const devServer = await startDevServer({
     logLevel: "warn",
     sourceDirectoryUrl,

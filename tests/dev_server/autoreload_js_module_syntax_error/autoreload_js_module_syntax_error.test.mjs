@@ -5,7 +5,7 @@
  * - Fixing the syntax error removes the error overlay
  */
 
-import { writeFileStructureSync, writeFileSync } from "@jsenv/filesystem";
+import { replaceFileStructureSync, writeFileSync } from "@jsenv/filesystem";
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 
@@ -17,10 +17,10 @@ import {
 
 let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
-writeFileStructureSync(
-  sourceDirectoryUrl,
-  new URL("./0_at_start/", import.meta.url),
-);
+replaceFileStructureSync({
+  from: new URL("./0_at_start/", import.meta.url),
+  to: sourceDirectoryUrl,
+});
 const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",

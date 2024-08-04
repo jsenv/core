@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "39.3.0",
+  "version": "39.3.1",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -69,7 +69,7 @@
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.3.0",
     "@jsenv/ast": "6.2.15",
-    "@jsenv/filesystem": "4.9.10",
+    "@jsenv/filesystem": "4.10.0",
     "@jsenv/humanize": "1.2.8",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/integrity": "0.0.2",

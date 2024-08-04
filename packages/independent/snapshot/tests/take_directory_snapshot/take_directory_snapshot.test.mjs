@@ -4,12 +4,12 @@ import {
   ensureEmptyDirectorySync,
   readFileStructureSync,
   removeDirectorySync,
+  replaceFileStructureSync,
   writeFileStructureSync,
   writeFileSync,
 } from "@jsenv/filesystem";
-import stripAnsi from "strip-ansi";
-
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import stripAnsi from "strip-ansi";
 
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
@@ -166,18 +166,21 @@ test(() => {
 
 // file inside directory sarting with "." are ignored
 test(() => {
-  writeFileStructureSync(
-    snapshotsDirectoryUrl,
-    new URL("./fixtures/4_dir_starting_with_dot/", import.meta.url),
-  );
+  replaceFileStructureSync({
+    from: new URL("./fixtures/4_dir_starting_with_dot/", import.meta.url),
+    to: snapshotsDirectoryUrl,
+  });
   const fileStructureBeforeComparison = readFileStructureSync(
     snapshotsDirectoryUrl,
   );
   const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
-  writeFileStructureSync(
-    snapshotsDirectoryUrl,
-    new URL("./fixtures/5_dir_starting_with_dot_changed/", import.meta.url),
-  );
+  replaceFileStructureSync({
+    from: new URL(
+      "./fixtures/5_dir_starting_with_dot_changed/",
+      import.meta.url,
+    ),
+    to: snapshotsDirectoryUrl,
+  });
   directorySnapshot.compare(true);
   const fileStructureAfterComparison = readFileStructureSync(
     snapshotsDirectoryUrl,
@@ -208,10 +211,10 @@ test(() => {
     snapshotsDirectoryUrl,
   );
   const directorySnapshot = takeDirectorySnapshot(snapshotsDirectoryUrl);
-  writeFileStructureSync(
-    snapshotsDirectoryUrl,
-    new URL("./fixtures/6_dir_starting_with_dot_added/", import.meta.url),
-  );
+  replaceFileStructureSync({
+    from: new URL("./fixtures/6_dir_starting_with_dot_added/", import.meta.url),
+    to: snapshotsDirectoryUrl,
+  });
   directorySnapshot.compare(true);
   const fileStructureAfterComparison = readFileStructureSync(
     snapshotsDirectoryUrl,

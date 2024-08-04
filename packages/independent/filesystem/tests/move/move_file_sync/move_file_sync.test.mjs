@@ -1,4 +1,4 @@
-import { moveFileSync, writeFileStructureSync } from "@jsenv/filesystem";
+import { moveFileSync, replaceFileStructureSync } from "@jsenv/filesystem";
 
 const test = (scenario, fn) => {
   const scenarioAtStartDirectoryUrl = new URL(
@@ -9,7 +9,10 @@ const test = (scenario, fn) => {
     `./output/${scenario}/`,
     import.meta.url,
   );
-  writeFileStructureSync(scenarioDirectoryUrl, scenarioAtStartDirectoryUrl);
+  replaceFileStructureSync({
+    from: scenarioAtStartDirectoryUrl,
+    to: scenarioDirectoryUrl,
+  });
   fn(scenarioDirectoryUrl);
 };
 

@@ -12,7 +12,7 @@
 
 import {
   ensureEmptyDirectorySync,
-  writeFileStructureSync,
+  replaceFileStructureSync,
 } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { writeFileSync } from "node:fs";
@@ -25,7 +25,10 @@ const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 const writeFileStructureForScenario = (scenario) => {
   const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
-  writeFileStructureSync(sourceDirectoryUrl, scenarioDirectoryUrl);
+  replaceFileStructureSync({
+    from: scenarioDirectoryUrl,
+    to: sourceDirectoryUrl,
+  });
 };
 ensureEmptyDirectorySync(snapshotsDirectoryUrl);
 writeFileStructureForScenario("0_at_start");
@@ -52,7 +55,10 @@ const takeScreenshot = async (scenario) => {
 };
 const testScenario = async (scenario) => {
   const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
-  writeFileStructureSync(sourceDirectoryUrl, scenarioDirectoryUrl);
+  replaceFileStructureSync({
+    from: scenarioDirectoryUrl,
+    to: sourceDirectoryUrl,
+  });
   await new Promise((resolve) => setTimeout(resolve, 500));
   await takeScreenshot(scenario);
 };
