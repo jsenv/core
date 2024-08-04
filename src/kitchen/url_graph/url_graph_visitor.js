@@ -118,19 +118,20 @@ GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (
       if (referenceToOther.gotInlined()) {
         continue;
       }
-      if (referenceToOther.isWeak) {
-        continue;
-      }
       const referencedUrlInfo = referenceToOther.urlInfo;
-      if (seen.has(referencedUrlInfo)) {
-        continue;
-      }
-      seen.add(referencedUrlInfo);
       if (
         directoryUrlInfoSet &&
         referenceToOther.expectedType === "directory"
       ) {
         directoryUrlInfoSet.add(referencedUrlInfo);
+      }
+      if (seen.has(referencedUrlInfo)) {
+        continue;
+      }
+      seen.add(referencedUrlInfo);
+
+      if (referenceToOther.isWeak) {
+        continue;
       }
       callback(referencedUrlInfo);
       iterateOnReferences(referencedUrlInfo);

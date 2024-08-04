@@ -22,10 +22,10 @@ export const jsenvPluginDirectoryReferenceEffect = (
         return null;
       }
       reference.leadsToADirectory = true;
+      reference.expectedType = "directory";
       if (reference.ownerUrlInfo.type === "directory") {
         reference.dirnameHint = reference.ownerUrlInfo.filenameHint;
       }
-      reference.expectedType = "directory";
       if (reference.type === "filesystem") {
         reference.filenameHint = `${
           reference.ownerUrlInfo.filenameHint
