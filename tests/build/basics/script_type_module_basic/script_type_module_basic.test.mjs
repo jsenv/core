@@ -7,7 +7,6 @@ const run = async ({ runtimeCompat }) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     bundling: false,
     minification: false,
     versioning: false,

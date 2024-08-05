@@ -8,7 +8,6 @@ const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     minification: false,
   };
   test("0_js_module", () =>
