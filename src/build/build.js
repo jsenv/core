@@ -154,7 +154,7 @@ export const build = async ({
         process.env.CAPTURING_SIDE_EFFECTS ||
         urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl)
       ) {
-        outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
+        outDirectoryUrl = new URL("../.jsenv_build/", sourceDirectoryUrl);
       } else {
         const packageDirectoryUrl = lookupPackageDirectory(sourceDirectoryUrl);
         if (packageDirectoryUrl) {
