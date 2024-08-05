@@ -67,6 +67,8 @@ export const createException = (
     return exception;
   }
   errorTransform(reason);
+  const isError = reason instanceof Error;
+  const name = getErrorName(reason, isError);
   if (reason.stackFrames === undefined && "stack" in reason) {
     let stackFrames;
 
@@ -197,7 +199,6 @@ export const createException = (
     }
     exception.stackTrace = stackTrace;
     let stack = "";
-    const name = getErrorName(reason);
     const message = reason.message || "";
     stack += `${name}: ${message}`;
     if (stackTrace) {
@@ -216,7 +217,6 @@ export const createException = (
         : firstCallFrame.evalSite;
     }
   }
-  const isError = reason instanceof Error;
   exception.isError = isError;
 
   // getOwnPropertyNames to catch non enumerable properties on reason
@@ -227,7 +227,7 @@ export const createException = (
   if (isError) {
     // getOwnPropertyNames is not enough to copy .name and .message
     // on error instances
-    exception.name = getErrorName(reason);
+    exception.name = name;
     exception.message = reason.message;
     ownKeySet.delete("__INTERNAL_ERROR__");
     ownKeySet.delete("name");
@@ -325,11 +325,15 @@ const indentLines = (text, level = 1) => {
   return result;
 };
 
-const getErrorName = (value) => {
+const getErrorName = (value, isError) => {
   const { constructor } = value;
   if (constructor) {
-    if (constructor.name !== "Object") {
-      return constructor.name;
+    const { name } = constructor;
+    if (name !== "Object") {
+      if (name === "Error" && isError && value.name !== "Error") {
+        return value.name;
+      }
+      return name;
     }
   }
   return value.name || "Error";
