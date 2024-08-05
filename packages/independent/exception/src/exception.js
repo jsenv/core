@@ -69,8 +69,16 @@ export const createException = (
     return exception;
   }
   errorTransform(reason);
+  const isError = reason instanceof Error;
   if (reason.isException) {
-    Object.assign(exception, reason);
+    if (isError) {
+      // see "normalizeRuntimeError" in run.js
+      for (const key of Object.getOwnPropertyNames(reason)) {
+        exception[key] = reason[key];
+      }
+    } else {
+      Object.assign(exception, reason);
+    }
     if (reason.runtime === "browser") {
       const { stackFrames, stackTrace, stack, site } = getStackInfo(reason, {
         name: reason.name,
@@ -81,12 +89,11 @@ export const createException = (
       exception.stackTrace = stackTrace;
       exception.stack = stack;
       exception.site = site;
+      exception.runtime = "node";
+      exception.originalRuntime = "browser";
     }
-    exception.runtime = "node";
-    exception.originalRuntime = "browser";
     return exception;
   }
-  const isError = reason instanceof Error;
   exception.isError = isError;
   const name = getErrorName(reason, isError);
   if ("stack" in reason) {
@@ -100,7 +107,6 @@ export const createException = (
     exception.stack = stack;
     exception.site = site;
   }
-
   // getOwnPropertyNames to catch non enumerable properties on reason
   // (happens mostly when reason is instanceof Error)
   // like .stack, .message
@@ -179,24 +185,26 @@ const getStackInfo = (
       Error.prepareStackTrace = prepareStackTrace;
     }
   }
-  if (reason.stackFrames) {
-    stackFrames = reason.stackFrames;
-  } else {
-    const calls = parseStackTrace(stack);
-    stackFrames = [];
-    for (const call of calls) {
-      if (call.fileName === "") {
-        continue;
+  if (stackFrames === undefined) {
+    if (reason.stackFrames) {
+      stackFrames = reason.stackFrames;
+    } else {
+      const calls = parseStackTrace(stack);
+      stackFrames = [];
+      for (const call of calls) {
+        if (call.fileName === "") {
+          continue;
+        }
+        const isNative = call.type === "native";
+        stackFrames.push({
+          raw: call.raw,
+          functionName: call.name,
+          url: asFileUrl(call.fileName, { isNative }),
+          line: call.line,
+          column: call.column,
+          isNative,
+        });
       }
-      const isNative = call.type === "native";
-      stackFrames.push({
-        raw: call.raw,
-        functionName: call.name,
-        url: asFileUrl(call.fileName, { isNative }),
-        line: call.line,
-        column: call.column,
-        isNative,
-      });
     }
   }
   if (reason.__INTERNAL_ERROR__) {
