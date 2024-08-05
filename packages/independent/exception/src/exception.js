@@ -273,7 +273,7 @@ const getStackInfo = (
   }
 
   let site;
-  if (reason.site && !reason.site.isInline) {
+  if (reason.stackFrames && reason.site && !reason.site.isInline) {
     site = reason.site;
   } else {
     const [firstCallFrame] = stackFrames;
