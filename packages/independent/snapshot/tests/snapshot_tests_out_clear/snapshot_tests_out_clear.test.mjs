@@ -2,6 +2,7 @@ import { assert } from "@jsenv/assert";
 import {
   clearDirectorySync,
   readFileStructureSync,
+  removeFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
 import { snapshotTests } from "@jsenv/snapshot";
@@ -81,40 +82,33 @@ await snapshotTests(
   assert({ actual, expect });
 }
 
-// file.txt is deleted
-writeFileSync(
-  new URL("./_snapshot_tests_out_clear.test.mjs/file.txt", import.meta.url),
-  "hello.txt",
-);
-await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_first", () => {});
-});
 {
-  const actual = existsSync(
-    new URL("./_snapshot_tests_out_clear.test.mjs/file.txt", import.meta.url),
+  const fileTxtUrl = new URL(
+    "./_snapshot_tests_out_clear.test.mjs/file.txt",
+    import.meta.url,
   );
-  const expect = false;
-  assert({ actual, expect });
-}
-writeFileSync(
-  new URL("./_snapshot_tests_out_clear.test.mjs/file.txt", import.meta.url),
-  "hello.txt",
-);
-await snapshotTests(
-  import.meta.url,
-  ({ test }) => {
-    test("0_first", () => {});
-  },
-  {
-    filesystemActions: {
-      "*.txt": "ignore",
+  // first execution does write hello.txt
+  writeFileSync(fileTxtUrl, "hello");
+  // suddenly a second execution stops writing the file
+  // BUT we said it's ok to ignore this file
+  await snapshotTests(
+    import.meta.url,
+    ({ test }) => {
+      test("0_first", () => {});
     },
-  },
-);
-{
-  const actual = existsSync(
-    new URL("./_snapshot_tests_out_clear.test.mjs/file.txt", import.meta.url),
+    {
+      throwWhenDiff: true,
+      filesystemActions: {
+        "*.txt": "ignore",
+      },
+    },
   );
-  const expect = true;
-  assert({ actual, expect });
+  {
+    const actual = existsSync(
+      new URL("./_snapshot_tests_out_clear.test.mjs/file.txt", import.meta.url),
+    );
+    const expect = true;
+    assert({ actual, expect });
+  }
+  removeFileSync(fileTxtUrl);
 }

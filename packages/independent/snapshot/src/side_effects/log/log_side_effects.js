@@ -113,6 +113,16 @@ export const logSideEffects = (logSideEffectsOptions) => {
         if (sideEffectLevel < levelNumber) {
           return;
         }
+        message = String(message);
+        // some messages are flaky by definition we don't want to
+        // fail on thoose
+        if (
+          message.includes(
+            "[.WebGL-0x1470004c2a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+          )
+        ) {
+          return;
+        }
         addSideEffect({
           code: type,
           type,
