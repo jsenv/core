@@ -13,11 +13,7 @@
       <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
-  <error type="Error"> 9 |   &#x3C;body&#x3E;
-10 |     &#x3C;script&#x3E;
-11 |       throw new Error(&#x22;here&#x22;);
-                 ^
-Error: here
+  <error type="Error">Error: here
   at [mock]/error_in_script.spec.html:11:13</error>
   <testcase
     file="error_in_script.spec.html"
@@ -32,11 +28,7 @@ Error: here
       <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
-  <error type="Error"> 8 | 
- 9 |   &#x3C;body&#x3E;
-10 |     &#x3C;script&#x3E;
-                 ^
-Error: here
+  <error type="Error">Error: here
 @[mock]/error_in_script.spec.html:11:13</error>
   <testcase
     file="error_in_script.spec.html"
@@ -51,10 +43,6 @@ Error: here
       <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
-  <error type="Error"> 8 | 
- 9 |   &#x3C;body&#x3E;
-10 |     &#x3C;script&#x3E;
-                                  ^
-Error: here
+  <error type="Error">Error: here
 global code@[mock]/error_in_script.spec.html:11:22</error>
 </testsuite>
