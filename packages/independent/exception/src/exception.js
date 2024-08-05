@@ -21,8 +21,14 @@
 // https://cdn.jsdelivr.net/npm/errorstacks@latest/dist/esm/index.mjs
 import { URL_META } from "@jsenv/url-meta";
 import { parseStackTrace } from "errorstacks";
+import { pathToFileURL } from "node:url";
 
 const isDev = process.execArgv.includes("--conditions=development");
+
+export const markAsInternalError = (error) => {
+  error.__INTERNAL_ERROR__ = true;
+  return error;
+};
 
 export const createException = (
   reason,
@@ -41,6 +47,7 @@ export const createException = (
     stack: "",
     stackFrames: undefined,
     site: null,
+    ownProps: {},
   };
 
   if (reason === undefined) {
@@ -68,13 +75,17 @@ export const createException = (
 
       stackFrames = [];
       for (const callSite of callSites) {
+        const isNative = callSite.isNative();
         const stackFrame = {
           raw: `  at ${String(callSite)}`,
-          url: callSite.getFileName() || callSite.getScriptNameOrSourceURL(),
+          url: asFileUrl(
+            callSite.getFileName() || callSite.getScriptNameOrSourceURL(),
+            { isNative },
+          ),
           line: callSite.getLineNumber(),
           column: callSite.getColumnNumber(),
           functionName: callSite.getFunctionName(),
-          isNative: callSite.isNative(),
+          isNative,
           isEval: callSite.isEval(),
           isConstructor: callSite.isConstructor(),
           isAsync: callSite.isAsync(),
@@ -103,32 +114,42 @@ export const createException = (
         if (call.fileName === "") {
           continue;
         }
+        const isNative = call.type === "native";
         stackFrames.push({
           raw: call.raw,
           functionName: call.name,
-          url: call.fileName,
+          url: asFileUrl(call.fileName, { isNative }),
           line: call.line,
           column: call.column,
-          native: call.type === "native",
+          isNative,
         });
       }
     }
 
-    const stackFramesNonNative = [];
-    for (const stackFrame of stackFrames) {
-      if (!stackFrame.url) {
-        continue;
-      }
-      if (stackFrame.url.startsWith("node:")) {
-        stackFrame.native = "node";
-        continue;
-      }
-      if (stackFrame.url.startsWith("file:")) {
-        if (rootDirectoryUrl && stackFrame.url.startsWith(rootDirectoryUrl)) {
-          stackFramesNonNative.push(stackFrame);
+    if (reason.__INTERNAL_ERROR__) {
+      stackFrames = [];
+    } else {
+      const stackFrameInternalArray = [];
+      for (const stackFrame of stackFrames) {
+        if (!stackFrame.url) {
           continue;
         }
-
+        if (stackFrame.isNative) {
+          stackFrame.category = "native";
+          continue;
+        }
+        if (stackFrame.url.startsWith("node:")) {
+          stackFrame.category = "node";
+          continue;
+        }
+        if (!stackFrame.url.startsWith("file:")) {
+          stackFrameInternalArray.push(stackFrame);
+          continue;
+        }
+        if (rootDirectoryUrl && stackFrame.url.startsWith(rootDirectoryUrl)) {
+          stackFrameInternalArray.push(stackFrame);
+          continue;
+        }
         if (isDev) {
           // while developing jsenv itself we want to exclude any
           // - src/*
@@ -141,7 +162,7 @@ export const createException = (
               [`${jsenvCoreDirectoryUrl}packages/**/src/`]: true,
             })
           ) {
-            stackFrame.native = "jsenv";
+            stackFrame.category = "jsenv";
             continue;
           }
         } else if (
@@ -149,24 +170,31 @@ export const createException = (
             "file:///**/node_modules/@jsenv/core/": true,
           })
         ) {
-          stackFrame.native = "jsenv";
+          stackFrame.category = "jsenv";
           continue;
         }
+        if (
+          URL_META.matches(stackFrame.url, {
+            "file:///**/node_modules/": true,
+          })
+        ) {
+          stackFrame.category = "node_modules";
+          continue;
+        }
+        stackFrameInternalArray.push(stackFrame);
       }
-      stackFramesNonNative.push(stackFrame);
+      if (stackFrameInternalArray.length) {
+        stackFrames = stackFrameInternalArray;
+      }
     }
-    if (stackFramesNonNative.length) {
-      stackFrames = stackFramesNonNative;
-    }
-
-    reason.stackFrames = stackFrames;
+    exception.stackFrames = stackFrames;
 
     let stackTrace = "";
     for (const stackFrame of stackFrames) {
       if (stackTrace) stackTrace += "\n";
       stackTrace += stackFrame.raw;
     }
-    reason.stackTrace = stackTrace;
+    exception.stackTrace = stackTrace;
     let stack = "";
     const name = getErrorName(reason);
     const message = errorMessageTransform(reason.message || "");
@@ -174,11 +202,11 @@ export const createException = (
     if (stackTrace) {
       stack += `\n${stackTrace}`;
     }
-    reason.stack = stack;
+    exception.stack = stack;
 
     const [firstCallFrame] = stackFrames;
     if (firstCallFrame && (!reason.site || !reason.site.isInline)) {
-      reason.site = firstCallFrame.url
+      exception.site = firstCallFrame.url
         ? {
             url: firstCallFrame.url,
             line: firstCallFrame.line,
@@ -187,22 +215,110 @@ export const createException = (
         : firstCallFrame.evalSite;
     }
   }
+  const isError = reason instanceof Error;
+  exception.isError = isError;
+
   // getOwnPropertyNames to catch non enumerable properties on reason
   // (happens mostly when reason is instanceof Error)
   // like .stack, .message
   // some properties are even on the prototype like .name
-  for (const ownPropertyName of Object.getOwnPropertyNames(reason)) {
-    exception[ownPropertyName] = reason[ownPropertyName];
-  }
-  const isError = reason instanceof Error;
-  exception.isError = isError;
+  const ownPropertyNameSet = new Set(Object.getOwnPropertyNames(reason));
   if (isError) {
     // getOwnPropertyNames is not enough to copy .name and .message
     // on error instances
     exception.name = getErrorName(reason);
     exception.message = errorMessageTransform(reason.message);
+    ownPropertyNameSet.delete("__INTERNAL_ERROR__");
+    ownPropertyNameSet.delete("name");
+    ownPropertyNameSet.delete("message");
+    ownPropertyNameSet.delete("stack");
+    if (reason.cause) {
+      ownPropertyNameSet.delete("cause");
+      const causeException = createException(reason.cause, {
+        jsenvCoreDirectoryUrl,
+        rootDirectoryUrl,
+        errorMessageTransform,
+      });
+      exception.ownProps["[cause]"] = causeException;
+    }
+  }
+  for (const ownPropertyName of ownPropertyNameSet) {
+    exception.ownProps = reason[ownPropertyName];
   }
   return exception;
+};
+
+const asFileUrl = (callSiteFilename, { isNative }) => {
+  if (isNative) {
+    return callSiteFilename;
+  }
+  if (callSiteFilename.startsWith("file:")) {
+    return callSiteFilename;
+  }
+  if (callSiteFilename.startsWith("node:")) {
+    return callSiteFilename;
+  }
+  try {
+    const fileUrl = pathToFileURL(callSiteFilename);
+    return fileUrl.href;
+  } catch (e) {
+    return callSiteFilename;
+  }
+};
+
+export const stringifyException = (exception, { errorStackHidden } = {}) => {
+  let string = "";
+
+  if (exception.name) {
+    string += `${exception.name}: ${exception.message}`;
+  } else {
+    string += exception.message;
+  }
+  if (exception.stackTrace && !errorStackHidden) {
+    string += `\n${exception.stackTrace}`;
+  }
+  const { ownProps } = exception;
+  if (ownProps) {
+    const ownPropsKeys = Object.keys(ownProps);
+    if (ownPropsKeys.length > 0) {
+      string += " {";
+      const indentationLevel = 0;
+      const indentation = "  ".repeat(indentationLevel);
+      const indentationInsideObject = "  ".repeat(indentationLevel + 1);
+      for (const key of Object.keys(ownProps)) {
+        const value = ownProps[key];
+        string += `\n${indentationInsideObject}`;
+        string += `${key}: `;
+        if (value && value.isException) {
+          const valueString = stringifyException(value, { errorStackHidden });
+          const valueStringIndented = indentLines(
+            valueString,
+            indentationLevel + 1,
+          );
+          string += valueStringIndented;
+        } else {
+          string += JSON.stringify(value, null, indentationInsideObject);
+        }
+        string += ",";
+      }
+      string += `\n${indentation}}`;
+    }
+  }
+  return string;
+};
+
+const indentLines = (text, level = 1) => {
+  const lines = text.split(/\r?\n/);
+  const indentation = "  ".repeat(level);
+  const firstLine = lines.shift();
+  let result = firstLine;
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    i++;
+    result += line.length ? `\n${indentation}${line}` : `\n`;
+  }
+  return result;
 };
 
 const getErrorName = (value) => {

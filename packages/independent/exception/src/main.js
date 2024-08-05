@@ -1,1 +1,5 @@
-export { createException } from "./exception.js";
+export {
+  createException,
+  markAsInternalError,
+  stringifyException,
+} from "./exception.js";

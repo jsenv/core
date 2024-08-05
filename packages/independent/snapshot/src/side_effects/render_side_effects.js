@@ -1,4 +1,4 @@
-import { createException } from "@jsenv/exception";
+import { createException, stringifyException } from "@jsenv/exception";
 import { writeFileSync } from "@jsenv/filesystem";
 import { renderTerminalSvg } from "@jsenv/terminal-recorder";
 import { urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
@@ -255,9 +255,9 @@ const renderText = (
           rootDirectoryUrl,
           errorMessageTransform,
         });
-        const exceptionText = errorStackHidden
-          ? `${exception.name}: ${exception.message}`
-          : exception.stack || exception.message || exception;
+        const exceptionText = stringifyException(exception, {
+          errorStackHidden,
+        });
         return renderPotentialAnsi(exceptionText, {
           stringType: "error",
           sideEffect,
