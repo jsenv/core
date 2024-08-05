@@ -2,7 +2,6 @@ import { startDevServer } from "@jsenv/core";
 import { writeFileSync } from "@jsenv/filesystem";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
-
 import {
   chromium,
   executeTestPlan,
@@ -11,6 +10,7 @@ import {
   reporterList,
   webkit,
 } from "@jsenv/test";
+import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
 if (process.platform === "win32") {
   // to fix once got a windows OS to reproduce
@@ -33,10 +33,7 @@ const devServer = await startDevServer({
   port: 0,
 });
 
-const test = async (filename, params) => {
-  if (terminalAnimatedRecording) {
-    console.log(`snapshoting ${filename}`);
-  }
+const run = async ({ filename }) => {
   const testPlanResult = await executeTestPlan({
     logs: {
       type: null,
@@ -116,19 +113,38 @@ const test = async (filename, params) => {
     webServer: {
       origin: devServer.origin,
     },
-    ...params,
   });
   const junitXmlFileUrl = new URL(`./output/${filename}.xml`, import.meta.url);
   await reportAsJunitXml(testPlanResult, junitXmlFileUrl);
 };
 
-await test("console.spec.html");
-await test("empty.spec.html");
-await test("error_in_script.spec.html");
-await test("error_in_script_module.spec.html");
-await test("error_in_js_module.spec.html");
-await test("error_in_js_classic.spec.html");
-if (!process.env.CI) {
-  // fails in CI for some reason
-  await test("error_jsenv_assert_in_script_module.spec.html");
-}
+await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
+  test("0_console", () =>
+    run({
+      filename: "console.spec.html",
+    }));
+  test("1_empty", () =>
+    run({
+      filename: "empty.spec.html",
+    }));
+  test("2_error_in_script", () =>
+    run({
+      filename: "error_in_script.spec.html",
+    }));
+  test("3_error_in_script_module", () =>
+    run({
+      filename: "error_in_script_module.spec.html",
+    }));
+  test("4_error_in_js_module", () =>
+    run({
+      filename: "error_in_js_module.spec.html",
+    }));
+  test("5_error_in_js_classic", () =>
+    run({
+      filename: "error_in_js_classic.spec.html",
+    }));
+  test("6_error_jsenv_assert_in_script_module", () =>
+    run({
+      filename: "error_jsenv_assert_in_script_module.spec.html",
+    }));
+});
