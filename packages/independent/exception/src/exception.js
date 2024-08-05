@@ -177,7 +177,9 @@ const getStackInfo = (
       Error.prepareStackTrace = prepareStackTrace;
     }
   }
-  if (stackFrames === undefined) {
+  if (reason.stackFrames) {
+    stackFrames = reason.stackFrames;
+  } else {
     const calls = parseStackTrace(reason.stack);
     stackFrames = [];
     for (const call of calls) {
@@ -271,15 +273,19 @@ const getStackInfo = (
   }
 
   let site;
-  const [firstCallFrame] = stackFrames;
-  if (firstCallFrame && (!reason.site || !reason.site.isInline)) {
-    site = firstCallFrame.url
-      ? {
-          url: firstCallFrame.url,
-          line: firstCallFrame.line,
-          column: firstCallFrame.column,
-        }
-      : firstCallFrame.evalSite;
+  if (reason.site && !reason.site.isInline) {
+    site = reason.site;
+  } else {
+    const [firstCallFrame] = stackFrames;
+    if (firstCallFrame) {
+      site = firstCallFrame.url
+        ? {
+            url: firstCallFrame.url,
+            line: firstCallFrame.line,
+            column: firstCallFrame.column,
+          }
+        : firstCallFrame.evalSite;
+    }
   }
   return { stackFrames, stackTrace, stack, site };
 };

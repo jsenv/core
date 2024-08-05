@@ -47,8 +47,6 @@ Error: here
       <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
-  <error type="Error">1 | throw new Error(&#x22;here&#x22;);
-                   ^
-Error: here
+  <error type="Error">Error: here
 module code@[mock]/error_in_js_module.spec.js:1:16</error>
 </testsuite>

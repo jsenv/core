@@ -3,7 +3,7 @@
   font-family="SauceCodePro Nerd Font, Source Code Pro, Courier"
   font-size="14"
   width="100%"
-  viewBox="0 0 640 461.45"
+  viewBox="0 0 640 480.45"
   background-color="#282c34"
 >
   <g id="background">
@@ -11,7 +11,7 @@
       x="1"
       y="1"
       width="638"
-      height="459.45"
+      height="478.45"
       fill="#282c34"
       stroke="rgba(255,255,255,0.35)"
       stroke-width="1"
@@ -32,90 +32,81 @@
     id="body"
     y="40"
     width="100%"
-    height="421.45"
+    height="440.45"
     overflow="hidden"
   >
     <svg
       width="708.91"
-      height="421.45"
+      height="440.45"
       font-family="monospace"
       font-variant-east-asian="full-width"
       fill="#cccccc"
     >
       <g>
-        <text x="26.8" y="14.55"> at </text>
-        <text x="52.01" y="14.55" font-weight="bold"
+        <text x="152.82" y="14.55" fill="#cd5555">^</text>
+        <text x="10" y="33.55">AssertionError: </text>
+        <text x="144.42" y="33.55" fill="#cd5555">actual</text>
+        <text x="203.23" y="33.55"> and </text>
+        <text x="236.84" y="33.55" fill="#11bc79">expect</text>
+        <text x="295.65" y="33.55"> are different</text>
+        <text x="10" y="71.55" fill="#7f7f7f">actual:</text>
+        <text x="77.21" y="71.55" fill="#cd5555">1</text>
+        <text x="10" y="90.55" fill="#7f7f7f">expect:</text>
+        <text x="77.21" y="90.55" fill="#11bc79">&#x22;1&#x22;</text>
+        <text x="10" y="109.55">@</text>
+        <text x="18.4" y="109.55" font-weight="bold"
           >[mock]/error_jsenv_assert_in_script_module.spec.html</text
         >
-        <text x="488.88" y="14.55">:13:7</text>
-        <text x="10" y="33.55" fill="#7f7f7f"
+        <text x="455.27" y="109.55">:13:13</text>
+        <text x="10" y="128.55" fill="#7f7f7f"
           >--------------------------------------</text
         >
-        <text x="10" y="52.55" fill="#cd5555"
-          >&#x2716; 2/3 error_jsenv_assert_in_script_module.spec.html</text
-        >
-        <text x="446.87" y="52.55" fill="#7f7f7f"
-          >[firefox/&#x3C;mock&#x3E;ms]</text
-        >
-        <text x="606.5" y="52.55"> (2 </text>
-        <text x="631.7" y="52.55" fill="#cd5555">failed</text>
-        <text x="682.11" y="52.55">)</text>
-        <text x="10" y="71.55" fill="#7f7f7f">---------------</text>
-        <text x="144.42" y="71.55"> error </text>
-        <text x="194.83" y="71.55" fill="#7f7f7f">----------------</text>
-        <text x="10" y="90.55">AssertionError: </text>
-        <text x="144.42" y="90.55" fill="#cd5555">actual</text>
-        <text x="203.23" y="90.55"> and </text>
-        <text x="236.84" y="90.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="90.55"> are different</text>
-        <text x="10" y="128.55" fill="#7f7f7f">actual:</text>
-        <text x="77.21" y="128.55" fill="#cd5555">1</text>
-        <text x="10" y="147.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="147.55" fill="#11bc79">&#x22;1&#x22;</text>
-        <text x="10" y="166.55">@</text>
-        <text x="18.4" y="166.55" font-weight="bold"
-          >[mock]/error_jsenv_assert_in_script_module.spec.html</text
-        >
-        <text x="455.27" y="166.55">:13:13</text>
-        <text x="10" y="185.55" fill="#7f7f7f"
-          >--------------------------------------</text
-        >
-        <text x="10" y="204.55" fill="#cd5555"
+        <text x="10" y="147.55" fill="#cd5555"
           >&#x2716; 3/3 error_jsenv_assert_in_script_module.spec.html</text
         >
-        <text x="446.87" y="204.55" fill="#7f7f7f"
+        <text x="446.87" y="147.55" fill="#7f7f7f"
           >[webkit/&#x3C;mock&#x3E;ms]</text
         >
-        <text x="598.1" y="204.55"> (all </text>
-        <text x="640.1" y="204.55" fill="#cd5555">failed</text>
-        <text x="690.51" y="204.55">)</text>
-        <text x="10" y="223.55" fill="#7f7f7f">---------------</text>
-        <text x="144.42" y="223.55"> error </text>
-        <text x="194.83" y="223.55" fill="#7f7f7f">----------------</text>
-        <text x="10" y="242.55">AssertionError: </text>
-        <text x="144.42" y="242.55" fill="#cd5555">actual</text>
-        <text x="203.23" y="242.55"> and </text>
-        <text x="236.84" y="242.55" fill="#11bc79">expect</text>
-        <text x="295.65" y="242.55"> are different</text>
-        <text x="10" y="280.55" fill="#7f7f7f">actual:</text>
-        <text x="77.21" y="280.55" fill="#cd5555">1</text>
-        <text x="10" y="299.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="299.55" fill="#11bc79">&#x22;1&#x22;</text>
-        <text x="10" y="318.55">module code@</text>
-        <text x="110.82" y="318.55" font-weight="bold"
+        <text x="598.1" y="147.55"> (all </text>
+        <text x="640.1" y="147.55" fill="#cd5555">failed</text>
+        <text x="690.51" y="147.55">)</text>
+        <text x="10" y="166.55" fill="#7f7f7f">---------------</text>
+        <text x="144.42" y="166.55"> error </text>
+        <text x="194.83" y="166.55" fill="#7f7f7f">----------------</text>
+        <text x="10" y="185.55" fill="#7f7f7f">11 |</text>
+        <text x="102.42" y="185.55">
+          import { assert } from &#x22;@jsenv/assert&#x22;;</text
+        >
+        <text x="10" y="204.55" fill="#7f7f7f">12 |</text>
+        <text x="10" y="223.55" fill="#7f7f7f">13 |</text>
+        <text x="102.42" y="223.55">
+          assert({ actual: 1, expect: &#x22;1&#x22; });</text
+        >
+        <text x="152.82" y="242.55" fill="#cd5555">^</text>
+        <text x="10" y="261.55">AssertionError: </text>
+        <text x="144.42" y="261.55" fill="#cd5555">actual</text>
+        <text x="203.23" y="261.55"> and </text>
+        <text x="236.84" y="261.55" fill="#11bc79">expect</text>
+        <text x="295.65" y="261.55"> are different</text>
+        <text x="10" y="299.55" fill="#7f7f7f">actual:</text>
+        <text x="77.21" y="299.55" fill="#cd5555">1</text>
+        <text x="10" y="318.55" fill="#7f7f7f">expect:</text>
+        <text x="77.21" y="318.55" fill="#11bc79">&#x22;1&#x22;</text>
+        <text x="10" y="337.55">module code@</text>
+        <text x="110.82" y="337.55" font-weight="bold"
           >[mock]/error_jsenv_assert_in_script_module.spec.html</text
         >
-        <text x="547.69" y="318.55">:13:13</text>
-        <text x="10" y="337.55" fill="#7f7f7f"
+        <text x="547.69" y="337.55">:13:13</text>
+        <text x="10" y="356.55" fill="#7f7f7f"
           >--------------------------------------</text
         >
-        <text x="10" y="356.55" fill="#7f7f7f">-------------</text>
-        <text x="127.62" y="356.55"> 3 executions done </text>
-        <text x="278.84" y="356.55" fill="#7f7f7f">-------------</text>
-        <text x="10" y="375.55">status: all </text>
-        <text x="110.82" y="375.55" fill="#cd5555">failed</text>
-        <text x="10" y="394.55">duration: &#x3C;mock&#x3E;s</text>
-        <text x="10" y="413.55" fill="#7f7f7f"
+        <text x="10" y="375.55" fill="#7f7f7f">-------------</text>
+        <text x="127.62" y="375.55"> 3 executions done </text>
+        <text x="278.84" y="375.55" fill="#7f7f7f">-------------</text>
+        <text x="10" y="394.55">status: all </text>
+        <text x="110.82" y="394.55" fill="#cd5555">failed</text>
+        <text x="10" y="413.55">duration: &#x3C;mock&#x3E;s</text>
+        <text x="10" y="432.55" fill="#7f7f7f"
           >---------------------------------------------</text
         >
       </g>

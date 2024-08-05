@@ -13,7 +13,11 @@
       <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
-  <failure type="AssertionError">AssertionError: &#x1B;[31mactual&#x1B;[0m and &#x1B;[32mexpect&#x1B;[0m are different
+  <failure type="AssertionError">11 |       import { assert } from &#x22;@jsenv/assert&#x22;;
+12 | 
+13 |       assert({ actual: 1, expect: &#x22;1&#x22; });
+           ^
+AssertionError: &#x1B;[31mactual&#x1B;[0m and &#x1B;[32mexpect&#x1B;[0m are different
 
 &#x1B;[90mactual:&#x1B;[0m &#x1B;[31m1&#x1B;[0m
 &#x1B;[90mexpect:&#x1B;[0m &#x1B;[32m&#x22;&#x1B;[0m&#x1B;[32m1&#x1B;[0m&#x1B;[32m&#x22;&#x1B;[0m
@@ -31,7 +35,11 @@
       <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
-  <failure type="AssertionError">AssertionError: &#x1B;[31mactual&#x1B;[0m and &#x1B;[32mexpect&#x1B;[0m are different
+  <failure type="AssertionError">11 |       import { assert } from &#x22;@jsenv/assert&#x22;;
+12 | 
+13 |       assert({ actual: 1, expect: &#x22;1&#x22; });
+                 ^
+AssertionError: &#x1B;[31mactual&#x1B;[0m and &#x1B;[32mexpect&#x1B;[0m are different
 
 &#x1B;[90mactual:&#x1B;[0m &#x1B;[31m1&#x1B;[0m
 &#x1B;[90mexpect:&#x1B;[0m &#x1B;[32m&#x22;&#x1B;[0m&#x1B;[32m1&#x1B;[0m&#x1B;[32m&#x22;&#x1B;[0m
@@ -49,7 +57,11 @@
       <property name="runtimeVersion" value="[mock]"></property>
     </properties>
   </testcase>
-  <failure type="AssertionError">AssertionError: &#x1B;[31mactual&#x1B;[0m and &#x1B;[32mexpect&#x1B;[0m are different
+  <failure type="AssertionError">11 |       import { assert } from &#x22;@jsenv/assert&#x22;;
+12 | 
+13 |       assert({ actual: 1, expect: &#x22;1&#x22; });
+                 ^
+AssertionError: &#x1B;[31mactual&#x1B;[0m and &#x1B;[32mexpect&#x1B;[0m are different
 
 &#x1B;[90mactual:&#x1B;[0m &#x1B;[31m1&#x1B;[0m
 &#x1B;[90mexpect:&#x1B;[0m &#x1B;[32m&#x22;&#x1B;[0m&#x1B;[32m1&#x1B;[0m&#x1B;[32m&#x22;&#x1B;[0m
