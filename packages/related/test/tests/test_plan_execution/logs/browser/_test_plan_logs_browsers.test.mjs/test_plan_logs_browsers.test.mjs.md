@@ -12,9 +12,9 @@ run({
 })
 ```
 
-### 1/2 write 2 files into "./output/"
+### 1/2 write file "./output/report.xml"
 
-see [./0_console/output/](./0_console/output/)
+see [./0_console/output/report.xml](./0_console/output/report.xml)
 
 ### 2/2 resolve
 
@@ -30,9 +30,9 @@ run({
 })
 ```
 
-### 1/2 write 2 files into "./output/"
+### 1/2 write file "./output/report.xml"
 
-see [./1_empty/output/](./1_empty/output/)
+see [./1_empty/output/report.xml](./1_empty/output/report.xml)
 
 ### 2/2 resolve
 
@@ -48,9 +48,9 @@ run({
 })
 ```
 
-### 1/2 write 2 files into "./output/"
+### 1/2 write file "./output/report.xml"
 
-see [./2_error_in_script/output/](./2_error_in_script/output/)
+see [./2_error_in_script/output/report.xml](./2_error_in_script/output/report.xml)
 
 ### 2/2 resolve
 
@@ -66,9 +66,9 @@ run({
 })
 ```
 
-### 1/2 write 2 files into "./output/"
+### 1/2 write file "./output/report.xml"
 
-see [./3_error_in_script_module/output/](./3_error_in_script_module/output/)
+see [./3_error_in_script_module/output/report.xml](./3_error_in_script_module/output/report.xml)
 
 ### 2/2 resolve
 
@@ -84,9 +84,9 @@ run({
 })
 ```
 
-### 1/2 write 2 files into "./output/"
+### 1/2 write file "./output/report.xml"
 
-see [./4_error_in_js_module/output/](./4_error_in_js_module/output/)
+see [./4_error_in_js_module/output/report.xml](./4_error_in_js_module/output/report.xml)
 
 ### 2/2 resolve
 
@@ -102,9 +102,9 @@ run({
 })
 ```
 
-### 1/2 write 2 files into "./output/"
+### 1/2 write file "./output/report.xml"
 
-see [./5_error_in_js_classic/output/](./5_error_in_js_classic/output/)
+see [./5_error_in_js_classic/output/report.xml](./5_error_in_js_classic/output/report.xml)
 
 ### 2/2 resolve
 
@@ -120,9 +120,9 @@ run({
 })
 ```
 
-### 1/2 write 2 files into "./output/"
+### 1/2 write file "./output/report.xml"
 
-see [./6_error_jsenv_assert_in_script_module/output/](./6_error_jsenv_assert_in_script_module/output/)
+see [./6_error_jsenv_assert_in_script_module/output/report.xml](./6_error_jsenv_assert_in_script_module/output/report.xml)
 
 ### 2/2 resolve
 
