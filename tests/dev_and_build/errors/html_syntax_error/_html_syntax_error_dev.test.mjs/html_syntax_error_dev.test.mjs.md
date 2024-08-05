@@ -10,20 +10,9 @@
 run({ browserLauncher: chromium })
 ```
 
-### 1/3 logs
-
-![img](0_chromium/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
+### 1/3 console.error
 
 ```console
-⠋ start dev server
-✔ start dev server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
 Error while handling http://localhost/main.html:
 invalid-first-character-of-tag-name
 base/client/main.html:5:12
@@ -33,9 +22,6 @@ base/client/main.html:5:12
 5 |       foo <=> baz;
                ^
 ```
-
-</details>
-
 
 ### 2/3 write file "./.jsenv/chrome@127.00/main.html"
 

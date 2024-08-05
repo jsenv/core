@@ -10,36 +10,17 @@
 run({ browserLauncher: chromium })
 ```
 
-### 1/4 logs
-
-![img](0_chromium/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-⠋ start dev server
-✔ start dev server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
-```
-
-</details>
-
-
-### 2/4 write 5 files into "./.jsenv/chrome@127.00/"
+### 1/3 write 5 files into "./.jsenv/chrome@127.00/"
 
 see [./0_chromium/.jsenv/chrome@127.00/](./0_chromium/.jsenv/chrome@127.00/)
 
-### 3/4 console.log
+### 2/3 console.log
 
 ```console
 chromium console.log > 42
 ```
 
-### 4/4 resolve
+### 3/3 resolve
 
 ```js
 {}

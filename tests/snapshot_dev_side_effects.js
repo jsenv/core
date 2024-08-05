@@ -14,4 +14,11 @@ export const snapshotDevSideEffects = async (
       "**/.jsenv/**/*.html@*": "ignore",
       ...options.filesystemActions,
     },
+    logEffects:
+      options.logEffects === false
+        ? false
+        : {
+            level: "warn",
+            ...(options.logEffects === true ? {} : options.logEffects),
+          },
   });
