@@ -7,8 +7,8 @@
 ## 0_basic
 
 ```js
-build({
-  ...testParams,
+run({
+  bundling: true,
 })
 ```
 
@@ -19,14 +19,16 @@ see [./0_basic/build/](./0_basic/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "workerResponse": "pong",
+  "worker2Response": "pong"
+}
 ```
 
 ## 1_no_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   bundling: false,
 })
 ```
@@ -38,5 +40,8 @@ see [./1_no_bundling/build/](./1_no_bundling/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "workerResponse": "pong",
+  "worker2Response": "pong"
+}
 ```
