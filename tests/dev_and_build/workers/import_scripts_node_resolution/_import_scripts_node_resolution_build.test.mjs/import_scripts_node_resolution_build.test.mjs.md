@@ -7,12 +7,7 @@
 ## 0_basic
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-  bundling: false,
-  minification: false,
+run({
   runtimeCompat: { chrome: "90" },
 })
 ```
@@ -24,5 +19,5 @@ see [./0_basic/build/](./0_basic/build/)
 ### 2/2 resolve
 
 ```js
-{}
+42
 ```

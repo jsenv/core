@@ -1,36 +1,20 @@
-import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
 import { chromium } from "playwright";
 
-import { startDevServer } from "@jsenv/core";
-import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
-
-const devServer = await startDevServer({
-  logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  keepProcessAlive: false,
-  supervisor: false,
-  clientAutoreload: false,
-  ribbon: false,
-  port: 0,
-});
-
-const test = async ({ browserLauncher }) => {
-  const browser = await browserLauncher.launch({ headless: true });
-  try {
-    const page = await launchBrowserPage(browser);
-    await page.goto(`${devServer.origin}/main.html`);
-
-    const result = await page.evaluate(
-      /* eslint-disable no-undef */
-      () => window.resultPromise,
-      /* eslint-enable no-undef */
-    );
-    const actual = result;
-    const expect = 42;
-    assert({ actual, expect });
-  } finally {
-    browser.close();
-  }
+const run = async () => {
+  const devServer = await startDevServer({
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    clientAutoreload: false,
+    supervisor: false,
+    ribbon: false,
+    keepProcessAlive: false,
+    port: 0,
+  });
+  return executeHtml(`${devServer.origin}/main.html`);
 };
 
-await test({ browserLauncher: chromium });
+await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+  test("0_chromium", () => run({ browserLauncher: chromium }));
+});

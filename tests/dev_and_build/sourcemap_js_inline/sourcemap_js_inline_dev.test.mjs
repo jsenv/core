@@ -18,7 +18,7 @@ const run = async () => {
     keepProcessAlive: false,
     port: 0,
   });
-  await executeHtml(`${devServer.origin}/main.html`);
+  return executeHtml(`${devServer.origin}/main.html`);
 };
 
 await snapshotDevSideEffects(
