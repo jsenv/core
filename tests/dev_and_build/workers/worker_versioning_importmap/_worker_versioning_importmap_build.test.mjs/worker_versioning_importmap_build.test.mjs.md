@@ -7,8 +7,7 @@
 ## 0_importmap
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
@@ -20,14 +19,16 @@ see [./0_importmap/build/](./0_importmap/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "ping": "pong",
+  "workerResponse": "pong"
+}
 ```
 
 ## 1_importmap_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "88" },
 })
 ```
@@ -39,5 +40,8 @@ see [./1_importmap_fallback/build/](./1_importmap_fallback/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "ping": "pong",
+  "workerResponse": "pong"
+}
 ```
