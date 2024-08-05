@@ -7,9 +7,9 @@
 ## 0_js_module
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
+  bundling: true,
 })
 ```
 
@@ -20,15 +20,18 @@ see [./0_js_module/build/](./0_js_module/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "answer": 42,
+  "url": "window.origin/main.html"
+}
 ```
 
 ## 1_js_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "60" },
+  bundling: true,
 })
 ```
 
@@ -39,14 +42,16 @@ see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "answer": 42,
+  "url": "window.origin/main.html__inline_script__1"
+}
 ```
 
 ## 2_js_module_fallback_no_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "60" },
   bundling: false,
 })
@@ -59,5 +64,8 @@ see [./2_js_module_fallback_no_bundling/build/](./2_js_module_fallback_no_bundli
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "answer": 42,
+  "url": "window.origin/main.html__inline_script__1"
+}
 ```
