@@ -1,0 +1,11 @@
+{
+  "version": 3,
+  "sources": [
+    ""
+  ],
+  "sourcesContent": [
+    "const answer = 42;\nconsole.log(answer)"
+  ],
+  "names": [],
+  "mappings": "AAAA,GAAK,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AAClB,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC"
+}

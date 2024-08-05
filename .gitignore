@@ -15,4 +15,4 @@
 .DS_STORE
 todo.txt
 **/tests/**/git_ignored/
-!**/tests/**/_*test.*/
+!**/tests/**/_*.test.*/**
