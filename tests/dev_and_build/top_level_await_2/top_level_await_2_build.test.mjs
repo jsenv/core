@@ -8,25 +8,27 @@ if (process.platform !== "darwin") {
   // on linux the error stack is different
   // TODO: fix this one day
 }
+const run = ({ runtimeCompat, versioning }) => {
+  return build({
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    bundling: false,
+    minification: false,
+    runtimeCompat,
+    versioning,
+  });
+};
 
 const { dirUrlMap } = await snapshotBuildTests(
   import.meta.url,
   ({ test }) => {
-    const testParams = {
-      sourceDirectoryUrl: new URL("./client/", import.meta.url),
-      buildDirectoryUrl: new URL("./build/", import.meta.url),
-      entryPoints: { "./main.html": "main.html" },
-      bundling: false,
-      minification: false,
-    };
     test("0_top_level_await", () =>
-      build({
-        ...testParams,
+      run({
         runtimeCompat: { chrome: "89" },
       }));
     test("1_top_level_await_fallback", () =>
-      build({
-        ...testParams,
+      run({
         runtimeCompat: { chrome: "55" },
       }));
     // support for <script type="module"> but not TLA
@@ -36,14 +38,16 @@ const { dirUrlMap } = await snapshotBuildTests(
     // -> Jsenv throw an error when TLA + exports is used and systemjs is not
     // (ideally jsenv would throw a custom error explaining all this)
     test("2_top_level_await_throw", () =>
-      build({
-        ...testParams,
+      run({
         runtimeCompat: { chrome: "65" },
         versioning: false,
       }));
   },
   {
-    errorStackHidden: true,
+    errorTransform: (error) => {
+      error.stack = "";
+      delete error.cause;
+    },
   },
 );
 

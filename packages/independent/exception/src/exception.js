@@ -63,10 +63,10 @@ export const createException = (
     return exception;
   }
   if (typeof reason !== "object") {
-    errorTransform(reason);
     exception.message = JSON.stringify(reason);
     return exception;
   }
+  errorTransform(reason);
   if (reason.stackFrames === undefined && "stack" in reason) {
     let stackFrames;
 
@@ -218,7 +218,6 @@ export const createException = (
   }
   const isError = reason instanceof Error;
   exception.isError = isError;
-  errorTransform(reason);
 
   // getOwnPropertyNames to catch non enumerable properties on reason
   // (happens mostly when reason is instanceof Error)
