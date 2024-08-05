@@ -47,7 +47,7 @@ export const snapshotTests = async (
 ) => {
   filesystemActions = {
     ...filesystemActions,
-    "**/*.svg": "presence_only",
+    "**/*.svg": "compare_presence_only",
   };
 
   const sourceName = urlToBasename(sourceFileUrl, true);
