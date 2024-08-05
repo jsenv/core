@@ -7,8 +7,7 @@
 ## 0_import_meta_resolve
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "107" }, // import.meta.resolve supported
 })
 ```
@@ -52,6 +51,12 @@ see [./0_import_meta_resolve/build/](./0_import_meta_resolve/build/)
 - js   : 2 (592 B / 63 %)
 - total: 3 (941 B / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -60,14 +65,16 @@ see [./0_import_meta_resolve/build/](./0_import_meta_resolve/build/)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "importMetaResolveReturnValue": "window.origin/js/foo.js",
+  "__TEST__": "window.origin/js/foo.js"
+}
 ```
 
 ## 1_import_meta_resolve_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "80" }, // module supported but import.meta.resolve is not
 })
 ```
@@ -111,6 +118,12 @@ see [./1_import_meta_resolve_fallback/build/](./1_import_meta_resolve_fallback/b
 - js   : 2 (822 B / 70 %)
 - total: 3 (1.2 kB / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -119,14 +132,16 @@ see [./1_import_meta_resolve_fallback/build/](./1_import_meta_resolve_fallback/b
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "importMetaResolveReturnValue": "window.origin/js/foo.js",
+  "__TEST__": "window.origin/js/foo.js"
+}
 ```
 
 ## 2_js_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "60" },
 })
 ```
@@ -170,6 +185,12 @@ see [./2_js_module_fallback/build/](./2_js_module_fallback/build/)
 - js   : 2 (1.4 kB / 8 %)
 - total: 3 (18.2 kB / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -178,5 +199,8 @@ see [./2_js_module_fallback/build/](./2_js_module_fallback/build/)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "importMetaResolveReturnValue": "window.origin/js/foo.js",
+  "__TEST__": "window.origin/js/foo.js"
+}
 ```
