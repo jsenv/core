@@ -4,9 +4,8 @@ import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effe
 import { chromium } from "playwright";
 
 const run = async () => {
-  const sourceDirectoryUrl = new URL("./client/", import.meta.url);
   const devServer = await startDevServer({
-    sourceDirectoryUrl,
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
   });

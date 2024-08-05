@@ -13,9 +13,9 @@ const run = async () => {
     versioning: false,
   });
   const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
-    buildDirectoryUrl: new URL("./build/", import.meta.url),
   });
   return executeHtml(`${buildServer.origin}/main.html`);
 };

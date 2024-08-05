@@ -1,37 +1,28 @@
-import { assert } from "@jsenv/assert";
-
-import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
 import "./local_server/serve.js";
 
-const test = async (params) => {
+import { build, startBuildServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+
+const run = async () => {
   await build({
-    logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    entryPoints: {
-      "./main.html": "main.html",
-    },
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    bundling: false,
+    minification: false,
     runtimeCompat: { chrome: "89" },
-    ...params,
   });
-  const server = await startFileServer({
-    rootDirectoryUrl: new URL("./dist/", import.meta.url),
+  const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
   });
-  const { returnValue } = await executeInBrowser(`${server.origin}/main.html`);
-  const actual = returnValue;
-  const expect = {
-    url: `http://127.0.0.1:9999/constants.js?foo=bar`,
-  };
-  assert({ actual, expect });
+  return executeHtml(`${buildServer.origin}/main.html`);
 };
 
-// http url preserved
-await test({
-  bundling: false,
-  minification: false,
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_http_preserved", () => run());
+  // TODO: ability to fetch http url and transform it
+  // will be tested when module are not supported (systemjs)
 });
-
-// TODO: ability to fetch http url and transform it
-// will be tested when modle are not supported (systemjs)
