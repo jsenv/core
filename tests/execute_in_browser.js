@@ -37,7 +37,7 @@ export const executeInBrowser = async (
     warning: consoleOutput.warnings,
     error: consoleOutput.errors,
   };
-  page.on("console", (message) => {
+  const consoleCallback = (message) => {
     const type = message.type();
     if (collectConsole) {
       const text = message.text();
@@ -48,7 +48,8 @@ export const executeInBrowser = async (
     } else if (type === "error") {
       console.error(message.text());
     }
-  });
+  };
+  page.on("console", consoleCallback);
 
   const pageErrors = [];
   if (collectErrors) {
@@ -102,6 +103,7 @@ export const executeInBrowser = async (
     ]);
     return result;
   } finally {
+    page.off("console", consoleCallback);
     if (autoStop) {
       isClosing = true;
       await closeBrowser(browser);

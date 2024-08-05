@@ -17,6 +17,7 @@ const typeToLevelMap = {
   "console.debug": 0,
   "console.trace": 1,
   "console.info": 2,
+  "console.log": 2,
   "process.stdout": 2,
   "console.warn": 3,
   "console.error": 4,
