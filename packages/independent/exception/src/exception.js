@@ -223,18 +223,18 @@ export const createException = (
   // (happens mostly when reason is instanceof Error)
   // like .stack, .message
   // some properties are even on the prototype like .name
-  const ownPropertyNameSet = new Set(Object.getOwnPropertyNames(reason));
+  const ownKeySet = new Set(Object.keys(reason));
   if (isError) {
     // getOwnPropertyNames is not enough to copy .name and .message
     // on error instances
     exception.name = getErrorName(reason);
     exception.message = reason.message;
-    ownPropertyNameSet.delete("__INTERNAL_ERROR__");
-    ownPropertyNameSet.delete("name");
-    ownPropertyNameSet.delete("message");
-    ownPropertyNameSet.delete("stack");
+    ownKeySet.delete("__INTERNAL_ERROR__");
+    ownKeySet.delete("name");
+    ownKeySet.delete("message");
+    ownKeySet.delete("stack");
     if (reason.cause) {
-      ownPropertyNameSet.delete("cause");
+      ownKeySet.delete("cause");
       const causeException = createException(reason.cause, {
         jsenvCoreDirectoryUrl,
         rootDirectoryUrl,
@@ -243,8 +243,8 @@ export const createException = (
       exception.ownProps["[cause]"] = causeException;
     }
   }
-  for (const ownPropertyName of ownPropertyNameSet) {
-    exception.ownProps[ownPropertyName] = reason[ownPropertyName];
+  for (const ownKey of ownKeySet) {
+    exception.ownProps[ownKey] = reason[ownKey];
   }
   return exception;
 };
