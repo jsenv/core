@@ -35,7 +35,7 @@ const run = async ({ filename }) => {
         mockFluctuatingValues: true,
         spy: async () => {
           const terminalSnapshotFileUrl = new URL(
-            `./output/${filename}.svg`,
+            `./output/terminal.svg`,
             import.meta.url,
           );
           const terminalRecorder = await startTerminalRecording({ svg: true });
@@ -74,7 +74,7 @@ const run = async ({ filename }) => {
                     const terminalRecords = await terminalRecorder.stop();
                     const terminalGif = await terminalRecords.gif();
                     writeFileSync(
-                      new URL(`./output/${filename}.gif`, import.meta.url),
+                      new URL(`./output/terminal.gif`, import.meta.url),
                       terminalGif,
                     );
                   },
@@ -101,7 +101,7 @@ const run = async ({ filename }) => {
     },
     githubCheck: false,
   });
-  const junitXmlFileUrl = new URL(`./output/${filename}.xml`, import.meta.url);
+  const junitXmlFileUrl = new URL(`./output/report.xml`, import.meta.url);
   await reportAsJunitXml(testPlanResult, junitXmlFileUrl);
 };
 
