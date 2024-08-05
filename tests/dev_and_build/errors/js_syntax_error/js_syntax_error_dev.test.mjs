@@ -1,12 +1,11 @@
-import { assert } from "@jsenv/assert";
-
 import { startDevServer } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
+import { chromium } from "playwright";
 
-const test = async (params) => {
+const run = async () => {
   const sourceDirectoryUrl = new URL("./client/", import.meta.url);
   const devServer = await startDevServer({
-    logLevel: "off",
     sourceDirectoryUrl,
     keepProcessAlive: false,
     clientAutoreload: {
@@ -15,34 +14,14 @@ const test = async (params) => {
       },
     },
     port: 0,
-    ...params,
   });
-  const { returnValue, pageErrors, consoleOutput } = await executeInBrowser(
-    `${devServer.origin}/main.html`,
-    {
-      collectConsole: true,
-      collectErrors: true,
-      /* eslint-disable no-undef */
-      pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
-      /* eslint-enable no-undef */
-    },
-  );
-  const errorText = returnValue.executionResults["/main.js"].exception.text;
-  const actual = {
-    pageErrors,
-    errorText,
-    consoleOutputRaw: consoleOutput.raw,
-  };
-  const expect = {
-    pageErrors: [
-      Object.assign(new Error("Unexpected end of input"), {
-        name: "SyntaxError",
-      }),
-    ],
-    errorText: "SyntaxError: Unexpected end of input",
-    consoleOutputRaw: "",
-  };
-  assert({ actual, expect });
+  return executeHtml(`${devServer.origin}/main.html`, {
+    /* eslint-env browser */
+    pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
+    /* eslint-env node */
+  });
 };
 
-await test();
+await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+  test("0_chromium", () => run({ browserLauncher: chromium }));
+});

@@ -1,12 +1,11 @@
-import { assert } from "@jsenv/assert";
-
 import { startDevServer } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
+import { chromium } from "playwright";
 
-const test = async (params) => {
+const run = async () => {
   const sourceDirectoryUrl = new URL("./client/", import.meta.url);
   const devServer = await startDevServer({
-    logLevel: "warn",
     sourceDirectoryUrl,
     keepProcessAlive: false,
     clientAutoreload: {
@@ -15,32 +14,14 @@ const test = async (params) => {
       },
     },
     port: 0,
-    ...params,
   });
-  const { returnValue, pageErrors, consoleOutput } = await executeInBrowser(
-    `${devServer.origin}/main.html`,
-    {
-      /* eslint-disable no-undef */
-      pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
-      /* eslint-enable no-undef */
-      collectConsole: true,
-      collectErrors: true,
-    },
-  );
-  const errorStack = returnValue.executionResults["/main.js"].exception.stack;
-  const actual = {
-    errorStack,
-    pageErrors,
-    consoleOutputRaw: consoleOutput.raw,
-  };
-  const expect = {
-    errorStack: `Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-  at triggerError (${sourceDirectoryUrl}trigger_error.js:2:9)
-  at ${sourceDirectoryUrl}main.js:3:1`,
-    pageErrors: [assert.any(Error)],
-    consoleOutputRaw: "",
-  };
-  assert({ actual, expect });
+  return executeHtml(`${devServer.origin}/main.html`, {
+    /* eslint-env browser */
+    pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
+    /* eslint-env node */
+  });
 };
 
-await test();
+await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+  test("0_chromium", () => run({ browserLauncher: chromium }));
+});

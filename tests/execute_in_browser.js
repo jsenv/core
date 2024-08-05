@@ -6,9 +6,9 @@ export const executeInBrowser = async (
   {
     browserLauncher = chromium,
     headScriptUrl,
-    /* eslint-disable no-undef */
+    /* eslint-env browser */
     pageFunction = () => window.resultPromise,
-    /* eslint-enable no-undef */
+    /* eslint-env node */
     pageArguments = [],
     collectConsole = false,
     collectErrors = false,
