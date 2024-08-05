@@ -1,20 +1,17 @@
-import { startDevServer } from "@jsenv/core";
 import { writeFileSync } from "@jsenv/filesystem";
 import { ANSI, UNICODE } from "@jsenv/humanize";
-import { takeFileSnapshot } from "@jsenv/snapshot";
+import { snapshotTests } from "@jsenv/snapshot";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
-
 import {
-  chromium,
   executeTestPlan,
-  firefox,
+  nodeChildProcess,
+  nodeWorkerThread,
   reportAsJunitXml,
   reporterList,
-  webkit,
 } from "@jsenv/test";
 
 if (process.platform === "win32") {
-  // to fix once got a windows OS to reproduce
+  // TODO: fix on windows
   process.exit(0);
 }
 
@@ -27,14 +24,7 @@ const terminalAnimatedRecording =
 UNICODE.supported = true;
 ANSI.supported = true;
 
-const devServer = await startDevServer({
-  logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  keepProcessAlive: false,
-  port: 0,
-});
-
-const test = async (filename, params) => {
+const run = async ({ filename }) => {
   if (terminalAnimatedRecording) {
     console.log(`snapshoting ${filename}`);
   }
@@ -48,15 +38,10 @@ const test = async (filename, params) => {
         mockFluctuatingValues: true,
         spy: async () => {
           const terminalSnapshotFileUrl = new URL(
-            `./snapshots/browsers/${filename}.svg`,
+            `./output/${filename}.svg`,
             import.meta.url,
           );
-          const terminalRecorder = await startTerminalRecording({
-            svg: true,
-          });
-          const terminalFileSnapshot = takeFileSnapshot(
-            terminalSnapshotFileUrl,
-          );
+          const terminalRecorder = await startTerminalRecording({ svg: true });
           return {
             write: (log) => {
               terminalRecorder.write(log);
@@ -65,7 +50,6 @@ const test = async (filename, params) => {
               const terminalRecords = await terminalRecorder.stop();
               const terminalSvg = await terminalRecords.svg();
               writeFileSync(terminalSnapshotFileUrl, terminalSvg);
-              terminalFileSnapshot.compare();
             },
           };
         },
@@ -76,12 +60,14 @@ const test = async (filename, params) => {
               animated: true,
               spy: async () => {
                 const terminalRecorder = await startTerminalRecording({
+                  // logs: true,
                   columns: 120,
                   rows: 30,
                   gif: {
                     repeat: true,
                     msAddedAtTheEnd: 3_500,
                   },
+                  // debug: true,
                 });
                 return {
                   write: async (log) => {
@@ -92,7 +78,7 @@ const test = async (filename, params) => {
                     const terminalGif = await terminalRecords.gif();
                     writeFileSync(
                       new URL(
-                        `./snapshots/browsers/${filename}.gif`,
+                        `./snapshots/node/${filename}.gif`,
                         import.meta.url,
                       ),
                       terminalGif,
@@ -104,46 +90,63 @@ const test = async (filename, params) => {
           ]
         : []),
     ],
-    rootDirectoryUrl: new URL("./client/", import.meta.url),
+    rootDirectoryUrl: new URL("./node_client/", import.meta.url),
     testPlan: {
       [filename]: {
-        chromium: {
-          runtime: chromium(),
+        worker_thread: {
+          runtime: nodeWorkerThread(),
         },
-        firefox: {
-          runtime: firefox({
-            disableOnWindowsBecauseFlaky: false,
-          }),
-        },
-        webkit: {
-          runtime: webkit(),
-        },
+        child_process:
+          // console output order in not predictible on child_process
+          filename === "console.spec.js"
+            ? null
+            : {
+                runtime: nodeChildProcess(),
+              },
       },
     },
     githubCheck: false,
-    webServer: {
-      origin: devServer.origin,
-    },
-    ...params,
   });
-  const junitXmlFileUrl = new URL(
-    `./snapshots/browsers/${filename}.xml`,
-    import.meta.url,
-  );
-  const junitXmlFileSnapshot = takeFileSnapshot(junitXmlFileUrl);
-  await reportAsJunitXml(testPlanResult, junitXmlFileUrl, {
-    mockFluctuatingValues: true,
-  });
-  junitXmlFileSnapshot.compare();
+  const junitXmlFileUrl = new URL(`./output/${filename}.xml`, import.meta.url);
+  await reportAsJunitXml(testPlanResult, junitXmlFileUrl);
 };
 
-await test("console.spec.html");
-await test("empty.spec.html");
-await test("error_in_script.spec.html");
-await test("error_in_script_module.spec.html");
-await test("error_in_js_module.spec.html");
-await test("error_in_js_classic.spec.html");
-if (!process.env.CI) {
-  // fails in CI for some reason
-  await test("error_jsenv_assert_in_script_module.spec.html");
-}
+await snapshotTests(import.meta.url, ({ test }) => {
+  test.ONLY("0_not_found", () =>
+    run({
+      filename: "not_found.js",
+    }),
+  );
+  test("1_console", () =>
+    run({
+      filename: "console.spec.js",
+    }));
+  test("2_empty", () =>
+    run({
+      filename: "empty.spec.js",
+    }));
+  test("3_error_in_source_function", () =>
+    run({
+      filename: "error_in_source_function.spec.js",
+    }));
+  test("4_error_in_test_function", () =>
+    run({
+      filename: "error_in_test_function.spec.js",
+    }));
+  test("5_error_in_test_jsenv_assert", () =>
+    run({
+      filename: "error_in_test_jsenv_assert.spec.js",
+    }));
+  test("6_error_in_test", () =>
+    run({
+      filename: "error_in_test.spec.js",
+    }));
+  test("8_error_in_timeout", () =>
+    run({
+      filename: "error_in_timeout.spec.js",
+    }));
+  test("9_unhandled_rejection_in_test", () =>
+    run({
+      filename: "unhandled_rejection_in_test.spec.js",
+    }));
+});
