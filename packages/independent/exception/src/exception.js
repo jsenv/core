@@ -35,7 +35,7 @@ export const createException = (
   {
     jsenvCoreDirectoryUrl = new URL("../../../../", import.meta.url),
     rootDirectoryUrl,
-    errorMessageTransform = (message) => message,
+    errorTransform = () => {},
   } = {},
 ) => {
   const exception = {
@@ -63,6 +63,7 @@ export const createException = (
     return exception;
   }
   if (typeof reason !== "object") {
+    errorTransform(reason);
     exception.message = JSON.stringify(reason);
     return exception;
   }
@@ -197,7 +198,7 @@ export const createException = (
     exception.stackTrace = stackTrace;
     let stack = "";
     const name = getErrorName(reason);
-    const message = errorMessageTransform(reason.message || "");
+    const message = reason.message || "";
     stack += `${name}: ${message}`;
     if (stackTrace) {
       stack += `\n${stackTrace}`;
@@ -217,6 +218,7 @@ export const createException = (
   }
   const isError = reason instanceof Error;
   exception.isError = isError;
+  errorTransform(reason);
 
   // getOwnPropertyNames to catch non enumerable properties on reason
   // (happens mostly when reason is instanceof Error)
@@ -227,7 +229,7 @@ export const createException = (
     // getOwnPropertyNames is not enough to copy .name and .message
     // on error instances
     exception.name = getErrorName(reason);
-    exception.message = errorMessageTransform(reason.message);
+    exception.message = reason.message;
     ownPropertyNameSet.delete("__INTERNAL_ERROR__");
     ownPropertyNameSet.delete("name");
     ownPropertyNameSet.delete("message");
@@ -237,13 +239,13 @@ export const createException = (
       const causeException = createException(reason.cause, {
         jsenvCoreDirectoryUrl,
         rootDirectoryUrl,
-        errorMessageTransform,
+        errorTransform,
       });
       exception.ownProps["[cause]"] = causeException;
     }
   }
   for (const ownPropertyName of ownPropertyNameSet) {
-    exception.ownProps = reason[ownPropertyName];
+    exception.ownProps[ownPropertyName] = reason[ownPropertyName];
   }
   return exception;
 };
@@ -269,7 +271,7 @@ const asFileUrl = (callSiteFilename, { isNative }) => {
   }
 };
 
-export const stringifyException = (exception, { errorStackHidden } = {}) => {
+export const stringifyException = (exception) => {
   let string = "";
 
   if (exception.name) {
@@ -277,7 +279,7 @@ export const stringifyException = (exception, { errorStackHidden } = {}) => {
   } else {
     string += exception.message;
   }
-  if (exception.stackTrace && !errorStackHidden) {
+  if (exception.stackTrace) {
     string += `\n${exception.stackTrace}`;
   }
   const { ownProps } = exception;
@@ -293,7 +295,7 @@ export const stringifyException = (exception, { errorStackHidden } = {}) => {
         string += `\n${indentationInsideObject}`;
         string += `${key}: `;
         if (value && value.isException) {
-          const valueString = stringifyException(value, { errorStackHidden });
+          const valueString = stringifyException(value);
           const valueStringIndented = indentLines(
             valueString,
             indentationLevel + 1,

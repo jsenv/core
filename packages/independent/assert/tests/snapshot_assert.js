@@ -6,7 +6,9 @@ export const snapshotAssertTests = async (
   options,
 ) => {
   await snapshotTests(testFileUrl, fnRegisteringTest, {
-    errorStackHidden: true,
+    errorTransform: (e) => {
+      e.stack = "";
+    },
     ...options,
   });
 };

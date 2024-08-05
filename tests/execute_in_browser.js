@@ -63,7 +63,7 @@ export const executeInBrowser = async (
   };
 
   const errorPromise = collectErrors
-    ? Promise.resolve()
+    ? new Promise(() => {})
     : new Promise((resolve, reject) => {
         const errorCallback = (error) => {
           page.off("pageerror", errorCallback);
