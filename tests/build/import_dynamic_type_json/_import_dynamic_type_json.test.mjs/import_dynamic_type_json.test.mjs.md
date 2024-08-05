@@ -7,8 +7,7 @@
 ## 0_js_module
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
@@ -20,14 +19,15 @@ see [./0_js_module/build/](./0_js_module/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "answer": 42
+}
 ```
 
 ## 1_js_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "62" },
 })
 ```
@@ -39,5 +39,7 @@ see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "answer": 42
+}
 ```

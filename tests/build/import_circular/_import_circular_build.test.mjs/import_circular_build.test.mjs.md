@@ -19,7 +19,14 @@ see [./0_with_bundling/build/main.js](./0_with_bundling/build/main.js)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "executionOrder": [
+    "index",
+    "tag",
+    "data",
+    "main: Tag: Tag data Tag data"
+  ]
+}
 ```
 
 ## 1_without_bundling
@@ -37,5 +44,12 @@ see [./1_without_bundling/build/](./1_without_bundling/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "executionOrder": [
+    "index",
+    "tag",
+    "data",
+    "main: Tag: Tag data Tag data"
+  ]
+}
 ```
