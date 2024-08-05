@@ -7,8 +7,7 @@
 ## 0_js_module
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
@@ -54,6 +53,12 @@ see [./0_js_module/build/](./0_js_module/build/)
 - js   : 1 (94 B / 22 %)
 - total: 2 (420 B / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -62,14 +67,17 @@ see [./0_js_module/build/](./0_js_module/build/)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "data": {
+    "answer": 42
+  }
+}
 ```
 
 ## 1_js_module_no_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
   bundling: false,
 })
@@ -114,6 +122,12 @@ see [./1_js_module_no_bundling/build/](./1_js_module_no_bundling/build/)
 - js   : 1 (81 B / 15 %)
 - total: 2 (558 B / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -122,14 +136,17 @@ see [./1_js_module_no_bundling/build/](./1_js_module_no_bundling/build/)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "data": {
+    "answer": 42
+  }
+}
 ```
 
 ## 2_js_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "60" },
 })
 ```
@@ -175,6 +192,12 @@ see [./2_js_module_fallback/build/](./2_js_module_fallback/build/)
 - js   : 1 (259 B / 2 %)
 - total: 2 (17.1 kB / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -183,14 +206,17 @@ see [./2_js_module_fallback/build/](./2_js_module_fallback/build/)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "data": {
+    "answer": 42
+  }
+}
 ```
 
 ## 3_js_module_fallback_no_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "60" },
   bundling: false,
 })
@@ -235,6 +261,12 @@ see [./3_js_module_fallback_no_bundling/build/](./3_js_module_fallback_no_bundli
 - js   : 1 (330 B / 2 %)
 - total: 2 (17.4 kB / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -243,5 +275,9 @@ see [./3_js_module_fallback_no_bundling/build/](./3_js_module_fallback_no_bundli
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "data": {
+    "answer": 42
+  }
+}
 ```
