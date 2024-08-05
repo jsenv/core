@@ -12,9 +12,9 @@ run({
 })
 ```
 
-### 1/2 write file "./output/report.xml"
+### 1/2 write 2 files into "./output/"
 
-see [./0_not_found/output/report.xml](./0_not_found/output/report.xml)
+see [./0_not_found/output/](./0_not_found/output/)
 
 ### 2/2 resolve
 
@@ -30,9 +30,9 @@ run({
 })
 ```
 
-### 1/2 write file "./output/report.xml"
+### 1/2 write 2 files into "./output/"
 
-see [./1_console/output/report.xml](./1_console/output/report.xml)
+see [./1_console/output/](./1_console/output/)
 
 ### 2/2 resolve
 
@@ -48,9 +48,9 @@ run({
 })
 ```
 
-### 1/2 write file "./output/report.xml"
+### 1/2 write 2 files into "./output/"
 
-see [./2_empty/output/report.xml](./2_empty/output/report.xml)
+see [./2_empty/output/](./2_empty/output/)
 
 ### 2/2 resolve
 
@@ -66,9 +66,9 @@ run({
 })
 ```
 
-### 1/2 write file "./output/report.xml"
+### 1/2 write 2 files into "./output/"
 
-see [./3_error_in_source_function/output/report.xml](./3_error_in_source_function/output/report.xml)
+see [./3_error_in_source_function/output/](./3_error_in_source_function/output/)
 
 ### 2/2 resolve
 
@@ -84,9 +84,9 @@ run({
 })
 ```
 
-### 1/2 write file "./output/report.xml"
+### 1/2 write 2 files into "./output/"
 
-see [./4_error_in_test_function/output/report.xml](./4_error_in_test_function/output/report.xml)
+see [./4_error_in_test_function/output/](./4_error_in_test_function/output/)
 
 ### 2/2 resolve
 
@@ -102,9 +102,9 @@ run({
 })
 ```
 
-### 1/2 write file "./output/report.xml"
+### 1/2 write 2 files into "./output/"
 
-see [./5_error_in_test_jsenv_assert/output/report.xml](./5_error_in_test_jsenv_assert/output/report.xml)
+see [./5_error_in_test_jsenv_assert/output/](./5_error_in_test_jsenv_assert/output/)
 
 ### 2/2 resolve
 
@@ -120,9 +120,9 @@ run({
 })
 ```
 
-### 1/2 write file "./output/report.xml"
+### 1/2 write 2 files into "./output/"
 
-see [./6_error_in_test/output/report.xml](./6_error_in_test/output/report.xml)
+see [./6_error_in_test/output/](./6_error_in_test/output/)
 
 ### 2/2 resolve
 
@@ -138,9 +138,9 @@ run({
 })
 ```
 
-### 1/2 write file "./output/report.xml"
+### 1/2 write 2 files into "./output/"
 
-see [./8_error_in_timeout/output/report.xml](./8_error_in_timeout/output/report.xml)
+see [./8_error_in_timeout/output/](./8_error_in_timeout/output/)
 
 ### 2/2 resolve
 
@@ -156,9 +156,9 @@ run({
 })
 ```
 
-### 1/2 write file "./output/report.xml"
+### 1/2 write 2 files into "./output/"
 
-see [./9_unhandled_rejection_in_test/output/report.xml](./9_unhandled_rejection_in_test/output/report.xml)
+see [./9_unhandled_rejection_in_test/output/](./9_unhandled_rejection_in_test/output/)
 
 ### 2/2 resolve
 
