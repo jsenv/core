@@ -9,7 +9,7 @@ const logSideEffectsOptionsDefault = {
   onlyIfLevel: "debug",
 };
 
-const isLogSideEffect = (sideEffect) => {
+export const isLogSideEffect = (sideEffect) => {
   const { type } = sideEffect;
   return typeof typeToLevelMap[type] === "number";
 };
