@@ -9,8 +9,8 @@
 
   <body>
     <script>
-      window.namespacePromise = new Promise((resolve) => {
-        window.resolveNamespacePromise = resolve;
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
       });
     </script>
     <script type="module">
@@ -24,7 +24,7 @@
       await new Promise((resolve) => {
         setTimeout(resolve, 5000);
       });
-      window.resolveNamespacePromise();
+      window.resolveResultPromise(42);
     </script>
   </body>
 </html>
