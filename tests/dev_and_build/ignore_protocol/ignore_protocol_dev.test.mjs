@@ -1,26 +1,17 @@
-import { assert } from "@jsenv/assert";
-
 import { startDevServer } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
+import { chromium } from "playwright";
 
-const test = async (params) => {
+const run = async () => {
   const devServer = await startDevServer({
-    logLevel: "warn",
-    sourceDirectoryUrl: new URL("client/", import.meta.url),
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
-    ...params,
   });
-  const { returnValue } = await executeInBrowser(
-    `${devServer.origin}/main.html`,
-  );
-  const actual = returnValue;
-  const expect = {
-    ignoreAJsHref: `window.origin/a.js`,
-    ignoreIgnoreBJsHref: `ignore:b.js`,
-  };
-  assert({ actual, expect });
+  return executeHtml(`${devServer.origin}/main.html`);
 };
 
-await test();
+await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+  test("0_chromium", () => run({ browserLauncher: chromium }));
+});

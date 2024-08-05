@@ -7,15 +7,7 @@
 ## 0_js_module
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-  runtimeCompat: { chrome: "89" },
-  bundling: false,
-  minification: false,
-  versioning: false,
-})
+run()
 ```
 
 ### 1/4 logs
@@ -56,6 +48,12 @@ see [./0_js_module/build/main.html](./0_js_module/build/main.html)
 - html : 1 (713 B / 100 %)
 - total: 1 (713 B / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -64,5 +62,8 @@ see [./0_js_module/build/main.html](./0_js_module/build/main.html)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "ignoreAJsHref": "window.origin/a.js",
+  "ignoreIgnoreBJsHref": "ignore:b.js"
+}
 ```

@@ -7,8 +7,7 @@
 ## 0_js_module
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
@@ -50,10 +49,16 @@ see [./0_js_module/build/](./0_js_module/build/)
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (349 B / 43 %)
-- js   : 1 (472 B / 57 %)
-- total: 2 (821 B / 100 %)
+- html : 1 (323 B / 41 %)
+- js   : 1 (472 B / 59 %)
+- total: 2 (795 B / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -62,14 +67,20 @@ see [./0_js_module/build/](./0_js_module/build/)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "meta": {
+    "url": "window.origin/js/main.js"
+  },
+  "url": "window.origin/js/main.js",
+  "urlDestructured": "window.origin/js/main.js",
+  "importMetaBuild": true
+}
 ```
 
 ## 1_js_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "60" },
 })
 ```
@@ -111,10 +122,16 @@ see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (16.8 kB / 96 %)
-- js   : 1 (741 B / 4 %)
-- total: 2 (17.6 kB / 100 %)
+- html : 1 (323 B / 41 %)
+- js   : 1 (472 B / 59 %)
+- total: 2 (795 B / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -123,5 +140,12 @@ see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "meta": {
+    "url": "window.origin/js/main.js"
+  },
+  "url": "window.origin/js/main.js",
+  "urlDestructured": "window.origin/js/main.js",
+  "importMetaBuild": true
+}
 ```
