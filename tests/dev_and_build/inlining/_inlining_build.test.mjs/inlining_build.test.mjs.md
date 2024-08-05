@@ -7,15 +7,7 @@
 ## 0_inlining
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-  runtimeCompat: { chrome: "89" },
-  bundling: false,
-  minification: false,
-  versioning: false,
-})
+run()
 ```
 
 ### 1/4 logs
@@ -57,6 +49,13 @@ see [./0_inlining/build/](./0_inlining/build/)
 - other: 1 (6.8 kB / 93 %)
 - total: 2 (7.3 kB / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
+chromium console.log > here
 ```
 
 </details>
@@ -65,5 +64,5 @@ see [./0_inlining/build/](./0_inlining/build/)
 ### 4/4 resolve
 
 ```js
-{}
+42
 ```
