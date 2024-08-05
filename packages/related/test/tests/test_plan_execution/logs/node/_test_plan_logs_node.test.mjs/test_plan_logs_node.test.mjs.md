@@ -18,9 +18,9 @@ run({
 snapshoting not_found.js
 ```
 
-### 2/3 write 48 files into "../../../../../../"
+### 2/3 write 2 files into "./"
 
-see [./0_not_found/@jsenv/core/packages/](./0_not_found/@jsenv/core/packages/)
+see [./0_not_found/](./0_not_found/)
 
 ### 3/3 resolve
 

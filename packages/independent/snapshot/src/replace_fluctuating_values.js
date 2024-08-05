@@ -38,8 +38,8 @@ export const replaceFluctuatingValues = (
       const extension = urlToExtension(fileUrl);
       if (extension === ".html") {
         stringType = "html";
-      } else if (extension === ".svg") {
-        stringType = "svg";
+      } else if (extension === ".svg" || extension === ".xml") {
+        stringType = "xml";
       } else if (extension === ".json" || CONTENT_TYPE.isJson(contentType)) {
         stringType = "json";
       }
@@ -92,10 +92,10 @@ export const replaceFluctuatingValues = (
       const replaced = replaceInObject(jsValue, { replace: replaceThings });
       return JSON.stringify(replaced, null, "  ");
     }
-    if (stringType === "html" || stringType === "svg") {
+    if (stringType === "html" || stringType === "xml") {
       // do parse html
       const htmlAst =
-        stringType === "svg"
+        stringType === "xml"
           ? parseSvgString(value)
           : parseHtml({
               html: value,
@@ -112,7 +112,14 @@ export const replaceFluctuatingValues = (
           const attributes = getHtmlNodeAttributes(node);
           if (attributes) {
             for (const name of Object.keys(attributes)) {
-              attributes[name] = replaceThings(attributes[name]);
+              const attributeValue = attributes[name];
+              if (name === "timestamp") {
+                attributes[name] = "[timestamp]";
+              } else if (name === "time") {
+                attributes[name] = "[time]";
+              } else {
+                attributes[name] = replaceThings(attributeValue);
+              }
             }
             setHtmlNodeAttributes(node, attributes);
           }
