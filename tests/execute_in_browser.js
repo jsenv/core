@@ -87,7 +87,6 @@ export const executeInBrowser = async (
     }
     const returnValue = await page.evaluate(pageFunction, ...pageArguments);
     result.returnValue = returnValue;
-    return result;
   })();
 
   let isClosing = false;
@@ -101,6 +100,7 @@ export const executeInBrowser = async (
         return Promise.reject(e);
       }),
     ]);
+    return result;
   } finally {
     if (autoStop) {
       isClosing = true;

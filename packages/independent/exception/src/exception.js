@@ -252,6 +252,9 @@ const asFileUrl = (callSiteFilename, { isNative }) => {
   if (isNative) {
     return callSiteFilename;
   }
+  if (!callSiteFilename) {
+    return callSiteFilename;
+  }
   if (callSiteFilename.startsWith("file:")) {
     return callSiteFilename;
   }
