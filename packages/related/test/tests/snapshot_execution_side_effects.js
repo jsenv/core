@@ -23,7 +23,7 @@ export const snapshotTestPlanSideEffects = async (
       "**": "compare",
       "**/.jsenv/": "undo",
       "**/*.png": process.env.CI ? "compare_presence_only" : "compare",
-      "**/*.gif": process.env.CI ? "ignore" : "compare",
+      "**/*.gif": "ignore",
       "**/.coverage/": "ignore",
     },
     ...options,

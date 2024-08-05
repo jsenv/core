@@ -74,7 +74,7 @@ const run = async ({ filename }) => {
                     const terminalRecords = await terminalRecorder.stop();
                     const terminalGif = await terminalRecords.gif();
                     writeFileSync(
-                      new URL(`./output/terminal.gif`, import.meta.url),
+                      new URL(`./output/${filename}.gif`, import.meta.url),
                       terminalGif,
                     );
                   },
