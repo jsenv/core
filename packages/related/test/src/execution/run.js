@@ -213,6 +213,7 @@ const normalizeRuntimeError = (runtimeError) => {
   // otherwise they would pollute the error displayed by Node.js
   const errorProxy = new Error(runtimeError.message);
   const exception = createException(runtimeError); // in case it was not done
+  errorProxy.name = exception.name;
   errorProxy.stack = exception.stack;
   return errorProxy;
 };
