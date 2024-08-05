@@ -7,11 +7,7 @@
 ## 0_basic
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-})
+run()
 ```
 
 ```console
