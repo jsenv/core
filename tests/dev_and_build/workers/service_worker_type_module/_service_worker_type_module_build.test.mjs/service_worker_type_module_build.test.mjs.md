@@ -7,8 +7,7 @@
 ## 0_sw_type_module
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "80" },
   versioning: false, // to prevent importmap forcing fallback on js classic
 })
@@ -21,14 +20,23 @@ see [./0_sw_type_module/build/](./0_sw_type_module/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "inspectResponse": {
+    "order": [],
+    "resourcesFromJsenvBuild": {
+      "/main.html": {},
+      "/css/style.css": {
+        "versionedUrl": null
+      }
+    }
+  }
+}
 ```
 
 ## 1_sw_type_module_no_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "80" },
   versioning: false, // to prevent importmap forcing fallback on js classic
   bundling: false,
@@ -42,14 +50,29 @@ see [./1_sw_type_module_no_bundling/build/](./1_sw_type_module_no_bundling/build
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "inspectResponse": {
+    "order": [],
+    "resourcesFromJsenvBuild": {
+      "/main.html": {},
+      "/css/style.css": {
+        "versionedUrl": null
+      },
+      "/js/a.js": {
+        "versionedUrl": null
+      },
+      "/js/b.js": {
+        "versionedUrl": null
+      }
+    }
+  }
+}
 ```
 
 ## 2_sw_type_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "79" },
 })
 ```
@@ -61,14 +84,26 @@ see [./2_sw_type_module_fallback/build/](./2_sw_type_module_fallback/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "inspectResponse": {
+    "order": [],
+    "resourcesFromJsenvBuild": {
+      "/main.html": {
+        "version": "4bfab674"
+      },
+      "/css/style.css": {
+        "version": "2e9d11a2",
+        "versionedUrl": "/css/style.css?v=2e9d11a2"
+      }
+    }
+  }
+}
 ```
 
 ## 3_sw_type_module_fallback_no_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "79" },
   bundling: false,
 })
@@ -81,5 +116,26 @@ see [./3_sw_type_module_fallback_no_bundling/build/](./3_sw_type_module_fallback
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "inspectResponse": {
+    "order": [],
+    "resourcesFromJsenvBuild": {
+      "/main.html": {
+        "version": "a738cab3"
+      },
+      "/css/style.css": {
+        "version": "2e9d11a2",
+        "versionedUrl": "/css/style.css?v=2e9d11a2"
+      },
+      "/js/a.nomodule.js": {
+        "version": "8dd53fd5",
+        "versionedUrl": "/js/a.nomodule.js?v=8dd53fd5"
+      },
+      "/js/b.nomodule.js": {
+        "version": "4d5b0641",
+        "versionedUrl": "/js/b.nomodule.js?v=4d5b0641"
+      }
+    }
+  }
+}
 ```

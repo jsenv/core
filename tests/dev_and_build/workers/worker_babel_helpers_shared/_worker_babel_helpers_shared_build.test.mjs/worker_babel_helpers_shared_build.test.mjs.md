@@ -7,17 +7,24 @@
 ## 0_basic
 
 ```js
-build({
-  ...testParams,
-})
+run()
 ```
 
-### 1/2 write 4 files into "./build/"
+### 1/3 write 4 files into "./build/"
 
 see [./0_basic/build/](./0_basic/build/)
 
-### 2/2 resolve
+### 2/3 logs
+
+```console
+chromium console.log > {answer: 42}
+chromium console.log > {answer: 42}
+```
+
+### 3/3 resolve
 
 ```js
-{}
+{
+  "workerResponse": 42
+}
 ```

@@ -7,9 +7,7 @@
 ## 0_basic
 
 ```js
-build({
-  ...testParams,
-})
+run()
 ```
 
 ### 1/2 write 5 files into "./build/"
@@ -19,5 +17,32 @@ see [./0_basic/build/](./0_basic/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "inspectResponse": {
+    "order": [
+      "before-a",
+      "before-b",
+      "b",
+      "after-b",
+      "after-a"
+    ],
+    "resourcesFromJsenvBuild": {
+      "/main.html": {
+        "version": "a3b3b305"
+      },
+      "/css/style.css": {
+        "version": "2e9d11a2",
+        "versionedUrl": "/css/style.css?v=2e9d11a2"
+      },
+      "/js/a.js": {
+        "version": "76c9c177",
+        "versionedUrl": "/js/a.js?v=76c9c177"
+      },
+      "/js/b.js": {
+        "version": "54f517a9",
+        "versionedUrl": "/js/b.js?v=54f517a9"
+      }
+    }
+  }
+}
 ```
