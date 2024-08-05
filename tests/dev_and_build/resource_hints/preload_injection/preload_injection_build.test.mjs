@@ -1,32 +1,30 @@
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { build, startBuildServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-import { build } from "@jsenv/core";
-
-const test = async ({ name, ...params }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+const run = async () => {
   await build({
-    logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
-  });
-  buildDirectorySnapshot.compare();
-};
-
-await test({
-  name: "0_js_module",
-  runtimeCompat: { chrome: "89" },
-  bundling: {
-    js_module: {
-      chunks: {
-        vendors: { "./dep.js": true },
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    runtimeCompat: { chrome: "89" },
+    bundling: {
+      js_module: {
+        chunks: {
+          vendors: { "./dep.js": true },
+        },
       },
     },
-  },
-  minification: false,
+    minification: false,
+  });
+  const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
+  });
+  return executeHtml(`${buildServer.origin}/main.html`);
+};
+
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_js_module", () => run());
 });
