@@ -11561,10 +11561,12 @@ ${reason}`,
         },
       ),
     );
-    resolveError.name = "RESOLVE_URL_ERROR";
-    resolveError.code = code;
-    resolveError.reason = reason;
-    resolveError.asResponse = error.asResponse;
+    defineNonEnumerableProperties(resolveError, {
+      name: "RESOLVE_URL_ERROR",
+      code,
+      reason,
+      asResponse: error.asResponse,
+    });
     return resolveError;
   };
   if (error.message === "NO_RESOLVE") {
@@ -11607,16 +11609,14 @@ ${reason}`,
         },
       ),
     );
-    fetchError.name = "FETCH_URL_CONTENT_ERROR";
-    fetchError.code = code;
-    fetchError.reason = reason;
-    fetchError.url = urlInfo.url;
-    if (code === "PARSE_ERROR") {
-      fetchError.trace = error.trace;
-    } else {
-      fetchError.trace = reference.trace;
-    }
-    fetchError.asResponse = error.asResponse;
+    defineNonEnumerableProperties(fetchError, {
+      name: "FETCH_URL_CONTENT_ERROR",
+      code,
+      reason,
+      url: urlInfo.url,
+      trace: code === "PARSE_ERROR" ? error.trace : reference.trace,
+      asResponse: error.asResponse,
+    });
     return fetchError;
   };
 
@@ -11723,13 +11723,14 @@ ${error.message}`,
         },
       ),
     );
-    transformError.cause = error;
-    transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
-    transformError.code = "PARSE_ERROR";
-    transformError.stack = error.stack;
-    transformError.reason = error.message;
-    transformError.trace = trace;
-    transformError.asResponse = error.asResponse;
+    defineNonEnumerableProperties(transformError, {
+      name: "TRANSFORM_URL_CONTENT_ERROR",
+      code: "PARSE_ERROR",
+      reason: error.message,
+      stack: error.stack,
+      trace,
+      asResponse: error.asResponse,
+    });
     return transformError;
   }
   const createFailedToTransformError = ({
@@ -11751,14 +11752,16 @@ ${reason}`,
         },
       ),
     );
-    transformError.cause = error;
-    transformError.name = "TRANSFORM_URL_CONTENT_ERROR";
-    transformError.code = code;
-    transformError.reason = reason;
-    transformError.stack = error.stack;
-    transformError.url = urlInfo.url;
-    transformError.trace = trace;
-    transformError.asResponse = error.asResponse;
+    defineNonEnumerableProperties(transformError, {
+      cause: error,
+      name: "TRANSFORM_URL_CONTENT_ERROR",
+      code,
+      reason,
+      stack: error.stack,
+      url: urlInfo.url,
+      trace,
+      asResponse: error.asResponse,
+    });
     return transformError;
   };
   return createFailedToTransformError({
@@ -11784,12 +11787,12 @@ ${reference.trace.message}`,
       },
     ),
   );
-  if (error && error instanceof Error) {
-    finalizeError.cause = error;
-  }
-  finalizeError.name = "FINALIZE_URL_CONTENT_ERROR";
-  finalizeError.reason = `"finalizeUrlContent" error on "${urlInfo.type}"`;
-  finalizeError.asResponse = error.asResponse;
+  defineNonEnumerableProperties(finalizeError, {
+    ...(error && error instanceof Error ? { cause: error } : {}),
+    name: "FINALIZE_URL_CONTENT_ERROR",
+    reason: `"finalizeUrlContent" error on "${urlInfo.type}"`,
+    asResponse: error.asResponse,
+  });
   return finalizeError;
 };
 
@@ -11844,6 +11847,16 @@ const detailsFromValueThrown = (valueThrownByPlugin) => {
   return {
     error: JSON.stringify(valueThrownByPlugin),
   };
+};
+
+const defineNonEnumerableProperties = (assertionError, properties) => {
+  for (const key of Object.keys(properties)) {
+    Object.defineProperty(assertionError, key, {
+      configurable: true,
+      writable: true,
+      value: properties[key],
+    });
+  }
 };
 
 const isSupportedAlgorithm = (algo) => {

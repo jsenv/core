@@ -196,19 +196,7 @@ TypeError: base/client/a.js: Cannot export after a top-level await when using to
     at @jsenv/core/node_modules/gensync/index.js:113:33
     at step (@jsenv/core/node_modules/gensync/index.js:287:14)
     at @jsenv/core/node_modules/gensync/index.js:273:13
-    at async.call.result.err.err (@jsenv/core/node_modules/gensync/index.js:223:11) {
-  code: "BABEL_TRANSFORM_ERROR",
-  reason: "\"transformUrlContent\" error on \"js_module\"",
-  url: "base/client/a.js",
-  trace: {
-  "codeFrame": "1 | import \"./a.js\";\n          ^",
-  "message": "base/client/main.js:1:7\n1 | import \"./a.js\";\n          ^",
-  "url": "base/client/main.js",
-  "line": 1,
-  "column": 7
-},
-  asResponse: undefined,
-}
+    at async.call.result.err.err (@jsenv/core/node_modules/gensync/index.js:223:11)
 ```
 
 </details>
