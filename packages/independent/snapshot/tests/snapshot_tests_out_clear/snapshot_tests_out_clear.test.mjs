@@ -80,3 +80,41 @@ await snapshotTests(
   const expect = false;
   assert({ actual, expect });
 }
+
+// file.txt is deleted
+writeFileSync(
+  new URL("./_snapshot_tests_out_clear.test.mjs/file.txt", import.meta.url),
+  "hello.txt",
+);
+await snapshotTests(import.meta.url, ({ test }) => {
+  test("0_first", () => {});
+});
+{
+  const actual = existsSync(
+    new URL("./_snapshot_tests_out_clear.test.mjs/file.txt", import.meta.url),
+  );
+  const expect = false;
+  assert({ actual, expect });
+}
+writeFileSync(
+  new URL("./_snapshot_tests_out_clear.test.mjs/file.txt", import.meta.url),
+  "hello.txt",
+);
+await snapshotTests(
+  import.meta.url,
+  ({ test }) => {
+    test("0_first", () => {});
+  },
+  {
+    filesystemActions: {
+      "*.txt": "ignore",
+    },
+  },
+);
+{
+  const actual = existsSync(
+    new URL("./_snapshot_tests_out_clear.test.mjs/file.txt", import.meta.url),
+  );
+  const expect = true;
+  assert({ actual, expect });
+}

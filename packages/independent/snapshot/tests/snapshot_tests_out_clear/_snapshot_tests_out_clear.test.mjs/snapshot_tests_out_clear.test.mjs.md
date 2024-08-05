@@ -7,16 +7,8 @@
 ## 0_first
 
 ```js
-writeFileSync(new URL("./dir/deep/tata.txt", import.meta.url));
-```
-
-### 1/2 write file "./dir/deep/tata.txt"
-
-```txt
 
 ```
-
-### 2/2 return
 
 ```js
 undefined
