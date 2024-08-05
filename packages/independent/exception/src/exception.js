@@ -67,6 +67,10 @@ export const createException = (
     return exception;
   }
   errorTransform(reason);
+  if (reason.isException) {
+    Object.assign(exception, reason);
+    return exception;
+  }
   const isError = reason instanceof Error;
   const name = getErrorName(reason, isError);
   if (reason.stackFrames === undefined && "stack" in reason) {
