@@ -187,7 +187,6 @@ ${error.message}`,
       ),
     );
     defineNonEnumerableProperties(transformError, {
-      cause: error,
       name: "TRANSFORM_URL_CONTENT_ERROR",
       code: "PARSE_ERROR",
       reason: error.message,
@@ -254,9 +253,7 @@ ${reference.trace.message}`,
   defineNonEnumerableProperties(finalizeError, {
     ...(error && error instanceof Error ? { cause: error } : {}),
     name: "FINALIZE_URL_CONTENT_ERROR",
-
     reason: `"finalizeUrlContent" error on "${urlInfo.type}"`,
-
     asResponse: error.asResponse,
   });
   return finalizeError;
