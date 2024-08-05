@@ -7,8 +7,7 @@
 ## 0_worker_type_module
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
@@ -20,14 +19,16 @@ see [./0_worker_type_module/build/](./0_worker_type_module/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "workerResponse": "pong",
+  "worker2Response": "pong"
+}
 ```
 
 ## 1_worker_type_module_no_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
   bundling: false,
   versioning: false,
@@ -41,14 +42,16 @@ see [./1_worker_type_module_no_bundling/build/](./1_worker_type_module_no_bundli
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "workerResponse": "pong",
+  "worker2Response": "pong"
+}
 ```
 
 ## 2_worker_type_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "79" },
 })
 ```
@@ -60,14 +63,16 @@ see [./2_worker_type_module_fallback/build/](./2_worker_type_module_fallback/bui
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "workerResponse": "pong",
+  "worker2Response": "pong"
+}
 ```
 
 ## 3_worker_type_module_fallback_no_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "79" },
   bundling: false,
 })
@@ -80,14 +85,16 @@ see [./3_worker_type_module_fallback_no_bundling/build/](./3_worker_type_module_
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "workerResponse": "pong",
+  "worker2Response": "pong"
+}
 ```
 
 ## 4_js_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "62" },
 })
 ```
@@ -99,5 +106,8 @@ see [./4_js_module_fallback/build/](./4_js_module_fallback/build/)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "workerResponse": "pong",
+  "worker2Response": "pong"
+}
 ```
