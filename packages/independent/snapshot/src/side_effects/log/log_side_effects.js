@@ -6,6 +6,29 @@ const logSideEffectsOptionsDefault = {
   prevent: true,
   group: true,
   level: "info", // "debug", "trace", "info", "warn", "error", "off"
+  onlyIfLevel: "debug",
+};
+
+const isLogSideEffect = (sideEffect) => {
+  const { type } = sideEffect;
+  return typeof typeToLevelMap[type] === "number";
+};
+const typeToLevelMap = {
+  "console.debug": 0,
+  "console.trace": 1,
+  "console.info": 2,
+  "process.stdout": 2,
+  "console.warn": 3,
+  "console.error": 4,
+  "process.stderr": 4,
+};
+const levelNumberMap = {
+  debug: 0,
+  trace: 1,
+  info: 2,
+  warn: 3,
+  error: 4,
+  off: 5,
 };
 
 export const logSideEffects = (logSideEffectsOptions) => {
@@ -16,7 +39,30 @@ export const logSideEffects = (logSideEffectsOptions) => {
   return {
     name: "console",
     install: (addSideEffect, { addFinallyCallback }) => {
-      const { level, prevent, group } = logSideEffectsOptions;
+      const { level, prevent, group, onlyIfLevel } = logSideEffectsOptions;
+      const levelNumber = levelNumberMap[level];
+      if (onlyIfLevel && onlyIfLevel !== "debug") {
+        const onlyIfLevelNumber = levelNumberMap[onlyIfLevel];
+        addFinallyCallback((sideEffects) => {
+          const logSideEffects = [];
+          let hasOneOfLevelOrAbove;
+          for (const sideEffect of sideEffects) {
+            if (!isLogSideEffect(sideEffect)) {
+              continue;
+            }
+            logSideEffects.push(sideEffect);
+            if (!hasOneOfLevelOrAbove) {
+              const sideEffectLevel = typeToLevelMap[sideEffect.type];
+              hasOneOfLevelOrAbove = sideEffectLevel >= onlyIfLevelNumber;
+            }
+          }
+          if (!hasOneOfLevelOrAbove) {
+            for (const logSideEffect of logSideEffects) {
+              sideEffects.removeSideEffect(logSideEffect);
+            }
+          }
+        });
+      }
       if (group) {
         addFinallyCallback((sideEffects) => {
           groupLogSideEffects(sideEffects, {
@@ -60,35 +106,11 @@ export const logSideEffects = (logSideEffectsOptions) => {
           });
         });
       }
+
       const addLogSideEffect = (type, message) => {
-        if (level === "debug") {
-        } else if (level === "trace") {
-          if (type === "console.debug") {
-            return;
-          }
-        } else if (level === "info") {
-          if (type === "console.debug" || type === "console.trace") {
-            return;
-          }
-        } else if (level === "warn") {
-          if (
-            type === "console.debug" ||
-            type === "console.trace" ||
-            type === "console.info" ||
-            type === "process.stdout"
-          ) {
-            return;
-          }
-        } else if (level === "error") {
-          if (
-            type === "console.debug" ||
-            type === "console.trace" ||
-            type === "console.info" ||
-            type === "process.stdout" ||
-            type === "console.warn"
-          ) {
-            return;
-          }
+        const sideEffectLevel = typeToLevelMap[type];
+        if (sideEffectLevel < levelNumber) {
+          return;
         }
         addSideEffect({
           code: type,
