@@ -9,7 +9,6 @@ const run = async ({ browserLauncher }) => {
     keepProcessAlive: false,
     port: 0,
   });
-
   return executeHtml(`${devServer.origin}/main.html`, {
     browserLauncher,
   });

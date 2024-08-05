@@ -7,11 +7,7 @@
 ## 0_basic
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-})
+run()
 ```
 
 ```console
@@ -23,5 +19,6 @@ base/client/style.css:2:25
 no entry on filesystem
 --- plugin name ---
 "jsenv:file_url_fetching"
-  at async base/css_background_url_not_found_build.test.mjs:5:1
+  at async run (base/css_background_url_not_found_build.test.mjs:6:3)
+  at async base/css_background_url_not_found_build.test.mjs:19:1
 ```
