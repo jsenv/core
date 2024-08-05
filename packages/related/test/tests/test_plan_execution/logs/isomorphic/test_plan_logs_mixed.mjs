@@ -3,7 +3,6 @@ import { writeFileSync } from "@jsenv/filesystem";
 import { ANSI, UNICODE } from "@jsenv/humanize";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
-
 import {
   chromium,
   executeTestPlan,
@@ -14,6 +13,7 @@ import {
   reporterList,
   webkit,
 } from "@jsenv/test";
+import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
 const terminalAnimatedRecording =
   process.execArgv.includes("--conditions=development") &&
@@ -30,7 +30,7 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   port: 0,
 });
-const test = async (filename, params) => {
+const run = async (filename) => {
   const testPlanResult = await executeTestPlan({
     logs: {
       type: null,
@@ -41,7 +41,7 @@ const test = async (filename, params) => {
         mockFluctuatingValues: true,
         spy: async () => {
           const terminalSnapshotFileUrl = new URL(
-            `./snapshots/mixed/${filename}.svg`,
+            `./output/${filename}.svg`,
             import.meta.url,
           );
           const terminalRecorder = await startTerminalRecording({
@@ -84,10 +84,7 @@ const test = async (filename, params) => {
                     const terminalRecords = await terminalRecorder.stop();
                     const terminalGif = await terminalRecords.gif();
                     writeFileSync(
-                      new URL(
-                        `./snapshots/mixed/${filename}.gif`,
-                        import.meta.url,
-                      ),
+                      new URL(`./output/${filename}.gif`, import.meta.url),
                       terminalGif,
                     );
                   },
@@ -102,39 +99,34 @@ const test = async (filename, params) => {
       origin: devServer.origin,
     },
     githubCheck: false,
-    ...params,
   });
-  const junitXmlFileUrl = new URL(
-    `./snapshots/mixed/${filename}.xml`,
-    import.meta.url,
-  );
-  const junitXmlFileSnapshot = takeFileSnapshot(junitXmlFileUrl);
-  await reportAsJunitXml(testPlanResult, junitXmlFileUrl, {
-    mockFluctuatingValues: true,
-  });
-  junitXmlFileSnapshot.compare();
+  const junitXmlFileUrl = new URL(`./output/${filename}.xml`, import.meta.url);
+  await reportAsJunitXml(testPlanResult, junitXmlFileUrl);
 };
 
-await test("empty.txt", {
-  testPlan: {
-    "./node_client/empty.spec.js": {
-      node: {
-        runtime: nodeWorkerThread(),
+await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
+  test("0_empty", () =>
+    run({
+      testPlan: {
+        "./client/empty.spec.js": {
+          node: {
+            runtime: nodeWorkerThread(),
+          },
+          node_2: {
+            runtime: nodeChildProcess(),
+          },
+        },
+        "./client/empty.spec.html": {
+          chrome: {
+            runtime: chromium(),
+          },
+          firefox: {
+            runtime: firefox(),
+          },
+          webkit: {
+            runtime: webkit(),
+          },
+        },
       },
-      node_2: {
-        runtime: nodeChildProcess(),
-      },
-    },
-    "./client/empty.spec.html": {
-      chrome: {
-        runtime: chromium(),
-      },
-      firefox: {
-        runtime: firefox(),
-      },
-      webkit: {
-        runtime: webkit(),
-      },
-    },
-  },
+    }));
 });
