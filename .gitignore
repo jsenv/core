@@ -15,4 +15,5 @@
 .DS_STORE
 todo.txt
 **/tests/**/git_ignored/
+**/tests/**/.jsenv_b/
 !**/tests/**/_*.test.*/**
