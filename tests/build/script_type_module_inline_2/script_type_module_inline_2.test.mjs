@@ -1,17 +1,9 @@
-import { assert } from "@jsenv/assert";
-import { build } from "@jsenv/core";
-import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { build, startBuildServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-if (process.platform !== "darwin") {
-  process.exit(0);
-  // for some obscure reason html is sized at 18.5 kB on linux
-  // and 18.6 kB on mac
-  // we need to understand this at some point
-}
-
-const run = ({ runtimeCompat, sourcemaps }) => {
-  return build({
+const run = async ({ runtimeCompat, sourcemaps }) => {
+  await build({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
@@ -21,9 +13,15 @@ const run = ({ runtimeCompat, sourcemaps }) => {
     runtimeCompat,
     sourcemaps,
   });
+  const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
+  });
+  return executeHtml(`${buildServer.origin}/main.html`);
 };
 
-const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
+await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_js_module", () =>
     run({
       runtimeCompat: { chrome: "89" },
@@ -44,21 +42,3 @@ const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
       sourcemaps: "file",
     }));
 });
-
-const actual = {
-  jsModule: await executeBuildHtmlInBrowser(
-    `${dirUrlMap.get("0_js_module")}build/`,
-  ),
-  jsModuleFallback: await executeBuildHtmlInBrowser(
-    `${dirUrlMap.get("1_js_module_fallback")}build/`,
-  ),
-  jsModuleFallbackSourcemapFile: await executeBuildHtmlInBrowser(
-    `${dirUrlMap.get("2_js_module_fallback_and_sourcemap_as_file")}build/`,
-  ),
-};
-const expect = {
-  jsModule: { answer: 42 },
-  jsModuleFallback: { answer: 42 },
-  jsModuleFallbackSourcemapFile: { answer: 42 },
-};
-assert({ actual, expect });
