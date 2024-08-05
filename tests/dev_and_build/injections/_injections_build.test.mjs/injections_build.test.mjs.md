@@ -7,20 +7,7 @@
 ## 0_injection
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-  bundling: false,
-  minification: false,
-  injections: {
-    "./main.js": (urlInfo) => {
-      return {
-        __DEMO__: urlInfo.context.dev ? "dev" : "build",
-      };
-    },
-  },
-})
+run()
 ```
 
 ### 1/4 logs
@@ -62,6 +49,12 @@ see [./0_injection/build/](./0_injection/build/)
 - js   : 1 (74 B / 18 %)
 - total: 2 (406 B / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
 ```
 
 </details>
@@ -70,5 +63,5 @@ see [./0_injection/build/](./0_injection/build/)
 ### 4/4 resolve
 
 ```js
-{}
+build
 ```

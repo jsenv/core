@@ -7,8 +7,7 @@
 ## 0_js_module
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
   minification: false,
 })
@@ -56,6 +55,14 @@ see [./0_js_module/build/](./0_js_module/build/)
 - other: 1 (6.8 kB / 75 %)
 - total: 3 (9.2 kB / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
+chromium console.log > {bodyBackgroundColor: rgb(255, 0, 0)}
+chromium console.log > {bodyBackgroundImage: url("http://localhost/other/jsenv.png?v=467b6542")}
 ```
 
 </details>
@@ -64,14 +71,16 @@ see [./0_js_module/build/](./0_js_module/build/)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "bodyBackgroundColor": "rgb(255, 0, 0)",
+  "bodyBackgroundImage": "url(\"window.origin/other/jsenv.png?v=467b6542\")"
+}
 ```
 
 ## 1_js_module_fallback_css_minified
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "88" },
   minification: {
     js_module: false,
@@ -123,6 +132,14 @@ see [./1_js_module_fallback_css_minified/build/](./1_js_module_fallback_css_mini
 - other: 1 (6.8 kB / 25 %)
 - total: 3 (27.3 kB / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
+chromium console.log > {bodyBackgroundColor: rgb(255, 0, 0)}
+chromium console.log > {bodyBackgroundImage: url("http://localhost/other/jsenv.png?v=467b6542")}
 ```
 
 </details>
@@ -131,14 +148,16 @@ see [./1_js_module_fallback_css_minified/build/](./1_js_module_fallback_css_mini
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "bodyBackgroundColor": "rgb(255, 0, 0)",
+  "bodyBackgroundImage": "url(\"window.origin/other/jsenv.png?v=467b6542\")"
+}
 ```
 
 ## 2_js_module_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "60" },
   minification: false,
 })
@@ -186,6 +205,14 @@ see [./2_js_module_fallback/build/](./2_js_module_fallback/build/)
 - other: 1 (6.8 kB / 17 %)
 - total: 3 (40.3 kB / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
+chromium console.log > {bodyBackgroundColor: rgb(255, 0, 0)}
+chromium console.log > {bodyBackgroundImage: url("http://localhost/other/jsenv.png?v=467b6542")}
 ```
 
 </details>
@@ -194,14 +221,16 @@ see [./2_js_module_fallback/build/](./2_js_module_fallback/build/)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "bodyBackgroundColor": "rgb(255, 0, 0)",
+  "bodyBackgroundImage": "url(\"window.origin/other/jsenv.png?v=467b6542\")"
+}
 ```
 
 ## 3_js_module_fallback_no_bundling
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "64" },
 })
 ```
@@ -248,6 +277,14 @@ see [./3_js_module_fallback_no_bundling/build/](./3_js_module_fallback_no_bundli
 - other: 1 (6.8 kB / 36 %)
 - total: 3 (18.8 kB / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
+chromium console.log > {bodyBackgroundColor: rgb(255, 0, 0)}
+chromium console.log > {bodyBackgroundImage: url("http://localhost/other/jsenv.png?v=467b6542")}
 ```
 
 </details>
@@ -256,5 +293,8 @@ see [./3_js_module_fallback_no_bundling/build/](./3_js_module_fallback_no_bundli
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "bodyBackgroundColor": "rgb(255, 0, 0)",
+  "bodyBackgroundImage": "url(\"window.origin/other/jsenv.png?v=467b6542\")"
+}
 ```
