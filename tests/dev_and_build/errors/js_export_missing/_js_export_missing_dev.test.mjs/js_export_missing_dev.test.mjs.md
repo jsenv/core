@@ -37,6 +37,6 @@ see [./0_chromium/.jsenv/chrome@127.00/](./0_chromium/.jsenv/chrome@127.00/)
 
 ```console
 Error: chromium "pageerror" {
-  [cause]: Error: The requested module '/file.js' does not provide an export named 'answer',
+  [cause]: SyntaxError: The requested module '/file.js' does not provide an export named 'answer',
 }
 ```

@@ -35,7 +35,7 @@ build "./main.html"
 ### 2/2 reject
 
 ```console
-Error: Failed to fetch url content
+FETCH_URL_CONTENT_ERROR: Failed to fetch url content
 base/client/intermediate.js:2:7
 1 | // eslint-disable-next-line import/no-unresolved
 2 | import "./not_found.js";

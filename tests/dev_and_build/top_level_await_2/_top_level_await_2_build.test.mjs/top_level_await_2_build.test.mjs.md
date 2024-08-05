@@ -154,7 +154,7 @@ build "./main.html"
   <summary>details</summary>
 
 ```console
-Error: "transformUrlContent" error on "js_module"
+TRANSFORM_URL_CONTENT_ERROR: "transformUrlContent" error on "js_module"
 base/client/main.js:1:7
 1 | import "./a.js";
           ^

@@ -35,7 +35,7 @@ build "./main.html"
 ### 2/2 reject
 
 ```console
-Error: parse error on "js_module"
+TRANSFORM_URL_CONTENT_ERROR: parse error on "js_module"
 base/client/main_syntax_error.js:4:16
 1 | // above 1
 2 | // above 2
