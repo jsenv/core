@@ -481,6 +481,7 @@ window.__supervisor__ = (() => {
       column
     } = {}) => {
       const exception = {
+        runtime: "browser",
         reason,
         isException: true,
         isError: false,
