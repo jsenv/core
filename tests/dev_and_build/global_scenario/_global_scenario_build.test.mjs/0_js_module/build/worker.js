@@ -1,3 +1,3 @@
 /* globals false */
 
-console.log(false);
+console.log({ dev: false });

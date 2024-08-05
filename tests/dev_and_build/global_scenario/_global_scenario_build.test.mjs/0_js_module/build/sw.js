@@ -9,4 +9,4 @@ self.resourcesFromJsenvBuild = {
 
 /* globals false */
 
-console.log(false);
+console.log({ dev: false });

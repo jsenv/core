@@ -7,15 +7,7 @@
 ## 0_js_module
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-  runtimeCompat: { chrome: "89" },
-  bundling: false,
-  minification: false,
-  versioning: false,
-})
+run()
 ```
 
 ### 1/4 logs
@@ -55,10 +47,17 @@ see [./0_js_module/build/](./0_js_module/build/)
 ```console
 ✔ write files in build directory (done in <X> second)
 --- build files ---  
-- html : 1 (335 B / 43 %)
-- js   : 3 (438 B / 57 %)
-- total: 4 (773 B / 100 %)
+- html : 1 (335 B / 42 %)
+- js   : 3 (456 B / 58 %)
+- total: 4 (791 B / 100 %)
 --------------------
+⠋ start build server
+✔ start build server (done in <X> second)
+
+- http://localhost
+- http://[::1]
+
+chromium console.log > {dev: false}
 ```
 
 </details>
@@ -67,5 +66,8 @@ see [./0_js_module/build/](./0_js_module/build/)
 ### 4/4 resolve
 
 ```js
-{}
+{
+  "dev": false,
+  "build": true
+}
 ```
