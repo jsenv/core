@@ -45,37 +45,21 @@ const test = async (params) => {
 
 actual: "foo"
 expect: "bar"`;
-  const expectedLine = {
-    chromium: 13,
-    firefox: 9,
-    webkit: 9,
-  }[params.runtime.name];
-  const expectedColumn = {
-    chromium: 7,
-    firefox: 5,
-    webkit: 5,
-  }[params.runtime.name];
-  const ownerSite = {
+  const site = {
     chromium: {
-      url: `${clientDirectoryUrl}/main.html@L10C5-L17C14.js`,
-      ownerColumn: 5,
-      ownerLine: 10,
-      inlineColumn: expectedColumn,
-      inlineLine: 3,
+      url: `${clientDirectoryUrl}/main.html`,
+      line: 13,
+      column: 7,
     },
     firefox: {
-      url: `${clientDirectoryUrl}/main.html@L10C5-L17C14.js`,
-      ownerColumn: 5,
-      ownerLine: 10,
-      inlineColumn: undefined,
-      inlineLine: undefined,
+      url: `${clientDirectoryUrl}/main.html`,
+      line: 13,
+      column: 13,
     },
     webkit: {
-      url: `${clientDirectoryUrl}/main.html@L10C5-L17C14.js`,
-      ownerColumn: 5,
-      ownerLine: 10,
-      inlineColumn: undefined,
-      inlineLine: undefined,
+      url: `${clientDirectoryUrl}/main.html`,
+      line: 13,
+      column: 13,
     },
   }[params.runtime.name];
 
@@ -83,14 +67,7 @@ expect: "bar"`;
     status: "failed",
     consoleCalls: [],
     errorMessage: expectedErrorMessage,
-    site: {
-      ownerSite,
-      isInline: true,
-      url: `${clientDirectoryUrl}/main.html`,
-      line: expectedLine,
-      column: expectedColumn,
-      serverUrl: `${devServer.origin}/main.html`,
-    },
+    site,
   };
   assert({ actual, expect, details: params.runtime.name });
 };
