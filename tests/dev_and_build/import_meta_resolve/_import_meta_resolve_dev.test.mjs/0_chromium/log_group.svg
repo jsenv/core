@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 669.45" background-color="#282c34">
+  <g id="background">
+    <rect x="1" y="1" width="638" height="667.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+  </g>
+  <foreignObject id="body" y="0" width="100%" height="679.45" overflow="hidden">
+    <svg width="1179.39" height="669.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+      <g>
+        <text x="10" y="24.55">GET http://localhost/@fs@jsenv/core/packages/internal/ast/src/html/html_src_set.js?v=6.2.16</text>
+        <text x="26.8" y="43.55" fill="#cd5555">500</text>
+        <text x="60.41" y="43.55"> FINALIZE_URL_CONTENT_ERROR: "finalizeUrlContent" error on "js_module"</text>
+        <text x="26.8" y="62.55">  @jsenv/core/src/plugins/autoreload/client/autoreload.js:4:7</text>
+        <text x="26.8" y="81.55">  1 | import {</text>
+        <text x="26.8" y="100.55">  2 |   parseSrcSet,</text>
+        <text x="26.8" y="119.55">  3 |   stringifySrcSet,</text>
+        <text x="26.8" y="138.55">  4 | } from "@jsenv/ast/src/html/html_src_set.js";</text>
+        <text x="110.82" y="157.55">            ^</text>
+        <text x="26.8" y="176.55">  --- error stack ---</text>
+        <text x="26.8" y="195.55">  Error: ENOENT: no such file or directory, open 'base/.jsenv/chrome@127.00/@fs@jsenv/core/packages/internal/ast/src/html/html_src_set.js'</text>
+        <text x="60.41" y="214.55">      at METHOD_EXECUTION_STANDARD (@jsenv/core/packages/independent/snapshot/src/side_effects/hook_into_method.js:163:30)</text>
+        <text x="60.41" y="233.55">      at Object.proxy [as writeFileUtf8] (@jsenv/core/packages/independent/snapshot/src/side_effects/hook_into_method.js:105:14)</text>
+        <text x="60.41" y="252.55">      at writeFileSync (node:fs:2348:20)</text>
+        <text x="60.41" y="271.55">      at writeFileSync (@jsenv/core/packages/independent/filesystem/src/read_write/write_file_sync.js:22:7)</text>
+        <text x="60.41" y="290.55">      at writeInsideOutDirectory (@jsenv/core/src/kitchen/url_graph/url_info_transformations.js:295:7)</text>
+        <text x="60.41" y="309.55">      at applyContentEffects (@jsenv/core/src/kitchen/url_graph/url_info_transformations.js:256:5)</text>
+        <text x="60.41" y="328.55">      at Object.endTransformations (@jsenv/core/src/kitchen/url_graph/url_info_transformations.js:401:5)</text>
+        <text x="60.41" y="347.55">      at Object.finalizeUrlContent (@jsenv/core/src/kitchen/kitchen.js:442:26)</text>
+        <text x="60.41" y="366.55">      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)</text>
+        <text x="60.41" y="385.55">      at async @jsenv/core/src/kitchen/kitchen.js:481:11</text>
+        <text x="60.41" y="404.55">      at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)</text>
+        <text x="60.41" y="423.55">      at async @jsenv/core/src/kitchen/kitchen.js:473:9</text>
+        <text x="60.41" y="442.55">      at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:638:7)</text>
+        <text x="60.41" y="461.55">      at async handleRequest (@jsenv/core/src/dev/start_dev_server.js:452:11)</text>
+        <text x="60.41" y="480.55">      at async callAsyncHook (@jsenv/core/packages/independent/server/src/service_controller.js:80:25)</text>
+        <text x="60.41" y="499.55">      at createFinalizeUrlContentError (@jsenv/core/src/kitchen/errors.js:242:25)</text>
+        <text x="60.41" y="518.55">      at Object.finalizeUrlContent (@jsenv/core/src/kitchen/kitchen.js:444:13)</text>
+        <text x="60.41" y="537.55">      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)</text>
+        <text x="60.41" y="556.55">      at async @jsenv/core/src/kitchen/kitchen.js:481:11</text>
+        <text x="60.41" y="575.55">      at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)</text>
+        <text x="60.41" y="594.55">      at async @jsenv/core/src/kitchen/kitchen.js:473:9</text>
+        <text x="60.41" y="613.55">      at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:638:7)</text>
+        <text x="60.41" y="632.55">      at async handleRequest (@jsenv/core/src/dev/start_dev_server.js:452:11)</text>
+        <text x="60.41" y="651.55">      at async callAsyncHook (@jsenv/core/packages/independent/server/src/service_controller.js:80:25)</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>

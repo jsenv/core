@@ -12,7 +12,7 @@ run({
 })
 ```
 
-### 1/4 console.warn
+### 1/3 console.warn
 
 ![img](0_js_module/console.warn.svg)
 
@@ -26,17 +26,11 @@ run({
 </details>
 
 
-### 2/4 write 2 files into "./build/"
+### 2/3 write 2 files into "./build/"
 
 see [./0_js_module/build/](./0_js_module/build/)
 
-### 3/4 console.log
-
-```console
-chromium console.log > 42
-```
-
-### 4/4 resolve
+### 3/3 resolve
 
 ```js
 42
@@ -50,7 +44,7 @@ run({
 })
 ```
 
-### 1/4 console.warn
+### 1/3 console.warn
 
 ![img](1_js_module_fallback/console.warn.svg)
 
@@ -64,17 +58,11 @@ run({
 </details>
 
 
-### 2/4 write 2 files into "./build/"
+### 2/3 write 2 files into "./build/"
 
 see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 
-### 3/4 console.log
-
-```console
-chromium console.log > 42
-```
-
-### 4/4 resolve
+### 3/3 resolve
 
 ```js
 42

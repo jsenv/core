@@ -12,18 +12,11 @@ run({
 })
 ```
 
-### 1/3 write 3 files into "./build/"
+### 1/2 write 3 files into "./build/"
 
 see [./0_js_module/build/](./0_js_module/build/)
 
-### 2/3 logs
-
-```console
-chromium console.log > Window
-chromium console.log > Window
-```
-
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 42
@@ -37,18 +30,11 @@ run({
 })
 ```
 
-### 1/3 write 3 files into "./build/"
+### 1/2 write 3 files into "./build/"
 
 see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 
-### 2/3 logs
-
-```console
-chromium console.log > Window
-chromium console.log > Window
-```
-
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 42
@@ -63,18 +49,11 @@ run({
 })
 ```
 
-### 1/3 write 3 files into "./build/"
+### 1/2 write 3 files into "./build/"
 
 see [./1_js_module_fallback_no_versioning/build/](./1_js_module_fallback_no_versioning/build/)
 
-### 2/3 logs
-
-```console
-chromium console.log > Window
-chromium console.log > Window
-```
-
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 42

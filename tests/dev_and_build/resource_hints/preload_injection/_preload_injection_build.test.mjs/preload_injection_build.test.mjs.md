@@ -10,17 +10,11 @@
 run()
 ```
 
-### 1/3 write 3 files into "./build/"
+### 1/2 write 3 files into "./build/"
 
 see [./0_js_module/build/](./0_js_module/build/)
 
-### 2/3 console.log
-
-```console
-chromium console.log > toto
-```
-
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 42

@@ -10,17 +10,11 @@
 run()
 ```
 
-### 1/3 write 2 files into "./build/"
+### 1/2 write 2 files into "./build/"
 
 see [./0_inlining/build/](./0_inlining/build/)
 
-### 2/3 console.log
-
-```console
-chromium console.log > here
-```
-
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 42

@@ -10,17 +10,11 @@
 run({ browserLauncher: chromium })
 ```
 
-### 1/3 write 5 files into "./.jsenv/chrome@127.00/"
+### 1/2 write 5 files into "./.jsenv/chrome@127.00/"
 
 see [./0_chromium/.jsenv/chrome@127.00/](./0_chromium/.jsenv/chrome@127.00/)
 
-### 2/3 console.log
-
-```console
-chromium console.log > 42
-```
-
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 {}

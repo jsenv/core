@@ -10,17 +10,11 @@
 run()
 ```
 
-### 1/3 write 14 files into "./build/"
+### 1/2 write 14 files into "./build/"
 
 see [./0_basic/build/](./0_basic/build/)
 
-### 2/3 console.log
-
-```console
-chromium console.log > {answer: 42}
-```
-
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 {

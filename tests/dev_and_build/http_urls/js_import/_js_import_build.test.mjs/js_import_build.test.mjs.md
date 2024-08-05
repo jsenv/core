@@ -10,17 +10,11 @@
 run()
 ```
 
-### 1/3 write 2 files into "./build/"
+### 1/2 write 2 files into "./build/"
 
 see [./0_http_preserved/build/](./0_http_preserved/build/)
 
-### 2/3 console.log
-
-```console
-chromium console.log > http://127.0.0.1:9999/constants.js?foo=bar
-```
-
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 {

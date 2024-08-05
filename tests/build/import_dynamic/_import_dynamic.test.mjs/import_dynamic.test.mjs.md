@@ -12,18 +12,11 @@ run({
 })
 ```
 
-### 1/3 write 4 files into "./build/"
+### 1/2 write 4 files into "./build/"
 
 see [./0_js_module/build/](./0_js_module/build/)
 
-### 2/3 logs
-
-```console
-chromium console.log > 42
-chromium console.log > nested
-```
-
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 {
@@ -40,18 +33,11 @@ run({
 })
 ```
 
-### 1/3 write 4 files into "./build/"
+### 1/2 write 4 files into "./build/"
 
 see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 
-### 2/3 logs
-
-```console
-chromium console.log > 42
-chromium console.log > nested
-```
-
-### 3/3 resolve
+### 2/2 resolve
 
 ```js
 {
