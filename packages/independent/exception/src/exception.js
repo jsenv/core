@@ -137,7 +137,9 @@ const getStackInfo = (
 ) => {
   let stack;
   let stackFrames;
-  if (!reason.isException) {
+  if (reason.isException) {
+    stack = reason.stack;
+  } else {
     const { prepareStackTrace } = Error;
     Error.prepareStackTrace = (e, callSites) => {
       Error.prepareStackTrace = prepareStackTrace;
@@ -180,7 +182,7 @@ const getStackInfo = (
   if (reason.stackFrames) {
     stackFrames = reason.stackFrames;
   } else {
-    const calls = parseStackTrace(reason.stack);
+    const calls = parseStackTrace(stack);
     stackFrames = [];
     for (const call of calls) {
       if (call.fileName === "") {
