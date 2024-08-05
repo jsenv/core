@@ -4,7 +4,6 @@ import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_exe
 
 const run = async ({ runtime }) => {
   const devServer = await startDevServer({
-    logLevel: "off", // TODO: change this
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
