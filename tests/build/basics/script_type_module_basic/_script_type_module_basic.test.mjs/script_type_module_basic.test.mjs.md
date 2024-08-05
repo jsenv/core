@@ -12,30 +12,42 @@ run({
 })
 ```
 
-### 1/2 write 2 files into "./build/"
+### 1/3 write 2 files into "./build/"
 
 see [./0_js_module/build/](./0_js_module/build/)
 
-### 2/2 resolve
+### 2/3 console.log
+
+```console
+chromium console.log > 42
+```
+
+### 3/3 resolve
 
 ```js
-{}
+undefined
 ```
 
 ## 1_js_module_fallback
 
 ```js
 run({
-  runtimeCompat: { chrome: "60" },
+  runtimeCompat: { chrome: "62" },
 })
 ```
 
-### 1/2 write 2 files into "./build/"
+### 1/3 write 2 files into "./build/"
 
 see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 
-### 2/2 resolve
+### 2/3 console.log
+
+```console
+chromium console.log > 42
+```
+
+### 3/3 resolve
 
 ```js
-{}
+undefined
 ```
