@@ -17,51 +17,11 @@ build({
 })
 ```
 
-### 1/4 logs
-
-![img](0_basic/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 4 files into "./build/"
+### 1/2 write 4 files into "./build/"
 
 see [./0_basic/build/](./0_basic/build/)
 
-### 3/4 logs
-
-![img](0_basic/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (603 B / 44 %)
-- js   : 3 (757 B / 56 %)
-- total: 4 (1.4 kB / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {}

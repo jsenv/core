@@ -12,57 +12,11 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](0_import_meta_resolve/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 3 files into "./build/"
+### 1/2 write 3 files into "./build/"
 
 see [./0_import_meta_resolve/build/](./0_import_meta_resolve/build/)
 
-### 3/4 logs
-
-![img](0_import_meta_resolve/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (349 B / 37 %)
-- js   : 2 (592 B / 63 %)
-- total: 3 (941 B / 100 %)
---------------------
-⠋ start build server
-✔ start build server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {
@@ -79,57 +33,11 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](1_import_meta_resolve_fallback/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 3 files into "./build/"
+### 1/2 write 3 files into "./build/"
 
 see [./1_import_meta_resolve_fallback/build/](./1_import_meta_resolve_fallback/build/)
 
-### 3/4 logs
-
-![img](1_import_meta_resolve_fallback/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (349 B / 30 %)
-- js   : 2 (822 B / 70 %)
-- total: 3 (1.2 kB / 100 %)
---------------------
-⠋ start build server
-✔ start build server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {
@@ -146,57 +54,11 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](2_js_module_fallback/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 3 files into "./build/"
+### 1/2 write 3 files into "./build/"
 
 see [./2_js_module_fallback/build/](./2_js_module_fallback/build/)
 
-### 3/4 logs
-
-![img](2_js_module_fallback/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (16.8 kB / 92 %)
-- js   : 2 (1.4 kB / 8 %)
-- total: 3 (18.2 kB / 100 %)
---------------------
-⠋ start build server
-✔ start build server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {

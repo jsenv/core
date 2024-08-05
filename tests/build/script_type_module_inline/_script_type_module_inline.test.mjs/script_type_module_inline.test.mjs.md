@@ -13,53 +13,11 @@ build({
 })
 ```
 
-### 1/4 logs
-
-![img](0_js_module/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ bundle "js_module"
-✔ bundle "js_module" (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 2 files into "./build/"
+### 1/2 write 2 files into "./build/"
 
 see [./0_js_module/build/](./0_js_module/build/)
 
-### 3/4 logs
-
-![img](0_js_module/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (693 B / 95 %)
-- js   : 1 (39 B / 5 %)
-- total: 2 (732 B / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {}
@@ -74,53 +32,11 @@ build({
 })
 ```
 
-### 1/4 logs
-
-![img](1_js_module_fallback/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ bundle "js_module"
-✔ bundle "js_module" (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 2 files into "./build/"
+### 1/2 write 2 files into "./build/"
 
 see [./1_js_module_fallback/build/](./1_js_module_fallback/build/)
 
-### 3/4 logs
-
-![img](1_js_module_fallback/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (17.5 kB / 99 %)
-- js   : 1 (189 B / 1 %)
-- total: 2 (17.7 kB / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {}
@@ -136,51 +52,11 @@ build({
 })
 ```
 
-### 1/4 logs
-
-![img](2_js_module_fallback_no_bundling/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 2 files into "./build/"
+### 1/2 write 2 files into "./build/"
 
 see [./2_js_module_fallback_no_bundling/build/](./2_js_module_fallback_no_bundling/build/)
 
-### 3/4 logs
-
-![img](2_js_module_fallback_no_bundling/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (17.5 kB / 99 %)
-- js   : 1 (189 B / 1 %)
-- total: 2 (17.7 kB / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {}

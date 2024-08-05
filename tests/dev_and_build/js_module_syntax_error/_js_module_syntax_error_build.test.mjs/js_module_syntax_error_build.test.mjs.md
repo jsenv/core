@@ -14,26 +14,6 @@ build({
 })
 ```
 
-### 1/2 logs
-
-![img](0_basic/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✖ failed to generate source graph
-
-```
-
-</details>
-
-
-### 2/2 reject
-
 ```console
 TRANSFORM_URL_CONTENT_ERROR: parse error on "js_module"
 base/client/main_syntax_error.js:4:16

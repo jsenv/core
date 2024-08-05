@@ -36,7 +36,7 @@ see [./0_chromium/.jsenv/chrome@127.00/](./0_chromium/.jsenv/chrome@127.00/)
 ### 3/4 console.log
 
 ```console
-chromium console.log > true
+chromium console.log > {dev: true}
 ```
 
 ### 4/4 resolve

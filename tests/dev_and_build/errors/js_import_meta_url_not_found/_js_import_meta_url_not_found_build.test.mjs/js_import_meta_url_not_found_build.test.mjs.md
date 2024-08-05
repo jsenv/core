@@ -14,26 +14,6 @@ build({
 })
 ```
 
-### 1/2 logs
-
-![img](0_basic/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✖ failed to generate source graph
-
-```
-
-</details>
-
-
-### 2/2 reject
-
 ```console
 FETCH_URL_CONTENT_ERROR: Failed to fetch url content
 base/client/main.js:1:23

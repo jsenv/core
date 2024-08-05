@@ -14,28 +14,6 @@ build({
 })
 ```
 
-### 1/2 logs
-
-![img](0_basic/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ bundle "js_module"
-✖ failed to bundle "js_module"
-
-```
-
-</details>
-
-
-### 2/2 reject
-
 ```console
 Error: tests/dev_and_build/errors/js_export_missing/client/main.js (2:9): "answer" is not exported by "tests/dev_and_build/errors/js_export_missing/client/file.js", imported by "tests/dev_and_build/errors/js_export_missing/client/main.js".
 --- frame ---

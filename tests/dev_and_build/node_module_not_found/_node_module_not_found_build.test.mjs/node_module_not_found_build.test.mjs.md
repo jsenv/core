@@ -14,26 +14,6 @@ build({
 })
 ```
 
-### 1/2 logs
-
-![img](0_basic/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✖ failed to generate source graph
-
-```
-
-</details>
-
-
-### 2/2 reject
-
 ```console
 RESOLVE_URL_ERROR: Failed to resolve url reference
 base/client/node_modules/foo/index.js:1:7

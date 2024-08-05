@@ -13,62 +13,18 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](0_js_module/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ bundle "js_module"
-✔ bundle "js_module" (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 3 files into "./build/"
+### 1/3 write 3 files into "./build/"
 
 see [./0_js_module/build/](./0_js_module/build/)
 
-### 3/4 logs
-
-![img](0_js_module/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
+### 2/3 logs
 
 ```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (669 B / 7 %)
-- js   : 1 (1.7 kB / 18 %)
-- other: 1 (6.8 kB / 75 %)
-- total: 3 (9.2 kB / 100 %)
---------------------
-⠋ start build server
-✔ start build server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
 chromium console.log > {bodyBackgroundColor: rgb(255, 0, 0)}
 chromium console.log > {bodyBackgroundImage: url("http://localhost/other/jsenv.png?v=467b6542")}
 ```
 
-</details>
-
-
-### 4/4 resolve
+### 3/3 resolve
 
 ```js
 {
@@ -90,62 +46,18 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](1_js_module_fallback_css_minified/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ bundle "js_module"
-✔ bundle "js_module" (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 3 files into "./build/"
+### 1/3 write 3 files into "./build/"
 
 see [./1_js_module_fallback_css_minified/build/](./1_js_module_fallback_css_minified/build/)
 
-### 3/4 logs
-
-![img](1_js_module_fallback_css_minified/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
+### 2/3 logs
 
 ```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (17.8 kB / 65 %)
-- js   : 1 (2.7 kB / 10 %)
-- other: 1 (6.8 kB / 25 %)
-- total: 3 (27.3 kB / 100 %)
---------------------
-⠋ start build server
-✔ start build server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
 chromium console.log > {bodyBackgroundColor: rgb(255, 0, 0)}
 chromium console.log > {bodyBackgroundImage: url("http://localhost/other/jsenv.png?v=467b6542")}
 ```
 
-</details>
-
-
-### 4/4 resolve
+### 3/3 resolve
 
 ```js
 {
@@ -163,62 +75,18 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](2_js_module_fallback/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ bundle "js_module"
-✔ bundle "js_module" (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 3 files into "./build/"
+### 1/3 write 3 files into "./build/"
 
 see [./2_js_module_fallback/build/](./2_js_module_fallback/build/)
 
-### 3/4 logs
-
-![img](2_js_module_fallback/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
+### 2/3 logs
 
 ```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (17.2 kB / 43 %)
-- js   : 1 (16.3 kB / 40 %)
-- other: 1 (6.8 kB / 17 %)
-- total: 3 (40.3 kB / 100 %)
---------------------
-⠋ start build server
-✔ start build server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
 chromium console.log > {bodyBackgroundColor: rgb(255, 0, 0)}
 chromium console.log > {bodyBackgroundImage: url("http://localhost/other/jsenv.png?v=467b6542")}
 ```
 
-</details>
-
-
-### 4/4 resolve
+### 3/3 resolve
 
 ```js
 {
@@ -235,62 +103,18 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](3_js_module_fallback_no_bundling/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ bundle "js_module"
-✔ bundle "js_module" (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 3 files into "./build/"
+### 1/3 write 3 files into "./build/"
 
 see [./3_js_module_fallback_no_bundling/build/](./3_js_module_fallback_no_bundling/build/)
 
-### 3/4 logs
-
-![img](3_js_module_fallback_no_bundling/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
+### 2/3 logs
 
 ```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (5.6 kB / 30 %)
-- js   : 1 (6.3 kB / 34 %)
-- other: 1 (6.8 kB / 36 %)
-- total: 3 (18.8 kB / 100 %)
---------------------
-⠋ start build server
-✔ start build server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
 chromium console.log > {bodyBackgroundColor: rgb(255, 0, 0)}
 chromium console.log > {bodyBackgroundImage: url("http://localhost/other/jsenv.png?v=467b6542")}
 ```
 
-</details>
-
-
-### 4/4 resolve
+### 3/3 resolve
 
 ```js
 {

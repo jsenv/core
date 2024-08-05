@@ -21,17 +21,9 @@ build({
 })
 ```
 
-### 1/4 logs
-
-![img](0_injection/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
+### 1/3 console.warn
 
 ```console
-
-build "./main.html"
-⠋ generate source graph
 placeholder "__DEMO__" not found in base/client/main.html.
 --- suggestion a ---
 Add "__DEMO__" in that file.
@@ -44,39 +36,13 @@ import { INJECTIONS } from "@jsenv/core";
 return {
   "__DEMO__": INJECTIONS.optional("foo"),
 };
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
 ```
 
-</details>
-
-
-### 2/4 write file "./build/main.html"
+### 2/3 write file "./build/main.html"
 
 see [./0_injection/build/main.html](./0_injection/build/main.html)
 
-### 3/4 logs
-
-![img](0_injection/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (304 B / 100 %)
-- total: 1 (304 B / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
+### 3/3 resolve
 
 ```js
 {}

@@ -5,7 +5,7 @@ import { groupLogSideEffects } from "./group_log_side_effects.js";
 const logSideEffectsOptionsDefault = {
   prevent: true,
   group: true,
-  ignore: false,
+  level: "info", // "debug", "trace", "info", "warn", "error", "off"
 };
 
 export const logSideEffects = (logSideEffectsOptions) => {
@@ -16,7 +16,7 @@ export const logSideEffects = (logSideEffectsOptions) => {
   return {
     name: "console",
     install: (addSideEffect, { addFinallyCallback }) => {
-      const { prevent, group, ignore } = logSideEffectsOptions;
+      const { level, prevent, group } = logSideEffectsOptions;
       if (group) {
         addFinallyCallback((sideEffects) => {
           groupLogSideEffects(sideEffects, {
@@ -61,8 +61,34 @@ export const logSideEffects = (logSideEffectsOptions) => {
         });
       }
       const addLogSideEffect = (type, message) => {
-        if (ignore) {
-          return;
+        if (level === "debug") {
+        } else if (level === "trace") {
+          if (type === "console.debug") {
+            return;
+          }
+        } else if (level === "info") {
+          if (type === "console.debug" || type === "console.trace") {
+            return;
+          }
+        } else if (level === "warn") {
+          if (
+            type === "console.debug" ||
+            type === "console.trace" ||
+            type === "console.info" ||
+            type === "process.stdout"
+          ) {
+            return;
+          }
+        } else if (level === "error") {
+          if (
+            type === "console.debug" ||
+            type === "console.trace" ||
+            type === "console.info" ||
+            type === "process.stdout" ||
+            type === "console.warn"
+          ) {
+            return;
+          }
         }
         addSideEffect({
           code: type,

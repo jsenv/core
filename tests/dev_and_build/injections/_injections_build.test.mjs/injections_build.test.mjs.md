@@ -10,57 +10,11 @@
 run()
 ```
 
-### 1/4 logs
-
-![img](0_injection/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 2 files into "./build/"
+### 1/2 write 2 files into "./build/"
 
 see [./0_injection/build/](./0_injection/build/)
 
-### 3/4 logs
-
-![img](0_injection/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (332 B / 82 %)
-- js   : 1 (74 B / 18 %)
-- total: 2 (406 B / 100 %)
---------------------
-⠋ start build server
-✔ start build server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 build

@@ -6,10 +6,17 @@ export const snapshotBuildTests = async (
   options = {},
 ) =>
   snapshotTests(testFileUrl, fnRegisteringTests, {
+    ...options,
     filesystemActions: {
       "**": "compare",
       "**/.jsenv/": "undo",
       ...options.filesystemActions,
     },
-    ...options,
+    logEffects:
+      options.logEffects === false
+        ? false
+        : {
+            level: "warn",
+            ...(options.logEffects === true ? {} : options.logEffects),
+          },
   });

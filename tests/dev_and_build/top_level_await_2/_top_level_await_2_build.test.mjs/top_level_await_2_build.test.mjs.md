@@ -12,51 +12,11 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](0_top_level_await/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 4 files into "./build/"
+### 1/2 write 4 files into "./build/"
 
 see [./0_top_level_await/build/](./0_top_level_await/build/)
 
-### 3/4 logs
-
-![img](0_top_level_await/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (540 B / 54 %)
-- js   : 3 (463 B / 46 %)
-- total: 4 (1 kB / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {}
@@ -70,51 +30,11 @@ run({
 })
 ```
 
-### 1/4 logs
-
-![img](1_top_level_await_fallback/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write 4 files into "./build/"
+### 1/2 write 4 files into "./build/"
 
 see [./1_top_level_await_fallback/build/](./1_top_level_await_fallback/build/)
 
-### 3/4 logs
-
-![img](1_top_level_await_fallback/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (17.2 kB / 92 %)
-- js   : 3 (1.6 kB / 8 %)
-- total: 4 (18.8 kB / 100 %)
---------------------
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {}
@@ -128,30 +48,6 @@ run({
   versioning: false,
 })
 ```
-
-### 1/2 logs
-
-![img](2_top_level_await_throw/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✖ failed to generate build graph
-
-```
-
-</details>
-
-
-### 2/2 reject
-  <details>
-  <summary>details</summary>
 
 ```console
 TRANSFORM_URL_CONTENT_ERROR: "transformUrlContent" error on "js_module"
@@ -198,5 +94,3 @@ TypeError: base/client/a.js: Cannot export after a top-level await when using to
     at @jsenv/core/node_modules/gensync/index.js:273:13
     at async.call.result.err.err (@jsenv/core/node_modules/gensync/index.js:223:11)
 ```
-
-</details>

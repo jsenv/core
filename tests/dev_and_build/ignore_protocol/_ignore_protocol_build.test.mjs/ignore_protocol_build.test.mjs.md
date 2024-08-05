@@ -10,56 +10,11 @@
 run()
 ```
 
-### 1/4 logs
-
-![img](0_js_module/log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-
-build "./main.html"
-⠋ generate source graph
-✔ generate source graph (done in <X> second)
-⠋ generate build graph
-✔ generate build graph (done in <X> second)
-⠋ write files in build directory
-
-```
-
-</details>
-
-
-### 2/4 write file "./build/main.html"
+### 1/2 write file "./build/main.html"
 
 see [./0_js_module/build/main.html](./0_js_module/build/main.html)
 
-### 3/4 logs
-
-![img](0_js_module/log_group_1.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-✔ write files in build directory (done in <X> second)
---- build files ---  
-- html : 1 (713 B / 100 %)
-- total: 1 (713 B / 100 %)
---------------------
-⠋ start build server
-✔ start build server (done in <X> second)
-
-- http://localhost
-- http://[::1]
-
-```
-
-</details>
-
-
-### 4/4 resolve
+### 2/2 resolve
 
 ```js
 {

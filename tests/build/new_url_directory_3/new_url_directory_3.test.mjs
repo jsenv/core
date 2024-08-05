@@ -72,6 +72,6 @@ await snapshotBuildTests(
       }));
   },
   {
-    logEffects: { ignore: true },
+    logEffects: { level: "warn" },
   },
 );
