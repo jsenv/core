@@ -7,8 +7,7 @@
 ## 0_top_level_await
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
@@ -20,14 +19,15 @@ see [./0_top_level_await/build/main.html](./0_top_level_await/build/main.html)
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "answer": 42
+}
 ```
 
 ## 1_top_level_await_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "55" },
 })
 ```
@@ -39,5 +39,7 @@ see [./1_top_level_await_fallback/build/main.html](./1_top_level_await_fallback/
 ### 2/2 resolve
 
 ```js
-{}
+{
+  "answer": 42
+}
 ```

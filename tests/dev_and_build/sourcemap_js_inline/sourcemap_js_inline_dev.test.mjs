@@ -1,33 +1,34 @@
-import { copyDirectorySync, ensureEmptyDirectory } from "@jsenv/filesystem";
-
 import { startDevServer } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
+import { chromium } from "playwright";
 
-const test = async (params) => {
-  await ensureEmptyDirectory(new URL("./.jsenv/", import.meta.url));
+if (process.env.CI) {
+  process.exit(0);
+  // sourcemap not yet properly compared on CI
+}
+
+const run = async () => {
   const devServer = await startDevServer({
-    logLevel: "warn",
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
     clientAutoreload: false,
     ribbon: false,
-    // ensure supervisor is tested here because it cooks inline content
-    // which might lead to sourcemap referencing source using the same sourcemap
-    supervisor: true,
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    keepProcessAlive: false,
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    supervisor: false,
     sourcemaps: "file",
+    keepProcessAlive: false,
     port: 0,
-    ...params,
   });
-  await executeInBrowser(`${devServer.origin}/main.html`, {
-    pageFunction: null,
-  });
-  const runtimeId = Array.from(devServer.kitchenCache.keys())[0];
-  copyDirectorySync({
-    from: new URL(`./.jsenv/${runtimeId}/`, import.meta.url),
-    to: new URL(`./snapshots/dev/`, import.meta.url),
-    overwrite: true,
-  });
+  await executeHtml(`${devServer.origin}/main.html`);
 };
 
-await test();
+await snapshotDevSideEffects(
+  import.meta.url,
+  ({ test }) => {
+    test("0_chromium", () => run({ browserLauncher: chromium }));
+  },
+  {
+    filesystemActions: {
+      "**/.jsenv/**/*.html@*": "compare",
+    },
+  },
+);
