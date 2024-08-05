@@ -12,17 +12,155 @@ run({
 })
 ```
 
-### 1/3 console.log
+### 1/2 write 2 files into "./output/"
 
-```console
-snapshoting not_found.js
+see [./0_not_found/output/](./0_not_found/output/)
+
+### 2/2 resolve
+
+```js
+undefined
 ```
 
-### 2/3 write 2 files into "./"
+## 1_console
 
-see [./0_not_found/](./0_not_found/)
+```js
+run({
+  filename: "console.spec.js",
+})
+```
 
-### 3/3 resolve
+### 1/2 write 2 files into "./output/"
+
+see [./1_console/output/](./1_console/output/)
+
+### 2/2 resolve
+
+```js
+undefined
+```
+
+## 2_empty
+
+```js
+run({
+  filename: "empty.spec.js",
+})
+```
+
+### 1/2 write 2 files into "./output/"
+
+see [./2_empty/output/](./2_empty/output/)
+
+### 2/2 resolve
+
+```js
+undefined
+```
+
+## 3_error_in_source_function
+
+```js
+run({
+  filename: "error_in_source_function.spec.js",
+})
+```
+
+### 1/2 write 2 files into "./output/"
+
+see [./3_error_in_source_function/output/](./3_error_in_source_function/output/)
+
+### 2/2 resolve
+
+```js
+undefined
+```
+
+## 4_error_in_test_function
+
+```js
+run({
+  filename: "error_in_test_function.spec.js",
+})
+```
+
+### 1/2 write 2 files into "./output/"
+
+see [./4_error_in_test_function/output/](./4_error_in_test_function/output/)
+
+### 2/2 resolve
+
+```js
+undefined
+```
+
+## 5_error_in_test_jsenv_assert
+
+```js
+run({
+  filename: "error_in_test_jsenv_assert.spec.js",
+})
+```
+
+### 1/2 write 2 files into "./output/"
+
+see [./5_error_in_test_jsenv_assert/output/](./5_error_in_test_jsenv_assert/output/)
+
+### 2/2 resolve
+
+```js
+undefined
+```
+
+## 6_error_in_test
+
+```js
+run({
+  filename: "error_in_test.spec.js",
+})
+```
+
+### 1/2 write 2 files into "./output/"
+
+see [./6_error_in_test/output/](./6_error_in_test/output/)
+
+### 2/2 resolve
+
+```js
+undefined
+```
+
+## 8_error_in_timeout
+
+```js
+run({
+  filename: "error_in_timeout.spec.js",
+})
+```
+
+### 1/2 write 2 files into "./output/"
+
+see [./8_error_in_timeout/output/](./8_error_in_timeout/output/)
+
+### 2/2 resolve
+
+```js
+undefined
+```
+
+## 9_unhandled_rejection_in_test
+
+```js
+run({
+  filename: "unhandled_rejection_in_test.spec.js",
+})
+```
+
+### 1/2 write 2 files into "./output/"
+
+see [./9_unhandled_rejection_in_test/output/](./9_unhandled_rejection_in_test/output/)
+
+### 2/2 resolve
 
 ```js
 undefined

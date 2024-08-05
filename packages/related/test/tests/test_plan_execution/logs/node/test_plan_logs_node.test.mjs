@@ -25,9 +25,6 @@ UNICODE.supported = true;
 ANSI.supported = true;
 
 const run = async ({ filename }) => {
-  if (terminalAnimatedRecording) {
-    console.log(`snapshoting ${filename}`);
-  }
   const testPlanResult = await executeTestPlan({
     logs: {
       type: null,
@@ -77,10 +74,7 @@ const run = async ({ filename }) => {
                     const terminalRecords = await terminalRecorder.stop();
                     const terminalGif = await terminalRecords.gif();
                     writeFileSync(
-                      new URL(
-                        `./snapshots/node/${filename}.gif`,
-                        import.meta.url,
-                      ),
+                      new URL(`./output/${filename}.gif`, import.meta.url),
                       terminalGif,
                     );
                   },
@@ -112,11 +106,10 @@ const run = async ({ filename }) => {
 };
 
 await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
-  test.ONLY("0_not_found", () =>
+  test("0_not_found", () =>
     run({
       filename: "not_found.js",
-    }),
-  );
+    }));
   test("1_console", () =>
     run({
       filename: "console.spec.js",
