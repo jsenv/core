@@ -1,15 +1,14 @@
-import { assert } from "@jsenv/assert";
-import { build } from "@jsenv/core";
-import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { build, startBuildServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
 if (process.platform !== "darwin") {
   process.exit(0);
   // on linux the error stack is different
-  // TODO: fix this one day
 }
-const run = ({ runtimeCompat, versioning }) => {
-  return build({
+
+const run = async ({ runtimeCompat, versioning }) => {
+  await build({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
@@ -18,9 +17,15 @@ const run = ({ runtimeCompat, versioning }) => {
     runtimeCompat,
     versioning,
   });
+  const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
+  });
+  return executeHtml(`${buildServer.origin}/main.html`);
 };
 
-const { dirUrlMap } = await snapshotBuildTests(
+await snapshotBuildTests(
   import.meta.url,
   ({ test }) => {
     test("0_top_level_await", () =>
@@ -50,27 +55,3 @@ const { dirUrlMap } = await snapshotBuildTests(
     },
   },
 );
-
-const actual = {
-  topLevelAwait: await executeBuildHtmlInBrowser(
-    `${dirUrlMap.get("0_top_level_await")}build/`,
-  ),
-  topLevelAwaitFallback: await executeBuildHtmlInBrowser(
-    `${dirUrlMap.get("1_top_level_await_fallback")}build/`,
-  ),
-};
-const expect = {
-  topLevelAwait: [
-    "a_before_timeout",
-    "a_after_timeout",
-    "before_import_a",
-    "after_import_a",
-  ],
-  topLevelAwaitFallback: [
-    "a_before_timeout",
-    "a_after_timeout",
-    "before_import_a",
-    "after_import_a",
-  ],
-};
-assert({ actual, expect });

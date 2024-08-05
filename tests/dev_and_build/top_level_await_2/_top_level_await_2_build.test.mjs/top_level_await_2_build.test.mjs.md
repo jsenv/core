@@ -12,14 +12,25 @@ run({
 })
 ```
 
-### 1/2 write 4 files into "./build/"
+### 1/3 write 4 files into "./build/"
 
 see [./0_top_level_await/build/](./0_top_level_await/build/)
 
-### 2/2 resolve
+### 2/3 console.log
+
+```console
+chromium console.log > 42
+```
+
+### 3/3 resolve
 
 ```js
-{}
+[
+  "a_before_timeout",
+  "a_after_timeout",
+  "before_import_a",
+  "after_import_a"
+]
 ```
 
 ## 1_top_level_await_fallback
@@ -30,14 +41,25 @@ run({
 })
 ```
 
-### 1/2 write 4 files into "./build/"
+### 1/3 write 4 files into "./build/"
 
 see [./1_top_level_await_fallback/build/](./1_top_level_await_fallback/build/)
 
-### 2/2 resolve
+### 2/3 console.log
+
+```console
+chromium console.log > 42
+```
+
+### 3/3 resolve
 
 ```js
-{}
+[
+  "a_before_timeout",
+  "a_after_timeout",
+  "before_import_a",
+  "after_import_a"
+]
 ```
 
 ## 2_top_level_await_throw
