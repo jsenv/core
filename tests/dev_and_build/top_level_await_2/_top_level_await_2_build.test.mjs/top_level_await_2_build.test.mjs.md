@@ -7,8 +7,7 @@
 ## 0_top_level_await
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
@@ -66,8 +65,7 @@ see [./0_top_level_await/build/](./0_top_level_await/build/)
 ## 1_top_level_await_fallback
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "55" },
 })
 ```
@@ -125,8 +123,7 @@ see [./1_top_level_await_fallback/build/](./1_top_level_await_fallback/build/)
 ## 2_top_level_await_throw
 
 ```js
-build({
-  ...testParams,
+run({
   runtimeCompat: { chrome: "65" },
   versioning: false,
 })
@@ -157,7 +154,7 @@ build "./main.html"
   <summary>details</summary>
 
 ```console
-Error: "transformUrlContent" error on "js_module"
+TRANSFORM_URL_CONTENT_ERROR: "transformUrlContent" error on "js_module"
 base/client/main.js:1:7
 1 | import "./a.js";
           ^

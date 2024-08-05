@@ -4,8 +4,7 @@
  * - https://bvaughn.github.io/babel-repl
  */
 import { fileURLToPath, pathToFileURL } from "node:url";
-
-import { createJsParseError } from "./js_parse_error.js";
+import { createParseError } from "../parse_error.js";
 
 export const applyBabelPlugins = async ({
   babelPlugins,
@@ -70,8 +69,7 @@ export const applyBabelPlugins = async ({
     return normalizeResult(result);
   } catch (error) {
     if (error && error.code === "BABEL_PARSE_ERROR") {
-      throw createJsParseError({
-        message: error.message,
+      throw createParseError(error.message, {
         reasonCode: error.reasonCode,
         content: input,
         url: inputUrl,

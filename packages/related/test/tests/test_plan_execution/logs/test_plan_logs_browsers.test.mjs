@@ -15,7 +15,7 @@ import {
 
 if (process.platform === "win32") {
   // to fix once got a windows OS to reproduce
-  process.exit();
+  process.exit(0);
 }
 
 const terminalAnimatedRecording =

@@ -35,7 +35,7 @@ build "./main.html"
 ### 2/2 reject
 
 ```console
-Error: Failed to fetch url content
+FETCH_URL_CONTENT_ERROR: Failed to fetch url content
 base/client/main.js:1:23
 1 | const cssUrl = new URL("./style.css", import.meta.url);
                           ^

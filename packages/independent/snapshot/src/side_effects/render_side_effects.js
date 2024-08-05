@@ -1,4 +1,4 @@
-import { createException } from "@jsenv/exception";
+import { createException, stringifyException } from "@jsenv/exception";
 import { writeFileSync } from "@jsenv/filesystem";
 import { renderTerminalSvg } from "@jsenv/terminal-recorder";
 import { urlToExtension, urlToRelativeUrl } from "@jsenv/urls";
@@ -48,8 +48,7 @@ export const renderSideEffects = (
       // and in that case we might want to move it to an other file
       dedicatedFile: { line: 50, length: 5000 },
     }),
-    errorStackHidden,
-    errorMessageTransform,
+    errorTransform,
   } = {},
 ) => {
   const { rootDirectoryUrl, replaceFilesystemWellKnownValues } =
@@ -91,8 +90,7 @@ export const renderSideEffects = (
       titleLevel,
       getBigSizeEffect,
       replace,
-      errorStackHidden,
-      errorMessageTransform,
+      errorTransform,
       lastSideEffectNumber,
     });
   }
@@ -139,8 +137,7 @@ const renderOneSideEffect = (
     titleLevel,
     getBigSizeEffect,
     replace,
-    errorStackHidden,
-    errorMessageTransform,
+    errorTransform,
     lastSideEffectNumber,
   },
 ) => {
@@ -175,8 +172,7 @@ const renderOneSideEffect = (
       generateOutFileUrl,
       replace,
       rootDirectoryUrl,
-      errorStackHidden,
-      errorMessageTransform,
+      errorTransform,
     });
   }
   if (sideEffect.code === "source_code") {
@@ -212,8 +208,7 @@ const renderText = (
     generateOutFileUrl,
     replace,
     rootDirectoryUrl,
-    errorStackHidden,
-    errorMessageTransform,
+    errorTransform,
   },
 ) => {
   if (text && typeof text === "object") {
@@ -253,11 +248,9 @@ const renderText = (
         // return renderMarkdownBlock(text.value.stack);
         const exception = createException(jsValue, {
           rootDirectoryUrl,
-          errorMessageTransform,
+          errorTransform,
         });
-        const exceptionText = errorStackHidden
-          ? `${exception.name}: ${exception.message}`
-          : exception.stack || exception.message || exception;
+        const exceptionText = stringifyException(exception);
         return renderPotentialAnsi(exceptionText, {
           stringType: "error",
           sideEffect,

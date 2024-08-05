@@ -1,7 +1,6 @@
 import { Parser, getLineInfo } from "acorn";
 import { importAttributes } from "acorn-import-attributes";
-
-import { createJsParseError } from "./js_parse_error.js";
+import { createParseError } from "../parse_error.js";
 
 export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
   const AcornParser = Parser.extend(importAttributes);
@@ -28,8 +27,7 @@ export const parseJsWithAcorn = ({ js, url, isJsModule }) => {
   } catch (e) {
     if (e && e.name === "SyntaxError") {
       const { line, column } = getLineInfo(js, e.raisedAt);
-      throw createJsParseError({
-        message: e.message,
+      throw createParseError(e.message, {
         reasonCode: e.message,
         content: js,
         url,

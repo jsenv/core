@@ -35,7 +35,7 @@ build "./main.html"
 ### 2/2 reject
 
 ```console
-Error: Failed to resolve url reference
+RESOLVE_URL_ERROR: Failed to resolve url reference
 base/client/node_modules/foo/index.js:1:7
 1 | import "not_found";
           ^

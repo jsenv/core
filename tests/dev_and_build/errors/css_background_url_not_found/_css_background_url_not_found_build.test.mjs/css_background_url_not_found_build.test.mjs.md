@@ -35,7 +35,7 @@ build "./main.html"
 ### 2/2 reject
 
 ```console
-Error: Failed to fetch url content
+FETCH_URL_CONTENT_ERROR: Failed to fetch url content
 base/client/style.css:2:25
 1 | body {
 2 |   background-image: url("./img.png");

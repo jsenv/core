@@ -35,7 +35,7 @@ build "./main.html"
 ### 2/2 reject
 
 ```console
-Error: parse error on "js_module"
+TRANSFORM_URL_CONTENT_ERROR: parse error on "js_module"
 base/client/main_syntax_error.js:4:16
 1 | // above 1
 2 | // above 2
@@ -47,8 +47,8 @@ Unexpected token (4:15)
 base/client/main.html:9:27
 --- plugin name ---
 "jsenv:js_reference_analysis"
-    at createJsParseError (@jsenv/core/packages/internal/ast/src/js/js_parse_error.js:8:22)
-    at parseJsWithAcorn (@jsenv/core/packages/internal/ast/src/js/parse_js_with_acorn.js:31:13)
+    at createParseError (@jsenv/core/packages/internal/ast/src/parse_error.js:2:22)
+    at parseJsWithAcorn (@jsenv/core/packages/internal/ast/src/js/parse_js_with_acorn.js:30:13)
     at getContentAst (@jsenv/core/src/kitchen/url_graph/url_content.js:88:12)
     at @jsenv/core/src/kitchen/url_graph/url_content.js:13:14
     at Object.get [as originalContentAst] (@jsenv/core/src/kitchen/url_graph/url_content.js:78:21)

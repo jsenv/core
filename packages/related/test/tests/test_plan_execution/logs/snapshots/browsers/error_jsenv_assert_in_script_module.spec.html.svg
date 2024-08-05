@@ -43,7 +43,7 @@
       fill="#cccccc"
     >
       <g>
-        <text x="77.21" y="14.55" fill="#cd5555">^</text>
+        <text x="152.82" y="14.55" fill="#cd5555">^</text>
         <text x="10" y="33.55">AssertionError: </text>
         <text x="144.42" y="33.55" fill="#cd5555">actual</text>
         <text x="203.23" y="33.55"> and </text>
@@ -73,12 +73,16 @@
         <text x="10" y="166.55" fill="#7f7f7f">---------------</text>
         <text x="144.42" y="166.55"> error </text>
         <text x="194.83" y="166.55" fill="#7f7f7f">----------------</text>
-        <text x="10" y="185.55" fill="#7f7f7f">7 |</text>
-        <text x="60.41" y="185.55"> &#x3C;/head&#x3E;</text>
-        <text x="10" y="204.55" fill="#7f7f7f">8 |</text>
-        <text x="10" y="223.55" fill="#7f7f7f">9 |</text>
-        <text x="60.41" y="223.55"> &#x3C;body&#x3E;</text>
-        <text x="77.21" y="242.55" fill="#cd5555">^</text>
+        <text x="10" y="185.55" fill="#7f7f7f">11 |</text>
+        <text x="102.42" y="185.55">
+          import { assert } from &#x22;@jsenv/assert&#x22;;</text
+        >
+        <text x="10" y="204.55" fill="#7f7f7f">12 |</text>
+        <text x="10" y="223.55" fill="#7f7f7f">13 |</text>
+        <text x="102.42" y="223.55">
+          assert({ actual: 1, expect: &#x22;1&#x22; });</text
+        >
+        <text x="152.82" y="242.55" fill="#cd5555">^</text>
         <text x="10" y="261.55">AssertionError: </text>
         <text x="144.42" y="261.55" fill="#cd5555">actual</text>
         <text x="203.23" y="261.55"> and </text>

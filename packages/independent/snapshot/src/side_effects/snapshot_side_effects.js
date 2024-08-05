@@ -32,7 +32,7 @@ export const snapshotSideEffects = (
   {
     sideEffectMdFileUrl,
     outFilePattern = "_[source_filename]/[filename]",
-    errorStackHidden,
+    errorTransform,
     throwWhenDiff,
     ...captureOptions
   } = {},
@@ -62,7 +62,7 @@ export const snapshotSideEffects = (
     const sideEffectFileContent = renderSideEffects(sideEffects, {
       sideEffectMdFileUrl,
       generateOutFileUrl,
-      errorStackHidden,
+      errorTransform,
     });
     writeFileSync(sideEffectMdFileUrl, sideEffectFileContent);
     outDirectorySnapshot.compare(throwWhenDiff);

@@ -63,11 +63,12 @@
         <text x="10" y="71.55" fill="#7f7f7f">---------------</text>
         <text x="144.42" y="71.55"> error </text>
         <text x="194.83" y="71.55" fill="#7f7f7f">----------------</text>
-        <text x="18.4" y="90.55" fill="#7f7f7f"> 8 |</text>
-        <text x="18.4" y="109.55" fill="#7f7f7f"> 9 |</text>
-        <text x="68.81" y="109.55"> &#x3C;body&#x3E;</text>
-        <text x="10" y="128.55" fill="#7f7f7f">10 |</text>
-        <text x="85.61" y="128.55"> &#x3C;script&#x3E;</text>
+        <text x="18.4" y="90.55" fill="#7f7f7f"> 9 |</text>
+        <text x="68.81" y="90.55"> &#x3C;body&#x3E;</text>
+        <text x="10" y="109.55" fill="#7f7f7f">10 |</text>
+        <text x="85.61" y="109.55"> &#x3C;script&#x3E;</text>
+        <text x="10" y="128.55" fill="#7f7f7f">11 |</text>
+        <text x="102.42" y="128.55"> throw new Error(&#x22;here&#x22;);</text>
         <text x="152.82" y="147.55" fill="#cd5555">^</text>
         <text x="10" y="166.55">Error: here</text>
         <text x="10" y="185.55">@</text>
@@ -90,12 +91,13 @@
         <text x="10" y="242.55" fill="#7f7f7f">---------------</text>
         <text x="144.42" y="242.55"> error </text>
         <text x="194.83" y="242.55" fill="#7f7f7f">----------------</text>
-        <text x="18.4" y="261.55" fill="#7f7f7f"> 8 |</text>
-        <text x="18.4" y="280.55" fill="#7f7f7f"> 9 |</text>
-        <text x="68.81" y="280.55"> &#x3C;body&#x3E;</text>
-        <text x="10" y="299.55" fill="#7f7f7f">10 |</text>
-        <text x="85.61" y="299.55"> &#x3C;script&#x3E;</text>
-        <text x="295.65" y="318.55" fill="#cd5555">^</text>
+        <text x="18.4" y="261.55" fill="#7f7f7f"> 9 |</text>
+        <text x="68.81" y="261.55"> &#x3C;body&#x3E;</text>
+        <text x="10" y="280.55" fill="#7f7f7f">10 |</text>
+        <text x="85.61" y="280.55"> &#x3C;script&#x3E;</text>
+        <text x="10" y="299.55" fill="#7f7f7f">11 |</text>
+        <text x="102.42" y="299.55"> throw new Error(&#x22;here&#x22;);</text>
+        <text x="228.44" y="318.55" fill="#cd5555">^</text>
         <text x="10" y="337.55">Error: here</text>
         <text x="10" y="356.55">global code@</text>
         <text x="110.82" y="356.55" font-weight="bold"

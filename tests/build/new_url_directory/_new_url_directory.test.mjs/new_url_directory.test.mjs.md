@@ -50,7 +50,9 @@ base/client/main.html:15:40
   at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:57:23)
   at onExternalReference (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:102:44)
   at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:150:7)
-  at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:22:18)
+  at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:22:18) {
+  code: "DIRECTORY_REFERENCE_NOT_ALLOWED",
+}
 ```
 
 ## 1_copy

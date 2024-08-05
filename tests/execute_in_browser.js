@@ -1,3 +1,4 @@
+import { markAsInternalError } from "@jsenv/exception";
 import { chromium } from "playwright";
 
 export const executeInBrowser = async (
@@ -20,7 +21,6 @@ export const executeInBrowser = async (
   const browser = await browserLauncher.launch({ headless });
   const browserName = browser._name;
   const page = await browser.newPage({ ignoreHTTPSErrors: true });
-
   const consoleOutput = {
     raw: "",
     logs: [],
@@ -51,37 +51,62 @@ export const executeInBrowser = async (
   });
 
   const pageErrors = [];
-  page.on("pageerror", (error) => {
-    if (collectErrors) {
+  if (collectErrors) {
+    page.on("pageerror", (error) => {
       pageErrors.push(error);
-    } else {
-      throw error;
-    }
-  });
-
-  await page.goto(url);
-  if (headScriptUrl) {
-    // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
-    await page.addScriptTag({ url: headScriptUrl });
+    });
   }
-
-  let result = {
+  const result = {
     returnValue: undefined,
     pageErrors,
     consoleOutput,
   };
 
-  try {
-    const returnValue = pageFunction
-      ? await page.evaluate(pageFunction, ...pageArguments)
-      : undefined;
+  const errorPromise = collectErrors
+    ? new Promise(() => {})
+    : new Promise((resolve, reject) => {
+        const errorCallback = (error) => {
+          page.off("pageerror", errorCallback);
+          page.on("pageerror", (error) => {
+            throw error;
+          });
+          reject(
+            markAsInternalError(
+              new Error(`${browserName} "pageerror"`, { cause: error }),
+            ),
+          );
+        };
+        page.on("pageerror", errorCallback);
+      });
+
+  const resultPromise = (async () => {
+    await page.goto(url);
+    if (headScriptUrl) {
+      // https://github.com/GoogleChrome/puppeteer/blob/master/docs/api.md#pageaddscripttagoptions
+      await page.addScriptTag({ url: headScriptUrl });
+    }
+    const returnValue = await page.evaluate(pageFunction, ...pageArguments);
     result.returnValue = returnValue;
+  })();
+
+  let isClosing = false;
+  try {
+    await Promise.race([
+      errorPromise,
+      resultPromise.catch((e) => {
+        if (isClosing) {
+          return null;
+        }
+        return Promise.reject(e);
+      }),
+    ]);
+    return result;
   } finally {
     if (autoStop) {
+      isClosing = true;
       await closeBrowser(browser);
     }
   }
-  return result;
 };
 
 const closeBrowser = async (browser) => {

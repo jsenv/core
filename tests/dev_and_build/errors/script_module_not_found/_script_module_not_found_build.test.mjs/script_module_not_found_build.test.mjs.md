@@ -35,7 +35,7 @@ build "./main.html"
 ### 2/2 reject
 
 ```console
-Error: Failed to fetch url content
+FETCH_URL_CONTENT_ERROR: Failed to fetch url content
 base/client/main.html:10:27
  7 |   </head>
  8 | 
@@ -45,7 +45,7 @@ base/client/main.html:10:27
 no entry on filesystem
 --- plugin name ---
 "jsenv:file_url_fetching"
-  at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:61:24)
+  at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:63:24)
   at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:104:14)
   at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:402:13)
   at async @jsenv/core/src/kitchen/kitchen.js:475:11

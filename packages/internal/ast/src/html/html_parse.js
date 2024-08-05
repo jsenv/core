@@ -1,6 +1,6 @@
 import { generateContentFrame } from "@jsenv/humanize";
 import { parse, parseFragment, serialize } from "parse5";
-
+import { createParseError } from "../parse_error.js";
 import { insertHtmlNodeAfter, insertHtmlNodeBefore } from "./html_node.js";
 import {
   getHtmlNodeAttribute,
@@ -27,19 +27,20 @@ export const parseHtml = ({ html, url, storeOriginalPositions = true }) => {
       ) {
         return;
       }
-      const htmlParseError = new Error(
+      const htmlParseError = createParseError(
         `Unable to parse HTML; ${parse5Error.code}`,
+        {
+          reasonCode: parse5Error.code,
+          url,
+          line: parse5Error.startLine,
+          column: parse5Error.startCol,
+          contentFrame: generateContentFrame({
+            content: html,
+            line: parse5Error.startLine,
+            column: parse5Error.startCol,
+          }),
+        },
       );
-      htmlParseError.reasonCode = parse5Error.code;
-      htmlParseError.code = "PARSE_ERROR";
-      htmlParseError.url = url;
-      htmlParseError.line = parse5Error.startLine;
-      htmlParseError.column = parse5Error.startCol;
-      htmlParseError.contentFrame = generateContentFrame({
-        content: html,
-        line: parse5Error.startLine,
-        column: parse5Error.startCol,
-      });
       throw htmlParseError;
     },
   });

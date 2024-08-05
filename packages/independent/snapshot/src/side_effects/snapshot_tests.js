@@ -39,8 +39,7 @@ export const snapshotTests = async (
     generatedBy = true,
     linkToSource = true,
     linkToEachSource,
-    errorStackHidden,
-    errorMessageTransform,
+    errorTransform,
     logEffects,
     filesystemEffects,
     throwWhenDiff = process.env.CI,
@@ -152,8 +151,7 @@ export const snapshotTests = async (
       generateOutFileUrl: generateScenarioOutFileUrl,
       generatedBy: false,
       titleLevel: 3,
-      errorStackHidden,
-      errorMessageTransform,
+      errorTransform,
     });
     markdown += sideEffectsMarkdown;
   }

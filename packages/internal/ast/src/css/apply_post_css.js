@@ -1,6 +1,5 @@
 import { fileURLToPath } from "node:url";
-
-import { createCssParseError } from "./css_parse_error.js";
+import { createParseError } from "../parse_error.js";
 
 export const applyPostCss = async ({
   sourcemaps = "comment",
@@ -34,8 +33,7 @@ export const applyPostCss = async ({
     };
   } catch (error) {
     if (error.name === "CssSyntaxError") {
-      throw createCssParseError({
-        message: error.message,
+      throw createParseError(error.message, {
         reasonCode: error.reason,
         url,
         line: error.line,

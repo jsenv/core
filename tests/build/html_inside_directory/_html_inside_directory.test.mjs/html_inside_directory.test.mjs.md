@@ -7,13 +7,7 @@
 ## 0_basic
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./src/main.html": "index.html" },
-  bundling: false,
-  minification: false,
-})
+run()
 ```
 
 ### 1/4 logs

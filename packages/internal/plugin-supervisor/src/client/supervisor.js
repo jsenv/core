@@ -439,6 +439,7 @@ window.__supervisor__ = (() => {
       { message, reportedBy, url, line, column } = {},
     ) => {
       const exception = {
+        runtime: "browser",
         reason,
         isException: true,
         isError: false, // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/throw
