@@ -12,6 +12,7 @@ const buildPromise = build({
   logLevel: "warn",
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   buildDirectoryUrl: new URL("./dist/", import.meta.url),
+  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   entryPoints: {
     "./index.js": "index.js",
   },
