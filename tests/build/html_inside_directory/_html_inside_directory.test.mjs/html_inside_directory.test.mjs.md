@@ -17,5 +17,5 @@ see [./0_basic/build/](./0_basic/build/)
 ### 2/2 resolve
 
 ```js
-{}
+42
 ```
