@@ -118,7 +118,7 @@ export const logSideEffects = (logSideEffectsOptions) => {
         // fail on thoose
         if (
           message.includes(
-            "[.WebGL-0x1470004c2a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+            "GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
           )
         ) {
           return;
