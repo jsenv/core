@@ -11,6 +11,7 @@ const devServer = await startDevServer({
   serverLogLevel: "off",
   sourceDirectoryUrl,
   keepProcessAlive: !debug,
+  clientAutoreload: false,
   port: 0,
 });
 const browser = await chromium.launch({
