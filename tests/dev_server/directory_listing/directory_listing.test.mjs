@@ -28,20 +28,26 @@ const takeScreenshot = async (scenario) => {
 };
 
 try {
-  // replaceFileStructureSync({
-  //   from: new URL("./fixtures/0_at_start/", import.meta.url),
-  //   to: sourceDirectoryUrl,
-  // });
-  // await page.goto(`${devServer.origin}`);
-  // await takeScreenshot("0_root_one_file");
+  replaceFileStructureSync({
+    from: new URL("./fixtures/0_at_start/", import.meta.url),
+    to: sourceDirectoryUrl,
+  });
+  await page.goto(`${devServer.origin}`);
+  await takeScreenshot("0_root_one_file");
   replaceFileStructureSync({
     from: new URL("./fixtures/1_many_files/", import.meta.url),
     to: sourceDirectoryUrl,
   });
-  // await page.reload();
-  // await takeScreenshot("1_root_many_file");
-  await page.goto(`${devServer.origin}/dir/404.js`);
+  await page.reload();
+  await takeScreenshot("1_root_many_file");
+  await page.goto(`${devServer.origin}/dir/`);
   await takeScreenshot("2_dir_many_file");
+  await page.locator(`a[href="/dir/deep/"]`).click();
+  await takeScreenshot("3_after_click_deep");
+  await page.locator(`.directory_nav a[href="/dir/"]`).click();
+  await takeScreenshot("4_after_click_dir_in_nav");
+  await page.locator(`.directory_nav a`).click();
+  await takeScreenshot("5_after_click_root_in_nav");
 } finally {
   if (!debug) {
     browser.close();

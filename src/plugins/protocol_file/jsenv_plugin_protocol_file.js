@@ -232,7 +232,7 @@ const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
   let i = 0;
   while (i < parts.length) {
     const part = parts[i];
-    const href = i === 0 ? "/" : `/${parts.slice(0, i + 1).join("/")}/`;
+    const href = i === 0 ? "/" : `/${parts.slice(1, i + 1).join("/")}/`;
     const text = part;
     const isLastPart = i === parts.length - 1;
     if (isLastPart) {
