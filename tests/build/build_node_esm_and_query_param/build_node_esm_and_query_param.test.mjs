@@ -5,7 +5,7 @@ const run = () => {
   return build({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
-    entryPoints: { "./main.js": "main.js" },
+    entryPoints: { "./main.html": "main.html" },
   });
 };
 
