@@ -12,8 +12,8 @@ see [./.jsenv/chrome@127.00/](./.jsenv/chrome@127.00/)
 
 ```js
 {
-  "importMetaResolveReturnValue": "window.origin/node_modules/foo/foo.js?js_classic&v=0.0.1",
-  "__TEST__": "window.origin/node_modules/foo/foo.js?js_classic&v=0.0.1"
+  "importMetaResolveReturnValue": "window.origin/node_modules/foo/foo.js?v=0.0.1",
+  "__TEST__": "window.origin/node_modules/foo/foo.js?v=0.0.1"
 }
 ```
 ---

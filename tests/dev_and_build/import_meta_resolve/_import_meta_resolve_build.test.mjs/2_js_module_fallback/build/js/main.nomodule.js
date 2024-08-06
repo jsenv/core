@@ -26,7 +26,7 @@ System.register([], function (_export, _context) {
   return {
     setters: [],
     execute: async function () {
-      importMetaResolveReturnValue = _context.meta.resolve("/js/foo.js");
+      importMetaResolveReturnValue = _context.meta.resolve("/js/foo.nomodule.js");
       script = document.createElement("script");
       script.src = importMetaResolveReturnValue;
       scriptLoadPromise = new Promise(resolve => {
