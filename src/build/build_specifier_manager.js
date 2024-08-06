@@ -87,9 +87,14 @@ export const createBuildSpecifierManager = ({
 
     let buildSpecifier;
     if (base === "./") {
-      const parentBuildUrl = reference.ownerUrlInfo.isRoot
+      const { ownerUrlInfo } = reference;
+      const parentBuildUrl = ownerUrlInfo.isRoot
         ? buildDirectoryUrl
-        : urlInfoToBuildUrlMap.get(reference.ownerUrlInfo);
+        : urlInfoToBuildUrlMap.get(
+            ownerUrlInfo.isInline
+              ? ownerUrlInfo.findParentIfInline()
+              : ownerUrlInfo,
+          );
       const urlRelativeToParent = urlToRelativeUrl(buildUrl, parentBuildUrl);
       if (urlRelativeToParent[0] === ".") {
         buildSpecifier = urlRelativeToParent;

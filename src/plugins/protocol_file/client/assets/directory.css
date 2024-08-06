@@ -63,10 +63,10 @@ button {
   content: none;
 }
 .directory_child[data-type="file"] {
-  background-image: url("./file.png");
+  background-image: url("./file.png?inline");
 }
 .directory_child[data-type="dir"] {
-  background-image: url("./dir.png");
+  background-image: url("./dir.png?inline");
 }
 .directory_child[data-type="dir"]::before {
   content: " ";
