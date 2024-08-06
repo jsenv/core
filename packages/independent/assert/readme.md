@@ -37,12 +37,14 @@ _assert_ does nothing when comparison is successfull but throws an error when co
 
 ### Colors
 
-The message produced have colors that helps to see the diff.
+The message produced have colors that helps to see the diff. Each color have a meaning described below:
 
-- grey: same in actual and expect
-- red: found in actual and is different
-- green: found in expect and is different
-- yellow: found only in actual or found only in expect
+| Color  | Meaning                                       |
+| ------ | --------------------------------------------- |
+| grey   | same in actual and expect                     |
+| red    | different from expect                         |
+| green  | different from actual                         |
+| yellow | exists only in actual / exists only in expect |
 
 ### JavaScript aware
 
@@ -155,10 +157,10 @@ assert({
 ### And much more
 
 - Support comparison between value having circular references
-- Can detect diff on prototypes
-- Can detect diff on object integrity (usage of Object.freeze, Object.seal and Object.preventExtensions)
-- Can detect diff on property descriptors
-- Can detect diff on property symbols
+- Can detect diff on [prototypes](./tests/_prototype.test.js/prototype.test.js.md)
+- Can detect diff on [object integrity](./tests/_object_integrity.test.js/object_integrity.test.js.md) (`Object.freeze`, `Object.seal` and `Object.preventExtensions`)
+- Can detect diff on [property descriptors](./tests/_property_descriptor.test.js/property_descriptor.test.js.md)
+- Can detect diff on [symbols](./tests/_symbol.test.js/symbol.test.js.md)
 
 ## Usage in Node.js
 
