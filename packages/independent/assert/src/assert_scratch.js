@@ -1532,6 +1532,7 @@ let createRootNode;
       firstChildWithDiffKey: undefined,
       rangeToDisplay: null,
       displayedRange: null,
+      childIndexToDisplayArray: null,
       diffType: "",
       otherNode: null,
       // END will be set by comparison
