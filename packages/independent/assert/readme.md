@@ -27,7 +27,7 @@ assert({
 
 ![img](./tests/_object.test.js/basic/throw.svg)
 
-There is 200+ examples in [./tests/side_effects/](./tests/readme.md)
+There is 200+ examples in [./tests/](./tests/readme.md)
 
 ## How it works
 
