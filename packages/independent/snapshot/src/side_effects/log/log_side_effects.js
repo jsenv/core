@@ -123,6 +123,9 @@ export const logSideEffects = (logSideEffectsOptions) => {
         ) {
           return;
         }
+        if (message.includes("task queue exceeded allotted deadline by")) {
+          return;
+        }
         addSideEffect({
           code: type,
           type,
