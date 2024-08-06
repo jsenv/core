@@ -195,7 +195,7 @@ export const snapshotTests = async (
   if (generatedBy) {
     markdown += "\n";
     markdown += "---";
-    markdown += "\n";
+    markdown += "\n\n";
     markdown += renderSmallLink(
       {
         text: "@jsenv/snapshot",
