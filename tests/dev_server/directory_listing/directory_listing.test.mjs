@@ -2,7 +2,7 @@ import { startDevServer } from "@jsenv/core";
 import { replaceFileStructureSync, writeFileSync } from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
-let debug = true;
+let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
