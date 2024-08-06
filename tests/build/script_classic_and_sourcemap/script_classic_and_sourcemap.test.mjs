@@ -1,20 +1,23 @@
-import { assert } from "@jsenv/assert";
-import { build } from "@jsenv/core";
-import { executeBuildHtmlInBrowser } from "@jsenv/core/tests/execute_build_html_in_browser.js";
+import { build, startBuildServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_basic", () =>
-    build({
-      sourceDirectoryUrl: new URL("./client/", import.meta.url),
-      buildDirectoryUrl: new URL("./build/", import.meta.url),
-      entryPoints: { "./main.html": "main.html" },
-      bundling: false,
-      minification: false,
-    }));
+const run = async () => {
+  await build({
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    bundling: false,
+    minification: false,
+  });
+  const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
+  });
+  return executeHtml(`${buildServer.origin}/main.html`);
+};
+
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_basic", () => run());
 });
-const actual = await executeBuildHtmlInBrowser(
-  `${dirUrlMap.get("0_basic")}build/`,
-);
-const expect = 42;
-assert({ actual, expect });
