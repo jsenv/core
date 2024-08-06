@@ -7,7 +7,9 @@ export const snapshotAssertTests = async (
 ) => {
   await snapshotTests(testFileUrl, fnRegisteringTest, {
     errorTransform: (e) => {
-      e.stack = "";
+      if (e.constructor?.name === "AssertionError") {
+        e.stack = "";
+      }
     },
     ...options,
   });

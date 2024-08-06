@@ -807,9 +807,6 @@ export const renderChildrenMultiline = (node, props) => {
     setIndexToDisplayArrayDuo(node, otherNode, props);
   }
   const childIndexToDisplayArray = node.childIndexToDisplayArray;
-  if (!childIndexToDisplayArray) {
-    debugger;
-  }
   const firstDisplayedChildWithDiffIndex = childIndexToDisplayArray.findIndex(
     (index) => {
       return node.childNodeMap.get(node.childrenKeys[index]).comparison
@@ -1075,7 +1072,8 @@ const setIndexToDisplayArraySolo = (node, props) => {
     node,
     props,
   );
-  if (maxDiff === Infinity) {
+  const { firstChildWithDiffKey } = node;
+  if (maxDiff === Infinity || firstChildWithDiffKey === undefined) {
     let index = 0;
     // eslint-disable-next-line no-unused-vars
     for (const key of childrenKeys) {
@@ -1204,33 +1202,25 @@ const setIndexToDisplayArrayDuo = (actualNode, expectNode, props) => {
     }
     return true;
   };
-  const addChildByKey = (node, childKey, effectAlreadyApplied) => {
-    const childrenKeys =
-      node === actualNode ? actualChildrenKeys : expectChildrenKeys;
+  const addSoloAt = (node, childIndex, effectAlreadyApplied) => {
     const indexSet = node === actualNode ? actualIndexSet : expectIndexSet;
-    const childIndex = childrenKeys.indexOf(childKey);
-    if (childIndex === -1) {
-      return;
-    }
     if (indexSet.has(childIndex)) {
       return;
     }
+    const childrenKeys =
+      node === actualNode ? actualChildrenKeys : expectChildrenKeys;
     if (!effectAlreadyApplied) {
-      applyChildDisplayedEffect(childKey);
+      applyChildDisplayedEffect(childrenKeys[childIndex]);
     }
     indexSet.add(childIndex);
   };
-  const addBefore = (node, childKey) => {
-    const childrenKeys =
-      node === actualNode ? actualChildrenKeys : expectChildrenKeys;
+  const addSoloBeforeIndex = (node, childIndex) => {
     const beforeDiffRemainingCount = maxChildBeforeDiff;
     if (beforeDiffRemainingCount < 1) {
       return;
     }
-    const childIndex = childrenKeys.indexOf(childKey);
-    if (childIndex === -1) {
-      return;
-    }
+    const childrenKeys =
+      node === actualNode ? actualChildrenKeys : expectChildrenKeys;
     let fromIndex = childIndex - beforeDiffRemainingCount;
     let toIndex = childIndex;
     if (fromIndex < 0) {
@@ -1240,21 +1230,17 @@ const setIndexToDisplayArrayDuo = (actualNode, expectNode, props) => {
     }
     let index = fromIndex;
     while (index !== toIndex) {
-      addChildByKey(node, childrenKeys[childIndex - index]);
+      addDuoByKey(childrenKeys[childIndex - index]);
       index++;
     }
   };
-  const addAfter = (node, childKey) => {
-    const childrenKeys =
-      node === actualNode ? actualChildrenKeys : expectChildrenKeys;
+  const addSoloAfterIndex = (node, childIndex) => {
     const afterDiffRemainingCount = maxChildAfterDiff;
     if (afterDiffRemainingCount < 1) {
       return;
     }
-    const childIndex = childrenKeys.indexOf(childKey);
-    if (childIndex === -1) {
-      return;
-    }
+    const childrenKeys =
+      node === actualNode ? actualChildrenKeys : expectChildrenKeys;
     let fromIndex = childIndex + 1;
     let toIndex = childIndex + 1 + afterDiffRemainingCount;
     if (toIndex > childrenKeys.length) {
@@ -1264,10 +1250,41 @@ const setIndexToDisplayArrayDuo = (actualNode, expectNode, props) => {
     }
     let index = fromIndex;
     while (index !== toIndex) {
-      addChildByKey(node, childrenKeys[childIndex + index]);
+      addDuoByKey(childrenKeys[childIndex + index]);
       index++;
     }
   };
+  const addDuoByKey = (childKey, effectAlreadyApplied) => {
+    const actualIndex = actualChildrenKeys.indexOf(childKey);
+    if (actualIndex > -1) {
+      addSoloAt(actualNode, actualIndex, effectAlreadyApplied);
+    }
+    const expectIndex = expectChildrenKeys.indexOf(childKey);
+    if (expectIndex > -1) {
+      addSoloAt(expectNode, expectIndex, effectAlreadyApplied);
+    }
+  };
+  const addDuoBeforeKey = (childKey) => {
+    const actualIndex = actualChildrenKeys.indexOf(childKey);
+    if (actualIndex > -1) {
+      addSoloBeforeIndex(actualNode, actualIndex);
+    }
+    const expectIndex = expectChildrenKeys.indexOf(childKey);
+    if (expectIndex > -1) {
+      addSoloBeforeIndex(expectNode, expectIndex);
+    }
+  };
+  const addDuoAfterKey = (childKey) => {
+    const actualIndex = actualChildrenKeys.indexOf(childKey);
+    if (actualIndex > -1) {
+      addSoloAfterIndex(actualNode, actualIndex);
+    }
+    const expectIndex = expectChildrenKeys.indexOf(childKey);
+    if (expectIndex > -1) {
+      addSoloAfterIndex(expectNode, expectIndex);
+    }
+  };
+
   const keySet = new Set([...actualChildrenKeys, ...expectChildrenKeys]);
   for (const key of keySet) {
     if (maxDiffReached) {
@@ -1279,13 +1296,9 @@ const setIndexToDisplayArrayDuo = (actualNode, expectNode, props) => {
     if (!applyChildDisplayedEffect(key)) {
       continue;
     }
-    addBefore(actualNode, key);
-    addChildByKey(actualNode, key, true);
-    addAfter(actualNode, key);
-
-    addBefore(expectNode, key);
-    addChildByKey(expectNode, key, true);
-    addAfter(expectNode, key);
+    addDuoBeforeKey(key);
+    addDuoByKey(key, true);
+    addDuoAfterKey(key);
   }
   actualNode.childIndexToDisplayArray = Array.from(actualIndexSet).sort();
   expectNode.childIndexToDisplayArray = Array.from(expectIndexSet).sort();

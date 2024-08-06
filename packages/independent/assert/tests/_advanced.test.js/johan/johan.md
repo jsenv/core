@@ -26,9 +26,33 @@ assert({
 });
 ```
 
+![img](throw.svg)
+
+<details>
+  <summary>see without style</summary>
+
 ```console
-TypeError: Cannot read properties of undefined (reading 'diffType')
+AssertionError: actual and expect are different
+
+actual: {
+  ↑ 1 prop ↑
+  b: true,
+  ACTUAL_NEW_1: true,
+  ↕ 2 props ↕
+  e: true,
+  ↓ 1 prop ↓
+}
+expect: {
+  ↑ 2 props ↑ (1 removed)
+  b: true,
+  ↕ 2 props ↕
+  e: false,
+  ↓ 1 prop ↓
+}
 ```
+
+</details>
+
 ---
 
 <sub>
