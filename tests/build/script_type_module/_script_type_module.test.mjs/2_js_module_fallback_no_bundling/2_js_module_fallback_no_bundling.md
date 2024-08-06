@@ -1,12 +1,13 @@
-# [0_js_module](../../script_type_module.test.mjs#L23)
+# [2_js_module_fallback_no_bundling](../../script_type_module.test.mjs#L31)
 
 ```js
 run({
-  runtimeCompat: { chrome: "89" },
+  runtimeCompat: { chrome: "60" },
+  bundling: false,
 })
 ```
 
-# 1/2 write 2 files into "./build/"
+# 1/2 write 3 files into "./build/"
 
 see [./build/](./build/)
 
@@ -15,7 +16,7 @@ see [./build/](./build/)
 ```js
 {
   "answer": 42,
-  "url": "window.origin/js/main.js?v=bff3ad6a"
+  "url": "window.origin/js/main.nomodule.js?v=3287262d"
 }
 ```
 ---

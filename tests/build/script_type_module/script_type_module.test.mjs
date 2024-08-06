@@ -28,10 +28,9 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
     run({
       runtimeCompat: { chrome: "60" },
     }));
-  run("2_js_module_fallback_no_bundling", () =>
+  test("2_js_module_fallback_no_bundling", () =>
     run({
       runtimeCompat: { chrome: "60" },
       bundling: false,
-    }),
-  );
+    }));
 });
