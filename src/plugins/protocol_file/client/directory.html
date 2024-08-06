@@ -4,16 +4,12 @@
     <title>Directory explorer</title>
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./assets/directory.css" />
   </head>
 
-  <body>
-    <h1>
-      <a jsenv-ignore href="/${directoryRelativeUrl}"
-        >/${directoryRelativeUrl}</a
-      >
-      directory content:
-    </h1>
-    <ul>
+  <body data-theme="dark">
+    <h1 class="directory_nav">${directoryNav}</h1>
+    <ul class="directory_content">
       ${directoryContent}
     </ul>
   </body>

@@ -6,8 +6,6 @@
  *
  * - TODO: test in a subdirectory
  * - TODO: test when dir is empty
- * - TODO: test "/404.js"
- * - TODO in an other test: quite the same but for syntax error in html
  */
 
 import {

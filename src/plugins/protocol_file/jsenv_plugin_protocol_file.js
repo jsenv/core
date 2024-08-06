@@ -13,14 +13,17 @@ import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { jsenvPluginFsRedirection } from "./jsenv_plugin_fs_redirection.js";
 
 const html404AndParentDirIsEmptyFileUrl = new URL(
-  "./html_404_and_parent_dir_is_empty.html",
+  "./client/html_404_and_parent_dir_is_empty.html",
   import.meta.url,
 );
 const html404AndParentDirFileUrl = new URL(
-  "./html_404_and_parent_dir.html",
+  "./client/html_404_and_parent_dir.html",
   import.meta.url,
 );
-const htmlFileUrlForDirectory = new URL("./directory.html", import.meta.url);
+const htmlFileUrlForDirectory = new URL(
+  "./client/directory.html",
+  import.meta.url,
+);
 
 export const jsenvPluginProtocolFile = ({
   magicExtensions,
@@ -167,9 +170,10 @@ const generateHtmlForDirectory = (
 ) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
   const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
+  const directoryRelativeUrl = urlToRelativeUrl(directoryUrl, rootDirectoryUrl);
   const replacers = {
-    directoryRelativeUrl: urlToRelativeUrl(directoryUrl, rootDirectoryUrl),
     directoryUrl,
+    directoryNav: () => generateDirectoryNav(directoryRelativeUrl),
     directoryContent: () =>
       generateDirectoryContent(
         directoryContentArray,
@@ -219,6 +223,22 @@ const generateHtmlForENOENTOnHtmlFile = (
   };
   const html = replacePlaceholders(htmlFor404AndParentDir, replacers);
   return html;
+};
+const generateDirectoryNav = (directoryRelativeUrl) => {
+  const parts = directoryRelativeUrl.split("/");
+  let dirPartsHtml = "";
+  let i = 0;
+  while (i < parts.length) {
+    const part = parts[i];
+    i++;
+    const href = parts.slice(0, i).join("/");
+    const text = part;
+    dirPartsHtml += `
+      <a class="directory_part" href="${href}">
+        ${text}
+      </a>`;
+  }
+  return dirPartsHtml;
 };
 const generateDirectoryContent = (
   directoryContentArray,
