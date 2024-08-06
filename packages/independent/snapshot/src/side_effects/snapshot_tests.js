@@ -172,7 +172,6 @@ export const snapshotTests = async (
         sideEffectMdFileUrl: scenarioMdFileUrl,
         generateOutFileUrl: generateScenarioOutFileUrl,
         title: scenario,
-        titleLevel: 2,
         errorTransform,
       });
       writeFileSync(scenarioMdFileUrl, sideEffectsMarkdown);

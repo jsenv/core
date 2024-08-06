@@ -60,6 +60,7 @@ export const snapshotSideEffects = (
   const outDirectorySnapshot = takeDirectorySnapshot(outDirectoryUrl);
   const onSideEffects = (sideEffects) => {
     const sideEffectFileContent = renderSideEffects(sideEffects, {
+      title: urlToFilename(sourceFileUrl),
       sideEffectMdFileUrl,
       generateOutFileUrl,
       errorTransform,
