@@ -1,4 +1,6 @@
-# assert [![npm package](https://img.shields.io/npm/v/@jsenv/assert.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/assert)
+# assert
+
+[![npm package](https://img.shields.io/npm/v/@jsenv/assert.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/assert)
 
 _@jsenv/assert_ is the NPM package used by jsenv to write tests.
 
