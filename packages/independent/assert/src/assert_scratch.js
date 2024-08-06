@@ -29,6 +29,12 @@ import {
   renderString,
   renderValue,
 } from "./renderers.js";
+import {
+  ARRAY_EMPTY_VALUE,
+  SOURCE_CODE_ENTRY_KEY,
+  SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY,
+  VALUE_OF_RETURN_VALUE_ENTRY_KEY,
+} from "./special_values.js";
 import { getPropertyValueNode } from "./utils.js";
 import { canParseDate, usesTimezone } from "./utils/can_parse_date.js";
 import { groupDigits } from "./utils/group_digits.js";
@@ -100,12 +106,6 @@ const PLACEHOLDER_FOR_SAME = {
 const PLACEHOLDER_FOR_MODIFIED = {
   placeholder: "modified",
   context: {},
-};
-const ARRAY_EMPTY_VALUE = { tag: "array_empty_value" };
-const SOURCE_CODE_ENTRY_KEY = { key: "[[source code]]" };
-const VALUE_OF_RETURN_VALUE_ENTRY_KEY = { key: "valueOf()" };
-const SYMBOL_TO_PRIMITIVE_RETURN_VALUE_ENTRY_KEY = {
-  key: "Symbol.toPrimitive()",
 };
 
 const defaultOptions = {
