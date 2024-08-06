@@ -59,7 +59,8 @@ export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
     resolveReference: (reference) => {
       if (reference.specifier.startsWith("node_esm:")) {
         reference.specifier = reference.specifier.slice("node_esm:".length);
-        return nodeEsmResolverDefault(reference);
+        const result = nodeEsmResolverDefault(reference);
+        return result;
       }
       const urlType = urlTypeFromReference(reference);
       const resolver = resolvers[urlType];
