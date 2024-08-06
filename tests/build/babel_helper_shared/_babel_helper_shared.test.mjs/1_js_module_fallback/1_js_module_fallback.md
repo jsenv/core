@@ -1,4 +1,4 @@
-# [1_js_module_fallback](../../babel_helper_shared.test.mjs#L21)
+# [1_js_module_fallback](../../babel_helper_shared.test.mjs#L28)
 
 ```js
 run({
@@ -18,7 +18,10 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-{}
+{
+  "a": "a",
+  "b": "b"
+}
 ```
 ---
 <sub>

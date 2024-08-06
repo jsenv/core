@@ -1,4 +1,4 @@
-# [0_js_module](../../babel_helper_shared.test.mjs#L16)
+# [0_js_module](../../babel_helper_shared.test.mjs#L23)
 
 ```js
 run({
@@ -13,7 +13,10 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-{}
+{
+  "a": "a",
+  "b": "b"
+}
 ```
 ---
 <sub>
