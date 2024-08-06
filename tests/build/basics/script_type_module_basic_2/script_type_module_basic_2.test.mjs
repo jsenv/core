@@ -1,4 +1,5 @@
-import { build } from "@jsenv/core";
+import { build, startBuildServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
 if (process.env.CI) {
@@ -6,8 +7,8 @@ if (process.env.CI) {
   // sourcemap fails on CI linux for some reason
 }
 
-const run = ({ runtimeCompat, sourcemaps }) => {
-  return build({
+const run = async ({ runtimeCompat, sourcemaps }) => {
+  await build({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
@@ -17,6 +18,12 @@ const run = ({ runtimeCompat, sourcemaps }) => {
     runtimeCompat,
     sourcemaps,
   });
+  const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
+  });
+  return executeHtml(`${buildServer.origin}/main.html`);
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
