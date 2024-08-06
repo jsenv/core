@@ -261,6 +261,7 @@ export const startDevServer = async ({
             nodeEsmResolution,
             magicExtensions,
             magicDirectoryIndex,
+            directoryReferenceEffect: "preserve",
             supervisor,
             injections,
             transpilation,

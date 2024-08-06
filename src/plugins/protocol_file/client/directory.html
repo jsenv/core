@@ -4,13 +4,14 @@
     <title>Directory explorer</title>
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="./assets/directory.css" />
+    <link
+      rel="stylesheet"
+      href="node_esm:@jsenv/core/src/plugins/protocol_file/client/assets/directory.css"
+    />
   </head>
 
   <body data-theme="dark">
     <h1 class="directory_nav">${directoryNav}</h1>
-    <ul class="directory_content">
-      ${directoryContent}
-    </ul>
+    ${directoryContent}
   </body>
 </html>

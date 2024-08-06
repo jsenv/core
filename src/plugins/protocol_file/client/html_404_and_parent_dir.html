@@ -4,18 +4,51 @@
     <title>404 ENOENT</title>
     <meta charset="utf-8" />
     <link rel="icon" href="data:," />
+    <link
+      rel="stylesheet"
+      href="node_esm:@jsenv/core/src/plugins/protocol_file/client/assets/directory.css"
+    />
+    <style>
+      .error_message {
+        background-color: #fce4e4;
+        border: 1px solid #fcc2c3;
+        padding: 1.5em 1.2em;
+        margin: 1em;
+        display: block;
+      }
+      .error_text {
+        color: #cc0033;
+        font-weight: bold;
+        line-height: 2em;
+        text-shadow: 1px 1px rgba(250, 250, 250, 0.3);
+      }
+
+      .hint_message {
+        background-color: lightblue;
+        border: 1px solid #fcc2c3;
+        padding: 1.5em 1.2em;
+        margin: 1em;
+        display: block;
+      }
+      .hint_text {
+        color: black;
+        font-weight: bold;
+        line-height: 2em;
+        text-shadow: 1px 1px rgba(250, 250, 250, 0.3);
+      }
+    </style>
   </head>
 
-  <body>
-    <p>No entry on the filesystem for <strong>/${fileRelativeUrl}</strong></p>
-    <p>
-      <a jsenv-ignore href="/${parentDirectoryRelativeUrl}"
-        >/${parentDirectoryRelativeUrl}</a
-      >
-      directory content:
+  <body data-theme="dark">
+    <p class="error_message">
+      <span class="error_text">
+        No entry on the filesystem for <code>/${fileRelativeUrl}</code> (at
+        ${fileUrl})
+        <br />
+        Content of the parent directory is listed below:
+      </span>
     </p>
-    <ul>
-      ${parentDirectoryContent}
-    </ul>
+    <h1 class="directory_nav">${parentDirectoryNav}</h1>
+    ${parentDirectoryContent}
   </body>
 </html>

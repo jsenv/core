@@ -55,7 +55,9 @@ export const jsenvPluginDirectoryReferenceEffect = (
         throw error;
       }
       if (actionForDirectory === "preserve") {
-        return `ignore:${reference.specifier}`;
+        return reference.ownerUrlInfo.context.dev
+          ? null
+          : `ignore:${reference.specifier}`;
       }
       return null;
     },
