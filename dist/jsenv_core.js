@@ -20699,9 +20699,6 @@ const createBuildSpecifierManager = ({
               ? ownerUrlInfo.findParentIfInline()
               : ownerUrlInfo,
           );
-      if (!parentBuildUrl) {
-        debugger;
-      }
       const urlRelativeToParent = urlToRelativeUrl(buildUrl, parentBuildUrl);
       if (urlRelativeToParent[0] === ".") {
         buildSpecifier = urlRelativeToParent;
@@ -22386,25 +22383,28 @@ build ${entryPointKeys.length} entry points`);
           // are entry points that should be bundled
           // For instance we will bundle service worker/workers detected like this
           if (rawUrlInfo.type === "js_module") {
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+            for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
               if (referenceToOther.type === "js_url") {
                 const referencedUrlInfo = referenceToOther.urlInfo;
+                let isAlreadyBundled = false;
                 for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
                   if (referenceFromOther.url === referencedUrlInfo.url) {
                     if (
                       referenceFromOther.subtype === "import_dynamic" ||
                       referenceFromOther.type === "script"
                     ) {
-                      // will already be bundled
-                      return;
+                      isAlreadyBundled = true;
+                      break;
                     }
                   }
                 }
-                addToBundlerIfAny(referencedUrlInfo);
-                return;
+                if (!isAlreadyBundled) {
+                  addToBundlerIfAny(referencedUrlInfo);
+                }
+                continue;
               }
               if (referenceToOther.type === "js_inline_content") ;
-            });
+            }
           }
         },
       );
