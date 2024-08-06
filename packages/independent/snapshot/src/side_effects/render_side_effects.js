@@ -40,6 +40,7 @@ export const renderSideEffects = (
     sideEffectMdFileUrl,
     generateOutFileUrl,
     generatedBy = true,
+    title,
     titleLevel = 1,
     getBigSizeEffect = createBigSizeEffect({
       details: { line: 15, length: 2000 },
@@ -63,6 +64,7 @@ export const renderSideEffects = (
   };
 
   let markdown = "";
+  markdown += `# ${title}`;
   let sideEffectNumber = 0;
   for (const sideEffect of sideEffects) {
     if (sideEffect.skippable) {
