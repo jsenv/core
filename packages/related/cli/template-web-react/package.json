@@ -23,7 +23,7 @@
     "@babel/plugin-syntax-import-assertions": "7.24.7",
     "@babel/plugin-transform-react-jsx": "7.25.2",
     "@jsenv/assert": "4.1.15",
-    "@jsenv/core": "39.3.4",
+    "@jsenv/core": "39.3.5",
     "@jsenv/plugin-react": "1.5.22",
     "@jsenv/plugin-bundling": "2.7.7",
     "@jsenv/plugin-minification": "1.5.5",

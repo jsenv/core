@@ -36,6 +36,6 @@
     "rollup": "4.20.0",
     "@jsenv/filesystem": "../filesystem/",
     "@jsenv/importmap": "1.2.1",
-    "@jsenv/node-esm-resolution": "1.0.3"
+    "@jsenv/node-esm-resolution": "1.0.5"
   }
 }

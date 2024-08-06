@@ -14,8 +14,8 @@ see [./build/](./build/)
 
 ```js
 {
-  "importMetaResolveReturnValue": "window.origin/js/foo.nomodule.js",
-  "__TEST__": "window.origin/js/foo.nomodule.js"
+  "importMetaResolveReturnValue": "window.origin/js/foo.js",
+  "__TEST__": "window.origin/js/foo.js"
 }
 ```
 ---
