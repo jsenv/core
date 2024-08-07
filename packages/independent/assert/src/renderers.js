@@ -1118,14 +1118,19 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
   if (actualNode.childKeyToDisplaySet || expectNode.childKeyToDisplaySet) {
     return;
   }
+  /*
+   * A node will be used as reference to decide what child to display
+   * 99% of the time it will be expectNode but whenever expect has no diff it cannot be used
+   * in that case we'll use actual (happens when all the same and actual got some added child)
+   */
   let referenceNode;
   let otherNode;
-  if (actualNode.firstChildWithDiffKey === undefined) {
-    referenceNode = expectNode;
-    otherNode = actualNode;
-  } else {
+  if (expectNode.firstChildWithDiffKey === undefined) {
     referenceNode = actualNode;
     otherNode = expectNode;
+  } else {
+    referenceNode = expectNode;
+    otherNode = actualNode;
   }
   const referenceChildKeyToDisplaySet = new Set();
   {

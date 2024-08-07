@@ -1,4 +1,4 @@
-# [johan](../../advanced.test.js#L8)
+# [johan](../../advanced.test.js#L5)
 
 ```js
 assert({

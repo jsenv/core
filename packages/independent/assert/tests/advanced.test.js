@@ -1,9 +1,6 @@
 import { assert } from "@jsenv/assert";
 import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
-// TOFIX: actual display 3 remaining props while expect display 4 remaining props
-// they must hide the same number of props
-
 await snapshotAssertTests(import.meta.url, ({ test }) => {
   test.ONLY("johan", () => {
     assert({

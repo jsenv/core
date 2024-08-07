@@ -35,9 +35,7 @@ actual: {
     an_object: true,
     and: true,
   },
-  d: true,
-  e: true,
-  ↓ 3 props ↓
+  ↓ 5 props ↓
 }
 expect: {
   a: true,
