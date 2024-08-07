@@ -1,4 +1,4 @@
-# [array subclass](../../array.test.js#L165)
+# [array subclass](../../array.test.js#L167)
 
 ```js
 class MyArray extends Array {}

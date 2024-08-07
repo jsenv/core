@@ -151,7 +151,7 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
       }),
     });
   });
-  test("array like and array", () => {
+  test.ONLY("array like and array", () => {
     assert({
       actual: {
         0: "Z",

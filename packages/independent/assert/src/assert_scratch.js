@@ -113,7 +113,11 @@ const defaultOptions = {
   MAX_DEPTH: 5,
   MAX_DEPTH_INSIDE_DIFF: 2,
   MAX_DIFF: 15,
-  MAX_DIFF_PER_VALUE: { prop: 2, line: 1 },
+  MAX_DIFF_PER_VALUE: {
+    "prop": 2,
+    "line": 1,
+    "*": 5,
+  },
   MAX_CONTEXT_BEFORE_DIFF: { prop: 2, line: 3 },
   MAX_CONTEXT_AFTER_DIFF: { prop: 2, line: 3 },
   MAX_COLUMNS: 100,
@@ -258,15 +262,30 @@ export const createAssert = ({
       if (expectNode.ignore && expectNode.comparison) {
         return expectNode.comparison;
       }
-      const valueType =
-        (actualNode.placeholder ? expectNode : actualNode).subgroup ===
-        "line_entries"
-          ? "line"
-          : "prop";
-      const maxDiffPerValue =
-        typeof MAX_DIFF_PER_VALUE === "number"
-          ? MAX_DIFF_PER_VALUE
-          : MAX_DIFF_PER_VALUE[valueType];
+
+      let maxDiffPerValue;
+      if (typeof MAX_DIFF_PER_VALUE === "number") {
+        maxDiffPerValue = MAX_DIFF_PER_VALUE;
+      } else {
+        const node = actualNode.placeholder ? expectNode : actualNode;
+        const valueType =
+          node.subgroup === "line_entries"
+            ? "line"
+            : node.subgroup === "own_properties"
+              ? "prop"
+              : node.subgroup === "indexed_entries"
+                ? "index"
+                : "other";
+        if (valueType in MAX_DIFF_PER_VALUE) {
+          maxDiffPerValue = MAX_DIFF_PER_VALUE[valueType];
+        } else if ("*" in MAX_DIFF_PER_VALUE) {
+          maxDiffPerValue = MAX_DIFF_PER_VALUE["*"];
+        } else if ("prop" in MAX_DIFF_PER_VALUE) {
+          maxDiffPerValue = MAX_DIFF_PER_VALUE.prop;
+        } else {
+          maxDiffPerValue = Infinity;
+        }
+      }
       let maxDiffPerValueReached = false;
       let diffPerValueCounter = 0;
 
@@ -303,19 +322,17 @@ export const createAssert = ({
         onDiffCallback(node);
       };
       const onDuoDiff = (node) => {
-        if (node.subgroup === "entries") {
-          return;
-        }
-        if (node.subgroup === "entry") {
+        if (!node.isStandaloneDiff) {
           return;
         }
         onDiff(node);
       };
       const onSoloDiff = (node) => {
-        if (node.subgroup === "entries") {
+        if (!node.isStandaloneDiff) {
           return;
         }
-        if (node.subgroup === "entry") {
+        if (node.group === "entry_key") {
+          // will be also reported by the value
           return;
         }
         onDiff(node);
@@ -349,7 +366,6 @@ export const createAssert = ({
           allowRecompare = true;
         }
         if (maxDiffPerValueReached) {
-          console.log("set max diff reached on ", actualChildNode.subgroup);
           if (!actualChildNode.placeholder) {
             actualChildNode.maxDiffReached = true;
           }
@@ -1544,6 +1560,7 @@ let createRootNode;
     onelineDiff = null,
     multilineDiff = null,
     stringDiffPrecision = "per_line_and_per_char",
+    isStandaloneDiff = false,
   }) => {
     const node = {
       context,
@@ -1569,6 +1586,7 @@ let createRootNode;
       isStringForUrl,
       isStringForDate,
       isBody,
+      isStandaloneDiff,
       // info
       isCustomExpectation: false,
       // info/primitive
@@ -2995,6 +3013,7 @@ let createRootNode;
                           separatorMarker: " => ",
                           group: "entry_key",
                           subgroup: "map_entry_key",
+                          isStandaloneDiff: true,
                         });
                         mapEntryNode.appendChild("entry_value", {
                           value: mapEntryValue,
@@ -3002,6 +3021,7 @@ let createRootNode;
                           separatorMarker: ",",
                           group: "entry_value",
                           subgroup: "map_entry_value",
+                          isStandaloneDiff: true,
                         });
                       }
                       objectTagCounterMap.clear();
@@ -3028,6 +3048,7 @@ let createRootNode;
                           path: setEntriesNode.path.append(index, {
                             isIndexedEntry: true,
                           }),
+                          isStandaloneDiff: true,
                         });
                         index++;
                       }
@@ -3080,6 +3101,7 @@ let createRootNode;
                           separatorMarker: ",",
                           group: "entry_value",
                           subgroup: "url_search_param_entry_value",
+                          isStandaloneDiff: true,
                         });
                       }
                     },
@@ -3278,6 +3300,7 @@ let createRootNode;
                       path: arrayEntriesNode.path.append(index, {
                         isIndexedEntry: true,
                       }),
+                      isStandaloneDiff: true,
                     });
                     index++;
                   }
@@ -3331,6 +3354,7 @@ let createRootNode;
                       path: typedEntriesNode.path.append(index, {
                         isIndexedEntry: true,
                       }),
+                      isStandaloneDiff: true,
                     });
                     index++;
                   }
@@ -3639,6 +3663,7 @@ let createRootNode;
                                 isBody,
                                 isFunctionPrototype,
                                 isClassPrototype,
+                                isStandaloneDiff: true,
                               });
                             }
                           },
@@ -3875,6 +3900,7 @@ const createArgEntriesNode = (node, { args, renderOnlyArgs }) => {
           separatorMarker: ",",
           path: node.path.append(key || argIndex),
           depth: node.depth,
+          isStandaloneDiff: true,
           ...valueParams,
         });
       };
