@@ -49,9 +49,11 @@ await snapshotBuildTests(
       }));
   },
   {
-    errorTransform: (error) => {
-      error.stack = "";
-      delete error.cause;
+    executionEffects: {
+      catch: (error) => {
+        error.stack = "";
+        delete error.cause;
+      },
     },
   },
 );

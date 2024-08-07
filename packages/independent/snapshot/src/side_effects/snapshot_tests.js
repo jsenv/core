@@ -37,7 +37,7 @@ export const snapshotTests = async (
     },
     rootDirectoryUrl,
     generatedBy = true,
-    errorTransform,
+    executionEffects,
     logEffects,
     filesystemEffects,
     throwWhenDiff = process.env.CI,
@@ -94,6 +94,7 @@ export const snapshotTests = async (
   const captureSideEffects = createCaptureSideEffects({
     sourceFileUrl,
     rootDirectoryUrl,
+    executionEffects,
     logEffects,
     filesystemEffects,
     filesystemActions,
@@ -166,7 +167,6 @@ export const snapshotTests = async (
         sideEffectMdFileUrl: scenarioMdFileUrl,
         generateOutFileUrl: generateScenarioOutFileUrl,
         title: scenario,
-        errorTransform,
       });
       writeFileSync(scenarioMdFileUrl, sideEffectsMarkdown);
     }
