@@ -404,24 +404,26 @@ export const createAssert = ({
           expectNode.subgroup === "set_entries";
         const childComparisonMap = new Map();
         const childComparisonDiffMap = new Map();
-        actual_children_comparisons: {
+        const referenceNode = expectNode;
+        const otherNode = actualNode;
+        reference_children_comparisons: {
           const childrenKeys = [];
           let firstChildWithDiffKey;
-          for (let [childKey, childNode] of actualNode.childNodeMap) {
-            let expectChildNode;
+          for (let [childKey, childNode] of referenceNode.childNodeMap) {
+            let otherChildNode;
             if (isSetEntriesComparison) {
               const setValueNode = childNode;
-              for (const [, expectSetValueNode] of expectNode.childNodeMap) {
-                if (expectSetValueNode.value === setValueNode.value) {
-                  expectChildNode = expectSetValueNode;
+              for (const [, otherSetValueNode] of otherNode.childNodeMap) {
+                if (otherSetValueNode.value === setValueNode.value) {
+                  otherChildNode = otherSetValueNode;
                   break;
                 }
               }
             } else {
-              expectChildNode = expectNode.childNodeMap.get(childKey);
+              otherChildNode = otherNode.childNodeMap.get(childKey);
             }
-            if (childNode && expectChildNode) {
-              const childComparison = subcompareDuo(childNode, expectChildNode);
+            if (childNode && otherChildNode) {
+              const childComparison = subcompareDuo(otherChildNode, childNode);
               childComparisonMap.set(childKey, childComparison);
               if (childComparison.hasAnyDiff) {
                 childComparisonDiffMap.set(childKey, childComparison);
@@ -437,12 +439,12 @@ export const createAssert = ({
               }
               continue;
             }
-            const addedChildComparison = subcompareSolo(
+            const removedChildComparison = subcompareSolo(
               childNode,
               PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
             );
-            childComparisonMap.set(childKey, addedChildComparison);
-            childComparisonDiffMap.set(childKey, addedChildComparison);
+            childComparisonMap.set(childKey, removedChildComparison);
+            childComparisonDiffMap.set(childKey, removedChildComparison);
             if (!childNode.isHidden) {
               childrenKeys.push(childKey);
               if (firstChildWithDiffKey === undefined) {
@@ -450,21 +452,24 @@ export const createAssert = ({
               }
             }
           }
-          if (actualNode.context.order === "sort") {
+          if (referenceNode.context.order === "sort") {
             childrenKeys.sort();
           }
-          actualNode.childrenKeys = childrenKeys;
-          actualNode.firstChildWithDiffKey = firstChildWithDiffKey;
+          referenceNode.childrenKeys = childrenKeys;
+          referenceNode.firstChildWithDiffKey = firstChildWithDiffKey;
         }
-        expect_children_comparisons: {
+        other_children_comparisons: {
           const childrenKeys = [];
           let firstChildWithDiffKey;
-          for (let [childKey, childNode] of expectNode.childNodeMap) {
+          for (let [childKey, childNode] of otherNode.childNodeMap) {
             if (isSetEntriesComparison) {
               const setValueNode = childNode;
               let hasEntry;
-              for (const [, actualSetValueNode] of actualNode.childNodeMap) {
-                if (actualSetValueNode.value === setValueNode.value) {
+              for (const [
+                ,
+                referenceSetValueNode,
+              ] of referenceNode.childNodeMap) {
+                if (referenceSetValueNode.value === setValueNode.value) {
                   hasEntry = true;
                   break;
                 }
@@ -490,12 +495,12 @@ export const createAssert = ({
                 continue;
               }
             }
-            const removedChildComparison = subcompareSolo(
+            const addedChildComparison = subcompareSolo(
               childNode,
               PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
             );
-            childComparisonMap.set(childKey, removedChildComparison);
-            childComparisonDiffMap.set(childKey, removedChildComparison);
+            childComparisonMap.set(childKey, addedChildComparison);
+            childComparisonDiffMap.set(childKey, addedChildComparison);
             if (!childNode.isHidden) {
               childrenKeys.push(childKey);
               if (firstChildWithDiffKey === undefined) {
@@ -503,11 +508,11 @@ export const createAssert = ({
               }
             }
           }
-          if (expectNode.context.order === "sort") {
+          if (otherNode.context.order === "sort") {
             childrenKeys.sort();
           }
-          expectNode.childrenKeys = childrenKeys;
-          expectNode.firstChildWithDiffKey = firstChildWithDiffKey;
+          otherNode.childrenKeys = childrenKeys;
+          otherNode.firstChildWithDiffKey = firstChildWithDiffKey;
         }
         actualNode.childComparisonDiffMap = childComparisonDiffMap;
         expectNode.childComparisonDiffMap = childComparisonDiffMap;
