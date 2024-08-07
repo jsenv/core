@@ -30,12 +30,7 @@ AssertionError: actual and expect are different
 
 actual: {
   a: 3_654_320_000_000,
-  b: 10_922,
-  c: 10_922,
-  d: 262_926_349,
-  e: 11_259_375,
-  f: 1_090_785_345,
-  g: 1_090_785_345,
+  ↓ 6 props ↓
 }
 expect: {
   a: 365_673_200,

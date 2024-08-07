@@ -33,12 +33,14 @@ actual: ↑ 2 lines ↑
         3| three
         4| four/true
         5| five
-        ↓ 2 lines ↓
+        6| six
+        7| seven/0
 expect: ↑ 2 lines ↑
         3| three
         4| four/false
         5| five
-        ↓ 2 lines ↓
+        6| six
+        7| seven/1
 ```
 
 </details>

@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 289.45" background-color="#282c34">
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 194.45" background-color="#282c34">
   <g id="background">
-    <rect x="1" y="1" width="638" height="287.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+    <rect x="1" y="1" width="638" height="192.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
-  <foreignObject id="body" y="0" width="100%" height="299.45" overflow="hidden">
-    <svg width="414.86" height="289.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+  <foreignObject id="body" y="0" width="100%" height="204.45" overflow="hidden">
+    <svg width="414.86" height="194.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">AssertionError: </text>
         <text x="144.42" y="24.55" fill="#cd5555">actual</text>
@@ -16,38 +16,15 @@
         <text x="35.2" y="81.55" fill="#7f7f7f">: </text>
         <text x="52.01" y="81.55" fill="#cd5555">3_654_320_000_000</text>
         <text x="194.83" y="81.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="100.55" fill="#DAA520">b</text>
-        <text x="35.2" y="100.55" fill="#DAA520">: </text>
-        <text x="52.01" y="100.55" fill="#DAA520">10_922</text>
-        <text x="102.42" y="100.55" fill="#DAA520">,</text>
-        <text x="26.8" y="119.55" fill="#DAA520">c</text>
-        <text x="35.2" y="119.55" fill="#DAA520">: </text>
-        <text x="52.01" y="119.55" fill="#DAA520">10_922</text>
-        <text x="102.42" y="119.55" fill="#DAA520">,</text>
-        <text x="26.8" y="138.55" fill="#DAA520">d</text>
-        <text x="35.2" y="138.55" fill="#DAA520">: </text>
-        <text x="52.01" y="138.55" fill="#DAA520">262_926_349</text>
-        <text x="144.42" y="138.55" fill="#DAA520">,</text>
-        <text x="26.8" y="157.55" fill="#DAA520">e</text>
-        <text x="35.2" y="157.55" fill="#DAA520">: </text>
-        <text x="52.01" y="157.55" fill="#DAA520">11_259_375</text>
-        <text x="136.02" y="157.55" fill="#DAA520">,</text>
-        <text x="26.8" y="176.55" fill="#DAA520">f</text>
-        <text x="35.2" y="176.55" fill="#DAA520">: </text>
-        <text x="52.01" y="176.55" fill="#DAA520">1_090_785_345</text>
-        <text x="161.22" y="176.55" fill="#DAA520">,</text>
-        <text x="26.8" y="195.55" fill="#DAA520">g</text>
-        <text x="35.2" y="195.55" fill="#DAA520">: </text>
-        <text x="52.01" y="195.55" fill="#DAA520">1_090_785_345</text>
-        <text x="161.22" y="195.55" fill="#DAA520">,</text>
-        <text x="10" y="214.55" fill="#7f7f7f">}</text>
-        <text x="10" y="233.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="233.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="252.55" fill="#7f7f7f">a</text>
-        <text x="35.2" y="252.55" fill="#7f7f7f">: </text>
-        <text x="52.01" y="252.55" fill="#11bc79">365_673_200</text>
-        <text x="144.42" y="252.55" fill="#7f7f7f">,</text>
-        <text x="10" y="271.55" fill="#7f7f7f">}</text>
+        <text x="26.8" y="100.55" fill="#DAA520">↓ 6 props ↓</text>
+        <text x="10" y="119.55" fill="#7f7f7f">}</text>
+        <text x="10" y="138.55" fill="#7f7f7f">expect:</text>
+        <text x="77.21" y="138.55" fill="#7f7f7f">{</text>
+        <text x="26.8" y="157.55" fill="#7f7f7f">a</text>
+        <text x="35.2" y="157.55" fill="#7f7f7f">: </text>
+        <text x="52.01" y="157.55" fill="#11bc79">365_673_200</text>
+        <text x="144.42" y="157.55" fill="#7f7f7f">,</text>
+        <text x="10" y="176.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>

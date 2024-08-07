@@ -801,45 +801,69 @@ export const renderChildrenMultiline = (node, props) => {
   } = node.multilineDiff;
 
   const otherNode = node.otherNode;
-  if (otherNode.placeholder) {
-    setChildKeyToDisplaySetSolo(node, props);
-  } else {
-    setChildKeyToDisplaySetDuo(node, otherNode, props);
-  }
-  const childIndexToDisplayArrayRaw = [];
-  const { childKeyToDisplaySet } = node;
-  let firstDisplayedChildWithDiffIndex = -1;
-  for (const childKeyToDisplay of childKeyToDisplaySet) {
-    const childIndexToDisplay = childrenKeys.indexOf(childKeyToDisplay);
-    if (firstDisplayedChildWithDiffIndex === -1) {
-      const childNode = node.childNodeMap.get(childKeyToDisplay);
-      if (childNode.comparison.hasAnyDiff) {
-        firstDisplayedChildWithDiffIndex = childIndexToDisplay;
-      }
-    }
-    childIndexToDisplayArrayRaw.push(childIndexToDisplay);
-  }
-
   let childIndexToDisplayArray;
-  if (childIndexToDisplayArrayRaw.length === 1) {
-    childIndexToDisplayArray = childIndexToDisplayArrayRaw;
+  let firstDisplayedChildWithDiffIndex = -1;
+  if (childrenKeys.length === 0) {
+    childIndexToDisplayArray = [];
+  } else if (childrenKeys.length === 1) {
+    childIndexToDisplayArray = [0];
   } else {
-    childIndexToDisplayArrayRaw.sort();
-    let i = 1;
-    let previousIndexDisplayed = childIndexToDisplayArrayRaw[0];
-    childIndexToDisplayArray = [previousIndexDisplayed];
-    while (i < childIndexToDisplayArrayRaw.length) {
-      const indexToDisplay = childIndexToDisplayArrayRaw[i];
-      const gap = indexToDisplay - previousIndexDisplayed;
-      if (gap === 2) {
-        childIndexToDisplayArray.push(indexToDisplay - 1);
-      }
-      childIndexToDisplayArray.push(indexToDisplay);
-      previousIndexDisplayed = indexToDisplay;
-      i++;
+    if (otherNode.placeholder) {
+      setChildKeyToDisplaySetSolo(node, props);
+    } else {
+      setChildKeyToDisplaySetDuo(node, otherNode, props);
     }
-    if (previousIndexDisplayed === childrenKeys.length - 2) {
-      childIndexToDisplayArray.push(previousIndexDisplayed + 1);
+    const childIndexToDisplayArrayRaw = [];
+    const { childKeyToDisplaySet } = node;
+    for (const childKeyToDisplay of childKeyToDisplaySet) {
+      const childIndexToDisplay = childrenKeys.indexOf(childKeyToDisplay);
+      if (firstDisplayedChildWithDiffIndex === -1) {
+        const childNode = node.childNodeMap.get(childKeyToDisplay);
+        if (childNode.comparison.hasAnyDiff) {
+          firstDisplayedChildWithDiffIndex = childIndexToDisplay;
+        }
+      }
+      childIndexToDisplayArrayRaw.push(childIndexToDisplay);
+    }
+    if (childIndexToDisplayArrayRaw.length === 0) {
+      childIndexToDisplayArray =
+        childrenKeys.length === 0
+          ? []
+          : childrenKeys.length === 1
+            ? [0]
+            : childrenKeys.length === 2
+              ? [0, 1]
+              : [];
+    } else if (childIndexToDisplayArrayRaw.length === 1) {
+      childIndexToDisplayArray = childIndexToDisplayArrayRaw;
+      const singleChildIndexToDisplay = childIndexToDisplayArrayRaw[0];
+      if (singleChildIndexToDisplay === 0) {
+        childIndexToDisplayArray = childrenKeys.length === 2 ? [0, 1] : [0];
+      } else if (singleChildIndexToDisplay === 1) {
+        childIndexToDisplayArray =
+          childrenKeys.length === 3 ? [0, 1, 2] : [0, 1];
+      } else {
+        childIndexToDisplayArray = childIndexToDisplayArrayRaw;
+      }
+    } else {
+      childIndexToDisplayArrayRaw.sort((a, b) => a - b);
+      let i = 1;
+      let previousIndexDisplayed = childIndexToDisplayArrayRaw[0];
+      childIndexToDisplayArray =
+        previousIndexDisplayed === 1 ? [0, 1] : [previousIndexDisplayed];
+      while (i < childIndexToDisplayArrayRaw.length) {
+        const indexToDisplay = childIndexToDisplayArrayRaw[i];
+        const gap = indexToDisplay - previousIndexDisplayed;
+        if (gap === 2) {
+          childIndexToDisplayArray.push(indexToDisplay - 1);
+        }
+        childIndexToDisplayArray.push(indexToDisplay);
+        previousIndexDisplayed = indexToDisplay;
+        i++;
+      }
+      if (previousIndexDisplayed === childrenKeys.length - 2) {
+        childIndexToDisplayArray.push(previousIndexDisplayed + 1);
+      }
     }
   }
   const focusedChildIndex =
@@ -1074,7 +1098,12 @@ export const renderChildrenMultiline = (node, props) => {
     childrenKeys.length > 1 &&
     previousChildIndexDisplayed !== childrenKeys.length - 1
   ) {
-    appendSkippedSection(previousChildIndexDisplayed, childrenKeys.length - 1);
+    appendSkippedSection(
+      previousChildIndexDisplayed === undefined
+        ? 0
+        : previousChildIndexDisplayed,
+      childrenKeys.length - 1,
+    );
   }
   let diff = "";
   diff += applyStyles(node, startMarker);
@@ -1149,6 +1178,9 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
       const childKey = childrenKeys[childIndex];
       childIndex++;
       const childNode = referenceNode.childNodeMap.get(childKey);
+      if (!childNode) {
+        debugger;
+      }
       if (!childNode.comparison.hasAnyDiff) {
         continue;
       }

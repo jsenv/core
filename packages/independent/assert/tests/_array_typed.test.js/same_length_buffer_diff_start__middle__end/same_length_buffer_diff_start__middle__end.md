@@ -22,7 +22,9 @@ actual: Buffer [
   110,
   97,
   109,
-  ↓ 8 values ↓ (1 modified)
+  ↕ 6 values ↕
+  97,
+  109,
 ]
 expect: Buffer [
   90,
@@ -31,7 +33,9 @@ expect: Buffer [
   110,
   90,
   109,
-  ↓ 8 values ↓ (1 modified)
+  ↕ 6 values ↕
+  97,
+  90,
 ]
 ```
 

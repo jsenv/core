@@ -23,12 +23,12 @@ AssertionError: actual and expect are different
 
 actual: {
   a: 1| a
-     ↓ 1 line ↓
+     2| b
   b: true,
 }
 expect: {
   a: 1| a
-     ↓ 1 line ↓
+     2| b
   b: false,
 }
 ```

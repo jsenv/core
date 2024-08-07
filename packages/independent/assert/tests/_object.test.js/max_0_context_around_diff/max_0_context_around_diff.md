@@ -26,14 +26,14 @@ assert({
 AssertionError: actual and expect are different
 
 actual: {
-  ↑ 1 prop ↑
+  a: true,
   b: true,
-  ↓ 1 prop ↓
+  c: true,
 }
 expect: {
-  ↑ 1 prop ↑
+  c: true,
   b: false,
-  ↓ 1 prop ↓
+  a: true,
 }
 ```
 

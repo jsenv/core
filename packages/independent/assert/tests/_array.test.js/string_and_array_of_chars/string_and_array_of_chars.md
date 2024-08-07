@@ -19,7 +19,8 @@ actual: "hello world"
 expect: [
   "h",
   "e",
-  ↓ 9 values ↓
+  "l",
+  ↓ 8 values ↓
 ]
 ```
 
