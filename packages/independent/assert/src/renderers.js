@@ -806,11 +806,9 @@ export const renderChildrenMultiline = (node, props) => {
   } else {
     setChildKeyToDisplaySetDuo(node, otherNode, props);
   }
-  const childIndexToDisplayArray = [];
+  const childIndexToDisplayArrayRaw = [];
   const { childKeyToDisplaySet } = node;
   let firstDisplayedChildWithDiffIndex = -1;
-
-  let previousIndexDisplayed = -1;
   for (const childKeyToDisplay of childKeyToDisplaySet) {
     const childIndexToDisplay = childrenKeys.indexOf(childKeyToDisplay);
     if (firstDisplayedChildWithDiffIndex === -1) {
@@ -819,30 +817,35 @@ export const renderChildrenMultiline = (node, props) => {
         firstDisplayedChildWithDiffIndex = childIndexToDisplay;
       }
     }
-    if (previousIndexDisplayed === -1) {
-      previousIndexDisplayed = childIndexToDisplay;
-    } else {
-      // ensure we hide section of length > 1
-      const gap = childIndexToDisplay - previousIndexDisplayed;
-      if (gap === 2) {
-        childIndexToDisplayArray.push(childIndexToDisplay - 1);
-      }
-      previousIndexDisplayed = childIndexToDisplay;
-    }
-    childIndexToDisplayArray.push(childIndexToDisplay);
+    childIndexToDisplayArrayRaw.push(childIndexToDisplay);
   }
-  // ensure we hide section of length > 1
-  if (
-    childrenKeys.length > 1 &&
-    previousIndexDisplayed === childrenKeys.length - 1
-  ) {
-    childIndexToDisplayArray.push(childrenKeys.length - 1);
+
+  let childIndexToDisplayArray;
+  if (childIndexToDisplayArrayRaw.length === 1) {
+    childIndexToDisplayArray = childIndexToDisplayArrayRaw;
+  } else {
+    childIndexToDisplayArrayRaw.sort();
+    let i = 1;
+    let previousIndexDisplayed = childIndexToDisplayArrayRaw[0];
+    childIndexToDisplayArray = [previousIndexDisplayed];
+    while (i < childIndexToDisplayArrayRaw.length) {
+      const indexToDisplay = childIndexToDisplayArrayRaw[i];
+      const gap = indexToDisplay - previousIndexDisplayed;
+      if (gap === 2) {
+        childIndexToDisplayArray.push(indexToDisplay - 1);
+      }
+      childIndexToDisplayArray.push(indexToDisplay);
+      previousIndexDisplayed = indexToDisplay;
+      i++;
+    }
+    if (previousIndexDisplayed === childrenKeys.length - 2) {
+      childIndexToDisplayArray.push(previousIndexDisplayed + 1);
+    }
   }
   const focusedChildIndex =
     firstDisplayedChildWithDiffIndex === -1
       ? 0
       : firstDisplayedChildWithDiffIndex;
-
   if (node.beforeRender) {
     node.beforeRender(props, { focusedChildIndex, childIndexToDisplayArray });
   }

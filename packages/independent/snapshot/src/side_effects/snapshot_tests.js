@@ -135,7 +135,7 @@ export const snapshotTests = async (
       const scenarioMdFileUrl = generateScenarioOutFileUrl(
         `${scenarioFilename}.md`,
       );
-      allTestMd += `- ${only ? `ONLY ` : ""}[${scenario}](${urlToRelativeUrl(scenarioMdFileUrl, sideEffectMdFileUrl)})`;
+      allTestMd += `- [${scenario}](${urlToRelativeUrl(scenarioMdFileUrl, sideEffectMdFileUrl)})`;
       allTestMd += "\n";
       if (hasOnly && !only) {
         scenarioIgnoreActions[scenarioOutDirectoryUrl] = "ignore";
