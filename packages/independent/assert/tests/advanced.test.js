@@ -27,4 +27,30 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
       MAX_CONTEXT_BEFORE_DIFF: 2,
     });
   });
+
+  test("johan reversed", () => {
+    assert({
+      actual: {
+        a: false,
+        ACTUAL_NEW_1: true,
+        b: true,
+        c: false,
+        d: false,
+        e: false,
+        f: false,
+      },
+      expect: {
+        a: false,
+        b: true,
+        EXPECT_NEW_1: true,
+        c: true,
+        d: true,
+        e: true,
+        f: true,
+      },
+      MAX_DIFF_PER_VALUE: 2,
+      MAX_CONTEXT_AFTER_DIFF: 2,
+      MAX_CONTEXT_BEFORE_DIFF: 2,
+    });
+  });
 });
