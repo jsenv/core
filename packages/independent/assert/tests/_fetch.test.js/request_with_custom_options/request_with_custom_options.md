@@ -45,14 +45,7 @@ expect: Request("http://example.com/", {
   body: ReadableStream,
   cache: "no-store",
   credentials: "omit",
-  headers: Headers(
-    "from" => "developer@example.org",
-  ),
-  method: "POST",
-  mode: "same-origin",
-  redirect: "manual",
-  referrerPolicy: "strict-origin",
-  referrer: "http://google.com/",
+  ↓ 6 props ↓
 })
 ```
 

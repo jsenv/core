@@ -16,8 +16,7 @@ assert({
 AssertionError: actual and expect are different
 
 actual: [
-  ↑ 2 values ↑
-  "c",
+  ↑ 3 values ↑
   "d",
 ]
 expect: [
@@ -25,7 +24,9 @@ expect: [
   "d",
   "Z1",
   "Z2",
-  ↓ 3 values ↓
+  "Z3",
+  "Z4",
+  "Z5",
 ]
 ```
 

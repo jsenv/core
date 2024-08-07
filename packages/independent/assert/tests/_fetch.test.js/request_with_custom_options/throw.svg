@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 327.45" background-color="#282c34">
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 194.45" background-color="#282c34">
   <g id="background">
-    <rect x="1" y="1" width="638" height="325.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+    <rect x="1" y="1" width="638" height="192.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
-  <foreignObject id="body" y="0" width="100%" height="337.45" overflow="hidden">
-    <svg width="414.86" height="327.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+  <foreignObject id="body" y="0" width="100%" height="204.45" overflow="hidden">
+    <svg width="414.86" height="194.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">AssertionError: </text>
         <text x="144.42" y="24.55" fill="#cd5555">actual</text>
@@ -102,142 +102,9 @@
         <text x="169.63" y="138.55" fill="#DAA520">t</text>
         <text x="178.03" y="138.55" fill="#DAA520">"</text>
         <text x="186.43" y="138.55" fill="#DAA520">,</text>
-        <text x="26.8" y="157.55" fill="#DAA520">h</text>
-        <text x="35.2" y="157.55" fill="#DAA520">e</text>
-        <text x="43.61" y="157.55" fill="#DAA520">a</text>
-        <text x="52.01" y="157.55" fill="#DAA520">d</text>
-        <text x="60.41" y="157.55" fill="#DAA520">e</text>
-        <text x="68.81" y="157.55" fill="#DAA520">r</text>
-        <text x="77.21" y="157.55" fill="#DAA520">s</text>
-        <text x="85.61" y="157.55" fill="#DAA520">: </text>
-        <text x="102.42" y="157.55" fill="#DAA520">Headers</text>
-        <text x="161.22" y="157.55" fill="#DAA520">(</text>
-        <text x="43.61" y="176.55" fill="#DAA520">"</text>
-        <text x="52.01" y="176.55" fill="#DAA520">f</text>
-        <text x="60.41" y="176.55" fill="#DAA520">r</text>
-        <text x="68.81" y="176.55" fill="#DAA520">o</text>
-        <text x="77.21" y="176.55" fill="#DAA520">m</text>
-        <text x="85.61" y="176.55" fill="#DAA520">"</text>
-        <text x="102.42" y="176.55" fill="#DAA520"> =&gt; </text>
-        <text x="127.62" y="176.55" fill="#DAA520">"</text>
-        <text x="136.02" y="176.55" fill="#DAA520">developer@example.org</text>
-        <text x="312.45" y="176.55" fill="#DAA520">"</text>
-        <text x="320.85" y="176.55" fill="#DAA520">,</text>
-        <text x="26.8" y="195.55" fill="#DAA520">)</text>
-        <text x="35.2" y="195.55" fill="#DAA520">,</text>
-        <text x="26.8" y="214.55" fill="#DAA520">m</text>
-        <text x="35.2" y="214.55" fill="#DAA520">e</text>
-        <text x="43.61" y="214.55" fill="#DAA520">t</text>
-        <text x="52.01" y="214.55" fill="#DAA520">h</text>
-        <text x="60.41" y="214.55" fill="#DAA520">o</text>
-        <text x="68.81" y="214.55" fill="#DAA520">d</text>
-        <text x="77.21" y="214.55" fill="#DAA520">: </text>
-        <text x="94.01" y="214.55" fill="#DAA520">"</text>
-        <text x="102.42" y="214.55" fill="#DAA520">P</text>
-        <text x="110.82" y="214.55" fill="#DAA520">O</text>
-        <text x="119.22" y="214.55" fill="#DAA520">S</text>
-        <text x="127.62" y="214.55" fill="#DAA520">T</text>
-        <text x="136.02" y="214.55" fill="#DAA520">"</text>
-        <text x="144.42" y="214.55" fill="#DAA520">,</text>
-        <text x="26.8" y="233.55" fill="#DAA520">m</text>
-        <text x="35.2" y="233.55" fill="#DAA520">o</text>
-        <text x="43.61" y="233.55" fill="#DAA520">d</text>
-        <text x="52.01" y="233.55" fill="#DAA520">e</text>
-        <text x="60.41" y="233.55" fill="#DAA520">: </text>
-        <text x="77.21" y="233.55" fill="#DAA520">"</text>
-        <text x="85.61" y="233.55" fill="#DAA520">s</text>
-        <text x="94.01" y="233.55" fill="#DAA520">a</text>
-        <text x="102.42" y="233.55" fill="#DAA520">m</text>
-        <text x="110.82" y="233.55" fill="#DAA520">e</text>
-        <text x="119.22" y="233.55" fill="#DAA520">-</text>
-        <text x="127.62" y="233.55" fill="#DAA520">o</text>
-        <text x="136.02" y="233.55" fill="#DAA520">r</text>
-        <text x="144.42" y="233.55" fill="#DAA520">i</text>
-        <text x="152.82" y="233.55" fill="#DAA520">g</text>
-        <text x="161.22" y="233.55" fill="#DAA520">i</text>
-        <text x="169.63" y="233.55" fill="#DAA520">n</text>
-        <text x="178.03" y="233.55" fill="#DAA520">"</text>
-        <text x="186.43" y="233.55" fill="#DAA520">,</text>
-        <text x="26.8" y="252.55" fill="#DAA520">r</text>
-        <text x="35.2" y="252.55" fill="#DAA520">e</text>
-        <text x="43.61" y="252.55" fill="#DAA520">d</text>
-        <text x="52.01" y="252.55" fill="#DAA520">i</text>
-        <text x="60.41" y="252.55" fill="#DAA520">r</text>
-        <text x="68.81" y="252.55" fill="#DAA520">e</text>
-        <text x="77.21" y="252.55" fill="#DAA520">c</text>
-        <text x="85.61" y="252.55" fill="#DAA520">t</text>
-        <text x="94.01" y="252.55" fill="#DAA520">: </text>
-        <text x="110.82" y="252.55" fill="#DAA520">"</text>
-        <text x="119.22" y="252.55" fill="#DAA520">m</text>
-        <text x="127.62" y="252.55" fill="#DAA520">a</text>
-        <text x="136.02" y="252.55" fill="#DAA520">n</text>
-        <text x="144.42" y="252.55" fill="#DAA520">u</text>
-        <text x="152.82" y="252.55" fill="#DAA520">a</text>
-        <text x="161.22" y="252.55" fill="#DAA520">l</text>
-        <text x="169.63" y="252.55" fill="#DAA520">"</text>
-        <text x="178.03" y="252.55" fill="#DAA520">,</text>
-        <text x="26.8" y="271.55" fill="#DAA520">r</text>
-        <text x="35.2" y="271.55" fill="#DAA520">e</text>
-        <text x="43.61" y="271.55" fill="#DAA520">f</text>
-        <text x="52.01" y="271.55" fill="#DAA520">e</text>
-        <text x="60.41" y="271.55" fill="#DAA520">r</text>
-        <text x="68.81" y="271.55" fill="#DAA520">r</text>
-        <text x="77.21" y="271.55" fill="#DAA520">e</text>
-        <text x="85.61" y="271.55" fill="#DAA520">r</text>
-        <text x="94.01" y="271.55" fill="#DAA520">P</text>
-        <text x="102.42" y="271.55" fill="#DAA520">o</text>
-        <text x="110.82" y="271.55" fill="#DAA520">l</text>
-        <text x="119.22" y="271.55" fill="#DAA520">i</text>
-        <text x="127.62" y="271.55" fill="#DAA520">c</text>
-        <text x="136.02" y="271.55" fill="#DAA520">y</text>
-        <text x="144.42" y="271.55" fill="#DAA520">: </text>
-        <text x="161.22" y="271.55" fill="#DAA520">"</text>
-        <text x="169.63" y="271.55" fill="#DAA520">s</text>
-        <text x="178.03" y="271.55" fill="#DAA520">t</text>
-        <text x="186.43" y="271.55" fill="#DAA520">r</text>
-        <text x="194.83" y="271.55" fill="#DAA520">i</text>
-        <text x="203.23" y="271.55" fill="#DAA520">c</text>
-        <text x="211.63" y="271.55" fill="#DAA520">t</text>
-        <text x="220.03" y="271.55" fill="#DAA520">-</text>
-        <text x="228.44" y="271.55" fill="#DAA520">o</text>
-        <text x="236.84" y="271.55" fill="#DAA520">r</text>
-        <text x="245.24" y="271.55" fill="#DAA520">i</text>
-        <text x="253.64" y="271.55" fill="#DAA520">g</text>
-        <text x="262.04" y="271.55" fill="#DAA520">i</text>
-        <text x="270.44" y="271.55" fill="#DAA520">n</text>
-        <text x="278.84" y="271.55" fill="#DAA520">"</text>
-        <text x="287.25" y="271.55" fill="#DAA520">,</text>
-        <text x="26.8" y="290.55" fill="#DAA520">r</text>
-        <text x="35.2" y="290.55" fill="#DAA520">e</text>
-        <text x="43.61" y="290.55" fill="#DAA520">f</text>
-        <text x="52.01" y="290.55" fill="#DAA520">e</text>
-        <text x="60.41" y="290.55" fill="#DAA520">r</text>
-        <text x="68.81" y="290.55" fill="#DAA520">r</text>
-        <text x="77.21" y="290.55" fill="#DAA520">e</text>
-        <text x="85.61" y="290.55" fill="#DAA520">r</text>
-        <text x="94.01" y="290.55" fill="#DAA520">: </text>
-        <text x="110.82" y="290.55" fill="#DAA520">"</text>
-        <text x="119.22" y="290.55" fill="#DAA520">h</text>
-        <text x="127.62" y="290.55" fill="#DAA520">t</text>
-        <text x="136.02" y="290.55" fill="#DAA520">t</text>
-        <text x="144.42" y="290.55" fill="#DAA520">p</text>
-        <text x="152.82" y="290.55" fill="#DAA520">:</text>
-        <text x="161.22" y="290.55" fill="#DAA520">//</text>
-        <text x="178.03" y="290.55" fill="#DAA520">g</text>
-        <text x="186.43" y="290.55" fill="#DAA520">o</text>
-        <text x="194.83" y="290.55" fill="#DAA520">o</text>
-        <text x="203.23" y="290.55" fill="#DAA520">g</text>
-        <text x="211.63" y="290.55" fill="#DAA520">l</text>
-        <text x="220.03" y="290.55" fill="#DAA520">e</text>
-        <text x="228.44" y="290.55" fill="#DAA520">.</text>
-        <text x="236.84" y="290.55" fill="#DAA520">c</text>
-        <text x="245.24" y="290.55" fill="#DAA520">o</text>
-        <text x="253.64" y="290.55" fill="#DAA520">m</text>
-        <text x="262.04" y="290.55" fill="#DAA520">/</text>
-        <text x="270.44" y="290.55" fill="#DAA520">"</text>
-        <text x="278.84" y="290.55" fill="#DAA520">,</text>
-        <text x="10" y="309.55" fill="#DAA520">}</text>
-        <text x="18.4" y="309.55" fill="#7f7f7f">)</text>
+        <text x="26.8" y="157.55" fill="#DAA520">↓ 6 props ↓</text>
+        <text x="10" y="176.55" fill="#DAA520">}</text>
+        <text x="18.4" y="176.55" fill="#7f7f7f">)</text>
       </g>
     </svg>
   </foreignObject>

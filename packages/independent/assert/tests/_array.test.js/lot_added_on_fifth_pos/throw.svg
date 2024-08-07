@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 289.45" background-color="#282c34">
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 308.45" background-color="#282c34">
   <g id="background">
-    <rect x="1" y="1" width="638" height="287.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+    <rect x="1" y="1" width="638" height="306.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
-  <foreignObject id="body" y="0" width="100%" height="299.45" overflow="hidden">
-    <svg width="414.86" height="289.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+  <foreignObject id="body" y="0" width="100%" height="318.45" overflow="hidden">
+    <svg width="414.86" height="308.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">AssertionError: </text>
         <text x="144.42" y="24.55" fill="#cd5555">actual</text>
@@ -12,35 +12,45 @@
         <text x="295.65" y="24.55"> are different</text>
         <text x="10" y="62.55" fill="#7f7f7f">actual:</text>
         <text x="77.21" y="62.55" fill="#7f7f7f">[</text>
-        <text x="26.8" y="81.55" fill="#7f7f7f">↑ 2 values ↑</text>
+        <text x="26.8" y="81.55" fill="#7f7f7f">↑ 3 values ↑</text>
         <text x="26.8" y="100.55" fill="#7f7f7f">"</text>
-        <text x="35.2" y="100.55" fill="#7f7f7f">c</text>
+        <text x="35.2" y="100.55" fill="#7f7f7f">d</text>
         <text x="43.61" y="100.55" fill="#7f7f7f">"</text>
         <text x="52.01" y="100.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="119.55" fill="#7f7f7f">"</text>
-        <text x="35.2" y="119.55" fill="#7f7f7f">d</text>
-        <text x="43.61" y="119.55" fill="#7f7f7f">"</text>
-        <text x="52.01" y="119.55" fill="#7f7f7f">,</text>
-        <text x="10" y="138.55" fill="#7f7f7f">]</text>
-        <text x="10" y="157.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="157.55" fill="#7f7f7f">[</text>
-        <text x="26.8" y="176.55" fill="#7f7f7f">↑ 3 values ↑</text>
-        <text x="26.8" y="195.55" fill="#7f7f7f">"</text>
-        <text x="35.2" y="195.55" fill="#7f7f7f">d</text>
-        <text x="43.61" y="195.55" fill="#7f7f7f">"</text>
-        <text x="52.01" y="195.55" fill="#7f7f7f">,</text>
+        <text x="10" y="119.55" fill="#7f7f7f">]</text>
+        <text x="10" y="138.55" fill="#7f7f7f">expect:</text>
+        <text x="77.21" y="138.55" fill="#7f7f7f">[</text>
+        <text x="26.8" y="157.55" fill="#7f7f7f">↑ 3 values ↑</text>
+        <text x="26.8" y="176.55" fill="#7f7f7f">"</text>
+        <text x="35.2" y="176.55" fill="#7f7f7f">d</text>
+        <text x="43.61" y="176.55" fill="#7f7f7f">"</text>
+        <text x="52.01" y="176.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="195.55" fill="#DAA520">"</text>
+        <text x="35.2" y="195.55" fill="#DAA520">Z</text>
+        <text x="43.61" y="195.55" fill="#DAA520">1</text>
+        <text x="52.01" y="195.55" fill="#DAA520">"</text>
+        <text x="60.41" y="195.55" fill="#DAA520">,</text>
         <text x="26.8" y="214.55" fill="#DAA520">"</text>
         <text x="35.2" y="214.55" fill="#DAA520">Z</text>
-        <text x="43.61" y="214.55" fill="#DAA520">1</text>
+        <text x="43.61" y="214.55" fill="#DAA520">2</text>
         <text x="52.01" y="214.55" fill="#DAA520">"</text>
         <text x="60.41" y="214.55" fill="#DAA520">,</text>
         <text x="26.8" y="233.55" fill="#DAA520">"</text>
         <text x="35.2" y="233.55" fill="#DAA520">Z</text>
-        <text x="43.61" y="233.55" fill="#DAA520">2</text>
+        <text x="43.61" y="233.55" fill="#DAA520">3</text>
         <text x="52.01" y="233.55" fill="#DAA520">"</text>
         <text x="60.41" y="233.55" fill="#DAA520">,</text>
-        <text x="26.8" y="252.55" fill="#DAA520">↓ 3 values ↓</text>
-        <text x="10" y="271.55" fill="#7f7f7f">]</text>
+        <text x="26.8" y="252.55" fill="#DAA520">"</text>
+        <text x="35.2" y="252.55" fill="#DAA520">Z</text>
+        <text x="43.61" y="252.55" fill="#DAA520">4</text>
+        <text x="52.01" y="252.55" fill="#DAA520">"</text>
+        <text x="60.41" y="252.55" fill="#DAA520">,</text>
+        <text x="26.8" y="271.55" fill="#DAA520">"</text>
+        <text x="35.2" y="271.55" fill="#DAA520">Z</text>
+        <text x="43.61" y="271.55" fill="#DAA520">5</text>
+        <text x="52.01" y="271.55" fill="#DAA520">"</text>
+        <text x="60.41" y="271.55" fill="#DAA520">,</text>
+        <text x="10" y="290.55" fill="#7f7f7f">]</text>
       </g>
     </svg>
   </foreignObject>

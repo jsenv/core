@@ -28,8 +28,7 @@ actual: {
 }
 expect: {
   a: "b",
-  enumerable a: false,
-  configurable a: false,
+  ↓ 2 values ↓
 }
 ```
 

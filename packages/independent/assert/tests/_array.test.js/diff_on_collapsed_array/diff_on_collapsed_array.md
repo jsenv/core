@@ -42,7 +42,17 @@ actual: {
       false,
     ],
     r: [],
-    ↓ 3 props ↓
+    ma: [
+      false,
+      true,
+    ],
+    mr: [
+      false,
+    ],
+    m: [
+      false,
+      false,
+    ],
   },
 }
 expect: {
@@ -54,7 +64,16 @@ expect: {
       true,
       true,
     ],
-    ↓ 3 props ↓
+    ma: [
+      true,
+    ],
+    mr: [
+      true,
+    ],
+    m: [
+      true,
+      true,
+    ],
   },
 }
 ```
