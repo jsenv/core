@@ -21,7 +21,9 @@ And http urls
 http://localhost
 http://localhost/
 http://localhost:3457
-http://localhost:3457/`,
+http://localhost:3457/
+ip notation: http://127.0.0.1:5678
+ipv6 notation: http://[::1]:5678`,
     {
       replaceFilesystemWellKnownValues: createReplaceFilesystemWellKnownValues({
         homedirDisabled: true,
@@ -42,10 +44,12 @@ And file urls
 - file:///cwd()/directory/
 - file:///cwd()/directory/file.txt
 And http urls
-http://localhost
-http://localhost/
-http://localhost
-http://localhost/`;
+http://127.0.0.1
+http://127.0.0.1/
+http://127.0.0.1
+http://127.0.0.1/
+ip notation: http://127.0.0.1
+ipv6 notation: http://127.0.0.1`;
   assert({ actual, expect });
 }
 
