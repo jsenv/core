@@ -44,4 +44,11 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
       expect: new URLSearchParams("bar=b&foo=b"),
     });
   });
+  test("search params sort", () => {
+    assert({
+      actual: new URLSearchParams("foo=a&bar=a"),
+      expect: new URLSearchParams("bar=b&foo=b"),
+      order: "sort",
+    });
+  });
 });

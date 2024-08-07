@@ -27,6 +27,7 @@
 - [object vs user](object_vs_user/object_vs_user.md)
 - [collapsed with overview when no diff](collapsed_with_overview_when_no_diff/collapsed_with_overview_when_no_diff.md)
 - [one prop no diff](one_prop_no_diff/one_prop_no_diff.md)
+- [sort object prop](sort_object_prop/sort_object_prop.md)
 
 ---
 

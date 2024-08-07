@@ -408,6 +408,19 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
       },
     });
   });
+  test("sort object prop", () => {
+    assert({
+      actual: {
+        a: true,
+        b: true,
+      },
+      expect: {
+        b: false,
+        a: false,
+      },
+      order: "sort",
+    });
+  });
 });
 
 // await snapshotAssertTests("object", {

@@ -9,6 +9,7 @@
 - [foo second value removed](foo_second_value_removed/foo_second_value_removed.md)
 - [foo second value modified](foo_second_value_modified/foo_second_value_modified.md)
 - [param order modified and value modified](param_order_modified_and_value_modified/param_order_modified_and_value_modified.md)
+- [search params sort](search_params_sort/search_params_sort.md)
 
 ---
 
