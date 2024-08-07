@@ -14,7 +14,7 @@ Jsenv is a suite of tools that can be used in projects involving JavaScript.
 It favors standards and simplicity.  
 As a result it can be enjoyed by people without much experience in tooling or seeking for simple tools without hidden complexities.
 
-If you want to try jsenv on your machine, use [@jsenv/cli](./packages/related/cli/readme.md).
+If you want to try jsenv on your machine, use [@jsenv/cli](./packages/related/cli/#jsenvcli).
 
 Link to [documentation](./md/users/users.md)
 
