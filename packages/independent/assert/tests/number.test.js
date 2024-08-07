@@ -112,7 +112,7 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
   });
   test("special notations", () => {
     assert({
-      MAX_DIFF_INSIDE_VALUE: 10,
+      MAX_DIFF_PER_VALUE: 10,
       actual: {
         a: 3.65432e12,
         b: 0b10101010101010, // binary

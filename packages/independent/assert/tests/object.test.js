@@ -163,7 +163,7 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
         b: { a: false },
         a: true,
       },
-      MAX_DIFF_INSIDE_VALUE: 2,
+      MAX_DIFF_PER_VALUE: 2,
     });
   });
   test("max 2 context after diff (there is 2)", () => {
@@ -300,7 +300,7 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
         o: true,
         p: true,
       },
-      MAX_DIFF_INSIDE_VALUE: 3,
+      MAX_DIFF_PER_VALUE: 3,
     });
   });
   test("max 1 context around diff", () => {
@@ -354,7 +354,7 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
         },
       },
       MAX_COLUMNS: 100,
-      MAX_DIFF_INSIDE_VALUE: 3,
+      MAX_DIFF_PER_VALUE: 3,
     });
   });
   test("many props should not be there", () => {
@@ -373,7 +373,7 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
         a: true,
         c: {},
       },
-      MAX_DIFF_INSIDE_VALUE: 3,
+      MAX_DIFF_PER_VALUE: 3,
     });
   });
   test("object vs user", () => {

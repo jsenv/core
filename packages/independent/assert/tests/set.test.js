@@ -20,7 +20,7 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
         // new
         "Z",
       ]),
-      MAX_DIFF_INSIDE_VALUE: 4,
+      MAX_DIFF_PER_VALUE: 4,
       MAX_CONTEXT_BEFORE_DIFF: 2,
     });
   });

@@ -28,14 +28,12 @@ AssertionError: actual and expect are different
 actual: {
   a: true,
   b: true,
-  c: true,
-  e: true,
+  ↓ 2 props ↓ (1 added)
 }
 expect: {
   a: false,
   b: true,
-  c: true,
-  d: true,
+  ↓ 2 props ↓ (1 removed)
 }
 ```
 

@@ -17,7 +17,7 @@ assert({
     b: { a: false },
     a: true,
   },
-  MAX_DIFF_INSIDE_VALUE: 2,
+  MAX_DIFF_PER_VALUE: 2,
 });
 ```
 

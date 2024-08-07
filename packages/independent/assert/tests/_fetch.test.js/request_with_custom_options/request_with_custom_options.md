@@ -44,8 +44,7 @@ actual: Request("http://example.com/")
 expect: Request("http://example.com/", {
   body: ReadableStream,
   cache: "no-store",
-  credentials: "omit",
-  ↓ 6 props ↓
+  ↓ 7 props ↓
 })
 ```
 

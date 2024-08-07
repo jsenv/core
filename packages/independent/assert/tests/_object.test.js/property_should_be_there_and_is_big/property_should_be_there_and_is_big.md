@@ -19,7 +19,7 @@ assert({
     },
   },
   MAX_COLUMNS: 100,
-  MAX_DIFF_INSIDE_VALUE: 3,
+  MAX_DIFF_PER_VALUE: 3,
 });
 ```
 
@@ -40,8 +40,7 @@ expect: {
     a: true,
     b: true,
     item: Object(3),
-    c: true,
-    ↓ 4 props ↓
+    ↓ 5 props ↓
   },
 }
 ```

@@ -38,7 +38,7 @@ assert({
     o: true,
     p: true,
   },
-  MAX_DIFF_INSIDE_VALUE: 3,
+  MAX_DIFF_PER_VALUE: 3,
 });
 ```
 
@@ -62,8 +62,7 @@ actual: {
   ↕ 2 props ↕
   l: true,
   m: true,
-  n: true,
-  ↓ 2 props ↓
+  ↓ 3 props ↓
 }
 expect: {
   ↑ 2 props ↑
@@ -77,8 +76,7 @@ expect: {
   ↕ 2 props ↕
   l: true,
   m: false,
-  n: true,
-  ↓ 2 props ↓
+  ↓ 3 props ↓
 }
 ```
 
