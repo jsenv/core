@@ -2,7 +2,7 @@ import { assert } from "@jsenv/assert";
 import { snapshotAssertTests } from "@jsenv/assert/tests/snapshot_assert.js";
 
 await snapshotAssertTests(import.meta.url, ({ test }) => {
-  test.ONLY("johan", () => {
+  test("johan", () => {
     assert({
       actual: {
         a: false,

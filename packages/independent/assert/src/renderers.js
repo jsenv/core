@@ -938,13 +938,13 @@ export const renderChildrenMultiline = (node, props) => {
       skippedChildIndex++;
       const skippedChildKey = childrenKeys[skippedChildIndex];
       const skippedChild = node.childNodeMap.get(skippedChildKey);
-      if (skippedChild.diffType === "modified") {
-        modifiedCount++;
-        modifiedColor = skippedChild.color;
-      }
-      if (skippedChild.diffType === "solo") {
+      const overallReasons = skippedChild.comparison.reasons.overall;
+      if (overallReasons.added.size || overallReasons.removed.size) {
         soloCount++;
         soloColor = skippedChild.color;
+      } else if (overallReasons.modified.size) {
+        modifiedCount++;
+        modifiedColor = skippedChild.color;
       }
     }
     const allModified = modifiedCount === skippedCount;
