@@ -20,7 +20,8 @@ assert({
     e: false,
     f: false,
   },
-  MAX_DIFF_PER_VALUE: 1,
+  MAX_DIFF: 30,
+  MAX_DIFF_PER_VALUE: 2,
   MAX_CONTEXT_AFTER_DIFF: 2,
   MAX_CONTEXT_BEFORE_DIFF: 2,
 });

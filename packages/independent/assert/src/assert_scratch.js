@@ -405,14 +405,14 @@ export const createAssert = ({
         const childComparisonMap = new Map();
         const childComparisonDiffMap = new Map();
         actual_children_comparisons: {
-          const actualChildrenKeys = [];
-          let actualFirstChildWithDiffKey;
-          for (let [childKey, actualChildNode] of actualNode.childNodeMap) {
+          const childrenKeys = [];
+          let firstChildWithDiffKey;
+          for (let [childKey, childNode] of actualNode.childNodeMap) {
             let expectChildNode;
             if (isSetEntriesComparison) {
-              const actualSetValueNode = actualChildNode;
+              const setValueNode = childNode;
               for (const [, expectSetValueNode] of expectNode.childNodeMap) {
-                if (expectSetValueNode.value === actualSetValueNode.value) {
+                if (expectSetValueNode.value === setValueNode.value) {
                   expectChildNode = expectSetValueNode;
                   break;
                 }
@@ -420,97 +420,94 @@ export const createAssert = ({
             } else {
               expectChildNode = expectNode.childNodeMap.get(childKey);
             }
-            if (actualChildNode && expectChildNode) {
-              const childComparison = subcompareDuo(
-                actualChildNode,
-                expectChildNode,
-              );
+            if (childNode && expectChildNode) {
+              const childComparison = subcompareDuo(childNode, expectChildNode);
               childComparisonMap.set(childKey, childComparison);
               if (childComparison.hasAnyDiff) {
                 childComparisonDiffMap.set(childKey, childComparison);
               }
-              if (!actualChildNode.isHidden) {
-                actualChildrenKeys.push(childKey);
+              if (!childNode.isHidden) {
+                childrenKeys.push(childKey);
                 if (
                   childComparison.hasAnyDiff &&
-                  actualFirstChildWithDiffKey === undefined
+                  firstChildWithDiffKey === undefined
                 ) {
-                  actualFirstChildWithDiffKey = childKey;
+                  firstChildWithDiffKey = childKey;
                 }
               }
               continue;
             }
             const addedChildComparison = subcompareSolo(
-              actualChildNode,
+              childNode,
               PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
             );
             childComparisonMap.set(childKey, addedChildComparison);
             childComparisonDiffMap.set(childKey, addedChildComparison);
-            if (!actualChildNode.isHidden) {
-              actualChildrenKeys.push(childKey);
-              if (actualFirstChildWithDiffKey === undefined) {
-                actualFirstChildWithDiffKey = childKey;
+            if (!childNode.isHidden) {
+              childrenKeys.push(childKey);
+              if (firstChildWithDiffKey === undefined) {
+                firstChildWithDiffKey = childKey;
               }
             }
           }
           if (actualNode.context.order === "sort") {
-            actualChildrenKeys.sort();
+            childrenKeys.sort();
           }
-          actualNode.childrenKeys = actualChildrenKeys;
-          actualNode.firstChildWithDiffKey = actualFirstChildWithDiffKey;
+          actualNode.childrenKeys = childrenKeys;
+          actualNode.firstChildWithDiffKey = firstChildWithDiffKey;
         }
         expect_children_comparisons: {
-          const expectChildrenKeys = [];
-          let expectFirstChildWithDiffKey;
-          for (let [childKey, expectChildNode] of expectNode.childNodeMap) {
+          const childrenKeys = [];
+          let firstChildWithDiffKey;
+          for (let [childKey, childNode] of expectNode.childNodeMap) {
             if (isSetEntriesComparison) {
-              const expectSetValueNode = expectChildNode;
+              const setValueNode = childNode;
               let hasEntry;
               for (const [, actualSetValueNode] of actualNode.childNodeMap) {
-                if (actualSetValueNode.value === expectSetValueNode.value) {
+                if (actualSetValueNode.value === setValueNode.value) {
                   hasEntry = true;
                   break;
                 }
               }
               if (hasEntry) {
-                if (!expectChildNode.isHidden) {
-                  expectChildrenKeys.push(childKey);
+                if (!childNode.isHidden) {
+                  childrenKeys.push(childKey);
                 }
                 continue;
               }
             } else {
               const childComparison = childComparisonMap.get(childKey);
               if (childComparison) {
-                if (!expectChildNode.isHidden) {
-                  expectChildrenKeys.push(childKey);
+                if (!childNode.isHidden) {
+                  childrenKeys.push(childKey);
                   if (
                     childComparison.hasAnyDiff &&
-                    expectFirstChildWithDiffKey === undefined
+                    firstChildWithDiffKey === undefined
                   ) {
-                    expectFirstChildWithDiffKey = childKey;
+                    firstChildWithDiffKey = childKey;
                   }
                 }
                 continue;
               }
             }
             const removedChildComparison = subcompareSolo(
-              expectChildNode,
+              childNode,
               PLACEHOLDER_WHEN_ADDED_OR_REMOVED,
             );
             childComparisonMap.set(childKey, removedChildComparison);
             childComparisonDiffMap.set(childKey, removedChildComparison);
-            if (!expectChildNode.isHidden) {
-              expectChildrenKeys.push(childKey);
-              if (expectFirstChildWithDiffKey === undefined) {
-                expectFirstChildWithDiffKey = childKey;
+            if (!childNode.isHidden) {
+              childrenKeys.push(childKey);
+              if (firstChildWithDiffKey === undefined) {
+                firstChildWithDiffKey = childKey;
               }
             }
           }
           if (expectNode.context.order === "sort") {
-            expectChildrenKeys.sort();
+            childrenKeys.sort();
           }
-          expectNode.childrenKeys = expectChildrenKeys;
-          expectNode.firstChildWithDiffKey = expectFirstChildWithDiffKey;
+          expectNode.childrenKeys = childrenKeys;
+          expectNode.firstChildWithDiffKey = firstChildWithDiffKey;
         }
         actualNode.childComparisonDiffMap = childComparisonDiffMap;
         expectNode.childComparisonDiffMap = childComparisonDiffMap;
