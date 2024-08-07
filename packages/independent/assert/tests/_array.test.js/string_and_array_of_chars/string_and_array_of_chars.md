@@ -1,4 +1,4 @@
-# [string and array of chars](../../array.test.js#L136)
+# [string and array of chars](../../array.test.js#L138)
 
 ```js
 assert({
@@ -20,7 +20,9 @@ expect: [
   "h",
   "e",
   "l",
-  ↓ 8 values ↓
+  "l",
+  "o",
+  ↓ 6 values ↓
 ]
 ```
 

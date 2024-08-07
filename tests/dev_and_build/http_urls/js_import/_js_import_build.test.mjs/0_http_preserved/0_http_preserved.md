@@ -12,7 +12,7 @@ see [./build/](./build/)
 
 ```js
 {
-  "url": "http://127.0.0.1:9999/constants.js?foo=bar"
+  "url": "http://127.0.0.1/constants.js?foo=bar"
 }
 ```
 ---

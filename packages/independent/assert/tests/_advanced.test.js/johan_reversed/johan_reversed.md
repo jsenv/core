@@ -1,24 +1,24 @@
-# [johan](../../advanced.test.js#L5)
+# [johan reversed](../../advanced.test.js#L31)
 
 ```js
 assert({
   actual: {
     a: false,
-    b: true,
     ACTUAL_NEW_1: true,
-    c: true,
-    d: true,
-    e: true,
-    f: true,
-  },
-  expect: {
-    a: false,
-    EXPECT_NEW_1: true,
     b: true,
     c: false,
     d: false,
     e: false,
     f: false,
+  },
+  expect: {
+    a: false,
+    b: true,
+    EXPECT_NEW_1: true,
+    c: true,
+    d: true,
+    e: true,
+    f: true,
   },
   MAX_DIFF_PER_VALUE: 2,
   MAX_CONTEXT_AFTER_DIFF: 2,
@@ -36,16 +36,16 @@ AssertionError: actual and expect are different
 
 actual: {
   a: false,
-  b: true,
   ACTUAL_NEW_1: true,
-  c: true,
+  b: true,
+  c: false,
   ↓ 3 props ↓
 }
 expect: {
   a: false,
-  EXPECT_NEW_1: true,
   b: true,
-  c: false,
+  EXPECT_NEW_1: true,
+  c: true,
   ↓ 3 props ↓
 }
 ```

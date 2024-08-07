@@ -130,6 +130,8 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
           m: [true, true],
         },
       },
+      MAX_DIFF: 6,
+      MAX_DIFF_PER_VALUE: 6,
       MAX_DEPTH_INSIDE_DIFF: 0,
     });
   });
@@ -149,7 +151,7 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
       }),
     });
   });
-  test("array like and array", () => {
+  test.ONLY("array like and array", () => {
     assert({
       actual: {
         0: "Z",

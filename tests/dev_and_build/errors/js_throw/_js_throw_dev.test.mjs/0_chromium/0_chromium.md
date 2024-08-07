@@ -13,8 +13,8 @@ see [./.jsenv/chrome@127.00/](./.jsenv/chrome@127.00/)
 ```console
 Error: chromium "pageerror" {
   [cause]: Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
-    at triggerError (http://localhost/trigger_error.js:2:9)
-    at http://localhost/main.js:3:1,
+    at triggerError (http://127.0.0.1/trigger_error.js:2:9)
+    at http://127.0.0.1/main.js:3:1,
 }
 ```
 ---

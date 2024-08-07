@@ -196,11 +196,18 @@ const replaceInObject = (object, { replace }) => {
 };
 
 const replaceHttpUrls = (source) => {
-  source = source.replace(/(https?):\/\/localhost:\d+/g, (match, protocol) => {
-    return `${protocol}://localhost`;
+  source = source.replace(/(https?):\/\/127.0.0.1:\d+/g, (match, protocol) => {
+    return `${protocol}://127.0.0.1`;
   });
+  // we force "localhost" to "127.0.0.1"
+  // in case the machine does not have localhost mapping
+  source = source.replace(/(https?):\/\/localhost:\d+/g, (match, protocol) => {
+    return `${protocol}://127.0.0.1`;
+  });
+  // we force [::1] to "127.0.0.1"
+  // in case the machine does not have ipv6
   source = source.replace(/(https?):\/\/\[::1\]:\d+/g, (match, protocol) => {
-    return `${protocol}://[::1]`;
+    return `${protocol}://127.0.0.1`;
   });
   return source;
   // return source.replace(/(?:https?|ftp):\/\/\S+[\w/]/g, (match) => {

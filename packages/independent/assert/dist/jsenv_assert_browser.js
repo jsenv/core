@@ -476,7 +476,7 @@ const renderComposite = (node, props) => {
     maxDepthReached = nodeDepth > props.MAX_DEPTH_INSIDE_DIFF;
   }
   const compositePartsNode = node.childNodeMap.get("parts");
-  if (maxDepthReached) {
+  if (maxDepthReached || node.maxDiffReached) {
     node.startMarker = node.endMarker = "";
     if (node.isStringObject) {
       const length = node.value.length;
@@ -1069,7 +1069,7 @@ const renderChildrenMultiline = (node, props) => {
     childIndexToDisplayArray = [0];
   } else {
     if (otherNode.placeholder) {
-      setChildKeyToDisplaySetSolo(node, props);
+      setChildKeyToDisplaySetSolo(node);
     } else {
       setChildKeyToDisplaySetDuo(node, otherNode, props);
     }
@@ -1171,13 +1171,13 @@ const renderChildrenMultiline = (node, props) => {
       skippedChildIndex++;
       const skippedChildKey = childrenKeys[skippedChildIndex];
       const skippedChild = node.childNodeMap.get(skippedChildKey);
-      if (skippedChild.diffType === "modified") {
-        modifiedCount++;
-        modifiedColor = skippedChild.color;
-      }
-      if (skippedChild.diffType === "solo") {
+      const overallReasons = skippedChild.comparison.reasons.overall;
+      if (overallReasons.added.size || overallReasons.removed.size) {
         soloCount++;
         soloColor = skippedChild.color;
+      } else if (overallReasons.modified.size) {
+        modifiedCount++;
+        modifiedColor = skippedChild.color;
       }
     }
     const allModified = modifiedCount === skippedCount;
@@ -1342,7 +1342,7 @@ const renderChildrenMultiline = (node, props) => {
   diff += applyStyles(node, endMarker);
   return diff;
 };
-const setChildKeyToDisplaySetSolo = (node, props) => {
+const setChildKeyToDisplaySetSolo = node => {
   /*
    * For a solo node:
    * - All child has a diff (all added or removed)
@@ -1350,19 +1350,10 @@ const setChildKeyToDisplaySetSolo = (node, props) => {
    */
   const childrenKeys = node.childrenKeys;
   const childKeyToDisplaySet = new Set();
-  const {
-    maxDiff
-  } = getMaxDiffOptions(node, props);
-  let maxDiffReached = false;
-  let diffCount = 0;
   for (const childKey of childrenKeys) {
-    if (maxDiffReached) {
-      break;
-    }
     const childNode = node.childNodeMap.get(childKey);
-    if (isSourceCodeProperty(childNode)) ; else {
-      diffCount++;
-      maxDiffReached = diffCount > maxDiff;
+    if (childNode.maxDiffReached) {
+      break;
     }
     childKeyToDisplaySet.add(childKey);
   }
@@ -1394,29 +1385,22 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
       firstChildWithDiffKey
     } = referenceNode;
     const {
-      maxDiff,
       maxChildBeforeDiff,
       maxChildAfterDiff
     } = getMaxDiffOptions(referenceNode, props);
     const firstChildWithDiffIndex = childrenKeys.indexOf(firstChildWithDiffKey);
     let childIndex = firstChildWithDiffIndex;
-    let maxDiffReached = false;
-    let diffCount = 0;
     while (childIndex < childrenKeys.length) {
-      if (maxDiffReached) {
-        break;
-      }
       const childKey = childrenKeys[childIndex];
       childIndex++;
       const childNode = referenceNode.childNodeMap.get(childKey);
+      if (childNode.maxDiffReached) {
+        break;
+      }
       if (!childNode.comparison.hasAnyDiff) {
         continue;
       }
       childKeyWithDiffSet.add(childKey);
-      if (isSourceCodeProperty(childNode)) ; else {
-        diffCount++;
-        maxDiffReached = diffCount > maxDiff;
-      }
     }
     for (const childKey of childKeyWithDiffSet) {
       const childIndex = childrenKeys.indexOf(childKey);
@@ -1430,7 +1414,8 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
         }
         let index = fromIndex;
         while (index !== toIndex) {
-          referenceChildKeyToDisplaySet.add(childrenKeys[index]);
+          const childKeyBefore = childrenKeys[index];
+          referenceChildKeyToDisplaySet.add(childKeyBefore);
           index++;
         }
       }
@@ -1445,7 +1430,12 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
         }
         let index = fromIndex;
         while (index !== toIndex) {
-          referenceChildKeyToDisplaySet.add(childrenKeys[index]);
+          const childKeyAfter = childrenKeys[index];
+          const childNodeAfter = referenceNode.childNodeMap.get(childKeyAfter);
+          if (childNodeAfter.maxDiffReached) {
+            break;
+          }
+          referenceChildKeyToDisplaySet.add(childKeyAfter);
           index++;
         }
       }
@@ -1468,15 +1458,12 @@ const getMaxDiffOptions = (node, props) => {
     maxDiffType = "prop"
   } = node.multilineDiff;
   const {
-    MAX_DIFF_INSIDE_VALUE,
     MAX_CONTEXT_BEFORE_DIFF,
     MAX_CONTEXT_AFTER_DIFF
   } = props;
-  const maxDiff = typeof MAX_DIFF_INSIDE_VALUE === "number" ? MAX_DIFF_INSIDE_VALUE : MAX_DIFF_INSIDE_VALUE[maxDiffType];
   const maxChildBeforeDiff = typeof MAX_CONTEXT_BEFORE_DIFF === "number" ? MAX_CONTEXT_BEFORE_DIFF : MAX_CONTEXT_BEFORE_DIFF[maxDiffType];
   const maxChildAfterDiff = typeof MAX_CONTEXT_AFTER_DIFF === "number" ? MAX_CONTEXT_AFTER_DIFF : MAX_CONTEXT_AFTER_DIFF[maxDiffType];
   return {
-    maxDiff,
     maxChildBeforeDiff,
     maxChildAfterDiff
   };
@@ -2046,8 +2033,6 @@ const symbolToDescription$1 = symbol => {
  * This file is named "scratch" as a testimony of the fact it has been
  * recoded from scratch around april 2024
  *
- * To fix:
- * - Error: is a valid url ???
  * Nice to have:
  * - preact signals
  * - a DOM node should be converted to outerHTML right?
@@ -2118,9 +2103,11 @@ const defaultOptions = {
   expect: undefined,
   MAX_DEPTH: 5,
   MAX_DEPTH_INSIDE_DIFF: 2,
-  MAX_DIFF_INSIDE_VALUE: {
-    prop: 2,
-    line: 1
+  MAX_DIFF: 15,
+  MAX_DIFF_PER_VALUE: {
+    "prop": 2,
+    "line": 1,
+    "*": 5
   },
   MAX_CONTEXT_BEFORE_DIFF: {
     prop: 2,
@@ -2170,7 +2157,8 @@ const createAssert = ({
       expect,
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
-      MAX_DIFF_INSIDE_VALUE,
+      MAX_DIFF,
+      MAX_DIFF_PER_VALUE,
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
@@ -2247,14 +2235,44 @@ const createAssert = ({
      */
     let isNot = false;
     let allowRecompare = false;
-    const compare = (actualNode, expectNode) => {
+    let diffCount = 0;
+    let maxDiffReached = false;
+    const compare = (actualNode, expectNode, {
+      onDiffCallback
+    } = {}) => {
       if (actualNode.ignore && actualNode.comparison) {
         return actualNode.comparison;
       }
       if (expectNode.ignore && expectNode.comparison) {
         return expectNode.comparison;
       }
+      let maxDiffPerValue;
+      if (typeof MAX_DIFF_PER_VALUE === "number") {
+        maxDiffPerValue = MAX_DIFF_PER_VALUE;
+      } else {
+        const node = actualNode.placeholder ? expectNode : actualNode;
+        const valueType = node.subgroup === "line_entries" ? "line" : node.subgroup === "own_properties" ? "prop" : node.subgroup === "indexed_entries" ? "index" : "other";
+        if (valueType in MAX_DIFF_PER_VALUE) {
+          maxDiffPerValue = MAX_DIFF_PER_VALUE[valueType];
+        } else if ("*" in MAX_DIFF_PER_VALUE) {
+          maxDiffPerValue = MAX_DIFF_PER_VALUE["*"];
+        } else if ("prop" in MAX_DIFF_PER_VALUE) {
+          maxDiffPerValue = MAX_DIFF_PER_VALUE.prop;
+        } else {
+          maxDiffPerValue = Infinity;
+        }
+      }
+      let maxDiffPerValueReached = false;
+      let diffPerValueCounter = 0;
       const reasons = createReasons();
+      if (maxDiffReached) {
+        if (!actualNode.placeholder) {
+          actualNode.maxDiffReached = true;
+        }
+        if (!expectNode.placeholder) {
+          expectNode.maxDiffReached = true;
+        }
+      }
       const comparison = {
         actualNode,
         expectNode,
@@ -2267,17 +2285,46 @@ const createAssert = ({
       if (!expectNode.placeholder) {
         expectNode.otherNode = actualNode;
       }
+      const onDiff = node => {
+        if (isSourceCodeProperty(node)) {
+          return;
+        }
+        diffCount++;
+        if (!maxDiffReached && diffCount >= MAX_DIFF) {
+          maxDiffReached = true;
+        }
+        onDiffCallback(node);
+      };
+      const onDuoDiff = node => {
+        if (!node.isStandaloneDiff) {
+          return;
+        }
+        onDiff(node);
+      };
+      const onSoloDiff = node => {
+        if (!node.isStandaloneDiff) {
+          return;
+        }
+        if (node.group === "entry_key") {
+          // will be also reported by the value
+          return;
+        }
+        onDiff(node);
+      };
       const onSelfDiff = reason => {
         reasons.self.modified.add(reason);
         causeSet.add(comparison);
+        onDuoDiff(comparison.actualNode);
       };
       const onAdded = reason => {
         reasons.self.added.add(reason);
         causeSet.add(comparison);
+        onSoloDiff(comparison.actualNode);
       };
       const onRemoved = reason => {
         reasons.self.removed.add(reason);
         causeSet.add(comparison);
+        onSoloDiff(comparison.expectNode);
       };
       const subcompareDuo = (actualChildNode, expectChildNode, {
         revertNot,
@@ -2290,7 +2337,23 @@ const createAssert = ({
         if (isRecomparison) {
           allowRecompare = true;
         }
-        const childComparison = compare(actualChildNode, expectChildNode);
+        if (maxDiffPerValueReached) {
+          if (!actualChildNode.placeholder) {
+            actualChildNode.maxDiffReached = true;
+          }
+          if (!expectChildNode.placeholder) {
+            expectChildNode.maxDiffReached = true;
+          }
+        }
+        const childComparison = compare(actualChildNode, expectChildNode, {
+          onDiffCallback: node => {
+            onDiffCallback(node);
+            diffPerValueCounter++;
+            if (!maxDiffPerValueReached && diffPerValueCounter >= maxDiffPerValue) {
+              maxDiffPerValueReached = true;
+            }
+          }
+        });
         isNot = isNotPrevious;
         appendReasonGroup(comparison.reasons.inside, childComparison.reasons.overall);
         return childComparison;
@@ -2305,98 +2368,100 @@ const createAssert = ({
         const isSetEntriesComparison = actualNode.subgroup === "set_entries" && expectNode.subgroup === "set_entries";
         const childComparisonMap = new Map();
         const childComparisonDiffMap = new Map();
+        const referenceNode = expectNode;
+        const otherNode = actualNode;
         {
-          const actualChildrenKeys = [];
-          let actualFirstChildWithDiffKey;
-          for (let [childKey, actualChildNode] of actualNode.childNodeMap) {
-            let expectChildNode;
+          const childrenKeys = [];
+          let firstChildWithDiffKey;
+          for (let [childKey, childNode] of referenceNode.childNodeMap) {
+            let otherChildNode;
             if (isSetEntriesComparison) {
-              const actualSetValueNode = actualChildNode;
-              for (const [, expectSetValueNode] of expectNode.childNodeMap) {
-                if (expectSetValueNode.value === actualSetValueNode.value) {
-                  expectChildNode = expectSetValueNode;
+              const setValueNode = childNode;
+              for (const [, otherSetValueNode] of otherNode.childNodeMap) {
+                if (otherSetValueNode.value === setValueNode.value) {
+                  otherChildNode = otherSetValueNode;
                   break;
                 }
               }
             } else {
-              expectChildNode = expectNode.childNodeMap.get(childKey);
+              otherChildNode = otherNode.childNodeMap.get(childKey);
             }
-            if (actualChildNode && expectChildNode) {
-              const childComparison = subcompareDuo(actualChildNode, expectChildNode);
+            if (childNode && otherChildNode) {
+              const childComparison = subcompareDuo(otherChildNode, childNode);
               childComparisonMap.set(childKey, childComparison);
               if (childComparison.hasAnyDiff) {
                 childComparisonDiffMap.set(childKey, childComparison);
               }
-              if (!actualChildNode.isHidden) {
-                actualChildrenKeys.push(childKey);
-                if (childComparison.hasAnyDiff && actualFirstChildWithDiffKey === undefined) {
-                  actualFirstChildWithDiffKey = childKey;
+              if (!childNode.isHidden) {
+                childrenKeys.push(childKey);
+                if (childComparison.hasAnyDiff && firstChildWithDiffKey === undefined) {
+                  firstChildWithDiffKey = childKey;
                 }
               }
               continue;
             }
-            const addedChildComparison = subcompareSolo(actualChildNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
-            childComparisonMap.set(childKey, addedChildComparison);
-            childComparisonDiffMap.set(childKey, addedChildComparison);
-            if (!actualChildNode.isHidden) {
-              actualChildrenKeys.push(childKey);
-              if (actualFirstChildWithDiffKey === undefined) {
-                actualFirstChildWithDiffKey = childKey;
+            const removedChildComparison = subcompareSolo(childNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
+            childComparisonMap.set(childKey, removedChildComparison);
+            childComparisonDiffMap.set(childKey, removedChildComparison);
+            if (!childNode.isHidden) {
+              childrenKeys.push(childKey);
+              if (firstChildWithDiffKey === undefined) {
+                firstChildWithDiffKey = childKey;
               }
             }
           }
-          if (actualNode.context.order === "sort") {
-            actualChildrenKeys.sort();
+          if (referenceNode.context.order === "sort") {
+            childrenKeys.sort();
           }
-          actualNode.childrenKeys = actualChildrenKeys;
-          actualNode.firstChildWithDiffKey = actualFirstChildWithDiffKey;
+          referenceNode.childrenKeys = childrenKeys;
+          referenceNode.firstChildWithDiffKey = firstChildWithDiffKey;
         }
         {
-          const expectChildrenKeys = [];
-          let expectFirstChildWithDiffKey;
-          for (let [childKey, expectChildNode] of expectNode.childNodeMap) {
+          const childrenKeys = [];
+          let firstChildWithDiffKey;
+          for (let [childKey, childNode] of otherNode.childNodeMap) {
             if (isSetEntriesComparison) {
-              const expectSetValueNode = expectChildNode;
+              const setValueNode = childNode;
               let hasEntry;
-              for (const [, actualSetValueNode] of actualNode.childNodeMap) {
-                if (actualSetValueNode.value === expectSetValueNode.value) {
+              for (const [, referenceSetValueNode] of referenceNode.childNodeMap) {
+                if (referenceSetValueNode.value === setValueNode.value) {
                   hasEntry = true;
                   break;
                 }
               }
               if (hasEntry) {
-                if (!expectChildNode.isHidden) {
-                  expectChildrenKeys.push(childKey);
+                if (!childNode.isHidden) {
+                  childrenKeys.push(childKey);
                 }
                 continue;
               }
             } else {
               const childComparison = childComparisonMap.get(childKey);
               if (childComparison) {
-                if (!expectChildNode.isHidden) {
-                  expectChildrenKeys.push(childKey);
-                  if (childComparison.hasAnyDiff && expectFirstChildWithDiffKey === undefined) {
-                    expectFirstChildWithDiffKey = childKey;
+                if (!childNode.isHidden) {
+                  childrenKeys.push(childKey);
+                  if (childComparison.hasAnyDiff && firstChildWithDiffKey === undefined) {
+                    firstChildWithDiffKey = childKey;
                   }
                 }
                 continue;
               }
             }
-            const removedChildComparison = subcompareSolo(expectChildNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
-            childComparisonMap.set(childKey, removedChildComparison);
-            childComparisonDiffMap.set(childKey, removedChildComparison);
-            if (!expectChildNode.isHidden) {
-              expectChildrenKeys.push(childKey);
-              if (expectFirstChildWithDiffKey === undefined) {
-                expectFirstChildWithDiffKey = childKey;
+            const addedChildComparison = subcompareSolo(childNode, PLACEHOLDER_WHEN_ADDED_OR_REMOVED);
+            childComparisonMap.set(childKey, addedChildComparison);
+            childComparisonDiffMap.set(childKey, addedChildComparison);
+            if (!childNode.isHidden) {
+              childrenKeys.push(childKey);
+              if (firstChildWithDiffKey === undefined) {
+                firstChildWithDiffKey = childKey;
               }
             }
           }
-          if (expectNode.context.order === "sort") {
-            expectChildrenKeys.sort();
+          if (otherNode.context.order === "sort") {
+            childrenKeys.sort();
           }
-          expectNode.childrenKeys = expectChildrenKeys;
-          expectNode.firstChildWithDiffKey = expectFirstChildWithDiffKey;
+          otherNode.childrenKeys = childrenKeys;
+          otherNode.firstChildWithDiffKey = firstChildWithDiffKey;
         }
         actualNode.childComparisonDiffMap = childComparisonDiffMap;
         expectNode.childComparisonDiffMap = childComparisonDiffMap;
@@ -2650,7 +2715,9 @@ const createAssert = ({
       }
       return comparison;
     };
-    const rootComparison = compare(actualRootNode, expectRootNode);
+    const rootComparison = compare(actualRootNode, expectRootNode, {
+      onDiffCallback: () => {}
+    });
     if (!rootComparison.hasAnyDiff) {
       return;
     }
@@ -2736,7 +2803,6 @@ const createAssert = ({
     const actualDiff = actualStartNode.render({
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
-      MAX_DIFF_INSIDE_VALUE,
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
@@ -2753,7 +2819,6 @@ const createAssert = ({
     const expectDiff = expectStartNode.render({
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
-      MAX_DIFF_INSIDE_VALUE,
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
@@ -3293,7 +3358,8 @@ let createRootNode;
     renderOptions = renderOptionsDefault,
     onelineDiff = null,
     multilineDiff = null,
-    stringDiffPrecision = "per_line_and_per_char"
+    stringDiffPrecision = "per_line_and_per_char",
+    isStandaloneDiff = false
   }) => {
     const node = {
       context,
@@ -3318,6 +3384,7 @@ let createRootNode;
       isStringForUrl,
       isStringForDate,
       isBody,
+      isStandaloneDiff,
       // info
       isCustomExpectation: false,
       // info/primitive
@@ -3368,6 +3435,7 @@ let createRootNode;
       rangeToDisplay: null,
       displayedRange: null,
       childKeyToDisplaySet: null,
+      maxDiffReached: false,
       diffType: "",
       otherNode: null,
       // END will be set by comparison
@@ -4580,14 +4648,16 @@ let createRootNode;
                         render: renderValue,
                         separatorMarker: " => ",
                         group: "entry_key",
-                        subgroup: "map_entry_key"
+                        subgroup: "map_entry_key",
+                        isStandaloneDiff: true
                       });
                       mapEntryNode.appendChild("entry_value", {
                         value: mapEntryValue,
                         render: renderValue,
                         separatorMarker: ",",
                         group: "entry_value",
-                        subgroup: "map_entry_value"
+                        subgroup: "map_entry_value",
+                        isStandaloneDiff: true
                       });
                     }
                     objectTagCounterMap.clear();
@@ -4610,7 +4680,8 @@ let createRootNode;
                         subgroup: "set_entry",
                         path: setEntriesNode.path.append(index, {
                           isIndexedEntry: true
-                        })
+                        }),
+                        isStandaloneDiff: true
                       });
                       index++;
                     }
@@ -4656,7 +4727,8 @@ let createRootNode;
                         render: renderValue,
                         separatorMarker: ",",
                         group: "entry_value",
-                        subgroup: "url_search_param_entry_value"
+                        subgroup: "url_search_param_entry_value",
+                        isStandaloneDiff: true
                       });
                     }
                   }
@@ -4826,7 +4898,8 @@ let createRootNode;
                       subgroup: "array_entry_value",
                       path: arrayEntriesNode.path.append(index, {
                         isIndexedEntry: true
-                      })
+                      }),
+                      isStandaloneDiff: true
                     });
                     index++;
                   }
@@ -4876,7 +4949,8 @@ let createRootNode;
                       subgroup: "typed_array_entry_value",
                       path: typedEntriesNode.path.append(index, {
                         isIndexedEntry: true
-                      })
+                      }),
+                      isStandaloneDiff: true
                     });
                     index++;
                   }
@@ -5113,7 +5187,8 @@ let createRootNode;
                             isSourceCode,
                             isBody,
                             isFunctionPrototype,
-                            isClassPrototype
+                            isClassPrototype,
+                            isStandaloneDiff: true
                           });
                         }
                       },
@@ -5298,6 +5373,7 @@ const createArgEntriesNode = (node, {
           separatorMarker: ",",
           path: node.path.append(key || argIndex),
           depth: node.depth,
+          isStandaloneDiff: true,
           ...valueParams
         });
       };

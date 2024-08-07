@@ -7,7 +7,7 @@ run({ browserLauncher: chromium })
 # 1/3 console.error
 
 ```console
-Error while handling http://localhost/main.html:
+Error while handling http://127.0.0.1/main.html:
 invalid-first-character-of-tag-name
 base/client/main.html:5:12
 2 | <html lang="en">

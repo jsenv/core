@@ -49,7 +49,8 @@ function onSubmit(evt) {
       actual,
       expect,
       MAX_COLUMNS: Math.floor(diffActualNode.offsetWidth / 8.4) - 1,
-      MAX_DIFF_INSIDE_VALUE: Infinity,
+      MAX_DIFF: 20,
+      MAX_DIFF_PER_VALUE: Infinity,
       MAX_CONTEXT_BEFORE_DIFF: { prop: 6, line: 6 },
       MAX_CONTEXT_AFTER_DIFF: { prop: 6, line: 6 },
     });
