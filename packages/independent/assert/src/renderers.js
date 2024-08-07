@@ -809,38 +809,34 @@ export const renderChildrenMultiline = (node, props) => {
   const childIndexToDisplayArray = [];
   const { childKeyToDisplaySet } = node;
   let firstDisplayedChildWithDiffIndex = -1;
-  if (childKeyToDisplaySet.size === 1) {
-    const childNode = node.childNodeMap.get(childrenKeys[0]);
-    if (childNode.comparison.hasAnyDiff) {
-      firstDisplayedChildWithDiffIndex = 0;
-    }
-    childIndexToDisplayArray.push(0);
-  } else {
-    let previousIndexDisplayed = -1;
-    for (const childKeyToDisplay of childKeyToDisplaySet) {
-      const childIndexToDisplay = childrenKeys.indexOf(childKeyToDisplay);
-      if (firstDisplayedChildWithDiffIndex === -1) {
-        const childNode = node.childNodeMap.get(childKeyToDisplay);
-        if (childNode.comparison.hasAnyDiff) {
-          firstDisplayedChildWithDiffIndex = childIndexToDisplay;
-        }
+
+  let previousIndexDisplayed = -1;
+  for (const childKeyToDisplay of childKeyToDisplaySet) {
+    const childIndexToDisplay = childrenKeys.indexOf(childKeyToDisplay);
+    if (firstDisplayedChildWithDiffIndex === -1) {
+      const childNode = node.childNodeMap.get(childKeyToDisplay);
+      if (childNode.comparison.hasAnyDiff) {
+        firstDisplayedChildWithDiffIndex = childIndexToDisplay;
       }
-      if (previousIndexDisplayed === -1) {
-        previousIndexDisplayed = childIndexToDisplay;
-      } else {
-        // ensure we hide section of length > 1
-        const gap = childIndexToDisplay - previousIndexDisplayed;
-        if (gap === 2) {
-          childIndexToDisplayArray.push(childIndexToDisplay - 1);
-        }
-        previousIndexDisplayed = childIndexToDisplay;
+    }
+    if (previousIndexDisplayed === -1) {
+      previousIndexDisplayed = childIndexToDisplay;
+    } else {
+      // ensure we hide section of length > 1
+      const gap = childIndexToDisplay - previousIndexDisplayed;
+      if (gap === 2) {
+        childIndexToDisplayArray.push(childIndexToDisplay - 1);
       }
-      childIndexToDisplayArray.push(childIndexToDisplay);
+      previousIndexDisplayed = childIndexToDisplay;
     }
-    // ensure we hide section of length > 1
-    if (previousIndexDisplayed === childrenKeys.length - 1) {
-      childIndexToDisplayArray.push(childrenKeys.length - 1);
-    }
+    childIndexToDisplayArray.push(childIndexToDisplay);
+  }
+  // ensure we hide section of length > 1
+  if (
+    childrenKeys.length > 1 &&
+    previousIndexDisplayed === childrenKeys.length - 1
+  ) {
+    childIndexToDisplayArray.push(childrenKeys.length - 1);
   }
   const focusedChildIndex =
     firstDisplayedChildWithDiffIndex === -1
