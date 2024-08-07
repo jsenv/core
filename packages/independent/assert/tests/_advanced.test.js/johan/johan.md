@@ -35,19 +35,20 @@ assert({
 AssertionError: actual and expect are different
 
 actual: {
-  ↑ 1 prop ↑
+  a: false,
   b: true,
   ACTUAL_NEW_1: true,
-  ↕ 2 props ↕
-  e: true,
-  ↓ 1 prop ↓
+  c: true,
+  d: true,
+  ↓ 2 props ↓
 }
 expect: {
-  ↑ 2 props ↑ (1 removed)
+  a: false,
+  EXPECT_NEW_1: true,
   b: true,
-  ↕ 2 props ↕
-  e: false,
-  ↓ 1 prop ↓
+  c: false,
+  d: false,
+  ↓ 2 props ↓
 }
 ```
 

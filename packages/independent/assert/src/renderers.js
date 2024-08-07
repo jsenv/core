@@ -802,17 +802,46 @@ export const renderChildrenMultiline = (node, props) => {
 
   const otherNode = node.otherNode;
   if (otherNode.placeholder) {
-    setIndexToDisplayArraySolo(node, props);
+    setChildKeyToDisplaySetSolo(node, props);
   } else {
-    setIndexToDisplayArrayDuo(node, otherNode, props);
+    setChildKeyToDisplaySetDuo(node, otherNode, props);
   }
-  const childIndexToDisplayArray = node.childIndexToDisplayArray;
-  const firstDisplayedChildWithDiffIndex = childIndexToDisplayArray.findIndex(
-    (index) => {
-      return node.childNodeMap.get(node.childrenKeys[index]).comparison
-        .hasAnyDiff;
-    },
-  );
+  const childIndexToDisplayArray = [];
+  const { childKeyToDisplaySet } = node;
+  let firstDisplayedChildWithDiffIndex = -1;
+  if (childKeyToDisplaySet.size === 1) {
+    const childNode = node.childNodeMap.get(childrenKeys[0]);
+    if (childNode.comparison.hasAnyDiff) {
+      firstDisplayedChildWithDiffIndex = 0;
+    }
+    childIndexToDisplayArray.push(0);
+  } else {
+    let previousIndexDisplayed = -1;
+    for (const childKeyToDisplay of childKeyToDisplaySet) {
+      const childIndexToDisplay = childrenKeys.indexOf(childKeyToDisplay);
+      if (firstDisplayedChildWithDiffIndex === -1) {
+        const childNode = node.childNodeMap.get(childKeyToDisplay);
+        if (childNode.comparison.hasAnyDiff) {
+          firstDisplayedChildWithDiffIndex = childIndexToDisplay;
+        }
+      }
+      if (previousIndexDisplayed === -1) {
+        previousIndexDisplayed = childIndexToDisplay;
+      } else {
+        // ensure we hide section of length > 1
+        const gap = childIndexToDisplay - previousIndexDisplayed;
+        if (gap === 2) {
+          childIndexToDisplayArray.push(childIndexToDisplay - 1);
+        }
+        previousIndexDisplayed = childIndexToDisplay;
+      }
+      childIndexToDisplayArray.push(childIndexToDisplay);
+    }
+    // ensure we hide section of length > 1
+    if (previousIndexDisplayed === childrenKeys.length - 1) {
+      childIndexToDisplayArray.push(childrenKeys.length - 1);
+    }
+  }
   const focusedChildIndex =
     firstDisplayedChildWithDiffIndex === -1
       ? 0
@@ -1061,247 +1090,117 @@ export const renderChildrenMultiline = (node, props) => {
   diff += applyStyles(node, endMarker);
   return diff;
 };
-const setIndexToDisplayArraySolo = (node, props) => {
+const setChildKeyToDisplaySetSolo = (node, props) => {
+  /*
+   * For a solo node:
+   * - All child has a diff (all added or removed)
+   * - We can display all child until maxDiff is reached
+   */
   const childrenKeys = node.childrenKeys;
-  if (childrenKeys.length === 0) {
-    node.childIndexToDisplayArray = [];
-    return;
-  }
-  const childIndexToDisplayArray = [];
-  const { maxDiff, maxChildBeforeDiff, maxChildAfterDiff } = getMaxDiffOptions(
-    node,
-    props,
-  );
-  const { firstChildWithDiffKey } = node;
-  if (maxDiff === Infinity || firstChildWithDiffKey === undefined) {
-    let index = 0;
-    // eslint-disable-next-line no-unused-vars
-    for (const key of childrenKeys) {
-      childIndexToDisplayArray.push(index);
-      index++;
-    }
-    node.childIndexToDisplayArray = childIndexToDisplayArray;
-    return;
-  }
+  const childKeyToDisplaySet = new Set();
+  const { maxDiff } = getMaxDiffOptions(node, props);
   let maxDiffReached = false;
   let diffCount = 0;
-  const visitedKeySet = new Set();
-  const applyChildDisplayedEffect = (childKey) => {
-    visitedKeySet.add(childKey);
+  for (const childKey of childrenKeys) {
+    if (maxDiffReached) {
+      break;
+    }
     const childNode = node.childNodeMap.get(childKey);
-    if (!childNode.comparison.hasAnyDiff) {
-      // pas de diff, qu'est ce qu'on fait? on continue
-      return false;
-    }
     if (isSourceCodeProperty(childNode)) {
     } else {
       diffCount++;
       maxDiffReached = diffCount > maxDiff;
     }
-    return true;
-  };
-  const indexSet = new Set();
-  const addChildByKey = (childKey, effectAlreadyApplied) => {
-    const childIndex = childrenKeys.indexOf(childKey);
-    if (indexSet.has(childIndex)) {
-      return;
-    }
-    if (!effectAlreadyApplied) {
-      applyChildDisplayedEffect(childKey);
-    }
-    indexSet.add(childIndex);
-  };
-  const addBefore = (childKey) => {
-    const beforeDiffRemainingCount = maxChildBeforeDiff;
-    if (beforeDiffRemainingCount < 1) {
-      return;
-    }
-    const childIndex = childrenKeys.indexOf(childKey);
-    let fromIndex = childIndex - beforeDiffRemainingCount;
-    let toIndex = childIndex;
-    if (fromIndex < 0) {
-      fromIndex = 0;
-    } else if (fromIndex > 0) {
-      fromIndex++;
-    }
-    let index = fromIndex;
-    while (index !== toIndex) {
-      addChildByKey(childrenKeys[childKey - index]);
-      index++;
-    }
-  };
-  const addAfter = (childKey) => {
-    const afterDiffRemainingCount = maxChildAfterDiff;
-    if (afterDiffRemainingCount < 1) {
-      return;
-    }
-    const childIndex = childrenKeys.indexOf(childKey);
-    let fromIndex = childIndex + 1;
-    let toIndex = childIndex + 1 + afterDiffRemainingCount;
-    if (toIndex > childrenKeys.length) {
-      toIndex = childrenKeys.length;
-    } else if (toIndex !== childrenKeys.length) {
-      toIndex--;
-    }
-    let index = fromIndex;
-    while (index !== toIndex) {
-      addChildByKey(childrenKeys[childIndex + index]);
-      index++;
-    }
-  };
-  for (const key of childrenKeys) {
-    if (maxDiffReached) {
-      break;
-    }
-    if (visitedKeySet.has(key)) {
-      continue;
-    }
-    if (!applyChildDisplayedEffect(key)) {
-      continue;
-    }
-    addBefore(key);
-    addChildByKey(key);
-    addAfter(key);
+    childKeyToDisplaySet.add(childKey);
   }
-  node.childIndexToDisplayArray = Array.from(indexSet);
+  node.childKeyToDisplaySet = childKeyToDisplaySet;
 };
-const setIndexToDisplayArrayDuo = (actualNode, expectNode, props) => {
-  if (
-    actualNode.childIndexToDisplayArray ||
-    expectNode.childIndexToDisplayArray
-  ) {
+const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
+  if (actualNode.childKeyToDisplaySet || expectNode.childKeyToDisplaySet) {
     return;
   }
-  const { maxDiff, maxChildBeforeDiff, maxChildAfterDiff } = getMaxDiffOptions(
-    actualNode,
-    props,
-  );
-  const actualIndexSet = new Set();
-  const expectIndexSet = new Set();
-  const actualChildrenKeys = actualNode.childrenKeys;
-  const expectChildrenKeys = expectNode.childrenKeys;
-  let diffCount = 0;
-  let maxDiffReached = false;
-  const visitedKeySet = new Set();
-  const applyChildDisplayedEffect = (childKey) => {
-    visitedKeySet.add(childKey);
-    let childNode;
-    if (actualChildrenKeys.indexOf(childKey) === -1) {
-      childNode = expectNode.childNodeMap.get(childKey);
-    } else {
-      childNode = actualNode.childNodeMap.get(childKey);
-    }
-    if (!childNode.comparison.hasAnyDiff) {
-      // pas de diff, qu'est ce qu'on fait? on continue
-      return false;
-    }
-    if (isSourceCodeProperty(childNode)) {
-    } else {
-      diffCount++;
-      maxDiffReached = diffCount > maxDiff;
-    }
-    return true;
-  };
-  const addSoloAt = (node, childIndex, effectAlreadyApplied) => {
-    const indexSet = node === actualNode ? actualIndexSet : expectIndexSet;
-    if (indexSet.has(childIndex)) {
-      return;
-    }
-    const childrenKeys =
-      node === actualNode ? actualChildrenKeys : expectChildrenKeys;
-    if (!effectAlreadyApplied) {
-      applyChildDisplayedEffect(childrenKeys[childIndex]);
-    }
-    indexSet.add(childIndex);
-  };
-  const addSoloBeforeIndex = (node, childIndex) => {
-    const beforeDiffRemainingCount = maxChildBeforeDiff;
-    if (beforeDiffRemainingCount < 1) {
-      return;
-    }
-    const childrenKeys =
-      node === actualNode ? actualChildrenKeys : expectChildrenKeys;
-    let fromIndex = childIndex - beforeDiffRemainingCount;
-    let toIndex = childIndex;
-    if (fromIndex < 0) {
-      fromIndex = 0;
-    } else if (fromIndex > 0) {
-      fromIndex++;
-    }
-    let index = fromIndex;
-    while (index !== toIndex) {
-      addDuoByKey(childrenKeys[childIndex - index]);
-      index++;
-    }
-  };
-  const addSoloAfterIndex = (node, childIndex) => {
-    const afterDiffRemainingCount = maxChildAfterDiff;
-    if (afterDiffRemainingCount < 1) {
-      return;
-    }
-    const childrenKeys =
-      node === actualNode ? actualChildrenKeys : expectChildrenKeys;
-    let fromIndex = childIndex + 1;
-    let toIndex = childIndex + 1 + afterDiffRemainingCount;
-    if (toIndex > childrenKeys.length) {
-      toIndex = childrenKeys.length;
-    } else if (toIndex !== childrenKeys.length) {
-      toIndex--;
-    }
-    let index = fromIndex;
-    while (index !== toIndex) {
-      addDuoByKey(childrenKeys[childIndex + index]);
-      index++;
-    }
-  };
-  const addDuoByKey = (childKey, effectAlreadyApplied) => {
-    const actualIndex = actualChildrenKeys.indexOf(childKey);
-    if (actualIndex > -1) {
-      addSoloAt(actualNode, actualIndex, effectAlreadyApplied);
-    }
-    const expectIndex = expectChildrenKeys.indexOf(childKey);
-    if (expectIndex > -1) {
-      addSoloAt(expectNode, expectIndex, effectAlreadyApplied);
-    }
-  };
-  const addDuoBeforeKey = (childKey) => {
-    const actualIndex = actualChildrenKeys.indexOf(childKey);
-    if (actualIndex > -1) {
-      addSoloBeforeIndex(actualNode, actualIndex);
-    }
-    const expectIndex = expectChildrenKeys.indexOf(childKey);
-    if (expectIndex > -1) {
-      addSoloBeforeIndex(expectNode, expectIndex);
-    }
-  };
-  const addDuoAfterKey = (childKey) => {
-    const actualIndex = actualChildrenKeys.indexOf(childKey);
-    if (actualIndex > -1) {
-      addSoloAfterIndex(actualNode, actualIndex);
-    }
-    const expectIndex = expectChildrenKeys.indexOf(childKey);
-    if (expectIndex > -1) {
-      addSoloAfterIndex(expectNode, expectIndex);
-    }
-  };
-
-  const keySet = new Set([...actualChildrenKeys, ...expectChildrenKeys]);
-  for (const key of keySet) {
-    if (maxDiffReached) {
-      break;
-    }
-    if (visitedKeySet.has(key)) {
-      continue;
-    }
-    if (!applyChildDisplayedEffect(key)) {
-      continue;
-    }
-    addDuoBeforeKey(key);
-    addDuoByKey(key, true);
-    addDuoAfterKey(key);
+  let referenceNode;
+  let otherNode;
+  if (actualNode.firstChildWithDiffKey === undefined) {
+    referenceNode = expectNode;
+    otherNode = actualNode;
+  } else {
+    referenceNode = actualNode;
+    otherNode = expectNode;
   }
-  actualNode.childIndexToDisplayArray = Array.from(actualIndexSet).sort();
-  expectNode.childIndexToDisplayArray = Array.from(expectIndexSet).sort();
+  const referenceChildKeyToDisplaySet = new Set();
+  {
+    const childKeyWithDiffSet = new Set();
+    const { childrenKeys, firstChildWithDiffKey } = referenceNode;
+    const { maxDiff, maxChildBeforeDiff, maxChildAfterDiff } =
+      getMaxDiffOptions(referenceNode, props);
+    const firstChildWithDiffIndex = childrenKeys.indexOf(firstChildWithDiffKey);
+    let childIndex = firstChildWithDiffIndex;
+    let maxDiffReached = false;
+    let diffCount = 0;
+    while (childIndex < childrenKeys.length) {
+      if (maxDiffReached) {
+        break;
+      }
+      const childKey = childrenKeys[childIndex];
+      childIndex++;
+      const childNode = referenceNode.childNodeMap.get(childKey);
+      if (!childNode.comparison.hasAnyDiff) {
+        continue;
+      }
+      childKeyWithDiffSet.add(childKey);
+      if (isSourceCodeProperty(childNode)) {
+      } else {
+        diffCount++;
+        maxDiffReached = diffCount > maxDiff;
+      }
+    }
+    for (const childKey of childKeyWithDiffSet) {
+      const childIndex = childrenKeys.indexOf(childKey);
+      if (maxChildBeforeDiff > 0) {
+        let fromIndex = childIndex - maxChildBeforeDiff;
+        let toIndex = childIndex;
+        if (fromIndex < 0) {
+          fromIndex = 0;
+        } else if (fromIndex > 0) {
+          fromIndex++;
+        }
+        let index = fromIndex;
+        while (index !== toIndex) {
+          referenceChildKeyToDisplaySet.add(childrenKeys[index]);
+          index++;
+        }
+      }
+      referenceChildKeyToDisplaySet.add(childKey);
+      if (maxChildAfterDiff > 0) {
+        let fromIndex = childIndex + 1;
+        let toIndex = childIndex + 1 + maxChildAfterDiff;
+        if (toIndex > childrenKeys.length) {
+          toIndex = childrenKeys.length;
+        } else if (toIndex !== childrenKeys.length) {
+          toIndex--;
+        }
+        let index = fromIndex;
+        while (index !== toIndex) {
+          referenceChildKeyToDisplaySet.add(childrenKeys[index]);
+          index++;
+        }
+      }
+    }
+  }
+  const otherChildKeyToDisplaySet = new Set();
+  const otherNodeChildrenKeys = otherNode.childrenKeys;
+  for (const referenceChildKeyToDisplay of referenceChildKeyToDisplaySet) {
+    const otherNodeChildIndex = otherNodeChildrenKeys.indexOf(
+      referenceChildKeyToDisplay,
+    );
+    if (otherNodeChildIndex === -1) {
+      continue;
+    }
+    otherChildKeyToDisplaySet.add(referenceChildKeyToDisplay);
+  }
+  referenceNode.childKeyToDisplaySet = referenceChildKeyToDisplaySet;
+  otherNode.childKeyToDisplaySet = otherChildKeyToDisplaySet;
 };
 const getMaxDiffOptions = (node, props) => {
   const { maxDiffType = "prop" } = node.multilineDiff;
