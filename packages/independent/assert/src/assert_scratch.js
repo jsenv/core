@@ -811,7 +811,7 @@ export const createAssert = ({
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
       columnsRemaining: MAX_COLUMNS - "actual: ".length,
-      diffCountRef: { current: 0 },
+      causeSet,
       startNode: actualStartNode,
     });
     diff += actualDiff;
@@ -830,7 +830,7 @@ export const createAssert = ({
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
       columnsRemaining: MAX_COLUMNS - "expect: ".length,
-      diffCountRef: { current: 0 },
+      causeSet,
       startNode: expectStartNode,
     });
     diff += expectDiff;
