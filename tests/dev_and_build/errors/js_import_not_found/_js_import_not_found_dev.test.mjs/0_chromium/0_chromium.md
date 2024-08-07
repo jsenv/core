@@ -16,7 +16,7 @@ see [./.jsenv/chrome@127.00/](./.jsenv/chrome@127.00/)
   <summary>see without style</summary>
 
 ```console
-GET http://localhost/not_found.js
+GET http://127.0.0.1/not_found.js
   404 Failed to fetch url content
   base/client/intermediate.js:2:7
   1 | // eslint-disable-next-line import/no-unresolved
@@ -76,7 +76,7 @@ chromium console.error > Failed to load resource: the server responded with a st
           "ownerSite": null,
           "isInline": false,
           "url": "base/client/main.js",
-          "serverUrl": "http://localhost/main.js"
+          "serverUrl": "http://127.0.0.1/main.js"
         },
         "text": "Error while loading module"
       },

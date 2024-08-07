@@ -13,7 +13,7 @@ see [./build/main.html](./build/main.html)
 # 2/2 resolve
 
 ```js
-http://localhost/main.html__inline_script__1
+http://127.0.0.1/main.html__inline_script__1
 ```
 ---
 
