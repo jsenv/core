@@ -2,8 +2,6 @@
  * This file is named "scratch" as a testimony of the fact it has been
  * recoded from scratch around april 2024
  *
- * To fix:
- * - Error: is a valid url ???
  * Nice to have:
  * - preact signals
  * - a DOM node should be converted to outerHTML right?
@@ -19,6 +17,7 @@ import stripAnsi from "strip-ansi";
 import { applyStyles, truncateAndApplyColor } from "./render_style.js";
 import {
   enableMultilineDiff,
+  isSourceCodeProperty,
   renderChar,
   renderChildren,
   renderChildrenMultiline,
@@ -113,7 +112,8 @@ const defaultOptions = {
   expect: undefined,
   MAX_DEPTH: 5,
   MAX_DEPTH_INSIDE_DIFF: 2,
-  MAX_DIFF_INSIDE_VALUE: { prop: 2, line: 1 },
+  MAX_DIFF: 15,
+  MAX_DIFF_PER_VALUE: { prop: 2, line: 1 },
   MAX_CONTEXT_BEFORE_DIFF: { prop: 2, line: 3 },
   MAX_CONTEXT_AFTER_DIFF: { prop: 2, line: 3 },
   MAX_COLUMNS: 100,
@@ -169,7 +169,8 @@ export const createAssert = ({
       expect,
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
-      MAX_DIFF_INSIDE_VALUE,
+      MAX_DIFF,
+      MAX_DIFF_PER_VALUE,
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
@@ -248,14 +249,36 @@ export const createAssert = ({
      */
     let isNot = false;
     let allowRecompare = false;
-    const compare = (actualNode, expectNode) => {
+    let diffCount = 0;
+    let maxDiffReached = false;
+    const compare = (actualNode, expectNode, { onDiffCallback } = {}) => {
       if (actualNode.ignore && actualNode.comparison) {
         return actualNode.comparison;
       }
       if (expectNode.ignore && expectNode.comparison) {
         return expectNode.comparison;
       }
+      const valueType =
+        (actualNode.placeholder ? expectNode : actualNode).subgroup ===
+        "line_entries"
+          ? "line"
+          : "prop";
+      const maxDiffPerValue =
+        typeof MAX_DIFF_PER_VALUE === "number"
+          ? MAX_DIFF_PER_VALUE
+          : MAX_DIFF_PER_VALUE[valueType];
+      let maxDiffPerValueReached = false;
+      let diffPerValueCounter = 0;
+
       const reasons = createReasons();
+      if (maxDiffReached) {
+        if (!actualNode.placeholder) {
+          actualNode.maxDiffReached = true;
+        }
+        if (!expectNode.placeholder) {
+          expectNode.maxDiffReached = true;
+        }
+      }
       const comparison = {
         actualNode,
         expectNode,
@@ -269,17 +292,48 @@ export const createAssert = ({
         expectNode.otherNode = actualNode;
       }
 
+      const onDiff = (node) => {
+        if (isSourceCodeProperty(node)) {
+          return;
+        }
+        diffCount++;
+        if (!maxDiffReached && diffCount >= MAX_DIFF) {
+          maxDiffReached = true;
+        }
+        onDiffCallback(node);
+      };
+      const onDuoDiff = (node) => {
+        if (node.subgroup === "entries") {
+          return;
+        }
+        if (node.subgroup === "entry") {
+          return;
+        }
+        onDiff(node);
+      };
+      const onSoloDiff = (node) => {
+        if (node.subgroup === "entries") {
+          return;
+        }
+        if (node.subgroup === "entry") {
+          return;
+        }
+        onDiff(node);
+      };
       const onSelfDiff = (reason) => {
         reasons.self.modified.add(reason);
         causeSet.add(comparison);
+        onDuoDiff(comparison.actualNode);
       };
       const onAdded = (reason) => {
         reasons.self.added.add(reason);
         causeSet.add(comparison);
+        onSoloDiff(comparison.actualNode);
       };
       const onRemoved = (reason) => {
         reasons.self.removed.add(reason);
         causeSet.add(comparison);
+        onSoloDiff(comparison.expectNode);
       };
 
       const subcompareDuo = (
@@ -294,7 +348,27 @@ export const createAssert = ({
         if (isRecomparison) {
           allowRecompare = true;
         }
-        const childComparison = compare(actualChildNode, expectChildNode);
+        if (maxDiffPerValueReached) {
+          console.log("set max diff reached on ", actualChildNode.subgroup);
+          if (!actualChildNode.placeholder) {
+            actualChildNode.maxDiffReached = true;
+          }
+          if (!expectChildNode.placeholder) {
+            expectChildNode.maxDiffReached = true;
+          }
+        }
+        const childComparison = compare(actualChildNode, expectChildNode, {
+          onDiffCallback: (node) => {
+            onDiffCallback(node);
+            diffPerValueCounter++;
+            if (
+              !maxDiffPerValueReached &&
+              diffPerValueCounter >= maxDiffPerValue
+            ) {
+              maxDiffPerValueReached = true;
+            }
+          },
+        });
         isNot = isNotPrevious;
         appendReasonGroup(
           comparison.reasons.inside,
@@ -721,7 +795,9 @@ export const createAssert = ({
       return comparison;
     };
 
-    const rootComparison = compare(actualRootNode, expectRootNode);
+    const rootComparison = compare(actualRootNode, expectRootNode, {
+      onDiffCallback: () => {},
+    });
     if (!rootComparison.hasAnyDiff) {
       return;
     }
@@ -815,7 +891,6 @@ export const createAssert = ({
     const actualDiff = actualStartNode.render({
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
-      MAX_DIFF_INSIDE_VALUE,
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
@@ -832,7 +907,6 @@ export const createAssert = ({
     const expectDiff = expectStartNode.render({
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
-      MAX_DIFF_INSIDE_VALUE,
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
@@ -1545,6 +1619,7 @@ let createRootNode;
       rangeToDisplay: null,
       displayedRange: null,
       childKeyToDisplaySet: null,
+      maxDiffReached: false,
       diffType: "",
       otherNode: null,
       // END will be set by comparison

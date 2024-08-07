@@ -22,6 +22,8 @@ assert({
       m: [true, true],
     },
   },
+  MAX_DIFF: 6,
+  MAX_DIFF_PER_VALUE: 6,
   MAX_DEPTH_INSIDE_DIFF: 0,
 });
 ```
@@ -46,13 +48,7 @@ actual: {
       false,
       true,
     ],
-    mr: [
-      false,
-    ],
-    m: [
-      false,
-      false,
-    ],
+    ↓ 2 props ↓
   },
 }
 expect: {
@@ -67,13 +63,7 @@ expect: {
     ma: [
       true,
     ],
-    mr: [
-      true,
-    ],
-    m: [
-      true,
-      true,
-    ],
+    ↓ 2 props ↓
   },
 }
 ```

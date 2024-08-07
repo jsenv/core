@@ -15,6 +15,7 @@ export const snapshotAssertTests = async (
         throw e;
       },
     },
+    logEffects: false,
     ...options,
   });
 };

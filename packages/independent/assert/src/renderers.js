@@ -189,7 +189,7 @@ const renderComposite = (node, props) => {
   }
 
   const compositePartsNode = node.childNodeMap.get("parts");
-  if (maxDepthReached) {
+  if (maxDepthReached || node.maxDiffReached) {
     node.startMarker = node.endMarker = "";
     if (node.isStringObject) {
       const length = node.value.length;
@@ -1144,7 +1144,7 @@ export const renderChildrenMultiline = (node, props) => {
   diff += applyStyles(node, endMarker);
   return diff;
 };
-const setChildKeyToDisplaySetSolo = (node, props) => {
+const setChildKeyToDisplaySetSolo = (node) => {
   /*
    * For a solo node:
    * - All child has a diff (all added or removed)
@@ -1152,18 +1152,10 @@ const setChildKeyToDisplaySetSolo = (node, props) => {
    */
   const childrenKeys = node.childrenKeys;
   const childKeyToDisplaySet = new Set();
-  const { maxDiff } = getMaxDiffOptions(node, props);
-  let maxDiffReached = false;
-  let diffCount = 0;
   for (const childKey of childrenKeys) {
-    if (maxDiffReached) {
-      break;
-    }
     const childNode = node.childNodeMap.get(childKey);
-    if (isSourceCodeProperty(childNode)) {
-    } else {
-      diffCount++;
-      maxDiffReached = diffCount > maxDiff;
+    if (childNode.maxDiffReached) {
+      break;
     }
     childKeyToDisplaySet.add(childKey);
   }
@@ -1191,28 +1183,23 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
   {
     const childKeyWithDiffSet = new Set();
     const { childrenKeys, firstChildWithDiffKey } = referenceNode;
-    const { maxDiff, maxChildBeforeDiff, maxChildAfterDiff } =
-      getMaxDiffOptions(referenceNode, props);
+    const { maxChildBeforeDiff, maxChildAfterDiff } = getMaxDiffOptions(
+      referenceNode,
+      props,
+    );
     const firstChildWithDiffIndex = childrenKeys.indexOf(firstChildWithDiffKey);
     let childIndex = firstChildWithDiffIndex;
-    let maxDiffReached = false;
-    let diffCount = 0;
     while (childIndex < childrenKeys.length) {
-      if (maxDiffReached) {
-        break;
-      }
       const childKey = childrenKeys[childIndex];
       childIndex++;
       const childNode = referenceNode.childNodeMap.get(childKey);
+      if (childNode.maxDiffReached) {
+        break;
+      }
       if (!childNode.comparison.hasAnyDiff) {
         continue;
       }
       childKeyWithDiffSet.add(childKey);
-      if (isSourceCodeProperty(childNode)) {
-      } else {
-        diffCount++;
-        maxDiffReached = diffCount > maxDiff;
-      }
     }
     for (const childKey of childKeyWithDiffSet) {
       const childIndex = childrenKeys.indexOf(childKey);
@@ -1226,7 +1213,8 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
         }
         let index = fromIndex;
         while (index !== toIndex) {
-          referenceChildKeyToDisplaySet.add(childrenKeys[index]);
+          const childKeyBefore = childrenKeys[index];
+          referenceChildKeyToDisplaySet.add(childKeyBefore);
           index++;
         }
       }
@@ -1241,7 +1229,12 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
         }
         let index = fromIndex;
         while (index !== toIndex) {
-          referenceChildKeyToDisplaySet.add(childrenKeys[index]);
+          const childKeyAfter = childrenKeys[index];
+          const childNodeAfter = referenceNode.childNodeMap.get(childKeyAfter);
+          if (childNodeAfter.maxDiffReached) {
+            break;
+          }
+          referenceChildKeyToDisplaySet.add(childKeyAfter);
           index++;
         }
       }
@@ -1263,15 +1256,7 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
 };
 const getMaxDiffOptions = (node, props) => {
   const { maxDiffType = "prop" } = node.multilineDiff;
-  const {
-    MAX_DIFF_INSIDE_VALUE,
-    MAX_CONTEXT_BEFORE_DIFF,
-    MAX_CONTEXT_AFTER_DIFF,
-  } = props;
-  const maxDiff =
-    typeof MAX_DIFF_INSIDE_VALUE === "number"
-      ? MAX_DIFF_INSIDE_VALUE
-      : MAX_DIFF_INSIDE_VALUE[maxDiffType];
+  const { MAX_CONTEXT_BEFORE_DIFF, MAX_CONTEXT_AFTER_DIFF } = props;
   const maxChildBeforeDiff =
     typeof MAX_CONTEXT_BEFORE_DIFF === "number"
       ? MAX_CONTEXT_BEFORE_DIFF
@@ -1280,10 +1265,10 @@ const getMaxDiffOptions = (node, props) => {
     typeof MAX_CONTEXT_AFTER_DIFF === "number"
       ? MAX_CONTEXT_AFTER_DIFF
       : MAX_CONTEXT_AFTER_DIFF[maxDiffType];
-  return { maxDiff, maxChildBeforeDiff, maxChildAfterDiff };
+  return { maxChildBeforeDiff, maxChildAfterDiff };
 };
 
-const isSourceCodeProperty = (node) => {
+export const isSourceCodeProperty = (node) => {
   const propertyValueNode = getPropertyValueNode(node);
   return propertyValueNode && propertyValueNode.isSourceCode;
 };
