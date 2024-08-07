@@ -189,7 +189,7 @@ const renderComposite = (node, props) => {
   }
 
   const compositePartsNode = node.childNodeMap.get("parts");
-  if (maxDepthReached || props.causeSet.size > props.MAX_DIFF) {
+  if (maxDepthReached || props.lightCauseSet.size > props.MAX_DIFF) {
     node.startMarker = node.endMarker = "";
     if (node.isStringObject) {
       const length = node.value.length;
@@ -216,6 +216,9 @@ const renderComposite = (node, props) => {
     }
     const ownPropertiesNode =
       compositePartsNode.childNodeMap.get("own_properties");
+    if (!ownPropertiesNode) {
+      return truncateAndApplyColor(`${node.objectTag}`, node, props);
+    }
     const ownPropertyCount = ownPropertiesNode.childNodeMap.size;
     const childrenColor =
       pickColorFromChildren(ownPropertiesNode) || node.color;
