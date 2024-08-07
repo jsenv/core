@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 669.45" background-color="#282c34">
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 859.45" background-color="#282c34">
   <g id="background">
-    <rect x="1" y="1" width="638" height="667.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+    <rect x="1" y="1" width="638" height="857.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
-  <foreignObject id="body" y="0" width="100%" height="679.45" overflow="hidden">
-    <svg width="414.86" height="669.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+  <foreignObject id="body" y="0" width="100%" height="869.45" overflow="hidden">
+    <svg width="414.86" height="859.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">AssertionError: </text>
         <text x="144.42" y="24.55" fill="#cd5555">actual</text>
@@ -50,72 +50,80 @@
         <text x="43.61" y="290.55" fill="#7f7f7f">m</text>
         <text x="52.01" y="290.55" fill="#7f7f7f">r</text>
         <text x="60.41" y="290.55" fill="#7f7f7f">: </text>
-        <text x="77.21" y="290.55" fill="#7f7f7f">Array(</text>
-        <text x="127.62" y="290.55" fill="#cd5555">1</text>
-        <text x="136.02" y="290.55" fill="#7f7f7f">)</text>
-        <text x="144.42" y="290.55" fill="#7f7f7f">,</text>
-        <text x="43.61" y="309.55" fill="#7f7f7f">m</text>
-        <text x="52.01" y="309.55" fill="#7f7f7f">: </text>
-        <text x="68.81" y="309.55" fill="#7f7f7f">Array(</text>
-        <text x="119.22" y="309.55" fill="#cd5555">2</text>
-        <text x="127.62" y="309.55" fill="#7f7f7f">)</text>
-        <text x="136.02" y="309.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="328.55" fill="#7f7f7f">}</text>
-        <text x="35.2" y="328.55" fill="#7f7f7f">,</text>
-        <text x="10" y="347.55" fill="#7f7f7f">}</text>
-        <text x="10" y="366.55" fill="#7f7f7f">expect:</text>
-        <text x="77.21" y="366.55" fill="#7f7f7f">{</text>
-        <text x="26.8" y="385.55" fill="#7f7f7f">a</text>
-        <text x="35.2" y="385.55" fill="#7f7f7f">: </text>
-        <text x="52.01" y="385.55" fill="#7f7f7f">{</text>
-        <text x="43.61" y="404.55" fill="#7f7f7f">s</text>
-        <text x="52.01" y="404.55" fill="#7f7f7f">a</text>
-        <text x="60.41" y="404.55" fill="#7f7f7f">m</text>
-        <text x="68.81" y="404.55" fill="#7f7f7f">e</text>
-        <text x="77.21" y="404.55" fill="#7f7f7f">: </text>
-        <text x="94.01" y="404.55" fill="#7f7f7f">[</text>
-        <text x="102.42" y="404.55" fill="#7f7f7f">true</text>
-        <text x="136.02" y="404.55" fill="#7f7f7f">]</text>
-        <text x="144.42" y="404.55" fill="#7f7f7f">,</text>
-        <text x="43.61" y="423.55" fill="#7f7f7f">a</text>
-        <text x="52.01" y="423.55" fill="#7f7f7f">: </text>
-        <text x="68.81" y="423.55" fill="#7f7f7f">[]</text>
-        <text x="85.61" y="423.55" fill="#7f7f7f">,</text>
-        <text x="43.61" y="442.55" fill="#7f7f7f">r</text>
-        <text x="52.01" y="442.55" fill="#7f7f7f">: </text>
-        <text x="68.81" y="442.55" fill="#7f7f7f">[</text>
-        <text x="60.41" y="461.55" fill="#DAA520">true</text>
-        <text x="94.01" y="461.55" fill="#DAA520">,</text>
-        <text x="60.41" y="480.55" fill="#DAA520">true</text>
-        <text x="94.01" y="480.55" fill="#DAA520">,</text>
-        <text x="60.41" y="499.55" fill="#DAA520">true</text>
-        <text x="94.01" y="499.55" fill="#DAA520">,</text>
-        <text x="43.61" y="518.55" fill="#7f7f7f">]</text>
-        <text x="52.01" y="518.55" fill="#7f7f7f">,</text>
-        <text x="43.61" y="537.55" fill="#7f7f7f">m</text>
-        <text x="52.01" y="537.55" fill="#7f7f7f">a</text>
-        <text x="60.41" y="537.55" fill="#7f7f7f">: </text>
-        <text x="77.21" y="537.55" fill="#7f7f7f">[</text>
-        <text x="60.41" y="556.55" fill="#11bc79">true</text>
-        <text x="94.01" y="556.55" fill="#7f7f7f">,</text>
-        <text x="43.61" y="575.55" fill="#7f7f7f">]</text>
-        <text x="52.01" y="575.55" fill="#7f7f7f">,</text>
-        <text x="43.61" y="594.55" fill="#7f7f7f">m</text>
-        <text x="52.01" y="594.55" fill="#7f7f7f">r</text>
-        <text x="60.41" y="594.55" fill="#7f7f7f">: </text>
-        <text x="77.21" y="594.55" fill="#7f7f7f">Array(</text>
-        <text x="127.62" y="594.55" fill="#11bc79">1</text>
-        <text x="136.02" y="594.55" fill="#7f7f7f">)</text>
-        <text x="144.42" y="594.55" fill="#7f7f7f">,</text>
-        <text x="43.61" y="613.55" fill="#7f7f7f">m</text>
-        <text x="52.01" y="613.55" fill="#7f7f7f">: </text>
-        <text x="68.81" y="613.55" fill="#7f7f7f">Array(</text>
-        <text x="119.22" y="613.55" fill="#11bc79">2</text>
-        <text x="127.62" y="613.55" fill="#7f7f7f">)</text>
-        <text x="136.02" y="613.55" fill="#7f7f7f">,</text>
-        <text x="26.8" y="632.55" fill="#7f7f7f">}</text>
-        <text x="35.2" y="632.55" fill="#7f7f7f">,</text>
-        <text x="10" y="651.55" fill="#7f7f7f">}</text>
+        <text x="77.21" y="290.55" fill="#7f7f7f">[</text>
+        <text x="60.41" y="309.55" fill="#cd5555">false</text>
+        <text x="102.42" y="309.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="328.55" fill="#7f7f7f">]</text>
+        <text x="52.01" y="328.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="347.55" fill="#7f7f7f">m</text>
+        <text x="52.01" y="347.55" fill="#7f7f7f">: </text>
+        <text x="68.81" y="347.55" fill="#7f7f7f">[</text>
+        <text x="60.41" y="366.55" fill="#cd5555">false</text>
+        <text x="102.42" y="366.55" fill="#7f7f7f">,</text>
+        <text x="60.41" y="385.55" fill="#cd5555">false</text>
+        <text x="102.42" y="385.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="404.55" fill="#7f7f7f">]</text>
+        <text x="52.01" y="404.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="423.55" fill="#7f7f7f">}</text>
+        <text x="35.2" y="423.55" fill="#7f7f7f">,</text>
+        <text x="10" y="442.55" fill="#7f7f7f">}</text>
+        <text x="10" y="461.55" fill="#7f7f7f">expect:</text>
+        <text x="77.21" y="461.55" fill="#7f7f7f">{</text>
+        <text x="26.8" y="480.55" fill="#7f7f7f">a</text>
+        <text x="35.2" y="480.55" fill="#7f7f7f">: </text>
+        <text x="52.01" y="480.55" fill="#7f7f7f">{</text>
+        <text x="43.61" y="499.55" fill="#7f7f7f">s</text>
+        <text x="52.01" y="499.55" fill="#7f7f7f">a</text>
+        <text x="60.41" y="499.55" fill="#7f7f7f">m</text>
+        <text x="68.81" y="499.55" fill="#7f7f7f">e</text>
+        <text x="77.21" y="499.55" fill="#7f7f7f">: </text>
+        <text x="94.01" y="499.55" fill="#7f7f7f">[</text>
+        <text x="102.42" y="499.55" fill="#7f7f7f">true</text>
+        <text x="136.02" y="499.55" fill="#7f7f7f">]</text>
+        <text x="144.42" y="499.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="518.55" fill="#7f7f7f">a</text>
+        <text x="52.01" y="518.55" fill="#7f7f7f">: </text>
+        <text x="68.81" y="518.55" fill="#7f7f7f">[]</text>
+        <text x="85.61" y="518.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="537.55" fill="#7f7f7f">r</text>
+        <text x="52.01" y="537.55" fill="#7f7f7f">: </text>
+        <text x="68.81" y="537.55" fill="#7f7f7f">[</text>
+        <text x="60.41" y="556.55" fill="#DAA520">true</text>
+        <text x="94.01" y="556.55" fill="#DAA520">,</text>
+        <text x="60.41" y="575.55" fill="#DAA520">true</text>
+        <text x="94.01" y="575.55" fill="#DAA520">,</text>
+        <text x="60.41" y="594.55" fill="#DAA520">true</text>
+        <text x="94.01" y="594.55" fill="#DAA520">,</text>
+        <text x="43.61" y="613.55" fill="#7f7f7f">]</text>
+        <text x="52.01" y="613.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="632.55" fill="#7f7f7f">m</text>
+        <text x="52.01" y="632.55" fill="#7f7f7f">a</text>
+        <text x="60.41" y="632.55" fill="#7f7f7f">: </text>
+        <text x="77.21" y="632.55" fill="#7f7f7f">[</text>
+        <text x="60.41" y="651.55" fill="#11bc79">true</text>
+        <text x="94.01" y="651.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="670.55" fill="#7f7f7f">]</text>
+        <text x="52.01" y="670.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="689.55" fill="#7f7f7f">m</text>
+        <text x="52.01" y="689.55" fill="#7f7f7f">r</text>
+        <text x="60.41" y="689.55" fill="#7f7f7f">: </text>
+        <text x="77.21" y="689.55" fill="#7f7f7f">[</text>
+        <text x="60.41" y="708.55" fill="#11bc79">true</text>
+        <text x="94.01" y="708.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="727.55" fill="#7f7f7f">]</text>
+        <text x="52.01" y="727.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="746.55" fill="#7f7f7f">m</text>
+        <text x="52.01" y="746.55" fill="#7f7f7f">: </text>
+        <text x="68.81" y="746.55" fill="#7f7f7f">[</text>
+        <text x="60.41" y="765.55" fill="#11bc79">true</text>
+        <text x="94.01" y="765.55" fill="#7f7f7f">,</text>
+        <text x="60.41" y="784.55" fill="#11bc79">true</text>
+        <text x="94.01" y="784.55" fill="#7f7f7f">,</text>
+        <text x="43.61" y="803.55" fill="#7f7f7f">]</text>
+        <text x="52.01" y="803.55" fill="#7f7f7f">,</text>
+        <text x="26.8" y="822.55" fill="#7f7f7f">}</text>
+        <text x="35.2" y="822.55" fill="#7f7f7f">,</text>
+        <text x="10" y="841.55" fill="#7f7f7f">}</text>
       </g>
     </svg>
   </foreignObject>

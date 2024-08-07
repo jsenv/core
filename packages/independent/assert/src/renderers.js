@@ -189,7 +189,7 @@ const renderComposite = (node, props) => {
   }
 
   const compositePartsNode = node.childNodeMap.get("parts");
-  if (maxDepthReached || props.lightCauseSet.size > props.MAX_DIFF) {
+  if (maxDepthReached) {
     node.startMarker = node.endMarker = "";
     if (node.isStringObject) {
       const length = node.value.length;
@@ -1204,9 +1204,6 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
       const childKey = childrenKeys[childIndex];
       childIndex++;
       const childNode = referenceNode.childNodeMap.get(childKey);
-      if (!childNode) {
-        debugger;
-      }
       if (!childNode.comparison.hasAnyDiff) {
         continue;
       }

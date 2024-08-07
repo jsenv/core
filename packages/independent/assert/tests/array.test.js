@@ -130,7 +130,6 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
           m: [true, true],
         },
       },
-      MAX_DIFF: 3,
       MAX_DEPTH_INSIDE_DIFF: 0,
     });
   });

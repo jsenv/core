@@ -1,4 +1,4 @@
-# [associative array with values](../../array.test.js#L143)
+# [associative array with values](../../array.test.js#L142)
 
 ```js
 assert({

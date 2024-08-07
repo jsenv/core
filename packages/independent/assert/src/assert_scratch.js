@@ -111,7 +111,6 @@ const PLACEHOLDER_FOR_MODIFIED = {
 const defaultOptions = {
   actual: undefined,
   expect: undefined,
-  MAX_DIFF: 6,
   MAX_DEPTH: 5,
   MAX_DEPTH_INSIDE_DIFF: 2,
   MAX_DIFF_INSIDE_VALUE: { prop: 2, line: 1 },
@@ -167,7 +166,6 @@ export const createAssert = ({
     const {
       actual,
       expect,
-      MAX_DIFF,
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
       MAX_DIFF_INSIDE_VALUE,
@@ -217,7 +215,6 @@ export const createAssert = ({
     });
 
     const causeSet = new Set();
-    const lightCauseSet = new Set();
 
     /*
      * Comparison are objects used to compare actualNode and expectNode
@@ -269,47 +266,17 @@ export const createAssert = ({
         expectNode.otherNode = actualNode;
       }
 
-      const isLight = (node) => {
-        if (
-          // will be reported by "line_entries"
-          node.subgroup === "char" ||
-          node.subgroup === "line_entry_value" ||
-          // will be reported by "property_entry"
-          node.subgroup === "property_descriptor_value" ||
-          node.subgroup === "property_descriptor" ||
-          node.subgroup === "property_key"
-        ) {
-          return false;
-        }
-        if (node.parent.otherNode.placeholder) {
-          return false;
-        }
-        return true;
-      };
       const onSelfDiff = (reason) => {
         reasons.self.modified.add(reason);
         causeSet.add(comparison);
-        if (isLight(comparison.actualNode)) {
-          lightCauseSet.add(comparison);
-        }
       };
       const onAdded = (reason) => {
         reasons.self.added.add(reason);
         causeSet.add(comparison);
-        if (expectNode === PLACEHOLDER_FOR_NOTHING) {
-          // already reported by ancestor
-        } else if (isLight(comparison.actualNode)) {
-          lightCauseSet.add(comparison);
-        }
       };
       const onRemoved = (reason) => {
         reasons.self.removed.add(reason);
         causeSet.add(comparison);
-        if (actualNode === PLACEHOLDER_FOR_NOTHING) {
-          // already reported by ancestor
-        } else if (isLight(comparison.expectNode)) {
-          lightCauseSet.add(comparison);
-        }
       };
 
       const subcompareDuo = (
@@ -834,7 +801,6 @@ export const createAssert = ({
     });
     diff += " ";
     const actualDiff = actualStartNode.render({
-      MAX_DIFF,
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
       MAX_DIFF_INSIDE_VALUE,
@@ -842,7 +808,6 @@ export const createAssert = ({
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
       columnsRemaining: MAX_COLUMNS - "actual: ".length,
-      lightCauseSet,
       startNode: actualStartNode,
     });
     diff += actualDiff;
@@ -853,7 +818,6 @@ export const createAssert = ({
     });
     diff += " ";
     const expectDiff = expectStartNode.render({
-      MAX_DIFF,
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
       MAX_DIFF_INSIDE_VALUE,
@@ -861,7 +825,6 @@ export const createAssert = ({
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
       columnsRemaining: MAX_COLUMNS - "expect: ".length,
-      lightCauseSet,
       startNode: expectStartNode,
     });
     diff += expectDiff;
