@@ -2131,6 +2131,8 @@ const defaultOptions = {
     line: 3
   },
   MAX_COLUMNS: 100,
+  order: "natural",
+  // "natural", "sort"
   forceMultilineDiff: false,
   message: "",
   details: ""
@@ -2172,6 +2174,7 @@ const createAssert = ({
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
+      order,
       forceMultilineDiff,
       message,
       details
@@ -2184,7 +2187,8 @@ const createAssert = ({
       getWellKnownValuePath,
       tokenizeString,
       measureStringWidth,
-      assert
+      assert,
+      order
     };
     const actualRootNode = createRootNode({
       context: {
@@ -2341,6 +2345,9 @@ const createAssert = ({
               }
             }
           }
+          if (actualNode.context.order === "sort") {
+            actualChildrenKeys.sort();
+          }
           actualNode.childrenKeys = actualChildrenKeys;
           actualNode.firstChildWithDiffKey = actualFirstChildWithDiffKey;
         }
@@ -2385,6 +2392,9 @@ const createAssert = ({
               }
             }
           }
+          if (expectNode.context.order === "sort") {
+            expectChildrenKeys.sort();
+          }
           expectNode.childrenKeys = expectChildrenKeys;
           expectNode.firstChildWithDiffKey = expectFirstChildWithDiffKey;
         }
@@ -2406,6 +2416,9 @@ const createAssert = ({
               firstChildWithDiffKey = childKey;
             }
           }
+        }
+        if (node.context.order === "sort") {
+          childrenKeys.sort();
         }
         node.childrenKeys = childrenKeys;
         node.firstChildWithDiffKey = firstChildWithDiffKey;
