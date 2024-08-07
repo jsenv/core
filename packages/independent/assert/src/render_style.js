@@ -1,6 +1,11 @@
 import { ANSI } from "@jsenv/humanize";
 
-export const truncateAndApplyColor = (valueDiff, node, props) => {
+export const truncateAndApplyColor = (
+  valueDiff,
+  node,
+  props,
+  { chirurgicalColor } = {},
+) => {
   const { columnsRemaining } = props;
   if (columnsRemaining < 1) {
     return props.endSkippedMarkerDisabled ? "" : applyStyles(node, "…");
@@ -32,14 +37,14 @@ export const truncateAndApplyColor = (valueDiff, node, props) => {
   if (endMarker) {
     diff += endMarker;
   }
-  diff = applyStyles(node, diff);
+  diff = applyStyles(node, diff, { chirurgicalColor });
   return diff;
 };
 
 export const applyStyles = (
   node,
   text,
-  { color = node.color, underline = true } = {},
+  { chirurgicalColor, color = node.color, underline = true } = {},
 ) => {
   let shouldAddUnderline;
   let shouldAddColor;
@@ -88,6 +93,28 @@ export const applyStyles = (
       break should_color;
     }
     shouldAddColor = true;
+  }
+  if (chirurgicalColor && chirurgicalColor.color !== color) {
+    let stylized = "";
+    const before = text.slice(0, chirurgicalColor.start);
+    const middle = text.slice(chirurgicalColor.start, chirurgicalColor.end);
+    const after = text.slice(chirurgicalColor.end);
+    if (shouldAddUnderline) {
+      stylized += ANSI.effect(before, ANSI.UNDERLINE);
+    }
+    if (shouldAddColor) {
+      stylized = ANSI.color(before, color);
+    }
+    if (shouldAddColor) {
+      stylized += ANSI.color(middle, chirurgicalColor.color);
+    }
+    if (shouldAddUnderline) {
+      stylized += ANSI.effect(before, ANSI.UNDERLINE);
+    }
+    if (shouldAddColor) {
+      stylized += ANSI.color(after, color);
+    }
+    return stylized;
   }
   if (shouldAddUnderline) {
     text = ANSI.effect(text, ANSI.UNDERLINE);

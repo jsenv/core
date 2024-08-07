@@ -13,12 +13,21 @@ export const renderValue = (node, props) => {
 };
 export const renderPrimitive = (node, props) => {
   if (props.columnsRemaining < 1) {
+    if (node.diffType !== "same") {
+      props.diffCountRef.current++;
+    }
     return applyStyles(node, "…");
   }
   if (node.isSourceCode) {
+    if (node.diffType !== "same") {
+      props.diffCountRef.current++;
+    }
     return truncateAndApplyColor("[source code]", node, props);
   }
   if (node.isUndefined) {
+    if (node.diffType !== "same") {
+      props.diffCountRef.current++;
+    }
     return truncateAndApplyColor("undefined", node, props);
   }
   if (node.isString) {
@@ -31,11 +40,20 @@ export const renderPrimitive = (node, props) => {
     return renderNumber(node, props);
   }
   if (node.isBigInt) {
+    if (node.diffType !== "same") {
+      props.diffCountRef.current++;
+    }
     return truncateAndApplyColor(`${node.value}n`, node, props);
+  }
+  if (node.diffType !== "same") {
+    props.diffCountRef.current++;
   }
   return truncateAndApplyColor(JSON.stringify(node.value), node, props);
 };
 export const renderString = (node, props) => {
+  if (node.diffType !== "same") {
+    props.diffCountRef.current++;
+  }
   if (node.value === VALUE_OF_RETURN_VALUE_ENTRY_KEY) {
     return truncateAndApplyColor("valueOf()", node, props);
   }
@@ -63,6 +81,9 @@ export const renderString = (node, props) => {
   return truncateAndApplyColor(diff, node, props);
 };
 export const renderEmptyValue = (node, props) => {
+  if (node.diffType !== "same") {
+    props.diffCountRef.current++;
+  }
   return truncateAndApplyColor("empty", node, props);
 };
 export const renderChar = (node, props) => {
@@ -144,6 +165,9 @@ const CHAR_TO_ESCAPE = {
 };
 const stringCharMappingDefault = new Map(Object.entries(CHAR_TO_ESCAPE));
 export const renderNumber = (node, props) => {
+  if (node.diffType !== "same") {
+    props.diffCountRef.current++;
+  }
   const numberCompositionNode = node.childNodeMap.get("composition");
   if (numberCompositionNode) {
     return numberCompositionNode.render(props);
@@ -151,6 +175,9 @@ export const renderNumber = (node, props) => {
   return truncateAndApplyColor(JSON.stringify(node.value), node, props);
 };
 const renderSymbol = (node, props) => {
+  if (node.diffType !== "same") {
+    props.diffCountRef.current++;
+  }
   const wellKnownNode = node.childNodeMap.get("well_known");
   if (wellKnownNode) {
     return wellKnownNode.render(props);
@@ -160,6 +187,9 @@ const renderSymbol = (node, props) => {
 };
 
 const renderComposite = (node, props) => {
+  if (node.diffType !== "same") {
+    props.diffCountRef.current++;
+  }
   // it's here that at some point we'll compare more than just own properties
   // because composite also got a prototype
   // and a constructor that might differ
@@ -187,8 +217,9 @@ const renderComposite = (node, props) => {
     props.firstDiffDepth = nodeDepth;
     maxDepthReached = nodeDepth > props.MAX_DEPTH_INSIDE_DIFF;
   }
+
   const compositePartsNode = node.childNodeMap.get("parts");
-  if (maxDepthReached) {
+  if (maxDepthReached || props.diffCountRef.current > props.MAX_DIFF) {
     node.startMarker = node.endMarker = "";
     if (node.isStringObject) {
       const length = node.value.length;
@@ -198,15 +229,37 @@ const renderComposite = (node, props) => {
       compositePartsNode.childNodeMap.get("indexed_entries");
     if (indexedEntriesNode) {
       const length = indexedEntriesNode.childNodeMap.size;
-      return truncateAndApplyColor(`${node.objectTag}(${length})`, node, props);
+      const childrenColor =
+        pickColorFromChildren(indexedEntriesNode) || node.color;
+      return truncateAndApplyColor(
+        `${node.objectTag}(${length})`,
+        node,
+        props,
+        {
+          chirurgicalColor: {
+            start: `${node.objectTag}(`.length,
+            end: `${node.objectTag}(${length}`.length,
+            color: childrenColor,
+          },
+        },
+      );
     }
     const ownPropertiesNode =
       compositePartsNode.childNodeMap.get("own_properties");
     const ownPropertyCount = ownPropertiesNode.childNodeMap.size;
+    const childrenColor =
+      pickColorFromChildren(ownPropertiesNode) || node.color;
     return truncateAndApplyColor(
       `${node.objectTag}(${ownPropertyCount})`,
       node,
       props,
+      {
+        chirurgicalColor: {
+          start: `${node.objectTag}(`.length,
+          end: `${node.objectTag}(${ownPropertyCount}`.length,
+          color: childrenColor,
+        },
+      },
     );
   }
   return compositePartsNode.render(props);
@@ -1329,4 +1382,17 @@ const shouldDisableSeparator = (
     return !hasTrailingSeparator;
   }
   return false;
+};
+
+const pickColorFromChildren = (node) => {
+  let color;
+  for (const [, childNode] of node.childNodeMap) {
+    if (childNode.diffType === "modified") {
+      return childNode.color;
+    }
+    if (childNode.diffType === "solo") {
+      color = childNode.color;
+    }
+  }
+  return color;
 };

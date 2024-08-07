@@ -1,4 +1,4 @@
-# [added on third pos](../../array.test.js#L172)
+# [added on third pos](../../array.test.js#L173)
 
 ```js
 assert({

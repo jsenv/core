@@ -111,6 +111,7 @@ const PLACEHOLDER_FOR_MODIFIED = {
 const defaultOptions = {
   actual: undefined,
   expect: undefined,
+  MAX_DIFF: 6,
   MAX_DEPTH: 5,
   MAX_DEPTH_INSIDE_DIFF: 2,
   MAX_DIFF_INSIDE_VALUE: { prop: 2, line: 1 },
@@ -166,6 +167,7 @@ export const createAssert = ({
     const {
       actual,
       expect,
+      MAX_DIFF,
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
       MAX_DIFF_INSIDE_VALUE,
@@ -801,6 +803,7 @@ export const createAssert = ({
     });
     diff += " ";
     const actualDiff = actualStartNode.render({
+      MAX_DIFF,
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
       MAX_DIFF_INSIDE_VALUE,
@@ -808,6 +811,7 @@ export const createAssert = ({
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
       columnsRemaining: MAX_COLUMNS - "actual: ".length,
+      diffCountRef: { current: 0 },
       startNode: actualStartNode,
     });
     diff += actualDiff;
@@ -818,6 +822,7 @@ export const createAssert = ({
     });
     diff += " ";
     const expectDiff = expectStartNode.render({
+      MAX_DIFF,
       MAX_DEPTH,
       MAX_DEPTH_INSIDE_DIFF,
       MAX_DIFF_INSIDE_VALUE,
@@ -825,6 +830,7 @@ export const createAssert = ({
       MAX_CONTEXT_AFTER_DIFF,
       MAX_COLUMNS,
       columnsRemaining: MAX_COLUMNS - "expect: ".length,
+      diffCountRef: { current: 0 },
       startNode: expectStartNode,
     });
     diff += expectDiff;

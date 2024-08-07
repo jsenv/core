@@ -1,4 +1,4 @@
-# [string and array of chars](../../array.test.js#L136)
+# [string and array of chars](../../array.test.js#L137)
 
 ```js
 assert({
