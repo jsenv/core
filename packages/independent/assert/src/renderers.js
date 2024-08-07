@@ -187,6 +187,7 @@ const renderComposite = (node, props) => {
     props.firstDiffDepth = nodeDepth;
     maxDepthReached = nodeDepth > props.MAX_DEPTH_INSIDE_DIFF;
   }
+
   const compositePartsNode = node.childNodeMap.get("parts");
   if (maxDepthReached) {
     node.startMarker = node.endMarker = "";
@@ -198,15 +199,40 @@ const renderComposite = (node, props) => {
       compositePartsNode.childNodeMap.get("indexed_entries");
     if (indexedEntriesNode) {
       const length = indexedEntriesNode.childNodeMap.size;
-      return truncateAndApplyColor(`${node.objectTag}(${length})`, node, props);
+      const childrenColor =
+        pickColorFromChildren(indexedEntriesNode) || node.color;
+      return truncateAndApplyColor(
+        `${node.objectTag}(${length})`,
+        node,
+        props,
+        {
+          chirurgicalColor: {
+            start: `${node.objectTag}(`.length,
+            end: `${node.objectTag}(${length}`.length,
+            color: childrenColor,
+          },
+        },
+      );
     }
     const ownPropertiesNode =
       compositePartsNode.childNodeMap.get("own_properties");
+    if (!ownPropertiesNode) {
+      return truncateAndApplyColor(`${node.objectTag}`, node, props);
+    }
     const ownPropertyCount = ownPropertiesNode.childNodeMap.size;
+    const childrenColor =
+      pickColorFromChildren(ownPropertiesNode) || node.color;
     return truncateAndApplyColor(
       `${node.objectTag}(${ownPropertyCount})`,
       node,
       props,
+      {
+        chirurgicalColor: {
+          start: `${node.objectTag}(`.length,
+          end: `${node.objectTag}(${ownPropertyCount}`.length,
+          color: childrenColor,
+        },
+      },
     );
   }
   return compositePartsNode.render(props);
@@ -1178,9 +1204,6 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
       const childKey = childrenKeys[childIndex];
       childIndex++;
       const childNode = referenceNode.childNodeMap.get(childKey);
-      if (!childNode) {
-        debugger;
-      }
       if (!childNode.comparison.hasAnyDiff) {
         continue;
       }
@@ -1329,4 +1352,17 @@ const shouldDisableSeparator = (
     return !hasTrailingSeparator;
   }
   return false;
+};
+
+const pickColorFromChildren = (node) => {
+  let color;
+  for (const [, childNode] of node.childNodeMap) {
+    if (childNode.diffType === "modified") {
+      return childNode.color;
+    }
+    if (childNode.diffType === "solo") {
+      color = childNode.color;
+    }
+  }
+  return color;
 };

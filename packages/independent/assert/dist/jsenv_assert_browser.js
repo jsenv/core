@@ -132,7 +132,9 @@ function stripAnsi(string) {
   return string.replace(regex, '');
 }
 
-const truncateAndApplyColor = (valueDiff, node, props) => {
+const truncateAndApplyColor = (valueDiff, node, props, {
+  chirurgicalColor
+} = {}) => {
   const {
     columnsRemaining
   } = props;
@@ -169,10 +171,13 @@ const truncateAndApplyColor = (valueDiff, node, props) => {
   if (endMarker) {
     diff += endMarker;
   }
-  diff = applyStyles(node, diff);
+  diff = applyStyles(node, diff, {
+    chirurgicalColor
+  });
   return diff;
 };
 const applyStyles = (node, text, {
+  chirurgicalColor,
   color = node.color,
   underline = true
 } = {}) => {
@@ -227,6 +232,28 @@ const applyStyles = (node, text, {
       break should_color;
     }
     shouldAddColor = true;
+  }
+  if (chirurgicalColor && chirurgicalColor.color !== color) {
+    let stylized = "";
+    const before = text.slice(0, chirurgicalColor.start);
+    const middle = text.slice(chirurgicalColor.start, chirurgicalColor.end);
+    const after = text.slice(chirurgicalColor.end);
+    if (shouldAddUnderline) {
+      stylized += ANSI.effect(before, ANSI.UNDERLINE);
+    }
+    if (shouldAddColor) {
+      stylized = ANSI.color(before, color);
+    }
+    if (shouldAddColor) {
+      stylized += ANSI.color(middle, chirurgicalColor.color);
+    }
+    if (shouldAddUnderline) {
+      stylized += ANSI.effect(before, ANSI.UNDERLINE);
+    }
+    if (shouldAddColor) {
+      stylized += ANSI.color(after, color);
+    }
+    return stylized;
   }
   if (shouldAddUnderline) {
     text = ANSI.effect(text, ANSI.UNDERLINE);
@@ -458,11 +485,28 @@ const renderComposite = (node, props) => {
     const indexedEntriesNode = compositePartsNode.childNodeMap.get("indexed_entries");
     if (indexedEntriesNode) {
       const length = indexedEntriesNode.childNodeMap.size;
-      return truncateAndApplyColor("".concat(node.objectTag, "(").concat(length, ")"), node, props);
+      const childrenColor = pickColorFromChildren(indexedEntriesNode) || node.color;
+      return truncateAndApplyColor("".concat(node.objectTag, "(").concat(length, ")"), node, props, {
+        chirurgicalColor: {
+          start: "".concat(node.objectTag, "(").length,
+          end: "".concat(node.objectTag, "(").concat(length).length,
+          color: childrenColor
+        }
+      });
     }
     const ownPropertiesNode = compositePartsNode.childNodeMap.get("own_properties");
+    if (!ownPropertiesNode) {
+      return truncateAndApplyColor("".concat(node.objectTag), node, props);
+    }
     const ownPropertyCount = ownPropertiesNode.childNodeMap.size;
-    return truncateAndApplyColor("".concat(node.objectTag, "(").concat(ownPropertyCount, ")"), node, props);
+    const childrenColor = pickColorFromChildren(ownPropertiesNode) || node.color;
+    return truncateAndApplyColor("".concat(node.objectTag, "(").concat(ownPropertyCount, ")"), node, props, {
+      chirurgicalColor: {
+        start: "".concat(node.objectTag, "(").length,
+        end: "".concat(node.objectTag, "(").concat(ownPropertyCount).length,
+        color: childrenColor
+      }
+    });
   }
   return compositePartsNode.render(props);
 };
@@ -1365,9 +1409,6 @@ const setChildKeyToDisplaySetDuo = (actualNode, expectNode, props) => {
       const childKey = childrenKeys[childIndex];
       childIndex++;
       const childNode = referenceNode.childNodeMap.get(childKey);
-      if (!childNode) {
-        debugger;
-      }
       if (!childNode.comparison.hasAnyDiff) {
         continue;
       }
@@ -1502,6 +1543,18 @@ const shouldDisableSeparator = (childIndex, childrenKeys, {
     return !hasTrailingSeparator;
   }
   return false;
+};
+const pickColorFromChildren = node => {
+  let color;
+  for (const [, childNode] of node.childNodeMap) {
+    if (childNode.diffType === "modified") {
+      return childNode.color;
+    }
+    if (childNode.diffType === "solo") {
+      color = childNode.color;
+    }
+  }
+  return color;
 };
 
 // canParseDate can be called on any string

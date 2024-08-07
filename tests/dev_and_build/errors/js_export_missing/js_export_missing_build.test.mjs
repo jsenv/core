@@ -22,15 +22,17 @@ await snapshotBuildTests(
     test("0_basic", () => run());
   },
   {
-    errorTransform: (error) => {
-      if (error.message) {
-        error.message = error.message.split("\n").slice(0, 3).join("\n");
-      }
-      if (error.cause) {
-        error.cause = {
-          code: error.cause.code,
-        };
-      }
+    executionEffects: {
+      catch: (error) => {
+        if (error.message) {
+          error.message = error.message.split("\n").slice(0, 3).join("\n");
+        }
+        if (error.cause) {
+          error.cause = {
+            code: error.cause.code,
+          };
+        }
+      },
     },
   },
 );

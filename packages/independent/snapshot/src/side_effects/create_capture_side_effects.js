@@ -8,6 +8,7 @@ export const createCaptureSideEffects = ({
   logEffects = true,
   filesystemEffects = true,
   filesystemActions,
+  executionEffects = {},
   rootDirectoryUrl,
   replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
     rootDirectoryUrl,
@@ -285,6 +286,12 @@ export const createCaptureSideEffects = ({
             return sideEffects;
           },
           (e) => {
+            if (executionEffects.catch === false) {
+              throw e;
+            }
+            if (typeof executionEffects.catch === "function") {
+              executionEffects.catch(e);
+            }
             onReject(e);
             onFinally();
             return sideEffects;
@@ -295,6 +302,12 @@ export const createCaptureSideEffects = ({
       onReturn(valueReturned);
       return sideEffects;
     } catch (e) {
+      if (executionEffects.catch === false) {
+        throw e;
+      }
+      if (typeof executionEffects.catch === "function") {
+        executionEffects.catch(e);
+      }
       onCatch(e);
       return sideEffects;
     } finally {

@@ -6,10 +6,14 @@ export const snapshotAssertTests = async (
   options,
 ) => {
   await snapshotTests(testFileUrl, fnRegisteringTest, {
-    errorTransform: (e) => {
-      if (e.constructor?.name === "AssertionError") {
-        e.stack = "";
-      }
+    executionEffects: {
+      catch: (e) => {
+        if (e.constructor?.name === "AssertionError") {
+          e.stack = "";
+          return;
+        }
+        throw e;
+      },
     },
     ...options,
   });
