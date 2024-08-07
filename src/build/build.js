@@ -470,9 +470,23 @@ build ${entryPointKeys.length} entry points`);
             addToBundlerIfAny(rawUrlInfo);
           }
           if (rawUrlInfo.type === "html") {
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+            for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
+              if (
+                referenceToOther.isResourceHint &&
+                referenceToOther.expectedType === "js_module"
+              ) {
+                const referencedUrlInfo = referenceToOther.urlInfo;
+                if (
+                  referencedUrlInfo &&
+                  // something else than the resource hint is using this url
+                  referencedUrlInfo.referenceFromOthersSet.size > 0
+                ) {
+                  addToBundlerIfAny(referencedUrlInfo);
+                  continue;
+                }
+              }
               if (referenceToOther.isWeak) {
-                return;
+                continue;
               }
               const referencedUrlInfo = referenceToOther.urlInfo;
               if (referencedUrlInfo.isInline) {
@@ -488,52 +502,40 @@ build ${entryPointKeys.length} entry points`);
                   );
                 }
                 // inline content cannot be bundled
-                return;
+                continue;
               }
               addToBundlerIfAny(referencedUrlInfo);
-            });
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              if (
-                referenceToOther.isResourceHint &&
-                referenceToOther.expectedType === "js_module"
-              ) {
-                const referencedUrlInfo = referenceToOther.urlInfo;
-                if (
-                  referencedUrlInfo &&
-                  // something else than the resource hint is using this url
-                  referencedUrlInfo.referenceFromOthersSet.size > 0
-                ) {
-                  addToBundlerIfAny(referencedUrlInfo);
-                }
-              }
-            });
+            }
             return;
           }
           // File referenced with new URL('./file.js', import.meta.url)
           // are entry points that should be bundled
           // For instance we will bundle service worker/workers detected like this
           if (rawUrlInfo.type === "js_module") {
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+            for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
               if (referenceToOther.type === "js_url") {
                 const referencedUrlInfo = referenceToOther.urlInfo;
+                let isAlreadyBundled = false;
                 for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
                   if (referenceFromOther.url === referencedUrlInfo.url) {
                     if (
                       referenceFromOther.subtype === "import_dynamic" ||
                       referenceFromOther.type === "script"
                     ) {
-                      // will already be bundled
-                      return;
+                      isAlreadyBundled = true;
+                      break;
                     }
                   }
                 }
-                addToBundlerIfAny(referencedUrlInfo);
-                return;
+                if (!isAlreadyBundled) {
+                  addToBundlerIfAny(referencedUrlInfo);
+                }
+                continue;
               }
               if (referenceToOther.type === "js_inline_content") {
                 // we should bundle it too right?
               }
-            });
+            }
           }
         },
       );

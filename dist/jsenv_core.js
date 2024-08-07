@@ -15032,6 +15032,8 @@ const jsenvPluginDirectoryReferenceEffect = (
         actionForDirectory = "copy";
       } else if (reference.type === "filesystem") {
         actionForDirectory = "copy";
+      } else if (reference.type === "http_request") {
+        actionForDirectory = "preserve";
       } else if (typeof directoryReferenceEffect === "string") {
         actionForDirectory = directoryReferenceEffect;
       } else if (typeof directoryReferenceEffect === "function") {
@@ -15049,7 +15051,9 @@ const jsenvPluginDirectoryReferenceEffect = (
         throw error;
       }
       if (actionForDirectory === "preserve") {
-        return `ignore:${reference.specifier}`;
+        return reference.ownerUrlInfo.context.dev
+          ? null
+          : `ignore:${reference.specifier}`;
       }
       return null;
     },
@@ -17486,7 +17490,7 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
     }
     const packageResolution = applyPackageResolve(specifier, resolutionContext);
     const search = new URL(specifier, "file:///").search;
-    if (search) {
+    if (search && !new URL(packageResolution.url).search) {
       packageResolution.url = `${packageResolution.url}${search}`;
     }
     return packageResolution;
@@ -18408,6 +18412,11 @@ const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
       }
     },
     resolveReference: (reference) => {
+      if (reference.specifier.startsWith("node_esm:")) {
+        reference.specifier = reference.specifier.slice("node_esm:".length);
+        const result = nodeEsmResolverDefault(reference);
+        return result;
+      }
       const urlType = urlTypeFromReference(reference);
       const resolver = resolvers[urlType];
       return resolver ? resolver(reference) : null;
@@ -18434,7 +18443,6 @@ const urlTypeFromReference = (reference) => {
   if (reference.injected) {
     return reference.expectedType;
   }
-
   return reference.ownerUrlInfo.type;
 };
 
@@ -18600,15 +18608,14 @@ const resolveSymlink = (fileUrl) => {
   return realUrlObject.href;
 };
 
-const html404AndParentDirIsEmptyFileUrl = new URL(
-  "./html/html_404_and_parent_dir_is_empty.html",
-  import.meta.url,
-);
 const html404AndParentDirFileUrl = new URL(
   "./html/html_404_and_parent_dir.html",
   import.meta.url,
 );
-const htmlFileUrlForDirectory = new URL("./html/directory.html", import.meta.url);
+const htmlFileUrlForDirectory = new URL(
+  "./html/directory.html",
+  import.meta.url,
+);
 
 const jsenvPluginProtocolFile = ({
   magicExtensions,
@@ -18685,12 +18692,14 @@ const jsenvPluginProtocolFile = ({
             ? pickContentType(urlInfo.context.request, ["text/html"])
             : false;
           if (acceptsHtml) {
+            firstReference.expectedType = "html";
             const html = generateHtmlForDirectory(
               urlObject.href,
               directoryContentArray,
               urlInfo.context.rootDirectoryUrl,
             );
             return {
+              type: "html",
               contentType: "text/html",
               content: html,
             };
@@ -18731,6 +18740,9 @@ const jsenvPluginProtocolFile = ({
             return {
               contentType: "text/html",
               content: html,
+              headers: {
+                "cache-control": "no-cache",
+              },
             };
           }
         }
@@ -18754,10 +18766,13 @@ const generateHtmlForDirectory = (
   rootDirectoryUrl,
 ) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+
   const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
+  const directoryRelativeUrl = urlToRelativeUrl(directoryUrl, rootDirectoryUrl);
   const replacers = {
-    directoryRelativeUrl: urlToRelativeUrl(directoryUrl, rootDirectoryUrl),
     directoryUrl,
+    directoryNav: () =>
+      generateDirectoryNav(directoryRelativeUrl, rootDirectoryUrl),
     directoryContent: () =>
       generateDirectoryContent(
         directoryContentArray,
@@ -18774,30 +18789,21 @@ const generateHtmlForENOENTOnHtmlFile = (
   parentDirectoryUrl,
   rootDirectoryUrl,
 ) => {
-  if (parentDirectoryContentArray.length === 0) {
-    const htmlFor404AndParentDirIsEmpty = String(
-      readFileSync(html404AndParentDirIsEmptyFileUrl),
-    );
-    return replacePlaceholders$1(htmlFor404AndParentDirIsEmpty, {
-      fileRelativeUrl: urlToRelativeUrl(url, rootDirectoryUrl),
-      parentDirectoryRelativeUrl: urlToRelativeUrl(
-        parentDirectoryUrl,
-        rootDirectoryUrl,
-      ),
-    });
-  }
   const htmlFor404AndParentDir = String(
     readFileSync(html404AndParentDirFileUrl),
   );
-
+  const fileRelativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+  const parentDirectoryRelativeUrl = urlToRelativeUrl(
+    parentDirectoryUrl,
+    rootDirectoryUrl,
+  );
   const replacers = {
     fileUrl: url,
-    fileRelativeUrl: urlToRelativeUrl(url, rootDirectoryUrl),
+    fileRelativeUrl,
     parentDirectoryUrl,
-    parentDirectoryRelativeUrl: urlToRelativeUrl(
-      parentDirectoryUrl,
-      rootDirectoryUrl,
-    ),
+    parentDirectoryRelativeUrl,
+    parentDirectoryNav: () =>
+      generateDirectoryNav(parentDirectoryRelativeUrl, rootDirectoryUrl),
     parentDirectoryContent: () =>
       generateDirectoryContent(
         parentDirectoryContentArray,
@@ -18808,11 +18814,51 @@ const generateHtmlForENOENTOnHtmlFile = (
   const html = replacePlaceholders$1(htmlFor404AndParentDir, replacers);
   return html;
 };
+const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
+  const rootDirectoryUrlName = urlToFilename$1(rootDirectoryUrl);
+  const relativeUrlWithRoot = relativeUrl
+    ? `${rootDirectoryUrlName}/${relativeUrl}`
+    : `${rootDirectoryUrlName}/`;
+  const isDir = relativeUrlWithRoot.endsWith("/");
+  const parts = isDir
+    ? relativeUrlWithRoot.slice(0, -1).split("/")
+    : relativeUrlWithRoot.split("/");
+  let dirPartsHtml = "";
+  let i = 0;
+  while (i < parts.length) {
+    const part = parts[i];
+    const href = i === 0 ? "/" : `/${parts.slice(1, i + 1).join("/")}/`;
+    const text = part;
+    const isLastPart = i === parts.length - 1;
+    if (isLastPart) {
+      dirPartsHtml += `
+      <span class="directory_nav_item" data-current>
+        ${text}
+      </span>`;
+      break;
+    }
+    dirPartsHtml += `
+      <a class="directory_nav_item" href="${href}">
+        ${text}
+      </a>`;
+    dirPartsHtml += `
+    <span class="directory_separator">/</span>`;
+    i++;
+  }
+  if (isDir) {
+    dirPartsHtml += `
+    <span class="directory_separator">/</span>`;
+  }
+  return dirPartsHtml;
+};
 const generateDirectoryContent = (
   directoryContentArray,
   directoryUrl,
   rootDirectoryUrl,
 ) => {
+  if (directoryContentArray.length === 0) {
+    return `<p>Directory is empty</p>`;
+  }
   const sortedNames = [];
   for (const filename of directoryContentArray) {
     const fileUrlObject = new URL(filename, directoryUrl);
@@ -18823,15 +18869,20 @@ const generateDirectoryContent = (
     }
   }
   sortedNames.sort(comparePathnames);
-  return sortedNames.map((filename) => {
+  let html = `<ul class="directory_content">`;
+  for (const filename of sortedNames) {
     const fileUrlObject = new URL(filename, directoryUrl);
     const fileUrl = String(fileUrlObject);
-    let fileUrlRelative = urlToRelativeUrl(fileUrl, rootDirectoryUrl);
-    return `<li>
-    <a href="/${fileUrlRelative}">/${fileUrlRelative}</a>
-  </li>`;
-  }).join(`
-  `);
+    const fileUrlRelativeToParent = urlToRelativeUrl(fileUrl, directoryUrl);
+    const fileUrlRelativeToRoot = urlToRelativeUrl(fileUrl, rootDirectoryUrl);
+    const type = fileUrlRelativeToParent.endsWith("/") ? "dir" : "file";
+    html += `
+      <li class="directory_child" data-type="${type}">
+        <a href="/${fileUrlRelativeToRoot}">${fileUrlRelativeToParent}</a>
+      </li>`;
+  }
+  html += `\n  </ul>`;
+  return html;
 };
 const replacePlaceholders$1 = (html, replacers) => {
   return html.replace(/\$\{(\w+)\}/g, (match, name) => {
@@ -20646,9 +20697,14 @@ const createBuildSpecifierManager = ({
 
     let buildSpecifier;
     if (base === "./") {
-      const parentBuildUrl = reference.ownerUrlInfo.isRoot
+      const { ownerUrlInfo } = reference;
+      const parentBuildUrl = ownerUrlInfo.isRoot
         ? buildDirectoryUrl
-        : urlInfoToBuildUrlMap.get(reference.ownerUrlInfo);
+        : urlInfoToBuildUrlMap.get(
+            ownerUrlInfo.isInline
+              ? ownerUrlInfo.findParentIfInline()
+              : ownerUrlInfo,
+          );
       const urlRelativeToParent = urlToRelativeUrl(buildUrl, parentBuildUrl);
       if (urlRelativeToParent[0] === ".") {
         buildSpecifier = urlRelativeToParent;
@@ -22291,9 +22347,23 @@ build ${entryPointKeys.length} entry points`);
             addToBundlerIfAny(rawUrlInfo);
           }
           if (rawUrlInfo.type === "html") {
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+            for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
+              if (
+                referenceToOther.isResourceHint &&
+                referenceToOther.expectedType === "js_module"
+              ) {
+                const referencedUrlInfo = referenceToOther.urlInfo;
+                if (
+                  referencedUrlInfo &&
+                  // something else than the resource hint is using this url
+                  referencedUrlInfo.referenceFromOthersSet.size > 0
+                ) {
+                  addToBundlerIfAny(referencedUrlInfo);
+                  continue;
+                }
+              }
               if (referenceToOther.isWeak) {
-                return;
+                continue;
               }
               const referencedUrlInfo = referenceToOther.urlInfo;
               if (referencedUrlInfo.isInline) {
@@ -22309,50 +22379,38 @@ build ${entryPointKeys.length} entry points`);
                   );
                 }
                 // inline content cannot be bundled
-                return;
+                continue;
               }
               addToBundlerIfAny(referencedUrlInfo);
-            });
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-              if (
-                referenceToOther.isResourceHint &&
-                referenceToOther.expectedType === "js_module"
-              ) {
-                const referencedUrlInfo = referenceToOther.urlInfo;
-                if (
-                  referencedUrlInfo &&
-                  // something else than the resource hint is using this url
-                  referencedUrlInfo.referenceFromOthersSet.size > 0
-                ) {
-                  addToBundlerIfAny(referencedUrlInfo);
-                }
-              }
-            });
+            }
             return;
           }
           // File referenced with new URL('./file.js', import.meta.url)
           // are entry points that should be bundled
           // For instance we will bundle service worker/workers detected like this
           if (rawUrlInfo.type === "js_module") {
-            rawUrlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+            for (const referenceToOther of rawUrlInfo.referenceToOthersSet) {
               if (referenceToOther.type === "js_url") {
                 const referencedUrlInfo = referenceToOther.urlInfo;
+                let isAlreadyBundled = false;
                 for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
                   if (referenceFromOther.url === referencedUrlInfo.url) {
                     if (
                       referenceFromOther.subtype === "import_dynamic" ||
                       referenceFromOther.type === "script"
                     ) {
-                      // will already be bundled
-                      return;
+                      isAlreadyBundled = true;
+                      break;
                     }
                   }
                 }
-                addToBundlerIfAny(referencedUrlInfo);
-                return;
+                if (!isAlreadyBundled) {
+                  addToBundlerIfAny(referencedUrlInfo);
+                }
+                continue;
               }
               if (referenceToOther.type === "js_inline_content") ;
-            });
+            }
           }
         },
       );

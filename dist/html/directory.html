@@ -4,15 +4,163 @@
     <title>Directory explorer</title>
     <meta charset="utf-8">
     <link rel="icon" href="data:,">
+    <style>
+      html, body, h1, div, p, ul, li, a, p, button {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        border: 0;
+        margin: 0;
+        padding: 0;
+        font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+      }
+      
+      .directory_nav {
+        margin: 20px 25px 15px;
+        font-size: 16px;
+        font-weight: bold;
+        display: flex;
+      }
+      
+      .directory_nav_item {
+        text-decoration: none;
+        position: relative;
+      }
+      
+      .directory_separator {
+        margin: 0 .3em;
+      }
+      
+      .directory_separator:first-child {
+        margin-left: 0;
+      }
+      
+      .directory_content {
+        border-radius: 3px;
+        margin: 10px 15px;
+        list-style-type: none;
+      }
+      
+      .directory_child {
+        text-indent: 30px;
+        box-sizing: border-box;
+        background-position: 15px;
+        background-repeat: no-repeat;
+        background-size: 16px 16px;
+        min-height: 19px;
+        padding: 10px 15px;
+        font-size: 15px;
+        position: relative;
+      }
+      
+      .directory_child:after {
+        content: " ";
+        display: block;
+        position: absolute;
+        bottom: 0;
+        left: 15px;
+        right: 0;
+      }
+      
+      .directory_child:last-child {
+        border-bottom: none;
+        padding-bottom: 10px;
+      }
+      
+      .directory_child:last-child:after {
+        content: none;
+      }
+      
+      .directory_child[data-type="file"] {
+        background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAJBlWElmTU0AKgAAAAgABgEGAAMAAAABAAIAAAESAAMAAAABAAEAAAEaAAUAAAABAAAAVgEbAAUAAAABAAAAXgEoAAMAAAABAAIAAIdpAAQAAAABAAAAZgAAAAAAAABIAAAAAQAAAEgAAAABAAOgAQADAAAAAQABAACgAgAEAAAAAQAAACCgAwAEAAAAAQAAACAAAAAAF9yy1AAAAAlwSFlzAAALEwAACxMBAJqcGAAAAgtpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IlhNUCBDb3JlIDYuMC4wIj4KICAgPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICAgICAgPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIKICAgICAgICAgICAgeG1sbnM6dGlmZj0iaHR0cDovL25zLmFkb2JlLmNvbS90aWZmLzEuMC8iPgogICAgICAgICA8dGlmZjpQaG90b21ldHJpY0ludGVycHJldGF0aW9uPjI8L3RpZmY6UGhvdG9tZXRyaWNJbnRlcnByZXRhdGlvbj4KICAgICAgICAgPHRpZmY6T3JpZW50YXRpb24+MTwvdGlmZjpPcmllbnRhdGlvbj4KICAgICAgICAgPHRpZmY6Q29tcHJlc3Npb24+MTwvdGlmZjpDb21wcmVzc2lvbj4KICAgICAgICAgPHRpZmY6UmVzb2x1dGlvblVuaXQ+MjwvdGlmZjpSZXNvbHV0aW9uVW5pdD4KICAgICAgPC9yZGY6RGVzY3JpcHRpb24+CiAgIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+Cu3MPn8AAAK5SURBVFgJ5Vc7jhpBEG1+MyA7sGxpQWScZU/g1HLqi+wl9goOnKxvQkCKRIjEahJYloEB1+udZ9U01cPMBk48UvOqql9Vve4e2F7n/venY2xAZ71efx0Oh4/n8/kO85fLxdNCZG5RFPl+v/+VJMmP6XT6wngT7BqkJE3TR4nfdTpv+mKochMR8E14v+fz+QcVv2laAtJut+tXjsax5oyjg+yUEwFuNBrdTyaTpzYiLAE9FGWDJiJwNHmeu8Fg4OToWomwBEjP6taHgkJf3gEvoN/vO4w2IiwBqH+1A3U7gSM4Ho+u1+t5AW1EmALCHdC+tr1S+cAOnE4nJ+9OaxGmgHAHQj8UAR/nj/cgFCHfqPvxePy0WCw+UrBG63fg83a7fSYp/O5rHzbG4XBwm83GZVnmvxE4CgjCUZQvppPfiJ+z2ey71C1YG2gK2O12z2wEEm0LEeM7gGOAjx3BTuABljt2lJ34JKHKD1Xfs258oAALh4hUNJGtxip9JXDwEL3j3EAQhIoA8x1AQ44ymaswsVyhOcf8Eq/6XQWYEBZFPIzRr5vTHNbWaApgUoixRuBxxDi6qbZNAbeKhMK0r22rjm4O2xQQK6KTYxzEY3M6n7YpAJNWEcaYTN9CK8Y8jaaAWDLiHCxyiwseOczRaArQSUwOURcJ57SvbZ1D2xQQJlk+YyxE30LGyNVoCgCBSXXIORakbyFj5BJNASQ3QXDIQ1HaMWRjoimgSaG6BnVzbEyMCvhXIkwBXMF7RHBlVq6eo20K0MnaprA65Bwb0CcyTrQE4I/5BgSdRLsJksMm8OVugJpvFwVOCFoCiuVy+SAJGXi6GO0mCA55cmnNVqvVg5SrXMd8fXwETyr+l3IMBa1rW5BS62LVrzJwz8Q4yPj7WMURw9UJQvBfksWRcOMHArByNM5lVI7hD10h1EqG5mxPAAAAAElFTkSuQmCC);
+      }
+      
+      .directory_child[data-type="dir"] {
+        background-image: url(data:image/png;base64,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);
+      }
+      
+      .directory_child[data-type="dir"]:before {
+        content: " ";
+        border-top-right-radius: 1px;
+        width: 5px;
+        height: 5px;
+        display: block;
+        position: absolute;
+        top: 16px;
+        right: 15px;
+        transform: rotate(45deg);
+      }
+      
+      .directory_child a {
+        text-decoration: none;
+        display: block;
+      }
+      
+      body[data-theme="dark"] {
+        background: #121212;
+      }
+      
+      body[data-theme="light"] {
+        background: #f1f1f1;
+      }
+      
+      body[data-theme="dark"] .directory_nav_item {
+        color: #999;
+      }
+      
+      body[data-theme="dark"] .directory_nav_item[data-current] {
+        color: #f1f1f1;
+      }
+      
+      body[data-theme="light"] .directory_nav_item {
+        color: #000;
+      }
+      
+      body[data-theme="dark"] .directory_separator {
+        color: #666;
+      }
+      
+      body[data-theme="light"] .directory_separator {
+        color: #999;
+      }
+      
+      body[data-theme="dark"] .directory_content {
+        background: #1e1e1e;
+      }
+      
+      body[data-theme="light"] .directory_content {
+        background: #fefefe;
+      }
+      
+      body[data-theme="dark"] .directory_child {
+        border-bottom: 1px solid #121212;
+      }
+      
+      body[data-theme="light"] .directory_child {
+        border-bottom: 1px solid #f1f1f1;
+      }
+      
+      body[data-theme="dark"] .directory_child[data-type="dir"]:before {
+        border-top: 2px solid #666;
+        border-right: 2px solid #666;
+      }
+      
+      body[data-theme="light"] .directory_child[data-type="file"]:before {
+        border-top: 2px solid #999;
+        border-right: 2px solid #999;
+      }
+      
+      body[data-theme="dark"] .directory_child a {
+        color: #fff;
+      }
+      
+      body[data-theme="light"] .directory_child a {
+        color: #000;
+      }
+    </style>
   </head>
 
-  <body>
-    <h1>
-      <a jsenv-ignore="" href="/${directoryRelativeUrl}">/${directoryRelativeUrl}</a>
-      directory content:
-    </h1>
-    <ul>
-      ${directoryContent}
-    </ul>
+  <body data-theme="dark">
+    <h1 class="directory_nav">${directoryNav}</h1>
+    ${directoryContent}
   </body>
 </html>

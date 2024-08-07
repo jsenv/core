@@ -38,6 +38,8 @@ export const jsenvPluginDirectoryReferenceEffect = (
         actionForDirectory = "copy";
       } else if (reference.type === "filesystem") {
         actionForDirectory = "copy";
+      } else if (reference.type === "http_request") {
+        actionForDirectory = "preserve";
       } else if (typeof directoryReferenceEffect === "string") {
         actionForDirectory = directoryReferenceEffect;
       } else if (typeof directoryReferenceEffect === "function") {
@@ -55,7 +57,9 @@ export const jsenvPluginDirectoryReferenceEffect = (
         throw error;
       }
       if (actionForDirectory === "preserve") {
-        return `ignore:${reference.specifier}`;
+        return reference.ownerUrlInfo.context.dev
+          ? null
+          : `ignore:${reference.specifier}`;
       }
       return null;
     },

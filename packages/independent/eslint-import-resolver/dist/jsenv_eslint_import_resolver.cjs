@@ -1277,7 +1277,7 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
     }
     const packageResolution = applyPackageResolve(specifier, resolutionContext);
     const search = new URL(specifier, "file://").search;
-    if (search) {
+    if (search && !new URL(packageResolution.url).search) {
       packageResolution.url = `${packageResolution.url}${search}`;
     }
     return packageResolution;

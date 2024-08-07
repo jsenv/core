@@ -6,21 +6,21 @@ import { pickContentType } from "@jsenv/server";
 import {
   ensurePathnameTrailingSlash,
   urlIsInsideOf,
+  urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { jsenvPluginFsRedirection } from "./jsenv_plugin_fs_redirection.js";
 
-const html404AndParentDirIsEmptyFileUrl = new URL(
-  "./html_404_and_parent_dir_is_empty.html",
-  import.meta.url,
-);
 const html404AndParentDirFileUrl = new URL(
-  "./html_404_and_parent_dir.html",
+  "./client/html_404_and_parent_dir.html",
   import.meta.url,
 );
-const htmlFileUrlForDirectory = new URL("./directory.html", import.meta.url);
+const htmlFileUrlForDirectory = new URL(
+  "./client/directory.html",
+  import.meta.url,
+);
 
 export const jsenvPluginProtocolFile = ({
   magicExtensions,
@@ -97,12 +97,14 @@ export const jsenvPluginProtocolFile = ({
             ? pickContentType(urlInfo.context.request, ["text/html"])
             : false;
           if (acceptsHtml) {
+            firstReference.expectedType = "html";
             const html = generateHtmlForDirectory(
               urlObject.href,
               directoryContentArray,
               urlInfo.context.rootDirectoryUrl,
             );
             return {
+              type: "html",
               contentType: "text/html",
               content: html,
             };
@@ -143,6 +145,9 @@ export const jsenvPluginProtocolFile = ({
             return {
               contentType: "text/html",
               content: html,
+              headers: {
+                "cache-control": "no-cache",
+              },
             };
           }
         }
@@ -166,10 +171,13 @@ const generateHtmlForDirectory = (
   rootDirectoryUrl,
 ) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+
   const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
+  const directoryRelativeUrl = urlToRelativeUrl(directoryUrl, rootDirectoryUrl);
   const replacers = {
-    directoryRelativeUrl: urlToRelativeUrl(directoryUrl, rootDirectoryUrl),
     directoryUrl,
+    directoryNav: () =>
+      generateDirectoryNav(directoryRelativeUrl, rootDirectoryUrl),
     directoryContent: () =>
       generateDirectoryContent(
         directoryContentArray,
@@ -186,30 +194,21 @@ const generateHtmlForENOENTOnHtmlFile = (
   parentDirectoryUrl,
   rootDirectoryUrl,
 ) => {
-  if (parentDirectoryContentArray.length === 0) {
-    const htmlFor404AndParentDirIsEmpty = String(
-      readFileSync(html404AndParentDirIsEmptyFileUrl),
-    );
-    return replacePlaceholders(htmlFor404AndParentDirIsEmpty, {
-      fileRelativeUrl: urlToRelativeUrl(url, rootDirectoryUrl),
-      parentDirectoryRelativeUrl: urlToRelativeUrl(
-        parentDirectoryUrl,
-        rootDirectoryUrl,
-      ),
-    });
-  }
   const htmlFor404AndParentDir = String(
     readFileSync(html404AndParentDirFileUrl),
   );
-
+  const fileRelativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+  const parentDirectoryRelativeUrl = urlToRelativeUrl(
+    parentDirectoryUrl,
+    rootDirectoryUrl,
+  );
   const replacers = {
     fileUrl: url,
-    fileRelativeUrl: urlToRelativeUrl(url, rootDirectoryUrl),
+    fileRelativeUrl,
     parentDirectoryUrl,
-    parentDirectoryRelativeUrl: urlToRelativeUrl(
-      parentDirectoryUrl,
-      rootDirectoryUrl,
-    ),
+    parentDirectoryRelativeUrl,
+    parentDirectoryNav: () =>
+      generateDirectoryNav(parentDirectoryRelativeUrl, rootDirectoryUrl),
     parentDirectoryContent: () =>
       generateDirectoryContent(
         parentDirectoryContentArray,
@@ -220,11 +219,51 @@ const generateHtmlForENOENTOnHtmlFile = (
   const html = replacePlaceholders(htmlFor404AndParentDir, replacers);
   return html;
 };
+const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
+  const rootDirectoryUrlName = urlToFilename(rootDirectoryUrl);
+  const relativeUrlWithRoot = relativeUrl
+    ? `${rootDirectoryUrlName}/${relativeUrl}`
+    : `${rootDirectoryUrlName}/`;
+  const isDir = relativeUrlWithRoot.endsWith("/");
+  const parts = isDir
+    ? relativeUrlWithRoot.slice(0, -1).split("/")
+    : relativeUrlWithRoot.split("/");
+  let dirPartsHtml = "";
+  let i = 0;
+  while (i < parts.length) {
+    const part = parts[i];
+    const href = i === 0 ? "/" : `/${parts.slice(1, i + 1).join("/")}/`;
+    const text = part;
+    const isLastPart = i === parts.length - 1;
+    if (isLastPart) {
+      dirPartsHtml += `
+      <span class="directory_nav_item" data-current>
+        ${text}
+      </span>`;
+      break;
+    }
+    dirPartsHtml += `
+      <a class="directory_nav_item" href="${href}">
+        ${text}
+      </a>`;
+    dirPartsHtml += `
+    <span class="directory_separator">/</span>`;
+    i++;
+  }
+  if (isDir) {
+    dirPartsHtml += `
+    <span class="directory_separator">/</span>`;
+  }
+  return dirPartsHtml;
+};
 const generateDirectoryContent = (
   directoryContentArray,
   directoryUrl,
   rootDirectoryUrl,
 ) => {
+  if (directoryContentArray.length === 0) {
+    return `<p>Directory is empty</p>`;
+  }
   const sortedNames = [];
   for (const filename of directoryContentArray) {
     const fileUrlObject = new URL(filename, directoryUrl);
@@ -235,15 +274,20 @@ const generateDirectoryContent = (
     }
   }
   sortedNames.sort(comparePathnames);
-  return sortedNames.map((filename) => {
+  let html = `<ul class="directory_content">`;
+  for (const filename of sortedNames) {
     const fileUrlObject = new URL(filename, directoryUrl);
     const fileUrl = String(fileUrlObject);
-    let fileUrlRelative = urlToRelativeUrl(fileUrl, rootDirectoryUrl);
-    return `<li>
-    <a href="/${fileUrlRelative}">/${fileUrlRelative}</a>
-  </li>`;
-  }).join(`
-  `);
+    const fileUrlRelativeToParent = urlToRelativeUrl(fileUrl, directoryUrl);
+    const fileUrlRelativeToRoot = urlToRelativeUrl(fileUrl, rootDirectoryUrl);
+    const type = fileUrlRelativeToParent.endsWith("/") ? "dir" : "file";
+    html += `
+      <li class="directory_child" data-type="${type}">
+        <a href="/${fileUrlRelativeToRoot}">${fileUrlRelativeToParent}</a>
+      </li>`;
+  }
+  html += `\n  </ul>`;
+  return html;
 };
 const replacePlaceholders = (html, replacers) => {
   return html.replace(/\$\{(\w+)\}/g, (match, name) => {
