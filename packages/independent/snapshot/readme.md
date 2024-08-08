@@ -10,10 +10,10 @@ Snapshot testing consists into:
 
 1. Making code execution produce file(s). They are called snapshots.
 2. Make further code execution follow these steps:
-    1. Read existing snapshot
-    2. Execute code
-    3. Read new snapshot
-    4. Compare the two snapshots and throw if there is a diff
+   1. Read existing snapshot
+   2. Execute code
+   3. Read new snapshot
+   4. Compare the two snapshots and throw if there is a diff
 
 This force code execution to produce the same snapshots. Meaning that code being tested still behave as expected.
 
@@ -24,6 +24,7 @@ This force code execution to produce the same snapshots. Meaning that code being
 When there is no snapshot(s), the snapshot won't be compared. It happens the very first time you generate snapshots or because all snapshot files have been removed for some reason.
 
 For all next code executions, snapshots are compared and
+
 - An error is thrown when `process.env.CI` is set (code is executed in CI).
 - Otherwise nothing special happens (it's your job to review eventual diff in the snapshots, using `git diff` for example)
 
@@ -35,21 +36,20 @@ For all next code executions, snapshots are compared and
 import { writeFileSync } from "node:fs";
 import { takeFileSnapshot } from "@jsenv/snapshot";
 
-const writeFileTxt = (directoryUrl) => {
-  writeFileSync(new URL("./file.txt", directoryUrl), "Hello");
+const fileTxtUrl = new URL("./file.txt", import.meta.url);
+const writeFileTxt = (content) => {
+  writeFileSync(writeFileTxt, content);
 };
 
-// take snapshot of "dir/"
-const fileSnapshot = takeFileSnapshot(
-  new URL("./dir/file.txt", import.meta.url),
-);
-writeFileTxt(new URL("./dir/", import.meta.url));
-// compare the state of "./dit/file.txt" with previous version
+// take snapshot of "./file.txt"
+const fileSnapshot = takeFileSnapshot(fileTxtUrl);
+writeFileTxt("Hello world");
+// compare the state of "./file.txt" with previous version
 fileSnapshot.compare();
 ```
 
-The code below ensure `writeFileTxt` always write one file: "file.txt" with the content "Hello".
-Updating the code of `writeFileTxt` would fail snapshot comparison.
+The code below ensure `writeFileTxt` write `content` into "./file.txt".  
+Changing that behaviour would fail snapshot comparison.
 
 ## takeDirectorySnapshot(directoryUrl)
 
@@ -57,22 +57,21 @@ Updating the code of `writeFileTxt` would fail snapshot comparison.
 import { writeFileSync } from "node:fs";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
-const writeManyFiles = (directoryUrl) => {
+const directoryUrl = new URL("./dir/", import.meta.url);
+const writeManyFiles = () => {
   writeFileSync(new URL("./a.txt", directoryUrl), "a");
   writeFileSync(new URL("./b.txt", directoryUrl), "b");
 };
 
-// take snapshot of "dir/"
-const directorySnapshot = takeDirectorySnapshot(
-  new URL("./dir/", import.meta.url),
-);
-writeFileTxt(new URL("./dir/", import.meta.url));
-// compare the state of "dir/" with previous version
+// take snapshot of "./dir/"
+const directorySnapshot = takeDirectorySnapshot(directoryUrl);
+writeFileTxt(directoryUrl);
+// compare the state of "./dir/" with previous version
 directorySnapshot.compare();
 ```
 
-The code below ensure `writeManyFiles` always write twos file: "a.txt" and "b.txt" with the content "a" and "b".
-Updating the code of `writeManyFiles` would fail snapshot comparison.
+The code below ensure `writeManyFiles` always write twos file: "./dir/a.txt" and "./dir/b.txt" with the content "a" and "b".  
+Changing that behaviour would fail snapshot comparison.
 
 ## snapshotTests(testFileUrl, fnRegistertingTests, options)
 
@@ -106,6 +105,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
 ```
 
 The code above is executing `getCircleArea` and produces a markdown files describing how it goes.  
+This markdown will be compared with any previous version ensuring `getCircleArea` still behave as expected.
+
 See the markdown at [./docs/\_circle_area.test.js/circle_area.test.js.md](./docs/_circle_area.test.js/circle_area.test.js.md)
 
 Why is it so wonderful?
