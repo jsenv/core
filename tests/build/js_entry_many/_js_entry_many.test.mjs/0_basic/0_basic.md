@@ -1,16 +1,7 @@
-# [0_basic](../../js_entry_many.test.mjs#L8)
+# [0_basic](../../js_entry_many.test.mjs#L36)
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: {
-    "./a.js": "a.js",
-    "./b.js": "b.js",
-  },
-  bundling: false,
-  minification: false,
-})
+run()
 ```
 
 # 1/2 write 5 files into "./build/"
@@ -20,7 +11,10 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-{}
+{
+  "a": "a-shared",
+  "b": "b-shared"
+}
 ```
 ---
 
