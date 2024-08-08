@@ -1,13 +1,7 @@
-# [0_basic](../../json_parse.test.mjs#L7)
+# [0_basic](../../json_parse.test.mjs#L30)
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-  bundling: false,
-  minification: true,
-  versioning: false,
+run({
   runtimeCompat: { chrome: "89" },
 })
 ```
@@ -19,7 +13,11 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-{}
+{
+  "data": {
+    "answer": 42
+  }
+}
 ```
 ---
 
