@@ -124,8 +124,8 @@ There is a few more very helpul things hapenning:
 
 Advanced examples:
 
-- [@jsenv/assert/tests/array.test.js.md](../assert/tests/_array.test.js/array.test.js.md). Here tests are calling a function expected to throw in many different ways.
-- [@jsenv/core/tests/script_type_module_basic.test.mjs](../../../tests/build/basics/script_type_module_basic/_script_type_module_basic.test.mjs/script_type_module_basic.test.mjs.md). Here tests are generating build files, starting a server and executing build files in a browser.
+- Tests how `assert` throw in many different ways: [@jsenv/assert/tests/array.test.js.md](../assert/tests/_array.test.js/array.test.js.md).
+- Tests generating build files, starting a server and executing build files in a browser: [@jsenv/core/tests/script_type_module_basic.test.mjs](../../../tests/build/basics/script_type_module_basic/_script_type_module_basic.test.mjs/script_type_module_basic.test.mjs.md).
 
 ### Fluctuating values replacement
 
