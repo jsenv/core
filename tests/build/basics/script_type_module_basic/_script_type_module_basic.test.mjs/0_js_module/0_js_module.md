@@ -13,7 +13,7 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-undefined
+42
 ```
 ---
 

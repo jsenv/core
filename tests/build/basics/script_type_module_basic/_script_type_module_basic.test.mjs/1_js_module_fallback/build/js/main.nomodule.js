@@ -4,7 +4,7 @@ System.register([], function (_export, _context) {
   return {
     setters: [],
     execute: function () {
-      console.log(42);
+      window.resolveResultPromise(42);
     }
   };
 });

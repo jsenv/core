@@ -120,7 +120,12 @@ There is a few more very helpul things hapenning:
 
 - Log side effects are catched, see [./docs/\_logs.test.js/log.test.js.md](./docs/_log.test.js/log.test.js.md)
 - Filesystem side effects are catched and undone, see [./docs/\_filesystem.test.js/filesystem.test.js.md](./docs/_filesystem.test.js/filesystem.test.js.md)
-- Fluctuating values are replaced with stable values (see next secion)
+- Fluctuating values are replaced with stable values, see [#Fluctuating values replacement](#fluctuating-values-replacement)
+
+Advanced examples:
+
+- [@jsenv/assert/tests/array.test.js.md](../assert/tests/_array.test.js/array.test.js.md). Here tests are calling a function expected to throw in many different ways.
+- [@jsenv/core/tests/script_type_module_basic.test.mjs](../../../tests/build/basics/script_type_module_basic/_script_type_module_basic.test.mjs/script_type_module_basic.test.mjs.md). Here tests are generating build files, starting a server and executing build files in a browser.
 
 ### Fluctuating values replacement
 
