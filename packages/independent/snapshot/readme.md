@@ -6,12 +6,16 @@ A tool to generate snapshots during tests.
 
 ## A word on snapshot testing
 
-Using snapshot to test goes like this:
+Snapshot testing consists into:
 
-1. Executing code produces one or many files called snapshots
-2. When code is executed again, snapshots are compared and throw if there is a diff
+1. Making code execution produce file(s). They are called snapshots.
+2. Make further code execution follow these steps:
+    1. Read existing snapshot
+    2. Execute code
+    3. Read new snapshot
+    4. Compare existing and new snapshot and throw if there is a diff
 
-This ensure code execution produces the same snapshots meaning that the code being tested still behave as expected.
+This force code execution to produce the same snapshots. Meaning that code being tested still behave as expected.
 
 ## How it works
 
