@@ -124,18 +124,21 @@ There is a few more very helpul things hapenning:
 
 ### Fluctuating values replacement
 
-`@jsenv/snapshot` is meant to be executed once on your machine (or the machine of an other contributor) then on the CI.
+Snapshots will be generated on your machine or the machine of an other contributor, then on the CI.
 
-Each of these execution happens in a specific context: time, operating system, filesystem location, ...
-This context influences the behavior of the code.
+Each execution will happen in a different context. This context influence behaviour of the code:
 
-Things like error stack traces, logs, the content of the file being produced.
+- time
+- operating system
+- filesystem location
+- available ressources,
+- and so on...
 
-To ensure the snapshot generated is predictible and the same accross context, all fluctuating values are replaced with stable values.
+To ensure the snapshot generated is not influenced by this, all fluctuating values are replaced with stable values.
 
+- Things like "2s" becomes "Xs"
 - Filesystem urls dynamic parts are replaced
 - Port in https urls is removed
-- Things like "2s" becomes "Xs"
-- And so on
+- and so on...
 
-If something is fluctuating and makes your snapshot testing fail, you can an issue or create a pull request.
+If something is fluctuating and makes your snapshot testing unstable, you can open an issue or create a pull request.
