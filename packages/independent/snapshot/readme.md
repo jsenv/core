@@ -13,7 +13,7 @@ Snapshot testing consists into:
     1. Read existing snapshot
     2. Execute code
     3. Read new snapshot
-    4. Compare existing and new snapshot and throw if there is a diff
+    4. Compare the two snapshots and throw if there is a diff
 
 This force code execution to produce the same snapshots. Meaning that code being tested still behave as expected.
 
@@ -21,13 +21,11 @@ This force code execution to produce the same snapshots. Meaning that code being
 
 `@jsenv/snapshot` behaves as follow:
 
-The very first time code is executed, there is no pre-existing snapshots, files are written on the filesystem.
+When there is no snapshot(s), the snapshot won't be compared. It happens the very first time you generate snapshots or because all snapshot files have been removed for some reason.
 
-For all next code executions, snapshots are compared but `@jsenv/snapshot` will remain silent in case of diff.
-It's only if code is executed in CI (`process.env.CI`) that an error will be thrown.
-Locally it's your job to review eventual diff in the snapshots (`git diff`).
-
-In the CI any diff will throw an error.
+For all next code executions, snapshots are compared and
+- An error is thrown when `process.env.CI` is set (code is executed in CI).
+- Otherwise nothing special happens (it's your job to review eventual diff in the snapshots, using `git diff` for example)
 
 > Every function accepts a `throwWhenDiff` param to throw even if runned locally. You can also set `process.env.CI` before executing your code.
 
