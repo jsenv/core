@@ -126,7 +126,7 @@ There is a few more very helpul things hapenning:
 
 Snapshots will be generated on your machine or the machine of an other contributor, then on the CI.
 
-Each execution will happen in a different context. This context influence behaviour of the code:
+Each execution will happen in a different context. This context influence behaviour of the code and as a consequence might change the snapshot being generated.
 
 - time
 - operating system
@@ -134,7 +134,7 @@ Each execution will happen in a different context. This context influence behavi
 - available ressources,
 - and so on...
 
-To ensure the snapshot generated is not influenced by this, all fluctuating values are replaced with stable values.
+To ensure the snapshot generated is not influenced, all fluctuating values are replaced with stable values.
 
 - Things like "2s" becomes "Xs"
 - Filesystem urls dynamic parts are replaced
