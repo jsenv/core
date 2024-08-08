@@ -1,8 +1,7 @@
-# [0_versioning](../../link_href_@import.test.mjs#L14)
+# [0_versioning](../../link_href_@import.test.mjs#L23)
 
 ```js
-build({
-  ...testParams,
+run({
   versioning: true,
 })
 ```
@@ -14,7 +13,9 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-{}
+{
+  "bodyBackgroundColor": "rgb(255, 0, 0)"
+}
 ```
 ---
 
