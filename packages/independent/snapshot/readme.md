@@ -32,6 +32,9 @@ For all next code executions, snapshots are compared and
 
 ## takeFileSnapshot(fileUrl)
 
+The code below ensure `writeFileTxt` write `content` into "./file.txt".  
+Changing that behaviour would fail snapshot comparison.
+
 ```js
 import { writeFileSync } from "node:fs";
 import { takeFileSnapshot } from "@jsenv/snapshot";
@@ -48,10 +51,10 @@ writeFileTxt("Hello world");
 fileSnapshot.compare();
 ```
 
-The code below ensure `writeFileTxt` write `content` into "./file.txt".  
-Changing that behaviour would fail snapshot comparison.
-
 ## takeDirectorySnapshot(directoryUrl)
+
+The code below ensure `writeManyFiles` always write twos file: "./dir/a.txt" and "./dir/b.txt" with the content "a" and "b".  
+Changing that behaviour would fail snapshot comparison.
 
 ```js
 import { writeFileSync } from "node:fs";
@@ -69,9 +72,6 @@ writeFileTxt(directoryUrl);
 // compare the state of "./dir/" with previous version
 directorySnapshot.compare();
 ```
-
-The code below ensure `writeManyFiles` always write twos file: "./dir/a.txt" and "./dir/b.txt" with the content "a" and "b".  
-Changing that behaviour would fail snapshot comparison.
 
 ## snapshotTests(testFileUrl, fnRegistertingTests, options)
 
