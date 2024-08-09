@@ -1,6 +1,6 @@
 import { copyEntrySync } from "../copy/copy_entry_sync.js";
 
-export const replaceFileSync = (from, to) =>
+export const replaceFileSync = ({ from, to }) =>
   copyEntrySync({
     from,
     to,

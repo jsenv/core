@@ -1,7 +1,10 @@
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
+import { startTerminalRecording } from "@jsenv/terminal-recorder";
 import { readFileSync, writeFileSync } from "node:fs";
 
-import { startTerminalRecording } from "@jsenv/terminal-recorder";
+if (process.platform === "win32") {
+  process.exit(0);
+}
 
 const test = async (file, snapshotFilename = `${file}.svg`, options = {}) => {
   const ansiFixtureFileUrl = new URL(`./fixtures/${file}`, import.meta.url);

@@ -60,6 +60,7 @@ const jsenvPluginInlineContentFetcher = () => {
         if (lastInlineReference.content === undefined) {
           const originalUrlInfo = prev.urlInfo;
           await originalUrlInfo.cook();
+          originalContent = originalUrlInfo.originalContent;
           lastInlineReference.content = originalUrlInfo.content;
           lastInlineReference.contentType = originalUrlInfo.contentType;
         }
