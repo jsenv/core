@@ -1,12 +1,15 @@
 import babelParser from "@babel/eslint-parser";
+import { fixupPluginRules } from "@eslint/compat";
 import {
   composteEslintFlatConfig,
   eslintConfigBase,
   eslintConfigForPrettier,
   eslintConfigToPreferExplicitGlobals,
   jsenvEslintRules,
+  jsenvEslintRulesForImport,
 } from "@jsenv/eslint-config";
 import html from "eslint-plugin-html";
+import importPlugin from "eslint-plugin-import";
 import * as regexpPlugin from "eslint-plugin-regexp";
 import globals from "globals";
 
@@ -59,9 +62,8 @@ export default composteEslintFlatConfig(
     files: [
       "**/*.html",
       "**/client/**/*.js",
-      "dev_exploring/**/*.js",
       "./docs/**/*.js",
-      "**/babel_helpers/**/*.js",
+      "./tests/dev_server/errors/stories/",
       "./packages/**/pwa/**/*.js",
       "./packages/**/custom-elements-redefine/**/*.js",
       "**/jsenv_service_worker.js",
@@ -104,25 +106,26 @@ export default composteEslintFlatConfig(
   // already handled by prettier.
   eslintConfigForPrettier,
   // plugins
-  // Enable import plugin
-  // {
-  //   plugins: ["import"],
-  //   settings: {
-  //     "import/resolver": {
-  //       "@jsenv/eslint-import-resolver": {
-  //         rootDirectoryUrl: __dirname,
-  //         packageConditions: ["node", "development", "import"],
-  //       },
-  //     },
-  //     "import/extensions": [".js", ".mjs"],
-  //     // https://github.com/import-js/eslint-plugin-import/issues/1753
-  //     "import/ignore": ["node_modules/playwright/"],
-  //   },
-  //   rules: {
-  //     ...jsenvEslintRulesForImport,
-  //     "import/no-duplicates": ["off"], // already handled by prettier-plugin-organize-imports
-  //   },
-  // },
+  {
+    plugins: {
+      import: fixupPluginRules(importPlugin),
+      settings: {
+        "import/resolver": {
+          "@jsenv/eslint-import-resolver": {
+            rootDirectoryUrl: new URL("./", import.meta.url),
+            packageConditions: ["node", "development", "import"],
+          },
+        },
+        "import/extensions": [".js", ".mjs"],
+        // https://github.com/import-js/eslint-plugin-import/issues/1753
+        "import/ignore": ["node_modules/playwright/"],
+      },
+      rules: {
+        ...jsenvEslintRulesForImport,
+        "import/no-duplicates": ["off"], // already handled by prettier-plugin-organize-imports
+      },
+    },
+  },
   {
     plugins: { regexp: regexpPlugin },
     rules: {

@@ -85,12 +85,14 @@
     "@jsenv/url-meta": "8.5.1",
     "@jsenv/urls": "2.5.2",
     "@jsenv/utils": "2.1.2",
-    "anchor-markdown-header": "0.7.0"
+    "anchor-markdown-header": "0.7.0",
+    "eslint-plugin-import": "2.29.1"
   },
   "devDependencies": {
     "@babel/eslint-parser": "7.25.1",
     "@babel/plugin-syntax-import-attributes": "7.24.7",
     "@babel/plugin-syntax-optional-chaining-assign": "7.24.7",
+    "@eslint/compat": "1.1.1",
     "@jsenv/assert": "./packages/independent/assert/",
     "@jsenv/cli": "./packages/related/cli/",
     "@jsenv/core": "./",
