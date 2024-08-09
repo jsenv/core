@@ -7,5 +7,6 @@ await startDevServer({
   keepProcessAlive: true,
   port: 5678,
   ribbon: false,
+  // supervisor: false,
   // clientAutoreload: false,
 });

@@ -27,11 +27,10 @@ const run = async ({ runtime }) => {
 };
 
 await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
-  test.ONLY("0_chromium", () =>
+  test("0_chromium", () =>
     run({
       runtime: chromium(),
-    }),
-  );
+    }));
   test("1_firefox", () =>
     run({
       runtime: firefox({
