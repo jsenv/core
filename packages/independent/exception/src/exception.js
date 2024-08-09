@@ -25,11 +25,6 @@ import { pathToFileURL } from "node:url";
 
 const isDev = process.execArgv.includes("--conditions=development");
 
-export const markAsInternalError = (error) => {
-  error.__INTERNAL_ERROR__ = true;
-  return error;
-};
-
 export const createException = (
   reason,
   {

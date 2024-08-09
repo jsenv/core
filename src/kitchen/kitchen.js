@@ -1,4 +1,3 @@
-import { markAsInternalError } from "@jsenv/exception";
 import { ensureWindowsDriveLetter } from "@jsenv/filesystem";
 import { ANSI, createDetailedMessage, createLogger } from "@jsenv/humanize";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
@@ -18,6 +17,7 @@ import {
   createFinalizeUrlContentError,
   createResolveUrlError,
   createTransformUrlContentError,
+  defineNonEnumerableProperties,
 } from "./errors.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
 import { createUrlGraph } from "./url_graph/url_graph.js";
@@ -511,7 +511,11 @@ ${urlInfo.firstReference.trace.message}`;
         if (e.isJsenvCookingError) {
           throw e;
         }
-        throw markAsInternalError(new Error(errorWrapperMessage, { cause: e }));
+        const error = new Error(errorWrapperMessage, { cause: e });
+        defineNonEnumerableProperties(error, {
+          __INTERNAL_ERROR__: true,
+        });
+        throw error;
       }
     }
 
