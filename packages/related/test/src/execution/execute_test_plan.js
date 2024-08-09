@@ -193,7 +193,7 @@ export const executeTestPlan = async ({
       availableCpu: countAvailableCpus(),
       availableMemory: totalmem(),
     },
-    process: {
+    runtime: {
       name: "node",
       version: process.version.slice(1),
     },

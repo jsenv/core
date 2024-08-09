@@ -292,12 +292,12 @@ const renderIntro = (testPlanResult, logOptions) => {
       lines.push(osLine);
       // TODO: an option to log how many cpu, memory etc we'll use?
     }
-    process_line: {
-      const process = logOptions.mockFluctuatingValues
+    runtime_line: {
+      const runtime = logOptions.mockFluctuatingValues
         ? `node@mock`
-        : `${testPlanResult.process.name}@${testPlanResult.process.version}`;
-      let processLine = `process: ${process}`;
-      lines.push(processLine);
+        : `${testPlanResult.runtime.name}@${testPlanResult.runtime.version}`;
+      let runtimeLine = `runtime: ${runtime}`;
+      lines.push(runtimeLine);
     }
   }
   return `${renderBigSection({

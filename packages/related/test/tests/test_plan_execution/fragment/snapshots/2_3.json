@@ -5,7 +5,7 @@
     "availableCpu": "<mock>",
     "availableMemory": "<mock>"
   },
-  "process": {
+  "runtime": {
     "name": "node",
     "version": "<mock>"
   },

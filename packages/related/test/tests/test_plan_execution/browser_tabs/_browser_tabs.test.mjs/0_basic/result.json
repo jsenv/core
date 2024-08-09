@@ -5,7 +5,7 @@
     "availableCpu": "<X>",
     "availableMemory": "<X>"
   },
-  "process": {
+  "runtime": {
     "name": "node",
     "version": "22.3.0"
   },
