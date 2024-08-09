@@ -14,35 +14,6 @@ export default composteEslintFlatConfig(
   eslintConfigBase,
   {
     files: ["**/*.js", "**/*.mjs"],
-    ignores: [
-      "**/.jsenv/**",
-      "**/.coverage/",
-      "**/dist/",
-      "**/node_modules/",
-      "**/git_ignored/",
-      // newline
-      "!/.github/",
-      "/dev_exploring/",
-      "/experiments/",
-      "/node_modules/",
-      "/old/",
-      // new line
-      "**/babel_helpers/",
-      "**/client/regenerator_runtime.js",
-      "**/async-to-promises.js",
-      // new line
-      "**/tests/**/**syntax_error**.*",
-      "!**/tests/**/**syntax_error**.test.*",
-      "**/tests/**/**syntax_error**/main.html",
-      "**/tests/**/snapshots/",
-      "**/tests/**/output/",
-      "**/tests/**/_*test.*/",
-      // new line
-      "/**/*.nomodule.js",
-      "/**/*.jsx",
-      "/**/*.noeslint.*",
-      "source-map@*.js",
-    ],
   },
   // use "@babel/eslint-parser" until top level await is supported by ESLint default parser
   // + to support import assertions in some files
@@ -87,15 +58,15 @@ export default composteEslintFlatConfig(
   {
     files: [
       "**/*.html",
-      "dev_exploring/**/*.js",
-      "**/client/**/*.js",
-      "**/browser/**/*.js",
-      "./docs/**/*.js",
-      "**/babel_helpers/**/*.js",
-      "test/dev_server/**/*.js",
-      "./packages/**/pwa/**/*.js",
-      "./packages/**/custom-elements-redefine/**/*.js",
-      "**/jsenv_service_worker.js",
+      // "dev_exploring/**/*.js",
+      // "**/client/**/*.js",
+      // "**/browser/**/*.js",
+      // "./docs/**/*.js",
+      // "**/babel_helpers/**/*.js",
+      // "test/dev_server/**/*.js",
+      // "./packages/**/pwa/**/*.js",
+      // "./packages/**/custom-elements-redefine/**/*.js",
+      // "**/jsenv_service_worker.js",
     ],
     languageOptions: {
       globals: globals.browser,
@@ -165,5 +136,37 @@ export default composteEslintFlatConfig(
   {
     files: ["**/*.html"],
     plugins: { html },
+  },
+
+  {
+    ignores: [
+      "**/.jsenv/**",
+      "**/.coverage/",
+      "**/dist/",
+      "**/node_modules/",
+      "**/git_ignored/",
+      // newline
+      "!/.github/",
+      "dev_exploring/",
+      "experiments/",
+      "node_modules/",
+      "old/",
+      // new line
+      "**/babel_helpers/",
+      "**/client/regenerator_runtime.js",
+      "**/async-to-promises.js",
+      // new line
+      "**/tests/**/**syntax_error**.*",
+      "!**/tests/**/**syntax_error**.test.*",
+      "**/tests/**/**syntax_error**/main.html",
+      "**/tests/**/snapshots/",
+      "**/tests/**/output/",
+      "**/tests/**/_*test.*/",
+      // new line
+      "**/*.nomodule.js",
+      "**/*.jsx",
+      "**/*.noeslint.*",
+      "source-map@*.js",
+    ],
   },
 );
