@@ -4531,11 +4531,11 @@ const renderIntro = (testPlanResult, logOptions) => {
       // TODO: an option to log how many cpu, memory etc we'll use?
     }
     {
-      const process = logOptions.mockFluctuatingValues
+      const runtime = logOptions.mockFluctuatingValues
         ? `node@mock`
-        : `${testPlanResult.process.name}@${testPlanResult.process.version}`;
-      let processLine = `process: ${process}`;
-      lines.push(processLine);
+        : `${testPlanResult.runtime.name}@${testPlanResult.runtime.version}`;
+      let runtimeLine = `runtime: ${runtime}`;
+      lines.push(runtimeLine);
     }
   }
   return `${renderBigSection({
@@ -5856,7 +5856,7 @@ const executeTestPlan = async ({
       availableCpu: countAvailableCpus(),
       availableMemory: totalmem(),
     },
-    process: {
+    runtime: {
       name: "node",
       version: process.version.slice(1),
     },
@@ -9336,7 +9336,7 @@ const reportAsJson = (
   testPlanResultCopy.os.version = "<mock>";
   testPlanResultCopy.os.availableCpu = "<mock>";
   testPlanResultCopy.os.availableMemory = "<mock>";
-  testPlanResultCopy.process.version = "<mock>";
+  testPlanResultCopy.runtime.version = "<mock>";
   testPlanResultCopy.memoryUsage = "<mock>";
   testPlanResultCopy.cpuUsage = "<mock>";
   testPlanResultCopy.rootDirectoryUrl = "/mock/";

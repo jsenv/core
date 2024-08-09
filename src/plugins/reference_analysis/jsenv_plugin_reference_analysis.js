@@ -41,17 +41,44 @@ const jsenvPluginInlineContentFetcher = () => {
       if (!urlInfo.isInline) {
         return null;
       }
-      // - we must use last reference because
-      //   when updating the file, first reference is the previous version
-      // - we cannot use urlInfo.lastReference because it can be the reference created by "http_request"
+      let isDirectRequestToFile;
+      if (urlInfo.context.request) {
+        const requestedUrl = new URL(
+          urlInfo.context.request.resource.slice(1),
+          urlInfo.context.rootDirectoryUrl,
+        ).href;
+        isDirectRequestToFile = requestedUrl === urlInfo.url;
+      }
+      /*
+       * We want to find inline content but it's not straightforward
+       *
+       * For some reason (that would be great to investigate)
+       * urlInfo corresponding to inline content has several referenceFromOthersSet
+       * so the latest version is the last reference
+       * BUT the last reference is the "http_request"
+       * so it's more likely the before last reference that contains the latest version
+       *
+       * BUT the is an exception when using supervisor as the before last reference
+       * is the one fetched by the browser that is already cooked
+       * we must re-cook from the original content, not from the already cooked content
+       * Otherwise references are already resolved and
+       * - "/node_modules/package/file.js" instead of "package/file.js"
+       * - meaning we would not create the implicit dependency to package.json
+       * - resulting in a reload of the browser (as implicit reference to package.json is gone)
+       * -> can create infinite loop of reloads
+       */
       let lastInlineReference;
       let originalContent = urlInfo.originalContent;
       for (const reference of urlInfo.referenceFromOthersSet) {
-        if (reference.isInline) {
-          if (urlInfo.originalContent === undefined) {
-            originalContent = reference.content;
-          }
-          lastInlineReference = reference;
+        if (!reference.isInline) {
+          continue;
+        }
+        if (urlInfo.originalContent === undefined) {
+          originalContent = reference.content;
+        }
+        lastInlineReference = reference;
+        if (isDirectRequestToFile) {
+          break;
         }
       }
       const { prev } = lastInlineReference;
@@ -73,12 +100,6 @@ const jsenvPluginInlineContentFetcher = () => {
       return {
         originalContent,
         content:
-          // we must favor original content to re-apply the same plugin logic
-          // so that the same references are generated
-          // without this we would try to resolve references like
-          // "/node_modules/package/file.js" instead of "package/file.js"
-          // meaning we would not create the implicit dependency to package.json
-          // resulting in a reload of the browser (as implicit reference to package.json is gone)
           originalContent === undefined
             ? lastInlineReference.content
             : originalContent,

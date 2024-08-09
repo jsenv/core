@@ -6,7 +6,7 @@
 
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
-import { chromium } from "playwright";
+import { firefox } from "playwright";
 
 const devServer = await startDevServer({
   logLevel: "off",
@@ -19,7 +19,7 @@ const devServer = await startDevServer({
   ribbon: false,
 });
 
-const browser = await chromium.launch({ headless: true });
+const browser = await firefox.launch({ headless: true });
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
 const getResult = () => {
   return page.evaluate(
