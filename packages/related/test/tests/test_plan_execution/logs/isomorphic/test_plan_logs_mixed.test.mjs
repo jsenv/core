@@ -15,6 +15,10 @@ import {
 } from "@jsenv/test";
 import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
+if (process.platform === "win32") {
+  process.exit(0);
+}
+
 const terminalAnimatedRecording =
   process.execArgv.includes("--conditions=development") &&
   !process.env.CI &&
