@@ -1,8 +1,7 @@
 /*
  * Test the following:
- * - <style> can hot reload
- * - Introducing a syntax error removes background color
- * - Fixing syntax error restore background color
+ * - A non deterministic plugin error while cooking inline style does not prevent
+ * - browser from displaying the underlying html + css in that <style>
  */
 
 import { assert } from "@jsenv/assert";
