@@ -35,7 +35,7 @@
   "dependencies": {
     "@jsenv/assert": "4.4.0",
     "@jsenv/ast": "6.2.16",
-    "@jsenv/exception": "1.1.0",
+    "@jsenv/exception": "1.1.1",
     "@jsenv/filesystem": "4.10.0",
     "@jsenv/terminal-recorder": "1.4.4",
     "@jsenv/urls": "2.5.2",
