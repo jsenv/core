@@ -44,14 +44,14 @@ try {
     ),
     to: new URL("./git_ignored/main.importmap", import.meta.url),
   });
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await new Promise((resolve) => setTimeout(resolve, 300));
   await page.reload();
   const afterRedirect = await getWindowAnswer();
   replaceFileSync({
     from: new URL("./fixtures/0_at_start/main.importmap", import.meta.url),
     to: new URL("./git_ignored/main.importmap", import.meta.url),
   });
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  await new Promise((resolve) => setTimeout(resolve, 300));
   await page.reload();
   const afterRestore = await getWindowAnswer();
   assert({
