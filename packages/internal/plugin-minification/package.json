@@ -25,8 +25,8 @@
   },
   "dependencies": {
     "html-minifier": "4.0.0",
-    "lightningcss": "1.25.1",
-    "terser": "5.31.3"
+    "lightningcss": "1.26.0",
+    "terser": "5.31.5"
   },
   "peerDependencies": {
     "@jsenv/core": "*"
