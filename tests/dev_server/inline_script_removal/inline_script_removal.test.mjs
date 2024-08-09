@@ -3,13 +3,12 @@
  */
 
 import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
+import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 import { writeFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
-
-import { startDevServer } from "@jsenv/core";
-import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
 let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
