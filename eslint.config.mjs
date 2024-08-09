@@ -15,7 +15,7 @@ export default composteEslintFlatConfig(
   {
     files: ["**/*.js", "**/*.mjs"],
     ignores: [
-      "**/.jsenv/",
+      "**/.jsenv/**",
       "**/.coverage/",
       "**/dist/",
       "**/node_modules/",

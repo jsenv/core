@@ -1,4 +1,4 @@
-/* eslint-env browser */
+/* globals window, document */
 import { swFacade } from "./sw_facade.js";
 
 const animalUrl = new URL("./animal.svg", import.meta.url);
