@@ -17129,7 +17129,16 @@ const jsenvPluginInlineContentFetcher = () => {
       }
       return {
         originalContent,
-        content: lastInlineReference.content,
+        content:
+          // we must favor original content to re-apply the same plugin logic
+          // so that the same references are generated
+          // without this we would try to resolve references like
+          // "/node_modules/package/file.js" instead of "package/file.js"
+          // meaning we would not create the implicit dependency to package.json
+          // resulting in a reload of the browser (as implicit reference to package.json is gone)
+          originalContent === undefined
+            ? lastInlineReference.content
+            : originalContent,
         contentType: lastInlineReference.contentType,
       };
     },
