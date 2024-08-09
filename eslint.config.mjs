@@ -1,3 +1,4 @@
+import babelParser from "@babel/eslint-parser";
 import {
   composteEslintFlatConfig,
   eslintConfigBase,
@@ -6,28 +7,82 @@ import {
   jsenvEslintRules,
   jsenvEslintRulesForImport,
 } from "@jsenv/eslint-config";
+import globals from "globals";
 // import html from "eslint-plugin-html";
 // import * as regexpPlugin from "eslint-plugin-regexp";
 
 export default composteEslintFlatConfig(
   eslintConfigBase,
+  {
+    files: ["**/*.js", "**/*.mjs"],
+    ignores: [
+      ".jsenv/",
+      ".coverage/",
+      "dist/",
+      "node_modules/",
+      "git_ignored/",
+      // newline
+      "!/.github/",
+      "/dev_exploring/",
+      "/experiments/",
+      "/node_modules/",
+      "/old/",
+      // new line
+      "**/babel_helpers/",
+      "**/client/regenerator_runtime.js",
+      "**/async-to-promises.js",
+      // new line
+      "**/tests/**/**syntax_error**.*",
+      "!**/tests/**/**syntax_error**.test.*",
+      "**/tests/**/**syntax_error**/main.html",
+      "**/tests/**/snapshots/",
+      "**/tests/**/output/",
+      "**/tests/**/_*test.*/",
+      // new line
+      "/**/*.nomodule.js",
+      "/**/*.jsx",
+      "/**/*.noeslint.*",
+      "source-map@*.js",
+      "!eslint.config.mjs",
+    ],
+  },
 
   // use "@babel/eslint-parser" until top level await is supported by ESLint default parser
   // + to support import assertions in some files
-  // {
-  //   parser: "@babel/eslint-parser",
-  //   parserOptions: {
-  //     requireConfigFile: false,
-  //   },
-  // },
-
-  // Files in this repository are all meant to be executed in Node.js
-  // and we want to tell this to ESLint.
-  // As a result ESLint can consider `window` as undefined
-  // and `global` as an existing global variable.
   {
-    env: {
-      node: true,
+    languageOptions: {
+      parser: babelParser,
+      parserOptions: {
+        requireConfigFile: false,
+      },
+      // Files in this repository are all meant to be executed in Node.js
+      // and we want to tell this to ESLint.
+      // As a result ESLint can consider `window` as undefined
+      // and `global` as an existing global variable.
+
+      // package is "type": "module" so:
+      // 1. disable commonjs globals by default
+      // 2. Re-enable commonjs into *.cjs files
+      globals: {
+        ...globals.node,
+        __filename: "off",
+        __dirname: "off",
+        require: "off",
+        exports: "off",
+      },
+    },
+  },
+  {
+    files: ["**/*.cjs"],
+    languageOptions: {
+      sourceType: "commonjs",
+      // inside *.cjs files. restore commonJS "globals"
+      globals: {
+        __filename: true,
+        __dirname: true,
+        require: true,
+        exports: true,
+      },
     },
   },
 
@@ -76,68 +131,44 @@ export default composteEslintFlatConfig(
   //   },
   // },
 
-  // // package is "type": "module" so:
-  // // 1. disable commonjs globals by default
-  // // 2. Re-enable commonjs into *.cjs files
-  // {
-  //   globals: {
-  //     __filename: "off",
-  //     __dirname: "off",
-  //     require: "off",
-  //     exports: "off",
-  //   },
-  // },
-  // {
-  //   files: ["**/*.cjs"],
-  //   env: {
-  //     commonjs: true,
-  //   },
-  //   // inside *.cjs files. restore commonJS "globals"
-  //   globals: {
-  //     __filename: true,
-  //     __dirname: true,
-  //     require: true,
-  //     exports: true,
-  //   },
-  // },
+  // several files are written for browsers, not Node.js
+  {
+    files: [
+      "**/*.html",
+      "dev_exploring/**/*.js",
+      "**/client/**/*.js",
+      "**/browser/**/*.js",
+      "./docs/**/*.js",
+      "**/babel_helpers/**/*.js",
+      "test/dev_server/**/*.js",
+      "./packages/**/pwa/**/*.js",
+      "./packages/**/custom-elements-redefine/**/*.js",
+      "**/jsenv_service_worker.js",
+    ],
+    languageOptions: {
+      globals: globals.browser,
+    },
+    settings: {
+      "import/resolver": {
+        "@jsenv/eslint-import-resolver": {
+          rootDirectoryUrl: new URL("./", import.meta.url),
+          packageConditions: ["browser", "import"],
+          // logLevel: "debug",
+        },
+      },
+    },
+  },
 
-  // // several files are written for browsers, not Node.js
-  // {
-  //   files: [
-  //     "**/**/*.html",
-  //     "dev_exploring/**/*.js",
-  //     "**/client/**/*.js",
-  //     "**/browser/**/*.js",
-  //     "./docs/**/*.js",
-  //     "**/babel_helpers/**/*.js",
-  //     "test/dev_server/**/*.js",
-  //     "./packages/**/pwa/**/*.js",
-  //     "./packages/**/custom-elements-redefine/**/*.js",
-  //     "**/jsenv_service_worker.js",
-  //   ],
-  //   env: {
-  //     browser: true,
-  //     node: false,
-  //   },
-  //   settings: {
-  //     "import/resolver": {
-  //       "@jsenv/eslint-import-resolver": {
-  //         rootDirectoryUrl: __dirname,
-  //         packageConditions: ["browser", "import"],
-  //         // logLevel: "debug",
-  //       },
-  //     },
-  //   },
-  // },
-
-  // // browser and node
-  // {
-  //   files: ["./packages/**/assert/**/*.js"],
-  //   env: {
-  //     browser: true,
-  //     node: true,
-  //   },
-  // },
+  // browser and node
+  {
+    files: ["./packages/**/assert/**/*.js"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+      },
+    },
+  },
 
   eslintConfigToPreferExplicitGlobals,
 

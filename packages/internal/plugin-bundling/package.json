@@ -28,7 +28,7 @@
     "@jsenv/url-meta": "8.5.1",
     "@jsenv/urls": "2.5.2",
     "@jsenv/sourcemap": "1.2.23",
-    "lightningcss": "1.25.1",
+    "lightningcss": "1.26.0",
     "rollup": "4.20.0"
   },
   "peerDependencies": {
