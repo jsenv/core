@@ -7,10 +7,13 @@
   </head>
 
   <body>
+    <script src="./a.js"></script>
     <script type="module">
       import { foo } from "foo";
 
       console.log({ foo });
+
+      window.resolveResultPromise(42);
     </script>
   </body>
 </html>
