@@ -5,22 +5,21 @@ import {
   eslintConfigForPrettier,
   eslintConfigToPreferExplicitGlobals,
   jsenvEslintRules,
-  jsenvEslintRulesForImport,
 } from "@jsenv/eslint-config";
+import html from "eslint-plugin-html";
+import * as regexpPlugin from "eslint-plugin-regexp";
 import globals from "globals";
-// import html from "eslint-plugin-html";
-// import * as regexpPlugin from "eslint-plugin-regexp";
 
 export default composteEslintFlatConfig(
   eslintConfigBase,
   {
     files: ["**/*.js", "**/*.mjs"],
     ignores: [
-      ".jsenv/",
-      ".coverage/",
-      "dist/",
-      "node_modules/",
-      "git_ignored/",
+      "**/.jsenv/",
+      "**/.coverage/",
+      "**/dist/",
+      "**/node_modules/",
+      "**/git_ignored/",
       // newline
       "!/.github/",
       "/dev_exploring/",
@@ -43,12 +42,11 @@ export default composteEslintFlatConfig(
       "/**/*.jsx",
       "/**/*.noeslint.*",
       "source-map@*.js",
-      "!eslint.config.mjs",
     ],
   },
-
   // use "@babel/eslint-parser" until top level await is supported by ESLint default parser
   // + to support import assertions in some files
+  // node only
   {
     languageOptions: {
       parser: babelParser,
@@ -85,53 +83,7 @@ export default composteEslintFlatConfig(
       },
     },
   },
-
-  // Enable import plugin
-  // {
-  //   plugins: ["import"],
-  //   settings: {
-  //     "import/resolver": {
-  //       "@jsenv/eslint-import-resolver": {
-  //         rootDirectoryUrl: __dirname,
-  //         packageConditions: ["node", "development", "import"],
-  //       },
-  //     },
-  //     "import/extensions": [".js", ".mjs"],
-  //     // https://github.com/import-js/eslint-plugin-import/issues/1753
-  //     "import/ignore": ["node_modules/playwright/"],
-  //   },
-  //   rules: {
-  //     ...jsenvEslintRulesForImport,
-  //     "import/no-duplicates": ["off"], // already handled by prettier-plugin-organize-imports
-  //   },
-  // },
-
-  // {
-  //   plugins: { regexp: regexpPlugin },
-  //   rules: {
-  //     "regexp/prefer-d": ["off"],
-  //     "regexp/prefer-w": ["off"],
-  //     "regexp/use-ignore-case": ["off"],
-  //   },
-  // },
-
-  // {
-  //   files: ["**/*.html"],
-  //   plugins: { html },
-  // },
-
-  // Reuse jsenv eslint rules
-  // {
-  //   rules: {
-  //     ...jsenvEslintRules,
-  //     // Example of code changing the ESLint configuration to enable a rule:
-  //     "camelcase": ["off"],
-  //     "dot-notation": ["off"],
-  //     "spaced-comment": ["off"],
-  //   },
-  // },
-
-  // several files are written for browsers, not Node.js
+  // browser only
   {
     files: [
       "**/*.html",
@@ -158,7 +110,6 @@ export default composteEslintFlatConfig(
       },
     },
   },
-
   // browser and node
   {
     files: ["./packages/**/assert/**/*.js"],
@@ -169,10 +120,50 @@ export default composteEslintFlatConfig(
       },
     },
   },
-
   eslintConfigToPreferExplicitGlobals,
-
+  // Reuse jsenv eslint rules
+  {
+    rules: {
+      ...jsenvEslintRules,
+      // Example of code changing the ESLint configuration to enable a rule:
+      "camelcase": ["off"],
+      "dot-notation": ["off"],
+      "spaced-comment": ["off"],
+    },
+  },
   // We are using prettier, disable all eslint rules
   // already handled by prettier.
   eslintConfigForPrettier,
+  // plugins
+  // Enable import plugin
+  // {
+  //   plugins: ["import"],
+  //   settings: {
+  //     "import/resolver": {
+  //       "@jsenv/eslint-import-resolver": {
+  //         rootDirectoryUrl: __dirname,
+  //         packageConditions: ["node", "development", "import"],
+  //       },
+  //     },
+  //     "import/extensions": [".js", ".mjs"],
+  //     // https://github.com/import-js/eslint-plugin-import/issues/1753
+  //     "import/ignore": ["node_modules/playwright/"],
+  //   },
+  //   rules: {
+  //     ...jsenvEslintRulesForImport,
+  //     "import/no-duplicates": ["off"], // already handled by prettier-plugin-organize-imports
+  //   },
+  // },
+  {
+    plugins: { regexp: regexpPlugin },
+    rules: {
+      "regexp/prefer-d": ["off"],
+      "regexp/prefer-w": ["off"],
+      "regexp/use-ignore-case": ["off"],
+    },
+  },
+  {
+    files: ["**/*.html"],
+    plugins: { html },
+  },
 );
