@@ -8,6 +8,7 @@
  * - TODO: test when dir is empty
  */
 
+import { startDevServer } from "@jsenv/core";
 import {
   ensureEmptyDirectorySync,
   replaceFileStructureSync,
@@ -15,8 +16,6 @@ import {
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
-
-import { startDevServer } from "@jsenv/core";
 
 let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);

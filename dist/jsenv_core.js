@@ -17126,6 +17126,11 @@ const jsenvPluginInlineContentFetcher = () => {
           originalContent = originalUrlInfo.originalContent;
           lastInlineReference.content = originalUrlInfo.content;
           lastInlineReference.contentType = originalUrlInfo.contentType;
+          return {
+            originalContent: originalUrlInfo.originalContent,
+            content: originalUrlInfo.content,
+            contentType: originalUrlInfo.contentType,
+          };
         }
       }
       return {

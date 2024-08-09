@@ -6,6 +6,7 @@ import { chromium } from "playwright";
 const run = async () => {
   const devServer = await startDevServer({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     clientAutoreload: false,
     ribbon: false,
     supervisor: false,
