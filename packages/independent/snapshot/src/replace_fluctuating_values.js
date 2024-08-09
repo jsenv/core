@@ -68,6 +68,15 @@ export const replaceFluctuatingValues = (
     // );
     return string;
   };
+  // const replaceUnicodeFallbacks = (string) => {
+  //   string = string.replaceAll(">", "❯");
+  //   string = string.replaceAll("√", "✔");
+  //   string = string.replaceAll("×", "✖");
+  //   string = string.replaceAll("♦", "◆");
+  //   string = string.replaceAll("i", "ℹ");
+  //   // string = string.replaceAll("‼", "⚠");
+  //   return string;
+  // };
   const replaceThings = (string, { shouldReplaceDurations } = {}) => {
     if (stringType === "filesystem") {
       return replaceFilesystemWellKnownValues(string);
@@ -82,6 +91,7 @@ export const replaceFluctuatingValues = (
     if (shouldReplaceDurations !== false) {
       string = replaceDurations(string);
     }
+    // string = replaceUnicodeFallbacks(string);
     string = replaceSizes(string);
     return string;
   };

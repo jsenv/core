@@ -1,4 +1,5 @@
 import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
+import { ANSI, UNICODE } from "@jsenv/humanize";
 import { createReplaceFilesystemWellKnownValues } from "../filesystem_well_known_values.js";
 import { filesystemSideEffects } from "./filesystem/filesystem_side_effects.js";
 import { logSideEffects } from "./log/log_side_effects.js";
@@ -37,6 +38,14 @@ export const createCaptureSideEffects = ({
   };
   let functionExecutingCount = 0;
   const capture = (fn, { callSite, baseDirectory } = {}) => {
+    const unicodeSupported = UNICODE.supported;
+    const ansiSupported = ANSI.supported;
+    // this is fragile because if the copy of humanize we have
+    // is not the same (different version)
+    // we won't be able to force support
+    // good enough for now
+    UNICODE.supported = true;
+    ANSI.supported = true;
     if (baseDirectory !== undefined && filesystemSideEffectsDetector) {
       filesystemSideEffectsDetector.setBaseDirectory(baseDirectory);
     }
@@ -265,6 +274,8 @@ export const createCaptureSideEffects = ({
     };
     const onFinally = () => {
       delete process.env.CAPTURING_SIDE_EFFECTS;
+      UNICODE.supported = unicodeSupported;
+      ANSI.supported = ansiSupported;
       functionExecutingCount--;
       for (const finallyCallback of finallyCallbackSet) {
         finallyCallback(sideEffects);
