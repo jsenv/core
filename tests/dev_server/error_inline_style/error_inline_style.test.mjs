@@ -22,44 +22,59 @@ const devServer = await startDevServer({
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
+  plugins: [
+    {
+      transformUrlContent: {
+        css: (urlInfo) => {
+          if (urlInfo.content.includes("yellow")) {
+            throw new Error("here");
+          }
+        },
+      },
+    },
+  ],
+  clientAutoreload: false,
+  ribbon: false,
+  supervisor: false,
 });
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
+const getDocumentBodyBackgroundColor = () => {
+  return page.evaluate(
+    /* eslint-env browser */
+    () => window.getComputedStyle(document.body).backgroundColor,
+    /* eslint-env node */
+  );
+};
 
 try {
   await page.goto(`${devServer.origin}/main.html`);
-  const getDocumentBodyBackgroundColor = () => {
-    return page.evaluate(
-      /* eslint-disable no-undef */
-      () => window.getComputedStyle(document.body).backgroundColor,
-      /* eslint-enable no-undef */
-    );
-  };
   const atStart = await getDocumentBodyBackgroundColor();
-  const pageReloadPromise = page.waitForNavigation();
   replaceFileStructureSync({
-    from: new URL("./fixtures/1_syntax_error/", import.meta.url),
+    from: new URL("./fixtures/1_update/", import.meta.url),
     to: sourceDirectoryUrl,
   });
-  await pageReloadPromise;
-  const afterSyntaxError = await getDocumentBodyBackgroundColor();
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  await page.reload();
+  const afterUpdateToYellow = await getDocumentBodyBackgroundColor();
   replaceFileStructureSync({
     from: new URL("./fixtures/0_at_start/", import.meta.url),
     to: sourceDirectoryUrl,
   });
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  await page.reload();
   const afterRestore = await getDocumentBodyBackgroundColor();
   assert({
     actual: {
       atStart,
-      afterSyntaxError,
+      afterUpdateToYellow,
       afterRestore,
     },
     expect: {
-      atStart: `rgb(255, 0, 0)`,
-      afterSyntaxError: `rgba(0, 0, 0, 0)`,
-      afterRestore: `rgb(255, 0, 0)`,
+      atStart: `rgb(0, 128, 0)`,
+      afterUpdateToYellow: `rgb(255, 255, 0)`,
+      afterRestore: `rgb(0, 128, 0)`,
     },
   });
 } finally {

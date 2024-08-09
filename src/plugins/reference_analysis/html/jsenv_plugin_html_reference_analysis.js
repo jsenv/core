@@ -274,13 +274,8 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
             });
 
             actions.push(async () => {
-              try {
-                await inlineReference.urlInfo.cook();
-              } catch (e) {
-                if (!e || e.code !== "PARSE_ERROR") {
-                  throw e;
-                }
-              }
+              const inlineUrlInfo = inlineReference.urlInfo;
+              await inlineUrlInfo.cook();
               mutations.push(() => {
                 if (hotAccept) {
                   removeHtmlNodeText(node);
@@ -288,7 +283,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
                     "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
                   });
                 } else {
-                  setHtmlNodeText(node, inlineReference.urlInfo.content, {
+                  setHtmlNodeText(node, inlineUrlInfo.content, {
                     indentation: false, // indentation would decrease stack trace precision
                   });
                   setHtmlNodeAttributes(node, {
@@ -561,7 +556,8 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
           }
           mutations.forEach((mutation) => mutation());
           mutations.length = 0;
-          return stringifyHtmlAst(htmlAst);
+          const html = stringifyHtmlAst(htmlAst);
+          return html;
         } catch (e) {
           importmapLoaded();
           throw e;

@@ -448,7 +448,6 @@ export const startDevServer = async ({
               };
             }
           }
-
           await urlInfo.cook({ request, reference });
           let { response } = urlInfo;
           if (response) {
@@ -491,9 +490,8 @@ export const startDevServer = async ({
             },
           );
           return response;
-        } catch (e) {
-          urlInfo.error = e;
-          const originalError = e ? e.cause || e : e;
+        } catch (error) {
+          const originalError = error ? error.cause || error : error;
           if (originalError.asResponse) {
             return originalError.asResponse();
           }
@@ -505,13 +503,13 @@ export const startDevServer = async ({
             if (urlInfo.content !== undefined) {
               kitchen.context.logger.error(`Error while handling ${request.url}:
 ${originalError.reasonCode || originalError.code}
-${e.trace?.message}`);
+${error.trace?.message}`);
               return {
                 url: reference.url,
                 status: 200,
                 // reason becomes the http response statusText, it must not contain invalid chars
                 // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
-                statusText: e.reason,
+                statusText: error.reason,
                 statusMessage: originalError.message,
                 headers: {
                   "content-type": urlInfo.contentType,
@@ -524,7 +522,7 @@ ${e.trace?.message}`);
             return {
               url: reference.url,
               status: 500,
-              statusText: e.reason,
+              statusText: error.reason,
               statusMessage: originalError.message,
               headers: {
                 "cache-control": "no-store",
@@ -559,8 +557,11 @@ ${e.trace?.message}`);
           return {
             url: reference.url,
             status: 500,
-            statusText: e.reason,
-            statusMessage: e.stack,
+            statusText: error.reason,
+            statusMessage: error.stack,
+            headers: {
+              "cache-control": "no-store",
+            },
           };
         }
       },
