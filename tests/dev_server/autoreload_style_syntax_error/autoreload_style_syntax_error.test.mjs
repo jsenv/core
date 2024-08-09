@@ -6,21 +6,19 @@
  */
 
 import { assert } from "@jsenv/assert";
-import { readFileSync, writeFileSync } from "node:fs";
+import { startDevServer } from "@jsenv/core";
+import { replaceFileStructureSync } from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
-import { startDevServer } from "@jsenv/core";
-
-const htmlFileUrl = new URL("./client/main.html", import.meta.url);
-const htmlFileContent = {
-  beforeTest: readFileSync(htmlFileUrl),
-  update: (content) => writeFileSync(htmlFileUrl, content),
-  restore: () => writeFileSync(htmlFileUrl, htmlFileContent.beforeTest),
-};
+const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
+replaceFileStructureSync({
+  from: new URL("./fixtures/0_at_start/", import.meta.url),
+  to: sourceDirectoryUrl,
+});
 const devServer = await startDevServer({
   logLevel: "off",
   serverLogLevel: "off",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl,
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   keepProcessAlive: false,
   port: 0,
@@ -38,48 +36,34 @@ try {
       /* eslint-enable no-undef */
     );
   };
-
-  {
-    const actual = await getDocumentBodyBackgroundColor();
-    const expect = `rgb(255, 0, 0)`;
-    assert({ actual, expect });
-  }
-
+  const atStart = await getDocumentBodyBackgroundColor();
   const pageReloadPromise = page.waitForNavigation();
-  htmlFileContent.update(`<!DOCTYPE html>
-  <html>
-    <head>
-      <title>Title</title>
-      <meta charset="utf-8" />
-      <link rel="icon" href="data:," />
-    </head>
-  
-    <body>
-      <style>
-        body {
-          background: red
-          color: blue;
-        }
-      </style>
-    </body>
-  </html>`);
-  await pageReloadPromise;
-  {
-    const actual = await getDocumentBodyBackgroundColor();
-    const expect = `rgba(0, 0, 0, 0)`;
-    assert({ actual, expect });
-  }
-  htmlFileContent.restore();
-  await new Promise((resolve) => {
-    setTimeout(resolve, 500);
+  replaceFileStructureSync({
+    from: new URL("./fixtures/1_syntax_error/", import.meta.url),
+    to: sourceDirectoryUrl,
   });
-  {
-    const actual = await getDocumentBodyBackgroundColor();
-    const expect = `rgb(255, 0, 0)`;
-    assert({ actual, expect });
-  }
+  await pageReloadPromise;
+  const afterSyntaxError = await getDocumentBodyBackgroundColor();
+  replaceFileStructureSync({
+    from: new URL("./fixtures/0_at_start/", import.meta.url),
+    to: sourceDirectoryUrl,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const afterRestore = await getDocumentBodyBackgroundColor();
+  assert({
+    actual: {
+      atStart,
+      afterSyntaxError,
+      afterRestore,
+    },
+    expect: {
+      atStart: `rgb(255, 0, 0)`,
+      afterSyntaxError: `rgba(0, 0, 0, 0)`,
+
+      afterRestore: `rgb(255, 0, 0)`,
+    },
+  });
 } finally {
-  htmlFileContent.restore();
   browser.close();
   devServer.stop(); // required because for some reason the rooms are kept alive
 }
