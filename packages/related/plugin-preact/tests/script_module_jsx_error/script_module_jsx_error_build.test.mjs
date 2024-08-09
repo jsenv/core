@@ -1,39 +1,37 @@
-import { build } from "@jsenv/core";
-import { replaceFluctuatingValues, takeFileSnapshot } from "@jsenv/snapshot";
+import { build, startBuildServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const consoleErrorCalls = [];
-const { error } = console;
-console.error = (message) => {
-  consoleErrorCalls.push(message);
-};
-const test = async (params) => {
+const run = async ({ runtimeCompat }) => {
   await build({
-    logLevel: "error",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: new URL("./dist/", import.meta.url),
-    entryPoints: {
-      "./main.noeslint.html": "main.html",
-    },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
-  });
-};
-
-try {
-  await test({
-    runtimeCompat: { chrome: "89" },
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.noeslint.html": "main.html" },
     bundling: false,
     minification: false,
+    runtimeCompat,
   });
-  const callMocked = consoleErrorCalls.map((consoleErrorMessage) => {
-    return replaceFluctuatingValues(consoleErrorMessage, {
-      rootDirectoryUrl: new URL("./", import.meta.url),
-    });
+  const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
   });
-  const consoleOutputFileSnapshot = takeFileSnapshot(
-    new URL("./output/console_errors.txt", import.meta.url),
-  );
-  consoleOutputFileSnapshot.update(callMocked[0]);
-} finally {
-  console.error = error;
-}
+  return executeHtml(`${buildServer.origin}/main.html`);
+};
+
+await snapshotBuildTests(
+  import.meta.url,
+  ({ test }) => {
+    test("0_js_module", () =>
+      run({
+        runtimeCompat: { chrome: "89" },
+      }));
+  },
+  {
+    executionEffects: {
+      catch(e) {
+        e.stack = "";
+      },
+    },
+  },
+);

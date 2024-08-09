@@ -485,7 +485,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         }
         let errorWrapperMessage;
         if (e.code === "PARSE_ERROR") {
-          errorWrapperMessage = `parse error on "${urlInfo.type}"
+          errorWrapperMessage =
+            e.name === "TRANSFORM_URL_CONTENT_ERROR"
+              ? e.message
+              : `parse error on "${urlInfo.type}"
 ${e.trace?.message}
 ${e.reason}
 --- declared in ---

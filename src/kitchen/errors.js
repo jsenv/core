@@ -135,6 +135,9 @@ export const createTransformUrlContentError = ({
     return error;
   }
   if (error.code === "PARSE_ERROR") {
+    if (error.isJsenvCookingError) {
+      return error;
+    }
     const reference = urlInfo.firstReference;
     let trace = reference.trace;
     let line = error.line;
@@ -182,7 +185,9 @@ export const createTransformUrlContentError = ({
 ${trace.message}
 ${error.message}`,
         {
-          "first reference": `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`,
+          "first reference": reference.trace.url
+            ? `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`
+            : reference.trace.message,
           ...detailsFromFirstReference(reference),
           ...detailsFromPluginController(pluginController),
         },
