@@ -3,13 +3,9 @@
  */
 
 export const eslintConfigBase = {
-  parserOptions: {
+  files: ["**/*.js", "**/*.mjs"],
+  languageOptions: {
     sourceType: "module",
-  },
-  env: {
-    es2022: true,
-  },
-  settings: {
-    extensions: [".js", ".mjs"],
+    ecmaVersion: "2022",
   },
 };

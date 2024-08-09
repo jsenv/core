@@ -86,14 +86,12 @@ const composeTwoEslintConfigs = (firstEslintConfig, secondEslintConfig) => {
  */
 
 const eslintConfigBase = {
+  files: ["**/*.js", "**/*.mjs"],
   parserOptions: {
     sourceType: "module",
   },
   env: {
     es2022: true,
-  },
-  settings: {
-    extensions: [".js", ".mjs"],
   },
 };
 

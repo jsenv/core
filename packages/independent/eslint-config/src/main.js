@@ -1,3 +1,4 @@
+export { composteEslintFlatConfig } from "./compose_eslint_flat_config.js";
 export { composeEslintConfig } from "./composeEslintConfig.js";
 export { eslintConfigBase } from "./eslintConfigBase.js";
 export { eslintConfigForPrettier } from "./eslintConfigForPrettier.js";

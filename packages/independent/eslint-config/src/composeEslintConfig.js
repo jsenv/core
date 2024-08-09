@@ -7,7 +7,11 @@ export const composeEslintConfig = (...eslintConfigs) => {
   }, {});
 };
 
-const composeTwoEslintConfigs = (firstEslintConfig, secondEslintConfig) => {
+const composeTwoEslintConfigs = (
+  firstEslintConfig,
+  secondEslintConfig,
+  flat = true,
+) => {
   return composeTwoObjects(firstEslintConfig, secondEslintConfig, {
     parserOptions: (firstParserOptions, secondParserOptions) => {
       return composeTwoObjects(firstParserOptions, secondParserOptions, {

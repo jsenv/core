@@ -25,4 +25,4 @@ git_ignored/
 /**/*.jsx
 /**/*.noeslint.*
 source-map@*.js
-!.eslintrc.js
+!eslint.config.mjs
