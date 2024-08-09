@@ -11672,6 +11672,9 @@ const createTransformUrlContentError = ({
     return error;
   }
   if (error.code === "PARSE_ERROR") {
+    if (error.isJsenvCookingError) {
+      return error;
+    }
     const reference = urlInfo.firstReference;
     let trace = reference.trace;
     let line = error.line;
@@ -11719,7 +11722,9 @@ const createTransformUrlContentError = ({
 ${trace.message}
 ${error.message}`,
         {
-          "first reference": `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`,
+          "first reference": reference.trace.url
+            ? `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`
+            : reference.trace.message,
           ...detailsFromFirstReference(reference),
           ...detailsFromPluginController(pluginController),
         },
@@ -14549,7 +14554,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         }
         let errorWrapperMessage;
         if (e.code === "PARSE_ERROR") {
-          errorWrapperMessage = `parse error on "${urlInfo.type}"
+          errorWrapperMessage =
+            e.name === "TRANSFORM_URL_CONTENT_ERROR"
+              ? e.message
+              : `parse error on "${urlInfo.type}"
 ${e.trace?.message}
 ${e.reason}
 --- declared in ---
@@ -18270,47 +18278,46 @@ const createNodeEsmResolver = ({
       specifier: reference.specifier,
       preservesSymlink,
     });
-    if (ownerUrlInfo.context.dev) {
-      const dependsOnPackageJson =
-        type !== "relative_specifier" &&
-        type !== "absolute_specifier" &&
-        type !== "node_builtin_specifier";
-      if (dependsOnPackageJson) {
-        // this reference depends on package.json and node_modules
-        // to be resolved. Each file using this specifier
-        // must be invalidated when corresponding package.json changes
-        addRelationshipWithPackageJson({
-          reference,
-          packageJsonUrl: `${packageDirectoryUrl}package.json`,
-          field: type.startsWith("field:")
-            ? `#${type.slice("field:".length)}`
-            : "",
-        });
-      }
+    if (ownerUrlInfo.context.build) {
+      return url;
     }
-    if (ownerUrlInfo.context.dev) {
-      // without this check a file inside a project without package.json
-      // could be considered as a node module if there is a ancestor package.json
-      // but we want to version only node modules
-      if (url.includes("/node_modules/")) {
-        const packageDirectoryUrl = defaultLookupPackageScope(url);
-        if (
-          packageDirectoryUrl &&
-          packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl
-        ) {
-          const packageVersion =
-            defaultReadPackageJson(packageDirectoryUrl).version;
-          // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
-          if (packageVersion) {
-            addRelationshipWithPackageJson({
-              reference,
-              packageJsonUrl: `${packageDirectoryUrl}package.json`,
-              field: "version",
-              hasVersioningEffect: true,
-            });
-          }
-          reference.version = packageVersion;
+    const dependsOnPackageJson =
+      type !== "relative_specifier" &&
+      type !== "absolute_specifier" &&
+      type !== "node_builtin_specifier";
+    if (dependsOnPackageJson) {
+      // this reference depends on package.json and node_modules
+      // to be resolved. Each file using this specifier
+      // must be invalidated when corresponding package.json changes
+      addRelationshipWithPackageJson({
+        reference,
+        packageJsonUrl: `${packageDirectoryUrl}package.json`,
+        field: type.startsWith("field:")
+          ? `#${type.slice("field:".length)}`
+          : "",
+      });
+    }
+    // without this check a file inside a project without package.json
+    // could be considered as a node module if there is a ancestor package.json
+    // but we want to version only node modules
+    if (url.includes("/node_modules/")) {
+      const packageDirectoryUrl = defaultLookupPackageScope(url);
+      if (
+        packageDirectoryUrl &&
+        packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl
+      ) {
+        const packageVersion =
+          defaultReadPackageJson(packageDirectoryUrl).version;
+        // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
+        if (packageVersion) {
+          addRelationshipWithPackageJson({
+            reference,
+            packageJsonUrl: `${packageDirectoryUrl}package.json`,
+            field: "version",
+            hasVersioningEffect: true,
+          });
         }
+        reference.version = packageVersion;
       }
     }
     return url;
@@ -19975,6 +19982,9 @@ const jsenvPluginAutoreloadServer = ({
                 // Can happen when starting dev server with sourcemaps: "file"
                 // In that case, as sourcemaps are injected, the reference
                 // are lost and sourcemap is considered as pruned
+                continue;
+              }
+              if (lastReferenceFromOther.type === "package_json") {
                 continue;
               }
               const { ownerUrlInfo } = lastReferenceFromOther;
