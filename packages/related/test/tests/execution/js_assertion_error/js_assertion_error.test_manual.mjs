@@ -6,4 +6,6 @@ await startDevServer({
   sourceMainFilePath: "main.html",
   keepProcessAlive: true,
   port: 5678,
+  ribbon: false,
+  // clientAutoreload: false,
 });

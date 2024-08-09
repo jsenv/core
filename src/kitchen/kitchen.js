@@ -17,6 +17,7 @@ import {
   createFinalizeUrlContentError,
   createResolveUrlError,
   createTransformUrlContentError,
+  defineNonEnumerableProperties,
 } from "./errors.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
 import { createUrlGraph } from "./url_graph/url_graph.js";
@@ -426,7 +427,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo,
         error,
       });
-      urlInfo.error = transformError;
       throw transformError;
     }
   };
@@ -458,9 +458,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
     // urlInfo objects are reused, they must be "reset" before cooking them again
     if (urlInfo.error || urlInfo.content !== undefined) {
-      if (urlInfo.isInline) {
-        return;
-      }
       urlInfo.error = null;
       urlInfo.type = null;
       urlInfo.subtype = null;
@@ -482,30 +479,46 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         });
       } catch (e) {
         urlInfo.error = e;
-        if (
-          urlInfo.isInline &&
-          e.code !== "DIRECTORY_REFERENCE_NOT_ALLOWED" &&
-          errorOnInlineContentCanSkipThrow(urlInfo)
-        ) {
-          // When something like <style> or <script> contains syntax error
-          // the HTML in itself it still valid
-          // keep the syntax error and continue with the HTML
-          if (e.code === "PARSE_ERROR") {
-            logger.error(`parse error on "${urlInfo.type}"
+        if (urlInfo.isInline) {
+          const parentUrlInfo = urlInfo.findParentIfInline();
+          parentUrlInfo.error = e;
+        }
+        let errorWrapperMessage;
+        if (e.code === "PARSE_ERROR") {
+          errorWrapperMessage =
+            e.name === "TRANSFORM_URL_CONTENT_ERROR"
+              ? e.message
+              : `parse error on "${urlInfo.type}"
 ${e.trace?.message}
 ${e.reason}
 --- declared in ---
-${urlInfo.firstReference.trace.message}`);
-            return;
-          }
-          logger.error(
-            `Error while cooking ${urlInfo.type}
-${urlInfo.firstReference.trace.message}
-${e.stack}`,
-          );
+${urlInfo.firstReference.trace.message}`;
+        } else if (e.isJsenvCookingError) {
+          errorWrapperMessage = e.message;
+        } else {
+          errorWrapperMessage = `Error while cooking ${urlInfo.type}
+${urlInfo.firstReference.trace.message}`;
+        }
+        // if we are cooking inline content during dev it's better not to throw
+        // because the main url info (html) is still valid and can be returned to the browser
+        if (
+          urlInfo.isInline &&
+          urlInfo.context.dev &&
+          // but if we are explicitely requesting inline content file then we throw
+          // to properly send 500 to the browser
+          urlInfo.context.reference !== urlInfo.url
+        ) {
+          logger.error(errorWrapperMessage);
           return;
         }
-        throw e;
+        if (e.isJsenvCookingError) {
+          throw e;
+        }
+        const error = new Error(errorWrapperMessage, { cause: e });
+        defineNonEnumerableProperties(error, {
+          __INTERNAL_ERROR__: true,
+        });
+        throw error;
       }
     }
 
@@ -593,23 +606,6 @@ ${e.stack}`,
   kitchenContext.cookDependencies = cookDependencies;
 
   return kitchen;
-};
-
-// if we are cooking the inline content internally it's better not to throw
-// because the main url info (html) is still valid
-// but if we are explicitely requesting inline content during dev
-// then we should throw
-const errorOnInlineContentCanSkipThrow = (urlInfo) => {
-  if (urlInfo.context.build) {
-    return true;
-  }
-  if (
-    urlInfo.context.reference &&
-    urlInfo.context.reference.url === urlInfo.url
-  ) {
-    return false;
-  }
-  return true;
 };
 
 const debounceCook = (cook) => {

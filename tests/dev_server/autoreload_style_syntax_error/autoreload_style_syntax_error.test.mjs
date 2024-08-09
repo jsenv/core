@@ -59,7 +59,6 @@ try {
     expect: {
       atStart: `rgb(255, 0, 0)`,
       afterSyntaxError: `rgba(0, 0, 0, 0)`,
-
       afterRestore: `rgb(255, 0, 0)`,
     },
   });

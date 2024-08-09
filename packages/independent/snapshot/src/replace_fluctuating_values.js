@@ -68,7 +68,7 @@ export const replaceFluctuatingValues = (
     // );
     return string;
   };
-  const replaceThings = (string) => {
+  const replaceThings = (string, { shouldReplaceDurations } = {}) => {
     if (stringType === "filesystem") {
       return replaceFilesystemWellKnownValues(string);
     }
@@ -79,7 +79,9 @@ export const replaceFluctuatingValues = (
       willBeWrittenOnFilesystem: false,
     });
     string = replaceHttpUrls(string);
-    string = replaceDurations(string);
+    if (shouldReplaceDurations !== false) {
+      string = replaceDurations(string);
+    }
     string = replaceSizes(string);
     return string;
   };
@@ -113,13 +115,17 @@ export const replaceFluctuatingValues = (
           if (attributes) {
             for (const name of Object.keys(attributes)) {
               const attributeValue = attributes[name];
+              let newValue;
               if (name === "timestamp") {
-                attributes[name] = "[timestamp]";
+                newValue = "[timestamp]";
               } else if (name === "time") {
-                attributes[name] = "[time]";
+                newValue = "[time]";
               } else {
-                attributes[name] = replaceThings(attributeValue);
+                newValue = replaceThings(attributeValue, {
+                  shouldReplaceDurations: name !== "style",
+                });
               }
+              attributes[name] = newValue;
             }
             setHtmlNodeAttributes(node, attributes);
           }

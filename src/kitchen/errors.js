@@ -25,6 +25,7 @@ ${reason}`,
       ),
     );
     defineNonEnumerableProperties(resolveError, {
+      isJsenvCookingError: true,
       name: "RESOLVE_URL_ERROR",
       code,
       reason,
@@ -73,6 +74,7 @@ ${reason}`,
       ),
     );
     defineNonEnumerableProperties(fetchError, {
+      isJsenvCookingError: true,
       name: "FETCH_URL_CONTENT_ERROR",
       code,
       reason,
@@ -133,6 +135,9 @@ export const createTransformUrlContentError = ({
     return error;
   }
   if (error.code === "PARSE_ERROR") {
+    if (error.isJsenvCookingError) {
+      return error;
+    }
     const reference = urlInfo.firstReference;
     let trace = reference.trace;
     let line = error.line;
@@ -180,13 +185,16 @@ export const createTransformUrlContentError = ({
 ${trace.message}
 ${error.message}`,
         {
-          "first reference": `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`,
+          "first reference": reference.trace.url
+            ? `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`
+            : reference.trace.message,
           ...detailsFromFirstReference(reference),
           ...detailsFromPluginController(pluginController),
         },
       ),
     );
     defineNonEnumerableProperties(transformError, {
+      isJsenvCookingError: true,
       name: "TRANSFORM_URL_CONTENT_ERROR",
       code: "PARSE_ERROR",
       reason: error.message,
@@ -216,6 +224,7 @@ ${reason}`,
       ),
     );
     defineNonEnumerableProperties(transformError, {
+      isJsenvCookingError: true,
       cause: error,
       name: "TRANSFORM_URL_CONTENT_ERROR",
       code,
@@ -251,6 +260,7 @@ ${reference.trace.message}`,
     ),
   );
   defineNonEnumerableProperties(finalizeError, {
+    isJsenvCookingError: true,
     ...(error && error instanceof Error ? { cause: error } : {}),
     name: "FINALIZE_URL_CONTENT_ERROR",
     reason: `"finalizeUrlContent" error on "${urlInfo.type}"`,
@@ -312,9 +322,9 @@ const detailsFromValueThrown = (valueThrownByPlugin) => {
   };
 };
 
-const defineNonEnumerableProperties = (assertionError, properties) => {
+export const defineNonEnumerableProperties = (object, properties) => {
   for (const key of Object.keys(properties)) {
-    Object.defineProperty(assertionError, key, {
+    Object.defineProperty(object, key, {
       configurable: true,
       writable: true,
       value: properties[key],

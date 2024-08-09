@@ -238,6 +238,9 @@ export const jsenvPluginAutoreloadServer = ({
                 // are lost and sourcemap is considered as pruned
                 continue;
               }
+              if (lastReferenceFromOther.type === "package_json") {
+                continue;
+              }
               const { ownerUrlInfo } = lastReferenceFromOther;
               if (!ownerUrlInfo.isUsed()) {
                 continue;

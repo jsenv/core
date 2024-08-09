@@ -11562,6 +11562,7 @@ ${reason}`,
       ),
     );
     defineNonEnumerableProperties(resolveError, {
+      isJsenvCookingError: true,
       name: "RESOLVE_URL_ERROR",
       code,
       reason,
@@ -11610,6 +11611,7 @@ ${reason}`,
       ),
     );
     defineNonEnumerableProperties(fetchError, {
+      isJsenvCookingError: true,
       name: "FETCH_URL_CONTENT_ERROR",
       code,
       reason,
@@ -11670,6 +11672,9 @@ const createTransformUrlContentError = ({
     return error;
   }
   if (error.code === "PARSE_ERROR") {
+    if (error.isJsenvCookingError) {
+      return error;
+    }
     const reference = urlInfo.firstReference;
     let trace = reference.trace;
     let line = error.line;
@@ -11717,13 +11722,16 @@ const createTransformUrlContentError = ({
 ${trace.message}
 ${error.message}`,
         {
-          "first reference": `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`,
+          "first reference": reference.trace.url
+            ? `${reference.trace.url}:${reference.trace.line}:${reference.trace.column}`
+            : reference.trace.message,
           ...detailsFromFirstReference(reference),
           ...detailsFromPluginController(pluginController),
         },
       ),
     );
     defineNonEnumerableProperties(transformError, {
+      isJsenvCookingError: true,
       name: "TRANSFORM_URL_CONTENT_ERROR",
       code: "PARSE_ERROR",
       reason: error.message,
@@ -11753,6 +11761,7 @@ ${reason}`,
       ),
     );
     defineNonEnumerableProperties(transformError, {
+      isJsenvCookingError: true,
       cause: error,
       name: "TRANSFORM_URL_CONTENT_ERROR",
       code,
@@ -11788,6 +11797,7 @@ ${reference.trace.message}`,
     ),
   );
   defineNonEnumerableProperties(finalizeError, {
+    isJsenvCookingError: true,
     ...(error && error instanceof Error ? { cause: error } : {}),
     name: "FINALIZE_URL_CONTENT_ERROR",
     reason: `"finalizeUrlContent" error on "${urlInfo.type}"`,
@@ -11849,9 +11859,9 @@ const detailsFromValueThrown = (valueThrownByPlugin) => {
   };
 };
 
-const defineNonEnumerableProperties = (assertionError, properties) => {
+const defineNonEnumerableProperties = (object, properties) => {
   for (const key of Object.keys(properties)) {
-    Object.defineProperty(assertionError, key, {
+    Object.defineProperty(object, key, {
       configurable: true,
       writable: true,
       value: properties[key],
@@ -14486,7 +14496,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo,
         error,
       });
-      urlInfo.error = transformError;
       throw transformError;
     }
   };
@@ -14518,9 +14527,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
 
     // urlInfo objects are reused, they must be "reset" before cooking them again
     if (urlInfo.error || urlInfo.content !== undefined) {
-      if (urlInfo.isInline) {
-        return;
-      }
       urlInfo.error = null;
       urlInfo.type = null;
       urlInfo.subtype = null;
@@ -14542,30 +14548,46 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         });
       } catch (e) {
         urlInfo.error = e;
-        if (
-          urlInfo.isInline &&
-          e.code !== "DIRECTORY_REFERENCE_NOT_ALLOWED" &&
-          errorOnInlineContentCanSkipThrow(urlInfo)
-        ) {
-          // When something like <style> or <script> contains syntax error
-          // the HTML in itself it still valid
-          // keep the syntax error and continue with the HTML
-          if (e.code === "PARSE_ERROR") {
-            logger.error(`parse error on "${urlInfo.type}"
+        if (urlInfo.isInline) {
+          const parentUrlInfo = urlInfo.findParentIfInline();
+          parentUrlInfo.error = e;
+        }
+        let errorWrapperMessage;
+        if (e.code === "PARSE_ERROR") {
+          errorWrapperMessage =
+            e.name === "TRANSFORM_URL_CONTENT_ERROR"
+              ? e.message
+              : `parse error on "${urlInfo.type}"
 ${e.trace?.message}
 ${e.reason}
 --- declared in ---
-${urlInfo.firstReference.trace.message}`);
-            return;
-          }
-          logger.error(
-            `Error while cooking ${urlInfo.type}
-${urlInfo.firstReference.trace.message}
-${e.stack}`,
-          );
+${urlInfo.firstReference.trace.message}`;
+        } else if (e.isJsenvCookingError) {
+          errorWrapperMessage = e.message;
+        } else {
+          errorWrapperMessage = `Error while cooking ${urlInfo.type}
+${urlInfo.firstReference.trace.message}`;
+        }
+        // if we are cooking inline content during dev it's better not to throw
+        // because the main url info (html) is still valid and can be returned to the browser
+        if (
+          urlInfo.isInline &&
+          urlInfo.context.dev &&
+          // but if we are explicitely requesting inline content file then we throw
+          // to properly send 500 to the browser
+          urlInfo.context.reference !== urlInfo.url
+        ) {
+          logger.error(errorWrapperMessage);
           return;
         }
-        throw e;
+        if (e.isJsenvCookingError) {
+          throw e;
+        }
+        const error = new Error(errorWrapperMessage, { cause: e });
+        defineNonEnumerableProperties(error, {
+          __INTERNAL_ERROR__: true,
+        });
+        throw error;
       }
     }
 
@@ -14653,23 +14675,6 @@ ${e.stack}`,
   kitchenContext.cookDependencies = cookDependencies;
 
   return kitchen;
-};
-
-// if we are cooking the inline content internally it's better not to throw
-// because the main url info (html) is still valid
-// but if we are explicitely requesting inline content during dev
-// then we should throw
-const errorOnInlineContentCanSkipThrow = (urlInfo) => {
-  if (urlInfo.context.build) {
-    return true;
-  }
-  if (
-    urlInfo.context.reference &&
-    urlInfo.context.reference.url === urlInfo.url
-  ) {
-    return false;
-  }
-  return true;
 };
 
 const debounceCook = (cook) => {
@@ -15047,7 +15052,10 @@ const jsenvPluginDirectoryReferenceEffect = (
       }
       if (actionForDirectory === "error") {
         const error = new Error("Reference leads to a directory");
-        error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
+        defineNonEnumerableProperties(error, {
+          isJsenvCookingError: true,
+          code: "DIRECTORY_REFERENCE_NOT_ALLOWED",
+        });
         throw error;
       }
       if (actionForDirectory === "preserve") {
@@ -16450,13 +16458,8 @@ const jsenvPluginHtmlReferenceAnalysis = ({
             });
 
             actions.push(async () => {
-              try {
-                await inlineReference.urlInfo.cook();
-              } catch (e) {
-                if (!e || e.code !== "PARSE_ERROR") {
-                  throw e;
-                }
-              }
+              const inlineUrlInfo = inlineReference.urlInfo;
+              await inlineUrlInfo.cook();
               mutations.push(() => {
                 if (hotAccept) {
                   removeHtmlNodeText(node);
@@ -16464,7 +16467,7 @@ const jsenvPluginHtmlReferenceAnalysis = ({
                     "jsenv-cooked-by": "jsenv:html_inline_content_analysis",
                   });
                 } else {
-                  setHtmlNodeText(node, inlineReference.urlInfo.content, {
+                  setHtmlNodeText(node, inlineUrlInfo.content, {
                     indentation: false, // indentation would decrease stack trace precision
                   });
                   setHtmlNodeAttributes(node, {
@@ -16737,7 +16740,8 @@ const jsenvPluginHtmlReferenceAnalysis = ({
           }
           mutations.forEach((mutation) => mutation());
           mutations.length = 0;
-          return stringifyHtmlAst(htmlAst);
+          const html = stringifyHtmlAst(htmlAst);
+          return html;
         } catch (e) {
           importmapLoaded();
           throw e;
@@ -18274,47 +18278,46 @@ const createNodeEsmResolver = ({
       specifier: reference.specifier,
       preservesSymlink,
     });
-    if (ownerUrlInfo.context.dev) {
-      const dependsOnPackageJson =
-        type !== "relative_specifier" &&
-        type !== "absolute_specifier" &&
-        type !== "node_builtin_specifier";
-      if (dependsOnPackageJson) {
-        // this reference depends on package.json and node_modules
-        // to be resolved. Each file using this specifier
-        // must be invalidated when corresponding package.json changes
-        addRelationshipWithPackageJson({
-          reference,
-          packageJsonUrl: `${packageDirectoryUrl}package.json`,
-          field: type.startsWith("field:")
-            ? `#${type.slice("field:".length)}`
-            : "",
-        });
-      }
+    if (ownerUrlInfo.context.build) {
+      return url;
     }
-    if (ownerUrlInfo.context.dev) {
-      // without this check a file inside a project without package.json
-      // could be considered as a node module if there is a ancestor package.json
-      // but we want to version only node modules
-      if (url.includes("/node_modules/")) {
-        const packageDirectoryUrl = defaultLookupPackageScope(url);
-        if (
-          packageDirectoryUrl &&
-          packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl
-        ) {
-          const packageVersion =
-            defaultReadPackageJson(packageDirectoryUrl).version;
-          // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
-          if (packageVersion) {
-            addRelationshipWithPackageJson({
-              reference,
-              packageJsonUrl: `${packageDirectoryUrl}package.json`,
-              field: "version",
-              hasVersioningEffect: true,
-            });
-          }
-          reference.version = packageVersion;
+    const dependsOnPackageJson =
+      type !== "relative_specifier" &&
+      type !== "absolute_specifier" &&
+      type !== "node_builtin_specifier";
+    if (dependsOnPackageJson) {
+      // this reference depends on package.json and node_modules
+      // to be resolved. Each file using this specifier
+      // must be invalidated when corresponding package.json changes
+      addRelationshipWithPackageJson({
+        reference,
+        packageJsonUrl: `${packageDirectoryUrl}package.json`,
+        field: type.startsWith("field:")
+          ? `#${type.slice("field:".length)}`
+          : "",
+      });
+    }
+    // without this check a file inside a project without package.json
+    // could be considered as a node module if there is a ancestor package.json
+    // but we want to version only node modules
+    if (url.includes("/node_modules/")) {
+      const packageDirectoryUrl = defaultLookupPackageScope(url);
+      if (
+        packageDirectoryUrl &&
+        packageDirectoryUrl !== ownerUrlInfo.context.rootDirectoryUrl
+      ) {
+        const packageVersion =
+          defaultReadPackageJson(packageDirectoryUrl).version;
+        // package version can be null, see https://github.com/babel/babel/blob/2ce56e832c2dd7a7ed92c89028ba929f874c2f5c/packages/babel-runtime/helpers/esm/package.json#L2
+        if (packageVersion) {
+          addRelationshipWithPackageJson({
+            reference,
+            packageJsonUrl: `${packageDirectoryUrl}package.json`,
+            field: "version",
+            hasVersioningEffect: true,
+          });
         }
+        reference.version = packageVersion;
       }
     }
     return url;
@@ -19979,6 +19982,9 @@ const jsenvPluginAutoreloadServer = ({
                 // Can happen when starting dev server with sourcemaps: "file"
                 // In that case, as sourcemaps are injected, the reference
                 // are lost and sourcemap is considered as pruned
+                continue;
+              }
+              if (lastReferenceFromOther.type === "package_json") {
                 continue;
               }
               const { ownerUrlInfo } = lastReferenceFromOther;
@@ -23241,7 +23247,6 @@ const startDevServer = async ({
               };
             }
           }
-
           await urlInfo.cook({ request, reference });
           let { response } = urlInfo;
           if (response) {
@@ -23284,9 +23289,8 @@ const startDevServer = async ({
             },
           );
           return response;
-        } catch (e) {
-          urlInfo.error = e;
-          const originalError = e ? e.cause || e : e;
+        } catch (error) {
+          const originalError = error ? error.cause || error : error;
           if (originalError.asResponse) {
             return originalError.asResponse();
           }
@@ -23298,13 +23302,13 @@ const startDevServer = async ({
             if (urlInfo.content !== undefined) {
               kitchen.context.logger.error(`Error while handling ${request.url}:
 ${originalError.reasonCode || originalError.code}
-${e.trace?.message}`);
+${error.trace?.message}`);
               return {
                 url: reference.url,
                 status: 200,
                 // reason becomes the http response statusText, it must not contain invalid chars
                 // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
-                statusText: e.reason,
+                statusText: error.reason,
                 statusMessage: originalError.message,
                 headers: {
                   "content-type": urlInfo.contentType,
@@ -23317,7 +23321,7 @@ ${e.trace?.message}`);
             return {
               url: reference.url,
               status: 500,
-              statusText: e.reason,
+              statusText: error.reason,
               statusMessage: originalError.message,
               headers: {
                 "cache-control": "no-store",
@@ -23352,8 +23356,11 @@ ${e.trace?.message}`);
           return {
             url: reference.url,
             status: 500,
-            statusText: e.reason,
-            statusMessage: e.stack,
+            statusText: error.reason,
+            statusMessage: error.stack,
+            headers: {
+              "cache-control": "no-store",
+            },
           };
         }
       },
