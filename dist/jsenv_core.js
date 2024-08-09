@@ -17111,7 +17111,7 @@ const jsenvPluginInlineContentFetcher = () => {
       let originalContent = urlInfo.originalContent;
       for (const reference of urlInfo.referenceFromOthersSet) {
         if (reference.isInline) {
-          if (originalContent === undefined) {
+          if (urlInfo.originalContent === undefined) {
             originalContent = reference.content;
           }
           lastInlineReference = reference;
@@ -17123,6 +17123,7 @@ const jsenvPluginInlineContentFetcher = () => {
         if (lastInlineReference.content === undefined) {
           const originalUrlInfo = prev.urlInfo;
           await originalUrlInfo.cook();
+          originalContent = originalUrlInfo.originalContent;
           lastInlineReference.content = originalUrlInfo.content;
           lastInlineReference.contentType = originalUrlInfo.contentType;
         }
