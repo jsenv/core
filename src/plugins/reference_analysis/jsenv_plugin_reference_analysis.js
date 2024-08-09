@@ -48,7 +48,7 @@ const jsenvPluginInlineContentFetcher = () => {
       let originalContent = urlInfo.originalContent;
       for (const reference of urlInfo.referenceFromOthersSet) {
         if (reference.isInline) {
-          if (originalContent === undefined) {
+          if (urlInfo.originalContent === undefined) {
             originalContent = reference.content;
           }
           lastInlineReference = reference;
