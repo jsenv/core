@@ -1,4 +1,5 @@
 import { urlToFilename } from "@jsenv/urls";
+import { defineNonEnumerableProperties } from "../../kitchen/errors.js";
 
 export const jsenvPluginDirectoryReferenceEffect = (
   directoryReferenceEffect = "error",
@@ -53,7 +54,10 @@ export const jsenvPluginDirectoryReferenceEffect = (
       }
       if (actionForDirectory === "error") {
         const error = new Error("Reference leads to a directory");
-        error.code = "DIRECTORY_REFERENCE_NOT_ALLOWED";
+        defineNonEnumerableProperties(error, {
+          isJsenvCookingError: true,
+          code: "DIRECTORY_REFERENCE_NOT_ALLOWED",
+        });
         throw error;
       }
       if (actionForDirectory === "preserve") {

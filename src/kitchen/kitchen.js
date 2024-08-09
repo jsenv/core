@@ -490,6 +490,8 @@ ${e.trace?.message}
 ${e.reason}
 --- declared in ---
 ${urlInfo.firstReference.trace.message}`;
+        } else if (e.isJsenvCookingError) {
+          errorWrapperMessage = e.message;
         } else {
           errorWrapperMessage = `Error while cooking ${urlInfo.type}
 ${urlInfo.firstReference.trace.message}`;
@@ -505,6 +507,9 @@ ${urlInfo.firstReference.trace.message}`;
         ) {
           logger.error(errorWrapperMessage);
           return;
+        }
+        if (e.isJsenvCookingError) {
+          throw e;
         }
         throw markAsInternalError(new Error(errorWrapperMessage, { cause: e }));
       }

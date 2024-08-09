@@ -25,6 +25,7 @@ ${reason}`,
       ),
     );
     defineNonEnumerableProperties(resolveError, {
+      isJsenvCookingError: true,
       name: "RESOLVE_URL_ERROR",
       code,
       reason,
@@ -73,6 +74,7 @@ ${reason}`,
       ),
     );
     defineNonEnumerableProperties(fetchError, {
+      isJsenvCookingError: true,
       name: "FETCH_URL_CONTENT_ERROR",
       code,
       reason,
@@ -187,6 +189,7 @@ ${error.message}`,
       ),
     );
     defineNonEnumerableProperties(transformError, {
+      isJsenvCookingError: true,
       name: "TRANSFORM_URL_CONTENT_ERROR",
       code: "PARSE_ERROR",
       reason: error.message,
@@ -216,6 +219,7 @@ ${reason}`,
       ),
     );
     defineNonEnumerableProperties(transformError, {
+      isJsenvCookingError: true,
       cause: error,
       name: "TRANSFORM_URL_CONTENT_ERROR",
       code,
@@ -251,6 +255,7 @@ ${reference.trace.message}`,
     ),
   );
   defineNonEnumerableProperties(finalizeError, {
+    isJsenvCookingError: true,
     ...(error && error instanceof Error ? { cause: error } : {}),
     name: "FINALIZE_URL_CONTENT_ERROR",
     reason: `"finalizeUrlContent" error on "${urlInfo.type}"`,
@@ -312,9 +317,9 @@ const detailsFromValueThrown = (valueThrownByPlugin) => {
   };
 };
 
-const defineNonEnumerableProperties = (assertionError, properties) => {
+export const defineNonEnumerableProperties = (object, properties) => {
   for (const key of Object.keys(properties)) {
-    Object.defineProperty(assertionError, key, {
+    Object.defineProperty(object, key, {
       configurable: true,
       writable: true,
       value: properties[key],
