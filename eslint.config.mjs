@@ -58,15 +58,13 @@ export default composteEslintFlatConfig(
   {
     files: [
       "**/*.html",
-      // "dev_exploring/**/*.js",
-      // "**/client/**/*.js",
-      // "**/browser/**/*.js",
-      // "./docs/**/*.js",
-      // "**/babel_helpers/**/*.js",
-      // "test/dev_server/**/*.js",
-      // "./packages/**/pwa/**/*.js",
-      // "./packages/**/custom-elements-redefine/**/*.js",
-      // "**/jsenv_service_worker.js",
+      "**/client/**/*.js",
+      "dev_exploring/**/*.js",
+      "./docs/**/*.js",
+      "**/babel_helpers/**/*.js",
+      "./packages/**/pwa/**/*.js",
+      "./packages/**/custom-elements-redefine/**/*.js",
+      "**/jsenv_service_worker.js",
     ],
     languageOptions: {
       globals: globals.browser,
@@ -137,10 +135,10 @@ export default composteEslintFlatConfig(
     files: ["**/*.html"],
     plugins: { html },
   },
-
   {
     ignores: [
       "**/.jsenv/**",
+      "**/.jsenv_b/**",
       "**/.coverage/",
       "**/dist/",
       "**/node_modules/",
