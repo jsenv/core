@@ -1,4 +1,9 @@
-import { setUrlBasename, urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  setUrlBasename,
+  startsWithWindowsDriveLetter,
+  urlIsInsideOf,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { pathToFileURL } from "node:url";
 import { createWellKnown } from "../../filesystem_well_known_values.js";
@@ -124,7 +129,15 @@ export const filesystemSideEffects = (
         // collapse them if they have a shared ancestor
         groupFileSideEffectsPerDirectory(sideEffects, {
           createWriteFileGroupSideEffect: (fileSideEffectArray, commonPath) => {
-            let commonUrl = pathToFileURL(commonPath);
+            let commonUrl;
+            if (
+              process.platform === "win32" &&
+              startsWithWindowsDriveLetter(commonPath.slice(1))
+            ) {
+              commonUrl = pathToFileURL(commonPath.slice("/C:".length));
+            } else {
+              commonUrl = pathToFileURL(commonPath);
+            }
             let commonDirectoryUrl;
             if (commonUrl.href.endsWith("/")) {
               commonDirectoryUrl = commonUrl;
