@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 // copied from
 // https://github.com/babel/babel/blob/e498bee10f0123bb208baa228ce6417542a2c3c4/packages/babel-compat-data/data/plugins.json#L1
 // https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/plugins.json#L1
