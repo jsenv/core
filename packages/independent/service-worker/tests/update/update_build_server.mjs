@@ -5,7 +5,7 @@ const buildStory = async (name) => {
   await build({
     handleSIGINT: false,
     logLevel: "warn",
-    sourceDirectoryUrl: new URL("./project/cliebt/", import.meta.url),
+    sourceDirectoryUrl: new URL("./project/client/", import.meta.url),
     buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
