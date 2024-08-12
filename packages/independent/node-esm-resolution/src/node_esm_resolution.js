@@ -93,7 +93,7 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
       type: "absolute_specifier",
       url: urlObject.href,
     };
-  } catch (e) {
+  } catch {
     // bare specifier
     const browserFieldResolution = applyBrowserFieldResolution(
       specifier,

@@ -166,7 +166,7 @@ export const createReplaceFilesystemWellKnownValues = ({
       let packageObject;
       try {
         packageObject = JSON.parse(packageFileContent);
-      } catch (e) {
+      } catch {
         continue;
       }
       const packageName = packageObject.name;

@@ -847,7 +847,7 @@ export const createAssert = ({
         }
         let currentNode = topMostNodeWithDiff;
         let startDepth = topMostNodeWithDiff.depth - MAX_DEPTH;
-        // eslint-disable-next-line no-constant-condition
+
         while (true) {
           const parentNode = currentNode.parent;
           if (!parentNode) {
@@ -4133,7 +4133,6 @@ const shouldIgnoreOwnPropertyDescriptor = (
   descriptorValue,
   { isFrozen, isSealed, propertyKey },
 ) => {
-  /* eslint-disable no-unneeded-ternary */
   if (descriptorName === "writable") {
     if (isFrozen) {
       return true;
@@ -4167,7 +4166,6 @@ const shouldIgnoreOwnPropertyDescriptor = (
     }
     return descriptorValue === true;
   }
-  /* eslint-enable no-unneeded-ternary */
   if (descriptorName === "get") {
     return descriptorValue === undefined;
   }
@@ -4291,10 +4289,10 @@ const canParseUrlNative =
   URL.canParse ||
   ((value) => {
     try {
-      // eslint-disable-next-line no-new, no-undef
+      // eslint-disable-next-line no-new
       new URL(value);
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   });

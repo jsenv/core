@@ -6,7 +6,7 @@ export const defaultReadPackageJson = (packageUrl) => {
   const string = String(buffer);
   try {
     return JSON.parse(string);
-  } catch (e) {
+  } catch {
     throw new Error(`Invalid package configuration`);
   }
 };

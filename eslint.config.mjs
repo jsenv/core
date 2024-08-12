@@ -24,6 +24,7 @@ export default [
     ignores: [
       "**/async-to-promises.js",
       "**/regenerator_runtime.js",
+      "**/neuquant.js",
       "**/babel_helpers/",
       "experiments/",
     ],

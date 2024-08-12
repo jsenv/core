@@ -1,5 +1,5 @@
+import { rulesRelax } from "@jsenv/eslint-config-relax";
 import html from "eslint-plugin-html";
-import { rulesRelax } from "./rules_relax.js";
 
 export default [
   {
