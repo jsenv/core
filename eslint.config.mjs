@@ -15,6 +15,6 @@ export default [
     jsxPragmaAuto: true,
   }),
   {
-    ignores: ["**/async-to-promises.js"],
+    ignores: ["**/async-to-promises.js", "**/babel_helpers/"],
   },
 ];
