@@ -35,7 +35,7 @@ export const eslintConfigRelax = ({
     ...patternForEachExtension("**/www/**/*[extension]", browserExtensions),
     ...patternForEachExtension("**/browser/**/*[extension]", browserExtensions),
     ...(isBrowser
-      ? patternForEachExtension("./src/**/*[extension]", browserExtensions)
+      ? patternForEachExtension("src/**/*[extension]", browserExtensions)
       : []),
     ...browserFiles,
   ];
@@ -51,6 +51,22 @@ export const eslintConfigRelax = ({
     ecmaVersion: 2022,
     sourceType: "module",
   };
+  const globalsForNodeModule = {
+    ...globals.node,
+    __filename: "off",
+    __dirname: "off",
+    require: "off",
+    exports: "off",
+    ...explicitGlobals,
+  };
+  const globalsForNodeCommonJs = {
+    ...globals.node,
+    __filename: true,
+    __dirname: true,
+    require: true,
+    exports: true,
+    ...explicitGlobals,
+  };
 
   return [
     // node "module" files
@@ -58,14 +74,7 @@ export const eslintConfigRelax = ({
       files: nodeFiles,
       languageOptions: {
         parserOptions,
-        globals: {
-          ...globals.node,
-          __filename: "off",
-          __dirname: "off",
-          require: "off",
-          exports: "off",
-          ...explicitGlobals,
-        },
+        globals: globalsForNodeModule,
       },
     },
     // node "commonjs" files
@@ -76,14 +85,7 @@ export const eslintConfigRelax = ({
           ...parserOptions,
           sourceType: "commonjs",
         },
-        globals: {
-          ...globals.node,
-          __filename: true,
-          __dirname: true,
-          require: true,
-          exports: true,
-          ...explicitGlobals,
-        },
+        globals: globalsForNodeCommonJs,
       },
     },
     // browser files
