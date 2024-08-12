@@ -4,7 +4,7 @@
  * Check ./jsenvEslintRules.js to see the mindset used  to configure these rules
  */
 
-export const jsenvEslintRulesForImport = {
+export const rulesImportRelax = {
   "import-x/default": ["error"],
   "import-x/no-unresolved": [
     "error",

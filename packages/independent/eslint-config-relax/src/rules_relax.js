@@ -15,7 +15,7 @@
  * - https://eslint.org/docs/rules/
  */
 
-export const jsenvEslintRules = {
+export const rulesRelax = {
   "accessor-pairs": ["error"],
   "array-bracket-spacing": ["error", "never"],
   "array-callback-return": ["error"],
@@ -53,7 +53,7 @@ export const jsenvEslintRules = {
   "curly": ["error"],
   "default-case": ["error"],
   "dot-location": ["error", "property"],
-  "dot-notation": ["error"],
+  "dot-notation": ["off"],
   "eol-last": ["off"],
   "eqeqeq": ["error"],
   "generator-star-spacing": ["error", "both"],
@@ -323,7 +323,7 @@ export const jsenvEslintRules = {
   "space-infix-ops": ["error"],
   "space-unary-ops": ["error"],
   "spaced-comment": [
-    "error",
+    "off",
     "always",
     {
       markers: ["!"],
