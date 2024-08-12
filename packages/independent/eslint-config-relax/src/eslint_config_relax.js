@@ -48,6 +48,7 @@ export const eslintConfigRelax = ({
       ? patternForEachExtension("./src/**/*[extension]", SUPPORTED_EXTENSIONS)
       : []),
     ...browserFiles,
+    "**/*.html",
   ];
   browserAndNodeFiles = [...browserAndNodeFiles];
 
