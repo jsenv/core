@@ -7,7 +7,6 @@ export const urlToBasename = (url, removeAllExtensions) => {
     return basename;
   }
   let currentBasename = basename;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const nextBasename = filenameToBasename(basename);
     if (nextBasename === currentBasename) {

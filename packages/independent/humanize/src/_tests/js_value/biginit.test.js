@@ -1,4 +1,3 @@
-/* eslint-disable no-eval */
 import { assert } from "@jsenv/assert";
 import { humanize } from "@jsenv/humanize";
 

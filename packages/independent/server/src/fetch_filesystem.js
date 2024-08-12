@@ -339,7 +339,7 @@ const getMtimeResponse = async ({ headers, sourceStat }) => {
     let cachedModificationDate;
     try {
       cachedModificationDate = new Date(headers["if-modified-since"]);
-    } catch (e) {
+    } catch {
       return {
         status: 400,
         statusText: "if-modified-since header is not a valid date",
@@ -441,7 +441,7 @@ const asUrlString = (value) => {
     try {
       const urlObject = new URL(value);
       return String(urlObject);
-    } catch (e) {
+    } catch {
       return null;
     }
   }

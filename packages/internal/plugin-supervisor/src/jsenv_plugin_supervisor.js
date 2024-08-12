@@ -7,7 +7,6 @@ import { generateContentFrame } from "@jsenv/humanize";
 import { getOriginalPosition } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
-
 import {
   injectSupervisorIntoHTML,
   supervisorFileUrl,
@@ -22,7 +21,6 @@ export const jsenvPluginSupervisor = ({
 }) => {
   const resolveUrlSite = (urlWithLineAndColumn) => {
     const inlineUrlMatch = urlWithLineAndColumn.match(
-      // eslint-disable-next-line regexp/no-unused-capturing-group
       /@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+(:([0-9]+):([0-9]+))?$/,
     );
     if (inlineUrlMatch) {
