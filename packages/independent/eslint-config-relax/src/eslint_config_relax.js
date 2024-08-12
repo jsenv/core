@@ -20,8 +20,8 @@ const patternForEachExtension = (pattern, extensions) => {
 export const eslintConfigRelax = ({
   rootDirectoryUrl,
   type = "browser",
-  prettier = true,
-  prettierSortImport = false,
+  prettier = true, // ideally check presence of prettier config files, or in package.json dev deps
+  prettierSortImport = false, // check presence in package deps
   jsxPragmaAuto = false,
   importResolutionLogLevel,
 
@@ -94,7 +94,7 @@ export const eslintConfigRelax = ({
       settings: {
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
-            rootDirectoryUrl,
+            rootDirectoryUrl: String(rootDirectoryUrl),
             packageConditions: ["node", "development", "import"],
             logLevel: importResolutionLogLevel,
           },
@@ -114,7 +114,7 @@ export const eslintConfigRelax = ({
       settings: {
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
-            rootDirectoryUrl,
+            rootDirectoryUrl: String(rootDirectoryUrl),
             packageConditions: ["node", "development"],
             logLevel: importResolutionLogLevel,
           },
