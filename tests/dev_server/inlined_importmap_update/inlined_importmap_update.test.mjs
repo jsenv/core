@@ -28,9 +28,9 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
 const getWindowAnswer = () => {
   return page.evaluate(
-    /* eslint-env browser */
+    /* eslint-disable no-undef */
     () => window.answer,
-    /* eslint-env node */
+    /* eslint-enable no-undef */
   );
 };
 

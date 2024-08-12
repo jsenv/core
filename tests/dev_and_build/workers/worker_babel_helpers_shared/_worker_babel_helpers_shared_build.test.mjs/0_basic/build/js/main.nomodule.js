@@ -35,8 +35,6 @@ System.register([__v__("/js/objectSpread2.nomodule.js")], function (_export, _co
       // this would crash the worker if that code was shared and executed
       // in the worker context
       window.toto = true;
-
-      // eslint-disable-next-line no-new
       worker = new Worker(new URL("/worker.nomodule.js", _context.meta.url), {
         type: "classic"
       });

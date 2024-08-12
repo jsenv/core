@@ -1,5 +1,4 @@
 import { useLayoutEffect } from "react";
-
 import appStyleSheet from "./app.css" with { type: "css" };
 import { Counter } from "./counter.jsx";
 

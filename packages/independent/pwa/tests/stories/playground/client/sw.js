@@ -313,7 +313,7 @@ const getPreloadResponse = async (preloadResponse) => {
       return null;
     }
     return response;
-  } catch (e) {
+  } catch {
     return null;
   }
 };

@@ -16,7 +16,6 @@ const { dirUrlMap } = await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_copy", () => run());
 });
 
-// eslint-disable-next-line import/no-unresolved
 const { directoryUrl } = await import(
   `${dirUrlMap.get("0_copy")}build/main.js`
 );

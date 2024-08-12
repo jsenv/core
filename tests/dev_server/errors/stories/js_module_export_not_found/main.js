@@ -1,5 +1,5 @@
 // there is a deliberate typo: "answerr" with 2 r instead of "answer"
-/* eslint-disable import/named */
+/* eslint-disable import-x/named */
 // above 1
 // above 2
 // above 3
@@ -7,6 +7,6 @@
 // below 1
 // below 2
 // below 3
-/* eslint-enable import/named */
+/* eslint-enable import-x/named */
 
 console.log(answerr);

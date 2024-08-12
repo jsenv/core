@@ -1,8 +1,7 @@
-/* eslint-env serviceworker */
+/* globals self */
 
 self.importScripts("../../../../src/jsenv_service_worker.js");
 
-// eslint-disable-next-line no-unreachable
 self.__sw__.init({
   logLevel: "debug",
   name: self.NAME,

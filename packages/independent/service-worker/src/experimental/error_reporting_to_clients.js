@@ -1,4 +1,4 @@
-/* eslint-env serviceworker */
+/* globals self */
 
 /*
  * We won't use this for now

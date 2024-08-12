@@ -6,7 +6,7 @@ import { fetchFileSystem, startServer } from "@jsenv/server";
 const require = createRequire(import.meta.url);
 const testDirectoryUrl = new URL("./", import.meta.url).href;
 
-// eslint-disable-next-line import/no-unresolved
+// eslint-disable-next-line import-x/no-unresolved
 const { chromium } = require("playwright-chromium");
 
 const server = await startServer({

@@ -13,7 +13,6 @@ export const getRealFileSystemUrlSync = (
     reconstructedFileUrl += `${windowsDriveLetter}/`;
   }
   let i = 0;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const name = parts[i];
     i++;

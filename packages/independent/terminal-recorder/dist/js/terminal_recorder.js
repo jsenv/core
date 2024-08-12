@@ -1835,7 +1835,7 @@ const createGifEncoder = ({
         firstFrame = false;
         indexedPixels.length = 0;
         return true;
-      } catch (e) {
+      } catch {
         return false;
       }
     },
@@ -1851,7 +1851,7 @@ const createGifEncoder = ({
       try {
         writeByte(0x3b); // gif trailer
         return true;
-      } catch (e) {
+      } catch {
         return false;
       }
     },

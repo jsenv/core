@@ -186,7 +186,7 @@ const canUseBlob = () => {
     // eslint-disable-next-line no-new
     new Blob();
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };

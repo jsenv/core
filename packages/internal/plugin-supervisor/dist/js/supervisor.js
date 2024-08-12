@@ -14,7 +14,7 @@ window.__supervisor__ = (() => {
   let documentTimingsOrigin;
   try {
     documentTimingsOrigin = window.performance.timing.navigationStart;
-  } catch (e) {
+  } catch (_unused) {
     documentTimingsOrigin = Date.now();
   }
   const documentTimings = {
@@ -822,7 +822,7 @@ window.__supervisor__ = (() => {
       let urlObject;
       try {
         urlObject = new URL(url, window.origin);
-      } catch (e) {
+      } catch (_unused2) {
         return url;
       }
       if (urlObject.origin === window.origin) {
@@ -1036,7 +1036,7 @@ window.__supervisor__ = (() => {
                   renderException();
                   return;
                 }
-              } catch (e) {
+              } catch (_unused3) {
                 // happens if server is closed for instance
                 return;
               }

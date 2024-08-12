@@ -1190,9 +1190,7 @@ const jsenvPluginSupervisor = ({
   errorBaseUrl
 }) => {
   const resolveUrlSite = urlWithLineAndColumn => {
-    const inlineUrlMatch = urlWithLineAndColumn.match(
-    // eslint-disable-next-line regexp/no-unused-capturing-group
-    /@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+(:([0-9]+):([0-9]+))?$/);
+    const inlineUrlMatch = urlWithLineAndColumn.match(/@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+(:([0-9]+):([0-9]+))?$/);
     if (inlineUrlMatch) {
       const htmlUrl = urlWithLineAndColumn.slice(0, inlineUrlMatch.index);
       const tagLineStart = parseInt(inlineUrlMatch[1]);

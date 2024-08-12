@@ -8,8 +8,8 @@
       name="description"
       content="Basic website used to measure dev server performances"
     />
-    <link rel="icon" href="./src/logo.png" />
-    <link rel="apple-touch-icon" href="./src/logo.png" />
+    <link rel="icon" href="./client/logo.png" />
+    <link rel="apple-touch-icon" href="./client/logo.png" />
     <!--
       boot.css contains styles for the following use cases:
       - JavaScript is disabled
@@ -18,7 +18,11 @@
       boot.css is part of the resources inlined in this HTML during build
       by [data-jsenv-force-inline] attribute
     --->
-    <link rel="stylesheet" href="./src/boot/boot.css" data-jsenv-force-inline />
+    <link
+      rel="stylesheet"
+      href="./client/boot/boot.css"
+      data-jsenv-force-inline
+    />
     <!--
       This HTML uses "dev.importmap" to control how js import are resolved.
       It is used to have code specific to dev or prod.
@@ -40,15 +44,15 @@
     -->
     <link
       rel="preload"
-      href="./src/app_loader/roboto_v27_latin_regular.woff2"
+      href="./client/app_loader/roboto_v27_latin_regular.woff2"
       as="font"
       type="font/woff2"
       crossorigin
     />
-    <link rel="preload" href="./src/app_loader/app_loader.css" as="style" />
-    <link rel="modulepreload" href="./src/app_loader/app_loader.js" />
-    <link rel="preload" href="./src/app/app.css" as="style" />
-    <link rel="modulepreload" href="./src/app/app.js" />
+    <link rel="preload" href="./client/app_loader/app_loader.css" as="style" />
+    <link rel="modulepreload" href="./client/app_loader/app_loader.js" />
+    <link rel="preload" href="./client/app/app.css" as="style" />
+    <link rel="modulepreload" href="./client/app/app.js" />
   </head>
 
   <body>
@@ -69,7 +73,7 @@
       <p>Please update your internet browser or try with an other one</p>
     </div>
     <script
-      src="./src/boot/browser_support_detection.js"
+      src="./client/boot/browser_support_detection.js"
       data-jsenv-force-inline
     ></script>
     <!--
@@ -86,7 +90,7 @@
     <div id="splashscreen">
       <div id="splashscreen_logo">
         <img
-          src="./src/logo.png"
+          src="./client/logo.png"
           width="128"
           height="128"
           alt="jsenv logo"
@@ -114,7 +118,7 @@
     </script>
     <script
       type="module"
-      src="./src/boot/boot.js"
+      src="./client/boot/boot.js"
       data-jsenv-force-inline
     ></script>
   </body>

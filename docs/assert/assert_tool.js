@@ -13,7 +13,7 @@ function getActualExpectFromUi() {
   try {
     actual = JSON.parse(inputNode.elements.actual.value);
     expect = JSON.parse(inputNode.elements.expect.value);
-  } catch (error) {
+  } catch {
     actual = inputNode.elements.actual.value;
     expect = inputNode.elements.expect.value;
   }

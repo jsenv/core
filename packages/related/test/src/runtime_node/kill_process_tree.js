@@ -1,4 +1,5 @@
 import { importWithRequire } from "../helpers/import_with_require.js";
+
 // see also https://github.com/sindresorhus/execa/issues/96
 export const killProcessTree = async (
   processId,
@@ -19,7 +20,7 @@ export const killProcessTree = async (
   descendantProcessIds.forEach((descendantProcessId) => {
     try {
       process.kill(descendantProcessId, signal);
-    } catch (error) {
+    } catch {
       // ignore
     }
   });
@@ -39,7 +40,7 @@ export const killProcessTree = async (
       try {
         process.kill(remainingId, 0);
         return true;
-      } catch (e) {
+      } catch {
         return false;
       }
     });

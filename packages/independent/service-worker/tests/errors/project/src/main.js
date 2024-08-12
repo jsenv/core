@@ -1,4 +1,4 @@
-/* eslint-env browser */
+/* globals window, document */
 import {
   createServiceWorkerFacade,
   navigatorControllerRef,

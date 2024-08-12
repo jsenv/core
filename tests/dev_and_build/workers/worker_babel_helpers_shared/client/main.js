@@ -6,7 +6,6 @@ console.log({
 // in the worker context
 window.toto = true;
 
-// eslint-disable-next-line no-new
 const worker = new Worker(new URL("./worker.js", import.meta.url), {
   type: "module",
 });

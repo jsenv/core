@@ -3,9 +3,9 @@ import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 export const executeHtml = async (
   htmlUrl,
   {
-    /* eslint-env browser */
+    /* eslint-disable no-undef */
     pageFunction = () => window.resultPromise,
-    /* eslint-env node */
+    /* eslint-enable no-undef */
     pageFunctionArg = undefined,
     ...options
   } = {},

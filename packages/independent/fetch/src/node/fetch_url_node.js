@@ -1,14 +1,13 @@
 // https://github.com/node-fetch/node-fetch/blob/8c197f8982a238b3c345c64b17bfa92e16b4f7c4/src/response.js#L1
 
-import nodeFetch, { Response } from "node-fetch";
-import { Agent } from "node:https";
-
 import { fetchFileSystem } from "@jsenv/server";
 import {
   fileHandleToReadableStream,
   isFileHandle,
 } from "@jsenv/server/src/interfacing_with_node/body.js";
 import { DATA_URL } from "@jsenv/urls";
+import nodeFetch, { Response } from "node-fetch";
+import { Agent } from "node:https";
 
 export const fetchUrl = async (
   url,
@@ -25,7 +24,7 @@ export const fetchUrl = async (
 ) => {
   try {
     url = String(new URL(url));
-  } catch (e) {
+  } catch {
     throw new Error(
       `fetchUrl first argument must be an absolute url, received ${url}`,
     );

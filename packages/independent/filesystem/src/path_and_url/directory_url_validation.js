@@ -15,7 +15,7 @@ export const validateDirectoryUrl = (value) => {
     } else {
       try {
         urlString = String(new URL(value));
-      } catch (e) {
+      } catch {
         return {
           valid: false,
           value,
@@ -23,6 +23,12 @@ export const validateDirectoryUrl = (value) => {
         };
       }
     }
+  } else if (
+    value &&
+    typeof value === "object" &&
+    typeof value.href === "string"
+  ) {
+    value = value.href;
   } else {
     return {
       valid: false,

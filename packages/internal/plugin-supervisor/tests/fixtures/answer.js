@@ -3,5 +3,4 @@ export const getAnswer = async () => {
   return 43;
 };
 
-// eslint-disable-next-line import/no-default-export
 export default 42;

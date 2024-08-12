@@ -58,13 +58,13 @@
       "count": 1,
       "runtimeType": "browser",
       "runtimeName": "chromium",
-      "runtimeVersion": "127.0.6533.17"
+      "runtimeVersion": "128.0.6613.18"
     },
     "b": {
       "count": 1,
       "runtimeType": "browser",
       "runtimeName": "chromium",
-      "runtimeVersion": "127.0.6533.17"
+      "runtimeVersion": "128.0.6613.18"
     }
   },
   "counters": {

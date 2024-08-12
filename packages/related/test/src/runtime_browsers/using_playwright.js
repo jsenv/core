@@ -3,7 +3,6 @@ import { createDetailedMessage } from "@jsenv/humanize";
 import { urlIsInsideOf } from "@jsenv/urls";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 import { readFileSync, writeFileSync } from "node:fs";
-
 import { composeTwoFileByFileIstanbulCoverages } from "../coverage/istanbul_coverage_composition.js";
 import { filterV8Coverage } from "../coverage/v8_coverage.js";
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
@@ -275,7 +274,7 @@ ${webServer.rootDirectoryUrl}`);
     if (memoryUsageAPIAvailable) {
       const getMemoryUsage = async () => {
         const memoryUsage = await page.evaluate(
-          /* eslint-env browser */
+          /* eslint-disable no-undef */
           /* istanbul ignore next */
           async () => {
             const { performance } = window;
@@ -298,7 +297,7 @@ ${webServer.rootDirectoryUrl}`);
             }
             return null;
           },
-          /* eslint-env node */
+          /* eslint-enable no-undef */
         );
         return memoryUsage;
       };
@@ -317,7 +316,7 @@ ${webServer.rootDirectoryUrl}`);
     if (collectPerformance) {
       callbackSet.add(async () => {
         const performance = await page.evaluate(
-          /* eslint-env browser */
+          /* eslint-disable no-undef */
           /* istanbul ignore next */
           () => {
             const { performance } = window;
@@ -336,7 +335,7 @@ ${webServer.rootDirectoryUrl}`);
               measures,
             };
           },
-          /* eslint-env node */
+          /* eslint-enable no-undef */
         );
         result.performance = performance;
       });
@@ -409,7 +408,7 @@ ${webServer.rootDirectoryUrl}`);
               try {
                 await page.goto(fileServerUrl, { timeout: 0 });
                 const returnValue = await page.evaluate(
-                  /* eslint-env browser */
+                  /* eslint-disable no-undef */
                   /* istanbul ignore next */
                   async () => {
                     if (!window.__supervisor__) {
@@ -424,7 +423,7 @@ ${webServer.rootDirectoryUrl}`);
                         executionResultFromJsenvSupervisor.executionResults,
                     };
                   },
-                  /* eslint-env node */
+                  /* eslint-enable no-undef */
                 );
                 cb(returnValue);
               } catch (e) {
@@ -595,7 +594,6 @@ const extractTextFromConsoleMessage = (consoleMessage) => {
   // ensure we use a string so that istanbul won't try
   // to put any coverage statement inside it
   // ideally we should use uneval no ?
-  // eslint-disable-next-line no-new-func
   //   const functionEvaluatedBrowserSide = new Function(
   //     "value",
   //     `if (value instanceof Error) {

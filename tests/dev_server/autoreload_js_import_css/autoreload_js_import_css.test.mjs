@@ -1,9 +1,17 @@
 import { assert } from "@jsenv/assert";
+import { startDevServer } from "@jsenv/core";
 import { replaceFileStructureSync } from "@jsenv/filesystem";
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium, firefox } from "playwright";
 
-import { startDevServer } from "@jsenv/core";
+if (process.platform === "win32") {
+  // TODO: fix on windows
+  process.exit(0);
+}
+if (process.platform === "linux") {
+  // TODO: fix on linux
+  process.exit(0);
+}
 
 const test = async ({
   debug = false,
@@ -104,7 +112,7 @@ const test = async ({
   const jsFileUrl = new URL("./main.js", sourceDirectoryUrl);
   const cssFileUrl = new URL("./style.css", sourceDirectoryUrl);
   replaceFileStructureSync({
-    from: new URL("./0_at_start/", import.meta.url),
+    from: new URL("./fixtures/0_at_start/", import.meta.url),
     to: sourceDirectoryUrl,
   });
   const devServer = await startDevServer({
@@ -173,7 +181,10 @@ const test = async ({
     writeFileSync(
       cssFileUrl,
       readFileSync(
-        new URL("./1_fixtures/style_background_green.css", import.meta.url),
+        new URL(
+          "./fixtures/1_other/style_background_green.css",
+          import.meta.url,
+        ),
       ),
     );
     await new Promise((resolve) => setTimeout(resolve, 1_000));
@@ -183,7 +194,10 @@ const test = async ({
     writeFileSync(
       jsFileUrl,
       readFileSync(
-        new URL("./1_fixtures/main_comment_file_import.js", import.meta.url),
+        new URL(
+          "./fixtures/1_other/main_comment_file_import.js",
+          import.meta.url,
+        ),
       ),
     );
     await new Promise((resolve) => setTimeout(resolve, 1_000));
@@ -192,7 +206,7 @@ const test = async ({
     // restore deps on css file
     writeFileSync(
       jsFileUrl,
-      readFileSync(new URL("./0_at_start/main.js", import.meta.url)),
+      readFileSync(new URL("./fixtures/0_at_start/main.js", import.meta.url)),
     );
     // wait for partial reload effect to be done
     await new Promise((resolve) => setTimeout(resolve, 1_000));
@@ -209,15 +223,6 @@ const test = async ({
     }
   }
 };
-
-if (process.platform === "win32") {
-  // TODO: fix on windows
-  process.exit();
-}
-if (process.platform === "linux") {
-  // TODO: fix on linux
-  process.exit();
-}
 
 await test({
   browserLauncher: chromium,

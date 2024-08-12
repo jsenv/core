@@ -23,9 +23,9 @@ const browser = await firefox.launch({ headless: true });
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
 const getResult = () => {
   return page.evaluate(
-    /* eslint-env browser */
+    /* eslint-disable no-undef */
     () => window.resultPromise,
-    /* eslint-env node */
+    /* eslint-enable no-undef */
   );
 };
 

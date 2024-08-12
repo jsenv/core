@@ -4,9 +4,9 @@
 run({ browserLauncher: chromium })
 ```
 
-# 1/3 write 5 files into "./.jsenv/chrome@127.00/"
+# 1/3 write 5 files into "./.jsenv/chrome@128.00/"
 
-see [./.jsenv/chrome@127.00/](./.jsenv/chrome@127.00/)
+see [./.jsenv/chrome@128.00/](./.jsenv/chrome@128.00/)
 
 # 2/3 logs
 
@@ -19,7 +19,7 @@ see [./.jsenv/chrome@127.00/](./.jsenv/chrome@127.00/)
 GET http://127.0.0.1/not_found.js
   404 Failed to fetch url content
   base/client/intermediate.js:2:7
-  1 | // eslint-disable-next-line import/no-unresolved
+  1 | // eslint-disable-next-line import-x/no-unresolved
   2 | import "./not_found.js";
             ^
   no entry on filesystem

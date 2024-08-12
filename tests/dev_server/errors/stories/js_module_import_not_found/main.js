@@ -1,4 +1,4 @@
-/* eslint-disable import/no-unresolved */
+/* eslint-disable import-x/no-unresolved */
 // above 1
 // above 2
 // above 3
@@ -6,7 +6,7 @@
 // below 1
 // below 2
 // below 3
-/* eslint-enable import/no-unresolved */
+/* eslint-enable import-x/no-unresolved */
 
 if (import.meta.hot) {
   import.meta.hot.accept();

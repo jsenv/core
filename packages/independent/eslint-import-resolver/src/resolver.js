@@ -17,7 +17,6 @@ import {
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
-
 import { applyImportmapResolution } from "./importmap_resolution.js";
 import { createLogger } from "./logger.js";
 import { applyUrlResolution } from "./url_resolution.js";
@@ -52,7 +51,9 @@ ${source}
 --- importer ---
 ${file}
 --- root directory path ---
-${fileURLToPath(rootDirectoryUrl)}`);
+${fileURLToPath(rootDirectoryUrl)}
+--- package conditions ---
+${packageConditions.join(",")}`);
 
   const triggerNotFoundWarning = ({ resolver, specifier, importer, url }) => {
     const logLevel =
@@ -285,7 +286,7 @@ const isAbsoluteUrl = (url) => {
     // eslint-disable-next-line no-new
     new URL(url);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };

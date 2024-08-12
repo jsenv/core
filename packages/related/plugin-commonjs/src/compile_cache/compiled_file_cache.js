@@ -4,7 +4,6 @@ import {
 } from "@jsenv/filesystem";
 import { createLogger, UNICODE } from "@jsenv/humanize";
 import { readFileSync, writeFileSync } from "node:fs";
-
 import { createLockRegistry } from "./file_lock_registry.js";
 import { updateCompileCache } from "./update_compile_cache.js";
 import { validateCompileCache } from "./validate_compile_cache.js";
@@ -147,7 +146,7 @@ const readCompileContextFile = ({ logger, compileContextJsonFileUrl }) => {
   let compileContextFileContent;
   try {
     compileContextFileContent = readFileSync(compileContextJsonFileUrl);
-  } catch (e) {
+  } catch {
     logger.debug(
       `${UNICODE.INFO} cannot read compile context at ${compileContextJsonFileUrl}`,
     );
