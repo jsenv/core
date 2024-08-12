@@ -16,9 +16,9 @@ const run = async () => {
     port: 0,
   });
   return executeHtml(`${devServer.origin}/main.html`, {
-    /* eslint-env browser */
+    /* eslint-disable no-undef */
     pageFunction: () => window.__supervisor__.getDocumentExecutionResult(),
-    /* eslint-env node */
+    /* eslint-enable no-undef */
   });
 };
 
