@@ -8,12 +8,13 @@ export default [
       "./tests/dev_server/errors/stories/",
       "./packages/**/pwa/**/*.js",
       "./packages/**/custom-elements-redefine/**/*.js",
+      "./packages/service-worker/**/*.js",
       "**/jsenv_service_worker.js",
     ],
     browserAndNodeFiles: ["./packages/**/assert/**/*.js"],
     jsxPragmaAuto: true,
   }),
   {
-    ignores: [],
+    ignores: ["./**/async-to-promises.js"],
   },
 ];

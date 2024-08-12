@@ -1,4 +1,4 @@
-/* eslint-env serviceworker */
+/* globals self */
 
 self.importScripts("../../../../src/jsenv_service_worker.js");
 

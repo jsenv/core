@@ -312,7 +312,7 @@ const sw = self.__sw__;
             return null;
           }
           return response;
-        } catch (e) {
+        } catch {
           return null;
         }
       };

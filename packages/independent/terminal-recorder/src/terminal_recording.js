@@ -10,7 +10,6 @@
 */
 
 import prettier from "prettier";
-
 import { renderTerminalSvg } from "./svg/render_terminal_svg.js";
 
 const isDev = process.execArgv.includes("--conditions=development");
@@ -99,7 +98,7 @@ export const startTerminalRecording = async ({
   });
   await page.goto(`${server.origin}/xterm.html`);
   await page.evaluate(
-    /* eslint-env browser */
+    /* eslint-disable no-undef */
     async ({ cols, rows, convertEol, textInViewport, gif, video, logs }) => {
       await window.xtreamReadyPromise;
       const __term__ = await window.initTerminal({
@@ -113,6 +112,7 @@ export const startTerminalRecording = async ({
       });
       window.__term__ = __term__;
     },
+    /* eslint-enable no-undef */
     {
       cols,
       rows,
@@ -122,34 +122,33 @@ export const startTerminalRecording = async ({
       video,
       logs,
     },
-    /* eslint-env node */
   );
   await page.evaluate(
-    /* eslint-env browser */
+    /* eslint-disable no-undef */
     async () => {
       const { writeIntoTerminal, stopRecording } =
         await window.__term__.startRecording();
       window.terminalRecording = { writeIntoTerminal, stopRecording };
     },
-    /* eslint-env node */
+    /* eslint-enable no-undef */
   );
   writeCallbackSet.add(async (data, options) => {
     await page.evaluate(
-      /* eslint-env browser */
+      /* eslint-disable no-undef */
       async ({ data, options }) => {
         await window.terminalRecording.writeIntoTerminal(data, options);
       },
+      /* eslint-enable no-undef */
       { data, options },
-      /* eslint-env node */
     );
   });
   stopCallbackSet.add(async () => {
     const recordedFormats = await page.evaluate(
-      /* eslint-env browser */
+      /* eslint-disable no-undef */
       () => {
         return window.terminalRecording.stopRecording();
       },
-      /* eslint-env node */
+      /* eslint-enable no-undef */
     );
     if (!debug) {
       server.stop();
