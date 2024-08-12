@@ -6,6 +6,7 @@ export default [
     browserFiles: [
       "docs/**/*.js",
       "tests/dev_server/errors/stories/**/*.js",
+      "tests/dev_server/**/fixtures/**/*.js",
       "packages/**/pwa/**/*.js",
       "packages/**/custom-elements-redefine/**/*.js",
       "packages/service-worker/**/*.js",

@@ -1,4 +1,3 @@
-/* eslint-env browser */
 import style from "./style.css" with { type: "css" };
 
 const updateStylesheet = (label, callback) => {
