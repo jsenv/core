@@ -11,6 +11,13 @@ import { rulesReactRelax } from "./rules_react_relax.js";
 import { rulesRegexpRelax } from "./rules_regexp_relax.js";
 import { rulesRelax } from "./rules_relax.js";
 
+const SUPPORTED_EXTENSIONS = [".js", ".cjs", ".mjs", ".jsx", ".html"];
+const patternForEachExtension = (pattern, extensions) => {
+  return extensions.map((extension) =>
+    pattern.replaceAll("[extension]", extension),
+  );
+};
+
 export const eslintConfigRelax = ({
   rootDirectoryUrl,
   type = "browser",
@@ -23,12 +30,33 @@ export const eslintConfigRelax = ({
 } = {}) => {
   const isBrowser = type === "browser";
 
+  const files = patternForEachExtension(
+    "**/*[extension]",
+    SUPPORTED_EXTENSIONS,
+  );
+  browserFiles = [
+    ...patternForEachExtension("**/*[extension]", SUPPORTED_EXTENSIONS),
+    ...patternForEachExtension(
+      "**/client/**/*[extension]",
+      SUPPORTED_EXTENSIONS,
+    ),
+    ...patternForEachExtension("**/www/**/*[extension]", SUPPORTED_EXTENSIONS),
+    ...patternForEachExtension(
+      "**/browser/**/*[extension]",
+      SUPPORTED_EXTENSIONS,
+    ),
+    ...(isBrowser
+      ? patternForEachExtension("./src/**/*[extension]", SUPPORTED_EXTENSIONS)
+      : []),
+    ...browserFiles,
+  ];
+  browserAndNodeFiles = [...browserAndNodeFiles];
+
   return [
     {
-      files: ["**/*.js", "**/*.mjs"],
+      files,
       // use "@babel/eslint-parser" until top level await is supported by ESLint default parser
       // + to support import assertions in some files
-      // node only
       languageOptions: {
         parser: babelParser,
         parserOptions: {
@@ -39,15 +67,32 @@ export const eslintConfigRelax = ({
         },
       },
     },
-    // Files in this repository are all meant to be executed in Node.js
-    // and we want to tell this to ESLint.
-    // As a result ESLint can consider `window` as undefined
-    // and `global` as an existing global variable.
-    // package is "type": "module" so:
-    // 1. disable commonjs globals by default
-    // 2. Re-enable commonjs into *.cjs files
+    // node "commonjs" files
     {
+      files: ["**/*.cjs"],
       languageOptions: {
+        sourceType: "commonjs",
+        // inside *.cjs files. restore commonJS "globals"
+        globals: {
+          ...globals.node,
+          __filename: true,
+          __dirname: true,
+          require: true,
+          exports: true,
+        },
+      },
+    },
+    // node "module" files
+    {
+      files: ["**/*.mjs"],
+      languageOptions: {
+        // Files in this repository are all meant to be executed in Node.js
+        // and we want to tell this to ESLint.
+        // As a result ESLint can consider `window` as undefined
+        // and `global` as an existing global variable.
+        // package is "type": "module" so:
+        // 1. disable commonjs globals by default
+        // 2. Re-enable commonjs into *.cjs files
         globals: {
           ...globals.node,
           __filename: "off",
@@ -57,29 +102,9 @@ export const eslintConfigRelax = ({
         },
       },
     },
+    // browser files
     {
-      files: ["**/*.cjs"],
-      languageOptions: {
-        sourceType: "commonjs",
-        // inside *.cjs files. restore commonJS "globals"
-        globals: {
-          __filename: true,
-          __dirname: true,
-          require: true,
-          exports: true,
-        },
-      },
-    },
-    // browser only
-    {
-      files: [
-        "**/*.html",
-        "**/client/",
-        "**/www/",
-        "**/public/",
-        ...(isBrowser ? ["./src/"] : []),
-        ...browserFiles,
-      ],
+      files: browserFiles,
       languageOptions: {
         globals: globals.browser,
       },
@@ -94,7 +119,7 @@ export const eslintConfigRelax = ({
         },
       },
     },
-    // browser and node
+    // browser and node files
     {
       files: browserAndNodeFiles,
       languageOptions: {
@@ -164,6 +189,7 @@ export const eslintConfigRelax = ({
     },
     // jsx plugins
     {
+      files: ["**/*.jsx", "**/*.tsx"],
       plugins: {
         react: reactPlugin,
       },
