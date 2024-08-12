@@ -23,6 +23,7 @@ export const eslintConfigRelax = ({
   prettier = true,
   prettierSortImport = false,
   jsxPragmaAuto = false,
+  importResolutionLogLevel,
 
   browserFiles = [],
   browserAndNodeFiles = [],
@@ -105,12 +106,13 @@ export const eslintConfigRelax = ({
         },
       },
       settings: {
-        "import/resolver": {
+        "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
             rootDirectoryUrl: isBrowser
               ? new URL("./src/", rootDirectoryUrl)
               : rootDirectoryUrl,
             packageConditions: ["browser", "import"],
+            logLevel: importResolutionLogLevel,
           },
         },
       },

@@ -453,7 +453,7 @@ const validateDirectoryUrl = (value) => {
     } else {
       try {
         urlString = String(new URL(value));
-      } catch (e) {
+      } catch {
         return {
           valid: false,
           value,
@@ -461,6 +461,12 @@ const validateDirectoryUrl = (value) => {
         };
       }
     }
+  } else if (
+    value &&
+    typeof value === "object" &&
+    typeof value.href === "string"
+  ) {
+    value = value.href;
   } else {
     return {
       valid: false,
@@ -970,7 +976,7 @@ const isValidUrl = (url) => {
     // eslint-disable-next-line no-new
     new URL(url);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };
@@ -1018,7 +1024,7 @@ const defaultReadPackageJson = (packageUrl) => {
   const string = String(buffer);
   try {
     return JSON.parse(string);
-  } catch (e) {
+  } catch {
     throw new Error(`Invalid package configuration`);
   }
 };
@@ -1266,7 +1272,7 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
       type: "absolute_specifier",
       url: urlObject.href,
     };
-  } catch (e) {
+  } catch {
     // bare specifier
     const browserFieldResolution = applyBrowserFieldResolution(
       specifier,
@@ -3113,7 +3119,7 @@ const isAbsoluteUrl = (url) => {
     // eslint-disable-next-line no-new
     new URL(url);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };
