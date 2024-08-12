@@ -29,9 +29,6 @@ const run = async ({ fragment }) => {
   const jsonFileUrl = new URL(`./output/${filename}.json`, import.meta.url);
   const junitXmlFileUrl = new URL(`./output/${filename}.xml`, import.meta.url);
   const gifFileUrl = new URL(`./output/${filename}.gif`, import.meta.url);
-  if (terminalAnimatedRecording) {
-    console.log(`snapshoting ${filename}`);
-  }
   const testPlanResult = await executeTestPlan({
     logs: {
       type: null,
