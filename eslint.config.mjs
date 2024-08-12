@@ -21,6 +21,11 @@ export default [
     },
   },
   {
-    ignores: ["**/async-to-promises.js", "**/babel_helpers/", "experiments/"],
+    ignores: [
+      "**/async-to-promises.js",
+      "**/regenerator_runtime.js",
+      "**/babel_helpers/",
+      "experiments/",
+    ],
   },
 ];

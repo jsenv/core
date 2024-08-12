@@ -1,7 +1,6 @@
 import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution";
 import { URL_META } from "@jsenv/url-meta";
 import { injectQueryParams, urlToBasename, urlToExtension } from "@jsenv/urls";
-
 import { commonJsToJsModule } from "./cjs_to_esm.js";
 
 const compileCacheDirectoryUrlDefault = new URL("../.cache/", import.meta.url);
@@ -141,7 +140,7 @@ const isBareSpecifier = (specifier) => {
     // eslint-disable-next-line no-new
     new URL(specifier);
     return false;
-  } catch (e) {
+  } catch {
     return true;
   }
 };

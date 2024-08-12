@@ -1,6 +1,5 @@
 import { Abort } from "@jsenv/abort";
 import { spawn, spawnSync } from "node:child_process";
-
 import { pingServer } from "../../helpers/ping_server.js";
 
 export const startServerUsingCommand = async (
@@ -96,7 +95,6 @@ export const startServerUsingCommand = async (
 
   const startedPromise = (async () => {
     const logScale = [100, 250, 500];
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (errorReceived) {
         break;

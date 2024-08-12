@@ -10,7 +10,7 @@ export const loadCSSAndFonts = async (
         await document.fonts.ready;
         onFontsReady();
       }
-    } catch (e) {
+    } catch {
       return;
     }
   })();
