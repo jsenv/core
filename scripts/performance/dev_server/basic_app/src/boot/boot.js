@@ -10,7 +10,7 @@
  *   - Hide splashscreen once app is ready to be displayed
  */
 
-// eslint-disable-next-line import/no-unresolved
+// eslint-disable-next-line import-x/no-unresolved
 import { DEV } from "#env";
 
 if (DEV) {

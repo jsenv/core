@@ -7,7 +7,7 @@ run()
 ```console
 FETCH_URL_CONTENT_ERROR: Failed to fetch url content
 base/client/intermediate.js:2:7
-1 | // eslint-disable-next-line import/no-unresolved
+1 | // eslint-disable-next-line import-x/no-unresolved
 2 | import "./not_found.js";
           ^
 no entry on filesystem

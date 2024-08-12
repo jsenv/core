@@ -71,7 +71,7 @@ const test = async ({ browserLauncher, browserName }) => {
     }
     try {
       await page.waitForSelector("jsenv-error-overlay", { timeout: 5_000 });
-    } catch (e) {
+    } catch {
       throw new Error(
         `jsenv error overlay not displayed on ${browserName} for ${story}`,
       );
