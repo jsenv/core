@@ -1,4 +1,5 @@
 import { assert } from "@jsenv/assert";
+import * as resolver from "@jsenv/eslint-import-resolver";
 import {
   ensureEmptyDirectorySync,
   ensureWindowsDriveLetter,
@@ -6,8 +7,6 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
-
-import * as resolver from "@jsenv/eslint-import-resolver";
 
 const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
 const spyConsoleWarn = () => {
@@ -29,7 +28,7 @@ const test = (callback) => {
   ensureEmptyDirectorySync(tempDirectoryUrl);
   try {
     callback({ consoleWarnCalls });
-  } catch (e) {
+  } catch {
     ensureEmptyDirectorySync(tempDirectoryUrl);
     removeConsoleWarnSpy();
   }

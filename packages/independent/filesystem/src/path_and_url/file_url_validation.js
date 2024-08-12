@@ -11,7 +11,7 @@ export const validateFileUrl = (value, baseUrl) => {
     } else {
       try {
         urlString = String(new URL(value, baseUrl));
-      } catch (e) {
+      } catch {
         return {
           valid: false,
           value,

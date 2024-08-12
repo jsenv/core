@@ -19,7 +19,7 @@ const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 export const ensureWindowsDriveLetter = (url, baseUrl) => {
   try {
     url = String(new URL(url));
-  } catch (e) {
+  } catch {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
@@ -29,7 +29,7 @@ export const ensureWindowsDriveLetter = (url, baseUrl) => {
 
   try {
     baseUrl = String(new URL(baseUrl));
-  } catch (e) {
+  } catch {
     throw new Error(
       `absolute baseUrl expect but got ${baseUrl} to ensure windows drive letter on ${url}`,
     );

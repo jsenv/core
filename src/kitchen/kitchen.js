@@ -9,7 +9,6 @@ import {
   urlIsInsideOf,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-
 import { jsenvPluginHtmlSyntaxErrorFallback } from "../plugins/html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 import { createPluginController } from "../plugins/plugin_controller.js";
 import {

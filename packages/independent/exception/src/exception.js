@@ -311,7 +311,7 @@ const asFileUrl = (callSiteFilename, { isNative }) => {
   try {
     const fileUrl = pathToFileURL(callSiteFilename);
     return fileUrl.href;
-  } catch (e) {
+  } catch {
     return callSiteFilename;
   }
 };
