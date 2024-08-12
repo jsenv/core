@@ -11,7 +11,6 @@ System.register([], function (_export, _context) {
           loadNestedFeature
         } = await _context.import("/js/feature.nomodule.js");
         loadNestedFeature();
-        // eslint-disable-next-line no-debugger
         debugger;
         console.log(answer);
       });

@@ -9,7 +9,7 @@ System.register([__v__("/js/a.nomodule.js")], function (_export, _context) {
     execute: function () {
       window.executionOrder.push("before_import_a");
 
-      // eslint-disable-next-line import/first
+      // eslint-disable-next-line import-x/first
 
       window.executionOrder.push("after_import_a");
       console.log(answer);

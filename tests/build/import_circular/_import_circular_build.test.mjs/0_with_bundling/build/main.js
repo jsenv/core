@@ -1,6 +1,6 @@
 const executionOrder = [];
 
-/* eslint-enable import/no-cycle */
+/* eslint-enable import-x/no-cycle */
 
 executionOrder.push("index");
 
