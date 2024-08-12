@@ -43,5 +43,8 @@ export const rulesImportRelax = {
   "import-x/no-self-import": ["error"],
   "import-x/no-cycle": ["error"],
   "import-x/no-useless-path-segments": ["error"],
-  "import-x/no-default-export": ["error"],
+  // named imports are definitely better than import default
+  // but some tools expect you to use default export.
+  // Also this rules is not that important, in the "relax" spirit there is no need to annoy people with that
+  "import-x/no-default-export": ["off"],
 };

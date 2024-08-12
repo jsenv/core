@@ -23,15 +23,13 @@ export const eslintConfigRelax = ({
   return [
     {
       files: ["**/*.js", "**/*.mjs"],
-      env: {
-        es2022: true,
-      },
       // use "@babel/eslint-parser" until top level await is supported by ESLint default parser
       // + to support import assertions in some files
       // node only
       languageOptions: {
         parser: babelParser,
         parserOptions: {
+          ecmaVersion: 2022,
           sourceType: "module",
           requireConfigFile: false,
         },
