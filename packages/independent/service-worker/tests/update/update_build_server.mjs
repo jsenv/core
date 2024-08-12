@@ -5,7 +5,7 @@ const buildStory = async (name) => {
   await build({
     handleSIGINT: false,
     logLevel: "warn",
-    sourceDirectoryUrl: new URL("./project/src/", import.meta.url),
+    sourceDirectoryUrl: new URL("./project/cliebt/", import.meta.url),
     buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
     entryPoints: {
       "./main.html": "main.html",
@@ -15,7 +15,7 @@ const buildStory = async (name) => {
         resolveReference: (reference) => {
           if (reference.specifier.includes("animal.svg")) {
             reference.filenameHint = "animal.svg";
-            return new URL(`./project/src/${name}.svg`, import.meta.url);
+            return new URL(`./project/client/${name}.svg`, import.meta.url);
           }
           return null;
         },

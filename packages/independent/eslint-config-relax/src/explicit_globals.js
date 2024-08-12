@@ -31,4 +31,5 @@ export const explicitGlobals = {
   top: "off",
   unescape: "off",
   valueOf: "off",
+  self: "off",
 };

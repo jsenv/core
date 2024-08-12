@@ -69,7 +69,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     extension = extensionMappings[extension] || extension;
     let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
     let integer = 1;
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (!names.includes(nameCandidate)) {
         names.push(nameCandidate);

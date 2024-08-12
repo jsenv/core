@@ -28,7 +28,7 @@ export const eslintConfigRelax = ({
   browserAndNodeFiles = [],
 } = {}) => {
   const isBrowser = type === "browser";
-  const browserExtensions = [".js", ".jsx", ".html"];
+  const browserExtensions = [".js", ".jsx"];
   browserFiles = [
     "**/*.html",
     ...patternForEachExtension("**/client/**/*[extension]", browserExtensions),
@@ -40,13 +40,7 @@ export const eslintConfigRelax = ({
     ...browserFiles,
   ];
   browserAndNodeFiles = [...browserAndNodeFiles];
-  // tout ce qui n'est pas browser files
-  const nodeFiles = [
-    "**/*.js",
-    "**/*.mjs",
-    "**/*.jsx",
-    ...browserFiles.map((browserFile) => `!${browserFile}`),
-  ];
+  const nodeFiles = ["**/*.js", "**/*.mjs", "**/*.jsx"];
   const parserOptions = {
     ecmaVersion: 2022,
     sourceType: "module",
@@ -75,6 +69,12 @@ export const eslintConfigRelax = ({
       languageOptions: {
         parserOptions,
         globals: globalsForNodeModule,
+      },
+      rules: {
+        ...rulesRelax,
+        // We are using prettier, disable all eslint rules
+        // already handled by prettier.
+        ...(prettier ? rulesOffPrettier : {}),
       },
     },
     // node "commonjs" files
@@ -128,15 +128,6 @@ export const eslintConfigRelax = ({
           ...globals.browser,
           ...explicitGlobals,
         },
-      },
-    },
-    // Reuse jsenv eslint rules
-    {
-      rules: {
-        ...rulesRelax,
-        // We are using prettier, disable all eslint rules
-        // already handled by prettier.
-        ...(prettier ? rulesOffPrettier : {}),
       },
     },
     // import plugin
@@ -201,7 +192,7 @@ export const eslintConfigRelax = ({
     },
     {
       ignores: [
-        "**/.*/**",
+        "**/.*/**/*",
         "!**/.github/",
         "**/node_modules/",
         "**/git_ignored/",
@@ -210,9 +201,9 @@ export const eslintConfigRelax = ({
         "**/*.noeslint.*",
         "**/tests/**/**syntax_error**.*",
         "**/tests/**/**syntax_error**/main.html",
-        "**/tests/**/snapshots/",
-        "**/tests/**/output/",
-        "**/tests/**/_*test.*/",
+        "**/tests/**/snapshots/**/*",
+        "**/tests/**/output/**/*",
+        "**/tests/**/_*test.*/**/*",
       ],
     },
   ];
