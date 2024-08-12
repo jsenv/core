@@ -7,5 +7,12 @@ module.exports = {
         version: "2023-07",
       },
     ],
+    [
+      "@babel/plugin-transform-react-jsx",
+      {
+        pragma: "React.createElement",
+        pragmaFrag: "React.Fragment",
+      },
+    ],
   ],
 };

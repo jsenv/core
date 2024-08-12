@@ -11,6 +11,7 @@ export default [
       "**/jsenv_service_worker.js",
     ],
     browserAndNodeFiles: ["./packages/**/assert/**/*.js"],
+    jsxPragmaAuto: true,
   }),
   {
     ignores: [],

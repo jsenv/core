@@ -23,7 +23,7 @@ export const eslintConfigRelax = ({
   type = "browser",
   prettier = true,
   prettierSortImport = false,
-  reactJsxAuto = false,
+  jsxPragmaAuto = false,
 
   browserFiles = [],
   browserAndNodeFiles = [],
@@ -102,7 +102,6 @@ export const eslintConfigRelax = ({
         },
       },
     },
-
     // browser files
     {
       files: browserFiles,
@@ -201,7 +200,7 @@ export const eslintConfigRelax = ({
       },
       rules: {
         ...rulesReactRelax,
-        ...(reactJsxAuto ? { "react/react-in-jsx-scope": ["off"] } : {}),
+        ...(jsxPragmaAuto ? { "react/react-in-jsx-scope": ["off"] } : {}),
       },
     },
     {
