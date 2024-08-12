@@ -15,7 +15,6 @@ export default [
       "packages/related/cli/template-web-react/src/**/*",
       "packages/**/pwa/**/*.js",
       "packages/**/custom-elements-redefine/**/*.js",
-      "packages/service-worker/**/*.js",
       "**/jsenv_service_worker.js",
     ],
     browserAndNodeFiles: ["packages/**/assert/**/*.js"],

@@ -1,5 +1,4 @@
 import { useLayoutEffect } from "preact/hooks";
-
 import appStyleSheet from "./app.css" with { type: "css" };
 import { Counter } from "./counter.jsx";
 
@@ -30,6 +29,7 @@ export const App = () => {
           Edit{" "}
           <a
             className="app_link"
+            // eslint-disable-next-line no-script-url
             href="javascript:window.fetch('/__open_in_editor__/app/app.jsx')"
           >
             app.jsx
