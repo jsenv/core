@@ -68,7 +68,12 @@ export const snapshotTests = async (
   const testArray = [];
   let index = 0;
   let hasOnly = false;
+  const scenariosSet = new Set();
   const test = (scenario, fn, options) => {
+    if (scenariosSet.has(scenario)) {
+      console.warn(`"${scenario}" overrides`);
+    }
+    scenariosSet.add(scenario);
     testArray.push({
       index,
       scenario,
@@ -79,6 +84,10 @@ export const snapshotTests = async (
     index++;
   };
   test.ONLY = (scenario, fn, options) => {
+    if (scenariosSet.has(scenario)) {
+      console.warn(`"${scenario}" overrides`);
+    }
+    scenariosSet.add(scenario);
     hasOnly = true;
     testArray.push({
       index,

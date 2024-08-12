@@ -25,7 +25,6 @@ import {
 import { memoryUsage } from "node:process";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
-
 import { generateCoverage } from "../coverage/generate_coverage.js";
 import { createCallOrderer } from "../helpers/call_orderer.js";
 import { startMeasuringTotalCpuUsage } from "../helpers/cpu_usage.js";

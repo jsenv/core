@@ -1,8 +1,7 @@
 import { writeFileSync } from "@jsenv/filesystem";
 import { ANSI, UNICODE } from "@jsenv/humanize";
-import { takeDirectorySnapshot, takeFileSnapshot } from "@jsenv/snapshot";
+import { takeFileSnapshot } from "@jsenv/snapshot";
 import { startTerminalRecording } from "@jsenv/terminal-recorder";
-
 import {
   executeTestPlan,
   nodeWorkerThread,
@@ -10,6 +9,7 @@ import {
   reportAsJunitXml,
   reporterList,
 } from "@jsenv/test";
+import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
 const terminalAnimatedRecording =
   process.execArgv.includes("--conditions=development") &&
@@ -20,25 +20,15 @@ const terminalAnimatedRecording =
 UNICODE.supported = true;
 ANSI.supported = true;
 
-const snapshotDirectoryUrl = new URL("./snapshots/", import.meta.url);
-
-const results = [];
-const test = async ({ fragment }) => {
+const run = async ({ fragment }) => {
   const filename = fragment.replace("/", "_");
   const terminalSnapshotFileUrl = new URL(
-    `./snapshots/${filename}.svg`,
+    `./output/${filename}.svg`,
     import.meta.url,
   );
-  const jsonFileUrl = new URL(`./snapshots/${filename}.json`, import.meta.url);
-  const junitXmlFileUrl = new URL(
-    `./snapshots/${filename}.xml`,
-    import.meta.url,
-  );
-  const gifFileUrl = new URL(
-    `./recording/node/${filename}.gif`,
-    import.meta.url,
-  );
-
+  const jsonFileUrl = new URL(`./output/${filename}.json`, import.meta.url);
+  const junitXmlFileUrl = new URL(`./output/${filename}.xml`, import.meta.url);
+  const gifFileUrl = new URL(`./output/${filename}.gif`, import.meta.url);
   if (terminalAnimatedRecording) {
     console.log(`snapshoting ${filename}`);
   }
@@ -111,18 +101,13 @@ const test = async ({ fragment }) => {
     githubCheck: false,
     fragment,
   });
-  results.push(testPlanResult);
-  reportAsJson(testPlanResult, jsonFileUrl, {
-    mockFluctuatingValues: true,
-  });
-  await reportAsJunitXml(testPlanResult, junitXmlFileUrl, {
-    mockFluctuatingValues: true,
-  });
+  reportAsJson(testPlanResult, jsonFileUrl);
+  await reportAsJunitXml(testPlanResult, junitXmlFileUrl);
   return testPlanResult;
 };
 
-const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
-await test({ fragment: "1/3" });
-await test({ fragment: "2/3" });
-await test({ fragment: "3/3" });
-directorySnapshot.compare();
+await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
+  test("1/3", () => run({ fragment: "1/3" }));
+  test("2/3", () => run({ fragment: "2/3" }));
+  test("3/3", () => run({ fragment: "3/3" }));
+});
