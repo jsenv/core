@@ -40,7 +40,6 @@ export const eslintConfigRelax = ({
     ...browserFiles,
   ];
   browserAndNodeFiles = [...browserAndNodeFiles];
-  const nodeFiles = ["**/*.js", "**/*.mjs", "**/*.jsx"];
   const parserOptions = {
     ecmaVersion: 2022,
     sourceType: "module",
@@ -55,26 +54,20 @@ export const eslintConfigRelax = ({
   };
   const globalsForNodeCommonJs = {
     ...globals.node,
-    __filename: true,
-    __dirname: true,
-    require: true,
-    exports: true,
+    __filename: false,
+    __dirname: false,
+    require: false,
+    exports: false,
     ...explicitGlobals,
   };
 
   return [
     // node "module" files
     {
-      files: nodeFiles,
+      files: ["**/*.js", "**/*.mjs", "**/*.jsx"],
       languageOptions: {
         parserOptions,
         globals: globalsForNodeModule,
-      },
-      rules: {
-        ...rulesRelax,
-        // We are using prettier, disable all eslint rules
-        // already handled by prettier.
-        ...(prettier ? rulesOffPrettier : {}),
       },
     },
     // node "commonjs" files
@@ -128,6 +121,14 @@ export const eslintConfigRelax = ({
           ...globals.browser,
           ...explicitGlobals,
         },
+      },
+    },
+    {
+      rules: {
+        ...rulesRelax,
+        // We are using prettier, disable all eslint rules
+        // already handled by prettier.
+        ...(prettier ? rulesOffPrettier : {}),
       },
     },
     // import plugin
