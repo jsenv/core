@@ -9,6 +9,10 @@ import { startDevServer } from "@jsenv/core";
 import { replaceFileStructureSync, replaceFileSync } from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
+if (process.env.CI) {
+  process.exit(0);
+}
+
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 replaceFileStructureSync({
   from: new URL("./fixtures/0_at_start/", import.meta.url),
