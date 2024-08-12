@@ -35,7 +35,6 @@ export const eslintConfigRelax = ({
     SUPPORTED_EXTENSIONS,
   );
   browserFiles = [
-    ...patternForEachExtension("**/*[extension]", SUPPORTED_EXTENSIONS),
     ...patternForEachExtension(
       "**/client/**/*[extension]",
       SUPPORTED_EXTENSIONS,
@@ -67,24 +66,9 @@ export const eslintConfigRelax = ({
         },
       },
     },
-    // node "commonjs" files
-    {
-      files: ["**/*.cjs"],
-      languageOptions: {
-        sourceType: "commonjs",
-        // inside *.cjs files. restore commonJS "globals"
-        globals: {
-          ...globals.node,
-          __filename: true,
-          __dirname: true,
-          require: true,
-          exports: true,
-        },
-      },
-    },
     // node "module" files
     {
-      files: ["**/*.mjs"],
+      files,
       languageOptions: {
         // Files in this repository are all meant to be executed in Node.js
         // and we want to tell this to ESLint.
@@ -102,6 +86,22 @@ export const eslintConfigRelax = ({
         },
       },
     },
+    // node "commonjs" files
+    {
+      files: ["**/*.cjs"],
+      languageOptions: {
+        sourceType: "commonjs",
+        // inside *.cjs files. restore commonJS "globals"
+        globals: {
+          ...globals.node,
+          __filename: true,
+          __dirname: true,
+          require: true,
+          exports: true,
+        },
+      },
+    },
+
     // browser files
     {
       files: browserFiles,
