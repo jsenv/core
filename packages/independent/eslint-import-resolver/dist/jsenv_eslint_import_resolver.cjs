@@ -509,7 +509,7 @@ const validateFileUrl = (value, baseUrl) => {
     } else {
       try {
         urlString = String(new URL(value, baseUrl));
-      } catch (e) {
+      } catch {
         return {
           valid: false,
           value,
@@ -570,7 +570,7 @@ const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 const ensureWindowsDriveLetter = (url, baseUrl) => {
   try {
     url = String(new URL(url));
-  } catch (e) {
+  } catch {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
@@ -580,7 +580,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
 
   try {
     baseUrl = String(new URL(baseUrl));
-  } catch (e) {
+  } catch {
     throw new Error(
       `absolute baseUrl expect but got ${baseUrl} to ensure windows drive letter on ${url}`,
     );
@@ -872,7 +872,6 @@ const getRealFileSystemUrlSync = (
     reconstructedFileUrl += `${windowsDriveLetter}/`;
   }
   let i = 0;
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const name = parts[i];
     i++;
@@ -2888,7 +2887,7 @@ ${file}
 --- root directory path ---
 ${node_url.fileURLToPath(rootDirectoryUrl)}
 --- package conditions ---
-${packageConditions.join(',')}`);
+${packageConditions.join(",")}`);
 
   const triggerNotFoundWarning = ({ resolver, specifier, importer, url }) => {
     const logLevel =
@@ -2897,8 +2896,7 @@ ${packageConditions.join(',')}`);
         : "warn";
     if (resolver === "esm") {
       logger[logLevel](
-        `esm module resolution failed for "${specifier}" imported by ${importer}
-package conditions: ${packageConditions.join(',')}`,
+        `esm module resolution failed for "${specifier}" imported by ${importer}`,
       );
     } else if (resolver === "commonjs") {
       logger[logLevel](
@@ -2918,7 +2916,7 @@ package conditions: ${packageConditions.join(',')}`,
   const browserInPackageConditions = packageConditions.includes("browser");
   const nodeInPackageConditions = packageConditions.includes("node");
   if (nodeInPackageConditions && isSpecifierForNodeBuiltin(source)) {
-    logger.debug(`-> native smodule`);
+    logger.debug(`-> native node module`);
     return {
       found: true,
       path: null,

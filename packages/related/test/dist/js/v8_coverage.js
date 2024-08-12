@@ -301,7 +301,7 @@ const resolveAssociations = (associations, baseUrl) => {
         let patternResolved;
         try {
           patternResolved = String(new URL(pattern, baseUrl));
-        } catch (e) {
+        } catch {
           // it's not really an url, no need to perform url resolution nor encoding
           patternResolved = pattern;
         }

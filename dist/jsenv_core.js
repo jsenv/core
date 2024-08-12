@@ -1465,7 +1465,7 @@ const isValidUrl$1 = (url) => {
     // eslint-disable-next-line no-new
     new URL(url);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };
@@ -1826,7 +1826,7 @@ const validateDirectoryUrl = (value) => {
     } else {
       try {
         urlString = String(new URL(value));
-      } catch (e) {
+      } catch {
         return {
           valid: false,
           value,
@@ -1834,6 +1834,12 @@ const validateDirectoryUrl = (value) => {
         };
       }
     }
+  } else if (
+    value &&
+    typeof value === "object" &&
+    typeof value.href === "string"
+  ) {
+    value = value.href;
   } else {
     return {
       valid: false,
@@ -1876,7 +1882,7 @@ const validateFileUrl = (value, baseUrl) => {
     } else {
       try {
         urlString = String(new URL(value, baseUrl));
-      } catch (e) {
+      } catch {
         return {
           valid: false,
           value,
@@ -1987,7 +1993,7 @@ const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
 const ensureWindowsDriveLetter = (url, baseUrl) => {
   try {
     url = String(new URL(url));
-  } catch (e) {
+  } catch {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
@@ -1997,7 +2003,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
 
   try {
     baseUrl = String(new URL(baseUrl));
-  } catch (e) {
+  } catch {
     throw new Error(
       `absolute baseUrl expect but got ${baseUrl} to ensure windows drive letter on ${url}`,
     );
@@ -2847,7 +2853,7 @@ const resolveAssociations = (associations, baseUrl) => {
         let patternResolved;
         try {
           patternResolved = String(new URL(pattern, baseUrl));
-        } catch (e) {
+        } catch {
           // it's not really an url, no need to perform url resolution nor encoding
           patternResolved = pattern;
         }
@@ -7826,7 +7832,7 @@ const getMtimeResponse = async ({ headers, sourceStat }) => {
     let cachedModificationDate;
     try {
       cachedModificationDate = new Date(headers["if-modified-since"]);
-    } catch (e) {
+    } catch {
       return {
         status: 400,
         statusText: "if-modified-since header is not a valid date",
@@ -7928,7 +7934,7 @@ const asUrlString = (value) => {
     try {
       const urlObject = new URL(value);
       return String(urlObject);
-    } catch (e) {
+    } catch {
       return null;
     }
   }
@@ -9606,7 +9612,6 @@ const babelPluginBabelHelpersAsJsenvImports = (
   };
 };
 
-/* eslint-disable camelcase */
 // copied from
 // https://github.com/babel/babel/blob/e498bee10f0123bb208baa228ce6417542a2c3c4/packages/babel-compat-data/data/plugins.json#L1
 // https://github.com/babel/babel/blob/master/packages/babel-compat-data/data/plugins.json#L1
@@ -17227,7 +17232,7 @@ const isValidUrl = (url) => {
     // eslint-disable-next-line no-new
     new URL(url);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };
@@ -17275,7 +17280,7 @@ const defaultReadPackageJson = (packageUrl) => {
   const string = String(buffer);
   try {
     return JSON.parse(string);
-  } catch (e) {
+  } catch {
     throw new Error(`Invalid package configuration`);
   }
 };
@@ -17523,7 +17528,7 @@ const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
       type: "absolute_specifier",
       url: urlObject.href,
     };
-  } catch (e) {
+  } catch {
     // bare specifier
     const browserFieldResolution = applyBrowserFieldResolution(
       specifier,
@@ -20513,7 +20518,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
     extension = extensionMappings[extension] || extension;
     let nameCandidate = `${basename}${extension}`; // reconstruct name in case extension was normalized
     let integer = 1;
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (!names.includes(nameCandidate)) {
         names.push(nameCandidate);

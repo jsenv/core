@@ -14,7 +14,7 @@ export const jsenvEslintRulesForImport = {
       caseSensitive: false,
     },
   ],
-  "import-x/named": ["error"],
+  "import/named": ["error"],
   "import/namespace": ["error", { allowComputed: true }],
   "import/no-absolute-path": ["off"],
   "import/no-dynamic-require": ["error"],

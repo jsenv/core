@@ -29,7 +29,7 @@ const ACTIONS_AVAILABLE = {
       const filePath = fileURLToPath(fileUrl);
       const require = createRequire(fileUrl);
       result.timings.start = Date.now();
-      // eslint-disable-next-line import/no-dynamic-require
+      // eslint-disable-next-line import-x/no-dynamic-require
       const namespace = require(filePath);
       const namespaceResolved = {};
       await Promise.all(

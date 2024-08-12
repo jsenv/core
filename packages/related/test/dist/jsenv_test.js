@@ -1887,7 +1887,7 @@ const validateDirectoryUrl = (value) => {
     } else {
       try {
         urlString = String(new URL(value));
-      } catch (e) {
+      } catch {
         return {
           valid: false,
           value,
@@ -1895,6 +1895,12 @@ const validateDirectoryUrl = (value) => {
         };
       }
     }
+  } else if (
+    value &&
+    typeof value === "object" &&
+    typeof value.href === "string"
+  ) {
+    value = value.href;
   } else {
     return {
       valid: false,
@@ -1937,7 +1943,7 @@ const validateFileUrl = (value, baseUrl) => {
     } else {
       try {
         urlString = String(new URL(value, baseUrl));
-      } catch (e) {
+      } catch {
         return {
           valid: false,
           value,
@@ -2048,7 +2054,7 @@ const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 const ensureWindowsDriveLetter = (url, baseUrl) => {
   try {
     url = String(new URL(url));
-  } catch (e) {
+  } catch {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
@@ -2058,7 +2064,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
 
   try {
     baseUrl = String(new URL(baseUrl));
-  } catch (e) {
+  } catch {
     throw new Error(
       `absolute baseUrl expect but got ${baseUrl} to ensure windows drive letter on ${url}`,
     );
@@ -3314,8 +3320,6 @@ const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
   if (secondV8Coverage.result.length === 0) {
     return firstV8Coverage;
   }
-
-  // eslint-disable-next-line import/no-unresolved
   const { mergeProcessCovs } = importWithRequire("@c88/v8-coverage");
   // "mergeProcessCovs" do not preserves source-map-cache during the merge
   // so we store sourcemap cache now
@@ -5550,7 +5554,6 @@ const startServerUsingCommand = async (
 
   const startedPromise = (async () => {
     const logScale = [100, 250, 500];
-    // eslint-disable-next-line no-constant-condition
     while (true) {
       if (errorReceived) {
         break;
@@ -7332,7 +7335,7 @@ ${webServer.rootDirectoryUrl}`);
     if (memoryUsageAPIAvailable) {
       const getMemoryUsage = async () => {
         const memoryUsage = await page.evaluate(
-          /* eslint-env browser */
+          /* eslint-disable no-undef */
           /* istanbul ignore next */
           async () => {
             const { performance } = window;
@@ -7355,7 +7358,7 @@ ${webServer.rootDirectoryUrl}`);
             }
             return null;
           },
-          /* eslint-env node */
+          /* eslint-enable no-undef */
         );
         return memoryUsage;
       };
@@ -7374,7 +7377,7 @@ ${webServer.rootDirectoryUrl}`);
     if (collectPerformance) {
       callbackSet.add(async () => {
         const performance = await page.evaluate(
-          /* eslint-env browser */
+          /* eslint-disable no-undef */
           /* istanbul ignore next */
           () => {
             const { performance } = window;
@@ -7393,7 +7396,7 @@ ${webServer.rootDirectoryUrl}`);
               measures,
             };
           },
-          /* eslint-env node */
+          /* eslint-enable no-undef */
         );
         result.performance = performance;
       });
@@ -7466,7 +7469,7 @@ ${webServer.rootDirectoryUrl}`);
               try {
                 await page.goto(fileServerUrl, { timeout: 0 });
                 const returnValue = await page.evaluate(
-                  /* eslint-env browser */
+                  /* eslint-disable no-undef */
                   /* istanbul ignore next */
                   async () => {
                     if (!window.__supervisor__) {
@@ -7481,7 +7484,7 @@ ${webServer.rootDirectoryUrl}`);
                         executionResultFromJsenvSupervisor.executionResults,
                     };
                   },
-                  /* eslint-env node */
+                  /* eslint-enable no-undef */
                 );
                 cb(returnValue);
               } catch (e) {
@@ -7652,7 +7655,6 @@ const extractTextFromConsoleMessage = (consoleMessage) => {
   // ensure we use a string so that istanbul won't try
   // to put any coverage statement inside it
   // ideally we should use uneval no ?
-  // eslint-disable-next-line no-new-func
   //   const functionEvaluatedBrowserSide = new Function(
   //     "value",
   //     `if (value instanceof Error) {
@@ -8037,7 +8039,7 @@ const killProcessTree = async (
   descendantProcessIds.forEach((descendantProcessId) => {
     try {
       process.kill(descendantProcessId, signal);
-    } catch (error) {
+    } catch {
       // ignore
     }
   });
@@ -8057,7 +8059,7 @@ const killProcessTree = async (
       try {
         process.kill(remainingId, 0);
         return true;
-      } catch (e) {
+      } catch {
         return false;
       }
     });

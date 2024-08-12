@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/github-check-run",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "description": "Interact with GitHub check rest API",
   "license": "MIT",
   "author": {
@@ -33,7 +33,7 @@
     "test": "node ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/fetch": "1.1.72",
+    "@jsenv/fetch": "1.1.73",
     "@jsenv/humanize": "1.2.8"
   }
 }

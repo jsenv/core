@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/fetch",
-  "version": "1.1.72",
+  "version": "1.1.73",
   "description": "Unified url fetcher (http, http, file, data)",
   "license": "MIT",
   "author": {
@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@jsenv/urls": "2.5.2",
-    "@jsenv/server": "15.2.19",
+    "@jsenv/server": "15.3.0",
     "node-fetch": "3.3.2"
   }
 }
