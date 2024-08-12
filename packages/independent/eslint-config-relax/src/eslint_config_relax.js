@@ -220,7 +220,7 @@ export const eslintConfigRelax = ({
     },
     {
       ignores: [
-        "**/.*/**/*",
+        "**/.*/",
         "!**/.github/",
         "**/node_modules/",
         "**/git_ignored/",
@@ -229,9 +229,9 @@ export const eslintConfigRelax = ({
         "**/*.noeslint.*",
         "**/tests/**/**syntax_error**.*",
         "**/tests/**/**syntax_error**/main.html",
-        "**/tests/**/snapshots/**/*",
-        "**/tests/**/output/**/*",
-        "**/tests/**/_*test.*/**/*",
+        "**/tests/**/snapshots/",
+        "**/tests/**/output/",
+        "**/tests/**/_*test.*/",
       ],
     },
   ];
