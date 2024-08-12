@@ -87,6 +87,54 @@ export const eslintConfigRelax = ({
         globals: globalsForNodeCommonJs,
       },
     },
+    // import plugin
+    {
+      plugins: {
+        "import-x": pluginImportX,
+      },
+      settings: {
+        "import-x/resolver": {
+          "@jsenv/eslint-import-resolver": {
+            rootDirectoryUrl,
+            packageConditions: ["node", "development", "import"],
+            logLevel: importResolutionLogLevel,
+          },
+        },
+        "import-x/extensions": [".js", ".mjs", ".jsx", ".ts", ".tsx"],
+        // https://github.com/import-js/eslint-plugin-import/issues/1753
+        "import-x/ignore": ["node_modules/playwright/"],
+      },
+      rules: {
+        ...rulesImportRelax,
+        // already handled by prettier-plugin-organize-imports}
+        ...(prettierSortImport ? { "import-x/no-duplicates": ["off"] } : {}),
+      },
+    },
+    // regexp plugin
+    {
+      plugins: {
+        regexp: regexpPlugin,
+      },
+      rules: {
+        ...rulesRegexpRelax,
+      },
+    },
+    // jsx plugin
+    {
+      files: ["**/*.jsx"],
+      plugins: {
+        react: reactPlugin,
+      },
+      settings: {
+        react: {
+          version: "detect",
+        },
+      },
+      rules: {
+        ...rulesReactRelax,
+        ...(jsxPragmaAuto ? { "react/react-in-jsx-scope": ["off"] } : {}),
+      },
+    },
     // browser files
     {
       files: browserFiles,
@@ -108,9 +156,11 @@ export const eslintConfigRelax = ({
       settings: {
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
-            rootDirectoryUrl: isBrowser
-              ? new URL("./src/", rootDirectoryUrl)
-              : rootDirectoryUrl,
+            rootDirectoryUrl: String(
+              isBrowser
+                ? new URL("./src/", rootDirectoryUrl)
+                : rootDirectoryUrl,
+            ),
             packageConditions: ["browser", "import"],
             logLevel: importResolutionLogLevel,
           },
@@ -144,37 +194,7 @@ export const eslintConfigRelax = ({
         ...(prettier ? rulesOffPrettier : {}),
       },
     },
-    // import plugin
-    {
-      plugins: {
-        "import-x": pluginImportX,
-      },
-      settings: {
-        "import-x/resolver": {
-          "@jsenv/eslint-import-resolver": {
-            rootDirectoryUrl,
-            packageConditions: ["node", "development", "import"],
-          },
-        },
-        "import-x/extensions": [".js", ".mjs"],
-        // https://github.com/import-js/eslint-plugin-import/issues/1753
-        "import-x/ignore": ["node_modules/playwright/"],
-      },
-      rules: {
-        ...rulesImportRelax,
-        // already handled by prettier-plugin-organize-imports}
-        ...(prettierSortImport ? { "import-x/no-duplicates": ["off"] } : {}),
-      },
-    },
-    // regexp plugin
-    {
-      plugins: {
-        regexp: regexpPlugin,
-      },
-      rules: {
-        ...rulesRegexpRelax,
-      },
-    },
+
     // html plugin
     {
       files: ["**/*.html"],
@@ -186,22 +206,6 @@ export const eslintConfigRelax = ({
           "text/jsx",
           "module/jsx",
         ],
-      },
-    },
-    // jsx plugin
-    {
-      files: ["**/*.jsx"],
-      plugins: {
-        react: reactPlugin,
-      },
-      settings: {
-        react: {
-          version: "detect",
-        },
-      },
-      rules: {
-        ...rulesReactRelax,
-        ...(jsxPragmaAuto ? { "react/react-in-jsx-scope": ["off"] } : {}),
       },
     },
     {
