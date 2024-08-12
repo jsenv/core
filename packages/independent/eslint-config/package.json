@@ -19,18 +19,23 @@
     "access": "public"
   },
   "type": "module",
+  "main": "./dist/jsenv_eslint_config.cjs",
   "exports": {
     ".": {
-      "import": "./src/main.js"
+      "import": "./src/main.js",
+      "require": "./dist/jsenv_eslint_config.cjs"
     },
     "./*": "./*"
   },
   "files": [
+    "/dist/",
     "/src/",
     "/babel.config.cjs"
   ],
   "scripts": {
-    "test": "node ./scripts/test.mjs"
+    "test": "node ./scripts/test.mjs",
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@jsenv/eslint-import-resolver": "8.1.3"

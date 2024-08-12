@@ -1,0 +1,36 @@
+{
+  "name": "@jsenv/eslint-config-relax",
+  "version": "1.0.0",
+  "description": "A pleaseant ESLint configuration for any project",
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/eslint-config-relax"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "scripts": {},
+  "dependencies": {
+    "@jsenv/eslint-import-resolver": "8.1.3"
+  },
+  "devDependencies": {}
+}

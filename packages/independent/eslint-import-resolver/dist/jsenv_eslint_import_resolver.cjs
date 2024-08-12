@@ -1,5 +1,7 @@
 'use strict';
 
+console.log('HERE')
+
 var process$1 = require('process');
 var os = require('os');
 var tty = require('tty');
