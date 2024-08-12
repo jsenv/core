@@ -100,7 +100,7 @@ const validateCompiledFile = ({
       let ifModifiedSinceDate;
       try {
         ifModifiedSinceDate = new Date(lastModificationTime);
-      } catch (e) {
+      } catch {
         ifModifiedSinceDate = null;
         // ideally we should rather respond with
         // 400 "if-modified-since header is not a valid date"

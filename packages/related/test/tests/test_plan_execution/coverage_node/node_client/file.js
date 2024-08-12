@@ -1,4 +1,4 @@
-/* eslint-env browser */
+/* globals window */
 if (typeof window === "object") {
   console.log("browser");
 } else if (typeof process === "object") {

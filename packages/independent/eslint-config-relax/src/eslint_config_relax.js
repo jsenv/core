@@ -43,6 +43,7 @@ export const eslintConfigRelax = ({
   const parserOptions = {
     ecmaVersion: 2022,
     sourceType: "module",
+    ecmaFeatures: { jsx: true },
   };
   const globalsForNodeModule = {
     ...globals.node,

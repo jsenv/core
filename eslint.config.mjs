@@ -16,6 +16,11 @@ export default [
     jsxPragmaAuto: true,
   }),
   {
+    rules: {
+      "no-debugger": ["off"],
+    },
+  },
+  {
     ignores: ["**/async-to-promises.js", "**/babel_helpers/", "experiments/"],
   },
 ];
