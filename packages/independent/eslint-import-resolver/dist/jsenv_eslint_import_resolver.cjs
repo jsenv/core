@@ -2886,7 +2886,9 @@ ${source}
 --- importer ---
 ${file}
 --- root directory path ---
-${node_url.fileURLToPath(rootDirectoryUrl)}`);
+${node_url.fileURLToPath(rootDirectoryUrl)}
+--- package conditions ---
+${packageConditions.join(',')}`);
 
   const triggerNotFoundWarning = ({ resolver, specifier, importer, url }) => {
     const logLevel =
@@ -2895,7 +2897,8 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
         : "warn";
     if (resolver === "esm") {
       logger[logLevel](
-        `esm module resolution failed for "${specifier}" imported by ${importer}`,
+        `esm module resolution failed for "${specifier}" imported by ${importer}
+package conditions: ${packageConditions.join(',')}`,
       );
     } else if (resolver === "commonjs") {
       logger[logLevel](
@@ -2915,7 +2918,7 @@ ${node_url.fileURLToPath(rootDirectoryUrl)}`);
   const browserInPackageConditions = packageConditions.includes("browser");
   const nodeInPackageConditions = packageConditions.includes("node");
   if (nodeInPackageConditions && isSpecifierForNodeBuiltin(source)) {
-    logger.debug(`-> native node module`);
+    logger.debug(`-> native smodule`);
     return {
       found: true,
       path: null,

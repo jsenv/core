@@ -51,7 +51,9 @@ ${source}
 --- importer ---
 ${file}
 --- root directory path ---
-${fileURLToPath(rootDirectoryUrl)}`);
+${fileURLToPath(rootDirectoryUrl)}
+--- package conditions ---
+${packageConditions.join(",")}`);
 
   const triggerNotFoundWarning = ({ resolver, specifier, importer, url }) => {
     const logLevel =

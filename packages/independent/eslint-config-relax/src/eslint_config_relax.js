@@ -64,6 +64,22 @@ export const eslintConfigRelax = ({
   };
 
   return [
+    // import plugin
+    {
+      plugins: {
+        "import-x": pluginImportX,
+      },
+      rules: {
+        ...rulesImportRelax,
+        // already handled by prettier-plugin-organize-imports}
+        ...(prettierSortImport ? { "import-x/no-duplicates": ["off"] } : {}),
+      },
+      settings: {
+        "import-x/extensions": [".js", ".mjs", ".jsx", ".ts", ".tsx"],
+        // https://github.com/import-js/eslint-plugin-import/issues/1753
+        "import-x/ignore": ["node_modules/playwright/"],
+      },
+    },
     // node "module" files
     {
       files: ["**/*.js", "**/*.mjs", "**/*.jsx"],
@@ -74,6 +90,15 @@ export const eslintConfigRelax = ({
           requireConfigFile: false,
         },
         globals: globalsForNodeModule,
+      },
+      settings: {
+        "import-x/resolver": {
+          "@jsenv/eslint-import-resolver": {
+            rootDirectoryUrl,
+            packageConditions: ["node", "development", "import"],
+            logLevel: importResolutionLogLevel,
+          },
+        },
       },
     },
     // node "commonjs" files
@@ -86,28 +111,14 @@ export const eslintConfigRelax = ({
         },
         globals: globalsForNodeCommonJs,
       },
-    },
-    // import plugin
-    {
-      plugins: {
-        "import-x": pluginImportX,
-      },
       settings: {
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
             rootDirectoryUrl,
-            packageConditions: ["node", "development", "import"],
+            packageConditions: ["node", "development"],
             logLevel: importResolutionLogLevel,
           },
         },
-        "import-x/extensions": [".js", ".mjs", ".jsx", ".ts", ".tsx"],
-        // https://github.com/import-js/eslint-plugin-import/issues/1753
-        "import-x/ignore": ["node_modules/playwright/"],
-      },
-      rules: {
-        ...rulesImportRelax,
-        // already handled by prettier-plugin-organize-imports}
-        ...(prettierSortImport ? { "import-x/no-duplicates": ["off"] } : {}),
       },
     },
     // regexp plugin
@@ -194,7 +205,6 @@ export const eslintConfigRelax = ({
         ...(prettier ? rulesOffPrettier : {}),
       },
     },
-
     // html plugin
     {
       files: ["**/*.html"],
