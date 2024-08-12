@@ -4,8 +4,6 @@ export const composeTwoV8Coverages = (firstV8Coverage, secondV8Coverage) => {
   if (secondV8Coverage.result.length === 0) {
     return firstV8Coverage;
   }
-
-  // eslint-disable-next-line import-x/no-unresolved
   const { mergeProcessCovs } = importWithRequire("@c88/v8-coverage");
   // "mergeProcessCovs" do not preserves source-map-cache during the merge
   // so we store sourcemap cache now

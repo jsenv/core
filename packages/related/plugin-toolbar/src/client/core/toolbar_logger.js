@@ -19,7 +19,6 @@ export const logger = {
 // a nice yellow:ffdc00
 const backgroundColor = "#F7931E"; // jsenv logo color
 
-// eslint-disable-next-line no-unused-vars
 const prefixArgs = (...args) => {
   return [
     `%cjsenv`,

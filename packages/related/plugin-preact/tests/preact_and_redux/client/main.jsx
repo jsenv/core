@@ -1,7 +1,7 @@
 import { render } from "preact";
 import { Provider } from "react-redux";
-
 import { store } from "./store.js";
+
 const { App } = await import("./app.jsx");
 
 let resolveRenderPromise;

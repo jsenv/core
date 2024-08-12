@@ -14,5 +14,11 @@ module.exports = {
         pragmaFrag: "React.Fragment",
       },
     ],
+    [
+      "@babel/plugin-syntax-decorators",
+      {
+        decoratorsBeforeExport: true,
+      },
+    ],
   ],
 };

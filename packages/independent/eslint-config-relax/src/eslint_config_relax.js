@@ -67,7 +67,11 @@ export const eslintConfigRelax = ({
     {
       files: ["**/*.js", "**/*.mjs", "**/*.jsx"],
       languageOptions: {
-        parserOptions,
+        parser: babelParser,
+        parserOptions: {
+          ...parserOptions,
+          requireConfigFile: false,
+        },
         globals: globalsForNodeModule,
       },
     },
@@ -86,13 +90,14 @@ export const eslintConfigRelax = ({
     {
       files: browserFiles,
       languageOptions: {
-        // use "@babel/eslint-parser" until top level await is supported by ESLint default parser
-        // + to support import assertions in some files
+        // use "@babel/eslint-parser" because of
+        // - top level await
+        // - import attributes
+        // - decorators
         parser: babelParser,
         parserOptions: {
           ...parserOptions,
           requireConfigFile: false,
-          ecmaFeatures: { jsx: true },
         },
         globals: {
           ...globals.browser,
@@ -111,19 +116,24 @@ export const eslintConfigRelax = ({
       },
     },
     // browser and node files
-    {
-      files: browserAndNodeFiles,
-      languageOptions: {
-        parserOptions: {
-          ...parserOptions,
-        },
-        globals: {
-          ...globals.node,
-          ...globals.browser,
-          ...explicitGlobals,
-        },
-      },
-    },
+    ...(browserAndNodeFiles.length
+      ? [
+          {
+            files: browserAndNodeFiles,
+            languageOptions: {
+              parser: babelParser,
+              parserOptions: {
+                ...parserOptions,
+              },
+              globals: {
+                ...globals.node,
+                ...globals.browser,
+                ...explicitGlobals,
+              },
+            },
+          },
+        ]
+      : []),
     {
       rules: {
         ...rulesRelax,
