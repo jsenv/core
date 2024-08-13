@@ -1,4 +1,5 @@
 import babelParser from "@babel/eslint-parser";
+import { urlToRelativeUrl } from "@jsenv/urls";
 import html from "eslint-plugin-html";
 import pluginImportX from "eslint-plugin-import-x";
 import reactPlugin from "eslint-plugin-react";
@@ -18,9 +19,18 @@ const patternForEachExtension = (pattern, extensions) => {
   );
 };
 
+/**
+ * Return an ESLint flat config
+ * @param {Object} parameters
+ * @param {string|url} parameters.rootDirectoryUrl
+ *        Directory containing the eslint config file and likely your package.json
+ * @param {string|url} [parameters.webDirectoryUrl]
+ *        Directory leading to files that will be executed by a web browser
+ * @return {Array} Array of ESLint config objects
+ */
 export const eslintConfigRelax = ({
   rootDirectoryUrl,
-  type = "browser",
+  browserDirectoryUrl,
   prettier,
   prettierSortImport,
   jsxPragmaAuto = false,
@@ -52,15 +62,17 @@ export const eslintConfigRelax = ({
     }
   }
 
-  const isBrowser = type === "browser";
   const browserExtensions = [".js", ".jsx"];
   browserFiles = [
     "**/*.html",
     ...patternForEachExtension("**/client/**/*[extension]", browserExtensions),
     ...patternForEachExtension("**/www/**/*[extension]", browserExtensions),
     ...patternForEachExtension("**/browser/**/*[extension]", browserExtensions),
-    ...(isBrowser
-      ? patternForEachExtension("src/**/*[extension]", browserExtensions)
+    ...(browserDirectoryUrl
+      ? patternForEachExtension(
+          `${urlToRelativeUrl(browserDirectoryUrl, rootDirectoryUrl)}/**/*[extension]`,
+          browserExtensions,
+        )
       : []),
     ...browserFiles,
   ];
@@ -191,11 +203,7 @@ export const eslintConfigRelax = ({
       settings: {
         "import-x/resolver": {
           "@jsenv/eslint-import-resolver": {
-            rootDirectoryUrl: String(
-              isBrowser
-                ? new URL("./src/", rootDirectoryUrl)
-                : rootDirectoryUrl,
-            ),
+            rootDirectoryUrl: browserDirectoryUrl || rootDirectoryUrl,
             packageConditions: ["browser", "import"],
             logLevel: importResolutionLogLevel,
           },

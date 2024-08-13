@@ -21,7 +21,7 @@
     "@jsenv/core": "39.3.12",
     "@jsenv/plugin-bundling": "2.7.7",
     "@jsenv/plugin-minification": "1.5.5",
-    "@jsenv/eslint-config-relax": "1.1.1",
+    "@jsenv/eslint-config-relax": "1.1.2",
     "@jsenv/test": "3.4.1",
     "eslint": "9.9.0",
     "open": "10.1.0",
