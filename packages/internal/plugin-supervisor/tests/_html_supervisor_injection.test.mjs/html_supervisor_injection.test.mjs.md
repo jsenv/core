@@ -1,4 +1,4 @@
-# [html_supervisor_snapshots.test.mjs](../html_supervisor_snapshots.test.mjs)
+# [html_supervisor_injection.test.mjs](../html_supervisor_injection.test.mjs)
 
 ```js
 await run("script_inline.html");
