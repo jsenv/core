@@ -116,7 +116,7 @@ System.register([], function (_export, _context) {
       a = 0;
     for (n.__k = [], t = 0; t < e; t++) r = t + a, null != (i = n.__k[t] = null == (i = l[t]) || "boolean" == typeof i || "function" == typeof i ? null : "string" == typeof i || "number" == typeof i || "bigint" == typeof i || i.constructor == String ? g$3(null, i, null, null, null) : y$1(i) ? g$3(k$2, {
       children: i
-    }, null, null, null) : void 0 === i.constructor && i.__b > 0 ? g$3(i.type, i.props, i.key, i.ref ? i.ref : null, i.__v) : i) ? (i.__ = n, i.__b = n.__b + 1, f = L$1(i, u, r, s), i.__i = f, o = null, -1 !== f && (s--, (o = u[f]) && (o.__u |= 131072)), null == o || null === o.__v ? (-1 == f && a--, "function" != typeof i.type && (i.__u |= 65536)) : f !== r && (f == r - 1 ? a = f - r : f == r + 1 ? a++ : f > r ? s > e - r ? a += f - r : a-- : f < r && a++, f !== t + a && (i.__u |= 65536))) : (o = u[r]) && null == o.key && o.__e && 0 == (131072 & o.__u) && (o.__e == n.__d && (n.__d = x$2(o)), V$1(o, o, !1), u[r] = null, s--);
+    }, null, null, null) : void 0 === i.constructor && i.__b > 0 ? g$3(i.type, i.props, i.key, i.ref ? i.ref : null, i.__v) : i) ? (i.__ = n, i.__b = n.__b + 1, f = L$1(i, u, r, s), i.__i = f, o = null, -1 !== f && (s--, (o = u[f]) && (o.__u |= 131072)), null == o || null === o.__v ? (-1 == f && a--, "function" != typeof i.type && (i.__u |= 65536)) : f !== r && (f == r - 1 ? a-- : f == r + 1 ? a++ : f > r ? s > e - r ? a += f - r : a-- : f < r && (f == r - a ? a -= f - r : a++), f !== t + a && (i.__u |= 65536))) : (o = u[r]) && null == o.key && o.__e && 0 == (131072 & o.__u) && (o.__e == n.__d && (n.__d = x$2(o)), V$1(o, o, !1), u[r] = null, s--);
     if (s) for (t = 0; t < c; t++) null != (o = u[t]) && 0 == (131072 & o.__u) && (o.__e == n.__d && (n.__d = x$2(o)), V$1(o, o));
   }
   function I$1(n, l, u) {
@@ -1362,12 +1362,13 @@ System.register([], function (_export, _context) {
         "string" == typeof n.type && function (n) {
           var t = n.props,
             e = n.type,
-            u = {};
-          for (var o in t) {
-            var i = t[o];
-            if (!("value" === o && "defaultValue" in t && null == i || Y && "children" === o && "noscript" === e || "class" === o || "className" === o)) {
-              var c = o.toLowerCase();
-              "defaultValue" === o && "value" in t && null == t.value ? o = "value" : "download" === o && !0 === i ? i = "" : "translate" === c && "no" === i ? i = !1 : "ondoubleclick" === c ? o = "ondblclick" : "onchange" !== c || "input" !== e && "textarea" !== e || $(t.type) ? "onfocus" === c ? o = "onfocusin" : "onblur" === c ? o = "onfocusout" : H.test(o) ? o = c : -1 === e.indexOf("-") && B.test(o) ? o = o.replace(Z, "-$&").toLowerCase() : null === i && (i = void 0) : c = o = "oninput", "oninput" === c && u[o = c] && (o = "oninputCapture"), u[o] = i;
+            u = {},
+            o = -1 === e.indexOf("-");
+          for (var i in t) {
+            var c = t[i];
+            if (!("value" === i && "defaultValue" in t && null == c || Y && "children" === i && "noscript" === e || "class" === i || "className" === i)) {
+              var l = i.toLowerCase();
+              "defaultValue" === i && "value" in t && null == t.value ? i = "value" : "download" === i && !0 === c ? c = "" : "translate" === l && "no" === c ? c = !1 : "o" === l[0] && "n" === l[1] ? "ondoubleclick" === l ? i = "ondblclick" : "onchange" !== l || "input" !== e && "textarea" !== e || $(t.type) ? "onfocus" === l ? i = "onfocusin" : "onblur" === l ? i = "onfocusout" : H.test(i) && (i = l) : l = i = "oninput" : o && B.test(i) ? i = i.replace(Z, "-$&").toLowerCase() : null === c && (c = void 0), "oninput" === l && u[i = l] && (i = "oninputCapture"), u[i] = c;
             }
           }
           "select" == e && u.multiple && Array.isArray(u.value) && (u.value = H$1(t.children).forEach(function (n) {
