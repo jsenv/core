@@ -1,0 +1,40 @@
+{
+  "name": "@jsenv/lighthouse-impact",
+  "version": "4.2.0",
+  "description": "Package description",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/workflow/lighthouse-impact"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "snapshot": "node ./tests/comment/generate_comment_snapshot_file.mjs",
+    "test": "node ./scripts/test.mjs"
+  },
+  "dependencies": {
+    "@jsenv/abort": "4.3.0",
+    "@jsenv/dynamic-import-worker": "1.2.1",
+    "@jsenv/filesystem": "4.10.2",
+    "@jsenv/github-pull-request-impact": "1.8.0",
+    "@jsenv/humanize": "1.2.8",
+    "lighthouse": "12.2.0"
+  }
+}
