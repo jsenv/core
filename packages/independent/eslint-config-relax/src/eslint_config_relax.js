@@ -29,7 +29,7 @@ export const eslintConfigRelax = ({
   browserFiles = [],
   browserAndNodeFiles = [],
 } = {}) => {
-  const packageJsonFileUrl = new URL("./package.json", import.meta.url);
+  const packageJsonFileUrl = new URL("./package.json", rootDirectoryUrl);
   let packageObject = {};
   try {
     const packageBuffer = readFileSync(packageJsonFileUrl);
@@ -40,8 +40,8 @@ export const eslintConfigRelax = ({
     if (devDependencies.prettier || packageObject.prettier) {
       prettier = true;
     } else if (
-      existsSync(new URL("./.prettierrc.yml", import.meta.url)) ||
-      existsSync(new URL(".prettierignore", import.meta.url))
+      existsSync(new URL("./.prettierrc.yml", rootDirectoryUrl)) ||
+      existsSync(new URL(".prettierignore", rootDirectoryUrl))
     ) {
       prettier = true;
     }
