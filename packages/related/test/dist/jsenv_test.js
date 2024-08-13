@@ -9208,11 +9208,24 @@ const reportAsJunitXml = async (
       const testCase = testSuite.createNode("testcase", {
         file: fileRelativeUrl,
         name: group,
-        time: mockFluctuatingValues ? "[mock]" : executionResult.timings.end, // duration of this execution
-        timestamp: mockFluctuatingValues
+        // duration of this execution
+        time: mockFluctuatingValues
           ? "[mock]"
-          : new Date(executionResult.timings.origin).toISOString().slice(0, -5), //  Date and time of when the test run was executed
-        tests: 1, // Total number of tests for this execution
+          : executionResult.status === "skipped"
+            ? 0
+            : executionResult.timings.end,
+        // Date and time of when the test run was executed
+        ...(executionResult.status === "skipped"
+          ? {}
+          : {
+              timestamp: mockFluctuatingValues
+                ? "[mock]"
+                : new Date(executionResult.timings.origin)
+                    .toISOString()
+                    .slice(0, -5),
+            }),
+        // Total number of tests for this execution
+        tests: 1,
       });
       testSuite.appendChild(testCase);
 

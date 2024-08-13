@@ -1,14 +1,14 @@
 import { UNICODE } from "@jsenv/humanize";
 import { collectWorkspacePackages } from "./internal/collect_workspace_packages.js";
 import {
+  compareTwoPackageVersions,
+  VERSION_COMPARE_RESULTS,
+} from "./internal/compare_two_package_versions.js";
+import {
   buildDependencyGraph,
   orderByDependencies,
 } from "./internal/dependency_graph.js";
 import { fetchWorkspaceLatests } from "./internal/fetch_workspace_latests.js";
-import {
-  compareTwoPackageVersions,
-  VERSION_COMPARE_RESULTS,
-} from "./internal/compare_two_package_versions.js";
 import { increaseVersion } from "./internal/increase_version.js";
 
 export const syncPackagesVersions = async ({
@@ -92,7 +92,8 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
     if (
       version.startsWith("./") ||
       version.startsWith("../") ||
-      version.startsWith("file:")
+      version.startsWith("file:") ||
+      version.startsWith("workspace:")
     ) {
       return;
     }

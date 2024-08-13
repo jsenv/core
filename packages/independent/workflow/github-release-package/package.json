@@ -30,6 +30,6 @@
   "dependencies": {
     "@jsenv/filesystem": "4.10.2",
     "@jsenv/humanize": "1.2.8",
-    "@jsenv/github-pull-request-impact": "1.7.7"
+    "@jsenv/github-pull-request-impact": "1.8.0"
   }
 }
