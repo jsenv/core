@@ -1,45 +1,44 @@
-import { assert } from "@jsenv/assert";
-
 import { startDevServer } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+import { chromium } from "playwright";
 
-const plugins = [
-  jsenvPluginPreact(),
-  jsenvPluginCommonJs({
-    include: {
-      "/**/node_modules/react-is/": true,
-      "/**/node_modules/use-sync-external-store/": {
-        external: ["react"],
-      },
-      "/**/node_modules/hoist-non-react-statics/": {
-        // "react-redux" depends on
-        // - react-is@18+
-        // - hoist-non-react-statics@3.3.2+
-        // but "hoist-non-react-statics@3.3.2" depends on
-        // - react-is@16+
-        // In the end there is 2 versions of react-is trying to cohabit
-        // to prevent them to clash we let rollup inline "react-is" into "react-statics"
-        // thanks to the comment below
-        // external: ["react-is"],
-      },
-    },
-  }),
-];
-
-const devServer = await startDevServer({
-  logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  keepProcessAlive: false,
-  plugins,
-  port: 0,
-});
-const { returnValue } = await executeInBrowser(`${devServer.origin}/main.html`);
-const actual = returnValue;
-const expect = {
-  spanContentAfterIncrement: "1",
-  spanContentAfterDecrement: "0",
+const run = async ({ browserLauncher }) => {
+  const devServer = await startDevServer({
+    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
+    plugins: [
+      jsenvPluginPreact(),
+      jsenvPluginCommonJs({
+        include: {
+          "/**/node_modules/react-is/": true,
+          "/**/node_modules/use-sync-external-store/": {
+            external: ["react"],
+          },
+          "/**/node_modules/hoist-non-react-statics/": {
+            // "react-redux" depends on
+            // - react-is@18+
+            // - hoist-non-react-statics@3.3.2+
+            // but "hoist-non-react-statics@3.3.2" depends on
+            // - react-is@16+
+            // In the end there is 2 versions of react-is trying to cohabit
+            // to prevent them to clash we let rollup inline "react-is" into "react-statics"
+            // thanks to the comment below
+            // external: ["react-is"],
+          },
+        },
+      }),
+    ],
+    sourcemaps: "none",
+  });
+  return executeHtml(`${devServer.origin}/main.html`, {
+    browserLauncher,
+  });
 };
-assert({ actual, expect });
+
+await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+  test("0_chromium", () => run({ browserLauncher: chromium }));
+});
