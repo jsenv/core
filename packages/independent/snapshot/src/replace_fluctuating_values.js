@@ -56,6 +56,12 @@ export const replaceFluctuatingValues = (
     );
     return string;
   };
+  const replaceTimestamps = (string) => {
+    string = string.replace(/\?hot=\d+/g, () => {
+      return "?hot=now()";
+    });
+    return string;
+  };
   const replaceSizes = (string) => {
     // the size of files might slighly differ from an OS to an other
     // we round the floats to make them predictable
@@ -81,6 +87,7 @@ export const replaceFluctuatingValues = (
     if (stringType === "filesystem") {
       return replaceFilesystemWellKnownValues(string);
     }
+    string = replaceTimestamps(string);
     if (!preserveAnsi) {
       string = stripAnsi(string);
     }

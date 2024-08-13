@@ -20,7 +20,7 @@ const run = async ({ browserLauncher }) => {
       }),
     ],
     clientAutoreload: {
-      cooldownBetweenFileEvents: 250,
+      cooldownBetweenFileEvents: 300,
     },
     sourcemaps: "none",
   });
@@ -63,6 +63,12 @@ const run = async ({ browserLauncher }) => {
   };
 };
 
-await snapshotDevSideEffects(import.meta.url, ({ test }) => {
-  test("0_chromium", () => run({ browserLauncher: chromium }));
-});
+await snapshotDevSideEffects(
+  import.meta.url,
+  ({ test }) => {
+    test("0_chromium", () => run({ browserLauncher: chromium }));
+  },
+  {
+    filesystemEffects: false,
+  },
+);
