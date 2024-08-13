@@ -3,7 +3,7 @@ import {
   bufferToEtag,
   readFile,
 } from "@jsenv/filesystem";
-import { createDetailedMessage, createLogger } from "@jsenv/log";
+import { createDetailedMessage, createLogger } from "@jsenv/humanize";
 import { fileURLToPath } from "node:url";
 import { applyTrackingConfig } from "./internal/apply_tracking_config.js";
 import { formatFileSizeReportForLog } from "./internal/format_file_size_report_for_log.js";
