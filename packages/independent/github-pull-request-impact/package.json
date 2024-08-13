@@ -1,0 +1,35 @@
+{
+  "name": "@jsenv/github-pull-request-impact",
+  "version": "1.7.7",
+  "description": "Report pull request impact on something",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/github-pull-request-impact"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "scripts": {
+    "test": "node ./scripts/test.mjs"
+  },
+  "dependencies": {
+    "@jsenv/filesystem": "4.10.2",
+    "@jsenv/humanize": "1.2.8"
+  }
+}
