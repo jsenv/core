@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/file-size-impact",
-  "version": "14.2.1",
+  "version": "14.3.0",
   "description": "Add files size impact into pull requests",
   "license": "MIT",
   "repository": {

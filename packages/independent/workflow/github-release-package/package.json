@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/github-release-package",
-  "version": "1.5.7",
+  "version": "1.6.0",
   "description": "Create github release when package version changes.",
   "license": "MIT",
   "repository": {

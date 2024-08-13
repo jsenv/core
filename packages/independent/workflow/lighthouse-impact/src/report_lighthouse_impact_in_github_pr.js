@@ -107,7 +107,7 @@ export const reportLighthouseImpactInGithubPullRequest = async ({
       };
     },
     generatedByLink: {
-      url: "https://github.com/jsenv/workflow/tree/main/packages/lighthouse-impact",
+      url: "https://github.com/jsenv/core/tree/main/packages/independent/workflow/lighthouse-impact",
       text: "@jsenv/lighthouse-impact",
     },
     runLink,
