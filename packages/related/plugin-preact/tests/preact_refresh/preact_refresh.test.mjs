@@ -1,32 +1,31 @@
-import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
-import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
-import { readFileSync, writeFileSync } from "node:fs";
+import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
+import { replaceFileStructureSync, replaceFileSync } from "@jsenv/filesystem";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { chromium } from "playwright";
 
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
-
-const labelClientFileUrl = new URL("./client/label.js", import.meta.url);
-
-const devServer = await startDevServer({
-  logLevel: "warn",
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  keepProcessAlive: false,
-  plugins: [
-    jsenvPluginPreact({
-      refreshInstrumentation: true,
-    }),
-  ],
-  clientAutoreload: {
-    cooldownBetweenFileEvents: 250,
-  },
-  port: 0,
+replaceFileStructureSync({
+  from: new URL("./fixtures/0_at_start/", import.meta.url),
+  to: new URL("./git_ignored/", import.meta.url),
 });
-const browser = await chromium.launch({
-  headless: true,
-});
-try {
-  const page = await launchBrowserPage(browser);
+
+const run = async ({ browserLauncher }) => {
+  const devServer = await startDevServer({
+    sourceDirectoryUrl: new URL("./git_ignored/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
+    plugins: [
+      jsenvPluginPreact({
+        refreshInstrumentation: true,
+      }),
+    ],
+    clientAutoreload: {
+      cooldownBetweenFileEvents: 250,
+    },
+    sourcemaps: "none",
+  });
+  const browser = await browserLauncher.launch({ headless: true });
+  const page = await browser.newPage({ ignoreHTTPSErrors: true });
   await page.goto(`${devServer.origin}/main.html`);
   await page.evaluate(
     /* eslint-disable no-undef */
@@ -44,54 +43,26 @@ try {
     return page.click("#button_increase");
   };
 
-  {
-    const actual = {
-      countLabelText: await getCountLabelText(),
-    };
-    const expect = {
-      countLabelText: "toto: 0",
-    };
-    assert({ actual, expect });
-  }
-
-  {
-    await increase();
-    const actual = {
-      countLabelText: await getCountLabelText(),
-    };
-    const expect = {
-      countLabelText: "toto: 1",
-    };
-    assert({ actual, expect });
-  }
-  writeFileSync(
-    labelClientFileUrl,
-    readFileSync(new URL("./fixtures/label_1.js", import.meta.url)),
-  );
+  const labelAtStart = await getCountLabelText();
+  await increase();
+  const labelAfterIncrease = await getCountLabelText();
+  replaceFileSync({
+    from: new URL("./fixtures/label_tata.js", import.meta.url),
+    to: new URL("./git_ignored/label.js", import.meta.url),
+  });
   await new Promise((resolve) => setTimeout(resolve, 500));
-  {
-    const actual = {
-      countLabelText: await getCountLabelText(),
-    };
-    const expect = {
-      countLabelText: "tata: 1",
-    };
-    assert({ actual, expect });
-  }
-  {
-    await increase();
-    const actual = {
-      countLabelText: await getCountLabelText(),
-    };
-    const expect = {
-      countLabelText: "tata: 2",
-    };
-    assert({ actual, expect });
-  }
-} finally {
+  const labelAfterUpdateTata = await getCountLabelText();
+  await increase();
+  const labelTataAfterIncrease = await getCountLabelText();
   browser.close();
-  writeFileSync(
-    labelClientFileUrl,
-    readFileSync(new URL("./fixtures/label_0.js", import.meta.url)),
-  );
-}
+  return {
+    labelAtStart,
+    labelAfterIncrease,
+    labelAfterUpdateTata,
+    labelTataAfterIncrease,
+  };
+};
+
+await snapshotDevSideEffects(import.meta.url, ({ test }) => {
+  test("0_chromium", () => run({ browserLauncher: chromium }));
+});

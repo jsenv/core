@@ -4,7 +4,7 @@ import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 startDevServer({
   port: 5678,
-  rootDirectoryUrl: new URL("./client/", import.meta.url),
+  rootDirectoryUrl: new URL("./git_ignored/", import.meta.url),
   plugins: [
     jsenvPluginExplorer({
       groups: {
