@@ -7,7 +7,7 @@
 #  - Check linting passes (no eslint error on files)
 #  - Run tests and ensure none is failing
 
-name: core
+name: workspace_tests
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-12, windows-2022] # https://github.com/actions/runner-images
+        os: [ubuntu-22.04, macos-14, windows-2022] # https://github.com/actions/runner-images
         node: [22.3.0]
     runs-on: ${{ matrix.os }}
     name: test on ${{ matrix.os }} and node ${{ matrix.node }}

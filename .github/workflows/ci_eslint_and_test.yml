@@ -7,7 +7,7 @@
 #  - Check linting passes (no eslint error on files)
 #  - Run tests and ensure none is failing
 
-name: core
+name: eslint_and_tests
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-12, windows-2022] # https://github.com/actions/runner-images
+        os: [ubuntu-22.04, macos-14, windows-2022] # https://github.com/actions/runner-images
         node: [22.3.0]
     runs-on: ${{ matrix.os }}
     name: test on ${{ matrix.os }} and node ${{ matrix.node }}
@@ -62,6 +62,8 @@ jobs:
         if: runner.os == 'Windows'
         run: npm install lightningcss-win32-x64-msvc
       - name: Run ESLint
+        env:
+          NODE_OPTIONS: "--max_old_space_size=4096"
         run: npm run eslint
       - name: Run core tests
         run: npm test
