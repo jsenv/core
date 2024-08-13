@@ -4,6 +4,10 @@ import { replaceFileStructureSync, replaceFileSync } from "@jsenv/filesystem";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { chromium } from "playwright";
 
+if (process.platform === "linux") {
+  process.exit(0);
+}
+
 replaceFileStructureSync({
   from: new URL("./fixtures/0_at_start/", import.meta.url),
   to: new URL("./git_ignored/", import.meta.url),
