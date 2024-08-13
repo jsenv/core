@@ -4,6 +4,7 @@ import pluginImportX from "eslint-plugin-import-x";
 import reactPlugin from "eslint-plugin-react";
 import * as regexpPlugin from "eslint-plugin-regexp";
 import globals from "globals";
+import { existsSync, readFileSync } from "node:fs";
 import { explicitGlobals } from "./explicit_globals.js";
 import { rulesImportRelax } from "./rules_import_relax.js";
 import { rulesOffPrettier } from "./rules_off_prettier.js";
@@ -20,14 +21,37 @@ const patternForEachExtension = (pattern, extensions) => {
 export const eslintConfigRelax = ({
   rootDirectoryUrl,
   type = "browser",
-  prettier = true, // ideally check presence of prettier config files, or in package.json dev deps
-  prettierSortImport = false, // check presence in package deps
+  prettier,
+  prettierSortImport,
   jsxPragmaAuto = false,
   importResolutionLogLevel,
 
   browserFiles = [],
   browserAndNodeFiles = [],
 } = {}) => {
+  const packageJsonFileUrl = new URL("./package.json", import.meta.url);
+  let packageObject = {};
+  try {
+    const packageBuffer = readFileSync(packageJsonFileUrl);
+    packageObject = JSON.parse(String(packageBuffer));
+  } catch {}
+  const { devDependencies = {} } = packageObject;
+  if (prettier === undefined) {
+    if (devDependencies.prettier || packageObject.prettier) {
+      prettier = true;
+    } else if (
+      existsSync(new URL("./.prettierrc.yml", import.meta.url)) ||
+      existsSync(new URL(".prettierignore", import.meta.url))
+    ) {
+      prettier = true;
+    }
+  }
+  if (prettierSortImport === undefined) {
+    if (devDependencies["prettier-plugin-organize-imports"]) {
+      prettierSortImport = true;
+    }
+  }
+
   const isBrowser = type === "browser";
   const browserExtensions = [".js", ".jsx"];
   browserFiles = [
