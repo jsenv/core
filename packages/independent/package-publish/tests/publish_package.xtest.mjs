@@ -9,14 +9,12 @@
  *
  */
 
-import { createRequire } from "node:module";
-
 import { assert } from "@jsenv/assert";
 import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
-
 import { publishPackage } from "@jsenv/package-publish";
-import { fetchLatestInRegistry } from "@jsenv/package-publish/src/internal/fetchLatestInRegistry.js";
-import { loadEnvFile, assertProcessEnvShape } from "./testHelper.js";
+import { fetchLatestInRegistry } from "@jsenv/package-publish/src/internal/fetch_latest_in_registry.js";
+import { createRequire } from "node:module";
+import { assertProcessEnvShape, loadEnvFile } from "./test_helper.js";
 
 const require = createRequire(import.meta.url);
 const { inc: incrementVersion } = require("semver");

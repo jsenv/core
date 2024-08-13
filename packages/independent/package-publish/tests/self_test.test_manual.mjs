@@ -1,5 +1,5 @@
 import { publishPackage } from "@jsenv/package-publish";
-import { loadEnvFile } from "./testHelper.js";
+import { loadEnvFile } from "./test_helper.js";
 
 const run = async () => {
   if (!process.env.CI) {

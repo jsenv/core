@@ -1,5 +1,5 @@
 import { createTaskLog } from "@jsenv/humanize";
-import { fetchLatestInRegistry } from "@jsenv/package-publish/src/internal/fetchLatestInRegistry.js";
+import { fetchLatestInRegistry } from "@jsenv/package-publish/src/internal/fetch_latest_in_registry.js";
 
 export const fetchWorkspaceLatests = async (workspacePackages) => {
   const packageNames = Object.keys(workspacePackages);

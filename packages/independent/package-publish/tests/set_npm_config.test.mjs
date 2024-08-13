@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
-
-import { setNpmConfig } from "@jsenv/package-publish/src/internal/setNpmConfig.js";
+import { setNpmConfig } from "@jsenv/package-publish/src/internal/set_npm_config.js";
 
 {
   const actual = setNpmConfig("", { whatever: 42 });

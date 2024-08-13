@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
-
-import { fetchLatestInRegistry } from "@jsenv/package-publish/src/internal/fetchLatestInRegistry.js";
+import { fetchLatestInRegistry } from "@jsenv/package-publish/src/internal/fetch_latest_in_registry.js";
 
 const actual = await fetchLatestInRegistry({
   registryUrl: "https://registry.npmjs.org",

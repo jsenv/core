@@ -1,13 +1,12 @@
 import { assert } from "@jsenv/assert";
-
 import {
   needsPublish,
-  PUBLISH_BECAUSE_NEVER_PUBLISHED,
-  PUBLISH_BECAUSE_LATEST_LOWER,
-  PUBLISH_BECAUSE_TAG_DIFFERS,
-  NOTHING_BECAUSE_LATEST_HIGHER,
   NOTHING_BECAUSE_ALREADY_PUBLISHED,
-} from "@jsenv/package-publish/src/internal/needsPublish.js";
+  NOTHING_BECAUSE_LATEST_HIGHER,
+  PUBLISH_BECAUSE_LATEST_LOWER,
+  PUBLISH_BECAUSE_NEVER_PUBLISHED,
+  PUBLISH_BECAUSE_TAG_DIFFERS,
+} from "@jsenv/package-publish/src/internal/needs_publish.js";
 
 {
   const actual = needsPublish({
