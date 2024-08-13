@@ -1,15 +1,15 @@
 {
-  "name": "@jsenv/file-size-impact",
-  "version": "14.2.1",
-  "description": "Add files size impact into pull requests",
+  "name": "@jsenv/performance-impact",
+  "version": "4.3.1",
+  "description": "Report pull request impacts on performance metrics",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/file-size-impact"
+    "directory": "packages/independent/workflow/performance-impact"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=16.13.0"
   },
   "publishConfig": {
     "access": "public"
@@ -21,23 +21,18 @@
     },
     "./*": "./*"
   },
-  "bin": {
-    "filesize": "./bin/filesize.mjs"
-  },
   "main": "./src/main.js",
   "files": [
     "/src/"
   ],
   "scripts": {
-    "snapshot": "node ./tests/comment/generate_comment_snapshot_file.mjs",
-    "test": "node ./scripts/test.mjs",
-    "file-size": "node ./scripts/file_size.mjs --log"
+    "snapshot": "node ./tests/comment_snapshot/generate_comment_snapshot_file.mjs",
+    "test": "node ./scripts/test.mjs"
   },
   "dependencies": {
     "@jsenv/dynamic-import-worker": "1.2.1",
     "@jsenv/filesystem": "4.10.2",
     "@jsenv/github-pull-request-impact": "1.7.7",
-    "@jsenv/urls": "2.5.2",
     "@jsenv/humanize": "1.2.8"
   }
 }

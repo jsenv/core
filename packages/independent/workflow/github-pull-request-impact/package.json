@@ -1,12 +1,12 @@
 {
-  "name": "@jsenv/package-publish",
-  "version": "1.10.7",
-  "description": "Publish package to one or many registry.",
+  "name": "@jsenv/github-pull-request-impact",
+  "version": "1.7.7",
+  "description": "Report pull request impact on something",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/package-publish"
+    "directory": "packages/independent/workflow/github-pull-request-impact"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -26,11 +26,10 @@
     "/src/"
   ],
   "scripts": {
-    "test": "node --experimental-json-modules ./scripts/test.mjs"
+    "test": "node ./scripts/test.mjs"
   },
   "dependencies": {
     "@jsenv/filesystem": "4.10.2",
-    "@jsenv/humanize": "1.2.8",
-    "semver": "7.6.3"
+    "@jsenv/humanize": "1.2.8"
   }
 }

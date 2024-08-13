@@ -38,6 +38,7 @@
   },
   "workspaces": [
     "./packages/independent/*",
+    "./packages/independent/workflow/*",
     "./packages/internal/*",
     "./packages/related/*",
     "./packages/related/cli/*"
