@@ -1,9 +1,7 @@
-import { assert } from "@jsenv/assert";
-import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { build, startBuildServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
-
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
@@ -12,19 +10,15 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
-const test = async ({ name, ...params }) => {
+const run = async ({ runtimeCompat, bundling }) => {
   await ensureEmptyDirectory(
-    new URL("./.jsenv/build/cjs_to_esm/", import.meta.url),
+    new URL("./.jsenv_b/build/cjs_to_esm/", import.meta.url),
   );
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
   await build({
-    logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    minification: false,
     plugins: [
       jsenvPluginPreact(),
       jsenvPluginCommonJs({
@@ -47,39 +41,35 @@ const test = async ({ name, ...params }) => {
         },
       }),
     ],
-    ...params,
+    runtimeCompat,
+    bundling,
   });
-  const server = await startFileServer({
-    rootDirectoryUrl: snapshotDirectoryUrl,
+  const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
   });
-  const { returnValue } = await executeInBrowser(`${server.origin}/main.html`);
-  const actual = returnValue;
-  const expect = {
-    spanContentAfterIncrement: "1",
-    spanContentAfterDecrement: "0",
-  };
-  assert({ actual, expect });
+  return executeHtml(`${buildServer.origin}/main.html`);
 };
 
-// support for <script type="module">
-await test({
-  name: "0_js_module",
-  runtimeCompat: { chrome: "89" },
-  bundling: {
-    js_module: {
-      chunks: {
-        // IT's ABSOLUTELY MANDATORY
-        // WITHOUT THIS ROLLUP CREATES CIRCULAR DEP IN THE CODE
-        // THAT IS NEVER RESOLVING
-        vendors: { "file:///**/node_modules/": true },
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_js_module", () =>
+    run({
+      runtimeCompat: { chrome: "89" },
+      bundling: {
+        js_module: {
+          chunks: {
+            // IT's ABSOLUTELY MANDATORY
+            // WITHOUT THIS ROLLUP CREATES CIRCULAR DEP IN THE CODE
+            // THAT IS NEVER RESOLVING
+            vendors: { "file:///**/node_modules/": true },
+          },
+        },
       },
-    },
-  },
-  minification: false,
-});
-// no support for <script type="module">
-await test({
-  name: "1_js_module_fallback",
-  runtimeCompat: { chrome: "62" },
-  minification: false,
+    }));
+
+  test("1_js_module_fallback", () =>
+    run({
+      runtimeCompat: { chrome: "62" },
+    }));
 });
