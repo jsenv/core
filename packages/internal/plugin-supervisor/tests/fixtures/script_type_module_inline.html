@@ -8,7 +8,6 @@
 
   <body>
     <script type="module">
-      /* eslint-disable import-x/no-duplicates */
       import "./answer.js";
       import { getAnswer } from "./answer.js";
       import { getAnswer as getAnswerAlias } from "./answer.js";
@@ -16,7 +15,6 @@
       import * as namespace from "./answer.js";
       import toto2, { getAnswer as getAnswerAlias2 } from "./answer.js";
       import toto3, * as namespace2 from "./answer.js";
-      /* eslint-enable import-x/no-duplicates */
 
       window.toto = toto;
       window.getAnswerAlias = getAnswerAlias;

@@ -1,5 +1,4 @@
 import { useState } from "preact/hooks";
-
 import { CountLabel } from "./count_label.jsx";
 
 export const App = () => {

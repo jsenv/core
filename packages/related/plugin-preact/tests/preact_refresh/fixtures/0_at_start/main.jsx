@@ -1,3 +1,4 @@
+/* globals document, window */
 import { render } from "preact";
 
 const { App } = await import("./app.jsx");
