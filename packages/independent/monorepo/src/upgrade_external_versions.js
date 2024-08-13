@@ -9,8 +9,8 @@
  * Be sure to check ../readme.md#upgrade-dependencies
  */
 
-import { UNICODE, createTaskLog } from "@jsenv/humanize";
-import { fetchLatestInRegistry } from "@jsenv/package-publish/src/internal/fetchLatestInRegistry.js";
+import { createTaskLog, UNICODE } from "@jsenv/humanize";
+import { fetchLatestInRegistry } from "@jsenv/package-publish/src/internal/fetch_latest_in_registry.js";
 import { collectWorkspacePackages } from "./internal/collect_workspace_packages.js";
 import {
   compareTwoPackageVersions,
