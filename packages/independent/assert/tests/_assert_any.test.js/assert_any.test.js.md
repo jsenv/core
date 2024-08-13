@@ -1,7 +1,6 @@
 # [assert_any.test.js](../assert_any.test.js)
 
 
-
 - [10 and any(String)](10_and_any(string)/10_and_any(string).md)
 - ["foo" and any(String)](foo_and_any(string)/foo_and_any(string).md)
 - ["foo" and not(any(String))](foo_and_not(any(string))/foo_and_not(any(string)).md)

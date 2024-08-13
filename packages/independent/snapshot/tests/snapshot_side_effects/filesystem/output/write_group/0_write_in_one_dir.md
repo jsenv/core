@@ -17,6 +17,7 @@ see [./0_write_in_one_dir/shared/](./0_write_in_one_dir/shared/)
 ```js
 undefined
 ```
+
 ---
 
 <sub>

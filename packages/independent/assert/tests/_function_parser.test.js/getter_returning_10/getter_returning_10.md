@@ -17,6 +17,7 @@ generateFunctionBody(
 ```js
 return 10;
 ```
+
 ---
 
 <sub>

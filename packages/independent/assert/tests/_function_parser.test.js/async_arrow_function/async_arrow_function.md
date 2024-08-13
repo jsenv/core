@@ -9,6 +9,7 @@ generateFunctionBody(async () => {
 ```js
 console.log("async_body");
 ```
+
 ---
 
 <sub>

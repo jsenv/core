@@ -12,6 +12,7 @@ return generateFunctionBody(
 ```js
 return a + b;
 ```
+
 ---
 
 <sub>

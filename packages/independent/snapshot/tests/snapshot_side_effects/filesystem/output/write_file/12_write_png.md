@@ -16,6 +16,7 @@ see [./12_write_png/jsenv.png](./12_write_png/jsenv.png)
 ```js
 undefined
 ```
+
 ---
 
 <sub>

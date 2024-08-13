@@ -35,6 +35,7 @@ base/client/js_syntax_error.js:1:11
 ```console
 SyntaxError: expected expression, got end of script
 ```
+
 ---
 
 <sub>

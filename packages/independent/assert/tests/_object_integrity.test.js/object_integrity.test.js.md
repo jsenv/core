@@ -1,7 +1,6 @@
 # [object_integrity.test.js](../object_integrity.test.js)
 
 
-
 - [frozen vs not frozen](frozen_vs_not_frozen/frozen_vs_not_frozen.md)
 - [not frozen vs frozen](not_frozen_vs_frozen/not_frozen_vs_frozen.md)
 - [sealed vs not sealed](sealed_vs_not_sealed/sealed_vs_not_sealed.md)

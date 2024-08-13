@@ -11,6 +11,7 @@ generateFunctionBody((a = () => {}) => {
       return a;
     
 ```
+
 ---
 
 <sub>

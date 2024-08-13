@@ -10,6 +10,7 @@ Error: here
   at startTesting (base/side_effects_basic.test.mjs:20:11)
   at async base/side_effects_basic.test.mjs:28:1
 ```
+
 ---
 
 <sub>

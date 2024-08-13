@@ -1,7 +1,6 @@
 # [test_plan_logs_browsers.test.mjs](../test_plan_logs_browsers.test.mjs)
 
 
-
 - [0_console](0_console/0_console.md)
 - [1_empty](1_empty/1_empty.md)
 - [2_error_in_script](2_error_in_script/2_error_in_script.md)

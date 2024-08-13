@@ -1,7 +1,6 @@
 # [ref.test.js](../ref.test.js)
 
 
-
 - [reference removed](reference_removed/reference_removed.md)
 - [reference added](reference_added/reference_added.md)
 - [same ref to self](same_ref_to_self/same_ref_to_self.md)

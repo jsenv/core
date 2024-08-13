@@ -1,7 +1,6 @@
 # [object.test.js](../object.test.js)
 
 
-
 - [basic](basic/basic.md)
 - [property are different](property_are_different/property_are_different.md)
 - [property removed](property_removed/property_removed.md)

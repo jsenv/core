@@ -7,6 +7,7 @@ generateFunctionBody(() => ({}))
 ```js
 ({})
 ```
+
 ---
 
 <sub>

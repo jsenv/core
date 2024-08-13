@@ -1,7 +1,6 @@
 # [function_parser.test.js](../function_parser.test.js)
 
 
-
 - [arrow function containing arrow function](arrow_function_containing_arrow_function/arrow_function_containing_arrow_function.md)
 - [async arrow function](async_arrow_function/async_arrow_function.md)
 - [anonymous arrow default param arrow](anonymous_arrow_default_param_arrow/anonymous_arrow_default_param_arrow.md)

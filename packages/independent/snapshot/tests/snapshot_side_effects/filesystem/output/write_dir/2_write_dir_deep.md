@@ -11,6 +11,7 @@ writeDirectorySync(new URL("./dir/a/b/c", import.meta.url));
 ```js
 undefined
 ```
+
 ---
 
 <sub>

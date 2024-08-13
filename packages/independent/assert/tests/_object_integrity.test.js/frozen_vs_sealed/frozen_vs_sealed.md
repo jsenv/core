@@ -21,6 +21,7 @@ expect: Object.seal({ a: true })
 
 </details>
 
+
 ---
 
 <sub>

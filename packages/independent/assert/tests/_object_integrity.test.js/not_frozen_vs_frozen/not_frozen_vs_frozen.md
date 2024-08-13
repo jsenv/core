@@ -21,6 +21,7 @@ expect: Object.freeze({ a: true })
 
 </details>
 
+
 ---
 
 <sub>

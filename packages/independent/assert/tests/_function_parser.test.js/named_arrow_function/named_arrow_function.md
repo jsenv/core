@@ -13,6 +13,7 @@ generateFunctionBody(
 ```js
 console.log(10);
 ```
+
 ---
 
 <sub>

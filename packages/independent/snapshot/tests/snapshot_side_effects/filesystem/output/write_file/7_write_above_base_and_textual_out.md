@@ -16,6 +16,7 @@ see [./7_write_above_base_and_textual_out/@jsenv/core/packages/independent/snaps
 ```js
 undefined
 ```
+
 ---
 
 <sub>

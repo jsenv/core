@@ -11,6 +11,7 @@ Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE
   at triggerError (base/client/trigger_error.js:2:9)
   at base/client/main.js:3:1
 ```
+
 ---
 
 <sub>

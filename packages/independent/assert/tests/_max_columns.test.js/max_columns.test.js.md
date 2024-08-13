@@ -1,7 +1,6 @@
 # [max_columns.test.js](../max_columns.test.js)
 
 
-
 - [at removed char](at_removed_char/at_removed_char.md)
 - [at added char](at_added_char/at_added_char.md)
 - [at removed char 2](at_removed_char_2/at_removed_char_2.md)

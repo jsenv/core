@@ -23,6 +23,7 @@ console.log("[31m Hi[0m <toto>");
 ```js
 undefined
 ```
+
 ---
 
 <sub>

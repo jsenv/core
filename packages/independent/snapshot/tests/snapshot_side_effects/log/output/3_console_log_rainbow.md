@@ -25,6 +25,7 @@ red yellow green cyan blue magenta
 ```js
 undefined
 ```
+
 ---
 
 <sub>

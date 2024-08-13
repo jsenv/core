@@ -11,6 +11,7 @@ generateFunctionBody(() => {
 const a = () => {};
 a();
 ```
+
 ---
 
 <sub>

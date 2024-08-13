@@ -21,6 +21,7 @@ expect: Object.preventExtensions({ a: true })
 
 </details>
 
+
 ---
 
 <sub>

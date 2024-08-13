@@ -1,7 +1,6 @@
 # [symbol.test.js](../symbol.test.js)
 
 
-
 - [named Symbol() property added](named_symbol()_property_added/named_symbol()_property_added.md)
 - [named Symbol() property removed](named_symbol()_property_removed/named_symbol()_property_removed.md)
 - [Symbol.for() property value modified](symbol_for()_property_value_modified/symbol_for()_property_value_modified.md)

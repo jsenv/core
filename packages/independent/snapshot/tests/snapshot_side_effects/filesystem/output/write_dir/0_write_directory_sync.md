@@ -12,6 +12,7 @@ return existsSync(new URL("./dir_sync/", import.meta.url));
 ```js
 true
 ```
+
 ---
 
 <sub>

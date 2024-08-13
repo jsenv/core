@@ -1,7 +1,6 @@
 # [property_descriptor.test.js](../property_descriptor.test.js)
 
 
-
 - [enumerable and configurable and value diff](enumerable_and_configurable_and_value_diff/enumerable_and_configurable_and_value_diff.md)
 - [non enumerable hidden when value same](non_enumerable_hidden_when_value_same/non_enumerable_hidden_when_value_same.md)
 - [non enumerable displayed when value modified](non_enumerable_displayed_when_value_modified/non_enumerable_displayed_when_value_modified.md)

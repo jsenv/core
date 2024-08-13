@@ -1,7 +1,6 @@
 # [prototype.test.js](../prototype.test.js)
 
 
-
 - [Error vs TypeError](error_vs_typeerror/error_vs_typeerror.md)
 - [object with different prototypes](object_with_different_prototypes/object_with_different_prototypes.md)
 - [Object.create(null) and {}](object_create(null)_and_%7B%7D/object_create(null)_and_%7B%7D.md)

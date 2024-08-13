@@ -1,7 +1,6 @@
 # [boolean.test.js](../boolean.test.js)
 
 
-
 - [true should be false](true_should_be_false/true_should_be_false.md)
 - [false should be true](false_should_be_true/false_should_be_true.md)
 - [true should be 1](true_should_be_1/true_should_be_1.md)

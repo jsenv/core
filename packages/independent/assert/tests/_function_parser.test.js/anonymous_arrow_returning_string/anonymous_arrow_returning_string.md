@@ -9,6 +9,7 @@ generateFunctionBody(() => {
 ```js
 return "yo";
 ```
+
 ---
 
 <sub>

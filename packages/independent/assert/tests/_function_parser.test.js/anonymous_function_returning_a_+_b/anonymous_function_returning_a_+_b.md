@@ -9,6 +9,7 @@ generateFunctionBody(function (a, b) {
 ```js
 return a + b;
 ```
+
 ---
 
 <sub>

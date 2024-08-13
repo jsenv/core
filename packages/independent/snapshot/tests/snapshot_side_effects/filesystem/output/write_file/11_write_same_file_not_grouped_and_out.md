@@ -25,6 +25,7 @@ see [./11_write_same_file_not_grouped_and_out/toto_1.txt](./11_write_same_file_n
 ```js
 undefined
 ```
+
 ---
 
 <sub>

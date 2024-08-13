@@ -1,7 +1,6 @@
 # [fetch.test.js](../fetch.test.js)
 
 
-
 - [abort signal pending vs aborted](abort_signal_pending_vs_aborted/abort_signal_pending_vs_aborted.md)
 - [request url diff](request_url_diff/request_url_diff.md)
 - [request with custom options](request_with_custom_options/request_with_custom_options.md)

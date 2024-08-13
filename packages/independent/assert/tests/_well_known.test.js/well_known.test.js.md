@@ -1,7 +1,6 @@
 # [well_known.test.js](../well_known.test.js)
 
 
-
 - [String and Object](string_and_object/string_and_object.md)
 - [Number.MAX_VALUE and Number.MIN_VALUE](number_max_value_and_number_min_value/number_max_value_and_number_min_value.md)
 - [Symbol.iterator and Symbol.toPrimitive](symbol_iterator_and_symbol_toprimitive/symbol_iterator_and_symbol_toprimitive.md)

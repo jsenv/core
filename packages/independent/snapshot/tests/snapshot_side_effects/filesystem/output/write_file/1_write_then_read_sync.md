@@ -19,6 +19,7 @@ return String(readFileSync(new URL("./toto.txt", import.meta.url)));
 ```js
 1_write_then_read_sync
 ```
+
 ---
 
 <sub>

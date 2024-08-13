@@ -1,7 +1,6 @@
 # [quote.test.js](../quote.test.js)
 
 
-
 - [string contains escaped double quote](string_contains_escaped_double_quote/string_contains_escaped_double_quote.md)
 - [single quote best in actual](single_quote_best_in_actual/single_quote_best_in_actual.md)
 - [single quote best in expect](single_quote_best_in_expect/single_quote_best_in_expect.md)
