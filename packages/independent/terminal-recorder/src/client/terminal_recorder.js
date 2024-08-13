@@ -89,59 +89,77 @@ export const initTerminal = ({
   const terminalElement = document.getElementById("terminal");
   term.open(terminalElement);
 
-  const canvas = document.querySelector("#canvas");
-  const context = canvas.getContext("2d", { willReadFrequently: true });
-  context.imageSmoothingEnabled = true;
-  const xtermCanvas = document.querySelector(
-    "#terminal canvas.xterm-link-layer + canvas",
-  );
-  const headerHeight = 40;
-  canvas.width = paddingLeft + xtermCanvas.width + paddingRight;
-  canvas.height = headerHeight + xtermCanvas.height;
-
-  draw_header: {
-    drawRectangle(context, {
-      x: 0,
-      y: 0,
-      width: canvas.width,
-      height: canvas.height,
-      fill: "#282c34",
-      stroke: "rgba(255,255,255,0.35)",
-      strokeWidth: 10,
-      radius: 8,
-    });
-    drawCircle(context, {
-      x: 20,
-      y: headerHeight / 2,
-      radius: 6,
-      fill: "#ff5f57",
-    });
-    drawCircle(context, {
-      x: 40,
-      y: headerHeight / 2,
-      radius: 6,
-      fill: "#febc2e",
-    });
-    drawCircle(context, {
-      x: 60,
-      y: headerHeight / 2,
-      radius: 6,
-      fill: "#28c840",
-    });
-
-    // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Drawing_text
-    const text = "Terminal";
-    context.font = `${fontSize}px ${fontFamily}`;
-    context.textBaseline = "middle";
-    context.textAlign = "center";
-    // const textSize = context.measureText(text);
-    context.fillStyle = "#abb2bf";
-    context.fillText(text, canvas.width / 2, headerHeight / 2);
-  }
+  const canvasPromise = (async () => {
+    const canvas = document.querySelector("#canvas");
+    if (!canvas) {
+      throw new Error('Cannot find <canvas id="canvas"> in the document');
+    }
+    let xtermCanvas = document.querySelector(
+      "#terminal canvas.xterm-link-layer + canvas",
+    );
+    if (!xtermCanvas) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      xtermCanvas = document.querySelector(
+        "#terminal canvas.xterm-link-layer + canvas",
+      );
+      if (!xtermCanvas) {
+        throw new Error(
+          "Cannot find xterm canvas (canvas.xterm-link-layer + canvas)",
+        );
+      }
+    }
+    return { canvas, xtermCanvas };
+  })();
 
   return {
     term,
     startRecording: async () => {
+      const { canvas, xtermCanvas } = await canvasPromise;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      context.imageSmoothingEnabled = true;
+      const headerHeight = 40;
+      canvas.width = paddingLeft + xtermCanvas.width + paddingRight;
+      canvas.height = headerHeight + xtermCanvas.height;
+      draw_header: {
+        drawRectangle(context, {
+          x: 0,
+          y: 0,
+          width: canvas.width,
+          height: canvas.height,
+          fill: "#282c34",
+          stroke: "rgba(255,255,255,0.35)",
+          strokeWidth: 10,
+          radius: 8,
+        });
+        drawCircle(context, {
+          x: 20,
+          y: headerHeight / 2,
+          radius: 6,
+          fill: "#ff5f57",
+        });
+        drawCircle(context, {
+          x: 40,
+          y: headerHeight / 2,
+          radius: 6,
+          fill: "#febc2e",
+        });
+        drawCircle(context, {
+          x: 60,
+          y: headerHeight / 2,
+          radius: 6,
+          fill: "#28c840",
+        });
+
+        // https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Drawing_text
+        const text = "Terminal";
+        context.font = `${fontSize}px ${fontFamily}`;
+        context.textBaseline = "middle";
+        context.textAlign = "center";
+        // const textSize = context.measureText(text);
+        context.fillStyle = "#abb2bf";
+        context.fillText(text, canvas.width / 2, headerHeight / 2);
+      }
+
       const records = {};
       let writePromise = Promise.resolve();
       const frameCallbackSet = new Set();
