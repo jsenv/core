@@ -10,7 +10,7 @@ const run = async (inlineExec) => {
       uses: desc.uses,
       runtime: inlineRuntime(async () => {
         callOrder.push(`${key}_start`);
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        await new Promise((resolve) => setTimeout(resolve, 500));
         callOrder.push(`${key}_end`);
       }),
     };
@@ -22,6 +22,9 @@ const run = async (inlineExec) => {
     rootDirectoryUrl: new URL("./", import.meta.url),
     testPlan: {
       "./uses_port.test.mjs": inlineExecutions,
+    },
+    parallel: {
+      max: 4,
     },
     githubCheck: false,
   });
