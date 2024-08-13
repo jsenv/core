@@ -1,12 +1,12 @@
 {
   "name": "@jsenv/monorepo",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "description": "Helpers to manage packages in a monorepo",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/monorepo"
+    "directory": "packages/independent/workflow/monorepo"
   },
   "engines": {
     "node": ">=20.0.0"
