@@ -50,11 +50,11 @@ const run = async ({ browserLauncher }) => {
     from: new URL("./fixtures/label_tata.js", import.meta.url),
     to: new URL("./git_ignored/label.js", import.meta.url),
   });
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 600));
   const labelAfterUpdateTata = await getCountLabelText();
   await increase();
   const labelTataAfterIncrease = await getCountLabelText();
-  browser.close();
+  await browser.close();
   return {
     labelAtStart,
     labelAfterIncrease,
