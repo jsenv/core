@@ -1,51 +1,34 @@
-import { assert } from "@jsenv/assert";
-import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
+import { build, startBuildServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
-const test = async ({ name, ...params }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+const run = async ({ runtimeCompat }) => {
   await build({
-    logLevel: "warn",
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
+    bundling: false,
+    minification: false,
     plugins: [jsenvPluginPreact()],
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
+    runtimeCompat,
   });
-  buildDirectorySnapshot.compare();
-  const server = await startFileServer({
-    rootDirectoryUrl: snapshotDirectoryUrl,
+  const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
   });
-  const { returnValue } = await executeInBrowser(`${server.origin}/main.html`, {
-    /* eslint-disable no-undef */
-    pageFunction: () => window.resultPromise,
-    /* eslint-enable no-undef */
-  });
-  const actual = returnValue;
-  const expect = "Hello world";
-  assert({ actual, expect });
+  return executeHtml(`${buildServer.origin}/main.html`);
 };
 
-// support for <script type="module">
-await test({
-  name: "0_js_module",
-  runtimeCompat: { chrome: "89" },
-  bundling: false,
-  minification: false,
-});
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_js_module", () =>
+    run({
+      runtimeCompat: { chrome: "89" },
+    }));
 
-// no support for <script type="module">
-await test({
-  name: "1_js_module_fallback",
-  runtimeCompat: { chrome: "88" },
-  bundling: false,
-  minification: false,
+  test("1_js_module_fallback", () =>
+    run({
+      runtimeCompat: { chrome: "88" },
+    }));
 });
