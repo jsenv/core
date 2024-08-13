@@ -4143,26 +4143,28 @@ const formatErrorForTerminal = (
       error.site.url.startsWith("file:") &&
       typeof error.site.line === "number"
     ) {
-      const content = readFileSync(new URL(error.site.url), "utf8");
-      text += generateContentFrame({
-        content,
-        line: error.site.line,
-        column: error.site.column,
-        linesAbove: 2,
-        linesBelow: 0,
-        lineMaxWidth: process.stdout.columns,
-        format: (string, type) => {
-          return {
-            line_number_aside: () => ANSI.color(string, ANSI.GREY),
-            char: () => string,
-            marker_overflow_left: () => ANSI.color(string, ANSI.GREY),
-            marker_overflow_right: () => ANSI.color(string, ANSI.GREY),
-            marker_line: () => ANSI.color(string, ANSI.RED),
-            marker_column: () => ANSI.color(string, ANSI.RED),
-          }[type]();
-        },
-      });
-      text += `\n`;
+      try {
+        const content = readFileSync(new URL(error.site.url), "utf8");
+        text += generateContentFrame({
+          content,
+          line: error.site.line,
+          column: error.site.column,
+          linesAbove: 2,
+          linesBelow: 0,
+          lineMaxWidth: process.stdout.columns,
+          format: (string, type) => {
+            return {
+              line_number_aside: () => ANSI.color(string, ANSI.GREY),
+              char: () => string,
+              marker_overflow_left: () => ANSI.color(string, ANSI.GREY),
+              marker_overflow_right: () => ANSI.color(string, ANSI.GREY),
+              marker_line: () => ANSI.color(string, ANSI.RED),
+              marker_column: () => ANSI.color(string, ANSI.RED),
+            }[type]();
+          },
+        });
+        text += `\n`;
+      } catch {}
     }
   }
   text += `${error.name}: ${error.message}`;
@@ -5576,7 +5578,7 @@ const startServerUsingCommand = async (
       if (timeoutAbortSource.signal.aborted) {
         // aborted by timeout
         throw new Error(
-          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms`,
+          `"${webServer.command}" command did not start a server at ${webServer.origin} in less than ${allocatedMs}ms`,
         );
       }
       if (signal.aborted) {

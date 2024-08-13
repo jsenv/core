@@ -10,7 +10,7 @@ const run = async (inlineExec) => {
       uses: desc.uses,
       runtime: inlineRuntime(async () => {
         callOrder.push(`${key}_start`);
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 800));
         callOrder.push(`${key}_end`);
       }),
     };
