@@ -15,6 +15,7 @@ Error: chromium "pageerror" {
   [cause]: Error: SPECIAL_STRING_UNLIKELY_TO_COLLIDE,
 }
 ```
+
 ---
 
 <sub>

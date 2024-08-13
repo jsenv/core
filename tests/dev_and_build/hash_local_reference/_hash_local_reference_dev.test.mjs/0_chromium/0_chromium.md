@@ -13,6 +13,7 @@ see [./.jsenv/chrome@128.00/main.html](./.jsenv/chrome@128.00/main.html)
 ```js
 window.origin/main.html#toto
 ```
+
 ---
 
 <sub>

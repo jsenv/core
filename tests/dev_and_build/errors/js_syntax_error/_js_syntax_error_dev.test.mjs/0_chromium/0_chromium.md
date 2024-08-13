@@ -25,6 +25,7 @@ Error: chromium "pageerror" {
   [cause]: SyntaxError: Unexpected end of input,
 }
 ```
+
 ---
 
 <sub>

@@ -13,6 +13,7 @@ see [./build/main.html](./build/main.html)
 ```js
 window.origin/main.html#toto
 ```
+
 ---
 
 <sub>

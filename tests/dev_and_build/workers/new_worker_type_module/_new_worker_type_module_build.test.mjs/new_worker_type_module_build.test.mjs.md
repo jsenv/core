@@ -1,7 +1,6 @@
 # [new_worker_type_module_build.test.mjs](../new_worker_type_module_build.test.mjs)
 
 
-
 - [0_worker_type_module](0_worker_type_module/0_worker_type_module.md)
 - [1_worker_type_module_no_bundling](1_worker_type_module_no_bundling/1_worker_type_module_no_bundling.md)
 - [2_worker_type_module_fallback](2_worker_type_module_fallback/2_worker_type_module_fallback.md)

@@ -1,7 +1,6 @@
 # [inline_as_base_64_build.test.mjs](../inline_as_base_64_build.test.mjs)
 
 
-
 - [0_inline_base64](0_inline_base64/0_inline_base64.md)
 
 ---

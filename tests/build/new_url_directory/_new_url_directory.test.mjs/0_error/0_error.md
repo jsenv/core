@@ -26,6 +26,7 @@ base/client/main.html:15:40
   at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:150:7)
   at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:22:18)
 ```
+
 ---
 
 <sub>

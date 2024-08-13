@@ -22,6 +22,7 @@ Cannot find "not_found" imported from base/client/node_modules/foo/index.js
 "jsenv:node_esm_resolution"
   at async base/node_module_not_found_build.test.mjs:5:1
 ```
+
 ---
 
 <sub>

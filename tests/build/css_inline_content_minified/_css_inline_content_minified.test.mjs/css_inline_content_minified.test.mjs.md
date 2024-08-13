@@ -1,7 +1,6 @@
 # [css_inline_content_minified.test.mjs](../css_inline_content_minified.test.mjs)
 
 
-
 - [0_basic](0_basic/0_basic.md)
 
 ---
