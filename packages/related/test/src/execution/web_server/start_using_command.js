@@ -117,7 +117,7 @@ export const startServerUsingCommand = async (
       if (timeoutAbortSource.signal.aborted) {
         // aborted by timeout
         throw new Error(
-          `"${webServer.command}" command did not start a server in less than ${allocatedMs}ms`,
+          `"${webServer.command}" command did not start a server at ${webServer.origin} in less than ${allocatedMs}ms`,
         );
       }
       if (signal.aborted) {

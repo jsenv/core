@@ -45,7 +45,7 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     const actual = e.message;
     const expect = `"node ${fileURLToPath(
       webServer.moduleUrl,
-    )}" command did not start a server in less than 500ms`;
+    )}" command did not start a server at http://localhost:9961 in less than 500ms`;
     assert({ actual, expect });
   }
 }
@@ -69,7 +69,7 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     const expect = new Error(
       `"node ${fileURLToPath(
         webServer.moduleUrl,
-      )}" command did not start a server in less than 500ms`,
+      )}" command did not start a server at http://localhost:9962 in less than 500ms`,
     );
     assert({ actual, expect });
   }

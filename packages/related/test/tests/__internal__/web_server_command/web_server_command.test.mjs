@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
   } catch (e) {
     const actual = e;
     const expect = new Error(
-      `"${webServer.command}" command did not start a server in less than 500ms`,
+      `"${webServer.command}" command did not start a server at http://localhost:3459 in less than 500ms`,
     );
     assert({ actual, expect });
   }
@@ -43,7 +43,7 @@ import { fileURLToPath } from "node:url";
   } catch (e) {
     const actual = e;
     const expect = new Error(
-      `"${webServer.command}" command did not start a server in less than 500ms`,
+      `"${webServer.command}" command did not start a server at http://localhost:3459 in less than 500ms`,
     );
     assert({ actual, expect });
   }
@@ -68,7 +68,7 @@ import { fileURLToPath } from "node:url";
   } catch (e) {
     const actual = e;
     const expect = new Error(
-      `"${webServer.command}" command did not start a server in less than 500ms`,
+      `"${webServer.command}" command did not start a server at http://localhost:3459 in less than 500ms`,
     );
     assert({ actual, expect });
   }
