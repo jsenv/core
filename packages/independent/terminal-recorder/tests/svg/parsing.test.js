@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-
 import { parseAnsi } from "@jsenv/terminal-recorder/src/svg/parse_ansi.js";
 
 // reset bold
