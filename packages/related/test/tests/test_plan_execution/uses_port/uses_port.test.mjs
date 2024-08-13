@@ -1,8 +1,7 @@
-import { assert } from "@jsenv/assert";
-
 import { executeTestPlan, inlineRuntime } from "@jsenv/test";
+import { snapshotTestPlanSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
-const test = async (inlineExec, expectCallOrder) => {
+const run = async (inlineExec) => {
   const callOrder = [];
   const inlineExecutions = {};
   for (const key of Object.keys(inlineExec)) {
@@ -11,9 +10,7 @@ const test = async (inlineExec, expectCallOrder) => {
       uses: desc.uses,
       runtime: inlineRuntime(async () => {
         callOrder.push(`${key}_start`);
-        await new Promise((resolve) => {
-          setTimeout(resolve, 500);
-        });
+        await new Promise((resolve) => setTimeout(resolve, 500));
         callOrder.push(`${key}_end`);
       }),
     };
@@ -28,29 +25,21 @@ const test = async (inlineExec, expectCallOrder) => {
     },
     githubCheck: false,
   });
-  assert({
-    actual: {
-      callOrder,
-    },
-    expect: {
-      callOrder: expectCallOrder,
-    },
-  });
+  return callOrder;
 };
 
-await test(
-  {
-    a: { uses: ["port:4"] },
-    b: { uses: ["port:5"] },
-    c: { uses: ["port:6"] },
-  },
-  ["a_start", "b_start", "c_start", "a_end", "b_end", "c_end"],
-);
-await test(
-  {
-    a: { uses: ["port:4"] },
-    b: { uses: ["port:4"] },
-    c: { uses: ["port:5"] },
-  },
-  ["a_start", "c_start", "a_end", "b_start", "c_end", "b_end"],
-);
+await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
+  test("0_basic", () =>
+    run({
+      a: { uses: ["port:4"] },
+      b: { uses: ["port:5"] },
+      c: { uses: ["port:6"] },
+    }));
+
+  test("0_second", () =>
+    run({
+      a: { uses: ["port:4"] },
+      b: { uses: ["port:4"] },
+      c: { uses: ["port:5"] },
+    }));
+});
