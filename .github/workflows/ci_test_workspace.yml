@@ -15,15 +15,15 @@ on:
       - main
       # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#patterns-to-match-file-paths
     paths-ignore:
-      - "./md/**"
-      - "./www/**"
+      - "md/**"
+      - "www/**"
       - "**/readme.md"
   pull_request:
     branches:
       - "**"
     paths-ignore:
-      - "./md/**"
-      - "./www/**"
+      - "md/**"
+      - "www/**"
       - "./readme.md"
 
 jobs:
