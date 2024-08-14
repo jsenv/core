@@ -7,10 +7,9 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
+process.env.GENERATING_SNAPSHOTS = "true"; // for dev server
+const { devServer } = await import("./start_dev_server.mjs");
 const run = async ({ browserLauncher, browserName }) => {
-  process.env.GENERATING_SNAPSHOTS = "true"; // for dev server
-  const { devServer } = await import("./start_dev_server.mjs");
-
   const browser = await browserLauncher.launch({ headless: true });
   const takeSnapshotsForStory = async (story) => {
     const page = await browser.newPage();
@@ -75,22 +74,15 @@ const run = async ({ browserLauncher, browserName }) => {
     "js_module_syntax_error",
     "js_module_syntax_error_unexpected_end",
     "js_module_throw",
-    // for some reason webkit ignore this error (it does not report an error on window)
-    ...(browserLauncher === webkit
-      ? []
-      : ["js_module_top_level_await_then_throw"]),
+    "js_module_top_level_await_then_throw",
     "js_module_unhandled_rejection",
-    // the column number is flaky on CI for this specific story + webkit
-    ...(browserLauncher === webkit
-      ? []
-      : ["js_module_undefined_is_not_a_function"]),
+    "js_module_undefined_is_not_a_function",
     "js_module_worker_throw",
     "script_src_not_found",
   ]) {
     await takeSnapshotsForStory(story);
   }
   await browser.close();
-  await devServer.stop();
 };
 await snapshotTests(
   import.meta.url,
@@ -117,3 +109,5 @@ await snapshotTests(
     },
   },
 );
+
+await devServer.stop();
