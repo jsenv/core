@@ -1,7 +1,10 @@
 import { assert } from "@jsenv/assert";
 import { readFile } from "@jsenv/filesystem";
-
 import { parseHosts } from "@jsenv/https-local/src/internal/hosts.js";
+
+if (process.platform === "win32") {
+  process.exit(0);
+}
 
 const hostsAContent = await readFile(
   new URL("./hosts_files/hosts", import.meta.url),

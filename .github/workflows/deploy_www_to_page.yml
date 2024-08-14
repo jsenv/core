@@ -4,7 +4,7 @@ name: deploy_www_to_page
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: [$default-branch]
+    branches: [main]
     paths:
       - "./www/**"
 
