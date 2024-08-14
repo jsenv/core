@@ -11,4 +11,5 @@ export const assert = createAssert({
     return splitter.splitGraphemes(string);
   },
   getWellKnownValuePath: createGetWellKnownValuePath(global),
+  MAX_COLUMNS: process.stdout.columns,
 });
