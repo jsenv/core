@@ -32,7 +32,7 @@ const { rootCertificateFilePath } = await installCertificateAuthority({
     error: true,
   });
   const actual = { infos, warns, errors };
-  const expected = {
+  const expect = {
     infos: [
       `${UNICODE.OK} authority root certificate found in filesystem`,
       `Checking certificate validity...`,
@@ -58,5 +58,5 @@ const { rootCertificateFilePath } = await installCertificateAuthority({
     warns: [],
     errors: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

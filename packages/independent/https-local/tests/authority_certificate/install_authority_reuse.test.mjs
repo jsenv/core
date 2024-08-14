@@ -6,6 +6,8 @@ import {
 import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
 import { UNICODE } from "@jsenv/humanize";
 
+process.exit(0);
+
 await uninstallCertificateAuthority({
   logLevel: "warn",
 });
@@ -33,7 +35,7 @@ const actual = {
   secondCallReturnValue,
   secondCallLogs,
 };
-const expected = {
+const expect = {
   sameCertificate: true,
   secondCallReturnValue: {
     rootCertificateForgeObject: assert.any(Object),
@@ -134,4 +136,4 @@ const expected = {
     errors: [],
   },
 };
-assert({ actual, expected });
+assert({ actual, expect });

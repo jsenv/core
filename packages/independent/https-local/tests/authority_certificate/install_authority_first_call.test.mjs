@@ -42,7 +42,7 @@ const actual = {
   rootCertificateFilePath,
   trustInfo,
 };
-const expected = {
+const expect = {
   infos: [
     `${UNICODE.INFO} authority root certificate not found in filesystem`,
     `Generating authority root certificate with a validity of 20 years...`,
@@ -123,4 +123,4 @@ const expected = {
     },
   }[process.platform],
 };
-assert({ actual, expected });
+assert({ actual, expect });

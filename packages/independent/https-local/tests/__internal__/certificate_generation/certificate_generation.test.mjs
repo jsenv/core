@@ -29,12 +29,12 @@ const {
     rootCertificatePublicKeyForgeObject,
     rootCertificatePrivateKeyForgeObject,
   };
-  const expected = {
+  const expect = {
     rootCertificateForgeObject: assert.any(Object),
     rootCertificatePublicKeyForgeObject: assert.any(Object),
     rootCertificatePrivateKeyForgeObject: assert.any(Object),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -51,8 +51,8 @@ const {
     rootCertificatePrivateKey,
   );
   const actual = auhtorityCertificatePrivateKeyForgeObject;
-  const expected = auhtorityCertificatePrivateKeyForgeObject;
-  assert({ actual, expected });
+  const expect = auhtorityCertificatePrivateKeyForgeObject;
+  assert({ actual, expect });
 }
 
 {
@@ -73,12 +73,12 @@ const {
     certificatePublicKeyForgeObject,
     certificatePrivateKeyForgeObject,
   };
-  const expected = {
+  const expect = {
     certificateForgeObject: assert.any(Object),
     certificatePublicKeyForgeObject: assert.any(Object),
     certificatePrivateKeyForgeObject: assert.any(Object),
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 
   // ici ça serais bien de tester des truc de forge,
   // genre que le certificat issuer est bien l'authorité
@@ -102,7 +102,7 @@ const {
   //       },
   //     )
   //   })
-  //   const expected = false
-  //   assert({ actual, expected })
+  //   const expectfalse
+  //   assert({ actual, expect })
   // }
 }

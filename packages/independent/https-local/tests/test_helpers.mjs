@@ -129,7 +129,10 @@ export const requestServerUsingBrowser = async ({ serverOrigin, browser }) => {
         return;
       }
       // firefox
-      if (e.message.includes("SEC_ERROR_UNKNOWN_ISSUER")) {
+      if (
+        e.message.includes("SEC_ERROR_UNKNOWN_ISSUER") ||
+        e.message.includes("SEC_ERROR_UNKNOWN")
+      ) {
         return;
       }
       // webkit

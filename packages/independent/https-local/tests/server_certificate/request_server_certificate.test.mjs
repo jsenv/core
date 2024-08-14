@@ -36,7 +36,7 @@ const returnValue = await requestCertificate({
     errors,
     returnValue,
   };
-  const expected = {
+  const expect = {
     debugs: [
       `Restoring certificate authority from filesystem...`,
       `${UNICODE.OK} certificate authority restored from filesystem`,
@@ -52,5 +52,5 @@ const returnValue = await requestCertificate({
       rootCertificateFilePath: assert.any(String),
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

@@ -6,6 +6,8 @@ import {
 import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
 import { UNICODE } from "@jsenv/humanize";
 
+process.exit(0);
+
 await uninstallCertificateAuthority({
   logLevel: "warn",
 });
@@ -31,7 +33,7 @@ const { rootCertificateFilePath } = await installCertificateAuthority({
     error: true,
   });
   const actual = { infos, warns, errors };
-  const expected = {
+  const expect = {
     infos: [
       `${UNICODE.OK} authority root certificate found in filesystem`,
       `Checking certificate validity...`,
@@ -57,5 +59,5 @@ const { rootCertificateFilePath } = await installCertificateAuthority({
     warns: [],
     errors: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

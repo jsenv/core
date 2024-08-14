@@ -10,9 +10,8 @@ await executeTestPlan({
   testPlan: {
     "tests/**/*.test.mjs": {
       node: {
-        runtime: nodeChildProcess,
+        runtime: nodeChildProcess(),
       },
     },
   },
-  coverage: process.argv.includes("--coverage"),
 });

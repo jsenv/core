@@ -35,7 +35,7 @@ const hostsFilePath = fileURLToPath(hostFileUrl);
     warns,
     errors,
   };
-  const expected = {
+  const expect = {
     hostsFileContent:
       process.platform === "win32"
         ? `127.0.0.1 localhost\r\n127.0.0.1 jsenv\r\n`
@@ -52,7 +52,7 @@ const hostsFilePath = fileURLToPath(hostFileUrl);
     warns: [],
     errors: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // 2 ip mapping missing
@@ -69,11 +69,11 @@ const hostsFilePath = fileURLToPath(hostFileUrl);
   });
   const hostsFileContent = await readFile(hostsFilePath, { as: "string" });
   const actual = hostsFileContent;
-  const expected =
+  const expect =
     process.platform === "win32"
       ? `127.0.0.1 localhost jsenv\r\n192.168.1.1 toto\r\n`
       : `127.0.0.1 localhost jsenv\n192.168.1.1 toto\n`;
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // all hostname there
@@ -101,7 +101,7 @@ const hostsFilePath = fileURLToPath(hostFileUrl);
     warns,
     errors,
   };
-  const expected = {
+  const expect = {
     infos: [
       `Check hosts file content...`,
       `${UNICODE.OK} all ip mappings found in hosts file`,
@@ -109,7 +109,7 @@ const hostsFilePath = fileURLToPath(hostFileUrl);
     warns: [],
     errors: [],
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 await removeEntry(hostFileUrl);
