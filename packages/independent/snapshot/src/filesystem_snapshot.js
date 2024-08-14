@@ -396,7 +396,7 @@ ${extraUrls.join("\n")}`);
         }
         continue;
       }
-      if (!shouldIncludeFile(directoryItemUrl)) {
+      if (!shouldIncludeFile(directoryItemUrl.href)) {
         continue;
       }
       contentSnapshotNaturalOrder[relativeUrl] =

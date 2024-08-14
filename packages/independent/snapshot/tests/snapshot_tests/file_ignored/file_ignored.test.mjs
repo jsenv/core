@@ -10,7 +10,7 @@ import { writeFileStructureSync, writeFileSync } from "@jsenv/filesystem";
 import { snapshotTests } from "@jsenv/snapshot";
 import { existsSync } from "node:fs";
 
-const outDirectoryUrl = new URL("./_file_ignored.test.mjs/", import.meta.url);
+const outDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 const fileTxtUrl = new URL("./output/file.txt", import.meta.url);
 writeFileStructureSync(outDirectoryUrl, {});
 // 1. a first execution who writes file.txt
@@ -22,9 +22,10 @@ await snapshotTests(
     });
   },
   {
+    outFilePattern: "./git_ignored/first/[filename]",
     throwWhenDiff: false,
     filesystemActions: {
-      "*.txt": "ignore",
+      "**/*.txt": "ignore",
     },
   },
 );
@@ -36,14 +37,14 @@ await snapshotTests(
     test("0_first", () => {});
   },
   {
+    outFilePattern: "./git_ignored/second/[filename]",
     throwWhenDiff: true,
     filesystemActions: {
-      "*.txt": "ignore",
+      "**/*.txt": "ignore",
     },
   },
 );
 const existsAfterSecondRun = existsSync(fileTxtUrl);
-writeFileStructureSync(outDirectoryUrl, {});
 const actual = {
   existsAfterFirstRun,
   existsAfterSecondRun,
