@@ -33,7 +33,7 @@
     "test": "node --conditions=development ./scripts/test.mjs"
   },
   "dependencies": {
-    "@jsenv/assert": "4.4.0",
+    "@jsenv/assert": "4.4.1",
     "@jsenv/ast": "6.2.16",
     "@jsenv/exception": "1.1.2",
     "@jsenv/humanize": "1.2.8",

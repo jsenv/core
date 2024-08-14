@@ -2117,7 +2117,7 @@ const defaultOptions = {
     prop: 2,
     line: 3
   },
-  MAX_COLUMNS: 100,
+  MAX_COLUMNS: undefined,
   order: "natural",
   // "natural", "sort"
   forceMultilineDiff: false,
@@ -2130,7 +2130,8 @@ const createAssert = ({
   // "any_diff", "trailing_space_multiline_diff"
   measureStringWidth = string => stripAnsi(string).length,
   tokenizeString = string => string.split(""),
-  getWellKnownValuePath
+  getWellKnownValuePath,
+  MAX_COLUMNS_DEFAULT = 100
 } = {}) => {
   const assert = (firstArg, ...rest) => {
     if (firstArg === undefined) {
@@ -2161,7 +2162,7 @@ const createAssert = ({
       MAX_DIFF_PER_VALUE,
       MAX_CONTEXT_BEFORE_DIFF,
       MAX_CONTEXT_AFTER_DIFF,
-      MAX_COLUMNS,
+      MAX_COLUMNS = MAX_COLUMNS_DEFAULT,
       order,
       forceMultilineDiff,
       message,
