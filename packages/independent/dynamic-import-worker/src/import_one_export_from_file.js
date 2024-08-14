@@ -1,6 +1,6 @@
-import { Worker } from "node:worker_threads";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { Worker } from "node:worker_threads";
 
 // we use a worker to bypass node cache on dynamic import
 const WORKER_COLLECTING_ONE_EXPORT_FILE_URL = new URL(

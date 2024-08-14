@@ -1,0 +1,14 @@
+##
+# Header comment
+#
+# Header comment description
+# on two lines
+##
+127.0.0.1       localhost
+255.255.255.255 broadcasthost
+::1             localhost
+# 127.0.0.1     old-tool.example.com
+127.0.0.1       tool.example.com
+127.0.0.1       jsenv
+# Footer comment
+127.0.0.1       example

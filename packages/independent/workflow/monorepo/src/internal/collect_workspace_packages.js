@@ -1,6 +1,6 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { urlToRelativeUrl } from "@jsenv/urls";
 import { listFilesMatching } from "@jsenv/filesystem";
+import { urlToRelativeUrl } from "@jsenv/urls";
+import { readFileSync, writeFileSync } from "node:fs";
 
 export const collectWorkspacePackages = async ({ directoryUrl }) => {
   const workspacePackages = {};

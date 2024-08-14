@@ -10,8 +10,8 @@ before commiting it.
 
 */
 
-import { readFileSync } from "node:fs";
 import { assert } from "@jsenv/assert";
+import { readFileSync } from "node:fs";
 
 const commentSnapshotFileUrl = new URL(
   "./comment_snapshot.md",

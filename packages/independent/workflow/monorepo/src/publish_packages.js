@@ -1,11 +1,11 @@
 import { createLogger, UNICODE } from "@jsenv/humanize";
 import { publish } from "@jsenv/package-publish/src/internal/publish.js";
 import { collectWorkspacePackages } from "./internal/collect_workspace_packages.js";
-import { fetchWorkspaceLatests } from "./internal/fetch_workspace_latests.js";
 import {
   compareTwoPackageVersions,
   VERSION_COMPARE_RESULTS,
 } from "./internal/compare_two_package_versions.js";
+import { fetchWorkspaceLatests } from "./internal/fetch_workspace_latests.js";
 
 export const publishPackages = async ({ directoryUrl }) => {
   const workspacePackages = await collectWorkspacePackages({ directoryUrl });

@@ -1,6 +1,5 @@
-import { requestCertificate } from "@jsenv/https-local";
-
 import { startBuildServer } from "@jsenv/core";
+import { requestCertificate } from "@jsenv/https-local";
 
 const { certificate, privateKey } = requestCertificate({ altNames: ["local"] });
 await startBuildServer({

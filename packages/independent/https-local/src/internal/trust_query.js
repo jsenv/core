@@ -1,0 +1,4 @@
+export const VERB_CHECK_TRUST = "CHECK_TRUST";
+export const VERB_ADD_TRUST = "ADD_TRUST";
+export const VERB_ENSURE_TRUST = "ENSURE_TRUST";
+export const VERB_REMOVE_TRUST = "REMOVE_TRUST";
