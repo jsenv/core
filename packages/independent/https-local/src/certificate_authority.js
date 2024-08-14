@@ -326,13 +326,13 @@ export const uninstallCertificateAuthority = async ({
       const rootCertificateCommonName = attributeDescriptionFromAttributeArray(
         rootCertificateForgeObject.subject.attributes,
       ).commonName;
-      const { removeCertificateFromTrustStores } =
-        await importPlatformMethods();
-      await removeCertificateFromTrustStores({
+      const platformMethods = await importPlatformMethods();
+      await platformMethods.executeTrustQuery({
         logger,
-        certificate: rootCertificate,
-        certificateFileUrl: rootCertificateFileInfo.url,
         certificateCommonName: rootCertificateCommonName,
+        certificateFileUrl: rootCertificateFileInfo.url,
+        certificate: rootCertificate,
+        verb: "REMOVE_TRUST",
       });
     }
     filesToRemove.push(rootCertificateFileInfo.url);

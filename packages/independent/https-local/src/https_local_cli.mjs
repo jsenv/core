@@ -58,10 +58,10 @@ const commandHandlers = {
       tryToUpdatesHostsFile: true,
     });
   },
-  install: async ({ tryToTrust }) => {
+  install: async ({ trust }) => {
     await installCertificateAuthority({
-      tryToTrust,
-      NSSDynamicInstall: tryToTrust,
+      tryToTrust: trust,
+      NSSDynamicInstall: trust,
     });
   },
   uninstall: async () => {
