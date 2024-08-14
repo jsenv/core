@@ -3,6 +3,7 @@
 import {
   installCertificateAuthority,
   uninstallCertificateAuthority,
+  verifyHostsFile,
 } from "@jsenv/https-local";
 import { parseArgs } from "node:util";
 
@@ -23,10 +24,16 @@ if (values.help || positionals.length === 0) {
   console.log(`https-local: Generate https certificates to use on your machine.
 
 Usage: 
-npx @jsenv/https-local install --trust
-npx @jsenv/https-local uninstall
 
-trust: Try to add root certificate to os and browser trusted stores.
+npx @jsenv/https-local install --trust
+  Install root certificate on the filesystem
+  - trust: Try to add root certificate to os and browser trusted stores.
+
+npx @jsenv/https-local uninstall
+  Uninstall root certificate from the filesystem
+
+npx @jsenv/https-local localhost-mapping
+  Ensure localhost mapping to 127.0.0.1 is set on the filesystem
 
 https://github.com/jsenv/core/tree/main/packages/independent/https-local
 
@@ -45,6 +52,14 @@ const commandHandlers = {
   uninstall: async () => {
     await uninstallCertificateAuthority({
       tryToUntrust: true,
+    });
+  },
+  ["localhost-mapping"]: async () => {
+    await verifyHostsFile({
+      ipMappings: {
+        "127.0.0.1": ["localhost"],
+      },
+      tryToUpdatesHostsFile: true,
     });
   },
 };

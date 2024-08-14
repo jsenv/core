@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/https-local",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "A programmatic way to generate locally trusted certificates",
   "license": "MIT",
   "repository": {
