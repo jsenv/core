@@ -1,10 +1,9 @@
 import { assert } from "@jsenv/assert";
 import { readFile, removeEntry, writeFile } from "@jsenv/filesystem";
-import { UNICODE } from "@jsenv/log";
-import { fileURLToPath } from "node:url";
-
 import { verifyHostsFile } from "@jsenv/https-local";
 import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
+import { UNICODE } from "@jsenv/humanize";
+import { fileURLToPath } from "node:url";
 
 const hostFileUrl = new URL("./hosts", import.meta.url);
 const hostsFilePath = fileURLToPath(hostFileUrl);

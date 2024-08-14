@@ -1,12 +1,11 @@
 import { assert } from "@jsenv/assert";
-import { UNICODE } from "@jsenv/log";
-
 import {
   installCertificateAuthority,
   requestCertificate,
   uninstallCertificateAuthority,
 } from "@jsenv/https-local";
 import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
+import { UNICODE } from "@jsenv/humanize";
 
 const loggerDuringTest = createLoggerForTest({
   // forwardToConsole: true,

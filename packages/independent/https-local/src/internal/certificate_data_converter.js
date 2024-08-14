@@ -29,7 +29,7 @@ const isUrl = (value) => {
     // eslint-disable-next-line no-new
     new URL(value);
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };

@@ -1,11 +1,10 @@
 import { assert } from "@jsenv/assert";
-import { UNICODE } from "@jsenv/log";
-
 import {
   installCertificateAuthority,
   uninstallCertificateAuthority,
 } from "@jsenv/https-local";
 import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
+import { UNICODE } from "@jsenv/humanize";
 
 await uninstallCertificateAuthority({
   logLevel: "warn",
