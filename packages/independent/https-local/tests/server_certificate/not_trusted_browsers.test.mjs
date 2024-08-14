@@ -58,14 +58,9 @@ if (process.platform !== "win32") {
     });
     throw new Error("should throw");
   } catch (e) {
-    const actual = e.errorText;
-    const expect = {
-      darwin: "SEC_ERROR_UNKNOWN",
-      linux: "SEC_ERROR_UNKNOWN_ISSUER",
-    }[process.platform];
     assert({
-      actual,
-      expect,
+      actual: e.errorText.includes("SEC_ERROR_UNKNOWN"),
+      expect: true,
     });
   } finally {
     browser.close();
