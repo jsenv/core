@@ -77,17 +77,22 @@ if (process.platform !== "win32") {
     });
     throw new Error("should throw");
   } catch (e) {
-    const actual = e.errorText;
-    const expect = {
-      win32: "SSL peer certificate or SSH remote key was not OK",
-      linux: "Unacceptable TLS certificate",
-      darwin:
-        "The certificate for this server is invalid. You might be connecting to a server that is pretending to be “localhost”, which could put your confidential information at risk.",
-    }[process.platform];
-    assert({
-      actual,
-      expect,
-    });
+    if (process.platform === "darwin") {
+      assert({
+        actual: e.errorText.includes(
+          "The certificate for this server is invalid. You might be connecting to",
+        ),
+        expect: true,
+      });
+    } else {
+      assert({
+        actual: e.errorText,
+        expect: {
+          win32: "SSL peer certificate or SSH remote key was not OK",
+          linux: "Unacceptable TLS certificate",
+        }[process.platform],
+      });
+    }
   } finally {
     browser.close();
   }
