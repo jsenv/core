@@ -267,6 +267,23 @@ const createDirectorySnapshot = (
       const nextDirectoryContentSnapshot =
         nextDirectorySnapshot.contentSnapshot;
       const nextRelativeUrls = Object.keys(nextDirectoryContentSnapshot);
+      // first compare the content
+      {
+        for (const relativeUrl of relativeUrls) {
+          if (!shouldCompareFileContent(new URL(relativeUrl, directoryUrl))) {
+            continue;
+          }
+          const snapshot = directoryContentSnapshot[relativeUrl];
+          const nextSnapshot = nextDirectoryContentSnapshot[relativeUrl];
+          if (nextSnapshot) {
+            snapshot.compare(nextSnapshot, {
+              throwWhenDiff: relativeUrl.endsWith(".gif")
+                ? false
+                : throwWhenDiff,
+            });
+          }
+        }
+      }
       // missing content
       if (throwWhenDiff) {
         const missingRelativeUrls = relativeUrls.filter(
@@ -321,23 +338,6 @@ ${extraFileCount} directory entries are unexpected
 --- unexpected entries ---
 ${extraUrls.join("\n")}`);
           throw extraFileAssertionError;
-        }
-      }
-      // content
-      {
-        for (const relativeUrl of relativeUrls) {
-          if (!shouldCompareFileContent(new URL(relativeUrl, directoryUrl))) {
-            continue;
-          }
-          const snapshot = directoryContentSnapshot[relativeUrl];
-          const nextSnapshot = nextDirectoryContentSnapshot[relativeUrl];
-          if (nextSnapshot) {
-            snapshot.compare(nextSnapshot, {
-              throwWhenDiff: relativeUrl.endsWith(".gif")
-                ? false
-                : throwWhenDiff,
-            });
-          }
         }
       }
     },

@@ -59,7 +59,6 @@ await snapshotSideEffects(
     }
   },
   {
-    throwWhenDiff: true,
     filesystemEffects: false,
   },
 );

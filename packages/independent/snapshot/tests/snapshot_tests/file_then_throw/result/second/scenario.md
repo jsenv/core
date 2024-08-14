@@ -7,7 +7,7 @@ throw new Error("here");
 ```console
 Error: here
   at base/file_then_throw.test.mjs:45:19
-  at async snapshotSideEffects.throwWhenDiff (base/file_then_throw.test.mjs:41:7)
+  at async snapshotSideEffects.filesystemEffects (base/file_then_throw.test.mjs:41:7)
   at async base/file_then_throw.test.mjs:37:1
 ```
 
