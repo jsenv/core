@@ -1,4 +1,6 @@
-# https local [![npm package](https://img.shields.io/npm/v/@jsenv/https-local.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/https-local)
+# https local
+
+[![npm package](https://img.shields.io/npm/v/@jsenv/https-local.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/https-local)
 
 A programmatic way to generate locally trusted certificates.
 
@@ -8,68 +10,32 @@ Works on mac, linux and windows.
 
 # How to use
 
-1 - Install _@jsenv/https-local_
+The following steps can be taken to start a local server in https.
+
+1. Install the root certificate using https-local
+2. Request certificate for your server
+3. Start that server
+
+## 1. Install the root certificate
 
 ```console
-npm install --save-dev @jsenv/https-local
+npx @jsenv/https-local install --trust
 ```
 
-2 - Create _install_certificate_authority.mjs_
+This will install a root certificate valid for 20 years.
+
+- Re-executing this command will log the current root certificate validity and trust status.
+- Re-executing this command 20 years later would reinstall a root certificate and re-trust it
+
+## 2. Request certificate for your server
+
+_start_dev_server.mjs_
 
 ```js
-/*
- * This file needs to be executed once.
- * After that the root certificate is valid for 20 years.
- * Re-executing this file will log the current root certificate validity and trust status.
- * Re-executing this file 20 years later would reinstall a root certificate and re-trust it.
- *
- * Read more in https://github.com/jsenv/https-local#installCertificateAuthority
- */
-
-import {
-  installCertificateAuthority,
-  verifyHostsFile,
-} from "@jsenv/https-local";
-
-await installCertificateAuthority({
-  tryToTrust: true,
-  NSSDynamicInstall: true,
-});
-await verifyHostsFile({
-  ipMappings: {
-    "127.0.0.1": ["localhost"],
-  },
-  tryToUpdatesHostsFile: true,
-});
-```
-
-3 - Run with node
-
-```console
-node ./install_certificate_authority.mjs
-```
-
-4 - Create _start_dev_server.mjs_
-
-```js
-/*
- * This file uses "@jsenv/https-local" to obtain a certificate used to start a server in https.
- * The certificate is valid for 1 year (396 days) and is issued by a certificate authority trusted on this machine.
- * If the certificate authority was not installed before executing this file, an error is thrown
- * explaining that certificate authority must be installed first.
- *
- * To install the certificate authority, you can use the following command
- *
- * > node ./install_certificate_authority.mjs
- *
- * Read more in https://github.com/jsenv/https-local#requestCertificate
- */
-
 import { createServer } from "node:https";
 import { requestCertificate } from "@jsenv/https-local";
 
 const { certificate, privateKey } = requestCertificate();
-
 const server = createServer(
   {
     cert: certificate,
@@ -89,7 +55,7 @@ server.listen(8080);
 console.log(`Server listening at https://local.example:8080`);
 ```
 
-5 - Start server with node
+## 3. Start the server
 
 ```console
 node ./start_dev_server.mjs

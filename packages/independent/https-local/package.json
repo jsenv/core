@@ -21,6 +21,7 @@
     },
     "./*": "./*"
   },
+  "bin": "./src/https_local_cli.mjs",
   "main": "./src/main.js",
   "files": [
     "/src/"
