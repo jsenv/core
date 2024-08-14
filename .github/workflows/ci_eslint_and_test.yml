@@ -57,7 +57,7 @@ jobs:
         run: npx playwright install-deps
       - name: Install certificate # needed for @jsenv/service-worker tests
         if: runner.os == 'Linux' # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
-        run: npm run certificate:install
+        run: npm run https:setup
       - name: Fix lightningcss windows
         if: runner.os == 'Windows'
         run: npm install lightningcss-win32-x64-msvc

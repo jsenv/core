@@ -25,6 +25,9 @@ if (values.help || positionals.length === 0) {
 
 Usage: 
 
+npx @jsenv/https-local setup
+  Install root certificate, try to trust it and ensure localhost is mapped to 127.0.0.1
+
 npx @jsenv/https-local install --trust
   Install root certificate on the filesystem
   - trust: Try to add root certificate to os and browser trusted stores.
@@ -43,6 +46,18 @@ https://github.com/jsenv/core/tree/main/packages/independent/https-local
 }
 
 const commandHandlers = {
+  setup: async () => {
+    await installCertificateAuthority({
+      tryToTrust: true,
+      NSSDynamicInstall: true,
+    });
+    await verifyHostsFile({
+      ipMappings: {
+        "127.0.0.1": ["localhost"],
+      },
+      tryToUpdatesHostsFile: true,
+    });
+  },
   install: async ({ tryToTrust }) => {
     await installCertificateAuthority({
       tryToTrust,

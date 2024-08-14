@@ -63,7 +63,7 @@
     "workspace:test:ci": "CI=1 npm run workspace:test",
     "dev": "node --conditions=development ./scripts/dev/dev.mjs",
     "playwright:install": "npx playwright install-deps && npx playwright install",
-    "certificate:install": "npx @jsenv/https-local install",
+    "https:setup": "npx @jsenv/https-local setup",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
