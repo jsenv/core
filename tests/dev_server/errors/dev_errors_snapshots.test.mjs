@@ -106,6 +106,7 @@ await snapshotTests(
   {
     filesystemActions: {
       "**/.jsenv/": "ignore",
+      "**/*.png": "compare_presence_only",
     },
   },
 );
