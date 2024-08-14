@@ -12,6 +12,10 @@ import {
   startServerForTest,
 } from "@jsenv/https-local/tests/test_helpers.mjs";
 
+if (process.platform === "win32") {
+  process.exit(0);
+}
+
 await uninstallCertificateAuthority({
   logLevel: "warn",
 });
