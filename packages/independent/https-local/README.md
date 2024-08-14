@@ -77,7 +77,134 @@ In the unlikely scenario where a local server is running for more than a year wi
 The **authority root certificate** expires after 20 years which is close to the maximum allowed duration.
 In the very unlikely scenario where you are using the same machine for more than 20 years, re-execute [installCertificateAuthority](#installCertificateAuthority) to update certificate authority then restart your server.
 
-# installCertificateAuthority
+# JavaScript API
+
+## requestCertificate
+
+_requestCertificate_ function returns a certificate and private key that can be used to start a server in HTTPS.
+
+```js
+import { createServer } from "node:https";
+import { requestCertificate } from "@jsenv/https-local";
+
+const { certificate, privateKey } = requestCertificate({
+  altNames: ["localhost", "local.example"],
+});
+```
+
+[installCertificateAuthority](#installCertificateAuthority) must be called before this function.
+
+## verifyHostsFile
+
+This function is not mandatory to obtain the https certificates.
+But it is useful to programmatically verify ip mappings that are important for your local server are present in hosts file.
+
+```js
+import { verifyHostsFile } from "@jsenv/https-local";
+
+await verifyHostsFile({
+  ipMappings: {
+    "127.0.0.1": ["localhost", "local.example"],
+  },
+});
+```
+
+Find below logs written in terminal when this function is executed.
+
+<details>
+  <summary>mac and linux</summary>
+
+```console
+> node ./verify_hosts.mjs
+
+Check hosts file content...
+⚠ 1 mapping is missing in hosts file
+--- hosts file path ---
+/etc/hosts
+--- line(s) to add ---
+127.0.0.1 localhost local.example
+```
+
+</details>
+
+<details>
+  <summary>windows</summary>
+
+```console
+> node ./verify_hosts.mjs
+
+Check hosts file content...
+⚠ 1 mapping is missing in hosts file
+--- hosts file path ---
+C:\\Windows\\System32\\Drivers\\etc\\hosts
+--- line(s) to add ---
+127.0.0.1 localhost local.example
+```
+
+</details>
+
+### Auto update hosts
+
+It's possible to update hosts file programmatically using _tryToUpdateHostsFile_.
+
+```js
+import { verifyHostsFile } from "@jsenv/https-local";
+
+await verifyHostsFile({
+  ipMappings: {
+    "127.0.0.1": ["localhost", "local.example"],
+  },
+  tryToUpdateHostsFile: true,
+});
+```
+
+<details>
+  <summary>mac and linux</summary>
+
+```console
+Check hosts file content...
+ℹ 1 mapping is missing in hosts file
+Adding 1 mapping(s) in hosts file...
+❯ echo "127.0.0.1 local.example" | sudo tee -a /etc/hosts
+Password:
+✔ mappings added to hosts file
+```
+
+_Second execution logs_
+
+```console
+> node ./verify_hosts.mjs
+
+Check hosts file content...
+✔ all ip mappings found in hosts file
+```
+
+</details>
+
+<details>
+  <summary>windows</summary>
+
+```console
+Check hosts file content...
+ℹ 1 mapping is missing in hosts file
+Adding 1 mapping(s) in hosts file...
+❯ (echo 127.0.0.1 local.example) >> C:\\Windows\\System32\\Drivers\\etc\\hosts
+Password:
+✔ mappings added to hosts file
+```
+
+_Second execution logs_
+
+```console
+> node ./verify_hosts.mjs
+
+Check hosts file content...
+✔ all ip mappings found in hosts file
+```
+
+</details>
+
+## installCertificateAuthority
 
 _installCertificateAuthority_ function generates a certificate authority valid for 20 years.
 This certificate authority is needed to generate local certificates that will be trusted by the operating system and web browsers.
@@ -188,7 +315,7 @@ Check if certificate is trusted by firefox...
 
 </details>
 
-## Auto trust
+### Auto trust
 
 It's possible to trust root certificate programmatically using _tryToTrust_
 
@@ -317,131 +444,6 @@ Check if certificate is trusted by windows...
 ✔ certificate trusted by windows
 Check if certificate is trusted by firefox...
 ℹ unable to detect if certificate is trusted by firefox (not implemented on windows)
-```
-
-</details>
-
-# requestCertificate
-
-_requestCertificate_ function returns a certificate and private key that can be used to start a server in HTTPS.
-
-```js
-import { createServer } from "node:https";
-import { requestCertificate } from "@jsenv/https-local";
-
-const { certificate, privateKey } = requestCertificate({
-  altNames: ["localhost", "local.example"],
-});
-```
-
-[installCertificateAuthority](#installCertificateAuthority) must be called before this function.
-
-# verifyHostsFile
-
-This function is not mandatory to obtain the https certificates.
-But it is useful to programmatically verify ip mappings that are important for your local server are present in hosts file.
-
-```js
-import { verifyHostsFile } from "@jsenv/https-local";
-
-await verifyHostsFile({
-  ipMappings: {
-    "127.0.0.1": ["localhost", "local.example"],
-  },
-});
-```
-
-Find below logs written in terminal when this function is executed.
-
-<details>
-  <summary>mac and linux</summary>
-
-```console
-> node ./verify_hosts.mjs
-
-Check hosts file content...
-⚠ 1 mapping is missing in hosts file
---- hosts file path ---
-/etc/hosts
---- line(s) to add ---
-127.0.0.1 localhost local.example
-```
-
-</details>
-
-<details>
-  <summary>windows</summary>
-
-```console
-> node ./verify_hosts.mjs
-
-Check hosts file content...
-⚠ 1 mapping is missing in hosts file
---- hosts file path ---
-C:\\Windows\\System32\\Drivers\\etc\\hosts
---- line(s) to add ---
-127.0.0.1 localhost local.example
-```
-
-</details>
-
-## Auto update hosts
-
-It's possible to update hosts file programmatically using _tryToUpdateHostsFile_.
-
-```js
-import { verifyHostsFile } from "@jsenv/https-local";
-
-await verifyHostsFile({
-  ipMappings: {
-    "127.0.0.1": ["localhost", "local.example"],
-  },
-  tryToUpdateHostsFile: true,
-});
-```
-
-<details>
-  <summary>mac and linux</summary>
-
-```console
-Check hosts file content...
-ℹ 1 mapping is missing in hosts file
-Adding 1 mapping(s) in hosts file...
-❯ echo "127.0.0.1 local.example" | sudo tee -a /etc/hosts
-Password:
-✔ mappings added to hosts file
-```
-
-_Second execution logs_
-
-```console
-> node ./verify_hosts.mjs
-
-Check hosts file content...
-✔ all ip mappings found in hosts file
-```
-
-</details>
-
-<details>
-  <summary>windows</summary>
-
-```console
-Check hosts file content...
-ℹ 1 mapping is missing in hosts file
-Adding 1 mapping(s) in hosts file...
-❯ (echo 127.0.0.1 local.example) >> C:\\Windows\\System32\\Drivers\\etc\\hosts
-Password:
-✔ mappings added to hosts file
-```
-
-_Second execution logs_
-
-```console
-> node ./verify_hosts.mjs
-
-Check hosts file content...
-✔ all ip mappings found in hosts file
 ```
 
 </details>

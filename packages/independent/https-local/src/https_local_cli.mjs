@@ -26,9 +26,12 @@ Usage:
 npx @jsenv/https-local install --trust
 npx @jsenv/https-local uninstall
 
+trust: Try to add root certificate to os and browser trusted stores.
+
 https://github.com/jsenv/core/tree/main/packages/independent/https-local
 
 `);
+
   process.exit(0);
 }
 
