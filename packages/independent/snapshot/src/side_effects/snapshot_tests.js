@@ -31,10 +31,7 @@ export const snapshotTests = async (
   fnRegisteringTest,
   {
     outFilePattern = "./_[source_filename]/[filename]",
-    filesystemActions = {
-      "**": "compare",
-      // "**/*.svg": "compare_presence_only",
-    },
+    filesystemActions,
     rootDirectoryUrl,
     generatedBy = true,
     executionEffects,
@@ -44,6 +41,7 @@ export const snapshotTests = async (
   } = {},
 ) => {
   filesystemActions = {
+    "**": "compare",
     ...filesystemActions,
     "**/*.svg": "compare_presence_only",
   };
