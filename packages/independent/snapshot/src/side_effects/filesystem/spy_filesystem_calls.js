@@ -4,13 +4,14 @@
 // https://github.com/tschaub/mock-fs/issues/348
 
 import {
+  comparePathnames,
   removeDirectorySync,
   removeFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
 import { URL_META } from "@jsenv/url-meta";
 import { ensurePathnameTrailingSlash, yieldAncestorUrls } from "@jsenv/urls";
-import { readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
   disableHooksWhileCalling,
@@ -47,6 +48,7 @@ export const spyFilesystemCalls = (
   const filesystemStateInfoMap = new Map();
   const fileDescriptorPathMap = new Map();
   const fileRestoreMap = new Map();
+  const dirRestoreMap = new Map();
   const onWriteFileDone = (fileUrl, stateBefore, stateAfter) => {
     if (!stateAfter.found) {
       // seems to be possible somehow
@@ -99,12 +101,16 @@ export const spyFilesystemCalls = (
       action === "compare_presence_only" ||
       action === true;
     if (action === "undo" || shouldCompare) {
-      if (undoFilesystemSideEffects && !fileRestoreMap.has(directoryUrl)) {
-        fileRestoreMap.set(directoryUrl, () => {
-          removeDirectorySync(directoryUrl, {
-            allowUseless: true,
-            recursive: true,
-          });
+      if (undoFilesystemSideEffects && !dirRestoreMap.has(directoryUrl)) {
+        dirRestoreMap.set(directoryUrl, () => {
+          try {
+            const isEmpty = readdirSync(new URL(directoryUrl)).length === 0;
+            if (isEmpty) {
+              removeDirectorySync(directoryUrl, {
+                allowUseless: true,
+              });
+            }
+          } catch {}
         });
       }
     }
@@ -253,6 +259,18 @@ export const spyFilesystemCalls = (
         restore();
       }
       fileRestoreMap.clear();
+      const dirUrls = Array.from(dirRestoreMap.keys());
+      dirUrls.sort((left, right) => {
+        return comparePathnames(
+          new URL(left).pathname,
+          new URL(right).pathname,
+        );
+      });
+      for (const dirUrl of dirUrls) {
+        const restore = dirRestoreMap.get(dirUrl);
+        restore();
+      }
+      dirRestoreMap.clear();
     },
   };
 };

@@ -379,19 +379,17 @@ ${extraUrls.join("\n")}`);
       const relativeUrl = urlToRelativeUrl(directoryItemUrl, directoryUrl);
       if (directoryItemStat.isDirectory()) {
         ensurePathnameTrailingSlash(directoryItemUrl);
-        if (!shouldVisitDirectory(directoryItemUrl)) {
+        if (!shouldVisitDirectory(directoryItemUrl.href)) {
           continue;
         }
-        contentSnapshotNaturalOrder[relativeUrl] = createDirectorySnapshot(
-          directoryItemUrl,
-          {
-            shouldVisitDirectory,
-            shouldIncludeFile,
-            shouldCompareFileContent,
-            clean,
-          },
-        );
-        if (clean) {
+        const subdirSnapshot = createDirectorySnapshot(directoryItemUrl, {
+          shouldVisitDirectory,
+          shouldIncludeFile,
+          shouldCompareFileContent,
+          clean,
+        });
+        contentSnapshotNaturalOrder[relativeUrl] = subdirSnapshot;
+        if (clean && subdirSnapshot) {
           removeDirectorySync(directoryItemUrl);
         }
         continue;

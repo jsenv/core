@@ -1,12 +1,16 @@
 import { assert } from "@jsenv/assert";
-import { writeFileStructureSync, writeFileSync } from "@jsenv/filesystem";
+import {
+  removeDirectorySync,
+  writeFileStructureSync,
+  writeFileSync,
+} from "@jsenv/filesystem";
 import { snapshotTests } from "@jsenv/snapshot";
 import { existsSync } from "node:fs";
 
-writeFileStructureSync(
-  new URL("./_undo_deep_directory.test.mjs/", import.meta.url),
-  {},
-);
+removeDirectorySync(new URL("./dir/", import.meta.url), {
+  allowUseless: true,
+});
+writeFileStructureSync(new URL("./git_ignored/", import.meta.url), {});
 await snapshotTests(
   import.meta.url,
   ({ test }) => {
@@ -15,6 +19,7 @@ await snapshotTests(
     });
   },
   {
+    outFilePattern: "./git_ignored/[filename]",
     filesystemEffects: {
       textualFilesInline: true,
     },
@@ -23,7 +28,3 @@ await snapshotTests(
 const actual = existsSync(new URL("./dir/", import.meta.url));
 const expect = false;
 assert({ actual, expect });
-writeFileStructureSync(
-  new URL("./_undo_deep_directory.test.mjs/", import.meta.url),
-  {},
-);
