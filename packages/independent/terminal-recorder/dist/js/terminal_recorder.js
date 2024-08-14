@@ -1,3 +1,5 @@
+!function(e,t){"object"==typeof exports&&"object"==typeof module?module.exports=t():"function"==typeof define&&define.amd?define([],t):"object"==typeof exports?exports.FitAddon=t():e.FitAddon=t();}(self,(()=>(()=>{var e={};return (()=>{var t=e;Object.defineProperty(t,"__esModule",{value:!0}),t.FitAddon=void 0,t.FitAddon=class{activate(e){this._terminal=e;}dispose(){}fit(){const e=this.proposeDimensions();if(!e||!this._terminal||isNaN(e.cols)||isNaN(e.rows))return;const t=this._terminal._core;this._terminal.rows===e.rows&&this._terminal.cols===e.cols||(t._renderService.clear(),this._terminal.resize(e.cols,e.rows));}proposeDimensions(){if(!this._terminal)return;if(!this._terminal.element||!this._terminal.element.parentElement)return;const e=this._terminal._core,t=e._renderService.dimensions;if(0===t.css.cell.width||0===t.css.cell.height)return;const r=0===this._terminal.options.scrollback?0:e.viewport.scrollBarWidth,i=window.getComputedStyle(this._terminal.element.parentElement),o=parseInt(i.getPropertyValue("height")),s=Math.max(0,parseInt(i.getPropertyValue("width"))),n=window.getComputedStyle(this._terminal.element),l=o-(parseInt(n.getPropertyValue("padding-top"))+parseInt(n.getPropertyValue("padding-bottom"))),a=s-(parseInt(n.getPropertyValue("padding-right"))+parseInt(n.getPropertyValue("padding-left")))-r;return {cols:Math.max(2,Math.floor(a/t.css.cell.width)),rows:Math.max(1,Math.floor(l/t.css.cell.height))}}};})(),e})()));
+
 !function (e, t) {
   "object" == typeof exports && "object" == typeof module ? module.exports = t() : "function" == typeof define && define.amd ? define([], t) : "object" == typeof exports ? exports.SerializeAddon = t() : e.SerializeAddon = t();
 }(window, () => (() => {
@@ -1916,6 +1918,7 @@ https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
 
 
 const { Terminal } = window;
+const { FitAddon } = window.FitAddon;
 const { WebglAddon } = window.WebglAddon;
 const { SerializeAddon } = window.SerializeAddon;
 
@@ -1972,47 +1975,35 @@ const initTerminal = ({
       brightBlue: "#87CEEB",
     },
   });
-  term.loadAddon(
-    new WebglAddon(
-      // we pass true to enable preserveDrawingBuffer
-      // it's not actually useful thanks to term.write callback +
-      // call on _innerRefresh() before context.drawImage
-      // but let's keep it nevertheless
-      true,
-    ),
-  );
   const serializeAddon = new SerializeAddon();
   term.loadAddon(serializeAddon);
-
-  const terminalElement = document.getElementById("terminal");
+  const fitAddon = new FitAddon();
+  term.loadAddon(fitAddon);
+  const webglAddon = new WebglAddon(
+    // we pass true to enable preserveDrawingBuffer
+    // it's not actually useful thanks to term.write callback +
+    // call on _innerRefresh() before context.drawImage
+    // but let's keep it nevertheless
+    true,
+  );
+  term.loadAddon(webglAddon);
+  const terminalElement = document.querySelector("#terminal");
   term.open(terminalElement);
+  fitAddon.fit();
 
-  const canvasPromise = (async () => {
-    const canvas = document.querySelector("#canvas");
-    if (!canvas) {
-      throw new Error('Cannot find <canvas id="canvas"> in the document');
-    }
-    let xtermCanvas = document.querySelector(
-      "#terminal canvas.xterm-link-layer + canvas",
-    );
-    if (!xtermCanvas) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      xtermCanvas = document.querySelector(
-        "#terminal canvas.xterm-link-layer + canvas",
-      );
-      if (!xtermCanvas) {
-        throw new Error(
-          "Cannot find xterm canvas (canvas.xterm-link-layer + canvas)",
-        );
-      }
-    }
-    return { canvas, xtermCanvas };
-  })();
+  const canvas = document.querySelector("#canvas");
+  if (!canvas) {
+    throw new Error('Cannot find <canvas id="canvas"> in the document');
+  }
+  const xTermCanvasSelector = "#terminal canvas.xterm-link-layer + canvas";
+  const xtermCanvas = document.querySelector(xTermCanvasSelector);
+  if (!xtermCanvas) {
+    throw new Error(`Cannot find xterm canvas (${xTermCanvasSelector})`);
+  }
 
   return {
     term,
     startRecording: async () => {
-      const { canvas, xtermCanvas } = await canvasPromise;
       const context = canvas.getContext("2d", { willReadFrequently: true });
       context.imageSmoothingEnabled = true;
       const headerHeight = 40;

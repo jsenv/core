@@ -1,3 +1,4 @@
+import { assert } from "@jsenv/assert";
 import {
   assertAndNormalizeDirectoryUrl,
   assertAndNormalizeFileUrl,
@@ -16,8 +17,6 @@ import {
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-
-import { assert } from "@jsenv/assert";
 import { comparePngFiles } from "./compare_png_files.js";
 import {
   ExtraFileAssertionError,
