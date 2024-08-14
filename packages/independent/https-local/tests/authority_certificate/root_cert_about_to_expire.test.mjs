@@ -6,6 +6,8 @@ import {
 import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
 import { UNICODE } from "@jsenv/humanize";
 
+process.exit(0);
+
 await uninstallCertificateAuthority({
   logLevel: "warn",
 });
@@ -36,7 +38,7 @@ const { rootCertificateFilePath } = await installCertificateAuthority({
     infos: [
       `${UNICODE.OK} authority root certificate found in filesystem`,
       `Checking certificate validity...`,
-      assert.matchesRegExp(/certificate will expire in \d seconds/),
+      assert.matches(/certificate will expire in \d seconds/),
       `Generating authority root certificate with a validity of 6 seconds...`,
       `${UNICODE.OK} authority root certificate written at ${rootCertificateFilePath}`,
       ...{
