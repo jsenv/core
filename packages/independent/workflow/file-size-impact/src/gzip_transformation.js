@@ -1,4 +1,4 @@
-import { gzip, constants } from "node:zlib";
+import { constants, gzip } from "node:zlib";
 
 export const name = "gzip";
 

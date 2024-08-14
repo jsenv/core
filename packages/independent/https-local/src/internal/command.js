@@ -1,9 +1,9 @@
-import { createRequire } from "node:module"
+import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url)
+const require = createRequire(import.meta.url);
 
 export const commandExists = async (command) => {
-  const { sync } = require("command-exists")
-  const exists = sync(command)
-  return exists
-}
+  const { sync } = require("command-exists");
+  const exists = sync(command);
+  return exists;
+};

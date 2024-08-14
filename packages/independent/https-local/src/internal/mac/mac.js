@@ -4,10 +4,10 @@
  * - https://www.unix.com/man-page/mojave/1/security/
  */
 
-import { executeTrustQueryOnMacKeychain } from "./mac_keychain.js"
-import { executeTrustQueryOnChrome } from "./chrome_mac.js"
-import { executeTrustQueryOnFirefox } from "./firefox_mac.js"
-import { executeTrustQueryOnSafari } from "./safari.js"
+import { executeTrustQueryOnChrome } from "./chrome_mac.js";
+import { executeTrustQueryOnFirefox } from "./firefox_mac.js";
+import { executeTrustQueryOnMacKeychain } from "./mac_keychain.js";
+import { executeTrustQueryOnSafari } from "./safari.js";
 
 export const executeTrustQuery = async ({
   logger,
@@ -25,13 +25,13 @@ export const executeTrustQuery = async ({
     certificateIsNew,
     certificate,
     verb,
-  })
+  });
 
   const chromeTrustInfo = await executeTrustQueryOnChrome({
     logger,
     // chrome needs macTrustInfo because it uses OS trust store
     macTrustInfo,
-  })
+  });
 
   const firefoxTrustInfo = await executeTrustQueryOnFirefox({
     logger,
@@ -41,18 +41,18 @@ export const executeTrustQuery = async ({
     certificate,
     verb,
     NSSDynamicInstall,
-  })
+  });
 
   const safariTrustInfo = await executeTrustQueryOnSafari({
     logger,
     // safari needs macTrustInfo because it uses OS trust store
     macTrustInfo,
-  })
+  });
 
   return {
     mac: macTrustInfo,
     chrome: chromeTrustInfo,
     firefox: firefoxTrustInfo,
     safari: safariTrustInfo,
-  }
-}
+  };
+};

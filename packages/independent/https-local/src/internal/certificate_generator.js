@@ -1,13 +1,13 @@
 // https://github.com/digitalbazaar/forge/blob/master/examples/create-cert.js
 // https://github.com/digitalbazaar/forge/issues/660#issuecomment-467145103
 
-import { forge } from "./forge.js"
 import {
   attributeArrayFromAttributeDescription,
   attributeDescriptionFromAttributeArray,
-  subjectAltNamesFromAltNames,
   extensionArrayFromExtensionDescription,
-} from "./certificate_data_converter.js"
+  subjectAltNamesFromAltNames,
+} from "./certificate_data_converter.js";
+import { forge } from "./forge.js";
 
 export const createAuthorityRootCertificate = async ({
   commonName,
@@ -20,21 +20,21 @@ export const createAuthorityRootCertificate = async ({
   serialNumber,
 } = {}) => {
   if (typeof serialNumber !== "number") {
-    throw new TypeError(`serial must be a number but received ${serialNumber}`)
+    throw new TypeError(`serial must be a number but received ${serialNumber}`);
   }
 
-  const { pki } = forge
-  const rootCertificateForgeObject = pki.createCertificate()
-  const keyPair = pki.rsa.generateKeyPair(2048) // TODO: use async version https://github.com/digitalbazaar/forge#rsa
-  const rootCertificatePublicKeyForgeObject = keyPair.publicKey
-  const rootCertificatePrivateKeyForgeObject = keyPair.privateKey
+  const { pki } = forge;
+  const rootCertificateForgeObject = pki.createCertificate();
+  const keyPair = pki.rsa.generateKeyPair(2048); // TODO: use async version https://github.com/digitalbazaar/forge#rsa
+  const rootCertificatePublicKeyForgeObject = keyPair.publicKey;
+  const rootCertificatePrivateKeyForgeObject = keyPair.privateKey;
 
-  rootCertificateForgeObject.publicKey = rootCertificatePublicKeyForgeObject
-  rootCertificateForgeObject.serialNumber = serialNumber.toString(16)
-  rootCertificateForgeObject.validity.notBefore = new Date()
+  rootCertificateForgeObject.publicKey = rootCertificatePublicKeyForgeObject;
+  rootCertificateForgeObject.serialNumber = serialNumber.toString(16);
+  rootCertificateForgeObject.validity.notBefore = new Date();
   rootCertificateForgeObject.validity.notAfter = new Date(
     Date.now() + validityDurationInMs,
-  )
+  );
   rootCertificateForgeObject.setSubject(
     attributeArrayFromAttributeDescription({
       commonName,
@@ -44,7 +44,7 @@ export const createAuthorityRootCertificate = async ({
       organizationName,
       organizationalUnitName,
     }),
-  )
+  );
   rootCertificateForgeObject.setIssuer(
     attributeArrayFromAttributeDescription({
       commonName,
@@ -54,7 +54,7 @@ export const createAuthorityRootCertificate = async ({
       organizationName,
       organizationalUnitName,
     }),
-  )
+  );
   rootCertificateForgeObject.setExtensions(
     extensionArrayFromExtensionDescription({
       basicConstraints: {
@@ -73,17 +73,17 @@ export const createAuthorityRootCertificate = async ({
       // },
       // subjectKeyIdentifier: {},
     }),
-  )
+  );
 
   // self-sign certificate
-  rootCertificateForgeObject.sign(rootCertificatePrivateKeyForgeObject) // , forge.sha256.create())
+  rootCertificateForgeObject.sign(rootCertificatePrivateKeyForgeObject); // , forge.sha256.create())
 
   return {
     rootCertificateForgeObject,
     rootCertificatePublicKeyForgeObject,
     rootCertificatePrivateKeyForgeObject,
-  }
-}
+  };
+};
 
 export const requestCertificateFromAuthority = ({
   authorityCertificateForgeObject, // could be intermediate or root certificate authority
@@ -99,7 +99,7 @@ export const requestCertificateFromAuthority = ({
   ) {
     throw new TypeError(
       `authorityCertificateForgeObject must be an object but received ${authorityCertificateForgeObject}`,
-    )
+    );
   }
   if (
     typeof auhtorityCertificatePrivateKeyForgeObject !== "object" ||
@@ -107,26 +107,26 @@ export const requestCertificateFromAuthority = ({
   ) {
     throw new TypeError(
       `auhtorityCertificatePrivateKeyForgeObject must be an object but received ${auhtorityCertificatePrivateKeyForgeObject}`,
-    )
+    );
   }
   if (typeof serialNumber !== "number") {
     throw new TypeError(
       `serialNumber must be a number but received ${serialNumber}`,
-    )
+    );
   }
 
-  const { pki } = forge
-  const certificateForgeObject = pki.createCertificate()
-  const keyPair = pki.rsa.generateKeyPair(2048) // TODO: use async version https://github.com/digitalbazaar/forge#rsa
-  const certificatePublicKeyForgeObject = keyPair.publicKey
-  const certificatePrivateKeyForgeObject = keyPair.privateKey
+  const { pki } = forge;
+  const certificateForgeObject = pki.createCertificate();
+  const keyPair = pki.rsa.generateKeyPair(2048); // TODO: use async version https://github.com/digitalbazaar/forge#rsa
+  const certificatePublicKeyForgeObject = keyPair.publicKey;
+  const certificatePrivateKeyForgeObject = keyPair.privateKey;
 
-  certificateForgeObject.publicKey = certificatePublicKeyForgeObject
-  certificateForgeObject.serialNumber = serialNumber.toString(16)
-  certificateForgeObject.validity.notBefore = new Date()
+  certificateForgeObject.publicKey = certificatePublicKeyForgeObject;
+  certificateForgeObject.serialNumber = serialNumber.toString(16);
+  certificateForgeObject.validity.notBefore = new Date();
   certificateForgeObject.validity.notAfter = new Date(
     Date.now() + validityDurationInMs,
-  )
+  );
 
   const attributeDescription = {
     ...attributeDescriptionFromAttributeArray(
@@ -134,13 +134,13 @@ export const requestCertificateFromAuthority = ({
     ),
     commonName,
     // organizationName: serverCertificateOrganizationName
-  }
+  };
   const attributeArray =
-    attributeArrayFromAttributeDescription(attributeDescription)
-  certificateForgeObject.setSubject(attributeArray)
+    attributeArrayFromAttributeDescription(attributeDescription);
+  certificateForgeObject.setSubject(attributeArray);
   certificateForgeObject.setIssuer(
     authorityCertificateForgeObject.subject.attributes,
-  )
+  );
   certificateForgeObject.setExtensions(
     extensionArrayFromExtensionDescription({
       basicConstraints: {
@@ -167,15 +167,15 @@ export const requestCertificateFromAuthority = ({
         altNames: subjectAltNamesFromAltNames(altNames),
       },
     }),
-  )
+  );
   certificateForgeObject.sign(
     auhtorityCertificatePrivateKeyForgeObject,
     forge.sha256.create(),
-  )
+  );
 
   return {
     certificateForgeObject,
     certificatePublicKeyForgeObject,
     certificatePrivateKeyForgeObject,
-  }
-}
+  };
+};

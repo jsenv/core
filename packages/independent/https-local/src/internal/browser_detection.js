@@ -1,7 +1,7 @@
-import { existsSync } from "node:fs"
+import { existsSync } from "node:fs";
 
 export const detectBrowser = (pathCandidates) => {
   return pathCandidates.some((pathCandidate) => {
-    return existsSync(pathCandidate)
-  })
-}
+    return existsSync(pathCandidate);
+  });
+};

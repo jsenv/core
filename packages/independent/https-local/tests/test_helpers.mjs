@@ -1,7 +1,7 @@
-import { createServer } from "node:https"
-import { createRequire } from "node:module"
+import { createServer } from "node:https";
+import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url)
+const require = createRequire(import.meta.url);
 
 /*
  * Logs are an important part of this package
@@ -9,34 +9,34 @@ const require = createRequire(import.meta.url)
  * and their content. This file provide a logger capable to do that.
  */
 export const createLoggerForTest = ({ forwardToConsole = false } = {}) => {
-  const debugs = []
-  const infos = []
-  const warns = []
-  const errors = []
+  const debugs = [];
+  const infos = [];
+  const warns = [];
+  const errors = [];
 
   return {
     debug: (...args) => {
-      debugs.push(args.join(""))
+      debugs.push(args.join(""));
       if (forwardToConsole) {
-        console.debug(...args)
+        console.debug(...args);
       }
     },
     info: (...args) => {
-      infos.push(args.join(""))
+      infos.push(args.join(""));
       if (forwardToConsole) {
-        console.info(...args)
+        console.info(...args);
       }
     },
     warn: (...args) => {
-      warns.push(args.join(""))
+      warns.push(args.join(""));
       if (forwardToConsole) {
-        console.warn(...args)
+        console.warn(...args);
       }
     },
     error: (...args) => {
-      errors.push(args.join(""))
+      errors.push(args.join(""));
       if (forwardToConsole) {
-        console.error(...args)
+        console.error(...args);
       }
     },
 
@@ -53,10 +53,10 @@ export const createLoggerForTest = ({ forwardToConsole = false } = {}) => {
         ...(info ? { infos } : {}),
         ...(warn ? { warns } : {}),
         ...(error ? { errors } : {}),
-      }
+      };
     },
-  }
-}
+  };
+};
 
 export const startServerForTest = async ({
   certificate,
@@ -70,55 +70,55 @@ export const startServerForTest = async ({
       key: privateKey,
     },
     (request, response) => {
-      const body = "Hello world"
+      const body = "Hello world";
       response.writeHead(200, {
         "content-type": "text/plain",
         "content-length": Buffer.byteLength(body),
-      })
-      response.write(body)
-      response.end()
+      });
+      response.write(body);
+      response.end();
     },
-  )
+  );
   if (!keepAlive) {
-    server.unref()
+    server.unref();
   }
   const serverPort = await new Promise((resolve) => {
     server.on("listening", () => {
       // in case port is 0 (randomly assign an available port)
       // https://nodejs.org/api/net.html#net_server_listen_port_host_backlog_callback
-      resolve(server.address().port)
-    })
-    server.listen(port)
-  })
-  return `https://localhost:${serverPort}`
-}
+      resolve(server.address().port);
+    });
+    server.listen(port);
+  });
+  return `https://localhost:${serverPort}`;
+};
 
 export const launchChromium = () => {
-  const { chromium } = require("playwright")
-  return chromium.launch()
-}
+  const { chromium } = require("playwright");
+  return chromium.launch();
+};
 
 export const launchFirefox = () => {
-  const { firefox } = require("playwright")
-  return firefox.launch()
-}
+  const { firefox } = require("playwright");
+  return firefox.launch();
+};
 
 export const launchWebkit = () => {
-  const { webkit } = require("playwright")
-  return webkit.launch()
-}
+  const { webkit } = require("playwright");
+  return webkit.launch();
+};
 
 export const requestServerUsingBrowser = async ({ serverOrigin, browser }) => {
-  const page = await browser.newPage()
+  const page = await browser.newPage();
 
   return new Promise(async (resolve, reject) => {
     page.on("requestfailed", (request) => {
-      reject(request.failure())
-    })
+      reject(request.failure());
+    });
 
     page.on("load", () => {
-      setTimeout(resolve, 400) // this time is required for firefox to trigger "requestfailed"
-    })
+      setTimeout(resolve, 400); // this time is required for firefox to trigger "requestfailed"
+    });
 
     page.goto(serverOrigin).catch((e) => {
       // chrome
@@ -126,17 +126,17 @@ export const requestServerUsingBrowser = async ({ serverOrigin, browser }) => {
         e.message.includes("ERR_CERT_INVALID") ||
         e.message.includes("ERR_CERT_AUTHORITY_INVALID")
       ) {
-        return
+        return;
       }
       // firefox
       if (e.message.includes("SEC_ERROR_UNKNOWN_ISSUER")) {
-        return
+        return;
       }
       // webkit
       if (e.message.includes("The certificate for this server is invalid.")) {
-        return
+        return;
       }
-      throw e
-    })
-  })
-}
+      throw e;
+    });
+  });
+};

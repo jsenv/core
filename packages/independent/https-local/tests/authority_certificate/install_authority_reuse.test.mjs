@@ -1,38 +1,39 @@
-import { assert } from "@jsenv/assert"
-import { UNICODE } from "@jsenv/log"
+import { assert } from "@jsenv/assert";
+import { UNICODE } from "@jsenv/log";
 
 import {
   installCertificateAuthority,
   uninstallCertificateAuthority,
-} from "@jsenv/https-local"
-import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs"
+} from "@jsenv/https-local";
+import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
 
 await uninstallCertificateAuthority({
   logLevel: "warn",
-})
+});
 const firstCallReturnValue = await installCertificateAuthority({
   logLevel: "warn",
-})
+});
 const loggerForTest = createLoggerForTest({
   // logLevel: "info",
   // forwardToConsole: true,
-})
+});
 const secondCallReturnValue = await installCertificateAuthority({
   logger: loggerForTest,
-})
+});
 const secondCallLogs = loggerForTest.getLogs({
   info: true,
   warn: true,
   error: true,
-})
+});
 const sameCertificate =
-  firstCallReturnValue.rootCertificate === secondCallReturnValue.rootCertificate
+  firstCallReturnValue.rootCertificate ===
+  secondCallReturnValue.rootCertificate;
 
 const actual = {
   sameCertificate,
   secondCallReturnValue,
   secondCallLogs,
-}
+};
 const expected = {
   sameCertificate: true,
   secondCallReturnValue: {
@@ -133,5 +134,5 @@ const expected = {
     warns: [],
     errors: [],
   },
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

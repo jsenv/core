@@ -1,5 +1,5 @@
-import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 export const readProjectPackage = ({ rootDirectoryUrl }) => {
   const packageFileUrlObject = new URL("./package.json", rootDirectoryUrl);

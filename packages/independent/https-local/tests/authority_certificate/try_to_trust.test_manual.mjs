@@ -1,24 +1,24 @@
 // https://github.com/nccgroup/wssip/blob/56d0d2c15a7c0fd4c99be445ec8d6c16571e81a0/lib/mitmengine.js#L450
 
-import { writeSymbolicLink } from "@jsenv/filesystem"
+import { writeSymbolicLink } from "@jsenv/filesystem";
 import {
   installCertificateAuthority,
-  uninstallCertificateAuthority,
   requestCertificate,
-} from "@jsenv/https-local"
-import { startServerForTest } from "@jsenv/https-local/tests/test_helpers.mjs"
+  uninstallCertificateAuthority,
+} from "@jsenv/https-local";
+import { startServerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
 
 await uninstallCertificateAuthority({
   tryToUntrust: true,
-})
+});
 await installCertificateAuthority({
   tryToTrust: true,
-})
+});
 const { certificate, privateKey, rootCertificateFilePath } = requestCertificate(
   {
     altNames: ["localhost", "*.localhost"],
   },
-)
+);
 
 if (process.platform !== "win32") {
   // not on windows because symlink requires admin rights
@@ -28,7 +28,7 @@ if (process.platform !== "win32") {
     type: "file",
     allowUseless: true,
     allowOverwrite: true,
-  })
+  });
 }
 
 const serverOrigin = await startServerForTest({
@@ -36,5 +36,5 @@ const serverOrigin = await startServerForTest({
   certificate,
   privateKey,
   keepAlive: true,
-})
-console.log(`Open ${serverOrigin} in a browser`)
+});
+console.log(`Open ${serverOrigin} in a browser`);

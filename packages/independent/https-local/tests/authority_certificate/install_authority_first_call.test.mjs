@@ -1,19 +1,19 @@
-import { assert } from "@jsenv/assert"
-import { UNICODE } from "@jsenv/log"
+import { assert } from "@jsenv/assert";
+import { UNICODE } from "@jsenv/log";
 
 import {
   installCertificateAuthority,
   uninstallCertificateAuthority,
-} from "@jsenv/https-local"
-import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs"
+} from "@jsenv/https-local";
+import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
 
 await uninstallCertificateAuthority({
   logLevel: "warn",
-})
+});
 const loggerForTest = createLoggerForTest({
   // logLevel: "info",
   // forwardToConsole: true,
-})
+});
 const {
   rootCertificateForgeObject,
   rootCertificatePrivateKeyForgeObject,
@@ -23,12 +23,12 @@ const {
   trustInfo,
 } = await installCertificateAuthority({
   logger: loggerForTest,
-})
+});
 const { infos, warns, errors } = loggerForTest.getLogs({
   info: true,
   warn: true,
   error: true,
-})
+});
 
 const actual = {
   // assert what is logged
@@ -42,7 +42,7 @@ const actual = {
   rootCertificatePrivateKey,
   rootCertificateFilePath,
   trustInfo,
-}
+};
 const expected = {
   infos: [
     `${UNICODE.INFO} authority root certificate not found in filesystem`,
@@ -123,5 +123,5 @@ const expected = {
       },
     },
   }[process.platform],
-}
-assert({ actual, expected })
+};
+assert({ actual, expected });

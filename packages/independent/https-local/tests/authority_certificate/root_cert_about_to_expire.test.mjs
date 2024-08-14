@@ -1,38 +1,38 @@
-import { assert } from "@jsenv/assert"
-import { UNICODE } from "@jsenv/log"
+import { assert } from "@jsenv/assert";
+import { UNICODE } from "@jsenv/log";
 
 import {
   installCertificateAuthority,
   uninstallCertificateAuthority,
-} from "@jsenv/https-local"
-import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs"
+} from "@jsenv/https-local";
+import { createLoggerForTest } from "@jsenv/https-local/tests/test_helpers.mjs";
 
 await uninstallCertificateAuthority({
   logLevel: "warn",
-})
+});
 await installCertificateAuthority({
   logLevel: "warn",
   certificateValidityDurationInMs: 6000,
-})
+});
 await new Promise((resolve) => {
-  setTimeout(resolve, 1500)
-})
+  setTimeout(resolve, 1500);
+});
 const loggerForSecondCall = createLoggerForTest({
   // forwardToConsole: true,
-})
+});
 const { rootCertificateFilePath } = await installCertificateAuthority({
   logger: loggerForSecondCall,
   certificateValidityDurationInMs: 6000,
   aboutToExpireRatio: 0.95,
-})
+});
 
 {
   const { infos, warns, errors } = loggerForSecondCall.getLogs({
     info: true,
     warn: true,
     error: true,
-  })
-  const actual = { infos, warns, errors }
+  });
+  const actual = { infos, warns, errors };
   const expected = {
     infos: [
       `${UNICODE.OK} authority root certificate found in filesystem`,
@@ -58,6 +58,6 @@ const { rootCertificateFilePath } = await installCertificateAuthority({
     ],
     warns: [],
     errors: [],
-  }
-  assert({ actual, expected })
+  };
+  assert({ actual, expected });
 }

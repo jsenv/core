@@ -9,8 +9,8 @@ The goal is to force user to regenerate comment_snapshot.md and ensure it looks 
 
 */
 
-import { readFileSync } from "node:fs";
 import { assert } from "@jsenv/assert";
+import { readFileSync } from "node:fs";
 
 const commentSnapshotFileUrl = new URL(
   "./comment_snapshot.md",

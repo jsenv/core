@@ -1,5 +1,5 @@
-import { createRequire } from "node:module"
+import { createRequire } from "node:module";
 
-const require = createRequire(import.meta.url)
+const require = createRequire(import.meta.url);
 
-export const forge = require("node-forge")
+export const forge = require("node-forge");

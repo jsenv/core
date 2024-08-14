@@ -1,6 +1,6 @@
-import { executeTrustQueryOnLinux } from "./linux_trust_store.js"
-import { executeTrustQueryOnChrome } from "./chrome_linux.js"
-import { executeTrustQueryOnFirefox } from "./firefox_linux.js"
+import { executeTrustQueryOnChrome } from "./chrome_linux.js";
+import { executeTrustQueryOnFirefox } from "./firefox_linux.js";
+import { executeTrustQueryOnLinux } from "./linux_trust_store.js";
 
 export const executeTrustQuery = async ({
   logger,
@@ -18,7 +18,7 @@ export const executeTrustQuery = async ({
     certificateIsNew,
     certificate,
     verb,
-  })
+  });
 
   const chromeTrustInfo = await executeTrustQueryOnChrome({
     logger,
@@ -28,7 +28,7 @@ export const executeTrustQuery = async ({
     certificate,
     verb,
     NSSDynamicInstall,
-  })
+  });
 
   const firefoxTrustInfo = await executeTrustQueryOnFirefox({
     logger,
@@ -38,11 +38,11 @@ export const executeTrustQuery = async ({
     certificate,
     verb,
     NSSDynamicInstall,
-  })
+  });
 
   return {
     linux: linuxTrustInfo,
     chrome: chromeTrustInfo,
     firefox: firefoxTrustInfo,
-  }
-}
+  };
+};

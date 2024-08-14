@@ -11,7 +11,7 @@
  * See https://github.com/jsenv/performance-impact
  */
 
-import { importMetricFromFiles } from "@jsenv/performance-impact"
+import { importMetricFromFiles } from "@jsenv/performance-impact";
 
 const { packageImportMetrics, packageTarballMetrics } =
   await importMetricFromFiles({
@@ -28,11 +28,11 @@ const { packageImportMetrics, packageTarballMetrics } =
       },
     },
     logLevel: process.argv.includes("--log") ? "info" : "warn",
-  })
+  });
 
 export const performanceReport = {
   "package metrics": {
     ...packageImportMetrics,
     ...packageTarballMetrics,
   },
-}
+};

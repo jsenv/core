@@ -1,4 +1,4 @@
-import { verifyHostsFile } from "@jsenv/https-local"
+import { verifyHostsFile } from "@jsenv/https-local";
 
 await verifyHostsFile({
   logLevel: "debug",
@@ -6,4 +6,4 @@ await verifyHostsFile({
     "127.0.0.1": ["localhost", "local.example"],
   },
   tryToUpdateHostsFile: true,
-})
+});

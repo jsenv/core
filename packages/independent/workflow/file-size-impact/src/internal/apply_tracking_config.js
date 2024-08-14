@@ -1,5 +1,5 @@
-import { fileURLToPath } from "node:url";
 import { collectDirectoryMatchReport } from "@jsenv/filesystem";
+import { fileURLToPath } from "node:url";
 
 export const applyTrackingConfig = async (
   trackingConfig,

@@ -1,33 +1,33 @@
-import { urlToFilename } from "@jsenv/urls"
-import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem"
+import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
+import { urlToFilename } from "@jsenv/urls";
 
 export const getCertificateAuthorityFileUrls = () => {
   // we need a directory common to every instance of @jsenv/https-local
   // so that even if it's used multiple times, the certificate autority files
   // are reused
-  const applicationDirectoryUrl = getJsenvApplicationDirectoryUrl()
+  const applicationDirectoryUrl = getJsenvApplicationDirectoryUrl();
 
   const certificateAuthorityJsonFileUrl = new URL(
     "./https_local_certificate_authority.json",
     applicationDirectoryUrl,
-  )
+  );
 
   const rootCertificateFileUrl = new URL(
     "./https_local_root_certificate.crt",
     applicationDirectoryUrl,
-  )
+  );
 
   const rootCertificatePrivateKeyFileUrl = new URL(
     "./https_local_root_certificate.key",
     applicationDirectoryUrl,
-  ).href
+  ).href;
 
   return {
     certificateAuthorityJsonFileUrl,
     rootCertificateFileUrl,
     rootCertificatePrivateKeyFileUrl,
-  }
-}
+  };
+};
 
 export const getRootCertificateSymlinkUrls = ({
   rootCertificateFileUrl,
@@ -35,34 +35,34 @@ export const getRootCertificateSymlinkUrls = ({
   serverCertificateFileUrl,
 }) => {
   const serverCertificateDirectory = new URL("./", serverCertificateFileUrl)
-    .href
+    .href;
 
-  const rootCertificateFilename = urlToFilename(rootCertificateFileUrl)
+  const rootCertificateFilename = urlToFilename(rootCertificateFileUrl);
   const rootCertificateSymlinkUrl = new URL(
     rootCertificateFilename,
     serverCertificateDirectory,
-  ).href
-  const rootPrivateKeyFilename = urlToFilename(rootPrivateKeyFileUrl)
+  ).href;
+  const rootPrivateKeyFilename = urlToFilename(rootPrivateKeyFileUrl);
   const rootPrivateKeySymlinkUrl = new URL(
     rootPrivateKeyFilename,
     serverCertificateDirectory,
-  ).href
+  ).href;
 
   return {
     rootCertificateSymlinkUrl,
     rootPrivateKeySymlinkUrl,
-  }
-}
+  };
+};
 
 // https://github.com/LinusU/node-application-config-path/blob/master/index.js
 const getJsenvApplicationDirectoryUrl = () => {
-  const { platform } = process
+  const { platform } = process;
 
   if (platform === "darwin") {
     return new URL(
       `./Library/Application Support/https_local/`,
       assertAndNormalizeDirectoryUrl(process.env.HOME),
-    ).href
+    ).href;
   }
 
   if (platform === "linux") {
@@ -70,12 +70,12 @@ const getJsenvApplicationDirectoryUrl = () => {
       return new URL(
         `./https_local/`,
         assertAndNormalizeDirectoryUrl(process.env.XDG_CONFIG_HOME),
-      ).href
+      ).href;
     }
     return new URL(
       `./.config/https_local/`,
       assertAndNormalizeDirectoryUrl(process.env.HOME),
-    ).href
+    ).href;
   }
 
   if (platform === "win32") {
@@ -83,14 +83,14 @@ const getJsenvApplicationDirectoryUrl = () => {
       return new URL(
         `./https_local/`,
         assertAndNormalizeDirectoryUrl(process.env.LOCALAPPDATA),
-      ).href
+      ).href;
     }
 
     return new URL(
       `./Local Settings/Application Data/https_local/`,
       assertAndNormalizeDirectoryUrl(process.env.USERPROFILE),
-    ).href
+    ).href;
   }
 
-  throw new Error(`platform not supported`)
-}
+  throw new Error(`platform not supported`);
+};

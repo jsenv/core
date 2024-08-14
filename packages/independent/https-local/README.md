@@ -29,18 +29,18 @@ npm install --save-dev @jsenv/https-local
 import {
   installCertificateAuthority,
   verifyHostsFile,
-} from "@jsenv/https-local"
+} from "@jsenv/https-local";
 
 await installCertificateAuthority({
   tryToTrust: true,
   NSSDynamicInstall: true,
-})
+});
 await verifyHostsFile({
   ipMappings: {
     "127.0.0.1": ["localhost"],
   },
   tryToUpdatesHostsFile: true,
-})
+});
 ```
 
 3 - Run with node
@@ -65,10 +65,10 @@ node ./install_certificate_authority.mjs
  * Read more in https://github.com/jsenv/https-local#requestCertificate
  */
 
-import { createServer } from "node:https"
-import { requestCertificate } from "@jsenv/https-local"
+import { createServer } from "node:https";
+import { requestCertificate } from "@jsenv/https-local";
 
-const { certificate, privateKey } = requestCertificate()
+const { certificate, privateKey } = requestCertificate();
 
 const server = createServer(
   {
@@ -76,17 +76,17 @@ const server = createServer(
     key: privateKey,
   },
   (request, response) => {
-    const body = "Hello world"
+    const body = "Hello world";
     response.writeHead(200, {
       "content-type": "text/plain",
       "content-length": Buffer.byteLength(body),
-    })
-    response.write(body)
-    response.end()
+    });
+    response.write(body);
+    response.end();
   },
-)
-server.listen(8080)
-console.log(`Server listening at https://local.example:8080`)
+);
+server.listen(8080);
+console.log(`Server listening at https://local.example:8080`);
 ```
 
 5 - Start server with node
@@ -117,9 +117,9 @@ _installCertificateAuthority_ function generates a certificate authority valid f
 This certificate authority is needed to generate local certificates that will be trusted by the operating system and web browsers.
 
 ```js
-import { installCertificateAuthority } from "@jsenv/https-local"
+import { installCertificateAuthority } from "@jsenv/https-local";
 
-await installCertificateAuthority()
+await installCertificateAuthority();
 ```
 
 By default, trusting authority root certificate is a manual process. This manual process is documented in [BenMorel/dev-certificates#Import the CA in your browser](https://github.com/BenMorel/dev-certificates/tree/c10cd68945da772f31815b7a36721ddf848ff3a3#import-the-ca-in-your-browser). This process can be done programmatically as explained in [Auto trust](#Auto-trust).
@@ -227,11 +227,11 @@ Check if certificate is trusted by firefox...
 It's possible to trust root certificate programmatically using _tryToTrust_
 
 ```js
-import { installCertificateAuthority } from "@jsenv/https-local"
+import { installCertificateAuthority } from "@jsenv/https-local";
 
 await installCertificateAuthority({
   tryToTrust: true,
-})
+});
 ```
 
 <details>
@@ -360,12 +360,12 @@ Check if certificate is trusted by firefox...
 _requestCertificate_ function returns a certificate and private key that can be used to start a server in HTTPS.
 
 ```js
-import { createServer } from "node:https"
-import { requestCertificate } from "@jsenv/https-local"
+import { createServer } from "node:https";
+import { requestCertificate } from "@jsenv/https-local";
 
 const { certificate, privateKey } = requestCertificate({
   altNames: ["localhost", "local.example"],
-})
+});
 ```
 
 [installCertificateAuthority](#installCertificateAuthority) must be called before this function.
@@ -376,13 +376,13 @@ This function is not mandatory to obtain the https certificates.
 But it is useful to programmatically verify ip mappings that are important for your local server are present in hosts file.
 
 ```js
-import { verifyHostsFile } from "@jsenv/https-local"
+import { verifyHostsFile } from "@jsenv/https-local";
 
 await verifyHostsFile({
   ipMappings: {
     "127.0.0.1": ["localhost", "local.example"],
   },
-})
+});
 ```
 
 Find below logs written in terminal when this function is executed.
@@ -424,14 +424,14 @@ C:\\Windows\\System32\\Drivers\\etc\\hosts
 It's possible to update hosts file programmatically using _tryToUpdateHostsFile_.
 
 ```js
-import { verifyHostsFile } from "@jsenv/https-local"
+import { verifyHostsFile } from "@jsenv/https-local";
 
 await verifyHostsFile({
   ipMappings: {
     "127.0.0.1": ["localhost", "local.example"],
   },
   tryToUpdateHostsFile: true,
-})
+});
 ```
 
 <details>

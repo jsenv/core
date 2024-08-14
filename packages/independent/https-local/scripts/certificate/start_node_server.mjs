@@ -1,9 +1,9 @@
-import { createServer } from "node:https"
-import { requestCertificate } from "@jsenv/https-local"
+import { requestCertificate } from "@jsenv/https-local";
+import { createServer } from "node:https";
 
 const { certificate, privateKey } = requestCertificate({
   altNames: ["localhost", "local.example"],
-})
+});
 
 const server = createServer(
   {
@@ -11,14 +11,14 @@ const server = createServer(
     key: privateKey,
   },
   (request, response) => {
-    const body = "Hello world"
+    const body = "Hello world";
     response.writeHead(200, {
       "content-type": "text/plain",
       "content-length": Buffer.byteLength(body),
-    })
-    response.write(body)
-    response.end()
+    });
+    response.write(body);
+    response.end();
   },
-)
-server.listen(8080)
-console.log(`Server listening at https://local.example:8080`)
+);
+server.listen(8080);
+console.log(`Server listening at https://local.example:8080`);
