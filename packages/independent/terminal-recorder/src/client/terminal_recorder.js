@@ -12,12 +12,14 @@ https://webglfundamentals.org/webgl/lessons/webgl-tips.html
 https://github.com/xtermjs/xterm.js/blob/master/typings/xterm.d.ts
 */
 
+import "@xterm/addon-fit";
 import "@xterm/addon-serialize?as_js_module";
-import "@xterm/addon-webgl";
+import "@xterm/addon-webgl"; // https://github.com/xtermjs/xterm.js/tree/master/addons/addon-webgl
 import "@xterm/xterm";
 import { createGifEncoder } from "./gif_encoder.js";
 
 const { Terminal } = window;
+const { FitAddon } = window.FitAddon;
 const { WebglAddon } = window.WebglAddon;
 const { SerializeAddon } = window.SerializeAddon;
 
@@ -74,47 +76,35 @@ export const initTerminal = ({
       brightBlue: "#87CEEB",
     },
   });
-  term.loadAddon(
-    new WebglAddon(
-      // we pass true to enable preserveDrawingBuffer
-      // it's not actually useful thanks to term.write callback +
-      // call on _innerRefresh() before context.drawImage
-      // but let's keep it nevertheless
-      true,
-    ),
-  );
   const serializeAddon = new SerializeAddon();
   term.loadAddon(serializeAddon);
-
-  const terminalElement = document.getElementById("terminal");
+  const fitAddon = new FitAddon();
+  term.loadAddon(fitAddon);
+  const webglAddon = new WebglAddon(
+    // we pass true to enable preserveDrawingBuffer
+    // it's not actually useful thanks to term.write callback +
+    // call on _innerRefresh() before context.drawImage
+    // but let's keep it nevertheless
+    true,
+  );
+  term.loadAddon(webglAddon);
+  const terminalElement = document.querySelector("#terminal");
   term.open(terminalElement);
+  fitAddon.fit();
 
-  const canvasPromise = (async () => {
-    const canvas = document.querySelector("#canvas");
-    if (!canvas) {
-      throw new Error('Cannot find <canvas id="canvas"> in the document');
-    }
-    let xtermCanvas = document.querySelector(
-      "#terminal canvas.xterm-link-layer + canvas",
-    );
-    if (!xtermCanvas) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      xtermCanvas = document.querySelector(
-        "#terminal canvas.xterm-link-layer + canvas",
-      );
-      if (!xtermCanvas) {
-        throw new Error(
-          "Cannot find xterm canvas (canvas.xterm-link-layer + canvas)",
-        );
-      }
-    }
-    return { canvas, xtermCanvas };
-  })();
+  const canvas = document.querySelector("#canvas");
+  if (!canvas) {
+    throw new Error('Cannot find <canvas id="canvas"> in the document');
+  }
+  const xTermCanvasSelector = "#terminal canvas.xterm-link-layer + canvas";
+  const xtermCanvas = document.querySelector(xTermCanvasSelector);
+  if (!xtermCanvas) {
+    throw new Error(`Cannot find xterm canvas (${xTermCanvasSelector})`);
+  }
 
   return {
     term,
     startRecording: async () => {
-      const { canvas, xtermCanvas } = await canvasPromise;
       const context = canvas.getContext("2d", { willReadFrequently: true });
       context.imageSmoothingEnabled = true;
       const headerHeight = 40;

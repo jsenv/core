@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/terminal-recorder",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Record terminal output as .svg, .gif, .webm, .mp4",
   "license": "MIT",
   "repository": {
@@ -49,8 +49,9 @@
     "webm-to-mp4": "1.0.0"
   },
   "devDependencies": {
+    "@xterm/addon-fit": "0.10.0",
     "@xterm/addon-serialize": "0.13.0",
-    "@xterm/xterm": "5.5.0",
-    "@xterm/addon-webgl": "0.18.0"
+    "@xterm/addon-webgl": "0.18.0",
+    "@xterm/xterm": "5.5.0"
   }
 }
