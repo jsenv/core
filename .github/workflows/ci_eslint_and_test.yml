@@ -15,18 +15,18 @@ on:
       - main
       # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#patterns-to-match-file-paths
     paths-ignore:
-      - "**/README.md"
-      - "**/md/**"
-      - "**/docs/**"
-      - "**/packages/independent/workflow/**"
+      - "./md/**"
+      - "./packages/independent/workflow/**"
+      - "./www/**"
+      - "**/readme.md"
   pull_request:
     branches:
       - "**"
     paths-ignore:
-      - "**/README.md"
-      - "**/md/**"
-      - "**/docs/**"
-      - "**/packages/independent/workflow/**"
+      - "./md/**"
+      - "./packages/independent/workflow/**"
+      - "./www/**"
+      - "**/readme.md"
 
 jobs:
   test:
