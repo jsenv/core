@@ -1,9 +1,9 @@
 .jsenv/
 .jsenv_b/
 .coverage/
-/md/**/dist/
-/md/**/node_modules/
-/md/**/package-lock.json
+/docs/**/dist/
+/docs/**/node_modules/
+/docs/**/package-lock.json
 /node_modules/
 /packages/**/node_modules/
 !/packages/**/tests/**/node_modules/
