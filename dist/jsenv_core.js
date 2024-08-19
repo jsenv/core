@@ -18325,7 +18325,14 @@ const createNodeEsmResolver = ({
       );
       return url;
     }
-    const parentUrl = reference.baseUrl || ownerUrlInfo.url;
+    let parentUrl;
+    if (reference.baseUrl) {
+      parentUrl = reference.baseUrl;
+    } else if (ownerUrlInfo.originalUrl?.startsWith("http")) {
+      parentUrl = ownerUrlInfo.originalUrl;
+    } else {
+      parentUrl = ownerUrlInfo.url;
+    }
     if (!parentUrl.startsWith("file:")) {
       const url = new URL(reference.specifier, parentUrl);
       return url;
