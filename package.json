@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "39.4.0",
+  "version": "39.4.1",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -86,6 +86,7 @@
     "@jsenv/url-meta": "8.5.1",
     "@jsenv/urls": "2.5.2",
     "@jsenv/utils": "2.1.2",
+    "string-width": "7.2.0",
     "anchor-markdown-header": "0.7.0"
   },
   "devDependencies": {

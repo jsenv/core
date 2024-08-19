@@ -268,14 +268,14 @@ await startTesting(({ test }) => {
     test("copy_file/0_copy_sync", () => {
       copyFileSyncNode(
         new URL("./input/a.txt", import.meta.url),
-        new URL("./dist/a.txt", import.meta.url),
+        new URL("./a.txt", import.meta.url),
       );
     });
     test("copy_file/0_copy_async", async () => {
       await new Promise((resolve, reject) => {
         copyFileNode(
           new URL("./input/a.txt", import.meta.url),
-          new URL("./dist/a.txt", import.meta.url),
+          new URL("./a.txt", import.meta.url),
           (err) => {
             if (err) {
               reject(err);
@@ -291,7 +291,7 @@ await startTesting(({ test }) => {
     test("move_file/0_rename_sync", () => {
       renameSync(
         new URL("./input/a.txt", import.meta.url),
-        new URL("./dist/a.txt", import.meta.url),
+        new URL("./a.txt", import.meta.url),
       );
     });
   }
