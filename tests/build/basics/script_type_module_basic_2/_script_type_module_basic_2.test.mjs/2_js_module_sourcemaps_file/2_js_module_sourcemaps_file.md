@@ -1,8 +1,9 @@
-# [1_js_module_fallback](../../import_dynamic.test.mjs#L28)
+# [2_js_module_sourcemaps_file](../../script_type_module_basic_2.test.mjs#L41)
 
 ```js
 run({
-  runtimeCompat: { chrome: "62" },
+  runtimeCompat: { chrome: "89" },
+  sourcemaps: "file",
 })
 ```
 
@@ -13,10 +14,7 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-{
-  "answer": 42,
-  "nestedFeatureUrl": "/js/nested_feature.nomodule.js"
-}
+undefined
 ```
 
 ---

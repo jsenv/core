@@ -6,36 +6,16 @@ run({
 })
 ```
 
-```console
-FETCH_URL_CONTENT_ERROR: Failed to fetch url content
-base/client/main.js:1:31
-1 | const namespace = await import("./data.json?debug", {
-                                  ^
-An error occured during "fetchUrlContent"
---- error stack ---
-Error: base/client/data.json.js?debug&as_json_module not found in graph
-    at fetchUrlContent (@jsenv/core/src/build/build_specifier_manager.js:350:13)
-    at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:206:31)
-    at visit (@jsenv/core/src/plugins/plugin_controller.js:270:33)
-    at visit (@jsenv/core/src/plugins/plugin_controller.js:276:13)
-    at async visit (@jsenv/core/src/plugins/plugin_controller.js:276:7)
-    at async visit (@jsenv/core/src/plugins/plugin_controller.js:276:7)
-    at async Object.callAsyncHooksUntil (@jsenv/core/src/plugins/plugin_controller.js:278:5)
-    at async Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:324:9)
-    at async @jsenv/core/src/kitchen/kitchen.js:482:11
-    at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)
---- plugin name ---
-"jsenv:move_to_build_directory"
-  at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:64:24)
-  at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:120:10)
-  at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:413:13)
-  at async @jsenv/core/src/kitchen/kitchen.js:482:11
-  at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)
-  at async @jsenv/core/src/kitchen/kitchen.js:480:9
-  at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:664:5)
-  at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:571:7)
-  at async Promise.all (index 0)
-  at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:605:7)
+# 1/2 write 3 files into "./build/"
+
+see [./build/](./build/)
+
+# 2/2 resolve
+
+```js
+{
+  "answer": 42
+}
 ```
 
 ---

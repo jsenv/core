@@ -1,4 +1,4 @@
-# [0_copy](../../new_url_directory_2.test.mjs#L16)
+# [0_copy](../../new_url_directory_2.test.mjs#L19)
 
 ```js
 run()
@@ -11,7 +11,7 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-{}
+base/build/src/
 ```
 
 ---
