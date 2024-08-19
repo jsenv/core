@@ -54,15 +54,15 @@ await startTesting(({ test }) => {
   }
   write_directory: {
     test("write_dir/0_write_directory_sync", () => {
-      writeDirectorySync(new URL("./dir_sync/", import.meta.url));
-      return existsSync(new URL("./dir_sync/", import.meta.url));
+      writeDirectorySync(new URL("./out/dir_sync/", import.meta.url));
+      return existsSync(new URL("./out/dir_sync/", import.meta.url));
     });
     test("write_dir/1_write_directory_async", async () => {
-      await writeDirectory(new URL("./dir_async/", import.meta.url));
-      return existsSync(new URL("./dir_async/", import.meta.url));
+      await writeDirectory(new URL("./out/dir_async/", import.meta.url));
+      return existsSync(new URL("./out/dir_async/", import.meta.url));
     });
     test("write_dir/2_write_dir_deep", () => {
-      writeDirectorySync(new URL("./dir/a/b/c", import.meta.url));
+      writeDirectorySync(new URL("./out/dir/a/b/c", import.meta.url));
     });
   }
   write_file: {
@@ -70,7 +70,7 @@ await startTesting(({ test }) => {
       "write_file/0_write_sync",
       () => {
         writeFileSync(
-          new URL("./toto.txt", import.meta.url),
+          new URL("./out/toto.txt", import.meta.url),
           "0_write_file_sync",
         );
       },
@@ -84,7 +84,7 @@ await startTesting(({ test }) => {
       "write_file/1_write_then_read_sync",
       () => {
         writeFileSync(
-          new URL("./toto.txt", import.meta.url),
+          new URL("./out/toto.txt", import.meta.url),
           "1_write_then_read_sync",
         );
         return String(readFileSync(new URL("./toto.txt", import.meta.url)));
@@ -99,7 +99,7 @@ await startTesting(({ test }) => {
       "write_file/2_write_sync_deep",
       () => {
         writeFileSync(
-          new URL("./toto/toto.txt", import.meta.url),
+          new URL("./out/toto/toto.txt", import.meta.url),
           "2_write_sync_deep",
         );
       },
@@ -113,7 +113,7 @@ await startTesting(({ test }) => {
       "write_file/3_write_async",
       async () => {
         await writeFile(
-          new URL("./toto.txt", import.meta.url),
+          new URL("./out/toto.txt", import.meta.url),
           "3_write_async",
         );
       },
@@ -127,7 +127,7 @@ await startTesting(({ test }) => {
       "write_file/4_write_inside_base",
       () => {
         writeFileSync(
-          new URL("./toto.txt", import.meta.url),
+          new URL("./out/toto.txt", import.meta.url),
           "4_write_inside_base",
         );
       },
@@ -139,7 +139,7 @@ await startTesting(({ test }) => {
     );
     test("write_file/5_write_inside_base_and_textual_out", () => {
       writeFileSync(
-        new URL("./toto.txt", import.meta.url),
+        new URL("./out/toto.txt", import.meta.url),
         "5_write_inside_base_and_textual_out",
       );
     });
@@ -166,8 +166,8 @@ await startTesting(({ test }) => {
     test(
       "write_file/8_write_same_file",
       () => {
-        writeFileSync(new URL("./toto.txt", import.meta.url), "a");
-        writeFileSync(new URL("./toto.txt", import.meta.url), "b");
+        writeFileSync(new URL("./out/toto.txt", import.meta.url), "a");
+        writeFileSync(new URL("./out/toto.txt", import.meta.url), "b");
       },
       {
         filesystemEffects: {
@@ -178,10 +178,10 @@ await startTesting(({ test }) => {
     test(
       "write_file/9_write_same_file_again",
       () => {
-        writeFileSync(new URL("./dist/a.txt", import.meta.url), "a");
-        writeFileSync(new URL("./dist/b.txt", import.meta.url), "b");
-        writeFileSync(new URL("./dist/b.txt", import.meta.url), "b");
-        writeFileSync(new URL("./dist/c.txt", import.meta.url), "c");
+        writeFileSync(new URL("./out/a.txt", import.meta.url), "a");
+        writeFileSync(new URL("./out/b.txt", import.meta.url), "b");
+        writeFileSync(new URL("./out/b.txt", import.meta.url), "b");
+        writeFileSync(new URL("./out/c.txt", import.meta.url), "c");
       },
       {
         filesystemEffects: {
@@ -193,9 +193,9 @@ await startTesting(({ test }) => {
     test(
       "write_file/10_write_same_file_not_grouped",
       () => {
-        writeFileSync(new URL("./toto.txt", import.meta.url), "first");
+        writeFileSync(new URL("./out/toto.txt", import.meta.url), "first");
         console.log("hey");
-        writeFileSync(new URL("./toto.txt", import.meta.url), "second");
+        writeFileSync(new URL("./out/toto.txt", import.meta.url), "second");
       },
       {
         filesystemEffects: {
@@ -204,19 +204,19 @@ await startTesting(({ test }) => {
       },
     );
     test("write_file/11_write_same_file_not_grouped_and_out", () => {
-      writeFileSync(new URL("./toto.txt", import.meta.url), "first");
+      writeFileSync(new URL("./out/toto.txt", import.meta.url), "first");
       console.log("hey");
-      writeFileSync(new URL("./toto.txt", import.meta.url), "second");
+      writeFileSync(new URL("./out/toto.txt", import.meta.url), "second");
     });
     test("write_file/12_write_png", () => {
       writeFileSync(
-        new URL("./jsenv.png", import.meta.url),
+        new URL("./out/jsenv.png", import.meta.url),
         readFileSync(new URL("./input/jsenv.png", import.meta.url)),
       );
     });
     test("write_file/13_write_json", () => {
       writeFileSync(
-        new URL("./data.json", import.meta.url),
+        new URL("./out/data.json", import.meta.url),
         JSON.stringify(
           {
             url: import.meta.url,
@@ -232,30 +232,24 @@ await startTesting(({ test }) => {
   }
   group_write_by_directory: {
     test("write_group/0_write_in_one_dir", () => {
-      writeFileSync(new URL("./shared/a/a_1.txt", import.meta.url));
-      writeFileSync(new URL("./shared/a/a_2.txt", import.meta.url));
-      writeFileSync(new URL("./shared/b/b_1.txt", import.meta.url));
-      writeFileSync(new URL("./shared/b/b_2.txt", import.meta.url));
-      writeFileSync(new URL("./shared/b/b_3.txt", import.meta.url));
+      writeFileSync(new URL("./out/shared/a/a_1.txt", import.meta.url));
+      writeFileSync(new URL("./out/shared/a/a_2.txt", import.meta.url));
+      writeFileSync(new URL("./out/shared/b/b_1.txt", import.meta.url));
+      writeFileSync(new URL("./out/shared/b/b_2.txt", import.meta.url));
+      writeFileSync(new URL("./out/shared/b/b_3.txt", import.meta.url));
     });
     test("write_group/1_write_in_2_dir", () => {
-      writeFileSync(new URL("./a/a_1.txt", import.meta.url));
-      writeFileSync(new URL("./a/a_2.txt", import.meta.url));
-      writeFileSync(new URL("./b/b_1.txt", import.meta.url));
-      writeFileSync(new URL("./b/b_2.txt", import.meta.url));
-      writeFileSync(new URL("./b/b_3.txt", import.meta.url));
+      writeFileSync(new URL("./out/a/a_1.txt", import.meta.url));
+      writeFileSync(new URL("./out/a/a_2.txt", import.meta.url));
+      writeFileSync(new URL("./out/b/b_1.txt", import.meta.url));
+      writeFileSync(new URL("./out/b/b_2.txt", import.meta.url));
+      writeFileSync(new URL("./out/b/b_3.txt", import.meta.url));
     });
     test(
       "write_group/2_write_no_out",
       () => {
-        writeFileSync(
-          new URL("./dist/a_1.txt", import.meta.url),
-          "a_1_content",
-        );
-        writeFileSync(
-          new URL("./dist/a_2.txt", import.meta.url),
-          "a_2_content",
-        );
+        writeFileSync(new URL("./out/a_1.txt", import.meta.url), "a_1_content");
+        writeFileSync(new URL("./out/a_2.txt", import.meta.url), "a_2_content");
       },
       {
         filesystemEffects: {
@@ -268,14 +262,14 @@ await startTesting(({ test }) => {
     test("copy_file/0_copy_sync", () => {
       copyFileSyncNode(
         new URL("./input/a.txt", import.meta.url),
-        new URL("./a.txt", import.meta.url),
+        new URL("./out/a.txt", import.meta.url),
       );
     });
     test("copy_file/0_copy_async", async () => {
       await new Promise((resolve, reject) => {
         copyFileNode(
           new URL("./input/a.txt", import.meta.url),
-          new URL("./a.txt", import.meta.url),
+          new URL("./out/a.txt", import.meta.url),
           (err) => {
             if (err) {
               reject(err);
@@ -291,7 +285,7 @@ await startTesting(({ test }) => {
     test("move_file/0_rename_sync", () => {
       renameSync(
         new URL("./input/a.txt", import.meta.url),
-        new URL("./a.txt", import.meta.url),
+        new URL("./out/a.txt", import.meta.url),
       );
     });
   }

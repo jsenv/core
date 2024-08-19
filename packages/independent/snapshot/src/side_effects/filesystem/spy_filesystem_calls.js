@@ -49,6 +49,25 @@ export const spyFilesystemCalls = (
   const fileDescriptorPathMap = new Map();
   const fileRestoreMap = new Map();
   const dirRestoreMap = new Map();
+
+  const onWriteFileDone = (stateBefore, stateAfter) =>
+    onFileMutationDone(stateBefore, stateAfter);
+  const onCopyFileDone = (stateBefore, stateAfter) =>
+    onFileMutationDone(stateBefore, stateAfter);
+  const onMoveFileDone = (fromStateBefore, toStateBefore, toStateAfter) => {
+    if (!toStateAfter.found) {
+      // seems to be possible somehow
+      return;
+    }
+    // effect on source file
+    registerUndoAndNotify(fromStateBefore, () => {
+      onRemoveFile(fromStateBefore.url, fromStateBefore.buffer, "move");
+    });
+    // effect on target file
+    registerUndoAndNotify(toStateBefore, () => {
+      onWriteFile(fromStateBefore.url, fromStateBefore.buffer, "created");
+    });
+  };
   const onFileMutationDone = (stateBefore, stateAfter) => {
     if (!stateAfter.found) {
       // seems to be possible somehow
@@ -58,45 +77,57 @@ export const spyFilesystemCalls = (
     // - writing file for the 1st time
     // - updating file content
     // the important part is the file content in the end of the function execution
-    let reason;
-    if (!stateBefore.found && stateAfter.found) {
-      reason = "created";
-    } else if (Buffer.compare(stateBefore.buffer, stateAfter.buffer)) {
-      reason = "content_modified";
-    } else if (stateBefore.mtimeMs !== stateAfter.mtimeMs) {
-      reason = "mtime_modified";
-    } else if (stateBefore.url !== stateAfter.url) {
-      reason = "moved";
-    } else {
-      // file is exactly the same
-      // function did not have any effect on the file
+    const reason = getMutationReason(stateBefore, stateAfter);
+    if (!reason) {
       return;
     }
-    const beforeUrl = stateBefore.url;
-    const afterUrl = stateAfter.url;
-    const action = getAction(beforeUrl);
+    registerUndoAndNotify(stateBefore, () => {
+      onWriteFile(stateAfter.url, stateAfter.buffer, reason);
+    });
+  };
+  const getMutationReason = (stateBefore, stateAfter) => {
+    if (!stateBefore.found && stateAfter.found) {
+      return "created";
+    }
+    if (Buffer.compare(stateBefore.buffer, stateAfter.buffer)) {
+      return "content_modified";
+    }
+    if (stateBefore.mtimeMs !== stateAfter.mtimeMs) {
+      return "mtime_modified";
+    }
+    // file is exactly the same
+    // function did not have any effect on the file
+    return null;
+  };
+  const registerUndoAndNotify = (stateBefore, notify) => {
+    const action = getAction(stateBefore.url);
     const shouldCompare =
       action === "compare" ||
       action === "compare_presence_only" ||
       action === true;
-    if (action === "undo" || shouldCompare) {
-      if (undoFilesystemSideEffects && !fileRestoreMap.has(beforeUrl)) {
-        if (stateBefore.found) {
-          fileRestoreMap.set(beforeUrl, () => {
-            writeFileSync(beforeUrl, stateBefore.buffer);
-          });
-        } else {
-          fileRestoreMap.set(beforeUrl, () => {
-            removeFileSync(beforeUrl, { allowUseless: true });
-          });
-        }
+    // "ignore", false, anything else
+    undo: {
+      if (!undoFilesystemSideEffects) {
+        break undo;
+      }
+      if (action !== "undo" && !shouldCompare) {
+        break undo;
+      }
+      if (stateBefore.found) {
+        fileRestoreMap.set(stateBefore.url, () => {
+          writeFileSync(stateBefore.url, stateBefore.buffer);
+        });
+      } else {
+        fileRestoreMap.set(stateBefore.url, () => {
+          removeFileSync(stateBefore.url, { allowUseless: true });
+        });
       }
     }
     if (shouldCompare) {
-      onWriteFile(afterUrl, stateAfter.buffer, reason);
+      notify();
     }
-    // "ignore", false, anything else
   };
+
   const onWriteDirectoryDone = (directoryUrl) => {
     const action = getAction(directoryUrl);
     const shouldCompare =
@@ -217,7 +248,7 @@ export const spyFilesystemCalls = (
           fileDescriptorPathMap.delete(fileDescriptor);
           filesystemStateInfoMap.delete(filePath);
           const stateAfter = getFileStateWithinHook(filePath);
-          onFileMutationDone(stateBefore, stateAfter);
+          onWriteFileDone(stateBefore, stateAfter);
         },
       };
     },
@@ -231,7 +262,7 @@ export const spyFilesystemCalls = (
       return {
         return: () => {
           const stateAfter = getFileStateWithinHook(filePath);
-          onFileMutationDone(stateBefore, stateAfter);
+          onWriteFileDone(stateBefore, stateAfter);
         },
       };
     },
@@ -247,11 +278,11 @@ export const spyFilesystemCalls = (
     _internalFs,
     "copyFile",
     (fromPath, toPath) => {
-      const stateBefore = getFileStateWithinHook(fromPath);
+      const toStateBefore = getFileStateWithinHook(toPath);
       return {
         return: () => {
-          const stateAfter = getFileStateWithinHook(toPath);
-          onFileMutationDone(stateBefore, stateAfter);
+          const toStateAfter = getFileStateWithinHook(toPath);
+          onCopyFileDone(toStateBefore, toStateAfter);
         },
       };
     },
@@ -261,11 +292,12 @@ export const spyFilesystemCalls = (
     _internalFs,
     "rename",
     (fromPath, toPath) => {
-      const stateBefore = getFileStateWithinHook(fromPath);
+      const fromStateBefore = getFileStateWithinHook(fromPath);
+      const toStateBefore = getFileStateWithinHook(toPath);
       return {
         return: () => {
-          const stateAfter = getFileStateWithinHook(toPath);
-          onFileMutationDone(stateBefore, stateAfter);
+          const toStateAfter = getFileStateWithinHook(toPath);
+          onMoveFileDone(fromStateBefore, toStateBefore, toStateAfter);
         },
       };
     },
