@@ -21,13 +21,17 @@ const run = async ({ directoryReferenceEffect }) => {
   return executeHtml(`${buildServer.origin}/main.html`);
 };
 
-await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_error", () =>
-    run({
-      directoryReferenceEffect: "error",
-    }));
-  test("1_copy", () =>
-    run({
-      directoryReferenceEffect: "copy",
-    }));
-});
+await snapshotBuildTests(
+  import.meta.url,
+  ({ test }) => {
+    test("0_error", () =>
+      run({
+        directoryReferenceEffect: "error",
+      }));
+    test("1_copy", () =>
+      run({
+        directoryReferenceEffect: "copy",
+      }));
+  },
+  { executionEffects: { catch: true } },
+);

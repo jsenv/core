@@ -16,6 +16,10 @@ const run = async () => {
   return executeHtml(`${buildServer.origin}/main.html`);
 };
 
-await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_basic", () => run());
-});
+await snapshotBuildTests(
+  import.meta.url,
+  ({ test }) => {
+    test("0_basic", () => run());
+  },
+  { executionEffects: { catch: true } },
+);

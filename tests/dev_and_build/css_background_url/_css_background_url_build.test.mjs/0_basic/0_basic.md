@@ -1,13 +1,7 @@
-# [0_basic](../../css_background_url_build.test.mjs#L5)
+# [0_basic](../../css_background_url_build.test.mjs#L15)
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./build/", import.meta.url),
-  entryPoints: { "./main.css": "main.css" },
-  bundling: false,
-  minification: false,
-})
+run()
 ```
 
 # 1/2 write 2 files into "./build/"
@@ -17,7 +11,7 @@ see [./build/](./build/)
 # 2/2 resolve
 
 ```js
-{}
+undefined
 ```
 
 ---

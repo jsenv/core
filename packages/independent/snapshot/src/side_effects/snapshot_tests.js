@@ -12,6 +12,11 @@ import { renderSideEffects, renderSmallLink } from "./render_side_effects.js";
  * @param {Object} snapshotTestsOptions
  * @param {string|url} snapshotTestsOptions.outFilePattern
  * @param {string|url} snapshotTestsOptions.rootDirectoryUrl
+ * @param {Object} [snapshotTestsOptions.executionEffects]
+ * @param {boolean} [snapshotTestsOptions.executionEffects.catch=true]
+ *        Any error thrown by test function is detected and added to side effects
+ * @param {boolean} [snapshotTestsOptions.executionEffects.return=true]
+ *        Test function return value is added to side effects
  * @param {Object} [snapshotTestsOptions.filesystemActions]
  *        Control what to do when there is a file side effect
  *        "compare", "compare_presence_only", "undo", "ignore"
