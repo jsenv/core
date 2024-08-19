@@ -1,13 +1,7 @@
-import { ensureWindowsDriveLetter } from "@jsenv/filesystem";
 import { ANSI, createDetailedMessage, createLogger } from "@jsenv/humanize";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { URL_META } from "@jsenv/url-meta";
-import {
-  moveUrl,
-  normalizeUrl,
-  setUrlFilename,
-  urlIsInsideOf,
-} from "@jsenv/urls";
+import { normalizeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { jsenvPluginHtmlSyntaxErrorFallback } from "../plugins/html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 import { createPluginController } from "../plugins/plugin_controller.js";
@@ -19,6 +13,7 @@ import {
   defineNonEnumerableProperties,
 } from "./errors.js";
 import { assertFetchedContentCompliance } from "./fetched_content_compliance.js";
+import { determineFileUrlForOutDirectory } from "./out_directory_url.js";
 import { createUrlGraph } from "./url_graph/url_graph.js";
 import { createUrlInfoTransformer } from "./url_graph/url_info_transformations.js";
 import { urlSpecifierEncoding } from "./url_graph/url_specifier_encoding.js";
@@ -251,7 +246,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       // - side_effect_file references injected in entry points or at the top of files
       return;
     }
-
     transform_search_params: {
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
@@ -287,6 +281,15 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference.generatedSearchParams = generatedSearchParams;
       }
     }
+    const referencedUrlInfo = reference.urlInfo;
+    referencedUrlInfo.generatedUrl = determineFileUrlForOutDirectory(
+      referencedUrlInfo.url,
+      {
+        filenameHint: referencedUrlInfo.filenameHint,
+        rootDirectoryUrl: referencedUrlInfo.context.rootDirectoryUrl,
+        outDirectoryUrl: referencedUrlInfo.context.outDirectoryUrl,
+      },
+    );
     format: {
       const returnValue = pluginController.callHooksUntil(
         "formatReference",
@@ -369,7 +372,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo,
         content,
       });
-      urlInfo.generatedUrl = determineFileUrlForOutDirectory(urlInfo);
 
       // we wait here to read .contentAst and .originalContentAst
       // so that we don't trigger lazy getters
@@ -704,28 +706,4 @@ const inferUrlInfoType = (urlInfo) => {
     return "text";
   }
   return "other";
-};
-
-const determineFileUrlForOutDirectory = (urlInfo) => {
-  if (!urlInfo.context.outDirectoryUrl) {
-    return urlInfo.url;
-  }
-  if (!urlInfo.url.startsWith("file:")) {
-    return urlInfo.url;
-  }
-  let url = urlInfo.url;
-  if (!urlIsInsideOf(urlInfo.url, urlInfo.context.rootDirectoryUrl)) {
-    const fsRootUrl = ensureWindowsDriveLetter("file:///", urlInfo.url);
-    url = `${urlInfo.context.rootDirectoryUrl}@fs/${url.slice(
-      fsRootUrl.length,
-    )}`;
-  }
-  if (urlInfo.filenameHint) {
-    url = setUrlFilename(url, urlInfo.filenameHint);
-  }
-  return moveUrl({
-    url,
-    from: urlInfo.context.rootDirectoryUrl,
-    to: urlInfo.context.outDirectoryUrl,
-  });
 };

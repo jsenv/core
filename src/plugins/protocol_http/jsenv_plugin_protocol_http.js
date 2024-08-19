@@ -26,8 +26,6 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
     name: "jsenv:protocol_http",
     appliesDuring: "build",
     redirectReference: (reference) => {
-      // TODO: according to some pattern matching jsenv could be allowed
-      // to fetch and transform http urls
       if (
         !reference.url.startsWith("http:") &&
         !reference.url.startsWith("https:")
@@ -46,7 +44,7 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
       ) {
         return null;
       }
-      const response = await fetch(urlInfo.url);
+      const response = await fetch(urlInfo.originalUrl);
       const responseStatus = response.status;
       if (responseStatus < 200 || responseStatus > 299) {
         throw new Error(`unexpected response status ${responseStatus}`);

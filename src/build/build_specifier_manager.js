@@ -334,7 +334,7 @@ export const createBuildSpecifierManager = ({
           contentType: firstReference.contentType,
         };
       }
-      throw new Error(createDetailedMessage(`Cannot fetch ${rawUrl}`));
+      throw new Error(createDetailedMessage(`${rawUrl} not found in graph`));
     },
   };
 
