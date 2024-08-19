@@ -281,15 +281,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference.generatedSearchParams = generatedSearchParams;
       }
     }
-    const referencedUrlInfo = reference.urlInfo;
-    referencedUrlInfo.generatedUrl = determineFileUrlForOutDirectory(
-      referencedUrlInfo.url,
-      {
-        filenameHint: referencedUrlInfo.filenameHint,
-        rootDirectoryUrl: referencedUrlInfo.context.rootDirectoryUrl,
-        outDirectoryUrl: referencedUrlInfo.context.outDirectoryUrl,
-      },
-    );
     format: {
       const returnValue = pluginController.callHooksUntil(
         "formatReference",
@@ -371,6 +362,11 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
       assertFetchedContentCompliance({
         urlInfo,
         content,
+      });
+      urlInfo.generatedUrl = determineFileUrlForOutDirectory(urlInfo.url, {
+        filenameHint: urlInfo.filenameHint,
+        rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+        outDirectoryUrl: urlInfo.context.outDirectoryUrl,
       });
 
       // we wait here to read .contentAst and .originalContentAst
