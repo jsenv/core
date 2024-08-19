@@ -17,14 +17,14 @@ no entry on filesystem
 "jsenv:file_url_fetching"
   at createFailedToFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:64:24)
   at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:106:14)
-  at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:402:13)
-  at async @jsenv/core/src/kitchen/kitchen.js:471:11
+  at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:404:13)
+  at async @jsenv/core/src/kitchen/kitchen.js:473:11
   at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)
-  at async @jsenv/core/src/kitchen/kitchen.js:469:9
-  at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:653:5)
-  at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:560:7)
+  at async @jsenv/core/src/kitchen/kitchen.js:471:9
+  at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:655:5)
+  at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:562:7)
   at async Promise.all (index 0)
-  at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:594:7)
+  at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:596:7)
 ```
 
 ---

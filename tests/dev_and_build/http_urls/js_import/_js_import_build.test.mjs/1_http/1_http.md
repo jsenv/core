@@ -12,7 +12,7 @@ see [./build/](./build/)
 
 ```js
 {
-  "url": "http://127.0.0.1/js/constants.js?foo=bar&v=e0ca6bf7",
+  "url": "window.origin/js/constants.js?foo=bar&v=e0ca6bf7",
   "answer": 42
 }
 ```
