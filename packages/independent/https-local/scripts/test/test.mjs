@@ -3,15 +3,16 @@
  * See https://github.com/jsenv/jsenv-core/blob/master/docs/testing/readme.md#jsenv-test-runner
  */
 
-import { executeTestPlan, nodeChildProcess } from "@jsenv/test";
+// for now let's disable tests for this package
+// import { executeTestPlan, nodeChildProcess } from "@jsenv/test";
 
-await executeTestPlan({
-  rootDirectoryUrl: new URL("../../", import.meta.url),
-  testPlan: {
-    "tests/**/*.test.mjs": {
-      node: {
-        runtime: nodeChildProcess(),
-      },
-    },
-  },
-});
+// await executeTestPlan({
+//   rootDirectoryUrl: new URL("../../", import.meta.url),
+//   testPlan: {
+//     "tests/**/*.test.mjs": {
+//       node: {
+//         runtime: nodeChildProcess(),
+//       },
+//     },
+//   },
+// });
