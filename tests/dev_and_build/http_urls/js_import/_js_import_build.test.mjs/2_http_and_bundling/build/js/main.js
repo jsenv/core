@@ -1,4 +1,4 @@
-import { url } from "/js/file.js";
+const url = import.meta.url;
 
 const answer = 42;
 

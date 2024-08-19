@@ -4,7 +4,7 @@
 run({ http: true, bundling: true })
 ```
 
-# 1/2 write 4 files into "./build/"
+# 1/2 write 2 files into "./build/"
 
 see [./build/](./build/)
 
@@ -12,7 +12,7 @@ see [./build/](./build/)
 
 ```js
 {
-  "url": "http://127.0.0.1/js/constants.js?foo=bar&v=e0ca6bf7",
+  "url": "http://127.0.0.1/js/main.js?v=07ef91aa",
   "answer": 42
 }
 ```
