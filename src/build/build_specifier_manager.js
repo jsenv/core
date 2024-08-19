@@ -65,9 +65,6 @@ export const createBuildSpecifierManager = ({
     let buildUrl;
     if (reference.type === "sourcemap_comment") {
       const parentBuildUrl = urlInfoToBuildUrlMap.get(reference.ownerUrlInfo);
-      // if (!parentBuildUrl) {
-      //   debugger;
-      // }
       buildUrl = generateSourcemapFileUrl(parentBuildUrl);
       reference.generatedSpecifier = buildUrl;
     } else {
@@ -763,10 +760,15 @@ export const createBuildSpecifierManager = ({
           if (urlInfo.isEntryPoint) {
             generateReplacement(urlInfo.firstReference);
           }
-          if (urlInfo.isInline) {
-            generateReplacement(urlInfo.firstReference);
-          }
           if (urlInfo.type === "sourcemap") {
+            const { referenceFromOthersSet } = urlInfo;
+            let lastRef;
+            for (const ref of referenceFromOthersSet) {
+              lastRef = ref;
+            }
+            generateReplacement(lastRef);
+          }
+          if (urlInfo.isInline) {
             generateReplacement(urlInfo.firstReference);
           }
           if (urlInfo.firstReference.type === "side_effect_file") {
