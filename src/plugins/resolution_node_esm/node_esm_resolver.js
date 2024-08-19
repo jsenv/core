@@ -48,7 +48,7 @@ export const createNodeEsmResolver = ({
     let parentUrl;
     if (reference.baseUrl) {
       parentUrl = reference.baseUrl;
-    } else if (ownerUrlInfo.originalUrl.startsWith("http")) {
+    } else if (ownerUrlInfo.originalUrl?.startsWith("http")) {
       parentUrl = ownerUrlInfo.originalUrl;
     } else {
       parentUrl = ownerUrlInfo.url;
