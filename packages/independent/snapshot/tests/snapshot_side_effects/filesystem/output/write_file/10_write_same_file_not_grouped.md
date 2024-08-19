@@ -1,12 +1,12 @@
 # [side_effects_filesystem.test.mjs](../../side_effects_filesystem.test.mjs)
 
 ```js
-writeFileSync(new URL("./toto.txt", import.meta.url), "first");
+writeFileSync(new URL("./out/toto.txt", import.meta.url), "first");
 console.log("hey");
-writeFileSync(new URL("./toto.txt", import.meta.url), "second");
+writeFileSync(new URL("./out/toto.txt", import.meta.url), "second");
 ```
 
-# 1/4 write file "./toto.txt"
+# 1/4 write file "./out/toto.txt"
 
 ```txt
 first
@@ -18,7 +18,7 @@ first
 hey
 ```
 
-# 3/4 write file "./toto.txt"
+# 3/4 write file "./out/toto.txt"
 
 ```txt
 second

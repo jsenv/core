@@ -1,10 +1,10 @@
 # [side_effects_filesystem.test.mjs](../../side_effects_filesystem.test.mjs)
 
 ```js
-writeDirectorySync(new URL("./dir/a/b/c", import.meta.url));
+writeDirectorySync(new URL("./out/dir/a/b/c", import.meta.url));
 ```
 
-# 1/2 write directory "./dir/a/b/c/"
+# 1/2 write directory "./out/dir/a/b/c/"
 
 # 2/2 return
 

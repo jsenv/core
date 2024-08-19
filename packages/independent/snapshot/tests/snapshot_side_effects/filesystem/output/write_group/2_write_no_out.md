@@ -1,17 +1,11 @@
 # [side_effects_filesystem.test.mjs](../../side_effects_filesystem.test.mjs)
 
 ```js
-writeFileSync(
-  new URL("./dist/a_1.txt", import.meta.url),
-  "a_1_content",
-);
-writeFileSync(
-  new URL("./dist/a_2.txt", import.meta.url),
-  "a_2_content",
-);
+writeFileSync(new URL("./out/a_1.txt", import.meta.url), "a_1_content");
+writeFileSync(new URL("./out/a_2.txt", import.meta.url), "a_2_content");
 ```
 
-# 1/2 write 2 files into "./dist/"
+# 1/2 write 2 files into "./out/"
 
 ## a_1.txt
 ```txt

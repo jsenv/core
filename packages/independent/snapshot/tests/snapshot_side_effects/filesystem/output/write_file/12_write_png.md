@@ -2,14 +2,14 @@
 
 ```js
 writeFileSync(
-  new URL("./jsenv.png", import.meta.url),
+  new URL("./out/jsenv.png", import.meta.url),
   readFileSync(new URL("./input/jsenv.png", import.meta.url)),
 );
 ```
 
-# 1/2 write file "./jsenv.png"
+# 1/2 write file "./out/jsenv.png"
 
-see [./12_write_png/jsenv.png](./12_write_png/jsenv.png)
+see [./12_write_png/out/jsenv.png](./12_write_png/out/jsenv.png)
 
 # 2/2 return
 

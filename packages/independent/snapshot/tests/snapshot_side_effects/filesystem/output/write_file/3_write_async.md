@@ -2,12 +2,12 @@
 
 ```js
 await writeFile(
-  new URL("./toto.txt", import.meta.url),
+  new URL("./out/toto.txt", import.meta.url),
   "3_write_async",
 );
 ```
 
-# 1/2 write file "./toto.txt"
+# 1/2 write file "./out/toto.txt"
 
 ```txt
 3_write_async

@@ -2,12 +2,12 @@
 
 ```js
 writeFileSync(
-  new URL("./toto.txt", import.meta.url),
+  new URL("./out/toto.txt", import.meta.url),
   "0_write_file_sync",
 );
 ```
 
-# 1/2 write file "./toto.txt"
+# 1/2 write file "./out/toto.txt"
 
 ```txt
 0_write_file_sync

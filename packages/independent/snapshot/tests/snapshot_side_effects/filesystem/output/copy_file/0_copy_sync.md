@@ -3,13 +3,13 @@
 ```js
 copyFileSyncNode(
   new URL("./input/a.txt", import.meta.url),
-  new URL("./a.txt", import.meta.url),
+  new URL("./out/a.txt", import.meta.url),
 );
 ```
 
-# 1/2 write file "./a.txt"
+# 1/2 write file "./out/a.txt"
 
-see [./0_copy_sync/a.txt](./0_copy_sync/a.txt)
+see [./0_copy_sync/out/a.txt](./0_copy_sync/out/a.txt)
 
 # 2/2 return
 

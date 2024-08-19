@@ -1,14 +1,14 @@
 # [side_effects_filesystem.test.mjs](../../side_effects_filesystem.test.mjs)
 
 ```js
-writeFileSync(new URL("./toto.txt", import.meta.url), "first");
+writeFileSync(new URL("./out/toto.txt", import.meta.url), "first");
 console.log("hey");
-writeFileSync(new URL("./toto.txt", import.meta.url), "second");
+writeFileSync(new URL("./out/toto.txt", import.meta.url), "second");
 ```
 
-# 1/4 write file "./toto.txt"
+# 1/4 write file "./out/toto.txt"
 
-see [./11_write_same_file_not_grouped_and_out/toto.txt](./11_write_same_file_not_grouped_and_out/toto.txt)
+see [./11_write_same_file_not_grouped_and_out/out/toto.txt](./11_write_same_file_not_grouped_and_out/out/toto.txt)
 
 # 2/4 console.log
 
@@ -16,9 +16,9 @@ see [./11_write_same_file_not_grouped_and_out/toto.txt](./11_write_same_file_not
 hey
 ```
 
-# 3/4 write file "./toto.txt"
+# 3/4 write file "./out/toto.txt"
 
-see [./11_write_same_file_not_grouped_and_out/toto_1.txt](./11_write_same_file_not_grouped_and_out/toto_1.txt)
+see [./11_write_same_file_not_grouped_and_out/out/toto_1.txt](./11_write_same_file_not_grouped_and_out/out/toto_1.txt)
 
 # 4/4 return
 
