@@ -74,10 +74,18 @@ export const jsenvPluginFsRedirection = ({
       if (!stat) {
         return null;
       }
-      const urlRaw = preserveSymlinks
-        ? urlObject.href
-        : resolveSymlink(urlObject.href);
-      const resolvedUrl = `${urlRaw}${search}${hash}`;
+      const urlBeforeSymlinkResolution = urlObject.href;
+      if (preserveSymlinks) {
+        return `${urlBeforeSymlinkResolution}${search}${hash}`;
+      }
+      const urlAfterSymlinkResolution = resolveSymlink(
+        urlBeforeSymlinkResolution,
+      );
+      if (urlAfterSymlinkResolution !== urlBeforeSymlinkResolution) {
+        reference.leadsToASymlink = true;
+        // reference.baseUrl = urlBeforeSymlinkResolution;
+      }
+      const resolvedUrl = `${urlAfterSymlinkResolution}${search}${hash}`;
       return resolvedUrl;
     },
   };

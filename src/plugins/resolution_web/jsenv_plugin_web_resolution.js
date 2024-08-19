@@ -16,12 +16,11 @@ export const jsenvPluginWebResolution = () => {
         );
         return url;
       }
-      const url = new URL(
-        reference.specifier,
-        // baseUrl happens second argument to new URL() is different from
-        // import.meta.url or document.currentScript.src
-        reference.baseUrl || ownerUrlInfo.originalUrl || ownerUrlInfo.url,
-      );
+      // baseUrl happens second argument to new URL() is different from
+      // import.meta.url or document.currentScript.src
+      const parentUrl =
+        reference.baseUrl || ownerUrlInfo.originalUrl || ownerUrlInfo.url;
+      const url = new URL(reference.specifier, parentUrl);
       return url;
     },
   };
