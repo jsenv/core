@@ -1,11 +1,7 @@
-# [0_basic](../../js_module_syntax_error_build.test.mjs#L6)
+# [0_basic](../../js_module_syntax_error_build.test.mjs#L15)
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-})
+run()
 ```
 
 ```console

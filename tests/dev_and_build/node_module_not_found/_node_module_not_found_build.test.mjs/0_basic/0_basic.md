@@ -1,11 +1,7 @@
-# [0_basic](../../node_module_not_found_build.test.mjs#L6)
+# [0_basic](../../node_module_not_found_build.test.mjs#L15)
 
 ```js
-build({
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
-  buildDirectoryUrl: new URL("./dist/", import.meta.url),
-  entryPoints: { "./main.html": "main.html" },
-})
+run()
 ```
 
 ```console
@@ -20,7 +16,8 @@ base/client/main.js:1:7
 Cannot find "not_found" imported from base/client/node_modules/foo/index.js
 --- plugin name ---
 "jsenv:node_esm_resolution"
-  at async base/node_module_not_found_build.test.mjs:5:1
+  at async run (base/node_module_not_found_build.test.mjs:5:3)
+  at async base/node_module_not_found_build.test.mjs:12:1
 ```
 
 ---

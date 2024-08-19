@@ -1,4 +1,4 @@
-# [0_basic](../../script_module_not_found_build.test.mjs#L20)
+# [0_basic](../../script_module_not_found_build.test.mjs#L22)
 
 ```js
 run()
