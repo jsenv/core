@@ -1,6 +1,5 @@
-import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
-
 import { build } from "@jsenv/core";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
 await build({
   sourceDirectoryUrl: new URL("../../src/", import.meta.url),

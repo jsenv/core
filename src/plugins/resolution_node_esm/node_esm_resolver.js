@@ -45,8 +45,7 @@ export const createNodeEsmResolver = ({
       );
       return url;
     }
-    const parentUrl =
-      reference.baseUrl || ownerUrlInfo.originalUrl || ownerUrlInfo.url;
+    const parentUrl = reference.baseUrl || ownerUrlInfo.url;
     if (!parentUrl.startsWith("file:")) {
       const url = new URL(reference.specifier, parentUrl);
       return url;
