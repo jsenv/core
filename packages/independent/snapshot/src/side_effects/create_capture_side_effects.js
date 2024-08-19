@@ -15,6 +15,13 @@ export const createCaptureSideEffects = ({
     rootDirectoryUrl,
   }),
 }) => {
+  if (executionEffects === false) {
+    executionEffects = {
+      catch: false,
+      return: false,
+    };
+  }
+
   const detectors = [];
   if (logEffects) {
     detectors.push(logSideEffects(logEffects === true ? {} : logEffects));
@@ -283,6 +290,33 @@ export const createCaptureSideEffects = ({
       finallyCallbackSet.clear();
     };
 
+    const onThrowOrReject = (value, isThrow) => {
+      if (executionEffects.catch === false) {
+        throw value;
+      }
+      if (typeof executionEffects.catch === "function") {
+        executionEffects.catch(value);
+      }
+      if (isThrow) {
+        onCatch(value);
+      } else {
+        onReject(value);
+      }
+    };
+    const onReturnOrResolve = (value, isReturn) => {
+      if (executionEffects.return === false) {
+        return;
+      }
+      if (typeof executionEffects.return === "function") {
+        executionEffects.return(value);
+      }
+      if (isReturn) {
+        onReturn(value);
+      } else {
+        onResolve(value);
+      }
+    };
+
     process.env.CAPTURING_SIDE_EFFECTS = "1";
     functionExecutingCount++;
     let returnedPromise = false;
@@ -292,34 +326,22 @@ export const createCaptureSideEffects = ({
         onReturn(RETURN_PROMISE);
         returnedPromise = valueReturned.then(
           (value) => {
-            onResolve(value);
+            onReturnOrResolve(value);
             onFinally();
             return sideEffects;
           },
           (e) => {
-            if (executionEffects.catch === false) {
-              throw e;
-            }
-            if (typeof executionEffects.catch === "function") {
-              executionEffects.catch(e);
-            }
-            onReject(e);
+            onThrowOrReject(e);
             onFinally();
             return sideEffects;
           },
         );
         return returnedPromise;
       }
-      onReturn(valueReturned);
+      onReturnOrResolve(valueReturned, true);
       return sideEffects;
     } catch (e) {
-      if (executionEffects.catch === false) {
-        throw e;
-      }
-      if (typeof executionEffects.catch === "function") {
-        executionEffects.catch(e);
-      }
-      onCatch(e);
+      onThrowOrReject(e, true);
       return sideEffects;
     } finally {
       if (!returnedPromise) {
