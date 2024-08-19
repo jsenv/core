@@ -22116,6 +22116,11 @@ const defaultRuntimeCompat = {
   safari: "11.3",
   samsung: "9.2",
 };
+const logsDefault = {
+  level: "info",
+  disabled: false,
+  animation: true,
+};
 
 /**
  * Generate an optimized version of source files into a directory
@@ -22154,11 +22159,7 @@ const defaultRuntimeCompat = {
 const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
-  logLevel = "info",
-  logs = {
-    disabled: false,
-    animation: true,
-  },
+  logs = logsDefault,
   sourceDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
@@ -22207,6 +22208,21 @@ const build = async ({
       throw new TypeError(
         `${unexpectedParamNames.join(",")}: there is no such param`,
       );
+    }
+    // logs
+    {
+      if (typeof logs !== "object") {
+        throw new TypeError(`logs must be an object, got ${logs}`);
+      }
+      const unexpectedLogsKeys = Object.keys(logs).filter(
+        (key) => !Object.hasOwn(logsDefault, key),
+      );
+      if (unexpectedLogsKeys.length > 0) {
+        throw new TypeError(
+          `${unexpectedLogsKeys.join(",")}: no such key on logs`,
+        );
+      }
+      logs = { ...logsDefault, ...logs };
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
       sourceDirectoryUrl,
@@ -22336,7 +22352,7 @@ build ${entryPointKeys.length} entry points`);
     };
     const rawKitchen = createKitchen({
       signal,
-      logLevel,
+      logLevel: logs.level,
       rootDirectoryUrl: sourceDirectoryUrl,
       ignore,
       // during first pass (craft) we keep "ignore:" when a reference is ignored
@@ -22416,7 +22432,7 @@ build ${entryPointKeys.length} entry points`);
 
     const finalKitchen = createKitchen({
       name: "shape",
-      logLevel,
+      logLevel: logs.level,
       rootDirectoryUrl: sourceDirectoryUrl,
       // here most plugins are not there
       // - no external plugin
@@ -22741,7 +22757,7 @@ build ${entryPointKeys.length} entry points`);
     try {
       const result = await runBuild({
         signal: operation.signal,
-        logLevel,
+        logLevel: logs.level,
       });
       return result;
     } finally {

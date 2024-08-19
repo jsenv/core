@@ -5,7 +5,7 @@ const test = async ({ name, ...params }) => {
   const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
   const directorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
-    logLevel: "warn",
+    logs: { level: "warn" },
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: snapshotDirectoryUrl,
     entryPoints: {

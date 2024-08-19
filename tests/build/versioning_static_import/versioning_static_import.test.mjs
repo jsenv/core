@@ -30,12 +30,10 @@ const test = async ({ name, ...rest }) => {
     );
     const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
     await build({
-      logLevel: "warn",
+      logs: { level: "warn" },
       sourceDirectoryUrl: new URL("./client/", import.meta.url),
       buildDirectoryUrl: new URL("./dist/", import.meta.url),
-      entryPoints: {
-        "./main.html": "main.html",
-      },
+      entryPoints: { "./main.html": "main.html" },
       versioningMethod: "filename",
       // we could just disable bundling to achieve the same result
       // but this allows to test versioning with bundling and include param
