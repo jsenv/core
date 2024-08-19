@@ -2,29 +2,26 @@
 
 ```js
 writeFileSync(
-  new URL("./out/toto.txt", import.meta.url),
+  new URL("./out/1_write_then_read_sync.txt", import.meta.url),
   "1_write_then_read_sync",
 );
-return String(readFileSync(new URL("./toto.txt", import.meta.url)));
+return String(
+  readFileSync(
+    new URL("./out/1_write_then_read_sync.txt", import.meta.url),
+  ),
+);
 ```
 
-# 1/2 write file "./out/toto.txt"
+# 1/2 write file "./out/1_write_then_read_sync.txt"
 
 ```txt
 1_write_then_read_sync
 ```
 
-# 2/2 throw
+# 2/2 return
 
-```console
-Error: ENOENT: no such file or directory, open 'base/toto.txt'
-  at test.filesystemEffects.textualFilesInline (base/side_effects_filesystem.test.mjs:90:23)
-  at startTesting (base/side_effects_filesystem.test.mjs:34:11) {
-  errno: -2,
-  code: "ENOENT",
-  syscall: "open",
-  path: "base/toto.txt",
-}
+```js
+1_write_then_read_sync
 ```
 
 ---

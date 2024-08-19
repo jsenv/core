@@ -2,12 +2,12 @@
 
 ```js
 writeFileSync(
-  new URL("../toto.txt", import.meta.url),
+  new URL("../6_write_above_base.txt", import.meta.url),
   "6_write_above_base",
 );
 ```
 
-# 1/2 write file "../toto.txt"
+# 1/2 write file "../6_write_above_base.txt"
 
 ```txt
 6_write_above_base

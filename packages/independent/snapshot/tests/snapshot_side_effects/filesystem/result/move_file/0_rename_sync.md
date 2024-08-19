@@ -3,7 +3,7 @@
 ```js
 renameSync(
   new URL("./input/a.txt", import.meta.url),
-  new URL("./out/a.txt", import.meta.url),
+  new URL("./out/0_rename_sync.txt", import.meta.url),
 );
 ```
 

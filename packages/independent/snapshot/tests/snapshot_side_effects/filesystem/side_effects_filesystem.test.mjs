@@ -70,7 +70,7 @@ await startTesting(({ test }) => {
       "write_file/0_write_sync",
       () => {
         writeFileSync(
-          new URL("./out/toto.txt", import.meta.url),
+          new URL("./out/0_write_sync.txt", import.meta.url),
           "0_write_file_sync",
         );
       },
@@ -84,10 +84,14 @@ await startTesting(({ test }) => {
       "write_file/1_write_then_read_sync",
       () => {
         writeFileSync(
-          new URL("./out/toto.txt", import.meta.url),
+          new URL("./out/1_write_then_read_sync.txt", import.meta.url),
           "1_write_then_read_sync",
         );
-        return String(readFileSync(new URL("./toto.txt", import.meta.url)));
+        return String(
+          readFileSync(
+            new URL("./out/1_write_then_read_sync.txt", import.meta.url),
+          ),
+        );
       },
       {
         filesystemEffects: {
@@ -99,7 +103,7 @@ await startTesting(({ test }) => {
       "write_file/2_write_sync_deep",
       () => {
         writeFileSync(
-          new URL("./out/toto/toto.txt", import.meta.url),
+          new URL("./out/toto/2_write_sync_deep.txt", import.meta.url),
           "2_write_sync_deep",
         );
       },
@@ -113,7 +117,7 @@ await startTesting(({ test }) => {
       "write_file/3_write_async",
       async () => {
         await writeFile(
-          new URL("./out/toto.txt", import.meta.url),
+          new URL("./out/3_write_async.txt", import.meta.url),
           "3_write_async",
         );
       },
@@ -127,7 +131,7 @@ await startTesting(({ test }) => {
       "write_file/4_write_inside_base",
       () => {
         writeFileSync(
-          new URL("./out/toto.txt", import.meta.url),
+          new URL("./out/4_write_inside_base.txt", import.meta.url),
           "4_write_inside_base",
         );
       },
@@ -139,7 +143,10 @@ await startTesting(({ test }) => {
     );
     test("write_file/5_write_inside_base_and_textual_out", () => {
       writeFileSync(
-        new URL("./out/toto.txt", import.meta.url),
+        new URL(
+          "./out/5_write_inside_base_and_textual_out.txt",
+          import.meta.url,
+        ),
         "5_write_inside_base_and_textual_out",
       );
     });
@@ -147,7 +154,7 @@ await startTesting(({ test }) => {
       "write_file/6_write_above_base",
       () => {
         writeFileSync(
-          new URL("../toto.txt", import.meta.url),
+          new URL("../6_write_above_base.txt", import.meta.url),
           "6_write_above_base",
         );
       },
@@ -159,15 +166,21 @@ await startTesting(({ test }) => {
     );
     test("write_file/7_write_above_base_and_textual_out", () => {
       writeFileSync(
-        new URL("../toto.txt", import.meta.url),
+        new URL("../7_write_above_base_and_textual_out.txt", import.meta.url),
         "7_write_above_base_and_out",
       );
     });
     test(
       "write_file/8_write_same_file",
       () => {
-        writeFileSync(new URL("./out/toto.txt", import.meta.url), "a");
-        writeFileSync(new URL("./out/toto.txt", import.meta.url), "b");
+        writeFileSync(
+          new URL("./out/8_write_same_file.txt", import.meta.url),
+          "a",
+        );
+        writeFileSync(
+          new URL("./out/8_write_same_file.txt", import.meta.url),
+          "b",
+        );
       },
       {
         filesystemEffects: {
@@ -193,9 +206,15 @@ await startTesting(({ test }) => {
     test(
       "write_file/10_write_same_file_not_grouped",
       () => {
-        writeFileSync(new URL("./out/toto.txt", import.meta.url), "first");
+        writeFileSync(
+          new URL("./out/10_write_same_file_not_grouped.txt", import.meta.url),
+          "first",
+        );
         console.log("hey");
-        writeFileSync(new URL("./out/toto.txt", import.meta.url), "second");
+        writeFileSync(
+          new URL("./out/10_write_same_file_not_grouped.txt", import.meta.url),
+          "second",
+        );
       },
       {
         filesystemEffects: {
@@ -204,19 +223,31 @@ await startTesting(({ test }) => {
       },
     );
     test("write_file/11_write_same_file_not_grouped_and_out", () => {
-      writeFileSync(new URL("./out/toto.txt", import.meta.url), "first");
+      writeFileSync(
+        new URL(
+          "./out/11_write_same_file_not_grouped_and_out.txt",
+          import.meta.url,
+        ),
+        "first",
+      );
       console.log("hey");
-      writeFileSync(new URL("./out/toto.txt", import.meta.url), "second");
+      writeFileSync(
+        new URL(
+          "./out/11_write_same_file_not_grouped_and_out.txt",
+          import.meta.url,
+        ),
+        "second",
+      );
     });
     test("write_file/12_write_png", () => {
       writeFileSync(
-        new URL("./out/jsenv.png", import.meta.url),
+        new URL("./out/12_write_png.png", import.meta.url),
         readFileSync(new URL("./input/jsenv.png", import.meta.url)),
       );
     });
     test("write_file/13_write_json", () => {
       writeFileSync(
-        new URL("./out/data.json", import.meta.url),
+        new URL("./out/13_write_json.json", import.meta.url),
         JSON.stringify(
           {
             url: import.meta.url,
@@ -269,7 +300,7 @@ await startTesting(({ test }) => {
       await new Promise((resolve, reject) => {
         copyFileNode(
           new URL("./input/a.txt", import.meta.url),
-          new URL("./out/a.txt", import.meta.url),
+          new URL("./out/0_copy_async.txt", import.meta.url),
           (err) => {
             if (err) {
               reject(err);
@@ -285,7 +316,7 @@ await startTesting(({ test }) => {
     test("move_file/0_rename_sync", () => {
       renameSync(
         new URL("./input/a.txt", import.meta.url),
-        new URL("./out/a.txt", import.meta.url),
+        new URL("./out/0_rename_sync.txt", import.meta.url),
       );
     });
   }

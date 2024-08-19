@@ -2,14 +2,17 @@
 
 ```js
 writeFileSync(
-  new URL("./out/toto.txt", import.meta.url),
+  new URL(
+    "./out/5_write_inside_base_and_textual_out.txt",
+    import.meta.url,
+  ),
   "5_write_inside_base_and_textual_out",
 );
 ```
 
-# 1/2 write file "./out/toto.txt"
+# 1/2 write file "./out/5_write_inside_base_and_textual_out.txt"
 
-see [./5_write_inside_base_and_textual_out/out/toto.txt](./5_write_inside_base_and_textual_out/out/toto.txt)
+see [./5_write_inside_base_and_textual_out/out/5_write_inside_base_and_textual_out.txt](./5_write_inside_base_and_textual_out/out/5_write_inside_base_and_textual_out.txt)
 
 # 2/2 return
 

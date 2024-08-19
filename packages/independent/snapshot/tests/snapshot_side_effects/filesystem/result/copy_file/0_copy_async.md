@@ -4,7 +4,7 @@
 await new Promise((resolve, reject) => {
   copyFileNode(
     new URL("./input/a.txt", import.meta.url),
-    new URL("./out/a.txt", import.meta.url),
+    new URL("./out/0_copy_async.txt", import.meta.url),
     (err) => {
       if (err) {
         reject(err);
@@ -16,9 +16,9 @@ await new Promise((resolve, reject) => {
 });
 ```
 
-# 1/2 write file "./out/a.txt"
+# 1/2 write file "./out/0_copy_async.txt"
 
-see [./0_copy_async/out/a.txt](./0_copy_async/out/a.txt)
+see [./0_copy_async/out/0_copy_async.txt](./0_copy_async/out/0_copy_async.txt)
 
 # 2/2 resolve
 

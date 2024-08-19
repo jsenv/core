@@ -1,18 +1,24 @@
 # [side_effects_filesystem.test.mjs](../../side_effects_filesystem.test.mjs)
 
 ```js
-writeFileSync(new URL("./out/toto.txt", import.meta.url), "a");
-writeFileSync(new URL("./out/toto.txt", import.meta.url), "b");
+writeFileSync(
+  new URL("./out/8_write_same_file.txt", import.meta.url),
+  "a",
+);
+writeFileSync(
+  new URL("./out/8_write_same_file.txt", import.meta.url),
+  "b",
+);
 ```
 
 # 1/2 write 2 files into "./out/"
 
-## toto.txt
+## 8_write_same_file.txt
 ```txt
 a
 ```
 
-## toto.txt
+## 8_write_same_file.txt
 ```txt
 b
 ```

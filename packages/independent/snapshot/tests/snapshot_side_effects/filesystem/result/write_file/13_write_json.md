@@ -2,7 +2,7 @@
 
 ```js
 writeFileSync(
-  new URL("./out/data.json", import.meta.url),
+  new URL("./out/13_write_json.json", import.meta.url),
   JSON.stringify(
     {
       url: import.meta.url,
@@ -16,9 +16,9 @@ writeFileSync(
 );
 ```
 
-# 1/2 write file "./out/data.json"
+# 1/2 write file "./out/13_write_json.json"
 
-see [./13_write_json/out/data.json](./13_write_json/out/data.json)
+see [./13_write_json/out/13_write_json.json](./13_write_json/out/13_write_json.json)
 
 # 2/2 return
 
