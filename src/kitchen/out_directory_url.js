@@ -46,9 +46,9 @@ export const determineFileUrlForOutDirectory = (
 
 // see https://github.com/parshap/node-sanitize-filename/blob/master/index.js
 const asValidFilename = (string) => {
-  return string
-    .trim()
-    .toLowerCase()
-    .replace(/[ ,.]/g, "_")
-    .replace(/["/?<>\\:*|]/g, "");
+  string = string.trim().toLowerCase();
+  if (string === ".") return "_";
+  if (string === "..") return "__";
+  string = string.replace(/[ ,]/g, "_").replace(/["/?<>\\:*|]/g, "");
+  return string;
 };

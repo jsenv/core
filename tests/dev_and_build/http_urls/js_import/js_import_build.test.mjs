@@ -24,5 +24,5 @@ const run = async ({ http }) => {
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_http_preserved", () => run({ http: false }));
-  test.ONLY("1_http_build", () => run({ http: true }));
+  test("1_http_build", () => run({ http: true }));
 });
