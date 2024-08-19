@@ -151,7 +151,11 @@ export const createKitchen = ({
         reference.type !== "js_import"
       ) {
         referenceUrl = `ignore:${referenceUrl}`;
-      } else if (isIgnored(referenceUrl)) {
+      } else if (
+        reference.url && reference.original
+          ? isIgnored(reference.original.url)
+          : isIgnored(referenceUrl)
+      ) {
         referenceUrl = `ignore:${referenceUrl}`;
       }
 
@@ -359,7 +363,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo.subtypeHint ||
         "";
       // during build urls info are reused and load returns originalUrl/originalContent
-      urlInfo.originalUrl = originalUrl || urlInfo.originalUrl;
+      urlInfo.originalUrl = originalUrl
+        ? String(originalUrl)
+        : urlInfo.originalUrl;
       if (data) {
         Object.assign(urlInfo.data, data);
       }
