@@ -58,15 +58,16 @@ export const spyFilesystemCalls = (
     // - writing file for the 1st time
     // - updating file content
     // the important part is the file content in the end of the function execution
-    const reason =
-      !stateBefore.found && stateAfter.found
-        ? "created"
-        : Buffer.compare(stateBefore.buffer, stateAfter.buffer)
-          ? "content_modified"
-          : stateBefore.mtimeMs === stateAfter.mtimeMs
-            ? ""
-            : "mtime_modified";
-    if (!reason) {
+    let reason;
+    if (!stateBefore.found && stateAfter.found) {
+      reason = "created";
+    } else if (Buffer.compare(stateBefore.buffer, stateAfter.buffer)) {
+      reason = "content_modified";
+    } else if (stateBefore.mtimeMs !== stateAfter.mtimeMs) {
+      reason = "mtime_modified";
+    } else if (stateBefore.url !== stateAfter.url) {
+      reason = "moved";
+    } else {
       // file is exactly the same
       // function did not have any effect on the file
       return;

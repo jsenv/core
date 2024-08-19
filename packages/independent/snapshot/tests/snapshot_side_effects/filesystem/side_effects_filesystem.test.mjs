@@ -11,6 +11,7 @@ import {
   copyFile as copyFileNode,
   copyFileSync as copyFileSyncNode,
   existsSync,
+  renameSync,
 } from "node:fs";
 
 const startTesting = async (fn) => {
@@ -286,12 +287,12 @@ await startTesting(({ test }) => {
       });
     });
   }
-  // move_file: {
-  //   test("move_file/0_rename_sync", () => {
-  //     renameSync(
-  //       new URL("./input/a.txt", import.meta.url),
-  //       new URL("./dist/a.txt", import.meta.url),
-  //     );
-  //   });
-  // }
+  move_file: {
+    test("move_file/0_rename_sync", () => {
+      renameSync(
+        new URL("./input/a.txt", import.meta.url),
+        new URL("./dist/a.txt", import.meta.url),
+      );
+    });
+  }
 });

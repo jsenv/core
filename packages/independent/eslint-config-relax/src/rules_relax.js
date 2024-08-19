@@ -162,7 +162,8 @@ export const rulesRelax = {
   "no-multi-str": ["error"],
   "no-multiple-empty-lines": ["off", { max: 1 }],
   "no-native-reassign": ["error"],
-  "no-negated-condition": ["error"],
+  // theorically great but too often a pain, does not fix the relax mindset
+  "no-negated-condition": ["off"],
   // disabled because deprecated in favor of no-unsafe-negation
   // https://eslint.org/docs/rules/no-negated-in-lhs
   "no-negated-in-lhs": ["off"],
