@@ -97,7 +97,6 @@ const logsDefault = {
 export const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
-  logLevel = "info",
   logs = logsDefault,
   sourceDirectoryUrl,
   buildDirectoryUrl,
@@ -291,7 +290,7 @@ build ${entryPointKeys.length} entry points`);
     };
     const rawKitchen = createKitchen({
       signal,
-      logLevel,
+      logLevel: logs.level,
       rootDirectoryUrl: sourceDirectoryUrl,
       ignore,
       // during first pass (craft) we keep "ignore:" when a reference is ignored
@@ -371,7 +370,7 @@ build ${entryPointKeys.length} entry points`);
 
     const finalKitchen = createKitchen({
       name: "shape",
-      logLevel,
+      logLevel: logs.level,
       rootDirectoryUrl: sourceDirectoryUrl,
       // here most plugins are not there
       // - no external plugin
@@ -698,7 +697,7 @@ build ${entryPointKeys.length} entry points`);
     try {
       const result = await runBuild({
         signal: operation.signal,
-        logLevel,
+        logLevel: logs.level,
       });
       return result;
     } finally {
