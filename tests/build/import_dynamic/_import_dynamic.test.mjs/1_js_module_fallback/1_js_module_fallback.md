@@ -15,7 +15,7 @@ see [./build/](./build/)
 ```js
 {
   "answer": 42,
-  "nestedFeatureUrl": "/js/nested_feature.nomodule.js"
+  "nestedFeatureUrl": "/js/nested_feature.js"
 }
 ```
 

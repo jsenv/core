@@ -2,8 +2,73 @@
 <html>
   <head>
     <title>Title</title>
-    <meta charset="utf-8">
+    <meta charset="utf8">
+    <link rel="icon" href="data:,">
     <script>
+      ;(function() {
+        var __versionMappings__ = {
+          "/js/a.nomodule.js": "/js/a.nomodule.js?v=dd59140f",
+          "/js/b.nomodule.js": "/js/b.nomodule.js?v=11224fda",
+          "/js/objectSpread2.nomodule.js": "/js/objectSpread2.nomodule.js?v=a1d95964",
+          "/js/main.nomodule.js": "/js/main.nomodule.js?v=ba609549"
+        };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
+    </script>
+    <script>
+      function _await(value, then, direct) {
+        if (direct) {
+          return then ? then(value) : value;
+        }
+        if (!value || !value.then) {
+          value = Promise.resolve(value);
+        }
+        return then ? value.then(then) : value;
+      }
+      function _async(f) {
+        return function () {
+          for (var args = [], i = 0; i < arguments.length; i++) {
+            args[i] = arguments[i];
+          }
+          try {
+            return Promise.resolve(f.apply(this, args));
+          } catch (e) {
+            return Promise.reject(e);
+          }
+        };
+      }
+      function _empty() {}
+      function _awaitIgnored(value, direct) {
+        if (!direct) {
+          return value && value.then ? value.then(_empty) : Promise.resolve();
+        }
+      }
+      function _invoke(body, then) {
+        var result = body();
+        if (result && result.then) {
+          return result.then(then);
+        }
+        return then(result);
+      }
+      function _catch(body, recover) {
+        try {
+          var result = body();
+        } catch (e) {
+          return recover(e);
+        }
+        if (result && result.then) {
+          return result.then(void 0, recover);
+        }
+        return result;
+      }
+      function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+      function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+      function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+      function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+      function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+      function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       /*
        * This file is a modified version of https://github.com/systemjs/systemjs/blob/main/dist/s.js
        * with the following changes:
@@ -47,9 +112,9 @@
               registerRegistry[document.currentScript.src] = [deps, declare];
               return null;
             }
-            const url = document.currentScript.src || `${window.location.href}__inline_script__${++inlineScriptCount}`;
+            const url = document.currentScript.src || "".concat(window.location.href, "__inline_script__").concat(++inlineScriptCount);
             registerRegistry[url] = [deps, declare];
-            return _import(url);
+            return _import2(url);
           };
           System.instantiate = url => {
             const script = createScript(url);
@@ -63,7 +128,7 @@
               window.addEventListener("error", windowErrorCallback);
               script.addEventListener("error", () => {
                 window.removeEventListener("error", windowErrorCallback);
-                reject(`An error occured while loading url with <script> for ${url}`);
+                reject("An error occured while loading url with <script> for ".concat(url));
               });
               script.addEventListener("load", () => {
                 window.removeEventListener("error", windowErrorCallback);
@@ -85,7 +150,7 @@
             // Only add cross origin for actual cross origin
             // this is because Safari triggers for all
             // - https://bugs.webkit.org/show_bug.cgi?id=171566
-            if (url.indexOf(`${self.location.origin}/`)) {
+            if (url.indexOf("".concat(self.location.origin, "/"))) {
               script.crossOrigin = "anonymous";
             }
             script.__s__ = true;
@@ -160,39 +225,42 @@
               });
             });
           }
-          System.register = async (deps, declare) => {
+          System.register = _async(function (deps, declare) {
             System.register = () => {
               throw new Error("unexpected call to System.register (called outside url instantiation)");
             };
             const url = self.location.href;
             registerRegistry[url] = [deps, declare];
-            const namespace = await _import(url);
-            firstImportCallbacks.forEach(firstImportCallback => {
-              firstImportCallback();
+            return _await(_import2(url), function (namespace) {
+              firstImportCallbacks.forEach(firstImportCallback => {
+                firstImportCallback();
+              });
+              firstImportCallbacks.length = 0;
+              return namespace;
             });
-            firstImportCallbacks.length = 0;
-            return namespace;
-          };
-          System.instantiate = async url => {
-            const response = await self.fetch(url, {
+          });
+          System.instantiate = _async(function (url) {
+            return _await(self.fetch(url, {
               credentials: "same-origin"
+            }), function (response) {
+              if (!response.ok) {
+                throw Error("Failed to fetch module at ".concat(url));
+              }
+              return _await(response.text(), function (source) {
+                if (source.indexOf("//# sourceURL=") < 0) {
+                  source += "\n//# sourceURL=".concat(url);
+                }
+                const register = System.register;
+                System.register = (deps, declare) => {
+                  registerRegistry[url] = [deps, declare];
+                };
+                (0, self.eval)(source);
+                System.register = register;
+              });
             });
-            if (!response.ok) {
-              throw Error(`Failed to fetch module at ${url}`);
-            }
-            let source = await response.text();
-            if (source.indexOf("//# sourceURL=") < 0) {
-              source += `\n//# sourceURL=${url}`;
-            }
-            const register = System.register;
-            System.register = (deps, declare) => {
-              registerRegistry[url] = [deps, declare];
-            };
-            (0, self.eval)(source);
-            System.register = register;
-          };
+          });
         }
-        const _import = (specifier, parentUrl) => {
+        const _import2 = (specifier, parentUrl) => {
           const url = resolveUrl(specifier, parentUrl);
           const load = getOrCreateLoad(url, parentUrl);
           if (load.completionPromise) {
@@ -225,116 +293,135 @@
             namespace
           };
           loadRegistry[url] = load;
-          load.instantiatePromise = (async () => {
-            try {
+          load.instantiatePromise = _async(function () {
+            return _catch(function () {
               let registration = registerRegistry[url];
-              if (!registration) {
-                const instantiateReturnValue = System.instantiate(url, firstParentUrl);
-                if (instantiateReturnValue) {
-                  await instantiateReturnValue;
+              return _invoke(function () {
+                if (!registration) {
+                  const instantiateReturnValue = System.instantiate(url, firstParentUrl);
+                  return _invoke(function () {
+                    if (instantiateReturnValue) {
+                      return _awaitIgnored(instantiateReturnValue);
+                    }
+                  }, function () {
+                    registration = registerRegistry[url];
+                  });
                 }
-                registration = registerRegistry[url];
-              }
-              if (!registration) {
-                throw new Error(`System.register() not called after executing ${url}`);
-              }
-              const _export = (firstArg, secondArg) => {
-                load.hoistedExports = true;
-                let changed = false;
-                if (typeof firstArg === "string") {
-                  const name = firstArg;
-                  const value = secondArg;
-                  if (!(name in namespace) || namespace[name] !== value) {
-                    namespace[name] = value;
-                    changed = true;
-                  }
-                } else {
-                  Object.keys(firstArg).forEach(name => {
-                    const value = firstArg[name];
+              }, function () {
+                if (!registration) {
+                  throw new Error("System.register() not called after executing ".concat(url));
+                }
+                const _export = (firstArg, secondArg) => {
+                  load.hoistedExports = true;
+                  let changed = false;
+                  if (typeof firstArg === "string") {
+                    const name = firstArg;
+                    const value = secondArg;
                     if (!(name in namespace) || namespace[name] !== value) {
                       namespace[name] = value;
                       changed = true;
                     }
-                  });
-                  if (firstArg && firstArg.__esModule) {
-                    namespace.__esModule = firstArg.__esModule;
-                  }
-                }
-                if (changed) {
-                  load.importerSetters.forEach(importerSetter => {
-                    if (importerSetter) {
-                      importerSetter(namespace);
+                  } else {
+                    Object.keys(firstArg).forEach(name => {
+                      const value = firstArg[name];
+                      if (!(name in namespace) || namespace[name] !== value) {
+                        namespace[name] = value;
+                        changed = true;
+                      }
+                    });
+                    if (firstArg && firstArg.__esModule) {
+                      namespace.__esModule = firstArg.__esModule;
                     }
-                  });
-                }
-                return secondArg;
-              };
-              const [deps, declare] = registration;
-              const {
-                setters,
-                execute = () => {}
-              } = declare(_export, {
-                import: importId => _import(importId, url),
-                meta: createMeta(url)
+                  }
+                  if (changed) {
+                    load.importerSetters.forEach(importerSetter => {
+                      if (importerSetter) {
+                        importerSetter(namespace);
+                      }
+                    });
+                  }
+                  return secondArg;
+                };
+                const _registration = registration,
+                  _registration2 = _slicedToArray(_registration, 2),
+                  deps = _registration2[0],
+                  declare = _registration2[1];
+                const _declare = declare(_export, {
+                    import: importId => _import2(importId, url),
+                    meta: createMeta(url)
+                  }),
+                  setters = _declare.setters,
+                  _declare$execute = _declare.execute,
+                  execute = _declare$execute === void 0 ? () => {} : _declare$execute;
+                load.deps = deps;
+                load.setters = setters;
+                load.execute = execute;
               });
-              load.deps = deps;
-              load.setters = setters;
-              load.execute = execute;
-            } catch (e) {
+            }, function (e) {
               load.error = e;
               load.execute = null;
-            }
+            });
           })();
-          load.linkPromise = (async () => {
-            await load.instantiatePromise;
-            const dependencyLoads = await Promise.all(load.deps.map(async (dep, index) => {
-              const setter = load.setters[index];
-              const dependencyUrl = resolveUrl(dep, url);
-              const dependencyLoad = getOrCreateLoad(dependencyUrl, url);
-              if (dependencyLoad.instantiatePromise) {
-                await dependencyLoad.instantiatePromise;
-              }
-              if (setter) {
-                dependencyLoad.importerSetters.push(setter);
-                if (dependencyLoad.hoistedExports || !dependencyLoad.instantiatePromise) {
-                  setter(dependencyLoad.namespace);
-                }
-              }
-              return dependencyLoad;
-            }));
-            load.dependencyLoads = dependencyLoads;
+          load.linkPromise = _async(function () {
+            return _await(load.instantiatePromise, function () {
+              return _await(Promise.all(load.deps.map(_async(function (dep, index) {
+                const setter = load.setters[index];
+                const dependencyUrl = resolveUrl(dep, url);
+                const dependencyLoad = getOrCreateLoad(dependencyUrl, url);
+                return _invoke(function () {
+                  if (dependencyLoad.instantiatePromise) {
+                    return _awaitIgnored(dependencyLoad.instantiatePromise);
+                  }
+                }, function () {
+                  if (setter) {
+                    dependencyLoad.importerSetters.push(setter);
+                    if (dependencyLoad.hoistedExports || !dependencyLoad.instantiatePromise) {
+                      setter(dependencyLoad.namespace);
+                    }
+                  }
+                  return dependencyLoad;
+                });
+              }))), function (dependencyLoads) {
+                load.dependencyLoads = dependencyLoads;
+              });
+            });
           })();
           return load;
         };
-        const startExecution = async (load, importerUrl) => {
-          load.completionPromise = (async () => {
-            await instantiateAll(load, load, {});
-            await postOrderExec(load, importerUrl ? [importerUrl] : []);
-            return load.namespace;
-          })();
+        const startExecution = _async(function (load, importerUrl) {
+          load.completionPromise = function () {
+            return _await(instantiateAll(load, load, {}), function () {
+              return _await(postOrderExec(load, importerUrl ? [importerUrl] : []), function () {
+                return load.namespace;
+              });
+            });
+          }();
           return load.completionPromise;
-        };
-        const instantiateAll = async (load, parent, loaded) => {
+        });
+        const instantiateAll = _async(function (load, parent, loaded) {
           if (loaded[load.url]) {
             return;
           }
           loaded[load.url] = true;
-          try {
-            if (load.linkPromise) {
-              // load.linkPromise is null once instantiated
-              await load.linkPromise;
-            }
-            await Promise.all(load.dependencyLoads.map(dependencyLoad => {
-              return instantiateAll(dependencyLoad, parent, loaded);
-            }));
-          } catch (error) {
+          return _catch(function () {
+            return _invoke(function () {
+              if (load.linkPromise) {
+                // load.linkPromise is null once instantiated
+                return _awaitIgnored(load.linkPromise);
+              }
+            }, function () {
+              return _awaitIgnored(Promise.all(load.dependencyLoads.map(dependencyLoad => {
+                return instantiateAll(dependencyLoad, parent, loaded);
+              })));
+            });
+          }, function (error) {
             if (load.error) {
               throw error;
             }
             load.execute = null;
             throw error;
-          }
-        };
+          });
+        });
         const postOrderExec = (load, importStack) => {
           if (importStack.indexOf(load.url) > -1) {
             return undefined;
@@ -366,33 +453,36 @@
               throw err;
             }
           });
-          return (async () => {
-            if (depLoadPromises.length) {
-              const allDepPromise = Promise.all(depLoadPromises);
-              await allDepPromise;
-            }
-            try {
-              const executeReturnValue = execute.call(nullContext);
-              if (executeReturnValue) {
-                load.executePromise = executeReturnValue.then(() => {
-                  load.executePromise = null;
-                  load.completionPromise = load.namespace;
-                }, error => {
-                  load.executePromise = null;
-                  load.error = error;
-                  throw error;
-                });
-                return;
+          return _async(function () {
+            return _invoke(function () {
+              if (depLoadPromises.length) {
+                const allDepPromise = Promise.all(depLoadPromises);
+                return _awaitIgnored(allDepPromise);
               }
-              load.instantiatePromise = null;
-              load.linkPromise = null;
-              load.completionPromise = load.namespace;
-            } catch (error) {
-              load.error = error;
-              throw error;
-            } finally {
-              load.execute = null;
-            }
+            }, function () {
+              try {
+                const executeReturnValue = execute.call(nullContext);
+                if (executeReturnValue) {
+                  load.executePromise = executeReturnValue.then(() => {
+                    load.executePromise = null;
+                    load.completionPromise = load.namespace;
+                  }, error => {
+                    load.executePromise = null;
+                    load.error = error;
+                    throw error;
+                  });
+                  return;
+                }
+                load.instantiatePromise = null;
+                load.linkPromise = null;
+                load.completionPromise = load.namespace;
+              } catch (error) {
+                load.error = error;
+                throw error;
+              } finally {
+                load.execute = null;
+              }
+            });
           })();
         };
       
@@ -414,11 +504,10 @@
       })();
     </script>
   </head>
-
   <body>
     <script>window.resultPromise = new Promise(resolve => {
   window.resolveResultPromise = resolve;
 });</script>
-    <script src="/js/main.nomodule.js"></script>
+    <script src="/js/main.js?v=ba609549"></script>
   </body>
 </html>

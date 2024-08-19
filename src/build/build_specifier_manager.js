@@ -188,7 +188,7 @@ export const createBuildSpecifierManager = ({
       return url;
     },
     redirectReference: (reference) => {
-      let { firstReference } = reference;
+      let firstReference = reference;
       if (
         firstReference.isInline &&
         firstReference.prev &&

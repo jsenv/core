@@ -1,1 +1,0 @@
-export default JSON.parse("{\n  \"answer\": 42\n}");

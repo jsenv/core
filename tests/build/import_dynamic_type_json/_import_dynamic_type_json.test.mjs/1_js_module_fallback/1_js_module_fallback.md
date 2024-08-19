@@ -6,16 +6,62 @@ run({
 })
 ```
 
-# 1/2 write 3 files into "./build/"
+```console
+FETCH_URL_CONTENT_ERROR: Failed to fetch url content
+base/client/main.js?js_module_fallback:29:36
 
-see [./build/](./build/)
-
-# 2/2 resolve
-
-```js
-{
-  "answer": 42
-}
+An error occured during "fetchUrlContent"
+--- error message ---
+Failed to fetch url content
+base/client/main.js:1:31
+1 | const namespace = await import("./data.json?debug", {
+                                  ^
+An error occured during "fetchUrlContent"
+--- error stack ---
+Error: base/client/data.json.js?debug&as_json_module not found in graph
+    at fetchUrlContent (@jsenv/core/src/build/build_specifier_manager.js:350:13)
+    at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:206:31)
+    at visit (@jsenv/core/src/plugins/plugin_controller.js:270:33)
+    at visit (@jsenv/core/src/plugins/plugin_controller.js:276:13)
+    at async visit (@jsenv/core/src/plugins/plugin_controller.js:276:7)
+    at async visit (@jsenv/core/src/plugins/plugin_controller.js:276:7)
+    at async Object.callAsyncHooksUntil (@jsenv/core/src/plugins/plugin_controller.js:278:5)
+    at async Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:324:9)
+    at async @jsenv/core/src/kitchen/kitchen.js:482:11
+    at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)
+    at async @jsenv/core/src/kitchen/kitchen.js:480:9
+    at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:664:5)
+    at async fetchUrlContent (@jsenv/core/packages/internal/plugin-transpilation/src/js_module_fallback/jsenv_plugin_js_module_conversion.js:91:7)
+    at async callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:206:25)
+    at async visit (@jsenv/core/src/plugins/plugin_controller.js:270:27)
+    at async visit (@jsenv/core/src/plugins/plugin_controller.js:276:7)
+    at async Object.callAsyncHooksUntil (@jsenv/core/src/plugins/plugin_controller.js:278:5)
+    at async Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:324:9)
+    at async @jsenv/core/src/kitchen/kitchen.js:482:11
+    at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)
+    at async @jsenv/core/src/kitchen/kitchen.js:480:9
+    at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:664:5)
+    at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:571:7)
+    at async Promise.all (index 1)
+    at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:605:7)
+    at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:572:7)
+    at async Promise.all (index 1)
+    at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:605:7)
+    at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:572:7)
+    at async Promise.all (index 0)
+    at async startCookingDependencies (@jsenv/core/src/kitchen/kitchen.js:605:7)
+    at async Object.cookDependencies (@jsenv/core/src/kitchen/kitchen.js:608:5)
+    at async runBuild (@jsenv/core/src/build/build.js:582:9)
+    at async build (@jsenv/core/src/build/build.js:677:22)
+    at async run (base/import_dynamic_type_json.test.mjs:6:3)
+    at async snapshotTests (@jsenv/core/packages/independent/snapshot/src/side_effects/snapshot_tests.js:168:27)
+    at async base/import_dynamic_type_json.test.mjs:23:1
+--- plugin name ---
+"jsenv:move_to_build_directory"
+--- plugin name ---
+"jsenv:move_to_build_directory"
+  at async run (base/import_dynamic_type_json.test.mjs:6:3)
+  at async base/import_dynamic_type_json.test.mjs:23:1
 ```
 
 ---
