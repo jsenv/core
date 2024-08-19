@@ -1,7 +1,9 @@
-# [js_import_build.test.mjs](../js_import_build.test.mjs)
+# [http_urls_build.test.mjs](../http_urls_build.test.mjs)
 
 
 - [0_http_preserved](0_http_preserved/0_http_preserved.md)
+- [1_http](1_http/1_http.md)
+- [2_http_and_bundling](2_http_and_bundling/2_http_and_bundling.md)
 
 ---
 

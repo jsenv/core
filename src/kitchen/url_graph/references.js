@@ -310,7 +310,9 @@ const createReference = ({
     if (specifier instanceof URL) {
       specifier = specifier.href;
     } else {
-      throw new TypeError(`"specifier" must be a string, got ${specifier}`);
+      throw new TypeError(
+        `"specifier" must be a string, got ${specifier} in ${ownerUrlInfo.url}`,
+      );
     }
   }
   const reference = {
@@ -715,7 +717,7 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   }
   referencedUrlInfo.firstReference = reference;
   referencedUrlInfo.originalUrl =
-    referencedUrlInfo.originalUrl || reference.url;
+    referencedUrlInfo.originalUrl || (reference.original || reference).url;
 
   if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
     referencedUrlInfo.isEntryPoint = true;

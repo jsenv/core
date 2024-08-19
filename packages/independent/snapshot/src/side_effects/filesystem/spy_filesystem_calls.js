@@ -49,7 +49,7 @@ export const spyFilesystemCalls = (
   const fileDescriptorPathMap = new Map();
   const fileRestoreMap = new Map();
   const dirRestoreMap = new Map();
-  const onWriteFileDone = (fileUrl, stateBefore, stateAfter) => {
+  const onFileMutationDone = (stateBefore, stateAfter) => {
     if (!stateAfter.found) {
       // seems to be possible somehow
       return;
@@ -58,39 +58,42 @@ export const spyFilesystemCalls = (
     // - writing file for the 1st time
     // - updating file content
     // the important part is the file content in the end of the function execution
-    const reason =
-      !stateBefore.found && stateAfter.found
-        ? "created"
-        : Buffer.compare(stateBefore.buffer, stateAfter.buffer)
-          ? "content_modified"
-          : stateBefore.mtimeMs === stateAfter.mtimeMs
-            ? ""
-            : "mtime_modified";
-    if (!reason) {
+    let reason;
+    if (!stateBefore.found && stateAfter.found) {
+      reason = "created";
+    } else if (Buffer.compare(stateBefore.buffer, stateAfter.buffer)) {
+      reason = "content_modified";
+    } else if (stateBefore.mtimeMs !== stateAfter.mtimeMs) {
+      reason = "mtime_modified";
+    } else if (stateBefore.url !== stateAfter.url) {
+      reason = "moved";
+    } else {
       // file is exactly the same
       // function did not have any effect on the file
       return;
     }
-    const action = getAction(fileUrl);
+    const beforeUrl = stateBefore.url;
+    const afterUrl = stateAfter.url;
+    const action = getAction(beforeUrl);
     const shouldCompare =
       action === "compare" ||
       action === "compare_presence_only" ||
       action === true;
     if (action === "undo" || shouldCompare) {
-      if (undoFilesystemSideEffects && !fileRestoreMap.has(fileUrl)) {
+      if (undoFilesystemSideEffects && !fileRestoreMap.has(beforeUrl)) {
         if (stateBefore.found) {
-          fileRestoreMap.set(fileUrl, () => {
-            writeFileSync(fileUrl, stateBefore.buffer);
+          fileRestoreMap.set(beforeUrl, () => {
+            writeFileSync(beforeUrl, stateBefore.buffer);
           });
         } else {
-          fileRestoreMap.set(fileUrl, () => {
-            removeFileSync(fileUrl, { allowUseless: true });
+          fileRestoreMap.set(beforeUrl, () => {
+            removeFileSync(beforeUrl, { allowUseless: true });
           });
         }
       }
     }
     if (shouldCompare) {
-      onWriteFile(fileUrl, stateAfter.buffer, reason);
+      onWriteFile(afterUrl, stateAfter.buffer, reason);
     }
     // "ignore", false, anything else
   };
@@ -121,9 +124,9 @@ export const spyFilesystemCalls = (
   };
   const restoreCallbackSet = new Set();
 
-  const getFileStateWithinHook = (fileUrl) => {
+  const getFileStateWithinHook = (filePath) => {
     return disableHooksWhileCalling(
-      () => getFileState(fileUrl),
+      () => getFileState(filePath),
       [openHook, closeHook],
     );
   };
@@ -208,14 +211,13 @@ export const spyFilesystemCalls = (
             fileDescriptorPathMap.delete(fileDescriptor);
             return;
           }
-          const fileUrl = pathToFileURL(filePath);
           if (buffer) {
-            onReadFile(String(fileUrl));
+            onReadFile(filePath);
           }
           fileDescriptorPathMap.delete(fileDescriptor);
           filesystemStateInfoMap.delete(filePath);
-          const stateAfter = getFileStateWithinHook(fileUrl);
-          onWriteFileDone(String(fileUrl), stateBefore, stateAfter);
+          const stateAfter = getFileStateWithinHook(filePath);
+          onFileMutationDone(stateBefore, stateAfter);
         },
       };
     },
@@ -225,12 +227,11 @@ export const spyFilesystemCalls = (
     _internalFs,
     "writeFileUtf8",
     (filePath) => {
-      const fileUrl = pathToFileURL(filePath);
-      const stateBefore = getFileStateWithinHook(fileUrl);
+      const stateBefore = getFileStateWithinHook(filePath);
       return {
         return: () => {
-          const stateAfter = getFileStateWithinHook(fileUrl);
-          onWriteFileDone(String(fileUrl), stateBefore, stateAfter);
+          const stateAfter = getFileStateWithinHook(filePath);
+          onFileMutationDone(stateBefore, stateAfter);
         },
       };
     },
@@ -242,12 +243,44 @@ export const spyFilesystemCalls = (
       },
     };
   });
+  const copyFileHook = hookIntoMethod(
+    _internalFs,
+    "copyFile",
+    (fromPath, toPath) => {
+      const stateBefore = getFileStateWithinHook(fromPath);
+      return {
+        return: () => {
+          const stateAfter = getFileStateWithinHook(toPath);
+          onFileMutationDone(stateBefore, stateAfter);
+        },
+      };
+    },
+    { execute: METHOD_EXECUTION_NODE_CALLBACK },
+  );
+  const renameHook = hookIntoMethod(
+    _internalFs,
+    "rename",
+    (fromPath, toPath) => {
+      const stateBefore = getFileStateWithinHook(fromPath);
+      return {
+        return: () => {
+          const stateAfter = getFileStateWithinHook(toPath);
+          onFileMutationDone(stateBefore, stateAfter);
+        },
+      };
+    },
+    {
+      execute: METHOD_EXECUTION_NODE_CALLBACK,
+    },
+  );
   restoreCallbackSet.add(() => {
     mkdirHook.remove();
     openHook.remove();
     closeHook.remove();
     writeFileUtf8Hook.remove();
     unlinkHook.remove();
+    copyFileHook.remove();
+    renameHook.remove();
   });
   return {
     restore: () => {
@@ -275,11 +308,13 @@ export const spyFilesystemCalls = (
   };
 };
 
-const getFileState = (file) => {
+const getFileState = (filePath) => {
+  const fileUrl = pathToFileURL(filePath);
   try {
-    const fileBuffer = readFileSync(file);
-    const { mtimeMs } = statSync(file);
+    const fileBuffer = readFileSync(fileUrl);
+    const { mtimeMs } = statSync(fileUrl);
     return {
+      url: String(fileUrl),
       found: true,
       mtimeMs,
       buffer: fileBuffer,
@@ -287,6 +322,7 @@ const getFileState = (file) => {
   } catch (e) {
     if (e.code === "ENOENT") {
       return {
+        url: String(fileUrl),
         found: false,
       };
     }

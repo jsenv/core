@@ -1,10 +1,10 @@
-# [0_http_preserved](../../js_import_build.test.mjs#L25)
+# [0_http_preserved](../../http_urls_build.test.mjs#L25)
 
 ```js
-run()
+run({ http: false })
 ```
 
-# 1/2 write 2 files into "./build/"
+# 1/2 write 3 files into "./build/"
 
 see [./build/](./build/)
 
@@ -12,7 +12,8 @@ see [./build/](./build/)
 
 ```js
 {
-  "url": "http://127.0.0.1/constants.js?foo=bar"
+  "url": "http://127.0.0.1/constants.js?foo=bar",
+  "answer": 42
 }
 ```
 

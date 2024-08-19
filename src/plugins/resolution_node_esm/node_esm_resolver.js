@@ -35,17 +35,27 @@ export const createNodeEsmResolver = ({
     const { ownerUrlInfo } = reference;
     if (reference.specifier === "/") {
       const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
-      return String(new URL(mainFilePath, rootDirectoryUrl));
+      const url = new URL(mainFilePath, rootDirectoryUrl);
+      return url;
     }
     if (reference.specifier[0] === "/") {
-      return new URL(
+      const url = new URL(
         reference.specifier.slice(1),
         ownerUrlInfo.context.rootDirectoryUrl,
-      ).href;
+      );
+      return url;
     }
-    const parentUrl = reference.baseUrl || ownerUrlInfo.url;
+    let parentUrl;
+    if (reference.baseUrl) {
+      parentUrl = reference.baseUrl;
+    } else if (ownerUrlInfo.originalUrl?.startsWith("http")) {
+      parentUrl = ownerUrlInfo.originalUrl;
+    } else {
+      parentUrl = ownerUrlInfo.url;
+    }
     if (!parentUrl.startsWith("file:")) {
-      return new URL(reference.specifier, parentUrl).href;
+      const url = new URL(reference.specifier, parentUrl);
+      return url;
     }
     const { url, type, packageDirectoryUrl } = applyNodeEsmResolution({
       conditions: packageConditions,

@@ -14,7 +14,7 @@ import { Http2ServerResponse } from "node:http2";
 import { performance as performance$1 } from "node:perf_hooks";
 import { lookup } from "node:dns";
 import { parseJsUrls, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, removeHtmlNode, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
-import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, SOURCEMAP, generateSourcemapFileUrl, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
 import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
@@ -1178,15 +1178,13 @@ const createDynamicLog = ({
 // is that node.js will later throw error if stream gets closed
 // while something listening data on it
 const spyStreamOutput = (stream, callback) => {
-  const originalWrite = stream.write;
-
   let output = "";
   let installed = true;
-
+  const originalWrite = stream.write;
   stream.write = function (...args /* chunk, encoding, callback */) {
     output += args;
     callback(output);
-    return originalWrite.call(stream, ...args);
+    return originalWrite.call(this, ...args);
   };
 
   const uninstall = () => {
@@ -12015,6 +12013,48 @@ const assertFetchedContentCompliance = ({ urlInfo, content }) => {
   }
 };
 
+const determineFileUrlForOutDirectory = (urlInfo) => {
+  let { url, filenameHint } = urlInfo;
+  const { rootDirectoryUrl, outDirectoryUrl } = urlInfo.context;
+  if (!outDirectoryUrl) {
+    return url;
+  }
+  if (!url.startsWith("file:")) {
+    return url;
+  }
+  if (!urlIsInsideOf(url, rootDirectoryUrl)) {
+    const fsRootUrl = ensureWindowsDriveLetter("file:///", url);
+    url = `${rootDirectoryUrl}@fs/${url.slice(fsRootUrl.length)}`;
+  }
+  if (filenameHint) {
+    url = setUrlFilename(url, filenameHint);
+  }
+  return moveUrl({
+    url,
+    from: rootDirectoryUrl,
+    to: outDirectoryUrl,
+  });
+};
+
+const determineSourcemapFileUrl = (urlInfo) => {
+  // sourcemap is a special kind of reference:
+  // It's a reference to a content generated dynamically the content itself.
+  // when jsenv is done cooking the file
+  //   during build it's urlInfo.url to be inside the build
+  //   but otherwise it's generatedUrl to be inside .jsenv/ directory
+  const generatedUrlObject = new URL(urlInfo.generatedUrl);
+  generatedUrlObject.searchParams.delete("js_module_fallback");
+  generatedUrlObject.searchParams.delete("as_js_module");
+  generatedUrlObject.searchParams.delete("as_js_classic");
+  generatedUrlObject.searchParams.delete("as_css_module");
+  generatedUrlObject.searchParams.delete("as_json_module");
+  generatedUrlObject.searchParams.delete("as_text_module");
+  generatedUrlObject.searchParams.delete("dynamic_import");
+  generatedUrlObject.searchParams.delete("cjs_as_js_module");
+  const urlForSourcemap = generatedUrlObject.href;
+  return generateSourcemapFileUrl(urlForSourcemap);
+};
+
 const createEventEmitter = () => {
   const callbackSet = new Set();
   const on = (callback) => {
@@ -12485,7 +12525,9 @@ const createReference = ({
     if (specifier instanceof URL) {
       specifier = specifier.href;
     } else {
-      throw new TypeError(`"specifier" must be a string, got ${specifier}`);
+      throw new TypeError(
+        `"specifier" must be a string, got ${specifier} in ${ownerUrlInfo.url}`,
+      );
     }
   }
   const reference = {
@@ -12890,7 +12932,7 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   }
   referencedUrlInfo.firstReference = reference;
   referencedUrlInfo.originalUrl =
-    referencedUrlInfo.originalUrl || reference.url;
+    referencedUrlInfo.originalUrl || (reference.original || reference).url;
 
   if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
     referencedUrlInfo.isEntryPoint = true;
@@ -13791,22 +13833,6 @@ const createUrlInfoTransformer = ({
     if (!may || !shouldHandle) {
       return;
     }
-    // sourcemap is a special kind of reference:
-    // It's a reference to a content generated dynamically the content itself.
-    // when jsenv is done cooking the file
-    //   during build it's urlInfo.url to be inside the build
-    //   but otherwise it's generatedUrl to be inside .jsenv/ directory
-    const generatedUrlObject = new URL(urlInfo.generatedUrl);
-    generatedUrlObject.searchParams.delete("js_module_fallback");
-    generatedUrlObject.searchParams.delete("as_js_module");
-    generatedUrlObject.searchParams.delete("as_js_classic");
-    generatedUrlObject.searchParams.delete("as_css_module");
-    generatedUrlObject.searchParams.delete("as_json_module");
-    generatedUrlObject.searchParams.delete("as_text_module");
-    generatedUrlObject.searchParams.delete("dynamic_import");
-    generatedUrlObject.searchParams.delete("cjs_as_js_module");
-    const urlForSourcemap = generatedUrlObject.href;
-    urlInfo.sourcemapGeneratedUrl = generateSourcemapFileUrl(urlForSourcemap);
 
     // case #1: already loaded during "load" hook
     // - happens during build
@@ -14228,7 +14254,11 @@ const createKitchen = ({
         reference.type !== "js_import"
       ) {
         referenceUrl = `ignore:${referenceUrl}`;
-      } else if (isIgnored(referenceUrl)) {
+      } else if (
+        reference.url && reference.original
+          ? isIgnored(reference.original.url)
+          : isIgnored(referenceUrl)
+      ) {
         referenceUrl = `ignore:${referenceUrl}`;
       }
 
@@ -14320,13 +14350,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.resolveReference = resolveReference;
 
   const finalizeReference = (reference) => {
+    const urlInfo = reference.urlInfo;
+    urlInfo.generatedUrl = determineFileUrlForOutDirectory(urlInfo);
+    urlInfo.sourcemapGeneratedUrl = determineSourcemapFileUrl(urlInfo);
+
     if (reference.isImplicit && reference.isWeak) {
       // not needed for implicit references that are not rendered anywhere
       // this condition excludes:
       // - side_effect_file references injected in entry points or at the top of files
       return;
     }
-
     {
       // This hook must touch reference.generatedUrl, NOT reference.url
       // And this is because this hook inject query params used to:
@@ -14433,7 +14466,9 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo.subtypeHint ||
         "";
       // during build urls info are reused and load returns originalUrl/originalContent
-      urlInfo.originalUrl = originalUrl || urlInfo.originalUrl;
+      urlInfo.originalUrl = originalUrl
+        ? String(originalUrl)
+        : urlInfo.originalUrl;
       if (data) {
         Object.assign(urlInfo.data, data);
       }
@@ -14444,7 +14479,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         urlInfo,
         content,
       });
-      urlInfo.generatedUrl = determineFileUrlForOutDirectory(urlInfo);
 
       // we wait here to read .contentAst and .originalContentAst
       // so that we don't trigger lazy getters
@@ -14779,30 +14813,6 @@ const inferUrlInfoType = (urlInfo) => {
     return "text";
   }
   return "other";
-};
-
-const determineFileUrlForOutDirectory = (urlInfo) => {
-  if (!urlInfo.context.outDirectoryUrl) {
-    return urlInfo.url;
-  }
-  if (!urlInfo.url.startsWith("file:")) {
-    return urlInfo.url;
-  }
-  let url = urlInfo.url;
-  if (!urlIsInsideOf(urlInfo.url, urlInfo.context.rootDirectoryUrl)) {
-    const fsRootUrl = ensureWindowsDriveLetter("file:///", urlInfo.url);
-    url = `${urlInfo.context.rootDirectoryUrl}@fs/${url.slice(
-      fsRootUrl.length,
-    )}`;
-  }
-  if (urlInfo.filenameHint) {
-    url = setUrlFilename(url, urlInfo.filenameHint);
-  }
-  return moveUrl({
-    url,
-    from: urlInfo.context.rootDirectoryUrl,
-    to: urlInfo.context.outDirectoryUrl,
-  });
 };
 
 const createUrlGraphSummary = (
@@ -18305,17 +18315,27 @@ const createNodeEsmResolver = ({
     const { ownerUrlInfo } = reference;
     if (reference.specifier === "/") {
       const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
-      return String(new URL(mainFilePath, rootDirectoryUrl));
+      const url = new URL(mainFilePath, rootDirectoryUrl);
+      return url;
     }
     if (reference.specifier[0] === "/") {
-      return new URL(
+      const url = new URL(
         reference.specifier.slice(1),
         ownerUrlInfo.context.rootDirectoryUrl,
-      ).href;
+      );
+      return url;
     }
-    const parentUrl = reference.baseUrl || ownerUrlInfo.url;
+    let parentUrl;
+    if (reference.baseUrl) {
+      parentUrl = reference.baseUrl;
+    } else if (ownerUrlInfo.originalUrl?.startsWith("http")) {
+      parentUrl = ownerUrlInfo.originalUrl;
+    } else {
+      parentUrl = ownerUrlInfo.url;
+    }
     if (!parentUrl.startsWith("file:")) {
-      return new URL(reference.specifier, parentUrl).href;
+      const url = new URL(reference.specifier, parentUrl);
+      return url;
     }
     const { url, type, packageDirectoryUrl } = applyNodeEsmResolution({
       conditions: packageConditions,
@@ -18502,20 +18522,22 @@ const jsenvPluginWebResolution = () => {
       const { ownerUrlInfo } = reference;
       if (reference.specifier === "/") {
         const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
-        return String(new URL(mainFilePath, rootDirectoryUrl));
+        const url = new URL(mainFilePath, rootDirectoryUrl);
+        return url;
       }
       if (reference.specifier[0] === "/") {
-        return new URL(
+        const url = new URL(
           reference.specifier.slice(1),
           ownerUrlInfo.context.rootDirectoryUrl,
-        ).href;
+        );
+        return url;
       }
-      return new URL(
-        reference.specifier,
-        // baseUrl happens second argument to new URL() is different from
-        // import.meta.url or document.currentScript.src
-        reference.baseUrl || ownerUrlInfo.url,
-      ).href;
+      // baseUrl happens second argument to new URL() is different from
+      // import.meta.url or document.currentScript.src
+      const parentUrl =
+        reference.baseUrl || ownerUrlInfo.originalUrl || ownerUrlInfo.url;
+      const url = new URL(reference.specifier, parentUrl);
+      return url;
     },
   };
 };
@@ -18623,10 +18645,18 @@ const jsenvPluginFsRedirection = ({
       if (!stat) {
         return null;
       }
-      const urlRaw = preserveSymlinks
-        ? urlObject.href
-        : resolveSymlink(urlObject.href);
-      const resolvedUrl = `${urlRaw}${search}${hash}`;
+      const urlBeforeSymlinkResolution = urlObject.href;
+      if (preserveSymlinks) {
+        return `${urlBeforeSymlinkResolution}${search}${hash}`;
+      }
+      const urlAfterSymlinkResolution = resolveSymlink(
+        urlBeforeSymlinkResolution,
+      );
+      if (urlAfterSymlinkResolution !== urlBeforeSymlinkResolution) {
+        reference.leadsToASymlink = true;
+        // reference.baseUrl = urlBeforeSymlinkResolution;
+      }
+      const resolvedUrl = `${urlAfterSymlinkResolution}${search}${hash}`;
       return resolvedUrl;
     },
   };
@@ -18704,17 +18734,17 @@ const jsenvPluginProtocolFile = ({
         return null;
       },
       formatReference: (reference) => {
-        if (!reference.generatedUrl.startsWith("file:")) {
+        const { generatedUrl } = reference;
+        if (!generatedUrl.startsWith("file:")) {
           return null;
         }
         const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
-        if (urlIsInsideOf(reference.generatedUrl, rootDirectoryUrl)) {
-          return `/${urlToRelativeUrl(
-            reference.generatedUrl,
-            rootDirectoryUrl,
-          )}`;
+        if (urlIsInsideOf(generatedUrl, rootDirectoryUrl)) {
+          const result = `/${urlToRelativeUrl(generatedUrl, rootDirectoryUrl)}`;
+          return result;
         }
-        return `/@fs/${reference.generatedUrl.slice("file:///".length)}`;
+        const result = `/@fs/${generatedUrl.slice("file:///".length)}`;
+        return result;
       },
     },
     {
@@ -18945,22 +18975,94 @@ const replacePlaceholders$1 = (html, replacers) => {
   });
 };
 
-const jsenvPluginProtocolHttp = () => {
+const jsenvPluginProtocolHttp = ({ include }) => {
+  if (include === false) {
+    return {
+      name: "jsenv:protocol_http",
+      appliesDuring: "*",
+      redirectReference: (reference) => {
+        if (!reference.url.startsWith("http")) {
+          return null;
+        }
+        return `ignore:${reference.url}`;
+      },
+    };
+  }
+  const shouldInclude =
+    include === true
+      ? () => true
+      : URL_META.createFilter(include, "http://jsenv.com");
+
   return {
     name: "jsenv:protocol_http",
-    appliesDuring: "*",
+    appliesDuring: "build",
+    // resolveReference: (reference) => {
+    //   if (reference.original && reference.original.url.startsWith("http")) {
+    //     return new URL(reference.specifier, reference.original.url);
+    //   }
+    //   return null;
+    // },
     redirectReference: (reference) => {
-      // TODO: according to some pattern matching jsenv could be allowed
-      // to fetch and transform http urls
-      if (
-        reference.url.startsWith("http:") ||
-        reference.url.startsWith("https:")
-      ) {
+      if (!reference.url.startsWith("http")) {
+        return null;
+      }
+      if (!shouldInclude(reference.url)) {
         return `ignore:${reference.url}`;
       }
-      return null;
+      const outDirectoryUrl = reference.ownerUrlInfo.context.outDirectoryUrl;
+      const urlObject = new URL(reference.url);
+      const { host, pathname, search } = urlObject;
+      let fileUrl = String(outDirectoryUrl);
+      if (reference.url.startsWith("http:")) {
+        fileUrl += "@http/";
+      } else {
+        fileUrl += "@https/";
+      }
+      fileUrl += asValidFilename(host);
+      if (pathname) {
+        fileUrl += "/";
+        fileUrl += asValidFilename(pathname);
+      }
+      if (search) {
+        fileUrl += search;
+      }
+      return fileUrl;
+    },
+    fetchUrlContent: async (urlInfo) => {
+      if (!urlInfo.originalUrl.startsWith("http")) {
+        return null;
+      }
+      const response = await fetch(urlInfo.originalUrl);
+      const responseStatus = response.status;
+      if (responseStatus < 200 || responseStatus > 299) {
+        throw new Error(`unexpected response status ${responseStatus}`);
+      }
+      const responseHeaders = response.headers;
+      const responseContentType = responseHeaders.get("content-type");
+      const contentType = responseContentType || "application/octet-stream";
+      const isTextual = CONTENT_TYPE.isTextual(contentType);
+      let content;
+      if (isTextual) {
+        content = await response.text();
+      } else {
+        content = await response.buffer;
+      }
+      return {
+        content,
+        contentType,
+        contentLength: responseHeaders.get("content-length") || undefined,
+      };
     },
   };
+};
+
+// see https://github.com/parshap/node-sanitize-filename/blob/master/index.js
+const asValidFilename = (string) => {
+  string = string.trim().toLowerCase();
+  if (string === ".") return "_";
+  if (string === "..") return "__";
+  string = string.replace(/[ ,]/g, "_").replace(/["/?<>\\:*|]/g, "");
+  return string;
 };
 
 const jsenvPluginInjections = (rawAssociations) => {
@@ -20348,6 +20450,7 @@ const getCorePlugins = ({
   injections,
   transpilation = true,
   inlining = true,
+  http = false,
 
   clientAutoreload,
   cacheControl,
@@ -20363,6 +20466,12 @@ const getCorePlugins = ({
   if (ribbon === true) {
     ribbon = {};
   }
+  if (http === true) {
+    http = { include: true };
+  }
+  if (http === false) {
+    http = { include: false };
+  }
 
   return [
     jsenvPluginReferenceAnalysis(referenceAnalysis),
@@ -20377,11 +20486,12 @@ const getCorePlugins = ({
        - reference inside a js module -> resolved by node esm
        - All the rest uses web standard url resolution
      */
+    jsenvPluginProtocolHttp(http),
     jsenvPluginProtocolFile({
       magicExtensions,
       magicDirectoryIndex,
     }),
-    jsenvPluginProtocolHttp(),
+
     ...(nodeEsmResolution
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),
@@ -20844,6 +20954,42 @@ const createBuildSpecifierManager = ({
       const url = new URL(reference.specifier, parentUrl).href;
       return url;
     },
+    redirectReference: (reference) => {
+      let referenceBeforeInlining = reference;
+      if (
+        referenceBeforeInlining.isInline &&
+        referenceBeforeInlining.prev &&
+        !referenceBeforeInlining.prev.isInline
+      ) {
+        referenceBeforeInlining = referenceBeforeInlining.prev;
+      }
+      const rawUrl = referenceBeforeInlining.url;
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
+      if (rawUrlInfo) {
+        reference.filenameHint = rawUrlInfo.filenameHint;
+        return null;
+      }
+      if (referenceBeforeInlining.injected) {
+        return null;
+      }
+      if (
+        referenceBeforeInlining.isInline &&
+        referenceBeforeInlining.ownerUrlInfo.url ===
+          referenceBeforeInlining.ownerUrlInfo.originalUrl
+      ) {
+        const rawUrlInfo = findRawUrlInfoWhenInline(
+          referenceBeforeInlining,
+          rawKitchen,
+        );
+        if (rawUrlInfo) {
+          reference.rawUrl = rawUrlInfo.url;
+          reference.filenameHint = rawUrlInfo.filenameHint;
+          return null;
+        }
+      }
+      reference.filenameHint = referenceBeforeInlining.filenameHint;
+      return null;
+    },
     transformReferenceSearchParams: () => {
       // those search params are reflected into the build file name
       // moreover it create cleaner output
@@ -20888,13 +21034,10 @@ const createBuildSpecifierManager = ({
       ) {
         firstReference = firstReference.prev;
       }
-      const rawUrl = firstReference.url;
+      const rawUrl = firstReference.rawUrl || firstReference.url;
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
-        if (rawUrlInfo && !finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
-        }
         finalUrlInfo.remapReference = bundleInfo.remapReference;
         return {
           // url: bundleInfo.url,
@@ -20907,9 +21050,6 @@ const createBuildSpecifierManager = ({
         };
       }
       if (rawUrlInfo) {
-        if (rawUrlInfo && !finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
-        }
         return rawUrlInfo;
       }
       // reference injected during "shape":
@@ -20931,9 +21071,6 @@ const createBuildSpecifierManager = ({
           content: reference.content,
           contentType: reference.contentType,
         });
-        if (!finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = reference.filenameHint;
-        }
         const rawUrlInfo = rawReference.urlInfo;
         await rawUrlInfo.cook();
         return {
@@ -20950,40 +21087,9 @@ const createBuildSpecifierManager = ({
           firstReference.ownerUrlInfo.url ===
           firstReference.ownerUrlInfo.originalUrl
         ) {
-          const rawUrlInfo = GRAPH_VISITOR.find(
-            rawKitchen.graph,
-            (rawUrlInfoCandidate) => {
-              const { inlineUrlSite } = rawUrlInfoCandidate;
-              if (!inlineUrlSite) {
-                return false;
-              }
-              if (
-                inlineUrlSite.url === firstReference.ownerUrlInfo.url &&
-                inlineUrlSite.line === firstReference.specifierLine &&
-                inlineUrlSite.column === firstReference.specifierColumn
-              ) {
-                return true;
-              }
-              if (rawUrlInfoCandidate.content === firstReference.content) {
-                return true;
-              }
-              if (
-                rawUrlInfoCandidate.originalContent === firstReference.content
-              ) {
-                return true;
-              }
-              return false;
-            },
-          );
           if (rawUrlInfo) {
-            if (!finalUrlInfo.filenameHint) {
-              finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
-            }
             return rawUrlInfo;
           }
-        }
-        if (!finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = firstReference.filenameHint;
         }
         return {
           originalContent: finalUrlInfo.originalContent,
@@ -20991,7 +21097,7 @@ const createBuildSpecifierManager = ({
           contentType: firstReference.contentType,
         };
       }
-      throw new Error(createDetailedMessage$1(`Cannot fetch ${rawUrl}`));
+      throw new Error(createDetailedMessage$1(`${rawUrl} not found in graph`));
     },
   };
 
@@ -21421,10 +21527,15 @@ const createBuildSpecifierManager = ({
           if (urlInfo.isEntryPoint) {
             generateReplacement(urlInfo.firstReference);
           }
-          if (urlInfo.isInline) {
-            generateReplacement(urlInfo.firstReference);
-          }
           if (urlInfo.type === "sourcemap") {
+            const { referenceFromOthersSet } = urlInfo;
+            let lastRef;
+            for (const ref of referenceFromOthersSet) {
+              lastRef = ref;
+            }
+            generateReplacement(lastRef);
+          }
+          if (urlInfo.isInline) {
             generateReplacement(urlInfo.firstReference);
           }
           if (urlInfo.firstReference.type === "side_effect_file") {
@@ -21661,10 +21772,10 @@ const createBuildSpecifierManager = ({
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
         (urlInfo) => {
-          if (!urlInfo.url.startsWith("file:")) {
+          const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+          if (!buildUrl) {
             return;
           }
-          const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned = versioning
             ? buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier)
@@ -21714,6 +21825,33 @@ const createBuildSpecifierManager = ({
       return { buildFileContents, buildInlineContents, buildManifest };
     },
   };
+};
+
+const findRawUrlInfoWhenInline = (reference, rawKitchen) => {
+  const rawUrlInfo = GRAPH_VISITOR.find(
+    rawKitchen.graph,
+    (rawUrlInfoCandidate) => {
+      const { inlineUrlSite } = rawUrlInfoCandidate;
+      if (!inlineUrlSite) {
+        return false;
+      }
+      if (
+        inlineUrlSite.url === reference.ownerUrlInfo.url &&
+        inlineUrlSite.line === reference.specifierLine &&
+        inlineUrlSite.column === reference.specifierColumn
+      ) {
+        return true;
+      }
+      if (rawUrlInfoCandidate.content === reference.content) {
+        return true;
+      }
+      if (rawUrlInfoCandidate.originalContent === reference.content) {
+        return true;
+      }
+      return false;
+    },
+  );
+  return rawUrlInfo;
 };
 
 // see https://github.com/rollup/rollup/blob/ce453507ab8457dd1ea3909d8dd7b117b2d14fab/src/utils/hashPlaceholders.ts#L1
@@ -22017,6 +22155,10 @@ const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
+  logs = {
+    disabled: false,
+    animation: true,
+  },
   sourceDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
@@ -22045,6 +22187,7 @@ const build = async ({
   sourceFilesConfig = {},
   cooldownBetweenFileEvents,
   watch = false,
+  http = false,
 
   directoryToClean,
   sourcemaps = "none",
@@ -22155,8 +22298,9 @@ const build = async ({
     const logger = createLogger({ logLevel });
     const createBuildTask = (label) => {
       return createTaskLog(label, {
-        disabled: !logger.levels.debug && !logger.levels.info,
-        animated: !logger.levels.debug,
+        disabled:
+          logs.disabled || (!logger.levels.debug && !logger.levels.info),
+        animated: logs.animation && !logger.levels.debug,
       });
     };
 
@@ -22231,6 +22375,7 @@ build ${entryPointKeys.length} entry points`);
             jsModuleFallback: false,
           },
           inlining: false,
+          http,
           scenarioPlaceholders,
         }),
       ],

@@ -37,6 +37,7 @@ export const getCorePlugins = ({
   injections,
   transpilation = true,
   inlining = true,
+  http = false,
 
   clientAutoreload,
   cacheControl,
@@ -52,6 +53,12 @@ export const getCorePlugins = ({
   if (ribbon === true) {
     ribbon = {};
   }
+  if (http === true) {
+    http = { include: true };
+  }
+  if (http === false) {
+    http = { include: false };
+  }
 
   return [
     jsenvPluginReferenceAnalysis(referenceAnalysis),
@@ -66,11 +73,12 @@ export const getCorePlugins = ({
        - reference inside a js module -> resolved by node esm
        - All the rest uses web standard url resolution
      */
+    jsenvPluginProtocolHttp(http),
     jsenvPluginProtocolFile({
       magicExtensions,
       magicDirectoryIndex,
     }),
-    jsenvPluginProtocolHttp(),
+
     ...(nodeEsmResolution
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),

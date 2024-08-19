@@ -1,9 +1,7 @@
 # [0_versioning](../../link_href_@import.test.mjs#L23)
 
 ```js
-run({
-  versioning: true,
-})
+run({ versioning: true })
 ```
 
 # 1/2 write 2 files into "./build/"

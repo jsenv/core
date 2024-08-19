@@ -187,6 +187,42 @@ export const createBuildSpecifierManager = ({
       const url = new URL(reference.specifier, parentUrl).href;
       return url;
     },
+    redirectReference: (reference) => {
+      let referenceBeforeInlining = reference;
+      if (
+        referenceBeforeInlining.isInline &&
+        referenceBeforeInlining.prev &&
+        !referenceBeforeInlining.prev.isInline
+      ) {
+        referenceBeforeInlining = referenceBeforeInlining.prev;
+      }
+      const rawUrl = referenceBeforeInlining.url;
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
+      if (rawUrlInfo) {
+        reference.filenameHint = rawUrlInfo.filenameHint;
+        return null;
+      }
+      if (referenceBeforeInlining.injected) {
+        return null;
+      }
+      if (
+        referenceBeforeInlining.isInline &&
+        referenceBeforeInlining.ownerUrlInfo.url ===
+          referenceBeforeInlining.ownerUrlInfo.originalUrl
+      ) {
+        const rawUrlInfo = findRawUrlInfoWhenInline(
+          referenceBeforeInlining,
+          rawKitchen,
+        );
+        if (rawUrlInfo) {
+          reference.rawUrl = rawUrlInfo.url;
+          reference.filenameHint = rawUrlInfo.filenameHint;
+          return null;
+        }
+      }
+      reference.filenameHint = referenceBeforeInlining.filenameHint;
+      return null;
+    },
     transformReferenceSearchParams: () => {
       // those search params are reflected into the build file name
       // moreover it create cleaner output
@@ -231,13 +267,10 @@ export const createBuildSpecifierManager = ({
       ) {
         firstReference = firstReference.prev;
       }
-      const rawUrl = firstReference.url;
+      const rawUrl = firstReference.rawUrl || firstReference.url;
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
-        if (rawUrlInfo && !finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
-        }
         finalUrlInfo.remapReference = bundleInfo.remapReference;
         return {
           // url: bundleInfo.url,
@@ -250,9 +283,6 @@ export const createBuildSpecifierManager = ({
         };
       }
       if (rawUrlInfo) {
-        if (rawUrlInfo && !finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
-        }
         return rawUrlInfo;
       }
       // reference injected during "shape":
@@ -274,9 +304,6 @@ export const createBuildSpecifierManager = ({
           content: reference.content,
           contentType: reference.contentType,
         });
-        if (!finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = reference.filenameHint;
-        }
         const rawUrlInfo = rawReference.urlInfo;
         await rawUrlInfo.cook();
         return {
@@ -293,40 +320,9 @@ export const createBuildSpecifierManager = ({
           firstReference.ownerUrlInfo.url ===
           firstReference.ownerUrlInfo.originalUrl
         ) {
-          const rawUrlInfo = GRAPH_VISITOR.find(
-            rawKitchen.graph,
-            (rawUrlInfoCandidate) => {
-              const { inlineUrlSite } = rawUrlInfoCandidate;
-              if (!inlineUrlSite) {
-                return false;
-              }
-              if (
-                inlineUrlSite.url === firstReference.ownerUrlInfo.url &&
-                inlineUrlSite.line === firstReference.specifierLine &&
-                inlineUrlSite.column === firstReference.specifierColumn
-              ) {
-                return true;
-              }
-              if (rawUrlInfoCandidate.content === firstReference.content) {
-                return true;
-              }
-              if (
-                rawUrlInfoCandidate.originalContent === firstReference.content
-              ) {
-                return true;
-              }
-              return false;
-            },
-          );
           if (rawUrlInfo) {
-            if (!finalUrlInfo.filenameHint) {
-              finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
-            }
             return rawUrlInfo;
           }
-        }
-        if (!finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = firstReference.filenameHint;
         }
         return {
           originalContent: finalUrlInfo.originalContent,
@@ -334,7 +330,7 @@ export const createBuildSpecifierManager = ({
           contentType: firstReference.contentType,
         };
       }
-      throw new Error(createDetailedMessage(`Cannot fetch ${rawUrl}`));
+      throw new Error(createDetailedMessage(`${rawUrl} not found in graph`));
     },
   };
 
@@ -764,10 +760,15 @@ export const createBuildSpecifierManager = ({
           if (urlInfo.isEntryPoint) {
             generateReplacement(urlInfo.firstReference);
           }
-          if (urlInfo.isInline) {
-            generateReplacement(urlInfo.firstReference);
-          }
           if (urlInfo.type === "sourcemap") {
+            const { referenceFromOthersSet } = urlInfo;
+            let lastRef;
+            for (const ref of referenceFromOthersSet) {
+              lastRef = ref;
+            }
+            generateReplacement(lastRef);
+          }
+          if (urlInfo.isInline) {
             generateReplacement(urlInfo.firstReference);
           }
           if (urlInfo.firstReference.type === "side_effect_file") {
@@ -1004,10 +1005,10 @@ export const createBuildSpecifierManager = ({
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
         (urlInfo) => {
-          if (!urlInfo.url.startsWith("file:")) {
+          const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+          if (!buildUrl) {
             return;
           }
-          const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned = versioning
             ? buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier)
@@ -1057,6 +1058,33 @@ export const createBuildSpecifierManager = ({
       return { buildFileContents, buildInlineContents, buildManifest };
     },
   };
+};
+
+const findRawUrlInfoWhenInline = (reference, rawKitchen) => {
+  const rawUrlInfo = GRAPH_VISITOR.find(
+    rawKitchen.graph,
+    (rawUrlInfoCandidate) => {
+      const { inlineUrlSite } = rawUrlInfoCandidate;
+      if (!inlineUrlSite) {
+        return false;
+      }
+      if (
+        inlineUrlSite.url === reference.ownerUrlInfo.url &&
+        inlineUrlSite.line === reference.specifierLine &&
+        inlineUrlSite.column === reference.specifierColumn
+      ) {
+        return true;
+      }
+      if (rawUrlInfoCandidate.content === reference.content) {
+        return true;
+      }
+      if (rawUrlInfoCandidate.originalContent === reference.content) {
+        return true;
+      }
+      return false;
+    },
+  );
+  return rawUrlInfo;
 };
 
 // see https://github.com/rollup/rollup/blob/ce453507ab8457dd1ea3909d8dd7b117b2d14fab/src/utils/hashPlaceholders.ts#L1

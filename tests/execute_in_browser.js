@@ -44,7 +44,9 @@ export const executeInBrowser = async (
       logTypes[type].push(text);
       consoleOutput.raw += text;
     } else if (mirrorConsole) {
-      console[type](`${browserName} console.${type} > ${message.text()}`);
+      console[type === "warning" ? "warn" : type](
+        `${browserName} console.${type} > ${message.text()}`,
+      );
     } else if (type === "error") {
       console.error(message.text());
     }

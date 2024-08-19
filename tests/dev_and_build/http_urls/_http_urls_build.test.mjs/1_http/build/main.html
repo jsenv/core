@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/file.js": "/js/file.js?v=f44add6e",
+          "/js/dep.js": "/js/dep.js?v=5b5b612b",
+          "/js/constants.js?foo=bar": "/js/constants.js?foo=bar&v=e0ca6bf7"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module" src="/js/main.js?v=9f87b350"></script>
+  </body>
+</html>

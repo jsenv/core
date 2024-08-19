@@ -1,17 +1,17 @@
-import "./local_server/serve.js";
-
 import { build, startBuildServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+import "./local_server/serve.js";
 
-const run = async () => {
+const run = async ({ http, bundling = false }) => {
   await build({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
-    bundling: false,
     minification: false,
     runtimeCompat: { chrome: "89" },
+    bundling,
+    http,
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: new URL("./build/", import.meta.url),
@@ -22,7 +22,7 @@ const run = async () => {
 };
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
-  test("0_http_preserved", () => run());
-  // TODO: ability to fetch http url and transform it
-  // will be tested when module are not supported (systemjs)
+  test("0_http_preserved", () => run({ http: false }));
+  test("1_http", () => run({ http: true }));
+  test("2_http_and_bundling", () => run({ http: true, bundling: true }));
 });

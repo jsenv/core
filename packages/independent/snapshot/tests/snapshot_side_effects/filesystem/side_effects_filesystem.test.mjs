@@ -7,7 +7,12 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { snapshotSideEffects, takeDirectorySnapshot } from "@jsenv/snapshot";
-import { existsSync } from "node:fs";
+import {
+  copyFile as copyFileNode,
+  copyFileSync as copyFileSyncNode,
+  existsSync,
+  renameSync,
+} from "node:fs";
 
 const startTesting = async (fn) => {
   const scenarioMap = new Map();
@@ -258,5 +263,36 @@ await startTesting(({ test }) => {
         },
       },
     );
+  }
+  copy_file: {
+    test("copy_file/0_copy_sync", () => {
+      copyFileSyncNode(
+        new URL("./input/a.txt", import.meta.url),
+        new URL("./dist/a.txt", import.meta.url),
+      );
+    });
+    test("copy_file/0_copy_async", async () => {
+      await new Promise((resolve, reject) => {
+        copyFileNode(
+          new URL("./input/a.txt", import.meta.url),
+          new URL("./dist/a.txt", import.meta.url),
+          (err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
+          },
+        );
+      });
+    });
+  }
+  move_file: {
+    test("move_file/0_rename_sync", () => {
+      renameSync(
+        new URL("./input/a.txt", import.meta.url),
+        new URL("./dist/a.txt", import.meta.url),
+      );
+    });
   }
 });
