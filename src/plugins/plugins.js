@@ -37,6 +37,7 @@ export const getCorePlugins = ({
   injections,
   transpilation = true,
   inlining = true,
+  http = false,
 
   clientAutoreload,
   cacheControl,
@@ -51,6 +52,12 @@ export const getCorePlugins = ({
   }
   if (ribbon === true) {
     ribbon = {};
+  }
+  if (http === true) {
+    http = { include: true };
+  }
+  if (http === false) {
+    http = { include: false };
   }
 
   return [
@@ -70,7 +77,7 @@ export const getCorePlugins = ({
       magicExtensions,
       magicDirectoryIndex,
     }),
-    jsenvPluginProtocolHttp(),
+    jsenvPluginProtocolHttp(http),
     ...(nodeEsmResolution
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),

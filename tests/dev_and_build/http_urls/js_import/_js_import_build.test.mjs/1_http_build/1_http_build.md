@@ -1,7 +1,7 @@
-# [0_http_preserved](../../js_import_build.test.mjs#L26)
+# [1_http_build](../../js_import_build.test.mjs#L27)
 
 ```js
-run({ http: false })
+run({ http: true })
 ```
 
 # 1/2 write 2 files into "./build/"

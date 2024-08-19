@@ -121,6 +121,7 @@ export const build = async ({
   sourceFilesConfig = {},
   cooldownBetweenFileEvents,
   watch = false,
+  http = false,
 
   directoryToClean,
   sourcemaps = "none",
@@ -307,6 +308,7 @@ build ${entryPointKeys.length} entry points`);
             jsModuleFallback: false,
           },
           inlining: false,
+          http,
           scenarioPlaceholders,
         }),
       ],
