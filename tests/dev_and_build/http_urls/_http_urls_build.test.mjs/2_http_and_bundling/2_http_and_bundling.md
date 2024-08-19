@@ -1,4 +1,4 @@
-# [2_http_and_bundling](../../js_import_build.test.mjs#L27)
+# [2_http_and_bundling](../../http_urls_build.test.mjs#L27)
 
 ```js
 run({ http: true, bundling: true })
