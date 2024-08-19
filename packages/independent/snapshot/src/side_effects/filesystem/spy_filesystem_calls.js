@@ -65,7 +65,7 @@ export const spyFilesystemCalls = (
     });
     // effect on target file
     registerUndoAndNotify(toStateBefore, () => {
-      onWriteFile(fromStateBefore.url, fromStateBefore.buffer, "created");
+      onWriteFile(toStateBefore.url, fromStateBefore.buffer, "created");
     });
   };
   const onFileMutationDone = (stateBefore, stateAfter) => {

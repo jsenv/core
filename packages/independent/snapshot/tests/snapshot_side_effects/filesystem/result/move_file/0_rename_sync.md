@@ -7,9 +7,9 @@ renameSync(
 );
 ```
 
-# 1/2 write file "./input/a.txt"
+# 1/2 write file "./out/0_rename_sync.txt"
 
-see [./0_rename_sync/input/a.txt](./0_rename_sync/input/a.txt)
+see [./0_rename_sync/out/0_rename_sync.txt](./0_rename_sync/out/0_rename_sync.txt)
 
 # 2/2 return
 
