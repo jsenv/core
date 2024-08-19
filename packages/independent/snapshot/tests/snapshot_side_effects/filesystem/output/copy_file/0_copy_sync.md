@@ -9,7 +9,7 @@ copyFileSyncNode(
 
 # 1/2 write file "./dist/a.txt"
 
-see [./0_copy/dist/a.txt](./0_copy/dist/a.txt)
+see [./0_copy_sync/dist/a.txt](./0_copy_sync/dist/a.txt)
 
 # 2/2 return
 
