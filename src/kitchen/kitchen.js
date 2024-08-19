@@ -1,7 +1,7 @@
 import { ANSI, createDetailedMessage, createLogger } from "@jsenv/humanize";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { URL_META } from "@jsenv/url-meta";
-import { normalizeUrl, setUrlFilename } from "@jsenv/urls";
+import { normalizeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { jsenvPluginHtmlSyntaxErrorFallback } from "../plugins/html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 import { createPluginController } from "../plugins/plugin_controller.js";
@@ -230,12 +230,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         );
       }
       reference.generatedUrl = reference.url;
-      if (reference.filenameHint) {
-        reference.generatedUrl = setUrlFilename(
-          reference.generatedUrl,
-          reference.filenameHint,
-        );
-      }
       reference.generatedSearchParams = reference.searchParams;
       return reference;
     } catch (error) {
@@ -287,12 +281,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         const generatedSearch = generatedSearchParams.toString();
         generatedUrlObject.search = generatedSearch;
         reference.generatedUrl = normalizeUrl(generatedUrlObject.href);
-        if (reference.filenameHint) {
-          reference.generatedUrl = setUrlFilename(
-            reference.generatedUrl,
-            reference.filenameHint,
-          );
-        }
         reference.generatedSearchParams = generatedSearchParams;
       }
     }
