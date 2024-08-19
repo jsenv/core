@@ -65,6 +65,9 @@ export const createBuildSpecifierManager = ({
     let buildUrl;
     if (reference.type === "sourcemap_comment") {
       const parentBuildUrl = urlInfoToBuildUrlMap.get(reference.ownerUrlInfo);
+      // if (!parentBuildUrl) {
+      //   debugger;
+      // }
       buildUrl = generateSourcemapFileUrl(parentBuildUrl);
       reference.generatedSpecifier = buildUrl;
     } else {
@@ -188,23 +191,40 @@ export const createBuildSpecifierManager = ({
       return url;
     },
     redirectReference: (reference) => {
-      let firstReference = reference;
+      let referenceBeforeInlining = reference;
       if (
-        firstReference.isInline &&
-        firstReference.prev &&
-        !firstReference.prev.isInline
+        referenceBeforeInlining.isInline &&
+        referenceBeforeInlining.prev &&
+        !referenceBeforeInlining.prev.isInline
       ) {
-        firstReference = firstReference.prev;
+        referenceBeforeInlining = referenceBeforeInlining.prev;
       }
-      const rawUrl = firstReference.url;
+      const rawUrl = referenceBeforeInlining.url;
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       if (rawUrlInfo) {
         reference.filenameHint = rawUrlInfo.filenameHint;
-      } else {
-        const firstReferenceOriginal =
-          firstReference.original || firstReference;
-        reference.filenameHint = firstReferenceOriginal.filenameHint;
+        return null;
       }
+      if (referenceBeforeInlining.injected) {
+        return null;
+      }
+      if (
+        referenceBeforeInlining.isInline &&
+        referenceBeforeInlining.ownerUrlInfo.url ===
+          referenceBeforeInlining.ownerUrlInfo.originalUrl
+      ) {
+        const rawUrlInfo = findRawUrlInfoWhenInline(
+          referenceBeforeInlining,
+          rawKitchen,
+        );
+        if (rawUrlInfo) {
+          reference.rawUrl = rawUrlInfo.url;
+          reference.filenameHint = rawUrlInfo.filenameHint;
+          return null;
+        }
+      }
+      reference.filenameHint = referenceBeforeInlining.filenameHint;
+      return null;
     },
     transformReferenceSearchParams: () => {
       // those search params are reflected into the build file name
@@ -226,15 +246,6 @@ export const createBuildSpecifierManager = ({
     formatReference: (reference) => {
       const generatedUrl = reference.generatedUrl;
       if (!generatedUrl.startsWith("file:")) {
-        if (reference.urlInfo.generatedUrl.startsWith("file:")) {
-          internalRedirections.set(
-            generatedUrl,
-            reference.urlInfo.generatedUrl,
-          );
-          const placeholder = placeholderAPI.generate();
-          placeholderToReferenceMap.set(placeholder, reference);
-          return placeholder;
-        }
         return null;
       }
       if (reference.isWeak && reference.expectedType !== "directory") {
@@ -259,7 +270,7 @@ export const createBuildSpecifierManager = ({
       ) {
         firstReference = firstReference.prev;
       }
-      const rawUrl = firstReference.url;
+      const rawUrl = firstReference.rawUrl || firstReference.url;
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
@@ -312,31 +323,6 @@ export const createBuildSpecifierManager = ({
           firstReference.ownerUrlInfo.url ===
           firstReference.ownerUrlInfo.originalUrl
         ) {
-          const rawUrlInfo = GRAPH_VISITOR.find(
-            rawKitchen.graph,
-            (rawUrlInfoCandidate) => {
-              const { inlineUrlSite } = rawUrlInfoCandidate;
-              if (!inlineUrlSite) {
-                return false;
-              }
-              if (
-                inlineUrlSite.url === firstReference.ownerUrlInfo.url &&
-                inlineUrlSite.line === firstReference.specifierLine &&
-                inlineUrlSite.column === firstReference.specifierColumn
-              ) {
-                return true;
-              }
-              if (rawUrlInfoCandidate.content === firstReference.content) {
-                return true;
-              }
-              if (
-                rawUrlInfoCandidate.originalContent === firstReference.content
-              ) {
-                return true;
-              }
-              return false;
-            },
-          );
           if (rawUrlInfo) {
             return rawUrlInfo;
           }
@@ -1070,6 +1056,33 @@ export const createBuildSpecifierManager = ({
       return { buildFileContents, buildInlineContents, buildManifest };
     },
   };
+};
+
+const findRawUrlInfoWhenInline = (reference, rawKitchen) => {
+  const rawUrlInfo = GRAPH_VISITOR.find(
+    rawKitchen.graph,
+    (rawUrlInfoCandidate) => {
+      const { inlineUrlSite } = rawUrlInfoCandidate;
+      if (!inlineUrlSite) {
+        return false;
+      }
+      if (
+        inlineUrlSite.url === reference.ownerUrlInfo.url &&
+        inlineUrlSite.line === reference.specifierLine &&
+        inlineUrlSite.column === reference.specifierColumn
+      ) {
+        return true;
+      }
+      if (rawUrlInfoCandidate.content === reference.content) {
+        return true;
+      }
+      if (rawUrlInfoCandidate.originalContent === reference.content) {
+        return true;
+      }
+      return false;
+    },
+  );
+  return rawUrlInfo;
 };
 
 // see https://github.com/rollup/rollup/blob/ce453507ab8457dd1ea3909d8dd7b117b2d14fab/src/utils/hashPlaceholders.ts#L1
