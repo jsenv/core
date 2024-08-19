@@ -73,11 +73,12 @@ export const getCorePlugins = ({
        - reference inside a js module -> resolved by node esm
        - All the rest uses web standard url resolution
      */
+    jsenvPluginProtocolHttp(http),
     jsenvPluginProtocolFile({
       magicExtensions,
       magicDirectoryIndex,
     }),
-    jsenvPluginProtocolHttp(http),
+
     ...(nodeEsmResolution
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),

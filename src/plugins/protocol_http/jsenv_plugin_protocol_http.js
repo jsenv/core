@@ -7,10 +7,7 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
       name: "jsenv:protocol_http",
       appliesDuring: "*",
       redirectReference: (reference) => {
-        if (
-          !reference.url.startsWith("http:") &&
-          !reference.url.startsWith("https:")
-        ) {
+        if (!reference.url.startsWith("http")) {
           return null;
         }
         return `ignore:${reference.url}`;
@@ -25,23 +22,40 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
   return {
     name: "jsenv:protocol_http",
     appliesDuring: "build",
+    // resolveReference: (reference) => {
+    //   if (reference.original && reference.original.url.startsWith("http")) {
+    //     return new URL(reference.specifier, reference.original.url);
+    //   }
+    //   return null;
+    // },
     redirectReference: (reference) => {
-      if (
-        !reference.url.startsWith("http:") &&
-        !reference.url.startsWith("https:")
-      ) {
+      if (!reference.url.startsWith("http")) {
         return null;
       }
       if (!shouldInclude(reference.url)) {
         return `ignore:${reference.url}`;
       }
-      return null;
+      const outDirectoryUrl = reference.ownerUrlInfo.context.outDirectoryUrl;
+      const urlObject = new URL(reference.url);
+      const { host, pathname, search } = urlObject;
+      let fileUrl = String(outDirectoryUrl);
+      if (reference.url.startsWith("http:")) {
+        fileUrl += "@http/";
+      } else {
+        fileUrl += "@https/";
+      }
+      fileUrl += asValidFilename(host);
+      if (pathname) {
+        fileUrl += "/";
+        fileUrl += asValidFilename(pathname);
+      }
+      if (search) {
+        fileUrl += search;
+      }
+      return fileUrl;
     },
     fetchUrlContent: async (urlInfo) => {
-      if (
-        !urlInfo.url.startsWith("http:") &&
-        !urlInfo.url.startsWith("https:")
-      ) {
+      if (!urlInfo.originalUrl.startsWith("http")) {
         return null;
       }
       const response = await fetch(urlInfo.originalUrl);
@@ -66,4 +80,13 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
       };
     },
   };
+};
+
+// see https://github.com/parshap/node-sanitize-filename/blob/master/index.js
+const asValidFilename = (string) => {
+  string = string.trim().toLowerCase();
+  if (string === ".") return "_";
+  if (string === "..") return "__";
+  string = string.replace(/[ ,]/g, "_").replace(/["/?<>\\:*|]/g, "");
+  return string;
 };

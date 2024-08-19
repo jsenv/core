@@ -715,7 +715,7 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   }
   referencedUrlInfo.firstReference = reference;
   referencedUrlInfo.originalUrl =
-    referencedUrlInfo.originalUrl || reference.url;
+    referencedUrlInfo.originalUrl || (reference.original || reference).url;
 
   if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
     referencedUrlInfo.isEntryPoint = true;

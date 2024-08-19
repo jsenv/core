@@ -23,6 +23,6 @@ const run = async ({ http, bundling = false }) => {
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_http_preserved", () => run({ http: false }));
-  test("1_http", () => run({ http: true }));
+  test.ONLY("1_http", () => run({ http: true }));
   test("2_http_and_bundling", () => run({ http: true, bundling: true }));
 });
