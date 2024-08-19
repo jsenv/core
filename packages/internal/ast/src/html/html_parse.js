@@ -143,6 +143,9 @@ const ensureLineBreaksBetweenHtmlNodes = (rootNode) => {
   const ensureChildrenSurroundedByLinebreaks = (headOrBody) => {
     const { childNodes } = headOrBody;
     const firstChild = childNodes[0];
+    if (!firstChild) {
+      return;
+    }
     if (firstChild.nodeName !== "#text") {
       mutationCallbackSet.add(() => {
         insertHtmlNodeBefore(
