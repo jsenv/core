@@ -24,20 +24,20 @@ const startTesting = async (fn) => {
     onlyScenarioMap.set(scenario, { fn, options });
   };
   fn({ test });
-  const outputDirectorySnapshot = takeDirectorySnapshot(
-    new URL("./output/", import.meta.url),
+  const resultDirectorySnapshot = takeDirectorySnapshot(
+    new URL("./result/", import.meta.url),
   );
   const activeScenarioMap = onlyScenarioMap.size
     ? onlyScenarioMap
     : scenarioMap;
   for (const [scenario, { fn, options }] of activeScenarioMap) {
     await snapshotSideEffects(import.meta.url, fn, {
-      sideEffectMdFileUrl: new URL(`./output/${scenario}.md`, import.meta.url),
-      outFilePattern: `./output/${scenario}/[filename]`,
+      sideEffectMdFileUrl: new URL(`./result/${scenario}.md`, import.meta.url),
+      outFilePattern: `./result/${scenario}/[filename]`,
       ...options,
     });
   }
-  outputDirectorySnapshot.compare();
+  resultDirectorySnapshot.compare();
 };
 
 await startTesting(({ test }) => {
