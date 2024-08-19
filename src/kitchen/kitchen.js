@@ -243,6 +243,10 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
   kitchenContext.resolveReference = resolveReference;
 
   const finalizeReference = (reference) => {
+    const urlInfo = reference.urlInfo;
+    urlInfo.generatedUrl = determineFileUrlForOutDirectory(urlInfo);
+    urlInfo.sourcemapGeneratedUrl = determineSourcemapFileUrl(urlInfo);
+
     if (reference.isImplicit && reference.isWeak) {
       // not needed for implicit references that are not rendered anywhere
       // this condition excludes:
@@ -284,9 +288,6 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         reference.generatedSearchParams = generatedSearchParams;
       }
     }
-    const urlInfo = reference.urlInfo;
-    urlInfo.generatedUrl = determineFileUrlForOutDirectory(urlInfo);
-    urlInfo.sourcemapGeneratedUrl = determineSourcemapFileUrl(urlInfo);
     format: {
       const returnValue = pluginController.callHooksUntil(
         "formatReference",

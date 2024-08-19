@@ -310,7 +310,9 @@ const createReference = ({
     if (specifier instanceof URL) {
       specifier = specifier.href;
     } else {
-      throw new TypeError(`"specifier" must be a string, got ${specifier}`);
+      throw new TypeError(
+        `"specifier" must be a string, got ${specifier} in ${ownerUrlInfo.url}`,
+      );
     }
   }
   const reference = {
