@@ -1,4 +1,4 @@
-# [0_chromium](../../js_syntax_error_browsers.test.mjs#L23)
+# [0_chromium](../../js_syntax_error_browsers.test.mjs#L25)
 
 ```js
 run({

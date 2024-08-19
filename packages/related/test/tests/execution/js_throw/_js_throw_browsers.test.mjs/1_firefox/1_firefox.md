@@ -1,4 +1,4 @@
-# [1_firefox](../../js_throw_browsers.test.mjs#L30)
+# [1_firefox](../../js_throw_browsers.test.mjs#L32)
 
 ```js
 run({

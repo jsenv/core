@@ -1,4 +1,4 @@
-# [0_chromium](../../js_assertion_error_browsers.test.mjs#L30)
+# [0_chromium](../../js_assertion_error_browsers.test.mjs#L32)
 
 ```js
 run({

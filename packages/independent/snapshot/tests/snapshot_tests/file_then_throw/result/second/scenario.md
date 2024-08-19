@@ -1,4 +1,4 @@
-# [scenario](../../file_then_throw.test.mjs#L44)
+# [scenario](../../file_then_throw.test.mjs#L45)
 
 ```js
 throw new Error("here");
@@ -6,9 +6,9 @@ throw new Error("here");
 
 ```console
 Error: here
-  at base/file_then_throw.test.mjs:45:19
-  at async snapshotSideEffects.filesystemEffects (base/file_then_throw.test.mjs:41:7)
-  at async base/file_then_throw.test.mjs:37:1
+  at base/file_then_throw.test.mjs:46:19
+  at async snapshotSideEffects.filesystemEffects (base/file_then_throw.test.mjs:42:7)
+  at async base/file_then_throw.test.mjs:38:1
 ```
 
 ---

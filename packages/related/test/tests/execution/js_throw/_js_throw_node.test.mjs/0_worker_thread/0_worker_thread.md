@@ -1,4 +1,4 @@
-# [0_worker_thread](../../js_throw_node.test.mjs#L15)
+# [0_worker_thread](../../js_throw_node.test.mjs#L17)
 
 ```js
 run({

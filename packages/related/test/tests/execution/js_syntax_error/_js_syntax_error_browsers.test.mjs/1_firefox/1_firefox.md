@@ -1,4 +1,4 @@
-# [1_firefox](../../js_syntax_error_browsers.test.mjs#L27)
+# [1_firefox](../../js_syntax_error_browsers.test.mjs#L29)
 
 ```js
 run({

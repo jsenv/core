@@ -10,6 +10,7 @@ try {
       });
     },
     {
+      executionEffects: { catch: true },
       throwWhenDiff: true,
       outFilePattern: "./git_ignored/[filename]",
     },
@@ -31,7 +32,7 @@ try {
 ```console
 AssertionError: snapshot comparison failed for "scenario.md"
 
-actual:  1| # [scenario](../../file_then_throw.test.mjs#L44)
+actual:  1| # [scenario](../../file_then_throw.test.mjs#L45)
          2| 
          3| ```js
          4| throw new Error("here");
@@ -39,9 +40,9 @@ actual:  1| # [scenario](../../file_then_throw.test.mjs#L44)
          6| 
          7| ```console
          8| Error: here
-         9|   at base/file_then_throw.test.mjs:45:19
-        10|   at async snapshotSideEffects.filesystemEffects (base/file_then_throw.test.mjs:41:7)
-        11|   at async base/file_then_throw.test.mjs:37:1
+         9|   at base/file_then_throw.test.mjs:46:19
+        10|   at async snapshotSideEffects.filesystemEffects (base/file_then_throw.test.mjs:42:7)
+        11|   at async base/file_then_throw.test.mjs:38:1
         12| ```
         13| 
         14| ---
@@ -75,8 +76,8 @@ expect:  1| # [scenario](../../file_then_throw.test.mjs#L24)
 --- details ---
 "@jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/git_ignored/scenario/scenario.md"
 ---------------
-  at async snapshotSideEffects.filesystemEffects (@jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:41:7)
-  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:37:1
+  at async snapshotSideEffects.filesystemEffects (@jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:42:7)
+  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:38:1
 ```
 
 </details>

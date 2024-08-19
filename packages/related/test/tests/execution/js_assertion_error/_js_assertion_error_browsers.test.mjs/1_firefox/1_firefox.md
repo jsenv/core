@@ -1,4 +1,4 @@
-# [1_firefox](../../js_assertion_error_browsers.test.mjs#L34)
+# [1_firefox](../../js_assertion_error_browsers.test.mjs#L36)
 
 ```js
 run({

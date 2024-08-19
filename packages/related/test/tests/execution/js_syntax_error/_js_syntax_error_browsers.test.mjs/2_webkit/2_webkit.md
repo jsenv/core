@@ -1,4 +1,4 @@
-# [2_webkit](../../js_syntax_error_browsers.test.mjs#L31)
+# [2_webkit](../../js_syntax_error_browsers.test.mjs#L33)
 
 ```js
 run({

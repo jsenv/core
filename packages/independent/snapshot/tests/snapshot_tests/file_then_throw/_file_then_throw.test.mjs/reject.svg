@@ -53,7 +53,7 @@
         <text x="472.08" y="62.55" fill="#7f7f7f">#</text>
         <text x="480.48" y="62.55" fill="#7f7f7f">L</text>
         <text x="488.88" y="62.55" fill="#cd5555">4</text>
-        <text x="497.28" y="62.55" fill="#7f7f7f">4</text>
+        <text x="497.28" y="62.55" fill="#cd5555">5</text>
         <text x="505.68" y="62.55" fill="#7f7f7f">)</text>
         <text x="85.61" y="81.55" fill="#7f7f7f"> 2| </text>
         <text x="85.61" y="100.55" fill="#7f7f7f"> 3| </text>
@@ -146,7 +146,7 @@
         <text x="388.06" y="214.55" fill="#cd5555">s</text>
         <text x="396.46" y="214.55" fill="#cd5555">:</text>
         <text x="404.86" y="214.55" fill="#cd5555">4</text>
-        <text x="413.27" y="214.55" fill="#cd5555">5</text>
+        <text x="413.27" y="214.55" fill="#cd5555">6</text>
         <text x="421.67" y="214.55" fill="#cd5555">:</text>
         <text x="430.07" y="214.55" fill="#cd5555">1</text>
         <text x="438.47" y="214.55" fill="#cd5555">9</text>
@@ -227,7 +227,7 @@
         <text x="766.12" y="233.55" fill="#DAA520">s</text>
         <text x="774.52" y="233.55" fill="#DAA520">:</text>
         <text x="782.93" y="233.55" fill="#DAA520">4</text>
-        <text x="791.33" y="233.55" fill="#DAA520">1</text>
+        <text x="791.33" y="233.55" fill="#DAA520">2</text>
         <text x="799.73" y="233.55" fill="#DAA520">:</text>
         <text x="808.13" y="233.55" fill="#DAA520">7</text>
         <text x="816.53" y="233.55" fill="#DAA520">)</text>
@@ -270,7 +270,7 @@
         <text x="438.47" y="252.55" fill="#DAA520">s</text>
         <text x="446.87" y="252.55" fill="#DAA520">:</text>
         <text x="455.27" y="252.55" fill="#DAA520">3</text>
-        <text x="463.67" y="252.55" fill="#DAA520">7</text>
+        <text x="463.67" y="252.55" fill="#DAA520">8</text>
         <text x="472.08" y="252.55" fill="#DAA520">:</text>
         <text x="480.48" y="252.55" fill="#DAA520">1</text>
         <text x="77.21" y="271.55" fill="#7f7f7f">12| </text>
@@ -428,7 +428,7 @@
         <text x="472.08" y="423.55" fill="#7f7f7f">#</text>
         <text x="480.48" y="423.55" fill="#7f7f7f">L</text>
         <text x="488.88" y="423.55" fill="#11bc79">2</text>
-        <text x="497.28" y="423.55" fill="#7f7f7f">4</text>
+        <text x="497.28" y="423.55" fill="#11bc79">4</text>
         <text x="505.68" y="423.55" fill="#7f7f7f">)</text>
         <text x="85.61" y="442.55" fill="#7f7f7f"> 2| </text>
         <text x="85.61" y="461.55" fill="#7f7f7f"> 3| </text>
@@ -689,8 +689,8 @@
         <text x="10" y="841.55">--- details ---</text>
         <text x="10" y="860.55">"@jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/git_ignored/scenario/scenario.md"</text>
         <text x="10" y="879.55">---------------</text>
-        <text x="26.8" y="898.55">  at async snapshotSideEffects.filesystemEffects (@jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:41:7)</text>
-        <text x="26.8" y="917.55">  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:37:1</text>
+        <text x="26.8" y="898.55">  at async snapshotSideEffects.filesystemEffects (@jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:42:7)</text>
+        <text x="26.8" y="917.55">  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:38:1</text>
       </g>
     </svg>
   </foreignObject>
