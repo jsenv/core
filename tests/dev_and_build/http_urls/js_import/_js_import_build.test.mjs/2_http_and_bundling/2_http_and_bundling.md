@@ -1,10 +1,10 @@
-# [1_http_build](../../js_import_build.test.mjs#L27)
+# [2_http_and_bundling](../../js_import_build.test.mjs#L28)
 
 ```js
-run({ http: true })
+run({ http: true, bundling: true })
 ```
 
-# 1/2 write 3 files into "./build/"
+# 1/2 write 2 files into "./build/"
 
 see [./build/](./build/)
 

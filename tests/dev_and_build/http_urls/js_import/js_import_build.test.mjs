@@ -4,14 +4,14 @@ import { build, startBuildServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 
-const run = async ({ http }) => {
+const run = async ({ http, bundling = false }) => {
   await build({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
-    bundling: false,
     minification: false,
     runtimeCompat: { chrome: "89" },
+    bundling,
     http,
   });
   const buildServer = await startBuildServer({
@@ -24,5 +24,6 @@ const run = async ({ http }) => {
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_http_preserved", () => run({ http: false }));
-  test("1_http_build", () => run({ http: true }));
+  test.ONLY("1_http", () => run({ http: true }));
+  test("2_http_and_bundling", () => run({ http: true, bundling: true }));
 });
