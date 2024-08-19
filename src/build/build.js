@@ -54,6 +54,11 @@ export const defaultRuntimeCompat = {
   safari: "11.3",
   samsung: "9.2",
 };
+const logsDefault = {
+  level: "info",
+  disabled: false,
+  animation: true,
+};
 
 /**
  * Generate an optimized version of source files into a directory
@@ -93,10 +98,7 @@ export const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
-  logs = {
-    disabled: false,
-    animation: true,
-  },
+  logs = logsDefault,
   sourceDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
@@ -145,6 +147,21 @@ export const build = async ({
       throw new TypeError(
         `${unexpectedParamNames.join(",")}: there is no such param`,
       );
+    }
+    // logs
+    {
+      if (typeof logs !== "object") {
+        throw new TypeError(`logs must be an object, got ${logs}`);
+      }
+      const unexpectedLogsKeys = Object.keys(logs).filter(
+        (key) => !Object.hasOwn(logsDefault, key),
+      );
+      if (unexpectedLogsKeys.length > 0) {
+        throw new TypeError(
+          `${unexpectedLogsKeys.join(",")}: no such key on logs`,
+        );
+      }
+      logs = { ...logsDefault, ...logs };
     }
     sourceDirectoryUrl = assertAndNormalizeDirectoryUrl(
       sourceDirectoryUrl,
