@@ -93,6 +93,10 @@ export const build = async ({
   signal = new AbortController().signal,
   handleSIGINT = true,
   logLevel = "info",
+  logs = {
+    disabled: false,
+    animation: true,
+  },
   sourceDirectoryUrl,
   buildDirectoryUrl,
   entryPoints = {},
@@ -232,8 +236,9 @@ export const build = async ({
     const logger = createLogger({ logLevel });
     const createBuildTask = (label) => {
       return createTaskLog(label, {
-        disabled: !logger.levels.debug && !logger.levels.info,
-        animated: !logger.levels.debug,
+        disabled:
+          logs.disabled || (!logger.levels.debug && !logger.levels.info),
+        animated: logs.animation && !logger.levels.debug,
       });
     };
 
