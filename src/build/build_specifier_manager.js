@@ -207,6 +207,15 @@ export const createBuildSpecifierManager = ({
     formatReference: (reference) => {
       const generatedUrl = reference.generatedUrl;
       if (!generatedUrl.startsWith("file:")) {
+        if (reference.urlInfo.generatedUrl.startsWith("file:")) {
+          internalRedirections.set(
+            generatedUrl,
+            reference.urlInfo.generatedUrl,
+          );
+          const placeholder = placeholderAPI.generate();
+          placeholderToReferenceMap.set(placeholder, reference);
+          return placeholder;
+        }
         return null;
       }
       if (reference.isWeak && reference.expectedType !== "directory") {
@@ -1004,10 +1013,10 @@ export const createBuildSpecifierManager = ({
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
         (urlInfo) => {
-          if (!urlInfo.url.startsWith("file:")) {
+          const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
+          if (!buildUrl) {
             return;
           }
-          const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned = versioning
             ? buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier)

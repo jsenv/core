@@ -1,8 +1,7 @@
-import "./local_server/serve.js";
-
 import { build, startBuildServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+import "./local_server/serve.js";
 
 const run = async ({ http, bundling = false }) => {
   await build({
@@ -24,6 +23,6 @@ const run = async ({ http, bundling = false }) => {
 
 await snapshotBuildTests(import.meta.url, ({ test }) => {
   test("0_http_preserved", () => run({ http: false }));
-  test.ONLY("1_http", () => run({ http: true }));
+  test("1_http", () => run({ http: true }));
   test("2_http_and_bundling", () => run({ http: true, bundling: true }));
 });

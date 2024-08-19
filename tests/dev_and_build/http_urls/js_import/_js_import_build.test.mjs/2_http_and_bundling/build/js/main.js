@@ -1,4 +1,4 @@
-import { url } from "http://127.0.0.1/file.js";
+import { url } from "/js/file.js";
 
 const answer = 42;
 
