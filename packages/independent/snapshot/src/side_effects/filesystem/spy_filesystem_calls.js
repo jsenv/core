@@ -242,12 +242,29 @@ export const spyFilesystemCalls = (
       },
     };
   });
+  const copyFileHook = hookIntoMethod(
+    _internalFs,
+    "copyFile",
+    (fromPath, toPath) => {
+      const stateBefore = getFileStateWithinHook(toPath);
+      filesystemStateInfoMap.set(toPath, stateBefore);
+      return {
+        return: () => {
+          const fileUrl = pathToFileURL(toPath);
+          const stateAfter = getFileStateWithinHook(fileUrl);
+          onWriteFileDone(String(fileUrl), stateBefore, stateAfter);
+        },
+      };
+    },
+    { execute: METHOD_EXECUTION_NODE_CALLBACK },
+  );
   restoreCallbackSet.add(() => {
     mkdirHook.remove();
     openHook.remove();
     closeHook.remove();
     writeFileUtf8Hook.remove();
     unlinkHook.remove();
+    copyFileHook.remove();
   });
   return {
     restore: () => {

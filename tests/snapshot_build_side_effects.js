@@ -10,7 +10,7 @@ export const snapshotBuildTests = async (
     filesystemActions: {
       "**": "compare",
       "**/.jsenv/": "undo",
-      "**/.jsenv_b/": "ignore",
+      "**/.jsenv_b/": "undo",
       ...options.filesystemActions,
     },
     logEffects:

@@ -1,4 +1,5 @@
 import {
+  // copyFileSync,
   readFile,
   readFileSync,
   writeDirectory,
@@ -7,7 +8,7 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { snapshotSideEffects, takeDirectorySnapshot } from "@jsenv/snapshot";
-import { existsSync } from "node:fs";
+import { copyFileSync as copyFileSyncNode, existsSync } from "node:fs";
 
 const startTesting = async (fn) => {
   const scenarioMap = new Map();
@@ -258,5 +259,13 @@ await startTesting(({ test }) => {
         },
       },
     );
+  }
+  copy_file: {
+    test("copy_file/0_copy", () => {
+      copyFileSyncNode(
+        new URL("./input/a.txt", import.meta.url),
+        new URL("./dist/a.txt", import.meta.url),
+      );
+    });
   }
 });
