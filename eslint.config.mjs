@@ -31,6 +31,7 @@ export default [
       "**/neuquant.js",
       "**/babel_helpers/",
       "experiments/",
+      "tests/build/js_entry_many/build/", // to remove once filesystem is properly restored when file are copied
     ],
   },
 ];
