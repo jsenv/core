@@ -100,7 +100,8 @@ export const spyFilesystemCalls = (
     return null;
   };
   const registerUndoAndNotify = (stateBefore, notify) => {
-    const action = getAction(stateBefore.url);
+    const url = stateBefore.url;
+    const action = getAction(url);
     const shouldCompare =
       action === "compare" ||
       action === "compare_presence_only" ||
@@ -113,13 +114,16 @@ export const spyFilesystemCalls = (
       if (action !== "undo" && !shouldCompare) {
         break undo;
       }
+      if (fileRestoreMap.has(url)) {
+        break undo;
+      }
       if (stateBefore.found) {
-        fileRestoreMap.set(stateBefore.url, () => {
-          writeFileSync(stateBefore.url, stateBefore.buffer);
+        fileRestoreMap.set(url, () => {
+          writeFileSync(url, stateBefore.buffer);
         });
       } else {
-        fileRestoreMap.set(stateBefore.url, () => {
-          removeFileSync(stateBefore.url, { allowUseless: true });
+        fileRestoreMap.set(url, () => {
+          removeFileSync(url, { allowUseless: true });
         });
       }
     }

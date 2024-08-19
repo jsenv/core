@@ -4,6 +4,7 @@ import {
   writeDirectory,
   writeDirectorySync,
   writeFile,
+  writeFileStructureSync,
   writeFileSync,
 } from "@jsenv/filesystem";
 import { snapshotSideEffects, takeDirectorySnapshot } from "@jsenv/snapshot";
@@ -13,6 +14,10 @@ import {
   existsSync,
   renameSync,
 } from "node:fs";
+
+writeFileStructureSync(new URL("./out/", import.meta.url), {
+  ".gitkeep": "",
+});
 
 const startTesting = async (fn) => {
   const scenarioMap = new Map();
