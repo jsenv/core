@@ -187,6 +187,25 @@ export const createBuildSpecifierManager = ({
       const url = new URL(reference.specifier, parentUrl).href;
       return url;
     },
+    redirectReference: (reference) => {
+      let { firstReference } = reference;
+      if (
+        firstReference.isInline &&
+        firstReference.prev &&
+        !firstReference.prev.isInline
+      ) {
+        firstReference = firstReference.prev;
+      }
+      const rawUrl = firstReference.url;
+      const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
+      if (rawUrlInfo) {
+        reference.filenameHint = rawUrlInfo.filenameHint;
+      } else {
+        const firstReferenceOriginal =
+          firstReference.original || firstReference;
+        reference.filenameHint = firstReferenceOriginal.filenameHint;
+      }
+    },
     transformReferenceSearchParams: () => {
       // those search params are reflected into the build file name
       // moreover it create cleaner output
@@ -244,9 +263,6 @@ export const createBuildSpecifierManager = ({
       const rawUrlInfo = rawKitchen.graph.getUrlInfo(rawUrl);
       const bundleInfo = bundleInfoMap.get(rawUrl);
       if (bundleInfo) {
-        if (rawUrlInfo && !finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
-        }
         finalUrlInfo.remapReference = bundleInfo.remapReference;
         return {
           // url: bundleInfo.url,
@@ -259,9 +275,6 @@ export const createBuildSpecifierManager = ({
         };
       }
       if (rawUrlInfo) {
-        if (rawUrlInfo && !finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
-        }
         return rawUrlInfo;
       }
       // reference injected during "shape":
@@ -283,9 +296,6 @@ export const createBuildSpecifierManager = ({
           content: reference.content,
           contentType: reference.contentType,
         });
-        if (!finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = reference.filenameHint;
-        }
         const rawUrlInfo = rawReference.urlInfo;
         await rawUrlInfo.cook();
         return {
@@ -328,14 +338,8 @@ export const createBuildSpecifierManager = ({
             },
           );
           if (rawUrlInfo) {
-            if (!finalUrlInfo.filenameHint) {
-              finalUrlInfo.filenameHint = rawUrlInfo.filenameHint;
-            }
             return rawUrlInfo;
           }
-        }
-        if (!finalUrlInfo.filenameHint) {
-          finalUrlInfo.filenameHint = firstReference.filenameHint;
         }
         return {
           originalContent: finalUrlInfo.originalContent,
