@@ -138,6 +138,7 @@ import { snapshotSideEffects } from "@jsenv/snapshot";
       throw new Error("in the end we throw");
     },
     {
+      executionEffects: { catch: true },
       sideEffectMdFileUrl: new URL(
         "./output/6_console_and_file.md",
         import.meta.url,

@@ -11,13 +11,19 @@ const run = async ({ runtime }) => {
   });
 };
 
-await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
-  test("0_worker_thread", () =>
-    run({
-      runtime: nodeWorkerThread(),
-    }));
-  test("0_child_process", () =>
-    run({
-      runtime: nodeChildProcess(),
-    }));
-});
+await snapshotFileExecutionSideEffects(
+  import.meta.url,
+  async ({ test }) => {
+    test("0_worker_thread", () =>
+      run({
+        runtime: nodeWorkerThread(),
+      }));
+    test("0_child_process", () =>
+      run({
+        runtime: nodeChildProcess(),
+      }));
+  },
+  {
+    executionEffects: { catch: true },
+  },
+);

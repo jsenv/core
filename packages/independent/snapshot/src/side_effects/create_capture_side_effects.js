@@ -4,12 +4,17 @@ import { createReplaceFilesystemWellKnownValues } from "../filesystem_well_known
 import { filesystemSideEffects } from "./filesystem/filesystem_side_effects.js";
 import { logSideEffects } from "./log/log_side_effects.js";
 
+const executionEffectsDefault = {
+  catch: true,
+  return: true,
+};
+
 export const createCaptureSideEffects = ({
   sourceFileUrl,
   logEffects = true,
   filesystemEffects = true,
   filesystemActions,
-  executionEffects = {},
+  executionEffects = executionEffectsDefault,
   rootDirectoryUrl,
   replaceFilesystemWellKnownValues = createReplaceFilesystemWellKnownValues({
     rootDirectoryUrl,
@@ -21,6 +26,7 @@ export const createCaptureSideEffects = ({
       return: false,
     };
   }
+  executionEffects = { ...executionEffectsDefault, ...executionEffects };
 
   const detectors = [];
   if (logEffects) {

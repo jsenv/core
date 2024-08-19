@@ -26,19 +26,25 @@ const run = async ({ runtime }) => {
   });
 };
 
-await snapshotFileExecutionSideEffects(import.meta.url, async ({ test }) => {
-  test("0_chromium", () =>
-    run({
-      runtime: chromium(),
-    }));
-  test("1_firefox", () =>
-    run({
-      runtime: firefox({
-        disableOnWindowsBecauseFlaky: false,
-      }),
-    }));
-  test("2_webkit", () =>
-    run({
-      runtime: webkit(),
-    }));
-});
+await snapshotFileExecutionSideEffects(
+  import.meta.url,
+  async ({ test }) => {
+    test("0_chromium", () =>
+      run({
+        runtime: chromium(),
+      }));
+    test("1_firefox", () =>
+      run({
+        runtime: firefox({
+          disableOnWindowsBecauseFlaky: false,
+        }),
+      }));
+    test("2_webkit", () =>
+      run({
+        runtime: webkit(),
+      }));
+  },
+  {
+    executionEffects: { catch: true },
+  },
+);

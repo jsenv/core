@@ -26,6 +26,7 @@ await snapshotTests(
     });
   },
   {
+    executionEffects: { catch: true },
     outFilePattern: "./git_ignored/[filename]",
   },
 );
@@ -46,6 +47,7 @@ await snapshotSideEffects(
           });
         },
         {
+          executionEffect: { catch: true },
           throwWhenDiff: true,
           outFilePattern: "./git_ignored/[filename]",
         },

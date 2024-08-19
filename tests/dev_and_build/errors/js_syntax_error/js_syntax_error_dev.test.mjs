@@ -22,6 +22,12 @@ const run = async () => {
   });
 };
 
-await snapshotDevSideEffects(import.meta.url, ({ test }) => {
-  test("0_chromium", () => run({ browserLauncher: chromium }));
-});
+await snapshotDevSideEffects(
+  import.meta.url,
+  ({ test }) => {
+    test("0_chromium", () => run({ browserLauncher: chromium }));
+  },
+  {
+    executionEffects: { catch: true },
+  },
+);

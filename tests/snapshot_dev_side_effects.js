@@ -21,4 +21,8 @@ export const snapshotDevSideEffects = async (
             level: "warn",
             ...(options.logEffects === true ? {} : options.logEffects),
           },
+    executionEffects: {
+      catch: false,
+      ...options.executionEffects,
+    },
   });

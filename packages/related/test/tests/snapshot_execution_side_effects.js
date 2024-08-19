@@ -6,11 +6,15 @@ export const snapshotFileExecutionSideEffects = async (
   options = {},
 ) =>
   snapshotTests(testFileUrl, fnRegisteringTests, {
+    ...options,
     filesystemActions: {
       "**": "compare",
       "**/.jsenv/": "undo",
     },
-    ...options,
+    executionEffects: {
+      catch: false,
+      ...options.executionEffects,
+    },
   });
 
 export const snapshotTestPlanSideEffects = async (
@@ -19,6 +23,7 @@ export const snapshotTestPlanSideEffects = async (
   options = {},
 ) =>
   snapshotTests(testFileUrl, fnRegisteringTests, {
+    ...options,
     filesystemActions: {
       "**": "compare",
       "**/.jsenv/": "undo",
@@ -26,5 +31,8 @@ export const snapshotTestPlanSideEffects = async (
       "**/*.gif": "ignore",
       "**/.coverage/": "ignore",
     },
-    ...options,
+    executionEffects: {
+      catch: false,
+      ...options.executionEffects,
+    },
   });
