@@ -747,7 +747,11 @@ To fix this warning:
             result: {},
           };
           if (typeof params.allocatedMs === "function") {
-            params.allocatedMs = params.allocatedMs(execution);
+            const allocatedMsResult = params.allocatedMs(execution);
+            params.allocatedMs =
+              allocatedMsResult === undefined
+                ? defaultMsAllocatedPerExecution
+                : allocatedMsResult;
           }
 
           lastExecution = execution;
