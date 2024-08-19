@@ -161,15 +161,13 @@ export const createDynamicLog = ({
 // is that node.js will later throw error if stream gets closed
 // while something listening data on it
 const spyStreamOutput = (stream, callback) => {
-  const originalWrite = stream.write;
-
   let output = "";
   let installed = true;
-
+  const originalWrite = stream.write;
   stream.write = function (...args /* chunk, encoding, callback */) {
     output += args;
     callback(output);
-    return originalWrite.call(stream, ...args);
+    return originalWrite.call(this, ...args);
   };
 
   const uninstall = () => {
