@@ -1,14 +1,8 @@
-# [0_chromium](../../preact_and_redux_dev.test.mjs#L43)
+# [0_chromium](../../preact_and_redux_dev.test.mjs#L46)
 
 ```js
 run({ browserLauncher: chromium })
 ```
-
-# 1/2 write 7 files into "./.jsenv/chrome@128.00/"
-
-see [./.jsenv/chrome@128.00/](./.jsenv/chrome@128.00/)
-
-# 2/2 resolve
 
 ```js
 {

@@ -8,6 +8,7 @@ import { chromium } from "playwright";
 const run = async ({ browserLauncher }) => {
   const devServer = await startDevServer({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
     plugins: [
@@ -39,6 +40,12 @@ const run = async ({ browserLauncher }) => {
   });
 };
 
-await snapshotDevSideEffects(import.meta.url, ({ test }) => {
-  test("0_chromium", () => run({ browserLauncher: chromium }));
-});
+await snapshotDevSideEffects(
+  import.meta.url,
+  ({ test }) => {
+    test("0_chromium", () => run({ browserLauncher: chromium }));
+  },
+  {
+    filesystemEffects: false,
+  },
+);
