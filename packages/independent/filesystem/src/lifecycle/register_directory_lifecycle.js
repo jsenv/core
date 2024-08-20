@@ -250,7 +250,12 @@ export const registerDirectoryLifecycle = (
         const directoryUrlObject = new URL(directoryUrl);
         entryNameArray = readdirSync(directoryUrlObject);
       } catch (e) {
-        if (e.code === "ENOENT" || e.code === "EACCES") {
+        if (
+          e.code === "ENOENT" ||
+          e.code === "EACCES" ||
+          e.code === "EPERM" ||
+          e.code === "ENOTDIR"
+        ) {
           return;
         }
         throw e;
@@ -282,7 +287,12 @@ export const registerDirectoryLifecycle = (
             });
           });
         } catch (e) {
-          if (e.code === "ENOENT" || e.code === "EACCES") {
+          if (
+            e.code === "ENOENT" ||
+            e.code === "EACCES" ||
+            e.code === "EPERM" ||
+            e.code === "ENOTDIR"
+          ) {
             return;
           }
           throw e;
