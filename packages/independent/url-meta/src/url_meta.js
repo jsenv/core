@@ -91,6 +91,9 @@ const deepAssign = (firstValue, secondValue) => {
     }
     return secondValue;
   }
+  if (!isPlainObject(secondValue)) {
+    return secondValue;
+  }
   for (const key of Object.keys(secondValue)) {
     const leftPopertyValue = firstValue[key];
     const rightPropertyValue = secondValue[key];
