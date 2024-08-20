@@ -20,9 +20,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  },
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.25.2",
     "@babel/plugin-transform-react-jsx-development": "7.24.7",

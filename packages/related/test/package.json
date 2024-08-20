@@ -28,7 +28,6 @@
     "/src/"
   ],
   "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs",
     "build": "node --conditions=development ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },

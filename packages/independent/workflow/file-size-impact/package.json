@@ -30,7 +30,6 @@
   ],
   "scripts": {
     "snapshot": "node ./tests/comment/generate_comment_snapshot_file.mjs",
-    "test": "node ./scripts/test.mjs",
     "file-size": "node ./scripts/file_size.mjs --log"
   },
   "dependencies": {

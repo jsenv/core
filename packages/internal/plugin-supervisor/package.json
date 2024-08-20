@@ -32,9 +32,7 @@
     "launch-editor": "2.8.1"
   },
   "scripts": {
-    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "build": "node ./scripts/build.mjs",
-    "test": "node ./scripts/test.mjs",
     "prepublishOnly": "npm run build"
   }
 }

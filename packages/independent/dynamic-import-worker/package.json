@@ -24,8 +24,5 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node ./scripts/test.mjs"
-  },
   "dependencies": {}
 }

@@ -753,6 +753,10 @@ To fix this warning:
                 ? defaultMsAllocatedPerExecution
                 : allocatedMsResult;
           }
+          if (typeof params.uses === "function") {
+            const usesResult = params.uses(execution);
+            params.uses = usesResult;
+          }
 
           lastExecution = execution;
           executionPlanifiedArray.push(execution);

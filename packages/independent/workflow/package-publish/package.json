@@ -25,9 +25,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node --experimental-json-modules ./scripts/test.mjs"
-  },
   "dependencies": {
     "@jsenv/filesystem": "4.10.2",
     "@jsenv/humanize": "1.2.8",

@@ -27,7 +27,6 @@
     "/src/"
   ],
   "scripts": {
-    "test": "node ./scripts/test/test.mjs",
     "performance": "node --expose-gc ./scripts/performance/performance.mjs  --local --log",
     "test:start-node-server": "node ./scripts/certificate/start_node_server.mjs",
     "ca:install": "node ./scripts/certificate/install_ca.mjs",

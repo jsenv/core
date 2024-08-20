@@ -25,9 +25,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node ./scripts/test.mjs"
-  },
   "dependencies": {
     "@jsenv/urls": "2.5.2",
     "@jsenv/filesystem": "4.10.2",

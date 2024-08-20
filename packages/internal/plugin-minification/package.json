@@ -20,9 +20,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  },
   "dependencies": {
     "html-minifier": "4.0.0",
     "lightningcss": "1.26.0",

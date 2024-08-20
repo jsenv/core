@@ -31,9 +31,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  },
   "dependencies": {
     "@jsenv/urls": "2.5.2",
     "@jsenv/server": "15.3.0",

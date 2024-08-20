@@ -29,7 +29,6 @@
     "@jsenv/filesystem": "4.10.2"
   },
   "scripts": {
-    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   }

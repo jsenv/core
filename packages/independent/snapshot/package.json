@@ -29,9 +29,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  },
   "dependencies": {
     "@jsenv/assert": "4.4.1",
     "@jsenv/ast": "6.2.17",

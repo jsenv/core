@@ -29,9 +29,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node ./scripts/test.mjs"
-  },
   "dependencies": {
     "@jsenv/fetch": "1.1.73",
     "@jsenv/humanize": "1.2.8"

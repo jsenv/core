@@ -29,9 +29,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  },
   "dependencies": {
     "@jsenv/abort": "4.3.0",
     "@jsenv/humanize": "1.2.8",

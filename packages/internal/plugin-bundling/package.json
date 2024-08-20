@@ -20,9 +20,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  },
   "dependencies": {
     "@jsenv/humanize": "1.2.8",
     "@jsenv/url-meta": "8.5.1",

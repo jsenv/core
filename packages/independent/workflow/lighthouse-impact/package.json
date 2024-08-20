@@ -26,8 +26,7 @@
     "/src/"
   ],
   "scripts": {
-    "snapshot": "node ./tests/comment/generate_comment_snapshot_file.mjs",
-    "test": "node ./scripts/test.mjs"
+    "snapshot": "node ./tests/comment/generate_comment_snapshot_file.mjs"
   },
   "dependencies": {
     "@jsenv/abort": "4.3.0",

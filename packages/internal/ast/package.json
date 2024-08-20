@@ -28,9 +28,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  },
   "dependencies": {
     "@babel/parser": "7.25.3",
     "@jsenv/humanize": "1.2.8",
