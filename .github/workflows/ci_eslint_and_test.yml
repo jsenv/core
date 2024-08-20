@@ -68,9 +68,10 @@ jobs:
       #    the correct version string.
       # 4. Finally, we use sed to extract just the version number (eg; '1.22.0')
       # The result is stored in $PLAYWRIGHT_VERSION
+      # https://github.com/microsoft/playwright/issues/7249#issuecomment-2299065930
       # https://stackoverflow.com/a/33426237/24573072
       - name: Get installed Playwright version
-        run: echo "PLAYWRIGHT_VERSION=$(npm ll -p --depth=0 playwright | grep -o '@.*')" >> $GITHUB_ENV
+        run: echo "PLAYWRIGHT_VERSION=1.46.1" >> $GITHUB_ENV
 
       - name: Print playwright version
         run: echo "${PLAYWRIGHT_VERSION}"

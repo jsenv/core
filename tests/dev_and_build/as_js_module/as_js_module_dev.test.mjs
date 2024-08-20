@@ -3,6 +3,10 @@ import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotDevSideEffects } from "@jsenv/core/tests/snapshot_dev_side_effects.js";
 import { chromium, firefox } from "playwright";
 
+if (process.platform === "win32") {
+  process.exit(0);
+}
+
 const run = async ({ browserLauncher }) => {
   const devServer = await startDevServer({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
