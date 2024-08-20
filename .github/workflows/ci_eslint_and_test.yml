@@ -87,7 +87,7 @@ jobs:
         id: playwright-cache
         with:
           path: "~/.cache/ms-playwright"
-          key: "${{ runner.os }}-playwright-${{ PLAYWRIGHT_VERSION }}"
+          key: "${{ runner.os }}-playwright-$PLAYWRIGHT_VERSION"
           # As a fallback, if the Playwright version has changed, try use the
           # most recently cached version. There's a good chance that at least one
           # of the browser binary versions haven't been updated, so Playwright can
