@@ -263,9 +263,20 @@ const createApplyColorOnFileRelativeUrl = (rootDirectoryUrl) => {
         // all the things before in grey
         // all the things after in the color
         const before = parts.slice(0, i).join("/");
-        const after = parts.slice(i).join("/");
-        let pathColored = ANSI.color(`${before}/`, ANSI.GREY);
-        pathColored += ANSI.color(`${after}/${filename}`, color);
+        const packageDirectory = parts[i];
+        const packageDirectoryStylized = ANSI.color(
+          ANSI.effect(packageDirectory, ANSI.UNDERLINE),
+          color,
+        );
+        let pathColored = ANSI.color(`${before}/`, color);
+        if (i === parts.length - 1) {
+          pathColored += packageDirectoryStylized;
+          pathColored += ANSI.color(`/${filename}`, color);
+          return pathColored;
+        }
+        const after = parts.slice(i + 1).join("/");
+        pathColored += packageDirectoryStylized;
+        pathColored += ANSI.color(`/${after}/${filename}`, color);
         return pathColored;
       }
       i++;
@@ -491,9 +502,12 @@ const descriptionFormatters = {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
     let skipped = ANSI.color(
-      `${UNICODE.CIRCLE_DOTTED_RAW} ${number}/${total} skipped`,
+      `${UNICODE.CIRCLE_DOTTED_RAW} ${number}`,
       COLOR_SKIPPED,
     );
+    skipped += ANSI.color(`/${total}`, COLOR_SKIPPED);
+    skipped += " ";
+    skipped += ANSI.color("skipped", COLOR_SKIPPED);
     skipped += " ";
     skipped += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_SKIPPED);
     if (skipReason) {
@@ -508,10 +522,8 @@ const descriptionFormatters = {
   ) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-    let aborted = ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${number}/${total}`,
-      COLOR_ABORTED,
-    );
+    let aborted = ANSI.color(`${UNICODE.FAILURE_RAW} ${number}`, COLOR_ABORTED);
+    aborted += ANSI.color(`/${total}`, COLOR_ABORTED);
     aborted += " ";
     aborted += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_ABORTED);
     return aborted;
@@ -523,9 +535,10 @@ const descriptionFormatters = {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
     let cancelled = ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${number}/${total}`,
+      `${UNICODE.FAILURE_RAW} ${number}`,
       COLOR_CANCELLED,
     );
+    cancelled += ANSI.color(`/${total}`, COLOR_CANCELLED);
     cancelled += " ";
     cancelled += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_CANCELLED);
     return cancelled;
@@ -537,9 +550,10 @@ const descriptionFormatters = {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
     let timedout = ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${number}/${total}`,
+      `${UNICODE.FAILURE_RAW} ${number}`,
       COLOR_TIMEOUT,
     );
+    timedout += ANSI.color(`/${total}`, COLOR_TIMEOUT);
     timedout += " ";
     timedout += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_TIMEOUT);
     timedout += " ";
@@ -555,10 +569,8 @@ const descriptionFormatters = {
   ) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-    let failed = ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${number}/${total}`,
-      COLOR_FAILED,
-    );
+    let failed = ANSI.color(`${UNICODE.FAILURE_RAW} ${number}`, COLOR_FAILED);
+    failed += ANSI.color(`/${total}`, COLOR_FAILED);
     failed += " ";
     failed += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_FAILED);
     return failed;
@@ -569,10 +581,8 @@ const descriptionFormatters = {
   ) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-    let completed = ANSI.color(
-      `${UNICODE.OK_RAW} ${number}/${total}`,
-      COLOR_COMPLETED,
-    );
+    let completed = ANSI.color(`${UNICODE.OK_RAW} ${number}`, COLOR_COMPLETED);
+    completed += ANSI.color(`/${total}`, COLOR_COMPLETED);
     completed += " ";
     completed += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_COMPLETED);
     return completed;
