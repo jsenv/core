@@ -4112,7 +4112,7 @@ const registerDirectoryLifecycle = (
         const directoryUrlObject = new URL(directoryUrl);
         entryNameArray = readdirSync(directoryUrlObject);
       } catch (e) {
-        if (e.code === "ENOENT") {
+        if (e.code === "ENOENT" || e.code === "EACCES") {
           return;
         }
         throw e;
@@ -4144,7 +4144,7 @@ const registerDirectoryLifecycle = (
             });
           });
         } catch (e) {
-          if (e.code === "ENOENT") {
+          if (e.code === "ENOENT" || e.code === "EACCES") {
             return;
           }
           throw e;

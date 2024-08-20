@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/package-publish",
-  "version": "1.11.6",
+  "version": "1.11.7",
   "description": "Publish package to one or many registry.",
   "license": "MIT",
   "repository": {
@@ -26,7 +26,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.10.8",
+    "@jsenv/filesystem": "4.10.9",
     "@jsenv/humanize": "1.2.8",
     "semver": "7.6.3"
   }
