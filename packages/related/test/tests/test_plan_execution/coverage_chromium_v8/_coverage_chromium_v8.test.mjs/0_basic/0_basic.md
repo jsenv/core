@@ -3,7 +3,7 @@
 ```js
 await run({
   testPlan: {
-    "./client/tests/main.test.html": {
+    "./client/tests/main.spec.html": {
       chrome: {
         runtime: chromium(),
         collectConsole: false,

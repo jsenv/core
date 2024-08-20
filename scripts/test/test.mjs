@@ -83,11 +83,11 @@ const testPlanForPackages = {
       },
     },
   },
-  "./packages/**/*.test.js": {
-    node: {
-      runtime: nodeWorkerThread(),
-    },
-  },
+  // "./packages/**/*.test.js": {
+  //   node: {
+  //     runtime: nodeWorkerThread(),
+  //   },
+  // },
   "./packages/**/with_signal_warnings.test.mjs": {
     node: {
       runtime: nodeWorkerThread({
@@ -95,8 +95,13 @@ const testPlanForPackages = {
       }),
     },
   },
-  "./packages/**/https-local/": {
-    node: null, // disabled for now
+  // "./packages/**/https-local/": {
+  //   node: null, // disabled for now
+  // },
+  "./packages/**/cli/": {
+    // the templates have their own test script that will be trigerred by
+    // npm run workspace:test
+    node: null,
   },
 };
 
