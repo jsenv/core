@@ -56,7 +56,9 @@ jobs:
           ulimit -n
         # sudo ulimit should prevent npm link failure
       - name: Install node modules
-        run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install
+        run: npm install
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
       # Figures out the version of playwright that's installed.
       # 1. Because we don't know what version yarn will resolve it to, we have
@@ -70,8 +72,12 @@ jobs:
       # The result is stored in $PLAYWRIGHT_VERSION
       # https://github.com/microsoft/playwright/issues/7249#issuecomment-2299065930
       # https://stackoverflow.com/a/33426237/24573072
-      - name: Get installed Playwright version
-        run: echo "PLAYWRIGHT_VERSION=1.46.1" >> $GITHUB_ENV
+      - name: Get installed Playwright version windows
+        if: runner.os == 'windows'
+        run: echo "PLAYWRIGHT_VERSION=$(npm ll -p --depth=0 playwright | grep -o '@.*')" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Get installed Playwright version Linux and Mac
+        if: runner.os != 'windows'
+        run: echo "PLAYWRIGHT_VERSION=$(npm ll -p --depth=0 playwright | grep -o '@.*')" >> $GITHUB_ENV
 
       - name: Print playwright version
         run: echo "${PLAYWRIGHT_VERSION}"
