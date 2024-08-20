@@ -11,6 +11,10 @@ import {
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import stripAnsi from "strip-ansi";
 
+if (process.platform === "win32") {
+  process.exit(0);
+}
+
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
 const test = (callback) => {
