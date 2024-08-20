@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.8.18",
+  "version": "2.8.19",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -21,7 +21,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.10.7",
+    "@jsenv/filesystem": "4.10.8",
     "@jsenv/humanize": "1.2.8",
     "@jsenv/url-meta": "8.5.2",
     "@jsenv/urls": "2.5.2",

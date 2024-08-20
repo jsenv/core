@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/lighthouse-impact",
-  "version": "4.2.5",
+  "version": "4.2.6",
   "description": "Package description",
   "license": "MIT",
   "repository": {
@@ -31,8 +31,8 @@
   "dependencies": {
     "@jsenv/abort": "4.3.0",
     "@jsenv/dynamic-import-worker": "1.2.1",
-    "@jsenv/filesystem": "4.10.7",
-    "@jsenv/github-pull-request-impact": "1.8.5",
+    "@jsenv/filesystem": "4.10.8",
+    "@jsenv/github-pull-request-impact": "1.8.6",
     "@jsenv/humanize": "1.2.8",
     "lighthouse": "12.2.0"
   }
