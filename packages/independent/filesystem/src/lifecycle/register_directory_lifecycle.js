@@ -265,22 +265,29 @@ export const registerDirectoryLifecycle = (
       }
       // we must watch manually every directory we find
       if (!fsWatchSupportsRecursive) {
-        const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
-          persistent: keepProcessAlive,
-        });
-        tracker.registerCleanupCallback(() => {
-          watcher.close();
-        });
-        watcher.on("change", (eventType, filename) => {
-          handleDirectoryEvent({
-            directoryRelativeUrl: entryInfo.relativeUrl,
-            filename: filename
-              ? // replace back slashes with slashes
-                filename.replace(/\\/g, "/")
-              : "",
-            eventType,
+        try {
+          const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
+            persistent: keepProcessAlive,
           });
-        });
+          tracker.registerCleanupCallback(() => {
+            watcher.close();
+          });
+          watcher.on("change", (eventType, filename) => {
+            handleDirectoryEvent({
+              directoryRelativeUrl: entryInfo.relativeUrl,
+              filename: filename
+                ? // replace back slashes with slashes
+                  filename.replace(/\\/g, "/")
+                : "",
+              eventType,
+            });
+          });
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            return;
+          }
+          throw e;
+        }
       }
     }
     if (added && entryInfo.patternValue && notify) {
