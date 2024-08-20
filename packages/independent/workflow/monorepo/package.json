@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/monorepo",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Helpers to manage packages in a monorepo",
   "license": "MIT",
   "repository": {

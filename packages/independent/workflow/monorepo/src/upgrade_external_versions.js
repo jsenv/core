@@ -41,6 +41,9 @@ export const upgradeExternalVersions = async ({ directoryUrl }) => {
       if (version === "*") {
         return;
       }
+      if (version.startsWith("workspace:")) {
+        return;
+      }
       const existing = externalPackages[name];
       if (existing) {
         externalPackages[name].push({
