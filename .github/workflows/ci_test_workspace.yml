@@ -54,7 +54,7 @@ jobs:
           ulimit -n
         # sudo ulimit should prevent npm link failure
       - name: Install node modules
-        run: npm install
+        run: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install
 
       # Figures out the version of playwright that's installed.
       # 1. Because we don't know what version yarn will resolve it to, we have
