@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
-
 import { chromium, execute, firefox, webkit } from "@jsenv/test";
 
 const test = async (params) => {
