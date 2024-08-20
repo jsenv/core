@@ -27,8 +27,11 @@
         <text x="26.8" y="109.55"> verbose log</text>
         <text x="26.8" y="128.55"> la</text>
         <text x="10" y="147.55" fill="#7f7f7f">--------------------------------------</text>
-        <text x="10" y="166.55" fill="#11bc79">✔ 3/3 console.spec.html</text>
-        <text x="211.63" y="166.55" fill="#7f7f7f">[webkit/&lt;mock&gt;ms]</text>
+        <text x="10" y="166.55" fill="#11bc79">✔ 3/3</text>
+        <text x="60.41" y="166.55" fill="#11bc79">console.spec.html</text>
+        <text x="211.63" y="166.55" fill="#7f7f7f">[</text>
+        <text x="220.03" y="166.55">webkit</text>
+        <text x="270.44" y="166.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
         <text x="362.86" y="166.55"> (all </text>
         <text x="404.86" y="166.55" fill="#11bc79">completed</text>
         <text x="480.48" y="166.55">)</text>

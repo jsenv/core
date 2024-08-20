@@ -29,8 +29,11 @@
         <text x="52.01" y="109.55" font-weight="bold">[mock]/error_in_test_jsenv_assert.spec.js</text>
         <text x="396.46" y="109.55">:3:1</text>
         <text x="10" y="128.55" fill="#7f7f7f">--------------------------------------</text>
-        <text x="10" y="147.55" fill="#cd5555">✖ 2/2 error_in_test_jsenv_assert.spec.js</text>
-        <text x="354.46" y="147.55" fill="#7f7f7f">[child_process/&lt;mock&gt;ms]</text>
+        <text x="10" y="147.55" fill="#cd5555">✖ 2/2</text>
+        <text x="60.41" y="147.55" fill="#cd5555">error_in_test_jsenv_assert.spec.js</text>
+        <text x="354.46" y="147.55" fill="#7f7f7f">[</text>
+        <text x="362.86" y="147.55">child_process</text>
+        <text x="472.08" y="147.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
         <text x="564.49" y="147.55"> (all </text>
         <text x="606.5" y="147.55" fill="#cd5555">failed</text>
         <text x="656.91" y="147.55">)</text>

@@ -17,8 +17,11 @@
       <g>
         <text x="10" y="14.55">directory: /mock/</text>
         <text x="10" y="33.55" fill="#7f7f7f">---------------------------------------------</text>
-        <text x="10" y="52.55" fill="#cd5555">✖ 1/2 error_in_timeout.spec.js</text>
-        <text x="270.44" y="52.55" fill="#7f7f7f">[worker_thread/&lt;mock&gt;ms]</text>
+        <text x="10" y="52.55" fill="#cd5555">✖ 1/2</text>
+        <text x="60.41" y="52.55" fill="#cd5555">error_in_timeout.spec.js</text>
+        <text x="270.44" y="52.55" fill="#7f7f7f">[</text>
+        <text x="278.84" y="52.55">worker_thread</text>
+        <text x="388.06" y="52.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
         <text x="480.48" y="52.55"> (1 </text>
         <text x="505.68" y="52.55" fill="#cd5555">failed</text>
         <text x="556.09" y="52.55">)</text>
@@ -37,8 +40,11 @@
         <text x="220.03" y="185.55" font-weight="bold">[mock]/error_in_timeout.spec.js</text>
         <text x="480.48" y="185.55">:3:11)</text>
         <text x="10" y="204.55" fill="#7f7f7f">--------------------------------------</text>
-        <text x="10" y="223.55" fill="#cd5555">✖ 2/2 error_in_timeout.spec.js</text>
-        <text x="270.44" y="223.55" fill="#7f7f7f">[child_process/&lt;mock&gt;ms]</text>
+        <text x="10" y="223.55" fill="#cd5555">✖ 2/2</text>
+        <text x="60.41" y="223.55" fill="#cd5555">error_in_timeout.spec.js</text>
+        <text x="270.44" y="223.55" fill="#7f7f7f">[</text>
+        <text x="278.84" y="223.55">child_process</text>
+        <text x="388.06" y="223.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
         <text x="480.48" y="223.55"> (all </text>
         <text x="522.48" y="223.55" fill="#cd5555">failed</text>
         <text x="572.89" y="223.55">)</text>

@@ -1,6 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { resolveUrl } from "@jsenv/urls";
-
 import {
   ensureEmptyDirectory,
   registerDirectoryLifecycle,
@@ -10,6 +8,7 @@ import {
   writeFile,
 } from "@jsenv/filesystem";
 import { wait } from "@jsenv/filesystem/tests/testHelpers.js";
+import { resolveUrl } from "@jsenv/urls";
 
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
 await ensureEmptyDirectory(tempDirectoryUrl);
@@ -20,7 +19,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const mutations = [];
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { "./file": "toto" },
-    cooldownBetweenFileEvents: 150,
+    cooldownBetweenFileEvents: 200,
     // debug: true,
     added: (data) => {
       mutations.push({ name: "added", ...data });
@@ -31,13 +30,13 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     keepProcessAlive: false,
   });
 
-  await wait(200);
+  await wait(400);
   await writeFile(fileUrl);
-  await wait(200);
+  await wait(400);
   await removeEntry(fileUrl);
-  await wait(200);
+  await wait(400);
   await writeFile(fileUrl);
-  await wait(200);
+  await wait(400);
   const actual = mutations;
   const expect = [
     {
@@ -67,7 +66,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const mutations = [];
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { "dir/": "toto" },
-    cooldownBetweenFileEvents: 100,
+    cooldownBetweenFileEvents: 200,
     added: (data) => {
       mutations.push({ name: "added", ...data });
     },
@@ -78,9 +77,9 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     recursive: true,
   });
   await writeDirectory(directoryUrl);
-  await wait(200);
+  await wait(400);
   await writeFile(fileUrl);
-  await wait(200);
+  await wait(400);
 
   const actual = mutations;
   const expect = [
@@ -110,7 +109,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const mutations = [];
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { file: "toto" },
-    cooldownBetweenFileEvents: 100,
+    cooldownBetweenFileEvents: 200,
     added: (data) => {
       mutations.push({ name: "added", ...data });
     },
@@ -123,11 +122,11 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     keepProcessAlive: false,
   });
   await writeFile(fileUrl);
-  await wait(200);
+  await wait(400);
   await writeEntryModificationTime(fileUrl, Date.now());
-  await wait(200);
+  await wait(400);
   await removeEntry(fileUrl);
-  await wait(200);
+  await wait(400);
 
   const actual = mutations;
   const expect = [
@@ -167,7 +166,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { file: "toto" },
-    cooldownBetweenFileEvents: 100,
+    cooldownBetweenFileEvents: 200,
     updated: (data) => {
       mutations.push({ name: "updated", ...data });
     },
@@ -177,11 +176,11 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     keepProcessAlive: false,
   });
   await removeEntry(fileUrl);
-  await wait(200);
+  await wait(400);
   await writeFile(fileUrl);
-  await wait(200);
+  await wait(400);
   await removeEntry(fileUrl);
-  await wait(200);
+  await wait(400);
   const actual = mutations;
   const expect = [
     {
@@ -214,7 +213,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { "dir/": "toto" },
-    cooldownBetweenFileEvents: 150,
+    cooldownBetweenFileEvents: 200,
     removed: (data) => {
       mutations.push({ name: "removed", ...data });
     },
@@ -274,21 +273,21 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { file: "toto" },
-    cooldownBetweenFileEvents: 100,
+    cooldownBetweenFileEvents: 200,
     updated: (data) => {
       mutations.push({ name: "updated", ...data });
     },
     keepProcessAlive: false,
   });
   await writeEntryModificationTime(fileUrl, Date.now());
-  await wait(200);
+  await wait(400);
   // file removed and created in between
   await removeEntry(fileUrl);
-  await wait(200);
+  await wait(400);
   await writeFile(fileUrl);
-  await wait(200);
+  await wait(400);
   await writeEntryModificationTime(fileUrl, Date.now() + 1000);
-  await wait(200);
+  await wait(400);
   const actual = mutations;
   const expect = [
     {
@@ -317,23 +316,23 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 {
   const fileUrl = resolveUrl("file", tempDirectoryUrl);
   await writeFile(fileUrl);
-  await wait(200);
+  await wait(400);
   const mutations = [];
 
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { file: "toto" },
-    cooldownBetweenFileEvents: 100,
+    cooldownBetweenFileEvents: 200,
     updated: (data) => {
       mutations.push({ name: "updated", ...data });
     },
     keepProcessAlive: false,
   });
   await writeEntryModificationTime(fileUrl, Date.now());
-  await wait(200);
+  await wait(400);
   await writeEntryModificationTime(fileUrl, Date.now());
-  await wait(200);
+  await wait(400);
   await writeEntryModificationTime(fileUrl, Date.now());
-  await wait(200);
+  await wait(400);
   const actual = mutations;
   const expect = [
     {

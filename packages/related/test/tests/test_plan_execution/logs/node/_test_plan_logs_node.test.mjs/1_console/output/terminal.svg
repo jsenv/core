@@ -20,7 +20,8 @@
         <text x="278.84" y="14.55" fill="#7f7f7f">-------------</text>
         <text x="10" y="33.55">directory: /mock/</text>
         <text x="10" y="52.55" fill="#7f7f7f">---------------------------------------------</text>
-        <text x="10" y="71.55" fill="#11bc79">✔ 1/1 console.spec.js</text>
+        <text x="10" y="71.55" fill="#11bc79">✔ 1/1</text>
+        <text x="60.41" y="71.55" fill="#11bc79">console.spec.js</text>
         <text x="194.83" y="71.55" fill="#7f7f7f">[&lt;mock&gt;ms]</text>
         <text x="287.25" y="71.55"> (all </text>
         <text x="329.25" y="71.55" fill="#11bc79">completed</text>

@@ -29,8 +29,11 @@
         <text x="18.4" y="109.55" font-weight="bold">[mock]/error_jsenv_assert_in_script_module.spec.html</text>
         <text x="455.27" y="109.55">:13:13</text>
         <text x="10" y="128.55" fill="#7f7f7f">--------------------------------------</text>
-        <text x="10" y="147.55" fill="#cd5555">✖ 3/3 error_jsenv_assert_in_script_module.spec.html</text>
-        <text x="446.87" y="147.55" fill="#7f7f7f">[webkit/&lt;mock&gt;ms]</text>
+        <text x="10" y="147.55" fill="#cd5555">✖ 3/3</text>
+        <text x="60.41" y="147.55" fill="#cd5555">error_jsenv_assert_in_script_module.spec.html</text>
+        <text x="446.87" y="147.55" fill="#7f7f7f">[</text>
+        <text x="455.27" y="147.55">webkit</text>
+        <text x="505.68" y="147.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
         <text x="598.1" y="147.55"> (all </text>
         <text x="640.1" y="147.55" fill="#cd5555">failed</text>
         <text x="690.51" y="147.55">)</text>

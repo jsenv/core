@@ -22,7 +22,8 @@
         <text x="10" y="52.55">fragment: 3/3, executing only 5:5</text>
         <text x="10" y="71.55" fill="#7f7f7f">---------------------------------------------</text>
         <text x="10" y="90.55" fill="#7f7f7f">◌ 1:4 skipped</text>
-        <text x="10" y="109.55" fill="#11bc79">✔ 5/5 e.spec.js</text>
+        <text x="10" y="109.55" fill="#11bc79">✔ 5/5</text>
+        <text x="60.41" y="109.55" fill="#11bc79">e.spec.js</text>
         <text x="144.42" y="109.55" fill="#7f7f7f">[&lt;mock&gt;ms]</text>
         <text x="236.84" y="109.55"> (1 </text>
         <text x="262.04" y="109.55" fill="#11bc79">completed</text>

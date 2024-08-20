@@ -7,9 +7,9 @@ import {
   UNICODE,
 } from "@jsenv/humanize";
 import { urlToFileSystemPath } from "@jsenv/urls";
+import { existsSync } from "node:fs";
 import { memoryUsage as processMemoryUsage } from "node:process";
 import stripAnsi from "strip-ansi";
-
 import { formatErrorForTerminal } from "../format_error_for_terminal.js";
 
 /*
@@ -74,6 +74,11 @@ export const reporterList = ({
     {
       reporter: "list",
       beforeAll: async (testPlanResult) => {
+        const applyColorOnFileRelativeUrl = createApplyColorOnFileRelativeUrl(
+          testPlanResult.rootDirectoryUrl,
+        );
+        logOptions.applyColorOnFileRelativeUrl = applyColorOnFileRelativeUrl;
+
         let spyReturnValue = await spy();
         let write = spyReturnValue.write;
         let end = spyReturnValue.end;
@@ -229,6 +234,47 @@ export const reporterList = ({
   return reporters;
 };
 
+const createApplyColorOnFileRelativeUrl = (rootDirectoryUrl) => {
+  const packageExistsMap = new Map();
+  const directoryHasPackageJsonFile = (directoryUrl) => {
+    if (packageExistsMap.has(directoryUrl)) {
+      return packageExistsMap.get(directoryUrl);
+    }
+    const packageJsonFileUrl = new URL("./package.json", directoryUrl);
+    if (existsSync(packageJsonFileUrl)) {
+      packageExistsMap.set(directoryUrl, true);
+      return true;
+    }
+    packageExistsMap.set(directoryUrl, false);
+    return false;
+  };
+  const applyColorOnFileRelativeUrl = (fileRelativeUrl, color) => {
+    let parts = fileRelativeUrl.split("/");
+    const filename = parts.pop();
+    let i = 0;
+    while (i < parts.length) {
+      const directoryRelativeUrl = parts.slice(0, i + 1).join("/");
+      const directoryUrl = new URL(`${directoryRelativeUrl}/`, rootDirectoryUrl)
+        .href;
+      if (directoryHasPackageJsonFile(directoryUrl)) {
+        if (i === 0) {
+          return ANSI.color(fileRelativeUrl, color);
+        }
+        // all the things before in grey
+        // all the things after in the color
+        const before = parts.slice(0, i).join("/");
+        const after = parts.slice(i).join("/");
+        let pathColored = ANSI.color(`${before}/`, ANSI.GREY);
+        pathColored += ANSI.color(`${after}/${filename}`, color);
+        return pathColored;
+      }
+      i++;
+    }
+    return ANSI.color(fileRelativeUrl, color);
+  };
+  return applyColorOnFileRelativeUrl;
+};
+
 const renderIntro = (testPlanResult, logOptions) => {
   const directory = logOptions.mockFluctuatingValues
     ? "/mock/"
@@ -372,15 +418,17 @@ const renderExecutionLabel = (execution, logOptions) => {
 
   // description
   {
-    const description =
-      descriptionFormatters[execution.result.status](execution);
+    const description = descriptionFormatters[execution.result.status](
+      execution,
+      logOptions,
+    );
     label += description;
   }
   // runtimeInfo
   {
     const infos = [];
     if (logOptions.group) {
-      infos.push(ANSI.color(execution.group, ANSI.GREY));
+      infos.push(execution.group);
     }
     const { timings, memoryUsage } = execution.result;
     if (timings) {
@@ -426,8 +474,8 @@ const renderExecutionLabel = (execution, logOptions) => {
   return label;
 };
 const descriptionFormatters = {
-  executing: ({ fileRelativeUrl }) => {
-    return ANSI.color(`${fileRelativeUrl}`, COLOR_EXECUTING);
+  executing: ({ fileRelativeUrl }, { applyColorOnFileRelativeUrl }) => {
+    return applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_EXECUTING);
   },
   skippedGroup: ({ from, to, skipReason }) => {
     let description = `${UNICODE.CIRCLE_DOTTED_RAW} ${from + 1}:${to + 1} skipped`;
@@ -436,57 +484,98 @@ const descriptionFormatters = {
     }
     return ANSI.color(description, COLOR_SKIPPED);
   },
-  skipped: ({ index, countersInOrder, fileRelativeUrl, skipReason }) => {
+  skipped: (
+    { index, countersInOrder, fileRelativeUrl, skipReason },
+    { applyColorOnFileRelativeUrl },
+  ) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-    let description = `${UNICODE.CIRCLE_DOTTED_RAW} ${number}/${total} skipped ${fileRelativeUrl}`;
+    let skipped = ANSI.color(
+      `${UNICODE.CIRCLE_DOTTED_RAW} ${number}/${total} skipped`,
+      COLOR_SKIPPED,
+    );
+    skipped += " ";
+    skipped += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_SKIPPED);
     if (skipReason) {
-      description += ` (${skipReason})`;
+      skipped += " ";
+      skipped += ANSI.color(`(${skipReason})`, COLOR_SKIPPED);
     }
-    return ANSI.color(description, COLOR_SKIPPED);
+    return skipped;
   },
-  aborted: ({ index, countersInOrder, fileRelativeUrl }) => {
+  aborted: (
+    { index, countersInOrder, fileRelativeUrl },
+    { applyColorOnFileRelativeUrl },
+  ) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-    return ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
+    let aborted = ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total}`,
       COLOR_ABORTED,
     );
+    aborted += " ";
+    aborted += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_ABORTED);
+    return aborted;
   },
-  cancelled: ({ index, countersInOrder, fileRelativeUrl }) => {
+  cancelled: (
+    { index, countersInOrder, fileRelativeUrl },
+    { applyColorOnFileRelativeUrl },
+  ) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-    return ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
+    let cancelled = ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total}`,
       COLOR_CANCELLED,
     );
+    cancelled += " ";
+    cancelled += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_CANCELLED);
+    return cancelled;
   },
-  timedout: ({ index, countersInOrder, fileRelativeUrl, params }) => {
+  timedout: (
+    { index, countersInOrder, fileRelativeUrl, params },
+    { applyColorOnFileRelativeUrl },
+  ) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-
-    return ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl} timeout after ${params.allocatedMs}ms`,
+    let timedout = ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total}`,
       COLOR_TIMEOUT,
     );
+    timedout += " ";
+    timedout += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_TIMEOUT);
+    timedout += " ";
+    timedout += ANSI.color(
+      `timeout after ${params.allocatedMs}ms`,
+      COLOR_TIMEOUT,
+    );
+    return timedout;
   },
-  failed: ({ index, countersInOrder, fileRelativeUrl }) => {
+  failed: (
+    { index, countersInOrder, fileRelativeUrl },
+    { applyColorOnFileRelativeUrl },
+  ) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-
-    return ANSI.color(
-      `${UNICODE.FAILURE_RAW} ${number}/${total} ${fileRelativeUrl}`,
+    let failed = ANSI.color(
+      `${UNICODE.FAILURE_RAW} ${number}/${total}`,
       COLOR_FAILED,
     );
+    failed += " ";
+    failed += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_FAILED);
+    return failed;
   },
-  completed: ({ index, countersInOrder, fileRelativeUrl }) => {
+  completed: (
+    { index, countersInOrder, fileRelativeUrl },
+    { applyColorOnFileRelativeUrl },
+  ) => {
     const total = countersInOrder.planified;
     const number = fillLeft(index + 1, total, "0");
-
-    return ANSI.color(
-      `${UNICODE.OK_RAW} ${number}/${total} ${fileRelativeUrl}`,
+    let completed = ANSI.color(
+      `${UNICODE.OK_RAW} ${number}/${total}`,
       COLOR_COMPLETED,
     );
+    completed += " ";
+    completed += applyColorOnFileRelativeUrl(fileRelativeUrl, COLOR_COMPLETED);
+    return completed;
   },
 };
 
