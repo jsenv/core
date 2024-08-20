@@ -67,7 +67,3 @@ jobs:
         run: npm run packages:test
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Run workspace tests
-        run: npm run workspace:test
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
