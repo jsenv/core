@@ -112,6 +112,12 @@ export const registerDirectoryLifecycle = (
           stat: null,
         };
       }
+      if (e.code === "EACCES") {
+        return {
+          type: null,
+          stat: null,
+        };
+      }
       throw e;
     }
   };

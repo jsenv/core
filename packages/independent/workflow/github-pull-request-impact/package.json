@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/github-pull-request-impact",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "Report pull request impact on something",
   "license": "MIT",
   "repository": {
@@ -26,7 +26,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.10.3",
+    "@jsenv/filesystem": "4.10.4",
     "@jsenv/humanize": "1.2.8"
   }
 }

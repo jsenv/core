@@ -5466,7 +5466,7 @@ const startServerUsingCommand = async (
   webServer,
   { signal, allocatedMs, logger, teardownCallbackSet, shell = true },
 ) => {
-  const spawnedProcess = spawn(webServer.command, [], {
+  const spawnedProcess = spawn(webServer.command, webServer.args || [], {
     // On non-windows platforms, `detached: true` makes child process a leader of a new
     // process group, making it possible to kill child process tree with `.kill(-pid)` command.
     // @see https://nodejs.org/api/child_process.html#child_process_options_detached
@@ -5514,7 +5514,7 @@ const startServerUsingCommand = async (
           `web server process exit exitCode=${exitCode}, exitSignal=${signal}, pid=${spawnedProcess.pid}`,
         );
       } else {
-        logger.error(
+        console.error(
           `web server process premature exit exitCode=${exitCode}, exitSignal=${signal}, pid=${spawnedProcess.pid}
 --- stderr ---
 ${stderr}
@@ -5619,8 +5619,8 @@ const startServerUsingModuleUrl = async (webServer, params) => {
   return startServerUsingCommand(
     {
       ...webServer,
-      command: `node ${fileURLToPath(webServer.moduleUrl)} --jsenv-test`,
-      shell: false,
+      command: `node ${fileURLToPath(webServer.moduleUrl)}`,
+      args: ["--jsenv-test"],
     },
     params,
   );

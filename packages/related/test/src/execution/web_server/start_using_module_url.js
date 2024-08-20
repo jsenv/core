@@ -10,8 +10,8 @@ export const startServerUsingModuleUrl = async (webServer, params) => {
   return startServerUsingCommand(
     {
       ...webServer,
-      command: `node ${fileURLToPath(webServer.moduleUrl)} --jsenv-test`,
-      shell: false,
+      command: `node ${fileURLToPath(webServer.moduleUrl)}`,
+      args: ["--jsenv-test"],
     },
     params,
   );
