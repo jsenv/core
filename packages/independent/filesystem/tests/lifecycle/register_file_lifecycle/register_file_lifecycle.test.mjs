@@ -1,6 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { resolveUrl } from "@jsenv/urls";
-
 import {
   ensureEmptyDirectory,
   moveEntry,
@@ -10,6 +8,7 @@ import {
   writeFile,
 } from "@jsenv/filesystem";
 import { wait } from "@jsenv/filesystem/tests/testHelpers.js";
+import { resolveUrl } from "@jsenv/urls";
 
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
 await ensureEmptyDirectory(tempDirectoryUrl);
@@ -136,12 +135,13 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     removed: () => {
       mutations.push({ type: "removed" });
     },
+    cooldownBetweenFileEvents: 200,
     keepProcessAlive: false,
   });
   await writeFile(fileUrl);
-  await wait(200);
+  await wait(500);
   await moveEntry({ from: fileUrl, to: destinationUrl });
-  await wait(200);
+  await wait(500);
   const actual = mutations;
   const expect = [{ type: "added" }, { type: "removed" }];
   assert({ actual, expect });
