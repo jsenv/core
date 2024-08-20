@@ -20,7 +20,7 @@ const testPlanResult = await executeTestPlan({
   },
   rootDirectoryUrl: new URL("./project/", import.meta.url),
   testPlan: {
-    "./public/**/*.test.html": {
+    "./public/**/*.spec.html": {
       chromium: {
         runtime: chromium(),
       },
@@ -34,7 +34,7 @@ const testPlanResult = await executeTestPlan({
   githubCheck: false,
 });
 
-const chromiumResult = testPlanResult.results["public/main.test.html"].chromium;
+const chromiumResult = testPlanResult.results["public/main.spec.html"].chromium;
 const actual = {
   status: chromiumResult.status,
   errorMessage: chromiumResult.errors[0].message,
