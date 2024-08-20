@@ -28,6 +28,8 @@ import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events
 import { createServerEventsDispatcher } from "../plugins/server_events/server_events_dispatcher.js";
 import { parseUserAgentHeader } from "./user_agent.js";
 
+const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
+
 /**
  * Start a server for source files:
  * - cook source files according to jsenv plugins
@@ -47,7 +49,7 @@ export const startDevServer = async ({
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
-  logLevel = process.env.IMPORTED_BY_TEST_PLAN ? "warn" : "info",
+  logLevel = EXECUTED_BY_TEST_PLAN ? "warn" : "info",
   serverLogLevel = "warn",
   services = [],
 
@@ -626,9 +628,7 @@ ${error.trace?.message}`);
     stopOnExit: false,
     stopOnSIGINT: handleSIGINT,
     stopOnInternalError: false,
-    keepProcessAlive: process.env.IMPORTED_BY_TEST_PLAN
-      ? false
-      : keepProcessAlive,
+    keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
 

@@ -23035,6 +23035,8 @@ const parseUserAgentHeader = memoizeByFirstArgument((userAgent) => {
   };
 });
 
+const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
+
 /**
  * Start a server for source files:
  * - cook source files according to jsenv plugins
@@ -23054,7 +23056,7 @@ const startDevServer = async ({
   // it's better to use http1 by default because it allows to get statusText in devtools
   // which gives valuable information when there is errors
   http2 = false,
-  logLevel = process.env.IMPORTED_BY_TEST_PLAN ? "warn" : "info",
+  logLevel = EXECUTED_BY_TEST_PLAN ? "warn" : "info",
   serverLogLevel = "warn",
   services = [],
 
@@ -23633,9 +23635,7 @@ ${error.trace?.message}`);
     stopOnExit: false,
     stopOnSIGINT: handleSIGINT,
     stopOnInternalError: false,
-    keepProcessAlive: process.env.IMPORTED_BY_TEST_PLAN
-      ? false
-      : keepProcessAlive,
+    keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
 
@@ -23773,9 +23773,7 @@ const startBuildServer = async ({
     stopOnExit: false,
     stopOnSIGINT: false,
     stopOnInternalError: false,
-    keepProcessAlive: process.env.IMPORTED_BY_TEST_PLAN
-      ? false
-      : keepProcessAlive,
+    keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
 

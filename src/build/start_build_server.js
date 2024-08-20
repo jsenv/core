@@ -108,9 +108,7 @@ export const startBuildServer = async ({
     stopOnExit: false,
     stopOnSIGINT: false,
     stopOnInternalError: false,
-    keepProcessAlive: process.env.IMPORTED_BY_TEST_PLAN
-      ? false
-      : keepProcessAlive,
+    keepProcessAlive,
     logLevel: serverLogLevel,
     startLog: false,
 

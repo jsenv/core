@@ -4,7 +4,7 @@ import { pingServer } from "../../helpers/ping_server.js";
 
 export const startServerUsingCommand = async (
   webServer,
-  { signal, allocatedMs, logger, teardownCallbackSet },
+  { signal, allocatedMs, logger, teardownCallbackSet, shell = true },
 ) => {
   const spawnedProcess = spawn(webServer.command, [], {
     // On non-windows platforms, `detached: true` makes child process a leader of a new
@@ -12,7 +12,7 @@ export const startServerUsingCommand = async (
     // @see https://nodejs.org/api/child_process.html#child_process_options_detached
     detached: process.platform !== "win32",
     stdio: ["pipe", "pipe", "pipe"],
-    shell: true,
+    shell,
     cwd: webServer.cwd,
   });
   if (!spawnedProcess.pid) {
@@ -42,6 +42,10 @@ export const startServerUsingCommand = async (
   let isAbort = false;
   let isTeardown = false;
   let processClosed = false;
+  let stderr = "";
+  spawnedProcess.stderr.on("data", (data) => {
+    stderr += String(data);
+  });
   const closedPromise = new Promise((resolve) => {
     spawnedProcess.once("exit", (exitCode, signal) => {
       processClosed = true;
@@ -51,7 +55,10 @@ export const startServerUsingCommand = async (
         );
       } else {
         logger.error(
-          `web server process premature exit exitCode=${exitCode}, exitSignal=${signal}, pid=${spawnedProcess.pid}`,
+          `web server process premature exit exitCode=${exitCode}, exitSignal=${signal}, pid=${spawnedProcess.pid}
+--- stderr ---
+${stderr}
+--------------`,
         );
       }
       resolve();
