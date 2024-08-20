@@ -33,9 +33,7 @@
     "/src/"
   ],
   "scripts": {
-    "dev": "node ./scripts/dev.mjs",
     "build": "node ./scripts/build.mjs",
-    "test": "node ./scripts/test.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
