@@ -142,9 +142,9 @@ await executeTestPlan({
     origin: "http://127.0.0.1:3456",
     moduleUrl: new URL("../dev/dev.mjs", import.meta.url),
   },
-  githubCheck: process.env.CI
-    ? {
-        name: `@jsenv/core tests (${process.platform})`,
-      }
-    : null,
+  // githubCheck: process.env.CI
+  //   ? {
+  //       name: `@jsenv/core tests (${process.platform})`,
+  //     }
+  //   : null,
 });
