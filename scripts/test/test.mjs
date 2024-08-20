@@ -6,8 +6,9 @@
 
 import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
 
-// here we'll have a custon behavior of if there is nothing specified we execute only our tests
-
+if (process.argv.length === 2) {
+  process.argv.push("./tests/");
+}
 await executeTestPlan({
   logs: {
     level: "info",

@@ -14,6 +14,7 @@ import {
 } from "@jsenv/github-check-run";
 import { createDetailedMessage, createLogger, UNICODE } from "@jsenv/humanize";
 import { URL_META } from "@jsenv/url-meta";
+import { urlIsInsideOf } from "@jsenv/urls";
 import { existsSync } from "node:fs";
 import {
   availableParallelism,
@@ -665,6 +666,14 @@ To fix this warning:
       let lastExecution;
       const fileExecutionCountMap = new Map();
       for (const { relativeUrl, meta } of fileResultArray) {
+        if (process.argv.length > 2) {
+          const onlyWithin = process.argv[2];
+          const fileUrl = new URL(relativeUrl, rootDirectoryUrl);
+          const onlyWithinUrl = new URL(onlyWithin, rootDirectoryUrl);
+          if (!urlIsInsideOf(fileUrl, onlyWithinUrl)) {
+            continue;
+          }
+        }
         const filePlan = meta.testPlan;
         for (const groupName of Object.keys(filePlan)) {
           const stepConfig = filePlan[groupName];
