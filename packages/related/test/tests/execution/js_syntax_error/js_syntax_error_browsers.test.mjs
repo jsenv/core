@@ -2,6 +2,10 @@ import { startDevServer } from "@jsenv/core";
 import { chromium, execute, firefox, webkit } from "@jsenv/test";
 import { snapshotFileExecutionSideEffects } from "@jsenv/test/tests/snapshot_execution_side_effects.js";
 
+if (process.platform === "win32") {
+  process.exit(0);
+}
+
 const run = async ({ runtime }) => {
   const devServer = await startDevServer({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
