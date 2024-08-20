@@ -1,7 +1,13 @@
 /*
- * Execute all test files
+ * Execute test files
  * - npm test
- * Read more in https://github.com/jsenv/core/tree/main/packages/test#jsenvtest-
+ *   Execute only tests inside @jsenv/core
+ * - npm test @jsenv/humanize(
+ *   Execute only tests inside @jsenv/humanize
+ * - npm test ./packages/
+ *   Execute only tests inside ./packages/
+ * - npm test .
+ *   Execute all tests
  */
 
 import {
@@ -13,7 +19,10 @@ import {
 } from "@jsenv/test";
 
 if (process.argv.length === 2) {
-  process.argv.push("./tests/");
+  process.argv.push("@jsenv/core");
+}
+if (process.argv[2] === "@jsenv/core") {
+  process.argv[2] = "./tests/";
 }
 await executeTestPlan({
   logs: {
