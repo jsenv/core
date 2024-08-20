@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-preact",
-  "version": "1.6.17",
+  "version": "1.6.18",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -20,16 +20,13 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  },
   "dependencies": {
     "babel-plugin-transform-hook-names": "1.0.2",
     "@babel/plugin-transform-react-jsx": "7.25.2",
     "@babel/plugin-transform-react-jsx-development": "7.24.7",
     "@jsenv/ast": "6.2.17",
     "@jsenv/sourcemap": "1.2.23",
-    "@jsenv/url-meta": "8.5.1",
+    "@jsenv/url-meta": "8.5.2",
     "@prefresh/babel-plugin": "0.5.1",
     "@prefresh/core": "1.5.2",
     "@prefresh/utils": "1.2.0"

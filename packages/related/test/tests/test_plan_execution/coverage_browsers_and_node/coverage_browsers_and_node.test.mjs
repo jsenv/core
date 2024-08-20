@@ -56,7 +56,7 @@ await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
   test("0_basic", async () => {
     await run({
       testPlan: {
-        "./client/main.test.html": {
+        "./client/main.spec.html": {
           chromium: {
             runtime: chromium(),
           },
@@ -69,7 +69,7 @@ await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
             runtime: webkit(),
           },
         },
-        "./client/main.test.js": {
+        "./client/main.spec.js": {
           node: {
             runtime: nodeWorkerThread(),
           },

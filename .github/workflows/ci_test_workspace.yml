@@ -63,6 +63,10 @@ jobs:
       - name: Fix lightningcss windows
         if: runner.os == 'Windows'
         run: npm install lightningcss-win32-x64-msvc
+      - name: Run package tests
+        run: npm run packages:test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Run workspace tests
         run: npm run workspace:test
         env:

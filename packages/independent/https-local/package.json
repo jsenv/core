@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/https-local",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "description": "A programmatic way to generate locally trusted certificates",
   "license": "MIT",
   "repository": {
@@ -27,7 +27,6 @@
     "/src/"
   ],
   "scripts": {
-    "test": "node ./scripts/test/test.mjs",
     "performance": "node --expose-gc ./scripts/performance/performance.mjs  --local --log",
     "test:start-node-server": "node ./scripts/certificate/start_node_server.mjs",
     "ca:install": "node ./scripts/certificate/install_ca.mjs",
@@ -41,7 +40,7 @@
     "hosts:ensure-localhost-mappings": "node ./scripts/hosts/ensure_localhost_mappings.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.10.2",
+    "@jsenv/filesystem": "4.10.3",
     "@jsenv/humanize": "1.2.8",
     "@jsenv/urls": "2.5.2",
     "command-exists": "1.2.9",

@@ -25,9 +25,6 @@
     "/src/"
   ],
   "sideEffects": false,
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  },
   "dependencies": {
     "@jsenv/humanize": "1.2.8"
   }

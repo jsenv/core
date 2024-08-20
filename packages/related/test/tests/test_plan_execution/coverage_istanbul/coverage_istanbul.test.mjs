@@ -57,7 +57,7 @@ await snapshotTestPlanSideEffects(import.meta.url, ({ test }) => {
   test("0_basic", async () => {
     await run({
       testPlan: {
-        "./client/main.test.html": {
+        "./client/main.spec.html": {
           chromium: {
             runtime: chromium(),
           },

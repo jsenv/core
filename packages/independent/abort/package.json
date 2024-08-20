@@ -27,8 +27,5 @@
   },
   "files": [
     "/src/"
-  ],
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  }
+  ]
 }

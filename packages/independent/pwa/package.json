@@ -29,11 +29,6 @@
   "files": [
     "/src/"
   ],
-  "scripts": {
-    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
-    "test": "node ./scripts/test.mjs",
-    "prettier": "prettier --write ."
-  },
   "dependencies": {
     "@jsenv/sigi": "0.0.5"
   },

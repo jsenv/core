@@ -28,11 +28,5 @@
   "main": "./src/main.js",
   "files": [
     "/src/"
-  ],
-  "scripts": {
-    "dev": "node ./scripts/dev.mjs",
-    "test": "node ./scripts/test.mjs"
-  },
-  "dependencies": {},
-  "devDependencies": {}
+  ]
 }

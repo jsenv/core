@@ -7,7 +7,7 @@ const measures = startMeasures({
 });
 const { build } = await import("@jsenv/core");
 await build({
-  logLevel: "warn",
+  logs: { level: "warn" },
   sourceDirectoryUrl: new URL("./", import.meta.url),
   entryPoints: {
     "./main.html": "main.min.html",

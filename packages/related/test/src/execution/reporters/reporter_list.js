@@ -260,8 +260,8 @@ const renderIntro = (testPlanResult, logOptions) => {
       if (!single) {
         testPlanLog += ",";
       }
+      testPlanLog += "\n";
     }
-    testPlanLog += "\n";
     testPlanLog += "}";
     lines.push(`testPlan: ${testPlanLog}`);
   }

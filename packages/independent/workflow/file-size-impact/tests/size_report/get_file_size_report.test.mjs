@@ -82,7 +82,7 @@ const test = (params) => {
     groups: {
       dist: {
         tracking: {
-          "./dist/**/*": meta,
+          "./dist/**/*": { showSizeImpact: meta.showSizeImpact },
         },
         manifestMap: {
           "dist/manifest.json": {

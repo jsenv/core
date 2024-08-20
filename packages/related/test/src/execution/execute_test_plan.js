@@ -13,7 +13,9 @@ import {
   startGithubCheckRun,
 } from "@jsenv/github-check-run";
 import { createDetailedMessage, createLogger, UNICODE } from "@jsenv/humanize";
+import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { URL_META } from "@jsenv/url-meta";
+import { urlIsInsideOf } from "@jsenv/urls";
 import { existsSync } from "node:fs";
 import {
   availableParallelism,
@@ -661,10 +663,30 @@ To fix this warning:
       // --- 100 execution found ---
       // Executing only from 33 to 66 according to fragment: "2/3"
 
+      let onlyWithinUrl;
+      if (process.argv.length > 2) {
+        const onlyWithin = process.argv[2];
+        if (onlyWithin[0] === "@") {
+          const resolutionResult = applyNodeEsmResolution({
+            specifier: onlyWithin,
+            parentUrl: rootDirectoryUrl,
+          });
+          onlyWithinUrl = resolutionResult.packageDirectoryUrl;
+        } else {
+          onlyWithinUrl = new URL(onlyWithin, rootDirectoryUrl);
+        }
+      }
+
       let index = 0;
       let lastExecution;
       const fileExecutionCountMap = new Map();
       for (const { relativeUrl, meta } of fileResultArray) {
+        if (onlyWithinUrl) {
+          const fileUrl = new URL(relativeUrl, rootDirectoryUrl).href;
+          if (!urlIsInsideOf(fileUrl, onlyWithinUrl)) {
+            continue;
+          }
+        }
         const filePlan = meta.testPlan;
         for (const groupName of Object.keys(filePlan)) {
           const stepConfig = filePlan[groupName];
@@ -752,6 +774,10 @@ To fix this warning:
               allocatedMsResult === undefined
                 ? defaultMsAllocatedPerExecution
                 : allocatedMsResult;
+          }
+          if (typeof params.uses === "function") {
+            const usesResult = params.uses(execution);
+            params.uses = usesResult;
           }
 
           lastExecution = execution;

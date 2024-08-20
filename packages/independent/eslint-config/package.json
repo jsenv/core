@@ -33,7 +33,6 @@
     "/babel.config.cjs"
   ],
   "scripts": {
-    "test": "node ./scripts/test.mjs",
     "build": "node ./scripts/build.mjs",
     "prepublishOnly": "npm run build"
   },

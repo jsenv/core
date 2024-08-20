@@ -1,17 +1,15 @@
-import { requestCertificate } from "@jsenv/https-local";
+import { startDevServer } from "@jsenv/core";
+// import { requestCertificate } from "@jsenv/https-local";
 import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
 
-import { startDevServer } from "@jsenv/core";
-
-const { certificate, privateKey } = requestCertificate();
+// const { certificate, privateKey } = requestCertificate();
 await startDevServer({
   sourceDirectoryUrl: new URL("../../", import.meta.url),
-  https: { certificate, privateKey },
+  hostname: "127.0.0.1",
+  // https: { certificate, privateKey },
   http2: false,
   port: 3456,
-  supervisor: {
-    logs: true,
-  },
+  // supervisor: { logs: true },
   plugins: [
     jsenvPluginExplorer({
       groups: {

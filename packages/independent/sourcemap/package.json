@@ -15,9 +15,6 @@
     ".": "./src/main.js",
     "./*": "./*"
   },
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  },
   "dependencies": {
     "@jsenv/urls": "2.5.2",
     "magic-string": "0.30.11",
