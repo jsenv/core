@@ -1,6 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { urlToFileSystemPath } from "@jsenv/urls";
-
 import {
   copyDirectoryContentSync,
   ensureEmptyDirectorySync,
@@ -9,6 +7,7 @@ import {
   writeFileStructureSync,
   writeFileSync,
 } from "@jsenv/filesystem";
+import { urlToFileSystemPath } from "@jsenv/urls";
 
 const tempDirectoryUrl = new URL("./temp/", import.meta.url);
 const test = (callback) => {

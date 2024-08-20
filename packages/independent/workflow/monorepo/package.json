@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/monorepo",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "description": "Helpers to manage packages in a monorepo",
   "license": "MIT",
   "repository": {
@@ -27,8 +27,8 @@
   ],
   "dependencies": {
     "@jsenv/urls": "2.5.2",
-    "@jsenv/filesystem": "4.10.4",
-    "@jsenv/package-publish": "1.11.2",
+    "@jsenv/filesystem": "4.10.6",
+    "@jsenv/package-publish": "1.11.4",
     "@jsenv/humanize": "1.2.8",
     "semver": "7.6.3"
   }

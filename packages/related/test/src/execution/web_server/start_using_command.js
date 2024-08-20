@@ -54,7 +54,7 @@ export const startServerUsingCommand = async (
           `web server process exit exitCode=${exitCode}, exitSignal=${signal}, pid=${spawnedProcess.pid}`,
         );
       } else {
-        console.error(
+        logger.error(
           `web server process premature exit exitCode=${exitCode}, exitSignal=${signal}, pid=${spawnedProcess.pid}
 --- stderr ---
 ${stderr}

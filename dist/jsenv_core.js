@@ -3973,7 +3973,7 @@ const registerDirectoryLifecycle = (
           stat: null,
         };
       }
-      if (e.code === "EACCES") {
+      if (e.code === "EACCES" || e.code === "EPERM") {
         return {
           type: null,
           stat: null,
@@ -4107,13 +4107,24 @@ const registerDirectoryLifecycle = (
     infoMap.set(entryInfo.relativeUrl, entryInfo);
     if (entryInfo.type === "directory") {
       const directoryUrl = `${entryInfo.url}/`;
-      readdirSync(new URL(directoryUrl)).forEach((entryName) => {
+      let entryNameArray;
+      try {
+        const directoryUrlObject = new URL(directoryUrl);
+        entryNameArray = readdirSync(directoryUrlObject);
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          entryNameArray = [];
+        } else {
+          throw e;
+        }
+      }
+      for (const entryName of entryNameArray) {
         const childEntryUrl = new URL(entryName, directoryUrl).href;
         const childEntryInfo = readEntryInfo(childEntryUrl);
         if (childEntryInfo.type !== null && childEntryInfo.patternValue) {
           handleEntryFound(childEntryInfo, { notify });
         }
-      });
+      }
       // we must watch manually every directory we find
       if (!fsWatchSupportsRecursive) {
         const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {

@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
   try {
     await ensureWebServerIsStarted(webServer, {
       signal: new AbortController().signal,
-      logger: { debug: () => {}, info: () => {} },
+      logger: { debug: () => {}, info: () => {}, error: () => {} },
       teardownCallbackSet: new Set(),
       allocatedMs: 500,
     });
@@ -35,7 +35,7 @@ import { fileURLToPath } from "node:url";
   try {
     await ensureWebServerIsStarted(webServer, {
       signal: new AbortController().signal,
-      logger: { debug: () => {}, info: () => {} },
+      logger: { debug: () => {}, info: () => {}, error: () => {} },
       teardownCallbackSet: new Set(),
       allocatedMs: 500,
     });
@@ -60,7 +60,7 @@ import { fileURLToPath } from "node:url";
   try {
     await ensureWebServerIsStarted(webServer, {
       signal: new AbortController().signal,
-      logger: { debug: () => {}, info: () => {} },
+      logger: { debug: () => {}, info: () => {}, error: () => {} },
       teardownCallbackSet: new Set(),
       allocatedMs: 500,
     });
@@ -85,7 +85,7 @@ import { fileURLToPath } from "node:url";
   };
   await ensureWebServerIsStarted(webServer, {
     signal: new AbortController().signal,
-    logger: { debug: () => {}, info: () => {} },
+    logger: { debug: () => {}, info: () => {}, error: () => {} },
     teardownCallbackSet,
   });
   const serverUp = await pingServer(webServer.origin);
