@@ -70,6 +70,7 @@ jobs:
       # The result is stored in $PLAYWRIGHT_VERSION
       # https://github.com/microsoft/playwright/issues/7249#issuecomment-2299065930
       # https://stackoverflow.com/a/33426237/24573072
+      # https://github.com/actions/runner/issues/1636#issuecomment-1024531638
       - name: Get installed Playwright version windows
         if: runner.os == 'windows'
         run: echo "PLAYWRIGHT_VERSION=$(npm ll -p --depth=0 playwright | grep -o '@.*')" | Out-File -FilePath $env:GITHUB_ENV -Append
