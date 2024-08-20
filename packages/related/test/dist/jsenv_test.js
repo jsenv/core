@@ -8,6 +8,7 @@ import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, 
 import { dirname } from "node:path";
 import crypto from "node:crypto";
 import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
+import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
 import { createRequire } from "node:module";
@@ -4502,8 +4503,8 @@ const renderIntro = (testPlanResult, logOptions) => {
       if (!single) {
         testPlanLog += ",";
       }
+      testPlanLog += "\n";
     }
-    testPlanLog += "\n";
     testPlanLog += "}";
     lines.push(`testPlan: ${testPlanLog}`);
   }
@@ -6328,10 +6329,30 @@ To fix this warning:
       // --- 100 execution found ---
       // Executing only from 33 to 66 according to fragment: "2/3"
 
+      let onlyWithinUrl;
+      if (process.argv.length > 2) {
+        const onlyWithin = process.argv[2];
+        if (onlyWithin[0] === "@") {
+          const resolutionResult = applyNodeEsmResolution({
+            specifier: onlyWithin,
+            parentUrl: rootDirectoryUrl,
+          });
+          onlyWithinUrl = resolutionResult.packageDirectoryUrl;
+        } else {
+          onlyWithinUrl = new URL(onlyWithin, rootDirectoryUrl);
+        }
+      }
+
       let index = 0;
       let lastExecution;
       const fileExecutionCountMap = new Map();
       for (const { relativeUrl, meta } of fileResultArray) {
+        if (onlyWithinUrl) {
+          const fileUrl = new URL(relativeUrl, rootDirectoryUrl).href;
+          if (!urlIsInsideOf(fileUrl, onlyWithinUrl)) {
+            continue;
+          }
+        }
         const filePlan = meta.testPlan;
         for (const groupName of Object.keys(filePlan)) {
           const stepConfig = filePlan[groupName];
@@ -6414,7 +6435,15 @@ To fix this warning:
             result: {},
           };
           if (typeof params.allocatedMs === "function") {
-            params.allocatedMs = params.allocatedMs(execution);
+            const allocatedMsResult = params.allocatedMs(execution);
+            params.allocatedMs =
+              allocatedMsResult === undefined
+                ? defaultMsAllocatedPerExecution
+                : allocatedMsResult;
+          }
+          if (typeof params.uses === "function") {
+            const usesResult = params.uses(execution);
+            params.uses = usesResult;
           }
 
           lastExecution = execution;
