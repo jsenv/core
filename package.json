@@ -48,6 +48,7 @@
     "test": "node --conditions=development ./scripts/test/test.mjs",
     "build": "node --conditions=development ./scripts/build/build.mjs",
     "packages:test": "npm run test -- ./packages/",
+    "custom:test": "npm test @jsenv/custom-elements-redefine",
     "workspace:test": "npm run test --workspaces --if-present -- --workspace",
     "workspace:build": "npm run build --workspaces --if-present --conditions=developement",
     "monorepo:sync_packages_versions": "node ./scripts/monorepo/sync_packages_versions.mjs",

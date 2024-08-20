@@ -4,7 +4,13 @@
  * Read more in https://github.com/jsenv/core/tree/main/packages/test#jsenvtest-
  */
 
-import { executeTestPlan, nodeWorkerThread } from "@jsenv/test";
+import {
+  chromium,
+  executeTestPlan,
+  firefox,
+  nodeWorkerThread,
+  webkit,
+} from "@jsenv/test";
 
 if (process.argv.length === 2) {
   process.argv.push("./tests/");
@@ -40,6 +46,19 @@ await executeTestPlan({
           }
           return 30_000;
         },
+      },
+    },
+    "./packages/**/*.test.html": {
+      chromium: {
+        runtime: chromium(),
+      },
+      firefox: {
+        runtime: firefox({
+          disableOnWindowsBecauseFlaky: true,
+        }),
+      },
+      webkit: {
+        runtime: webkit(),
       },
     },
     "./packages/**/*.test.mjs": {
@@ -104,14 +123,15 @@ await executeTestPlan({
         }),
       },
     },
-    "./packages/**/https-local/": {
-      node: null, // disabled for now
-    },
-    "./packages/**/cli/": {
-      // the templates have their own test script that will be trigerred by
-      // npm run workspace:test
-      node: null,
-    },
+    // disabled for now
+    "./packages/**/https-local/": null,
+    // the templates have their own test script that will be trigerred by
+    // npm run workspace:test
+    "./packages/**/cli/": null,
+  },
+  webServer: {
+    origin: "http://127.0.0.1:3456",
+    moduleUrl: new URL("../dev/dev.mjs", import.meta.url),
   },
   githubCheck: process.env.CI
     ? {
