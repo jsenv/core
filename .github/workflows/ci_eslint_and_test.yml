@@ -67,11 +67,14 @@ jobs:
       # 3. jq comes pre-installed in the Ubuntu runner, so we use that to get
       #    the correct version string.
       # 4. Finally, we use sed to extract just the version number (eg; '1.22.0')
-      # The result is stored in steps.playwright-version.outputs.version
+      # The result is stored in $PLAYWRIGHT_VERSION
       - name: Get installed Playwright version
         id: playwright-version
         # https://stackoverflow.com/a/33426237/24573072
-        run: echo "::set-output name=version::$(npm ll -p --depth=0 playwright | grep -o "@.*")"
+        run: echo "PLAYWRIGHT_VERSION=version::$(npm ll -p --depth=0 playwright | grep -o '@.*')" >> $GITHUB_OUTPUT
+
+      - name: Print playwright version
+        run: echo "${PLAYWRIGHT_VERSION}"
 
       # Attempt to restore the correct Playwright browser binaries based on the
       # currently installed version of Playwright (The browser binary versions
@@ -84,7 +87,7 @@ jobs:
         id: playwright-cache
         with:
           path: "~/.cache/ms-playwright"
-          key: "${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}"
+          key: "${{ runner.os }}-playwright-${{ PLAYWRIGHT_VERSION }}"
           # As a fallback, if the Playwright version has changed, try use the
           # most recently cached version. There's a good chance that at least one
           # of the browser binary versions haven't been updated, so Playwright can
