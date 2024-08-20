@@ -4113,10 +4113,9 @@ const registerDirectoryLifecycle = (
         entryNameArray = readdirSync(directoryUrlObject);
       } catch (e) {
         if (e.code === "ENOENT") {
-          entryNameArray = [];
-        } else {
-          throw e;
+          return;
         }
+        throw e;
       }
       for (const entryName of entryNameArray) {
         const childEntryUrl = new URL(entryName, directoryUrl).href;

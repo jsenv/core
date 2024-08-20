@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-explorer",
-  "version": "1.0.45",
+  "version": "1.0.46",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.10.6"
+    "@jsenv/filesystem": "4.10.7"
   },
   "scripts": {
     "build": "node ./scripts/build.mjs",
