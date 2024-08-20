@@ -476,7 +476,11 @@ const renderExecutionLabel = (execution, logOptions) => {
     }
   }
   // intersummary
-  if (logOptions.intermediateSummary) {
+  if (
+    logOptions.intermediateSummary ||
+    execution.counters.timedout ||
+    execution.counters.failed
+  ) {
     let intermediateSummary = "";
     intermediateSummary += renderStatusRepartition(execution.countersInOrder);
     label += ` (${intermediateSummary})`;
