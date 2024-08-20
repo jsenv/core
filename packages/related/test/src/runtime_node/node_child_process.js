@@ -3,7 +3,6 @@ import { ANSI, createDetailedMessage, UNICODE } from "@jsenv/humanize";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 import { fork } from "node:child_process";
 import { fileURLToPath } from "node:url";
-
 import { createChildExecOptions } from "./child_exec_options.js";
 import { ExecOptions } from "./exec_options.js";
 import { EXIT_CODES } from "./exit_codes.js";
@@ -197,7 +196,14 @@ export const nodeChildProcess = ({
         // There is no satisfying solution to this problem so we stick to the basic
         // childProcess.kill()
         if (process.platform === "win32") {
-          childProcess.kill();
+          try {
+            childProcess.kill();
+          } catch (e) {
+            if (e.code === "EPERM") {
+              return;
+            }
+            throw e;
+          }
           return;
         }
         if (gracefulStopAllocatedMs) {

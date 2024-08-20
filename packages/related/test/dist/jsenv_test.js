@@ -4719,7 +4719,11 @@ const renderExecutionLabel = (execution, logOptions) => {
     }
   }
   // intersummary
-  if (logOptions.intermediateSummary) {
+  if (
+    logOptions.intermediateSummary ||
+    execution.counters.timedout ||
+    execution.counters.failed
+  ) {
     let intermediateSummary = "";
     intermediateSummary += renderStatusRepartition(execution.countersInOrder);
     label += ` (${intermediateSummary})`;
@@ -8435,7 +8439,14 @@ const nodeChildProcess = ({
         // There is no satisfying solution to this problem so we stick to the basic
         // childProcess.kill()
         if (process.platform === "win32") {
-          childProcess.kill();
+          try {
+            childProcess.kill();
+          } catch (e) {
+            if (e.code === "EPERM") {
+              return;
+            }
+            throw e;
+          }
           return;
         }
         if (gracefulStopAllocatedMs) {
