@@ -28,8 +28,5 @@
   "main": "./src/jsenv_service_worker.js",
   "files": [
     "/src/"
-  ],
-  "scripts": {
-    "test": "node --conditions=development ./scripts/test.mjs"
-  }
+  ]
 }

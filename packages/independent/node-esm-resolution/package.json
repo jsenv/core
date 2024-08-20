@@ -22,8 +22,5 @@
     "/dist/",
     "/src/",
     "/main.js"
-  ],
-  "scripts": {
-    "test": "node --conditions=development ./tests/test.mjs"
-  }
+  ]
 }
