@@ -5499,13 +5499,21 @@ const startServerUsingCommand = async (
   // stderr.on("line", (data) => {
   //   logger.debug(`[pid=${spawnedProcess.pid}][err] ${data}`);
   // });
+  let isAbort = false;
+  let isTeardown = false;
   let processClosed = false;
   const closedPromise = new Promise((resolve) => {
     spawnedProcess.once("exit", (exitCode, signal) => {
-      logger.debug(
-        `[pid=${spawnedProcess.pid}] <process did exit: exitCode=${exitCode}, signal=${signal}>`,
-      );
       processClosed = true;
+      if (isAbort || isTeardown) {
+        logger.debug(
+          `web server process exit exitCode=${exitCode}, exitSignal=${signal}, pid=${spawnedProcess.pid}`,
+        );
+      } else {
+        logger.error(
+          `web server process premature exit exitCode=${exitCode}, exitSignal=${signal}, pid=${spawnedProcess.pid}`,
+        );
+      }
       resolve();
     });
   });
@@ -5550,8 +5558,14 @@ const startServerUsingCommand = async (
   const startOperation = Abort.startOperation();
   startOperation.addAbortSignal(signal);
   const timeoutAbortSource = startOperation.timeout(allocatedMs);
-  startOperation.addAbortCallback(killProcess);
-  teardownCallbackSet.add(killProcess);
+  startOperation.addAbortCallback(async () => {
+    isAbort = true;
+    await killProcess();
+  });
+  teardownCallbackSet.add(async () => {
+    isTeardown = true;
+    await killProcess();
+  });
 
   const startedPromise = (async () => {
     const logScale = [100, 250, 500];
