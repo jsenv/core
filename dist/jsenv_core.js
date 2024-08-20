@@ -3967,13 +3967,12 @@ const registerDirectoryLifecycle = (
         patternValue,
       };
     } catch (e) {
-      if (e.code === "ENOENT") {
-        return {
-          type: null,
-          stat: null,
-        };
-      }
-      if (e.code === "EACCES" || e.code === "EPERM") {
+      if (
+        e.code === "ENOENT" ||
+        e.code === "EACCES" ||
+        e.code === "EPERM" ||
+        e.code === "ENOTDIR" // happens on mac12 sometimes
+      ) {
         return {
           type: null,
           stat: null,
