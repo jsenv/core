@@ -81,7 +81,7 @@ jobs:
       # Note: Playwright's cache directory is hard coded because that's what it
       # says to do in the docs. There doesn't appear to be a command that prints
       # it out for us.
-      - name: Attempt to restore playwright from cache
+      - name: Cache by playwright version
         uses: actions/cache@v3
         id: playwright-cache
         with:
