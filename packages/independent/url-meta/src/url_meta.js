@@ -85,13 +85,16 @@ export const applyAssociations = ({ url, associations }) => {
 };
 
 const deepAssign = (firstValue, secondValue) => {
-  if (!isPlainObject(firstValue) || !isPlainObject(secondValue)) {
+  if (!isPlainObject(firstValue)) {
+    if (isPlainObject(secondValue)) {
+      return deepAssign({}, secondValue);
+    }
     return secondValue;
   }
   for (const key of Object.keys(secondValue)) {
-    const leftValue = firstValue[key];
-    const rightValue = secondValue[key];
-    firstValue[key] = deepAssign(leftValue, rightValue);
+    const leftPopertyValue = firstValue[key];
+    const rightPropertyValue = secondValue[key];
+    firstValue[key] = deepAssign(leftPopertyValue, rightPropertyValue);
   }
   return firstValue;
 };
