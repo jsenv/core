@@ -96,8 +96,6 @@ jobs:
       - name: Cache by playwright version
         uses: actions/cache@v4
         id: playwright-cache
-        env:
-          HOME: $HOME
         with:
           # see https://playwright.dev/docs/browsers#managing-browser-binaries
           path: ${{ runner.os == 'Windows' && join(env.HOME, '\AppData\Local\ms-playwright') || runner.os == 'Linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
