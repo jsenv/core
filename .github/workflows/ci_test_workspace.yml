@@ -98,7 +98,7 @@ jobs:
         id: playwright-cache
         with:
           # see https://playwright.dev/docs/browsers#managing-browser-binaries
-          path: ${{ runner.os == 'Windows' && format({0}{1}, env.HOME, '\AppData\Local\ms-playwright') || runner.os == 'Linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
+          path: ${{ runner.os == 'Windows' && format('{0}{1}', env.HOME, '\AppData\Local\ms-playwright') || runner.os == 'Linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
           # As a fallback, if the Playwright version has changed, try use the
           # most recently cached version. There's a good chance that at least one
