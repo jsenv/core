@@ -55,7 +55,7 @@ jobs:
           ulimit -n
       - name: Put $HOME in env
         if: runner.os == 'windows'
-        run: echo "HOME=$HOME | Out-File -FilePath $env:GITHUB_ENV -Append
+        run: echo "HOME=$HOME" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Echo $HOME
         if: runner.os == 'windows'
         run: echo $HOME
