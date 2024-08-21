@@ -81,11 +81,6 @@ jobs:
         if: runner.os == 'windows'
         run: echo "HOME=$HOME" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: toto
-        env:
-          FOO: ${{ format('{0}{1}', $HOME, '\AppData\Local\ms-playwright') }}
-        run: echo "${{ env.FOO }}"
-
       # Attempt to restore the correct Playwright browser binaries based on the
       # currently installed version of Playwright (The browser binary versions
       # may change with Playwright versions).
