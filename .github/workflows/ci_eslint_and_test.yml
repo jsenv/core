@@ -47,6 +47,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      ## --- NPM INSTALL START --- ##
+      # sudo ulimit should prevent npm link failure
       - name: set linux fs limits
         if: runner.os == 'Linux'
         run: |
@@ -54,21 +56,15 @@ jobs:
           sudo sysctl -p
           sudo sh -c "ulimit -n 65536 && exec su $LOGNAME"
           ulimit -n
-        # sudo ulimit should prevent npm link failure
       - name: Install node modules
         run: npm install
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-
       # Figures out the version of playwright that's installed.
-      # 1. Because we don't know what version yarn will resolve it to, we have
-      #    to use `yarn why` to get the actually installed version.
+      # 1. Because we don't know what version npm will resolve it to
       # 2. Because we're in a workspace, we need to make sure we get the version
       #    for the root and not any children, hence the `grep`. If not using
       #    workspaces, this can be skipped.
-      # 3. jq comes pre-installed in the Ubuntu runner, so we use that to get
-      #    the correct version string.
-      # 4. Finally, we use sed to extract just the version number (eg; '1.22.0')
       # The result is stored in $PLAYWRIGHT_VERSION
       # https://github.com/microsoft/playwright/issues/7249#issuecomment-2299065930
       # https://stackoverflow.com/a/33426237/24573072
@@ -115,17 +111,17 @@ jobs:
       - name: Install Playwright's dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps
-
-      - name: Install certificate # needed for @jsenv/service-worker tests
-        if: runner.os == 'Linux' # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
-        run: npm run https:setup
       - name: Fix lightningcss windows
         if: runner.os == 'Windows'
         run: npm install lightningcss-win32-x64-msvc
+      ## --- NPM INSTALL END --- ##
       - name: Run ESLint
         env:
           NODE_OPTIONS: "--max_old_space_size=4096"
         run: npm run eslint
+      - name: Install certificate # needed for @jsenv/service-worker tests
+        if: runner.os == 'Linux' # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
+        run: npm run https:setup
       - name: Run core tests
         run: npm test
         env:
