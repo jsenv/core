@@ -82,14 +82,13 @@ jobs:
       - name: Put $HOME in env
         if: runner.os == 'windows'
         run: echo "HOME=$HOME" | Out-File -FilePath $env:GITHUB_ENV -Append
-
       # Attempt to restore the correct Playwright browser binaries based on the
       # currently installed version of Playwright (The browser binary versions
       # may change with Playwright versions).
       # Note: Playwright's cache directory is hard coded because that's what it
       # says to do in the docs. There doesn't appear to be a command that prints
       # it out for us.
-      - name: Cache by playwright version
+      - name: Cache playwright binaries
         uses: actions/cache@v4
         id: playwright-cache
         with:
@@ -106,14 +105,13 @@ jobs:
           # new binaries or not.
           restore-keys: |
             ${{ runner.os }}-playwright-
-
       # If the Playwright browser binaries weren't able to be restored, we tell
       # paywright to install everything for us.
       - name: Install Playwright with dependencies
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
-
-      # https://github.com/microsoft/playwright/issues/7249#issuecomment-1171962742
+      # If browser binaries are available we ask playwright to install os specific deps
+      # For example on linux it will install ffmpeg, xvfb, and many more libs
       - name: Install Playwright's dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps
