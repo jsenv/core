@@ -82,7 +82,7 @@ jobs:
       # see https://playwright.dev/docs/browsers#managing-browser-binaries
       - name: Try something
         env:
-          PLAYWRIGHT_CACHE_PATH_2: ${{ runner.os == 'windows' && '$HOME\AppData\Local\ms-playwright' || runner.os === 'linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
+          PLAYWRIGHT_CACHE_PATH_2: ${{ runner.os == 'windows' && '$HOME\AppData\Local\ms-playwright' || runner.os == 'linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
         run: echo "${{ env.PLAYWRIGHT_CACHE_PATH_2 }}"
       - name: Detect Playwright cache path
         run: |
