@@ -79,21 +79,10 @@ jobs:
       - name: Detect installed Playwright version Linux and Mac
         if: runner.os != 'windows'
         run: echo "PLAYWRIGHT_VERSION=$(npm ll -p --depth=0 playwright | grep -o '@.*')" >> $GITHUB_ENV
-      # see https://playwright.dev/docs/browsers#managing-browser-binaries
       - name: Try something
         env:
-          PLAYWRIGHT_CACHE_PATH_2: ${{ runner.os == 'windows' && '$HOME\AppData\Local\ms-playwright' || runner.os == 'linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
+          PLAYWRIGHT_CACHE_PATH_2: ${{ runner.os == 'Windows' && '$HOME\AppData\Local\ms-playwright' || runner.os == 'Linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
         run: echo "${{ env.PLAYWRIGHT_CACHE_PATH_2 }}"
-      - name: Detect Playwright cache path
-        run: |
-          if [ ${{ runner.os }} == 'windows' ]; then
-            echo "PLAYWRIGHT_CACHE_PATH=" | Out-File -FilePath $env:GITHUB_ENV -Append
-          elif [ ${{ runner.os }} == 'linux' ]; then
-            echo "PLAYWRIGHT_CACHE_PATH=~/.cache/ms-playwright" >> $GITHUB_ENV
-          else 
-            echo "PLAYWRIGHT_CACHE_PATH=~/Library/Caches/ms-playwright" >> $GITHUB_ENV
-          fi
-        shell: bash
 
       # Attempt to restore the correct Playwright browser binaries based on the
       # currently installed version of Playwright (The browser binary versions
@@ -105,7 +94,8 @@ jobs:
         uses: actions/cache@v4
         id: playwright-cache
         with:
-          path: ${{ env.PLAYWRIGHT_CACHE_PATH }}
+          # see https://playwright.dev/docs/browsers#managing-browser-binaries
+          path: ${{ runner.os == 'Windows' && '$HOME\AppData\Local\ms-playwright' || runner.os == 'Linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
           # As a fallback, if the Playwright version has changed, try use the
           # most recently cached version. There's a good chance that at least one
