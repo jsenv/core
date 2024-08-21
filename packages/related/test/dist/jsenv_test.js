@@ -5132,22 +5132,40 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
   if (counters.planified === 0) {
     return ``;
   }
-  if (counters.skipped === counters.planified) {
+  if (
+    counters.skipped === counters.executed ||
+    counters.skipped === counters.planified
+  ) {
     return `all ${ANSI.color(`skipped`, COLOR_SKIPPED)}`;
   }
-  if (counters.aborted === counters.planified) {
+  if (
+    counters.aborted === counters.executed ||
+    counters.aborted === counters.planified
+  ) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
   }
-  if (counters.cancelled === counters.planified) {
+  if (
+    counters.cancelled === counters.executed ||
+    counters.cancelled === counters.planified
+  ) {
     return `all ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`;
   }
-  if (counters.timedout === counters.planified) {
+  if (
+    counters.timedout === counters.executed ||
+    counters.timedout === counters.planified
+  ) {
     return `all ${ANSI.color(`timed out`, COLOR_TIMEOUT)}`;
   }
-  if (counters.failed === counters.planified) {
+  if (
+    counters.failed === counters.executed ||
+    counters.failed === counters.planified
+  ) {
     return `all ${ANSI.color(`failed`, COLOR_FAILED)}`;
   }
-  if (counters.completed === counters.planified) {
+  if (
+    counters.completed === counters.executed ||
+    counters.completed === counters.planified
+  ) {
     return `all ${ANSI.color(`completed`, COLOR_COMPLETED)}`;
   }
   const parts = [];

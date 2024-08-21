@@ -79,7 +79,7 @@ jobs:
         run: echo "PLAYWRIGHT_VERSION=$(npm ll -p --depth=0 playwright | grep -o '@.*')" >> $GITHUB_ENV
 
       - name: Print playwright version
-        run: echo "${PLAYWRIGHT_VERSION}"
+        run: echo "${{ env.PLAYWRIGHT_VERSION }}"
 
       # Attempt to restore the correct Playwright browser binaries based on the
       # currently installed version of Playwright (The browser binary versions
@@ -91,8 +91,12 @@ jobs:
         uses: actions/cache@v4
         id: playwright-cache
         with:
-          path: "~/.cache/ms-playwright"
-          key: "${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}"
+          # see https://playwright.dev/docs/browsers#managing-browser-binaries
+          path: |
+            $HOME\AppData\Local\ms-playwright
+            ~/.cache/ms-playwright
+            ~/Library/Caches/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
           # As a fallback, if the Playwright version has changed, try use the
           # most recently cached version. There's a good chance that at least one
           # of the browser binary versions haven't been updated, so Playwright can
