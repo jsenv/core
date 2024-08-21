@@ -53,12 +53,6 @@ jobs:
           sudo sysctl -p
           sudo sh -c "ulimit -n 65536 && exec su $LOGNAME"
           ulimit -n
-      - name: Put $HOME in env
-        if: runner.os == 'windows'
-        run: echo "HOME=$HOME" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Echo $HOME
-        if: runner.os == 'windows'
-        run: echo $HOME
       - name: Install node modules
         run: npm install
         env:
@@ -77,15 +71,20 @@ jobs:
       # https://github.com/microsoft/playwright/issues/7249#issuecomment-2299065930
       # https://stackoverflow.com/a/33426237/24573072
       # https://github.com/actions/runner/issues/1636#issuecomment-1024531638
-      - name: Get installed Playwright version windows
+      - name: Detect Playwright version (Windows)
         if: runner.os == 'windows'
         run: echo "PLAYWRIGHT_VERSION=$(npm ll -p --depth=0 playwright | grep -o '@.*')" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Get installed Playwright version Linux and Mac
+      - name: Detect Playwright version (Linux and Mac)
         if: runner.os != 'windows'
         run: echo "PLAYWRIGHT_VERSION=$(npm ll -p --depth=0 playwright | grep -o '@.*')" >> $GITHUB_ENV
+      - name: Put $HOME in env
+        if: runner.os == 'windows'
+        run: echo "HOME=$HOME" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Print playwright version
-        run: echo "${{ env.PLAYWRIGHT_VERSION }}"
+      - name: toto
+        env:
+          FOO: format('{0}{1}', HOME, '\AppData\Local\ms-playwright')
+        run: echo "${{ env.FOO }}"
 
       # Attempt to restore the correct Playwright browser binaries based on the
       # currently installed version of Playwright (The browser binary versions

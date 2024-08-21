@@ -73,16 +73,15 @@ jobs:
       # https://github.com/microsoft/playwright/issues/7249#issuecomment-2299065930
       # https://stackoverflow.com/a/33426237/24573072
       # https://github.com/actions/runner/issues/1636#issuecomment-1024531638
-      - name: Detect installed Playwright version windows
+      - name: Detect Playwright version (Windows)
         if: runner.os == 'windows'
         run: echo "PLAYWRIGHT_VERSION=$(npm ll -p --depth=0 playwright | grep -o '@.*')" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Detect installed Playwright version Linux and Mac
+      - name: Detect Playwright version (Linux and Mac)
         if: runner.os != 'windows'
         run: echo "PLAYWRIGHT_VERSION=$(npm ll -p --depth=0 playwright | grep -o '@.*')" >> $GITHUB_ENV
-      - name: Try something
-        env:
-          PLAYWRIGHT_CACHE_PATH_2: ${{ runner.os == 'Windows' && '$HOME\AppData\Local\ms-playwright' || runner.os == 'Linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
-        run: echo "${{ env.PLAYWRIGHT_CACHE_PATH_2 }}"
+      - name: Put $HOME in env
+        if: runner.os == 'windows'
+        run: echo "HOME=$HOME" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       # Attempt to restore the correct Playwright browser binaries based on the
       # currently installed version of Playwright (The browser binary versions
@@ -95,7 +94,7 @@ jobs:
         id: playwright-cache
         with:
           # see https://playwright.dev/docs/browsers#managing-browser-binaries
-          path: ${{ runner.os == 'Windows' && '$HOME\AppData\Local\ms-playwright' || runner.os == 'Linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
+          path: ${{ runner.os == 'Windows' && format('{0}{1}', env.HOME, '\AppData\Local\ms-playwright') || runner.os == 'Linux' && '~/.cache/ms-playwright' || '~/Library/Caches/ms-playwright' }}
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
           # As a fallback, if the Playwright version has changed, try use the
           # most recently cached version. There's a good chance that at least one
