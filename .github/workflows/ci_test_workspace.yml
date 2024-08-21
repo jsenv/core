@@ -45,6 +45,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      # sudo ulimit should prevent npm link failure
       - name: set linux fs limits
         if: runner.os == 'Linux'
         run: |
@@ -52,7 +53,12 @@ jobs:
           sudo sysctl -p
           sudo sh -c "ulimit -n 65536 && exec su $LOGNAME"
           ulimit -n
-        # sudo ulimit should prevent npm link failure
+      - name: Put $HOME in env
+        if: runner.os == 'windows'
+        run: echo "HOME=$HOME | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: Echo $HOME
+        if: runner.os == 'windows'
+        run: echo $HOME
       - name: Install node modules
         run: npm install
         env:
