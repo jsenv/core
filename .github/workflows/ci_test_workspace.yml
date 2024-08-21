@@ -90,7 +90,7 @@ jobs:
         env:
           FOO: format({0}{1}, $HOME, '\AppData\Local\ms-playwright')
           BAR: $HOME\AppData\Local\ms-playwright
-          ZOO: ${{ env.HOME\AppData\Local\ms-playwright }}
+          ZOO: ${{ env.HOME'\AppData\Local\ms-playwright' }}
         run: echo "${{ env.FOO }}, ${{ env.BAR }}, ${{ env.ZAZ }}, ${{ env.ZOO }}"
 
       # Attempt to restore the correct Playwright browser binaries based on the
