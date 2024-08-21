@@ -4,5 +4,5 @@ const generatePerfReportFileUrl = new URL(
 );
 const { generatePerformanceReport } = await import(generatePerfReportFileUrl);
 
-const performanceReport = await generatePerformanceReport();
-console.log(JSON.stringify(performanceReport, null, "  "));
+await generatePerformanceReport();
+// console.log(JSON.stringify(performanceReport, null, "  "));

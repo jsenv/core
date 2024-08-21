@@ -22,41 +22,31 @@
         <text x="10" y="52.55" fill="#7f7f7f">---------------------------------------------</text>
         <text x="10" y="71.55" fill="#11bc79">✔ 1/5</text>
         <text x="60.41" y="71.55" fill="#11bc79">client/empty.spec.html</text>
-        <text x="253.64" y="71.55" fill="#7f7f7f">[</text>
-        <text x="262.04" y="71.55">chrome</text>
-        <text x="312.45" y="71.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
+        <text x="253.64" y="71.55" fill="#7f7f7f">[chrome/&lt;mock&gt;ms]</text>
         <text x="404.86" y="71.55"> (1 </text>
         <text x="430.07" y="71.55" fill="#11bc79">completed</text>
         <text x="505.68" y="71.55">)</text>
         <text x="10" y="90.55" fill="#11bc79">✔ 2/5</text>
         <text x="60.41" y="90.55" fill="#11bc79">client/empty.spec.html</text>
-        <text x="253.64" y="90.55" fill="#7f7f7f">[</text>
-        <text x="262.04" y="90.55">firefox</text>
-        <text x="320.85" y="90.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
+        <text x="253.64" y="90.55" fill="#7f7f7f">[firefox/&lt;mock&gt;ms]</text>
         <text x="413.27" y="90.55"> (2 </text>
         <text x="438.47" y="90.55" fill="#11bc79">completed</text>
         <text x="514.08" y="90.55">)</text>
         <text x="10" y="109.55" fill="#11bc79">✔ 3/5</text>
         <text x="60.41" y="109.55" fill="#11bc79">client/empty.spec.html</text>
-        <text x="253.64" y="109.55" fill="#7f7f7f">[</text>
-        <text x="262.04" y="109.55">webkit</text>
-        <text x="312.45" y="109.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
+        <text x="253.64" y="109.55" fill="#7f7f7f">[webkit/&lt;mock&gt;ms]</text>
         <text x="404.86" y="109.55"> (3 </text>
         <text x="430.07" y="109.55" fill="#11bc79">completed</text>
         <text x="505.68" y="109.55">)</text>
         <text x="10" y="128.55" fill="#11bc79">✔ 4/5</text>
         <text x="60.41" y="128.55" fill="#11bc79">client/empty.spec.js</text>
-        <text x="236.84" y="128.55" fill="#7f7f7f">[</text>
-        <text x="245.24" y="128.55">node</text>
-        <text x="278.84" y="128.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
+        <text x="236.84" y="128.55" fill="#7f7f7f">[node/&lt;mock&gt;ms]</text>
         <text x="371.26" y="128.55"> (4 </text>
         <text x="396.46" y="128.55" fill="#11bc79">completed</text>
         <text x="472.08" y="128.55">)</text>
         <text x="10" y="147.55" fill="#11bc79">✔ 5/5</text>
         <text x="60.41" y="147.55" fill="#11bc79">client/empty.spec.js</text>
-        <text x="236.84" y="147.55" fill="#7f7f7f">[</text>
-        <text x="245.24" y="147.55">node_2</text>
-        <text x="295.65" y="147.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
+        <text x="236.84" y="147.55" fill="#7f7f7f">[node_2/&lt;mock&gt;ms]</text>
         <text x="388.06" y="147.55"> (all </text>
         <text x="430.07" y="147.55" fill="#11bc79">completed</text>
         <text x="505.68" y="147.55">)</text>

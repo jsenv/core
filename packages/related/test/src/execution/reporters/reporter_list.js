@@ -439,7 +439,7 @@ const renderExecutionLabel = (execution, logOptions) => {
   {
     const infos = [];
     if (logOptions.group) {
-      infos.push(execution.group);
+      infos.push(ANSI.color(execution.group, ANSI.GREY));
     }
     const { timings, memoryUsage } = execution.result;
     if (timings) {

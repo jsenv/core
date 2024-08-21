@@ -52,7 +52,7 @@ const test = async () => {
       name = `${snapshotCount}_${name}`;
       snapshotCount++;
       const task = createTaskLog(`snapshoting "${name}" on chromium`, {
-        disabled: process.env.CI,
+        disabled: process.env.CI || process.env.JSENV,
       });
       await takeSnapshot(pageA, `a/${name}`);
       await takeSnapshot(pageB, `b/${name}`);

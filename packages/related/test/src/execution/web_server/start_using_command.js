@@ -42,9 +42,8 @@ export const startServerUsingCommand = async (
   let isAbort = false;
   let isTeardown = false;
   let processClosed = false;
-  let stderr = "";
   spawnedProcess.stderr.on("data", (data) => {
-    stderr += String(data);
+    logger.error(data);
   });
   const closedPromise = new Promise((resolve) => {
     spawnedProcess.once("exit", (exitCode, signal) => {
@@ -55,10 +54,7 @@ export const startServerUsingCommand = async (
         );
       } else {
         logger.error(
-          `web server process premature exit exitCode=${exitCode}, exitSignal=${signal}, pid=${spawnedProcess.pid}
---- stderr ---
-${stderr}
---------------`,
+          `web server process premature exit exitCode=${exitCode}, exitSignal=${signal}, pid=${spawnedProcess.pid}`,
         );
       }
       resolve();

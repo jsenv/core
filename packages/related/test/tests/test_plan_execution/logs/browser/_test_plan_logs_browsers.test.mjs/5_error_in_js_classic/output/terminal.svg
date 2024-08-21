@@ -27,9 +27,7 @@
         <text x="10" y="109.55" fill="#7f7f7f">--------------------------------------</text>
         <text x="10" y="128.55" fill="#cd5555">✖ 2/3</text>
         <text x="60.41" y="128.55" fill="#cd5555">error_in_js_classic.spec.html</text>
-        <text x="312.45" y="128.55" fill="#7f7f7f">[</text>
-        <text x="320.85" y="128.55">firefox</text>
-        <text x="379.66" y="128.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
+        <text x="312.45" y="128.55" fill="#7f7f7f">[firefox/&lt;mock&gt;ms]</text>
         <text x="472.08" y="128.55"> (2 </text>
         <text x="497.28" y="128.55" fill="#cd5555">failed</text>
         <text x="547.69" y="128.55">)</text>
@@ -44,9 +42,7 @@
         <text x="10" y="242.55" fill="#7f7f7f">--------------------------------------</text>
         <text x="10" y="261.55" fill="#cd5555">✖ 3/3</text>
         <text x="60.41" y="261.55" fill="#cd5555">error_in_js_classic.spec.html</text>
-        <text x="312.45" y="261.55" fill="#7f7f7f">[</text>
-        <text x="320.85" y="261.55">webkit</text>
-        <text x="371.26" y="261.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
+        <text x="312.45" y="261.55" fill="#7f7f7f">[webkit/&lt;mock&gt;ms]</text>
         <text x="463.67" y="261.55"> (all </text>
         <text x="505.68" y="261.55" fill="#cd5555">failed</text>
         <text x="556.09" y="261.55">)</text>

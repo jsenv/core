@@ -2,7 +2,7 @@ import { generateFileSizeReport } from "@jsenv/file-size-impact";
 
 await generateFileSizeReport({
   rootDirectoryUrl: new URL("./", import.meta.url),
-  log: true,
+  log: false,
   trackingConfig: {
     "first group": {
       "./out/**/*.js": true,

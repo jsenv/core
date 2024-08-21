@@ -19,9 +19,7 @@
         <text x="10" y="33.55" fill="#7f7f7f">---------------------------------------------</text>
         <text x="10" y="52.55" fill="#cd5555">✖ 1/2</text>
         <text x="60.41" y="52.55" fill="#cd5555">error_in_source_function.spec.js</text>
-        <text x="337.65" y="52.55" fill="#7f7f7f">[</text>
-        <text x="346.05" y="52.55">worker_thread</text>
-        <text x="455.27" y="52.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
+        <text x="337.65" y="52.55" fill="#7f7f7f">[worker_thread/&lt;mock&gt;ms]</text>
         <text x="547.69" y="52.55"> (1 </text>
         <text x="572.89" y="52.55" fill="#cd5555">failed</text>
         <text x="623.3" y="52.55">)</text>
@@ -44,9 +42,7 @@
         <text x="10" y="204.55" fill="#7f7f7f">--------------------------------------</text>
         <text x="10" y="223.55" fill="#cd5555">✖ 2/2</text>
         <text x="60.41" y="223.55" fill="#cd5555">error_in_source_function.spec.js</text>
-        <text x="337.65" y="223.55" fill="#7f7f7f">[</text>
-        <text x="346.05" y="223.55">child_process</text>
-        <text x="455.27" y="223.55" fill="#7f7f7f">/&lt;mock&gt;ms]</text>
+        <text x="337.65" y="223.55" fill="#7f7f7f">[child_process/&lt;mock&gt;ms]</text>
         <text x="547.69" y="223.55"> (all </text>
         <text x="589.69" y="223.55" fill="#cd5555">failed</text>
         <text x="640.1" y="223.55">)</text>

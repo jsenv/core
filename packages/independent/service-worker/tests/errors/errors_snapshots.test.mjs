@@ -63,7 +63,7 @@ const test = async () => {
       name = `${snapshotCount}_${name}`;
       snapshotCount++;
       const task = createTaskLog(`snapshoting "${name}" on chromium`, {
-        disabled: process.env.CI,
+        disabled: process.env.CI || process.env.JSENV,
       });
       const uiLocator = await page.locator("#ui");
       if (!process.env.CI) {

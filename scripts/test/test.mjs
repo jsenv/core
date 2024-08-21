@@ -1,13 +1,10 @@
 /*
  * Execute test files
- * - npm test
- *   Execute only tests inside @jsenv/core
- * - npm test @jsenv/humanize(
- *   Execute only tests inside @jsenv/humanize
- * - npm test ./packages/
- *   Execute only tests inside ./packages/
- * - npm test .
- *   Execute all tests
+ * Usage:
+ * npm test                 | Execute only tests inside @jsenv/core
+ * npm test @jsenv/humanize | Execute only tests inside @jsenv/humanize
+ * npm test ./packages/     | Execute only tests inside ./packages/
+ * npm test .               | Execute all tests
  */
 
 import {

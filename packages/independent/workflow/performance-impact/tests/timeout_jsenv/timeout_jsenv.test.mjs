@@ -27,4 +27,5 @@ const metrics = await measureMultipleTimes(() => {
   });
 });
 
-console.log(metrics, computeMetricsMedian(metrics));
+computeMetricsMedian(metrics);
+// console.log(metrics, median);
