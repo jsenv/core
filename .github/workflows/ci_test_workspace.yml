@@ -83,7 +83,7 @@ jobs:
 
       - name: toto
         env:
-          FOO: format('{0}{1}', HOME, '\AppData\Local\ms-playwright')
+          FOO: ${{ format('{0}{1}', HOME, '\AppData\Local\ms-playwright') }}
         run: echo "${{ env.FOO }}"
 
       # Attempt to restore the correct Playwright browser binaries based on the
