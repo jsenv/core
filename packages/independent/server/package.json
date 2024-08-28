@@ -37,7 +37,6 @@
     "ws": "8.18.0"
   },
   "devDependencies": {
-    "@jsenv/fetch": "../fetch/",
     "eventsource": "2.0.2"
   }
 }
