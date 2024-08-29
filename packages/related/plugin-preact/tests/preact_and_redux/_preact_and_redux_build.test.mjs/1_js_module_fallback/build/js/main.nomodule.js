@@ -1465,7 +1465,7 @@ System.register([], function (_export, _context) {
         lazy: F,
         __SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED: on
       };
-      ReactOriginal = /*#__PURE__*/Object.freeze( /*#__PURE__*/Object.defineProperty({
+      ReactOriginal = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
         __proto__: null,
         Children: N,
         Component: b$1,
@@ -1587,7 +1587,7 @@ System.register([], function (_export, _context) {
       // @ts-ignore
       "default" in ReactOriginal ? Rn : ReactOriginal; // src/components/Context.ts
       ContextKey = Symbol.for(`react-redux-context`);
-      gT = typeof globalThis !== "undefined" ? globalThis : ( /* fall back to a per-module scope (pre-8.1 behaviour) if `globalThis` is not available */
+      gT = typeof globalThis !== "undefined" ? globalThis : (/* fall back to a per-module scope (pre-8.1 behaviour) if `globalThis` is not available */
       {});
       ReactReduxContext = /* @__PURE__ */getContext(); // src/utils/useSyncExternalStore.ts
       notInitialized = () => {

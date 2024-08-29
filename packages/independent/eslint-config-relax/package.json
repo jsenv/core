@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/eslint-config-relax",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A pleaseant ESLint configuration for any project",
   "license": "MIT",
   "author": {
@@ -34,7 +34,7 @@
     "globals": "15.9.0",
     "@jsenv/eslint-import-resolver": "8.2.0",
     "@jsenv/urls": "2.5.2",
-    "eslint-plugin-import-x": "3.1.0",
+    "eslint-plugin-import-x": "4.1.1",
     "eslint-plugin-html": "8.1.1",
     "eslint-plugin-react": "7.35.0",
     "eslint-plugin-regexp": "2.6.0"

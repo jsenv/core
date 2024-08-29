@@ -4,7 +4,7 @@ import { jsx as _jsx } from "/js/react/jsx-runtime.js";
 const {
   Root
 } = await import(__v__("/js/root.js"));
-ReactDOM.createRoot(document.querySelector("#app")).render( /*#__PURE__*/_jsx(React.StrictMode, {
+ReactDOM.createRoot(document.querySelector("#app")).render(/*#__PURE__*/_jsx(React.StrictMode, {
   children: /*#__PURE__*/_jsx(Root, {
     onRender: () => {
       window.resolveResultPromise({

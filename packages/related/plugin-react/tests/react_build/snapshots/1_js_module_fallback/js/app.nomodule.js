@@ -34,7 +34,7 @@ System.register([__v__("/js/index.nomodule.js"), __v__("/js/client.nomodule.js")
     execute: async function () {
       return _await(_context.import(__v__("/js/root.nomodule.js")), function (_context$import) {
         _await$import = _context$import, Root = _await$import.Root;
-        ReactDOM.createRoot(document.querySelector("#app")).render( /*#__PURE__*/_jsx(React.StrictMode, {
+        ReactDOM.createRoot(document.querySelector("#app")).render(/*#__PURE__*/_jsx(React.StrictMode, {
           children: /*#__PURE__*/_jsx(Root, {
             onRender: () => {
               window.resolveResultPromise({

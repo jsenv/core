@@ -19,16 +19,16 @@
     "react-dom": "18.3.1"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-import-assertions": "7.24.7",
+    "@babel/plugin-syntax-import-assertions": "7.25.6",
     "@babel/plugin-transform-react-jsx": "7.25.2",
     "@jsenv/assert": "4.4.1",
-    "@jsenv/core": "39.5.11",
-    "@jsenv/plugin-react": "1.5.35",
-    "@jsenv/plugin-bundling": "2.7.9",
+    "@jsenv/core": "39.5.12",
+    "@jsenv/plugin-react": "1.5.36",
+    "@jsenv/plugin-bundling": "2.7.10",
     "@jsenv/plugin-minification": "1.5.6",
-    "@jsenv/eslint-config-relax": "1.2.0",
-    "@jsenv/test": "3.5.16",
-    "eslint": "9.9.0",
+    "@jsenv/eslint-config-relax": "1.2.1",
+    "@jsenv/test": "3.5.17",
+    "eslint": "9.9.1",
     "open": "10.1.0",
     "@playwright/browser-chromium": "1.46.1",
     "prettier": "3.3.3"
