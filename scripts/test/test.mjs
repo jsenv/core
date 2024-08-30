@@ -76,7 +76,8 @@ await executeTestPlan({
           }
           if (
             fileRelativeUrl.endsWith("_browsers.test.mjs") ||
-            fileRelativeUrl.endsWith("test_plan_logs_node.test.mjs")
+            fileRelativeUrl.endsWith("test_plan_logs_node.test.mjs") ||
+            fileRelativeUrl.endsWith("test_plan_logs_mixed.test.mjs")
           ) {
             return 90_000;
           }
