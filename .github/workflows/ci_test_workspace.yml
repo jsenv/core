@@ -117,6 +117,6 @@ jobs:
         if: runner.os == 'Linux' # https://docs.github.com/en/actions/learn-github-actions/contexts#runner-context
         run: npm run https:setup
       - name: Run package tests
-        run: npm run packages:test
+        run: npm run test:packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

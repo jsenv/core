@@ -23,9 +23,9 @@
         <text x="10" y="71.55" fill="#11bc79">✔ 1/2</text>
         <text x="60.41" y="71.55" fill="#11bc79">empty.spec.js</text>
         <text x="178.03" y="71.55" fill="#7f7f7f">[worker_thread/&lt;mock&gt;ms]</text>
-        <text x="388.06" y="71.55"> (1 </text>
-        <text x="413.27" y="71.55" fill="#11bc79">completed</text>
-        <text x="488.88" y="71.55">)</text>
+        <text x="388.06" y="71.55"> (all </text>
+        <text x="430.07" y="71.55" fill="#11bc79">completed</text>
+        <text x="505.68" y="71.55">)</text>
         <text x="10" y="90.55" fill="#11bc79">✔ 2/2</text>
         <text x="60.41" y="90.55" fill="#11bc79">empty.spec.js</text>
         <text x="178.03" y="90.55" fill="#7f7f7f">[child_process/&lt;mock&gt;ms]</text>

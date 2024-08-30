@@ -132,7 +132,7 @@ await executeTestPlan({
     // disabled for now
     "./packages/**/https-local/": null,
     // the templates have their own test script that will be trigerred by
-    // npm run workspace:test
+    // npm run test:packages
     "./packages/**/cli/": null,
   },
   webServer: {

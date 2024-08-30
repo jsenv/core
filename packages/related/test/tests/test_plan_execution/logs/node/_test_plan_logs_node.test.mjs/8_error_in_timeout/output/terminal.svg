@@ -20,9 +20,9 @@
         <text x="10" y="52.55" fill="#cd5555">✖ 1/2</text>
         <text x="60.41" y="52.55" fill="#cd5555">error_in_timeout.spec.js</text>
         <text x="270.44" y="52.55" fill="#7f7f7f">[worker_thread/&lt;mock&gt;ms]</text>
-        <text x="480.48" y="52.55"> (1 </text>
-        <text x="505.68" y="52.55" fill="#cd5555">failed</text>
-        <text x="556.09" y="52.55">)</text>
+        <text x="480.48" y="52.55"> (all </text>
+        <text x="522.48" y="52.55" fill="#cd5555">failed</text>
+        <text x="572.89" y="52.55">)</text>
         <text x="10" y="71.55" fill="#7f7f7f">---------------</text>
         <text x="144.42" y="71.55"> error </text>
         <text x="194.83" y="71.55" fill="#7f7f7f">----------------</text>
