@@ -1,9 +1,8 @@
+import { startDevServer } from "@jsenv/core";
+import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 import { readFileSync, writeFileSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { chromium } from "playwright";
-
-import { startDevServer } from "@jsenv/core";
-import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
 
 let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
@@ -54,9 +53,7 @@ try {
   await testScenario("1_add_syntax_error");
   await testScenario("2_other_syntax_error");
   await testScenario("3_fix_syntax_error");
-  outputDirectorySnapshot.compare(
-    process.platform === "darwin" && process.env.CI,
-  );
+  outputDirectorySnapshot.compare(false);
 } finally {
   if (!debug) {
     browser.close();
