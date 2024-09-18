@@ -889,40 +889,29 @@ const renderStatusRepartition = (counters, { showProgression } = {}) => {
   if (counters.planified === 0) {
     return ``;
   }
-  if (
-    counters.skipped === counters.executed ||
-    counters.skipped === counters.planified
-  ) {
+  const areAll = (status) => {
+    const counter = counters[status];
+    if (showProgression) {
+      return counter === counters.planified;
+    }
+    return counter === counters.executed || counter === counters.planified;
+  };
+  if (areAll("skipped")) {
     return `all ${ANSI.color(`skipped`, COLOR_SKIPPED)}`;
   }
-  if (
-    counters.aborted === counters.executed ||
-    counters.aborted === counters.planified
-  ) {
+  if (areAll("aborted")) {
     return `all ${ANSI.color(`aborted`, COLOR_ABORTED)}`;
   }
-  if (
-    counters.cancelled === counters.executed ||
-    counters.cancelled === counters.planified
-  ) {
+  if (areAll("cancelled")) {
     return `all ${ANSI.color(`cancelled`, COLOR_CANCELLED)}`;
   }
-  if (
-    counters.timedout === counters.executed ||
-    counters.timedout === counters.planified
-  ) {
+  if (areAll("timedout")) {
     return `all ${ANSI.color(`timed out`, COLOR_TIMEOUT)}`;
   }
-  if (
-    counters.failed === counters.executed ||
-    counters.failed === counters.planified
-  ) {
+  if (areAll("failed")) {
     return `all ${ANSI.color(`failed`, COLOR_FAILED)}`;
   }
-  if (
-    counters.completed === counters.executed ||
-    counters.completed === counters.planified
-  ) {
+  if (areAll("completed")) {
     return `all ${ANSI.color(`completed`, COLOR_COMPLETED)}`;
   }
   const parts = [];
