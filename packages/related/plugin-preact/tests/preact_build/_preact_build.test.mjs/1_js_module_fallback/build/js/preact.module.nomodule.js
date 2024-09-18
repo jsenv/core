@@ -1,14 +1,13 @@
 System.register([], function (_export, _context) {
   "use strict";
 
-  var n, l, u, t, i, o, r, f, e, c, s, a, h, p, v, y;
+  var n, l, u, t, i, o, r, f, e, c, s, a, h, v, p, y;
   function d(n, l) {
     for (var u in l) n[u] = l[u];
     return n;
   }
   function w(n) {
-    var l = n.parentNode;
-    l && l.removeChild(n);
+    n && n.parentNode && n.parentNode.removeChild(n);
   }
   function _(l, u, t) {
     var i,
@@ -43,10 +42,10 @@ System.register([], function (_export, _context) {
       current: null
     };
   }
-  function k(n) {
+  function b(n) {
     return n.children;
   }
-  function b(n, l) {
+  function k(n, l) {
     this.props = n, this.context = l;
   }
   function x(n, l) {
@@ -74,13 +73,13 @@ System.register([], function (_export, _context) {
   }
   function S(n, l, u, t, i, o, r, f, e, c, s) {
     var a,
-      v,
+      p,
       y,
       d,
       w,
-      _ = t && t.__k || p,
+      _ = t && t.__k || v,
       g = l.length;
-    for (u.__d = e, $(u, l, _), e = u.__d, a = 0; a < g; a++) null != (y = u.__k[a]) && "boolean" != typeof y && "function" != typeof y && (v = -1 === y.__i ? h : _[y.__i] || h, y.__i = a, O(n, y, v, i, o, r, f, e, c, s), d = y.__e, y.ref && v.ref != y.ref && (v.ref && N(v.ref, null, y), s.push(y.ref, y.__c || d, y)), null == w && null != d && (w = d), 65536 & y.__u || v.__k === y.__k ? e = I(y, e, n) : "function" == typeof y.type && void 0 !== y.__d ? e = y.__d : d && (e = d.nextSibling), y.__d = void 0, y.__u &= -196609);
+    for (u.__d = e, $(u, l, _), e = u.__d, a = 0; a < g; a++) null != (y = u.__k[a]) && (p = -1 === y.__i ? h : _[y.__i] || h, y.__i = a, O(n, y, p, i, o, r, f, e, c, s), d = y.__e, y.ref && p.ref != y.ref && (p.ref && N(p.ref, null, y), s.push(y.ref, y.__c || d, y)), null == w && null != d && (w = d), 65536 & y.__u || p.__k === y.__k ? e = I(y, e, n) : "function" == typeof y.type && void 0 !== y.__d ? e = y.__d : d && (e = d.nextSibling), y.__d = void 0, y.__u &= -196609);
     u.__d = e, u.__e = w;
   }
   function $(n, l, u) {
@@ -93,9 +92,9 @@ System.register([], function (_export, _context) {
       c = u.length,
       s = c,
       a = 0;
-    for (n.__k = [], t = 0; t < e; t++) r = t + a, null != (i = n.__k[t] = null == (i = l[t]) || "boolean" == typeof i || "function" == typeof i ? null : "string" == typeof i || "number" == typeof i || "bigint" == typeof i || i.constructor == String ? g(null, i, null, null, null) : y(i) ? g(k, {
+    for (n.__k = [], t = 0; t < e; t++) null != (i = l[t]) && "boolean" != typeof i && "function" != typeof i ? (r = t + a, (i = n.__k[t] = "string" == typeof i || "number" == typeof i || "bigint" == typeof i || i.constructor == String ? g(null, i, null, null, null) : y(i) ? g(b, {
       children: i
-    }, null, null, null) : void 0 === i.constructor && i.__b > 0 ? g(i.type, i.props, i.key, i.ref ? i.ref : null, i.__v) : i) ? (i.__ = n, i.__b = n.__b + 1, f = L(i, u, r, s), i.__i = f, o = null, -1 !== f && (s--, (o = u[f]) && (o.__u |= 131072)), null == o || null === o.__v ? (-1 == f && a--, "function" != typeof i.type && (i.__u |= 65536)) : f !== r && (f == r - 1 ? a-- : f == r + 1 ? a++ : f > r ? s > e - r ? a += f - r : a-- : f < r && (f == r - a ? a -= f - r : a++), f !== t + a && (i.__u |= 65536))) : (o = u[r]) && null == o.key && o.__e && 0 == (131072 & o.__u) && (o.__e == n.__d && (n.__d = x(o)), V(o, o, !1), u[r] = null, s--);
+    }, null, null, null) : void 0 === i.constructor && i.__b > 0 ? g(i.type, i.props, i.key, i.ref ? i.ref : null, i.__v) : i).__ = n, i.__b = n.__b + 1, o = null, -1 !== (f = i.__i = L(i, u, r, s)) && (s--, (o = u[f]) && (o.__u |= 131072)), null == o || null === o.__v ? (-1 == f && a--, "function" != typeof i.type && (i.__u |= 65536)) : f !== r && (f == r - 1 ? a-- : f == r + 1 ? a++ : (f > r ? a-- : a++, i.__u |= 65536))) : i = n.__k[t] = null;
     if (s) for (t = 0; t < c; t++) null != (o = u[t]) && 0 == (131072 & o.__u) && (o.__e == n.__d && (n.__d = x(o)), V(o, o));
   }
   function I(n, l, u) {
@@ -135,7 +134,7 @@ System.register([], function (_export, _context) {
     return -1;
   }
   function T(n, l, u) {
-    "-" === l[0] ? n.setProperty(l, null == u ? "" : u) : n[l] = null == u ? "" : "number" != typeof u || v.test(l) ? u : u + "px";
+    "-" === l[0] ? n.setProperty(l, null == u ? "" : u) : n[l] = null == u ? "" : "number" != typeof u || p.test(l) ? u : u + "px";
   }
   function A(n, l, u, t, i) {
     var o;
@@ -164,8 +163,8 @@ System.register([], function (_export, _context) {
   function O(n, u, t, i, o, r, f, e, c, s) {
     var a,
       h,
-      p,
       v,
+      p,
       w,
       _,
       g,
@@ -182,16 +181,16 @@ System.register([], function (_export, _context) {
     if (void 0 !== u.constructor) return null;
     128 & t.__u && (c = !!(32 & t.__u), r = [e = u.__e = t.__e]), (a = l.__b) && a(u);
     n: if ("function" == typeof T) try {
-      if (m = u.props, x = "prototype" in T && T.prototype.render, C = (a = T.contextType) && i[a.__c], M = a ? C ? C.props.value : a.__ : i, t.__c ? g = (h = u.__c = t.__c).__ = h.__E : (x ? u.__c = h = new T(m, M) : (u.__c = h = new b(m, M), h.constructor = T, h.render = q), C && C.sub(h), h.props = m, h.state || (h.state = {}), h.context = M, h.__n = i, p = h.__d = !0, h.__h = [], h._sb = []), x && null == h.__s && (h.__s = h.state), x && null != T.getDerivedStateFromProps && (h.__s == h.state && (h.__s = d({}, h.__s)), d(h.__s, T.getDerivedStateFromProps(m, h.__s))), v = h.props, w = h.state, h.__v = u, p) x && null == T.getDerivedStateFromProps && null != h.componentWillMount && h.componentWillMount(), x && null != h.componentDidMount && h.__h.push(h.componentDidMount);else {
-        if (x && null == T.getDerivedStateFromProps && m !== v && null != h.componentWillReceiveProps && h.componentWillReceiveProps(m, M), !h.__e && (null != h.shouldComponentUpdate && !1 === h.shouldComponentUpdate(m, h.__s, M) || u.__v === t.__v)) {
-          for (u.__v !== t.__v && (h.props = m, h.state = h.__s, h.__d = !1), u.__e = t.__e, u.__k = t.__k, u.__k.forEach(function (n) {
+      if (m = u.props, x = "prototype" in T && T.prototype.render, C = (a = T.contextType) && i[a.__c], M = a ? C ? C.props.value : a.__ : i, t.__c ? g = (h = u.__c = t.__c).__ = h.__E : (x ? u.__c = h = new T(m, M) : (u.__c = h = new k(m, M), h.constructor = T, h.render = q), C && C.sub(h), h.props = m, h.state || (h.state = {}), h.context = M, h.__n = i, v = h.__d = !0, h.__h = [], h._sb = []), x && null == h.__s && (h.__s = h.state), x && null != T.getDerivedStateFromProps && (h.__s == h.state && (h.__s = d({}, h.__s)), d(h.__s, T.getDerivedStateFromProps(m, h.__s))), p = h.props, w = h.state, h.__v = u, v) x && null == T.getDerivedStateFromProps && null != h.componentWillMount && h.componentWillMount(), x && null != h.componentDidMount && h.__h.push(h.componentDidMount);else {
+        if (x && null == T.getDerivedStateFromProps && m !== p && null != h.componentWillReceiveProps && h.componentWillReceiveProps(m, M), !h.__e && (null != h.shouldComponentUpdate && !1 === h.shouldComponentUpdate(m, h.__s, M) || u.__v === t.__v)) {
+          for (u.__v !== t.__v && (h.props = m, h.state = h.__s, h.__d = !1), u.__e = t.__e, u.__k = t.__k, u.__k.some(function (n) {
             n && (n.__ = u);
           }), P = 0; P < h._sb.length; P++) h.__h.push(h._sb[P]);
           h._sb = [], h.__h.length && f.push(h);
           break n;
         }
         null != h.componentWillUpdate && h.componentWillUpdate(m, h.__s, M), x && null != h.componentDidUpdate && h.__h.push(function () {
-          h.componentDidUpdate(v, w, _);
+          h.componentDidUpdate(p, w, _);
         });
       }
       if (h.context = M, h.props = m, h.__P = n, h.__e = !1, $ = l.__r, I = 0, x) {
@@ -200,7 +199,7 @@ System.register([], function (_export, _context) {
       } else do {
         h.__d = !1, $ && $(u), a = h.render(h.props, h.state, h.context), h.state = h.__s;
       } while (h.__d && ++I < 25);
-      h.state = h.__s, null != h.getChildContext && (i = d(d({}, i), h.getChildContext())), x && !p && null != h.getSnapshotBeforeUpdate && (_ = h.getSnapshotBeforeUpdate(v, w)), S(n, y(L = null != a && a.type === k && null == a.key ? a.props.children : a) ? L : [L], u, t, i, o, r, f, e, c, s), h.base = u.__e, u.__u &= -161, h.__h.length && f.push(h), g && (h.__E = h.__ = null);
+      h.state = h.__s, null != h.getChildContext && (i = d(d({}, i), h.getChildContext())), x && !v && null != h.getSnapshotBeforeUpdate && (_ = h.getSnapshotBeforeUpdate(p, w)), S(n, y(L = null != a && a.type === b && null == a.key ? a.props.children : a) ? L : [L], u, t, i, o, r, f, e, c, s), h.base = u.__e, u.__u &= -161, h.__h.length && f.push(h), g && (h.__E = h.__ = null);
     } catch (n) {
       if (u.__v = null, c || null != r) {
         for (u.__u |= c ? 160 : 32; e && 8 === e.nodeType && e.nextSibling;) e = e.nextSibling;
@@ -223,36 +222,36 @@ System.register([], function (_export, _context) {
       }
     });
   }
-  function z(l, u, t, i, o, r, f, e, c) {
-    var s,
-      a,
-      p,
+  function z(u, t, i, o, r, f, e, c, s) {
+    var a,
       v,
+      p,
       d,
       _,
       g,
-      m = t.props,
-      k = u.props,
-      b = u.type;
-    if ("svg" === b ? o = "http://www.w3.org/2000/svg" : "math" === b ? o = "http://www.w3.org/1998/Math/MathML" : o || (o = "http://www.w3.org/1999/xhtml"), null != r) for (s = 0; s < r.length; s++) if ((d = r[s]) && "setAttribute" in d == !!b && (b ? d.localName === b : 3 === d.nodeType)) {
-      l = d, r[s] = null;
+      m,
+      b = i.props,
+      k = t.props,
+      C = t.type;
+    if ("svg" === C ? r = "http://www.w3.org/2000/svg" : "math" === C ? r = "http://www.w3.org/1998/Math/MathML" : r || (r = "http://www.w3.org/1999/xhtml"), null != f) for (a = 0; a < f.length; a++) if ((_ = f[a]) && "setAttribute" in _ == !!C && (C ? _.localName === C : 3 === _.nodeType)) {
+      u = _, f[a] = null;
       break;
     }
-    if (null == l) {
-      if (null === b) return document.createTextNode(k);
-      l = document.createElementNS(o, b, k.is && k), r = null, e = !1;
+    if (null == u) {
+      if (null === C) return document.createTextNode(k);
+      u = document.createElementNS(r, C, k.is && k), c && (l.__m && l.__m(t, f), c = !1), f = null;
     }
-    if (null === b) m === k || e && l.data === k || (l.data = k);else {
-      if (r = r && n.call(l.childNodes), m = t.props || h, !e && null != r) for (m = {}, s = 0; s < l.attributes.length; s++) m[(d = l.attributes[s]).name] = d.value;
-      for (s in m) if (d = m[s], "children" == s) ;else if ("dangerouslySetInnerHTML" == s) p = d;else if ("key" !== s && !(s in k)) {
-        if ("value" == s && "defaultValue" in k || "checked" == s && "defaultChecked" in k) continue;
-        A(l, s, null, d, o);
+    if (null === C) b === k || c && u.data === k || (u.data = k);else {
+      if (f = f && n.call(u.childNodes), b = i.props || h, !c && null != f) for (b = {}, a = 0; a < u.attributes.length; a++) b[(_ = u.attributes[a]).name] = _.value;
+      for (a in b) if (_ = b[a], "children" == a) ;else if ("dangerouslySetInnerHTML" == a) p = _;else if (!(a in k)) {
+        if ("value" == a && "defaultValue" in k || "checked" == a && "defaultChecked" in k) continue;
+        A(u, a, null, _, r);
       }
-      for (s in k) d = k[s], "children" == s ? v = d : "dangerouslySetInnerHTML" == s ? a = d : "value" == s ? _ = d : "checked" == s ? g = d : "key" === s || e && "function" != typeof d || m[s] === d || A(l, s, d, m[s], o);
-      if (a) e || p && (a.__html === p.__html || a.__html === l.innerHTML) || (l.innerHTML = a.__html), u.__k = [];else if (p && (l.innerHTML = ""), S(l, y(v) ? v : [v], u, t, i, "foreignObject" === b ? "http://www.w3.org/1999/xhtml" : o, r, f, r ? r[0] : t.__k && x(t, 0), e, c), null != r) for (s = r.length; s--;) null != r[s] && w(r[s]);
-      e || (s = "value", void 0 !== _ && (_ !== l[s] || "progress" === b && !_ || "option" === b && _ !== m[s]) && A(l, s, _, m[s], o), s = "checked", void 0 !== g && g !== l[s] && A(l, s, g, m[s], o));
+      for (a in k) _ = k[a], "children" == a ? d = _ : "dangerouslySetInnerHTML" == a ? v = _ : "value" == a ? g = _ : "checked" == a ? m = _ : c && "function" != typeof _ || b[a] === _ || A(u, a, _, b[a], r);
+      if (v) c || p && (v.__html === p.__html || v.__html === u.innerHTML) || (u.innerHTML = v.__html), t.__k = [];else if (p && (u.innerHTML = ""), S(u, y(d) ? d : [d], t, i, o, "foreignObject" === C ? "http://www.w3.org/1999/xhtml" : r, f, e, f ? f[0] : i.__k && x(i, 0), c, s), null != f) for (a = f.length; a--;) w(f[a]);
+      c || (a = "value", "progress" === C && null == g ? u.removeAttribute("value") : void 0 !== g && (g !== u[a] || "progress" === C && !g || "option" === C && g !== b[a]) && A(u, a, g, b[a], r), a = "checked", void 0 !== m && m !== u[a] && A(u, a, m, b[a], r));
     }
-    return l;
+    return u;
   }
   function N(n, u, t) {
     try {
@@ -275,14 +274,14 @@ System.register([], function (_export, _context) {
       i.base = i.__P = null;
     }
     if (i = n.__k) for (o = 0; o < i.length; o++) i[o] && V(i[o], u, t || "function" != typeof n.type);
-    t || null == n.__e || w(n.__e), n.__c = n.__ = n.__e = n.__d = void 0;
+    t || w(n.__e), n.__c = n.__ = n.__e = n.__d = void 0;
   }
   function q(n, l, u) {
     return this.constructor(n, u);
   }
   function B(u, t, i) {
     var o, r, f, e;
-    l.__ && l.__(u, t), r = (o = "function" == typeof i) ? null : i && i.__k || t.__k, f = [], e = [], O(t, u = (!o && i || t).__k = _(k, null, [u]), r || h, h, t.namespaceURI, !o && i ? [i] : r ? null : t.firstChild ? n.call(t.childNodes) : null, f, !o && i ? i : r ? r.__e : t.firstChild, o, e), j(f, u, e);
+    l.__ && l.__(u, t), r = (o = "function" == typeof i) ? null : i && i.__k || t.__k, f = [], e = [], O(t, u = (!o && i || t).__k = _(b, null, [u]), r || h, h, t.namespaceURI, !o && i ? [i] : r ? null : t.firstChild ? n.call(t.childNodes) : null, f, !o && i ? i : r ? r.__e : t.firstChild, o, e), j(f, u, e);
   }
   function D(n, l) {
     B(n, l, D);
@@ -325,8 +324,8 @@ System.register([], function (_export, _context) {
     return u.Provider.__ = u.Consumer.contextType = u;
   }
   _export({
-    Component: b,
-    Fragment: k,
+    Component: k,
+    Fragment: b,
     cloneElement: E,
     createContext: G,
     createElement: _,
@@ -341,8 +340,8 @@ System.register([], function (_export, _context) {
   return {
     setters: [],
     execute: function () {
-      h = {}, p = [], v = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i, y = Array.isArray;
-      n = p.slice, _export("options", l = {
+      h = {}, v = [], p = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i, y = Array.isArray;
+      n = v.slice, _export("options", l = {
         __e: function __e(n, l, u, t) {
           for (var i, o, r; l = l.__;) if ((i = l.__c) && !i.__) try {
             if ((o = i.constructor) && null != o.getDerivedStateFromError && (i.setState(o.getDerivedStateFromError(n)), r = i.__d), null != i.componentDidCatch && (i.componentDidCatch(n, t || {}), r = i.__d), r) return i.__E = i;
@@ -353,12 +352,12 @@ System.register([], function (_export, _context) {
         }
       }), u = 0, _export("isValidElement", t = function t(n) {
         return null != n && null == n.constructor;
-      }), b.prototype.setState = function (n, l) {
+      }), k.prototype.setState = function (n, l) {
         var u;
         u = null != this.__s && this.__s !== this.state ? this.__s : this.__s = d({}, this.state), "function" == typeof n && (n = n(d({}, u), this.props)), n && d(u, n), null != n && this.__v && (l && this._sb.push(l), M(this));
-      }, b.prototype.forceUpdate = function (n) {
+      }, k.prototype.forceUpdate = function (n) {
         this.__v && (this.__e = !0, n && this.__h.push(n), M(this));
-      }, b.prototype.render = k, i = [], r = "function" == typeof Promise ? Promise.prototype.then.bind(Promise.resolve()) : setTimeout, f = function f(n, l) {
+      }, k.prototype.render = b, i = [], r = "function" == typeof Promise ? Promise.prototype.then.bind(Promise.resolve()) : setTimeout, f = function f(n, l) {
         return n.__v.__b - l.__v.__b;
       }, P.__r = 0, e = 0, c = F(!1), s = F(!0), a = 0;
     }
