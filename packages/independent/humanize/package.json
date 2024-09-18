@@ -41,7 +41,7 @@
     "ansi-escapes": "7.0.0"
   },
   "devDependencies": {
-    "is-unicode-supported": "2.0.0",
+    "is-unicode-supported": "2.1.0",
     "supports-color": "9.4.0"
   }
 }

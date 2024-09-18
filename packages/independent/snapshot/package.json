@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "2.11.10",
+  "version": "2.11.11",
   "description": "Snapshot testing",
   "license": "MIT",
   "author": {
@@ -38,7 +38,7 @@
     "@jsenv/terminal-recorder": "1.4.8",
     "@jsenv/urls": "2.5.2",
     "@jsenv/utils": "2.1.2",
-    "ansi-regex": "6.0.1",
+    "ansi-regex": "6.1.0",
     "pixelmatch": "6.0.0",
     "prettier": "3.3.3",
     "strip-ansi": "7.1.0"
