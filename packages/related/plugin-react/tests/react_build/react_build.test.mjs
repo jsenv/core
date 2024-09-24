@@ -1,14 +1,17 @@
 import { build, startBuildServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
+import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 
 const run = async ({ runtimeCompat, minification }) => {
+  await ensureEmptyDirectory(
+    new URL("./.jsenv_b/build/cjs_to_esm/", import.meta.url),
+  );
   await build({
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     buildDirectoryUrl: new URL("./build/", import.meta.url),
     entryPoints: { "./main.html": "main.html" },
-    outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
     plugins: [jsenvPluginReact({ asJsModuleLogLevel: "warn" })],
     bundling: false,
     runtimeCompat,
