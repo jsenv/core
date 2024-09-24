@@ -248,18 +248,23 @@ const ANSI = createAnsi({
 });
 
 function isUnicodeSupported() {
+	const {env} = process$1;
+	const {TERM, TERM_PROGRAM} = env;
+
 	if (process$1.platform !== 'win32') {
-		return process$1.env.TERM !== 'linux'; // Linux console (kernel)
+		return TERM !== 'linux'; // Linux console (kernel)
 	}
 
-	return Boolean(process$1.env.WT_SESSION) // Windows Terminal
-		|| Boolean(process$1.env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| process$1.env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| process$1.env.TERM_PROGRAM === 'Terminus-Sublime'
-		|| process$1.env.TERM_PROGRAM === 'vscode'
-		|| process$1.env.TERM === 'xterm-256color'
-		|| process$1.env.TERM === 'alacritty'
-		|| process$1.env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+	return Boolean(env.WT_SESSION) // Windows Terminal
+		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+		|| TERM_PROGRAM === 'Terminus-Sublime'
+		|| TERM_PROGRAM === 'vscode'
+		|| TERM === 'xterm-256color'
+		|| TERM === 'alacritty'
+		|| TERM === 'rxvt-unicode'
+		|| TERM === 'rxvt-unicode-256color'
+		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
 }
 
 // see also https://github.com/sindresorhus/figures

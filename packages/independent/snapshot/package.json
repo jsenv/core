@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "2.11.11",
+  "version": "2.11.12",
   "description": "Snapshot testing",
   "license": "MIT",
   "author": {
@@ -35,7 +35,7 @@
     "@jsenv/exception": "1.1.3",
     "@jsenv/humanize": "1.2.8",
     "@jsenv/filesystem": "4.10.11",
-    "@jsenv/terminal-recorder": "1.4.9",
+    "@jsenv/terminal-recorder": "1.4.10",
     "@jsenv/urls": "2.5.2",
     "@jsenv/utils": "2.1.2",
     "ansi-regex": "6.1.0",
