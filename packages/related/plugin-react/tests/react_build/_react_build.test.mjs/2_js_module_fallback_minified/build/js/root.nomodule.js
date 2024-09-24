@@ -1,0 +1,1 @@
+System.register([__v__("/js/index.nomodule.js"),__v__("/js/jsx-runtime.nomodule.js")],(function(e,t){"use strict";var n,r;return{setters:[function(e){n=e.useEffect},function(e){r=e.jsx}],execute:function(){e("Root",(e=>{let t=e.onRender;return n((()=>{t()}),[]),r("span",{children:"Hello world"})}))}}}));

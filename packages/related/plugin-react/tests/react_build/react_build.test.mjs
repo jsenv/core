@@ -1,67 +1,51 @@
-import { assert } from "@jsenv/assert";
-import { build } from "@jsenv/core";
-import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
-import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
-import { takeDirectorySnapshot } from "@jsenv/snapshot";
-
+import { build, startBuildServer } from "@jsenv/core";
+import { executeHtml } from "@jsenv/core/tests/execute_html.js";
+import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
 
-const test = async ({ name, ...params }) => {
-  const snapshotDirectoryUrl = new URL(`./snapshots/${name}/`, import.meta.url);
-  const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
+const run = async ({ runtimeCompat, minification }) => {
   await build({
-    logs: { level: "warn" },
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
-    buildDirectoryUrl: snapshotDirectoryUrl,
-    entryPoints: {
-      "./main.html": "main.html",
-    },
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    entryPoints: { "./main.html": "main.html" },
     outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
-    ...params,
-    plugins: [
-      jsenvPluginReact({
-        asJsModuleLogLevel: "warn",
-      }),
-      ...(params.plugins || []),
-    ],
+    plugins: [jsenvPluginReact({ asJsModuleLogLevel: "warn" })],
+    bundling: false,
+    runtimeCompat,
+    minification,
   });
-  buildDirectorySnapshot.compare();
-  const server = await startFileServer({
-    rootDirectoryUrl: snapshotDirectoryUrl,
+  const buildServer = await startBuildServer({
+    buildDirectoryUrl: new URL("./build/", import.meta.url),
+    keepProcessAlive: false,
+    port: 0,
   });
-  const { returnValue } = await executeInBrowser(`${server.origin}/main.html`);
-  const actual = returnValue;
-  const expect = { spanContent: "Hello world" };
-  assert({ actual, expect });
+  return executeHtml(`${buildServer.origin}/main.html`);
 };
 
-// support for <script type="module">
-await test({
-  name: "0_js_module",
-  runtimeCompat: { chrome: "89" },
-  bundling: false,
-  minification: false,
-});
-// no support for <script type="module">
-await test({
-  name: "1_js_module_fallback",
-  runtimeCompat: {
-    chrome: "55",
-    edge: "14",
-    firefox: "52",
-    safari: "11",
-  },
-  bundling: false,
-  minification: false,
-});
-await test({
-  name: "2_js_module_fallback_minified",
-  runtimeCompat: {
-    chrome: "55",
-    edge: "14",
-    firefox: "52",
-    safari: "11",
-  },
-  bundling: false,
-  minification: true,
+await snapshotBuildTests(import.meta.url, ({ test }) => {
+  test("0_js_module", () =>
+    run({
+      runtimeCompat: { chrome: "89" },
+    }));
+
+  test("1_js_module_fallback", () =>
+    run({
+      runtimeCompat: {
+        chrome: "55",
+        edge: "14",
+        firefox: "52",
+        safari: "11",
+      },
+    }));
+
+  test("2_js_module_fallback_minified", () =>
+    run({
+      runtimeCompat: {
+        chrome: "55",
+        edge: "14",
+        firefox: "52",
+        safari: "11",
+      },
+      minification: true,
+    }));
 });
