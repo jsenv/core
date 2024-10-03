@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-supervisor",
-  "version": "1.5.21",
+  "version": "1.5.22",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,7 +26,7 @@
     "/dist/"
   ],
   "dependencies": {
-    "@jsenv/ast": "6.3.0",
+    "@jsenv/ast": "6.3.1",
     "@jsenv/urls": "2.5.2",
     "@jsenv/sourcemap": "1.2.24",
     "launch-editor": "2.9.1"

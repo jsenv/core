@@ -40,10 +40,10 @@
     "@jsenv/eslint-import-resolver": "8.2.0"
   },
   "devDependencies": {
-    "@babel/core": "7.25.2",
-    "@babel/preset-env": "7.25.4",
-    "@babel/eslint-parser": "7.25.1",
-    "@babel/plugin-syntax-decorators": "7.24.7",
-    "@babel/plugin-syntax-jsx": "7.24.7"
+    "@babel/core": "7.25.7",
+    "@babel/preset-env": "7.25.7",
+    "@babel/eslint-parser": "7.25.7",
+    "@babel/plugin-syntax-decorators": "7.25.7",
+    "@babel/plugin-syntax-jsx": "7.25.7"
   }
 }
