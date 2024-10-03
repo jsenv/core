@@ -7876,7 +7876,7 @@ const firefox = (params) => {
 };
 
 const firefoxIsolatedTab = (params) => {
-  return createRuntimeUsingPlaywright({
+  return createFirefoxRuntime({
     ...params,
     isolatedTab: true,
   });
