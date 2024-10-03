@@ -16,6 +16,7 @@ import {
   compareTwoPackageVersions,
   VERSION_COMPARE_RESULTS,
 } from "./internal/compare_two_package_versions.js";
+import { increaseVersion } from "./internal/increase_version.js";
 import { shouldUpdateVersion } from "./internal/should_update_version.js";
 
 export const upgradeExternalVersions = async ({ directoryUrl }) => {
@@ -141,6 +142,11 @@ export const upgradeExternalVersions = async ({ directoryUrl }) => {
           from: versionDeclared,
           to: registryLatestVersion,
         });
+        if (shouldUpdateVersion(internalPackageObject.version)) {
+          internalPackageObject.version = increaseVersion(
+            internalPackageObject.version,
+          );
+        }
         internalPackageDeps[externalPackageName] = registryLatestVersion;
         packageFilesToUpdate[internalPackageName] = true;
       }
