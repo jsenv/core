@@ -5,7 +5,7 @@ export const firefox = (params) => {
 };
 
 export const firefoxIsolatedTab = (params) => {
-  return createRuntimeUsingPlaywright({
+  return createFirefoxRuntime({
     ...params,
     isolatedTab: true,
   });

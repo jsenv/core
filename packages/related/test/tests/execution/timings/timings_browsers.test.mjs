@@ -1,6 +1,11 @@
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
-import { chromium, execute, firefox, webkit } from "@jsenv/test";
+import {
+  chromiumIsolatedTab,
+  execute,
+  firefoxIsolatedTab,
+  webkitIsolatedTab,
+} from "@jsenv/test";
 
 const test = async (params) => {
   const devServer = await startDevServer({
@@ -48,9 +53,9 @@ const test = async (params) => {
     const expect = {
       // execution must take around 2s (due to the timeout)
       executionDuration: assert.between(2_000, 6_000),
-      // the overall run duration and runtime alive duration is between 2/30s
-      runDuration: assert.between(2_000, 30_000),
-      runtimeDuration: assert.between(2_000, 30_000),
+      // the overall run duration and runtime alive duration is between 2/10s
+      runDuration: assert.between(2_000, 10_000),
+      runtimeDuration: assert.between(2_000, 10_000),
       // it does not take more than 2s to start the file
       timeBetweenRuntimeStartAndExecutionStart: assert.between(0, 2_000),
     };
@@ -58,10 +63,10 @@ const test = async (params) => {
   }
 };
 
-await test({ runtime: chromium() });
+await test({ runtime: chromiumIsolatedTab() });
 if (!process.env.CI) {
   if (process.platform !== "win32") {
-    await test({ runtime: firefox() });
+    await test({ runtime: firefoxIsolatedTab() });
   }
-  await test({ runtime: webkit() });
+  await test({ runtime: webkitIsolatedTab() });
 }
