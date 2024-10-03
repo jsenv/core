@@ -10,6 +10,7 @@ import {
 } from "./internal/dependency_graph.js";
 import { fetchWorkspaceLatests } from "./internal/fetch_workspace_latests.js";
 import { increaseVersion } from "./internal/increase_version.js";
+import { shouldUpdateVersion } from "./internal/should_update_version.js";
 
 export const syncPackagesVersions = async ({
   directoryUrl,
@@ -88,13 +89,7 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
     const packageDeps =
       workspacePackages[packageName].packageObject[dependencyType];
     const version = packageDeps[dependencyName];
-    // ignore local deps
-    if (
-      version.startsWith("./") ||
-      version.startsWith("../") ||
-      version.startsWith("file:") ||
-      version.startsWith("workspace:")
-    ) {
+    if (!shouldUpdateVersion(version)) {
       return;
     }
     dependencyUpdates.push({

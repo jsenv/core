@@ -16,6 +16,7 @@ import {
   compareTwoPackageVersions,
   VERSION_COMPARE_RESULTS,
 } from "./internal/compare_two_package_versions.js";
+import { shouldUpdateVersion } from "./internal/should_update_version.js";
 
 export const upgradeExternalVersions = async ({ directoryUrl }) => {
   const internalPackages = await collectWorkspacePackages({ directoryUrl });
@@ -28,20 +29,7 @@ export const upgradeExternalVersions = async ({ directoryUrl }) => {
       type,
       version,
     }) => {
-      // ignore local deps
-      if (
-        version.startsWith("./") ||
-        version.startsWith("../") ||
-        version.startsWith("file:")
-      ) {
-        return;
-      }
-      // "*" means package accept anything
-      // so there is no need to update it, it's always matching the latest version
-      if (version === "*") {
-        return;
-      }
-      if (version.startsWith("workspace:")) {
+      if (!shouldUpdateVersion(version)) {
         return;
       }
       const existing = externalPackages[name];
@@ -127,10 +115,10 @@ export const upgradeExternalVersions = async ({ directoryUrl }) => {
     const externalPackageRefs = externalPackages[externalPackageName];
     for (const externalPackageRef of externalPackageRefs) {
       const internalPackageName = externalPackageRef.internalPackageName;
+      const internalPackageObject =
+        internalPackages[internalPackageName].packageObject;
       const internalPackageDeps =
-        internalPackages[internalPackageName].packageObject[
-          externalPackageRef.type
-        ];
+        internalPackageObject[externalPackageRef.type];
       const versionDeclared = internalPackageDeps[externalPackageName];
       const registryLatestVersion = latestVersions[externalPackageName];
       if (registryLatestVersion === null) {
