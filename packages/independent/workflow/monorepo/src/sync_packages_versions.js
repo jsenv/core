@@ -13,6 +13,7 @@ import { increaseVersion } from "./internal/increase_version.js";
 import { shouldUpdateVersion } from "./internal/should_update_version.js";
 
 export const syncPackagesVersions = async ({
+  logs = true,
   directoryUrl,
   packagesRelations = {},
 }) => {
@@ -205,13 +206,17 @@ Use a tool like "git diff" to see the new versions and ensure this is what you w
     workspacePackage.updateFile(workspacePackage.packageObject);
   });
   const updateCount = versionUpdates.length + dependencyUpdates.length;
-  if (updateCount === 0) {
-    console.log(`${UNICODE.OK} all versions in package.json files are in sync`);
-  } else {
-    console.log(
-      `${UNICODE.INFO} ${updateCount} versions modified in package.json files
+  if (logs) {
+    if (updateCount === 0) {
+      console.log(
+        `${UNICODE.OK} all versions in package.json files are in sync`,
+      );
+    } else {
+      console.log(
+        `${UNICODE.INFO} ${updateCount} versions modified in package.json files
   Use a tool like "git diff" to review these changes`,
-    );
+      );
+    }
   }
 
   return {

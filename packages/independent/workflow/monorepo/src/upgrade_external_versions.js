@@ -18,8 +18,12 @@ import {
 } from "./internal/compare_two_package_versions.js";
 import { increaseVersion } from "./internal/increase_version.js";
 import { shouldUpdateVersion } from "./internal/should_update_version.js";
+import { syncPackagesVersions } from "./sync_packages_versions.js";
 
-export const upgradeExternalVersions = async ({ directoryUrl }) => {
+export const upgradeExternalVersions = async ({
+  directoryUrl,
+  packagesRelations = {},
+}) => {
   const internalPackages = await collectWorkspacePackages({ directoryUrl });
   const internalPackageNames = Object.keys(internalPackages);
   let externalPackages = {};
@@ -112,6 +116,7 @@ export const upgradeExternalVersions = async ({ directoryUrl }) => {
 
   const packageFilesToUpdate = {};
   const updates = [];
+  let someInternalUpdate = false;
   for (const externalPackageName of externalPackageNames) {
     const externalPackageRefs = externalPackages[externalPackageName];
     for (const externalPackageRef of externalPackageRefs) {
@@ -142,7 +147,11 @@ export const upgradeExternalVersions = async ({ directoryUrl }) => {
           from: versionDeclared,
           to: registryLatestVersion,
         });
-        if (shouldUpdateVersion(internalPackageObject.version)) {
+        if (
+          externalPackageRef.type === "dependencies" &&
+          shouldUpdateVersion(internalPackageObject.version)
+        ) {
+          someInternalUpdate = true;
           internalPackageObject.version = increaseVersion(
             internalPackageObject.version,
           );
@@ -165,6 +174,14 @@ export const upgradeExternalVersions = async ({ directoryUrl }) => {
       `${UNICODE.INFO} ${updates.length} versions modified in package.json files
 Use a tool like "git diff" to review these changes then run "npm install"`,
     );
+  }
+
+  if (someInternalUpdate) {
+    await syncPackagesVersions({
+      logs: false,
+      directoryUrl,
+      packagesRelations,
+    });
   }
   return updates;
 };

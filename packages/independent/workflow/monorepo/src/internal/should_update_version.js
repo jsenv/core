@@ -1,4 +1,7 @@
 export const shouldUpdateVersion = (version) => {
+  if (!version) {
+    return false;
+  }
   if (
     version.startsWith("./") ||
     version.startsWith("../") ||
