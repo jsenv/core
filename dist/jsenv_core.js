@@ -11114,7 +11114,7 @@ const watchSourceFiles = (
   return stopWatchingSourceFiles;
 };
 
-const jsenvCoreDirectoryUrl = new URL("./jsenv-core/", import.meta.url);
+const jsenvCoreDirectoryUrl = new URL("./core/", import.meta.url);
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = new URL(
