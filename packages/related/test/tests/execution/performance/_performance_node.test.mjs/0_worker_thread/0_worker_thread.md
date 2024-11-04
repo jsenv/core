@@ -20,7 +20,12 @@ run({
       "loopStart": "<X>",
       "loopExit": "<X>",
       "bootstrapComplete": "<X>",
-      "idleTime": "<X>"
+      "idleTime": "<X>",
+      "uvMetricsInfo": {
+        "loopCount": "<X>",
+        "events": "<X>",
+        "eventsWaiting": "<X>"
+      }
     },
     "timeOrigin": "<X>",
     "eventLoopUtilization": {
