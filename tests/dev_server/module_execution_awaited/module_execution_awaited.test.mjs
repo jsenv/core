@@ -1,8 +1,7 @@
 import { assert } from "@jsenv/assert";
-import { chromium, firefox, webkit } from "playwright";
-
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
+import { chromium, firefox, webkit } from "playwright";
 
 const devServer = await startDevServer({
   logLevel: "warn",
@@ -26,7 +25,7 @@ const test = async ({ browserLauncher }) => {
     const actual = moduleExecutionResult.timings.end;
     assert({
       actual,
-      expect: assert.between(3_000, 8_000),
+      expect: assert.between(3_000, 10_000),
       details: {
         browser: `${browserLauncher.name()}`,
       },

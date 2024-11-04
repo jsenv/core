@@ -7,9 +7,9 @@ run({
 })
 ```
 
-# 1/2 write file "./build/0_root/main.js"
+# 1/2 write file "./build/main.js"
 
-see [./build/0_root/main.js](./build/0_root/main.js)
+see [./build/main.js](./build/main.js)
 
 # 2/2 resolve
 

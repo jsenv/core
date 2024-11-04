@@ -3,7 +3,6 @@
   <head>
     <title>Title</title>
     <meta charset="utf-8">
-    <link rel="icon" href="data:,">
   </head>
   <body>
     <jsenv-scripts>
@@ -11,19 +10,6 @@
       <script jsenv-injected-by="jsenv:server_events_client_injection" content-indented="" jsenv-cooked-by="jsenv:html_inline_content_analysis">
         window.__server_events__.setup({
           "logs": true
-        });
-      </script>
-      <script type="module" jsenv-injected-by="jsenv:toolbar" content-indented="" jsenv-cooked-by="jsenv:html_inline_content_analysis">
-        import { injectToolbar } from "/@fs@jsenv/core/packages/related/plugin-toolbar/src/client/toolbar_injector.js";
-            
-        injectToolbar({
-          "toolbarUrl": "/@fs@jsenv/core/packages/related/plugin-toolbar/src/client/toolbar.html",
-          "logLevel": "debug",
-          "theme": "dark",
-          "opened": false,
-          "autoreload": true,
-          "animationsEnabled": true,
-          "notificationsEnabled": true
         });
       </script>
       <script src="/@fs@jsenv/core/packages/internal/plugin-supervisor/src/client/supervisor.js" jsenv-injected-by="jsenv:supervisor"></script>
@@ -36,6 +22,10 @@
           "serverIsJsenvDevServer": true,
           "rootDirectoryUrl": "base/client/",
           "scriptInfos": [
+            {
+              "type": "js_classic",
+              "src": "/main.html@L9C5-L13C14.js"
+            },
             {
               "type": "js_module",
               "src": "/main.js"
@@ -61,12 +51,11 @@
   
 
   
-    <div id="app">Hello</div>
-    <script type="module" content-indented="" src="http://127.0.0.1/main.js"></script>
-    <jsenv-ribbon></jsenv-ribbon>
-    <jsenv-toolbar>
-      <iframe allowtransparency="true" src="http://127.0.0.1/@fs@jsenv/core/packages/related/plugin-toolbar/src/client/toolbar.html?logLevel=debug&amp;theme=dark&amp;autoreload=&amp;animationsEnabled=&amp;notificationsEnabled=" name="jsenv toolbar" style="position: fixed; z-index: 1000; bottom: 0px; left: 0px; width: 100%; height: 0px; visibility: hidden; transition-property: height, visibility; border: none; transition-duration: 300ms;"></iframe>
-      <jsenv-toolbar-trigger style="display: block;"></jsenv-toolbar-trigger>
-    </jsenv-toolbar>
+    <script jsenv-cooked-by="jsenv:supervisor" content-indented="" inlined-from-src="/main.html@L9C5-L13C14.js">
+      window.__supervisor__.superviseScript("/main.html@L9C5-L13C14.js");
+    </script>
+    <script type="module" content-indented="" jsenv-cooked-by="jsenv:supervisor" inlined-from-src="/main.js">
+      window.__supervisor__.superviseScriptTypeModule("/main.js", (url) => import(url));
+    </script>
   </body>
 </html>
