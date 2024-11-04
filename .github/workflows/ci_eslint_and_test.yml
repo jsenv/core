@@ -34,7 +34,7 @@ jobs:
       matrix:
         # https://github.com/actions/runner-images
         os:
-          - ubuntu-22.04
+          - ubuntu-24.04
           - macos-12 # until https://github.com/microsoft/playwright/issues/30585
           - windows-2022
         node: [22.11.0]
