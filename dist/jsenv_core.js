@@ -11114,7 +11114,7 @@ const watchSourceFiles = (
   return stopWatchingSourceFiles;
 };
 
-new URL("../", import.meta.url);
+const jsenvCoreDirectoryUrl = new URL("../", import.meta.url);
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = new URL(
@@ -18742,6 +18742,7 @@ const jsenvPluginProtocolFile = ({
   magicExtensions,
   magicDirectoryIndex,
   preserveSymlinks,
+  directoryListingUrlMocks,
 }) => {
   return [
     jsenvPluginFsRedirection({
@@ -18857,6 +18858,7 @@ const jsenvPluginProtocolFile = ({
               parentDirectoryContentArray,
               parentDirectoryUrl,
               urlInfo.context.rootDirectoryUrl,
+              directoryListingUrlMocks,
             );
             return {
               contentType: "text/html",
@@ -18909,6 +18911,7 @@ const generateHtmlForENOENTOnHtmlFile = (
   parentDirectoryContentArray,
   parentDirectoryUrl,
   rootDirectoryUrl,
+  directoryListingUrlMocks,
 ) => {
   const htmlFor404AndParentDir = String(
     readFileSync(html404AndParentDirFileUrl),
@@ -18919,7 +18922,9 @@ const generateHtmlForENOENTOnHtmlFile = (
     rootDirectoryUrl,
   );
   const replacers = {
-    fileUrl: url,
+    fileUrl: directoryListingUrlMocks
+      ? `@jsenv/core/${urlToRelativeUrl(url, jsenvCoreDirectoryUrl)}`
+      : url,
     fileRelativeUrl,
     parentDirectoryUrl,
     parentDirectoryRelativeUrl,
@@ -20488,6 +20493,7 @@ const getCorePlugins = ({
   nodeEsmResolution = {},
   magicExtensions,
   magicDirectoryIndex,
+  directoryListingUrlMocks,
   directoryReferenceEffect,
   supervisor,
   injections,
@@ -20533,6 +20539,7 @@ const getCorePlugins = ({
     jsenvPluginProtocolFile({
       magicExtensions,
       magicDirectoryIndex,
+      directoryListingUrlMocks,
     }),
 
     ...(nodeEsmResolution
@@ -23115,6 +23122,7 @@ const startDevServer = async ({
   supervisor = true,
   magicExtensions,
   magicDirectoryIndex,
+  directoryListingUrlMocks,
   injections,
   transpilation,
   cacheControl = true,
@@ -23307,6 +23315,7 @@ const startDevServer = async ({
             nodeEsmResolution,
             magicExtensions,
             magicDirectoryIndex,
+            directoryListingUrlMocks,
             supervisor,
             injections,
             transpilation,
