@@ -32,6 +32,7 @@ export const getCorePlugins = ({
   nodeEsmResolution = {},
   magicExtensions,
   magicDirectoryIndex,
+  directoryListingUrlMocks,
   directoryReferenceEffect,
   supervisor,
   injections,
@@ -77,6 +78,7 @@ export const getCorePlugins = ({
     jsenvPluginProtocolFile({
       magicExtensions,
       magicDirectoryIndex,
+      directoryListingUrlMocks,
     }),
 
     ...(nodeEsmResolution
