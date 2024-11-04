@@ -15,6 +15,7 @@ const devServer = await startDevServer({
   serverLogLevel: "off",
   sourceDirectoryUrl,
   keepProcessAlive: !debug,
+  directoryListingUrlMocks: true,
   clientAutoreload: false,
   port: 0,
 });

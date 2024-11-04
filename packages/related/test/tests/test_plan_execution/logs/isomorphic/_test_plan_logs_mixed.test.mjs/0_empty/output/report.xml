@@ -3,13 +3,13 @@
   <testcase file="client/empty.spec.html" name="chrome" time="[time]" timestamp="[timestamp]" tests="1">
     <properties>
       <property name="runtimeName" value="chromium"></property>
-      <property name="runtimeVersion" value="129.0.6668.29"></property>
+      <property name="runtimeVersion" value="130.0.6723.31"></property>
     </properties>
   </testcase>
   <testcase file="client/empty.spec.html" name="firefox" time="[time]" timestamp="[timestamp]" tests="1">
     <properties>
       <property name="runtimeName" value="firefox"></property>
-      <property name="runtimeVersion" value="130.0"></property>
+      <property name="runtimeVersion" value="131.0"></property>
     </properties>
   </testcase>
   <testcase file="client/empty.spec.html" name="webkit" time="[time]" timestamp="[timestamp]" tests="1">
@@ -21,13 +21,13 @@
   <testcase file="client/empty.spec.js" name="node" time="[time]" timestamp="[timestamp]" tests="1">
     <properties>
       <property name="runtimeName" value="node_worker_thread"></property>
-      <property name="runtimeVersion" value="22.3.0"></property>
+      <property name="runtimeVersion" value="22.11.0"></property>
     </properties>
   </testcase>
   <testcase file="client/empty.spec.js" name="node_2" time="[time]" timestamp="[timestamp]" tests="1">
     <properties>
       <property name="runtimeName" value="node_child_process"></property>
-      <property name="runtimeVersion" value="22.3.0"></property>
+      <property name="runtimeVersion" value="22.11.0"></property>
     </properties>
   </testcase>
 </testsuite>

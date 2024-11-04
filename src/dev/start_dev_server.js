@@ -71,6 +71,7 @@ export const startDevServer = async ({
   supervisor = true,
   magicExtensions,
   magicDirectoryIndex,
+  directoryListingUrlMocks,
   injections,
   transpilation,
   cacheControl = true,
@@ -110,7 +111,8 @@ export const startDevServer = async ({
     if (outDirectoryUrl === undefined) {
       if (
         process.env.CAPTURING_SIDE_EFFECTS ||
-        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl)
+        (!import.meta.build &&
+          urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
       ) {
         outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
       } else {
@@ -263,6 +265,7 @@ export const startDevServer = async ({
             nodeEsmResolution,
             magicExtensions,
             magicDirectoryIndex,
+            directoryListingUrlMocks,
             supervisor,
             injections,
             transpilation,

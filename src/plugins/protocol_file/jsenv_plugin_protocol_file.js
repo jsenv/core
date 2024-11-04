@@ -11,6 +11,7 @@ import {
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
+import { jsenvCoreDirectoryUrl } from "../../jsenv_core_directory_url.js";
 import { jsenvPluginFsRedirection } from "./jsenv_plugin_fs_redirection.js";
 
 const html404AndParentDirFileUrl = new URL(
@@ -26,6 +27,7 @@ export const jsenvPluginProtocolFile = ({
   magicExtensions,
   magicDirectoryIndex,
   preserveSymlinks,
+  directoryListingUrlMocks,
 }) => {
   return [
     jsenvPluginFsRedirection({
@@ -141,6 +143,7 @@ export const jsenvPluginProtocolFile = ({
               parentDirectoryContentArray,
               parentDirectoryUrl,
               urlInfo.context.rootDirectoryUrl,
+              directoryListingUrlMocks,
             );
             return {
               contentType: "text/html",
@@ -193,6 +196,7 @@ const generateHtmlForENOENTOnHtmlFile = (
   parentDirectoryContentArray,
   parentDirectoryUrl,
   rootDirectoryUrl,
+  directoryListingUrlMocks,
 ) => {
   const htmlFor404AndParentDir = String(
     readFileSync(html404AndParentDirFileUrl),
@@ -203,7 +207,9 @@ const generateHtmlForENOENTOnHtmlFile = (
     rootDirectoryUrl,
   );
   const replacers = {
-    fileUrl: url,
+    fileUrl: directoryListingUrlMocks
+      ? `@jsenv/core/${urlToRelativeUrl(url, jsenvCoreDirectoryUrl)}`
+      : url,
     fileRelativeUrl,
     parentDirectoryUrl,
     parentDirectoryRelativeUrl,

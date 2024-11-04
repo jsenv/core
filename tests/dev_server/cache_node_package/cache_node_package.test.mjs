@@ -4,7 +4,11 @@
  */
 
 import { assert } from "@jsenv/assert";
-import { copyDirectorySync } from "@jsenv/filesystem";
+import {
+  readFileStructureSync,
+  writeFileStructureSync,
+} from "@jsenv/filesystem";
+import { replaceFluctuatingValues } from "@jsenv/snapshot";
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 
@@ -77,11 +81,13 @@ try {
       `./snapshots/${name}/`,
       import.meta.url,
     );
-    copyDirectorySync({
-      from: jsenvDirectoryUrl,
-      to: snapshotDirectoryUrl,
-      overwrite: true,
-    });
+    const fileStructure = readFileStructureSync(jsenvDirectoryUrl);
+    for (const key of Object.keys(fileStructure)) {
+      fileStructure[key] = replaceFluctuatingValues(fileStructure[key], {
+        fileUrl: new URL(key, jsenvDirectoryUrl),
+      });
+    }
+    writeFileStructureSync(snapshotDirectoryUrl, fileStructure);
   };
 
   {
