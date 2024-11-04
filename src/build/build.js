@@ -173,7 +173,8 @@ export const build = async ({
     if (outDirectoryUrl === undefined) {
       if (
         process.env.CAPTURING_SIDE_EFFECTS ||
-        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl)
+        (!import.meta.build &&
+          urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl))
       ) {
         outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl);
       } else {

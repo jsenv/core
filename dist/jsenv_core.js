@@ -11114,7 +11114,7 @@ const watchSourceFiles = (
   return stopWatchingSourceFiles;
 };
 
-const jsenvCoreDirectoryUrl = new URL("./core/", import.meta.url);
+new URL("../", import.meta.url);
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = new URL(
@@ -15087,7 +15087,7 @@ const jsenvPluginDirectoryReferenceEffect = (
         reference.filenameHint = `${
           reference.ownerUrlInfo.filenameHint
         }${urlToFilename$1(reference.url)}/`;
-      } else {
+      } else if (reference.specifier.endsWith("./")) ; else {
         reference.filenameHint = `${urlToFilename$1(reference.url)}/`;
       }
       let actionForDirectory;
@@ -22278,7 +22278,7 @@ const build = async ({
     if (outDirectoryUrl === undefined) {
       if (
         process.env.CAPTURING_SIDE_EFFECTS ||
-        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl)
+        (!true)
       ) {
         outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl);
       } else {
@@ -23154,7 +23154,7 @@ const startDevServer = async ({
     if (outDirectoryUrl === undefined) {
       if (
         process.env.CAPTURING_SIDE_EFFECTS ||
-        urlIsInsideOf(sourceDirectoryUrl, jsenvCoreDirectoryUrl)
+        (!true)
       ) {
         outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
       } else {
