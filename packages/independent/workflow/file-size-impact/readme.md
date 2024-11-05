@@ -196,10 +196,10 @@ const fileSizeReport = await generateFileSizeReport({
 
 ## trackingConfig
 
-_trackingConfig_ parameter is an object used to configure group of files you want to track. This parameter is optional with a default value exported in [src/jsenvTrackingConfig.js](./src/jsenvTrackingConfig.js)
+_trackingConfig_ parameter is an object used to configure group of files you want to track. This parameter is optional with a default value exported in [src/jsenv_tracking_config.js](./src/jsenv_tracking_config.js)
 
 _trackingConfig_ keys are group names that will appear in the generated comment.
-_trackingConfig_ values are objects associating a pattern to a value. This object is refered as _metaValueMap_ in [@jsenv/url-meta#structuredMetaMap](https://github.com/jsenv/url-meta#structuredmetamap).
+_trackingConfig_ values are objects associating a pattern to a value.
 
 For example you can create two groups named _"critical files"_ and _"remaining files"_ like this:
 
