@@ -3,17 +3,17 @@
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../h_going_further/h_going_further.md">&lt; H) Going further</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    I) Test in Node.js
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../j_build_for_node/j_build_for_node.md">&gt; J) Build for Node.js</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../h_going_further/h_going_further.md">&lt; H) Going further</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      I) Test in Node.js
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../j_build_for_node/j_build_for_node.md">&gt; J) Build for Node.js</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->
@@ -367,17 +367,17 @@ Code coverage can be collected while executing test files.
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../h_going_further/h_going_further.md">&lt; H) Going further</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    I) Test in Node.js
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../j_build_for_node/j_build_for_node.md">&gt; J) Build for Node.js</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../h_going_further/h_going_further.md">&lt; H) Going further</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      I) Test in Node.js
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../j_build_for_node/j_build_for_node.md">&gt; J) Build for Node.js</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->

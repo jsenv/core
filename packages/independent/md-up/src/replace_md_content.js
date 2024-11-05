@@ -126,7 +126,7 @@ const renderTableOfContentsMarkdown = (rootNode, markdownFileUrl) => {
   let indent = 0;
   if (rootNode.canCollapse) {
     tableOfContent += `<details${rootNode.defaultOpen ? " open" : ""}>
-    <summary>${rootNode.title}</summary>`;
+  <summary>${rootNode.title}</summary>`;
     indent = 1;
   }
   const visit = (node, indent) => {
@@ -135,8 +135,8 @@ const renderTableOfContentsMarkdown = (rootNode, markdownFileUrl) => {
     for (const childNode of node.children) {
       tableOfContent += `\n${"  ".repeat(indent + 1)}<li>`;
       tableOfContent += `\n${"  ".repeat(indent + 2)}<a href="${urlToRelativeUrl(childNode.href, markdownFileUrl)}">
-  ${"  ".repeat(indent + 3)}${escapeHtml(childNode.text)}
-  ${"  ".repeat(indent + 2)}</a>`;
+${"  ".repeat(indent + 3)}${escapeHtml(childNode.text)}
+${"  ".repeat(indent + 2)}</a>`;
       if (childNode.children?.length) {
         visit(childNode, indent + 3);
       }
@@ -177,15 +177,15 @@ export const generatePrevNextNav = (
       markdownFile.url,
     );
     return `<table>
-    <tr>
-      <td width="2000px" align="left" nowrap>
-        ${escapeHtml(currentTitle)}
-      </td>
-      <td width="2000px" align="right" nowrap>
-        <a href="${nextUrlRelativeToCurrent}">${NEXT_CHAR} ${escapeHtml(nextTitle)}</a>
-      </td>
-    </tr>
-  </table>`;
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      ${escapeHtml(currentTitle)}
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="${nextUrlRelativeToCurrent}">${NEXT_CHAR} ${escapeHtml(nextTitle)}</a>
+    </td>
+  </tr>
+</table>`;
   }
   // last
   if (prevMarkdownFile && !nextMarkdownFile) {
@@ -196,15 +196,15 @@ export const generatePrevNextNav = (
       markdownFile.url,
     );
     return `<table>
-   <tr>
+  <tr>
     <td width="2000px" align="left" nowrap>
-     <a href="${prevUrlRelativeToCurrent}">${PREVIOUS_CHAR} ${escapeHtml(prevTitle)}</a>
+      <a href="${prevUrlRelativeToCurrent}">${PREVIOUS_CHAR} ${escapeHtml(prevTitle)}</a>
     </td>
     <td width="2000px" align="right" nowrap>
       ${escapeHtml(currentTitle)}
     </td>
-   </tr>
-  <table></table>`;
+  </tr>
+<table></table>`;
   }
   // between
   const currentTitle = extractMarkdownFileTitle(markdownFile);
@@ -219,18 +219,18 @@ export const generatePrevNextNav = (
     markdownFile.url,
   );
   return `<table>
-   <tr>
+  <tr>
     <td width="2000px" align="left" nowrap>
-     <a href="${prevUrlRelativeToCurrent}">${PREVIOUS_CHAR} ${escapeHtml(prevTitle)}</a>
+      <a href="${prevUrlRelativeToCurrent}">${PREVIOUS_CHAR} ${escapeHtml(prevTitle)}</a>
     </td>
     <td width="2000px" align="center" nowrap>
       ${escapeHtml(currentTitle)}
     </td>
     <td width="2000px" align="right" nowrap>
-     <a href="${nextUrlRelativeToCurrent}">${NEXT_CHAR} ${escapeHtml(nextTitle)}</a>
+      <a href="${nextUrlRelativeToCurrent}">${NEXT_CHAR} ${escapeHtml(nextTitle)}</a>
     </td>
-   </tr>
-  <table>`;
+  </tr>
+<table>`;
 };
 const extractMarkdownFileTitle = (markdownFile) => {
   const htmlTree = mdAsHtml(markdownFile.content);
@@ -254,10 +254,10 @@ const extractMarkdownFileTitle = (markdownFile) => {
 };
 const generateReplacement = (value, placeholder) => {
   let replacementWithMarkers = `<!-- PLACEHOLDER_START:${placeholder} -->
-  
-  ${value}
-  
-  <!-- PLACEHOLDER_END -->`;
+
+${value}
+
+<!-- PLACEHOLDER_END -->`;
   return replacementWithMarkers;
 };
 

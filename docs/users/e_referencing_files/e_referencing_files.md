@@ -3,17 +3,17 @@
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../d_test/d_test.md">&lt; D) Test</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    E) Referencing files
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../f_features/f_features.md">&gt; F) Features</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../d_test/d_test.md">&lt; D) Test</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      E) Referencing files
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../f_features/f_features.md">&gt; F) Features</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->
@@ -363,17 +363,17 @@ It is because in this situation `document.currentScript.src` would be `undefined
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../d_test/d_test.md">&lt; D) Test</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    E) Referencing files
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../f_features/f_features.md">&gt; F) Features</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../d_test/d_test.md">&lt; D) Test</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      E) Referencing files
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../f_features/f_features.md">&gt; F) Features</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->

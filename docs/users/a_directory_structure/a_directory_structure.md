@@ -45,11 +45,11 @@ project/
 
 `scripts/` contains files executable directly with `node` command.
 
-| File        | Description                                            | Link to doc            |
-| ----------- | ------------------------------------------------------ | ---------------------- |
-| _dev.mjs_   | starts a dev server for files in _src/_                | [B) Dev](<B)-Dev>)     |
-| _build.mjs_ | optimize files from _src/_ and write then into _dist/_ | [C) Build](<C)-Build>) |
-| _test.mjs_  | execute test files                                     | [D) Test](<D)-Test>)   |
+| File        | Description                                            | Link to doc                       |
+| ----------- | ------------------------------------------------------ | --------------------------------- |
+| _dev.mjs_   | starts a dev server for files in _src/_                | [B) Dev](../b_dev/b_dev.md)       |
+| _build.mjs_ | optimize files from _src/_ and write then into _dist/_ | [C) Build](../c_build/c_build.md) |
+| _test.mjs_  | execute test files                                     | [D) Test](../d_test/d_test.md)    |
 
 You can execute these files directory with `node`:
 

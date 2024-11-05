@@ -3,17 +3,17 @@
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../a_directory_structure/a_directory_structure.md">&lt; A) Directory Structure</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    B) Dev
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../c_build/c_build.md">&gt; C) Build</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../a_directory_structure/a_directory_structure.md">&lt; A) Directory Structure</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      B) Dev
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../c_build/c_build.md">&gt; C) Build</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->
@@ -200,7 +200,7 @@ Dev server support a large set of browsers:
 - Safari on IOS 12+
 - Samsung Internet 9.2+
 
-This is the list of browsers that can be used during dev. The browser support [after build](../c_build/Build#211-maximal-browser-support) is larger.
+This is the list of browsers that can be used during dev. The browser support [after build](../c_build/c_build.md#211-maximal-browser-support) is larger.
 
 ## 2.2 Directory structure agnostic
 
@@ -324,7 +324,7 @@ The following HTML was used to produce the error (it tries to load _main.js_ but
 </html>
 ```
 
-Check [tests/dev_server/errors/screenshots/](../../../tests/dev_server/errors/snapshots/sceenshots/) for more examples.
+Check [tests/dev_server/errors/screenshots/](../../../tests/dev_server/errors/_dev_errors_snapshots.test.mjs/0_chromium/output/screenshots/) for more examples.
 
 Error overlay can be disabled as follow:
 
@@ -455,17 +455,17 @@ await startDevServer({
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../a_directory_structure/a_directory_structure.md">&lt; A) Directory Structure</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    B) Dev
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../c_build/c_build.md">&gt; C) Build</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../a_directory_structure/a_directory_structure.md">&lt; A) Directory Structure</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      B) Dev
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../c_build/c_build.md">&gt; C) Build</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->

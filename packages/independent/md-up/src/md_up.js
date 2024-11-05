@@ -3,7 +3,7 @@ import {
   readEntryStatSync,
   writeFileSync,
 } from "@jsenv/filesystem";
-import { linkMarkdown } from "./lint_markdown.js";
+import { lintMarkdown } from "./lint_markdown.js";
 import {
   generateDirectoryTableOfContents,
   generatePrevNextNav,
@@ -80,6 +80,6 @@ const syncMarkdownContent = (markdownFile, replacers) => {
     mardownFileContent,
     replacers,
   );
-  linkMarkdown(markdownFileContentReplaced, markdownFile.url);
+  lintMarkdown(markdownFileContentReplaced, markdownFile.url);
   writeFileSync(markdownFile.url, markdownFileContentReplaced);
 };

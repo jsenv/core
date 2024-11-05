@@ -3,24 +3,24 @@
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../c_build/c_build.md">&lt; C) Build</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    D) Test
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../e_referencing_files/e_referencing_files.md">&gt; E) Referencing files</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../c_build/c_build.md">&lt; C) Build</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      D) Test
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../e_referencing_files/e_referencing_files.md">&gt; E) Referencing files</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->
 
 This page documents how jsenv can be used to write and execute tests. The tests will be executed in a web browser.
 
-If you want to execute tests in Node.js go to [I) Test in Node.js](../i_test_in_node/test_in_node.md).
+If you want to execute tests in Node.js go to [I) Test in Node.js](../i_test_in_node/i_test_in_node.md).
 
 Best parts of jsenv tests:
 
@@ -29,7 +29,7 @@ Best parts of jsenv tests:
 - [Isolated environment](#33-isolated-environment); each test file has a dedicated runtime
 - Test files can be executed in [Chrome, Firefox and Safari](#32-execute-on-more-browsers)
 - [Smart parallelism](#34-parallelism)
-- Logs are [nice](../../../packages/related/test/tests/test_plan_execution/logs/snapshots/browsers/empty.spec.html.gif); dynamic, colorful and human friendly
+- Logs are [nice](../../../packages/related/test/tests/test_plan_execution/logs/browser/output/console.spec.html.gif); dynamic, colorful and human friendly
 
 <!--
 When coding, we spend most of our time working on source files. At some point we switch from source files to test files. Suddenly things are different:
@@ -693,17 +693,17 @@ It contains all execution results and a few more infos
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../c_build/c_build.md">&lt; C) Build</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    D) Test
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../e_referencing_files/e_referencing_files.md">&gt; E) Referencing files</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../c_build/c_build.md">&lt; C) Build</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      D) Test
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../e_referencing_files/e_referencing_files.md">&gt; E) Referencing files</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->

@@ -3,17 +3,17 @@
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../e_referencing_files/e_referencing_files.md">&lt; E) Referencing files</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    F) Features
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../g_plugins/g_plugins.md">&gt; G) Plugins</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../e_referencing_files/e_referencing_files.md">&lt; E) Referencing files</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      F) Features
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../g_plugins/g_plugins.md">&gt; G) Plugins</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->
@@ -365,7 +365,7 @@ Inlining can also be used to inline code written as js module:
 </html>
 ```
 
-Read more about `as_js_classic` query parameter in [G) Plugins#asJsClassic](../g_plugins/plugins.md#22-asjsclassic)
+Read more about `as_js_classic` query parameter in [G) Plugins#asJsClassic](../g_plugins/g_plugins.md#22-asjsclassic)
 
 # 6. Importing UMD
 
@@ -431,7 +431,7 @@ Uncaught ReferenceError: module is not defined
 ```
 
 Obviously.  
-And jsenv won't try to perform automatic module conversion. The conversion to js modules must be done using `jsenvPluginCommonJs` documented in [G) Plugins#commonjs](../g_plugins/plugins.md#21-commonjs).
+And jsenv won't try to perform automatic module conversion. The conversion to js modules must be done using `jsenvPluginCommonJs` documented in [G) Plugins#commonjs](../g_plugins/g_plugins.md#21-commonjs).
 
 # 8. Loading js module with `<script></script>`
 
@@ -467,17 +467,17 @@ It's possible to obtain this thanks to `jsenvPluginAsJsClassic` documented in [G
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../e_referencing_files/e_referencing_files.md">&lt; E) Referencing files</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    F) Features
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../g_plugins/g_plugins.md">&gt; G) Plugins</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../e_referencing_files/e_referencing_files.md">&lt; E) Referencing files</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      F) Features
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../g_plugins/g_plugins.md">&gt; G) Plugins</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->

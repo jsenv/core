@@ -3,17 +3,17 @@
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../f_features/f_features.md">&lt; F) Features</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    G) Plugins
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../h_going_further/h_going_further.md">&gt; H) Going further</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../f_features/f_features.md">&lt; F) Features</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      G) Plugins
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../h_going_further/h_going_further.md">&gt; H) Going further</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->
@@ -390,17 +390,17 @@ There is no plugin specific to build for now.
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../f_features/f_features.md">&lt; F) Features</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    G) Plugins
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../h_going_further/h_going_further.md">&gt; H) Going further</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../f_features/f_features.md">&lt; F) Features</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      G) Plugins
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../h_going_further/h_going_further.md">&gt; H) Going further</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->

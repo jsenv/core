@@ -3,17 +3,17 @@
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../b_dev/b_dev.md">&lt; B) Dev</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    C) Build
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../d_test/d_test.md">&gt; D) Test</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../b_dev/b_dev.md">&lt; B) Dev</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      C) Build
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../d_test/d_test.md">&gt; D) Test</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->
@@ -627,7 +627,7 @@ Here again, remove the resource hint from the html file as it becomes useless af
 ## 2.8 plugins
 
 Array of custom jsenv plugins that will be used while building files.  
-Read more in [G) Plugins](<G)-Plugins>).
+Read more in [G) Plugins](../g_plugins/g_plugins.md).
 
 ## 2.9 Symbiosis with service worker
 
@@ -706,7 +706,7 @@ In case you don't have your own service worker already you can use [@jsenv/servi
 
 ## 2.10 sourcemaps
 
-Same as `sourcemaps` in [B) Dev](../b_dev/dev.md#28-sourcemaps) but default value is `"none"`
+Same as `sourcemaps` in [B) Dev](../b_dev/b_dev.md#28-sourcemaps) but default value is `"none"`
 
 # 3. How to serve build files
 
@@ -736,17 +736,17 @@ Same as https in [B) Dev](../b_dev/b_dev.md#210-https)
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
 <table>
- <tr>
-  <td width="2000px" align="left" nowrap>
-   <a href="../b_dev/b_dev.md">&lt; B) Dev</a>
-  </td>
-  <td width="2000px" align="center" nowrap>
-    C) Build
-  </td>
-  <td width="2000px" align="right" nowrap>
-   <a href="../d_test/d_test.md">&gt; D) Test</a>
-  </td>
- </tr>
+  <tr>
+    <td width="2000px" align="left" nowrap>
+      <a href="../b_dev/b_dev.md">&lt; B) Dev</a>
+    </td>
+    <td width="2000px" align="center" nowrap>
+      C) Build
+    </td>
+    <td width="2000px" align="right" nowrap>
+      <a href="../d_test/d_test.md">&gt; D) Test</a>
+    </td>
+  </tr>
 <table>
 
 <!-- PLACEHOLDER_END -->
