@@ -1,0 +1,27 @@
+{
+  "name": "@jsenv/md-up",
+  "version": "0.0.1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/md-up"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/md_up.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "dependencies": {
+    "anchor-markdown-header": "0.7.0",
+    "marked": "14.1.3"
+  }
+}
