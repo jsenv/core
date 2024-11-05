@@ -1,8 +1,8 @@
-import { findHtmlNode, getHtmlNodeText, parseHtml } from "@jsenv/ast";
+import { findHtmlNode, getHtmlNodeText } from "@jsenv/ast";
 import { readDirectorySync, readEntryStatSync } from "@jsenv/filesystem";
 import { urlToFilename, urlToRelativeUrl } from "@jsenv/urls";
 import anchor from "anchor-markdown-header";
-import { marked } from "marked";
+import { mdAsHtml } from "./md_as_html.js";
 import { getEntryMarkdownFile } from "./resolve_md_entry_file.js";
 
 const PREVIOUS_CHAR = "&lt;"; // "<"
@@ -38,8 +38,7 @@ export const generateTableOfContents = (markdownFile) => {
     defaultOpen: false,
     children: [],
   };
-  const mdHtml = mdFileAsHtml(markdownFile);
-  const htmlTree = parseHtml({ html: mdHtml });
+  const htmlTree = mdAsHtml(markdownFile.content);
   let isFirstH1 = true;
   const htmlNode = htmlTree.childNodes.find((node) => node.nodeName === "html");
   const body = htmlNode.childNodes.find((node) => node.nodeName === "body");
@@ -233,15 +232,8 @@ export const generatePrevNextNav = (
    </tr>
   <table>`;
 };
-const mdFileAsHtml = (markdownFile) => {
-  const mdAsHtml = marked.parse(markdownFile.content);
-  // eslint-disable-next-line no-control-regex
-  const mdSafe = mdAsHtml.replace(/[\u0000-\u001F\u007F-\u009F]/g, "");
-  return mdSafe;
-};
 const extractMarkdownFileTitle = (markdownFile) => {
-  const mdHtml = mdFileAsHtml(markdownFile);
-  const htmlTree = parseHtml({ html: mdHtml });
+  const htmlTree = mdAsHtml(markdownFile.content);
   let title;
   findHtmlNode(htmlTree, (node) => {
     if (node.nodeName === "#comment") {

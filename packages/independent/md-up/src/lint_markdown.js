@@ -1,1 +1,1 @@
-export const linkMarkdown = () => {};
+export const linkMarkdown = (mdContent, mdUrl) => {};
