@@ -9,11 +9,9 @@ RESOLVE_URL_ERROR: Failed to resolve url reference
 base/client/node_modules/foo/index.js:1:7
 1 | import "not_found";
           ^
-An error occured during specifier resolution
+"not_found" is a bare specifier but cannot be remapped to a package
 --- first reference in project ---
 base/client/main.js:1:7
---- error message ---
-Cannot find "not_found" imported from base/client/node_modules/foo/index.js
 --- plugin name ---
 "jsenv:node_esm_resolution"
   at async run (base/node_module_not_found_build.test.mjs:5:3)

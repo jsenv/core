@@ -978,9 +978,12 @@ window.__supervisor__ = (() => {
                 ? generateClickableText(trace.codeFrame)
                 : "",
               name: dataToRender.name,
-              message: dataToRender.message
-                ? generateClickableText(dataToRender.message)
-                : "",
+              message:
+                cause.code === "MODULE_NOT_FOUND"
+                  ? generateClickableText(dataToRender.reason)
+                  : dataToRender.message
+                    ? generateClickableText(dataToRender.message)
+                    : "",
               stackTrace: dataToRender.stackTrace
                 ? generateClickableText(dataToRender.stackTrace)
                 : "",

@@ -44,7 +44,6 @@ ${reason}`,
     const bareSpecifierError = createFailedToResolveUrlError({
       reason: `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`,
     });
-    bareSpecifierError.message = bareSpecifierError.reason;
     return bareSpecifierError;
   }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
