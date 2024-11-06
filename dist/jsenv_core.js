@@ -11591,6 +11591,7 @@ const createResolveUrlError = ({
   error,
 }) => {
   const createFailedToResolveUrlError = ({
+    name = "RESOLVE_URL_ERROR",
     code = error.code || "RESOLVE_URL_ERROR",
     reason,
     ...details
@@ -11609,10 +11610,11 @@ ${reason}`,
     );
     defineNonEnumerableProperties(resolveError, {
       isJsenvCookingError: true,
-      name: "RESOLVE_URL_ERROR",
+      name,
       code,
       reason,
       asResponse: error.asResponse,
+      trace: error.trace || reference.trace,
     });
     return resolveError;
   };
@@ -11620,6 +11622,12 @@ ${reason}`,
     return createFailedToResolveUrlError({
       reason: `no plugin has handled the specifier during "resolveUrl" hook`,
     });
+  }
+  if (error.code === "MODULE_NOT_FOUND") {
+    const bareSpecifierError = createFailedToResolveUrlError({
+      reason: `"${reference.specifier}" is a bare specifier but cannot be remapped to a package`,
+    });
+    return bareSpecifierError;
   }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
     error.message = createDetailedMessage$1(error.message, {

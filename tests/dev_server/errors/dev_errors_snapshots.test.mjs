@@ -63,6 +63,7 @@ const run = async ({ browserLauncher, browserName }) => {
     "js_classic_inline_throw",
     "js_classic_throw",
     "js_module_export_not_found",
+    "js_module_import_bare_specifier",
     "js_module_import_not_found",
     "js_module_inline_export_not_found",
     "js_module_inline_import_not_found",

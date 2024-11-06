@@ -737,19 +737,19 @@ window.__supervisor__ = (() => {
       message,
       stackTrace
     }) => {
-      let stack = "";
+      const parts = [];
       if (codeFrame) {
-        stack += "".concat(codeFrame, "\n");
+        parts.push(codeFrame);
       }
       if (name && message) {
-        stack += "".concat(name, ": ").concat(message);
+        parts.push("".concat(name, ": ").concat(message));
       } else if (message) {
-        stack += message;
+        parts.push(message);
       }
       if (stackTrace) {
-        stack += "\n".concat(stackTrace);
+        parts.push(stackTrace);
       }
-      return stack;
+      return parts.join("\n");
     };
     const stringifyUrlSite = ({
       url,
@@ -972,13 +972,14 @@ window.__supervisor__ = (() => {
             const {
               trace = {}
             } = cause;
+            const dataToRender = cause.code === "MODULE_NOT_FOUND" ? cause : exception;
             root.querySelector(".text").innerHTML = stringifyStack({
               codeFrame: trace.codeFrame ? generateClickableText(trace.codeFrame) : "",
-              name: exception.name,
-              message: exception.message ? generateClickableText(exception.message) : "",
-              stackTrace: exception.stackTrace ? generateClickableText(exception.stackTrace) : ""
+              name: dataToRender.name,
+              message: cause.code === "MODULE_NOT_FOUND" ? generateClickableText(dataToRender.reason) : dataToRender.message ? generateClickableText(dataToRender.message) : "",
+              stackTrace: dataToRender.stackTrace ? generateClickableText(dataToRender.stackTrace) : ""
             });
-            if (cause) {
+            if (cause && dataToRender === exception) {
               const causeText = stringifyStack({
                 name: getErrorName(cause),
                 message: cause.reason ? generateClickableText(cause.reason) : cause.stack ? generateClickableText(cause.stack) : ""
@@ -1237,6 +1238,9 @@ window.__supervisor__ = (() => {
     });
   };
   const getErrorName = value => {
+    if (value.code === "MODULE_NOT_FOUND") {
+      return "TypeError";
+    }
     const {
       constructor
     } = value;

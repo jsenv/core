@@ -2664,7 +2664,7 @@ const createAssert = ({
       comparison.hasAnyDiff = overall.any.size > 0;
       comparison.done = true;
       const updateNodeDiffType = (node, otherNode) => {
-        if (node.diffType !== "") {
+        if (node.diffType !== "" && !allowRecompare) {
           return;
         }
         let diffType = "";
