@@ -34,6 +34,16 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
       expect: assert.between(100, 200),
     });
   });
+  test("500 not between 100, 200", () => {
+    assert({
+      actual: {
+        duration: 500,
+      },
+      expect: {
+        duration: assert.between(100, 200),
+      },
+    });
+  });
   test("3500 is between 3000 and 5000", () => {
     assert({
       actual: {

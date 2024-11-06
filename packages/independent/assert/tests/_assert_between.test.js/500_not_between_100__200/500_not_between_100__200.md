@@ -1,14 +1,12 @@
-# [3500 is between 3000 and 5000](../../assert_between.test.js#L47)
+# [500 not between 100, 200](../../assert_between.test.js#L37)
 
 ```js
 assert({
   actual: {
-    a: 3_500,
-    b: true,
+    duration: 500,
   },
   expect: {
-    a: assert.between(3_000, 5_000),
-    b: false,
+    duration: assert.between(100, 200),
   },
 });
 ```
@@ -22,12 +20,10 @@ assert({
 AssertionError: actual and expect are different
 
 actual: {
-  a: 3_500,
-  b: true,
+  duration: 500,
 }
 expect: {
-  a: assert.between(3_000, 5_000),
-  b: false,
+  duration: assert.between(100, 200),
 }
 ```
 

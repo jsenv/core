@@ -751,7 +751,7 @@ export const createAssert = ({
       comparison.done = true;
 
       const updateNodeDiffType = (node, otherNode) => {
-        if (node.diffType !== "") {
+        if (node.diffType !== "" && !allowRecompare) {
           return;
         }
         let diffType = "";
