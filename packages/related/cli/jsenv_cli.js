@@ -285,8 +285,8 @@ write_files: {
       const fromStat = statSync(fromUrl);
       if (fromStat.isDirectory()) {
         if (directoryEntryName === "src" || directoryEntryName === "tests") {
-          if (existsSync(toUrl)) {
-            // copy src and tests if they don't exists
+          if (existsSync(toUrl) && readdirSync(toUrl).length > 0) {
+            // copy src and tests if they don't exists or are empty
             continue;
           }
           if (isWebAndHaveRootHtmlFile) {
@@ -325,11 +325,17 @@ write_files: {
             label: "npm start",
             run: () => runWithChildProcess("npm start"),
           });
+          const packageTemplateObject = JSON.parse(templateFileContent);
+          packageTemplateObject.name = urlToFilename(directoryUrl);
+          const packageString = JSON.stringify(
+            packageTemplateObject,
+            null,
+            "  ",
+          );
+          writeFileSync(toUrl, packageString);
+        } else {
+          writeFileSync(toUrl, templateFileContent);
         }
-        const packageTemplateObject = JSON.parse(templateFileContent);
-        packageTemplateObject.name = urlToFilename(directoryUrl);
-        const packageString = JSON.stringify(packageTemplateObject, null, "  ");
-        writeFileSync(toUrl, packageString);
         continue;
       }
       const relativeUrl = urlToRelativeUrl(fromUrl, templateSourceDirectoryUrl);
