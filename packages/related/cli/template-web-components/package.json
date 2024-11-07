@@ -15,7 +15,7 @@
     "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-import-assertions": "7.26.0",
+    "@babel/plugin-syntax-import-attributes": "7.26.0",
     "@jsenv/custom-elements-redefine": "0.0.1",
     "@jsenv/assert": "4.4.2",
     "@jsenv/core": "39.5.19",

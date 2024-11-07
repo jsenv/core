@@ -18,7 +18,7 @@
     "preact": "10.24.3"
   },
   "devDependencies": {
-    "@babel/plugin-syntax-import-assertions": "7.26.0",
+    "@babel/plugin-syntax-import-attributes": "7.26.0",
     "@babel/plugin-transform-react-jsx": "7.25.9",
     "@jsenv/assert": "4.4.2",
     "@jsenv/core": "39.5.19",

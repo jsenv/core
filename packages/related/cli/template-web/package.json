@@ -14,7 +14,7 @@
     "prettier": "prettier --write ."
   },
   "devDependencies": {
-    "@babel/plugin-syntax-import-assertions": "7.26.0",
+    "@babel/plugin-syntax-import-attributes": "7.26.0",
     "@jsenv/assert": "4.4.2",
     "@jsenv/core": "39.5.19",
     "@jsenv/eslint-config-relax": "1.2.12",
