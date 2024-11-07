@@ -130,9 +130,38 @@ const getJsenvScriptsNode = (htmlAst) => {
   jsenvScripts = createHtmlNode({
     tagName: "jsenv-scripts",
   });
-  getAsFirstJsModuleInjector(htmlAst, {
-    anyScript: true,
-  })(jsenvScripts);
+  const headNode = findChild(htmlAst, (node) => node.nodeName === "html")
+    .childNodes[0];
+  let after = headNode.childNodes[0];
+  for (const child of headNode.childNodes) {
+    if (child.nodeName === "link") {
+      after = child;
+      continue;
+    }
+    if (child.nodeName === "script") {
+      const { type } = analyzeScriptNode(child);
+      if (type === "js_classic") {
+        insertHtmlNodeBefore(jsenvScripts, child);
+        return jsenvScripts;
+      }
+      if (type === "importmap") {
+        insertHtmlNodeAfter(jsenvScripts, child);
+        return jsenvScripts;
+      }
+      if (type === "js_module") {
+        insertHtmlNodeBefore(jsenvScripts, child);
+        return jsenvScripts;
+      }
+    }
+    if (child.nodeName === "meta") {
+      after = child;
+    }
+  }
+  if (after) {
+    insertHtmlNodeAfter(jsenvScripts, after);
+    return jsenvScripts;
+  }
+  injectHtmlNode(htmlAst, jsenvScripts);
   return jsenvScripts;
 };
 const stringifyParams = (params, prefix = "") => {

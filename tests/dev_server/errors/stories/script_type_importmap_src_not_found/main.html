@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script>
+      window.onerror = (...args) => {
+        console.log("window.onerror", ...args);
+      };
+    </script>
+    <script type="importmap" src="./not_found.importmap"></script>
+  </body>
+</html>
