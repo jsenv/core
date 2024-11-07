@@ -16302,9 +16302,13 @@ const jsenvPluginHtmlReferenceAnalysis = ({
     return (importmapUrlInfo) => {
       const htmlUrl = htmlUrlInfo.url;
       if (importmapUrlInfo) {
-        // importmap was found in this HTML file and is known
-        const importmap = JSON.parse(importmapUrlInfo.content);
-        importmaps[htmlUrl] = normalizeImportMap(importmap, htmlUrl);
+        if (importmapUrlInfo.error) {
+          importmaps[htmlUrl] = null;
+        } else {
+          // importmap was found in this HTML file and is known
+          const importmap = JSON.parse(importmapUrlInfo.content);
+          importmaps[htmlUrl] = normalizeImportMap(importmap, htmlUrl);
+        }
       } else {
         // no importmap in this HTML file
         importmaps[htmlUrl] = null;
@@ -16643,6 +16647,9 @@ const jsenvPluginHtmlReferenceAnalysis = ({
                       importmapLoaded(importmapInlineUrlInfo);
                     }
                     mutations.push(() => {
+                      if (importmapInlineUrlInfo.error) {
+                        return;
+                      }
                       setHtmlNodeText(
                         scriptNode,
                         importmapInlineUrlInfo.content,
