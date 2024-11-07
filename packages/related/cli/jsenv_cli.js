@@ -264,9 +264,6 @@ write_files: {
     return false;
   })();
   const copyDirectoryContent = (fromDirectoryUrl, toDirectoryUrl) => {
-    if (!existsSync(toDirectoryUrl)) {
-      mkdirSync(toDirectoryUrl, { recursive: true });
-    }
     const directoryEntryNameArray = readdirSync(fromDirectoryUrl);
     for (const directoryEntryName of directoryEntryNameArray) {
       if (
@@ -316,6 +313,10 @@ write_files: {
         }
       }
       if (!existsSync(toUrl)) {
+        const parentDirectoryUrl = new URL("./", toUrl);
+        if (!existsSync(parentDirectoryUrl)) {
+          mkdirSync(parentDirectoryUrl, { recursive: true });
+        }
         if (directoryEntryName === "package.json") {
           commands.push({
             label: "npm install",
