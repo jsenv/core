@@ -301,7 +301,7 @@ write_files: {
         );
         continue;
       }
-      let templateFileContent = String(readFileSync(toUrl));
+      let templateFileContent = String(readFileSync(fromUrl));
       if (isWebAndHaveRootHtmlFile) {
         if (directoryEntryName === ".eslintrc.cjs") {
           templateFileContent = templateFileContent.replaceAll(
