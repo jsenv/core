@@ -24,7 +24,9 @@ export const jsenvPluginSupervisor = ({
       /@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+(:([0-9]+):([0-9]+))?$/,
     );
     if (inlineUrlMatch) {
-      const htmlUrl = urlWithLineAndColumn.slice(0, inlineUrlMatch.index);
+      const htmlUrl = withoutHotSearchParam(
+        urlWithLineAndColumn.slice(0, inlineUrlMatch.index),
+      );
       const tagLineStart = parseInt(inlineUrlMatch[1]);
       const tagColumnStart = parseInt(inlineUrlMatch[2]);
       // const tagLineEnd = parseInt(inlineUrlMatch[3]);
@@ -52,7 +54,9 @@ export const jsenvPluginSupervisor = ({
     if (!match) {
       return null;
     }
-    const file = urlWithLineAndColumn.slice(0, match.index);
+    const file = withoutHotSearchParam(
+      urlWithLineAndColumn.slice(0, match.index),
+    );
     let line = parseInt(match[1]);
     let column = parseInt(match[2]);
     return {
@@ -269,4 +273,10 @@ export const jsenvPluginSupervisor = ({
       },
     },
   };
+};
+
+const withoutHotSearchParam = (url) => {
+  const urlObject = new URL(url);
+  urlObject.searchParams.delete("hot");
+  return urlObject.href;
 };
