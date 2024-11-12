@@ -109,11 +109,11 @@ const injectImportMetaHot = (urlInfo, importMetaHotClientFileUrl) => {
     expectedType: "js_module",
     specifier: importMetaHotClientFileUrl,
   });
-  const magicSource = createMagicSource(urlInfo.content);
-  magicSource.prepend(
-    `import { createImportMetaHot } from ${importMetaHotClientFileReference.generatedSpecifier};
+  let content = urlInfo.content;
+  let prelude = `import { createImportMetaHot } from ${importMetaHotClientFileReference.generatedSpecifier};
 import.meta.hot = createImportMetaHot(import.meta.url);
-`,
-  );
-  return magicSource.toContentAndSourcemap();
+`;
+  return {
+    content: `${prelude.replace(/\n/g, "")}${content}`,
+  };
 };
