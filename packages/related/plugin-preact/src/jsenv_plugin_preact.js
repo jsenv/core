@@ -171,7 +171,7 @@ export const jsenvPluginPreact = ({
           const afterJsxReplace = magicSource.toContentAndSourcemap({
             source: "jsenv_preact",
           });
-          code = afterJsxReplace.code;
+          code = afterJsxReplace.content;
           map = await composeTwoSourcemaps(map, afterJsxReplace.sourcemap);
         }
         if (refreshEnabled) {
