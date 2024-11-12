@@ -5,6 +5,7 @@
 
 import { generateContentFrame } from "@jsenv/humanize";
 import { getOriginalPosition } from "@jsenv/sourcemap";
+import { injectQueryParams } from "@jsenv/urls";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import {
@@ -24,8 +25,9 @@ export const jsenvPluginSupervisor = ({
       /@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+(:([0-9]+):([0-9]+))?$/,
     );
     if (inlineUrlMatch) {
-      const htmlUrl = withoutHotSearchParam(
+      const htmlUrl = injectQueryParams(
         urlWithLineAndColumn.slice(0, inlineUrlMatch.index),
+        { hot: undefined },
       );
       const tagLineStart = parseInt(inlineUrlMatch[1]);
       const tagColumnStart = parseInt(inlineUrlMatch[2]);
@@ -54,9 +56,9 @@ export const jsenvPluginSupervisor = ({
     if (!match) {
       return null;
     }
-    const file = withoutHotSearchParam(
-      urlWithLineAndColumn.slice(0, match.index),
-    );
+    const file = injectQueryParams(urlWithLineAndColumn.slice(0, match.index), {
+      hot: undefined,
+    });
     let line = parseInt(match[1]);
     let column = parseInt(match[2]);
     return {
@@ -273,10 +275,4 @@ export const jsenvPluginSupervisor = ({
       },
     },
   };
-};
-
-const withoutHotSearchParam = (url) => {
-  const urlObject = new URL(url);
-  urlObject.searchParams.delete("hot");
-  return urlObject.href;
 };
