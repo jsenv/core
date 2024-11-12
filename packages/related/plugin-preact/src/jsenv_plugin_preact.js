@@ -113,7 +113,7 @@ export const jsenvPluginPreact = ({
             urlInfo.content.includes("useReducer") ||
             urlInfo.content.includes("useRef") ||
             urlInfo.content.includes("useMemo"));
-        const { code, map } = await applyBabelPlugins({
+        let { code, map } = await applyBabelPlugins({
           babelPlugins: [
             ...(jsxEnabled
               ? [
@@ -136,8 +136,8 @@ export const jsenvPluginPreact = ({
           inputUrl: urlInfo.url,
           outputUrl: urlInfo.generatedUrl,
         });
-        const magicSource = createMagicSource(code);
         if (jsxEnabled) {
+          const magicSource = createMagicSource(code);
           // "@babel/plugin-transform-react-jsx" is injecting some of these 3 imports into the code:
           // 1. import { jsx } from "preact/jsx-runtime"
           // 2. import { jsxDev } from "preact/jsx-dev-runtime"
@@ -168,6 +168,11 @@ export const jsenvPluginPreact = ({
               index = code.indexOf(importSpecifier, index + 1);
             }
           }
+          const afterJsxReplace = magicSource.toContentAndSourcemap({
+            source: "jsenv_preact",
+          });
+          code = afterJsxReplace.code;
+          map = await composeTwoSourcemaps(map, afterJsxReplace.sourcemap);
         }
         if (refreshEnabled) {
           const hasReg = /\$RefreshReg\$\(/.test(code);
@@ -178,28 +183,27 @@ export const jsenvPluginPreact = ({
               expectedType: "js_module",
               specifier: "@jsenv/plugin-preact/src/client/preact_refresh.js",
             });
-            magicSource.prepend(`import { installPreactRefresh } from ${
+            const prelude = `import { installPreactRefresh } from ${
               preactRefreshClientReference.generatedSpecifier
             };
 const __preact_refresh__ = installPreactRefresh(${JSON.stringify(urlInfo.url)});
-`);
+`;
+            code = `${prelude.replace(/\n/g, "")}${code}`;
             if (hasReg) {
-              magicSource.append(`
+              code = `${code}
+
 __preact_refresh__.end();
-import.meta.hot.accept(__preact_refresh__.acceptCallback);`);
+import.meta.hot.accept(__preact_refresh__.acceptCallback);`;
             }
           }
         }
-        const result = magicSource.toContentAndSourcemap({
-          source: "jsenv_preact",
-        });
         return {
-          content: result.content,
-          sourcemap: await composeTwoSourcemaps(map, result.sourcemap),
+          content: code,
+          sourcemap: map,
           // "no sourcemap is better than wrong sourcemap":
           // I don't know exactly what is resulting in bad sourcemaps
           // but I suspect hooknames or prefresh to be responsible
-          sourcemapIsWrong: jsxEnabled && refreshEnabled,
+          // sourcemapIsWrong: jsxEnabled && refreshEnabled,
         };
       },
     },
