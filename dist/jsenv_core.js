@@ -4850,6 +4850,8 @@ const writeHead = (
   });
   if (statusText === undefined) {
     statusText = statusTextFromStatus(status);
+  } else {
+    statusText = statusText.replace(/\\n/g, "\n");
   }
   if (responseIsServerHttp2Stream) {
     nodeHeaders = {
