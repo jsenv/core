@@ -454,6 +454,38 @@ isBrowser ? () => {
   throw new Error('`process.cwd()` only works in Node.js, not the browser.');
 } : process$1.cwd;
 
+// normalize url search params:
+// Using URLSearchParams to alter the url search params
+// can result into "file:///file.css?css_module"
+// becoming "file:///file.css?css_module="
+// we want to get rid of the "=" and consider it's the same url
+const normalizeUrl = url => {
+  if (url.includes("?")) {
+    // disable on data urls (would mess up base64 encoding)
+    if (url.startsWith("data:")) {
+      return url;
+    }
+    return url.replace(/[=](?=&|$)/g, "");
+  }
+  return url;
+};
+const injectQueryParams = (url, params) => {
+  const urlObject = new URL(url);
+  const {
+    searchParams
+  } = urlObject;
+  Object.keys(params).forEach(key => {
+    const value = params[key];
+    if (value === undefined) {
+      searchParams.delete(key);
+    } else {
+      searchParams.set(key, value);
+    }
+  });
+  const urlWithParams = urlObject.href;
+  return normalizeUrl(urlWithParams);
+};
+
 const getCommonPathname = (pathname, otherPathname) => {
   if (pathname === otherPathname) {
     return pathname;
@@ -1199,7 +1231,9 @@ const jsenvPluginSupervisor = ({
   const resolveUrlSite = urlWithLineAndColumn => {
     const inlineUrlMatch = urlWithLineAndColumn.match(/@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+(:([0-9]+):([0-9]+))?$/);
     if (inlineUrlMatch) {
-      const htmlUrl = urlWithLineAndColumn.slice(0, inlineUrlMatch.index);
+      const htmlUrl = injectQueryParams(urlWithLineAndColumn.slice(0, inlineUrlMatch.index), {
+        hot: undefined
+      });
       const tagLineStart = parseInt(inlineUrlMatch[1]);
       const tagColumnStart = parseInt(inlineUrlMatch[2]);
       // const tagLineEnd = parseInt(inlineUrlMatch[3]);
@@ -1220,7 +1254,9 @@ const jsenvPluginSupervisor = ({
     if (!match) {
       return null;
     }
-    const file = urlWithLineAndColumn.slice(0, match.index);
+    const file = injectQueryParams(urlWithLineAndColumn.slice(0, match.index), {
+      hot: undefined
+    });
     let line = parseInt(match[1]);
     let column = parseInt(match[2]);
     return {
