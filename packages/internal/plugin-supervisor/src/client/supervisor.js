@@ -528,6 +528,17 @@ window.__supervisor__ = (() => {
             for (const callSite of callSites) {
               const url =
                 callSite.getFileName() || callSite.getScriptNameOrSourceURL();
+              if (!url) {
+                // thinks like Array.forEach can generate this
+                const stackFrame = {
+                  raw: `  at ${String(callSite)}`,
+                  url: null,
+                  line: null,
+                  column: null,
+                };
+                stackFrames.push(stackFrame);
+                continue;
+              }
               const line = callSite.getLineNumber();
               const column = callSite.getColumnNumber();
               const site = resolveUrlSite({ url, line, column });

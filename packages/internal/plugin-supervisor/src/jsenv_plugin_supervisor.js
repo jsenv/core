@@ -88,6 +88,9 @@ export const jsenvPluginSupervisor = ({
             },
           };
         }
+        if (!urlInfo.originalContent) {
+          await urlInfo.fetchContent();
+        }
         const remap = searchParams.has("remap");
         if (remap) {
           const sourcemap = urlInfo.sourcemap;

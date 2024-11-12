@@ -566,6 +566,17 @@ window.__supervisor__ = (() => {
             stackFrames = [];
             for (const callSite of callSites) {
               const url = callSite.getFileName() || callSite.getScriptNameOrSourceURL();
+              if (!url) {
+                // thinks like Array.forEach can generate this
+                const stackFrame = {
+                  raw: "  at ".concat(String(callSite)),
+                  url: null,
+                  line: null,
+                  column: null
+                };
+                stackFrames.push(stackFrame);
+                continue;
+              }
               const line = callSite.getLineNumber();
               const column = callSite.getColumnNumber();
               const site = resolveUrlSite({
