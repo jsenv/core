@@ -16,11 +16,11 @@
   "devDependencies": {
     "@babel/plugin-syntax-import-attributes": "7.26.0",
     "@jsenv/assert": "4.4.2",
-    "@jsenv/core": "39.5.21",
+    "@jsenv/core": "39.5.23",
     "@jsenv/eslint-config-relax": "1.2.12",
     "@jsenv/plugin-bundling": "2.7.16",
     "@jsenv/plugin-minification": "1.5.10",
-    "@jsenv/test": "3.5.24",
+    "@jsenv/test": "3.5.25",
     "eslint": "9.14.0",
     "open": "10.1.0",
     "@playwright/browser-chromium": "1.48.2",

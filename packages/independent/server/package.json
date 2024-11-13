@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/server",
-  "version": "15.3.2",
+  "version": "15.3.3",
   "description": "Write your Node.js server using pure functions",
   "license": "MIT",
   "author": {

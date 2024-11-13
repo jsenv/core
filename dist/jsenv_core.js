@@ -4851,7 +4851,7 @@ const writeHead = (
   if (statusText === undefined) {
     statusText = statusTextFromStatus(status);
   } else {
-    statusText = statusText.replace(/\\n/g, "\n");
+    statusText = statusText.replace(/\n/g, "");
   }
   if (responseIsServerHttp2Stream) {
     nodeHeaders = {
@@ -11530,7 +11530,9 @@ const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
     if (!returnValueAssertion.appliesTo.includes(hook.name)) {
       continue;
     }
-    const assertionResult = returnValueAssertion.assertion(returnValue, info);
+    const assertionResult = returnValueAssertion.assertion(returnValue, info, {
+      hook,
+    });
     if (assertionResult !== undefined) {
       // normalization
       returnValue = assertionResult;
@@ -11544,7 +11546,7 @@ const returnValueAssertions = [
   {
     name: "url_assertion",
     appliesTo: ["resolveReference", "redirectReference"],
-    assertion: (valueReturned) => {
+    assertion: (valueReturned, urlInfo, { hook }) => {
       if (valueReturned instanceof URL) {
         return valueReturned.href;
       }
@@ -11552,7 +11554,7 @@ const returnValueAssertions = [
         return undefined;
       }
       throw new Error(
-        `Unexpected value returned by plugin: it must be a string; got ${valueReturned}`,
+        `Unexpected value returned by "${hook.plugin.name}" plugin: it must be a string; got ${valueReturned}`,
       );
     },
   },
@@ -11564,7 +11566,7 @@ const returnValueAssertions = [
       "finalizeUrlContent",
       "optimizeUrlContent",
     ],
-    assertion: (valueReturned, urlInfo) => {
+    assertion: (valueReturned, urlInfo, { hook }) => {
       if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
         return { content: valueReturned };
       }
@@ -11575,13 +11577,13 @@ const returnValueAssertions = [
         }
         if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
           throw new Error(
-            `Unexpected "content" returned by plugin: it must be a string or a buffer; got ${content}`,
+            `Unexpected "content" returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string or a buffer; got ${content}`,
           );
         }
         return undefined;
       }
       throw new Error(
-        `Unexpected value returned by plugin: it must be a string, a buffer or an object; got ${valueReturned}`,
+        `Unexpected value returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string, a buffer or an object; got ${valueReturned}`,
       );
     },
   },
@@ -19908,13 +19910,13 @@ const injectImportMetaHot = (urlInfo, importMetaHotClientFileUrl) => {
     expectedType: "js_module",
     specifier: importMetaHotClientFileUrl,
   });
-  const magicSource = createMagicSource(urlInfo.content);
-  magicSource.prepend(
-    `import { createImportMetaHot } from ${importMetaHotClientFileReference.generatedSpecifier};
+  let content = urlInfo.content;
+  let prelude = `import { createImportMetaHot } from ${importMetaHotClientFileReference.generatedSpecifier};
 import.meta.hot = createImportMetaHot(import.meta.url);
-`,
-  );
-  return magicSource.toContentAndSourcemap();
+`;
+  return {
+    content: `${prelude.replace(/\n/g, "")}${content}`,
+  };
 };
 
 const jsenvPluginAutoreloadClient = () => {

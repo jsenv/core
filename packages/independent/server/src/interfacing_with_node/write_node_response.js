@@ -151,7 +151,7 @@ const writeHead = (
   if (statusText === undefined) {
     statusText = statusTextFromStatus(status);
   } else {
-    statusText = statusText.replace(/\\n/g, "\n");
+    statusText = statusText.replace(/\n/g, "");
   }
   if (responseIsServerHttp2Stream) {
     nodeHeaders = {
