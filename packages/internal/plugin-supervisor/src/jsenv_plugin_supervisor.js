@@ -4,6 +4,7 @@
  */
 
 import { generateContentFrame } from "@jsenv/humanize";
+import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { getOriginalPosition } from "@jsenv/sourcemap";
 import { injectQueryParams } from "@jsenv/urls";
 import { createRequire } from "node:module";
@@ -147,6 +148,12 @@ export const jsenvPluginSupervisor = ({
             body: "Missing file in url",
           };
         }
+        const { url } = applyNodeEsmResolution({
+          conditions: [],
+          parentUrl: serveInfo.rootDirectoryUrl,
+          specifier: file,
+        });
+        file = url;
         const getErrorCauseInfo = () => {
           const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
           if (!urlInfo) {

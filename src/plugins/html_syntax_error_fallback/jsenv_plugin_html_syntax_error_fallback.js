@@ -1,8 +1,8 @@
 import { parseHtml } from "@jsenv/ast";
+import { generateContentFrame } from "@jsenv/humanize";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
-
-import { generateContentFrame } from "@jsenv/humanize";
+import { jsenvCoreDirectoryUrl } from "../../jsenv_core_directory_url.js";
 
 export const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = new URL(
@@ -58,6 +58,10 @@ const generateHtmlForSyntaxError = (
   const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
   const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
   const { line, column } = htmlSyntaxError;
+  if (htmlUrl.startsWith(jsenvCoreDirectoryUrl.href)) {
+    htmlUrl = urlToRelativeUrl(htmlUrl, jsenvCoreDirectoryUrl);
+    htmlUrl = `@jsenv/core/${htmlUrl}`;
+  }
   const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
   const replacers = {
     fileRelativeUrl: htmlRelativeUrl,
