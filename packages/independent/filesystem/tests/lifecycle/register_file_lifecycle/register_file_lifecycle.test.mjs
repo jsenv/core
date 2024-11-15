@@ -1,22 +1,22 @@
 import { assert } from "@jsenv/assert";
 import {
-  ensureEmptyDirectory,
-  moveEntry,
+  ensureEmptyDirectorySync,
+  moveEntrySync,
   registerFileLifecycle,
-  removeEntry,
-  writeEntryModificationTime,
-  writeFile,
+  removeEntrySync,
+  writeEntryModificationTimeSync,
+  writeFileSync,
 } from "@jsenv/filesystem";
 import { wait } from "@jsenv/filesystem/tests/testHelpers.js";
 import { resolveUrl } from "@jsenv/urls";
 
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
-await ensureEmptyDirectory(tempDirectoryUrl);
+ensureEmptyDirectorySync(tempDirectoryUrl);
 
 // added file exists
 {
   const fileUrl = resolveUrl("file", tempDirectoryUrl);
-  await writeFile(fileUrl);
+  writeFileSync(fileUrl);
   const mutations = [];
   const unregister = registerFileLifecycle(fileUrl, {
     added: () => {
@@ -35,13 +35,13 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const expect = [];
   assert({ actual, expect });
   unregister();
-  await ensureEmptyDirectory(tempDirectoryUrl);
+  ensureEmptyDirectorySync(tempDirectoryUrl);
 }
 
 // added, file exstis and notifyExistent
 {
   const fileUrl = resolveUrl("file", tempDirectoryUrl);
-  await writeFile(fileUrl);
+  writeFileSync(fileUrl);
   const mutations = [];
   const unregister = registerFileLifecycle(fileUrl, {
     added: () => {
@@ -61,7 +61,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const expect = [{ type: "added" }];
   assert({ actual, expect });
   unregister();
-  await ensureEmptyDirectory(tempDirectoryUrl);
+  ensureEmptyDirectorySync(tempDirectoryUrl);
 }
 
 // added, removed, added
@@ -77,18 +77,18 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     },
     keepProcessAlive: false,
   });
-  await writeFile(fileUrl);
+  writeFileSync(fileUrl);
   await wait(200);
-  await removeEntry(fileUrl);
+  removeEntrySync(fileUrl);
   await wait(200);
-  await writeFile(fileUrl);
+  writeFileSync(fileUrl);
   await wait(200);
 
   const actual = mutations;
   const expect = [{ type: "added" }, { type: "added" }];
   assert({ actual, expect });
   unregister();
-  await ensureEmptyDirectory(tempDirectoryUrl);
+  ensureEmptyDirectorySync(tempDirectoryUrl);
 }
 
 // added, updated, removed
@@ -107,17 +107,17 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     },
     keepProcessAlive: false,
   });
-  await writeFile(fileUrl);
+  writeFileSync(fileUrl);
   await wait(200);
-  await writeEntryModificationTime(fileUrl, Date.now());
+  writeEntryModificationTimeSync(fileUrl, Date.now());
   await wait(200);
-  await removeEntry(fileUrl);
+  removeEntrySync(fileUrl);
   await wait(200);
   const actual = mutations;
   const expect = [{ type: "added" }, { type: "updated" }, { type: "removed" }];
   assert({ actual, expect });
   unregister();
-  await ensureEmptyDirectory(tempDirectoryUrl);
+  ensureEmptyDirectorySync(tempDirectoryUrl);
 }
 
 // move
@@ -138,21 +138,21 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     cooldownBetweenFileEvents: 200,
     keepProcessAlive: false,
   });
-  await writeFile(fileUrl);
+  writeFileSync(fileUrl);
   await wait(500);
-  await moveEntry({ from: fileUrl, to: destinationUrl });
+  moveEntrySync({ from: fileUrl, to: destinationUrl });
   await wait(500);
   const actual = mutations;
   const expect = [{ type: "added" }, { type: "removed" }];
   assert({ actual, expect });
   unregister();
-  await ensureEmptyDirectory(tempDirectoryUrl);
+  ensureEmptyDirectorySync(tempDirectoryUrl);
 }
 
 // removed
 {
   const fileUrl = resolveUrl("file", tempDirectoryUrl);
-  await writeFile(fileUrl);
+  writeFileSync(fileUrl);
   const mutations = [];
   const unregister = registerFileLifecycle(fileUrl, {
     removed: () => {
@@ -160,24 +160,25 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     },
     keepProcessAlive: false,
   });
-  await removeEntry(fileUrl);
   await wait(200);
-  await writeFile(fileUrl);
+  removeEntrySync(fileUrl);
   await wait(200);
-  await removeEntry(fileUrl);
+  writeFileSync(fileUrl);
+  await wait(200);
+  removeEntrySync(fileUrl);
   await wait(200);
 
   const actual = mutations;
   const expect = [{ type: "removed" }, { type: "removed" }];
   assert({ actual, expect });
   unregister();
-  await ensureEmptyDirectory(tempDirectoryUrl);
+  ensureEmptyDirectorySync(tempDirectoryUrl);
 }
 
 // updated lot
 {
   const fileUrl = resolveUrl("file", tempDirectoryUrl);
-  await writeFile(fileUrl);
+  writeFileSync(fileUrl);
   const mutations = [];
   const unregister = registerFileLifecycle(fileUrl, {
     updated: (data) => {
@@ -189,11 +190,11 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     keepProcessAlive: false,
   });
   await wait(100);
-  await writeEntryModificationTime(fileUrl, Date.now());
+  writeEntryModificationTimeSync(fileUrl, Date.now());
   await wait(300);
-  await writeEntryModificationTime(fileUrl, Date.now());
+  writeEntryModificationTimeSync(fileUrl, Date.now());
   await wait(300);
-  await writeEntryModificationTime(fileUrl, Date.now());
+  writeEntryModificationTimeSync(fileUrl, Date.now());
   await wait(300);
 
   const actual = mutations;
@@ -204,7 +205,7 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   ];
   assert({ actual, expect });
   unregister();
-  await ensureEmptyDirectory(tempDirectoryUrl);
+  ensureEmptyDirectorySync(tempDirectoryUrl);
 }
 
 // windows eperm
@@ -218,12 +219,12 @@ await ensureEmptyDirectory(tempDirectoryUrl);
     },
     keepProcessAlive: false,
   });
-  await removeEntry(tempDirectoryUrl);
+  removeEntrySync(tempDirectoryUrl);
   await wait(200);
 
   const actual = mutations;
   const expect = [];
   assert({ actual, expect });
   unregister();
-  await ensureEmptyDirectory(tempDirectoryUrl);
+  ensureEmptyDirectorySync(tempDirectoryUrl);
 }
