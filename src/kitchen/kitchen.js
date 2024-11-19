@@ -675,10 +675,11 @@ const memoizeIsSupported = (runtimeCompat) => {
 
 const inferUrlInfoType = (urlInfo) => {
   const { type, typeHint } = urlInfo;
+  const { contentType } = urlInfo;
+  const { expectedType } = urlInfo.firstReference;
   if (type === "sourcemap" || typeHint === "sourcemap") {
     return "sourcemap";
   }
-  const { contentType } = urlInfo;
   if (contentType === "text/html") {
     return "html";
   }
@@ -686,10 +687,12 @@ const inferUrlInfoType = (urlInfo) => {
     return "css";
   }
   if (contentType === "text/javascript") {
-    if (urlInfo.firstReference.expectedType === "js_classic") {
+    if (expectedType === "js_classic") {
       return "js_classic";
     }
-    if (urlInfo.typeHint === "js_classic") return "js_classic";
+    if (typeHint === "js_classic") {
+      return "js_classic";
+    }
     return "js_module";
   }
   if (contentType === "application/importmap+json") {
@@ -707,5 +710,5 @@ const inferUrlInfoType = (urlInfo) => {
   if (CONTENT_TYPE.isTextual(contentType)) {
     return "text";
   }
-  return urlInfo.firstReference.expectedType || "other";
+  return expectedType || "other";
 };
