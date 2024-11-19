@@ -122,7 +122,9 @@ export const jsenvPluginProtocolFile = ({
         if (request && request.headers["sec-fetch-dest"] === "document") {
           try {
             const fileBuffer = readFileSync(urlObject);
-            const content = String(fileBuffer);
+            const content = CONTENT_TYPE.isTextual(contentType)
+              ? String(fileBuffer)
+              : fileBuffer;
             return {
               content,
               contentType,
