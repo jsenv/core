@@ -226,6 +226,7 @@ const createUrlInfo = (url, context) => {
     jsQuote: null, // maybe move to inlineUrlSite?
 
     timing: {},
+    status: 200,
     headers: {},
     debug: false,
   };

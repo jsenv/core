@@ -342,21 +342,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         body,
         isEntryPoint,
       } = fetchUrlContentReturnValue;
-      if (status !== 200) {
-        throw new Error(`unexpected status, ${status}`);
-      }
       if (content === undefined) {
         content = body;
       }
       if (contentType === undefined) {
         contentType = headers["content-type"] || "application/octet-stream";
       }
+      urlInfo.status = status;
       urlInfo.contentType = contentType;
       urlInfo.headers = headers;
-      urlInfo.type =
-        type ||
-        urlInfo.firstReference.expectedType ||
-        inferUrlInfoType(urlInfo);
+      urlInfo.type = type || inferUrlInfoType(urlInfo);
       urlInfo.subtype =
         subtype ||
         urlInfo.firstReference.expectedSubtype ||
@@ -691,6 +686,9 @@ const inferUrlInfoType = (urlInfo) => {
     return "css";
   }
   if (contentType === "text/javascript") {
+    if (urlInfo.firstReference.expectedType === "js_classic") {
+      return "js_classic";
+    }
     if (urlInfo.typeHint === "js_classic") return "js_classic";
     return "js_module";
   }
@@ -709,5 +707,5 @@ const inferUrlInfoType = (urlInfo) => {
   if (CONTENT_TYPE.isTextual(contentType)) {
     return "text";
   }
-  return "other";
+  return urlInfo.firstReference.expectedType || "other";
 };

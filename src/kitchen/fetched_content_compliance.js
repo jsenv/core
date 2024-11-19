@@ -1,6 +1,9 @@
 import { validateResponseIntegrity } from "@jsenv/integrity";
 
 export const assertFetchedContentCompliance = ({ urlInfo, content }) => {
+  if (urlInfo.status === 404) {
+    return;
+  }
   const { expectedContentType } = urlInfo.firstReference;
   if (expectedContentType && urlInfo.contentType !== expectedContentType) {
     throw new Error(
