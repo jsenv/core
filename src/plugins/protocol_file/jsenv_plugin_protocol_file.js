@@ -118,10 +118,13 @@ export const jsenvPluginProtocolFile = ({
           };
         }
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
-        if (contentType === "text/html") {
+        const request = urlInfo.context.request;
+        if (request && request.headers["sec-fetch-dest"] === "document") {
           try {
             const fileBuffer = readFileSync(urlObject);
-            const content = String(fileBuffer);
+            const content = CONTENT_TYPE.isTextual(contentType)
+              ? String(fileBuffer)
+              : fileBuffer;
             return {
               content,
               contentType,
@@ -138,7 +141,7 @@ export const jsenvPluginProtocolFile = ({
             const parentDirectoryContentArray = readdirSync(
               new URL(parentDirectoryUrl),
             );
-            const html = generateHtmlForENOENTOnHtmlFile(
+            const html = generateHtmlForENOENT(
               urlInfo.url,
               parentDirectoryContentArray,
               parentDirectoryUrl,
@@ -146,6 +149,7 @@ export const jsenvPluginProtocolFile = ({
               directoryListingUrlMocks,
             );
             return {
+              status: 404,
               contentType: "text/html",
               content: html,
               headers: {
@@ -191,7 +195,7 @@ const generateHtmlForDirectory = (
   const html = replacePlaceholders(htmlForDirectory, replacers);
   return html;
 };
-const generateHtmlForENOENTOnHtmlFile = (
+const generateHtmlForENOENT = (
   url,
   parentDirectoryContentArray,
   parentDirectoryUrl,

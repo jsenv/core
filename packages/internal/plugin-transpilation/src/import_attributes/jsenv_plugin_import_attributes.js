@@ -103,7 +103,7 @@ export const jsenvPluginImportAttributes = ({
         const originalUrlInfo = urlInfo.getWithoutSearchParam(
           `as_${type}_module`,
           {
-            expectedType: "json",
+            expectedType: type,
           },
         );
         if (!originalUrlInfo) {

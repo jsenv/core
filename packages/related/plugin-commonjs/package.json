@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.8.29",
+  "version": "2.9.0",
   "license": "MIT",
   "repository": {
     "type": "git",

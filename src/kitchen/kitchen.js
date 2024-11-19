@@ -342,21 +342,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         body,
         isEntryPoint,
       } = fetchUrlContentReturnValue;
-      if (status !== 200) {
-        throw new Error(`unexpected status, ${status}`);
-      }
       if (content === undefined) {
         content = body;
       }
       if (contentType === undefined) {
         contentType = headers["content-type"] || "application/octet-stream";
       }
+      urlInfo.status = status;
       urlInfo.contentType = contentType;
       urlInfo.headers = headers;
-      urlInfo.type =
-        type ||
-        urlInfo.firstReference.expectedType ||
-        inferUrlInfoType(urlInfo);
+      urlInfo.type = type || inferUrlInfoType(urlInfo);
       urlInfo.subtype =
         subtype ||
         urlInfo.firstReference.expectedSubtype ||
@@ -680,10 +675,11 @@ const memoizeIsSupported = (runtimeCompat) => {
 
 const inferUrlInfoType = (urlInfo) => {
   const { type, typeHint } = urlInfo;
+  const { contentType } = urlInfo;
+  const { expectedType } = urlInfo.firstReference;
   if (type === "sourcemap" || typeHint === "sourcemap") {
     return "sourcemap";
   }
-  const { contentType } = urlInfo;
   if (contentType === "text/html") {
     return "html";
   }
@@ -691,7 +687,12 @@ const inferUrlInfoType = (urlInfo) => {
     return "css";
   }
   if (contentType === "text/javascript") {
-    if (urlInfo.typeHint === "js_classic") return "js_classic";
+    if (expectedType === "js_classic") {
+      return "js_classic";
+    }
+    if (typeHint === "js_classic") {
+      return "js_classic";
+    }
     return "js_module";
   }
   if (contentType === "application/importmap+json") {
@@ -709,5 +710,5 @@ const inferUrlInfoType = (urlInfo) => {
   if (CONTENT_TYPE.isTextual(contentType)) {
     return "text";
   }
-  return "other";
+  return expectedType || "other";
 };

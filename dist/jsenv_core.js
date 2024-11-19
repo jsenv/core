@@ -10875,7 +10875,7 @@ const jsenvPluginImportAttributes = ({
         const originalUrlInfo = urlInfo.getWithoutSearchParam(
           `as_${type}_module`,
           {
-            expectedType: "json",
+            expectedType: type,
           },
         );
         if (!originalUrlInfo) {
@@ -11172,6 +11172,10 @@ const generateHtmlForSyntaxError = (
   const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
   const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
   const { line, column } = htmlSyntaxError;
+  if (htmlUrl.startsWith(jsenvCoreDirectoryUrl.href)) {
+    htmlUrl = urlToRelativeUrl(htmlUrl, jsenvCoreDirectoryUrl);
+    htmlUrl = `@jsenv/core/${htmlUrl}`;
+  }
   const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
   const replacers = {
     fileRelativeUrl: htmlRelativeUrl,
@@ -12046,17 +12050,18 @@ const isResponseEligibleForIntegrityValidation = (response) => {
 };
 
 const assertFetchedContentCompliance = ({ urlInfo, content }) => {
+  if (urlInfo.status === 404) {
+    return;
+  }
   const { expectedContentType } = urlInfo.firstReference;
   if (expectedContentType && urlInfo.contentType !== expectedContentType) {
     throw new Error(
-      `Unexpected content-type on url: "${expectedContentType}" was expect but got "${urlInfo.contentType}`,
+      `content-type must be "${expectedContentType}", got "${urlInfo.contentType}`,
     );
   }
   const { expectedType } = urlInfo.firstReference;
   if (expectedType && urlInfo.type !== expectedType) {
-    throw new Error(
-      `Unexpected type on url: "${expectedType}" was expect but got "${urlInfo.type}"`,
-    );
+    throw new Error(`type must be "${expectedType}", got "${urlInfo.type}"`);
   }
   const { integrity } = urlInfo.firstReference;
   if (integrity) {
@@ -13433,6 +13438,7 @@ const createUrlInfo = (url, context) => {
     jsQuote: null, // maybe move to inlineUrlSite?
 
     timing: {},
+    status: 200,
     headers: {},
     debug: false,
   };
@@ -14500,21 +14506,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         body,
         isEntryPoint,
       } = fetchUrlContentReturnValue;
-      if (status !== 200) {
-        throw new Error(`unexpected status, ${status}`);
-      }
       if (content === undefined) {
         content = body;
       }
       if (contentType === undefined) {
         contentType = headers["content-type"] || "application/octet-stream";
       }
+      urlInfo.status = status;
       urlInfo.contentType = contentType;
       urlInfo.headers = headers;
-      urlInfo.type =
-        type ||
-        urlInfo.firstReference.expectedType ||
-        inferUrlInfoType(urlInfo);
+      urlInfo.type = type || inferUrlInfoType(urlInfo);
       urlInfo.subtype =
         subtype ||
         urlInfo.firstReference.expectedSubtype ||
@@ -14838,10 +14839,11 @@ const memoizeIsSupported = (runtimeCompat) => {
 
 const inferUrlInfoType = (urlInfo) => {
   const { type, typeHint } = urlInfo;
+  const { contentType } = urlInfo;
+  const { expectedType } = urlInfo.firstReference;
   if (type === "sourcemap" || typeHint === "sourcemap") {
     return "sourcemap";
   }
-  const { contentType } = urlInfo;
   if (contentType === "text/html") {
     return "html";
   }
@@ -14849,7 +14851,12 @@ const inferUrlInfoType = (urlInfo) => {
     return "css";
   }
   if (contentType === "text/javascript") {
-    if (urlInfo.typeHint === "js_classic") return "js_classic";
+    if (expectedType === "js_classic") {
+      return "js_classic";
+    }
+    if (typeHint === "js_classic") {
+      return "js_classic";
+    }
     return "js_module";
   }
   if (contentType === "application/importmap+json") {
@@ -14867,7 +14874,7 @@ const inferUrlInfoType = (urlInfo) => {
   if (CONTENT_TYPE.isTextual(contentType)) {
     return "text";
   }
-  return "other";
+  return expectedType || "other";
 };
 
 const createUrlGraphSummary = (
@@ -18852,10 +18859,13 @@ const jsenvPluginProtocolFile = ({
           };
         }
         const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
-        if (contentType === "text/html") {
+        const request = urlInfo.context.request;
+        if (request && request.headers["sec-fetch-dest"] === "document") {
           try {
             const fileBuffer = readFileSync(urlObject);
-            const content = String(fileBuffer);
+            const content = CONTENT_TYPE.isTextual(contentType)
+              ? String(fileBuffer)
+              : fileBuffer;
             return {
               content,
               contentType,
@@ -18872,7 +18882,7 @@ const jsenvPluginProtocolFile = ({
             const parentDirectoryContentArray = readdirSync(
               new URL(parentDirectoryUrl),
             );
-            const html = generateHtmlForENOENTOnHtmlFile(
+            const html = generateHtmlForENOENT(
               urlInfo.url,
               parentDirectoryContentArray,
               parentDirectoryUrl,
@@ -18880,6 +18890,7 @@ const jsenvPluginProtocolFile = ({
               directoryListingUrlMocks,
             );
             return {
+              status: 404,
               contentType: "text/html",
               content: html,
               headers: {
@@ -18925,7 +18936,7 @@ const generateHtmlForDirectory = (
   const html = replacePlaceholders$1(htmlForDirectory, replacers);
   return html;
 };
-const generateHtmlForENOENTOnHtmlFile = (
+const generateHtmlForENOENT = (
   url,
   parentDirectoryContentArray,
   parentDirectoryUrl,
