@@ -15,8 +15,9 @@ import {
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
+import { urlToFileSystemPath } from "@jsenv/urls";
 import { createRequire } from "node:module";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import { applyImportmapResolution } from "./importmap_resolution.js";
 import { createLogger } from "./logger.js";
 import { applyUrlResolution } from "./url_resolution.js";
@@ -51,7 +52,7 @@ ${source}
 --- importer ---
 ${file}
 --- root directory path ---
-${fileURLToPath(rootDirectoryUrl)}
+${urlToFileSystemPath(rootDirectoryUrl)}
 --- package conditions ---
 ${packageConditions.join(",")}`);
 
@@ -251,7 +252,7 @@ const handleFileUrl = (
       importer,
       url: fileUrl,
     });
-    return { found: false, path: fileURLToPath(fileUrl) };
+    return { found: false, path: urlToFileSystemPath(fileUrl) };
   }
   fileUrl = fileResolution.url;
   const realFileUrl = getRealFileSystemUrlSync(fileUrl, {
@@ -260,8 +261,10 @@ const handleFileUrl = (
     // and we would log the warning about case sensitivity
     followLink: false,
   });
-  const filePath = fileURLToPath(fileUrl);
-  const realFilePath = realFileUrl ? fileURLToPath(realFileUrl) : filePath;
+  const filePath = urlToFileSystemPath(fileUrl);
+  const realFilePath = realFileUrl
+    ? urlToFileSystemPath(realFileUrl)
+    : filePath;
   if (caseSensitive && realFileUrl && realFileUrl !== fileUrl) {
     logger.warn(
       `WARNING: file found for ${filePath} but would not be found on a case sensitive filesystem.

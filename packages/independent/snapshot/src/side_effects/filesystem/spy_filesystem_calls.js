@@ -10,7 +10,11 @@ import {
   writeFileSync,
 } from "@jsenv/filesystem";
 import { URL_META } from "@jsenv/url-meta";
-import { ensurePathnameTrailingSlash, yieldAncestorUrls } from "@jsenv/urls";
+import {
+  ensurePathnameTrailingSlash,
+  urlToFileSystemPath,
+  yieldAncestorUrls,
+} from "@jsenv/urls";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
@@ -177,7 +181,9 @@ export const spyFilesystemCalls = (
       if (!stateBefore.found && recursive) {
         const ancestorNotFoundArray = [];
         for (const ancestorUrl of yieldAncestorUrls(directoryUrl)) {
-          const ancestorState = getDirectoryState(new URL(ancestorUrl));
+          const ancestorState = getDirectoryState(
+            urlToFileSystemPath(new URL(ancestorUrl)),
+          );
           if (ancestorState.found) {
             break;
           }
@@ -348,7 +354,7 @@ const getFileState = (filePath) => {
   const fileUrl = pathToFileURL(filePath);
   try {
     const fileBuffer = readFileSync(fileUrl);
-    const { mtimeMs } = statSync(fileUrl);
+    const { mtimeMs } = statSync(filePath);
     return {
       url: String(fileUrl),
       found: true,

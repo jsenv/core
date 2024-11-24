@@ -13,6 +13,7 @@ if (process.env.CI) {
   process.exit(0);
 }
 
+let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 replaceFileStructureSync({
   from: new URL("./fixtures/0_at_start/", import.meta.url),
@@ -28,7 +29,7 @@ const devServer = await startDevServer({
   supervisor: false,
   clientAutoreload: false,
 });
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: !debug });
 const page = await browser.newPage({ ignoreHTTPSErrors: true });
 const getWindowAnswer = () => {
   return page.evaluate(
@@ -71,6 +72,8 @@ try {
     },
   });
 } finally {
-  browser.close();
-  devServer.stop(); // required because for some reason the rooms are kept alive
+  if (!debug) {
+    browser.close();
+    devServer.stop(); // required because for some reason the rooms are kept alive
+  }
 }

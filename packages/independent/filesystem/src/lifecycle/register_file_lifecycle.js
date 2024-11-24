@@ -1,8 +1,7 @@
 import { urlToFileSystemPath } from "@jsenv/urls";
-import { statSync } from "node:fs";
 import { basename, dirname } from "node:path";
-
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
+import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
 import { statsToType } from "../read_write/stat/stats_to_type.js";
 import { createWatcher } from "./create_watcher.js";
 import { guardTooFastSecondCall } from "./guard_second_call.js";
@@ -113,7 +112,7 @@ export const registerFileLifecycle = (
 
 const readFileInfo = (url) => {
   try {
-    const stat = statSync(new URL(url));
+    const stat = readEntryStatSync(new URL(url));
     return {
       type: statsToType(stat),
       stat,

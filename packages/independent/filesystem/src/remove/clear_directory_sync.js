@@ -1,6 +1,6 @@
 import { URL_META } from "@jsenv/url-meta";
-import { readdirSync, statSync } from "node:fs";
-
+import { readdirSync } from "node:fs";
+import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
 import { removeEntrySync } from "./remove_entry_sync.js";
 
 export const clearDirectorySync = (initialDirectoryUrl, pattern = "**/*") => {
@@ -40,7 +40,7 @@ export const clearDirectorySync = (initialDirectoryUrl, pattern = "**/*") => {
       const entryUrl = new URL(entryName, directoryUrl);
       let entryStat;
       try {
-        entryStat = statSync(entryUrl);
+        entryStat = readEntryStatSync(entryUrl);
       } catch (e) {
         if (e && e.code === "ENOENT") {
           continue;

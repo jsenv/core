@@ -2,6 +2,12 @@
 
 // see https://docs.npmjs.com/cli/v8/commands/npm-init#description
 
+import { ANSI, createTaskLog, UNICODE } from "@jsenv/humanize";
+import {
+  ensurePathnameTrailingSlash,
+  urlToFilename,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 import { execSync } from "node:child_process";
 import {
   existsSync,
@@ -14,13 +20,6 @@ import {
 import { relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
-
-import { ANSI, createTaskLog, UNICODE } from "@jsenv/humanize";
-import {
-  ensurePathnameTrailingSlash,
-  urlToFilename,
-  urlToRelativeUrl,
-} from "@jsenv/urls";
 import prompts from "prompts";
 
 // not using readdir to control order

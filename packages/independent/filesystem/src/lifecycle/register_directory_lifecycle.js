@@ -1,8 +1,8 @@
 import { URL_META } from "@jsenv/url-meta";
 import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
-import { readdirSync, statSync } from "node:fs";
-
+import { readdirSync } from "node:fs";
 import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
+import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
 import { statsToType } from "../read_write/stat/stats_to_type.js";
 import { createWatcher } from "./create_watcher.js";
 import { guardTooFastSecondCallPerFile } from "./guard_second_call.js";
@@ -92,7 +92,7 @@ export const registerDirectoryLifecycle = (
     try {
       const relativeUrl = urlToRelativeUrl(url, source);
       const previousInfo = infoMap.get(relativeUrl);
-      const stat = statSync(new URL(url));
+      const stat = readEntryStatSync(new URL(url));
       const type = statsToType(stat);
       const patternValue = previousInfo
         ? previousInfo.patternValue
@@ -169,7 +169,7 @@ export const registerDirectoryLifecycle = (
       const removedEntryRelativeUrl = relativeUrlCandidateArray.find(
         (relativeUrlCandidate) => {
           try {
-            statSync(new URL(relativeUrlCandidate, sourceUrl));
+            readEntryStatSync(new URL(relativeUrlCandidate, sourceUrl));
             return false;
           } catch (e) {
             if (e.code === "ENOENT") {
@@ -320,8 +320,8 @@ export const registerDirectoryLifecycle = (
     }
   };
   const handleEntryUpdated = (entryInfo) => {
-    infoMap.set(entryInfo.relativeUrl, entryInfo);
     if (updated && entryInfo.patternValue && shouldCallUpdated(entryInfo)) {
+      infoMap.set(entryInfo.relativeUrl, entryInfo);
       updated({
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,

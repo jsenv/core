@@ -1,4 +1,4 @@
-import { fileURLToPath } from "node:url";
+import { urlToFileSystemPath } from "@jsenv/urls";
 
 export const applyCssTranspilation = async ({
   input,
@@ -9,7 +9,7 @@ export const applyCssTranspilation = async ({
   const { transform } = await import("lightningcss");
   const targets = runtimeCompatToTargets(runtimeCompat);
   const { code, map } = transform({
-    filename: fileURLToPath(inputUrl),
+    filename: urlToFileSystemPath(inputUrl),
     code: Buffer.from(input),
     targets,
     minify: false,

@@ -1,6 +1,5 @@
 import { createLogger } from "@jsenv/humanize";
-import { fileURLToPath } from "node:url";
-
+import { urlToFileSystemPath } from "@jsenv/urls";
 import { rollupPluginCommonJsNamedExports } from "./rollup_plugin_commonjs_named_exports.js";
 
 export const commonJsToJsModuleRaw = async ({
@@ -28,7 +27,7 @@ export const commonJsToJsModuleRaw = async ({
       `compatible only with file:// protocol, got ${sourceFileUrl}`,
     );
   }
-  const sourceFilePath = fileURLToPath(sourceFileUrl);
+  const sourceFilePath = urlToFileSystemPath(sourceFileUrl);
 
   const { nodeResolve } = await import("@rollup/plugin-node-resolve");
   const nodeResolveRollupPlugin = nodeResolve({
@@ -160,7 +159,7 @@ export const commonJsToJsModuleRaw = async ({
     sourcemap: true,
     sourcemapExcludeSources,
     exports: "named",
-    dir: fileURLToPath(abstractDirUrl),
+    dir: urlToFileSystemPath(abstractDirUrl),
     sourcemapPathTransform: (relativePath) => {
       const sourceUrl = new URL(relativePath, abstractDirUrl).href;
       return sourceUrl;

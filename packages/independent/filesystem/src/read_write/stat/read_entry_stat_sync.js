@@ -5,7 +5,6 @@
 
 import { urlToFileSystemPath } from "@jsenv/urls";
 import { lstatSync, statSync } from "node:fs";
-
 import { assertAndNormalizeFileUrl } from "../../path_and_url/file_url_validation.js";
 import { writeEntryPermissionsSync } from "./write_entry_permissions_sync.js";
 

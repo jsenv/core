@@ -3,7 +3,7 @@ import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { readdir, chmod, stat, lstat, promises, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, statSync, createReadStream, lstatSync, readFile, existsSync, realpathSync } from "node:fs";
+import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, createReadStream, readFile, existsSync, realpathSync } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import cluster from "node:cluster";
@@ -988,7 +988,7 @@ platform === 'Android'
 const ESC = '\u001B[';
 
 !isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows$3 = !isBrowser && process$1.platform === 'win32';
+const isWindows$4 = !isBrowser && process$1.platform === 'win32';
 
 isBrowser ? () => {
 	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
@@ -1014,7 +1014,7 @@ const eraseLines = count => {
 const eraseLine = ESC + '2K';
 const eraseScreen = ESC + '2J';
 
-const clearTerminal = isWindows$3
+const clearTerminal = isWindows$4
 	? `${eraseScreen}${ESC}0f`
 	// 1. Erases the screen (Only done in case `2` is not supported)
 	// 2. Erases the whole screen including scrollback buffer
@@ -1808,13 +1808,21 @@ const urlIsInsideOf = (url, otherUrl) => {
 };
 
 const urlToFileSystemPath = (url) => {
-  let urlString = String(url);
-  if (urlString[urlString.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    urlString = urlString.slice(0, -1);
+  const urlObject = new URL(url);
+  let urlString;
+  if (urlObject.hash) {
+    const origin =
+      urlObject.protocol === "file:" ? "file://" : urlObject.origin;
+    urlString = `${origin}${urlObject.pathname}${urlObject.search}%23${urlObject.hash.slice(1)}`;
+  } else {
+    urlString = urlObject.href;
   }
   const fileSystemPath = fileURLToPath(urlString);
+  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    return fileSystemPath.slice(0, -1);
+  }
   return fileSystemPath;
 };
 
@@ -1977,7 +1985,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
   return 0;
 };
 
-const isWindows$2 = process.platform === "win32";
+const isWindows$3 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
 
 /**
@@ -2000,7 +2008,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
-  if (!isWindows$2) {
+  if (!isWindows$3) {
     return url;
   }
 
@@ -3165,7 +3173,7 @@ const writeEntryPermissions = async (source, permissions) => {
  */
 
 
-const isWindows$1 = process.platform === "win32";
+const isWindows$2 = process.platform === "win32";
 
 const readEntryStat = async (
   source,
@@ -3185,7 +3193,7 @@ const readEntryStat = async (
   return readStat(sourcePath, {
     followLink,
     ...handleNotFoundOption,
-    ...(isWindows$1
+    ...(isWindows$2
       ? {
           // Windows can EPERM on stat
           handlePermissionDeniedError: async (error) => {
@@ -3250,13 +3258,104 @@ const readStat = (
   });
 };
 
+const writeEntryPermissionsSync = (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  let binaryFlags;
+  {
+    binaryFlags = permissions;
+  }
+
+  chmodSync(new URL(sourceUrl), binaryFlags);
+};
+
 /*
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
 
 
-process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
+
+const readEntryStatSync = (
+  source,
+  { nullIfNotFound = false, followLink = true } = {},
+) => {
+  let sourceUrl = assertAndNormalizeFileUrl(source);
+  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+
+  const handleNotFoundOption = nullIfNotFound
+    ? {
+        handleNotFoundError: () => null,
+      }
+    : {};
+
+  return statSyncNaive(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows$1
+      ? {
+          // Windows can EPERM on stat
+          handlePermissionDeniedError: (error) => {
+            console.error(
+              `trying to fix windows EPERM after stats on ${sourcePath}`,
+            );
+
+            try {
+              // unfortunately it means we mutate the permissions
+              // without being able to restore them to the previous value
+              // (because reading current permission would also throw)
+              writeEntryPermissionsSync(sourceUrl, 0o666);
+              const stats = statSyncNaive(sourcePath, {
+                followLink,
+                ...handleNotFoundOption,
+                // could not fix the permission error, give up and throw original error
+                handlePermissionDeniedError: () => {
+                  console.error(`still got EPERM after stats on ${sourcePath}`);
+                  throw error;
+                },
+              });
+              return stats;
+            } catch (e) {
+              console.error(
+                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
+              );
+              throw error;
+            }
+          },
+        }
+      : {}),
+  });
+};
+
+const statSyncNaive = (
+  sourcePath,
+  {
+    followLink,
+    handleNotFoundError = null,
+    handlePermissionDeniedError = null,
+  } = {},
+) => {
+  const nodeMethod = followLink ? statSync : lstatSync;
+
+  try {
+    const stats = nodeMethod(sourcePath);
+    return stats;
+  } catch (error) {
+    if (handleNotFoundError && error.code === "ENOENT") {
+      return handleNotFoundError(error);
+    }
+    if (
+      handlePermissionDeniedError &&
+      (error.code === "EPERM" || error.code === "EACCES")
+    ) {
+      return handlePermissionDeniedError(error);
+    }
+    throw error;
+  }
+};
 
 const statsToType = (stats) => {
   if (stats.isFile()) return "file";
@@ -3958,7 +4057,7 @@ const registerDirectoryLifecycle = (
     try {
       const relativeUrl = urlToRelativeUrl(url, source);
       const previousInfo = infoMap.get(relativeUrl);
-      const stat = statSync(new URL(url));
+      const stat = readEntryStatSync(new URL(url));
       const type = statsToType(stat);
       const patternValue = previousInfo
         ? previousInfo.patternValue
@@ -4035,7 +4134,7 @@ const registerDirectoryLifecycle = (
       const removedEntryRelativeUrl = relativeUrlCandidateArray.find(
         (relativeUrlCandidate) => {
           try {
-            statSync(new URL(relativeUrlCandidate, sourceUrl));
+            readEntryStatSync(new URL(relativeUrlCandidate, sourceUrl));
             return false;
           } catch (e) {
             if (e.code === "ENOENT") {
@@ -4186,8 +4285,8 @@ const registerDirectoryLifecycle = (
     }
   };
   const handleEntryUpdated = (entryInfo) => {
-    infoMap.set(entryInfo.relativeUrl, entryInfo);
     if (updated && entryInfo.patternValue && shouldCallUpdated(entryInfo)) {
+      infoMap.set(entryInfo.relativeUrl, entryInfo);
       updated({
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
@@ -8686,7 +8785,7 @@ const bundleCss = async (cssUrlInfos) => {
         },
         resolve(specifier, from) {
           const fileUrlObject = new URL(specifier, pathToFileURL(from));
-          const filePath = fileURLToPath(fileUrlObject);
+          const filePath = urlToFileSystemPath(fileUrlObject);
           return filePath;
         },
       },
@@ -8755,7 +8854,7 @@ const minifyCss = async (cssUrlInfo) => {
 
   const targets = runtimeCompatToTargets$1(cssUrlInfo.context.runtimeCompat);
   const { code, map } = transform({
-    filename: fileURLToPath(cssUrlInfo.originalUrl),
+    filename: urlToFileSystemPath(cssUrlInfo.originalUrl),
     code: Buffer.from(cssUrlInfo.content),
     targets,
     minify: true,
@@ -10601,7 +10700,7 @@ const applyCssTranspilation = async ({
   const { transform } = await import("lightningcss");
   const targets = runtimeCompatToTargets(runtimeCompat);
   const { code, map } = transform({
-    filename: fileURLToPath(inputUrl),
+    filename: urlToFileSystemPath(inputUrl),
     code: Buffer.from(input),
     targets,
     minify: false,
@@ -18276,7 +18375,7 @@ const applyFileSystemMagicResolution = (
 
   if (fileStat === undefined) {
     try {
-      fileStat = statSync(new URL(fileUrl));
+      fileStat = readEntryStatSync(new URL(fileUrl));
     } catch (e) {
       if (e.code === "ENOENT") {
         result.lastENOENTError = e;
@@ -18318,7 +18417,7 @@ const applyFileSystemMagicResolution = (
       const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
       let stat;
       try {
-        stat = statSync(new URL(urlCandidate));
+        stat = readEntryStatSync(new URL(urlCandidate));
       } catch (e) {
         if (e.code === "ENOENT") {
           stat = null;
@@ -18679,7 +18778,7 @@ const jsenvPluginFsRedirection = ({
       const urlObject = new URL(reference.url);
       let stat;
       try {
-        stat = statSync(urlObject);
+        stat = readEntryStatSync(urlObject);
       } catch (e) {
         if (e.code === "ENOENT") {
           stat = null;

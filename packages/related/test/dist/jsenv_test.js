@@ -1870,13 +1870,21 @@ const urlIsInsideOf = (url, otherUrl) => {
 };
 
 const urlToFileSystemPath = (url) => {
-  let urlString = String(url);
-  if (urlString[urlString.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    urlString = urlString.slice(0, -1);
+  const urlObject = new URL(url);
+  let urlString;
+  if (urlObject.hash) {
+    const origin =
+      urlObject.protocol === "file:" ? "file://" : urlObject.origin;
+    urlString = `${origin}${urlObject.pathname}${urlObject.search}%23${urlObject.hash.slice(1)}`;
+  } else {
+    urlString = urlObject.href;
   }
   const fileSystemPath = fileURLToPath(urlString);
+  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    return fileSystemPath.slice(0, -1);
+  }
   return fileSystemPath;
 };
 
@@ -5618,7 +5626,7 @@ const startServerUsingCommand = async (
   let isTeardown = false;
   let processClosed = false;
   spawnedProcess.stderr.on("data", (data) => {
-    logger.error(data);
+    logger.error(String(data));
   });
   const closedPromise = new Promise((resolve) => {
     spawnedProcess.once("exit", (exitCode, signal) => {
@@ -9166,7 +9174,7 @@ const reportCoverageAsHtml = (
   const libReport = importWithRequire("istanbul-lib-report");
   const reports = importWithRequire("istanbul-reports");
   const context = libReport.createContext({
-    dir: fileURLToPath(rootDirectoryUrl),
+    dir: urlToFileSystemPath(rootDirectoryUrl),
     coverageMap: istanbulCoverageMapFromCoverage(testPlanCoverage),
     sourceFinder: (path) =>
       readFileSync(new URL(path, rootDirectoryUrl), "utf8"),

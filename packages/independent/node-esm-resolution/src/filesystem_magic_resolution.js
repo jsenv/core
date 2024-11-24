@@ -1,5 +1,4 @@
-import { statSync } from "node:fs";
-
+import { readEntryStatSync } from "@jsenv/filesystem";
 import { urlToExtension, urlToFilename } from "./url_utils.js";
 
 export const applyFileSystemMagicResolution = (
@@ -16,7 +15,7 @@ export const applyFileSystemMagicResolution = (
 
   if (fileStat === undefined) {
     try {
-      fileStat = statSync(new URL(fileUrl));
+      fileStat = readEntryStatSync(new URL(fileUrl));
     } catch (e) {
       if (e.code === "ENOENT") {
         result.lastENOENTError = e;
@@ -58,7 +57,7 @@ export const applyFileSystemMagicResolution = (
       const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
       let stat;
       try {
-        stat = statSync(new URL(urlCandidate));
+        stat = readEntryStatSync(new URL(urlCandidate));
       } catch (e) {
         if (e.code === "ENOENT") {
           stat = null;

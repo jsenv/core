@@ -1,5 +1,5 @@
 import { collectDirectoryMatchReport } from "@jsenv/filesystem";
-import { fileURLToPath } from "node:url";
+import { urlToFileSystemPath } from "@jsenv/urls";
 
 export const applyTrackingConfig = async (
   trackingConfig,
@@ -39,7 +39,7 @@ const applyTracking = async (
       predicate: (meta) => Boolean(meta.track) || Boolean(meta.manifest),
     });
   } catch (e) {
-    const directoryPath = fileURLToPath(rootDirectoryUrl);
+    const directoryPath = urlToFileSystemPath(rootDirectoryUrl);
     if (e.code === "ENOENT" && e.path === directoryPath) {
       console.warn(`${directoryPath} does not exists`);
       return [];

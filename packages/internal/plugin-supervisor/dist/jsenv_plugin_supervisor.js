@@ -3,9 +3,11 @@ import process$1 from "node:process";
 import os from "node:os";
 import tty from "node:tty";
 import "string-width";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
+import "node:path";
+import "node:crypto";
 
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
@@ -487,6 +489,30 @@ const injectQueryParams = (url, params) => {
   return normalizeUrl(urlWithParams);
 };
 
+const isFileSystemPath = value => {
+  if (typeof value !== "string") {
+    throw new TypeError("isFileSystemPath first arg must be a string, got ".concat(value));
+  }
+  if (value[0] === "/") {
+    return true;
+  }
+  return startsWithWindowsDriveLetter(value);
+};
+const startsWithWindowsDriveLetter = string => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+  return true;
+};
+
+const fileSystemPathToUrl = value => {
+  if (!isFileSystemPath(value)) {
+    throw new Error("value must be a filesystem path, got ".concat(value));
+  }
+  return String(pathToFileURL(value));
+};
+
 const getCommonPathname = (pathname, otherPathname) => {
   if (pathname === otherPathname) {
     return pathname;
@@ -569,6 +595,24 @@ const pathnameToParentPathname = pathname => {
     return "/";
   }
   return pathname.slice(0, slashLastIndex + 1);
+};
+
+const urlToFileSystemPath = url => {
+  const urlObject = new URL(url);
+  let urlString;
+  if (urlObject.hash) {
+    const origin = urlObject.protocol === "file:" ? "file://" : urlObject.origin;
+    urlString = "".concat(origin).concat(urlObject.pathname).concat(urlObject.search, "%23").concat(urlObject.hash.slice(1));
+  } else {
+    urlString = urlObject.href;
+  }
+  const fileSystemPath = fileURLToPath(urlString);
+  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    return fileSystemPath.slice(0, -1);
+  }
+  return fileSystemPath;
 };
 
 const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -2054,6 +2098,31 @@ const resolvePackageSymlink = packageDirectoryUrl => {
   return "".concat(packageDirectoryResolvedUrl, "/");
 };
 
+process.platform === "win32";
+fileSystemPathToUrl(process.cwd());
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+process.platform === "win32";
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+process.platform === "win32";
+
+process.platform === "win32";
+
+process.platform === "win32";
+
+process.platform === "win32";
+
+process.platform === "linux";
+
 /*
  * This plugin provides a way for jsenv to supervisor js execution:
  * - Know how many js are executed, when they are done, collect errors, etc...
@@ -2242,7 +2311,7 @@ const jsenvPluginSupervisor = ({
           };
         }
         const fileUrl = new URL(file, serveInfo.rootDirectoryUrl);
-        const filePath = fileURLToPath(fileUrl);
+        const filePath = urlToFileSystemPath(fileUrl);
         const require = createRequire(import.meta.url);
         const launch = require("launch-editor");
         launch(filePath, () => {

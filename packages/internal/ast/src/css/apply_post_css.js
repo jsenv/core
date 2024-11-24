@@ -1,4 +1,4 @@
-import { fileURLToPath } from "node:url";
+import { urlToFileSystemPath } from "@jsenv/urls";
 import { createParseError } from "../parse_error.js";
 
 export const applyPostCss = async ({
@@ -16,8 +16,8 @@ export const applyPostCss = async ({
     const cssFileUrl = urlToFileUrl(url);
     const result = await postcss(plugins).process(content, {
       collectUrls: true,
-      from: fileURLToPath(cssFileUrl),
-      to: fileURLToPath(cssFileUrl),
+      from: urlToFileSystemPath(cssFileUrl),
+      to: urlToFileSystemPath(cssFileUrl),
       map: {
         annotation: sourcemaps === "file",
         inline: sourcemaps === "inline",

@@ -1,5 +1,5 @@
-import { bufferToEtag } from "@jsenv/filesystem";
-import { readFileSync, statSync } from "node:fs";
+import { bufferToEtag, readEntryStatSync } from "@jsenv/filesystem";
+import { readFileSync } from "node:fs";
 
 export const validateCompileCache = ({
   compiledFileUrl,
@@ -94,7 +94,7 @@ const validateCompiledFile = ({
       }
     }
     if (compileCacheStrategy === "mtime" && lastModificationTime) {
-      const stats = statSync(new URL(compiledFileUrl));
+      const stats = readEntryStatSync(new URL(compiledFileUrl));
       const mtime = Math.floor(stats.mtimeMs);
       validity.data.mtime = mtime;
       let ifModifiedSinceDate;

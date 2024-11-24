@@ -43,7 +43,7 @@ export const startServerUsingCommand = async (
   let isTeardown = false;
   let processClosed = false;
   spawnedProcess.stderr.on("data", (data) => {
-    logger.error(data);
+    logger.error(String(data));
   });
   const closedPromise = new Promise((resolve) => {
     spawnedProcess.once("exit", (exitCode, signal) => {

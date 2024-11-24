@@ -437,13 +437,21 @@ const fileSystemPathToUrl = (value) => {
 };
 
 const urlToFileSystemPath = (url) => {
-  let urlString = String(url);
-  if (urlString[urlString.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    urlString = urlString.slice(0, -1);
+  const urlObject = new URL(url);
+  let urlString;
+  if (urlObject.hash) {
+    const origin =
+      urlObject.protocol === "file:" ? "file://" : urlObject.origin;
+    urlString = `${origin}${urlObject.pathname}${urlObject.search}%23${urlObject.hash.slice(1)}`;
+  } else {
+    urlString = urlObject.href;
   }
   const fileSystemPath = node_url.fileURLToPath(urlString);
+  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    return fileSystemPath.slice(0, -1);
+  }
   return fileSystemPath;
 };
 
@@ -556,7 +564,7 @@ const assertAndNormalizeFileUrl = (
   return value;
 };
 
-const isWindows = process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 
 /**
@@ -579,7 +587,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
-  if (!isWindows) {
+  if (!isWindows$1) {
     return url;
   }
 
@@ -631,13 +639,104 @@ const extractDriveLetter = (resource) => {
 
 process.platform === "win32";
 
+const writeEntryPermissionsSync = (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  let binaryFlags;
+  {
+    binaryFlags = permissions;
+  }
+
+  node_fs.chmodSync(new URL(sourceUrl), binaryFlags);
+};
+
 /*
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
 
 
-process.platform === "win32";
+const isWindows = process.platform === "win32";
+
+const readEntryStatSync = (
+  source,
+  { nullIfNotFound = false, followLink = true } = {},
+) => {
+  let sourceUrl = assertAndNormalizeFileUrl(source);
+  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+
+  const handleNotFoundOption = nullIfNotFound
+    ? {
+        handleNotFoundError: () => null,
+      }
+    : {};
+
+  return statSyncNaive(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows
+      ? {
+          // Windows can EPERM on stat
+          handlePermissionDeniedError: (error) => {
+            console.error(
+              `trying to fix windows EPERM after stats on ${sourcePath}`,
+            );
+
+            try {
+              // unfortunately it means we mutate the permissions
+              // without being able to restore them to the previous value
+              // (because reading current permission would also throw)
+              writeEntryPermissionsSync(sourceUrl, 0o666);
+              const stats = statSyncNaive(sourcePath, {
+                followLink,
+                ...handleNotFoundOption,
+                // could not fix the permission error, give up and throw original error
+                handlePermissionDeniedError: () => {
+                  console.error(`still got EPERM after stats on ${sourcePath}`);
+                  throw error;
+                },
+              });
+              return stats;
+            } catch (e) {
+              console.error(
+                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
+              );
+              throw error;
+            }
+          },
+        }
+      : {}),
+  });
+};
+
+const statSyncNaive = (
+  sourcePath,
+  {
+    followLink,
+    handleNotFoundError = null,
+    handlePermissionDeniedError = null,
+  } = {},
+) => {
+  const nodeMethod = followLink ? node_fs.statSync : node_fs.lstatSync;
+
+  try {
+    const stats = nodeMethod(sourcePath);
+    return stats;
+  } catch (error) {
+    if (handleNotFoundError && error.code === "ENOENT") {
+      return handleNotFoundError(error);
+    }
+    if (
+      handlePermissionDeniedError &&
+      (error.code === "EPERM" || error.code === "EACCES")
+    ) {
+      return handlePermissionDeniedError(error);
+    }
+    throw error;
+  }
+};
 
 const mediaTypeInfos = {
   "application/json": {
@@ -1999,7 +2098,7 @@ const applyFileSystemMagicResolution = (
 
   if (fileStat === undefined) {
     try {
-      fileStat = node_fs.statSync(new URL(fileUrl));
+      fileStat = readEntryStatSync(new URL(fileUrl));
     } catch (e) {
       if (e.code === "ENOENT") {
         result.lastENOENTError = e;
@@ -2041,7 +2140,7 @@ const applyFileSystemMagicResolution = (
       const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
       let stat;
       try {
-        stat = node_fs.statSync(new URL(urlCandidate));
+        stat = readEntryStatSync(new URL(urlCandidate));
       } catch (e) {
         if (e.code === "ENOENT") {
           stat = null;
@@ -2890,7 +2989,7 @@ ${source}
 --- importer ---
 ${file}
 --- root directory path ---
-${node_url.fileURLToPath(rootDirectoryUrl)}
+${urlToFileSystemPath(rootDirectoryUrl)}
 --- package conditions ---
 ${packageConditions.join(",")}`);
 
@@ -3090,7 +3189,7 @@ const handleFileUrl = (
       importer,
       url: fileUrl,
     });
-    return { found: false, path: node_url.fileURLToPath(fileUrl) };
+    return { found: false, path: urlToFileSystemPath(fileUrl) };
   }
   fileUrl = fileResolution.url;
   const realFileUrl = getRealFileSystemUrlSync(fileUrl, {
@@ -3099,8 +3198,10 @@ const handleFileUrl = (
     // and we would log the warning about case sensitivity
     followLink: false,
   });
-  const filePath = node_url.fileURLToPath(fileUrl);
-  const realFilePath = realFileUrl ? node_url.fileURLToPath(realFileUrl) : filePath;
+  const filePath = urlToFileSystemPath(fileUrl);
+  const realFilePath = realFileUrl
+    ? urlToFileSystemPath(realFileUrl)
+    : filePath;
   if (caseSensitive && realFileUrl && realFileUrl !== fileUrl) {
     logger.warn(
       `WARNING: file found for ${filePath} but would not be found on a case sensitive filesystem.

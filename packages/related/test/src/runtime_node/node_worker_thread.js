@@ -6,7 +6,6 @@ import { ANSI, UNICODE } from "@jsenv/humanize";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 import { fileURLToPath } from "node:url";
 import { Worker } from "node:worker_threads";
-
 import { createChildExecOptions } from "./child_exec_options.js";
 import { ExecOptions } from "./exec_options.js";
 import { EXIT_CODES } from "./exit_codes.js";

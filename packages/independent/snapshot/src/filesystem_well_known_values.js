@@ -1,12 +1,13 @@
 import {
   ensurePathnameTrailingSlash,
   removePathnameTrailingSlash,
+  urlToFileSystemPath,
   yieldAncestorUrls,
 } from "@jsenv/urls";
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 
 // remember this: https://stackoverflow.com/a/31976060/24573072
 // when deciding which replacement to use and willBeWrittenOnFilesystem is true
@@ -85,7 +86,7 @@ export const createReplaceFilesystemWellKnownValues = ({
     const path =
       String(url) === String(cwdUrl)
         ? cwdPath
-        : fileURLToPath(urlWithoutTrailingSlash);
+        : urlToFileSystemPath(urlWithoutTrailingSlash);
     const windowPathRegex = new RegExp(
       `${escapeRegexpSpecialChars(path)}(((?:\\\\(?:[\\w !#()-]+|[.]{1,2})+)*)(?:\\\\)?)`,
       "gm",
