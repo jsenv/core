@@ -377,7 +377,7 @@ const shouldCallUpdated = (entryInfo) => {
   if (stat.atimeMs < stat.mtimeMs) {
     return true;
   }
-  if (isLinux && stat.mtimeMs <= previousInfo.stat.mtimeMs) {
+  if (stat.mtimeMs <= previousInfo.stat.mtimeMs) {
     return false;
   }
   return true;
