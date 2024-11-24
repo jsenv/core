@@ -1,8 +1,6 @@
 import { ensureEmptyDirectorySync } from "@jsenv/filesystem";
-import { urlToRelativeUrl } from "@jsenv/urls";
+import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-
 import { importWithRequire } from "../helpers/import_with_require.js";
 import { istanbulCoverageMapFromCoverage } from "./istanbul_coverage_map_from_coverage.js";
 
@@ -29,7 +27,7 @@ export const reportCoverageAsHtml = (
   const libReport = importWithRequire("istanbul-lib-report");
   const reports = importWithRequire("istanbul-reports");
   const context = libReport.createContext({
-    dir: fileURLToPath(rootDirectoryUrl),
+    dir: urlToFileSystemPath(rootDirectoryUrl),
     coverageMap: istanbulCoverageMapFromCoverage(testPlanCoverage),
     sourceFinder: (path) =>
       readFileSync(new URL(path, rootDirectoryUrl), "utf8"),

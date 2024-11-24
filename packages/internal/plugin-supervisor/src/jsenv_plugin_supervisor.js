@@ -6,9 +6,8 @@
 import { generateContentFrame } from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { getOriginalPosition } from "@jsenv/sourcemap";
-import { injectQueryParams } from "@jsenv/urls";
+import { injectQueryParams, urlToFileSystemPath } from "@jsenv/urls";
 import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
 import {
   injectSupervisorIntoHTML,
   supervisorFileUrl,
@@ -212,7 +211,7 @@ export const jsenvPluginSupervisor = ({
           };
         }
         const fileUrl = new URL(file, serveInfo.rootDirectoryUrl);
-        const filePath = fileURLToPath(fileUrl);
+        const filePath = urlToFileSystemPath(fileUrl);
         const require = createRequire(import.meta.url);
         const launch = require("launch-editor");
         launch(filePath, () => {

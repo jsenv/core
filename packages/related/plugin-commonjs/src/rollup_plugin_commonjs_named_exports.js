@@ -1,10 +1,11 @@
 // https://github.com/snowpackjs/snowpack/blob/main/esinstall/src/rollup-plugins/rollup-plugin-wrap-install-targets.ts
 
+import { urlToFileSystemPath } from "@jsenv/urls";
 import { init, parse } from "cjs-module-lexer";
 import isValidIdentifier from "is-valid-identifier";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import { Worker } from "node:worker_threads";
 import resolve from "resolve";
 
@@ -101,7 +102,7 @@ const detectStaticExports = ({ logger, filePath, visited = new Set() }) => {
     if (reexports.length > 0) {
       reexports.forEach((reexport) => {
         const reExportedFilePath = resolve.sync(reexport, {
-          basedir: fileURLToPath(new URL("./", pathToFileURL(filePath))),
+          basedir: urlToFileSystemPath(new URL("./", pathToFileURL(filePath))),
         });
         const staticExports = detectStaticExports({
           logger,

@@ -1,7 +1,6 @@
 import { bufferToEtag, writeFileSync } from "@jsenv/filesystem";
-import { urlToRelativeUrl } from "@jsenv/urls";
+import { urlToFileSystemPath, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, utimesSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 
 export const updateCompileCache = ({
   logger,
@@ -38,7 +37,9 @@ cache will be reused even if one of the source file is modified
 ${filesRemoved.join(`\n`)}`);
   }
 
-  logger.debug(`write compiled file at ${fileURLToPath(compiledFileUrl)}`);
+  logger.debug(
+    `write compiled file at ${urlToFileSystemPath(compiledFileUrl)}`,
+  );
   writeFileSync(compiledFileUrl, content, {
     fileLikelyNotFound: isNew,
   });
@@ -50,7 +51,9 @@ ${filesRemoved.join(`\n`)}`);
 
   const assetInfos = {};
   Object.keys(assets).forEach((assetUrl) => {
-    logger.debug(`write compiled file asset at ${fileURLToPath(assetUrl)}`);
+    logger.debug(
+      `write compiled file asset at ${urlToFileSystemPath(assetUrl)}`,
+    );
     const asset = assets[assetUrl];
     writeFileSync(assetUrl, asset.content, {
       fileLikelyNotFound: isNew,
@@ -82,7 +85,7 @@ ${filesRemoved.join(`\n`)}`);
     };
   }
   logger.debug(
-    `write compiled file info at ${fileURLToPath(compileInfoFileUrl)}`,
+    `write compiled file info at ${urlToFileSystemPath(compileInfoFileUrl)}`,
   );
   writeFileSync(
     compileInfoFileUrl,

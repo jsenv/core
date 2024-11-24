@@ -1,4 +1,5 @@
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { urlToFileSystemPath } from "@jsenv/urls";
+import { pathToFileURL } from "node:url";
 import { fileUrlConverter } from "../file_url_converter.js";
 
 // Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
@@ -21,7 +22,7 @@ export const bundleCss = async (cssUrlInfos) => {
         },
         resolve(specifier, from) {
           const fileUrlObject = new URL(specifier, pathToFileURL(from));
-          const filePath = fileURLToPath(fileUrlObject);
+          const filePath = urlToFileSystemPath(fileUrlObject);
           return filePath;
         },
       },

@@ -3,7 +3,8 @@
  * - https://astexplorer.net/
  * - https://bvaughn.github.io/babel-repl
  */
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { urlToFileSystemPath } from "@jsenv/urls";
+import { pathToFileURL } from "node:url";
 import { createParseError } from "../parse_error.js";
 
 export const applyBabelPlugins = async ({
@@ -20,7 +21,7 @@ export const applyBabelPlugins = async ({
   }
   const { transformAsync, transformFromAstAsync } = await import("@babel/core");
   const sourceFileName = inputUrl.startsWith("file:")
-    ? fileURLToPath(inputUrl)
+    ? urlToFileSystemPath(inputUrl)
     : undefined;
   options = {
     ast: false,
@@ -29,7 +30,7 @@ export const applyBabelPlugins = async ({
     sourceFileName,
     filename: outputUrl
       ? outputUrl.startsWith("file:")
-        ? fileURLToPath(inputUrl)
+        ? urlToFileSystemPath(inputUrl)
         : undefined
       : sourceFileName,
     configFile: false,

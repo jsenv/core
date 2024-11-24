@@ -22,8 +22,8 @@ const ACTIONS_AVAILABLE = {
     };
     try {
       const { createRequire } = await import("node:module");
-      const { fileURLToPath } = await import("node:url");
-      const filePath = fileURLToPath(fileUrl);
+      const { urlToFileSystemPath } = await import("@jsenv/urls");
+      const filePath = urlToFileSystemPath(fileUrl);
       const require = createRequire(fileUrl);
       result.timings.start = Date.now();
       // eslint-disable-next-line import-x/no-dynamic-require
