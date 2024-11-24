@@ -5,14 +5,17 @@
 
 import {
   comparePathnames,
-  readEntryStatSync,
   removeDirectorySync,
   removeFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
 import { URL_META } from "@jsenv/url-meta";
-import { ensurePathnameTrailingSlash, yieldAncestorUrls } from "@jsenv/urls";
-import { readdirSync, readFileSync } from "node:fs";
+import {
+  ensurePathnameTrailingSlash,
+  urlToFileSystemPath,
+  yieldAncestorUrls,
+} from "@jsenv/urls";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
   disableHooksWhileCalling,
@@ -178,7 +181,9 @@ export const spyFilesystemCalls = (
       if (!stateBefore.found && recursive) {
         const ancestorNotFoundArray = [];
         for (const ancestorUrl of yieldAncestorUrls(directoryUrl)) {
-          const ancestorState = getDirectoryState(new URL(ancestorUrl));
+          const ancestorState = getDirectoryState(
+            urlToFileSystemPath(new URL(ancestorUrl)),
+          );
           if (ancestorState.found) {
             break;
           }
@@ -349,7 +354,7 @@ const getFileState = (filePath) => {
   const fileUrl = pathToFileURL(filePath);
   try {
     const fileBuffer = readFileSync(fileUrl);
-    const { mtimeMs } = readEntryStatSync(fileUrl);
+    const { mtimeMs } = statSync(filePath);
     return {
       url: String(fileUrl),
       found: true,
@@ -369,7 +374,7 @@ const getFileState = (filePath) => {
 
 const getDirectoryState = (directory) => {
   try {
-    readEntryStatSync(directory);
+    statSync(directory);
     return {
       found: true,
     };
