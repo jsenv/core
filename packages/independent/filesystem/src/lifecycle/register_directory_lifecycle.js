@@ -320,8 +320,8 @@ export const registerDirectoryLifecycle = (
     }
   };
   const handleEntryUpdated = (entryInfo) => {
-    infoMap.set(entryInfo.relativeUrl, entryInfo);
     if (updated && entryInfo.patternValue && shouldCallUpdated(entryInfo)) {
+      infoMap.set(entryInfo.relativeUrl, entryInfo);
       updated({
         relativeUrl: entryInfo.relativeUrl,
         type: entryInfo.type,
@@ -377,7 +377,7 @@ const shouldCallUpdated = (entryInfo) => {
   if (stat.atimeMs < stat.mtimeMs) {
     return true;
   }
-  if (stat.mtimeMs <= previousInfo.stat.mtimeMs) {
+  if (isLinux && stat.mtimeMs <= previousInfo.stat.mtimeMs) {
     return false;
   }
   return true;
