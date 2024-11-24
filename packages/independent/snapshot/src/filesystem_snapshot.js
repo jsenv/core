@@ -4,6 +4,7 @@ import {
   assertAndNormalizeFileUrl,
   comparePathnames,
   ensureEmptyDirectorySync,
+  readEntryStatSync,
   removeDirectorySync,
   removeFileSync,
   writeFileSync,
@@ -15,7 +16,7 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { comparePngFiles } from "./compare_png_files.js";
 import {
@@ -129,7 +130,7 @@ ${fileUrl}`);
   };
 
   try {
-    fileSnapshot.stat = statSync(new URL(fileUrl));
+    fileSnapshot.stat = readEntryStatSync(new URL(fileUrl));
   } catch (e) {
     if (e.code === "ENOENT") {
       return fileSnapshot;
@@ -342,7 +343,7 @@ ${extraUrls.join("\n")}`);
     },
   };
   try {
-    directorySnapshot.stat = statSync(new URL(directoryUrl));
+    directorySnapshot.stat = readEntryStatSync(new URL(directoryUrl));
   } catch (e) {
     if (e.code === "ENOENT") {
       return directorySnapshot;
@@ -369,7 +370,7 @@ ${extraUrls.join("\n")}`);
       const directoryItemUrl = new URL(directoryItem, directoryUrl);
       let directoryItemStat;
       try {
-        directoryItemStat = statSync(directoryItemUrl);
+        directoryItemStat = readEntryStatSync(directoryItemUrl);
       } catch (e) {
         if (e.code === "ENOENT") {
           continue;

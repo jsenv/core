@@ -1,8 +1,9 @@
+import { readEntryStatSync } from "@jsenv/filesystem";
 import {
   applyFileSystemMagicResolution,
   getExtensionsToTry,
 } from "@jsenv/node-esm-resolution";
-import { realpathSync, statSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const jsenvPluginFsRedirection = ({
@@ -39,7 +40,7 @@ export const jsenvPluginFsRedirection = ({
       const urlObject = new URL(reference.url);
       let stat;
       try {
-        stat = statSync(urlObject);
+        stat = readEntryStatSync(urlObject);
       } catch (e) {
         if (e.code === "ENOENT") {
           stat = null;

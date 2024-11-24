@@ -1,10 +1,9 @@
-import { statSync } from "node:fs";
-
+import { readEntryStatSync } from "./read_entry_stat_sync.js";
 import { statsToType } from "./stats_to_type.js";
 
 export const readEntryInfo = (url) => {
   try {
-    const stats = statSync(new URL(url));
+    const stats = readEntryStatSync(new URL(url));
     const type = statsToType(stats);
     return {
       type,

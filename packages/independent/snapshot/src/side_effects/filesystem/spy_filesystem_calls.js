@@ -5,13 +5,14 @@
 
 import {
   comparePathnames,
+  readEntryStatSync,
   removeDirectorySync,
   removeFileSync,
   writeFileSync,
 } from "@jsenv/filesystem";
 import { URL_META } from "@jsenv/url-meta";
 import { ensurePathnameTrailingSlash, yieldAncestorUrls } from "@jsenv/urls";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
   disableHooksWhileCalling,
@@ -348,7 +349,7 @@ const getFileState = (filePath) => {
   const fileUrl = pathToFileURL(filePath);
   try {
     const fileBuffer = readFileSync(fileUrl);
-    const { mtimeMs } = statSync(fileUrl);
+    const { mtimeMs } = readEntryStatSync(fileUrl);
     return {
       url: String(fileUrl),
       found: true,
@@ -368,7 +369,7 @@ const getFileState = (filePath) => {
 
 const getDirectoryState = (directory) => {
   try {
-    statSync(directory);
+    readEntryStatSync(directory);
     return {
       found: true,
     };

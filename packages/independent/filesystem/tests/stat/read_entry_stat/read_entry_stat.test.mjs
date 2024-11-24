@@ -1,19 +1,27 @@
 import { assert } from "@jsenv/assert";
-import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
-
 import {
   ensureEmptyDirectory,
   readEntryStat,
+  readEntryStatSync,
   writeDirectory,
   writeEntryPermissions,
   writeFile,
   writeSymbolicLink,
 } from "@jsenv/filesystem";
 import { makeBusyFile } from "@jsenv/filesystem/tests/testHelpers.js";
+import { resolveUrl, urlToFileSystemPath } from "@jsenv/urls";
 
 const isWindows = process.platform === "win32";
 const tempDirectoryUrl = resolveUrl("./temp/", import.meta.url);
 await ensureEmptyDirectory(tempDirectoryUrl);
+
+{
+  const url = import.meta.resolve("./fixtures/#.txt");
+  const stat = readEntryStatSync(url);
+  const actual = stat.isDirectory();
+  const expect = false;
+  assert({ actual, expect });
+}
 
 // nothing
 {
