@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-commonjs",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -21,10 +21,10 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.10.12",
+    "@jsenv/filesystem": "4.10.13",
     "@jsenv/humanize": "1.2.8",
     "@jsenv/url-meta": "8.5.2",
-    "@jsenv/urls": "2.5.3",
+    "@jsenv/urls": "2.5.4",
     "@rollup/plugin-commonjs": "28.0.1",
     "@rollup/plugin-json": "6.1.0",
     "@rollup/plugin-node-resolve": "15.3.0",
@@ -32,7 +32,7 @@
     "cjs-module-lexer": "1.4.1",
     "is-valid-identifier": "2.0.2",
     "resolve": "1.22.8",
-    "rollup": "4.24.4",
+    "rollup": "4.27.4",
     "rollup-plugin-node-globals": "1.4.0",
     "rollup-plugin-polyfill-node": "0.13.0"
   }
