@@ -4,9 +4,9 @@
 run({ browserLauncher: firefox })
 ```
 
-# 1/2 write 6 files into "./.jsenv/firefox@131.00/"
+# 1/2 write 6 files into "./.jsenv/firefox@132.00/"
 
-see [./.jsenv/firefox@131.00/](./.jsenv/firefox@131.00/)
+see [./.jsenv/firefox@132.00/](./.jsenv/firefox@132.00/)
 
 # 2/2 resolve
 
