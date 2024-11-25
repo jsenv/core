@@ -34,6 +34,7 @@ export const eslintConfigRelax = ({
   prettier,
   prettierSortImport,
   jsxPragmaAuto = false,
+  preact = false,
   importResolutionLogLevel,
 
   browserFiles = [],
@@ -45,7 +46,7 @@ export const eslintConfigRelax = ({
     const packageBuffer = readFileSync(packageJsonFileUrl);
     packageObject = JSON.parse(String(packageBuffer));
   } catch {}
-  const { devDependencies = {} } = packageObject;
+  const { dependencies = {}, devDependencies = {} } = packageObject;
   if (prettier === undefined) {
     if (devDependencies.prettier || packageObject.prettier) {
       prettier = true;
@@ -59,6 +60,11 @@ export const eslintConfigRelax = ({
   if (prettierSortImport === undefined) {
     if (devDependencies["prettier-plugin-organize-imports"]) {
       prettierSortImport = true;
+    }
+  }
+  if (preact === undefined) {
+    if (dependencies.preact || devDependencies.preact) {
+      preact = true;
     }
   }
 
@@ -180,6 +186,14 @@ export const eslintConfigRelax = ({
       rules: {
         ...rulesReactRelax,
         ...(jsxPragmaAuto ? { "react/react-in-jsx-scope": ["off"] } : {}),
+        ...(preact
+          ? {
+              "react/no-unknown-property": [
+                "error",
+                { ignore: ["stroke-width"] },
+              ],
+            }
+          : {}),
       },
     },
     // browser files
