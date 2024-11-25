@@ -34,7 +34,7 @@ export const eslintConfigRelax = ({
   prettier,
   prettierSortImport,
   jsxPragmaAuto = false,
-  preact = false,
+  preact,
   importResolutionLogLevel,
 
   browserFiles = [],
