@@ -79,7 +79,7 @@ System.register([], function (_export, _context) {
       w,
       _ = t && t.__k || v,
       g = l.length;
-    for (u.__d = e, $(u, l, _), e = u.__d, a = 0; a < g; a++) null != (y = u.__k[a]) && (p = -1 === y.__i ? h : _[y.__i] || h, y.__i = a, O(n, y, p, i, o, r, f, e, c, s), d = y.__e, y.ref && p.ref != y.ref && (p.ref && N(p.ref, null, y), s.push(y.ref, y.__c || d, y)), null == w && null != d && (w = d), 65536 & y.__u || p.__k === y.__k ? e = I(y, e, n) : "function" == typeof y.type && void 0 !== y.__d ? e = y.__d : d && (e = d.nextSibling), y.__d = void 0, y.__u &= -196609);
+    for (u.__d = e, $(u, l, _), e = u.__d, a = 0; a < g; a++) null != (y = u.__k[a]) && (p = -1 === y.__i ? h : _[y.__i] || h, y.__i = a, O(n, y, p, i, o, r, f, e, c, s), d = y.__e, y.ref && p.ref != y.ref && (p.ref && E(p.ref, null, y), s.push(y.ref, y.__c || d, y)), null == w && null != d && (w = d), 65536 & y.__u || p.__k === y.__k ? e = I(y, e, n) : "function" == typeof y.type && void 0 !== y.__d ? e = y.__d : d && (e = d.nextSibling), y.__d = void 0, y.__u &= -196609);
     u.__d = e, u.__e = w;
   }
   function $(n, l, u) {
@@ -95,7 +95,7 @@ System.register([], function (_export, _context) {
     for (n.__k = [], t = 0; t < e; t++) null != (i = l[t]) && "boolean" != typeof i && "function" != typeof i ? (r = t + a, (i = n.__k[t] = "string" == typeof i || "number" == typeof i || "bigint" == typeof i || i.constructor == String ? g(null, i, null, null, null) : y(i) ? g(b, {
       children: i
     }, null, null, null) : void 0 === i.constructor && i.__b > 0 ? g(i.type, i.props, i.key, i.ref ? i.ref : null, i.__v) : i).__ = n, i.__b = n.__b + 1, o = null, -1 !== (f = i.__i = L(i, u, r, s)) && (s--, (o = u[f]) && (o.__u |= 131072)), null == o || null === o.__v ? (-1 == f && a--, "function" != typeof i.type && (i.__u |= 65536)) : f !== r && (f == r - 1 ? a-- : f == r + 1 ? a++ : (f > r ? a-- : a++, i.__u |= 65536))) : i = n.__k[t] = null;
-    if (s) for (t = 0; t < c; t++) null != (o = u[t]) && 0 == (131072 & o.__u) && (o.__e == n.__d && (n.__d = x(o)), V(o, o));
+    if (s) for (t = 0; t < c; t++) null != (o = u[t]) && 0 == (131072 & o.__u) && (o.__e == n.__d && (n.__d = x(o)), N(o, o));
   }
   function I(n, l, u) {
     var t, i;
@@ -121,7 +121,7 @@ System.register([], function (_export, _context) {
       f = u + 1,
       e = l[u];
     if (null === e || e && i == e.key && o === e.type && 0 == (131072 & e.__u)) return u;
-    if (t > (null != e && 0 == (131072 & e.__u) ? 1 : 0)) for (; r >= 0 || f < l.length;) {
+    if (("function" != typeof o || o === b || i) && t > (null != e && 0 == (131072 & e.__u) ? 1 : 0)) for (; r >= 0 || f < l.length;) {
       if (r >= 0) {
         if ((e = l[r]) && 0 == (131072 & e.__u) && i == e.key && o === e.type) return r;
         r--;
@@ -156,7 +156,7 @@ System.register([], function (_export, _context) {
       if (this.l) {
         var t = this.l[u.type + n];
         if (null == u.t) u.t = e++;else if (u.t < t.u) return;
-        return t(l.event ? l.event(u) : u);
+        return l.event && (u = l.event(u)), "handleEvent" in t ? t.handleEvent(u) : t(u);
       }
     };
   }
@@ -181,7 +181,7 @@ System.register([], function (_export, _context) {
     if (void 0 !== u.constructor) return null;
     128 & t.__u && (c = !!(32 & t.__u), r = [e = u.__e = t.__e]), (a = l.__b) && a(u);
     n: if ("function" == typeof T) try {
-      if (m = u.props, x = "prototype" in T && T.prototype.render, C = (a = T.contextType) && i[a.__c], S = a ? C ? C.props.value : a.__ : i, t.__c ? g = (h = u.__c = t.__c).__ = h.__E : (x ? u.__c = h = new T(m, S) : (u.__c = h = new k(m, S), h.constructor = T, h.render = q), C && C.sub(h), h.props = m, h.state || (h.state = {}), h.context = S, h.__n = i, v = h.__d = !0, h.__h = [], h._sb = []), x && null == h.__s && (h.__s = h.state), x && null != T.getDerivedStateFromProps && (h.__s == h.state && (h.__s = d({}, h.__s)), d(h.__s, T.getDerivedStateFromProps(m, h.__s))), p = h.props, w = h.state, h.__v = u, v) x && null == T.getDerivedStateFromProps && null != h.componentWillMount && h.componentWillMount(), x && null != h.componentDidMount && h.__h.push(h.componentDidMount);else {
+      if (m = u.props, x = "prototype" in T && T.prototype.render, C = (a = T.contextType) && i[a.__c], S = a ? C ? C.props.value : a.__ : i, t.__c ? g = (h = u.__c = t.__c).__ = h.__E : (x ? u.__c = h = new T(m, S) : (u.__c = h = new k(m, S), h.constructor = T, h.render = V), C && C.sub(h), h.props = m, h.state || (h.state = {}), h.context = S, h.__n = i, v = h.__d = !0, h.__h = [], h._sb = []), x && null == h.__s && (h.__s = h.state), x && null != T.getDerivedStateFromProps && (h.__s == h.state && (h.__s = d({}, h.__s)), d(h.__s, T.getDerivedStateFromProps(m, h.__s))), p = h.props, w = h.state, h.__v = u, v) x && null == T.getDerivedStateFromProps && null != h.componentWillMount && h.componentWillMount(), x && null != h.componentDidMount && h.__h.push(h.componentDidMount);else {
         if (x && null == T.getDerivedStateFromProps && m !== p && null != h.componentWillReceiveProps && h.componentWillReceiveProps(m, S), !h.__e && (null != h.shouldComponentUpdate && !1 === h.shouldComponentUpdate(m, h.__s, S) || u.__v === t.__v)) {
           for (u.__v !== t.__v && (h.props = m, h.state = h.__s, h.__d = !1), u.__e = t.__e, u.__k = t.__k, u.__k.some(function (n) {
             n && (n.__ = u);
@@ -211,7 +211,7 @@ System.register([], function (_export, _context) {
   }
   function j(n, u, t) {
     u.__d = void 0;
-    for (var i = 0; i < t.length; i++) N(t[i], t[++i], t[++i]);
+    for (var i = 0; i < t.length; i++) E(t[i], t[++i], t[++i]);
     l.__c && l.__c(u, n), n.some(function (u) {
       try {
         n = u.__h, u.__h = [], n.some(function (n) {
@@ -253,7 +253,7 @@ System.register([], function (_export, _context) {
     }
     return u;
   }
-  function N(n, u, t) {
+  function E(n, u, t) {
     try {
       if ("function" == typeof n) {
         var i = "function" == typeof n.__u;
@@ -263,9 +263,9 @@ System.register([], function (_export, _context) {
       l.__e(n, t);
     }
   }
-  function V(n, u, t) {
+  function N(n, u, t) {
     var i, o;
-    if (l.unmount && l.unmount(n), (i = n.ref) && (i.current && i.current !== n.__e || N(i, null, u)), null != (i = n.__c)) {
+    if (l.unmount && l.unmount(n), (i = n.ref) && (i.current && i.current !== n.__e || E(i, null, u)), null != (i = n.__c)) {
       if (i.componentWillUnmount) try {
         i.componentWillUnmount();
       } catch (n) {
@@ -273,20 +273,20 @@ System.register([], function (_export, _context) {
       }
       i.base = i.__P = null;
     }
-    if (i = n.__k) for (o = 0; o < i.length; o++) i[o] && V(i[o], u, t || "function" != typeof n.type);
+    if (i = n.__k) for (o = 0; o < i.length; o++) i[o] && N(i[o], u, t || "function" != typeof n.type);
     t || w(n.__e), n.__c = n.__ = n.__e = n.__d = void 0;
   }
-  function q(n, l, u) {
+  function V(n, l, u) {
     return this.constructor(n, u);
   }
-  function B(u, t, i) {
+  function q(u, t, i) {
     var o, r, f, e;
     l.__ && l.__(u, t), r = (o = "function" == typeof i) ? null : i && i.__k || t.__k, f = [], e = [], O(t, u = (!o && i || t).__k = _(b, null, [u]), r || h, h, t.namespaceURI, !o && i ? [i] : r ? null : t.firstChild ? n.call(t.childNodes) : null, f, !o && i ? i : r ? r.__e : t.firstChild, o, e), j(f, u, e);
   }
-  function D(n, l) {
-    B(n, l, D);
+  function B(n, l) {
+    q(n, l, B);
   }
-  function E(l, u, t) {
+  function D(l, u, t) {
     var i,
       o,
       r,
@@ -326,13 +326,13 @@ System.register([], function (_export, _context) {
   _export({
     Component: k,
     Fragment: b,
-    cloneElement: E,
+    cloneElement: D,
     createContext: G,
     createElement: _,
     createRef: m,
     h: _,
-    hydrate: D,
-    render: B,
+    hydrate: B,
+    render: q,
     toChildArray: H,
     options: void 0,
     isValidElement: void 0

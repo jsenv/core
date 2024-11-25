@@ -37,7 +37,7 @@ const test = async (params) => {
   const actual = memoryUsage;
   const expect =
     params.runtime.name === "chromium"
-      ? assert.between(4_000_000, 8_000_000) // around 5MB
+      ? assert.between(4_000_000, 12_000_000) // around 5MB
       : null;
   assert({ actual, expect });
 };

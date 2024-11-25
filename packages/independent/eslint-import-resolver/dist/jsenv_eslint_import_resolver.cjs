@@ -438,14 +438,20 @@ const fileSystemPathToUrl = (value) => {
 
 const urlToFileSystemPath = (url) => {
   const urlObject = new URL(url);
-  let urlString;
-  if (urlObject.hash) {
-    const origin =
-      urlObject.protocol === "file:" ? "file://" : urlObject.origin;
-    urlString = `${origin}${urlObject.pathname}${urlObject.search}%23${urlObject.hash.slice(1)}`;
-  } else {
-    urlString = urlObject.href;
+  let { origin, pathname, hash } = urlObject;
+  if (urlObject.protocol === "file:") {
+    origin = "file://";
   }
+  pathname = pathname
+    .split("/")
+    .map((part) => {
+      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
+    })
+    .join("/");
+  if (hash) {
+    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
+  }
+  const urlString = `${origin}${pathname}`;
   const fileSystemPath = node_url.fileURLToPath(urlString);
   if (fileSystemPath[fileSystemPath.length - 1] === "/") {
     // remove trailing / so that nodejs path becomes predictable otherwise it logs

@@ -28,13 +28,13 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
         if (u.every(function (n) {
           return !n.__N;
         })) return !c || c.call(this, n, t, r);
-        var i = !1;
+        var i = o.__c.props !== n;
         return u.forEach(function (n) {
           if (n.__N) {
             var t = n.__[0];
             n.__ = n.__N, n.__N = void 0, t !== n.__[0] && (i = !0);
           }
-        }), !(!i && o.__c.props === n) && (!c || c.call(this, n, t, r));
+        }), c && c.call(this, n, t, r) || i;
       };
       r.u = !0;
       var c = r.shouldComponentUpdate,

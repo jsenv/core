@@ -599,13 +599,21 @@ const pathnameToParentPathname = pathname => {
 
 const urlToFileSystemPath = url => {
   const urlObject = new URL(url);
-  let urlString;
-  if (urlObject.hash) {
-    const origin = urlObject.protocol === "file:" ? "file://" : urlObject.origin;
-    urlString = "".concat(origin).concat(urlObject.pathname).concat(urlObject.search, "%23").concat(urlObject.hash.slice(1));
-  } else {
-    urlString = urlObject.href;
+  let {
+    origin,
+    pathname,
+    hash
+  } = urlObject;
+  if (urlObject.protocol === "file:") {
+    origin = "file://";
   }
+  pathname = pathname.split("/").map(part => {
+    return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
+  }).join("/");
+  if (hash) {
+    pathname += "%23".concat(encodeURIComponent(hash.slice(1)));
+  }
+  const urlString = "".concat(origin).concat(pathname);
   const fileSystemPath = fileURLToPath(urlString);
   if (fileSystemPath[fileSystemPath.length - 1] === "/") {
     // remove trailing / so that nodejs path becomes predictable otherwise it logs
