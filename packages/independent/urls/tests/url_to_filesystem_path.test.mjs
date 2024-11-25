@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-
 import { urlToFileSystemPath } from "@jsenv/urls";
 
 const isWindows = process.platform === "win32";
@@ -23,9 +22,26 @@ if (isWindows) {
     assert({ actual, expect });
   }
 } else {
-  const actual = urlToFileSystemPath("file:///directory/file.js");
-  const expect = "/directory/file.js";
-  assert({ actual, expect });
+  {
+    const actual = urlToFileSystemPath("file:///directory/file.js");
+    const expect = "/directory/file.js";
+    assert({ actual, expect });
+  }
+  {
+    const actual = urlToFileSystemPath("file:///directory/#.js");
+    const expect = "/directory/#.js";
+    assert({ actual, expect });
+  }
+  {
+    const actual = urlToFileSystemPath("file:///directory/%.js");
+    const expect = "/directory/%.js";
+    assert({ actual, expect });
+  }
+  {
+    const actual = urlToFileSystemPath("file:///directory/a#b%c.js");
+    const expect = "/directory/a#b%c.js";
+    assert({ actual, expect });
+  }
 }
 
 try {
