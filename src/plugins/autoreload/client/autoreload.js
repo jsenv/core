@@ -2,7 +2,13 @@ import {
   parseSrcSet,
   stringifySrcSet,
 } from "@jsenv/ast/src/html/html_src_set.js";
-import { urlHotMetas } from "../../import_meta_hot/client/import_meta_hot.js";
+import {
+  dispatchAfterPartialReload,
+  dispatchBeforeFullReload,
+  dispatchBeforePartialReload,
+  dispatchBeforePrune,
+  urlHotMetas,
+} from "../../import_meta_hot/client/import_meta_hot.js";
 
 export const initAutoreload = ({ mainFilePath }) => {
   let debug = false;
@@ -62,9 +68,11 @@ export const initAutoreload = ({ mainFilePath }) => {
         (reloadMessage) => reloadMessage.type === "full",
       );
       if (someEffectIsFullReload) {
+        dispatchBeforeFullReload();
         reloadHtmlPage();
         return;
       }
+      dispatchBeforePartialReload();
       reloader.status.goTo("reloading");
       const onApplied = (reloadMessage) => {
         reloader.changes.remove(reloadMessage);
@@ -74,6 +82,7 @@ export const initAutoreload = ({ mainFilePath }) => {
           () => {
             onApplied(reloadMessage);
             reloader.currentExecution = null;
+            dispatchAfterPartialReload();
           },
           (e) => {
             reloader.status.goTo("failed");
@@ -141,6 +150,7 @@ This could be due to syntax errors or importing non-existent modules (see errors
       // - import.meta.hot.accept() is not called (happens for HTML and CSS)
       if (type === "prune") {
         if (urlHotMeta) {
+          dispatchBeforePrune();
           delete urlHotMetas[urlToFetch];
           if (urlHotMeta.disposeCallback) {
             console.groupCollapsed(

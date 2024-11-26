@@ -5,12 +5,46 @@
 
 export const urlHotMetas = {};
 
+const createEvent = () => {
+  const callbackSet = new Set();
+  const addCallback = (callback) => {
+    callbackSet.add(callback);
+    return () => {
+      callbackSet.delete(callback);
+    };
+  };
+  const dispatch = () => {
+    for (const callback of callbackSet) {
+      callback();
+    }
+  };
+  return [{ addCallback }, dispatch];
+};
+const [beforePartialReload, dispatchBeforePartialReload] = createEvent();
+const [afterPartialReload, dispatchAfterPartialReload] = createEvent();
+const [beforeFullReload, dispatchBeforeFullReload] = createEvent();
+const [beforePrune, dispatchBeforePrune] = createEvent();
+export {
+  dispatchAfterPartialReload,
+  dispatchBeforeFullReload,
+  dispatchBeforePartialReload,
+  dispatchBeforePrune,
+};
+
+const hotEvents = {
+  beforePartialReload,
+  afterPartialReload,
+  beforeFullReload,
+  beforePrune,
+};
+
 export const createImportMetaHot = (importMetaUrl) => {
   const data = {};
   const url = asUrlWithoutHotSearchParam(importMetaUrl);
 
   return {
     data,
+    events: hotEvents,
     accept: (firstArg, secondArg) => {
       if (!firstArg) {
         addUrlMeta(url, {

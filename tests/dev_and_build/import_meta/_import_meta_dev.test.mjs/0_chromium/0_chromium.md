@@ -15,7 +15,13 @@ see [./.jsenv/chrome@131.00/](./.jsenv/chrome@131.00/)
   "meta": {
     "url": "window.origin/main.js",
     "hot": {
-      "data": {}
+      "data": {},
+      "events": {
+        "beforePartialReload": {},
+        "afterPartialReload": {},
+        "beforeFullReload": {},
+        "beforePrune": {}
+      }
     }
   },
   "url": "window.origin/main.js",
