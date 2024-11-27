@@ -20122,7 +20122,7 @@ const jsenvPluginAutoreloadServer = ({
               }
               if (
                 urlInfo.data.hotDecline ||
-                urlInfo.firstReference?.type === "http_request"
+                urlInfo.lastReference?.type === "http_request"
               ) {
                 return {
                   declined: true,
