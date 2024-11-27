@@ -1,7 +1,10 @@
 import { getHtmlNodeAttribute } from "./html_node_attributes.js";
 
 export const analyzeScriptNode = (scriptNode) => {
-  const typeAttribute = getHtmlNodeAttribute(scriptNode, "type");
+  const typeAttribute =
+    getHtmlNodeAttribute(scriptNode, "jsenv-type") ||
+    getHtmlNodeAttribute(scriptNode, "original-type") ||
+    getHtmlNodeAttribute(scriptNode, "type");
   if (typeAttribute === undefined || typeAttribute === "text/javascript") {
     return {
       type: "js_classic",
