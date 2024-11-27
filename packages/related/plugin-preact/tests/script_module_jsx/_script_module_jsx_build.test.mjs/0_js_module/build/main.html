@@ -3,6 +3,7 @@
   <head>
     <title>Title</title>
     <meta charset="utf-8">
+    <link rel="icon" href="data:,">
     <script type="importmap">
       {
         "imports": {
@@ -21,7 +22,7 @@
         window.resolveResultPromise = resolve;
       });
     </script>
-    <script type="module">import { render } from "/js/preact.module.js";
+    <script type="module" jsenv-type="module/jsx">import { render } from "/js/preact.module.js";
 import { useEffect } from "/js/hooks.module.js";
 
 // eslint-disable-next-line no-unused-vars

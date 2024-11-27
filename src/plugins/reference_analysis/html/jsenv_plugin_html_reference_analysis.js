@@ -280,6 +280,31 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
             actions.push(async () => {
               const inlineUrlInfo = inlineReference.urlInfo;
               await inlineUrlInfo.cook();
+              const typeAttribute = getHtmlNodeAttribute(node, "type");
+              if (expectedType === "js_classic") {
+                if (
+                  typeAttribute !== undefined &&
+                  typeAttribute !== "text/javascript"
+                ) {
+                  // 1. <script type="jsx"> becomes <script>
+                  mutations.push(() => {
+                    setHtmlNodeAttributes(node, {
+                      "type": undefined,
+                      "original-type": typeAttribute,
+                    });
+                  });
+                }
+              } else if (expectedType === "js_module") {
+                // 2. <script type="module/jsx"> becomes <script type="module">
+                if (typeAttribute !== "module") {
+                  mutations.push(() => {
+                    setHtmlNodeAttributes(node, {
+                      "type": "module",
+                      "original-type": typeAttribute,
+                    });
+                  });
+                }
+              }
               mutations.push(() => {
                 if (hotAccept) {
                   removeHtmlNodeText(node);
@@ -344,7 +369,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
                 }
               : null,
             script: (scriptNode) => {
-              const { type, subtype, contentType, extension } =
+              const { type, subtype, contentType } =
                 analyzeScriptNode(scriptNode);
               if (type === "text") {
                 // ignore <script type="whatever">foobar</script>
@@ -483,31 +508,12 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
               ) {
                 return;
               }
-
-              const inlineRef = visitTextContent(scriptNode, {
+              visitTextContent(scriptNode, {
                 type: "script",
                 subtype,
                 expectedType: type,
                 contentType,
               });
-              if (inlineRef) {
-                // 1. <script type="jsx"> becomes <script>
-                if (type === "js_classic" && extension !== ".js") {
-                  mutations.push(() => {
-                    setHtmlNodeAttributes(scriptNode, {
-                      type: undefined,
-                    });
-                  });
-                }
-                // 2. <script type="module/jsx"> becomes <script type="module">
-                if (type === "js_module" && extension !== ".js") {
-                  mutations.push(() => {
-                    setHtmlNodeAttributes(scriptNode, {
-                      type: "module",
-                    });
-                  });
-                }
-              }
             },
             a: (aNode) => {
               visitHref(aNode, {

@@ -9,7 +9,11 @@ const run = async ({ browserLauncher }) => {
     sourceDirectoryUrl: new URL("./client/", import.meta.url),
     keepProcessAlive: false,
     port: 0,
-    plugins: [jsenvPluginPreact()],
+    plugins: [
+      jsenvPluginPreact({
+        refreshInstrumentation: true,
+      }),
+    ],
   });
   return executeHtml(`${devServer.origin}/main.html`, {
     browserLauncher,
