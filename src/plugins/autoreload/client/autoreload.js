@@ -153,20 +153,21 @@ This could be due to syntax errors or importing non-existent modules (see errors
           dispatchBeforePrune();
           delete urlHotMetas[urlToFetch];
           if (urlHotMeta.disposeCallback) {
-            console.groupCollapsed(
+            console.log(
               `[jsenv] cleanup ${boundary} (no longer referenced by ${acceptedBy})`,
             );
-            console.log(`call dispose callback`);
+            if (debug) {
+              console.log(`call dispose callback`);
+            }
             await urlHotMeta.disposeCallback();
-            console.groupEnd();
           }
         }
         continue;
       }
       if (acceptedBy === boundary) {
-        console.groupCollapsed(`[jsenv] hot reloading ${boundary} (${cause})`);
+        console.log(`[jsenv] hot reloading ${boundary} (${cause})`);
       } else {
-        console.groupCollapsed(
+        console.log(
           `[jsenv] hot reloading ${acceptedBy} usage in ${boundary} (${cause})`,
         );
       }
@@ -176,10 +177,14 @@ This could be due to syntax errors or importing non-existent modules (see errors
           continue;
         }
         if (urlHotMeta.disposeCallback) {
-          console.log(`call dispose callback`);
+          if (debug) {
+            console.log(`call dispose callback`);
+          }
           await urlHotMeta.disposeCallback();
         }
-        console.log(`importing js module`);
+        if (debug) {
+          console.log(`importing js module`);
+        }
         reloader.currentExecution = {
           type: "dynamic_import",
           url: urlToFetch,
@@ -188,8 +193,9 @@ This could be due to syntax errors or importing non-existent modules (see errors
         if (urlHotMeta.acceptCallback) {
           await urlHotMeta.acceptCallback(namespace);
         }
-        console.log(`js module import done`);
-        console.groupEnd();
+        if (debug) {
+          console.log(`js module import done`);
+        }
         continue;
       }
       if (type === "html") {
@@ -223,7 +229,6 @@ This could be due to syntax errors or importing non-existent modules (see errors
             domNodesUsingUrl.reload(hot);
           });
         }
-        console.groupEnd();
         continue;
       }
       console.warn(`unknown update type: "${type}"`);
