@@ -19,7 +19,7 @@ const test = async ({
   browserName,
   pageLogsAfterUpdatingCssFile = [
     {
-      type: "startGroupCollapsed",
+      type: "log",
       text:
         browserName === "chromium"
           ? "[jsenv] hot reloading file.js (style.css modified)"
@@ -27,83 +27,35 @@ const test = async ({
     },
     {
       type: "log",
-      text: "call dispose callback",
-    },
-    {
-      type: "log",
       text: "remove stylesheet",
     },
     {
       type: "log",
-      text: "importing js module",
-    },
-    {
-      type: "log",
       text: "adding stylesheet",
-    },
-    {
-      type: "log",
-      text: "js module import done",
-    },
-    {
-      type: "endGroup",
-      text: "",
     },
   ],
   pageLogsAfterRemovingCssImport = [
     {
-      type: "startGroupCollapsed",
+      type: "log",
       text: "[jsenv] hot reloading main.js (main.js modified)",
     },
     {
       type: "log",
-      text: "importing js module",
-    },
-    {
-      type: "log",
-      text: "js module import done",
-    },
-    {
-      type: "endGroup",
-      text: "",
-    },
-    {
-      type: "startGroupCollapsed",
       text: "[jsenv] cleanup file.js (no longer referenced by main.js)",
-    },
-    {
-      type: "log",
-      text: "call dispose callback",
     },
     {
       type: "log",
       text: "remove stylesheet",
     },
-    {
-      type: "endGroup",
-      text: "",
-    },
   ],
   pageLogsAfterRestoringCssImport = [
     {
-      type: "startGroupCollapsed",
+      type: "log",
       text: "[jsenv] hot reloading main.js (main.js modified)",
     },
     {
       type: "log",
-      text: "importing js module",
-    },
-    {
-      type: "log",
       text: "adding stylesheet",
-    },
-    {
-      type: "log",
-      text: "js module import done",
-    },
-    {
-      type: "endGroup",
-      text: "",
     },
   ],
   ...rest
