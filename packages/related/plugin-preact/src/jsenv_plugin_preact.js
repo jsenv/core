@@ -9,7 +9,7 @@ import {
   parseHtml,
   stringifyHtmlAst,
 } from "@jsenv/ast";
-import { composeTwoSourcemaps, createMagicSource } from "@jsenv/sourcemap";
+import { createMagicSource } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
 
 export const jsenvPluginPreact = ({
@@ -172,7 +172,9 @@ export const jsenvPluginPreact = ({
             source: "jsenv_preact",
           });
           code = afterJsxReplace.content;
-          map = await composeTwoSourcemaps(map, afterJsxReplace.sourcemap);
+          // can't do this: ths resulting sourcemap is wrong by a few lines
+          // (3-4) and would makes debugging experience close to horrible
+          // map = await composeTwoSourcemaps(map, afterJsxReplace.sourcemap);
         }
         if (refreshEnabled) {
           const hasReg = /\$RefreshReg\$\(/.test(code);

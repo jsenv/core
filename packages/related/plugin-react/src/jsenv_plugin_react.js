@@ -4,9 +4,8 @@
 
 import { applyBabelPlugins } from "@jsenv/ast";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
-import { composeTwoSourcemaps, createMagicSource } from "@jsenv/sourcemap";
+import { createMagicSource } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
-
 import { jsenvPluginReactRefreshPreamble } from "./jsenv_plugin_react_refresh_preamble.js";
 
 export const jsenvPluginReact = ({
@@ -167,7 +166,7 @@ import.meta.hot.accept(__react_refresh__.acceptCallback);`);
         const result = magicSource.toContentAndSourcemap();
         return {
           content: result.content,
-          sourcemap: await composeTwoSourcemaps(map, result.sourcemap),
+          sourcemap: map,
           // "no sourcemap is better than wrong sourcemap":
           // I don't know exactly what is resulting in bad sourcemaps
           // but I suspect hooknames or prefresh to be responsible
