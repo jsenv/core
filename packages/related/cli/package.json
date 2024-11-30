@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/cli",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "description": "Command Line Interface for jsenv",
   "license": "MIT",
   "repository": {
