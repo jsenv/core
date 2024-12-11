@@ -18,6 +18,8 @@ node_modules/
 **/tests/**/output/
 **/_*test.*/
 /packages/**/server/tests/internal_error/snapshots/
+/packages/**/snapshot/tests/**/*.md
+/packages/**/snapshot/tests/**/*.json
 /packages/internal/plugin-transpilation/src/babel/babel_helper_directory/
 /**/dist/**
 
