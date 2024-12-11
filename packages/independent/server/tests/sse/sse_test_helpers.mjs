@@ -1,8 +1,4 @@
-import { createRequire } from "node:module";
-
-const require = createRequire(import.meta.url);
-
-const EventSource = require("eventsource");
+import { EventSource } from "eventsource";
 
 export const openEventSource = async (url) => {
   const eventSource = new EventSource(url, {

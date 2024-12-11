@@ -2,8 +2,8 @@ var l$2,
   t$2;
 l$2 = {
   __e: function (n, l, u, t) {
-    for (var i, o, r; l = l.__;) if ((i = l.__c) && !i.__) try {
-      if ((o = i.constructor) && null != o.getDerivedStateFromError && (i.setState(o.getDerivedStateFromError(n)), r = i.__d), null != i.componentDidCatch && (i.componentDidCatch(n, t || {}), r = i.__d), r) return i.__E = i;
+    for (var i, r, o; l = l.__;) if ((i = l.__c) && !i.__) try {
+      if ((r = i.constructor) && null != r.getDerivedStateFromError && (i.setState(r.getDerivedStateFromError(n)), o = i.__d), null != i.componentDidCatch && (i.componentDidCatch(n, t || {}), o = i.__d), o) return i.__E = i;
     } catch (l) {
       n = l;
     }
@@ -15,19 +15,19 @@ l$2 = {
 
 var t$1,
   r$1,
-  u$1,
+  u$2,
   i$1,
   o = 0,
   f$1 = [],
-  c$2 = l$2,
-  e$1 = c$2.__b,
-  a$1 = c$2.__r,
-  v$2 = c$2.diffed,
-  l$1 = c$2.__c,
-  m = c$2.unmount,
-  s$1 = c$2.__;
+  c$1 = l$2,
+  e$1 = c$1.__b,
+  a$1 = c$1.__r,
+  v$2 = c$1.diffed,
+  l$1 = c$1.__c,
+  m = c$1.unmount,
+  s$1 = c$1.__;
 function d$2(n, t) {
-  c$2.__h && c$2.__h(r$1, n, o || t), o = 0;
+  c$1.__h && c$1.__h(r$1, n, o || t), o = 0;
   var u = r$1.__H || (r$1.__H = {
     __: [],
     __h: []
@@ -42,26 +42,26 @@ function j() {
   for (var n; n = f$1.shift();) if (n.__P && n.__H) try {
     n.__H.__h.forEach(z), n.__H.__h.forEach(B), n.__H.__h = [];
   } catch (t) {
-    n.__H.__h = [], c$2.__e(t, n.__v);
+    n.__H.__h = [], c$1.__e(t, n.__v);
   }
 }
-c$2.__b = function (n) {
+c$1.__b = function (n) {
   r$1 = null, e$1 && e$1(n);
-}, c$2.__ = function (n, t) {
+}, c$1.__ = function (n, t) {
   n && t.__k && t.__k.__m && (n.__m = t.__k.__m), s$1 && s$1(n, t);
-}, c$2.__r = function (n) {
+}, c$1.__r = function (n) {
   a$1 && a$1(n), t$1 = 0;
   var i = (r$1 = n.__c).__H;
-  i && (u$1 === r$1 ? (i.__h = [], r$1.__h = [], i.__.forEach(function (n) {
+  i && (u$2 === r$1 ? (i.__h = [], r$1.__h = [], i.__.forEach(function (n) {
     n.__N && (n.__ = n.__N), n.i = n.__N = void 0;
-  })) : (i.__h.forEach(z), i.__h.forEach(B), i.__h = [], t$1 = 0)), u$1 = r$1;
-}, c$2.diffed = function (n) {
+  })) : (i.__h.forEach(z), i.__h.forEach(B), i.__h = [], t$1 = 0)), u$2 = r$1;
+}, c$1.diffed = function (n) {
   v$2 && v$2(n);
   var t = n.__c;
-  t && t.__H && (t.__H.__h.length && (1 !== f$1.push(t) && i$1 === c$2.requestAnimationFrame || ((i$1 = c$2.requestAnimationFrame) || w$1)(j)), t.__H.__.forEach(function (n) {
+  t && t.__H && (t.__H.__h.length && (1 !== f$1.push(t) && i$1 === c$1.requestAnimationFrame || ((i$1 = c$1.requestAnimationFrame) || w$1)(j)), t.__H.__.forEach(function (n) {
     n.i && (n.__H = n.i), n.i = void 0;
-  })), u$1 = r$1 = null;
-}, c$2.__c = function (n, t) {
+  })), u$2 = r$1 = null;
+}, c$1.__c = function (n, t) {
   t.some(function (n) {
     try {
       n.__h.forEach(z), n.__h = n.__h.filter(function (n) {
@@ -70,10 +70,10 @@ c$2.__b = function (n) {
     } catch (r) {
       t.some(function (n) {
         n.__h && (n.__h = []);
-      }), t = [], c$2.__e(r, n.__v);
+      }), t = [], c$1.__e(r, n.__v);
     }
   }), l$1 && l$1(n, t);
-}, c$2.unmount = function (n) {
+}, c$1.unmount = function (n) {
   m && m(n);
   var t,
     r = n.__c;
@@ -83,7 +83,7 @@ c$2.__b = function (n) {
     } catch (n) {
       t = n;
     }
-  }), r.__H = void 0, t && c$2.__e(t, r.__v));
+  }), r.__H = void 0, t && c$1.__e(t, r.__v));
 };
 var k = "function" == typeof requestAnimationFrame;
 function w$1(n) {
@@ -144,7 +144,7 @@ let n, s;
 let r = 0,
   f = 0,
   e = 0;
-function c$1(i) {
+function c(i) {
   if (void 0 === n) return;
   let t = i.n;
   if (void 0 === t || t.t !== n) {
@@ -176,24 +176,24 @@ function c$1(i) {
     return t;
   }
 }
-function u(i) {
+function u$1(i) {
   this.v = i;
   this.i = 0;
   this.n = void 0;
   this.t = void 0;
 }
-u.prototype.brand = i;
-u.prototype.h = function () {
+u$1.prototype.brand = i;
+u$1.prototype.h = function () {
   return !0;
 };
-u.prototype.S = function (i) {
+u$1.prototype.S = function (i) {
   if (this.t !== i && void 0 === i.e) {
     i.x = this.t;
     if (void 0 !== this.t) this.t.e = i;
     this.t = i;
   }
 };
-u.prototype.U = function (i) {
+u$1.prototype.U = function (i) {
   if (void 0 !== this.t) {
     const t = i.e,
       o = i.x;
@@ -208,7 +208,7 @@ u.prototype.U = function (i) {
     if (i === this.t) this.t = o;
   }
 };
-u.prototype.subscribe = function (i) {
+u$1.prototype.subscribe = function (i) {
   return E(() => {
     const t = this.value,
       o = n;
@@ -220,16 +220,16 @@ u.prototype.subscribe = function (i) {
     }
   });
 };
-u.prototype.valueOf = function () {
+u$1.prototype.valueOf = function () {
   return this.value;
 };
-u.prototype.toString = function () {
+u$1.prototype.toString = function () {
   return this.value + "";
 };
-u.prototype.toJSON = function () {
+u$1.prototype.toJSON = function () {
   return this.value;
 };
-u.prototype.peek = function () {
+u$1.prototype.peek = function () {
   const i = n;
   n = void 0;
   try {
@@ -238,9 +238,9 @@ u.prototype.peek = function () {
     n = i;
   }
 };
-Object.defineProperty(u.prototype, "value", {
+Object.defineProperty(u$1.prototype, "value", {
   get() {
-    const i = c$1(this);
+    const i = c(this);
     if (void 0 !== i) i.i = this.i;
     return this.v;
   },
@@ -260,7 +260,7 @@ Object.defineProperty(u.prototype, "value", {
   }
 });
 function d$1(i) {
-  return new u(i);
+  return new u$1(i);
 }
 function v$1(i) {
   for (let t = i.s; void 0 !== t; t = t.n) if (t.S.i !== t.i || !t.S.h() || t.S.i !== t.i) return !0;
@@ -295,13 +295,13 @@ function y(i) {
   i.s = t;
 }
 function a(i) {
-  u.call(this, void 0);
+  u$1.call(this, void 0);
   this.x = i;
   this.s = void 0;
   this.g = e - 1;
   this.f = 4;
 }
-(a.prototype = new u()).h = function () {
+(a.prototype = new u$1()).h = function () {
   this.f &= -3;
   if (1 & this.f) return !1;
   if (32 == (36 & this.f)) return !0;
@@ -338,11 +338,11 @@ a.prototype.S = function (i) {
     this.f |= 36;
     for (let i = this.s; void 0 !== i; i = i.n) i.S.S(i);
   }
-  u.prototype.S.call(this, i);
+  u$1.prototype.S.call(this, i);
 };
 a.prototype.U = function (i) {
   if (void 0 !== this.t) {
-    u.prototype.U.call(this, i);
+    u$1.prototype.U.call(this, i);
     if (void 0 === this.t) {
       this.f &= -33;
       for (let i = this.s; void 0 !== i; i = i.n) i.S.U(i);
@@ -358,7 +358,7 @@ a.prototype.N = function () {
 Object.defineProperty(a.prototype, "value", {
   get() {
     if (1 & this.f) throw new Error("Cycle detected");
-    const i = c$1(this);
+    const i = c(this);
     this.h();
     if (void 0 !== i) i.i = this.i;
     if (16 & this.f) throw this.v;
@@ -453,7 +453,7 @@ function E(i) {
   return t.d.bind(t);
 }
 
-function c(t, e) {
+function u(t, e) {
   l$2[t] = e.bind(null, l$2[t] || (() => {}));
 }
 let d;
@@ -474,10 +474,13 @@ function p({
     }
     this.__$u.c = () => {
       var t;
-      if (!t$2(o.peek()) && 3 === (null == (t = this.base) ? void 0 : t.nodeType)) this.base.data = o.peek();else {
+      const i = this.__$u.S(),
+        n = o.value;
+      i();
+      if (t$2(n) || 3 !== (null == (t = this.base) ? void 0 : t.nodeType)) {
         this.__$f |= 1;
         this.setState({});
-      }
+      } else this.base.data = n;
     };
     return w(() => {
       let t = i.value.value;
@@ -487,7 +490,7 @@ function p({
   return o.value;
 }
 p.displayName = "_st";
-Object.defineProperties(u.prototype, {
+Object.defineProperties(u$1.prototype, {
   constructor: {
     configurable: !0,
     value: void 0
@@ -509,14 +512,14 @@ Object.defineProperties(u.prototype, {
     value: 1
   }
 });
-c("__b", (t, i) => {
+u("__b", (t, i) => {
   if ("string" == typeof i.type) {
     let t,
       e = i.props;
     for (let n in e) {
       if ("children" === n) continue;
       let o = e[n];
-      if (o instanceof u) {
+      if (o instanceof u$1) {
         if (!t) i.__np = t = {};
         t[n] = o;
         e[n] = o.peek();
@@ -525,7 +528,7 @@ c("__b", (t, i) => {
   }
   t(i);
 });
-c("__r", (t, i) => {
+u("__r", (t, i) => {
   h();
   let e,
     n = i.__c;
@@ -547,11 +550,11 @@ c("__r", (t, i) => {
   h(e);
   t(i);
 });
-c("__e", (t, i, e, n) => {
+u("__e", (t, i, e, n) => {
   h();
   t(i, e, n);
 });
-c("diffed", (t, i) => {
+u("diffed", (t, i) => {
   h();
   let e;
   if ("string" == typeof i.type && (e = i.__e)) {
@@ -598,7 +601,7 @@ function v(t, i, e, n) {
     })
   };
 }
-c("unmount", (t, i) => {
+u("unmount", (t, i) => {
   if ("string" == typeof i.type) {
     let t = i.__e;
     if (t) {
@@ -623,7 +626,7 @@ c("unmount", (t, i) => {
   }
   t(i);
 });
-c("__h", (t, i, e, n) => {
+u("__h", (t, i, e, n) => {
   if (n < 3 || 9 === n) i.__$f |= 2;
   t(i, e, n);
 });

@@ -33,11 +33,7 @@ startServer({
 _client.js_
 
 ```js
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
-
-const EventSource = require("eventsource");
+import { EventSource } from "eventsource";
 
 const eventSource = new EventSource("https://localhost:3456", {
   https: { rejectUnauthorized: false },

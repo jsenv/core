@@ -1,8 +1,4 @@
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
-
-const EventSource = require("eventsource");
+import { EventSource } from "eventsource";
 
 const eventsourceUrl = "https://localhost:3456";
 
