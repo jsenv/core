@@ -3,6 +3,7 @@ import { basename, dirname } from "node:path";
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
 import { statsToType } from "../read_write/stat/stats_to_type.js";
+import { callOnceIdle } from "./call_once_idle.js";
 import { createWatcher } from "./create_watcher.js";
 import { guardTooFastSecondCall } from "./guard_second_call.js";
 import { trackResources } from "./track_resources.js";
@@ -16,6 +17,7 @@ export const registerFileLifecycle = (
     notifyExistent = false,
     keepProcessAlive = true,
     cooldownBetweenFileEvents = 0,
+    idleMs = 50,
   },
 ) => {
   const sourceUrl = assertAndNormalizeFileUrl(source);
@@ -31,6 +33,11 @@ export const registerFileLifecycle = (
     throw new TypeError(
       `removed must be a function or undefined, got ${removed}`,
     );
+  }
+  if (idleMs) {
+    if (updated) {
+      updated = callOnceIdle(updated, idleMs);
+    }
   }
   if (cooldownBetweenFileEvents) {
     if (added) {

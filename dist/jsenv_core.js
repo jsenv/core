@@ -3906,6 +3906,24 @@ const ensureEmptyDirectory = async (source) => {
   );
 };
 
+const callOnceIdlePerFile = (callback, idleMs) => {
+  const timeoutIdMap = new Map();
+  return (fileEvent) => {
+    const { relativeUrl } = fileEvent;
+    let timeoutId = timeoutIdMap.get(relativeUrl);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      callback(fileEvent);
+    }, idleMs);
+    if (timeoutId.unref) {
+      timeoutId.unref();
+    }
+    timeoutIdMap.set(relativeUrl, timeoutId);
+  };
+};
+
 const isWindows = process.platform === "win32";
 
 const createWatcher = (sourcePath, options) => {
@@ -4001,6 +4019,7 @@ const registerDirectoryLifecycle = (
     // For this reason"cooldownBetweenFileEvents" should be reserved to scenarios
     // like unit tests
     cooldownBetweenFileEvents = 0,
+    idleMs = 50,
   },
 ) => {
   const sourceUrl = assertAndNormalizeDirectoryUrl(source);
@@ -4016,6 +4035,11 @@ const registerDirectoryLifecycle = (
     throw new TypeError(
       `removed must be a function or undefined, got ${removed}`,
     );
+  }
+  if (idleMs) {
+    if (updated) {
+      updated = callOnceIdlePerFile(updated, idleMs);
+    }
   }
   if (cooldownBetweenFileEvents) {
     if (added) {

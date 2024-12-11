@@ -4,6 +4,7 @@ import { readdirSync } from "node:fs";
 import { assertAndNormalizeDirectoryUrl } from "../path_and_url/directory_url_validation.js";
 import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
 import { statsToType } from "../read_write/stat/stats_to_type.js";
+import { callOnceIdlePerFile } from "./call_once_idle.js";
 import { createWatcher } from "./create_watcher.js";
 import { guardTooFastSecondCallPerFile } from "./guard_second_call.js";
 import { trackResources } from "./track_resources.js";
@@ -30,6 +31,7 @@ export const registerDirectoryLifecycle = (
     // For this reason"cooldownBetweenFileEvents" should be reserved to scenarios
     // like unit tests
     cooldownBetweenFileEvents = 0,
+    idleMs = 50,
   },
 ) => {
   const sourceUrl = assertAndNormalizeDirectoryUrl(source);
@@ -45,6 +47,11 @@ export const registerDirectoryLifecycle = (
     throw new TypeError(
       `removed must be a function or undefined, got ${removed}`,
     );
+  }
+  if (idleMs) {
+    if (updated) {
+      updated = callOnceIdlePerFile(updated, idleMs);
+    }
   }
   if (cooldownBetweenFileEvents) {
     if (added) {
