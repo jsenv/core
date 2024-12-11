@@ -258,13 +258,13 @@ const timeEllapsedPromise = (ms) => {
   } catch (errorEvent) {
     const actual = {
       type: errorEvent.type,
-      status: errorEvent.status,
+      code: errorEvent.code,
       message: errorEvent.message,
     };
     const expect = {
       type: "error",
-      status: 503,
-      message: "Service Unavailable",
+      code: 503,
+      message: "Non-200 status code (503)",
     };
     assert({ actual, expect });
   } finally {
@@ -294,13 +294,13 @@ const timeEllapsedPromise = (ms) => {
   } catch (errorEvent) {
     const actual = {
       type: errorEvent.type,
-      status: errorEvent.status,
+      code: errorEvent.code,
       message: errorEvent.message,
     };
     const expect = {
       type: "error",
-      status: 204,
-      message: "No Content",
+      code: 204,
+      message: "Server sent HTTP 204, not reconnecting",
     };
     assert({ actual, expect });
   }

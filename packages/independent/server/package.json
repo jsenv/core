@@ -37,6 +37,7 @@
     "ws": "8.18.0"
   },
   "devDependencies": {
-    "eventsource": "3.0.1"
+    "eventsource": "3.0.1",
+    "undici": "7.1.0"
   }
 }

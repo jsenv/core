@@ -1,8 +1,17 @@
 import { EventSource } from "eventsource";
+import { Agent, fetch } from "undici";
 
 export const openEventSource = async (url) => {
   const eventSource = new EventSource(url, {
-    https: { rejectUnauthorized: false },
+    fetch: (input, init) =>
+      fetch(input, {
+        ...init,
+        dispatcher: new Agent({
+          connect: {
+            rejectUnauthorized: false,
+          },
+        }),
+      }),
   });
 
   const messageEvents = [];
@@ -24,8 +33,12 @@ export const openEventSource = async (url) => {
     };
 
     eventSource.onerror = (errorEvent) => {
-      eventSource.onerror = () => {};
-      if (eventSource.readyState === EventSource.CONNECTING) {
+      if (
+        eventSource.readyState === EventSource.CLOSED ||
+        eventSource.readyState === EventSource.CONNECTING
+      ) {
+        eventSource.onerror = () => {};
+        eventSource.onopen = () => {};
         reject(errorEvent);
       }
     };

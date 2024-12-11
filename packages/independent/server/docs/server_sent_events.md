@@ -35,9 +35,7 @@ _client.js_
 ```js
 import { EventSource } from "eventsource";
 
-const eventSource = new EventSource("https://localhost:3456", {
-  https: { rejectUnauthorized: false },
-});
+const eventSource = new EventSource("https://localhost:3456");
 
 eventSource.addEventListener("ping", ({ lastEventId }) => {
   console.log("> ping from server", { lastEventId });
