@@ -1,5 +1,4 @@
 import { assert } from "@jsenv/assert";
-
 import { createSSERoom, startServer } from "@jsenv/server";
 import { closeEventSource, openEventSource } from "./sse_test_helpers.mjs";
 

@@ -37,7 +37,6 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
       __: null,
       __b: 0,
       __e: null,
-      __d: void 0,
       __c: null,
       constructor: void 0,
       __v: --f,
@@ -68,20 +67,20 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
         var a = t[u];
         if (null != a && "" !== a) {
           var p = "-" == u[0] ? u : c[u] || (c[u] = u.replace(l, "-$&").toLowerCase()),
-            _ = ";";
-          "number" != typeof a || p.startsWith("--") || o.test(p) || (_ = "px;"), i = i + p + ":" + a + _;
+            s = ";";
+          "number" != typeof a || p.startsWith("--") || o.test(p) || (s = "px;"), i = i + p + ":" + a + s;
         }
       }
       return e + '="' + i + '"';
     }
     return null == t || !1 === t || "function" == typeof t || "object" == typeof t ? "" : !0 === t ? e : e + '="' + n(t) + '"';
   }
-  function _(r) {
+  function s(r) {
     if (null == r || "boolean" == typeof r || "function" == typeof r) return null;
     if ("object" == typeof r) {
       if (void 0 === r.constructor) return r;
       if (i(r)) {
-        for (var e = 0; e < r.length; e++) r[e] = _(r[e]);
+        for (var e = 0; e < r.length; e++) r[e] = s(r[e]);
         return r;
       }
     }
@@ -91,7 +90,7 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
     jsx: u,
     jsxAttr: p,
     jsxDEV: u,
-    jsxEscape: _,
+    jsxEscape: s,
     jsxTemplate: a,
     jsxs: u
   });
