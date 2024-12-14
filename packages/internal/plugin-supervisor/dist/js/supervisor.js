@@ -1159,7 +1159,38 @@ window.__supervisor__ = (() => {
       }
       return exception;
     };
-    window.addEventListener("error", errorEvent => {
+    const addEventListenerCalledLast = (object, eventNameListened, eventCallback) => {
+      const eventCallbackSet = new Set();
+      object.addEventListener(eventNameListened, event => {
+        for (const callback of eventCallbackSet) {
+          callback(event);
+        }
+        eventCallback(event);
+      });
+      const addEventListener = object.addEventListener;
+      const removeEventListener = object.removeEventListener;
+      object.addEventListener = function (eventName, callback) {
+        if (eventName === eventNameListened) {
+          eventCallbackSet.add(callback);
+          return;
+        }
+        addEventListener.call(this, eventName, callback);
+      };
+      object.removeEventListener = function (eventName, callback) {
+        if (eventName === eventNameListened) {
+          eventCallbackSet.delete(callback);
+          return;
+        }
+        removeEventListener.call(this, eventName, callback);
+      };
+    };
+    addEventListenerCalledLast(window, "error", errorEvent => {
+      if (errorEvent.defaultPrevented) {
+        if (logs) {
+          console.log("ignore prevented error event", errorEvent);
+        }
+        return;
+      }
       if (!errorEvent.isTrusted) {
         // ignore custom error event (not sent by browser)
         if (logs) {
@@ -1188,7 +1219,7 @@ window.__supervisor__ = (() => {
       });
       supervisor.reportException(exception);
     });
-    window.addEventListener("unhandledrejection", event => {
+    addEventListenerCalledLast(window, "unhandledrejection", event => {
       if (event.defaultPrevented) {
         return;
       }
