@@ -21,7 +21,7 @@
     "@babel/plugin-syntax-import-attributes": "7.26.0",
     "@babel/plugin-transform-react-jsx": "7.25.9",
     "@jsenv/assert": "4.4.2",
-    "@jsenv/core": "39.7.6",
+    "@jsenv/core": "39.7.7",
     "@jsenv/plugin-preact": "1.6.31",
     "@jsenv/plugin-bundling": "2.7.20",
     "@jsenv/plugin-minification": "1.5.12",

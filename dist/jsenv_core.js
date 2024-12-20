@@ -3,7 +3,7 @@ import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, watch, readdirSync, createReadStream, readFile, existsSync, realpathSync } from "node:fs";
+import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFileSync, writeFileSync as writeFileSync$1, mkdirSync, unlink, openSync, closeSync, rmdir, unlinkSync, readdirSync, rmdirSync, watch, createReadStream, readFile, existsSync, realpathSync } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import cluster from "node:cluster";
@@ -3668,7 +3668,7 @@ const removeEntry = async (
       sourceStats.isCharacterDevice() ||
       sourceStats.isBlockDevice()
     ) {
-      await removeNonDirectory(
+      await removeNonDirectory$1(
         sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl,
         {
           maxRetries,
@@ -3689,7 +3689,7 @@ const removeEntry = async (
   }
 };
 
-const removeNonDirectory = (sourceUrl, { maxRetries, retryDelay }) => {
+const removeNonDirectory$1 = (sourceUrl, { maxRetries, retryDelay }) => {
   const sourcePath = urlToFileSystemPath(sourceUrl);
 
   let retryCount = 0;
@@ -3828,11 +3828,11 @@ const removeDirectory = async (
   };
 
   const visitFile = async (fileUrl) => {
-    await removeNonDirectory(fileUrl, { maxRetries, retryDelay });
+    await removeNonDirectory$1(fileUrl, { maxRetries, retryDelay });
   };
 
   const visitSymbolicLink = async (symbolicLinkUrl) => {
-    await removeNonDirectory(symbolicLinkUrl, { maxRetries, retryDelay });
+    await removeNonDirectory$1(symbolicLinkUrl, { maxRetries, retryDelay });
   };
 
   try {
@@ -3877,6 +3877,204 @@ const removeDirectoryNaive = (
 
 process.platform === "win32";
 
+const removeEntrySync = (
+  source,
+  {
+    allowUseless = false,
+    recursive = false,
+    maxRetries = 3,
+    retryDelay = 100,
+    onlyContent = false,
+  } = {},
+) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+  const sourceStats = readEntryStatSync(sourceUrl, {
+    nullIfNotFound: true,
+    followLink: false,
+  });
+  if (!sourceStats) {
+    if (allowUseless) {
+      return;
+    }
+    throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+  }
+
+  // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
+  // FIFO and socket are ignored, not sure what they are exactly and what to do with them
+  // other libraries ignore them, let's do the same.
+  if (
+    sourceStats.isFile() ||
+    sourceStats.isSymbolicLink() ||
+    sourceStats.isCharacterDevice() ||
+    sourceStats.isBlockDevice()
+  ) {
+    removeNonDirectory(
+      sourceUrl.endsWith("/") ? sourceUrl.slice(0, -1) : sourceUrl);
+  } else if (sourceStats.isDirectory()) {
+    const directoryUrl = ensurePathnameTrailingSlash(sourceUrl);
+    removeDirectorySync$1(directoryUrl, {
+      recursive,
+      maxRetries,
+      retryDelay,
+      onlyContent,
+    });
+  }
+};
+
+const removeNonDirectory = (sourceUrl) => {
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const attempt = () => {
+    unlinkSyncNaive(sourcePath);
+  };
+  attempt();
+};
+
+const unlinkSyncNaive = (sourcePath, { handleTemporaryError = null } = {}) => {
+  try {
+    unlinkSync(sourcePath);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      return;
+    }
+    if (
+      handleTemporaryError &&
+      (error.code === "EBUSY" ||
+        error.code === "EMFILE" ||
+        error.code === "ENFILE" ||
+        error.code === "ENOENT")
+    ) {
+      handleTemporaryError(error);
+      return;
+    }
+    throw error;
+  }
+};
+
+const removeDirectorySync$1 = (
+  rootDirectoryUrl,
+  { maxRetries, retryDelay, recursive, onlyContent },
+) => {
+  const visit = (sourceUrl) => {
+    const sourceStats = readEntryStatSync(sourceUrl, {
+      nullIfNotFound: true,
+      followLink: false,
+    });
+
+    // file/directory not found
+    if (sourceStats === null) {
+      return;
+    }
+
+    if (
+      sourceStats.isFile() ||
+      sourceStats.isCharacterDevice() ||
+      sourceStats.isBlockDevice()
+    ) {
+      visitFile(sourceUrl);
+    } else if (sourceStats.isSymbolicLink()) {
+      visitSymbolicLink(sourceUrl);
+    } else if (sourceStats.isDirectory()) {
+      visitDirectory(`${sourceUrl}/`);
+    }
+  };
+
+  const visitDirectory = (directoryUrl) => {
+    const directoryPath = urlToFileSystemPath(directoryUrl);
+    const optionsFromRecursive = recursive
+      ? {
+          handleNotEmptyError: () => {
+            removeDirectoryContent(directoryUrl);
+            visitDirectory(directoryUrl);
+          },
+        }
+      : {};
+    removeDirectorySyncNaive(directoryPath, {
+      ...optionsFromRecursive,
+      // Workaround for https://github.com/joyent/node/issues/4337
+      ...(process.platform === "win32"
+        ? {
+            handlePermissionError: (error) => {
+              console.error(
+                `trying to fix windows EPERM after readir on ${directoryPath}`,
+              );
+
+              let openOrCloseError;
+              try {
+                const fd = openSync(directoryPath);
+                closeSync(fd);
+              } catch (e) {
+                openOrCloseError = e;
+              }
+
+              if (openOrCloseError) {
+                if (openOrCloseError.code === "ENOENT") {
+                  return;
+                }
+                console.error(
+                  `error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`,
+                );
+                throw error;
+              }
+              removeDirectorySyncNaive(directoryPath, {
+                ...optionsFromRecursive,
+              });
+            },
+          }
+        : {}),
+    });
+  };
+
+  const removeDirectoryContent = (directoryUrl) => {
+    const entryNames = readdirSync(new URL(directoryUrl));
+    for (const entryName of entryNames) {
+      const url = resolveUrl$1(entryName, directoryUrl);
+      visit(url);
+    }
+  };
+
+  const visitFile = (fileUrl) => {
+    removeNonDirectory(fileUrl);
+  };
+
+  const visitSymbolicLink = (symbolicLinkUrl) => {
+    removeNonDirectory(symbolicLinkUrl);
+  };
+
+  if (onlyContent) {
+    removeDirectoryContent(rootDirectoryUrl);
+  } else {
+    visitDirectory(rootDirectoryUrl);
+  }
+};
+
+const removeDirectorySyncNaive = (
+  directoryPath,
+  { handleNotEmptyError = null, handlePermissionError = null } = {},
+) => {
+  try {
+    rmdirSync(directoryPath);
+  } catch (error) {
+    if (handlePermissionError && error.code === "EPERM") {
+      handlePermissionError(error);
+      return;
+    }
+    if (error.code === "ENOENT") {
+      return;
+    }
+    if (
+      handleNotEmptyError &&
+      // linux os
+      (error.code === "ENOTEMPTY" ||
+        // SunOS
+        error.code === "EEXIST")
+    ) {
+      handleNotEmptyError(error);
+      return;
+    }
+    throw error;
+  }
+};
+
 process.platform === "win32";
 
 const ensureEmptyDirectory = async (source) => {
@@ -3904,6 +4102,13 @@ const ensureEmptyDirectory = async (source) => {
   throw new Error(
     `ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`,
   );
+};
+
+const removeDirectorySync = (url, options = {}) => {
+  return removeEntrySync(url, {
+    ...options,
+    recursive: true,
+  });
 };
 
 const callOnceIdlePerFile = (callback, idleMs) => {
@@ -14163,7 +14368,18 @@ const createUrlInfoTransformer = ({
       contentIsInlined = false;
     }
     if (!contentIsInlined) {
-      writeFileSync(new URL(generatedUrl), urlInfo.content);
+      try {
+        writeFileSync(new URL(generatedUrl), urlInfo.content);
+      } catch (e) {
+        if (e.code === "EISDIR") {
+          // happens when directory existed but got delete
+          // we can safely remove that directory and write the new file
+          removeDirectorySync(new URL(generatedUrl));
+          writeFileSync(new URL(generatedUrl), urlInfo.content);
+        } else {
+          throw e;
+        }
+      }
     }
     const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
     if (sourcemapGeneratedUrl && sourcemapReference) {

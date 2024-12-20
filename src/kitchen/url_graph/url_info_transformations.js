@@ -1,4 +1,4 @@
-import { writeFileSync } from "@jsenv/filesystem";
+import { removeDirectorySync, writeFileSync } from "@jsenv/filesystem";
 import {
   composeTwoSourcemaps,
   generateSourcemapDataUrl,
@@ -275,7 +275,18 @@ export const createUrlInfoTransformer = ({
       contentIsInlined = false;
     }
     if (!contentIsInlined) {
-      writeFileSync(new URL(generatedUrl), urlInfo.content);
+      try {
+        writeFileSync(new URL(generatedUrl), urlInfo.content);
+      } catch (e) {
+        if (e.code === "EISDIR") {
+          // happens when directory existed but got delete
+          // we can safely remove that directory and write the new file
+          removeDirectorySync(new URL(generatedUrl));
+          writeFileSync(new URL(generatedUrl), urlInfo.content);
+        } else {
+          throw e;
+        }
+      }
     }
     const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
     if (sourcemapGeneratedUrl && sourcemapReference) {
