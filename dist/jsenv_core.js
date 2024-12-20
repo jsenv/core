@@ -18890,8 +18890,8 @@ const resolveSymlink = (fileUrl) => {
   return realUrlObject.href;
 };
 
-const html404AndParentDirFileUrl = new URL(
-  "./html/html_404_and_parent_dir.html",
+const html404AndAncestorDirFileUrl = new URL(
+  "./html/html_404_and_ancestor_dir.html",
   import.meta.url,
 );
 const htmlFileUrlForDirectory = new URL(
@@ -18959,68 +18959,86 @@ const jsenvPluginProtocolFile = ({
         if (!urlInfo.url.startsWith("file:")) {
           return null;
         }
-        const urlObject = new URL(urlInfo.url);
-        const { firstReference } = urlInfo;
-        if (firstReference.leadsToADirectory) {
-          const directoryContentArray = readdirSync(urlObject);
-          if (firstReference.type === "filesystem") {
-            const content = JSON.stringify(directoryContentArray, null, "  ");
+        const generateContent = () => {
+          const urlObject = new URL(urlInfo.url);
+          const { firstReference } = urlInfo;
+          if (firstReference.leadsToADirectory) {
+            const directoryContentArray = readdirSync(urlObject);
+            if (firstReference.type === "filesystem") {
+              const content = JSON.stringify(directoryContentArray, null, "  ");
+              return {
+                type: "directory",
+                contentType: "application/json",
+                content,
+              };
+            }
+            const acceptsHtml = urlInfo.context.request
+              ? pickContentType(urlInfo.context.request, ["text/html"])
+              : false;
+            if (acceptsHtml) {
+              firstReference.expectedType = "html";
+              const html = generateHtmlForDirectory(
+                urlObject.href,
+                directoryContentArray,
+                urlInfo.context.rootDirectoryUrl,
+              );
+              return {
+                type: "html",
+                contentType: "text/html",
+                content: html,
+              };
+            }
             return {
               type: "directory",
               contentType: "application/json",
-              content,
+              content: JSON.stringify(directoryContentArray, null, "  "),
             };
           }
-          const acceptsHtml = urlInfo.context.request
-            ? pickContentType(urlInfo.context.request, ["text/html"])
-            : false;
-          if (acceptsHtml) {
-            firstReference.expectedType = "html";
-            const html = generateHtmlForDirectory(
-              urlObject.href,
-              directoryContentArray,
-              urlInfo.context.rootDirectoryUrl,
-            );
-            return {
-              type: "html",
-              contentType: "text/html",
-              content: html,
-            };
-          }
+          const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
+          const fileBuffer = readFileSync(urlObject);
+          const content = CONTENT_TYPE.isTextual(contentType)
+            ? String(fileBuffer)
+            : fileBuffer;
           return {
-            type: "directory",
-            contentType: "application/json",
-            content: JSON.stringify(directoryContentArray, null, "  "),
+            content,
+            contentType,
+            contentLength: fileBuffer.length,
           };
-        }
-        const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
+        };
+
         const request = urlInfo.context.request;
         if (request && request.headers["sec-fetch-dest"] === "document") {
           try {
-            const fileBuffer = readFileSync(urlObject);
-            const content = CONTENT_TYPE.isTextual(contentType)
-              ? String(fileBuffer)
-              : fileBuffer;
-            return {
-              content,
-              contentType,
-              contentLength: fileBuffer.length,
-            };
+            return generateContent();
           } catch (e) {
             if (e.code !== "ENOENT") {
               throw e;
             }
-            const parentDirectoryUrl = new URL("./", urlInfo.url);
-            if (!existsSync(parentDirectoryUrl)) {
-              throw e;
+            const rootDirectoryUrl = urlInfo.context.rootDirectoryUrl;
+            let firstExistingAncestorDirectoryUrl = new URL("./", urlInfo.url);
+            while (!existsSync(firstExistingAncestorDirectoryUrl)) {
+              firstExistingAncestorDirectoryUrl = new URL(
+                "../",
+                firstExistingAncestorDirectoryUrl,
+              );
+              if (
+                !urlIsInsideOf(
+                  firstExistingAncestorDirectoryUrl,
+                  rootDirectoryUrl,
+                )
+              ) {
+                firstExistingAncestorDirectoryUrl = rootDirectoryUrl;
+                break;
+              }
             }
-            const parentDirectoryContentArray = readdirSync(
-              new URL(parentDirectoryUrl),
+
+            const firstExistingAncestorDirectoryContent = readdirSync(
+              new URL(firstExistingAncestorDirectoryUrl),
             );
             const html = generateHtmlForENOENT(
               urlInfo.url,
-              parentDirectoryContentArray,
-              parentDirectoryUrl,
+              firstExistingAncestorDirectoryContent,
+              firstExistingAncestorDirectoryUrl,
               urlInfo.context.rootDirectoryUrl,
               directoryListingUrlMocks,
             );
@@ -19034,15 +19052,7 @@ const jsenvPluginProtocolFile = ({
             };
           }
         }
-        const fileBuffer = readFileSync(urlObject);
-        const content = CONTENT_TYPE.isTextual(contentType)
-          ? String(fileBuffer)
-          : fileBuffer;
-        return {
-          content,
-          contentType,
-          contentLength: fileBuffer.length,
-        };
+        return generateContent();
       },
     },
   ];
@@ -19073,17 +19083,17 @@ const generateHtmlForDirectory = (
 };
 const generateHtmlForENOENT = (
   url,
-  parentDirectoryContentArray,
-  parentDirectoryUrl,
+  ancestorDirectoryContentArray,
+  ancestorDirectoryUrl,
   rootDirectoryUrl,
   directoryListingUrlMocks,
 ) => {
-  const htmlFor404AndParentDir = String(
-    readFileSync(html404AndParentDirFileUrl),
+  const htmlFor404AndAncestorDir = String(
+    readFileSync(html404AndAncestorDirFileUrl),
   );
   const fileRelativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-  const parentDirectoryRelativeUrl = urlToRelativeUrl(
-    parentDirectoryUrl,
+  const ancestorDirectoryRelativeUrl = urlToRelativeUrl(
+    ancestorDirectoryUrl,
     rootDirectoryUrl,
   );
   const replacers = {
@@ -19091,18 +19101,18 @@ const generateHtmlForENOENT = (
       ? `@jsenv/core/${urlToRelativeUrl(url, jsenvCoreDirectoryUrl)}`
       : url,
     fileRelativeUrl,
-    parentDirectoryUrl,
-    parentDirectoryRelativeUrl,
-    parentDirectoryNav: () =>
-      generateDirectoryNav(parentDirectoryRelativeUrl, rootDirectoryUrl),
-    parentDirectoryContent: () =>
+    ancestorDirectoryUrl,
+    ancestorDirectoryRelativeUrl,
+    ancestorDirectoryNav: () =>
+      generateDirectoryNav(ancestorDirectoryRelativeUrl, rootDirectoryUrl),
+    ancestorDirectoryContent: () =>
       generateDirectoryContent(
-        parentDirectoryContentArray,
-        parentDirectoryUrl,
+        ancestorDirectoryContentArray,
+        ancestorDirectoryUrl,
         rootDirectoryUrl,
       ),
   };
-  const html = replacePlaceholders$1(htmlFor404AndParentDir, replacers);
+  const html = replacePlaceholders$1(htmlFor404AndAncestorDir, replacers);
   return html;
 };
 const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
