@@ -4662,7 +4662,8 @@ const registerDirectoryLifecycle = (
     }
   };
 
-  readdirSync(new URL(sourceUrl)).forEach((entry) => {
+  const entries = readdirSync(new URL(sourceUrl));
+  for (const entry of entries) {
     const entryUrl = new URL(entry, sourceUrl).href;
     const entryInfo = readEntryInfo(entryUrl);
     if (entryInfo.type !== null && entryInfo.patternValue) {
@@ -4670,7 +4671,7 @@ const registerDirectoryLifecycle = (
         notify: notifyExistent,
       });
     }
-  });
+  }
   if (debug) {
     const relativeUrls = Array.from(infoMap.keys());
     if (relativeUrls.length === 0) {
@@ -4704,11 +4705,11 @@ const shouldCallUpdated = (entryInfo) => {
   if (!stat.atimeMs) {
     return true;
   }
-  if (stat.atimeMs < stat.mtimeMs) {
+  if (stat.atimeMs <= stat.mtimeMs) {
     return true;
   }
-  if (isLinux && stat.mtimeMs <= previousInfo.stat.mtimeMs) {
-    return false;
+  if (stat.mtimeMs !== previousInfo.stat.mtimeMs) {
+    return true;
   }
   return true;
 };
@@ -4741,6 +4742,10 @@ const fileSystemPathToDirectoryRelativeUrlAndFilename = (path) => {
     filename,
   };
 };
+
+process.platform === "darwin";
+process.platform === "linux";
+process.platform === "freebsd";
 
 /*
  * - Buffer documentation on Node.js
@@ -14003,6 +14008,19 @@ const createUrlInfo = (url, context) => {
     reference.next = referenceWithoutSearchParam;
     return referenceWithoutSearchParam.urlInfo;
   };
+  urlInfo.onRemoved = () => {
+    urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
+    urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+      referenceToOther.remove();
+    });
+    if (urlInfo.searchParams.size > 0) {
+      const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+      const urlInfoWithoutSearch = urlInfo.graph.getUrlInfo(urlWithoutSearch);
+      if (urlInfoWithoutSearch) {
+        urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
+      }
+    }
+  };
   urlInfo.onModified = ({ modifiedTimestamp = Date.now() } = {}) => {
     const visitedSet = new Set();
     const considerModified = (urlInfo) => {
@@ -14039,21 +14057,6 @@ const createUrlInfo = (url, context) => {
     );
   };
 
-  // not used for now
-  // urlInfo.deleteFromGraph = () => {
-  //   urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
-  //   urlInfo.graph.urlInfoMap.delete(url);
-  //   urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-  //     referenceToOther.remove();
-  //   });
-  //   if (urlInfo.searchParams.size > 0) {
-  //     const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-  //     const urlInfoWithoutSearch = urlInfo.graph.getUrlInfo(urlWithoutSearch);
-  //     if (urlInfoWithoutSearch) {
-  //       urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
-  //     }
-  //   }
-  // };
   urlInfo.cook = (customContext) => {
     return urlInfo.context.cook(urlInfo, customContext);
   };
@@ -23805,10 +23808,14 @@ const startDevServer = async ({
         sourceDirectoryUrl,
       );
       let kitchen;
-      clientFileChangeEventEmitter.on(({ url }) => {
+      clientFileChangeEventEmitter.on(({ url, event }) => {
         const urlInfo = kitchen.graph.getUrlInfo(url);
         if (urlInfo) {
-          urlInfo.onModified();
+          if (event === "removed") {
+            urlInfo.onRemoved();
+          } else {
+            urlInfo.onModified();
+          }
         }
       });
       const clientRuntimeCompat = { [runtimeName]: runtimeVersion };

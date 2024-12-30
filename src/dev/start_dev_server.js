@@ -237,10 +237,14 @@ export const startDevServer = async ({
         sourceDirectoryUrl,
       );
       let kitchen;
-      clientFileChangeEventEmitter.on(({ url }) => {
+      clientFileChangeEventEmitter.on(({ url, event }) => {
         const urlInfo = kitchen.graph.getUrlInfo(url);
         if (urlInfo) {
-          urlInfo.onModified();
+          if (event === "removed") {
+            urlInfo.onRemoved();
+          } else {
+            urlInfo.onModified();
+          }
         }
       });
       const clientRuntimeCompat = { [runtimeName]: runtimeVersion };

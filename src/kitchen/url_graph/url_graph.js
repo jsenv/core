@@ -356,6 +356,19 @@ const createUrlInfo = (url, context) => {
     reference.next = referenceWithoutSearchParam;
     return referenceWithoutSearchParam.urlInfo;
   };
+  urlInfo.onRemoved = () => {
+    urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
+    urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
+      referenceToOther.remove();
+    });
+    if (urlInfo.searchParams.size > 0) {
+      const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+      const urlInfoWithoutSearch = urlInfo.graph.getUrlInfo(urlWithoutSearch);
+      if (urlInfoWithoutSearch) {
+        urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
+      }
+    }
+  };
   urlInfo.onModified = ({ modifiedTimestamp = Date.now() } = {}) => {
     const visitedSet = new Set();
     const considerModified = (urlInfo) => {
@@ -392,21 +405,6 @@ const createUrlInfo = (url, context) => {
     );
   };
 
-  // not used for now
-  // urlInfo.deleteFromGraph = () => {
-  //   urlInfo.kitchen.urlInfoTransformer.resetContent(urlInfo);
-  //   urlInfo.graph.urlInfoMap.delete(url);
-  //   urlInfo.referenceToOthersSet.forEach((referenceToOther) => {
-  //     referenceToOther.remove();
-  //   });
-  //   if (urlInfo.searchParams.size > 0) {
-  //     const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-  //     const urlInfoWithoutSearch = urlInfo.graph.getUrlInfo(urlWithoutSearch);
-  //     if (urlInfoWithoutSearch) {
-  //       urlInfoWithoutSearch.searchParamVariantSet.delete(urlInfo);
-  //     }
-  //   }
-  // };
   urlInfo.cook = (customContext) => {
     return urlInfo.context.cook(urlInfo, customContext);
   };
