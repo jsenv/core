@@ -836,8 +836,7 @@ function requireHe () {
 			var freeExports = exports;
 
 			// Detect free variable `module`.
-			var freeModule = module &&
-				module.exports == freeExports && module;
+			var freeModule = module.exports == freeExports && module;
 
 			// Detect free variable `globalThis`, from Node.js or Browserified code,
 			// and use it as `root`.
