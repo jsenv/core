@@ -43,10 +43,17 @@ const jsenvPluginInlineContentFetcher = () => {
       }
       let isDirectRequestToFile;
       if (urlInfo.context.request) {
-        const requestedUrl = new URL(
-          urlInfo.context.request.resource.slice(1),
-          urlInfo.context.rootDirectoryUrl,
-        ).href;
+        let requestResource = urlInfo.context.request.resource;
+        let requestedUrl;
+        if (requestResource.startsWith("/@fs/")) {
+          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
+          requestedUrl = `file:///${fsRootRelativeUrl}`;
+        } else {
+          requestedUrl = new URL(
+            requestResource.slice(1),
+            urlInfo.context.rootDirectoryUrl,
+          ).href;
+        }
         isDirectRequestToFile = requestedUrl === urlInfo.url;
       }
       /*
