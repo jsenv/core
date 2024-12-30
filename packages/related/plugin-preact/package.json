@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/plugin-preact",
-  "version": "1.6.31",
+  "version": "1.6.32",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -25,7 +25,7 @@
     "@babel/plugin-transform-react-jsx": "7.25.9",
     "@babel/plugin-transform-react-jsx-development": "7.25.9",
     "@jsenv/ast": "6.4.1",
-    "@jsenv/sourcemap": "1.2.28",
+    "@jsenv/sourcemap": "1.2.29",
     "@jsenv/url-meta": "8.5.2",
     "@prefresh/babel-plugin": "0.5.1",
     "@prefresh/core": "1.5.3",
@@ -35,7 +35,7 @@
     "@jsenv/core": "*"
   },
   "devDependencies": {
-    "preact": "10.25.1",
+    "preact": "10.25.4",
     "react-redux": "9.2.0",
     "redux": "5.0.1"
   }

@@ -42,6 +42,6 @@
   },
   "devDependencies": {
     "is-unicode-supported": "2.1.0",
-    "supports-color": "9.4.0"
+    "supports-color": "10.0.0"
   }
 }
