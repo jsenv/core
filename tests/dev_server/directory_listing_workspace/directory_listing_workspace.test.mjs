@@ -37,6 +37,8 @@ const takeScreenshot = async (scenario) => {
 try {
   await page.goto(`${devServer.origin}`);
   await takeScreenshot("0_at_start");
+  await page.locator(`a:text-matches("../packages/")`).click();
+  await takeScreenshot("1_after_click_packages");
 } finally {
   if (!debug) {
     browser.close();
