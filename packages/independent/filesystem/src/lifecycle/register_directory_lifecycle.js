@@ -339,7 +339,8 @@ export const registerDirectoryLifecycle = (
     }
   };
 
-  readdirSync(new URL(sourceUrl)).forEach((entry) => {
+  const entries = readdirSync(new URL(sourceUrl));
+  for (const entry of entries) {
     const entryUrl = new URL(entry, sourceUrl).href;
     const entryInfo = readEntryInfo(entryUrl);
     if (entryInfo.type !== null && entryInfo.patternValue) {
@@ -347,7 +348,7 @@ export const registerDirectoryLifecycle = (
         notify: notifyExistent,
       });
     }
-  });
+  }
   if (debug) {
     const relativeUrls = Array.from(infoMap.keys());
     if (relativeUrls.length === 0) {
@@ -381,11 +382,11 @@ const shouldCallUpdated = (entryInfo) => {
   if (!stat.atimeMs) {
     return true;
   }
-  if (stat.atimeMs < stat.mtimeMs) {
+  if (stat.atimeMs <= stat.mtimeMs) {
     return true;
   }
-  if (isLinux && stat.mtimeMs <= previousInfo.stat.mtimeMs) {
-    return false;
+  if (stat.mtimeMs !== previousInfo.stat.mtimeMs) {
+    return true;
   }
   return true;
 };

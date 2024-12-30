@@ -8,6 +8,10 @@ import { createWatcher } from "./create_watcher.js";
 import { guardTooFastSecondCall } from "./guard_second_call.js";
 import { trackResources } from "./track_resources.js";
 
+const isMacos = process.platform === "darwin";
+const isLinux = process.platform === "linux";
+const isFreeBSD = process.platform === "freebsd";
+
 export const registerFileLifecycle = (
   source,
   {
@@ -171,16 +175,13 @@ const watchFileMutation = (
   { updated, removed, keepProcessAlive, stat },
 ) => {
   let prevStat = stat;
-  let watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
-    persistent: keepProcessAlive,
-  });
+  let watcher;
 
-  watcher.on("change", () => {
+  const onChange = () => {
     const { type, stat } = readFileInfo(sourceUrl);
 
     if (type === null) {
-      watcher.close();
-      watcher = undefined;
+      stopWatching();
       if (removed) {
         removed();
       }
@@ -188,25 +189,38 @@ const watchFileMutation = (
       if (updated && shouldCallUpdated(stat, prevStat)) {
         updated();
       }
+      if ((isMacos || isLinux || isFreeBSD) && prevStat.ino !== stat.ino) {
+        stopWatching();
+        watch();
+      }
     }
     prevStat = stat;
-  });
+  };
 
-  return () => {
+  const watch = () => {
+    watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
+      persistent: keepProcessAlive,
+    });
+    watcher.on("change", onChange);
+  };
+  const stopWatching = () => {
     if (watcher) {
       watcher.close();
+      watcher = undefined;
     }
   };
+  watch();
+  return stopWatching;
 };
 
 const shouldCallUpdated = (stat, prevStat) => {
   if (!stat.atimeMs) {
     return true;
   }
-  if (stat.atimeMs < stat.mtimeMs) {
+  if (stat.atimeMs <= stat.mtimeMs) {
     return true;
   }
-  if (stat.mtimeMs > prevStat.mtimeMs) {
+  if (stat.mtimeMs !== prevStat.mtimeMs) {
     return true;
   }
   return false;

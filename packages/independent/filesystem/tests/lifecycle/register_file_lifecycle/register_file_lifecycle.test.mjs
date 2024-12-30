@@ -139,9 +139,9 @@ ensureEmptyDirectorySync(tempDirectoryUrl);
     keepProcessAlive: false,
   });
   writeFileSync(fileUrl);
-  await wait(500);
+  await wait(200);
   moveEntrySync({ from: fileUrl, to: destinationUrl });
-  await wait(500);
+  await wait(200);
   const actual = mutations;
   const expect = [{ type: "added" }, { type: "removed" }];
   assert({ actual, expect });

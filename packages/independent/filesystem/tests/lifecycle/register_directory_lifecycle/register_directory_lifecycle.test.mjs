@@ -21,7 +21,6 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const mutations = [];
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { "./file": "toto" },
-    cooldownBetweenFileEvents: 300,
     // debug: true,
     added: (data) => {
       mutations.push({ name: "added", ...data });
@@ -68,7 +67,6 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const mutations = [];
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { "dir/": "toto" },
-    cooldownBetweenFileEvents: 300,
     added: (data) => {
       mutations.push({ name: "added", ...data });
     },
@@ -111,7 +109,6 @@ await ensureEmptyDirectory(tempDirectoryUrl);
   const mutations = [];
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { file: "toto" },
-    cooldownBetweenFileEvents: 300,
     added: (data) => {
       mutations.push({ name: "added", ...data });
     },
@@ -168,7 +165,6 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { file: "toto" },
-    cooldownBetweenFileEvents: 300,
     updated: (data) => {
       mutations.push({ name: "updated", ...data });
     },
@@ -215,7 +211,6 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { "dir/": "toto" },
-    cooldownBetweenFileEvents: 200,
     removed: (data) => {
       mutations.push({ name: "removed", ...data });
     },
@@ -275,7 +270,6 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { file: "toto" },
-    cooldownBetweenFileEvents: 200,
     updated: (data) => {
       mutations.push({ name: "updated", ...data });
     },
@@ -323,7 +317,6 @@ await ensureEmptyDirectory(tempDirectoryUrl);
 
   const unregister = registerDirectoryLifecycle(tempDirectoryUrl, {
     watchPatterns: { file: "toto" },
-    cooldownBetweenFileEvents: 200,
     updated: (data) => {
       mutations.push({ name: "updated", ...data });
     },
