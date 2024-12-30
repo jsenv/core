@@ -2139,6 +2139,10 @@ process.platform === "win32";
 
 process.platform === "linux";
 
+process.platform === "darwin";
+process.platform === "linux";
+process.platform === "freebsd";
+
 /*
  * This plugin provides a way for jsenv to supervisor js execution:
  * - Know how many js are executed, when they are done, collect errors, etc...

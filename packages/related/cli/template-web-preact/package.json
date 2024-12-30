@@ -10,7 +10,7 @@
     "test:coverage": "npm run test -- --coverage",
     "build": "node ./scripts/build.mjs",
     "build:serve": "node ./scripts/build_serve.mjs --open",
-    "eslint": "npx eslint . --ext=.html,.js,.jsx,.mjs,.cjs",
+    "eslint": "npx eslint .",
     "prettier": "prettier --write .",
     "playwright:install": "npx playwright install-deps && npx playwright install"
   },

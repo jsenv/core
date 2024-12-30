@@ -3204,6 +3204,10 @@ process.platform === "win32";
 
 process.platform === "linux";
 
+process.platform === "darwin";
+process.platform === "linux";
+process.platform === "freebsd";
+
 const normalizeFileByFileCoveragePaths = (
   fileByFileCoverage,
   rootDirectoryUrl,
