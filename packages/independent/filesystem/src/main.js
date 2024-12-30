@@ -17,6 +17,8 @@ export {
 } from "./path_and_url/file_url_validation.js";
 export { comparePathnames } from "./path_and_url/compare_pathnames.js";
 export { ensureWindowsDriveLetter } from "./path_and_url/ensure_windows_drive_letter.js";
+export { getParentDirectoryUrl } from "./path_and_url/get_parent_directory_url.js";
+export { findAncestorDirectoryUrl } from "./path_and_url/find_ancestor_directory_url.js";
 
 // list
 export { collectDirectoryMatchReport } from "./list/collect_directory_match_report.js";
