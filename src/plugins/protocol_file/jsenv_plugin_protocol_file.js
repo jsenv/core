@@ -295,17 +295,16 @@ const generateDirectoryContentItems = (directoryUrl, rootDirectoryUrl) => {
           );
           fileUrls.push(new URL(directoryUrl));
         } else {
-          const directoryUrl = ensurePathnameTrailingSlash(workspaceUrl);
-          fileUrls.push(new URL(directoryUrl));
+          fileUrls.push(ensurePathnameTrailingSlash(workspaceUrlObject));
         }
       }
     }
   }
 
   const sortedUrls = [];
-  for (const fileUrl of fileUrls) {
+  for (let fileUrl of fileUrls) {
     if (lstatSync(fileUrl).isDirectory()) {
-      sortedUrls.push(new URL(`${fileUrl}/`));
+      sortedUrls.push(ensurePathnameTrailingSlash(fileUrl));
     } else {
       sortedUrls.push(fileUrl);
     }

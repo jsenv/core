@@ -3,11 +3,12 @@ import { replaceFileStructureSync, writeFileSync } from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
 let debug = false;
+const projectDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 const sourceDirectoryUrl = new URL("./git_ignored/src/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 replaceFileStructureSync({
   from: new URL("./fixtures/0_at_start/", import.meta.url),
-  to: sourceDirectoryUrl,
+  to: projectDirectoryUrl,
 });
 
 const devServer = await startDevServer({
