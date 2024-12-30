@@ -1,7 +1,7 @@
 System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _context) {
   "use strict";
 
-  var r, e, t, o, f, i, c, l;
+  var r, e, t, o, f, i, c, p;
   function n(r) {
     if (0 === r.length || !1 === t.test(r)) return r;
     for (var e = 0, n = 0, o = "", f = ""; n < r.length; n++) {
@@ -26,11 +26,11 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
     t || (t = {});
     var a,
       c,
-      l = t;
-    "ref" in t && (a = t.ref, delete t.ref);
-    var p = {
+      p = t;
+    if ("ref" in p) for (c in p = {}, t) "ref" == c ? a = t[c] : p[c] = t[c];
+    var l = {
       type: e,
-      props: l,
+      props: p,
       key: n,
       ref: a,
       __k: null,
@@ -45,8 +45,8 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
       __source: i,
       __self: u
     };
-    if ("function" == typeof e && (a = e.defaultProps)) for (c in a) void 0 === l[c] && (l[c] = a[c]);
-    return r.vnode && r.vnode(p), p;
+    if ("function" == typeof e && (a = e.defaultProps)) for (c in a) void 0 === p[c] && (p[c] = a[c]);
+    return r.vnode && r.vnode(l), l;
   }
   function a(r) {
     var t = u(e, {
@@ -55,7 +55,7 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
     });
     return t.key = t.__v, t;
   }
-  function p(e, t) {
+  function l(e, t) {
     if (r.attr) {
       var f = r.attr(e, t);
       if ("string" == typeof f) return f;
@@ -66,9 +66,9 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
       for (var u in t) {
         var a = t[u];
         if (null != a && "" !== a) {
-          var p = "-" == u[0] ? u : c[u] || (c[u] = u.replace(l, "-$&").toLowerCase()),
+          var l = "-" == u[0] ? u : c[u] || (c[u] = u.replace(p, "-$&").toLowerCase()),
             s = ";";
-          "number" != typeof a || p.startsWith("--") || o.test(p) || (s = "px;"), i = i + p + ":" + a + s;
+          "number" != typeof a || l.startsWith("--") || o.test(l) || (s = "px;"), i = i + l + ":" + a + s;
         }
       }
       return e + '="' + i + '"';
@@ -88,7 +88,7 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
   }
   _export({
     jsx: u,
-    jsxAttr: p,
+    jsxAttr: l,
     jsxDEV: u,
     jsxEscape: s,
     jsxTemplate: a,
@@ -103,7 +103,7 @@ System.register([__v__("/js/preact.module.nomodule.js")], function (_export, _co
     execute: function () {
       t = /["&<]/;
       o = /acit|ex(?:s|g|n|p|$)|rph|grid|ows|mnc|ntw|ine[ch]|zoo|^ord|itera/i, f = 0, i = Array.isArray;
-      c = {}, l = /[A-Z]/g;
+      c = {}, p = /[A-Z]/g;
     }
   };
 });
