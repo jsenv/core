@@ -255,7 +255,7 @@ const generateDirectoryContentItems = (directoryUrl, rootDirectoryUrl) => {
   while (!existsSync(firstExistingDirectoryUrl)) {
     firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
     if (!urlIsInsideOf(firstExistingDirectoryUrl, rootDirectoryUrl)) {
-      firstExistingDirectoryUrl = rootDirectoryUrl;
+      firstExistingDirectoryUrl = new URL(rootDirectoryUrl);
       break;
     }
   }
@@ -315,7 +315,10 @@ const generateDirectoryContentItems = (directoryUrl, rootDirectoryUrl) => {
 
   const items = [];
   for (const sortedUrl of sortedUrls) {
-    const fileUrlRelativeToParent = urlToRelativeUrl(sortedUrl, directoryUrl);
+    const fileUrlRelativeToParent = urlToRelativeUrl(
+      sortedUrl,
+      firstExistingDirectoryUrl,
+    );
     const fileUrlRelativeToRoot = urlToRelativeUrl(sortedUrl, rootDirectoryUrl);
     const type = fileUrlRelativeToParent.endsWith("/") ? "dir" : "file";
     items.push({
