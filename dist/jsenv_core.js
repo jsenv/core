@@ -11510,7 +11510,6 @@ const watchSourceFiles = (
   callback,
   { sourceFileConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
 ) => {
-  let rootDirectoryUrl = sourceDirectoryUrl;
   // Project should use a dedicated directory (usually "src/")
   // passed to the dev server via "sourceDirectoryUrl" param
   // In that case all files inside the source directory should be watched
@@ -11518,7 +11517,7 @@ const watchSourceFiles = (
   // In that case source directory might contain files matching "node_modules/*" or ".git/*"
   // And jsenv should not consider these as source files and watch them (to not hurt performances)
   const watchPatterns = {};
-  const addDirectoryToWatch = (watchPatterns, directoryUrlRelativeToRoot) => {
+  const addDirectoryToWatch = (directoryUrlRelativeToRoot) => {
     Object.assign(watchPatterns, {
       [`${directoryUrlRelativeToRoot}**/*`]: true, // by default watch everything inside the source directory
       // line below is commented until @jsenv/url-meta fixes the fact that is matches
@@ -11575,20 +11574,20 @@ const watchSourceFiles = (
       break npm_workspaces;
     }
     const { workspaces } = packageContent;
-    if (workspaces.length === 0) {
+    if (!workspaces || !Array.isArray(workspaces) || workspaces.length === 0) {
       break npm_workspaces;
     }
     for (const workspace of workspaces) {
       if (workspace.endsWith("*")) {
         const workspaceRelativeUrl = urlToRelativeUrl(
           new URL(workspace.slice(0, -1), packageDirectoryUrl),
-          rootDirectoryUrl,
+          packageDirectoryUrl,
         );
         addDirectoryToWatch(workspaceRelativeUrl);
       } else {
         const workspaceRelativeUrl = urlToRelativeUrl(
           new URL(workspace, packageDirectoryUrl),
-          rootDirectoryUrl,
+          packageDirectoryUrl,
         );
         addDirectoryToWatch(workspaceRelativeUrl);
       }
