@@ -19175,6 +19175,7 @@ const jsenvPluginProtocolFile = ({
         if (!urlInfo.url.startsWith("file:")) {
           return null;
         }
+        const { rootDirectoryUrl } = urlInfo.context;
         const generateContent = () => {
           const urlObject = new URL(urlInfo.url);
           const { firstReference } = urlInfo;
@@ -19193,11 +19194,12 @@ const jsenvPluginProtocolFile = ({
               : false;
             if (acceptsHtml) {
               firstReference.expectedType = "html";
-              const html = generateHtmlForDirectory(
-                urlObject.href,
-                directoryContentArray,
-                urlInfo.context.rootDirectoryUrl,
+              const directoryUrl = urlObject.href;
+              const directoryContentItems = generateDirectoryContentItems(
+                directoryUrl,
+                rootDirectoryUrl,
               );
+              const html = generateHtmlForDirectory(directoryContentItems);
               return {
                 type: "html",
                 contentType: "text/html",
@@ -19230,32 +19232,13 @@ const jsenvPluginProtocolFile = ({
             if (e.code !== "ENOENT") {
               throw e;
             }
-            const rootDirectoryUrl = urlInfo.context.rootDirectoryUrl;
-            let firstExistingAncestorDirectoryUrl = new URL("./", urlInfo.url);
-            while (!existsSync(firstExistingAncestorDirectoryUrl)) {
-              firstExistingAncestorDirectoryUrl = new URL(
-                "../",
-                firstExistingAncestorDirectoryUrl,
-              );
-              if (
-                !urlIsInsideOf(
-                  firstExistingAncestorDirectoryUrl,
-                  rootDirectoryUrl,
-                )
-              ) {
-                firstExistingAncestorDirectoryUrl = rootDirectoryUrl;
-                break;
-              }
-            }
-
-            const firstExistingAncestorDirectoryContent = readdirSync(
-              new URL(firstExistingAncestorDirectoryUrl),
+            const directoryContentItems = generateDirectoryContentItems(
+              urlInfo.url,
+              rootDirectoryUrl,
             );
             const html = generateHtmlForENOENT(
               urlInfo.url,
-              firstExistingAncestorDirectoryContent,
-              firstExistingAncestorDirectoryUrl,
-              urlInfo.context.rootDirectoryUrl,
+              directoryContentItems,
               directoryListingUrlMocks,
             );
             return {
@@ -19274,11 +19257,9 @@ const jsenvPluginProtocolFile = ({
   ];
 };
 
-const generateHtmlForDirectory = (
-  directoryUrl,
-  directoryContentArray,
-  rootDirectoryUrl,
-) => {
+const generateHtmlForDirectory = (directoryContentItems) => {
+  let directoryUrl = directoryContentItems.firstExistingDirectoryUrl;
+  const rootDirectoryUrl = directoryContentItems.rootDirectoryUrl;
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
 
   const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
@@ -19287,23 +19268,19 @@ const generateHtmlForDirectory = (
     directoryUrl,
     directoryNav: () =>
       generateDirectoryNav(directoryRelativeUrl, rootDirectoryUrl),
-    directoryContent: () =>
-      generateDirectoryContent(
-        directoryContentArray,
-        directoryUrl,
-        rootDirectoryUrl,
-      ),
+    directoryContent: () => generateDirectoryContent(directoryContentItems),
   };
   const html = replacePlaceholders$1(htmlForDirectory, replacers);
   return html;
 };
 const generateHtmlForENOENT = (
   url,
-  ancestorDirectoryContentArray,
-  ancestorDirectoryUrl,
-  rootDirectoryUrl,
+  directoryContentItems,
   directoryListingUrlMocks,
 ) => {
+  const ancestorDirectoryUrl = directoryContentItems.firstExistingDirectoryUrl;
+  const rootDirectoryUrl = directoryContentItems.rootDirectoryUrl;
+
   const htmlFor404AndAncestorDir = String(
     readFileSync(html404AndAncestorDirFileUrl),
   );
@@ -19322,11 +19299,7 @@ const generateHtmlForENOENT = (
     ancestorDirectoryNav: () =>
       generateDirectoryNav(ancestorDirectoryRelativeUrl, rootDirectoryUrl),
     ancestorDirectoryContent: () =>
-      generateDirectoryContent(
-        ancestorDirectoryContentArray,
-        ancestorDirectoryUrl,
-        rootDirectoryUrl,
-      ),
+      generateDirectoryContent(directoryContentItems),
   };
   const html = replacePlaceholders$1(htmlFor404AndAncestorDir, replacers);
   return html;
@@ -19368,31 +19341,92 @@ const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
   }
   return dirPartsHtml;
 };
-const generateDirectoryContent = (
-  directoryContentArray,
-  directoryUrl,
-  rootDirectoryUrl,
-) => {
-  if (directoryContentArray.length === 0) {
-    return `<p>Directory is empty</p>`;
-  }
-  const sortedNames = [];
-  for (const filename of directoryContentArray) {
-    const fileUrlObject = new URL(filename, directoryUrl);
-    if (lstatSync(fileUrlObject).isDirectory()) {
-      sortedNames.push(`${filename}/`);
-    } else {
-      sortedNames.push(filename);
+const generateDirectoryContentItems = (directoryUrl, rootDirectoryUrl) => {
+  let firstExistingDirectoryUrl = new URL("./", directoryUrl);
+  while (!existsSync(firstExistingDirectoryUrl)) {
+    firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
+    if (!urlIsInsideOf(firstExistingDirectoryUrl, rootDirectoryUrl)) {
+      firstExistingDirectoryUrl = rootDirectoryUrl;
+      break;
     }
   }
-  sortedNames.sort(comparePathnames);
-  let html = `<ul class="directory_content">`;
-  for (const filename of sortedNames) {
-    const fileUrlObject = new URL(filename, directoryUrl);
-    const fileUrl = String(fileUrlObject);
-    const fileUrlRelativeToParent = urlToRelativeUrl(fileUrl, directoryUrl);
-    const fileUrlRelativeToRoot = urlToRelativeUrl(fileUrl, rootDirectoryUrl);
+  const directoryContentArray = readdirSync(firstExistingDirectoryUrl);
+  const fileUrls = [];
+  for (const filename of directoryContentArray) {
+    const fileUrlObject = new URL(filename, firstExistingDirectoryUrl);
+    fileUrls.push(fileUrlObject);
+  }
+  package_workspaces: {
+    if (String(firstExistingDirectoryUrl) !== String(rootDirectoryUrl)) {
+      break package_workspaces;
+    }
+    const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
+    if (!packageDirectoryUrl) {
+      break package_workspaces;
+    }
+    if (String(packageDirectoryUrl) === String(rootDirectoryUrl)) {
+      break package_workspaces;
+    }
+    let packageContent;
+    try {
+      packageContent = JSON.parse(
+        readFileSync(new URL("package.json", packageDirectoryUrl), "utf8"),
+      );
+    } catch {
+      break package_workspaces;
+    }
+    const { workspaces } = packageContent;
+    if (Array.isArray(workspaces)) {
+      for (const workspace of workspaces) {
+        const workspaceUrlObject = new URL(workspace, packageDirectoryUrl);
+        const workspaceUrl = workspaceUrlObject.href;
+        if (workspaceUrl.endsWith("*")) {
+          const directoryUrl = ensurePathnameTrailingSlash(
+            workspaceUrl.slice(0, -1),
+          );
+          fileUrls.push(new URL(directoryUrl));
+        } else {
+          fileUrls.push(ensurePathnameTrailingSlash(workspaceUrlObject));
+        }
+      }
+    }
+  }
+
+  const sortedUrls = [];
+  for (let fileUrl of fileUrls) {
+    if (lstatSync(fileUrl).isDirectory()) {
+      sortedUrls.push(ensurePathnameTrailingSlash(fileUrl));
+    } else {
+      sortedUrls.push(fileUrl);
+    }
+  }
+  sortedUrls.sort((a, b) => {
+    return comparePathnames(a.pathname, b.pathname);
+  });
+
+  const items = [];
+  for (const sortedUrl of sortedUrls) {
+    const fileUrlRelativeToParent = urlToRelativeUrl(sortedUrl, directoryUrl);
+    const fileUrlRelativeToRoot = urlToRelativeUrl(sortedUrl, rootDirectoryUrl);
     const type = fileUrlRelativeToParent.endsWith("/") ? "dir" : "file";
+    items.push({
+      type,
+      fileUrlRelativeToParent,
+      fileUrlRelativeToRoot,
+    });
+  }
+  items.rootDirectoryUrl = rootDirectoryUrl;
+  items.firstExistingDirectoryUrl = firstExistingDirectoryUrl;
+  return items;
+};
+const generateDirectoryContent = (directoryContentItems) => {
+  if (directoryContentItems.length === 0) {
+    return `<p>Directory is empty</p>`;
+  }
+  let html = `<ul class="directory_content">`;
+  for (const directoryContentItem of directoryContentItems) {
+    const { type, fileUrlRelativeToParent, fileUrlRelativeToRoot } =
+      directoryContentItem;
     html += `
       <li class="directory_child" data-type="${type}">
         <a href="/${fileUrlRelativeToRoot}">${fileUrlRelativeToParent}</a>
