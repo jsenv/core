@@ -49,10 +49,12 @@ const jsenvPluginInlineContentFetcher = () => {
           const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
           requestedUrl = `file:///${fsRootRelativeUrl}`;
         } else {
-          requestedUrl = new URL(
+          const requestedUrlObject = new URL(
             requestResource.slice(1),
             urlInfo.context.rootDirectoryUrl,
-          ).href;
+          );
+          requestedUrlObject.searchParams.delete("hot");
+          requestedUrl = requestedUrlObject.href;
         }
         isDirectRequestToFile = requestedUrl === urlInfo.url;
       }
