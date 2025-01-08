@@ -99,11 +99,14 @@ const jsenvPluginJsxAndRefresh = ({
                 ],
               ]
             : []),
+          ...(jsxEnabled && urlInfo.context.dev
+            ? ["@babel/plugin-transform-react-jsx-source"]
+            : []),
           ...(refreshEnabled
             ? [["react-refresh/babel", { skipEnvCheck: true }]]
             : []),
         ];
-        const { code, map } = await applyBabelPlugins({
+        let { code, map } = await applyBabelPlugins({
           babelPlugins,
           input: urlInfo.content,
           inputIsJsModule: true,
@@ -141,6 +144,13 @@ const jsenvPluginJsxAndRefresh = ({
               index = code.indexOf(importSpecifier, index + 1);
             }
           }
+          const afterJsxReplace = magicSource.toContentAndSourcemap({
+            source: "jsenv_preact",
+          });
+          code = afterJsxReplace.content;
+          // can't compose import maps: the resulting sourcemap is wrong by a few lines
+          // (3-4) and would makes debugging experience close to horrible
+          // map = await composeTwoSourcemaps(map, afterJsxReplace.sourcemap);
         }
         if (refreshEnabled) {
           const hasReg = /\$RefreshReg\$\(/.test(code);
@@ -151,26 +161,27 @@ const jsenvPluginJsxAndRefresh = ({
               expectedType: "js_module",
               specifier: "@jsenv/plugin-react/src/client/react_refresh.js",
             });
-            magicSource.prepend(`import { installReactRefresh } from ${
+            const prelude = `import { installReactRefresh } from ${
               reactRefreshClientReference.generatedSpecifier
-            }
+            };
 const __react_refresh__ = installReactRefresh(${JSON.stringify(urlInfo.url)});
-`);
+`;
+            code = `${prelude.replace(/\n/g, "")}${code}`;
             if (hasReg) {
-              magicSource.append(`
+              code = `${code}
+
 __react_refresh__.end();
-import.meta.hot.accept(__react_refresh__.acceptCallback);`);
+import.meta.hot.accept(__react_refresh__.acceptCallback);`;
             }
           }
         }
-        const result = magicSource.toContentAndSourcemap();
         return {
-          content: result.content,
+          content: code,
           sourcemap: map,
           // "no sourcemap is better than wrong sourcemap":
           // I don't know exactly what is resulting in bad sourcemaps
           // but I suspect hooknames or prefresh to be responsible
-          sourcemapIsWrong: jsxEnabled && refreshEnabled,
+          // sourcemapIsWrong: jsxEnabled && refreshEnabled,
         };
       },
     },

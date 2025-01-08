@@ -128,6 +128,9 @@ export const jsenvPluginPreact = ({
                   ],
                 ]
               : []),
+            ...(jsxEnabled && urlInfo.context.dev
+              ? ["@babel/plugin-transform-react-jsx-source"]
+              : []),
             ...(hookNamesEnabled ? ["babel-plugin-transform-hook-names"] : []),
             ...(refreshEnabled ? ["@prefresh/babel-plugin"] : []),
           ],
@@ -172,7 +175,7 @@ export const jsenvPluginPreact = ({
             source: "jsenv_preact",
           });
           code = afterJsxReplace.content;
-          // can't do this: ths resulting sourcemap is wrong by a few lines
+          // can't compose import maps: the resulting sourcemap is wrong by a few lines
           // (3-4) and would makes debugging experience close to horrible
           // map = await composeTwoSourcemaps(map, afterJsxReplace.sourcemap);
         }
