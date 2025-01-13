@@ -85,6 +85,7 @@ const createImportMetaHot = (importMetaUrl) => {
       });
     },
     invalidate: () => {
+      window.location.reload(true);
       addUrlMeta(url, {
         invalidated: true,
       });

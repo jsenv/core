@@ -86,7 +86,7 @@ This could be due to syntax errors or importing non-existent modules (see errors
           },
         );
       };
-      reloader.changes.value.forEach((reloadMessage) => {
+      for (const reloadMessage of reloader.changes.value) {
         if (reloadMessage.type === "hot") {
           const promise = addToHotQueue(() => {
             return applyHotReload(reloadMessage);
@@ -95,7 +95,7 @@ This could be due to syntax errors or importing non-existent modules (see errors
         } else {
           setReloadMessagePromise(reloadMessage, Promise.resolve());
         }
-      });
+      }
     },
   };
 
