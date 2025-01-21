@@ -107,11 +107,12 @@ const applyFsStatEffectsOnUrlObject = (urlObject, fsStat) => {
   const { pathname } = urlObject;
   const pathnameUsesTrailingSlash = pathname.endsWith("/");
   // force trailing slash on directories
-  if (fsStat.isDirectory() && !pathnameUsesTrailingSlash) {
-    urlObject.pathname = `${pathname}/`;
-  }
-  // otherwise remove trailing slash if any
-  if (!fsStat.isDirectory() && pathnameUsesTrailingSlash) {
+  if (fsStat.isDirectory()) {
+    if (!pathnameUsesTrailingSlash) {
+      urlObject.pathname = `${pathname}/`;
+    }
+  } else if (pathnameUsesTrailingSlash) {
+    // otherwise remove trailing slash if any
     // a warning here? (because it's strange to reference a file with a trailing slash)
     urlObject.pathname = pathname.slice(0, -1);
   }
