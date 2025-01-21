@@ -13056,7 +13056,7 @@ const createReference = ({
   isInline = false,
   content,
   contentType,
-  leadsToADirectory = false,
+  fsStat = null,
   debug = false,
   original = null,
   prev = null,
@@ -13117,7 +13117,7 @@ const createReference = ({
     version,
     injected,
     timing: {},
-    leadsToADirectory,
+    fsStat,
     debug,
     // for inline resources the reference contains the content
     isInline,
@@ -14038,7 +14038,7 @@ const createUrlInfo = (url, context) => {
       version: reference.version,
       content: reference.content,
       contentType: reference.contentType,
-      leadsToADirectory: reference.leadsToADirectory,
+      fsStat: reference.fsStat,
       debug: reference.debug,
       importAttributes: reference.importAttributes,
       astInfo: reference.astInfo,
@@ -14501,7 +14501,7 @@ const createUrlInfoTransformer = ({
     if (
       urlInfo.type === "directory" ||
       // happens when type is "html" to list directory content for example
-      urlInfo.firstReference?.leadsToADirectory
+      urlInfo.firstReference?.fsStat?.isDirectory()
     ) {
       // no need to write the directory
       return;
@@ -15585,7 +15585,6 @@ const jsenvPluginDirectoryReferenceEffect = (
       if (pathname[pathname.length - 1] !== "/") {
         return null;
       }
-      reference.leadsToADirectory = true;
       reference.expectedType = "directory";
       if (reference.ownerUrlInfo.type === "directory") {
         reference.dirnameHint = reference.ownerUrlInfo.filenameHint;
@@ -18885,11 +18884,6 @@ const createNodeEsmResolver = ({
       return reference.specifier;
     }
     const { ownerUrlInfo } = reference;
-    if (reference.specifier === "/") {
-      const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
-      const url = new URL(mainFilePath, rootDirectoryUrl);
-      return url;
-    }
     if (reference.specifier[0] === "/") {
       const url = new URL(
         reference.specifier.slice(1),
@@ -19092,11 +19086,6 @@ const jsenvPluginWebResolution = () => {
     appliesDuring: "*",
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
-      if (reference.specifier === "/") {
-        const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
-        const url = new URL(mainFilePath, rootDirectoryUrl);
-        return url;
-      }
       if (reference.specifier[0] === "/") {
         const url = new URL(
           reference.specifier.slice(1),
@@ -19165,7 +19154,6 @@ const jsenvPluginFsRedirection = ({
         return null;
       }
       if (reference.url === "file:///" || reference.url === "file://") {
-        reference.leadsToADirectory = true;
         return `ignore:file:///`;
       }
       // ignore all new URL second arg
@@ -19180,27 +19168,19 @@ const jsenvPluginFsRedirection = ({
       //   return `ignore:${reference.url}`;
       // }
       const urlObject = new URL(reference.url);
-      let stat;
-      try {
-        stat = readEntryStatSync(urlObject);
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          stat = null;
-        } else {
-          throw e;
-        }
-      }
+      let fsStat = readEntryStatSync(urlObject, { nullIfNotFound: true });
+      reference.fsStat = fsStat;
       const { search, hash } = urlObject;
       urlObject.search = "";
       urlObject.hash = "";
-      applyStatEffectsOnUrlObject(urlObject, stat);
+      applyFsStatEffectsOnUrlObject(urlObject, fsStat);
       const shouldApplyFilesystemMagicResolution =
         reference.type === "js_import";
       if (shouldApplyFilesystemMagicResolution) {
         const filesystemResolution = applyFileSystemMagicResolution(
           urlObject.href,
           {
-            fileStat: stat,
+            fileStat: fsStat,
             magicDirectoryIndex,
             magicExtensions: getExtensionsToTry(
               magicExtensions,
@@ -19209,12 +19189,13 @@ const jsenvPluginFsRedirection = ({
           },
         );
         if (filesystemResolution.stat) {
-          stat = filesystemResolution.stat;
+          fsStat = filesystemResolution.stat;
+          reference.fsStat = fsStat;
           urlObject.href = filesystemResolution.url;
-          applyStatEffectsOnUrlObject(urlObject, stat);
+          applyFsStatEffectsOnUrlObject(urlObject, fsStat);
         }
       }
-      if (!stat) {
+      if (!fsStat) {
         return null;
       }
       const urlBeforeSymlinkResolution = urlObject.href;
@@ -19234,15 +19215,18 @@ const jsenvPluginFsRedirection = ({
   };
 };
 
-const applyStatEffectsOnUrlObject = (urlObject, stat) => {
+const applyFsStatEffectsOnUrlObject = (urlObject, fsStat) => {
+  if (!fsStat) {
+    return;
+  }
   const { pathname } = urlObject;
   const pathnameUsesTrailingSlash = pathname.endsWith("/");
   // force trailing slash on directories
-  if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
+  if (fsStat.isDirectory() && !pathnameUsesTrailingSlash) {
     urlObject.pathname = `${pathname}/`;
   }
   // otherwise remove trailing slash if any
-  if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
+  if (!fsStat.isDirectory() && pathnameUsesTrailingSlash) {
     // a warning here? (because it's strange to reference a file with a trailing slash)
     urlObject.pathname = pathname.slice(0, -1);
   }
@@ -19327,45 +19311,16 @@ const jsenvPluginProtocolFile = ({
         if (!urlInfo.url.startsWith("file:")) {
           return null;
         }
-        const { rootDirectoryUrl } = urlInfo.context;
-        const generateContent = () => {
-          const urlObject = new URL(urlInfo.url);
-          const { firstReference } = urlInfo;
-          if (firstReference.leadsToADirectory) {
-            const directoryContentArray = readdirSync(urlObject);
-            if (firstReference.type === "filesystem") {
-              const content = JSON.stringify(directoryContentArray, null, "  ");
-              return {
-                type: "directory",
-                contentType: "application/json",
-                content,
-              };
-            }
-            const acceptsHtml = urlInfo.context.request
-              ? pickContentType(urlInfo.context.request, ["text/html"])
-              : false;
-            if (acceptsHtml) {
-              firstReference.expectedType = "html";
-              const directoryUrl = urlObject.href;
-              const directoryContentItems = generateDirectoryContentItems(
-                directoryUrl,
-                rootDirectoryUrl,
-              );
-              const html = generateHtmlForDirectory(directoryContentItems);
-              return {
-                type: "html",
-                contentType: "text/html",
-                content: html,
-              };
-            }
-            return {
-              type: "directory",
-              contentType: "application/json",
-              content: JSON.stringify(directoryContentArray, null, "  "),
-            };
-          }
-          const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
-          const fileBuffer = readFileSync(urlObject);
+        const { firstReference } = urlInfo;
+        let { fsStat } = firstReference;
+        if (!fsStat) {
+          fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
+        }
+        const isDirectory = fsStat?.isDirectory();
+        const { rootDirectoryUrl, request } = urlInfo.context;
+        const serveFile = (url) => {
+          const contentType = CONTENT_TYPE.fromUrlExtension(url);
+          const fileBuffer = readFileSync(new URL(url));
           const content = CONTENT_TYPE.isTextual(contentType)
             ? String(fileBuffer)
             : fileBuffer;
@@ -19376,14 +19331,22 @@ const jsenvPluginProtocolFile = ({
           };
         };
 
-        const request = urlInfo.context.request;
-        if (request && request.headers["sec-fetch-dest"] === "document") {
-          try {
-            return generateContent();
-          } catch (e) {
-            if (e.code !== "ENOENT") {
-              throw e;
-            }
+        // for SPA we want to serve the root HTML file only when:
+        // 1. There is no corresponding file on the filesystem
+        // 2. The url pathname does not have an extension
+        //    This point assume client is requesting a file when there is an extension
+        //    and it assumes all routes will not use extension
+        // 3. The url pathname does not ends with "/"
+        //    In that case we assume client explicitely asks to load a directory
+        if (!fsStat) {
+          if (
+            !urlToExtension$1(urlInfo.url) &&
+            !urlToPathname$1(urlInfo.url).endsWith("/")
+          ) {
+            const { mainFilePath, rootDirectoryUrl } = urlInfo.context;
+            return serveFile(new URL(mainFilePath, rootDirectoryUrl));
+          }
+          if (request && request.headers["sec-fetch-dest"] === "document") {
             const directoryContentItems = generateDirectoryContentItems(
               urlInfo.url,
               rootDirectoryUrl,
@@ -19403,7 +19366,40 @@ const jsenvPluginProtocolFile = ({
             };
           }
         }
-        return generateContent();
+        if (isDirectory) {
+          const directoryContentArray = readdirSync(new URL(urlInfo.url));
+          if (firstReference.type === "filesystem") {
+            const content = JSON.stringify(directoryContentArray, null, "  ");
+            return {
+              type: "directory",
+              contentType: "application/json",
+              content,
+            };
+          }
+          const acceptsHtml = request
+            ? pickContentType(request, ["text/html"])
+            : false;
+          if (acceptsHtml) {
+            firstReference.expectedType = "html";
+            const directoryUrl = urlInfo.url;
+            const directoryContentItems = generateDirectoryContentItems(
+              directoryUrl,
+              rootDirectoryUrl,
+            );
+            const html = generateHtmlForDirectory(directoryContentItems);
+            return {
+              type: "html",
+              contentType: "text/html",
+              content: html,
+            };
+          }
+          return {
+            type: "directory",
+            contentType: "application/json",
+            content: JSON.stringify(directoryContentArray, null, "  "),
+          };
+        }
+        return serveFile(urlInfo.url);
       },
     },
   ];
@@ -21122,6 +21118,19 @@ const getCorePlugins = ({
       directoryListingUrlMocks,
     }),
 
+    {
+      name: "jsenv:resolve_root_as_main",
+      appliesDuring: "*",
+      resolveReference: (reference) => {
+        const { ownerUrlInfo } = reference;
+        if (reference.specifier === "/") {
+          const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
+          const url = new URL(mainFilePath, rootDirectoryUrl);
+          return url;
+        }
+        return null;
+      },
+    },
     ...(nodeEsmResolution
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),
@@ -24052,12 +24061,14 @@ const startDevServer = async ({
           parentUrl,
         );
         if (!reference) {
-          reference =
-            kitchen.graph.rootUrlInfo.dependencies.createResolveAndFinalize({
-              trace: { message: parentUrl },
-              type: "http_request",
-              specifier: request.resource,
-            });
+          const rootUrlInfo = kitchen.graph.rootUrlInfo;
+          rootUrlInfo.context.request = request;
+          reference = rootUrlInfo.dependencies.createResolveAndFinalize({
+            trace: { message: parentUrl },
+            type: "http_request",
+            specifier: request.resource,
+          });
+          rootUrlInfo.context.request = null;
         }
         const urlInfo = reference.urlInfo;
         const ifNoneMatch = request.headers["if-none-match"];
