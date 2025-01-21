@@ -3,6 +3,7 @@ import {
   applyFileSystemMagicResolution,
   getExtensionsToTry,
 } from "@jsenv/node-esm-resolution";
+import { urlToExtension, urlToPathname } from "@jsenv/urls";
 import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
@@ -65,6 +66,21 @@ export const jsenvPluginFsRedirection = ({
         }
       }
       if (!fsStat) {
+        // for SPA we want to serve the root HTML file only when:
+        // 1. There is no corresponding file on the filesystem
+        // 2. The url pathname does not have an extension
+        //    This point assume client is requesting a file when there is an extension
+        //    and it assumes all routes will not use extension
+        // 3. The url pathname does not ends with "/"
+        //    In that case we assume client explicitely asks to load a directory
+        if (
+          !urlToExtension(urlObject) &&
+          !urlToPathname(urlObject).endsWith("/")
+        ) {
+          const { mainFilePath, rootDirectoryUrl } =
+            reference.ownerUrlInfo.context;
+          return new URL(mainFilePath, rootDirectoryUrl);
+        }
         return null;
       }
       const urlBeforeSymlinkResolution = urlObject.href;

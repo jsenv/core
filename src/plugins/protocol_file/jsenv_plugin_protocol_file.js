@@ -7,9 +7,7 @@ import { pickContentType } from "@jsenv/server";
 import {
   ensurePathnameTrailingSlash,
   urlIsInsideOf,
-  urlToExtension,
   urlToFilename,
-  urlToPathname,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
@@ -107,21 +105,7 @@ export const jsenvPluginProtocolFile = ({
           };
         };
 
-        // for SPA we want to serve the root HTML file only when:
-        // 1. There is no corresponding file on the filesystem
-        // 2. The url pathname does not have an extension
-        //    This point assume client is requesting a file when there is an extension
-        //    and it assumes all routes will not use extension
-        // 3. The url pathname does not ends with "/"
-        //    In that case we assume client explicitely asks to load a directory
         if (!fsStat) {
-          if (
-            !urlToExtension(urlInfo.url) &&
-            !urlToPathname(urlInfo.url).endsWith("/")
-          ) {
-            const { mainFilePath, rootDirectoryUrl } = urlInfo.context;
-            return serveFile(new URL(mainFilePath, rootDirectoryUrl));
-          }
           if (request && request.headers["sec-fetch-dest"] === "document") {
             const directoryContentItems = generateDirectoryContentItems(
               urlInfo.url,
