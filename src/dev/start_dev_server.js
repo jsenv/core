@@ -422,12 +422,14 @@ export const startDevServer = async ({
           parentUrl,
         );
         if (!reference) {
-          reference =
-            kitchen.graph.rootUrlInfo.dependencies.createResolveAndFinalize({
-              trace: { message: parentUrl },
-              type: "http_request",
-              specifier: request.resource,
-            });
+          const rootUrlInfo = kitchen.graph.rootUrlInfo;
+          rootUrlInfo.context.request = request;
+          reference = rootUrlInfo.dependencies.createResolveAndFinalize({
+            trace: { message: parentUrl },
+            type: "http_request",
+            specifier: request.resource,
+          });
+          rootUrlInfo.context.request = null;
         }
         const urlInfo = reference.urlInfo;
         const ifNoneMatch = request.headers["if-none-match"];

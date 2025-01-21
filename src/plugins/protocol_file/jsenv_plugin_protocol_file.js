@@ -84,7 +84,7 @@ export const jsenvPluginProtocolFile = ({
         if (!urlInfo.url.startsWith("file:")) {
           return null;
         }
-        const { rootDirectoryUrl } = urlInfo.context;
+        const { rootDirectoryUrl, request } = urlInfo.context;
         const generateContent = () => {
           const urlObject = new URL(urlInfo.url);
           const { firstReference } = urlInfo;
@@ -98,8 +98,8 @@ export const jsenvPluginProtocolFile = ({
                 content,
               };
             }
-            const acceptsHtml = urlInfo.context.request
-              ? pickContentType(urlInfo.context.request, ["text/html"])
+            const acceptsHtml = request
+              ? pickContentType(request, ["text/html"])
               : false;
             if (acceptsHtml) {
               firstReference.expectedType = "html";
@@ -133,7 +133,6 @@ export const jsenvPluginProtocolFile = ({
           };
         };
 
-        const request = urlInfo.context.request;
         if (request && request.headers["sec-fetch-dest"] === "document") {
           try {
             return generateContent();
