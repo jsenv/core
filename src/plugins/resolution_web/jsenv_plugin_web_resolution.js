@@ -4,11 +4,6 @@ export const jsenvPluginWebResolution = () => {
     appliesDuring: "*",
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
-      if (reference.specifier === "/") {
-        const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
-        const url = new URL(mainFilePath, rootDirectoryUrl);
-        return url;
-      }
       if (reference.specifier[0] === "/") {
         const url = new URL(
           reference.specifier.slice(1),

@@ -81,6 +81,19 @@ export const getCorePlugins = ({
       directoryListingUrlMocks,
     }),
 
+    {
+      name: "jsenv:resolve_root_as_main",
+      appliesDuring: "*",
+      resolveReference: (reference) => {
+        const { ownerUrlInfo } = reference;
+        if (reference.specifier === "/") {
+          const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
+          const url = new URL(mainFilePath, rootDirectoryUrl);
+          return url;
+        }
+        return null;
+      },
+    },
     ...(nodeEsmResolution
       ? [jsenvPluginNodeEsmResolution(nodeEsmResolution)]
       : []),
