@@ -1,6 +1,7 @@
 import {
   assertAndNormalizeDirectoryUrl,
   comparePathnames,
+  readEntryStatSync,
 } from "@jsenv/filesystem";
 import { pickContentType } from "@jsenv/server";
 import {
@@ -84,82 +85,80 @@ export const jsenvPluginProtocolFile = ({
         if (!urlInfo.url.startsWith("file:")) {
           return null;
         }
+        const urlObject = new URL(urlInfo.url);
+        const { firstReference } = urlInfo;
+        let { fsStat } = firstReference;
+        if (!fsStat) {
+          fsStat = readEntryStatSync(urlObject, { nullIfNotFound: true });
+        }
+        const isDirectory = fsStat?.isDirectory();
         const { rootDirectoryUrl, request } = urlInfo.context;
-        const generateContent = () => {
-          const urlObject = new URL(urlInfo.url);
-          const { firstReference } = urlInfo;
-          if (firstReference.leadsToADirectory) {
-            const directoryContentArray = readdirSync(urlObject);
-            if (firstReference.type === "filesystem") {
-              const content = JSON.stringify(directoryContentArray, null, "  ");
-              return {
-                type: "directory",
-                contentType: "application/json",
-                content,
-              };
-            }
-            const acceptsHtml = request
-              ? pickContentType(request, ["text/html"])
-              : false;
-            if (acceptsHtml) {
-              firstReference.expectedType = "html";
-              const directoryUrl = urlObject.href;
-              const directoryContentItems = generateDirectoryContentItems(
-                directoryUrl,
-                rootDirectoryUrl,
-              );
-              const html = generateHtmlForDirectory(directoryContentItems);
-              return {
-                type: "html",
-                contentType: "text/html",
-                content: html,
-              };
-            }
+        if (
+          request &&
+          request.headers["sec-fetch-dest"] === "document" &&
+          !fsStat
+        ) {
+          const directoryContentItems = generateDirectoryContentItems(
+            urlInfo.url,
+            rootDirectoryUrl,
+          );
+          const html = generateHtmlForENOENT(
+            urlInfo.url,
+            directoryContentItems,
+            directoryListingUrlMocks,
+          );
+          return {
+            status: 404,
+            contentType: "text/html",
+            content: html,
+            headers: {
+              "cache-control": "no-cache",
+            },
+          };
+        }
+        if (isDirectory) {
+          const directoryContentArray = readdirSync(urlObject);
+          if (firstReference.type === "filesystem") {
+            const content = JSON.stringify(directoryContentArray, null, "  ");
             return {
               type: "directory",
               contentType: "application/json",
-              content: JSON.stringify(directoryContentArray, null, "  "),
+              content,
             };
           }
-          const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
-          const fileBuffer = readFileSync(urlObject);
-          const content = CONTENT_TYPE.isTextual(contentType)
-            ? String(fileBuffer)
-            : fileBuffer;
-          return {
-            content,
-            contentType,
-            contentLength: fileBuffer.length,
-          };
-        };
-
-        if (request && request.headers["sec-fetch-dest"] === "document") {
-          try {
-            return generateContent();
-          } catch (e) {
-            if (e.code !== "ENOENT") {
-              throw e;
-            }
+          const acceptsHtml = request
+            ? pickContentType(request, ["text/html"])
+            : false;
+          if (acceptsHtml) {
+            firstReference.expectedType = "html";
+            const directoryUrl = urlObject.href;
             const directoryContentItems = generateDirectoryContentItems(
-              urlInfo.url,
+              directoryUrl,
               rootDirectoryUrl,
             );
-            const html = generateHtmlForENOENT(
-              urlInfo.url,
-              directoryContentItems,
-              directoryListingUrlMocks,
-            );
+            const html = generateHtmlForDirectory(directoryContentItems);
             return {
-              status: 404,
+              type: "html",
               contentType: "text/html",
               content: html,
-              headers: {
-                "cache-control": "no-cache",
-              },
             };
           }
+          return {
+            type: "directory",
+            contentType: "application/json",
+            content: JSON.stringify(directoryContentArray, null, "  "),
+          };
         }
-        return generateContent();
+        const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
+        const fileBuffer = readFileSync(urlObject);
+        const content = CONTENT_TYPE.isTextual(contentType)
+          ? String(fileBuffer)
+          : fileBuffer;
+        return {
+          content,
+          contentType,
+          contentLength: fileBuffer.length,
+        };
       },
     },
   ];

@@ -336,7 +336,7 @@ const createUrlInfo = (url, context) => {
       version: reference.version,
       content: reference.content,
       contentType: reference.contentType,
-      leadsToADirectory: reference.leadsToADirectory,
+      fsStat: reference.fsStat,
       debug: reference.debug,
       importAttributes: reference.importAttributes,
       astInfo: reference.astInfo,

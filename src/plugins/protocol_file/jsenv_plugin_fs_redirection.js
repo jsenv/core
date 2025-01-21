@@ -23,7 +23,6 @@ export const jsenvPluginFsRedirection = ({
         return null;
       }
       if (reference.url === "file:///" || reference.url === "file://") {
-        reference.leadsToADirectory = true;
         return `ignore:file:///`;
       }
       // ignore all new URL second arg
@@ -38,27 +37,19 @@ export const jsenvPluginFsRedirection = ({
       //   return `ignore:${reference.url}`;
       // }
       const urlObject = new URL(reference.url);
-      let stat;
-      try {
-        stat = readEntryStatSync(urlObject);
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          stat = null;
-        } else {
-          throw e;
-        }
-      }
+      let fsStat = readEntryStatSync(urlObject, { nullIfNotFound: true });
+      reference.fsStat = fsStat;
       const { search, hash } = urlObject;
       urlObject.search = "";
       urlObject.hash = "";
-      applyStatEffectsOnUrlObject(urlObject, stat);
+      applyFsStatEffectsOnUrlObject(urlObject, fsStat);
       const shouldApplyFilesystemMagicResolution =
         reference.type === "js_import";
       if (shouldApplyFilesystemMagicResolution) {
         const filesystemResolution = applyFileSystemMagicResolution(
           urlObject.href,
           {
-            fileStat: stat,
+            fileStat: fsStat,
             magicDirectoryIndex,
             magicExtensions: getExtensionsToTry(
               magicExtensions,
@@ -67,12 +58,13 @@ export const jsenvPluginFsRedirection = ({
           },
         );
         if (filesystemResolution.stat) {
-          stat = filesystemResolution.stat;
+          fsStat = filesystemResolution.stat;
+          reference.fsStat = fsStat;
           urlObject.href = filesystemResolution.url;
-          applyStatEffectsOnUrlObject(urlObject, stat);
+          applyFsStatEffectsOnUrlObject(urlObject, fsStat);
         }
       }
-      if (!stat) {
+      if (!fsStat) {
         return null;
       }
       const urlBeforeSymlinkResolution = urlObject.href;
@@ -92,15 +84,18 @@ export const jsenvPluginFsRedirection = ({
   };
 };
 
-const applyStatEffectsOnUrlObject = (urlObject, stat) => {
+const applyFsStatEffectsOnUrlObject = (urlObject, fsStat) => {
+  if (!fsStat) {
+    return;
+  }
   const { pathname } = urlObject;
   const pathnameUsesTrailingSlash = pathname.endsWith("/");
   // force trailing slash on directories
-  if (stat && stat.isDirectory() && !pathnameUsesTrailingSlash) {
+  if (fsStat.isDirectory() && !pathnameUsesTrailingSlash) {
     urlObject.pathname = `${pathname}/`;
   }
   // otherwise remove trailing slash if any
-  if (stat && !stat.isDirectory() && pathnameUsesTrailingSlash) {
+  if (!fsStat.isDirectory() && pathnameUsesTrailingSlash) {
     // a warning here? (because it's strange to reference a file with a trailing slash)
     urlObject.pathname = pathname.slice(0, -1);
   }
