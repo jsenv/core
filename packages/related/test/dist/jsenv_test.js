@@ -2030,7 +2030,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
 
     // longer comes first
     if (!leftPartExists) {
-      return +1;
+      return 1;
     }
     if (!rightPartExists) {
       return -1;
@@ -2040,7 +2040,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
     const rightPartIsLast = i === rightPartArray.length - 1;
     // folder comes first
     if (leftPartIsLast && !rightPartIsLast) {
-      return +1;
+      return 1;
     }
     if (!leftPartIsLast && rightPartIsLast) {
       return -1;
@@ -2057,7 +2057,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
   }
 
   if (leftLength < rightLength) {
-    return +1;
+    return 1;
   }
   if (leftLength > rightLength) {
     return -1;
@@ -2832,6 +2832,7 @@ const writeDirectorySync = (
               .slice(0, -1),
           ),
         );
+        destinationStats = null;
       } else {
         throw new Error(
           `cannot write directory at ${destinationPath} because there is a file at ${urlToFileSystemPath(
@@ -2851,10 +2852,14 @@ const writeDirectorySync = (
       }
       throw new Error(`directory already exists at ${destinationPath}`);
     }
-    const destinationType = statsToType(destinationStats);
-    throw new Error(
-      `cannot write directory at ${destinationPath} because there is a ${destinationType}`,
-    );
+    if (force) {
+      unlinkSync(destinationPath);
+    } else {
+      const destinationType = statsToType(destinationStats);
+      throw new Error(
+        `cannot write directory at ${destinationPath} because there is a ${destinationType}`,
+      );
+    }
   }
 
   try {

@@ -53,13 +53,13 @@ c$1.__b = function (n) {
   a$2 && a$2(n), t$1 = 0;
   var i = (r$1 = n.__c).__H;
   i && (u$1 === r$1 ? (i.__h = [], r$1.__h = [], i.__.forEach(function (n) {
-    n.__N && (n.__ = n.__N), n.i = n.__N = void 0;
+    n.__N && (n.__ = n.__N), n.i = n.__N = undefined;
   })) : (i.__h.forEach(z), i.__h.forEach(B), i.__h = [], t$1 = 0)), u$1 = r$1;
 }, c$1.diffed = function (n) {
   v$2 && v$2(n);
   var t = n.__c;
   t && t.__H && (t.__H.__h.length && (1 !== f$1.push(t) && i$1 === c$1.requestAnimationFrame || ((i$1 = c$1.requestAnimationFrame) || w$1)(j)), t.__H.__.forEach(function (n) {
-    n.i && (n.__H = n.i), n.i = void 0;
+    n.i && (n.__H = n.i), n.i = undefined;
   })), u$1 = r$1 = null;
 }, c$1.__c = function (n, t) {
   t.some(function (n) {
@@ -83,21 +83,21 @@ c$1.__b = function (n) {
     } catch (n) {
       t = n;
     }
-  }), r.__H = void 0, t && c$1.__e(t, r.__v));
+  }), r.__H = undefined, t && c$1.__e(t, r.__v));
 };
-var k = "function" == typeof requestAnimationFrame;
+var k$1 = "function" == typeof requestAnimationFrame;
 function w$1(n) {
   var t,
     r = function () {
-      clearTimeout(u), k && cancelAnimationFrame(t), setTimeout(n);
+      clearTimeout(u), k$1 && cancelAnimationFrame(t), setTimeout(n);
     },
     u = setTimeout(r, 100);
-  k && (t = requestAnimationFrame(r));
+  k$1 && (t = requestAnimationFrame(r));
 }
 function z(n) {
   var t = r$1,
     u = n.__c;
-  "function" == typeof u && (n.__c = void 0, u()), r$1 = t;
+  "function" == typeof u && (n.__c = undefined, u()), r$1 = t;
 }
 function B(n) {
   var t = r$1;
@@ -116,21 +116,21 @@ function t() {
     return;
   }
   let i,
-    t = !1;
-  while (void 0 !== s) {
+    t = false;
+  while (undefined !== s) {
     let o = s;
-    s = void 0;
+    s = undefined;
     f++;
-    while (void 0 !== o) {
+    while (undefined !== o) {
       const n = o.o;
-      o.o = void 0;
+      o.o = undefined;
       o.f &= -3;
       if (!(8 & o.f) && v$1(o)) try {
         o.c();
       } catch (o) {
         if (!t) {
           i = o;
-          t = !0;
+          t = true;
         }
       }
       o = n;
@@ -154,31 +154,31 @@ let r = 0,
   f = 0,
   e = 0;
 function c(i) {
-  if (void 0 === n) return;
+  if (undefined === n) return;
   let t = i.n;
-  if (void 0 === t || t.t !== n) {
+  if (undefined === t || t.t !== n) {
     t = {
       i: 0,
       S: i,
       p: n.s,
-      n: void 0,
+      n: undefined,
       t: n,
-      e: void 0,
-      x: void 0,
+      e: undefined,
+      x: undefined,
       r: t
     };
-    if (void 0 !== n.s) n.s.n = t;
+    if (undefined !== n.s) n.s.n = t;
     n.s = t;
     i.n = t;
     if (32 & n.f) i.S(t);
     return t;
   } else if (-1 === t.i) {
     t.i = 0;
-    if (void 0 !== t.n) {
+    if (undefined !== t.n) {
       t.n.p = t.p;
-      if (void 0 !== t.p) t.p.n = t.n;
+      if (undefined !== t.p) t.p.n = t.n;
       t.p = n.s;
-      t.n = void 0;
+      t.n = undefined;
       n.s.n = t;
       n.s = t;
     }
@@ -188,31 +188,31 @@ function c(i) {
 function u(i) {
   this.v = i;
   this.i = 0;
-  this.n = void 0;
-  this.t = void 0;
+  this.n = undefined;
+  this.t = undefined;
 }
 u.prototype.brand = i;
 u.prototype.h = function () {
-  return !0;
+  return true;
 };
 u.prototype.S = function (i) {
-  if (this.t !== i && void 0 === i.e) {
+  if (this.t !== i && undefined === i.e) {
     i.x = this.t;
-    if (void 0 !== this.t) this.t.e = i;
+    if (undefined !== this.t) this.t.e = i;
     this.t = i;
   }
 };
 u.prototype.U = function (i) {
-  if (void 0 !== this.t) {
+  if (undefined !== this.t) {
     const t = i.e,
       o = i.x;
-    if (void 0 !== t) {
+    if (undefined !== t) {
       t.x = o;
-      i.e = void 0;
+      i.e = undefined;
     }
-    if (void 0 !== o) {
+    if (undefined !== o) {
       o.e = t;
-      i.x = void 0;
+      i.x = undefined;
     }
     if (i === this.t) this.t = o;
   }
@@ -221,7 +221,7 @@ u.prototype.subscribe = function (i) {
   return E(() => {
     const t = this.value,
       o = n;
-    n = void 0;
+    n = undefined;
     try {
       i(t);
     } finally {
@@ -240,7 +240,7 @@ u.prototype.toJSON = function () {
 };
 u.prototype.peek = function () {
   const i = n;
-  n = void 0;
+  n = undefined;
   try {
     return this.value;
   } finally {
@@ -250,7 +250,7 @@ u.prototype.peek = function () {
 Object.defineProperty(u.prototype, "value", {
   get() {
     const i = c(this);
-    if (void 0 !== i) i.i = this.i;
+    if (undefined !== i) i.i = this.i;
     return this.v;
   },
   set(i) {
@@ -272,55 +272,55 @@ function d$1(i) {
   return new u(i);
 }
 function v$1(i) {
-  for (let t = i.s; void 0 !== t; t = t.n) if (t.S.i !== t.i || !t.S.h() || t.S.i !== t.i) return !0;
-  return !1;
+  for (let t = i.s; undefined !== t; t = t.n) if (t.S.i !== t.i || !t.S.h() || t.S.i !== t.i) return true;
+  return false;
 }
 function l(i) {
-  for (let t = i.s; void 0 !== t; t = t.n) {
+  for (let t = i.s; undefined !== t; t = t.n) {
     const o = t.S.n;
-    if (void 0 !== o) t.r = o;
+    if (undefined !== o) t.r = o;
     t.S.n = t;
     t.i = -1;
-    if (void 0 === t.n) {
+    if (undefined === t.n) {
       i.s = t;
       break;
     }
   }
 }
-function y$1(i) {
+function y(i) {
   let t,
     o = i.s;
-  while (void 0 !== o) {
+  while (undefined !== o) {
     const i = o.p;
     if (-1 === o.i) {
       o.S.U(o);
-      if (void 0 !== i) i.n = o.n;
-      if (void 0 !== o.n) o.n.p = i;
+      if (undefined !== i) i.n = o.n;
+      if (undefined !== o.n) o.n.p = i;
     } else t = o;
     o.S.n = o.r;
-    if (void 0 !== o.r) o.r = void 0;
+    if (undefined !== o.r) o.r = undefined;
     o = i;
   }
   i.s = t;
 }
 function a$1(i) {
-  u.call(this, void 0);
+  u.call(this, undefined);
   this.x = i;
-  this.s = void 0;
+  this.s = undefined;
   this.g = e - 1;
   this.f = 4;
 }
 (a$1.prototype = new u()).h = function () {
   this.f &= -3;
-  if (1 & this.f) return !1;
-  if (32 == (36 & this.f)) return !0;
+  if (1 & this.f) return false;
+  if (32 == (36 & this.f)) return true;
   this.f &= -5;
-  if (this.g === e) return !0;
+  if (this.g === e) return true;
   this.g = e;
   this.f |= 1;
   if (this.i > 0 && !v$1(this)) {
     this.f &= -2;
-    return !0;
+    return true;
   }
   const i = n;
   try {
@@ -338,30 +338,30 @@ function a$1(i) {
     this.i++;
   }
   n = i;
-  y$1(this);
+  y(this);
   this.f &= -2;
-  return !0;
+  return true;
 };
 a$1.prototype.S = function (i) {
-  if (void 0 === this.t) {
+  if (undefined === this.t) {
     this.f |= 36;
-    for (let i = this.s; void 0 !== i; i = i.n) i.S.S(i);
+    for (let i = this.s; undefined !== i; i = i.n) i.S.S(i);
   }
   u.prototype.S.call(this, i);
 };
 a$1.prototype.U = function (i) {
-  if (void 0 !== this.t) {
+  if (undefined !== this.t) {
     u.prototype.U.call(this, i);
-    if (void 0 === this.t) {
+    if (undefined === this.t) {
       this.f &= -33;
-      for (let i = this.s; void 0 !== i; i = i.n) i.S.U(i);
+      for (let i = this.s; undefined !== i; i = i.n) i.S.U(i);
     }
   }
 };
 a$1.prototype.N = function () {
   if (!(2 & this.f)) {
     this.f |= 6;
-    for (let i = this.t; void 0 !== i; i = i.x) i.t.N();
+    for (let i = this.t; undefined !== i; i = i.x) i.t.N();
   }
 };
 Object.defineProperty(a$1.prototype, "value", {
@@ -369,7 +369,7 @@ Object.defineProperty(a$1.prototype, "value", {
     if (1 & this.f) throw new Error("Cycle detected");
     const i = c(this);
     this.h();
-    if (void 0 !== i) i.i = this.i;
+    if (undefined !== i) i.i = this.i;
     if (16 & this.f) throw this.v;
     return this.v;
   }
@@ -379,17 +379,17 @@ function w(i) {
 }
 function _$1(i) {
   const o = i.u;
-  i.u = void 0;
+  i.u = undefined;
   if ("function" == typeof o) {
     r++;
     const s = n;
-    n = void 0;
+    n = undefined;
     try {
       o();
     } catch (t) {
       i.f &= -2;
       i.f |= 8;
-      g(i);
+      g$1(i);
       throw t;
     } finally {
       n = s;
@@ -397,25 +397,25 @@ function _$1(i) {
     }
   }
 }
-function g(i) {
-  for (let t = i.s; void 0 !== t; t = t.n) t.S.U(t);
-  i.x = void 0;
-  i.s = void 0;
+function g$1(i) {
+  for (let t = i.s; undefined !== t; t = t.n) t.S.U(t);
+  i.x = undefined;
+  i.s = undefined;
   _$1(i);
 }
-function p$1(i) {
+function p(i) {
   if (n !== this) throw new Error("Out-of-order effect");
-  y$1(this);
+  y(this);
   n = i;
   this.f &= -2;
-  if (8 & this.f) g(this);
+  if (8 & this.f) g$1(this);
   t();
 }
 function b$1(i) {
   this.x = i;
-  this.u = void 0;
-  this.s = void 0;
-  this.o = void 0;
+  this.u = undefined;
+  this.s = undefined;
+  this.o = undefined;
   this.f = 32;
 }
 b$1.prototype.c = function () {
@@ -438,7 +438,7 @@ b$1.prototype.S = function () {
   r++;
   const i = n;
   n = this;
-  return p$1.bind(this, i);
+  return p.bind(this, i);
 };
 b$1.prototype.N = function () {
   if (!(2 & this.f)) {
@@ -449,7 +449,7 @@ b$1.prototype.N = function () {
 };
 b$1.prototype.d = function () {
   this.f |= 8;
-  if (!(1 & this.f)) g(this);
+  if (!(1 & this.f)) g$1(this);
 };
 function E(i) {
   const t = new b$1(i);
@@ -462,62 +462,64 @@ function E(i) {
   return t.d.bind(t);
 }
 
-function a(t, e) {
+let a,
+  d,
+  _ = [];
+E(function () {
+  a = this.N;
+})();
+function m(t, e) {
   l$2[t] = e.bind(null, l$2[t] || (() => {}));
 }
-let d;
-function p(t) {
+function v(t) {
   if (d) d();
   d = t && t.S();
 }
-function v({
+function g({
   data: t
 }) {
   const i = useSignal(t);
   i.value = t;
-  const o = T(() => {
+  const [o, f] = T(() => {
     let t = this,
       n = this.__v;
     while (n = n.__) if (n.__c) {
       n.__c.__$f |= 4;
       break;
     }
-    const f = w(function () {
+    const o = w(() => {
         let t = i.value.value;
-        return 0 === t ? 0 : !0 === t ? "" : t || "";
+        return 0 === t ? 0 : true === t ? "" : t || "";
       }),
-      r = w(() => {
-        var t;
-        return t$2(f.value) || 3 !== (null == (t = this.base) ? void 0 : t.nodeType);
-      });
-    this.__$u.c = () => {
-      var t;
-      if (!t$2(o.peek()) && 3 === (null == (t = this.base) ? void 0 : t.nodeType)) this.base.data = o.peek();else {
-        this.__$f |= 1;
-        this.setState({});
-      }
+      f = w(() => !t$2(o.value)),
+      s = E(function () {
+        this.N = A;
+        if (f.value) {
+          const i = o.value;
+          if (t.base && 3 === t.base.nodeType) t.base.data = i;
+        }
+      }),
+      c = this.__$u.d;
+    this.__$u.d = function () {
+      s();
+      c.call(this);
     };
-    E(function () {
-      if (!m) m = this.N;
-      this.N = A;
-      if (r.value && t.base) t.base.data = f.value;
-    });
-    return f;
+    return [f, o];
   }, []);
-  return o.value;
+  return o.value ? f.peek() : f.value;
 }
-v.displayName = "_st";
+g.displayName = "_st";
 Object.defineProperties(u.prototype, {
   constructor: {
-    configurable: !0,
-    value: void 0
+    configurable: true,
+    value: undefined
   },
   type: {
-    configurable: !0,
-    value: v
+    configurable: true,
+    value: g
   },
   props: {
-    configurable: !0,
+    configurable: true,
     get() {
       return {
         data: this
@@ -525,11 +527,11 @@ Object.defineProperties(u.prototype, {
     }
   },
   __b: {
-    configurable: !0,
+    configurable: true,
     value: 1
   }
 });
-a("__b", (t, i) => {
+m("__b", (t, i) => {
   if ("string" == typeof i.type) {
     let t,
       e = i.props;
@@ -545,14 +547,14 @@ a("__b", (t, i) => {
   }
   t(i);
 });
-a("__r", (t, i) => {
-  p();
+m("__r", (t, i) => {
+  v();
   let e,
     n = i.__c;
   if (n) {
     n.__$f &= -2;
     e = n.__$u;
-    if (void 0 === e) n.__$u = e = function (t) {
+    if (undefined === e) n.__$u = e = function (t) {
       let i;
       E(function () {
         i = this;
@@ -564,15 +566,15 @@ a("__r", (t, i) => {
       return i;
     }();
   }
-  p(e);
+  v(e);
   t(i);
 });
-a("__e", (t, i, e, n) => {
-  p();
+m("__e", (t, i, e, n) => {
+  v();
   t(i, e, n);
 });
-a("diffed", (t, i) => {
-  p();
+m("diffed", (t, i) => {
+  v();
   let e;
   if ("string" == typeof i.type && (e = i.__e)) {
     let t = i.__np,
@@ -581,9 +583,9 @@ a("diffed", (t, i) => {
       let i = e.U;
       if (i) for (let e in i) {
         let n = i[e];
-        if (void 0 !== n && !(e in t)) {
+        if (undefined !== n && !(e in t)) {
           n.d();
-          i[e] = void 0;
+          i[e] = undefined;
         }
       } else {
         i = {};
@@ -592,8 +594,8 @@ a("diffed", (t, i) => {
       for (let o in t) {
         let f = i[o],
           r = t[o];
-        if (void 0 === f) {
-          f = _(e, o, r, n);
+        if (undefined === f) {
+          f = b(e, o, r, n);
           i[o] = f;
         } else f.o(r, n);
       }
@@ -601,8 +603,8 @@ a("diffed", (t, i) => {
   }
   t(i);
 });
-function _(t, i, e, n) {
-  const o = i in t && void 0 === t.ownerSVGElement,
+function b(t, i, e, n) {
+  const o = i in t && undefined === t.ownerSVGElement,
     f = d$1(e);
   return {
     o: (t, i) => {
@@ -610,7 +612,6 @@ function _(t, i, e, n) {
       n = i;
     },
     d: E(function () {
-      if (!m) m = this.N;
       this.N = A;
       const e = f.value.value;
       if (n[i] !== e) {
@@ -620,13 +621,13 @@ function _(t, i, e, n) {
     })
   };
 }
-a("unmount", (t, i) => {
+m("unmount", (t, i) => {
   if ("string" == typeof i.type) {
     let t = i.__e;
     if (t) {
       const i = t.U;
       if (i) {
-        t.U = void 0;
+        t.U = undefined;
         for (let t in i) {
           let e = i[t];
           if (e) e.d();
@@ -638,23 +639,21 @@ a("unmount", (t, i) => {
     if (t) {
       const i = t.__$u;
       if (i) {
-        t.__$u = void 0;
+        t.__$u = undefined;
         i.d();
       }
     }
   }
   t(i);
 });
-a("__h", (t, i, e, n) => {
+m("__h", (t, i, e, n) => {
   if (n < 3 || 9 === n) i.__$f |= 2;
   t(i, e, n);
 });
 function useSignal(t) {
   return T(() => d$1(t), []);
 }
-let m,
-  b = [];
-const y = t => {
+const k = t => {
     queueMicrotask(() => {
       queueMicrotask(t);
     });
@@ -662,11 +661,11 @@ const y = t => {
 function x() {
   o(() => {
     let t;
-    while (t = b.shift()) m.call(t);
+    while (t = _.shift()) a.call(t);
   });
 }
 function A() {
-  if (1 === b.push(this)) (l$2.requestAnimationFrame || y)(x);
+  if (1 === _.push(this)) (l$2.requestAnimationFrame || k)(x);
 }
 
 const paramsFromParentWindow = {};

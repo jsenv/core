@@ -60,7 +60,7 @@ const initAutoreload = ({ mainFilePath }) => {
             for (const reloadInstruction of reloadMessage.hotInstructions) {
               if (reloadInstruction.type === "html") {
                 const acceptedByUrl = new URL(
-                  reloadMessage.boundary,
+                  reloadInstruction.acceptedBy,
                   `${window.location.origin}/`,
                 ).href;
                 const isCurrentHtmlFile = compareTwoUrlPaths(

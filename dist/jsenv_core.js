@@ -1968,7 +1968,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
 
     // longer comes first
     if (!leftPartExists) {
-      return +1;
+      return 1;
     }
     if (!rightPartExists) {
       return -1;
@@ -1978,7 +1978,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
     const rightPartIsLast = i === rightPartArray.length - 1;
     // folder comes first
     if (leftPartIsLast && !rightPartIsLast) {
-      return +1;
+      return 1;
     }
     if (!leftPartIsLast && rightPartIsLast) {
       return -1;
@@ -1995,7 +1995,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
   }
 
   if (leftLength < rightLength) {
-    return +1;
+    return 1;
   }
   if (leftLength > rightLength) {
     return -1;
@@ -16909,11 +16909,7 @@ const jsenvPluginHtmlReferenceAnalysis = ({
             } else {
               position = getHtmlNodeAttributePosition(node, attributeName);
             }
-            const {
-              line,
-              column,
-              // originalLine, originalColumn
-            } = position;
+            const { line, column, originalLine, originalColumn } = position;
             const debug =
               getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
 
@@ -16946,8 +16942,9 @@ const jsenvPluginHtmlReferenceAnalysis = ({
               subtype,
               expectedType,
               specifier: attributeValue,
-              specifierLine: line,
-              specifierColumn: column,
+              specifierLine: originalLine === undefined ? line : originalLine,
+              specifierColumn:
+                originalColumn === undefined ? column : originalColumn,
               specifierStart: attributeValueStart,
               specifierEnd: attributeValueEnd,
               isResourceHint,
@@ -22883,7 +22880,7 @@ const build = async ({
     if (outDirectoryUrl === undefined) {
       if (
         process.env.CAPTURING_SIDE_EFFECTS ||
-        (!true)
+        (false)
       ) {
         outDirectoryUrl = new URL("../.jsenv_b/", sourceDirectoryUrl);
       } else {
@@ -23760,7 +23757,7 @@ const startDevServer = async ({
     if (outDirectoryUrl === undefined) {
       if (
         process.env.CAPTURING_SIDE_EFFECTS ||
-        (!true)
+        (false)
       ) {
         outDirectoryUrl = new URL("../.jsenv/", sourceDirectoryUrl);
       } else {
