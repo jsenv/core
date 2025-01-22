@@ -22,7 +22,6 @@ export const jsenvPluginDirectoryReferenceEffect = (
       if (pathname[pathname.length - 1] !== "/") {
         return null;
       }
-      reference.leadsToADirectory = true;
       reference.expectedType = "directory";
       if (reference.ownerUrlInfo.type === "directory") {
         reference.dirnameHint = reference.ownerUrlInfo.filenameHint;

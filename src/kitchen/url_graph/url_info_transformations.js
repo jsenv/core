@@ -254,7 +254,7 @@ export const createUrlInfoTransformer = ({
     if (
       urlInfo.type === "directory" ||
       // happens when type is "html" to list directory content for example
-      urlInfo.firstReference?.leadsToADirectory
+      urlInfo.firstReference?.fsStat?.isDirectory()
     ) {
       // no need to write the directory
       return;

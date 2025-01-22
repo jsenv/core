@@ -7,12 +7,21 @@
  * This test is compose of 2 parts:
  * 1. Shows code example trigerring Node.js warning
  * 2. How to use "withSignal" to avoid the warning
+ *
+ * UPDATE: not as useful since https://github.com/nodejs/node/pull/55816
  */
 
 import { assert } from "@jsenv/assert";
+import { setMaxListeners } from "node:events";
 
 import { Abort } from "@jsenv/abort";
 import { spyProcessWarnings } from "@jsenv/abort/tests/process_warnings_spy.mjs";
+
+const getLimitedAbortController = () => {
+  const abortController = new AbortController();
+  setMaxListeners(10, abortController.signal);
+  return abortController;
+};
 
 const fakeFetch = async ({ signal }) => {
   return new Promise((resolve, reject) => {
@@ -31,7 +40,7 @@ const fakeFetch = async ({ signal }) => {
 // Node.js emits a warning when more than 10 listeners on "abort"
 {
   const getProcessWarnings = spyProcessWarnings();
-  const abortController = new AbortController();
+  const abortController = getLimitedAbortController();
 
   await Promise.all(
     new Array(11).fill("").map(async () => {

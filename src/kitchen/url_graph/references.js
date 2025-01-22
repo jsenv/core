@@ -291,7 +291,7 @@ const createReference = ({
   isInline = false,
   content,
   contentType,
-  leadsToADirectory = false,
+  fsStat = null,
   debug = false,
   original = null,
   prev = null,
@@ -352,7 +352,7 @@ const createReference = ({
     version,
     injected,
     timing: {},
-    leadsToADirectory,
+    fsStat,
     debug,
     // for inline resources the reference contains the content
     isInline,

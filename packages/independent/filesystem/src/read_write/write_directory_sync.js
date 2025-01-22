@@ -43,6 +43,7 @@ export const writeDirectorySync = (
               .slice(0, -1),
           ),
         );
+        destinationStats = null;
       } else {
         throw new Error(
           `cannot write directory at ${destinationPath} because there is a file at ${urlToFileSystemPath(
@@ -62,10 +63,14 @@ export const writeDirectorySync = (
       }
       throw new Error(`directory already exists at ${destinationPath}`);
     }
-    const destinationType = statsToType(destinationStats);
-    throw new Error(
-      `cannot write directory at ${destinationPath} because there is a ${destinationType}`,
-    );
+    if (force) {
+      unlinkSync(destinationPath);
+    } else {
+      const destinationType = statsToType(destinationStats);
+      throw new Error(
+        `cannot write directory at ${destinationPath} because there is a ${destinationType}`,
+      );
+    }
   }
 
   try {

@@ -225,7 +225,7 @@ var runtime = (function (exports) {
   // AsyncIterator objects; they just return a Promise for the value of
   // the final result produced by the iterator.
   exports.async = function(innerFn, outerFn, self, tryLocsList, PromiseImpl) {
-    if (PromiseImpl === void 0) PromiseImpl = Promise;
+    if (PromiseImpl === undefined) PromiseImpl = Promise;
 
     var iter = new AsyncIterator(
       wrap(innerFn, outerFn, self, tryLocsList),

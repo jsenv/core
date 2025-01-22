@@ -22,8 +22,8 @@ const test = async ({
       type: "log",
       text:
         browserName === "chromium"
-          ? "[jsenv] hot reloading file.js (style.css modified)"
-          : "[jsenv] hot reloading file.js (style.css modified)",
+          ? "[jsenv] hot reload file.js (style.css modified)"
+          : "[jsenv] hot reload file.js (style.css modified)",
     },
     {
       type: "log",
@@ -37,7 +37,7 @@ const test = async ({
   pageLogsAfterRemovingCssImport = [
     {
       type: "log",
-      text: "[jsenv] hot reloading main.js (main.js modified)",
+      text: "[jsenv] hot reload main.js (main.js modified)",
     },
     {
       type: "log",
@@ -51,7 +51,7 @@ const test = async ({
   pageLogsAfterRestoringCssImport = [
     {
       type: "log",
-      text: "[jsenv] hot reloading main.js (main.js modified)",
+      text: "[jsenv] hot reload main.js (main.js modified)",
     },
     {
       type: "log",

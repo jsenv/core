@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/sigi",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "State management",
   "license": "MIT",
   "author": {
@@ -31,6 +31,6 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@preact/signals": "2.0.0"
+    "@preact/signals": "2.0.1"
   }
 }

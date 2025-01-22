@@ -1588,8 +1588,7 @@ const renderTerminalSvg = (
       // Some SVG implementations do not support underline and
       // strikethrough for <text> elements (see Sketch 49.2)
       if (style.underline) {
-        const yOffset = font.height * 0.14;
-        const ys = y - -yOffset;
+        const ys = y - -1.9600000000000002;
         const xw = x + w;
         const path = svg.createNode("path", {
           d: `M${x},${ys} L${xw},${ys} Z`,

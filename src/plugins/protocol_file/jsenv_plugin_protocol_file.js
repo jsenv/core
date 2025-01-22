@@ -1,6 +1,7 @@
 import {
   assertAndNormalizeDirectoryUrl,
   comparePathnames,
+  readEntryStatSync,
 } from "@jsenv/filesystem";
 import { pickContentType } from "@jsenv/server";
 import {
@@ -84,45 +85,16 @@ export const jsenvPluginProtocolFile = ({
         if (!urlInfo.url.startsWith("file:")) {
           return null;
         }
+        const { firstReference } = urlInfo;
+        let { fsStat } = firstReference;
+        if (!fsStat) {
+          fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
+        }
+        const isDirectory = fsStat?.isDirectory();
         const { rootDirectoryUrl, request } = urlInfo.context;
-        const generateContent = () => {
-          const urlObject = new URL(urlInfo.url);
-          const { firstReference } = urlInfo;
-          if (firstReference.leadsToADirectory) {
-            const directoryContentArray = readdirSync(urlObject);
-            if (firstReference.type === "filesystem") {
-              const content = JSON.stringify(directoryContentArray, null, "  ");
-              return {
-                type: "directory",
-                contentType: "application/json",
-                content,
-              };
-            }
-            const acceptsHtml = request
-              ? pickContentType(request, ["text/html"])
-              : false;
-            if (acceptsHtml) {
-              firstReference.expectedType = "html";
-              const directoryUrl = urlObject.href;
-              const directoryContentItems = generateDirectoryContentItems(
-                directoryUrl,
-                rootDirectoryUrl,
-              );
-              const html = generateHtmlForDirectory(directoryContentItems);
-              return {
-                type: "html",
-                contentType: "text/html",
-                content: html,
-              };
-            }
-            return {
-              type: "directory",
-              contentType: "application/json",
-              content: JSON.stringify(directoryContentArray, null, "  "),
-            };
-          }
-          const contentType = CONTENT_TYPE.fromUrlExtension(urlInfo.url);
-          const fileBuffer = readFileSync(urlObject);
+        const serveFile = (url) => {
+          const contentType = CONTENT_TYPE.fromUrlExtension(url);
+          const fileBuffer = readFileSync(new URL(url));
           const content = CONTENT_TYPE.isTextual(contentType)
             ? String(fileBuffer)
             : fileBuffer;
@@ -133,13 +105,8 @@ export const jsenvPluginProtocolFile = ({
           };
         };
 
-        if (request && request.headers["sec-fetch-dest"] === "document") {
-          try {
-            return generateContent();
-          } catch (e) {
-            if (e.code !== "ENOENT") {
-              throw e;
-            }
+        if (!fsStat) {
+          if (request && request.headers["sec-fetch-dest"] === "document") {
             const directoryContentItems = generateDirectoryContentItems(
               urlInfo.url,
               rootDirectoryUrl,
@@ -159,7 +126,40 @@ export const jsenvPluginProtocolFile = ({
             };
           }
         }
-        return generateContent();
+        if (isDirectory) {
+          const directoryContentArray = readdirSync(new URL(urlInfo.url));
+          if (firstReference.type === "filesystem") {
+            const content = JSON.stringify(directoryContentArray, null, "  ");
+            return {
+              type: "directory",
+              contentType: "application/json",
+              content,
+            };
+          }
+          const acceptsHtml = request
+            ? pickContentType(request, ["text/html"])
+            : false;
+          if (acceptsHtml) {
+            firstReference.expectedType = "html";
+            const directoryUrl = urlInfo.url;
+            const directoryContentItems = generateDirectoryContentItems(
+              directoryUrl,
+              rootDirectoryUrl,
+            );
+            const html = generateHtmlForDirectory(directoryContentItems);
+            return {
+              type: "html",
+              contentType: "text/html",
+              content: html,
+            };
+          }
+          return {
+            type: "directory",
+            contentType: "application/json",
+            content: JSON.stringify(directoryContentArray, null, "  "),
+          };
+        }
+        return serveFile(urlInfo.url);
       },
     },
   ];

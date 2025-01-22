@@ -4,11 +4,6 @@ export const jsenvPluginWebResolution = () => {
     appliesDuring: "*",
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
-      if (reference.specifier === "/") {
-        const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
-        const url = new URL(mainFilePath, rootDirectoryUrl);
-        return url;
-      }
       if (reference.specifier[0] === "/") {
         const url = new URL(
           reference.specifier.slice(1),
@@ -19,7 +14,9 @@ export const jsenvPluginWebResolution = () => {
       // baseUrl happens second argument to new URL() is different from
       // import.meta.url or document.currentScript.src
       const parentUrl =
-        reference.baseUrl || ownerUrlInfo.originalUrl || ownerUrlInfo.url;
+        reference.baseUrl || ownerUrlInfo.context.dev
+          ? ownerUrlInfo.url
+          : ownerUrlInfo.originalUrl || ownerUrlInfo.url;
       const url = new URL(reference.specifier, parentUrl);
       return url;
     },

@@ -1,5 +1,6 @@
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 export const devServer = await startDevServer({
   logLevel: process.env.GENERATING_SNAPSHOTS ? "off" : undefined,
@@ -39,6 +40,9 @@ export const devServer = await startDevServer({
           "./**/*.html": true,
         },
       },
+    }),
+    jsenvPluginPreact({
+      refreshInstrumentation: { "file://**/*.jsx": true },
     }),
   ],
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),

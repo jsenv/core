@@ -80,6 +80,7 @@ const run = async ({ browserLauncher, browserName }) => {
     "js_module_undefined_is_not_a_function",
     "js_module_worker_throw",
     "script_src_not_found",
+    "script_src_not_found_and_preact",
     // "script_type_importmap_not_found", // for now there is no error overlay in that case
     "script_type_module_src_not_found",
   ]) {

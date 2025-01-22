@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/performance-impact",
-  "version": "4.4.14",
+  "version": "4.4.15",
   "description": "Report pull request impacts on performance metrics",
   "license": "MIT",
   "repository": {
@@ -30,8 +30,8 @@
   },
   "dependencies": {
     "@jsenv/dynamic-import-worker": "1.2.1",
-    "@jsenv/filesystem": "4.13.0",
-    "@jsenv/github-pull-request-impact": "1.8.14",
+    "@jsenv/filesystem": "4.13.1",
+    "@jsenv/github-pull-request-impact": "1.8.15",
     "@jsenv/humanize": "1.2.8"
   }
 }
