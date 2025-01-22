@@ -34,7 +34,7 @@
     "/src/"
   ],
   "volta": {
-    "node": "22.3.0"
+    "node": "22.13.1"
   },
   "workspaces": [
     "./packages/independent/*",
