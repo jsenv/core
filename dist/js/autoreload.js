@@ -52,7 +52,29 @@ const initAutoreload = ({ mainFilePath }) => {
     currentExecution: null,
     reload: () => {
       const someEffectIsFullReload = reloader.changes.value.some(
-        (reloadMessage) => reloadMessage.type === "full",
+        (reloadMessage) => {
+          if (reloadMessage.type === "full") {
+            return true;
+          }
+          if (reloadMessage.type === "hot") {
+            for (const reloadInstruction of reloadMessage.hotInstructions) {
+              if (reloadInstruction.type === "html") {
+                const acceptedByUrl = new URL(
+                  reloadMessage.boundary,
+                  `${window.location.origin}/`,
+                ).href;
+                const isCurrentHtmlFile = compareTwoUrlPaths(
+                  acceptedByUrl,
+                  window.location.href,
+                );
+                if (isCurrentHtmlFile) {
+                  return true;
+                }
+              }
+            }
+          }
+          return false;
+        },
       );
       if (someEffectIsFullReload) {
         dispatchBeforeFullReload();
@@ -136,29 +158,30 @@ This could be due to syntax errors or importing non-existent modules (see errors
       // - code was not executed (code splitting with dynamic import)
       // - import.meta.hot.accept() is not called (happens for HTML and CSS)
       if (type === "prune") {
-        if (urlHotMeta) {
-          dispatchBeforePrune();
-          delete urlHotMetas[urlToFetch];
-          if (urlHotMeta.disposeCallback) {
-            console.log(
-              `[jsenv] cleanup ${boundary} (no longer referenced by ${acceptedBy})`,
-            );
-            await urlHotMeta.disposeCallback();
-          }
+        if (!urlHotMeta) {
+          // code not executed for this url, no need to prune
+          continue;
         }
-        continue;
-      }
-      if (acceptedBy === boundary) {
-        console.log(`[jsenv] hot reloading ${boundary} (${cause})`);
-      } else {
-        console.log(
-          `[jsenv] hot reloading ${acceptedBy} usage in ${boundary} (${cause})`,
-        );
+        dispatchBeforePrune();
+        delete urlHotMetas[urlToFetch];
+        if (urlHotMeta.disposeCallback) {
+          console.log(
+            `[jsenv] cleanup ${boundary} (no longer referenced by ${acceptedBy})`,
+          );
+          await urlHotMeta.disposeCallback();
+        }
       }
       if (type === "js_module") {
         if (!urlHotMeta) {
-          // code was not executed, no need to re-execute it
+          // code not yet executed for this url, no need to re-execute it
           continue;
+        }
+        if (acceptedBy === boundary) {
+          console.log(`[jsenv] hot reload ${boundary} (${cause})`);
+        } else {
+          console.log(
+            `[jsenv] hot reload ${acceptedBy} usage in ${boundary} (${cause})`,
+          );
         }
         if (urlHotMeta.disposeCallback) {
           await urlHotMeta.disposeCallback();
@@ -188,6 +211,13 @@ This could be due to syntax errors or importing non-existent modules (see errors
         ) {
           // we are not in that HTML page
           continue;
+        }
+        if (acceptedBy === boundary) {
+          console.log(`[jsenv] hot reload ${boundary} (${cause})`);
+        } else {
+          console.log(
+            `[jsenv] hot reload ${acceptedBy} usage in ${boundary} (${cause})`,
+          );
         }
         const urlToReload = new URL(acceptedBy, `${window.location.origin}/`)
           .href;

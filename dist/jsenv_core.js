@@ -3900,6 +3900,7 @@ const writeDirectorySync = (
               .slice(0, -1),
           ),
         );
+        destinationStats = null;
       } else {
         throw new Error(
           `cannot write directory at ${destinationPath} because there is a file at ${urlToFileSystemPath(
@@ -3919,10 +3920,14 @@ const writeDirectorySync = (
       }
       throw new Error(`directory already exists at ${destinationPath}`);
     }
-    const destinationType = statsToType(destinationStats);
-    throw new Error(
-      `cannot write directory at ${destinationPath} because there is a ${destinationType}`,
-    );
+    if (force) {
+      unlinkSync(destinationPath);
+    } else {
+      const destinationType = statsToType(destinationStats);
+      throw new Error(
+        `cannot write directory at ${destinationPath} because there is a ${destinationType}`,
+      );
+    }
   }
 
   try {
@@ -19096,7 +19101,9 @@ const jsenvPluginWebResolution = () => {
       // baseUrl happens second argument to new URL() is different from
       // import.meta.url or document.currentScript.src
       const parentUrl =
-        reference.baseUrl || ownerUrlInfo.originalUrl || ownerUrlInfo.url;
+        reference.baseUrl || ownerUrlInfo.context.dev
+          ? ownerUrlInfo.url
+          : ownerUrlInfo.originalUrl || ownerUrlInfo.url;
       const url = new URL(reference.specifier, parentUrl);
       return url;
     },
@@ -19196,6 +19203,21 @@ const jsenvPluginFsRedirection = ({
         }
       }
       if (!fsStat) {
+        // for SPA we want to serve the root HTML file only when:
+        // 1. There is no corresponding file on the filesystem
+        // 2. The url pathname does not have an extension
+        //    This point assume client is requesting a file when there is an extension
+        //    and it assumes all routes will not use extension
+        // 3. The url pathname does not ends with "/"
+        //    In that case we assume client explicitely asks to load a directory
+        if (
+          !urlToExtension$1(urlObject) &&
+          !urlToPathname$1(urlObject).endsWith("/")
+        ) {
+          const { mainFilePath, rootDirectoryUrl } =
+            reference.ownerUrlInfo.context;
+          return new URL(mainFilePath, rootDirectoryUrl);
+        }
         return null;
       }
       const urlBeforeSymlinkResolution = urlObject.href;
@@ -19222,11 +19244,12 @@ const applyFsStatEffectsOnUrlObject = (urlObject, fsStat) => {
   const { pathname } = urlObject;
   const pathnameUsesTrailingSlash = pathname.endsWith("/");
   // force trailing slash on directories
-  if (fsStat.isDirectory() && !pathnameUsesTrailingSlash) {
-    urlObject.pathname = `${pathname}/`;
-  }
-  // otherwise remove trailing slash if any
-  if (!fsStat.isDirectory() && pathnameUsesTrailingSlash) {
+  if (fsStat.isDirectory()) {
+    if (!pathnameUsesTrailingSlash) {
+      urlObject.pathname = `${pathname}/`;
+    }
+  } else if (pathnameUsesTrailingSlash) {
+    // otherwise remove trailing slash if any
     // a warning here? (because it's strange to reference a file with a trailing slash)
     urlObject.pathname = pathname.slice(0, -1);
   }
@@ -19331,21 +19354,7 @@ const jsenvPluginProtocolFile = ({
           };
         };
 
-        // for SPA we want to serve the root HTML file only when:
-        // 1. There is no corresponding file on the filesystem
-        // 2. The url pathname does not have an extension
-        //    This point assume client is requesting a file when there is an extension
-        //    and it assumes all routes will not use extension
-        // 3. The url pathname does not ends with "/"
-        //    In that case we assume client explicitely asks to load a directory
         if (!fsStat) {
-          if (
-            !urlToExtension$1(urlInfo.url) &&
-            !urlToPathname$1(urlInfo.url).endsWith("/")
-          ) {
-            const { mainFilePath, rootDirectoryUrl } = urlInfo.context;
-            return serveFile(new URL(mainFilePath, rootDirectoryUrl));
-          }
           if (request && request.headers["sec-fetch-dest"] === "document") {
             const directoryContentItems = generateDirectoryContentItems(
               urlInfo.url,
