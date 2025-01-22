@@ -156,11 +156,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
             } else {
               position = getHtmlNodeAttributePosition(node, attributeName);
             }
-            const {
-              line,
-              column,
-              // originalLine, originalColumn
-            } = position;
+            const { line, column, originalLine, originalColumn } = position;
             const debug =
               getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
 
@@ -193,8 +189,9 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
               subtype,
               expectedType,
               specifier: attributeValue,
-              specifierLine: line,
-              specifierColumn: column,
+              specifierLine: originalLine === undefined ? line : originalLine,
+              specifierColumn:
+                originalColumn === undefined ? column : originalColumn,
               specifierStart: attributeValueStart,
               specifierEnd: attributeValueEnd,
               isResourceHint,
