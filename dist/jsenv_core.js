@@ -14503,11 +14503,15 @@ const createUrlInfoTransformer = ({
     if (!generatedUrl.startsWith("file:")) {
       return;
     }
-    if (
-      urlInfo.type === "directory" ||
-      // happens when type is "html" to list directory content for example
-      urlInfo.firstReference?.fsStat?.isDirectory()
-    ) {
+    if (urlToPathname$1(generatedUrl).endsWith("/")) {
+      // when users explicitely request a directory
+      // we can't write the content returned by the server in ".jsenv" at that url
+      // because it would try to write a directory
+      // ideally we would decide a filename for this
+      // for now we just don't write anything
+      return;
+    }
+    if (urlInfo.type === "directory") {
       // no need to write the directory
       return;
     }
