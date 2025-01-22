@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/https-local",
-  "version": "3.2.16",
+  "version": "3.2.17",
   "description": "A programmatic way to generate locally trusted certificates",
   "license": "MIT",
   "repository": {
@@ -40,7 +40,7 @@
     "hosts:ensure-localhost-mappings": "node ./scripts/hosts/ensure_localhost_mappings.mjs"
   },
   "dependencies": {
-    "@jsenv/filesystem": "4.13.0",
+    "@jsenv/filesystem": "4.13.1",
     "@jsenv/humanize": "1.2.8",
     "@jsenv/urls": "2.5.4",
     "command-exists": "1.2.9",
