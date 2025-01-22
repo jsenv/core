@@ -192,7 +192,7 @@ System.register([], function (_export, _context) {
           var iter = document.createNodeIterator(node, NodeFilter.SHOW_ELEMENT, function (foundNode) {
             return getShadowRoot(foundNode) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
           }, null, false);
-          for (var next = void 0; next = iter.nextNode();) {
+          for (var next = undefined; next = iter.nextNode();) {
             callback(getShadowRoot(next));
           }
         }

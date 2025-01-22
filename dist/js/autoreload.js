@@ -170,6 +170,7 @@ This could be due to syntax errors or importing non-existent modules (see errors
           );
           await urlHotMeta.disposeCallback();
         }
+        continue;
       }
       if (type === "js_module") {
         if (!urlHotMeta) {
