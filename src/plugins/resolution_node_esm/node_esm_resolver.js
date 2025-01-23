@@ -33,7 +33,7 @@ export const createNodeEsmResolver = ({
       return reference.specifier;
     }
     const { ownerUrlInfo } = reference;
-    if (reference.specifier[0] === "/") {
+    if (reference.specifierPathname[0] === "/") {
       const url = new URL(
         reference.specifier.slice(1),
         ownerUrlInfo.context.rootDirectoryUrl,

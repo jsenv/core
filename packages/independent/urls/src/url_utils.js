@@ -23,6 +23,14 @@ export const isValidUrl = (url) => {
   }
 };
 
+export const asSpecifierWithoutSearch = (specifier) => {
+  if (isValidUrl(specifier)) {
+    return asUrlWithoutSearch(specifier);
+  }
+  const [beforeQuestion] = specifier.split("?");
+  return beforeQuestion;
+};
+
 // normalize url search params:
 // Using URLSearchParams to alter the url search params
 // can result into "file:///file.css?css_module"

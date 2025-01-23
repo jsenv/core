@@ -86,7 +86,7 @@ export const getCorePlugins = ({
       appliesDuring: "*",
       resolveReference: (reference) => {
         const { ownerUrlInfo } = reference;
-        if (reference.specifier === "/") {
+        if (reference.specifierPathname === "/") {
           const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
           const url = new URL(mainFilePath, rootDirectoryUrl);
           return url;

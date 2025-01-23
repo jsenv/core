@@ -1485,6 +1485,14 @@ const isValidUrl$1 = (url) => {
   }
 };
 
+const asSpecifierWithoutSearch = (specifier) => {
+  if (isValidUrl$1(specifier)) {
+    return asUrlWithoutSearch(specifier);
+  }
+  const [beforeQuestion] = specifier.split("?");
+  return beforeQuestion;
+};
+
 // normalize url search params:
 // Using URLSearchParams to alter the url search params
 // can result into "file:///file.css?css_module"
@@ -13085,6 +13093,7 @@ const createReference = ({
       );
     }
   }
+
   const reference = {
     id: ++referenceId,
     ownerUrlInfo,
@@ -13107,6 +13116,9 @@ const createReference = ({
     integrity,
     crossorigin,
     specifier,
+    get specifierPathname() {
+      return asSpecifierWithoutSearch(reference.specifier);
+    },
     specifierStart,
     specifierEnd,
     specifierLine,
@@ -15602,7 +15614,7 @@ const jsenvPluginDirectoryReferenceEffect = (
         reference.filenameHint = `${
           reference.ownerUrlInfo.filenameHint
         }${urlToFilename$1(reference.url)}/`;
-      } else if (reference.specifier.endsWith("./")) ; else {
+      } else if (reference.specifierPathname.endsWith("./")) ; else {
         reference.filenameHint = `${urlToFilename$1(reference.url)}/`;
       }
       let actionForDirectory;
@@ -18890,7 +18902,7 @@ const createNodeEsmResolver = ({
       return reference.specifier;
     }
     const { ownerUrlInfo } = reference;
-    if (reference.specifier[0] === "/") {
+    if (reference.specifierPathname[0] === "/") {
       const url = new URL(
         reference.specifier.slice(1),
         ownerUrlInfo.context.rootDirectoryUrl,
@@ -19092,7 +19104,7 @@ const jsenvPluginWebResolution = () => {
     appliesDuring: "*",
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
-      if (reference.specifier[0] === "/") {
+      if (reference.specifierPathname[0] === "/") {
         const url = new URL(
           reference.specifier.slice(1),
           ownerUrlInfo.context.rootDirectoryUrl,
@@ -21133,7 +21145,7 @@ const getCorePlugins = ({
       appliesDuring: "*",
       resolveReference: (reference) => {
         const { ownerUrlInfo } = reference;
-        if (reference.specifier === "/") {
+        if (reference.specifierPathname === "/") {
           const { mainFilePath, rootDirectoryUrl } = ownerUrlInfo.context;
           const url = new URL(mainFilePath, rootDirectoryUrl);
           return url;
@@ -21586,7 +21598,7 @@ const createBuildSpecifierManager = ({
         const url = new URL(reference.specifier, ownerRawUrl).href;
         return url;
       }
-      if (reference.specifier[0] === "/") {
+      if (reference.specifierPathname[0] === "/") {
         const url = new URL(reference.specifier.slice(1), sourceDirectoryUrl)
           .href;
         return url;
@@ -21711,6 +21723,7 @@ const createBuildSpecifierManager = ({
           type: reference.type,
           expectedType: reference.expectedType,
           specifier: reference.specifier,
+          specifierPathname: reference.specifierPathname,
           specifierLine: reference.specifierLine,
           specifierColumn: reference.specifierColumn,
           specifierStart: reference.specifierStart,

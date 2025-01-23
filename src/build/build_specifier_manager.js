@@ -170,7 +170,7 @@ export const createBuildSpecifierManager = ({
         const url = new URL(reference.specifier, ownerRawUrl).href;
         return url;
       }
-      if (reference.specifier[0] === "/") {
+      if (reference.specifierPathname[0] === "/") {
         const url = new URL(reference.specifier.slice(1), sourceDirectoryUrl)
           .href;
         return url;
@@ -295,6 +295,7 @@ export const createBuildSpecifierManager = ({
           type: reference.type,
           expectedType: reference.expectedType,
           specifier: reference.specifier,
+          specifierPathname: reference.specifierPathname,
           specifierLine: reference.specifierLine,
           specifierColumn: reference.specifierColumn,
           specifierStart: reference.specifierStart,

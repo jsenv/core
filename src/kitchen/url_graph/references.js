@@ -1,6 +1,7 @@
 import { generateUrlForInlineContent } from "@jsenv/ast";
 import { generateContentFrame } from "@jsenv/humanize";
 import {
+  asSpecifierWithoutSearch,
   getCallerPosition,
   stringifyUrlSite,
   urlToBasename,
@@ -315,6 +316,7 @@ const createReference = ({
       );
     }
   }
+
   const reference = {
     id: ++referenceId,
     ownerUrlInfo,
@@ -337,6 +339,9 @@ const createReference = ({
     integrity,
     crossorigin,
     specifier,
+    get specifierPathname() {
+      return asSpecifierWithoutSearch(reference.specifier);
+    },
     specifierStart,
     specifierEnd,
     specifierLine,

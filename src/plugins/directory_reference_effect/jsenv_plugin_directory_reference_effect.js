@@ -30,7 +30,7 @@ export const jsenvPluginDirectoryReferenceEffect = (
         reference.filenameHint = `${
           reference.ownerUrlInfo.filenameHint
         }${urlToFilename(reference.url)}/`;
-      } else if (reference.specifier.endsWith("./")) {
+      } else if (reference.specifierPathname.endsWith("./")) {
       } else {
         reference.filenameHint = `${urlToFilename(reference.url)}/`;
       }
