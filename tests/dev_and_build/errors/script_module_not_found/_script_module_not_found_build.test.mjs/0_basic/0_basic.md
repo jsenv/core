@@ -19,7 +19,7 @@ no entry on filesystem
   at createFetchUrlContentError (@jsenv/core/src/kitchen/errors.js:114:14)
   at Object.fetchUrlContent (@jsenv/core/src/kitchen/kitchen.js:403:13)
   at async @jsenv/core/src/kitchen/kitchen.js:472:11
-  at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:30:7)
+  at async Object.startCollecting (@jsenv/core/src/kitchen/url_graph/references.js:31:7)
   at async @jsenv/core/src/kitchen/kitchen.js:470:9
   at async Object.cook (@jsenv/core/src/kitchen/kitchen.js:654:5)
   at async cookSelfThenDependencies (@jsenv/core/src/kitchen/kitchen.js:561:7)
