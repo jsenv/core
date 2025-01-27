@@ -8061,6 +8061,7 @@ const fetchFileSystem = async (
       : "no-store",
     canReadDirectory = false,
     rootDirectoryUrl, //  = `${pathToFileURL(process.cwd())}/`,
+    ENOENTFallback = () => {},
   } = {},
 ) => {
   const urlString = asUrlString(filesystemUrl);
@@ -8118,100 +8119,109 @@ const fetchFileSystem = async (
     };
   }
 
-  const sourceUrl = `file://${new URL(urlString).pathname}`;
-  try {
-    const [readStatTiming, sourceStat] = await timeFunction(
-      "file service>read file stat",
-      () => statSync(new URL(sourceUrl)),
-    );
-    if (sourceStat.isDirectory()) {
-      if (canReadDirectory) {
-        return serveDirectory(urlString, {
+  const serveFile = async (fileUrl) => {
+    try {
+      const [readStatTiming, fileStat] = timeFunction(
+        "file service>read file stat",
+        () => statSync(new URL(fileUrl)),
+      );
+      if (fileStat.isDirectory()) {
+        if (canReadDirectory) {
+          return serveDirectory(fileUrl, {
+            headers,
+            canReadDirectory,
+            rootDirectoryUrl,
+          });
+        }
+        return {
+          status: 403,
+          statusText: "not allowed to read directory",
+        };
+      }
+      // not a file, give up
+      if (!fileStat.isFile()) {
+        return {
+          status: 404,
+          timing: readStatTiming,
+        };
+      }
+
+      const clientCacheResponse = await getClientCacheResponse({
+        headers,
+        etagEnabled,
+        etagMemory,
+        etagMemoryMaxSize,
+        mtimeEnabled,
+        fileStat,
+        fileUrl,
+      });
+
+      // send 304 (redirect response to client cache)
+      // because the response body does not have to be transmitted
+      if (clientCacheResponse.status === 304) {
+        return composeTwoResponses(
+          {
+            timing: readStatTiming,
+            headers: {
+              ...(cacheControl ? { "cache-control": cacheControl } : {}),
+            },
+          },
+          clientCacheResponse,
+        );
+      }
+
+      let response;
+      if (compressionEnabled && fileStat.size >= compressionSizeThreshold) {
+        const compressedResponse = await getCompressedResponse({
           headers,
-          canReadDirectory,
-          rootDirectoryUrl,
+          fileUrl,
+        });
+        if (compressedResponse) {
+          response = compressedResponse;
+        }
+      }
+      if (!response) {
+        response = await getRawResponse({
+          fileStat,
+          fileUrl,
         });
       }
-      return {
-        status: 403,
-        statusText: "not allowed to read directory",
-      };
-    }
-    // not a file, give up
-    if (!sourceStat.isFile()) {
-      return {
-        status: 404,
-        timing: readStatTiming,
-      };
-    }
 
-    const clientCacheResponse = await getClientCacheResponse({
-      headers,
-      etagEnabled,
-      etagMemory,
-      etagMemoryMaxSize,
-      mtimeEnabled,
-      sourceStat,
-      sourceUrl,
-    });
-
-    // send 304 (redirect response to client cache)
-    // because the response body does not have to be transmitted
-    if (clientCacheResponse.status === 304) {
-      return composeTwoResponses(
+      const intermediateResponse = composeTwoResponses(
         {
           timing: readStatTiming,
           headers: {
             ...(cacheControl ? { "cache-control": cacheControl } : {}),
+            // even if client cache is disabled, server can still
+            // send his own cache control but client should just ignore it
+            // and keep sending cache-control: 'no-store'
+            // if not, uncomment the line below to preserve client
+            // desire to ignore cache
+            // ...(headers["cache-control"] === "no-store" ? { "cache-control": "no-store" } : {}),
           },
         },
-        clientCacheResponse,
+        response,
+      );
+      return composeTwoResponses(intermediateResponse, clientCacheResponse);
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        const fallbackFileUrl = ENOENTFallback();
+        if (fallbackFileUrl) {
+          return serveFile(fallbackFileUrl);
+        }
+      }
+      return composeTwoResponses(
+        {
+          headers: {
+            ...(cacheControl ? { "cache-control": cacheControl } : {}),
+          },
+        },
+        convertFileSystemErrorToResponseProperties(e) || {},
       );
     }
+  };
 
-    let response;
-    if (compressionEnabled && sourceStat.size >= compressionSizeThreshold) {
-      const compressedResponse = await getCompressedResponse({
-        headers,
-        sourceUrl,
-      });
-      if (compressedResponse) {
-        response = compressedResponse;
-      }
-    }
-    if (!response) {
-      response = await getRawResponse({
-        sourceStat,
-        sourceUrl,
-      });
-    }
-
-    const intermediateResponse = composeTwoResponses(
-      {
-        timing: readStatTiming,
-        headers: {
-          ...(cacheControl ? { "cache-control": cacheControl } : {}),
-          // even if client cache is disabled, server can still
-          // send his own cache control but client should just ignore it
-          // and keep sending cache-control: 'no-store'
-          // if not, uncomment the line below to preserve client
-          // desire to ignore cache
-          // ...(headers["cache-control"] === "no-store" ? { "cache-control": "no-store" } : {}),
-        },
-      },
-      response,
-    );
-    return composeTwoResponses(intermediateResponse, clientCacheResponse);
-  } catch (e) {
-    return composeTwoResponses(
-      {
-        headers: {
-          ...(cacheControl ? { "cache-control": cacheControl } : {}),
-        },
-      },
-      convertFileSystemErrorToResponseProperties(e) || {},
-    );
-  }
+  return serveFile(`file://${new URL(urlString).pathname}`);
 };
 
 const create500Response = (message) => {
@@ -8231,8 +8241,8 @@ const getClientCacheResponse = async ({
   etagMemory,
   etagMemoryMaxSize,
   mtimeEnabled,
-  sourceStat,
-  sourceUrl,
+  fileStat,
+  fileUrl,
 }) => {
   // here you might be tempted to add || headers["cache-control"] === "no-cache"
   // but no-cache means resource can be cache but must be revalidated (yeah naming is strange)
@@ -8251,15 +8261,15 @@ const getClientCacheResponse = async ({
       headers,
       etagMemory,
       etagMemoryMaxSize,
-      sourceStat,
-      sourceUrl,
+      fileStat,
+      fileUrl,
     });
   }
 
   if (mtimeEnabled) {
     return getMtimeResponse({
       headers,
-      sourceStat,
+      fileStat,
     });
   }
 
@@ -8270,8 +8280,8 @@ const getEtagResponse = async ({
   headers,
   etagMemory,
   etagMemoryMaxSize,
-  sourceUrl,
-  sourceStat,
+  fileUrl,
+  fileStat,
 }) => {
   const [computeEtagTiming, fileContentEtag] = await timeFunction(
     "file service>generate file etag",
@@ -8279,8 +8289,8 @@ const getEtagResponse = async ({
       computeEtag({
         etagMemory,
         etagMemoryMaxSize,
-        sourceUrl,
-        sourceStat,
+        fileUrl,
+        fileStat,
       }),
   );
 
@@ -8308,20 +8318,20 @@ const ETAG_MEMORY_MAP = new Map();
 const computeEtag = async ({
   etagMemory,
   etagMemoryMaxSize,
-  sourceUrl,
-  sourceStat,
+  fileUrl,
+  fileStat,
 }) => {
   if (etagMemory) {
-    const etagMemoryEntry = ETAG_MEMORY_MAP.get(sourceUrl);
+    const etagMemoryEntry = ETAG_MEMORY_MAP.get(fileUrl);
     if (
       etagMemoryEntry &&
-      fileStatAreTheSame(etagMemoryEntry.sourceStat, sourceStat)
+      fileStatAreTheSame(etagMemoryEntry.fileStat, fileStat)
     ) {
       return etagMemoryEntry.eTag;
     }
   }
   const fileContentAsBuffer = await new Promise((resolve, reject) => {
-    readFile(new URL(sourceUrl), (error, buffer) => {
+    readFile(new URL(fileUrl), (error, buffer) => {
       if (error) {
         reject(error);
       } else {
@@ -8335,7 +8345,7 @@ const computeEtag = async ({
       const firstKey = Array.from(ETAG_MEMORY_MAP.keys())[0];
       ETAG_MEMORY_MAP.delete(firstKey);
     }
-    ETAG_MEMORY_MAP.set(sourceUrl, { sourceStat, eTag });
+    ETAG_MEMORY_MAP.set(fileUrl, { fileStat, eTag });
   }
   return eTag;
 };
@@ -8360,7 +8370,7 @@ const fileStatKeysToCompare = [
   "blksize",
 ];
 
-const getMtimeResponse = async ({ headers, sourceStat }) => {
+const getMtimeResponse = async ({ headers, fileStat }) => {
   if ("if-modified-since" in headers) {
     let cachedModificationDate;
     try {
@@ -8372,7 +8382,7 @@ const getMtimeResponse = async ({ headers, sourceStat }) => {
       };
     }
 
-    const actualModificationDate = dateToSecondsPrecision(sourceStat.mtime);
+    const actualModificationDate = dateToSecondsPrecision(fileStat.mtime);
     if (Number(cachedModificationDate) >= Number(actualModificationDate)) {
       return {
         status: 304,
@@ -8383,12 +8393,12 @@ const getMtimeResponse = async ({ headers, sourceStat }) => {
   return {
     status: 200,
     headers: {
-      "last-modified": dateToUTCString(sourceStat.mtime),
+      "last-modified": dateToUTCString(fileStat.mtime),
     },
   };
 };
 
-const getCompressedResponse = async ({ sourceUrl, headers }) => {
+const getCompressedResponse = async ({ fileUrl, headers }) => {
   const acceptedCompressionFormat = pickContentEncoding(
     { headers },
     Object.keys(availableCompressionFormats),
@@ -8397,7 +8407,7 @@ const getCompressedResponse = async ({ sourceUrl, headers }) => {
     return null;
   }
 
-  const fileReadableStream = fileUrlToReadableStream(sourceUrl);
+  const fileReadableStream = fileUrlToReadableStream(fileUrl);
   const body =
     await availableCompressionFormats[acceptedCompressionFormat](
       fileReadableStream,
@@ -8406,7 +8416,7 @@ const getCompressedResponse = async ({ sourceUrl, headers }) => {
   return {
     status: 200,
     headers: {
-      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
+      "content-type": CONTENT_TYPE.fromUrlExtension(fileUrl),
       "content-encoding": acceptedCompressionFormat,
       "vary": "accept-encoding",
     },
@@ -8436,14 +8446,14 @@ const availableCompressionFormats = {
   },
 };
 
-const getRawResponse = async ({ sourceUrl, sourceStat }) => {
+const getRawResponse = async ({ fileUrl, fileStat }) => {
   return {
     status: 200,
     headers: {
-      "content-type": CONTENT_TYPE.fromUrlExtension(sourceUrl),
-      "content-length": sourceStat.size,
+      "content-type": CONTENT_TYPE.fromUrlExtension(fileUrl),
+      "content-length": fileStat.size,
     },
-    body: fileUrlToReadableStream(sourceUrl),
+    body: fileUrlToReadableStream(fileUrl),
   };
 };
 
@@ -24521,19 +24531,26 @@ const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
         resource: `/${buildMainFilePath}`,
       };
     }
-    return fetchFileSystem(
-      new URL(request.resource.slice(1), buildDirectoryUrl),
-      {
-        headers: request.headers,
-        cacheControl: urlIsVersioned
-          ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-          : "private,max-age=0,must-revalidate",
-        etagEnabled: true,
-        compressionEnabled: !request.pathname.endsWith(".mp4"),
-        rootDirectoryUrl: buildDirectoryUrl,
-        canReadDirectory: true,
+    const urlObject = new URL(request.resource.slice(1), buildDirectoryUrl);
+    return fetchFileSystem(urlObject, {
+      headers: request.headers,
+      cacheControl: urlIsVersioned
+        ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+        : "private,max-age=0,must-revalidate",
+      etagEnabled: true,
+      compressionEnabled: !request.pathname.endsWith(".mp4"),
+      rootDirectoryUrl: buildDirectoryUrl,
+      canReadDirectory: true,
+      ENOENTFallback: () => {
+        if (
+          !urlToExtension$1(urlObject) &&
+          !urlToPathname$1(urlObject).endsWith("/")
+        ) {
+          return new URL(buildMainFilePath, buildDirectoryUrl);
+        }
+        return null;
       },
-    );
+    });
   };
 };
 
