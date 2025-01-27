@@ -10,9 +10,9 @@ export const createEventEmitter = () => {
     callbackSet.delete(callback);
   };
   const emit = (...args) => {
-    callbackSet.forEach((callback) => {
+    for (const callback of callbackSet) {
       callback(...args);
-    });
+    }
   };
   return { on, off, emit };
 };

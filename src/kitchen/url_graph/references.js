@@ -22,7 +22,7 @@ export const createDependencies = (ownerUrlInfo) => {
 
     const stopCollecting = () => {
       for (const prevReferenceToOther of prevReferenceToOthersSet) {
-        applyDependencyRemovalEffects(prevReferenceToOther);
+        checkForDependencyRemovalEffects(prevReferenceToOther);
       }
       prevReferenceToOthersSet.clear();
     };
@@ -527,7 +527,7 @@ ${ownerUrlInfo.url}`,
     implicitRef.remove();
   }
   ownerUrlInfo.referenceToOthersSet.delete(reference);
-  return applyDependencyRemovalEffects(reference);
+  return checkForDependencyRemovalEffects(reference);
 };
 
 const canAddOrRemoveReference = (reference) => {
@@ -556,7 +556,7 @@ const canAddOrRemoveReference = (reference) => {
   return false;
 };
 
-const applyDependencyRemovalEffects = (reference) => {
+const checkForDependencyRemovalEffects = (reference) => {
   const { ownerUrlInfo } = reference;
   const { referenceToOthersSet } = ownerUrlInfo;
   if (reference.isImplicit && !reference.isInline) {
@@ -591,6 +591,7 @@ const applyDependencyRemovalEffects = (reference) => {
   referencedUrlInfo.referenceFromOthersSet.delete(reference);
 
   let firstReferenceFromOther;
+  let wasInlined;
   for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
     if (referenceFromOther.urlInfo !== referencedUrlInfo) {
       continue;
@@ -605,7 +606,8 @@ const applyDependencyRemovalEffects = (reference) => {
     if (referenceFromOther.type === "http_request") {
       continue;
     }
-    if (referenceFromOther.gotInlined()) {
+    wasInlined = referenceFromOther.gotInlined();
+    if (wasInlined) {
       // the url info was inlined, an other reference is required
       // to consider the non-inlined urlInfo as used
       continue;
@@ -621,6 +623,9 @@ const applyDependencyRemovalEffects = (reference) => {
       referencedUrlInfo.firstReference = null;
       applyReferenceEffectsOnUrlInfo(firstReferenceFromOther);
     }
+    return false;
+  }
+  if (wasInlined) {
     return false;
   }
   // referencedUrlInfo.firstReference = null;

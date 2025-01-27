@@ -238,6 +238,11 @@ export const jsenvPluginAutoreloadServer = ({
                 // are lost and sourcemap is considered as pruned
                 continue;
               }
+              if (lastReferenceFromOther.type === "http_request") {
+                // no need to tell client to reload when a http request is pruned
+                // happens when reloading the current html page for instance
+                continue;
+              }
               const { ownerUrlInfo } = lastReferenceFromOther;
               if (!ownerUrlInfo.isUsed()) {
                 continue;
