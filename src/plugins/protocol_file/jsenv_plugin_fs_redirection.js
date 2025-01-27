@@ -8,6 +8,7 @@ import { realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 export const jsenvPluginFsRedirection = ({
+  directoryContentMagicName,
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
@@ -30,10 +31,14 @@ export const jsenvPluginFsRedirection = ({
       if (reference.subtype === "new_url_second_arg") {
         return `ignore:${reference.url}`;
       }
-      if (reference.specifierPathname.endsWith("/...")) {
+      if (
+        reference.specifierPathname.endsWith(`/${directoryContentMagicName}`)
+      ) {
         const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
         const directoryUrl = new URL(
-          reference.specifierPathname.replace("/...", "/").slice(1),
+          reference.specifierPathname
+            .replace(`/${directoryContentMagicName}`, "/")
+            .slice(1),
           rootDirectoryUrl,
         ).href;
         return directoryUrl;

@@ -24,6 +24,7 @@ const htmlFileUrlForDirectory = new URL(
   "./client/directory.html",
   import.meta.url,
 );
+const directoryContentMagicName = "...";
 
 export const jsenvPluginProtocolFile = ({
   magicExtensions,
@@ -33,6 +34,7 @@ export const jsenvPluginProtocolFile = ({
 }) => {
   return [
     jsenvPluginFsRedirection({
+      directoryContentMagicName,
       magicExtensions,
       magicDirectoryIndex,
       preserveSymlinks,
@@ -72,8 +74,9 @@ export const jsenvPluginProtocolFile = ({
         if (reference.original) {
           const originalSpecifierPathname =
             reference.original.specifierPathname;
-
-          if (originalSpecifierPathname.endsWith("/...")) {
+          if (
+            originalSpecifierPathname.endsWith(`/${directoryContentMagicName}`)
+          ) {
             return originalSpecifierPathname;
           }
         }
@@ -238,7 +241,10 @@ const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
   let i = 0;
   while (i < parts.length) {
     const part = parts[i];
-    const href = i === 0 ? "/..." : `/${parts.slice(1, i + 1).join("/")}/`;
+    const href =
+      i === 0
+        ? `/${directoryContentMagicName}`
+        : `/${parts.slice(1, i + 1).join("/")}/`;
     const text = part;
     const isLastPart = i === parts.length - 1;
     items.push({
