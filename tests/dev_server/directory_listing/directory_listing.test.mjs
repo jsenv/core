@@ -1,5 +1,9 @@
 import { startDevServer } from "@jsenv/core";
-import { replaceFileStructureSync, writeFileSync } from "@jsenv/filesystem";
+import {
+  replaceFileStructureSync,
+  writeDirectorySync,
+  writeFileSync,
+} from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
 let debug = false;
@@ -61,6 +65,11 @@ try {
   await takeScreenshot("7_index_exists_dir");
   await page.locator(`.directory_nav a[href="/..."]`).click();
   await takeScreenshot("8_after_click_root_in_nav");
+  await page.goto(`${devServer.origin}/dir/foo/bar/`);
+  await takeScreenshot("9_dir_404");
+  writeDirectorySync(new URL("./git_ignored/dir/empty/", import.meta.url));
+  await page.goto(`${devServer.origin}/dir/empty/file.js`);
+  await takeScreenshot("10_file_404_dir_empty");
 } finally {
   if (!debug) {
     browser.close();

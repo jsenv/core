@@ -356,7 +356,7 @@ const generateDirectoryContentItems = (directoryUrl, rootDirectoryUrl) => {
 };
 const generateDirectoryContent = (directoryContentItems) => {
   if (directoryContentItems.length === 0) {
-    return `<p>Directory is empty</p>`;
+    return `<p class="directory_empty_message">Directory is empty</p>`;
   }
   let html = `<ul class="directory_content">`;
   for (const directoryContentItem of directoryContentItems) {

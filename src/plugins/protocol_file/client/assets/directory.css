@@ -26,6 +26,11 @@ button {
   text-decoration: none;
   position: relative;
 }
+.directory_empty_message {
+  margin: 1em;
+  padding: 0.5em;
+  color: #bbbbbb;
+}
 .directory_content {
   margin: 10px 15px 10px 15px;
   list-style-type: none;
