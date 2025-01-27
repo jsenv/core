@@ -55,11 +55,7 @@ const takeScreenshot = async (scenario) => {
   );
 };
 const testScenario = async (scenario) => {
-  const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
-  replaceFileStructureSync({
-    from: scenarioDirectoryUrl,
-    to: sourceDirectoryUrl,
-  });
+  writeFileStructureForScenario(scenario);
   await new Promise((resolve) => setTimeout(resolve, 500));
   await takeScreenshot(scenario);
 };
