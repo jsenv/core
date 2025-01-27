@@ -1,12 +1,12 @@
-# [0_chromium](../../spa.test.mjs#L22)
+# [1_firefox](../../spa_dev.test.mjs#L23)
 
 ```js
-run({ browserLauncher: chromium })
+run({ browserLauncher: firefox })
 ```
 
-# 1/2 write 4 files into "./.jsenv/chrome@131.00/"
+# 1/2 write 4 files into "./.jsenv/firefox@132.00/"
 
-see [./.jsenv/chrome@131.00/](./.jsenv/chrome@131.00/)
+see [./.jsenv/firefox@132.00/](./.jsenv/firefox@132.00/)
 
 # 2/2 resolve
 
