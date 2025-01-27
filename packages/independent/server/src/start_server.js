@@ -355,6 +355,14 @@ export const startServer = async ({
         nodeResponse.end();
         return;
       }
+      try {
+        // eslint-disable-next-line no-new
+        new URL(nodeRequest.url, "http://example.com");
+      } catch {
+        nodeResponse.writeHead(400, "Request url is not supported");
+        nodeResponse.end();
+        return;
+      }
 
       const receiveRequestOperation = Abort.startOperation();
       receiveRequestOperation.addAbortSource((abort) => {
