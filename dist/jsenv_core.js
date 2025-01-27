@@ -19480,11 +19480,14 @@ const generateHtmlForDirectory = (directoryContentItems) => {
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
 
   const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
-  const directoryRelativeUrl = urlToRelativeUrl(directoryUrl, rootDirectoryUrl);
   const replacers = {
     directoryUrl,
     directoryNav: () =>
-      generateDirectoryNav(directoryRelativeUrl, rootDirectoryUrl),
+      generateDirectoryNav(directoryUrl, {
+        rootDirectoryUrl,
+        rootDirectoryUrlForServer:
+          directoryContentItems.rootDirectoryUrlForServer,
+      }),
     directoryContent: () => generateDirectoryContent(directoryContentItems),
   };
   const html = replacePlaceholders$1(htmlForDirectory, replacers);
@@ -19514,47 +19517,60 @@ const generateHtmlForENOENT = (
     ancestorDirectoryUrl,
     ancestorDirectoryRelativeUrl,
     ancestorDirectoryNav: () =>
-      generateDirectoryNav(ancestorDirectoryRelativeUrl, rootDirectoryUrl),
+      generateDirectoryNav(ancestorDirectoryUrl, {
+        rootDirectoryUrl,
+        rootDirectoryUrlForServer:
+          directoryContentItems.rootDirectoryUrlForServer,
+      }),
     ancestorDirectoryContent: () =>
       generateDirectoryContent(directoryContentItems),
   };
   const html = replacePlaceholders$1(htmlFor404AndAncestorDir, replacers);
   return html;
 };
-const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
+const generateDirectoryNav = (
+  entryDirectoryUrl,
+  { rootDirectoryUrl, rootDirectoryUrlForServer },
+) => {
+  const entryDirectoryRelativeUrl = urlToRelativeUrl(
+    entryDirectoryUrl,
+    rootDirectoryUrl,
+  );
+  const isDir = entryDirectoryRelativeUrl.endsWith("/");
   const rootDirectoryUrlName = urlToFilename$1(rootDirectoryUrl);
-  const relativeUrlWithRoot = relativeUrl
-    ? `${rootDirectoryUrlName}/${relativeUrl}`
-    : `${rootDirectoryUrlName}/`;
-  const isDir = relativeUrlWithRoot.endsWith("/");
-  const parts = isDir
-    ? relativeUrlWithRoot.slice(0, -1).split("/")
-    : relativeUrlWithRoot.split("/");
   const items = [];
-  items.push({
-    href: "/",
-    text: "/",
-  });
   let dirPartsHtml = "";
+  const parts =
+    `${rootDirectoryUrlName}/${entryDirectoryRelativeUrl.slice(0, -1)}`.split(
+      "/",
+    );
   let i = 0;
   while (i < parts.length) {
     const part = parts[i];
-    const href =
-      i === 0
-        ? `/${directoryContentMagicName}`
-        : `/${parts.slice(1, i + 1).join("/")}/`;
+    const directoryRelativeUrl = `${parts.slice(1, i + 1).join("/")}`;
+    const directoryUrl =
+      directoryRelativeUrl === ""
+        ? rootDirectoryUrl
+        : new URL(`${directoryRelativeUrl}/`, rootDirectoryUrl).href;
+    let href =
+      directoryUrl === rootDirectoryUrlForServer ||
+      urlIsInsideOf(directoryUrl, rootDirectoryUrlForServer)
+        ? urlToRelativeUrl(directoryUrl, rootDirectoryUrlForServer)
+        : directoryUrl;
+    if (href === "") {
+      href = `/${directoryContentMagicName}`;
+    }
     const text = part;
-    const isLastPart = i === parts.length - 1;
     items.push({
       href,
       text,
-      isCurrent: isLastPart,
     });
     i++;
   }
   i = 0;
-  for (const { href, text, isCurrent } of items) {
-    if (isCurrent) {
+  for (const { href, text } of items) {
+    const isLastPart = i === parts.length - 1;
+    if (isLastPart) {
       dirPartsHtml += `
       <span class="directory_nav_item" data-current>
         ${text}
@@ -19565,10 +19581,8 @@ const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
       <a class="directory_nav_item" href="${href}">
         ${text}
       </a>`;
-    if (i > 0) {
-      dirPartsHtml += `
+    dirPartsHtml += `
       <span class="directory_separator">/</span>`;
-    }
     i++;
   }
   if (isDir) {
@@ -19577,12 +19591,15 @@ const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
   }
   return dirPartsHtml;
 };
-const generateDirectoryContentItems = (directoryUrl, rootDirectoryUrl) => {
+const generateDirectoryContentItems = (
+  directoryUrl,
+  rootDirectoryUrlForServer,
+) => {
   let firstExistingDirectoryUrl = new URL("./", directoryUrl);
   while (!existsSync(firstExistingDirectoryUrl)) {
     firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
-    if (!urlIsInsideOf(firstExistingDirectoryUrl, rootDirectoryUrl)) {
-      firstExistingDirectoryUrl = new URL(rootDirectoryUrl);
+    if (!urlIsInsideOf(firstExistingDirectoryUrl, rootDirectoryUrlForServer)) {
+      firstExistingDirectoryUrl = new URL(rootDirectoryUrlForServer);
       break;
     }
   }
@@ -19592,37 +19609,42 @@ const generateDirectoryContentItems = (directoryUrl, rootDirectoryUrl) => {
     const fileUrlObject = new URL(filename, firstExistingDirectoryUrl);
     fileUrls.push(fileUrlObject);
   }
+  let rootDirectoryUrl = rootDirectoryUrlForServer;
   package_workspaces: {
-    if (String(firstExistingDirectoryUrl) !== String(rootDirectoryUrl)) {
-      break package_workspaces;
-    }
-    const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
+    const packageDirectoryUrl = lookupPackageDirectory(
+      rootDirectoryUrlForServer,
+    );
     if (!packageDirectoryUrl) {
       break package_workspaces;
     }
-    if (String(packageDirectoryUrl) === String(rootDirectoryUrl)) {
+    if (String(packageDirectoryUrl) === String(rootDirectoryUrlForServer)) {
       break package_workspaces;
     }
-    let packageContent;
-    try {
-      packageContent = JSON.parse(
-        readFileSync(new URL("package.json", packageDirectoryUrl), "utf8"),
-      );
-    } catch {
-      break package_workspaces;
-    }
-    const { workspaces } = packageContent;
-    if (Array.isArray(workspaces)) {
-      for (const workspace of workspaces) {
-        const workspaceUrlObject = new URL(workspace, packageDirectoryUrl);
-        const workspaceUrl = workspaceUrlObject.href;
-        if (workspaceUrl.endsWith("*")) {
-          const directoryUrl = ensurePathnameTrailingSlash(
-            workspaceUrl.slice(0, -1),
-          );
-          fileUrls.push(new URL(directoryUrl));
-        } else {
-          fileUrls.push(ensurePathnameTrailingSlash(workspaceUrlObject));
+    rootDirectoryUrl = packageDirectoryUrl;
+    if (
+      String(firstExistingDirectoryUrl) === String(rootDirectoryUrlForServer)
+    ) {
+      let packageContent;
+      try {
+        packageContent = JSON.parse(
+          readFileSync(new URL("package.json", packageDirectoryUrl), "utf8"),
+        );
+      } catch {
+        break package_workspaces;
+      }
+      const { workspaces } = packageContent;
+      if (Array.isArray(workspaces)) {
+        for (const workspace of workspaces) {
+          const workspaceUrlObject = new URL(workspace, packageDirectoryUrl);
+          const workspaceUrl = workspaceUrlObject.href;
+          if (workspaceUrl.endsWith("*")) {
+            const directoryUrl = ensurePathnameTrailingSlash(
+              workspaceUrl.slice(0, -1),
+            );
+            fileUrls.push(new URL(directoryUrl));
+          } else {
+            fileUrls.push(ensurePathnameTrailingSlash(workspaceUrlObject));
+          }
         }
       }
     }
@@ -19646,14 +19668,18 @@ const generateDirectoryContentItems = (directoryUrl, rootDirectoryUrl) => {
       sortedUrl,
       firstExistingDirectoryUrl,
     );
-    const fileUrlRelativeToRoot = urlToRelativeUrl(sortedUrl, rootDirectoryUrl);
+    const fileUrlRelativeToServer = urlToRelativeUrl(
+      sortedUrl,
+      rootDirectoryUrlForServer,
+    );
     const type = fileUrlRelativeToParent.endsWith("/") ? "dir" : "file";
     items.push({
       type,
       fileUrlRelativeToParent,
-      fileUrlRelativeToRoot,
+      fileUrlRelativeToServer,
     });
   }
+  items.rootDirectoryUrlForServer = rootDirectoryUrlForServer;
   items.rootDirectoryUrl = rootDirectoryUrl;
   items.firstExistingDirectoryUrl = firstExistingDirectoryUrl;
   return items;
@@ -19664,11 +19690,15 @@ const generateDirectoryContent = (directoryContentItems) => {
   }
   let html = `<ul class="directory_content">`;
   for (const directoryContentItem of directoryContentItems) {
-    const { type, fileUrlRelativeToParent, fileUrlRelativeToRoot } =
+    const { type, fileUrlRelativeToParent, fileUrlRelativeToServer } =
       directoryContentItem;
+    let href = fileUrlRelativeToServer;
+    if (href === "") {
+      href = `${directoryContentMagicName}`;
+    }
     html += `
       <li class="directory_child" data-type="${type}">
-        <a href="/${fileUrlRelativeToRoot}">${fileUrlRelativeToParent}</a>
+        <a href="/${href}">${fileUrlRelativeToParent}</a>
       </li>`;
   }
   html += `\n  </ul>`;
