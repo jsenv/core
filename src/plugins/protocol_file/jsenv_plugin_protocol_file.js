@@ -261,6 +261,8 @@ const generateDirectoryNav = (
         : directoryUrl;
     if (href === "") {
       href = `/${directoryContentMagicName}`;
+    } else {
+      href = `/${href}`;
     }
     const text = part;
     items.push({
