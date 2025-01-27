@@ -6981,6 +6981,14 @@ const startServer = async ({
         nodeResponse.end();
         return;
       }
+      try {
+        // eslint-disable-next-line no-new
+        new URL(nodeRequest.url, "http://example.com/");
+      } catch {
+        nodeResponse.writeHead(400, "Request url is not supported");
+        nodeResponse.end();
+        return;
+      }
 
       const receiveRequestOperation = Abort.startOperation();
       receiveRequestOperation.addAbortSource((abort) => {
@@ -19180,6 +19188,14 @@ const jsenvPluginFsRedirection = ({
       if (reference.subtype === "new_url_second_arg") {
         return `ignore:${reference.url}`;
       }
+      if (reference.specifierPathname.endsWith("/...")) {
+        const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
+        const directoryUrl = new URL(
+          reference.specifierPathname.replace("/...", "/").slice(1),
+          rootDirectoryUrl,
+        ).href;
+        return directoryUrl;
+      }
       // ignore "./" on new URL("./")
       // if (
       //   reference.subtype === "new_url_first_arg" &&
@@ -19330,6 +19346,14 @@ const jsenvPluginProtocolFile = ({
         const { generatedUrl } = reference;
         if (!generatedUrl.startsWith("file:")) {
           return null;
+        }
+        if (reference.original) {
+          const originalSpecifierPathname =
+            reference.original.specifierPathname;
+
+          if (originalSpecifierPathname.endsWith("/...")) {
+            return originalSpecifierPathname;
+          }
         }
         const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
         if (urlIsInsideOf(generatedUrl, rootDirectoryUrl)) {
@@ -19487,7 +19511,7 @@ const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
   let i = 0;
   while (i < parts.length) {
     const part = parts[i];
-    const href = i === 0 ? "/" : `/${parts.slice(1, i + 1).join("/")}/`;
+    const href = i === 0 ? "/..." : `/${parts.slice(1, i + 1).join("/")}/`;
     const text = part;
     const isLastPart = i === parts.length - 1;
     if (isLastPart) {
