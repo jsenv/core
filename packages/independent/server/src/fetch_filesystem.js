@@ -93,35 +93,32 @@ export const fetchFileSystem = async (
   }
 
   const serveFile = async (fileUrl) => {
-    const [readStatTiming, fileStat] = await timeFunction(
-      "file service>read file stat",
-      () => statSync(new URL(fileUrl)),
-    );
-    if (fileStat.isDirectory()) {
-      if (canReadDirectory) {
-        return serveDirectory(fileUrl, {
-          headers,
-          canReadDirectory,
-          rootDirectoryUrl,
-        });
-      }
-      return {
-        status: 403,
-        statusText: "not allowed to read directory",
-      };
-    }
-    // not a file, give up
-    if (!fileStat.isFile()) {
-      const fallbackFileUrl = ENOENTFallback();
-      if (fallbackFileUrl) {
-        return serveFile(fallbackFileUrl);
-      }
-      return {
-        status: 404,
-        timing: readStatTiming,
-      };
-    }
     try {
+      const [readStatTiming, fileStat] = timeFunction(
+        "file service>read file stat",
+        () => statSync(new URL(fileUrl)),
+      );
+      if (fileStat.isDirectory()) {
+        if (canReadDirectory) {
+          return serveDirectory(fileUrl, {
+            headers,
+            canReadDirectory,
+            rootDirectoryUrl,
+          });
+        }
+        return {
+          status: 403,
+          statusText: "not allowed to read directory",
+        };
+      }
+      // not a file, give up
+      if (!fileStat.isFile()) {
+        return {
+          status: 404,
+          timing: readStatTiming,
+        };
+      }
+
       const clientCacheResponse = await getClientCacheResponse({
         headers,
         etagEnabled,
@@ -180,6 +177,12 @@ export const fetchFileSystem = async (
       );
       return composeTwoResponses(intermediateResponse, clientCacheResponse);
     } catch (e) {
+      if (e.code === "ENOENT") {
+        const fallbackFileUrl = ENOENTFallback();
+        if (fallbackFileUrl) {
+          return serveFile(fallbackFileUrl);
+        }
+      }
       return composeTwoResponses(
         {
           headers: {
