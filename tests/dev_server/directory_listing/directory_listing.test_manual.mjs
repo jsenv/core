@@ -10,6 +10,7 @@ replaceFileStructureSync({
   to: sourceDirectoryUrl,
 });
 await startDevServer({
+  serverLogLevel: "info",
   sourceDirectoryUrl,
   port: 4567,
 });
