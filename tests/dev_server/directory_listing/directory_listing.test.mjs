@@ -50,6 +50,15 @@ try {
   await takeScreenshot("4_after_click_dir_in_nav");
   await page.locator(`.directory_nav a`).click();
   await takeScreenshot("5_after_click_root_in_nav");
+  replaceFileStructureSync({
+    from: new URL("./fixtures/2_index_exists/", import.meta.url),
+    to: sourceDirectoryUrl,
+  });
+  await page.reload();
+  await page.goto(`${devServer.origin}/...`);
+  await takeScreenshot("6_index_exists");
+  await page.goto(`${devServer.origin}/dir/...`);
+  await takeScreenshot("7_index_exists_dir");
 } finally {
   if (!debug) {
     browser.close();
