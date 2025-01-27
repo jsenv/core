@@ -19536,14 +19536,16 @@ const generateDirectoryNav = (
     entryDirectoryUrl,
     rootDirectoryUrl,
   );
-  const isDir = entryDirectoryRelativeUrl.endsWith("/");
+  const isDir =
+    entryDirectoryRelativeUrl === "" || entryDirectoryRelativeUrl.endsWith("/");
   const rootDirectoryUrlName = urlToFilename$1(rootDirectoryUrl);
   const items = [];
   let dirPartsHtml = "";
-  const parts =
-    `${rootDirectoryUrlName}/${entryDirectoryRelativeUrl.slice(0, -1)}`.split(
-      "/",
-    );
+  const parts = entryDirectoryRelativeUrl
+    ? `${rootDirectoryUrlName}/${entryDirectoryRelativeUrl.slice(0, -1)}`.split(
+        "/",
+      )
+    : [rootDirectoryUrlName];
   let i = 0;
   while (i < parts.length) {
     const part = parts[i];
@@ -19559,6 +19561,8 @@ const generateDirectoryNav = (
         : directoryUrl;
     if (href === "") {
       href = `/${directoryContentMagicName}`;
+    } else {
+      href = `/${href}`;
     }
     const text = part;
     items.push({
@@ -19569,7 +19573,7 @@ const generateDirectoryNav = (
   }
   i = 0;
   for (const { href, text } of items) {
-    const isLastPart = i === parts.length - 1;
+    const isLastPart = i === items.length - 1;
     if (isLastPart) {
       dirPartsHtml += `
       <span class="directory_nav_item" data-current>
