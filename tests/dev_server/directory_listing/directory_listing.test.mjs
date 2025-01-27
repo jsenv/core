@@ -48,7 +48,7 @@ try {
   await takeScreenshot("3_after_click_deep");
   await page.locator(`.directory_nav a[href="/dir/"]`).click();
   await takeScreenshot("4_after_click_dir_in_nav");
-  await page.locator(`.directory_nav a`).click();
+  await page.locator(`.directory_nav a[href="/..."]`).click();
   await takeScreenshot("5_after_click_root_in_nav");
   replaceFileStructureSync({
     from: new URL("./fixtures/2_index_exists/", import.meta.url),

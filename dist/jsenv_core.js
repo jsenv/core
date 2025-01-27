@@ -19517,6 +19517,11 @@ const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
   const parts = isDir
     ? relativeUrlWithRoot.slice(0, -1).split("/")
     : relativeUrlWithRoot.split("/");
+  const items = [];
+  items.push({
+    href: "/",
+    text: "/",
+  });
   let dirPartsHtml = "";
   let i = 0;
   while (i < parts.length) {
@@ -19524,7 +19529,16 @@ const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
     const href = i === 0 ? "/..." : `/${parts.slice(1, i + 1).join("/")}/`;
     const text = part;
     const isLastPart = i === parts.length - 1;
-    if (isLastPart) {
+    items.push({
+      href,
+      text,
+      isCurrent: isLastPart,
+    });
+    i++;
+  }
+  i = 0;
+  for (const { href, text, isCurrent } of items) {
+    if (isCurrent) {
       dirPartsHtml += `
       <span class="directory_nav_item" data-current>
         ${text}
@@ -19535,13 +19549,15 @@ const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
       <a class="directory_nav_item" href="${href}">
         ${text}
       </a>`;
-    dirPartsHtml += `
-    <span class="directory_separator">/</span>`;
+    if (i > 0) {
+      dirPartsHtml += `
+      <span class="directory_separator">/</span>`;
+    }
     i++;
   }
   if (isDir) {
     dirPartsHtml += `
-    <span class="directory_separator">/</span>`;
+      <span class="directory_separator">/</span>`;
   }
   return dirPartsHtml;
 };

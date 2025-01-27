@@ -13,4 +13,7 @@ await startDevServer({
   serverLogLevel: "info",
   sourceDirectoryUrl,
   port: 4567,
+  clientAutoreload: true,
+  supervisor: false,
+  ribbon: false,
 });
