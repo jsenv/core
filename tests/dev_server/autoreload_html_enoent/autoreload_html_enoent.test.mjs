@@ -21,7 +21,10 @@ let debug = false;
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 const writeFileStructureForScenario = (scenario) => {
-  const scenarioDirectoryUrl = new URL(`./${scenario}/`, import.meta.url);
+  const scenarioDirectoryUrl = new URL(
+    `./fixtures/${scenario}/`,
+    import.meta.url,
+  );
   replaceFileStructureSync({
     from: scenarioDirectoryUrl,
     to: sourceDirectoryUrl,
