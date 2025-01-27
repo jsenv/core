@@ -23,6 +23,7 @@ import {
   jsenvServiceErrorHandler,
   startServer,
 } from "@jsenv/server";
+import { urlToExtension, urlToPathname } from "@jsenv/urls";
 import { existsSync } from "node:fs";
 
 /**
@@ -168,19 +169,26 @@ const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
         resource: `/${buildMainFilePath}`,
       };
     }
-    return fetchFileSystem(
-      new URL(request.resource.slice(1), buildDirectoryUrl),
-      {
-        headers: request.headers,
-        cacheControl: urlIsVersioned
-          ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-          : "private,max-age=0,must-revalidate",
-        etagEnabled: true,
-        compressionEnabled: !request.pathname.endsWith(".mp4"),
-        rootDirectoryUrl: buildDirectoryUrl,
-        canReadDirectory: true,
+    const urlObject = new URL(request.resource.slice(1), buildDirectoryUrl);
+    return fetchFileSystem(urlObject, {
+      headers: request.headers,
+      cacheControl: urlIsVersioned
+        ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+        : "private,max-age=0,must-revalidate",
+      etagEnabled: true,
+      compressionEnabled: !request.pathname.endsWith(".mp4"),
+      rootDirectoryUrl: buildDirectoryUrl,
+      canReadDirectory: true,
+      ENOENTFallback: () => {
+        if (
+          !urlToExtension(urlObject) &&
+          !urlToPathname(urlObject).endsWith("/")
+        ) {
+          return new URL(buildMainFilePath, buildDirectoryUrl);
+        }
+        return null;
       },
-    );
+    });
   };
 };
 
