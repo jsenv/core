@@ -12648,9 +12648,9 @@ const createEventEmitter = () => {
     callbackSet.delete(callback);
   };
   const emit = (...args) => {
-    callbackSet.forEach((callback) => {
+    for (const callback of callbackSet) {
       callback(...args);
-    });
+    }
   };
   return { on, off, emit };
 };
@@ -12817,7 +12817,7 @@ const createDependencies = (ownerUrlInfo) => {
 
     const stopCollecting = () => {
       for (const prevReferenceToOther of prevReferenceToOthersSet) {
-        applyDependencyRemovalEffects(prevReferenceToOther);
+        checkForDependencyRemovalEffects(prevReferenceToOther);
       }
       prevReferenceToOthersSet.clear();
     };
@@ -13322,7 +13322,7 @@ ${ownerUrlInfo.url}`,
     implicitRef.remove();
   }
   ownerUrlInfo.referenceToOthersSet.delete(reference);
-  return applyDependencyRemovalEffects(reference);
+  return checkForDependencyRemovalEffects(reference);
 };
 
 const canAddOrRemoveReference = (reference) => {
@@ -13351,7 +13351,7 @@ const canAddOrRemoveReference = (reference) => {
   return false;
 };
 
-const applyDependencyRemovalEffects = (reference) => {
+const checkForDependencyRemovalEffects = (reference) => {
   const { ownerUrlInfo } = reference;
   const { referenceToOthersSet } = ownerUrlInfo;
   if (reference.isImplicit && !reference.isInline) {
@@ -13386,6 +13386,7 @@ const applyDependencyRemovalEffects = (reference) => {
   referencedUrlInfo.referenceFromOthersSet.delete(reference);
 
   let firstReferenceFromOther;
+  let wasInlined;
   for (const referenceFromOther of referencedUrlInfo.referenceFromOthersSet) {
     if (referenceFromOther.urlInfo !== referencedUrlInfo) {
       continue;
@@ -13400,7 +13401,8 @@ const applyDependencyRemovalEffects = (reference) => {
     if (referenceFromOther.type === "http_request") {
       continue;
     }
-    if (referenceFromOther.gotInlined()) {
+    wasInlined = referenceFromOther.gotInlined();
+    if (wasInlined) {
       // the url info was inlined, an other reference is required
       // to consider the non-inlined urlInfo as used
       continue;
@@ -13416,6 +13418,9 @@ const applyDependencyRemovalEffects = (reference) => {
       referencedUrlInfo.firstReference = null;
       applyReferenceEffectsOnUrlInfo(firstReferenceFromOther);
     }
+    return false;
+  }
+  if (wasInlined) {
     return false;
   }
   // referencedUrlInfo.firstReference = null;
@@ -19176,6 +19181,7 @@ const jsenvPluginVersionSearchParam = () => {
 };
 
 const jsenvPluginFsRedirection = ({
+  directoryContentMagicName,
   magicExtensions = ["inherit", ".js"],
   magicDirectoryIndex = true,
   preserveSymlinks = false,
@@ -19198,10 +19204,14 @@ const jsenvPluginFsRedirection = ({
       if (reference.subtype === "new_url_second_arg") {
         return `ignore:${reference.url}`;
       }
-      if (reference.specifierPathname.endsWith("/...")) {
+      if (
+        reference.specifierPathname.endsWith(`/${directoryContentMagicName}`)
+      ) {
         const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
         const directoryUrl = new URL(
-          reference.specifierPathname.replace("/...", "/").slice(1),
+          reference.specifierPathname
+            .replace(`/${directoryContentMagicName}`, "/")
+            .slice(1),
           rootDirectoryUrl,
         ).href;
         return directoryUrl;
@@ -19312,6 +19322,7 @@ const htmlFileUrlForDirectory = new URL(
   "./html/directory.html",
   import.meta.url,
 );
+const directoryContentMagicName = "...";
 
 const jsenvPluginProtocolFile = ({
   magicExtensions,
@@ -19321,6 +19332,7 @@ const jsenvPluginProtocolFile = ({
 }) => {
   return [
     jsenvPluginFsRedirection({
+      directoryContentMagicName,
       magicExtensions,
       magicDirectoryIndex,
       preserveSymlinks,
@@ -19360,8 +19372,9 @@ const jsenvPluginProtocolFile = ({
         if (reference.original) {
           const originalSpecifierPathname =
             reference.original.specifierPathname;
-
-          if (originalSpecifierPathname.endsWith("/...")) {
+          if (
+            originalSpecifierPathname.endsWith(`/${directoryContentMagicName}`)
+          ) {
             return originalSpecifierPathname;
           }
         }
@@ -19526,7 +19539,10 @@ const generateDirectoryNav = (relativeUrl, rootDirectoryUrl) => {
   let i = 0;
   while (i < parts.length) {
     const part = parts[i];
-    const href = i === 0 ? "/..." : `/${parts.slice(1, i + 1).join("/")}/`;
+    const href =
+      i === 0
+        ? `/${directoryContentMagicName}`
+        : `/${parts.slice(1, i + 1).join("/")}/`;
     const text = part;
     const isLastPart = i === parts.length - 1;
     items.push({
@@ -19644,7 +19660,7 @@ const generateDirectoryContentItems = (directoryUrl, rootDirectoryUrl) => {
 };
 const generateDirectoryContent = (directoryContentItems) => {
   if (directoryContentItems.length === 0) {
-    return `<p>Directory is empty</p>`;
+    return `<p class="directory_empty_message">Directory is empty</p>`;
   }
   let html = `<ul class="directory_content">`;
   for (const directoryContentItem of directoryContentItems) {
@@ -20825,6 +20841,11 @@ const jsenvPluginAutoreloadServer = ({
                 // Can happen when starting dev server with sourcemaps: "file"
                 // In that case, as sourcemaps are injected, the reference
                 // are lost and sourcemap is considered as pruned
+                continue;
+              }
+              if (lastReferenceFromOther.type === "http_request") {
+                // no need to tell client to reload when a http request is pruned
+                // happens when reloading the current html page for instance
                 continue;
               }
               const { ownerUrlInfo } = lastReferenceFromOther;
