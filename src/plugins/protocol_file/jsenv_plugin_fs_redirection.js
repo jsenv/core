@@ -30,10 +30,7 @@ export const jsenvPluginFsRedirection = ({
       if (reference.subtype === "new_url_second_arg") {
         return `ignore:${reference.url}`;
       }
-      if (
-        reference.specifierPathname.endsWith("/...") ||
-        reference.specifierPathname.endsWith("/.../")
-      ) {
+      if (reference.specifierPathname.endsWith("/...")) {
         const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
         const directoryUrl = new URL(
           reference.specifierPathname.replace("/...", "/").slice(1),

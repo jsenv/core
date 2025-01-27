@@ -59,6 +59,8 @@ try {
   await takeScreenshot("6_index_exists");
   await page.goto(`${devServer.origin}/dir/...`);
   await takeScreenshot("7_index_exists_dir");
+  await page.locator(`.directory_nav a[href="/..."]`).click();
+  await takeScreenshot("8_after_click_root_in_nav");
 } finally {
   if (!debug) {
     browser.close();
