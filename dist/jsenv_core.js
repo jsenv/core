@@ -8399,6 +8399,10 @@ const getMtimeResponse = async ({ headers, fileStat }) => {
 };
 
 const getCompressedResponse = async ({ fileUrl, headers }) => {
+  const contentType = CONTENT_TYPE.fromUrlExtension(fileUrl);
+  if (CONTENT_TYPE.isBinary(contentType)) {
+    return null;
+  }
   const acceptedCompressionFormat = pickContentEncoding(
     { headers },
     Object.keys(availableCompressionFormats),
@@ -8416,7 +8420,7 @@ const getCompressedResponse = async ({ fileUrl, headers }) => {
   return {
     status: 200,
     headers: {
-      "content-type": CONTENT_TYPE.fromUrlExtension(fileUrl),
+      "content-type": contentType,
       "content-encoding": acceptedCompressionFormat,
       "vary": "accept-encoding",
     },

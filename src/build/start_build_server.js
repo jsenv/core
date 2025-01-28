@@ -176,7 +176,7 @@ const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
         ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
         : "private,max-age=0,must-revalidate",
       etagEnabled: true,
-      compressionEnabled: !request.pathname.endsWith(".mp4"),
+      compressionEnabled: true,
       rootDirectoryUrl: buildDirectoryUrl,
       canReadDirectory: true,
       ENOENTFallback: () => {
