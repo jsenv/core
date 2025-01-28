@@ -36,7 +36,7 @@ button {
   display: flex;
   width: 1em;
   height: 1em;
-  margin-right: 0.5em;
+  margin-right: 0.25em;
 }
 .directory_empty_message {
   margin: 1em;
