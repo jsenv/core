@@ -289,14 +289,14 @@ const generateDirectoryNav = (
       if (isCurrent) {
         return `
         <span class="directory_nav_item" data-current>
-          <a class="directory_root_for_server" href="/${mainFilePath}"></a>
+          <a class="directory_root_for_server" hot-decline href="/${mainFilePath}"></a>
           <span class="directory_name">${text}</span>
         </span>`;
       }
       return `
         <span class="directory_nav_item">
-          <a class="directory_root_for_server" href="/${mainFilePath}"></a>
-          <a class="directory_name" href="${href}">${text}</a>
+          <a class="directory_root_for_server" hot-decline href="/${mainFilePath}"></a>
+          <a class="directory_name" hot-decline href="${href}">${text}</a>
         </span>`;
     }
     if (isCurrent) {
@@ -307,7 +307,7 @@ const generateDirectoryNav = (
     }
     return `
       <span class="directory_nav_item">
-        <a class="directory_text" href="${href}">${text}</a>
+        <a class="directory_text" hot-decline href="${href}">${text}</a>
       </span>`;
   };
 
@@ -440,7 +440,7 @@ const generateDirectoryContent = (directoryContentItems, { mainFilePath }) => {
     const mainFileAttr = isMainFile ? ` data-main-file` : "";
     html += `
       <li class="directory_child" data-type="${type}"${mainFileAttr}>
-        <a href="/${href}">${fileUrlRelativeToParent}</a>
+        <a href="/${href}" hot-decline>${fileUrlRelativeToParent}</a>
       </li>`;
   }
   html += `\n  </ul>`;
