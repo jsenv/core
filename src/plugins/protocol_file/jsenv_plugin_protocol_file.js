@@ -97,6 +97,7 @@ export const jsenvPluginProtocolFile = ({
           return null;
         }
         const { firstReference } = urlInfo;
+        const { mainFilePath } = urlInfo.context;
         let { fsStat } = firstReference;
         if (!fsStat) {
           fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
@@ -126,6 +127,7 @@ export const jsenvPluginProtocolFile = ({
               urlInfo.url,
               directoryContentItems,
               directoryListingUrlMocks,
+              { mainFilePath },
             );
             return {
               status: 404,
@@ -157,7 +159,9 @@ export const jsenvPluginProtocolFile = ({
               directoryUrl,
               rootDirectoryUrl,
             );
-            const html = generateHtmlForDirectory(directoryContentItems);
+            const html = generateHtmlForDirectory(directoryContentItems, {
+              mainFilePath,
+            });
             return {
               type: "html",
               contentType: "text/html",
@@ -176,7 +180,7 @@ export const jsenvPluginProtocolFile = ({
   ];
 };
 
-const generateHtmlForDirectory = (directoryContentItems) => {
+const generateHtmlForDirectory = (directoryContentItems, { mainFilePath }) => {
   let directoryUrl = directoryContentItems.firstExistingDirectoryUrl;
   const rootDirectoryUrl = directoryContentItems.rootDirectoryUrl;
   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
@@ -189,8 +193,10 @@ const generateHtmlForDirectory = (directoryContentItems) => {
         rootDirectoryUrl,
         rootDirectoryUrlForServer:
           directoryContentItems.rootDirectoryUrlForServer,
+        mainFilePath,
       }),
-    directoryContent: () => generateDirectoryContent(directoryContentItems),
+    directoryContent: () =>
+      generateDirectoryContent(directoryContentItems, { mainFilePath }),
   };
   const html = replacePlaceholders(htmlForDirectory, replacers);
   return html;
@@ -199,6 +205,7 @@ const generateHtmlForENOENT = (
   url,
   directoryContentItems,
   directoryListingUrlMocks,
+  { mainFilePath },
 ) => {
   const ancestorDirectoryUrl = directoryContentItems.firstExistingDirectoryUrl;
   const rootDirectoryUrl = directoryContentItems.rootDirectoryUrl;
@@ -223,16 +230,17 @@ const generateHtmlForENOENT = (
         rootDirectoryUrl,
         rootDirectoryUrlForServer:
           directoryContentItems.rootDirectoryUrlForServer,
+        mainFilePath,
       }),
     ancestorDirectoryContent: () =>
-      generateDirectoryContent(directoryContentItems),
+      generateDirectoryContent(directoryContentItems, { mainFilePath }),
   };
   const html = replacePlaceholders(htmlFor404AndAncestorDir, replacers);
   return html;
 };
 const generateDirectoryNav = (
   entryDirectoryUrl,
-  { rootDirectoryUrl, rootDirectoryUrlForServer },
+  { rootDirectoryUrl, rootDirectoryUrlForServer, mainFilePath },
 ) => {
   const entryDirectoryRelativeUrl = urlToRelativeUrl(
     entryDirectoryUrl,
@@ -274,19 +282,45 @@ const generateDirectoryNav = (
     i++;
   }
   i = 0;
+
+  const renderDirNavItem = ({ isCurrent, href, text }) => {
+    const isServerRootDir = href === `/${directoryContentMagicName}`;
+    if (isServerRootDir) {
+      if (isCurrent) {
+        return `
+        <span class="directory_nav_item" data-current>
+          <a class="directory_root_for_server" href="/${mainFilePath}"></a>
+          <span class="directory_name">${text}</span>
+        </span>`;
+      }
+      return `
+        <span class="directory_nav_item">
+          <a class="directory_root_for_server" href="/${mainFilePath}"></a>
+          <a class="directory_name" href="${href}">${text}</a>
+        </span>`;
+    }
+    if (isCurrent) {
+      return `
+      <span class="directory_nav_item" data-current>
+        <span class="directory_text">${text}</span>
+      </span>`;
+    }
+    return `
+      <span class="directory_nav_item">
+        <a class="directory_text" href="${href}">${text}</a>
+      </span>`;
+  };
+
   for (const { href, text } of items) {
     const isLastPart = i === items.length - 1;
+    dirPartsHtml += renderDirNavItem({
+      isCurrent: isLastPart,
+      href,
+      text,
+    });
     if (isLastPart) {
-      dirPartsHtml += `
-      <span class="directory_nav_item" data-current>
-        ${text}
-      </span>`;
       break;
     }
-    dirPartsHtml += `
-      <a class="directory_nav_item" href="${href}">
-        ${text}
-      </a>`;
     dirPartsHtml += `
       <span class="directory_separator">/</span>`;
     i++;
@@ -390,7 +424,7 @@ const generateDirectoryContentItems = (
   items.firstExistingDirectoryUrl = firstExistingDirectoryUrl;
   return items;
 };
-const generateDirectoryContent = (directoryContentItems) => {
+const generateDirectoryContent = (directoryContentItems, { mainFilePath }) => {
   if (directoryContentItems.length === 0) {
     return `<p class="directory_empty_message">Directory is empty</p>`;
   }
@@ -402,8 +436,10 @@ const generateDirectoryContent = (directoryContentItems) => {
     if (href === "") {
       href = `${directoryContentMagicName}`;
     }
+    const isMainFile = href === mainFilePath;
+    const mainFileAttr = isMainFile ? ` data-main-file` : "";
     html += `
-      <li class="directory_child" data-type="${type}">
+      <li class="directory_child" data-type="${type}"${mainFileAttr}>
         <a href="/${href}">${fileUrlRelativeToParent}</a>
       </li>`;
   }

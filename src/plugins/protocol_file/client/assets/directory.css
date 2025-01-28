@@ -23,8 +23,20 @@ button {
   gap: 0.3em;
 }
 .directory_nav_item {
+  display: flex;
+  align-items: center;
+}
+.directory_nav_item a {
   text-decoration: none;
   position: relative;
+  color: inherit;
+}
+.directory_root_for_server {
+  text-decoration: none;
+  display: flex;
+  width: 1em;
+  height: 1em;
+  margin-right: 0.5em;
 }
 .directory_empty_message {
   margin: 1em;
@@ -67,6 +79,11 @@ button {
 }
 .directory_child[data-type="dir"] {
   background-image: url("./dir.png?inline");
+}
+.directory_child[data-main-file],
+.directory_root_for_server {
+  background-image: url("./home.svg?inline");
+  background-repeat: no-repeat;
 }
 .directory_child[data-type="dir"]::before {
   content: " ";
