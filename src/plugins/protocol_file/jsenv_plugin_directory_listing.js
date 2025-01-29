@@ -69,6 +69,10 @@ export const jsenvPluginDirectoryListing = ({
     name: "jsenv:directory_listing",
     appliesDuring: "*",
     redirectReference: (reference) => {
+      const { build, request } = reference.ownerUrlInfo.context;
+      if (build) {
+        return null;
+      }
       if (reference.isInline) {
         return null;
       }
@@ -82,7 +86,6 @@ export const jsenvPluginDirectoryListing = ({
         reference.fsStat = fsStat;
       }
       if (!fsStat) {
-        const request = reference.ownerUrlInfo.context.request;
         if (request && request.headers["sec-fetch-dest"] === "document") {
           reference.addImplicit({
             type: "404",
@@ -102,7 +105,6 @@ export const jsenvPluginDirectoryListing = ({
         // and any file name ...json is a special file serving directory content as json
         return null;
       }
-      const request = reference.ownerUrlInfo.context.request;
       const acceptsHtml = request
         ? pickContentType(request, ["text/html"])
         : false;
