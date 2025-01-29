@@ -15,8 +15,8 @@ await startDevServer({
   // serverLogLevel: "info",
   sourceDirectoryUrl,
   port: 4567,
-  clientAutoreload: true,
-  supervisor: false,
+  clientAutoreload: false,
+  supervisor: true,
   ribbon: false,
   plugins: [jsenvPluginPreact()],
 });

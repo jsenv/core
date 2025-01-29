@@ -42,8 +42,9 @@ const jsenvPluginInlineContentFetcher = () => {
         return null;
       }
       let isDirectRequestToFile;
-      if (urlInfo.context.request) {
-        let requestResource = urlInfo.context.request.resource;
+      const request = urlInfo.context.request;
+      if (request) {
+        let requestResource = request.resource;
         let requestedUrl;
         if (requestResource.startsWith("/@fs/")) {
           const fsRootRelativeUrl = requestResource.slice("/@fs/".length);

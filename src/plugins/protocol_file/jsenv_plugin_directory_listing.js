@@ -15,9 +15,36 @@ const htmlFileUrlForDirectory = new URL(
 );
 
 export const jsenvPluginDirectoryListing = ({
+  supervisorEnabled,
   directoryContentMagicName,
   directoryListingUrlMocks,
 }) => {
+  const replaceDirectoryListingPlaceholder = (urlInfo) => {
+    const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+    if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
+      return null;
+    }
+    const urlToList = urlInfo.searchParams.get("url");
+    const enoent = urlInfo.searchParams.has("enoent");
+    if (!urlToList) {
+      return null;
+    }
+    const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
+    return replacePlaceholders(
+      urlInfo.content,
+      {
+        ...generateDirectoryListingInjection(urlToList, {
+          directoryListingUrlMocks,
+          directoryContentMagicName,
+          rootDirectoryUrl,
+          mainFilePath,
+          enoent,
+        }),
+      },
+      urlInfo,
+    );
+  };
+
   return {
     name: "jsenv:directory_listing",
     appliesDuring: "*",
@@ -51,34 +78,10 @@ export const jsenvPluginDirectoryListing = ({
       }
       return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
     },
-    transformUrlContent: {
-      html: (urlInfo) => {
-        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
-        if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
-          return null;
-        }
-        const urlToList = urlInfo.searchParams.get("url");
-        const enoent = urlInfo.searchParams.has("enoent");
-        if (!urlToList) {
-          return null;
-        }
-        const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
-
-        return replacePlaceholders(
-          urlInfo.content,
-          {
-            ...generateDirectoryListingInjection(urlToList, {
-              directoryListingUrlMocks,
-              directoryContentMagicName,
-              rootDirectoryUrl,
-              mainFilePath,
-              enoent,
-            }),
-          },
-          urlInfo,
-        );
-      },
-    },
+    // when supervisor is enabled html does not contain placeholder anymore
+    transformUrlContent: supervisorEnabled
+      ? { js_classic: replaceDirectoryListingPlaceholder }
+      : { html: replaceDirectoryListingPlaceholder },
   };
 };
 

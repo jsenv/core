@@ -76,6 +76,7 @@ export const getCorePlugins = ({
      */
     jsenvPluginProtocolHttp(http),
     jsenvPluginProtocolFile({
+      supervisorEnabled: Boolean(supervisor),
       magicExtensions,
       magicDirectoryIndex,
       directoryListingUrlMocks,
