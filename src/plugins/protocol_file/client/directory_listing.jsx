@@ -143,13 +143,25 @@ const DirectoryContent = () => {
           itemUrl,
           serverRootDirectoryUrl,
         );
-        const itemRelativeUrl = urlToRelativeUrl(itemUrl, directoryUrl);
-        const text = itemRelativeUrl;
-        const url = isOutsideServerRootDirectory
-          ? `/@fs/${itemUrl.slice("file:///".length)}`
-          : `/${itemRelativeUrl}`;
-        const isMainFile = itemRelativeUrl === mainFilePath;
+        const itemUrlRelativeToCurrentDirectory = urlToRelativeUrl(
+          itemUrl,
+          directoryUrl,
+        );
 
+        const text = itemUrlRelativeToCurrentDirectory;
+        let url;
+        let isMainFile;
+        if (isOutsideServerRootDirectory) {
+          url = `/@fs/${itemUrl.slice("file:///".length)}`;
+          isMainFile = false;
+        } else {
+          const itemUrlRelativeToServer = urlToRelativeUrl(
+            itemUrl,
+            serverRootDirectoryUrl,
+          );
+          url = `/${itemUrlRelativeToServer}`;
+          isMainFile = itemUrlRelativeToServer === mainFilePath;
+        }
         return (
           <DirectoryContentItem
             key={url}
