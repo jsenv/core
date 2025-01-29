@@ -1,10 +1,11 @@
 import { render } from "preact";
+import { useSyncExternalStore } from "preact/compat";
 
 const directoryIconUrl = import.meta.resolve("./assets/dir.png");
 const fileIconUrl = import.meta.resolve("./assets/file.png");
 const homeIconUrl = import.meta.resolve("./assets/home.svg#root");
 
-const {
+let {
   directoryContentMagicName,
   rootDirectoryUrl,
   serverRootDirectoryUrl,
@@ -14,12 +15,43 @@ const {
   enoentDetails,
 } = window.DIRECTORY_LISTING;
 
+const directoryItemsChangeCallbackSet = new Set();
+const updateDirectoryContentItems = (value) => {
+  directoryContentItems = value;
+  for (const directoryItemsChangeCallback of directoryItemsChangeCallbackSet) {
+    directoryItemsChangeCallback();
+  }
+};
+const websocketScheme = self.location.protocol === "https:" ? "wss" : "ws";
+const socket = new WebSocket(
+  `${websocketScheme}://${self.location.host}${directoryUrl}`,
+  ["watch-directory"],
+);
+socket.onopen = () => {
+  socket.onopen = null;
+  setInterval(() => {
+    socket.send('{"type":"ping"}');
+  }, 30_000);
+};
+socket.onmessage = (messageEvent) => {
+  const event = JSON.parse(messageEvent.data);
+  const { items } = event;
+  updateDirectoryContentItems(items);
+};
+
 const DirectoryListing = () => {
+  const directoryItems = useSyncExternalStore(
+    (callback) => {
+      directoryItemsChangeCallbackSet.add(callback);
+    },
+    () => directoryContentItems,
+  );
+
   return (
     <>
       {enoentDetails ? <ErrorMessage /> : null}
       <DirectoryNav />
-      <DirectoryContent />
+      <DirectoryContent items={directoryItems} />
     </>
   );
 };
@@ -130,13 +162,13 @@ const DirectoryNavItem = ({ url, iconImageUrl, iconLinkUrl, children }) => {
   );
 };
 
-const DirectoryContent = () => {
-  if (directoryContentItems.length === 0) {
+const DirectoryContent = ({ items }) => {
+  if (items.length === 0) {
     return <p className="directory_empty_message">Directory is empty</p>;
   }
   return (
     <ul className="directory_content">
-      {directoryContentItems.map((directoryContentItem) => {
+      {items.map((directoryContentItem) => {
         const itemUrl = directoryContentItem;
         const isDirectory = directoryContentItem.endsWith("/");
         const isOutsideServerRootDirectory = !urlIsInsideOf(

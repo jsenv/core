@@ -584,12 +584,38 @@ ${error.trace?.message}`);
           };
         }
       },
-      handleWebsocket: (websocket, { request }) => {
+      handleWebsocket: async (websocket, { request }) => {
         // if (true || logLevel === "debug") {
         //   console.log("handleWebsocket", websocket, request.headers);
         // }
+        const kitchen = getOrCreateKitchen(request);
+        const customServerEventDispatcher = createServerEventsDispatcher();
+        const handleWebsocketHookInfo = {
+          ...kitchen.context,
+          request,
+          websocket,
+        };
+        const responseFromPlugin =
+          await kitchen.pluginController.callAsyncHooksUntil(
+            "handleWebsocket",
+            handleWebsocketHookInfo,
+          );
+        if (responseFromPlugin) {
+          customServerEventDispatcher.addWebsocket(websocket, request);
+          responseFromPlugin({
+            signal: request.signal,
+            sendEvent: ({ type, ...data }) => {
+              customServerEventDispatcher.dispatch({
+                type,
+                data,
+              });
+            },
+          });
+          return;
+        }
         if (request.headers["sec-websocket-protocol"] === "jsenv") {
           serverEventsDispatcher.addWebsocket(websocket, request);
+          return;
         }
       },
     });

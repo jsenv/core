@@ -5,7 +5,11 @@
  * donc dans fetchUrlContent? c'est pour ça? a confirmer
  */
 
-import { comparePathnames, readEntryStatSync } from "@jsenv/filesystem";
+import {
+  comparePathnames,
+  readEntryStatSync,
+  registerDirectoryLifecycle,
+} from "@jsenv/filesystem";
 import { pickContentType } from "@jsenv/server";
 import {
   asUrlWithoutSearch,
@@ -149,6 +153,37 @@ export const jsenvPluginDirectoryListing = ({
               );
             },
           },
+      handleWebsocket: ({ request }) => {
+        if (request.headers["sec-websocket-protocol"] !== "watch_directory") {
+          return null;
+        }
+        return ({ signal, sendEvent }) => {
+          const { url } = request;
+          const unwatch = registerDirectoryLifecycle(url, {
+            added: ({ relativeUrl }) => {
+              sendEvent({
+                type: "added",
+                relativeUrl,
+              });
+            },
+            updated: ({ relativeUrl }) => {
+              sendEvent({
+                type: "updated",
+                relativeUrl,
+              });
+            },
+            removed: ({ relativeUrl }) => {
+              sendEvent({
+                type: "removed",
+                items: getDirectoryContentItems(),
+              });
+            },
+          });
+          signal.addEventListener("abort", () => {
+            unwatch();
+          });
+        };
+      },
     },
     {
       name: "jsenv:directory_as_json",
@@ -189,20 +224,13 @@ const generateDirectoryListingInjection = (
   },
 ) => {
   let serverRootDirectoryUrl = rootDirectoryUrl;
-  let firstExistingDirectoryUrl = new URL("./", requestedUrl);
-  while (!existsSync(firstExistingDirectoryUrl)) {
-    firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
-    if (!urlIsInsideOf(firstExistingDirectoryUrl, serverRootDirectoryUrl)) {
-      firstExistingDirectoryUrl = new URL(serverRootDirectoryUrl);
-      break;
-    }
-  }
-  const directoryContentArray = readdirSync(firstExistingDirectoryUrl);
-  const fileUrls = [];
-  for (const filename of directoryContentArray) {
-    const fileUrlObject = new URL(filename, firstExistingDirectoryUrl);
-    fileUrls.push(fileUrlObject);
-  }
+  const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
+    requestedUrl,
+    serverRootDirectoryUrl,
+  );
+  const directoryContentItems = getDirectoryContentItems(
+    firstExistingDirectoryUrl,
+  );
   package_workspaces: {
     const packageDirectoryUrl = lookupPackageDirectory(serverRootDirectoryUrl);
     if (!packageDirectoryUrl) {
@@ -238,18 +266,6 @@ const generateDirectoryListingInjection = (
     //   }
     // }
   }
-  const sortedUrls = [];
-  for (let fileUrl of fileUrls) {
-    if (lstatSync(fileUrl).isDirectory()) {
-      sortedUrls.push(ensurePathnameTrailingSlash(fileUrl));
-    } else {
-      sortedUrls.push(fileUrl);
-    }
-  }
-  sortedUrls.sort((a, b) => {
-    return comparePathnames(a.pathname, b.pathname);
-  });
-
   return {
     __DIRECTORY_LISTING__: {
       enoentDetails: enoent
@@ -263,7 +279,38 @@ const generateDirectoryListingInjection = (
       serverRootDirectoryUrl,
       rootDirectoryUrl,
       mainFilePath,
-      directoryContentItems: sortedUrls,
+      directoryContentItems,
     },
   };
+};
+const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
+  let firstExistingDirectoryUrl = new URL("./", requestedUrl);
+  while (!existsSync(firstExistingDirectoryUrl)) {
+    firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
+    if (!urlIsInsideOf(firstExistingDirectoryUrl, serverRootDirectoryUrl)) {
+      firstExistingDirectoryUrl = new URL(serverRootDirectoryUrl);
+      break;
+    }
+  }
+  return firstExistingDirectoryUrl;
+};
+const getDirectoryContentItems = (directoryUrl) => {
+  const directoryContentArray = readdirSync(directoryUrl);
+  const fileUrls = [];
+  for (const filename of directoryContentArray) {
+    const fileUrlObject = new URL(filename, directoryUrl);
+    fileUrls.push(fileUrlObject);
+  }
+  const sortedUrls = [];
+  for (let fileUrl of fileUrls) {
+    if (lstatSync(fileUrl).isDirectory()) {
+      sortedUrls.push(ensurePathnameTrailingSlash(fileUrl));
+    } else {
+      sortedUrls.push(fileUrl);
+    }
+  }
+  sortedUrls.sort((a, b) => {
+    return comparePathnames(a.pathname, b.pathname);
+  });
+  return sortedUrls;
 };
