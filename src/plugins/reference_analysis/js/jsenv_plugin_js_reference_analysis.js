@@ -41,9 +41,7 @@ const parseAndTransformJsReferences = async (
     Object.keys(urlInfo.context.runtimeCompat).toString() === "node";
 
   const onInlineReference = (inlineReferenceInfo) => {
-    const inlineUrl = getUrlForContentInsideJs(inlineReferenceInfo, {
-      url: urlInfo.originalUrl || urlInfo.url,
-    });
+    const inlineUrl = getUrlForContentInsideJs(inlineReferenceInfo, urlInfo);
     let { quote } = inlineReferenceInfo;
     if (quote === "`" && !canUseTemplateLiterals) {
       // if quote is "`" and template literals are not supported

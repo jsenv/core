@@ -5,7 +5,7 @@ import { analyzeScriptNode } from "./html_analysis.js";
 import { getHtmlNodeAttribute } from "./html_node_attributes.js";
 import { getHtmlNodePosition } from "./html_node_position.js";
 
-export const getUrlForContentInsideHtml = (node, { htmlUrl, url }) => {
+export const getUrlForContentInsideHtml = (node, htmlUrlInfo, reference) => {
   let externalSpecifierAttributeName;
   let basename;
   let extension;
@@ -18,8 +18,8 @@ export const getUrlForContentInsideHtml = (node, { htmlUrl, url }) => {
     externalSpecifierAttributeName = "inlined-from-href";
     extension = ".css";
   } else if (node.nodeName === "link") {
-    basename = urlToBasename(url);
-    extension = urlToExtension(url);
+    basename = urlToBasename(reference.url);
+    extension = urlToExtension(reference.url);
   }
 
   if (externalSpecifierAttributeName) {
@@ -38,7 +38,7 @@ export const getUrlForContentInsideHtml = (node, { htmlUrl, url }) => {
     preferOriginal: true,
   });
   const inlineContentUrl = generateUrlForInlineContent({
-    url: htmlUrl,
+    url: htmlUrlInfo.originalUrl || htmlUrlInfo.url,
     basename,
     extension,
     line,

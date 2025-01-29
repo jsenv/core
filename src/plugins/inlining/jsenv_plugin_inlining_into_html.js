@@ -42,10 +42,11 @@ export const jsenvPluginInliningIntoHtml = () => {
           const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
             preferOriginal: true,
           });
-          const linkInlineUrl = getUrlForContentInsideHtml(linkNode, {
-            htmlUrl: urlInfo.url,
-            url: linkReference.url,
-          });
+          const linkInlineUrl = getUrlForContentInsideHtml(
+            linkNode,
+            urlInfo,
+            linkReference,
+          );
           const linkReferenceInlined = linkReference.inline({
             line,
             column,
@@ -94,10 +95,11 @@ export const jsenvPluginInliningIntoHtml = () => {
           const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
             preferOriginal: true,
           });
-          const scriptInlineUrl = getUrlForContentInsideHtml(scriptNode, {
-            htmlUrl: urlInfo.url,
-            url: scriptReference.url,
-          });
+          const scriptInlineUrl = getUrlForContentInsideHtml(
+            scriptNode,
+            urlInfo,
+            scriptReference,
+          );
           const scriptReferenceInlined = scriptReference.inline({
             line,
             column,
