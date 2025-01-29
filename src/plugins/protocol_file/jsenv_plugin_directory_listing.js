@@ -1,3 +1,9 @@
+/*
+ * TODO:
+status should be 404 when enoent
+cache-control: no-cache for directory_listing.html
+*/
+
 import { comparePathnames, readEntryStatSync } from "@jsenv/filesystem";
 import { pickContentType } from "@jsenv/server";
 import {
@@ -83,6 +89,11 @@ export const jsenvPluginDirectoryListing = ({
       if (!isDirectory) {
         return null;
       }
+      if (reference.type === "filesystem") {
+        // TODO: we should redirect to something like /...json
+        // and any file name ...json is a special file serving directory content as json
+        return null;
+      }
       const request = reference.ownerUrlInfo.context.request;
       const acceptsHtml = request
         ? pickContentType(request, ["text/html"])
@@ -91,6 +102,24 @@ export const jsenvPluginDirectoryListing = ({
         return null;
       }
       return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
+    },
+    fetchUrlContent: (urlInfo) => {
+      const { firstReference } = urlInfo;
+      let { fsStat } = firstReference;
+      if (!fsStat) {
+        fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
+      }
+      const isDirectory = fsStat?.isDirectory();
+      if (!isDirectory) {
+        return null;
+      }
+      const directoryContentArray = readdirSync(new URL(urlInfo.url));
+      const content = JSON.stringify(directoryContentArray, null, "  ");
+      return {
+        type: "directory",
+        contentType: "application/json",
+        content,
+      };
     },
     // when supervisor is enabled html does not contain placeholder anymore
     transformUrlContent: supervisorEnabled

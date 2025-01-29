@@ -1467,6 +1467,7 @@ const pathnameToExtension$1 = (pathname) => {
 };
 
 const asUrlWithoutSearch = (url) => {
+  url = String(url);
   if (url.includes("?")) {
     const urlObject = new URL(url);
     urlObject.search = "";
@@ -1615,6 +1616,15 @@ const setUrlFilename = (url, filename) => {
       filename = filename(pathnameToFilename(pathname));
     }
     return `${parentPathname}${filename}`;
+  });
+};
+
+const setUrlBasename = (url, basename) => {
+  return setUrlFilename(url, (filename) => {
+    if (typeof basename === "function") {
+      basename = basename(filenameToBasename(filename));
+    }
+    return `${basename}${urlToExtension$1(url)}`;
   });
 };
 
@@ -11711,7 +11721,7 @@ const generateHtmlForSyntaxError = (
     errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
     syntaxError: escapeHtml(htmlErrorContentFrame),
   };
-  const html = replacePlaceholders$2(htmlForSyntaxError, replacers);
+  const html = replacePlaceholders$1(htmlForSyntaxError, replacers);
   return html;
 };
 const escapeHtml = (string) => {
@@ -11722,7 +11732,7 @@ const escapeHtml = (string) => {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 };
-const replacePlaceholders$2 = (html, replacers) => {
+const replacePlaceholders$1 = (html, replacers) => {
   return html.replace(/\$\{(\w+)\}/g, (match, name) => {
     const replacer = replacers[name];
     if (replacer === undefined) {
@@ -12614,11 +12624,12 @@ const determineFileUrlForOutDirectory = (urlInfo) => {
   if (filenameHint) {
     url = setUrlFilename(url, filenameHint);
   }
-  return moveUrl({
+  const outUrl = moveUrl({
     url,
     from: rootDirectoryUrl,
     to: outDirectoryUrl,
   });
+  return outUrl;
 };
 
 const determineSourcemapFileUrl = (urlInfo) => {
@@ -13982,6 +13993,7 @@ const createUrlInfo = (url, context) => {
     writable: false,
     value: url,
   });
+  urlInfo.pathname = new URL(url).pathname;
   urlInfo.searchParams = new URL(url).searchParams;
 
   urlInfo.dependencies = createDependencies(urlInfo);
@@ -14570,7 +14582,15 @@ const createUrlInfoTransformer = ({
       contentIsInlined = false;
     }
     if (!contentIsInlined) {
-      writeFileSync(new URL(generatedUrl), urlInfo.content, { force: true });
+      const generatedUrlObject = new URL(generatedUrl);
+      let baseName = urlToBasename(generatedUrlObject);
+      for (const [key, value] of generatedUrlObject.searchParams) {
+        baseName += `7${encodeFilePathComponent(key)}=${encodeFilePathComponent(value)}`;
+      }
+      const outFileUrl = setUrlBasename(generatedUrlObject, baseName);
+      let outFilePath = urlToFileSystemPath(outFileUrl);
+      outFilePath = truncate(outFilePath, 2055); // for windows
+      writeFileSync(outFilePath, urlInfo.content, { force: true });
     }
     const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
     if (sourcemapGeneratedUrl && sourcemapReference) {
@@ -14689,6 +14709,26 @@ const createUrlInfoTransformer = ({
   };
 };
 
+// https://gist.github.com/barbietunnie/7bc6d48a424446c44ff4
+const illegalRe = /[/?<>\\:*|"]/g;
+// eslint-disable-next-line no-control-regex
+const controlRe = /[\x00-\x1f\x80-\x9f]/g;
+const reservedRe = /^\.+$/;
+const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+const encodeFilePathComponent = (input, replacement = "") => {
+  const encoded = input
+    .replace(illegalRe, replacement)
+    .replace(controlRe, replacement)
+    .replace(reservedRe, replacement)
+    .replace(windowsReservedRe, replacement);
+  return encoded;
+};
+const truncate = (sanitized, length) => {
+  const uint8Array = new TextEncoder().encode(sanitized);
+  const truncated = uint8Array.slice(0, length);
+  return new TextDecoder().decode(truncated);
+};
+
 const shouldUpdateSourcemapComment = (urlInfo, sourcemaps) => {
   if (urlInfo.context.buildStep === "shape") {
     return false;
@@ -14698,7 +14738,6 @@ const shouldUpdateSourcemapComment = (urlInfo, sourcemaps) => {
   }
   return false;
 };
-
 const mayHaveSourcemap = (urlInfo) => {
   if (urlInfo.url.startsWith("data:")) {
     return false;
@@ -14708,7 +14747,6 @@ const mayHaveSourcemap = (urlInfo) => {
   }
   return true;
 };
-
 const shouldHandleSourcemap = (urlInfo) => {
   const { sourcemaps } = urlInfo.context;
   if (
@@ -17727,8 +17765,9 @@ const jsenvPluginInlineContentFetcher = () => {
         return null;
       }
       let isDirectRequestToFile;
-      if (urlInfo.context.request) {
-        let requestResource = urlInfo.context.request.resource;
+      const request = urlInfo.context.request;
+      if (request) {
+        let requestResource = request.resource;
         let requestedUrl;
         if (requestResource.startsWith("/@fs/")) {
           const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
@@ -19184,6 +19223,341 @@ const jsenvPluginVersionSearchParam = () => {
   };
 };
 
+const jsenvPluginInjections = (rawAssociations) => {
+  let resolvedAssociations;
+
+  return {
+    name: "jsenv:injections",
+    appliesDuring: "*",
+    init: (context) => {
+      resolvedAssociations = URL_META.resolveAssociations(
+        { injectionsGetter: rawAssociations },
+        context.rootDirectoryUrl,
+      );
+    },
+    transformUrlContent: async (urlInfo) => {
+      const { injectionsGetter } = URL_META.applyAssociations({
+        url: asUrlWithoutSearch(urlInfo.url),
+        associations: resolvedAssociations,
+      });
+      if (!injectionsGetter) {
+        return null;
+      }
+      if (typeof injectionsGetter !== "function") {
+        throw new TypeError("injectionsGetter must be a function");
+      }
+      const injections = await injectionsGetter(urlInfo);
+      if (!injections) {
+        return null;
+      }
+      const keys = Object.keys(injections);
+      if (keys.length === 0) {
+        return null;
+      }
+      return replacePlaceholders(urlInfo.content, injections, urlInfo);
+    },
+  };
+};
+
+const injectionSymbol = Symbol.for("jsenv_injection");
+const INJECTIONS = {
+  optional: (value) => {
+    return { [injectionSymbol]: "optional", value };
+  },
+};
+
+// we export this because it is imported by jsenv_plugin_placeholder.js and unit test
+const replacePlaceholders = (content, replacements, urlInfo) => {
+  const magicSource = createMagicSource(content);
+  for (const key of Object.keys(replacements)) {
+    let index = content.indexOf(key);
+    const replacement = replacements[key];
+    let isOptional;
+    let value;
+    if (replacement && replacement[injectionSymbol]) {
+      const valueBehindSymbol = replacement[injectionSymbol];
+      isOptional = valueBehindSymbol === "optional";
+      value = replacement.value;
+    } else {
+      value = replacement;
+    }
+    if (index === -1) {
+      if (!isOptional) {
+        urlInfo.context.logger.warn(
+          `placeholder "${key}" not found in ${urlInfo.url}.
+--- suggestion a ---
+Add "${key}" in that file.
+--- suggestion b ---
+Fix eventual typo in "${key}"?
+--- suggestion c ---
+Mark injection as optional using INJECTIONS.optional():
+import { INJECTIONS } from "@jsenv/core";
+
+return {
+  "${key}": INJECTIONS.optional(${JSON.stringify(value)}),
+};`,
+        );
+      }
+      continue;
+    }
+
+    while (index !== -1) {
+      const start = index;
+      const end = index + key.length;
+      magicSource.replace({
+        start,
+        end,
+        replacement:
+          urlInfo.type === "js_classic" ||
+          urlInfo.type === "js_module" ||
+          urlInfo.type === "html"
+            ? JSON.stringify(value, null, "  ")
+            : value,
+      });
+      index = content.indexOf(key, end);
+    }
+  }
+  return magicSource.toContentAndSourcemap();
+};
+
+/*
+ * TODO:
+status should be 404 when enoent
+cache-control: no-cache for directory_listing.html
+*/
+
+
+const htmlFileUrlForDirectory = new URL(
+  "./html/directory_listing.html",
+  import.meta.url,
+);
+
+const jsenvPluginDirectoryListing = ({
+  supervisorEnabled,
+  directoryContentMagicName,
+  directoryListingUrlMocks,
+}) => {
+  const extractDirectoryListingParams = (htmlUrlInfo) => {
+    const urlWithoutSearch = asUrlWithoutSearch(htmlUrlInfo.url);
+    if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
+      return null;
+    }
+    const requestedUrl = htmlUrlInfo.searchParams.get("url");
+    if (!requestedUrl) {
+      return null;
+    }
+    const enoent = htmlUrlInfo.searchParams.has("enoent");
+    return {
+      requestedUrl,
+      enoent,
+    };
+  };
+  const replaceDirectoryListingPlaceholder = (
+    urlInfo,
+    { requestedUrl, enoent },
+  ) => {
+    const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
+    return replacePlaceholders(
+      urlInfo.content,
+      {
+        ...generateDirectoryListingInjection(requestedUrl, {
+          directoryListingUrlMocks,
+          directoryContentMagicName,
+          rootDirectoryUrl,
+          mainFilePath,
+          enoent,
+        }),
+      },
+      urlInfo,
+    );
+  };
+
+  return {
+    name: "jsenv:directory_listing",
+    appliesDuring: "*",
+    redirectReference: (reference) => {
+      const url = reference.url;
+      if (!url.startsWith("file:")) {
+        return null;
+      }
+      let { fsStat } = reference;
+      if (!fsStat) {
+        reference.addImplicit({
+          type: "404",
+          specifier: reference.url,
+          isWeak: true,
+        });
+        fsStat = readEntryStatSync(url, { nullIfNotFound: true });
+        reference.fsStat = fsStat;
+      }
+      if (!fsStat) {
+        const request = reference.ownerUrlInfo.context.request;
+        if (request && request.headers["sec-fetch-dest"] === "document") {
+          return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
+        }
+        return null;
+      }
+      const isDirectory = fsStat?.isDirectory();
+      if (!isDirectory) {
+        return null;
+      }
+      if (reference.type === "filesystem") {
+        // TODO: we should redirect to something like /...json
+        // and any file name ...json is a special file serving directory content as json
+        return null;
+      }
+      const request = reference.ownerUrlInfo.context.request;
+      const acceptsHtml = request
+        ? pickContentType(request, ["text/html"])
+        : false;
+      if (!acceptsHtml) {
+        return null;
+      }
+      return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
+    },
+    fetchUrlContent: (urlInfo) => {
+      const { firstReference } = urlInfo;
+      let { fsStat } = firstReference;
+      if (!fsStat) {
+        fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
+      }
+      const isDirectory = fsStat?.isDirectory();
+      if (!isDirectory) {
+        return null;
+      }
+      const directoryContentArray = readdirSync(new URL(urlInfo.url));
+      const content = JSON.stringify(directoryContentArray, null, "  ");
+      return {
+        type: "directory",
+        contentType: "application/json",
+        content,
+      };
+    },
+    // when supervisor is enabled html does not contain placeholder anymore
+    transformUrlContent: supervisorEnabled
+      ? {
+          js_classic: (urlInfo) => {
+            const parentUrlInfo = urlInfo.findParentIfInline();
+            if (!parentUrlInfo) {
+              return null;
+            }
+            const directoryListingParams =
+              extractDirectoryListingParams(parentUrlInfo);
+            if (!directoryListingParams) {
+              return null;
+            }
+            return replaceDirectoryListingPlaceholder(
+              urlInfo,
+              directoryListingParams,
+            );
+          },
+        }
+      : {
+          html: (urlInfo) => {
+            const directoryListingParams =
+              extractDirectoryListingParams(urlInfo);
+            if (!directoryListingParams) {
+              return null;
+            }
+            return replaceDirectoryListingPlaceholder(
+              urlInfo,
+              directoryListingParams,
+            );
+          },
+        },
+  };
+};
+
+const generateDirectoryListingInjection = (
+  requestedUrl,
+  {
+    enoent,
+    directoryListingUrlMocks,
+    directoryContentMagicName,
+    rootDirectoryUrl,
+    mainFilePath,
+  },
+) => {
+  let serverRootDirectoryUrl = rootDirectoryUrl;
+  let firstExistingDirectoryUrl = new URL("./", requestedUrl);
+  while (!existsSync(firstExistingDirectoryUrl)) {
+    firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
+    if (!urlIsInsideOf(firstExistingDirectoryUrl, serverRootDirectoryUrl)) {
+      firstExistingDirectoryUrl = new URL(serverRootDirectoryUrl);
+      break;
+    }
+  }
+  const directoryContentArray = readdirSync(firstExistingDirectoryUrl);
+  const fileUrls = [];
+  for (const filename of directoryContentArray) {
+    const fileUrlObject = new URL(filename, firstExistingDirectoryUrl);
+    fileUrls.push(fileUrlObject);
+  }
+  package_workspaces: {
+    const packageDirectoryUrl = lookupPackageDirectory(serverRootDirectoryUrl);
+    if (!packageDirectoryUrl) {
+      break package_workspaces;
+    }
+    if (String(packageDirectoryUrl) === String(serverRootDirectoryUrl)) {
+      break package_workspaces;
+    }
+    rootDirectoryUrl = packageDirectoryUrl;
+    // if (String(firstExistingDirectoryUrl) === String(serverRootDirectoryUrl)) {
+    //   let packageContent;
+    //   try {
+    //     packageContent = JSON.parse(
+    //       readFileSync(new URL("package.json", packageDirectoryUrl), "utf8"),
+    //     );
+    //   } catch {
+    //     break package_workspaces;
+    //   }
+    //   const { workspaces } = packageContent;
+    //   if (Array.isArray(workspaces)) {
+    //     for (const workspace of workspaces) {
+    //       const workspaceUrlObject = new URL(workspace, packageDirectoryUrl);
+    //       const workspaceUrl = workspaceUrlObject.href;
+    //       if (workspaceUrl.endsWith("*")) {
+    //         const directoryUrl = ensurePathnameTrailingSlash(
+    //           workspaceUrl.slice(0, -1),
+    //         );
+    //         fileUrls.push(new URL(directoryUrl));
+    //       } else {
+    //         fileUrls.push(ensurePathnameTrailingSlash(workspaceUrlObject));
+    //       }
+    //     }
+    //   }
+    // }
+  }
+  const sortedUrls = [];
+  for (let fileUrl of fileUrls) {
+    if (lstatSync(fileUrl).isDirectory()) {
+      sortedUrls.push(ensurePathnameTrailingSlash(fileUrl));
+    } else {
+      sortedUrls.push(fileUrl);
+    }
+  }
+  sortedUrls.sort((a, b) => {
+    return comparePathnames(a.pathname, b.pathname);
+  });
+
+  return {
+    __DIRECTORY_LISTING__: {
+      enoentDetails: enoent
+        ? {
+            fileUrl: requestedUrl,
+          }
+        : null,
+      directoryListingUrlMocks,
+      directoryContentMagicName,
+      directoryUrl: firstExistingDirectoryUrl,
+      serverRootDirectoryUrl,
+      rootDirectoryUrl,
+      mainFilePath,
+      directoryContentItems: sortedUrls,
+    },
+  };
+};
+
 const jsenvPluginFsRedirection = ({
   directoryContentMagicName,
   magicExtensions = ["inherit", ".js"],
@@ -19318,17 +19692,10 @@ const resolveSymlink = (fileUrl) => {
   return realUrlObject.href;
 };
 
-const html404AndAncestorDirFileUrl = new URL(
-  "./html/html_404_and_ancestor_dir.html",
-  import.meta.url,
-);
-const htmlFileUrlForDirectory = new URL(
-  "./html/directory.html",
-  import.meta.url,
-);
 const directoryContentMagicName = "...";
 
 const jsenvPluginProtocolFile = ({
+  supervisorEnabled,
   magicExtensions,
   magicDirectoryIndex,
   preserveSymlinks,
@@ -19391,6 +19758,11 @@ const jsenvPluginProtocolFile = ({
         return result;
       },
     },
+    jsenvPluginDirectoryListing({
+      supervisorEnabled,
+      directoryContentMagicName,
+      directoryListingUrlMocks,
+    }),
     {
       name: "jsenv:file_url_fetching",
       appliesDuring: "*",
@@ -19399,13 +19771,10 @@ const jsenvPluginProtocolFile = ({
           return null;
         }
         const { firstReference } = urlInfo;
-        const { mainFilePath } = urlInfo.context;
         let { fsStat } = firstReference;
         if (!fsStat) {
           fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
         }
-        const isDirectory = fsStat?.isDirectory();
-        const { rootDirectoryUrl, request } = urlInfo.context;
         const serveFile = (url) => {
           const contentType = CONTENT_TYPE.fromUrlExtension(url);
           const fileBuffer = readFileSync(new URL(url));
@@ -19419,346 +19788,10 @@ const jsenvPluginProtocolFile = ({
           };
         };
 
-        if (!fsStat) {
-          if (request && request.headers["sec-fetch-dest"] === "document") {
-            const directoryContentItems = generateDirectoryContentItems(
-              urlInfo.url,
-              rootDirectoryUrl,
-            );
-            const html = generateHtmlForENOENT(
-              urlInfo.url,
-              directoryContentItems,
-              directoryListingUrlMocks,
-              { mainFilePath },
-            );
-            return {
-              status: 404,
-              contentType: "text/html",
-              content: html,
-              headers: {
-                "cache-control": "no-cache",
-              },
-            };
-          }
-        }
-        if (isDirectory) {
-          const directoryContentArray = readdirSync(new URL(urlInfo.url));
-          if (firstReference.type === "filesystem") {
-            const content = JSON.stringify(directoryContentArray, null, "  ");
-            return {
-              type: "directory",
-              contentType: "application/json",
-              content,
-            };
-          }
-          const acceptsHtml = request
-            ? pickContentType(request, ["text/html"])
-            : false;
-          if (acceptsHtml) {
-            firstReference.expectedType = "html";
-            const directoryUrl = urlInfo.url;
-            const directoryContentItems = generateDirectoryContentItems(
-              directoryUrl,
-              rootDirectoryUrl,
-            );
-            const html = generateHtmlForDirectory(directoryContentItems, {
-              mainFilePath,
-            });
-            return {
-              type: "html",
-              contentType: "text/html",
-              content: html,
-            };
-          }
-          return {
-            type: "directory",
-            contentType: "application/json",
-            content: JSON.stringify(directoryContentArray, null, "  "),
-          };
-        }
         return serveFile(urlInfo.url);
       },
     },
   ];
-};
-
-const generateHtmlForDirectory = (directoryContentItems, { mainFilePath }) => {
-  let directoryUrl = directoryContentItems.firstExistingDirectoryUrl;
-  const rootDirectoryUrl = directoryContentItems.rootDirectoryUrl;
-  directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
-
-  const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
-  const replacers = {
-    directoryUrl,
-    directoryNav: () =>
-      generateDirectoryNav(directoryUrl, {
-        rootDirectoryUrl,
-        rootDirectoryUrlForServer:
-          directoryContentItems.rootDirectoryUrlForServer,
-        mainFilePath,
-      }),
-    directoryContent: () =>
-      generateDirectoryContent(directoryContentItems, { mainFilePath }),
-  };
-  const html = replacePlaceholders$1(htmlForDirectory, replacers);
-  return html;
-};
-const generateHtmlForENOENT = (
-  url,
-  directoryContentItems,
-  directoryListingUrlMocks,
-  { mainFilePath },
-) => {
-  const ancestorDirectoryUrl = directoryContentItems.firstExistingDirectoryUrl;
-  const rootDirectoryUrl = directoryContentItems.rootDirectoryUrl;
-
-  const htmlFor404AndAncestorDir = String(
-    readFileSync(html404AndAncestorDirFileUrl),
-  );
-  const fileRelativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-  const ancestorDirectoryRelativeUrl = urlToRelativeUrl(
-    ancestorDirectoryUrl,
-    rootDirectoryUrl,
-  );
-  const replacers = {
-    fileUrl: directoryListingUrlMocks
-      ? `@jsenv/core/${urlToRelativeUrl(url, jsenvCoreDirectoryUrl)}`
-      : url,
-    fileRelativeUrl,
-    ancestorDirectoryUrl,
-    ancestorDirectoryRelativeUrl,
-    ancestorDirectoryNav: () =>
-      generateDirectoryNav(ancestorDirectoryUrl, {
-        rootDirectoryUrl,
-        rootDirectoryUrlForServer:
-          directoryContentItems.rootDirectoryUrlForServer,
-        mainFilePath,
-      }),
-    ancestorDirectoryContent: () =>
-      generateDirectoryContent(directoryContentItems, { mainFilePath }),
-  };
-  const html = replacePlaceholders$1(htmlFor404AndAncestorDir, replacers);
-  return html;
-};
-const generateDirectoryNav = (
-  entryDirectoryUrl,
-  { rootDirectoryUrl, rootDirectoryUrlForServer, mainFilePath },
-) => {
-  const entryDirectoryRelativeUrl = urlToRelativeUrl(
-    entryDirectoryUrl,
-    rootDirectoryUrl,
-  );
-  const isDir =
-    entryDirectoryRelativeUrl === "" || entryDirectoryRelativeUrl.endsWith("/");
-  const rootDirectoryUrlName = urlToFilename$1(rootDirectoryUrl);
-  const items = [];
-  let dirPartsHtml = "";
-  const parts = entryDirectoryRelativeUrl
-    ? `${rootDirectoryUrlName}/${entryDirectoryRelativeUrl.slice(0, -1)}`.split(
-        "/",
-      )
-    : [rootDirectoryUrlName];
-  let i = 0;
-  while (i < parts.length) {
-    const part = parts[i];
-    const directoryRelativeUrl = `${parts.slice(1, i + 1).join("/")}`;
-    const directoryUrl =
-      directoryRelativeUrl === ""
-        ? rootDirectoryUrl
-        : new URL(`${directoryRelativeUrl}/`, rootDirectoryUrl).href;
-    let href =
-      directoryUrl === rootDirectoryUrlForServer ||
-      urlIsInsideOf(directoryUrl, rootDirectoryUrlForServer)
-        ? urlToRelativeUrl(directoryUrl, rootDirectoryUrlForServer)
-        : directoryUrl;
-    if (href === "") {
-      href = `/${directoryContentMagicName}`;
-    } else {
-      href = `/${href}`;
-    }
-    const text = part;
-    items.push({
-      href,
-      text,
-    });
-    i++;
-  }
-  i = 0;
-
-  const renderDirNavItem = ({ isCurrent, href, text }) => {
-    const isServerRootDir = href === `/${directoryContentMagicName}`;
-    if (isServerRootDir) {
-      if (isCurrent) {
-        return `
-        <span class="directory_nav_item" data-current>
-          <a class="directory_root_for_server" hot-decline href="/${mainFilePath}"></a>
-          <span class="directory_name">${text}</span>
-        </span>`;
-      }
-      return `
-        <span class="directory_nav_item">
-          <a class="directory_root_for_server" hot-decline href="/${mainFilePath}"></a>
-          <a class="directory_name" hot-decline href="${href}">${text}</a>
-        </span>`;
-    }
-    if (isCurrent) {
-      return `
-      <span class="directory_nav_item" data-current>
-        <span class="directory_text">${text}</span>
-      </span>`;
-    }
-    return `
-      <span class="directory_nav_item">
-        <a class="directory_text" hot-decline href="${href}">${text}</a>
-      </span>`;
-  };
-
-  for (const { href, text } of items) {
-    const isLastPart = i === items.length - 1;
-    dirPartsHtml += renderDirNavItem({
-      isCurrent: isLastPart,
-      href,
-      text,
-    });
-    if (isLastPart) {
-      break;
-    }
-    dirPartsHtml += `
-      <span class="directory_separator">/</span>`;
-    i++;
-  }
-  if (isDir) {
-    dirPartsHtml += `
-      <span class="directory_separator">/</span>`;
-  }
-  return dirPartsHtml;
-};
-const generateDirectoryContentItems = (
-  directoryUrl,
-  rootDirectoryUrlForServer,
-) => {
-  let firstExistingDirectoryUrl = new URL("./", directoryUrl);
-  while (!existsSync(firstExistingDirectoryUrl)) {
-    firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
-    if (!urlIsInsideOf(firstExistingDirectoryUrl, rootDirectoryUrlForServer)) {
-      firstExistingDirectoryUrl = new URL(rootDirectoryUrlForServer);
-      break;
-    }
-  }
-  const directoryContentArray = readdirSync(firstExistingDirectoryUrl);
-  const fileUrls = [];
-  for (const filename of directoryContentArray) {
-    const fileUrlObject = new URL(filename, firstExistingDirectoryUrl);
-    fileUrls.push(fileUrlObject);
-  }
-  let rootDirectoryUrl = rootDirectoryUrlForServer;
-  package_workspaces: {
-    const packageDirectoryUrl = lookupPackageDirectory(
-      rootDirectoryUrlForServer,
-    );
-    if (!packageDirectoryUrl) {
-      break package_workspaces;
-    }
-    if (String(packageDirectoryUrl) === String(rootDirectoryUrlForServer)) {
-      break package_workspaces;
-    }
-    rootDirectoryUrl = packageDirectoryUrl;
-    if (
-      String(firstExistingDirectoryUrl) === String(rootDirectoryUrlForServer)
-    ) {
-      let packageContent;
-      try {
-        packageContent = JSON.parse(
-          readFileSync(new URL("package.json", packageDirectoryUrl), "utf8"),
-        );
-      } catch {
-        break package_workspaces;
-      }
-      const { workspaces } = packageContent;
-      if (Array.isArray(workspaces)) {
-        for (const workspace of workspaces) {
-          const workspaceUrlObject = new URL(workspace, packageDirectoryUrl);
-          const workspaceUrl = workspaceUrlObject.href;
-          if (workspaceUrl.endsWith("*")) {
-            const directoryUrl = ensurePathnameTrailingSlash(
-              workspaceUrl.slice(0, -1),
-            );
-            fileUrls.push(new URL(directoryUrl));
-          } else {
-            fileUrls.push(ensurePathnameTrailingSlash(workspaceUrlObject));
-          }
-        }
-      }
-    }
-  }
-
-  const sortedUrls = [];
-  for (let fileUrl of fileUrls) {
-    if (lstatSync(fileUrl).isDirectory()) {
-      sortedUrls.push(ensurePathnameTrailingSlash(fileUrl));
-    } else {
-      sortedUrls.push(fileUrl);
-    }
-  }
-  sortedUrls.sort((a, b) => {
-    return comparePathnames(a.pathname, b.pathname);
-  });
-
-  const items = [];
-  for (const sortedUrl of sortedUrls) {
-    const fileUrlRelativeToParent = urlToRelativeUrl(
-      sortedUrl,
-      firstExistingDirectoryUrl,
-    );
-    const fileUrlRelativeToServer = urlToRelativeUrl(
-      sortedUrl,
-      rootDirectoryUrlForServer,
-    );
-    const type = fileUrlRelativeToParent.endsWith("/") ? "dir" : "file";
-    items.push({
-      type,
-      fileUrlRelativeToParent,
-      fileUrlRelativeToServer,
-    });
-  }
-  items.rootDirectoryUrlForServer = rootDirectoryUrlForServer;
-  items.rootDirectoryUrl = rootDirectoryUrl;
-  items.firstExistingDirectoryUrl = firstExistingDirectoryUrl;
-  return items;
-};
-const generateDirectoryContent = (directoryContentItems, { mainFilePath }) => {
-  if (directoryContentItems.length === 0) {
-    return `<p class="directory_empty_message">Directory is empty</p>`;
-  }
-  let html = `<ul class="directory_content">`;
-  for (const directoryContentItem of directoryContentItems) {
-    const { type, fileUrlRelativeToParent, fileUrlRelativeToServer } =
-      directoryContentItem;
-    let href = fileUrlRelativeToServer;
-    if (href === "") {
-      href = `${directoryContentMagicName}`;
-    }
-    const isMainFile = href === mainFilePath;
-    const mainFileAttr = isMainFile ? ` data-main-file` : "";
-    html += `
-      <li class="directory_child" data-type="${type}"${mainFileAttr}>
-        <a href="/${href}" hot-decline>${fileUrlRelativeToParent}</a>
-      </li>`;
-  }
-  html += `\n  </ul>`;
-  return html;
-};
-const replacePlaceholders$1 = (html, replacers) => {
-  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
-    const replacer = replacers[name];
-    if (replacer === undefined) {
-      return match;
-    }
-    if (typeof replacer === "function") {
-      return replacer();
-    }
-    return replacer;
-  });
 };
 
 const jsenvPluginProtocolHttp = ({ include }) => {
@@ -19849,103 +19882,6 @@ const asValidFilename = (string) => {
   if (string === "..") return "__";
   string = string.replace(/[ ,]/g, "_").replace(/["/?<>\\:*|]/g, "");
   return string;
-};
-
-const jsenvPluginInjections = (rawAssociations) => {
-  let resolvedAssociations;
-
-  return {
-    name: "jsenv:injections",
-    appliesDuring: "*",
-    init: (context) => {
-      resolvedAssociations = URL_META.resolveAssociations(
-        { injectionsGetter: rawAssociations },
-        context.rootDirectoryUrl,
-      );
-    },
-    transformUrlContent: async (urlInfo) => {
-      const { injectionsGetter } = URL_META.applyAssociations({
-        url: asUrlWithoutSearch(urlInfo.url),
-        associations: resolvedAssociations,
-      });
-      if (!injectionsGetter) {
-        return null;
-      }
-      if (typeof injectionsGetter !== "function") {
-        throw new TypeError("injectionsGetter must be a function");
-      }
-      const injections = await injectionsGetter(urlInfo);
-      if (!injections) {
-        return null;
-      }
-      const keys = Object.keys(injections);
-      if (keys.length === 0) {
-        return null;
-      }
-      return replacePlaceholders(urlInfo.content, injections, urlInfo);
-    },
-  };
-};
-
-const injectionSymbol = Symbol.for("jsenv_injection");
-const INJECTIONS = {
-  optional: (value) => {
-    return { [injectionSymbol]: "optional", value };
-  },
-};
-
-// we export this because it is imported by jsenv_plugin_placeholder.js and unit test
-const replacePlaceholders = (content, replacements, urlInfo) => {
-  const magicSource = createMagicSource(content);
-  for (const key of Object.keys(replacements)) {
-    let index = content.indexOf(key);
-    const replacement = replacements[key];
-    let isOptional;
-    let value;
-    if (replacement && replacement[injectionSymbol]) {
-      const valueBehindSymbol = replacement[injectionSymbol];
-      isOptional = valueBehindSymbol === "optional";
-      value = replacement.value;
-    } else {
-      value = replacement;
-    }
-    if (index === -1) {
-      if (!isOptional) {
-        urlInfo.context.logger.warn(
-          `placeholder "${key}" not found in ${urlInfo.url}.
---- suggestion a ---
-Add "${key}" in that file.
---- suggestion b ---
-Fix eventual typo in "${key}"?
---- suggestion c ---
-Mark injection as optional using INJECTIONS.optional():
-import { INJECTIONS } from "@jsenv/core";
-
-return {
-  "${key}": INJECTIONS.optional(${JSON.stringify(value)}),
-};`,
-        );
-      }
-      continue;
-    }
-
-    while (index !== -1) {
-      const start = index;
-      const end = index + key.length;
-      magicSource.replace({
-        start,
-        end,
-        replacement:
-          urlInfo.type === "js_classic" ||
-          urlInfo.type === "js_module" ||
-          urlInfo.type === "html"
-            ? JSON.stringify(value, null, "  ")
-            : value,
-      });
-      index = content.indexOf(key, end);
-    }
-  }
-  return magicSource.toContentAndSourcemap();
 };
 
 /*
@@ -21280,6 +21216,7 @@ const getCorePlugins = ({
      */
     jsenvPluginProtocolHttp(http),
     jsenvPluginProtocolFile({
+      supervisorEnabled: Boolean(supervisor),
       magicExtensions,
       magicDirectoryIndex,
       directoryListingUrlMocks,
