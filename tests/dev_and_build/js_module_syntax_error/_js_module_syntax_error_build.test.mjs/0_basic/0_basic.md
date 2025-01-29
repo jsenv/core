@@ -24,7 +24,7 @@ base/client/main.html:9:27
     at Object.get [as originalContentAst] (@jsenv/core/src/kitchen/url_graph/url_content.js:78:21)
     at @jsenv/core/src/kitchen/url_graph/url_content.js:44:24
     at Object.get [as contentAst] (@jsenv/core/src/kitchen/url_graph/url_content.js:78:21)
-    at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:140:18)
+    at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:138:18)
     at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:22:18)
     at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:206:31)
 ```
