@@ -42,7 +42,7 @@ const parseAndTransformJsReferences = async (
 
   const onInlineReference = (inlineReferenceInfo) => {
     const inlineUrl = getUrlForContentInsideJs(inlineReferenceInfo, {
-      url: urlInfo.url,
+      url: urlInfo.originalUrl || urlInfo.url,
     });
     let { quote } = inlineReferenceInfo;
     if (quote === "`" && !canUseTemplateLiterals) {

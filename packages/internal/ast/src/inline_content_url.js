@@ -27,7 +27,7 @@ export const generateUrlForInlineContent = ({
   const filenameRaw = urlToFilename(url);
   const filename = `${filenameRaw}@${generatedName}${extension}`;
   const inlineContentUrl = new URL(filename, url);
-  const urlObject = new URL(url);
-  inlineContentUrl.search = urlObject.search;
+  const { search } = new URL(url);
+  inlineContentUrl.search = search;
   return inlineContentUrl.href;
 };
