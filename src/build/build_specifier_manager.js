@@ -295,7 +295,6 @@ export const createBuildSpecifierManager = ({
           type: reference.type,
           expectedType: reference.expectedType,
           specifier: reference.specifier,
-          specifierPathname: reference.specifierPathname,
           specifierLine: reference.specifierLine,
           specifierColumn: reference.specifierColumn,
           specifierStart: reference.specifierStart,
