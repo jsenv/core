@@ -482,8 +482,7 @@ export const startDevServer = async ({
               // If they match jsenv bypass cooking and returns 304
               // This must not happen when a plugin uses "no-store" or "no-cache" as it means
               // plugin logic wants to happens for every request to this url
-              ...(urlInfo.headers["cache-control"] === "no-store" ||
-              urlInfo.headers["cache-control"] === "no-cache"
+              ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
                 ? {}
                 : {
                     "cache-control": `private,max-age=0,must-revalidate`,
@@ -683,4 +682,11 @@ ${error.trace?.message}`);
     },
     kitchenCache,
   };
+};
+
+const cacheIsDisabledInResponseHeader = (urlInfo) => {
+  return (
+    urlInfo.headers["cache-control"] === "no-store" ||
+    urlInfo.headers["cache-control"] === "no-cache"
+  );
 };
