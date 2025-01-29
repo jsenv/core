@@ -25,6 +25,9 @@ export const jsenvPluginDirectoryListing = ({
       return null;
     }
     const requestedUrl = htmlUrlInfo.searchParams.get("url");
+    if (!requestedUrl) {
+      return null;
+    }
     const enoent = htmlUrlInfo.searchParams.has("enoent");
     return {
       requestedUrl,
