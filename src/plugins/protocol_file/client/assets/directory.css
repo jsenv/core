@@ -33,6 +33,7 @@ button {
   width: 1em;
   height: 1em;
   margin-right: 0.25em;
+  color: #f1f1f1;
 }
 a.directory_nav_item_icon {
   text-decoration: none;
@@ -74,7 +75,9 @@ a.directory_nav_item_text {
 }
 .directory_content_item_icon {
   width: 15px;
+  aspect-ratio: 1/1;
   display: flex;
+  color: #f1f1f1;
 }
 .directory_content_item_icon img {
   width: 100%;

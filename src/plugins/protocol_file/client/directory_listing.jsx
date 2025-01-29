@@ -2,12 +2,12 @@ import { render } from "preact";
 
 const directoryIconUrl = import.meta.resolve("./assets/dir.png");
 const fileIconUrl = import.meta.resolve("./assets/file.png");
-const homeIconUrl = import.meta.resolve("./assets/home.svg");
+const homeIconUrl = import.meta.resolve("./assets/home.svg#root");
 
 const {
   directoryContentMagicName,
   rootDirectoryUrl,
-  rootDirectoryUrlForServer,
+  serverRootDirectoryUrl,
   mainFilePath,
   directoryUrl,
   directoryContentItems,
@@ -32,24 +32,15 @@ const DirectoryNav = () => {
   let i = 0;
   while (i < parts.length) {
     const part = parts[i];
-    const directoryRelativeUrl = `${parts.slice(1, i + 1).join("/")}`;
-    const directoryUrl =
-      directoryRelativeUrl === ""
+    const navItemRelativeUrl = `${parts.slice(1, i + 1).join("/")}`;
+    const navItemUrl =
+      navItemRelativeUrl === ""
         ? rootDirectoryUrl
-        : new URL(`${directoryRelativeUrl}/`, rootDirectoryUrl).href;
-    let href =
-      directoryUrl === rootDirectoryUrlForServer ||
-      urlIsInsideOf(directoryUrl, rootDirectoryUrlForServer)
-        ? urlToRelativeUrl(directoryUrl, rootDirectoryUrlForServer)
-        : directoryUrl;
-    if (href === "") {
-      href = `/${directoryContentMagicName}`;
-    } else {
-      href = `/${href}`;
-    }
+        : new URL(`${navItemRelativeUrl}/`, rootDirectoryUrl).href;
+
     const text = part;
     items.push({
-      href,
+      url: navItemUrl,
       text,
     });
     i++;
@@ -58,17 +49,26 @@ const DirectoryNav = () => {
   return (
     <h1 className="directory_nav">
       {items.map((item, index) => {
+        const { url, text } = item;
+        const isServerRootDirectory = url === serverRootDirectoryUrl;
         const isLast = index === parts.length - 1;
-        const { href, text } = item;
-        const isServerRootDirectory = false;
-
+        let href =
+          url === serverRootDirectoryUrl ||
+          urlIsInsideOf(url, serverRootDirectoryUrl)
+            ? urlToRelativeUrl(url, serverRootDirectoryUrl)
+            : url;
+        if (href === "") {
+          href = `/${directoryContentMagicName}`;
+        } else {
+          href = `/${href}`;
+        }
         return (
           <>
             <DirectoryNavItem
               key={index}
               url={isLast ? null : href}
-              iconImageUrl={isServerRootDirectory ? "" : ""}
-              iconLinkUrl={isServerRootDirectory ? "" : ""}
+              iconImageUrl={isServerRootDirectory ? homeIconUrl : ""}
+              iconLinkUrl={isServerRootDirectory ? `/${mainFilePath}` : ""}
             >
               {text}
             </DirectoryNavItem>
@@ -79,10 +79,9 @@ const DirectoryNav = () => {
     </h1>
   );
 };
-
 const DirectoryNavItem = ({ url, iconImageUrl, iconLinkUrl, children }) => {
   return (
-    <span className="directory_nav_item" data-has-url={url ? true : undefined}>
+    <span className="directory_nav_item" data-has-url={url ? "" : undefined}>
       {iconLinkUrl ? (
         <a
           className="directory_nav_item_icon"
@@ -90,11 +89,11 @@ const DirectoryNavItem = ({ url, iconImageUrl, iconLinkUrl, children }) => {
           hot-decline
           href={iconLinkUrl}
         >
-          <img src={iconImageUrl} />
+          <Icon url={iconImageUrl} />
         </a>
       ) : iconImageUrl ? (
         <span className="directory_nav_item_icon">
-          <img src={iconImageUrl} />
+          <Icon url={iconImageUrl} />
         </span>
       ) : null}
       {url ? (
@@ -114,39 +113,44 @@ const DirectoryContent = () => {
   }
   return (
     <ul className="directory_content">
-      {directoryContentItems.map((directoryContentItem, index) => {
+      {directoryContentItems.map((directoryContentItem) => {
+        const fileUrl = directoryContentItem;
+        const isDirectory = directoryContentItem.endsWith("/");
+        const relativeUrl = urlToRelativeUrl(fileUrl, directoryUrl);
+        const text = relativeUrl;
+        const url = `/${relativeUrl}`;
+        const isMainFile = relativeUrl === mainFilePath;
+
         return (
-          <DirectoryContentItem key={index} {...directoryContentItem}>
-            COUCOU
+          <DirectoryContentItem
+            key={url}
+            url={url}
+            isDirectory={isDirectory}
+            isMainFile={isMainFile}
+          >
+            {text}
           </DirectoryContentItem>
         );
       })}
     </ul>
   );
 };
-
-const DirectoryContentItem = ({
-  type,
-  fileUrlRelativeToParent,
-  fileUrlRelativeToServer,
-  children,
-}) => {
-  let href = fileUrlRelativeToServer;
-  if (href === "") {
-    href = `${directoryContentMagicName}`;
-  }
-  const isMainFile = href === mainFilePath;
-  const isDirectory = type === "dir";
+const DirectoryContentItem = ({ url, isDirectory, isMainFile, children }) => {
   return (
-    <li className="directory_content_item" data-type={type}>
+    <li
+      className="directory_content_item"
+      data-directory={isDirectory ? "" : undefined}
+      data-file={isDirectory ? undefined : ""}
+    >
       <a
         className="directory_content_item_link"
-        href={`/${href}`} // eslint-disable-next-line react/no-unknown-property
+        href={url}
+        // eslint-disable-next-line react/no-unknown-property
         hot-decline={isMainFile ? true : undefined}
       >
         <span className="directory_content_item_icon">
-          <img
-            src={
+          <Icon
+            url={
               isMainFile
                 ? homeIconUrl
                 : isDirectory
@@ -156,7 +160,7 @@ const DirectoryContentItem = ({
           />
         </span>
         {children}
-        {isDirectory || true ? (
+        {isDirectory ? (
           <>
             <span style="flex:1"></span>
             <span className="directory_content_item_arrow">
@@ -168,7 +172,6 @@ const DirectoryContentItem = ({
     </li>
   );
 };
-
 const RightArrowSvg = () => {
   return (
     <svg fill="currentColor" viewBox="0 0 330 330">
@@ -181,6 +184,17 @@ const RightArrowSvg = () => {
       />
     </svg>
   );
+};
+
+const Icon = ({ url }) => {
+  if (urlToFilename(url).endsWith(".svg")) {
+    return (
+      <svg>
+        <use href={url} />
+      </svg>
+    );
+  }
+  return <img src={url} />;
 };
 
 const urlToRelativeUrl = (url, otherUrl) => {

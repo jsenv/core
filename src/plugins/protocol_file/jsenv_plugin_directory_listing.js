@@ -88,12 +88,12 @@ const generateDirectoryListingInjection = ({
   rootDirectoryUrl,
   mainFilePath,
 }) => {
-  let rootDirectoryUrlForServer = rootDirectoryUrl;
+  let serverRootDirectoryUrl = rootDirectoryUrl;
   let firstExistingDirectoryUrl = new URL("./", directoryUrl);
   while (!existsSync(firstExistingDirectoryUrl)) {
     firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
-    if (!urlIsInsideOf(firstExistingDirectoryUrl, rootDirectoryUrlForServer)) {
-      firstExistingDirectoryUrl = new URL(rootDirectoryUrlForServer);
+    if (!urlIsInsideOf(firstExistingDirectoryUrl, serverRootDirectoryUrl)) {
+      firstExistingDirectoryUrl = new URL(serverRootDirectoryUrl);
       break;
     }
   }
@@ -104,19 +104,15 @@ const generateDirectoryListingInjection = ({
     fileUrls.push(fileUrlObject);
   }
   package_workspaces: {
-    const packageDirectoryUrl = lookupPackageDirectory(
-      rootDirectoryUrlForServer,
-    );
+    const packageDirectoryUrl = lookupPackageDirectory(serverRootDirectoryUrl);
     if (!packageDirectoryUrl) {
       break package_workspaces;
     }
-    if (String(packageDirectoryUrl) === String(rootDirectoryUrlForServer)) {
+    if (String(packageDirectoryUrl) === String(serverRootDirectoryUrl)) {
       break package_workspaces;
     }
     rootDirectoryUrl = packageDirectoryUrl;
-    if (
-      String(firstExistingDirectoryUrl) === String(rootDirectoryUrlForServer)
-    ) {
+    if (String(firstExistingDirectoryUrl) === String(serverRootDirectoryUrl)) {
       let packageContent;
       try {
         packageContent = JSON.parse(
@@ -159,7 +155,7 @@ const generateDirectoryListingInjection = ({
       directoryListingUrlMocks,
       directoryContentMagicName,
       directoryUrl,
-      rootDirectoryUrlForServer,
+      serverRootDirectoryUrl,
       rootDirectoryUrl,
       mainFilePath,
       directoryContentItems: sortedUrls,
