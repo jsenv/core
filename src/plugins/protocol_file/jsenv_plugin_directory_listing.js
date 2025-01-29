@@ -1,4 +1,8 @@
 /*
+ * pourquoi le truc avec transformUrlContent et supervisor?
+ * je devrait pouvoir modifier le contenu du html
+ * mais je suppose qu'il faut que je le fasse avant que supervisor mette son nez dedans
+ * donc dans fetchUrlContent? c'est pour ça? a confirmer
  */
 
 import { comparePathnames, readEntryStatSync } from "@jsenv/filesystem";
