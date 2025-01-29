@@ -16,6 +16,35 @@ button {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ERROR MESSAGE */
+.error_message {
+  background-color: #fce4e4;
+  border: 1px solid #fcc2c3;
+  padding: 1.5em 1.2em;
+  margin: 1em;
+  display: block;
+}
+.error_text {
+  color: #cc0033;
+  font-weight: bold;
+  line-height: 2em;
+  text-shadow: 1px 1px rgba(250, 250, 250, 0.3);
+}
+
+.hint_message {
+  background-color: lightblue;
+  border: 1px solid #fcc2c3;
+  padding: 1.5em 1.2em;
+  margin: 1em;
+  display: block;
+}
+.hint_text {
+  color: black;
+  font-weight: bold;
+  line-height: 2em;
+  text-shadow: 1px 1px rgba(250, 250, 250, 0.3);
+}
+
 /* NAV */
 .directory_nav {
   font-size: 16px;

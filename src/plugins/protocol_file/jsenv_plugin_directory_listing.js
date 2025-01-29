@@ -9,10 +9,6 @@ import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
 import { lookupPackageDirectory } from "../../helpers/lookup_package_directory.js";
 import { replacePlaceholders } from "../injections/jsenv_plugin_injections.js";
 
-// const html404AndAncestorDirFileUrl = new URL(
-//   "./client/html_404_and_ancestor_dir.html",
-//   import.meta.url,
-// );
 const htmlFileUrlForDirectory = new URL(
   "./client/directory_listing.html",
   import.meta.url,
@@ -162,62 +158,3 @@ const generateDirectoryListingInjection = ({
     },
   };
 };
-
-// const generateHtmlForDirectory = (directoryContentItems, { mainFilePath }) => {
-//   let directoryUrl = directoryContentItems.firstExistingDirectoryUrl;
-//   const rootDirectoryUrl = directoryContentItems.rootDirectoryUrl;
-//   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
-
-//   const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
-//   const replacers = {
-//     directoryUrl,
-//     directoryNav: () =>
-//       generateDirectoryNav(directoryUrl, {
-//         rootDirectoryUrl,
-//         rootDirectoryUrlForServer:
-//           directoryContentItems.rootDirectoryUrlForServer,
-//         mainFilePath,
-//       }),
-//     directoryContent: () =>
-//       generateDirectoryContent(directoryContentItems, { mainFilePath }),
-//   };
-//   const html = replacePlaceholders(htmlForDirectory, replacers);
-//   return html;
-// };
-// const generateHtmlForENOENT = (
-//   url,
-//   directoryContentItems,
-//   directoryListingUrlMocks,
-//   { mainFilePath },
-// ) => {
-//   const ancestorDirectoryUrl = directoryContentItems.firstExistingDirectoryUrl;
-//   const rootDirectoryUrl = directoryContentItems.rootDirectoryUrl;
-
-//   const htmlFor404AndAncestorDir = String(
-//     readFileSync(html404AndAncestorDirFileUrl),
-//   );
-//   const fileRelativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
-//   const ancestorDirectoryRelativeUrl = urlToRelativeUrl(
-//     ancestorDirectoryUrl,
-//     rootDirectoryUrl,
-//   );
-//   const replacers = {
-//     fileUrl: directoryListingUrlMocks
-//       ? `@jsenv/core/${urlToRelativeUrl(url, jsenvCoreDirectoryUrl)}`
-//       : url,
-//     fileRelativeUrl,
-//     ancestorDirectoryUrl,
-//     ancestorDirectoryRelativeUrl,
-//     ancestorDirectoryNav: () =>
-//       generateDirectoryNav(ancestorDirectoryUrl, {
-//         rootDirectoryUrl,
-//         rootDirectoryUrlForServer:
-//           directoryContentItems.rootDirectoryUrlForServer,
-//         mainFilePath,
-//       }),
-//     ancestorDirectoryContent: () =>
-//       generateDirectoryContent(directoryContentItems, { mainFilePath }),
-//   };
-//   const html = replacePlaceholders(htmlFor404AndAncestorDir, replacers);
-//   return html;
-// };

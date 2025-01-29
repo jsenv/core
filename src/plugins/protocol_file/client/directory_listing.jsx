@@ -11,14 +11,33 @@ const {
   mainFilePath,
   directoryUrl,
   directoryContentItems,
+  enoentDetails,
 } = window.DIRECTORY_LISTING;
 
 const DirectoryListing = () => {
   return (
     <>
+      {enoentDetails ? <ErrorMessage /> : null}
       <DirectoryNav />
       <DirectoryContent />
     </>
+  );
+};
+
+const ErrorMessage = () => {
+  const { fileUrl } = enoentDetails;
+  const fileRelativeUrl = urlToRelativeUrl(fileUrl, rootDirectoryUrl);
+
+  return (
+    <p className="error_message">
+      <span className="error_text">
+        No entry on the filesystem for <code>/{fileRelativeUrl}</code>
+        <br />
+        <span style="color: #DDDDDD">(Server tried to read {fileUrl})</span>
+        <br />
+        Content of closest parent directory is listed below:
+      </span>
+    </p>
   );
 };
 
