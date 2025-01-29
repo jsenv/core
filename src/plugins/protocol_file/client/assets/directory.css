@@ -25,12 +25,13 @@ button {
   display: block;
 }
 .error_text {
-  color: #cc0033;
+  color: #853611;
   font-weight: bold;
-  line-height: 2em;
   text-shadow: 1px 1px rgba(250, 250, 250, 0.3);
 }
-
+.error_text code {
+  background: yellow;
+}
 .hint_message {
   background-color: lightblue;
   border: 1px solid #fcc2c3;

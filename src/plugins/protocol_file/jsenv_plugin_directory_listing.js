@@ -32,6 +32,10 @@ export const jsenvPluginDirectoryListing = ({
         reference.fsStat = fsStat;
       }
       if (!fsStat) {
+        const request = reference.ownerUrlInfo.context.request;
+        if (request && request.headers["sec-fetch-dest"] === "document") {
+          return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
+        }
         return null;
       }
       const isDirectory = fsStat?.isDirectory();
@@ -45,7 +49,7 @@ export const jsenvPluginDirectoryListing = ({
       if (!acceptsHtml) {
         return null;
       }
-      return `${htmlFileUrlForDirectory}?directory=${encodeURIComponent(url)}`;
+      return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
     },
     transformUrlContent: {
       html: (urlInfo) => {
@@ -53,8 +57,9 @@ export const jsenvPluginDirectoryListing = ({
         if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
           return null;
         }
-        const directoryUrl = urlInfo.searchParams.get("directory");
-        if (!directoryUrl) {
+        const urlToList = urlInfo.searchParams.get("url");
+        const enoent = urlInfo.searchParams.has("enoent");
+        if (!urlToList) {
           return null;
         }
         const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
@@ -62,12 +67,12 @@ export const jsenvPluginDirectoryListing = ({
         return replacePlaceholders(
           urlInfo.content,
           {
-            ...generateDirectoryListingInjection({
+            ...generateDirectoryListingInjection(urlToList, {
               directoryListingUrlMocks,
               directoryContentMagicName,
-              directoryUrl,
               rootDirectoryUrl,
               mainFilePath,
+              enoent,
             }),
           },
           urlInfo,
@@ -77,15 +82,18 @@ export const jsenvPluginDirectoryListing = ({
   };
 };
 
-const generateDirectoryListingInjection = ({
-  directoryListingUrlMocks,
-  directoryContentMagicName,
-  directoryUrl,
-  rootDirectoryUrl,
-  mainFilePath,
-}) => {
+const generateDirectoryListingInjection = (
+  requestedUrl,
+  {
+    enoent,
+    directoryListingUrlMocks,
+    directoryContentMagicName,
+    rootDirectoryUrl,
+    mainFilePath,
+  },
+) => {
   let serverRootDirectoryUrl = rootDirectoryUrl;
-  let firstExistingDirectoryUrl = new URL("./", directoryUrl);
+  let firstExistingDirectoryUrl = new URL("./", requestedUrl);
   while (!existsSync(firstExistingDirectoryUrl)) {
     firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
     if (!urlIsInsideOf(firstExistingDirectoryUrl, serverRootDirectoryUrl)) {
@@ -148,9 +156,14 @@ const generateDirectoryListingInjection = ({
 
   return {
     __DIRECTORY_LISTING__: {
+      enoentDetails: enoent
+        ? {
+            fileUrl: requestedUrl,
+          }
+        : null,
       directoryListingUrlMocks,
       directoryContentMagicName,
-      directoryUrl,
+      directoryUrl: firstExistingDirectoryUrl,
       serverRootDirectoryUrl,
       rootDirectoryUrl,
       mainFilePath,
