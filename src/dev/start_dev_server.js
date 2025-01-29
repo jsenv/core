@@ -15,7 +15,6 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, readFileSync } from "node:fs";
-
 import { defaultRuntimeCompat } from "../build/build.js";
 import { createEventEmitter } from "../helpers/event_emitter.js";
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
@@ -335,7 +334,17 @@ export const startDevServer = async ({
           for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
             const implicitUrlInfo =
               urlInfoCreated.graph.getUrlInfo(implicitUrl);
-            if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
+            if (!implicitUrlInfo) {
+              continue;
+            }
+            if (implicitUrlInfo.content === undefined) {
+              // happens when we explicitely load an url with a search param
+              // - it creates an implicit url info to the url without params
+              // - we never explicitely request the url without search param so it has no content
+              // in that case the underlying urlInfo cannot be invalidate by the implicit
+              continue;
+            }
+            if (!implicitUrlInfo.isValid()) {
               return false;
             }
           }
