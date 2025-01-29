@@ -1,5 +1,6 @@
 import { startDevServer } from "@jsenv/core";
 import { replaceFileStructureSync, writeFileSync } from "@jsenv/filesystem";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { chromium } from "playwright";
 
 let debug = false;
@@ -18,6 +19,7 @@ const devServer = await startDevServer({
   keepProcessAlive: !debug,
   directoryListingUrlMocks: true,
   clientAutoreload: false,
+  plugins: [jsenvPluginPreact()],
   port: 0,
 });
 const browser = await chromium.launch({

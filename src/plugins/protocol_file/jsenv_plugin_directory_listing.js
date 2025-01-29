@@ -5,7 +5,7 @@ import {
   ensurePathnameTrailingSlash,
   urlIsInsideOf,
 } from "@jsenv/urls";
-import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { lookupPackageDirectory } from "../../helpers/lookup_package_directory.js";
 import { replacePlaceholders } from "../injections/jsenv_plugin_injections.js";
 
@@ -153,31 +153,31 @@ const generateDirectoryListingInjection = (
       break package_workspaces;
     }
     rootDirectoryUrl = packageDirectoryUrl;
-    if (String(firstExistingDirectoryUrl) === String(serverRootDirectoryUrl)) {
-      let packageContent;
-      try {
-        packageContent = JSON.parse(
-          readFileSync(new URL("package.json", packageDirectoryUrl), "utf8"),
-        );
-      } catch {
-        break package_workspaces;
-      }
-      const { workspaces } = packageContent;
-      if (Array.isArray(workspaces)) {
-        for (const workspace of workspaces) {
-          const workspaceUrlObject = new URL(workspace, packageDirectoryUrl);
-          const workspaceUrl = workspaceUrlObject.href;
-          if (workspaceUrl.endsWith("*")) {
-            const directoryUrl = ensurePathnameTrailingSlash(
-              workspaceUrl.slice(0, -1),
-            );
-            fileUrls.push(new URL(directoryUrl));
-          } else {
-            fileUrls.push(ensurePathnameTrailingSlash(workspaceUrlObject));
-          }
-        }
-      }
-    }
+    // if (String(firstExistingDirectoryUrl) === String(serverRootDirectoryUrl)) {
+    //   let packageContent;
+    //   try {
+    //     packageContent = JSON.parse(
+    //       readFileSync(new URL("package.json", packageDirectoryUrl), "utf8"),
+    //     );
+    //   } catch {
+    //     break package_workspaces;
+    //   }
+    //   const { workspaces } = packageContent;
+    //   if (Array.isArray(workspaces)) {
+    //     for (const workspace of workspaces) {
+    //       const workspaceUrlObject = new URL(workspace, packageDirectoryUrl);
+    //       const workspaceUrl = workspaceUrlObject.href;
+    //       if (workspaceUrl.endsWith("*")) {
+    //         const directoryUrl = ensurePathnameTrailingSlash(
+    //           workspaceUrl.slice(0, -1),
+    //         );
+    //         fileUrls.push(new URL(directoryUrl));
+    //       } else {
+    //         fileUrls.push(ensurePathnameTrailingSlash(workspaceUrlObject));
+    //       }
+    //     }
+    //   }
+    // }
   }
   const sortedUrls = [];
   for (let fileUrl of fileUrls) {

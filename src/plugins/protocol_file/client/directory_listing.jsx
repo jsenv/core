@@ -26,7 +26,9 @@ const DirectoryListing = () => {
 
 const ErrorMessage = () => {
   const { fileUrl } = enoentDetails;
-  const fileRelativeUrl = urlToRelativeUrl(fileUrl, rootDirectoryUrl);
+  const fileRelativeUrl = urlIsInsideOf(fileUrl, serverRootDirectoryUrl)
+    ? urlToRelativeUrl(fileUrl, serverRootDirectoryUrl)
+    : urlToRelativeUrl(fileUrl, rootDirectoryUrl);
 
   return (
     <p className="error_message">
@@ -55,7 +57,6 @@ const DirectoryNav = () => {
       navItemRelativeUrl === ""
         ? rootDirectoryUrl
         : new URL(`${navItemRelativeUrl}/`, rootDirectoryUrl).href;
-
     const text = part;
     items.push({
       url: navItemUrl,
@@ -74,7 +75,7 @@ const DirectoryNav = () => {
           url === serverRootDirectoryUrl ||
           urlIsInsideOf(url, serverRootDirectoryUrl)
             ? urlToRelativeUrl(url, serverRootDirectoryUrl)
-            : url;
+            : `@fs/${url.slice("file:///".length)}`;
         if (href === "") {
           href = `/${directoryContentMagicName}`;
         } else {
@@ -136,19 +137,18 @@ const DirectoryContent = () => {
   return (
     <ul className="directory_content">
       {directoryContentItems.map((directoryContentItem) => {
-        const fileUrl = directoryContentItem;
+        const itemUrl = directoryContentItem;
         const isDirectory = directoryContentItem.endsWith("/");
-        const urlRelativeToCurrentDirectory = urlToRelativeUrl(
-          fileUrl,
-          directoryUrl,
-        );
-        const urlRelativeToServerRootDirectory = urlToRelativeUrl(
-          fileUrl,
+        const isOutsideServerRootDirectory = !urlIsInsideOf(
+          itemUrl,
           serverRootDirectoryUrl,
         );
-        const text = urlRelativeToCurrentDirectory;
-        const url = `/${urlRelativeToServerRootDirectory}`;
-        const isMainFile = urlRelativeToServerRootDirectory === mainFilePath;
+        const itemRelativeUrl = urlToRelativeUrl(itemUrl, directoryUrl);
+        const text = itemRelativeUrl;
+        const url = isOutsideServerRootDirectory
+          ? `/@fs/${itemUrl.slice("file:///".length)}`
+          : `/${itemRelativeUrl}`;
+        const isMainFile = itemRelativeUrl === mainFilePath;
 
         return (
           <DirectoryContentItem
