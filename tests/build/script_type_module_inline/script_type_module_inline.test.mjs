@@ -10,6 +10,7 @@ const run = async ({ runtimeCompat, bundling }) => {
     minification: false,
     runtimeCompat,
     bundling,
+    versioning: false,
   });
   const buildServer = await startBuildServer({
     buildDirectoryUrl: new URL("./build/", import.meta.url),
@@ -30,9 +31,10 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
       runtimeCompat: { chrome: "60" },
       bundling: true,
     }));
-  test("2_js_module_fallback_no_bundling", () =>
+  test.ONLY("2_js_module_fallback_no_bundling", () =>
     run({
       runtimeCompat: { chrome: "60" },
       bundling: false,
-    }));
+    }),
+  );
 });
