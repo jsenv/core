@@ -1,8 +1,5 @@
 /*
- * TODO:
-status should be 404 when enoent
-cache-control: no-cache for directory_listing.html
-*/
+ */
 
 import { comparePathnames, readEntryStatSync } from "@jsenv/filesystem";
 import { pickContentType } from "@jsenv/server";
@@ -35,6 +32,10 @@ export const jsenvPluginDirectoryListing = ({
       return null;
     }
     const enoent = htmlUrlInfo.searchParams.has("enoent");
+    if (enoent) {
+      htmlUrlInfo.status = 404;
+      htmlUrlInfo.headers["cache-control"] = "no-cache";
+    }
     return {
       requestedUrl,
       enoent,
