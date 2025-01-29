@@ -54,23 +54,21 @@ const DirectoryNav = () => {
     });
     i++;
   }
-  i = 0;
 
   return (
     <h1 className="directory_nav">
-      {parts.map((part, index) => {
-        const isLastPart = index === parts.length - 1;
-        const { href, text } = part;
+      {items.map((item, index) => {
+        const isLast = index === parts.length - 1;
+        const { href, text } = item;
         const isServerRootDirectory = false;
 
         return (
           <>
             <DirectoryNavItem
               key={index}
-              url={isLastPart ? null : href}
+              url={isLast ? null : href}
               iconImageUrl={isServerRootDirectory ? "" : ""}
               iconLinkUrl={isServerRootDirectory ? "" : ""}
-              {...part}
             >
               {text}
             </DirectoryNavItem>
@@ -116,9 +114,13 @@ const DirectoryContent = () => {
   }
   return (
     <ul className="directory_content">
-      {directoryContentItems.map((directoryContentItem, index) => (
-        <DirectoryContentItem key={index} {...directoryContentItem} />
-      ))}
+      {directoryContentItems.map((directoryContentItem, index) => {
+        return (
+          <DirectoryContentItem key={index} {...directoryContentItem}>
+            COUCOU
+          </DirectoryContentItem>
+        );
+      })}
     </ul>
   );
 };
@@ -127,34 +129,57 @@ const DirectoryContentItem = ({
   type,
   fileUrlRelativeToParent,
   fileUrlRelativeToServer,
+  children,
 }) => {
   let href = fileUrlRelativeToServer;
   if (href === "") {
     href = `${directoryContentMagicName}`;
   }
   const isMainFile = href === mainFilePath;
+  const isDirectory = type === "dir";
   return (
-    <li className="directory_child" data-type={type}>
-      <span className="directory_child_icon">
-        <img
-          src={
-            isMainFile
-              ? homeIconUrl
-              : type === "dir"
-                ? directoryIconUrl
-                : fileIconUrl
-          }
-        />
-      </span>
+    <li className="directory_content_item" data-type={type}>
       <a
-        className="directory_child_text"
-        href={`/${href}`}
-        // eslint-disable-next-line react/no-unknown-property
+        className="directory_content_item_link"
+        href={`/${href}`} // eslint-disable-next-line react/no-unknown-property
         hot-decline={isMainFile ? true : undefined}
       >
-        {fileUrlRelativeToParent}
+        <span className="directory_content_item_icon">
+          <img
+            src={
+              isMainFile
+                ? homeIconUrl
+                : isDirectory
+                  ? directoryIconUrl
+                  : fileIconUrl
+            }
+          />
+        </span>
+        {children}
+        {isDirectory || true ? (
+          <>
+            <span style="flex:1"></span>
+            <span className="directory_content_item_arrow">
+              <RightArrowSvg />
+            </span>
+          </>
+        ) : null}
       </a>
     </li>
+  );
+};
+
+const RightArrowSvg = () => {
+  return (
+    <svg fill="currentColor" viewBox="0 0 330 330">
+      <path
+        stroke="currentColor"
+        d="M250.606,154.389l-150-149.996c-5.857-5.858-15.355-5.858-21.213,0.001
+	c-5.857,5.858-5.857,15.355,0.001,21.213l139.393,139.39L79.393,304.394c-5.857,5.858-5.857,15.355,0.001,21.213
+	C82.322,328.536,86.161,330,90,330s7.678-1.464,10.607-4.394l149.999-150.004c2.814-2.813,4.394-6.628,4.394-10.606
+	C255,161.018,253.42,157.202,250.606,154.389z"
+      />
+    </svg>
   );
 };
 
