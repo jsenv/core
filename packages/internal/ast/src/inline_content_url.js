@@ -28,6 +28,8 @@ export const generateUrlForInlineContent = ({
   const filename = `${filenameRaw}@${generatedName}${extension}`;
   // ideally we should keep query params from url
   // maybe we could use a custom scheme like "inline:"
-  const inlineContentUrl = new URL(filename, url).href;
-  return inlineContentUrl;
+  const inlineContentUrl = new URL(filename, url);
+  const urlObject = new URL(url);
+  inlineContentUrl.search = urlObject.search;
+  return inlineContentUrl.href;
 };

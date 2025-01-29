@@ -19,21 +19,27 @@ export const jsenvPluginDirectoryListing = ({
   directoryContentMagicName,
   directoryListingUrlMocks,
 }) => {
-  const replaceDirectoryListingPlaceholder = (urlInfo) => {
-    const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+  const extractDirectoryListingParams = (htmlUrlInfo) => {
+    const urlWithoutSearch = asUrlWithoutSearch(htmlUrlInfo.url);
     if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
       return null;
     }
-    const urlToList = urlInfo.searchParams.get("url");
-    const enoent = urlInfo.searchParams.has("enoent");
-    if (!urlToList) {
-      return null;
-    }
+    const requestedUrl = htmlUrlInfo.searchParams.get("url");
+    const enoent = htmlUrlInfo.searchParams.has("enoent");
+    return {
+      requestedUrl,
+      enoent,
+    };
+  };
+  const replaceDirectoryListingPlaceholder = (
+    urlInfo,
+    { requestedUrl, enoent },
+  ) => {
     const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
     return replacePlaceholders(
       urlInfo.content,
       {
-        ...generateDirectoryListingInjection(urlToList, {
+        ...generateDirectoryListingInjection(requestedUrl, {
           directoryListingUrlMocks,
           directoryContentMagicName,
           rootDirectoryUrl,
@@ -80,8 +86,36 @@ export const jsenvPluginDirectoryListing = ({
     },
     // when supervisor is enabled html does not contain placeholder anymore
     transformUrlContent: supervisorEnabled
-      ? { js_classic: replaceDirectoryListingPlaceholder }
-      : { html: replaceDirectoryListingPlaceholder },
+      ? {
+          js_classic: (urlInfo) => {
+            const parentUrlInfo = urlInfo.findParentIfInline();
+            if (!parentUrlInfo) {
+              return null;
+            }
+            const directoryListingParams =
+              extractDirectoryListingParams(parentUrlInfo);
+            if (!directoryListingParams) {
+              return null;
+            }
+            return replaceDirectoryListingPlaceholder(
+              urlInfo,
+              directoryListingParams,
+            );
+          },
+        }
+      : {
+          html: (urlInfo) => {
+            const directoryListingParams =
+              extractDirectoryListingParams(urlInfo);
+            if (!directoryListingParams) {
+              return null;
+            }
+            return replaceDirectoryListingPlaceholder(
+              urlInfo,
+              directoryListingParams,
+            );
+          },
+        },
   };
 };
 
