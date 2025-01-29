@@ -67,28 +67,6 @@ export const jsenvPluginDirectoryListing = ({
 
   return [
     {
-      name: "jsenv:directory_as_json",
-      appliesDuring: "*",
-      fetchUrlContent: (urlInfo) => {
-        const { firstReference } = urlInfo;
-        let { fsStat } = firstReference;
-        if (!fsStat) {
-          fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
-        }
-        const isDirectory = fsStat?.isDirectory();
-        if (!isDirectory) {
-          return null;
-        }
-        const directoryContentArray = readdirSync(new URL(urlInfo.url));
-        const content = JSON.stringify(directoryContentArray, null, "  ");
-        return {
-          type: "directory",
-          contentType: "application/json",
-          content,
-        };
-      },
-    },
-    {
       name: "jsenv:directory_listing",
       appliesDuring: "dev",
       redirectReference: (reference) => {
@@ -131,6 +109,7 @@ export const jsenvPluginDirectoryListing = ({
         if (!acceptsHtml) {
           return null;
         }
+        reference.fsStat = null; // reset fsStat, now it's not a directory anyor
         return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
       },
       // when supervisor is enabled html does not contain placeholder anymore
@@ -165,6 +144,31 @@ export const jsenvPluginDirectoryListing = ({
               );
             },
           },
+    },
+    {
+      name: "jsenv:directory_as_json",
+      appliesDuring: "*",
+      fetchUrlContent: (urlInfo) => {
+        const { firstReference } = urlInfo;
+        let { fsStat } = firstReference;
+        if (!fsStat) {
+          fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
+        }
+        if (!fsStat) {
+          return null;
+        }
+        const isDirectory = fsStat.isDirectory();
+        if (!isDirectory) {
+          return null;
+        }
+        const directoryContentArray = readdirSync(new URL(urlInfo.url));
+        const content = JSON.stringify(directoryContentArray, null, "  ");
+        return {
+          type: "directory",
+          contentType: "application/json",
+          content,
+        };
+      },
     },
   ];
 };
