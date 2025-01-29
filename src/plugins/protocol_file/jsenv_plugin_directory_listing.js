@@ -61,6 +61,11 @@ export const jsenvPluginDirectoryListing = ({
       }
       let { fsStat } = reference;
       if (!fsStat) {
+        reference.addImplicit({
+          type: "404",
+          specifier: reference.url,
+          isWeak: true,
+        });
         fsStat = readEntryStatSync(url, { nullIfNotFound: true });
         reference.fsStat = fsStat;
       }
