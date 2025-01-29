@@ -51,6 +51,9 @@ export const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
     name: "jsenv:js_module_conversion",
     appliesDuring: "*",
     redirectReference: (reference) => {
+      if (reference.isInline) {
+        return null;
+      }
       if (reference.searchParams.has("js_module_fallback")) {
         markAsJsClassicProxy(reference);
         return null;
@@ -76,6 +79,9 @@ export const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
       return null;
     },
     fetchUrlContent: async (urlInfo) => {
+      if (urlInfo.isInline) {
+        return null;
+      }
       const jsModuleUrlInfo = urlInfo.getWithoutSearchParam(
         "js_module_fallback",
         {
