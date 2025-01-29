@@ -81,7 +81,11 @@ const DirectoryNav = () => {
 };
 const DirectoryNavItem = ({ url, iconImageUrl, iconLinkUrl, children }) => {
   return (
-    <span className="directory_nav_item" data-has-url={url ? "" : undefined}>
+    <span
+      className="directory_nav_item"
+      data-has-url={url ? "" : undefined}
+      data-current={url ? undefined : ""}
+    >
       {iconLinkUrl ? (
         <a
           className="directory_nav_item_icon"
@@ -116,10 +120,17 @@ const DirectoryContent = () => {
       {directoryContentItems.map((directoryContentItem) => {
         const fileUrl = directoryContentItem;
         const isDirectory = directoryContentItem.endsWith("/");
-        const relativeUrl = urlToRelativeUrl(fileUrl, directoryUrl);
-        const text = relativeUrl;
-        const url = `/${relativeUrl}`;
-        const isMainFile = relativeUrl === mainFilePath;
+        const urlRelativeToCurrentDirectory = urlToRelativeUrl(
+          fileUrl,
+          directoryUrl,
+        );
+        const urlRelativeToServerRootDirectory = urlToRelativeUrl(
+          fileUrl,
+          serverRootDirectoryUrl,
+        );
+        const text = urlRelativeToCurrentDirectory;
+        const url = `/${urlRelativeToServerRootDirectory}`;
+        const isMainFile = urlRelativeToServerRootDirectory === mainFilePath;
 
         return (
           <DirectoryContentItem

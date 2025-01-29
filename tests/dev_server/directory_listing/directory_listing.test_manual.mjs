@@ -3,8 +3,8 @@ import { replaceFileStructureSync } from "@jsenv/filesystem";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 // let fixture = "0_at_start";
-// let fixture = "1_many_files";
-let fixture = "2_index_exists";
+let fixture = "1_many_files";
+// let fixture = "2_index_exists";
 
 const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 replaceFileStructureSync({
