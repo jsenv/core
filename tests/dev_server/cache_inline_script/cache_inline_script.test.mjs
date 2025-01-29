@@ -46,10 +46,12 @@ try {
   {
     responses.length = 0;
     await page.reload();
-    const responseForInlineJsFile = responses.find(
-      (response) =>
-        response.url() === `${devServer.origin}/main.html@L10C5-L14C14.js`,
-    );
+    const responseForInlineJsFile = responses.find((response) => {
+      const urlCandidate = response.url();
+      return (
+        urlCandidate === `${devServer.origin}/main.html@L10C5-L14C14.js?foo`
+      );
+    });
     const inlineJsResponseStatus = responseForInlineJsFile.status();
     const answer = await getResult();
     const actual = {
@@ -75,10 +77,12 @@ try {
     );
     await new Promise((resolve) => setTimeout(resolve, 100));
     await page.reload();
-    const responseForInlineJsFile = responses.find(
-      (response) =>
-        response.url() === `${devServer.origin}/main.html@L10C5-L14C14.js`,
-    );
+    const responseForInlineJsFile = responses.find((response) => {
+      const urlCandidate = response.url();
+      return (
+        urlCandidate === `${devServer.origin}/main.html@L10C5-L14C14.js?foo`
+      );
+    });
     const inlineJsResponseStatus = responseForInlineJsFile.status();
     const answer = await getResult();
     const actual = {
