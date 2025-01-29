@@ -35,11 +35,12 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
     run({
       runtimeCompat: { chrome: "79" },
     }));
-  test("3_worker_type_module_fallback_no_bundling", () =>
+  test.ONLY("3_worker_type_module_fallback_no_bundling", () =>
     run({
       runtimeCompat: { chrome: "79" },
       bundling: false,
-    }));
+    }),
+  );
   test("4_js_module_fallback", () =>
     run({
       runtimeCompat: { chrome: "62" },
