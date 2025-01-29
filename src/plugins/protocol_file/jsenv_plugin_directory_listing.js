@@ -1,0 +1,227 @@
+import { comparePathnames, readEntryStatSync } from "@jsenv/filesystem";
+import { pickContentType } from "@jsenv/server";
+import {
+  asUrlWithoutSearch,
+  ensurePathnameTrailingSlash,
+  urlIsInsideOf,
+} from "@jsenv/urls";
+import { existsSync, lstatSync, readdirSync, readFileSync } from "node:fs";
+import { lookupPackageDirectory } from "../../helpers/lookup_package_directory.js";
+import { replacePlaceholders } from "../injections/jsenv_plugin_injections.js";
+
+// const html404AndAncestorDirFileUrl = new URL(
+//   "./client/html_404_and_ancestor_dir.html",
+//   import.meta.url,
+// );
+const htmlFileUrlForDirectory = new URL(
+  "./client/directory_listing.html",
+  import.meta.url,
+);
+
+export const jsenvPluginDirectoryListing = ({
+  directoryContentMagicName,
+  directoryListingUrlMocks,
+}) => {
+  return {
+    name: "jsenv:directory_listing",
+    appliesDuring: "*",
+    redirectReference: (reference) => {
+      const url = reference.url;
+      if (!url.startsWith("file:")) {
+        return null;
+      }
+      let { fsStat } = reference;
+      if (!fsStat) {
+        fsStat = readEntryStatSync(url, { nullIfNotFound: true });
+        reference.fsStat = fsStat;
+      }
+      if (!fsStat) {
+        return null;
+      }
+      const isDirectory = fsStat?.isDirectory();
+      if (!isDirectory) {
+        return null;
+      }
+      const request = reference.ownerUrlInfo.context.request;
+      const acceptsHtml = request
+        ? pickContentType(request, ["text/html"])
+        : false;
+      if (!acceptsHtml) {
+        return null;
+      }
+      return `${htmlFileUrlForDirectory}?directory=${encodeURIComponent(url)}`;
+    },
+    transformUrlContent: {
+      html: (urlInfo) => {
+        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+        if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
+          return null;
+        }
+        const directoryUrl = urlInfo.searchParams.get("directory");
+        if (!directoryUrl) {
+          return null;
+        }
+        const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
+
+        return replacePlaceholders(
+          urlInfo.content,
+          {
+            ...generateDirectoryListingInjection({
+              directoryListingUrlMocks,
+              directoryContentMagicName,
+              directoryUrl,
+              rootDirectoryUrl,
+              mainFilePath,
+            }),
+          },
+          urlInfo,
+        );
+      },
+    },
+  };
+};
+
+const generateDirectoryListingInjection = ({
+  directoryListingUrlMocks,
+  directoryContentMagicName,
+  directoryUrl,
+  rootDirectoryUrl,
+  mainFilePath,
+}) => {
+  let rootDirectoryUrlForServer = rootDirectoryUrl;
+  let firstExistingDirectoryUrl = new URL("./", directoryUrl);
+  while (!existsSync(firstExistingDirectoryUrl)) {
+    firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
+    if (!urlIsInsideOf(firstExistingDirectoryUrl, rootDirectoryUrlForServer)) {
+      firstExistingDirectoryUrl = new URL(rootDirectoryUrlForServer);
+      break;
+    }
+  }
+  const directoryContentArray = readdirSync(firstExistingDirectoryUrl);
+  const fileUrls = [];
+  for (const filename of directoryContentArray) {
+    const fileUrlObject = new URL(filename, firstExistingDirectoryUrl);
+    fileUrls.push(fileUrlObject);
+  }
+  package_workspaces: {
+    const packageDirectoryUrl = lookupPackageDirectory(
+      rootDirectoryUrlForServer,
+    );
+    if (!packageDirectoryUrl) {
+      break package_workspaces;
+    }
+    if (String(packageDirectoryUrl) === String(rootDirectoryUrlForServer)) {
+      break package_workspaces;
+    }
+    rootDirectoryUrl = packageDirectoryUrl;
+    if (
+      String(firstExistingDirectoryUrl) === String(rootDirectoryUrlForServer)
+    ) {
+      let packageContent;
+      try {
+        packageContent = JSON.parse(
+          readFileSync(new URL("package.json", packageDirectoryUrl), "utf8"),
+        );
+      } catch {
+        break package_workspaces;
+      }
+      const { workspaces } = packageContent;
+      if (Array.isArray(workspaces)) {
+        for (const workspace of workspaces) {
+          const workspaceUrlObject = new URL(workspace, packageDirectoryUrl);
+          const workspaceUrl = workspaceUrlObject.href;
+          if (workspaceUrl.endsWith("*")) {
+            const directoryUrl = ensurePathnameTrailingSlash(
+              workspaceUrl.slice(0, -1),
+            );
+            fileUrls.push(new URL(directoryUrl));
+          } else {
+            fileUrls.push(ensurePathnameTrailingSlash(workspaceUrlObject));
+          }
+        }
+      }
+    }
+  }
+  const sortedUrls = [];
+  for (let fileUrl of fileUrls) {
+    if (lstatSync(fileUrl).isDirectory()) {
+      sortedUrls.push(ensurePathnameTrailingSlash(fileUrl));
+    } else {
+      sortedUrls.push(fileUrl);
+    }
+  }
+  sortedUrls.sort((a, b) => {
+    return comparePathnames(a.pathname, b.pathname);
+  });
+
+  return {
+    __DIRECTORY_LISTING__: {
+      directoryListingUrlMocks,
+      directoryContentMagicName,
+      directoryUrl,
+      rootDirectoryUrlForServer,
+      rootDirectoryUrl,
+      mainFilePath,
+      directoryContentItems: sortedUrls,
+    },
+  };
+};
+
+// const generateHtmlForDirectory = (directoryContentItems, { mainFilePath }) => {
+//   let directoryUrl = directoryContentItems.firstExistingDirectoryUrl;
+//   const rootDirectoryUrl = directoryContentItems.rootDirectoryUrl;
+//   directoryUrl = assertAndNormalizeDirectoryUrl(directoryUrl);
+
+//   const htmlForDirectory = String(readFileSync(htmlFileUrlForDirectory));
+//   const replacers = {
+//     directoryUrl,
+//     directoryNav: () =>
+//       generateDirectoryNav(directoryUrl, {
+//         rootDirectoryUrl,
+//         rootDirectoryUrlForServer:
+//           directoryContentItems.rootDirectoryUrlForServer,
+//         mainFilePath,
+//       }),
+//     directoryContent: () =>
+//       generateDirectoryContent(directoryContentItems, { mainFilePath }),
+//   };
+//   const html = replacePlaceholders(htmlForDirectory, replacers);
+//   return html;
+// };
+// const generateHtmlForENOENT = (
+//   url,
+//   directoryContentItems,
+//   directoryListingUrlMocks,
+//   { mainFilePath },
+// ) => {
+//   const ancestorDirectoryUrl = directoryContentItems.firstExistingDirectoryUrl;
+//   const rootDirectoryUrl = directoryContentItems.rootDirectoryUrl;
+
+//   const htmlFor404AndAncestorDir = String(
+//     readFileSync(html404AndAncestorDirFileUrl),
+//   );
+//   const fileRelativeUrl = urlToRelativeUrl(url, rootDirectoryUrl);
+//   const ancestorDirectoryRelativeUrl = urlToRelativeUrl(
+//     ancestorDirectoryUrl,
+//     rootDirectoryUrl,
+//   );
+//   const replacers = {
+//     fileUrl: directoryListingUrlMocks
+//       ? `@jsenv/core/${urlToRelativeUrl(url, jsenvCoreDirectoryUrl)}`
+//       : url,
+//     fileRelativeUrl,
+//     ancestorDirectoryUrl,
+//     ancestorDirectoryRelativeUrl,
+//     ancestorDirectoryNav: () =>
+//       generateDirectoryNav(ancestorDirectoryUrl, {
+//         rootDirectoryUrl,
+//         rootDirectoryUrlForServer:
+//           directoryContentItems.rootDirectoryUrlForServer,
+//         mainFilePath,
+//       }),
+//     ancestorDirectoryContent: () =>
+//       generateDirectoryContent(directoryContentItems, { mainFilePath }),
+//   };
+//   const html = replacePlaceholders(htmlFor404AndAncestorDir, replacers);
+//   return html;
+// };
