@@ -69,23 +69,26 @@ export const jsenvPluginDirectoryListing = ({
     name: "jsenv:directory_listing",
     appliesDuring: "*",
     redirectReference: (reference) => {
+      if (reference.isInline) {
+        return null;
+      }
       const url = reference.url;
       if (!url.startsWith("file:")) {
         return null;
       }
       let { fsStat } = reference;
       if (!fsStat) {
-        reference.addImplicit({
-          type: "404",
-          specifier: reference.url,
-          isWeak: true,
-        });
         fsStat = readEntryStatSync(url, { nullIfNotFound: true });
         reference.fsStat = fsStat;
       }
       if (!fsStat) {
         const request = reference.ownerUrlInfo.context.request;
         if (request && request.headers["sec-fetch-dest"] === "document") {
+          reference.addImplicit({
+            type: "404",
+            specifier: url,
+            isWeak: true,
+          });
           return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
         }
         return null;

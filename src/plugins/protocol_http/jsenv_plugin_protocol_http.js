@@ -55,10 +55,11 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
       return fileUrl;
     },
     fetchUrlContent: async (urlInfo) => {
-      if (!urlInfo.originalUrl.startsWith("http")) {
+      const originalUrl = urlInfo.originalUrl;
+      if (!originalUrl.startsWith("http")) {
         return null;
       }
-      const response = await fetch(urlInfo.originalUrl);
+      const response = await fetch(originalUrl);
       const responseStatus = response.status;
       if (responseStatus < 200 || responseStatus > 299) {
         throw new Error(`unexpected response status ${responseStatus}`);
