@@ -41,24 +41,7 @@ const jsenvPluginInlineContentFetcher = () => {
       if (!urlInfo.isInline) {
         return null;
       }
-      let isDirectRequestToFile;
-      const request = urlInfo.context.request;
-      if (request) {
-        let requestResource = request.resource;
-        let requestedUrl;
-        if (requestResource.startsWith("/@fs/")) {
-          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
-          requestedUrl = `file:///${fsRootRelativeUrl}`;
-        } else {
-          const requestedUrlObject = new URL(
-            requestResource.slice(1),
-            urlInfo.context.rootDirectoryUrl,
-          );
-          requestedUrlObject.searchParams.delete("hot");
-          requestedUrl = requestedUrlObject.href;
-        }
-        isDirectRequestToFile = requestedUrl === urlInfo.url;
-      }
+      const { isDirectRequest } = urlInfo.lastReference;
       /*
        * We want to find inline content but it's not straightforward
        *
@@ -87,7 +70,7 @@ const jsenvPluginInlineContentFetcher = () => {
           originalContent = reference.content;
         }
         lastInlineReference = reference;
-        if (isDirectRequestToFile) {
+        if (isDirectRequest) {
           break;
         }
       }

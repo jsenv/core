@@ -35,6 +35,7 @@ export const jsenvPluginDirectoryListing = ({
     if (!requestedUrl) {
       return null;
     }
+    htmlUrlInfo.headers["cache-control"] = "no-cache";
     const enoent = htmlUrlInfo.searchParams.has("enoent");
     if (enoent) {
       htmlUrlInfo.status = 404;
@@ -84,7 +85,11 @@ export const jsenvPluginDirectoryListing = ({
         }
         const { request } = reference.ownerUrlInfo.context;
         if (!fsStat) {
-          if (request && request.headers["sec-fetch-dest"] === "document") {
+          if (
+            reference.isDirectRequest &&
+            request &&
+            request.headers["sec-fetch-dest"] === "document"
+          ) {
             reference.addImplicit({
               type: "404",
               specifier: url,

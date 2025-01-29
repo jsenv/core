@@ -274,6 +274,7 @@ const createReference = ({
   specifierColumn,
   baseUrl,
   isOriginalPosition,
+  isDirectRequest = false,
   isEntryPoint = false,
   isResourceHint = false,
   // implicit references are not real references
@@ -348,6 +349,7 @@ const createReference = ({
     specifierColumn,
     isOriginalPosition,
     baseUrl,
+    isDirectRequest,
     isEntryPoint,
     isResourceHint,
     isImplicit,
