@@ -31,6 +31,7 @@ await build({
     "file://**/node_modules/is-unicode-supported/": false,
     "file://**/node_modules/supports-color/": false,
     "file://**/node_modules/environment/": false,
+    "file://**/node_modules/preact/": false,
   },
   directoryReferenceEffect: (reference) => {
     // jsenv core directory url
