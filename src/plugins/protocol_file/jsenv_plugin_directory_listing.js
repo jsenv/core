@@ -15,6 +15,7 @@ import {
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
   urlIsInsideOf,
+  urlToRelativeUrl,
 } from "@jsenv/urls";
 import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { lookupPackageDirectory } from "../../helpers/lookup_package_directory.js";
@@ -161,35 +162,49 @@ export const jsenvPluginDirectoryListing = ({
         if (secProtocol !== "watch-directory") {
           return false;
         }
-        const directoryRelativeUrl = request.pathname;
-        const { rootDirectoryUrl } = context;
-        const directoryUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
-          directoryRelativeUrl,
+        const { rootDirectoryUrl, mainFilePath } = context;
+        const requestedUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
+          request.pathname,
           rootDirectoryUrl,
         );
+        const closestDirectoryUrl = getFirstExistingDirectoryUrl(requestedUrl);
         const sendMessage = (message) => {
           websocket.send(JSON.stringify(message));
         };
-        const unwatch = registerDirectoryLifecycle(directoryUrl, {
+        const generateItems = () => {
+          const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
+            requestedUrl,
+            rootDirectoryUrl,
+          );
+          const items = getDirectoryContentItems({
+            serverRootDirectoryUrl: rootDirectoryUrl,
+            mainFilePath,
+            requestedUrl,
+            firstExistingDirectoryUrl,
+          });
+          return items;
+        };
+
+        const unwatch = registerDirectoryLifecycle(closestDirectoryUrl, {
           added: ({ relativeUrl }) => {
             sendMessage({
               type: "change",
               reason: `${relativeUrl} added`,
-              items: getDirectoryContentItems(directoryUrl),
+              items: generateItems(),
             });
           },
           updated: ({ relativeUrl }) => {
             sendMessage({
               type: "change",
               reason: `${relativeUrl} updated`,
-              items: getDirectoryContentItems(directoryUrl),
+              items: generateItems(),
             });
           },
           removed: ({ relativeUrl }) => {
             sendMessage({
               type: "change",
               reason: `${relativeUrl} removed`,
-              items: getDirectoryContentItems(directoryUrl),
+              items: generateItems(),
             });
           },
         });
@@ -240,13 +255,13 @@ const generateDirectoryListingInjection = (
   },
 ) => {
   let serverRootDirectoryUrl = rootDirectoryUrl;
-  const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
-    requestedUrl,
+  const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(requestedUrl);
+  const directoryContentItems = getDirectoryContentItems({
     serverRootDirectoryUrl,
-  );
-  const directoryContentItems = getDirectoryContentItems(
+    mainFilePath,
+    requestedUrl,
     firstExistingDirectoryUrl,
-  );
+  });
   package_workspaces: {
     const packageDirectoryUrl = lookupPackageDirectory(serverRootDirectoryUrl);
     if (!packageDirectoryUrl) {
@@ -321,11 +336,16 @@ const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
   }
   return firstExistingDirectoryUrl;
 };
-const getDirectoryContentItems = (directoryUrl) => {
-  const directoryContentArray = readdirSync(new URL(directoryUrl));
+const getDirectoryContentItems = ({
+  serverRootDirectoryUrl,
+  mainFilePath,
+  requestedUrl,
+  firstExistingDirectoryUrl,
+}) => {
+  const directoryContentArray = readdirSync(new URL(firstExistingDirectoryUrl));
   const fileUrls = [];
   for (const filename of directoryContentArray) {
-    const fileUrlObject = new URL(filename, directoryUrl);
+    const fileUrlObject = new URL(filename, firstExistingDirectoryUrl);
     if (lstatSync(fileUrlObject).isDirectory()) {
       fileUrls.push(ensurePathnameTrailingSlash(fileUrlObject));
     } else {
@@ -337,8 +357,19 @@ const getDirectoryContentItems = (directoryUrl) => {
   });
   const items = [];
   for (const fileUrl of fileUrls) {
+    const urlRelativeToDocument = urlToRelativeUrl(fileUrl, requestedUrl);
+    const urlRelativeToServer = FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
+      fileUrl,
+      serverRootDirectoryUrl,
+    );
+    const mainFileUrl = new URL(mainFilePath, serverRootDirectoryUrl).href;
+    const isMainFile = fileUrl === mainFileUrl;
+
     items.push({
       url: String(fileUrl),
+      urlRelativeToDocument,
+      urlRelativeToServer,
+      isMainFile,
     });
   }
   return items;

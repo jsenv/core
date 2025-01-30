@@ -157,39 +157,14 @@ const DirectoryContent = ({ items }) => {
   return (
     <ul className="directory_content">
       {items.map((directoryItem) => {
-        const itemUrl = directoryItem.url;
-        const isDirectory = itemUrl.endsWith("/");
-        const isOutsideServerRootDirectory = !urlIsInsideOf(
-          itemUrl,
-          serverRootDirectoryUrl,
-        );
-        const itemUrlRelativeToCurrentDirectory = urlToRelativeUrl(
-          itemUrl,
-          directoryUrl,
-        );
-
-        const text = itemUrlRelativeToCurrentDirectory;
-        let url;
-        let isMainFile;
-        if (isOutsideServerRootDirectory) {
-          url = `/@fs/${itemUrl.slice("file:///".length)}`;
-          isMainFile = false;
-        } else {
-          const itemUrlRelativeToServer = urlToRelativeUrl(
-            itemUrl,
-            serverRootDirectoryUrl,
-          );
-          url = `/${itemUrlRelativeToServer}`;
-          isMainFile = itemUrlRelativeToServer === mainFilePath;
-        }
         return (
           <DirectoryContentItem
-            key={url}
-            url={url}
-            isDirectory={isDirectory}
-            isMainFile={isMainFile}
+            key={directoryItem.url}
+            url={directoryItem.urlRelativeToServer}
+            isDirectory={directoryItem.url.endsWith("/")}
+            isMainFile={directoryItem.isMainFile}
           >
-            {text}
+            {directoryItem.urlRelativeToDocument}
           </DirectoryContentItem>
         );
       })}
