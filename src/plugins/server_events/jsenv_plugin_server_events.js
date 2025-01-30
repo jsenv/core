@@ -39,10 +39,19 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
       };
       kitchenContext.signal.addEventListener("abort", onabort);
       serverEventsDispatcher = createServerEventsDispatcher();
-      Object.keys(allServerEvents).forEach((serverEventName) => {
+      for (const serverEventName of Object.keys(allServerEvents)) {
         const serverEventInfo = {
           ...kitchenContext,
+          // serverEventsDispatcher variable is safe, we can disable esling warning
+          // eslint-disable-next-line no-loop-func
           sendServerEvent: (data) => {
+            if (!serverEventsDispatcher) {
+              // this can happen if a plugin wants to send a server event but
+              // server is closing or the plugin got destroyed but still wants to do things
+              // if plugin code is correctly written it is never supposed to happen
+              // because it means a plugin is still trying to do stuff after being destroyed
+              return;
+            }
             serverEventsDispatcher.dispatch({
               type: serverEventName,
               data,
@@ -51,7 +60,7 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
         };
         const serverEventInit = allServerEvents[serverEventName];
         serverEventInit(serverEventInfo);
-      });
+      }
       return () => {
         kitchenContext.signal.removeEventListener("abort", onabort);
         serverEventsDispatcher.destroy();
