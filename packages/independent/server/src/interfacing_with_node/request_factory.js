@@ -1,3 +1,4 @@
+import { Abort } from "@jsenv/abort";
 import { headersFromObject } from "../internal/headersFromObject.js";
 import { observableFromNodeStream } from "./observable_from_node_stream.js";
 
@@ -5,6 +6,17 @@ export const fromNodeRequest = (
   nodeRequest,
   { serverOrigin, signal, requestBodyLifetime },
 ) => {
+  const handleRequestOperation = Abort.startOperation();
+  if (signal) {
+    handleRequestOperation.addAbortSignal(signal);
+  }
+  handleRequestOperation.addAbortSource((abort) => {
+    nodeRequest.once("close", abort);
+    return () => {
+      nodeRequest.removeListener("close", abort);
+    };
+  });
+
   const headers = headersFromObject(nodeRequest.headers);
   const body = observableFromNodeStream(nodeRequest, {
     readableStreamLifetime: requestBodyLifetime,
@@ -26,7 +38,7 @@ export const fromNodeRequest = (
   }
 
   return Object.freeze({
-    signal,
+    signal: handleRequestOperation.signal,
     http2: Boolean(nodeRequest.stream),
     origin: requestOrigin,
     ...getPropertiesFromResource({

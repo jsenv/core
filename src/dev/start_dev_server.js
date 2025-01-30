@@ -603,7 +603,7 @@ ${error.trace?.message}`);
         if (responseFromPlugin) {
           customServerEventDispatcher.addWebsocket(websocket, request);
           responseFromPlugin({
-            signal: request.signal,
+            signal: websocket.signal,
             sendEvent: ({ type, ...data }) => {
               customServerEventDispatcher.dispatch({
                 type,

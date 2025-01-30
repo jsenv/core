@@ -36,6 +36,7 @@ socket.onopen = () => {
 socket.onmessage = (messageEvent) => {
   const event = JSON.parse(messageEvent.data);
   const { items } = event;
+  // TODO: if index.html is added we must reload
   updateDirectoryContentItems(items);
 };
 
@@ -168,9 +169,9 @@ const DirectoryContent = ({ items }) => {
   }
   return (
     <ul className="directory_content">
-      {items.map((directoryContentItem) => {
-        const itemUrl = directoryContentItem;
-        const isDirectory = directoryContentItem.endsWith("/");
+      {items.map((directoryItem) => {
+        const itemUrl = directoryItem.url;
+        const isDirectory = itemUrl.endsWith("/");
         const isOutsideServerRootDirectory = !urlIsInsideOf(
           itemUrl,
           serverRootDirectoryUrl,

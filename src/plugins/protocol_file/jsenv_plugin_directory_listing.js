@@ -94,11 +94,6 @@ export const jsenvPluginDirectoryListing = ({
             request &&
             request.headers["sec-fetch-dest"] === "document"
           ) {
-            reference.addImplicit({
-              type: "404",
-              specifier: url,
-              isWeak: true,
-            });
             return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
           }
           return null;
@@ -157,25 +152,25 @@ export const jsenvPluginDirectoryListing = ({
         if (request.headers["sec-websocket-protocol"] !== "watch_directory") {
           return null;
         }
+        const directoryUrl = request.url;
         return ({ signal, sendEvent }) => {
-          const { url } = request;
-          const unwatch = registerDirectoryLifecycle(url, {
-            added: ({ relativeUrl }) => {
+          const unwatch = registerDirectoryLifecycle(directoryUrl, {
+            added: () => {
               sendEvent({
                 type: "added",
-                relativeUrl,
+                items: getDirectoryContentItems(directoryUrl),
               });
             },
-            updated: ({ relativeUrl }) => {
+            updated: () => {
               sendEvent({
                 type: "updated",
-                relativeUrl,
+                items: getDirectoryContentItems(directoryUrl),
               });
             },
-            removed: ({ relativeUrl }) => {
+            removed: () => {
               sendEvent({
                 type: "removed",
-                items: getDirectoryContentItems(),
+                items: getDirectoryContentItems(directoryUrl),
               });
             },
           });
@@ -299,18 +294,20 @@ const getDirectoryContentItems = (directoryUrl) => {
   const fileUrls = [];
   for (const filename of directoryContentArray) {
     const fileUrlObject = new URL(filename, directoryUrl);
-    fileUrls.push(fileUrlObject);
-  }
-  const sortedUrls = [];
-  for (let fileUrl of fileUrls) {
-    if (lstatSync(fileUrl).isDirectory()) {
-      sortedUrls.push(ensurePathnameTrailingSlash(fileUrl));
+    if (lstatSync(fileUrlObject).isDirectory()) {
+      fileUrls.push(ensurePathnameTrailingSlash(fileUrlObject));
     } else {
-      sortedUrls.push(fileUrl);
+      fileUrls.push(fileUrlObject);
     }
   }
-  sortedUrls.sort((a, b) => {
+  fileUrls.sort((a, b) => {
     return comparePathnames(a.pathname, b.pathname);
   });
-  return sortedUrls;
+  const items = [];
+  for (const fileUrl of fileUrls) {
+    items.push({
+      url: String(fileUrl),
+    });
+  }
+  return items;
 };
