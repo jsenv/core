@@ -315,7 +315,7 @@ const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
   return firstExistingDirectoryUrl;
 };
 const getDirectoryContentItems = (directoryUrl) => {
-  const directoryContentArray = readdirSync(directoryUrl);
+  const directoryContentArray = readdirSync(new URL(directoryUrl));
   const fileUrls = [];
   for (const filename of directoryContentArray) {
     const fileUrlObject = new URL(filename, directoryUrl);

@@ -19,6 +19,9 @@ export const FILE_AND_SERVER_URLS_CONVERTER = {
       );
       return `file:///${urlRelativeToFilesystemRoot}`;
     }
+    if (urlRelativeToServer[0] === "/") {
+      return new URL(urlRelativeToServer.slice(1), serverRootDirectoryUrl).href;
+    }
     return new URL(urlRelativeToServer, serverRootDirectoryUrl).href;
   },
 };
