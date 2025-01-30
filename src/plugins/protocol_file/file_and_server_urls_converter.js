@@ -9,7 +9,9 @@ export const FILE_AND_SERVER_URLS_CONVERTER = {
       );
       return `/${urlRelativeToServer}`;
     }
-    const urlRelativeToFilesystemRoot = fileUrl.slice("file:///".length);
+    const urlRelativeToFilesystemRoot = String(fileUrl).slice(
+      "file:///".length,
+    );
     return `/@fs/${urlRelativeToFilesystemRoot}`;
   },
   asFileUrl: (urlRelativeToServer, serverRootDirectoryUrl) => {

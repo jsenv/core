@@ -30,6 +30,7 @@ export const jsenvPluginDirectoryListing = ({
   supervisorEnabled,
   directoryContentMagicName,
   directoryListingUrlMocks,
+  autoreload = true,
 }) => {
   const extractDirectoryListingParams = (htmlUrlInfo) => {
     const urlWithoutSearch = asUrlWithoutSearch(htmlUrlInfo.url);
@@ -61,6 +62,7 @@ export const jsenvPluginDirectoryListing = ({
       urlInfo.content,
       {
         ...generateDirectoryListingInjection(requestedUrl, {
+          autoreload,
           request,
           directoryListingUrlMocks,
           directoryContentMagicName,
@@ -152,6 +154,9 @@ export const jsenvPluginDirectoryListing = ({
             },
           },
       serveWebsocket: ({ websocket, request, context }) => {
+        if (!autoreload) {
+          return false;
+        }
         const secProtocol = request.headers["sec-websocket-protocol"];
         if (secProtocol !== "watch-directory") {
           return false;
@@ -225,6 +230,7 @@ export const jsenvPluginDirectoryListing = ({
 const generateDirectoryListingInjection = (
   requestedUrl,
   {
+    autoreload,
     request,
     enoent,
     directoryListingUrlMocks,
@@ -300,6 +306,7 @@ const generateDirectoryListingInjection = (
       mainFilePath,
       directoryContentItems,
       websocketUrl,
+      autoreload,
     },
   };
 };

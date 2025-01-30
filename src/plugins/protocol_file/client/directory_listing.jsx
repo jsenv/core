@@ -14,6 +14,7 @@ let {
   directoryContentItems,
   enoentDetails,
   websocketUrl,
+  autoreload,
 } = window.DIRECTORY_LISTING;
 
 const directoryItemsChangeCallbackSet = new Set();
@@ -290,7 +291,7 @@ const urlIsInsideOf = (url, otherUrl) => {
   return isInside;
 };
 
-init_websocket: {
+if (autoreload) {
   const socket = new WebSocket(websocketUrl, ["watch-directory"]);
   socket.onopen = () => {
     socket.onopen = null;
