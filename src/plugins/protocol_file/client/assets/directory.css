@@ -75,6 +75,19 @@ a.nav_item_icon {
 a.nav_item_text {
   text-decoration: none;
 }
+.nav_item[data-404] .nav_item_text {
+  background-color: yellow;
+  color: #853611;
+}
+.nav_item_badge_404 {
+  color: #853611;
+  text-align: center;
+  background-color: yellow;
+  border-radius: 5px;
+  padding: 0.2em 0.1em;
+  font-size: 0.8em;
+  margin-right: 0.3em;
+}
 
 /* CONTENT */
 .directory_empty_message {

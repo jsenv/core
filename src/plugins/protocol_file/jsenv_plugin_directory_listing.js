@@ -250,13 +250,13 @@ export const jsenvPluginDirectoryListing = ({
 const generateDirectoryListingInjection = (
   requestedUrl,
   {
-    autoreload,
-    request,
-    enoent,
-    directoryListingUrlMocks,
-    directoryContentMagicName,
     rootDirectoryUrl,
     mainFilePath,
+    request,
+    directoryListingUrlMocks,
+    directoryContentMagicName,
+    autoreload,
+    enoent,
   },
 ) => {
   let serverRootDirectoryUrl = rootDirectoryUrl;
@@ -327,6 +327,7 @@ const generateDirectoryListingInjection = (
     } else {
       parts = [rootDirectoryUrlName];
     }
+
     let i = 0;
     while (i < parts.length) {
       const part = parts[i];
@@ -354,16 +355,24 @@ const generateDirectoryListingInjection = (
         urlRelativeToDocument = `/${directoryContentMagicName}`;
       }
       const name = part;
+      const isDirectory = navItemUrl.endsWith("/");
+      const is404 = isDirectory
+        ? urlIsInsideOf(navItemUrl, firstExistingDirectoryUrl)
+        : enoent;
+      const isCurrent = is404
+        ? false
+        : navItemUrl === String(firstExistingDirectoryUrl);
       navItems.push({
         url: navItemUrl,
         urlRelativeToServer,
         urlRelativeToDocument,
         isServerRootDirectory,
+        isCurrent,
         name,
+        is404,
       });
       i++;
     }
-    navItems[navItems.length - 1].isLast = true;
   }
 
   return {
@@ -400,7 +409,6 @@ const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
 const getDirectoryContentItems = ({
   serverRootDirectoryUrl,
   mainFilePath,
-  requestedUrl,
   firstExistingDirectoryUrl,
 }) => {
   const directoryContentArray = readdirSync(new URL(firstExistingDirectoryUrl));
@@ -418,7 +426,10 @@ const getDirectoryContentItems = ({
   });
   const items = [];
   for (const fileUrl of fileUrls) {
-    const urlRelativeToDocument = urlToRelativeUrl(fileUrl, requestedUrl);
+    const urlRelativeToCurrentDirectory = urlToRelativeUrl(
+      fileUrl,
+      firstExistingDirectoryUrl,
+    );
     const urlRelativeToServer = FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
       fileUrl,
       serverRootDirectoryUrl,
@@ -429,7 +440,7 @@ const getDirectoryContentItems = ({
 
     items.push({
       url,
-      urlRelativeToDocument,
+      urlRelativeToCurrentDirectory,
       urlRelativeToServer,
       isMainFile,
     });

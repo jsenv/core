@@ -59,8 +59,6 @@ const ErrorMessage = () => {
       <span className="error_text">
         No entry on the filesystem for{" "}
         <code title={fileUrl}>/{fileRelativeUrl}</code>.
-        <br />
-        Content of closest parent directory is listed below:
       </span>
     </p>
   );
@@ -73,18 +71,21 @@ const Nav = () => {
         const {
           url,
           urlRelativeToServer,
-          isLast,
-          isServerRootDirectory,
           name,
+          isCurrent,
+          isServerRootDirectory,
+          is404,
         } = navItem;
         const isDirectory = new URL(url).pathname.endsWith("/");
         return (
           <>
             <NavItem
               key={url}
-              url={isLast ? null : urlRelativeToServer}
+              url={urlRelativeToServer}
+              isCurrent={isCurrent}
               iconImageUrl={isServerRootDirectory ? homeIconUrl : ""}
               iconLinkUrl={isServerRootDirectory ? `/${mainFilePath}` : ""}
+              is404={is404}
             >
               {name}
             </NavItem>
@@ -97,12 +98,19 @@ const Nav = () => {
     </h1>
   );
 };
-const NavItem = ({ url, iconImageUrl, iconLinkUrl, children }) => {
+const NavItem = ({
+  url,
+  iconImageUrl,
+  iconLinkUrl,
+  isCurrent,
+  is404,
+  children,
+}) => {
   return (
     <span
       className="nav_item"
-      data-has-url={url ? "" : undefined}
-      data-current={url ? undefined : ""}
+      data-404={is404 ? "" : undefined}
+      data-current={isCurrent ? "" : undefined}
     >
       {iconLinkUrl ? (
         <a
@@ -143,7 +151,7 @@ const DirectoryContent = ({ items }) => {
             isDirectory={directoryItem.url.endsWith("/")}
             isMainFile={directoryItem.isMainFile}
           >
-            {directoryItem.urlRelativeToDocument}
+            {directoryItem.urlRelativeToCurrentDirectory}
           </DirectoryContentItem>
         );
       })}
