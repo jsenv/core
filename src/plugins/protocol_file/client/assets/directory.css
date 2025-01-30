@@ -47,32 +47,32 @@ button {
 }
 
 /* NAV */
-.directory_nav {
+.nav {
   font-size: 16px;
   font-weight: bold;
   margin: 20px 25px 15px 25px;
   display: flex;
   gap: 0.3em;
 }
-.directory_nav_item {
+.nav_item {
   display: flex;
   align-items: center;
 }
-.directory_nav_item_icon {
+.nav_item_icon {
   display: flex;
   width: 1em;
   height: 1em;
   margin-right: 0.25em;
   color: #f1f1f1;
 }
-a.directory_nav_item_icon {
+a.nav_item_icon {
   text-decoration: none;
 }
-.directory_nav_item_text {
+.nav_item_text {
   position: relative;
   color: inherit;
 }
-a.directory_nav_item_text {
+a.nav_item_text {
   text-decoration: none;
 }
 
@@ -132,13 +132,13 @@ body[data-theme="dark"] {
 body[data-theme="light"] {
   background: #f1f1f1;
 }
-body[data-theme="dark"] .directory_nav_item {
+body[data-theme="dark"] .nav_item {
   color: #999999;
 }
-body[data-theme="dark"] .directory_nav_item[data-current] {
+body[data-theme="dark"] .nav_item[data-current] {
   color: #f1f1f1;
 }
-body[data-theme="light"] .directory_nav_item {
+body[data-theme="light"] .nav_item {
   color: #000000;
 }
 body[data-theme="dark"] .directory_separator {

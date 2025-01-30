@@ -3,6 +3,10 @@
  * je devrait pouvoir modifier le contenu du html
  * mais je suppose qu'il faut que je le fasse avant que supervisor mette son nez dedans
  * donc dans fetchUrlContent? c'est pour ça? a confirmer
+ *
+ * ideally when 404 on file we would do this:
+ * display in the nav what was not found (like a red cross next to it)
+ * including the file itself if any, to show the 404 on the file
  */
 
 import {
@@ -15,6 +19,7 @@ import {
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
   urlIsInsideOf,
+  urlToFilename,
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { existsSync, lstatSync, readdirSync } from "node:fs";
@@ -255,7 +260,10 @@ const generateDirectoryListingInjection = (
   },
 ) => {
   let serverRootDirectoryUrl = rootDirectoryUrl;
-  const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(requestedUrl);
+  const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
+    requestedUrl,
+    serverRootDirectoryUrl,
+  );
   const directoryContentItems = getDirectoryContentItems({
     serverRootDirectoryUrl,
     mainFilePath,
@@ -306,6 +314,58 @@ const generateDirectoryListingInjection = (
   const { host } = new URL(request.url);
   const websocketUrl = `${websocketScheme}://${host}${directoryUrlRelativeToServer}`;
 
+  const navItems = [];
+  nav_items: {
+    const requestedRelativeUrl = urlToRelativeUrl(
+      requestedUrl,
+      rootDirectoryUrl,
+    );
+    const rootDirectoryUrlName = urlToFilename(rootDirectoryUrl);
+    let parts;
+    if (requestedRelativeUrl) {
+      parts = `${rootDirectoryUrlName}/${requestedRelativeUrl}`.split("/");
+    } else {
+      parts = [rootDirectoryUrlName];
+    }
+    let i = 0;
+    while (i < parts.length) {
+      const part = parts[i];
+      const isLastPart = i === parts.length - 1;
+      if (isLastPart && part === "") {
+        // ignore trailing slash
+        break;
+      }
+      let navItemRelativeUrl = `${parts.slice(1, i + 1).join("/")}`;
+      let navItemUrl =
+        navItemRelativeUrl === ""
+          ? rootDirectoryUrl
+          : new URL(navItemRelativeUrl, rootDirectoryUrl).href;
+      if (!isLastPart) {
+        navItemUrl = ensurePathnameTrailingSlash(navItemUrl);
+      }
+      let urlRelativeToServer = FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
+        navItemUrl,
+        serverRootDirectoryUrl,
+      );
+      let urlRelativeToDocument = urlToRelativeUrl(navItemUrl, requestedUrl);
+      const isServerRootDirectory = navItemUrl === serverRootDirectoryUrl;
+      if (isServerRootDirectory) {
+        urlRelativeToServer = `/${directoryContentMagicName}`;
+        urlRelativeToDocument = `/${directoryContentMagicName}`;
+      }
+      const name = part;
+      navItems.push({
+        url: navItemUrl,
+        urlRelativeToServer,
+        urlRelativeToDocument,
+        isServerRootDirectory,
+        name,
+      });
+      i++;
+    }
+    navItems[navItems.length - 1].isLast = true;
+  }
+
   return {
     __DIRECTORY_LISTING__: {
       enoentDetails: enoent
@@ -313,6 +373,7 @@ const generateDirectoryListingInjection = (
             fileUrl: requestedUrl,
           }
         : null,
+      navItems,
       directoryListingUrlMocks,
       directoryContentMagicName,
       directoryUrl: firstExistingDirectoryUrl,

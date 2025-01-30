@@ -6,11 +6,10 @@ const fileIconUrl = import.meta.resolve("./assets/file.png");
 const homeIconUrl = import.meta.resolve("./assets/home.svg#root");
 
 let {
-  directoryContentMagicName,
+  navItems,
   rootDirectoryUrl,
   serverRootDirectoryUrl,
   mainFilePath,
-  directoryUrl,
   directoryContentItems,
   enoentDetails,
   websocketUrl,
@@ -38,7 +37,7 @@ const DirectoryListing = () => {
   return (
     <>
       {enoentDetails ? <ErrorMessage /> : null}
-      <DirectoryNav />
+      <Nav />
       <DirectoryContent items={directoryItems} />
     </>
   );
@@ -62,72 +61,47 @@ const ErrorMessage = () => {
   );
 };
 
-const DirectoryNav = () => {
-  const directoryRelativeUrl = urlToRelativeUrl(directoryUrl, rootDirectoryUrl);
-  const rootDirectoryUrlName = urlToFilename(rootDirectoryUrl);
-  const items = [];
-  const parts = directoryRelativeUrl
-    ? `${rootDirectoryUrlName}/${directoryRelativeUrl.slice(0, -1)}`.split("/")
-    : [rootDirectoryUrlName];
-  let i = 0;
-  while (i < parts.length) {
-    const part = parts[i];
-    const navItemRelativeUrl = `${parts.slice(1, i + 1).join("/")}`;
-    const navItemUrl =
-      navItemRelativeUrl === ""
-        ? rootDirectoryUrl
-        : new URL(`${navItemRelativeUrl}/`, rootDirectoryUrl).href;
-    const text = part;
-    items.push({
-      url: navItemUrl,
-      text,
-    });
-    i++;
-  }
-
+const Nav = () => {
   return (
-    <h1 className="directory_nav">
-      {items.map((item, index) => {
-        const { url, text } = item;
-        const isServerRootDirectory = url === serverRootDirectoryUrl;
-        const isLast = index === parts.length - 1;
-        let href =
-          url === serverRootDirectoryUrl ||
-          urlIsInsideOf(url, serverRootDirectoryUrl)
-            ? urlToRelativeUrl(url, serverRootDirectoryUrl)
-            : `@fs/${url.slice("file:///".length)}`;
-        if (href === "") {
-          href = `/${directoryContentMagicName}`;
-        } else {
-          href = `/${href}`;
-        }
+    <h1 className="nav">
+      {navItems.map((navItem) => {
+        const {
+          url,
+          urlRelativeToServer,
+          isLast,
+          isServerRootDirectory,
+          name,
+        } = navItem;
+        const isDirectory = new URL(url).pathname.endsWith("/");
         return (
           <>
-            <DirectoryNavItem
-              key={index}
-              url={isLast ? null : href}
+            <NavItem
+              key={url}
+              url={isLast ? null : urlRelativeToServer}
               iconImageUrl={isServerRootDirectory ? homeIconUrl : ""}
               iconLinkUrl={isServerRootDirectory ? `/${mainFilePath}` : ""}
             >
-              {text}
-            </DirectoryNavItem>
-            <span className="directory_separator">/</span>
+              {name}
+            </NavItem>
+            {isDirectory ? (
+              <span className="directory_separator">/</span>
+            ) : null}
           </>
         );
       })}
     </h1>
   );
 };
-const DirectoryNavItem = ({ url, iconImageUrl, iconLinkUrl, children }) => {
+const NavItem = ({ url, iconImageUrl, iconLinkUrl, children }) => {
   return (
     <span
-      className="directory_nav_item"
+      className="nav_item"
       data-has-url={url ? "" : undefined}
       data-current={url ? undefined : ""}
     >
       {iconLinkUrl ? (
         <a
-          className="directory_nav_item_icon"
+          className="nav_item_icon"
           // eslint-disable-next-line react/no-unknown-property
           hot-decline
           href={iconLinkUrl}
@@ -135,16 +109,16 @@ const DirectoryNavItem = ({ url, iconImageUrl, iconLinkUrl, children }) => {
           <Icon url={iconImageUrl} />
         </a>
       ) : iconImageUrl ? (
-        <span className="directory_nav_item_icon">
+        <span className="nav_item_icon">
           <Icon url={iconImageUrl} />
         </span>
       ) : null}
       {url ? (
-        <a className="directory_nav_item_text" href={url}>
+        <a className="nav_item_text" href={url}>
           {children}
         </a>
       ) : (
-        <span className="directory_nav_item_text">{children}</span>
+        <span className="nav_item_text">{children}</span>
       )}
     </span>
   );
