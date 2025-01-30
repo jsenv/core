@@ -298,6 +298,15 @@ export const startServer = async ({
     status = "stopped";
     stoppedResolve(reason);
   });
+  let stopAbortSignal;
+  stop_signal: {
+    let stopAbortController = new AbortController();
+    stopCallbackSet.add(() => {
+      stopAbortController.abort();
+      stopAbortController = undefined;
+    });
+    stopAbortSignal = stopAbortController.signal;
+  }
 
   const cancelProcessTeardownRace = raceProcessTeardownEvents(
     processTeardownEvents,
@@ -365,6 +374,9 @@ export const startServer = async ({
       }
 
       const receiveRequestOperation = Abort.startOperation();
+      receiveRequestOperation.addAbortSignal(stopAbortSignal);
+      const sendResponseOperation = Abort.startOperation();
+      sendResponseOperation.addAbortSignal(stopAbortSignal);
       receiveRequestOperation.addAbortSource((abort) => {
         const closeEventCallback = () => {
           if (nodeRequest.complete) {
@@ -379,19 +391,11 @@ export const startServer = async ({
           nodeRequest.removeListener("close", closeEventCallback);
         };
       });
-      receiveRequestOperation.addAbortSource((abort) => {
-        return stopCallbackSet.add(abort);
-      });
-
-      const sendResponseOperation = Abort.startOperation();
       sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
-      sendResponseOperation.addAbortSource((abort) => {
-        return stopCallbackSet.add(abort);
-      });
 
       const request = fromNodeRequest(nodeRequest, {
+        signal: stopAbortSignal,
         serverOrigin,
-        signal: receiveRequestOperation.signal,
       });
 
       // Handling request is asynchronous, we buffer logs for that request
@@ -965,13 +969,16 @@ export const startServer = async ({
           socket,
           head,
           async (websocket) => {
+            const websocketAbortController = new AbortController();
             websocketClients.add(websocket);
+            websocket.signal = websocketAbortController.signal;
             websocket.once("close", () => {
               websocketClients.delete(websocket);
+              websocketAbortController.abort();
             });
             const request = fromNodeRequest(nodeRequest, {
+              signal: stopAbortSignal,
               serverOrigin: websocketOrigin,
-              signal: new AbortController().signal,
               requestBodyLifetime,
             });
             serviceController.callAsyncHooksUntil(
