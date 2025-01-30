@@ -449,7 +449,7 @@ build ${entryPointKeys.length} entry points`);
 
     const bundlers = {};
     bundle: {
-      for (const plugin of rawKitchen.pluginController.activePluginSet) {
+      for (const plugin of rawKitchen.pluginController.activePlugins) {
         const bundle = plugin.bundle;
         if (!bundle) {
           continue;

@@ -3,6 +3,7 @@ import { performance } from "node:perf_hooks";
 const HOOK_NAMES = [
   "init",
   "serve", // is called only during dev/tests
+  "serveWebsocket",
   "resolveReference",
   "redirectReference",
   "transformReferenceSearchParams",
@@ -29,20 +30,17 @@ export const createPluginController = (
     return value;
   };
 
+  const pluginCandidates = [];
   const activeEffectSet = new Set();
-  const pluginCandidateSet = new Set();
-  const activePluginSet = new Set();
+  const activePlugins = [];
   // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
   // also it should increase perf as there is less work to do
   const hookGroups = {};
-  const addPlugin = (plugin, { position = "end" }) => {
+  const addPlugin = (plugin, options) => {
     if (Array.isArray(plugin)) {
-      if (position === "start") {
-        plugin = plugin.slice().reverse();
-      }
       for (const value of plugin) {
-        addPlugin(value, { position });
+        addPlugin(value, options);
       }
       return;
     }
@@ -56,60 +54,7 @@ export const createPluginController = (
       plugin.destroy?.();
       return;
     }
-    pluginCandidateSet.add(plugin);
-    for (const key of Object.keys(plugin)) {
-      if (key === "meta") {
-        const value = plugin[key];
-        if (typeof value !== "object" || value === null) {
-          console.warn(`plugin.meta must be an object, got ${value}`);
-          continue;
-        }
-        Object.assign(pluginsMeta, value);
-        // any extension/modification on plugin.meta
-        // won't be taken into account so we freeze object
-        // to throw in case it happen
-        Object.freeze(value);
-        continue;
-      }
-      if (
-        key === "name" ||
-        key === "appliesDuring" ||
-        key === "init" ||
-        key === "serverEvents" ||
-        key === "mustStayFirst" ||
-        key === "effect"
-      ) {
-        continue;
-      }
-      const isHook = HOOK_NAMES.includes(key);
-      if (!isHook) {
-        console.warn(`Unexpected "${key}" property on "${plugin.name}" plugin`);
-        continue;
-      }
-      const hookName = key;
-      const hookValue = plugin[hookName];
-      if (hookValue) {
-        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
-        const hook = {
-          plugin,
-          name: hookName,
-          value: hookValue,
-        };
-        if (position === "start") {
-          let i = 0;
-          while (i < group.length) {
-            const before = group[i];
-            if (!before.plugin.mustStayFirst) {
-              break;
-            }
-            i++;
-          }
-          group.splice(i, 0, hook);
-        } else {
-          group.push(hook);
-        }
-      }
-    }
+    pluginCandidates.push(plugin);
   };
   const testAppliesDuring = (plugin) => {
     const { appliesDuring } = plugin;
@@ -163,41 +108,110 @@ export const createPluginController = (
   };
   const pushPlugin = (...args) => {
     for (const arg of args) {
-      addPlugin(arg, { position: "end" });
-    }
-    updateActivePlugins();
-  };
-  const unshiftPlugin = (...args) => {
-    for (const arg of args) {
-      addPlugin(arg, { position: "start" });
+      addPlugin(arg);
     }
     updateActivePlugins();
   };
   const updateActivePlugins = () => {
-    for (const { plugin, cleanup } of activeEffectSet) {
+    // construct activePlugins and hooks according
+    // to the one present in candidates and their effects
+    // 1. active plugins is an empty array
+    // 2. all active effects are cleaned-up
+    // 3. all effects are re-activated if still relevant
+    // 4. hooks are precomputed according to plugin order
+
+    // 1.
+    activePlugins.length = 0;
+    // 2.
+    for (const { cleanup } of activeEffectSet) {
       cleanup();
-      activePluginSet.delete(plugin);
     }
     activeEffectSet.clear();
-    // consider all plugin with effects as unactive
-    for (const pluginCandidate of pluginCandidateSet) {
+    for (const pluginCandidate of pluginCandidates) {
       const effect = pluginCandidate.effect;
       if (!effect) {
-        activePluginSet.add(pluginCandidate);
+        activePlugins.push(pluginCandidate);
+        continue;
+      }
+    }
+    // 3.
+    for (const pluginCandidate of pluginCandidates) {
+      const effect = pluginCandidate.effect;
+      if (!effect) {
         continue;
       }
       const returnValue = effect({
         kitchenContext,
-        activePluginSet,
+        otherPlugins: activePlugins,
       });
       if (!returnValue) {
         continue;
       }
-      activePluginSet.add(pluginCandidate);
+      activePlugins.push(pluginCandidate);
       activeEffectSet.add({
         plugin: pluginCandidate,
         cleanup: typeof returnValue === "function" ? returnValue : () => {},
       });
+    }
+    // 4.
+    activePlugins.sort((a, b) => {
+      return pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b);
+    });
+    for (const activePlugin of activePlugins) {
+      for (const key of Object.keys(activePlugin)) {
+        if (key === "meta") {
+          const value = activePlugin[key];
+          if (typeof value !== "object" || value === null) {
+            console.warn(`plugin.meta must be an object, got ${value}`);
+            continue;
+          }
+          Object.assign(pluginsMeta, value);
+          // any extension/modification on plugin.meta
+          // won't be taken into account so we freeze object
+          // to throw in case it happen
+          Object.freeze(value);
+          continue;
+        }
+        if (
+          key === "name" ||
+          key === "appliesDuring" ||
+          key === "init" ||
+          key === "serverEvents" ||
+          key === "mustStayFirst" ||
+          key === "effect"
+        ) {
+          continue;
+        }
+        const isHook = HOOK_NAMES.includes(key);
+        if (!isHook) {
+          console.warn(
+            `Unexpected "${key}" property on "${activePlugin.name}" plugin`,
+          );
+          continue;
+        }
+        const hookName = key;
+        const hookValue = activePlugin[hookName];
+        if (hookValue) {
+          const group = hookGroups[hookName] || (hookGroups[hookName] = []);
+          const hook = {
+            plugin: activePlugin,
+            name: hookName,
+            value: hookValue,
+          };
+          // if (position === "start") {
+          //   let i = 0;
+          //   while (i < group.length) {
+          //     const before = group[i];
+          //     if (!before.plugin.mustStayFirst) {
+          //       break;
+          //     }
+          //     i++;
+          //   }
+          //   group.splice(i, 0, hook);
+          // } else {
+          group.push(hook);
+        }
+      }
     }
   };
 
@@ -317,9 +331,8 @@ export const createPluginController = (
 
   return {
     pluginsMeta,
-    activePluginSet,
+    activePlugins,
     pushPlugin,
-    unshiftPlugin,
     getHookFunction,
     callHook,
     callAsyncHook,

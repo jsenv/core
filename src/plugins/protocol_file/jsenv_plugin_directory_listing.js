@@ -148,7 +148,7 @@ export const jsenvPluginDirectoryListing = ({
               );
             },
           },
-      handleWebsocket: ({ request, websocket }) => {
+      serveWebsocket: ({ websocket, request }) => {
         if (request.headers["sec-websocket-protocol"] !== "watch_directory") {
           return false;
         }

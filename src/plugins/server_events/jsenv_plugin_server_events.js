@@ -17,10 +17,10 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
   return {
     name: "jsenv:server_events",
     appliesDuring: "dev",
-    effect: ({ kitchenContext, activePluginSet }) => {
+    effect: ({ kitchenContext, otherPlugins }) => {
       const allServerEvents = {};
-      for (const plugin of activePluginSet) {
-        const { serverEvents } = plugin;
+      for (const otherPlugin of otherPlugins) {
+        const { serverEvents } = otherPlugin;
         if (!serverEvents) {
           continue;
         }
@@ -34,11 +34,11 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
       if (serverEventNames.length === 0) {
         return false;
       }
+      serverEventsDispatcher = createServerEventsDispatcher();
       const onabort = () => {
         serverEventsDispatcher.destroy();
       };
       kitchenContext.signal.addEventListener("abort", onabort);
-      serverEventsDispatcher = createServerEventsDispatcher();
       for (const serverEventName of Object.keys(allServerEvents)) {
         const serverEventInfo = {
           ...kitchenContext,
@@ -67,7 +67,7 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
         serverEventsDispatcher = undefined;
       };
     },
-    handleWebsocket: async (websocket, { request }) => {
+    serveWebsocket: async ({ websocket, request }) => {
       if (request.headers["sec-websocket-protocol"] !== "jsenv") {
         return false;
       }

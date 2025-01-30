@@ -555,14 +555,14 @@ ${error.trace?.message}`);
         //   console.log("handleWebsocket", websocket, request.headers);
         // }
         const kitchen = getOrCreateKitchen(request);
-        const handleWebsocketHookInfo = {
+        const serveWebsocketHookInfo = {
           ...kitchen.context,
           request,
           websocket,
         };
         await kitchen.pluginController.callAsyncHooksUntil(
-          "handleWebsocket",
-          handleWebsocketHookInfo,
+          "serveWebsocket",
+          serveWebsocketHookInfo,
         );
       },
     });
