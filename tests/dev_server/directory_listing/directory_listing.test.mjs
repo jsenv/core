@@ -52,9 +52,9 @@ try {
   await takeScreenshot("2_dir_many_file");
   await page.locator(`a[href="/dir/deep/"]`).click();
   await takeScreenshot("3_after_click_deep");
-  await page.locator(`.directory_nav a[href="/dir/"]`).click();
+  await page.locator(`.nav a[href="/dir/"]`).click();
   await takeScreenshot("4_after_click_dir_in_nav");
-  await page.locator(`.directory_nav a[href="/..."]`).click();
+  await page.locator(`.nav a[href="/..."]`).click();
   await takeScreenshot("5_after_click_root_in_nav");
   replaceFileStructureSync({
     from: new URL("./fixtures/2_index_exists/", import.meta.url),
@@ -65,7 +65,7 @@ try {
   await takeScreenshot("6_index_exists");
   await page.goto(`${devServer.origin}/dir/...`);
   await takeScreenshot("7_index_exists_dir");
-  await page.locator(`.directory_nav a[href="/..."]`).click();
+  await page.locator(`.nav a[href="/..."]`).click();
   await takeScreenshot("8_after_click_root_in_nav");
   await page.goto(`${devServer.origin}/dir/foo/bar/`);
   await takeScreenshot("9_dir_404");
