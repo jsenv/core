@@ -148,36 +148,41 @@ export const jsenvPluginDirectoryListing = ({
               );
             },
           },
-      handleWebsocket: ({ request }) => {
+      handleWebsocket: ({ request, websocket }) => {
         if (request.headers["sec-websocket-protocol"] !== "watch_directory") {
-          return null;
+          return false;
         }
         const directoryUrl = request.url;
-        return ({ signal, sendEvent }) => {
-          const unwatch = registerDirectoryLifecycle(directoryUrl, {
-            added: () => {
-              sendEvent({
-                type: "added",
-                items: getDirectoryContentItems(directoryUrl),
-              });
-            },
-            updated: () => {
-              sendEvent({
-                type: "updated",
-                items: getDirectoryContentItems(directoryUrl),
-              });
-            },
-            removed: () => {
-              sendEvent({
-                type: "removed",
-                items: getDirectoryContentItems(directoryUrl),
-              });
-            },
-          });
-          signal.addEventListener("abort", () => {
-            unwatch();
-          });
+        const sendMessage = (message) => {
+          websocket.send(JSON.stringify(message));
         };
+        const unwatch = registerDirectoryLifecycle(directoryUrl, {
+          added: ({ relativeUrl }) => {
+            sendMessage({
+              type: "change",
+              reason: `${relativeUrl} added`,
+              items: getDirectoryContentItems(directoryUrl),
+            });
+          },
+          updated: ({ relativeUrl }) => {
+            sendMessage({
+              type: "change",
+              reason: `${relativeUrl} updated`,
+              items: getDirectoryContentItems(directoryUrl),
+            });
+          },
+          removed: ({ relativeUrl }) => {
+            sendMessage({
+              type: "change",
+              reason: `${relativeUrl} removed`,
+              items: getDirectoryContentItems(directoryUrl),
+            });
+          },
+        });
+        websocket.signal.addEventListener("abort", () => {
+          unwatch();
+        });
+        return true;
       },
     },
     {

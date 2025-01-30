@@ -35,9 +35,12 @@ socket.onopen = () => {
 };
 socket.onmessage = (messageEvent) => {
   const event = JSON.parse(messageEvent.data);
-  const { items } = event;
-  // TODO: if index.html is added we must reload
-  updateDirectoryContentItems(items);
+  const { type, reason, items } = event;
+  if (type === "change") {
+    console.log(`update list (reason: ${reason})`);
+    // TODO: if index.html is added AND we are at "/" we must reload
+    updateDirectoryContentItems(items);
+  }
 };
 
 const DirectoryListing = () => {
