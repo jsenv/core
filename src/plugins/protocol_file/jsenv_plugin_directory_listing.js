@@ -3,10 +3,6 @@
  * je devrait pouvoir modifier le contenu du html
  * mais je suppose qu'il faut que je le fasse avant que supervisor mette son nez dedans
  * donc dans fetchUrlContent? c'est pour ça? a confirmer
- *
- * ideally when 404 on file we would do this:
- * display in the nav what was not found (like a red cross next to it)
- * including the file itself if any, to show the 404 on the file
  */
 
 import {

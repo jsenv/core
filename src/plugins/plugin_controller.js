@@ -36,7 +36,7 @@ export const createPluginController = (
   // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
   // also it should increase perf as there is less work to do
-  const hookGroups = {};
+  let hookGroups = {};
   const addPlugin = (plugin, options) => {
     if (Array.isArray(plugin)) {
       for (const value of plugin) {
@@ -157,6 +157,7 @@ export const createPluginController = (
     activePlugins.sort((a, b) => {
       return pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b);
     });
+    hookGroups = {};
     for (const activePlugin of activePlugins) {
       for (const key of Object.keys(activePlugin)) {
         if (key === "meta") {
