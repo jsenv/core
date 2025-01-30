@@ -19,6 +19,11 @@ let {
 const directoryItemsChangeCallbackSet = new Set();
 const updateDirectoryContentItems = (value) => {
   directoryContentItems = value;
+  for (const dirContentItem of value) {
+    if (dirContentItem.isMainFile && window.location.pathname === "/") {
+      window.location.reload();
+    }
+  }
   for (const directoryItemsChangeCallback of directoryItemsChangeCallbackSet) {
     directoryItemsChangeCallback();
   }
