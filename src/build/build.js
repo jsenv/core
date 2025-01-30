@@ -449,33 +449,33 @@ build ${entryPointKeys.length} entry points`);
 
     const bundlers = {};
     bundle: {
-      rawKitchen.pluginController.plugins.forEach((plugin) => {
+      for (const plugin of rawKitchen.pluginController.activePluginSet) {
         const bundle = plugin.bundle;
         if (!bundle) {
-          return;
+          continue;
         }
         if (typeof bundle !== "object") {
           throw new Error(
             `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
           );
         }
-        Object.keys(bundle).forEach((type) => {
+        for (const type of Object.keys(bundle)) {
           const bundleFunction = bundle[type];
           if (!bundleFunction) {
-            return;
+            continue;
           }
           const bundlerForThatType = bundlers[type];
           if (bundlerForThatType) {
             // first plugin to define a bundle hook wins
-            return;
+            continue;
           }
           bundlers[type] = {
             plugin,
             bundleFunction: bundle[type],
             urlInfoMap: new Map(),
           };
-        });
-      });
+        }
+      }
       const addToBundlerIfAny = (rawUrlInfo) => {
         const bundler = bundlers[rawUrlInfo.type];
         if (bundler) {

@@ -15,6 +15,7 @@ const HOOK_NAMES = [
   "cooked",
   "augmentResponse", // is called only during dev/tests
   "destroy",
+  "effect",
 ];
 
 export const createPluginController = (
@@ -28,7 +29,9 @@ export const createPluginController = (
     return value;
   };
 
-  const plugins = [];
+  const activeEffectSet = new Set();
+  const pluginCandidateSet = new Set();
+  const activePluginSet = new Set();
   // precompute a list of hooks per hookName for one major reason:
   // - When debugging, there is less iteration
   // also it should increase perf as there is less work to do
@@ -38,9 +41,9 @@ export const createPluginController = (
       if (position === "start") {
         plugin = plugin.slice().reverse();
       }
-      plugin.forEach((plugin) => {
-        addPlugin(plugin, { position });
-      });
+      for (const value of plugin) {
+        addPlugin(value, { position });
+      }
       return;
     }
     if (plugin === null || typeof plugin !== "object") {
@@ -50,12 +53,10 @@ export const createPluginController = (
       plugin.name = "anonymous";
     }
     if (!testAppliesDuring(plugin) || !initPlugin(plugin)) {
-      if (plugin.destroy) {
-        plugin.destroy();
-      }
+      plugin.destroy?.();
       return;
     }
-    plugins.push(plugin);
+    pluginCandidateSet.add(plugin);
     for (const key of Object.keys(plugin)) {
       if (key === "meta") {
         const value = plugin[key];
@@ -70,13 +71,13 @@ export const createPluginController = (
         Object.freeze(value);
         continue;
       }
-
       if (
         key === "name" ||
         key === "appliesDuring" ||
         key === "init" ||
         key === "serverEvents" ||
-        key === "mustStayFirst"
+        key === "mustStayFirst" ||
+        key === "effect"
       ) {
         continue;
       }
@@ -147,22 +148,57 @@ export const createPluginController = (
     );
   };
   const initPlugin = (plugin) => {
-    if (plugin.init) {
-      const initReturnValue = plugin.init(kitchenContext, plugin);
-      if (initReturnValue === false) {
-        return false;
-      }
-      if (typeof initReturnValue === "function" && !plugin.destroy) {
-        plugin.destroy = initReturnValue;
-      }
+    const { init } = plugin;
+    if (!init) {
+      return true;
+    }
+    const initReturnValue = init(kitchenContext, { plugin });
+    if (initReturnValue === false) {
+      return false;
+    }
+    if (typeof initReturnValue === "function" && !plugin.destroy) {
+      plugin.destroy = initReturnValue;
     }
     return true;
   };
-  const pushPlugin = (plugin) => {
-    addPlugin(plugin, { position: "end" });
+  const pushPlugin = (...args) => {
+    for (const arg of args) {
+      addPlugin(arg, { position: "end" });
+    }
+    updateActivePlugins();
   };
-  const unshiftPlugin = (plugin) => {
-    addPlugin(plugin, { position: "start" });
+  const unshiftPlugin = (...args) => {
+    for (const arg of args) {
+      addPlugin(arg, { position: "start" });
+    }
+    updateActivePlugins();
+  };
+  const updateActivePlugins = () => {
+    for (const { plugin, cleanup } of activeEffectSet) {
+      cleanup();
+      activePluginSet.delete(plugin);
+    }
+    activeEffectSet.clear();
+    // consider all plugin with effects as unactive
+    for (const pluginCandidate of pluginCandidateSet) {
+      const effect = pluginCandidate.effect;
+      if (!effect) {
+        activePluginSet.add(pluginCandidate);
+        continue;
+      }
+      const returnValue = effect({
+        kitchenContext,
+        activePluginSet,
+      });
+      if (!returnValue) {
+        continue;
+      }
+      activePluginSet.add(pluginCandidate);
+      activeEffectSet.add({
+        plugin: pluginCandidate,
+        cleanup: typeof returnValue === "function" ? returnValue : () => {},
+      });
+    }
   };
 
   let lastPluginUsed = null;
@@ -281,7 +317,7 @@ export const createPluginController = (
 
   return {
     pluginsMeta,
-    plugins,
+    activePluginSet,
     pushPlugin,
     unshiftPlugin,
     getHookFunction,

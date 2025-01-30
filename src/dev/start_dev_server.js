@@ -23,8 +23,7 @@ import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { getCorePlugins } from "../plugins/plugins.js";
-import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events/jsenv_plugin_server_events_client_injection.js";
-import { createServerEventsDispatcher } from "../plugins/server_events/server_events_dispatcher.js";
+import { jsenvPluginServerEvents } from "../plugins/server_events/jsenv_plugin_server_events.js";
 import { parseUserAgentHeader } from "./user_agent.js";
 
 const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
@@ -144,10 +143,11 @@ export const startDevServer = async ({
   });
 
   const serverStopCallbackSet = new Set();
-  const serverEventsDispatcher = createServerEventsDispatcher();
+  const serverStopAbortController = new AbortController();
   serverStopCallbackSet.add(() => {
-    serverEventsDispatcher.destroy();
+    serverStopAbortController.abort();
   });
+  const serverStopAbortSignal = serverStopAbortController.signal;
   const kitchenCache = new Map();
 
   const finalServices = [];
@@ -250,7 +250,7 @@ export const startDevServer = async ({
 
       kitchen = createKitchen({
         name: runtimeId,
-        signal,
+        signal: serverStopAbortSignal,
         logLevel,
         rootDirectoryUrl: sourceDirectoryUrl,
         mainFilePath: sourceMainFilePath,
@@ -259,6 +259,7 @@ export const startDevServer = async ({
         runtimeCompat,
         clientRuntimeCompat,
         plugins: [
+          jsenvPluginServerEvents({ clientAutoreload }),
           ...plugins,
           ...getCorePlugins({
             rootDirectoryUrl: sourceDirectoryUrl,
@@ -363,41 +364,6 @@ export const startDevServer = async ({
       serverStopCallbackSet.add(() => {
         kitchen.pluginController.callHooks("destroy", kitchen.context);
       });
-      server_events: {
-        const allServerEvents = {};
-        kitchen.pluginController.plugins.forEach((plugin) => {
-          const { serverEvents } = plugin;
-          if (serverEvents) {
-            Object.keys(serverEvents).forEach((serverEventName) => {
-              // we could throw on serverEvent name conflict
-              // we could throw if serverEvents[serverEventName] is not a function
-              allServerEvents[serverEventName] = serverEvents[serverEventName];
-            });
-          }
-        });
-        const serverEventNames = Object.keys(allServerEvents);
-        if (serverEventNames.length > 0) {
-          Object.keys(allServerEvents).forEach((serverEventName) => {
-            const serverEventInfo = {
-              ...kitchen.context,
-              sendServerEvent: (data) => {
-                serverEventsDispatcher.dispatch({
-                  type: serverEventName,
-                  data,
-                });
-              },
-            };
-            const serverEventInit = allServerEvents[serverEventName];
-            serverEventInit(serverEventInfo);
-          });
-          kitchen.pluginController.unshiftPlugin(
-            jsenvPluginServerEventsClientInjection(
-              clientAutoreload.clientServerEventsConfig,
-            ),
-          );
-        }
-      }
-
       kitchenCache.set(runtimeId, kitchen);
       onKitchenCreated(kitchen);
       return kitchen;
@@ -589,34 +555,15 @@ ${error.trace?.message}`);
         //   console.log("handleWebsocket", websocket, request.headers);
         // }
         const kitchen = getOrCreateKitchen(request);
-        const customServerEventDispatcher = createServerEventsDispatcher();
         const handleWebsocketHookInfo = {
           ...kitchen.context,
           request,
           websocket,
         };
-        const responseFromPlugin =
-          await kitchen.pluginController.callAsyncHooksUntil(
-            "handleWebsocket",
-            handleWebsocketHookInfo,
-          );
-        if (responseFromPlugin) {
-          customServerEventDispatcher.addWebsocket(websocket, request);
-          responseFromPlugin({
-            signal: websocket.signal,
-            sendEvent: ({ type, ...data }) => {
-              customServerEventDispatcher.dispatch({
-                type,
-                data,
-              });
-            },
-          });
-          return;
-        }
-        if (request.headers["sec-websocket-protocol"] === "jsenv") {
-          serverEventsDispatcher.addWebsocket(websocket, request);
-          return;
-        }
+        await kitchen.pluginController.callAsyncHooksUntil(
+          "handleWebsocket",
+          handleWebsocketHookInfo,
+        );
       },
     });
   }
