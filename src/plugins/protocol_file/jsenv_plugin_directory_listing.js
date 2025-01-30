@@ -423,11 +423,12 @@ const getDirectoryContentItems = ({
       fileUrl,
       serverRootDirectoryUrl,
     );
+    const url = String(fileUrl);
     const mainFileUrl = new URL(mainFilePath, serverRootDirectoryUrl).href;
-    const isMainFile = fileUrl === mainFileUrl;
+    const isMainFile = url === mainFileUrl;
 
     items.push({
-      url: String(fileUrl),
+      url,
       urlRelativeToDocument,
       urlRelativeToServer,
       isMainFile,
