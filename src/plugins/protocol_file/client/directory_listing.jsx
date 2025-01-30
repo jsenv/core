@@ -13,6 +13,7 @@ let {
   directoryUrl,
   directoryContentItems,
   enoentDetails,
+  websocketUrl,
 } = window.DIRECTORY_LISTING;
 
 const directoryItemsChangeCallbackSet = new Set();
@@ -22,33 +23,15 @@ const updateDirectoryContentItems = (value) => {
     directoryItemsChangeCallback();
   }
 };
-const websocketScheme = self.location.protocol === "https:" ? "wss" : "ws";
-const socket = new WebSocket(
-  `${websocketScheme}://${self.location.host}${directoryUrl}`,
-  ["watch-directory"],
-);
-socket.onopen = () => {
-  socket.onopen = null;
-  setInterval(() => {
-    socket.send('{"type":"ping"}');
-  }, 30_000);
-};
-socket.onmessage = (messageEvent) => {
-  const event = JSON.parse(messageEvent.data);
-  const { type, reason, items } = event;
-  if (type === "change") {
-    console.log(`update list (reason: ${reason})`);
-    // TODO: if index.html is added AND we are at "/" we must reload
-    updateDirectoryContentItems(items);
-  }
-};
 
 const DirectoryListing = () => {
   const directoryItems = useSyncExternalStore(
     (callback) => {
       directoryItemsChangeCallbackSet.add(callback);
     },
-    () => directoryContentItems,
+    () => {
+      return directoryContentItems;
+    },
   );
 
   return (
@@ -306,5 +289,24 @@ const urlIsInsideOf = (url, otherUrl) => {
   const isInside = urlPathname.startsWith(otherUrlPathname);
   return isInside;
 };
+
+init_websocket: {
+  const socket = new WebSocket(websocketUrl, ["watch-directory"]);
+  socket.onopen = () => {
+    socket.onopen = null;
+    setInterval(() => {
+      socket.send('{"type":"ping"}');
+    }, 30_000);
+  };
+  socket.onmessage = (messageEvent) => {
+    const event = JSON.parse(messageEvent.data);
+    const { type, reason, items } = event;
+    if (type === "change") {
+      console.log(`update list (reason: ${reason})`);
+      // TODO: if index.html is added AND we are at "/" we must reload
+      updateDirectoryContentItems(items);
+    }
+  };
+}
 
 render(<DirectoryListing />, document.querySelector("#root"));

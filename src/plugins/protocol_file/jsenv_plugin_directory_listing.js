@@ -19,6 +19,7 @@ import {
 import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { lookupPackageDirectory } from "../../helpers/lookup_package_directory.js";
 import { replacePlaceholders } from "../injections/jsenv_plugin_injections.js";
+import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";
 
 const htmlFileUrlForDirectory = new URL(
   "./client/directory_listing.html",
@@ -54,11 +55,13 @@ export const jsenvPluginDirectoryListing = ({
     urlInfo,
     { requestedUrl, enoent },
   ) => {
+    const request = urlInfo.context.request;
     const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
     return replacePlaceholders(
       urlInfo.content,
       {
         ...generateDirectoryListingInjection(requestedUrl, {
+          request,
           directoryListingUrlMocks,
           directoryContentMagicName,
           rootDirectoryUrl,
@@ -148,11 +151,17 @@ export const jsenvPluginDirectoryListing = ({
               );
             },
           },
-      serveWebsocket: ({ websocket, request }) => {
-        if (request.headers["sec-websocket-protocol"] !== "watch_directory") {
+      serveWebsocket: ({ websocket, request, context }) => {
+        const secProtocol = request.headers["sec-websocket-protocol"];
+        if (secProtocol !== "watch-directory") {
           return false;
         }
-        const directoryUrl = request.url;
+        const directoryRelativeUrl = request.pathname;
+        const { rootDirectoryUrl } = context;
+        const directoryUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
+          directoryRelativeUrl,
+          rootDirectoryUrl,
+        );
         const sendMessage = (message) => {
           websocket.send(JSON.stringify(message));
         };
@@ -216,6 +225,7 @@ export const jsenvPluginDirectoryListing = ({
 const generateDirectoryListingInjection = (
   requestedUrl,
   {
+    request,
     enoent,
     directoryListingUrlMocks,
     directoryContentMagicName,
@@ -266,6 +276,15 @@ const generateDirectoryListingInjection = (
     //   }
     // }
   }
+  const directoryUrlRelativeToServer =
+    FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
+      firstExistingDirectoryUrl,
+      serverRootDirectoryUrl,
+    );
+  const websocketScheme = request.protocol === "https" ? "wss" : "ws";
+  const { host } = new URL(request.url);
+  const websocketUrl = `${websocketScheme}://${host}${directoryUrlRelativeToServer}`;
+
   return {
     __DIRECTORY_LISTING__: {
       enoentDetails: enoent
@@ -280,6 +299,7 @@ const generateDirectoryListingInjection = (
       rootDirectoryUrl,
       mainFilePath,
       directoryContentItems,
+      websocketUrl,
     },
   };
 };

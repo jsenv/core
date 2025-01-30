@@ -449,7 +449,9 @@ export const startDevServer = async ({
               // This must not happen when a plugin uses "no-store" or "no-cache" as it means
               // plugin logic wants to happens for every request to this url
               ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
-                ? {}
+                ? {
+                    "cache-control": "no-store", // for inline file we force no-store when parent is no-store
+                  }
                 : {
                     "cache-control": `private,max-age=0,must-revalidate`,
                     // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
@@ -556,9 +558,9 @@ ${error.trace?.message}`);
         // }
         const kitchen = getOrCreateKitchen(request);
         const serveWebsocketHookInfo = {
-          ...kitchen.context,
           request,
           websocket,
+          context: kitchen.context,
         };
         await kitchen.pluginController.callAsyncHooksUntil(
           "serveWebsocket",

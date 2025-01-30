@@ -1,11 +1,8 @@
 import { readEntryStatSync } from "@jsenv/filesystem";
-import {
-  ensurePathnameTrailingSlash,
-  urlIsInsideOf,
-  urlToRelativeUrl,
-} from "@jsenv/urls";
+import { ensurePathnameTrailingSlash } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { readFileSync } from "node:fs";
+import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";
 import { jsenvPluginDirectoryListing } from "./jsenv_plugin_directory_listing.js";
 import { jsenvPluginFsRedirection } from "./jsenv_plugin_fs_redirection.js";
 
@@ -47,8 +44,7 @@ export const jsenvPluginProtocolFile = ({
       appliesDuring: "dev",
       resolveReference: (reference) => {
         if (reference.specifier.startsWith("/@fs/")) {
-          const fsRootRelativeUrl = reference.specifier.slice("/@fs/".length);
-          return `file:///${fsRootRelativeUrl}`;
+          return FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(reference.specifier);
         }
         return null;
       },
@@ -67,12 +63,10 @@ export const jsenvPluginProtocolFile = ({
           }
         }
         const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
-        if (urlIsInsideOf(generatedUrl, rootDirectoryUrl)) {
-          const result = `/${urlToRelativeUrl(generatedUrl, rootDirectoryUrl)}`;
-          return result;
-        }
-        const result = `/@fs/${generatedUrl.slice("file:///".length)}`;
-        return result;
+        return FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
+          generatedUrl,
+          rootDirectoryUrl,
+        );
       },
     },
     jsenvPluginDirectoryListing({
