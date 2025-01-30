@@ -85,7 +85,7 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
           initCall: {
             callee: "window.__server_events__.setup",
             params: {
-              logs: clientAutoreload.logs,
+              logs: clientAutoreload.clientServerEventsConfig.logs,
             },
           },
           pluginName: "jsenv:server_events",

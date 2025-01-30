@@ -16,9 +16,9 @@ base/client/main.html:15:40
 15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
                                             ^
   at redirectReference (@jsenv/core/src/plugins/directory_reference_effect/jsenv_plugin_directory_reference_effect.js:56:23)
-  at callHook (@jsenv/core/src/plugins/plugin_controller.js:183:25)
-  at Object.callHooks (@jsenv/core/src/plugins/plugin_controller.js:224:29)
-  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:230:26)
+  at callHook (@jsenv/core/src/plugins/plugin_controller.js:234:25)
+  at Object.callHooks (@jsenv/core/src/plugins/plugin_controller.js:275:29)
+  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:227:26)
   at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:377:38)
   at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:43:41)
   at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:58:23)
