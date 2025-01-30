@@ -14,6 +14,9 @@ const serverEventsClientFileUrl = new URL(
 export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
   let serverEventsDispatcher;
 
+  const { clientServerEventsConfig } = clientAutoreload;
+  const { logs = true } = clientServerEventsConfig;
+
   return {
     name: "jsenv:server_events",
     appliesDuring: "dev",
@@ -85,7 +88,7 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
           initCall: {
             callee: "window.__server_events__.setup",
             params: {
-              logs: clientAutoreload.clientServerEventsConfig.logs,
+              logs,
             },
           },
           pluginName: "jsenv:server_events",
