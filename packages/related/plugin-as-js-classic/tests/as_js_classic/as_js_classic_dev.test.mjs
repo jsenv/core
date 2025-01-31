@@ -15,6 +15,7 @@ const devServer = await startDevServer({
   keepProcessAlive: false,
   clientAutoreload: false,
   supervisor: false,
+  ribbon: false,
   port: 0,
 });
 const browser = await chromium.launch({ headless: !debug });
@@ -50,10 +51,10 @@ try {
   {
     responses.length = 0;
     await page.reload();
-    const responseForJsFile = responses.find(
-      (response) =>
-        response.url() === `${devServer.origin}/main.js?as_js_classic`,
-    );
+    const responseForJsFile = responses.find((response) => {
+      const urlCandidate = response.url();
+      return urlCandidate === `${devServer.origin}/main.js?as_js_classic`;
+    });
     const jsFileResponseStatus = responseForJsFile.status();
     const answer = await getResult();
     const actual = {
