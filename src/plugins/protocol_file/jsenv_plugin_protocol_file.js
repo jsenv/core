@@ -1,7 +1,7 @@
 import { readEntryStatSync } from "@jsenv/filesystem";
 import { ensurePathnameTrailingSlash } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";
 import { jsenvPluginDirectoryListing } from "./jsenv_plugin_directory_listing.js";
 import { jsenvPluginFsRedirection } from "./jsenv_plugin_fs_redirection.js";
@@ -74,6 +74,31 @@ export const jsenvPluginProtocolFile = ({
       directoryContentMagicName,
       directoryListingUrlMocks,
     }),
+    {
+      name: "jsenv:directory_as_json",
+      appliesDuring: "*",
+      fetchUrlContent: (urlInfo) => {
+        const { firstReference } = urlInfo;
+        let { fsStat } = firstReference;
+        if (!fsStat) {
+          fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
+        }
+        if (!fsStat) {
+          return null;
+        }
+        const isDirectory = fsStat.isDirectory();
+        if (!isDirectory) {
+          return null;
+        }
+        const directoryContentArray = readdirSync(new URL(urlInfo.url));
+        const content = JSON.stringify(directoryContentArray, null, "  ");
+        return {
+          type: "directory",
+          contentType: "application/json",
+          content,
+        };
+      },
+    },
     {
       name: "jsenv:file_url_fetching",
       appliesDuring: "*",

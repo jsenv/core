@@ -77,170 +77,143 @@ export const jsenvPluginDirectoryListing = ({
     );
   };
 
-  return [
-    {
-      name: "jsenv:directory_listing",
-      appliesDuring: "dev",
-      redirectReference: (reference) => {
-        if (reference.isInline) {
-          return null;
+  return {
+    name: "jsenv:directory_listing",
+    appliesDuring: "dev",
+    redirectReference: (reference) => {
+      if (reference.isInline) {
+        return null;
+      }
+      const url = reference.url;
+      if (!url.startsWith("file:")) {
+        return null;
+      }
+      let { fsStat } = reference;
+      if (!fsStat) {
+        fsStat = readEntryStatSync(url, { nullIfNotFound: true });
+        reference.fsStat = fsStat;
+      }
+      const { request } = reference.ownerUrlInfo.context;
+      if (!fsStat) {
+        if (
+          reference.isDirectRequest &&
+          request &&
+          request.headers["sec-fetch-dest"] === "document"
+        ) {
+          return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
         }
-        const url = reference.url;
-        if (!url.startsWith("file:")) {
-          return null;
-        }
-        let { fsStat } = reference;
-        if (!fsStat) {
-          fsStat = readEntryStatSync(url, { nullIfNotFound: true });
-          reference.fsStat = fsStat;
-        }
-        const { request } = reference.ownerUrlInfo.context;
-        if (!fsStat) {
-          if (
-            reference.isDirectRequest &&
-            request &&
-            request.headers["sec-fetch-dest"] === "document"
-          ) {
-            return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
-          }
-          return null;
-        }
-        const isDirectory = fsStat?.isDirectory();
-        if (!isDirectory) {
-          return null;
-        }
-        if (reference.type === "filesystem") {
-          // TODO: we should redirect to something like /...json
-          // and any file name ...json is a special file serving directory content as json
-          return null;
-        }
-        const acceptsHtml = request
-          ? pickContentType(request, ["text/html"])
-          : false;
-        if (!acceptsHtml) {
-          return null;
-        }
-        reference.fsStat = null; // reset fsStat, now it's not a directory anyor
-        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
-      },
-      // when supervisor is enabled html does not contain placeholder anymore
-      transformUrlContent: supervisorEnabled
-        ? {
-            js_classic: (urlInfo) => {
-              const parentUrlInfo = urlInfo.findParentIfInline();
-              if (!parentUrlInfo) {
-                return null;
-              }
-              const directoryListingParams =
-                extractDirectoryListingParams(parentUrlInfo);
-              if (!directoryListingParams) {
-                return null;
-              }
-              return replaceDirectoryListingPlaceholder(
-                urlInfo,
-                directoryListingParams,
-              );
-            },
-          }
-        : {
-            html: (urlInfo) => {
-              const directoryListingParams =
-                extractDirectoryListingParams(urlInfo);
-              if (!directoryListingParams) {
-                return null;
-              }
-              return replaceDirectoryListingPlaceholder(
-                urlInfo,
-                directoryListingParams,
-              );
-            },
+        return null;
+      }
+      const isDirectory = fsStat?.isDirectory();
+      if (!isDirectory) {
+        return null;
+      }
+      if (reference.type === "filesystem") {
+        // TODO: we should redirect to something like /...json
+        // and any file name ...json is a special file serving directory content as json
+        return null;
+      }
+      const acceptsHtml = request
+        ? pickContentType(request, ["text/html"])
+        : false;
+      if (!acceptsHtml) {
+        return null;
+      }
+      reference.fsStat = null; // reset fsStat, now it's not a directory anyor
+      return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
+    },
+    // when supervisor is enabled html does not contain placeholder anymore
+    transformUrlContent: supervisorEnabled
+      ? {
+          js_classic: (urlInfo) => {
+            const parentUrlInfo = urlInfo.findParentIfInline();
+            if (!parentUrlInfo) {
+              return null;
+            }
+            const directoryListingParams =
+              extractDirectoryListingParams(parentUrlInfo);
+            if (!directoryListingParams) {
+              return null;
+            }
+            return replaceDirectoryListingPlaceholder(
+              urlInfo,
+              directoryListingParams,
+            );
           },
-      serveWebsocket: ({ websocket, request, context }) => {
-        if (!autoreload) {
-          return false;
         }
-        const secProtocol = request.headers["sec-websocket-protocol"];
-        if (secProtocol !== "watch-directory") {
-          return false;
-        }
-        const { rootDirectoryUrl, mainFilePath } = context;
-        const requestedUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
-          request.pathname,
+      : {
+          html: (urlInfo) => {
+            const directoryListingParams =
+              extractDirectoryListingParams(urlInfo);
+            if (!directoryListingParams) {
+              return null;
+            }
+            return replaceDirectoryListingPlaceholder(
+              urlInfo,
+              directoryListingParams,
+            );
+          },
+        },
+    serveWebsocket: ({ websocket, request, context }) => {
+      if (!autoreload) {
+        return false;
+      }
+      const secProtocol = request.headers["sec-websocket-protocol"];
+      if (secProtocol !== "watch-directory") {
+        return false;
+      }
+      const { rootDirectoryUrl, mainFilePath } = context;
+      const requestedUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
+        request.pathname,
+        rootDirectoryUrl,
+      );
+      const closestDirectoryUrl = getFirstExistingDirectoryUrl(requestedUrl);
+      const sendMessage = (message) => {
+        websocket.send(JSON.stringify(message));
+      };
+      const generateItems = () => {
+        const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
+          requestedUrl,
           rootDirectoryUrl,
         );
-        const closestDirectoryUrl = getFirstExistingDirectoryUrl(requestedUrl);
-        const sendMessage = (message) => {
-          websocket.send(JSON.stringify(message));
-        };
-        const generateItems = () => {
-          const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
-            requestedUrl,
-            rootDirectoryUrl,
-          );
-          const items = getDirectoryContentItems({
-            serverRootDirectoryUrl: rootDirectoryUrl,
-            mainFilePath,
-            requestedUrl,
-            firstExistingDirectoryUrl,
-          });
-          return items;
-        };
+        const items = getDirectoryContentItems({
+          serverRootDirectoryUrl: rootDirectoryUrl,
+          mainFilePath,
+          requestedUrl,
+          firstExistingDirectoryUrl,
+        });
+        return items;
+      };
 
-        const unwatch = registerDirectoryLifecycle(closestDirectoryUrl, {
-          added: ({ relativeUrl }) => {
-            sendMessage({
-              type: "change",
-              reason: `${relativeUrl} added`,
-              items: generateItems(),
-            });
-          },
-          updated: ({ relativeUrl }) => {
-            sendMessage({
-              type: "change",
-              reason: `${relativeUrl} updated`,
-              items: generateItems(),
-            });
-          },
-          removed: ({ relativeUrl }) => {
-            sendMessage({
-              type: "change",
-              reason: `${relativeUrl} removed`,
-              items: generateItems(),
-            });
-          },
-        });
-        websocket.signal.addEventListener("abort", () => {
-          unwatch();
-        });
-        return true;
-      },
+      const unwatch = registerDirectoryLifecycle(closestDirectoryUrl, {
+        added: ({ relativeUrl }) => {
+          sendMessage({
+            type: "change",
+            reason: `${relativeUrl} added`,
+            items: generateItems(),
+          });
+        },
+        updated: ({ relativeUrl }) => {
+          sendMessage({
+            type: "change",
+            reason: `${relativeUrl} updated`,
+            items: generateItems(),
+          });
+        },
+        removed: ({ relativeUrl }) => {
+          sendMessage({
+            type: "change",
+            reason: `${relativeUrl} removed`,
+            items: generateItems(),
+          });
+        },
+      });
+      websocket.signal.addEventListener("abort", () => {
+        unwatch();
+      });
+      return true;
     },
-    {
-      name: "jsenv:directory_as_json",
-      appliesDuring: "*",
-      fetchUrlContent: (urlInfo) => {
-        const { firstReference } = urlInfo;
-        let { fsStat } = firstReference;
-        if (!fsStat) {
-          fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
-        }
-        if (!fsStat) {
-          return null;
-        }
-        const isDirectory = fsStat.isDirectory();
-        if (!isDirectory) {
-          return null;
-        }
-        const directoryContentArray = readdirSync(new URL(urlInfo.url));
-        const content = JSON.stringify(directoryContentArray, null, "  ");
-        return {
-          type: "directory",
-          contentType: "application/json",
-          content,
-        };
-      },
-    },
-  ];
+  };
 };
 
 const generateDirectoryListingInjection = (
