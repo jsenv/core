@@ -15,9 +15,16 @@ const run = async ({ browserLauncher }) => {
       }),
     ],
   });
-  return executeHtml(`${devServer.origin}/main.html`, {
+  const withoutSearch = await executeHtml(`${devServer.origin}/main.html`, {
     browserLauncher,
   });
+  const withSearch = await executeHtml(`${devServer.origin}/main.html?foo`, {
+    browserLauncher,
+  });
+  return {
+    withoutSearch,
+    withSearch,
+  };
 };
 
 await snapshotDevSideEffects(import.meta.url, ({ test }) => {
