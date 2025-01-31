@@ -18,11 +18,12 @@ export const determineFileUrlForOutDirectory = (urlInfo) => {
   if (filenameHint) {
     url = setUrlFilename(url, filenameHint);
   }
-  return moveUrl({
+  const outUrl = moveUrl({
     url,
     from: rootDirectoryUrl,
     to: outDirectoryUrl,
   });
+  return outUrl;
 };
 
 export const determineSourcemapFileUrl = (urlInfo) => {

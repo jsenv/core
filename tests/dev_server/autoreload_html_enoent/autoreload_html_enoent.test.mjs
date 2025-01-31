@@ -13,6 +13,7 @@ import {
   ensureEmptyDirectorySync,
   replaceFileStructureSync,
 } from "@jsenv/filesystem";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 import { writeFileSync } from "node:fs";
 import { chromium } from "playwright";
@@ -38,8 +39,11 @@ const devServer = await startDevServer({
   serverLogLevel: "off",
   sourceDirectoryUrl,
   keepProcessAlive: !debug,
-  directoryListingUrlMocks: true,
+  directoryListing: {
+    urlMocks: true,
+  },
   port: 0,
+  plugins: [jsenvPluginPreact()],
 });
 const browser = await chromium.launch({
   headless: !debug,

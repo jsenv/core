@@ -1,5 +1,6 @@
 import { startDevServer } from "@jsenv/core";
 import { replaceFileStructureSync, writeFileSync } from "@jsenv/filesystem";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 import { chromium } from "playwright";
 
 let debug = false;
@@ -16,8 +17,11 @@ const devServer = await startDevServer({
   serverLogLevel: "off",
   sourceDirectoryUrl,
   keepProcessAlive: !debug,
-  directoryListingUrlMocks: true,
+  directoryListing: {
+    urlMocks: true,
+  },
   clientAutoreload: false,
+  plugins: [jsenvPluginPreact()],
   port: 0,
 });
 const browser = await chromium.launch({
@@ -37,7 +41,9 @@ const takeScreenshot = async (scenario) => {
 try {
   await page.goto(`${devServer.origin}`);
   await takeScreenshot("0_at_start");
-  await page.locator(`a:text-matches("../packages/")`).click();
+  await page.locator(`a:text-matches("git_ignored")`).click();
+  await takeScreenshot("1_after_click_git_ignored");
+  await page.locator(`a:text-matches("packages/")`).click();
   await takeScreenshot("1_after_click_packages");
 } finally {
   if (!debug) {

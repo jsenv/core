@@ -236,6 +236,7 @@ const createUrlInfo = (url, context) => {
     writable: false,
     value: url,
   });
+  urlInfo.pathname = new URL(url).pathname;
   urlInfo.searchParams = new URL(url).searchParams;
 
   urlInfo.dependencies = createDependencies(urlInfo);

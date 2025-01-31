@@ -256,9 +256,11 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
             const { line, column, isOriginal } = getHtmlNodePosition(node, {
               preferOriginal: true,
             });
-            const inlineContentUrl = getUrlForContentInsideHtml(node, {
-              htmlUrl: urlInfo.url,
-            });
+            const inlineContentUrl = getUrlForContentInsideHtml(
+              node,
+              urlInfo,
+              null,
+            );
             const debug =
               getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
             const inlineReference = urlInfo.dependencies.foundInline({
@@ -399,9 +401,8 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
                   );
                   const importmapInlineUrl = getUrlForContentInsideHtml(
                     scriptNode,
-                    {
-                      htmlUrl: urlInfo.url,
-                    },
+                    urlInfo,
+                    importmapReference,
                   );
                   const importmapReferenceInlined = importmapReference.inline({
                     line,

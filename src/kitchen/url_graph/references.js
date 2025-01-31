@@ -111,7 +111,7 @@ export const createDependencies = (ownerUrlInfo) => {
     const injectAsBannerCodeBeforeFinalize = (urlInfoReceiver) => {
       const basename = urlToBasename(sideEffectFileUrl);
       const inlineUrl = generateUrlForInlineContent({
-        url: urlInfoReceiver.url,
+        url: urlInfoReceiver.originalUrl || urlInfoReceiver.url,
         basename,
         extension: urlToExtension(sideEffectFileUrl),
       });

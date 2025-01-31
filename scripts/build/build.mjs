@@ -1,5 +1,6 @@
 import { build } from "@jsenv/core";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 await build({
   sourceDirectoryUrl: new URL("../../src/", import.meta.url),
@@ -30,6 +31,7 @@ await build({
     "file://**/node_modules/is-unicode-supported/": false,
     "file://**/node_modules/supports-color/": false,
     "file://**/node_modules/environment/": false,
+    "file://**/node_modules/preact/": false,
   },
   directoryReferenceEffect: (reference) => {
     // jsenv core directory url
@@ -51,6 +53,7 @@ await build({
         "file:///**/node_modules/ws/": true,
       },
     }),
+    jsenvPluginPreact({}),
   ],
   // for debug
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),

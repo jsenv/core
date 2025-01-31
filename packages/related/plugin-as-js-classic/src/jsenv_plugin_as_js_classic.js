@@ -74,13 +74,13 @@ export const jsenvPluginAsJsClassic = () => {
       }
 
       if (urlInfo.context.dev) {
-        jsModuleBundledUrlInfo.sourceUrls.forEach((sourceUrl) => {
+        for (const sourceUrl of jsModuleBundledUrlInfo.sourceUrls) {
           urlInfo.dependencies.inject({
             isImplicit: true,
             type: "js_url",
             specifier: sourceUrl,
           });
-        });
+        }
       }
 
       const { content, sourcemap } = await convertJsModuleToJsClassic({

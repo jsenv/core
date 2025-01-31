@@ -92,10 +92,7 @@ export const createKitchen = ({
     initialPluginsMeta,
   );
   kitchen.pluginController = pluginController;
-  pluginController.pushPlugin(jsenvPluginHtmlSyntaxErrorFallback());
-  plugins.forEach((pluginEntry) => {
-    pluginController.pushPlugin(pluginEntry);
-  });
+  pluginController.pushPlugin(jsenvPluginHtmlSyntaxErrorFallback(), ...plugins);
 
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,

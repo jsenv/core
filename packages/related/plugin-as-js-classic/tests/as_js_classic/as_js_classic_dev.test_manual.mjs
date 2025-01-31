@@ -6,6 +6,7 @@ startDevServer({
   plugins: [jsenvPluginAsJsClassic()],
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
   sourceMainFilePath: "main.html",
-  clientAutoreload: true,
+  clientAutoreload: false,
   supervisor: false,
+  ribbon: false,
 });

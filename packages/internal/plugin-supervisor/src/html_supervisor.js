@@ -91,9 +91,11 @@ export const injectSupervisorIntoHTML = async (
       const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
         preferOriginal: true,
       });
-      const inlineScriptUrl = getUrlForContentInsideHtml(scriptNode, {
-        htmlUrl: url,
-      });
+      const inlineScriptUrl = getUrlForContentInsideHtml(
+        scriptNode,
+        { url },
+        null,
+      );
       const inlineScriptSrc = generateInlineScriptSrc({
         type,
         textContent,

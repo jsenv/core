@@ -1,5 +1,6 @@
 import { startDevServer } from "@jsenv/core";
 import { replaceFileStructureSync } from "@jsenv/filesystem";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 let fixture = "0_at_start";
 // let fixture = "1_many_files";
@@ -16,4 +17,5 @@ await startDevServer({
   clientAutoreload: true,
   supervisor: false,
   ribbon: false,
+  plugins: [jsenvPluginPreact()],
 });

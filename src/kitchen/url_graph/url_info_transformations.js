@@ -4,7 +4,14 @@ import {
   generateSourcemapDataUrl,
   SOURCEMAP,
 } from "@jsenv/sourcemap";
-import { isFileSystemPath, urlToPathname, urlToRelativeUrl } from "@jsenv/urls";
+import {
+  isFileSystemPath,
+  setUrlBasename,
+  urlToBasename,
+  urlToFileSystemPath,
+  urlToPathname,
+  urlToRelativeUrl,
+} from "@jsenv/urls";
 import { pathToFileURL } from "node:url";
 import {
   defineGettersOnPropertiesDerivedFromContent,
@@ -279,7 +286,15 @@ export const createUrlInfoTransformer = ({
       contentIsInlined = false;
     }
     if (!contentIsInlined) {
-      writeFileSync(new URL(generatedUrl), urlInfo.content, { force: true });
+      const generatedUrlObject = new URL(generatedUrl);
+      let baseName = urlToBasename(generatedUrlObject);
+      for (const [key, value] of generatedUrlObject.searchParams) {
+        baseName += `7${encodeFilePathComponent(key)}=${encodeFilePathComponent(value)}`;
+      }
+      const outFileUrl = setUrlBasename(generatedUrlObject, baseName);
+      let outFilePath = urlToFileSystemPath(outFileUrl);
+      outFilePath = truncate(outFilePath, 2055); // for windows
+      writeFileSync(outFilePath, urlInfo.content, { force: true });
     }
     const { sourcemapGeneratedUrl, sourcemapReference } = urlInfo;
     if (sourcemapGeneratedUrl && sourcemapReference) {
@@ -398,6 +413,26 @@ export const createUrlInfoTransformer = ({
   };
 };
 
+// https://gist.github.com/barbietunnie/7bc6d48a424446c44ff4
+const illegalRe = /[/?<>\\:*|"]/g;
+// eslint-disable-next-line no-control-regex
+const controlRe = /[\x00-\x1f\x80-\x9f]/g;
+const reservedRe = /^\.+$/;
+const windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+const encodeFilePathComponent = (input, replacement = "") => {
+  const encoded = input
+    .replace(illegalRe, replacement)
+    .replace(controlRe, replacement)
+    .replace(reservedRe, replacement)
+    .replace(windowsReservedRe, replacement);
+  return encoded;
+};
+const truncate = (sanitized, length) => {
+  const uint8Array = new TextEncoder().encode(sanitized);
+  const truncated = uint8Array.slice(0, length);
+  return new TextDecoder().decode(truncated);
+};
+
 const shouldUpdateSourcemapComment = (urlInfo, sourcemaps) => {
   if (urlInfo.context.buildStep === "shape") {
     return false;
@@ -407,7 +442,6 @@ const shouldUpdateSourcemapComment = (urlInfo, sourcemaps) => {
   }
   return false;
 };
-
 const mayHaveSourcemap = (urlInfo) => {
   if (urlInfo.url.startsWith("data:")) {
     return false;
@@ -417,7 +451,6 @@ const mayHaveSourcemap = (urlInfo) => {
   }
   return true;
 };
-
 const shouldHandleSourcemap = (urlInfo) => {
   const { sourcemaps } = urlInfo.context;
   if (

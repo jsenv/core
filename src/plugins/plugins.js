@@ -32,7 +32,7 @@ export const getCorePlugins = ({
   nodeEsmResolution = {},
   magicExtensions,
   magicDirectoryIndex,
-  directoryListingUrlMocks,
+  directoryListing = true,
   directoryReferenceEffect,
   supervisor,
   injections,
@@ -60,13 +60,16 @@ export const getCorePlugins = ({
   if (http === false) {
     http = { include: false };
   }
+  if (directoryListing === true) {
+    directoryListing = {};
+  }
 
   return [
     jsenvPluginReferenceAnalysis(referenceAnalysis),
     ...(injections ? [jsenvPluginInjections(injections)] : []),
     jsenvPluginTranspilation(transpilation),
+    // "jsenvPluginInlining" must be very soon because all other plugins will react differently once they see the file is inlined
     ...(inlining ? [jsenvPluginInlining()] : []),
-    ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // after inline as it needs inline script to be cooked
 
     /* When resolving references the following applies by default:
        - http urls are resolved by jsenvPluginHttpUrls
@@ -78,9 +81,8 @@ export const getCorePlugins = ({
     jsenvPluginProtocolFile({
       magicExtensions,
       magicDirectoryIndex,
-      directoryListingUrlMocks,
+      directoryListing,
     }),
-
     {
       name: "jsenv:resolve_root_as_main",
       appliesDuring: "*",
@@ -99,12 +101,14 @@ export const getCorePlugins = ({
       : []),
     jsenvPluginWebResolution(),
     jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
-
     jsenvPluginVersionSearchParam(),
+
+    // "jsenvPluginSupervisor" MUST be after "jsenvPluginInlining" as it needs inline script to be cooked
+    ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
+
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
     ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []),
-
     jsenvPluginNodeRuntime({ runtimeCompat }),
 
     jsenvPluginImportMetaHot(),

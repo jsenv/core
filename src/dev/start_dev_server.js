@@ -15,7 +15,6 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, readFileSync } from "node:fs";
-
 import { defaultRuntimeCompat } from "../build/build.js";
 import { createEventEmitter } from "../helpers/event_emitter.js";
 import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
@@ -24,8 +23,7 @@ import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
 import { getCorePlugins } from "../plugins/plugins.js";
-import { jsenvPluginServerEventsClientInjection } from "../plugins/server_events/jsenv_plugin_server_events_client_injection.js";
-import { createServerEventsDispatcher } from "../plugins/server_events/server_events_dispatcher.js";
+import { jsenvPluginServerEvents } from "../plugins/server_events/jsenv_plugin_server_events.js";
 import { parseUserAgentHeader } from "./user_agent.js";
 
 const EXECUTED_BY_TEST_PLAN = process.argv.includes("--jsenv-test");
@@ -71,7 +69,7 @@ export const startDevServer = async ({
   supervisor = true,
   magicExtensions,
   magicDirectoryIndex,
-  directoryListingUrlMocks,
+  directoryListing,
   injections,
   transpilation,
   cacheControl = true,
@@ -145,10 +143,11 @@ export const startDevServer = async ({
   });
 
   const serverStopCallbackSet = new Set();
-  const serverEventsDispatcher = createServerEventsDispatcher();
+  const serverStopAbortController = new AbortController();
   serverStopCallbackSet.add(() => {
-    serverEventsDispatcher.destroy();
+    serverStopAbortController.abort();
   });
+  const serverStopAbortSignal = serverStopAbortController.signal;
   const kitchenCache = new Map();
 
   const finalServices = [];
@@ -251,7 +250,7 @@ export const startDevServer = async ({
 
       kitchen = createKitchen({
         name: runtimeId,
-        signal,
+        signal: serverStopAbortSignal,
         logLevel,
         rootDirectoryUrl: sourceDirectoryUrl,
         mainFilePath: sourceMainFilePath,
@@ -260,6 +259,7 @@ export const startDevServer = async ({
         runtimeCompat,
         clientRuntimeCompat,
         plugins: [
+          jsenvPluginServerEvents({ clientAutoreload }),
           ...plugins,
           ...getCorePlugins({
             rootDirectoryUrl: sourceDirectoryUrl,
@@ -269,7 +269,7 @@ export const startDevServer = async ({
             nodeEsmResolution,
             magicExtensions,
             magicDirectoryIndex,
-            directoryListingUrlMocks,
+            directoryListing,
             supervisor,
             injections,
             transpilation,
@@ -335,7 +335,22 @@ export const startDevServer = async ({
           for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
             const implicitUrlInfo =
               urlInfoCreated.graph.getUrlInfo(implicitUrl);
-            if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
+            if (!implicitUrlInfo) {
+              continue;
+            }
+            if (implicitUrlInfo.content === undefined) {
+              // happens when we explicitely load an url with a search param
+              // - it creates an implicit url info to the url without params
+              // - we never explicitely request the url without search param so it has no content
+              // in that case the underlying urlInfo cannot be invalidate by the implicit
+              // we use modifiedTimestamp to detect if the url was loaded once
+              // or is just here to be used later
+              if (implicitUrlInfo.modifiedTimestamp) {
+                return false;
+              }
+              continue;
+            }
+            if (!implicitUrlInfo.isValid()) {
               return false;
             }
           }
@@ -354,41 +369,6 @@ export const startDevServer = async ({
       serverStopCallbackSet.add(() => {
         kitchen.pluginController.callHooks("destroy", kitchen.context);
       });
-      server_events: {
-        const allServerEvents = {};
-        kitchen.pluginController.plugins.forEach((plugin) => {
-          const { serverEvents } = plugin;
-          if (serverEvents) {
-            Object.keys(serverEvents).forEach((serverEventName) => {
-              // we could throw on serverEvent name conflict
-              // we could throw if serverEvents[serverEventName] is not a function
-              allServerEvents[serverEventName] = serverEvents[serverEventName];
-            });
-          }
-        });
-        const serverEventNames = Object.keys(allServerEvents);
-        if (serverEventNames.length > 0) {
-          Object.keys(allServerEvents).forEach((serverEventName) => {
-            const serverEventInfo = {
-              ...kitchen.context,
-              sendServerEvent: (data) => {
-                serverEventsDispatcher.dispatch({
-                  type: serverEventName,
-                  data,
-                });
-              },
-            };
-            const serverEventInit = allServerEvents[serverEventName];
-            serverEventInit(serverEventInfo);
-          });
-          kitchen.pluginController.unshiftPlugin(
-            jsenvPluginServerEventsClientInjection(
-              clientAutoreload.clientServerEventsConfig,
-            ),
-          );
-        }
-      }
-
       kitchenCache.set(runtimeId, kitchen);
       onKitchenCreated(kitchen);
       return kitchen;
@@ -410,6 +390,20 @@ export const startDevServer = async ({
         if (responseFromPlugin) {
           return responseFromPlugin;
         }
+        const { rootDirectoryUrl, mainFilePath } = kitchen.context;
+        let requestResource = request.resource;
+        let requestedUrl;
+        if (requestResource.startsWith("/@fs/")) {
+          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
+          requestedUrl = `file:///${fsRootRelativeUrl}`;
+        } else {
+          const requestedUrlObject = new URL(
+            requestResource === "/" ? mainFilePath : requestResource.slice(1),
+            rootDirectoryUrl,
+          );
+          requestedUrlObject.searchParams.delete("hot");
+          requestedUrl = requestedUrlObject.href;
+        }
         const { referer } = request.headers;
         const parentUrl = referer
           ? WEB_URL_CONVERTER.asFileUrl(referer, {
@@ -421,15 +415,20 @@ export const startDevServer = async ({
           request.resource,
           parentUrl,
         );
-        if (!reference) {
+        if (reference) {
+          reference.urlInfo.context.request = request;
+          reference.urlInfo.context.requestedUrl = requestedUrl;
+        } else {
           const rootUrlInfo = kitchen.graph.rootUrlInfo;
           rootUrlInfo.context.request = request;
+          rootUrlInfo.context.requestedUrl = requestedUrl;
           reference = rootUrlInfo.dependencies.createResolveAndFinalize({
             trace: { message: parentUrl },
             type: "http_request",
             specifier: request.resource,
           });
           rootUrlInfo.context.request = null;
+          rootUrlInfo.context.requestedUrl = null;
         }
         const urlInfo = reference.urlInfo;
         const ifNoneMatch = request.headers["if-none-match"];
@@ -473,9 +472,10 @@ export const startDevServer = async ({
               // If they match jsenv bypass cooking and returns 304
               // This must not happen when a plugin uses "no-store" or "no-cache" as it means
               // plugin logic wants to happens for every request to this url
-              ...(urlInfo.headers["cache-control"] === "no-store" ||
-              urlInfo.headers["cache-control"] === "no-cache"
-                ? {}
+              ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
+                ? {
+                    "cache-control": "no-store", // for inline file we force no-store when parent is no-store
+                  }
                 : {
                     "cache-control": `private,max-age=0,must-revalidate`,
                     // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
@@ -576,13 +576,20 @@ ${error.trace?.message}`);
           };
         }
       },
-      handleWebsocket: (websocket, { request }) => {
+      handleWebsocket: async (websocket, { request }) => {
         // if (true || logLevel === "debug") {
         //   console.log("handleWebsocket", websocket, request.headers);
         // }
-        if (request.headers["sec-websocket-protocol"] === "jsenv") {
-          serverEventsDispatcher.addWebsocket(websocket, request);
-        }
+        const kitchen = getOrCreateKitchen(request);
+        const serveWebsocketHookInfo = {
+          request,
+          websocket,
+          context: kitchen.context,
+        };
+        await kitchen.pluginController.callAsyncHooksUntil(
+          "serveWebsocket",
+          serveWebsocketHookInfo,
+        );
       },
     });
   }
@@ -674,4 +681,11 @@ ${error.trace?.message}`);
     },
     kitchenCache,
   };
+};
+
+const cacheIsDisabledInResponseHeader = (urlInfo) => {
+  return (
+    urlInfo.headers["cache-control"] === "no-store" ||
+    urlInfo.headers["cache-control"] === "no-cache"
+  );
 };

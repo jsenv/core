@@ -1101,8 +1101,8 @@ const injectSupervisorIntoHTML = async ({
         preferOriginal: true
       });
       const inlineScriptUrl = getUrlForContentInsideHtml(scriptNode, {
-        htmlUrl: url
-      });
+        url
+      }, null);
       const inlineScriptSrc = generateInlineScriptSrc({
         type,
         textContent,
