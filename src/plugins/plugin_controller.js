@@ -33,10 +33,10 @@ export const createPluginController = (
   const pluginCandidates = [];
   const activeEffectSet = new Set();
   const activePlugins = [];
-  // precompute a list of hooks per hookName for one major reason:
-  // - When debugging, there is less iteration
-  // also it should increase perf as there is less work to do
-  let hookGroups = {};
+  // precompute a list of hooks per hookName because:
+  // 1. [MAJOR REASON] when debugging, there is less iteration (so much better)
+  // 2. [MINOR REASON] it should increase perf as there is less work to do
+  const hookSetMap = new Map();
   const addPlugin = (plugin, options) => {
     if (Array.isArray(plugin)) {
       for (const value of plugin) {
@@ -157,7 +157,7 @@ export const createPluginController = (
     activePlugins.sort((a, b) => {
       return pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b);
     });
-    hookGroups = {};
+    hookSetMap.clear();
     for (const activePlugin of activePlugins) {
       for (const key of Object.keys(activePlugin)) {
         if (key === "meta") {
@@ -193,7 +193,11 @@ export const createPluginController = (
         const hookName = key;
         const hookValue = activePlugin[hookName];
         if (hookValue) {
-          const group = hookGroups[hookName] || (hookGroups[hookName] = []);
+          let hookSet = hookSetMap.get(hookName);
+          if (!hookSet) {
+            hookSet = new Set();
+            hookSetMap.set(hookName, hookSet);
+          }
           const hook = {
             plugin: activePlugin,
             name: hookName,
@@ -210,7 +214,7 @@ export const createPluginController = (
           //   }
           //   group.splice(i, 0, hook);
           // } else {
-          group.push(hook);
+          hookSet.add(hook);
         }
       }
     }
@@ -266,67 +270,69 @@ export const createPluginController = (
   };
 
   const callHooks = (hookName, info, callback) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      const setHookParams = (firstArg = info) => {
-        info = firstArg;
-      };
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info);
-        if (returnValue && callback) {
-          callback(returnValue, hook.plugin, setHookParams);
-        }
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    const setHookParams = (firstArg = info) => {
+      info = firstArg;
+    };
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info);
+      if (returnValue && callback) {
+        callback(returnValue, hook.plugin, setHookParams);
       }
     }
   };
   const callAsyncHooks = async (hookName, info, callback, options) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = await callAsyncHook(hook, info, options);
-        if (returnValue && callback) {
-          await callback(returnValue, hook.plugin);
-        }
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    for (const hook of hookSet) {
+      const returnValue = await callAsyncHook(hook, info, options);
+      if (returnValue && callback) {
+        await callback(returnValue, hook.plugin);
       }
     }
   };
 
   const callHooksUntil = (hookName, info) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info);
-        if (returnValue) {
-          return returnValue;
-        }
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return null;
+    }
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info);
+      if (returnValue) {
+        return returnValue;
       }
     }
     return null;
   };
   const callAsyncHooksUntil = async (hookName, info, options) => {
-    const hooks = hookGroups[hookName];
-    if (!hooks) {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
       return null;
     }
-    if (hooks.length === 0) {
+    if (hookSet.size === 0) {
       return null;
     }
+    const iterator = hookSet.values()[Symbol.iterator]();
     let result;
-    let index = 0;
     const visit = async () => {
-      if (index >= hooks.length) {
+      const { done, value: hook } = iterator.next();
+      if (done) {
         return;
       }
-      const hook = hooks[index];
       const returnValue = await callAsyncHook(hook, info, options);
       if (returnValue) {
         result = returnValue;
         return;
       }
-      index++;
       await visit();
     };
-    await visit(0);
+    await visit();
     return result;
   };
 
