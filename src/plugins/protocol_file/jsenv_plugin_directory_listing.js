@@ -1,8 +1,20 @@
 /*
- * pourquoi le truc avec transformUrlContent et supervisor?
- * je devrait pouvoir modifier le contenu du html
- * mais je suppose qu'il faut que je le fasse avant que supervisor mette son nez dedans
- * donc dans fetchUrlContent? c'est pour ça? a confirmer
+ * NICE TO HAVE:
+ * 
+ * - when visiting urls outside server root directory the UI is messed up
+ * 
+ * Let's say I visit file outside the server root directory that is in 404
+ * We must update the enoent message and maybe other things to take into account
+ * that url is no longer /something but "@fs/project_root/something" in the browser url bar
+ * 
+ * - watching directory might result into things that are not properly handled:
+ * 1. the existing directory is deleted
+ *    -> we should update the whole page to use a new "firstExistingDirectoryUrl"
+ * 2. the enoent is impacted
+ *    -> we should update the ENOENT message
+ * It means the websocket should contain more data and we can't assume firstExistingDirectoryUrl won't change
+ *
+
  */
 
 import {
@@ -29,54 +41,10 @@ const htmlFileUrlForDirectory = new URL(
 );
 
 export const jsenvPluginDirectoryListing = ({
-  supervisorEnabled,
   directoryContentMagicName,
   directoryListingUrlMocks,
   autoreload = true,
 }) => {
-  const extractDirectoryListingParams = (htmlUrlInfo) => {
-    const urlWithoutSearch = asUrlWithoutSearch(htmlUrlInfo.url);
-    if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
-      return null;
-    }
-    const requestedUrl = htmlUrlInfo.searchParams.get("url");
-    if (!requestedUrl) {
-      return null;
-    }
-    htmlUrlInfo.headers["cache-control"] = "no-cache";
-    const enoent = htmlUrlInfo.searchParams.has("enoent");
-    if (enoent) {
-      htmlUrlInfo.status = 404;
-      htmlUrlInfo.headers["cache-control"] = "no-cache";
-    }
-    return {
-      requestedUrl,
-      enoent,
-    };
-  };
-  const replaceDirectoryListingPlaceholder = (
-    urlInfo,
-    { requestedUrl, enoent },
-  ) => {
-    const request = urlInfo.context.request;
-    const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
-    return replacePlaceholders(
-      urlInfo.content,
-      {
-        ...generateDirectoryListingInjection(requestedUrl, {
-          autoreload,
-          request,
-          directoryListingUrlMocks,
-          directoryContentMagicName,
-          rootDirectoryUrl,
-          mainFilePath,
-          enoent,
-        }),
-      },
-      urlInfo,
-    );
-  };
-
   return {
     name: "jsenv:directory_listing",
     appliesDuring: "dev",
@@ -122,38 +90,41 @@ export const jsenvPluginDirectoryListing = ({
       reference.fsStat = null; // reset fsStat, now it's not a directory anyor
       return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
     },
-    // when supervisor is enabled html does not contain placeholder anymore
-    transformUrlContent: supervisorEnabled
-      ? {
-          js_classic: (urlInfo) => {
-            const parentUrlInfo = urlInfo.findParentIfInline();
-            if (!parentUrlInfo) {
-              return null;
-            }
-            const directoryListingParams =
-              extractDirectoryListingParams(parentUrlInfo);
-            if (!directoryListingParams) {
-              return null;
-            }
-            return replaceDirectoryListingPlaceholder(
-              urlInfo,
-              directoryListingParams,
-            );
-          },
+    transformUrlContent: {
+      html: (urlInfo) => {
+        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+        if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
+          return null;
         }
-      : {
-          html: (urlInfo) => {
-            const directoryListingParams =
-              extractDirectoryListingParams(urlInfo);
-            if (!directoryListingParams) {
-              return null;
-            }
-            return replaceDirectoryListingPlaceholder(
-              urlInfo,
-              directoryListingParams,
-            );
+        const requestedUrl = urlInfo.searchParams.get("url");
+        if (!requestedUrl) {
+          return null;
+        }
+        urlInfo.headers["cache-control"] = "no-cache";
+        const enoent = urlInfo.searchParams.has("enoent");
+        if (enoent) {
+          urlInfo.status = 404;
+          urlInfo.headers["cache-control"] = "no-cache";
+        }
+        const request = urlInfo.context.request;
+        const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
+        return replacePlaceholders(
+          urlInfo.content,
+          {
+            ...generateDirectoryListingInjection(requestedUrl, {
+              autoreload,
+              request,
+              directoryListingUrlMocks,
+              directoryContentMagicName,
+              rootDirectoryUrl,
+              mainFilePath,
+              enoent,
+            }),
           },
-        },
+          urlInfo,
+        );
+      },
+    },
     serveWebsocket: ({ websocket, request, context }) => {
       if (!autoreload) {
         return false;
