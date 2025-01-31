@@ -20,6 +20,15 @@ const updateDirectoryContentItems = (value) => {
   for (const dirContentItem of value) {
     if (dirContentItem.isMainFile && window.location.pathname === "/") {
       window.location.reload();
+      return;
+    }
+    const isDirectory = new URL(dirContentItem.url).pathname.endsWith("/");
+    if (
+      !isDirectory &&
+      dirContentItem.urlRelativeToServer === window.location.pathname
+    ) {
+      window.location.reload();
+      return;
     }
   }
   for (const directoryItemsChangeCallback of directoryItemsChangeCallbackSet) {
