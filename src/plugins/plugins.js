@@ -32,7 +32,7 @@ export const getCorePlugins = ({
   nodeEsmResolution = {},
   magicExtensions,
   magicDirectoryIndex,
-  directoryListingUrlMocks,
+  directoryListing = true,
   directoryReferenceEffect,
   supervisor,
   injections,
@@ -60,6 +60,9 @@ export const getCorePlugins = ({
   if (http === false) {
     http = { include: false };
   }
+  if (directoryListing === true) {
+    directoryListing = {};
+  }
 
   return [
     jsenvPluginReferenceAnalysis(referenceAnalysis),
@@ -78,7 +81,7 @@ export const getCorePlugins = ({
     jsenvPluginProtocolFile({
       magicExtensions,
       magicDirectoryIndex,
-      directoryListingUrlMocks,
+      directoryListing,
     }),
     {
       name: "jsenv:resolve_root_as_main",

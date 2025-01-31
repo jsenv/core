@@ -39,7 +39,9 @@ const devServer = await startDevServer({
   serverLogLevel: "off",
   sourceDirectoryUrl,
   keepProcessAlive: !debug,
-  directoryListingUrlMocks: true,
+  directoryListing: {
+    urlMocks: true,
+  },
   port: 0,
   plugins: [jsenvPluginPreact()],
 });

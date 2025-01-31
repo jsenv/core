@@ -41,9 +41,9 @@ const htmlFileUrlForDirectory = new URL(
 );
 
 export const jsenvPluginDirectoryListing = ({
-  directoryContentMagicName,
-  directoryListingUrlMocks,
+  urlMocks = false,
   autoreload = true,
+  directoryContentMagicName,
 }) => {
   return {
     name: "jsenv:directory_listing",
@@ -114,7 +114,7 @@ export const jsenvPluginDirectoryListing = ({
             ...generateDirectoryListingInjection(requestedUrl, {
               autoreload,
               request,
-              directoryListingUrlMocks,
+              urlMocks,
               directoryContentMagicName,
               rootDirectoryUrl,
               mainFilePath,
@@ -193,7 +193,7 @@ const generateDirectoryListingInjection = (
     rootDirectoryUrl,
     mainFilePath,
     request,
-    directoryListingUrlMocks,
+    urlMocks,
     directoryContentMagicName,
     autoreload,
     enoent,
@@ -332,7 +332,7 @@ const generateDirectoryListingInjection = (
     __DIRECTORY_LISTING__: {
       enoentDetails,
       navItems,
-      directoryListingUrlMocks,
+      urlMocks,
       directoryContentMagicName,
       directoryUrl: firstExistingDirectoryUrl,
       serverRootDirectoryUrl,

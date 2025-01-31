@@ -9,11 +9,10 @@ import { jsenvPluginFsRedirection } from "./jsenv_plugin_fs_redirection.js";
 const directoryContentMagicName = "...";
 
 export const jsenvPluginProtocolFile = ({
-  supervisorEnabled,
   magicExtensions,
   magicDirectoryIndex,
   preserveSymlinks,
-  directoryListingUrlMocks,
+  directoryListing,
 }) => {
   return [
     jsenvPluginFsRedirection({
@@ -69,11 +68,14 @@ export const jsenvPluginProtocolFile = ({
         );
       },
     },
-    jsenvPluginDirectoryListing({
-      supervisorEnabled,
-      directoryContentMagicName,
-      directoryListingUrlMocks,
-    }),
+    ...(directoryListing
+      ? [
+          jsenvPluginDirectoryListing({
+            ...directoryListing,
+            directoryContentMagicName,
+          }),
+        ]
+      : []),
     {
       name: "jsenv:directory_as_json",
       appliesDuring: "*",
