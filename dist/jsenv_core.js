@@ -5013,6 +5013,17 @@ const fromNodeRequest = (
   nodeRequest,
   { serverOrigin, signal, requestBodyLifetime },
 ) => {
+  const handleRequestOperation = Abort.startOperation();
+  if (signal) {
+    handleRequestOperation.addAbortSignal(signal);
+  }
+  handleRequestOperation.addAbortSource((abort) => {
+    nodeRequest.once("close", abort);
+    return () => {
+      nodeRequest.removeListener("close", abort);
+    };
+  });
+
   const headers = headersFromObject(nodeRequest.headers);
   const body = observableFromNodeStream(nodeRequest, {
     readableStreamLifetime: requestBodyLifetime,
@@ -5034,7 +5045,7 @@ const fromNodeRequest = (
   }
 
   return Object.freeze({
-    signal,
+    signal: handleRequestOperation.signal,
     http2: Boolean(nodeRequest.stream),
     origin: requestOrigin,
     ...getPropertiesFromResource({
@@ -6934,6 +6945,15 @@ const startServer = async ({
     status = "stopped";
     stoppedResolve(reason);
   });
+  let stopAbortSignal;
+  {
+    let stopAbortController = new AbortController();
+    stopCallbackSet.add(() => {
+      stopAbortController.abort();
+      stopAbortController = undefined;
+    });
+    stopAbortSignal = stopAbortController.signal;
+  }
 
   const cancelProcessTeardownRace = raceProcessTeardownEvents(
     processTeardownEvents,
@@ -7001,6 +7021,9 @@ const startServer = async ({
       }
 
       const receiveRequestOperation = Abort.startOperation();
+      receiveRequestOperation.addAbortSignal(stopAbortSignal);
+      const sendResponseOperation = Abort.startOperation();
+      sendResponseOperation.addAbortSignal(stopAbortSignal);
       receiveRequestOperation.addAbortSource((abort) => {
         const closeEventCallback = () => {
           if (nodeRequest.complete) {
@@ -7015,19 +7038,11 @@ const startServer = async ({
           nodeRequest.removeListener("close", closeEventCallback);
         };
       });
-      receiveRequestOperation.addAbortSource((abort) => {
-        return stopCallbackSet.add(abort);
-      });
-
-      const sendResponseOperation = Abort.startOperation();
       sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
-      sendResponseOperation.addAbortSource((abort) => {
-        return stopCallbackSet.add(abort);
-      });
 
       const request = fromNodeRequest(nodeRequest, {
+        signal: stopAbortSignal,
         serverOrigin,
-        signal: receiveRequestOperation.signal,
       });
 
       // Handling request is asynchronous, we buffer logs for that request
@@ -7601,13 +7616,16 @@ const startServer = async ({
           socket,
           head,
           async (websocket) => {
+            const websocketAbortController = new AbortController();
             websocketClients.add(websocket);
+            websocket.signal = websocketAbortController.signal;
             websocket.once("close", () => {
               websocketClients.delete(websocket);
+              websocketAbortController.abort();
             });
             const request = fromNodeRequest(nodeRequest, {
+              signal: stopAbortSignal,
               serverOrigin: websocketOrigin,
-              signal: new AbortController().signal,
               requestBodyLifetime,
             });
             serviceController.callAsyncHooksUntil(
@@ -11748,6 +11766,7 @@ const replacePlaceholders$1 = (html, replacers) => {
 const HOOK_NAMES = [
   "init",
   "serve", // is called only during dev/tests
+  "serveWebsocket",
   "resolveReference",
   "redirectReference",
   "transformReferenceSearchParams",
@@ -11760,6 +11779,7 @@ const HOOK_NAMES = [
   "cooked",
   "augmentResponse", // is called only during dev/tests
   "destroy",
+  "effect",
 ];
 
 const createPluginController = (
@@ -11773,19 +11793,18 @@ const createPluginController = (
     return value;
   };
 
-  const plugins = [];
-  // precompute a list of hooks per hookName for one major reason:
-  // - When debugging, there is less iteration
-  // also it should increase perf as there is less work to do
-  const hookGroups = {};
-  const addPlugin = (plugin, { position = "end" }) => {
+  const pluginCandidates = [];
+  const activeEffectSet = new Set();
+  const activePlugins = [];
+  // precompute a list of hooks per hookName because:
+  // 1. [MAJOR REASON] when debugging, there is less iteration (so much better)
+  // 2. [MINOR REASON] it should increase perf as there is less work to do
+  const hookSetMap = new Map();
+  const addPlugin = (plugin, options) => {
     if (Array.isArray(plugin)) {
-      if (position === "start") {
-        plugin = plugin.slice().reverse();
+      for (const value of plugin) {
+        addPlugin(value);
       }
-      plugin.forEach((plugin) => {
-        addPlugin(plugin, { position });
-      });
       return;
     }
     if (plugin === null || typeof plugin !== "object") {
@@ -11795,65 +11814,10 @@ const createPluginController = (
       plugin.name = "anonymous";
     }
     if (!testAppliesDuring(plugin) || !initPlugin(plugin)) {
-      if (plugin.destroy) {
-        plugin.destroy();
-      }
+      plugin.destroy?.();
       return;
     }
-    plugins.push(plugin);
-    for (const key of Object.keys(plugin)) {
-      if (key === "meta") {
-        const value = plugin[key];
-        if (typeof value !== "object" || value === null) {
-          console.warn(`plugin.meta must be an object, got ${value}`);
-          continue;
-        }
-        Object.assign(pluginsMeta, value);
-        // any extension/modification on plugin.meta
-        // won't be taken into account so we freeze object
-        // to throw in case it happen
-        Object.freeze(value);
-        continue;
-      }
-
-      if (
-        key === "name" ||
-        key === "appliesDuring" ||
-        key === "init" ||
-        key === "serverEvents" ||
-        key === "mustStayFirst"
-      ) {
-        continue;
-      }
-      const isHook = HOOK_NAMES.includes(key);
-      if (!isHook) {
-        console.warn(`Unexpected "${key}" property on "${plugin.name}" plugin`);
-        continue;
-      }
-      const hookName = key;
-      const hookValue = plugin[hookName];
-      if (hookValue) {
-        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
-        const hook = {
-          plugin,
-          name: hookName,
-          value: hookValue,
-        };
-        if (position === "start") {
-          let i = 0;
-          while (i < group.length) {
-            const before = group[i];
-            if (!before.plugin.mustStayFirst) {
-              break;
-            }
-            i++;
-          }
-          group.splice(i, 0, hook);
-        } else {
-          group.push(hook);
-        }
-      }
-    }
+    pluginCandidates.push(plugin);
   };
   const testAppliesDuring = (plugin) => {
     const { appliesDuring } = plugin;
@@ -11892,22 +11856,131 @@ const createPluginController = (
     );
   };
   const initPlugin = (plugin) => {
-    if (plugin.init) {
-      const initReturnValue = plugin.init(kitchenContext, plugin);
-      if (initReturnValue === false) {
-        return false;
-      }
-      if (typeof initReturnValue === "function" && !plugin.destroy) {
-        plugin.destroy = initReturnValue;
-      }
+    const { init } = plugin;
+    if (!init) {
+      return true;
+    }
+    const initReturnValue = init(kitchenContext, { plugin });
+    if (initReturnValue === false) {
+      return false;
+    }
+    if (typeof initReturnValue === "function" && !plugin.destroy) {
+      plugin.destroy = initReturnValue;
     }
     return true;
   };
-  const pushPlugin = (plugin) => {
-    addPlugin(plugin, { position: "end" });
+  const pushPlugin = (...args) => {
+    for (const arg of args) {
+      addPlugin(arg);
+    }
+    updateActivePlugins();
   };
-  const unshiftPlugin = (plugin) => {
-    addPlugin(plugin, { position: "start" });
+  const updateActivePlugins = () => {
+    // construct activePlugins and hooks according
+    // to the one present in candidates and their effects
+    // 1. active plugins is an empty array
+    // 2. all active effects are cleaned-up
+    // 3. all effects are re-activated if still relevant
+    // 4. hooks are precomputed according to plugin order
+
+    // 1.
+    activePlugins.length = 0;
+    // 2.
+    for (const { cleanup } of activeEffectSet) {
+      cleanup();
+    }
+    activeEffectSet.clear();
+    for (const pluginCandidate of pluginCandidates) {
+      const effect = pluginCandidate.effect;
+      if (!effect) {
+        activePlugins.push(pluginCandidate);
+        continue;
+      }
+    }
+    // 3.
+    for (const pluginCandidate of pluginCandidates) {
+      const effect = pluginCandidate.effect;
+      if (!effect) {
+        continue;
+      }
+      const returnValue = effect({
+        kitchenContext,
+        otherPlugins: activePlugins,
+      });
+      if (!returnValue) {
+        continue;
+      }
+      activePlugins.push(pluginCandidate);
+      activeEffectSet.add({
+        plugin: pluginCandidate,
+        cleanup: typeof returnValue === "function" ? returnValue : () => {},
+      });
+    }
+    // 4.
+    activePlugins.sort((a, b) => {
+      return pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b);
+    });
+    hookSetMap.clear();
+    for (const activePlugin of activePlugins) {
+      for (const key of Object.keys(activePlugin)) {
+        if (key === "meta") {
+          const value = activePlugin[key];
+          if (typeof value !== "object" || value === null) {
+            console.warn(`plugin.meta must be an object, got ${value}`);
+            continue;
+          }
+          Object.assign(pluginsMeta, value);
+          // any extension/modification on plugin.meta
+          // won't be taken into account so we freeze object
+          // to throw in case it happen
+          Object.freeze(value);
+          continue;
+        }
+        if (
+          key === "name" ||
+          key === "appliesDuring" ||
+          key === "init" ||
+          key === "serverEvents" ||
+          key === "mustStayFirst" ||
+          key === "effect"
+        ) {
+          continue;
+        }
+        const isHook = HOOK_NAMES.includes(key);
+        if (!isHook) {
+          console.warn(
+            `Unexpected "${key}" property on "${activePlugin.name}" plugin`,
+          );
+          continue;
+        }
+        const hookName = key;
+        const hookValue = activePlugin[hookName];
+        if (hookValue) {
+          let hookSet = hookSetMap.get(hookName);
+          if (!hookSet) {
+            hookSet = new Set();
+            hookSetMap.set(hookName, hookSet);
+          }
+          const hook = {
+            plugin: activePlugin,
+            name: hookName,
+            value: hookValue,
+          };
+          // if (position === "start") {
+          //   let i = 0;
+          //   while (i < group.length) {
+          //     const before = group[i];
+          //     if (!before.plugin.mustStayFirst) {
+          //       break;
+          //     }
+          //     i++;
+          //   }
+          //   group.splice(i, 0, hook);
+          // } else {
+          hookSet.add(hook);
+        }
+      }
+    }
   };
 
   let lastPluginUsed = null;
@@ -11960,64 +12033,66 @@ const createPluginController = (
   };
 
   const callHooks = (hookName, info, callback) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      const setHookParams = (firstArg = info) => {
-        info = firstArg;
-      };
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info);
-        if (returnValue && callback) {
-          callback(returnValue, hook.plugin, setHookParams);
-        }
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    const setHookParams = (firstArg = info) => {
+      info = firstArg;
+    };
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info);
+      if (returnValue && callback) {
+        callback(returnValue, hook.plugin, setHookParams);
       }
     }
   };
   const callAsyncHooks = async (hookName, info, callback, options) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = await callAsyncHook(hook, info);
-        if (returnValue && callback) {
-          await callback(returnValue, hook.plugin);
-        }
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    for (const hook of hookSet) {
+      const returnValue = await callAsyncHook(hook, info);
+      if (returnValue && callback) {
+        await callback(returnValue, hook.plugin);
       }
     }
   };
 
   const callHooksUntil = (hookName, info) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info);
-        if (returnValue) {
-          return returnValue;
-        }
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return null;
+    }
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info);
+      if (returnValue) {
+        return returnValue;
       }
     }
     return null;
   };
   const callAsyncHooksUntil = async (hookName, info, options) => {
-    const hooks = hookGroups[hookName];
-    if (!hooks) {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
       return null;
     }
-    if (hooks.length === 0) {
+    if (hookSet.size === 0) {
       return null;
     }
+    const iterator = hookSet.values()[Symbol.iterator]();
     let result;
-    let index = 0;
     const visit = async () => {
-      if (index >= hooks.length) {
+      const { done, value: hook } = iterator.next();
+      if (done) {
         return;
       }
-      const hook = hooks[index];
       const returnValue = await callAsyncHook(hook, info);
       if (returnValue) {
         result = returnValue;
         return;
       }
-      index++;
       await visit();
     };
     await visit();
@@ -12026,9 +12101,8 @@ const createPluginController = (
 
   return {
     pluginsMeta,
-    plugins,
+    activePlugins,
     pushPlugin,
-    unshiftPlugin,
     getHookFunction,
     callHook,
     callAsyncHook,
@@ -12921,7 +12995,7 @@ const createDependencies = (ownerUrlInfo) => {
     const injectAsBannerCodeBeforeFinalize = (urlInfoReceiver) => {
       const basename = urlToBasename(sideEffectFileUrl);
       const inlineUrl = generateUrlForInlineContent({
-        url: urlInfoReceiver.url,
+        url: urlInfoReceiver.originalUrl || urlInfoReceiver.url,
         basename,
         extension: urlToExtension$1(sideEffectFileUrl),
       });
@@ -13084,6 +13158,7 @@ const createReference = ({
   specifierColumn,
   baseUrl,
   isOriginalPosition,
+  isDirectRequest = false,
   isEntryPoint = false,
   isResourceHint = false,
   // implicit references are not real references
@@ -13158,6 +13233,7 @@ const createReference = ({
     specifierColumn,
     isOriginalPosition,
     baseUrl,
+    isDirectRequest,
     isEntryPoint,
     isResourceHint,
     isImplicit,
@@ -14830,10 +14906,7 @@ const createKitchen = ({
     initialPluginsMeta,
   );
   kitchen.pluginController = pluginController;
-  pluginController.pushPlugin(jsenvPluginHtmlSyntaxErrorFallback());
-  plugins.forEach((pluginEntry) => {
-    pluginController.pushPlugin(pluginEntry);
-  });
+  pluginController.pushPlugin(jsenvPluginHtmlSyntaxErrorFallback(), ...plugins);
 
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
@@ -14937,6 +15010,25 @@ const createKitchen = ({
 ${ANSI.color(reference.specifier, ANSI.GREY)} ->
 ${ANSI.color(reference.url, ANSI.YELLOW)}
 `);
+        }
+      }
+      const request = kitchen.context.request;
+      if (request) {
+        let requestResource = request.resource;
+        let requestedUrl;
+        if (requestResource.startsWith("/@fs/")) {
+          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
+          requestedUrl = `file:///${fsRootRelativeUrl}`;
+        } else {
+          const requestedUrlObject = new URL(
+            requestResource === "/" ? mainFilePath : requestResource.slice(1),
+            rootDirectoryUrl,
+          );
+          requestedUrlObject.searchParams.delete("hot");
+          requestedUrl = requestedUrlObject.href;
+        }
+        if (requestedUrl === reference.url) {
+          reference.isDirectRequest = true;
         }
       }
       redirect: {
@@ -15846,10 +15938,11 @@ const jsenvPluginInliningIntoHtml = () => {
           const { line, column, isOriginal } = getHtmlNodePosition(linkNode, {
             preferOriginal: true,
           });
-          const linkInlineUrl = getUrlForContentInsideHtml(linkNode, {
-            htmlUrl: urlInfo.url,
-            url: linkReference.url,
-          });
+          const linkInlineUrl = getUrlForContentInsideHtml(
+            linkNode,
+            urlInfo,
+            linkReference,
+          );
           const linkReferenceInlined = linkReference.inline({
             line,
             column,
@@ -15898,10 +15991,11 @@ const jsenvPluginInliningIntoHtml = () => {
           const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
             preferOriginal: true,
           });
-          const scriptInlineUrl = getUrlForContentInsideHtml(scriptNode, {
-            htmlUrl: urlInfo.url,
-            url: scriptReference.url,
-          });
+          const scriptInlineUrl = getUrlForContentInsideHtml(
+            scriptNode,
+            urlInfo,
+            scriptReference,
+          );
           const scriptReferenceInlined = scriptReference.inline({
             line,
             column,
@@ -17090,9 +17184,11 @@ const jsenvPluginHtmlReferenceAnalysis = ({
             const { line, column, isOriginal } = getHtmlNodePosition(node, {
               preferOriginal: true,
             });
-            const inlineContentUrl = getUrlForContentInsideHtml(node, {
-              htmlUrl: urlInfo.url,
-            });
+            const inlineContentUrl = getUrlForContentInsideHtml(
+              node,
+              urlInfo,
+              null,
+            );
             const debug =
               getHtmlNodeAttribute(node, "jsenv-debug") !== undefined;
             const inlineReference = urlInfo.dependencies.foundInline({
@@ -17233,9 +17329,8 @@ const jsenvPluginHtmlReferenceAnalysis = ({
                   );
                   const importmapInlineUrl = getUrlForContentInsideHtml(
                     scriptNode,
-                    {
-                      htmlUrl: urlInfo.url,
-                    },
+                    urlInfo,
+                    importmapReference,
                   );
                   const importmapReferenceInlined = importmapReference.inline({
                     line,
@@ -17519,9 +17614,7 @@ const parseAndTransformJsReferences = async (
     Object.keys(urlInfo.context.runtimeCompat).toString() === "node";
 
   const onInlineReference = (inlineReferenceInfo) => {
-    const inlineUrl = getUrlForContentInsideJs(inlineReferenceInfo, {
-      url: urlInfo.url,
-    });
+    const inlineUrl = getUrlForContentInsideJs(inlineReferenceInfo, urlInfo);
     let { quote } = inlineReferenceInfo;
     if (quote === "`" && !canUseTemplateLiterals) {
       // if quote is "`" and template literals are not supported
@@ -17764,24 +17857,7 @@ const jsenvPluginInlineContentFetcher = () => {
       if (!urlInfo.isInline) {
         return null;
       }
-      let isDirectRequestToFile;
-      const request = urlInfo.context.request;
-      if (request) {
-        let requestResource = request.resource;
-        let requestedUrl;
-        if (requestResource.startsWith("/@fs/")) {
-          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
-          requestedUrl = `file:///${fsRootRelativeUrl}`;
-        } else {
-          const requestedUrlObject = new URL(
-            requestResource.slice(1),
-            urlInfo.context.rootDirectoryUrl,
-          );
-          requestedUrlObject.searchParams.delete("hot");
-          requestedUrl = requestedUrlObject.href;
-        }
-        isDirectRequestToFile = requestedUrl === urlInfo.url;
-      }
+      const { isDirectRequest } = urlInfo.lastReference;
       /*
        * We want to find inline content but it's not straightforward
        *
@@ -17810,7 +17886,7 @@ const jsenvPluginInlineContentFetcher = () => {
           originalContent = reference.content;
         }
         lastInlineReference = reference;
-        if (isDirectRequestToFile) {
+        if (isDirectRequest) {
           break;
         }
       }
@@ -19223,6 +19299,37 @@ const jsenvPluginVersionSearchParam = () => {
   };
 };
 
+const FILE_AND_SERVER_URLS_CONVERTER = {
+  asServerUrl: (fileUrl, serverRootDirectoryUrl) => {
+    if (fileUrl === serverRootDirectoryUrl) {
+      return "/";
+    }
+    if (urlIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
+      const urlRelativeToServer = urlToRelativeUrl(
+        fileUrl,
+        serverRootDirectoryUrl,
+      );
+      return `/${urlRelativeToServer}`;
+    }
+    const urlRelativeToFilesystemRoot = String(fileUrl).slice(
+      "file:///".length,
+    );
+    return `/@fs/${urlRelativeToFilesystemRoot}`;
+  },
+  asFileUrl: (urlRelativeToServer, serverRootDirectoryUrl) => {
+    if (urlRelativeToServer.startsWith("/@fs/")) {
+      const urlRelativeToFilesystemRoot = urlRelativeToServer.slice(
+        "/@fs/".length,
+      );
+      return `file:///${urlRelativeToFilesystemRoot}`;
+    }
+    if (urlRelativeToServer[0] === "/") {
+      return new URL(urlRelativeToServer.slice(1), serverRootDirectoryUrl).href;
+    }
+    return new URL(urlRelativeToServer, serverRootDirectoryUrl).href;
+  },
+};
+
 const jsenvPluginInjections = (rawAssociations) => {
   let resolvedAssociations;
 
@@ -19321,10 +19428,23 @@ return {
 };
 
 /*
- * TODO:
-status should be 404 when enoent
-cache-control: no-cache for directory_listing.html
-*/
+ * NICE TO HAVE:
+ * 
+ * - when visiting urls outside server root directory the UI is messed up
+ * 
+ * Let's say I visit file outside the server root directory that is in 404
+ * We must update the enoent message and maybe other things to take into account
+ * that url is no longer /something but "@fs/project_root/something" in the browser url bar
+ * 
+ * - watching directory might result into things that are not properly handled:
+ * 1. the existing directory is deleted
+ *    -> we should update the whole page to use a new "firstExistingDirectoryUrl"
+ * 2. the enoent is impacted
+ *    -> we should update the ENOENT message
+ * It means the websocket should contain more data and we can't assume firstExistingDirectoryUrl won't change
+ *
+
+ */
 
 
 const htmlFileUrlForDirectory = new URL(
@@ -19333,66 +19453,33 @@ const htmlFileUrlForDirectory = new URL(
 );
 
 const jsenvPluginDirectoryListing = ({
-  supervisorEnabled,
   directoryContentMagicName,
   directoryListingUrlMocks,
+  autoreload = true,
 }) => {
-  const extractDirectoryListingParams = (htmlUrlInfo) => {
-    const urlWithoutSearch = asUrlWithoutSearch(htmlUrlInfo.url);
-    if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
-      return null;
-    }
-    const requestedUrl = htmlUrlInfo.searchParams.get("url");
-    if (!requestedUrl) {
-      return null;
-    }
-    const enoent = htmlUrlInfo.searchParams.has("enoent");
-    return {
-      requestedUrl,
-      enoent,
-    };
-  };
-  const replaceDirectoryListingPlaceholder = (
-    urlInfo,
-    { requestedUrl, enoent },
-  ) => {
-    const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
-    return replacePlaceholders(
-      urlInfo.content,
-      {
-        ...generateDirectoryListingInjection(requestedUrl, {
-          directoryListingUrlMocks,
-          directoryContentMagicName,
-          rootDirectoryUrl,
-          mainFilePath,
-          enoent,
-        }),
-      },
-      urlInfo,
-    );
-  };
-
   return {
     name: "jsenv:directory_listing",
-    appliesDuring: "*",
+    appliesDuring: "dev",
     redirectReference: (reference) => {
+      if (reference.isInline) {
+        return null;
+      }
       const url = reference.url;
       if (!url.startsWith("file:")) {
         return null;
       }
       let { fsStat } = reference;
       if (!fsStat) {
-        reference.addImplicit({
-          type: "404",
-          specifier: reference.url,
-          isWeak: true,
-        });
         fsStat = readEntryStatSync(url, { nullIfNotFound: true });
         reference.fsStat = fsStat;
       }
+      const { request } = reference.ownerUrlInfo.context;
       if (!fsStat) {
-        const request = reference.ownerUrlInfo.context.request;
-        if (request && request.headers["sec-fetch-dest"] === "document") {
+        if (
+          reference.isDirectRequest &&
+          request &&
+          request.headers["sec-fetch-dest"] === "document"
+        ) {
           return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
         }
         return null;
@@ -19406,93 +19493,135 @@ const jsenvPluginDirectoryListing = ({
         // and any file name ...json is a special file serving directory content as json
         return null;
       }
-      const request = reference.ownerUrlInfo.context.request;
       const acceptsHtml = request
         ? pickContentType(request, ["text/html"])
         : false;
       if (!acceptsHtml) {
         return null;
       }
+      reference.fsStat = null; // reset fsStat, now it's not a directory anyor
       return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}`;
     },
-    fetchUrlContent: (urlInfo) => {
-      const { firstReference } = urlInfo;
-      let { fsStat } = firstReference;
-      if (!fsStat) {
-        fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
-      }
-      const isDirectory = fsStat?.isDirectory();
-      if (!isDirectory) {
-        return null;
-      }
-      const directoryContentArray = readdirSync(new URL(urlInfo.url));
-      const content = JSON.stringify(directoryContentArray, null, "  ");
-      return {
-        type: "directory",
-        contentType: "application/json",
-        content,
-      };
-    },
-    // when supervisor is enabled html does not contain placeholder anymore
-    transformUrlContent: supervisorEnabled
-      ? {
-          js_classic: (urlInfo) => {
-            const parentUrlInfo = urlInfo.findParentIfInline();
-            if (!parentUrlInfo) {
-              return null;
-            }
-            const directoryListingParams =
-              extractDirectoryListingParams(parentUrlInfo);
-            if (!directoryListingParams) {
-              return null;
-            }
-            return replaceDirectoryListingPlaceholder(
-              urlInfo,
-              directoryListingParams,
-            );
-          },
+    transformUrlContent: {
+      html: (urlInfo) => {
+        const urlWithoutSearch = asUrlWithoutSearch(urlInfo.url);
+        if (urlWithoutSearch !== String(htmlFileUrlForDirectory)) {
+          return null;
         }
-      : {
-          html: (urlInfo) => {
-            const directoryListingParams =
-              extractDirectoryListingParams(urlInfo);
-            if (!directoryListingParams) {
-              return null;
-            }
-            return replaceDirectoryListingPlaceholder(
-              urlInfo,
-              directoryListingParams,
-            );
+        const requestedUrl = urlInfo.searchParams.get("url");
+        if (!requestedUrl) {
+          return null;
+        }
+        urlInfo.headers["cache-control"] = "no-cache";
+        const enoent = urlInfo.searchParams.has("enoent");
+        if (enoent) {
+          urlInfo.status = 404;
+          urlInfo.headers["cache-control"] = "no-cache";
+        }
+        const request = urlInfo.context.request;
+        const { rootDirectoryUrl, mainFilePath } = urlInfo.context;
+        return replacePlaceholders(
+          urlInfo.content,
+          {
+            ...generateDirectoryListingInjection(requestedUrl, {
+              autoreload,
+              request,
+              directoryListingUrlMocks,
+              directoryContentMagicName,
+              rootDirectoryUrl,
+              mainFilePath,
+              enoent,
+            }),
           },
+          urlInfo,
+        );
+      },
+    },
+    serveWebsocket: ({ websocket, request, context }) => {
+      if (!autoreload) {
+        return false;
+      }
+      const secProtocol = request.headers["sec-websocket-protocol"];
+      if (secProtocol !== "watch-directory") {
+        return false;
+      }
+      const { rootDirectoryUrl, mainFilePath } = context;
+      const requestedUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
+        request.pathname,
+        rootDirectoryUrl,
+      );
+      const closestDirectoryUrl = getFirstExistingDirectoryUrl(requestedUrl);
+      const sendMessage = (message) => {
+        websocket.send(JSON.stringify(message));
+      };
+      const generateItems = () => {
+        const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
+          requestedUrl,
+          rootDirectoryUrl,
+        );
+        const items = getDirectoryContentItems({
+          serverRootDirectoryUrl: rootDirectoryUrl,
+          mainFilePath,
+          requestedUrl,
+          firstExistingDirectoryUrl,
+        });
+        return items;
+      };
+
+      const unwatch = registerDirectoryLifecycle(closestDirectoryUrl, {
+        added: ({ relativeUrl }) => {
+          sendMessage({
+            type: "change",
+            reason: `${relativeUrl} added`,
+            items: generateItems(),
+          });
         },
+        updated: ({ relativeUrl }) => {
+          sendMessage({
+            type: "change",
+            reason: `${relativeUrl} updated`,
+            items: generateItems(),
+          });
+        },
+        removed: ({ relativeUrl }) => {
+          sendMessage({
+            type: "change",
+            reason: `${relativeUrl} removed`,
+            items: generateItems(),
+          });
+        },
+      });
+      websocket.signal.addEventListener("abort", () => {
+        unwatch();
+      });
+      return true;
+    },
   };
 };
 
 const generateDirectoryListingInjection = (
   requestedUrl,
   {
-    enoent,
-    directoryListingUrlMocks,
-    directoryContentMagicName,
     rootDirectoryUrl,
     mainFilePath,
+    request,
+    directoryListingUrlMocks,
+    directoryContentMagicName,
+    autoreload,
+    enoent,
   },
 ) => {
   let serverRootDirectoryUrl = rootDirectoryUrl;
-  let firstExistingDirectoryUrl = new URL("./", requestedUrl);
-  while (!existsSync(firstExistingDirectoryUrl)) {
-    firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
-    if (!urlIsInsideOf(firstExistingDirectoryUrl, serverRootDirectoryUrl)) {
-      firstExistingDirectoryUrl = new URL(serverRootDirectoryUrl);
-      break;
-    }
-  }
-  const directoryContentArray = readdirSync(firstExistingDirectoryUrl);
-  const fileUrls = [];
-  for (const filename of directoryContentArray) {
-    const fileUrlObject = new URL(filename, firstExistingDirectoryUrl);
-    fileUrls.push(fileUrlObject);
-  }
+  const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
+    requestedUrl,
+    serverRootDirectoryUrl,
+  );
+  const directoryContentItems = getDirectoryContentItems({
+    serverRootDirectoryUrl,
+    mainFilePath,
+    requestedUrl,
+    firstExistingDirectoryUrl,
+  });
   package_workspaces: {
     const packageDirectoryUrl = lookupPackageDirectory(serverRootDirectoryUrl);
     if (!packageDirectoryUrl) {
@@ -19528,34 +19657,156 @@ const generateDirectoryListingInjection = (
     //   }
     // }
   }
-  const sortedUrls = [];
-  for (let fileUrl of fileUrls) {
-    if (lstatSync(fileUrl).isDirectory()) {
-      sortedUrls.push(ensurePathnameTrailingSlash(fileUrl));
+  const directoryUrlRelativeToServer =
+    FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
+      firstExistingDirectoryUrl,
+      serverRootDirectoryUrl,
+    );
+  const websocketScheme = request.protocol === "https" ? "wss" : "ws";
+  const { host } = new URL(request.url);
+  const websocketUrl = `${websocketScheme}://${host}${directoryUrlRelativeToServer}`;
+
+  const navItems = [];
+  {
+    const lastItemUrl = firstExistingDirectoryUrl;
+    const lastItemRelativeUrl = urlToRelativeUrl(lastItemUrl, rootDirectoryUrl);
+    const rootDirectoryUrlName = urlToFilename$1(rootDirectoryUrl);
+    let parts;
+    if (lastItemRelativeUrl) {
+      parts = `${rootDirectoryUrlName}/${lastItemRelativeUrl}`.split("/");
     } else {
-      sortedUrls.push(fileUrl);
+      parts = [rootDirectoryUrlName];
+    }
+
+    let i = 0;
+    while (i < parts.length) {
+      const part = parts[i];
+      const isLastPart = i === parts.length - 1;
+      if (isLastPart && part === "") {
+        // ignore trailing slash
+        break;
+      }
+      let navItemRelativeUrl = `${parts.slice(1, i + 1).join("/")}`;
+      let navItemUrl =
+        navItemRelativeUrl === ""
+          ? rootDirectoryUrl
+          : new URL(navItemRelativeUrl, rootDirectoryUrl).href;
+      if (!isLastPart) {
+        navItemUrl = ensurePathnameTrailingSlash(navItemUrl);
+      }
+      let urlRelativeToServer = FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
+        navItemUrl,
+        serverRootDirectoryUrl,
+      );
+      let urlRelativeToDocument = urlToRelativeUrl(navItemUrl, requestedUrl);
+      const isServerRootDirectory = navItemUrl === serverRootDirectoryUrl;
+      if (isServerRootDirectory) {
+        urlRelativeToServer = `/${directoryContentMagicName}`;
+        urlRelativeToDocument = `/${directoryContentMagicName}`;
+      }
+      const name = part;
+      const isCurrent = navItemUrl === String(firstExistingDirectoryUrl);
+      navItems.push({
+        url: navItemUrl,
+        urlRelativeToServer,
+        urlRelativeToDocument,
+        isServerRootDirectory,
+        isCurrent,
+        name,
+      });
+      i++;
     }
   }
-  sortedUrls.sort((a, b) => {
-    return comparePathnames(a.pathname, b.pathname);
-  });
+
+  let enoentDetails = null;
+  if (enoent) {
+    const fileRelativeUrl = urlToRelativeUrl(
+      requestedUrl,
+      serverRootDirectoryUrl,
+    );
+    let filePathExisting;
+    let filePathNotFound;
+    const existingIndex = String(firstExistingDirectoryUrl).length;
+    filePathExisting = urlToRelativeUrl(
+      firstExistingDirectoryUrl,
+      serverRootDirectoryUrl,
+    );
+    filePathNotFound = requestedUrl.slice(existingIndex);
+    enoentDetails = {
+      fileUrl: requestedUrl,
+      fileRelativeUrl,
+      filePathExisting: `/${filePathExisting}`,
+      filePathNotFound,
+    };
+  }
 
   return {
     __DIRECTORY_LISTING__: {
-      enoentDetails: enoent
-        ? {
-            fileUrl: requestedUrl,
-          }
-        : null,
+      enoentDetails,
+      navItems,
       directoryListingUrlMocks,
       directoryContentMagicName,
       directoryUrl: firstExistingDirectoryUrl,
       serverRootDirectoryUrl,
       rootDirectoryUrl,
       mainFilePath,
-      directoryContentItems: sortedUrls,
+      directoryContentItems,
+      websocketUrl,
+      autoreload,
     },
   };
+};
+const getFirstExistingDirectoryUrl = (requestedUrl, serverRootDirectoryUrl) => {
+  let firstExistingDirectoryUrl = new URL("./", requestedUrl);
+  while (!existsSync(firstExistingDirectoryUrl)) {
+    firstExistingDirectoryUrl = new URL("../", firstExistingDirectoryUrl);
+    if (!urlIsInsideOf(firstExistingDirectoryUrl, serverRootDirectoryUrl)) {
+      firstExistingDirectoryUrl = new URL(serverRootDirectoryUrl);
+      break;
+    }
+  }
+  return firstExistingDirectoryUrl;
+};
+const getDirectoryContentItems = ({
+  serverRootDirectoryUrl,
+  mainFilePath,
+  firstExistingDirectoryUrl,
+}) => {
+  const directoryContentArray = readdirSync(new URL(firstExistingDirectoryUrl));
+  const fileUrls = [];
+  for (const filename of directoryContentArray) {
+    const fileUrlObject = new URL(filename, firstExistingDirectoryUrl);
+    if (lstatSync(fileUrlObject).isDirectory()) {
+      fileUrls.push(ensurePathnameTrailingSlash(fileUrlObject));
+    } else {
+      fileUrls.push(fileUrlObject);
+    }
+  }
+  fileUrls.sort((a, b) => {
+    return comparePathnames(a.pathname, b.pathname);
+  });
+  const items = [];
+  for (const fileUrl of fileUrls) {
+    const urlRelativeToCurrentDirectory = urlToRelativeUrl(
+      fileUrl,
+      firstExistingDirectoryUrl,
+    );
+    const urlRelativeToServer = FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
+      fileUrl,
+      serverRootDirectoryUrl,
+    );
+    const url = String(fileUrl);
+    const mainFileUrl = new URL(mainFilePath, serverRootDirectoryUrl).href;
+    const isMainFile = url === mainFileUrl;
+
+    items.push({
+      url,
+      urlRelativeToCurrentDirectory,
+      urlRelativeToServer,
+      isMainFile,
+    });
+  }
+  return items;
 };
 
 const jsenvPluginFsRedirection = ({
@@ -19730,8 +19981,7 @@ const jsenvPluginProtocolFile = ({
       appliesDuring: "dev",
       resolveReference: (reference) => {
         if (reference.specifier.startsWith("/@fs/")) {
-          const fsRootRelativeUrl = reference.specifier.slice("/@fs/".length);
-          return `file:///${fsRootRelativeUrl}`;
+          return FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(reference.specifier);
         }
         return null;
       },
@@ -19750,12 +20000,10 @@ const jsenvPluginProtocolFile = ({
           }
         }
         const { rootDirectoryUrl } = reference.ownerUrlInfo.context;
-        if (urlIsInsideOf(generatedUrl, rootDirectoryUrl)) {
-          const result = `/${urlToRelativeUrl(generatedUrl, rootDirectoryUrl)}`;
-          return result;
-        }
-        const result = `/@fs/${generatedUrl.slice("file:///".length)}`;
-        return result;
+        return FILE_AND_SERVER_URLS_CONVERTER.asServerUrl(
+          generatedUrl,
+          rootDirectoryUrl,
+        );
       },
     },
     jsenvPluginDirectoryListing({
@@ -19763,6 +20011,31 @@ const jsenvPluginProtocolFile = ({
       directoryContentMagicName,
       directoryListingUrlMocks,
     }),
+    {
+      name: "jsenv:directory_as_json",
+      appliesDuring: "*",
+      fetchUrlContent: (urlInfo) => {
+        const { firstReference } = urlInfo;
+        let { fsStat } = firstReference;
+        if (!fsStat) {
+          fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
+        }
+        if (!fsStat) {
+          return null;
+        }
+        const isDirectory = fsStat.isDirectory();
+        if (!isDirectory) {
+          return null;
+        }
+        const directoryContentArray = readdirSync(new URL(urlInfo.url));
+        const content = JSON.stringify(directoryContentArray, null, "  ");
+        return {
+          type: "directory",
+          contentType: "application/json",
+          content,
+        };
+      },
+    },
     {
       name: "jsenv:file_url_fetching",
       appliesDuring: "*",
@@ -19848,10 +20121,11 @@ const jsenvPluginProtocolHttp = ({ include }) => {
       return fileUrl;
     },
     fetchUrlContent: async (urlInfo) => {
-      if (!urlInfo.originalUrl.startsWith("http")) {
+      const originalUrl = urlInfo.originalUrl;
+      if (!originalUrl.startsWith("http")) {
         return null;
       }
-      const response = await fetch(urlInfo.originalUrl);
+      const response = await fetch(originalUrl);
       const responseStatus = response.status;
       if (responseStatus < 200 || responseStatus > 299) {
         throw new Error(`unexpected response status ${responseStatus}`);
@@ -21205,8 +21479,8 @@ const getCorePlugins = ({
     jsenvPluginReferenceAnalysis(referenceAnalysis),
     ...(injections ? [jsenvPluginInjections(injections)] : []),
     jsenvPluginTranspilation(transpilation),
+    // "jsenvPluginInlining" must be very soon because all other plugins will react differently once they see the file is inlined
     ...(inlining ? [jsenvPluginInlining()] : []),
-    ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []), // after inline as it needs inline script to be cooked
 
     /* When resolving references the following applies by default:
        - http urls are resolved by jsenvPluginHttpUrls
@@ -21216,12 +21490,10 @@ const getCorePlugins = ({
      */
     jsenvPluginProtocolHttp(http),
     jsenvPluginProtocolFile({
-      supervisorEnabled: Boolean(supervisor),
       magicExtensions,
       magicDirectoryIndex,
       directoryListingUrlMocks,
     }),
-
     {
       name: "jsenv:resolve_root_as_main",
       appliesDuring: "*",
@@ -21240,12 +21512,14 @@ const getCorePlugins = ({
       : []),
     jsenvPluginWebResolution(),
     jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
-
     jsenvPluginVersionSearchParam(),
+
+    // "jsenvPluginSupervisor" MUST be after "jsenvPluginInlining" as it needs inline script to be cooked
+    ...(supervisor ? [jsenvPluginSupervisor(supervisor)] : []),
+
     jsenvPluginCommonJsGlobals(),
     jsenvPluginImportMetaScenarios(),
     ...(scenarioPlaceholders ? [jsenvPluginGlobalScenarios()] : []),
-
     jsenvPluginNodeRuntime({ runtimeCompat }),
 
     jsenvPluginImportMetaHot(),
@@ -21805,7 +22079,6 @@ const createBuildSpecifierManager = ({
           type: reference.type,
           expectedType: reference.expectedType,
           specifier: reference.specifier,
-          specifierPathname: reference.specifierPathname,
           specifierLine: reference.specifierLine,
           specifierColumn: reference.specifierColumn,
           specifierStart: reference.specifierStart,
@@ -23254,33 +23527,33 @@ build ${entryPointKeys.length} entry points`);
 
     const bundlers = {};
     {
-      rawKitchen.pluginController.plugins.forEach((plugin) => {
+      for (const plugin of rawKitchen.pluginController.activePlugins) {
         const bundle = plugin.bundle;
         if (!bundle) {
-          return;
+          continue;
         }
         if (typeof bundle !== "object") {
           throw new Error(
             `bundle must be an object, found "${bundle}" on plugin named "${plugin.name}"`,
           );
         }
-        Object.keys(bundle).forEach((type) => {
+        for (const type of Object.keys(bundle)) {
           const bundleFunction = bundle[type];
           if (!bundleFunction) {
-            return;
+            continue;
           }
           const bundlerForThatType = bundlers[type];
           if (bundlerForThatType) {
             // first plugin to define a bundle hook wins
-            return;
+            continue;
           }
           bundlers[type] = {
             plugin,
             bundleFunction: bundle[type],
             urlInfoMap: new Map(),
           };
-        });
-      });
+        }
+      }
       const addToBundlerIfAny = (rawUrlInfo) => {
         const bundler = bundlers[rawUrlInfo.type];
         if (bundler) {
@@ -23600,43 +23873,6 @@ const WEB_URL_CONVERTER = {
   },
 };
 
-/*
- * This plugin is very special because it is here
- * to provide "serverEvents" used by other plugins
- */
-
-
-const serverEventsClientFileUrl = new URL(
-  "./js/server_events_client.js",
-  import.meta.url,
-).href;
-
-const jsenvPluginServerEventsClientInjection = ({ logs = true }) => {
-  return {
-    name: "jsenv:server_events_client_injection",
-    appliesDuring: "*",
-    transformUrlContent: {
-      html: (urlInfo) => {
-        const htmlAst = parseHtml({
-          html: urlInfo.content,
-          url: urlInfo.url,
-        });
-        injectJsenvScript(htmlAst, {
-          src: serverEventsClientFileUrl,
-          initCall: {
-            callee: "window.__server_events__.setup",
-            params: {
-              logs,
-            },
-          },
-          pluginName: "jsenv:server_events_client_injection",
-        });
-        return stringifyHtmlAst(htmlAst);
-      },
-    },
-  };
-};
-
 const createServerEventsDispatcher = () => {
   const clients = [];
   const MAX_CLIENTS = 100;
@@ -23728,6 +23964,105 @@ const createServerEventsDispatcher = () => {
       clients.forEach((client) => {
         client.destroy();
       });
+    },
+  };
+};
+
+/*
+ * This plugin is very special because it is here
+ * to provide "serverEvents" used by other plugins
+ */
+
+
+const serverEventsClientFileUrl = new URL(
+  "./js/server_events_client.js",
+  import.meta.url,
+).href;
+
+const jsenvPluginServerEvents = ({ clientAutoreload }) => {
+  let serverEventsDispatcher;
+
+  const { clientServerEventsConfig } = clientAutoreload;
+  const { logs = true } = clientServerEventsConfig;
+
+  return {
+    name: "jsenv:server_events",
+    appliesDuring: "dev",
+    effect: ({ kitchenContext, otherPlugins }) => {
+      const allServerEvents = {};
+      for (const otherPlugin of otherPlugins) {
+        const { serverEvents } = otherPlugin;
+        if (!serverEvents) {
+          continue;
+        }
+        for (const serverEventName of Object.keys(serverEvents)) {
+          // we could throw on serverEvent name conflict
+          // we could throw if serverEvents[serverEventName] is not a function
+          allServerEvents[serverEventName] = serverEvents[serverEventName];
+        }
+      }
+      const serverEventNames = Object.keys(allServerEvents);
+      if (serverEventNames.length === 0) {
+        return false;
+      }
+      serverEventsDispatcher = createServerEventsDispatcher();
+      const onabort = () => {
+        serverEventsDispatcher.destroy();
+      };
+      kitchenContext.signal.addEventListener("abort", onabort);
+      for (const serverEventName of Object.keys(allServerEvents)) {
+        const serverEventInfo = {
+          ...kitchenContext,
+          // serverEventsDispatcher variable is safe, we can disable esling warning
+          // eslint-disable-next-line no-loop-func
+          sendServerEvent: (data) => {
+            if (!serverEventsDispatcher) {
+              // this can happen if a plugin wants to send a server event but
+              // server is closing or the plugin got destroyed but still wants to do things
+              // if plugin code is correctly written it is never supposed to happen
+              // because it means a plugin is still trying to do stuff after being destroyed
+              return;
+            }
+            serverEventsDispatcher.dispatch({
+              type: serverEventName,
+              data,
+            });
+          },
+        };
+        const serverEventInit = allServerEvents[serverEventName];
+        serverEventInit(serverEventInfo);
+      }
+      return () => {
+        kitchenContext.signal.removeEventListener("abort", onabort);
+        serverEventsDispatcher.destroy();
+        serverEventsDispatcher = undefined;
+      };
+    },
+    serveWebsocket: async ({ websocket, request }) => {
+      if (request.headers["sec-websocket-protocol"] !== "jsenv") {
+        return false;
+      }
+      serverEventsDispatcher.addWebsocket(websocket, request);
+      return true;
+    },
+    transformUrlContent: {
+      html: (urlInfo) => {
+        const htmlAst = parseHtml({
+          html: urlInfo.content,
+          url: urlInfo.url,
+        });
+        injectJsenvScript(htmlAst, {
+          src: serverEventsClientFileUrl,
+          initCall: {
+            callee: "window.__server_events__.setup",
+            params: {
+              logs,
+            },
+          },
+          pluginName: "jsenv:server_events",
+        });
+        return stringifyHtmlAst(htmlAst);
+      },
     },
   };
 };
@@ -23889,10 +24224,11 @@ const startDevServer = async ({
   });
 
   const serverStopCallbackSet = new Set();
-  const serverEventsDispatcher = createServerEventsDispatcher();
+  const serverStopAbortController = new AbortController();
   serverStopCallbackSet.add(() => {
-    serverEventsDispatcher.destroy();
+    serverStopAbortController.abort();
   });
+  const serverStopAbortSignal = serverStopAbortController.signal;
   const kitchenCache = new Map();
 
   const finalServices = [];
@@ -23995,7 +24331,7 @@ const startDevServer = async ({
 
       kitchen = createKitchen({
         name: runtimeId,
-        signal,
+        signal: serverStopAbortSignal,
         logLevel,
         rootDirectoryUrl: sourceDirectoryUrl,
         mainFilePath: sourceMainFilePath,
@@ -24004,6 +24340,7 @@ const startDevServer = async ({
         runtimeCompat,
         clientRuntimeCompat,
         plugins: [
+          jsenvPluginServerEvents({ clientAutoreload }),
           ...plugins,
           ...getCorePlugins({
             rootDirectoryUrl: sourceDirectoryUrl,
@@ -24079,7 +24416,17 @@ const startDevServer = async ({
           for (const implicitUrl of urlInfoCreated.implicitUrlSet) {
             const implicitUrlInfo =
               urlInfoCreated.graph.getUrlInfo(implicitUrl);
-            if (implicitUrlInfo && !implicitUrlInfo.isValid()) {
+            if (!implicitUrlInfo) {
+              continue;
+            }
+            if (implicitUrlInfo.content === undefined) {
+              // happens when we explicitely load an url with a search param
+              // - it creates an implicit url info to the url without params
+              // - we never explicitely request the url without search param so it has no content
+              // in that case the underlying urlInfo cannot be invalidate by the implicit
+              continue;
+            }
+            if (!implicitUrlInfo.isValid()) {
               return false;
             }
           }
@@ -24098,41 +24445,6 @@ const startDevServer = async ({
       serverStopCallbackSet.add(() => {
         kitchen.pluginController.callHooks("destroy", kitchen.context);
       });
-      {
-        const allServerEvents = {};
-        kitchen.pluginController.plugins.forEach((plugin) => {
-          const { serverEvents } = plugin;
-          if (serverEvents) {
-            Object.keys(serverEvents).forEach((serverEventName) => {
-              // we could throw on serverEvent name conflict
-              // we could throw if serverEvents[serverEventName] is not a function
-              allServerEvents[serverEventName] = serverEvents[serverEventName];
-            });
-          }
-        });
-        const serverEventNames = Object.keys(allServerEvents);
-        if (serverEventNames.length > 0) {
-          Object.keys(allServerEvents).forEach((serverEventName) => {
-            const serverEventInfo = {
-              ...kitchen.context,
-              sendServerEvent: (data) => {
-                serverEventsDispatcher.dispatch({
-                  type: serverEventName,
-                  data,
-                });
-              },
-            };
-            const serverEventInit = allServerEvents[serverEventName];
-            serverEventInit(serverEventInfo);
-          });
-          kitchen.pluginController.unshiftPlugin(
-            jsenvPluginServerEventsClientInjection(
-              clientAutoreload.clientServerEventsConfig,
-            ),
-          );
-        }
-      }
-
       kitchenCache.set(runtimeId, kitchen);
       onKitchenCreated(kitchen);
       return kitchen;
@@ -24217,9 +24529,10 @@ const startDevServer = async ({
               // If they match jsenv bypass cooking and returns 304
               // This must not happen when a plugin uses "no-store" or "no-cache" as it means
               // plugin logic wants to happens for every request to this url
-              ...(urlInfo.headers["cache-control"] === "no-store" ||
-              urlInfo.headers["cache-control"] === "no-cache"
-                ? {}
+              ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
+                ? {
+                    "cache-control": "no-store", // for inline file we force no-store when parent is no-store
+                  }
                 : {
                     "cache-control": `private,max-age=0,must-revalidate`,
                     // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
@@ -24320,13 +24633,20 @@ ${error.trace?.message}`);
           };
         }
       },
-      handleWebsocket: (websocket, { request }) => {
+      handleWebsocket: async (websocket, { request }) => {
         // if (true || logLevel === "debug") {
         //   console.log("handleWebsocket", websocket, request.headers);
         // }
-        if (request.headers["sec-websocket-protocol"] === "jsenv") {
-          serverEventsDispatcher.addWebsocket(websocket, request);
-        }
+        const kitchen = getOrCreateKitchen(request);
+        const serveWebsocketHookInfo = {
+          request,
+          websocket,
+          context: kitchen.context,
+        };
+        await kitchen.pluginController.callAsyncHooksUntil(
+          "serveWebsocket",
+          serveWebsocketHookInfo,
+        );
       },
     });
   }
@@ -24418,6 +24738,13 @@ ${error.trace?.message}`);
     },
     kitchenCache,
   };
+};
+
+const cacheIsDisabledInResponseHeader = (urlInfo) => {
+  return (
+    urlInfo.headers["cache-control"] === "no-store" ||
+    urlInfo.headers["cache-control"] === "no-cache"
+  );
 };
 
 /*

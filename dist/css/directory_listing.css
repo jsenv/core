@@ -21,10 +21,6 @@ html, body, h1, div, p, ul, li, a, p, button {
   font-weight: bold;
 }
 
-.error_text code {
-  background: #ff0;
-}
-
 .hint_message {
   background-color: #add8e6;
   border: 1px solid #fcc2c3;
@@ -40,7 +36,7 @@ html, body, h1, div, p, ul, li, a, p, button {
   line-height: 2em;
 }
 
-.directory_nav {
+.nav {
   gap: .3em;
   margin: 20px 25px 15px;
   font-size: 16px;
@@ -48,12 +44,12 @@ html, body, h1, div, p, ul, li, a, p, button {
   display: flex;
 }
 
-.directory_nav_item {
+.nav_item {
   align-items: center;
   display: flex;
 }
 
-.directory_nav_item_icon {
+.nav_item_icon {
   color: #f1f1f1;
   width: 1em;
   height: 1em;
@@ -61,17 +57,38 @@ html, body, h1, div, p, ul, li, a, p, button {
   display: flex;
 }
 
-a.directory_nav_item_icon {
+a.nav_item_icon {
   text-decoration: none;
 }
 
-.directory_nav_item_text {
+.nav_item_text {
   color: inherit;
   position: relative;
 }
 
-a.directory_nav_item_text {
+a.nav_item_text {
   text-decoration: none;
+}
+
+.nav_item[data-404] .nav_item_text {
+  color: #853611;
+  background-color: #ff0;
+}
+
+.file_path_bad {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-color: red;
+}
+
+.nav_item_badge_404 {
+  color: #853611;
+  text-align: center;
+  background-color: #ff0;
+  border-radius: 5px;
+  margin-right: .3em;
+  padding: .2em .1em;
+  font-size: .8em;
 }
 
 .directory_empty_message {
@@ -139,15 +156,15 @@ body[data-theme="light"] {
   background: #f1f1f1;
 }
 
-body[data-theme="dark"] .directory_nav_item {
+body[data-theme="dark"] .nav_item {
   color: #999;
 }
 
-body[data-theme="dark"] .directory_nav_item[data-current] {
+body[data-theme="dark"] .nav_item[data-current] {
   color: #f1f1f1;
 }
 
-body[data-theme="light"] .directory_nav_item {
+body[data-theme="light"] .nav_item {
   color: #000;
 }
 
