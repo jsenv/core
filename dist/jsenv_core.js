@@ -13158,7 +13158,6 @@ const createReference = ({
   specifierColumn,
   baseUrl,
   isOriginalPosition,
-  isDirectRequest = false,
   isEntryPoint = false,
   isResourceHint = false,
   // implicit references are not real references
@@ -13233,7 +13232,6 @@ const createReference = ({
     specifierColumn,
     isOriginalPosition,
     baseUrl,
-    isDirectRequest,
     isEntryPoint,
     isResourceHint,
     isImplicit,
@@ -15010,25 +15008,6 @@ const createKitchen = ({
 ${ANSI.color(reference.specifier, ANSI.GREY)} ->
 ${ANSI.color(reference.url, ANSI.YELLOW)}
 `);
-        }
-      }
-      const request = kitchen.context.request;
-      if (request) {
-        let requestResource = request.resource;
-        let requestedUrl;
-        if (requestResource.startsWith("/@fs/")) {
-          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
-          requestedUrl = `file:///${fsRootRelativeUrl}`;
-        } else {
-          const requestedUrlObject = new URL(
-            requestResource === "/" ? mainFilePath : requestResource.slice(1),
-            rootDirectoryUrl,
-          );
-          requestedUrlObject.searchParams.delete("hot");
-          requestedUrl = requestedUrlObject.href;
-        }
-        if (requestedUrl === reference.url) {
-          reference.isDirectRequest = true;
         }
       }
       redirect: {
@@ -17857,7 +17836,7 @@ const jsenvPluginInlineContentFetcher = () => {
       if (!urlInfo.isInline) {
         return null;
       }
-      const { isDirectRequest } = urlInfo.lastReference;
+      const isDirectRequest = urlInfo.context.requestedUrl === urlInfo.url;
       /*
        * We want to find inline content but it's not straightforward
        *
@@ -19473,10 +19452,10 @@ const jsenvPluginDirectoryListing = ({
         fsStat = readEntryStatSync(url, { nullIfNotFound: true });
         reference.fsStat = fsStat;
       }
-      const { request } = reference.ownerUrlInfo.context;
+      const { request, requestedUrl } = reference.ownerUrlInfo.context;
       if (!fsStat) {
         if (
-          reference.isDirectRequest &&
+          requestedUrl === url &&
           request &&
           request.headers["sec-fetch-dest"] === "document"
         ) {
@@ -24465,6 +24444,20 @@ const startDevServer = async ({
         if (responseFromPlugin) {
           return responseFromPlugin;
         }
+        const { rootDirectoryUrl, mainFilePath } = kitchen.context;
+        let requestResource = request.resource;
+        let requestedUrl;
+        if (requestResource.startsWith("/@fs/")) {
+          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
+          requestedUrl = `file:///${fsRootRelativeUrl}`;
+        } else {
+          const requestedUrlObject = new URL(
+            requestResource === "/" ? mainFilePath : requestResource.slice(1),
+            rootDirectoryUrl,
+          );
+          requestedUrlObject.searchParams.delete("hot");
+          requestedUrl = requestedUrlObject.href;
+        }
         const { referer } = request.headers;
         const parentUrl = referer
           ? WEB_URL_CONVERTER.asFileUrl(referer, {
@@ -24476,15 +24469,20 @@ const startDevServer = async ({
           request.resource,
           parentUrl,
         );
-        if (!reference) {
+        if (reference) {
+          reference.urlInfo.context.request = request;
+          reference.urlInfo.context.requestedUrl = requestedUrl;
+        } else {
           const rootUrlInfo = kitchen.graph.rootUrlInfo;
           rootUrlInfo.context.request = request;
+          rootUrlInfo.context.requestedUrl = requestedUrl;
           reference = rootUrlInfo.dependencies.createResolveAndFinalize({
             trace: { message: parentUrl },
             type: "http_request",
             specifier: request.resource,
           });
           rootUrlInfo.context.request = null;
+          rootUrlInfo.context.requestedUrl = null;
         }
         const urlInfo = reference.urlInfo;
         const ifNoneMatch = request.headers["if-none-match"];
