@@ -7,8 +7,6 @@ const homeIconUrl = import.meta.resolve("./assets/home.svg#root");
 
 let {
   navItems,
-  rootDirectoryUrl,
-  serverRootDirectoryUrl,
   mainFilePath,
   directoryContentItems,
   enoentDetails,
@@ -49,16 +47,17 @@ const DirectoryListing = () => {
 };
 
 const ErrorMessage = () => {
-  const { fileUrl } = enoentDetails;
-  const fileRelativeUrl = urlIsInsideOf(fileUrl, serverRootDirectoryUrl)
-    ? urlToRelativeUrl(fileUrl, serverRootDirectoryUrl)
-    : urlToRelativeUrl(fileUrl, rootDirectoryUrl);
+  const { fileUrl, filePathExisting, filePathNotFound } = enoentDetails;
 
   return (
     <p className="error_message">
       <span className="error_text">
-        No entry on the filesystem for{" "}
-        <code title={fileUrl}>/{fileRelativeUrl}</code>.
+        No filesystem entry at{" "}
+        <code title={fileUrl}>
+          <span className="file_path_good">{filePathExisting}</span>
+          <span className="file_path_bad">{filePathNotFound}</span>
+        </code>
+        .
       </span>
     </p>
   );
@@ -74,7 +73,6 @@ const Nav = () => {
           name,
           isCurrent,
           isServerRootDirectory,
-          is404,
         } = navItem;
         const isDirectory = new URL(url).pathname.endsWith("/");
         return (
@@ -85,7 +83,6 @@ const Nav = () => {
               isCurrent={isCurrent}
               iconImageUrl={isServerRootDirectory ? homeIconUrl : ""}
               iconLinkUrl={isServerRootDirectory ? `/${mainFilePath}` : ""}
-              is404={is404}
             >
               {name}
             </NavItem>
@@ -98,20 +95,9 @@ const Nav = () => {
     </h1>
   );
 };
-const NavItem = ({
-  url,
-  iconImageUrl,
-  iconLinkUrl,
-  isCurrent,
-  is404,
-  children,
-}) => {
+const NavItem = ({ url, iconImageUrl, iconLinkUrl, isCurrent, children }) => {
   return (
-    <span
-      className="nav_item"
-      data-404={is404 ? "" : undefined}
-      data-current={isCurrent ? "" : undefined}
-    >
+    <span className="nav_item" data-current={isCurrent ? "" : undefined}>
       {iconLinkUrl ? (
         <a
           className="nav_item_icon"
@@ -220,9 +206,6 @@ const Icon = ({ url }) => {
   return <img src={url} />;
 };
 
-const urlToRelativeUrl = (url, otherUrl) => {
-  return url.slice(otherUrl.length);
-};
 const urlToFilename = (url) => {
   const pathname = new URL(url).pathname;
   const pathnameBeforeLastSlash = pathname.endsWith("/")
@@ -234,23 +217,6 @@ const urlToFilename = (url) => {
       ? pathnameBeforeLastSlash
       : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
   return filename;
-};
-const urlIsInsideOf = (url, otherUrl) => {
-  const urlObject = new URL(url);
-  const otherUrlObject = new URL(otherUrl);
-
-  if (urlObject.origin !== otherUrlObject.origin) {
-    return false;
-  }
-
-  const urlPathname = urlObject.pathname;
-  const otherUrlPathname = otherUrlObject.pathname;
-  if (urlPathname === otherUrlPathname) {
-    return false;
-  }
-
-  const isInside = urlPathname.startsWith(otherUrlPathname);
-  return isInside;
 };
 
 if (autoreload) {

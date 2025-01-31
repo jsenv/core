@@ -285,14 +285,12 @@ const generateDirectoryListingInjection = (
 
   const navItems = [];
   nav_items: {
-    const requestedRelativeUrl = urlToRelativeUrl(
-      requestedUrl,
-      rootDirectoryUrl,
-    );
+    const lastItemUrl = firstExistingDirectoryUrl;
+    const lastItemRelativeUrl = urlToRelativeUrl(lastItemUrl, rootDirectoryUrl);
     const rootDirectoryUrlName = urlToFilename(rootDirectoryUrl);
     let parts;
-    if (requestedRelativeUrl) {
-      parts = `${rootDirectoryUrlName}/${requestedRelativeUrl}`.split("/");
+    if (lastItemRelativeUrl) {
+      parts = `${rootDirectoryUrlName}/${lastItemRelativeUrl}`.split("/");
     } else {
       parts = [rootDirectoryUrlName];
     }
@@ -324,13 +322,7 @@ const generateDirectoryListingInjection = (
         urlRelativeToDocument = `/${directoryContentMagicName}`;
       }
       const name = part;
-      const isDirectory = navItemUrl.endsWith("/");
-      const is404 = isDirectory
-        ? urlIsInsideOf(navItemUrl, firstExistingDirectoryUrl)
-        : enoent;
-      const isCurrent = is404
-        ? false
-        : navItemUrl === String(firstExistingDirectoryUrl);
+      const isCurrent = navItemUrl === String(firstExistingDirectoryUrl);
       navItems.push({
         url: navItemUrl,
         urlRelativeToServer,
@@ -338,19 +330,36 @@ const generateDirectoryListingInjection = (
         isServerRootDirectory,
         isCurrent,
         name,
-        is404,
       });
       i++;
     }
   }
 
+  let enoentDetails = null;
+  if (enoent) {
+    const fileRelativeUrl = urlToRelativeUrl(
+      requestedUrl,
+      serverRootDirectoryUrl,
+    );
+    let filePathExisting;
+    let filePathNotFound;
+    const existingIndex = String(firstExistingDirectoryUrl).length;
+    filePathExisting = urlToRelativeUrl(
+      firstExistingDirectoryUrl,
+      serverRootDirectoryUrl,
+    );
+    filePathNotFound = requestedUrl.slice(existingIndex);
+    enoentDetails = {
+      fileUrl: requestedUrl,
+      fileRelativeUrl,
+      filePathExisting: `/${filePathExisting}`,
+      filePathNotFound,
+    };
+  }
+
   return {
     __DIRECTORY_LISTING__: {
-      enoentDetails: enoent
-        ? {
-            fileUrl: requestedUrl,
-          }
-        : null,
+      enoentDetails,
       navItems,
       directoryListingUrlMocks,
       directoryContentMagicName,

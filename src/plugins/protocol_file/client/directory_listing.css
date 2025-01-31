@@ -29,9 +29,6 @@ button {
   font-weight: bold;
   text-shadow: 1px 1px rgba(250, 250, 250, 0.3);
 }
-.error_text code {
-  background: yellow;
-}
 .hint_message {
   background-color: lightblue;
   border: 1px solid #fcc2c3;
@@ -78,6 +75,11 @@ a.nav_item_text {
 .nav_item[data-404] .nav_item_text {
   background-color: yellow;
   color: #853611;
+}
+.file_path_bad {
+  text-decoration-line: underline;
+  text-decoration-color: red;
+  text-decoration-style: wavy;
 }
 .nav_item_badge_404 {
   color: #853611;
