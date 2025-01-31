@@ -343,6 +343,11 @@ export const startDevServer = async ({
               // - it creates an implicit url info to the url without params
               // - we never explicitely request the url without search param so it has no content
               // in that case the underlying urlInfo cannot be invalidate by the implicit
+              // we use modifiedTimestamp to detect if the url was loaded once
+              // or is just here to be used later
+              if (implicitUrlInfo.modifiedTimestamp) {
+                return false;
+              }
               continue;
             }
             if (!implicitUrlInfo.isValid()) {

@@ -19432,9 +19432,9 @@ const htmlFileUrlForDirectory = new URL(
 );
 
 const jsenvPluginDirectoryListing = ({
-  directoryContentMagicName,
-  directoryListingUrlMocks,
+  urlMocks = false,
   autoreload = true,
+  directoryContentMagicName,
 }) => {
   return {
     name: "jsenv:directory_listing",
@@ -19505,7 +19505,7 @@ const jsenvPluginDirectoryListing = ({
             ...generateDirectoryListingInjection(requestedUrl, {
               autoreload,
               request,
-              directoryListingUrlMocks,
+              urlMocks,
               directoryContentMagicName,
               rootDirectoryUrl,
               mainFilePath,
@@ -19584,7 +19584,7 @@ const generateDirectoryListingInjection = (
     rootDirectoryUrl,
     mainFilePath,
     request,
-    directoryListingUrlMocks,
+    urlMocks,
     directoryContentMagicName,
     autoreload,
     enoent,
@@ -19723,7 +19723,7 @@ const generateDirectoryListingInjection = (
     __DIRECTORY_LISTING__: {
       enoentDetails,
       navItems,
-      directoryListingUrlMocks,
+      urlMocks,
       directoryContentMagicName,
       directoryUrl: firstExistingDirectoryUrl,
       serverRootDirectoryUrl,
@@ -19925,11 +19925,10 @@ const resolveSymlink = (fileUrl) => {
 const directoryContentMagicName = "...";
 
 const jsenvPluginProtocolFile = ({
-  supervisorEnabled,
   magicExtensions,
   magicDirectoryIndex,
   preserveSymlinks,
-  directoryListingUrlMocks,
+  directoryListing,
 }) => {
   return [
     jsenvPluginFsRedirection({
@@ -19985,11 +19984,14 @@ const jsenvPluginProtocolFile = ({
         );
       },
     },
-    jsenvPluginDirectoryListing({
-      supervisorEnabled,
-      directoryContentMagicName,
-      directoryListingUrlMocks,
-    }),
+    ...(directoryListing
+      ? [
+          jsenvPluginDirectoryListing({
+            ...directoryListing,
+            directoryContentMagicName,
+          }),
+        ]
+      : []),
     {
       name: "jsenv:directory_as_json",
       appliesDuring: "*",
@@ -21425,7 +21427,7 @@ const getCorePlugins = ({
   nodeEsmResolution = {},
   magicExtensions,
   magicDirectoryIndex,
-  directoryListingUrlMocks,
+  directoryListing = true,
   directoryReferenceEffect,
   supervisor,
   injections,
@@ -21453,6 +21455,9 @@ const getCorePlugins = ({
   if (http === false) {
     http = { include: false };
   }
+  if (directoryListing === true) {
+    directoryListing = {};
+  }
 
   return [
     jsenvPluginReferenceAnalysis(referenceAnalysis),
@@ -21471,7 +21476,7 @@ const getCorePlugins = ({
     jsenvPluginProtocolFile({
       magicExtensions,
       magicDirectoryIndex,
-      directoryListingUrlMocks,
+      directoryListing,
     }),
     {
       name: "jsenv:resolve_root_as_main",
@@ -24129,7 +24134,7 @@ const startDevServer = async ({
   supervisor = true,
   magicExtensions,
   magicDirectoryIndex,
-  directoryListingUrlMocks,
+  directoryListing,
   injections,
   transpilation,
   cacheControl = true,
@@ -24328,7 +24333,7 @@ const startDevServer = async ({
             nodeEsmResolution,
             magicExtensions,
             magicDirectoryIndex,
-            directoryListingUrlMocks,
+            directoryListing,
             supervisor,
             injections,
             transpilation,
@@ -24402,6 +24407,11 @@ const startDevServer = async ({
               // - it creates an implicit url info to the url without params
               // - we never explicitely request the url without search param so it has no content
               // in that case the underlying urlInfo cannot be invalidate by the implicit
+              // we use modifiedTimestamp to detect if the url was loaded once
+              // or is just here to be used later
+              if (implicitUrlInfo.modifiedTimestamp) {
+                return false;
+              }
               continue;
             }
             if (!implicitUrlInfo.isValid()) {
