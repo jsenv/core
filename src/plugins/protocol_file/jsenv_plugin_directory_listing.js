@@ -1,6 +1,11 @@
 /*
  * NICE TO HAVE:
  * 
+ * - when clicking the server root directory from the root directory 
+ * we should see "/..." in the url bar
+ * instead we ses "@fs/"
+ * everything still works but that would be cleaner
+ * 
  * - when visiting urls outside server root directory the UI is messed up
  * 
  * Let's say I visit file outside the server root directory that is in 404
