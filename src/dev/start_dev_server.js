@@ -385,6 +385,20 @@ export const startDevServer = async ({
         if (responseFromPlugin) {
           return responseFromPlugin;
         }
+        const { rootDirectoryUrl, mainFilePath } = kitchen.context;
+        let requestResource = request.resource;
+        let requestedUrl;
+        if (requestResource.startsWith("/@fs/")) {
+          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
+          requestedUrl = `file:///${fsRootRelativeUrl}`;
+        } else {
+          const requestedUrlObject = new URL(
+            requestResource === "/" ? mainFilePath : requestResource.slice(1),
+            rootDirectoryUrl,
+          );
+          requestedUrlObject.searchParams.delete("hot");
+          requestedUrl = requestedUrlObject.href;
+        }
         const { referer } = request.headers;
         const parentUrl = referer
           ? WEB_URL_CONVERTER.asFileUrl(referer, {
@@ -396,15 +410,20 @@ export const startDevServer = async ({
           request.resource,
           parentUrl,
         );
-        if (!reference) {
+        if (reference) {
+          reference.urlInfo.context.request = request;
+          reference.urlInfo.context.requestedUrl = requestedUrl;
+        } else {
           const rootUrlInfo = kitchen.graph.rootUrlInfo;
           rootUrlInfo.context.request = request;
+          rootUrlInfo.context.requestedUrl = requestedUrl;
           reference = rootUrlInfo.dependencies.createResolveAndFinalize({
             trace: { message: parentUrl },
             type: "http_request",
             specifier: request.resource,
           });
           rootUrlInfo.context.request = null;
+          rootUrlInfo.context.requestedUrl = null;
         }
         const urlInfo = reference.urlInfo;
         const ifNoneMatch = request.headers["if-none-match"];

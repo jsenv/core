@@ -41,7 +41,7 @@ const jsenvPluginInlineContentFetcher = () => {
       if (!urlInfo.isInline) {
         return null;
       }
-      const { isDirectRequest } = urlInfo.lastReference;
+      const isDirectRequest = urlInfo.context.requestedUrl === urlInfo.url;
       /*
        * We want to find inline content but it's not straightforward
        *

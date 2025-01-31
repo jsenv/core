@@ -198,25 +198,6 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
 `);
         }
       }
-      const request = kitchen.context.request;
-      if (request) {
-        let requestResource = request.resource;
-        let requestedUrl;
-        if (requestResource.startsWith("/@fs/")) {
-          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
-          requestedUrl = `file:///${fsRootRelativeUrl}`;
-        } else {
-          const requestedUrlObject = new URL(
-            requestResource === "/" ? mainFilePath : requestResource.slice(1),
-            rootDirectoryUrl,
-          );
-          requestedUrlObject.searchParams.delete("hot");
-          requestedUrl = requestedUrlObject.href;
-        }
-        if (requestedUrl === reference.url) {
-          reference.isDirectRequest = true;
-        }
-      }
       redirect: {
         if (reference.isImplicit && reference.isWeak) {
           // not needed for implicit references that are not rendered anywhere

@@ -61,10 +61,10 @@ export const jsenvPluginDirectoryListing = ({
         fsStat = readEntryStatSync(url, { nullIfNotFound: true });
         reference.fsStat = fsStat;
       }
-      const { request } = reference.ownerUrlInfo.context;
+      const { request, requestedUrl } = reference.ownerUrlInfo.context;
       if (!fsStat) {
         if (
-          reference.isDirectRequest &&
+          requestedUrl === url &&
           request &&
           request.headers["sec-fetch-dest"] === "document"
         ) {
