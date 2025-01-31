@@ -1,16 +1,22 @@
 import { assert } from "@jsenv/assert";
 import { startDevServer } from "@jsenv/core";
 import { launchBrowserPage } from "@jsenv/core/tests/launch_browser_page.js";
+import { replaceFileStructureSync } from "@jsenv/filesystem";
 import { readFileSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright";
 
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
 const debug = false; // true to have browser UI + keep it open after test to inspect things
+const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
+replaceFileStructureSync({
+  from: new URL(`./fixtures/`, import.meta.url),
+  to: sourceDirectoryUrl,
+});
 const devServer = await startDevServer({
   logLevel: "warn",
   plugins: [jsenvPluginAsJsClassic()],
-  sourceDirectoryUrl: new URL("./client/", import.meta.url),
+  sourceDirectoryUrl,
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
   keepProcessAlive: false,
   clientAutoreload: false,
@@ -19,7 +25,7 @@ const devServer = await startDevServer({
   port: 0,
 });
 const browser = await chromium.launch({ headless: !debug });
-const jsFileUrl = new URL("./client/dep.js", import.meta.url);
+const jsFileUrl = new URL("./dep.js", sourceDirectoryUrl);
 const jsFileContent = {
   beforeTest: readFileSync(jsFileUrl),
   update: (content) => writeFileSync(jsFileUrl, content),

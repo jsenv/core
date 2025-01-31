@@ -2,16 +2,22 @@ import { assert } from "@jsenv/assert";
 import { build } from "@jsenv/core";
 import { executeInBrowser } from "@jsenv/core/tests/execute_in_browser.js";
 import { startFileServer } from "@jsenv/core/tests/start_file_server.js";
+import { replaceFileStructureSync } from "@jsenv/filesystem";
 import { takeDirectorySnapshot } from "@jsenv/snapshot";
 
 import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
 const test = async (params) => {
+  const sourceDirectoryUrl = new URL("./git_ignored/", import.meta.url);
+  replaceFileStructureSync({
+    from: new URL(`./fixtures/`, import.meta.url),
+    to: sourceDirectoryUrl,
+  });
   const snapshotDirectoryUrl = new URL(`./snapshots/`, import.meta.url);
   const buildDirectorySnapshot = takeDirectorySnapshot(snapshotDirectoryUrl);
   await build({
     logs: { level: "warn" },
-    sourceDirectoryUrl: new URL("./client/", import.meta.url),
+    sourceDirectoryUrl,
     buildDirectoryUrl: snapshotDirectoryUrl,
     entryPoints: {
       "./main.html": "main.html",
