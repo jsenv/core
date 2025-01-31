@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/github-release-package",
-  "version": "1.6.16",
+  "version": "1.6.17",
   "description": "Create github release when package version changes.",
   "license": "MIT",
   "repository": {
@@ -25,8 +25,8 @@
     "/src/"
   ],
   "dependencies": {
-    "@jsenv/filesystem": "4.13.2",
+    "@jsenv/filesystem": "4.13.3",
     "@jsenv/humanize": "1.2.8",
-    "@jsenv/github-pull-request-impact": "1.8.16"
+    "@jsenv/github-pull-request-impact": "1.8.17"
   }
 }

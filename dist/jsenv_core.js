@@ -2717,12 +2717,18 @@ const applyMatching = (pattern, string) => {
     }
   };
   const matchOne = () => {
-    // pattern consumed and string consumed
-    if (remainingPattern === "" && remainingString === "") {
-      return true; // string fully matched pattern
-    }
-    // pattern consumed, string not consumed
-    if (remainingPattern === "" && remainingString !== "") {
+    // pattern consumed
+    if (remainingPattern === "") {
+      if (remainingString === "") {
+        return true; // string fully matched pattern
+      }
+      if (remainingString[0] === "?") {
+        // match search params
+        consumeRemainingString();
+
+        return true;
+      }
+      // if remainingString
       return false; // fails because string longer than expect
     }
     // -- from this point pattern is not consumed --
@@ -19408,6 +19414,11 @@ return {
 
 /*
  * NICE TO HAVE:
+ * 
+ * - when clicking the server root directory from the root directory 
+ * we should see "/..." in the url bar
+ * instead we ses "@fs/"
+ * everything still works but that would be cleaner
  * 
  * - when visiting urls outside server root directory the UI is messed up
  * 

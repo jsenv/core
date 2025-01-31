@@ -1,17 +1,20 @@
-# [0_chromium](../../script_module_jsx_dev.test.mjs#L24)
+# [0_chromium](../../script_module_jsx_dev.test.mjs#L35)
 
 ```js
 run({ browserLauncher: chromium })
 ```
 
-# 1/2 write file "./.jsenv/chrome@133.00/main.html"
+# 1/2 write 2 files into "./.jsenv/chrome@133.00/"
 
-see [./.jsenv/chrome@133.00/main.html](./.jsenv/chrome@133.00/main.html)
+see [./.jsenv/chrome@133.00/](./.jsenv/chrome@133.00/)
 
 # 2/2 resolve
 
 ```js
-Hello world
+{
+  "withoutSearch": "Hello world",
+  "withSearch": "Hello world"
+}
 ```
 
 ---

@@ -14,6 +14,10 @@ const run = async ({ browserLauncher }) => {
         refreshInstrumentation: true,
       }),
     ],
+    clientAutoreload: false,
+    ribbon: false,
+    supervisor: false,
+    directoryListing: false,
   });
   const withoutSearch = await executeHtml(`${devServer.origin}/main.html`, {
     browserLauncher,

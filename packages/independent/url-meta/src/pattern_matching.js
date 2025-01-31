@@ -82,12 +82,18 @@ const applyMatching = (pattern, string) => {
     }
   };
   const matchOne = () => {
-    // pattern consumed and string consumed
-    if (remainingPattern === "" && remainingString === "") {
-      return true; // string fully matched pattern
-    }
-    // pattern consumed, string not consumed
-    if (remainingPattern === "" && remainingString !== "") {
+    // pattern consumed
+    if (remainingPattern === "") {
+      if (remainingString === "") {
+        return true; // string fully matched pattern
+      }
+      if (remainingString[0] === "?") {
+        // match search params
+        consumeRemainingString();
+
+        return true;
+      }
+      // if remainingString
       return false; // fails because string longer than expect
     }
     // -- from this point pattern is not consumed --
