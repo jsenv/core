@@ -8,7 +8,7 @@ var f=0;function u(e,t,n,o,i,u){t||(t={});var a,c,p=t;if("ref"in p)for(c in p={}
 
 const directoryIconUrl = new URL("../other/dir.png", import.meta.url).href;
 const fileIconUrl = new URL("../other/file.png", import.meta.url).href;
-const homeIconUrl = new URL("../other/home.svg", import.meta.url).href;
+const homeIconUrl = new URL("../other/home.svg#root", import.meta.url).href;
 let {
   navItems,
   mainFilePath,

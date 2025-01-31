@@ -21653,7 +21653,6 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       integer++;
       nameCandidate = `${basename}${integer}${extension}`;
     }
-    hash = "";
     const buildUrl = `${buildDirectoryUrl}${directoryPath}${nameCandidate}${search}${hash}`;
     associateBuildUrl(url, buildUrl);
     return buildUrl;
