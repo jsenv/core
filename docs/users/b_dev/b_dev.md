@@ -18,14 +18,14 @@
 
 <!-- PLACEHOLDER_END -->
 
-This page documents how jsenv can be used to start a server for source files.
+This page explains how to use jsenv to start a development server for your source files.
 
-Best parts of jsenv dev server:
+Best parts of the jsenv dev server:
 
-- **Standard web server**: Complies with web standards, no hidden behavior.
+- **Standard web server**: Complies with web standards, ensuring transparency and predictability.
 - **Auto-reload on save**: Automatically refreshes the browser when files are saved.
-- **Error resilient**: Continues to function even with syntax errors.
-- **Large browser support**: Code served is compatible with the main browsers, including older versions.
+- **Error resilient**: Remains functional even with syntax errors, allowing uninterrupted work.
+- **Large browser support**: Serves code compatible with majors browsers, including older versions.
 
 <!-- PLACEHOLDER_START:TOC_INLINE -->
 
@@ -112,7 +112,7 @@ Best parts of jsenv dev server:
 
 # 1. Usage
 
-This section shows how to serve a project source files using jsenv.
+This section explains how to serve project source files using jsenv.
 
 ## 1.1 Project file structure
 
@@ -140,7 +140,7 @@ _src/index.html_:
 </html>
 ```
 
-Add dev.mjs:
+Add a `dev.mjs` file:
 
 ```diff
 project/
@@ -189,9 +189,9 @@ Expected output:
 
 ## 2.1 Browser support
 
-The dev server automatically serves the most compatible version of your code for the browser in use, ensuring your project works across different environments.
+The dev server automatically serves the most compatible version of your code for the browser being used.
 
-Here is the browser support during dev:
+**Supported browsers during development:**
 
 - Chrome 64+
 - Safari 11.3+
@@ -201,14 +201,14 @@ Here is the browser support during dev:
 - Safari on IOS 12+
 - Samsung Internet 9.2+
 
-This is the list of browsers that can be used during dev. The browser support [after build](../c_build/c_build.md#211-maximal-browser-support) is larger.
+**Note**: The browser support after the build process is broader, see [browser support after build](../c_build/c_build.md#211-maximal-browser-support).
 
 ## 2.2 Directory structure agnostic
 
-The dev server is compatible with _any_ directory structure, it does not assume anything.
-However it's recommended to have a directory dedicated to source files.
+The dev server is compatible with any directory structure and does not impose assumptions.
+However, organizing source files into a dedicated directory is recommended for clarity.
 
-**Not ideal**: source files are mixed with other files
+**Not ideal**: Source files are mixed with other files.
 
 ```
 project/
@@ -221,7 +221,7 @@ project/
   package.json
 ```
 
-**Better**: source files have their own directory
+**Better**: Source files are in a separate directory.
 
 ```
 project/
@@ -237,7 +237,7 @@ project/
 
 ## 2.3 Root url equivalence
 
-`/` is equivalent to `/index.html` as shown by the following screenshots:
+The root URL `/` is equivalent to `/index.html`:
 
 <table>
   <tr>
@@ -258,7 +258,7 @@ project/
   </tr>
 </table>
 
-The file can be configured with `sourceMainFilePath`:
+The main file can be configured with `sourceMainFilePath`:
 
 ```js
 import { startDevServer } from "@jsenv/core";
@@ -271,43 +271,34 @@ await startDevServer({
 
 ## 2.4 ribbon
 
-When a project has a server for build files it becomes hard to tell if a browser is displaying source files or build files.
-
-To differentiate them, one have to:
-
-1. look at the url
-2. check the port
-3. know which port belongs to which server
+Without a visual marker it's hard to distinguish source files from build files.
 
 | dev server                                                                                 | build server                                                                               |
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | ![title](https://github.com/jsenv/core/assets/443639/2b9c81f8-38be-424c-9fd9-6b64b9c061fe) | ![title](https://github.com/jsenv/core/assets/443639/a53b76db-9124-421f-a942-2d01a00d1d27) |
 
-To avoid potential confusion jsenv dev server is injecting a visual marker into HTML files:
+To differentiate source files from build files, the dev server injects a visual marker (ribbon) into HTML files:
 
 ![ribbon screenshot](https://github.com/jsenv/core/assets/443639/25e8cd22-2efb-45a4-9d97-84f96ad1b2f7)
 
-The code below shows how to disable this feature:
+The code below shows how to disable the ribbon:
 
 ```js
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  ribbon: false,
+  ribbon: false, // Disables the ribbon
 });
 ```
 
 ## 2.5 Error overlay
 
-The error overlay is a visual element displayed when there is an error:
+The dev server displays an error overlay when issues occur, complementing the browser’s dev tools:
 
 ![image](https://github.com/jsenv/core/assets/443639/3ecd51ac-7851-4201-93dd-30892e23f11c)
 
-It complements error(s) displayed in browser devtools.
-Error overlay exists because lots of errors occur during dev and it is handy to have a feedback without having to open browser devtools.
-
-The following HTML was used to produce the error (it tries to load _main.js_ but the file does not exists):
+**Example HTML causing an error**:
 
 ```html
 <!doctype html>
@@ -325,7 +316,7 @@ The following HTML was used to produce the error (it tries to load _main.js_ but
 </html>
 ```
 
-Check [tests/dev_server/errors/screenshots/](../../../tests/dev_server/errors/_dev_errors_snapshots.test.mjs/0_chromium/output/screenshots/) for more examples.
+A lot of examples are available at [tests/dev_server/errors/screenshots/](../../../tests/dev_server/errors/_dev_errors_snapshots.test.mjs/0_chromium/output/screenshots/).
 
 Error overlay can be disabled as follow:
 
@@ -335,7 +326,7 @@ import { startDevServer } from "@jsenv/core";
 await startDevServer({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
   supervisor: {
-    errorOverlay: false,
+    errorOverlay: false, // Disables the error overlay
   },
 });
 ```
@@ -346,8 +337,7 @@ In that case opening the same HTML file does not display error overlay. So devto
 
 ## 2.6 Autoreload
 
-When a file is saved jsenv apply changes in all browser connected to the dev server.  
-Some changes can be applied without reloading the page, others will reload the page.
+The dev server automatically applies changes when files are saved. Some updates can be applied without reloading the page, while others trigger a full reload.
 
 TODO:
 
@@ -363,9 +353,9 @@ By default the following files can trigger a reload:
 
 ```js
 {
-  "**/*": true, // everything inside the source directory
-  "**/.*/": false, // except directory starting with a dot
-  "**/node_modules/": false, // and except node_modules directory
+  "**/*": true, // All files inside the source directory
+  "**/.*/": false, // Exclude directory starting with a dot
+  "**/node_modules/": false, // Exclude node_modules
 }
 ```
 
@@ -396,8 +386,7 @@ await startDevServer({
 
 ## 2.7 Compatibility with frameworks
 
-Dev server capabilities can be enhanced using `plugins`.  
-The following code would allow to use react and jsx in source files:
+Enhance dev server capabilities with plugins. For example, to use React and JSX:
 
 ```js
 import { startDevServer } from "@jsenv/core";
@@ -409,23 +398,23 @@ await startDevServer({
 });
 ```
 
-See the list of plugins in [G) Plugins](../g_plugins/g_plugins.md)
+See the full list of plugins in [G) Plugins](../g_plugins/g_plugins.md)
 
 ## 2.8 sourcemaps
 
-Dev server generates source mappings and puts a comment into the generated files to let browser remap to original file contents. This behaviour can be configured with `sourcemaps` using one of the following values:
+The dev server generates source mappings, helping browsers remap compiled code to its original source.
 
-| Value      | Description                                                                    |
-| ---------- | ------------------------------------------------------------------------------ |
-| `"inline"` | Generate source mappings and inline them as base64 into a sourcemap comment    |
-| `"file"`   | Generate separate files for source mappings with comment pointing on that file |
-| `"none"`   | Source mappings are not generated; also disables sourcemap comment injection   |
+| Value      | Description                                      |
+| ---------- | ------------------------------------------------ |
+| `"inline"` | Inline mappings as base64 in sourcemap comments. |
+| `"file"`   | Generate separate `.map` files.                  |
+| `"none"`   | Disable sourcemap generation.                    |
 
-The default value is `"inline"`
+**Default**: `"inline"`
 
 ## 2.9 port
 
-The default port listened is `3456`. It can be configured as shown below:
+The dev server defaults to port 3456. Change it as needed:
 
 ```js
 import { startDevServer } from "@jsenv/core";
@@ -437,6 +426,8 @@ await startDevServer({
 ```
 
 ## 2.10 https
+
+The dev server can use HTTPS with a certificate and private key:
 
 ```js
 import { startDevServer } from "@jsenv/core";
@@ -451,7 +442,7 @@ await startDevServer({
 });
 ```
 
-☝️ The code above does not show the real value for `certificate` and `privateKey`. Usually these value are read from files generated by ssl commands. It's also possible to use [@jsenv/https-local](https://github.com/jsenv/https-local)<sup>↗</sup> to generate certificate and privateKey programmatically.
+**Tip**: Use [@jsenv/https-local](https://github.com/jsenv/https-local)<sup>↗</sup> to generate certificates programmatically.
 
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
