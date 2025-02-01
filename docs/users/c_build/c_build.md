@@ -530,8 +530,6 @@ Example of a build url with `base: "https://cdn.example.com"`:
 + <script type="module" src="https://cdn.example.com/js/main.js?v=16e5f70d"></script>
 ```
 
-### 2.5.2 Versioning
-
 ## 2.6 Precise cache invalidation
 
 Build [avoids cascading hash changes](https://bundlers.tooling.report/hashing/avoid-cascade/)<sup>↗</sup> by using [`<script type="importmap">`](https://github.com/WICG/import-maps)<sup>↗</sup> element.
