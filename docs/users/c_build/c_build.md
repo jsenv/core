@@ -454,50 +454,12 @@ Becomes _dist/index.html_:
 <script type="module" src="/js/main.js?v=16e5f70d"></script>
 ```
 
-### 2.5.1 Base
-
-You can configure the base URL for all files in the build:
-
-```diff
-- <script type="module" src="/js/main.js?v=16e5f70d"></script>
-+ <script type="module" src="https://cdn.example.com/js/main.js?v=16e5f70d"></script>
-```
-
-Example:
-
-```js
-import { build } from "@jsenv/core";
-
-await build({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../dist/", import.meta.url),
-  entryPoints: {
-    "./main.html": "index.html",
-  },
-  base: "https://cdn.example.com",
-});
-```
-
-### 2.5.2 Versioning
+### 2.5.1 Versioning
 
 By default, versioning is added as a URL search parameter:
 
 ```html
 <script type="module" src="/js/main.js?v=16e5f70d"></script>
-```
-
-Effect of filename versioning method:
-
-```diff
-- <script type="module" src="/js/main.js?v=16e5f70d"></script>
-+ <script type="module" src="/js/main-16e5f70d.js"></script>
-```
-
-Effect of disabling versioning:
-
-```diff
-- <script type="module" src="/js/main.js?v=16e5f70d"></script>
-+ <script type="module" src="/js/main.js"></script>
 ```
 
 You can switch to filename versioning:
@@ -515,6 +477,13 @@ await build({
 });
 ```
 
+Example of a build url when versioning via filename:
+
+```diff
+- <script type="module" src="/js/main.js?v=16e5f70d"></script>
++ <script type="module" src="/js/main-16e5f70d.js"></script>
+```
+
 Or disable versioning entirely:
 
 ```js
@@ -529,6 +498,39 @@ await build({
   versioning: false,
 });
 ```
+
+Example of a build url when versioning is disabled:
+
+```diff
+- <script type="module" src="/js/main.js?v=16e5f70d"></script>
++ <script type="module" src="/js/main.js"></script>
+```
+
+### 2.5.2 Base
+
+You can configure the base URL for all files in the build:
+
+```js
+import { build } from "@jsenv/core";
+
+await build({
+  sourceDirectoryUrl: new URL("../src/", import.meta.url),
+  buildDirectoryUrl: new URL("../dist/", import.meta.url),
+  entryPoints: {
+    "./main.html": "index.html",
+  },
+  base: "https://cdn.example.com",
+});
+```
+
+Example of a build url with `base: "https://cdn.example.com"`:
+
+```diff
+- <script type="module" src="/js/main.js?v=16e5f70d"></script>
++ <script type="module" src="https://cdn.example.com/js/main.js?v=16e5f70d"></script>
+```
+
+### 2.5.2 Versioning
 
 ## 2.6 Precise cache invalidation
 
