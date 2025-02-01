@@ -143,9 +143,11 @@ And many more features...
 
 # 1. Usage
 
-This section shows how to build project source files using jsenv.
+This section shows how to build your project source files using jsenv.
 
 ## 1.1 Project file structure
+
+Initially, the project structure looks like this:
 
 <pre>
 project/
@@ -154,7 +156,7 @@ project/
   package.json
 </pre>
 
-Adding a build have the following impacts on that file structure:
+After running a build, the structures changes to:
 
 ```diff
 project/
@@ -183,19 +185,19 @@ await build({
 
 ## 1.2 Generating a build
 
-Before generating a build, install dependencies with the following command:
+To generate a build, first install the necessary dependencies:
 
 ```console
 npm i --save-dev @jsenv/core
 ```
 
-Everything is ready, build can be generated with the following command:
+Once ready, you can generate the build by running the following command:
 
 ```console
 node ./scripts/build.mjs
 ```
 
-It will display the following output in the terminal:
+You should see the following output in the terminal:
 
 ![build](./build_terminal.svg)
 
@@ -203,7 +205,7 @@ It will display the following output in the terminal:
 
 ## 2.1 Browser support
 
-By default build generates code compatible with the following browsers:
+By default, the build generates code compatible with the following browsers:
 
 - Chrome 64+
 - Safari 11.3+
@@ -213,7 +215,7 @@ By default build generates code compatible with the following browsers:
 - Safari on IOS 12+
 - Samsung Internet 9.2+
 
-The browser support can be increased or decreased using `runtimeCompat`:
+You can adjust browser support using `runtimeCompat`:
 
 ```diff
 import { build } from "@jsenv/core";
@@ -233,7 +235,8 @@ await build({
 });
 ```
 
-Build ensure transformations are performed according to the browser support: if `<script type="module">` can be preserved, they will be.
+The build ensures transformations are performed based on the browser support specified.
+For example, if `<script type="module">` can be preserved, it will be.
 
 ### 2.1.1 Maximal browser support
 
@@ -249,46 +252,26 @@ The maximum compatibility that can be obtained after build is:
 
 ### 2.1.2 Same build for all browsers
 
-When `runtimeCompat` contains browsers not supporting `<script type="module"></script>` it is tempting to think the good thing to do is to generate 2 builds and use [`<script nomodule>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-nomodule)<sup>↗</sup>.
+When runtimeCompat includes browsers that do not support `<script type="module">`, it might seem logical to generate two builds and use the [`<script nomodule>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script#attr-nomodule)<sup>↗</sup>. However, based on tests with large codebases and user data, we found there is no significant performance impact. Generating a second set of files also introduces extra costs, such as:
 
-<!-- prettier-ignore -->
-```html
-<!-- this is NOT what jsenv does -->
-<script
- type="module"
- src="/dist/main.js"
-></script>
-<script
-  nomodule
-  src="/dist/main.nomodule.js"
-></script>
-```
+- Manual and automated testing on older browsers
+- Increased build time
 
-This has been tried on a big codebase served to a lot of users.
-The result: there is no significant performance impact for users.
-Moreover generating a second set of files has costs:
-
-- Manual tests must be runned also on old browsers
-- Automated tests as well
-- Finally it takes more time to generate the build
-
-For these reasons jsenv generates a single `<script>` tag.
+For these reasons jsenv generates a single `<script>` tag:
 
 ```html
-<!-- this is what jsenv does -->
 <script src="/dist/main.nomodule.js"></script>
 ```
 
-> **Note**
-> It's still possible to obtain X set of files by calling `build` multiple times with their own `runtimeCompat` and `buildDirectoryUrl`.
+If you prefer, you can generate multiple sets of files by calling build multiple times with different `runtimeCompat` settings and `buildDirectoryUrl`.
 
 ### 2.1.3 Polyfills
 
-Build does not inject polyfills. If code uses `Promise` and needs to be compatible with browsers that do not support `Promise`, the polyfill must be added. (suggestion: https://polyfill.io<sup>↗</sup>).
+Jsenv does not inject polyfills. If code relies on features like _Promise_ that are not supported in certain browsers, you must add the relevant polyfills. A recommended resource is https://polyfill.io<sup>↗</sup>.
 
 ## 2.2 Build directory structure
 
-A typical build end up with a file structure similar to:
+A typical build results in the following file structure:
 
 ```
 dist/
@@ -302,8 +285,8 @@ dist/
 
 ### 2.2.1 Entry points
 
-Entry points is an object describing the source files to build. It can be any type of file: HTML, CSS, JS, ...<br />
-Entry point values are used to control the name of the source file inside the build directory:
+The `entryPoints` object defines which source files to include in the build.
+These can be HTML, CSS, JS, etc. The values define the name of the output files in the build directory:
 
 ```js
 import { build } from "@jsenv/build";
@@ -331,7 +314,7 @@ dist/
 
 ### 2.2.2 Assets directory
 
-It's possible to regroup assets into a dedicated directory using `assetsDirectory` parameter:
+You can organize assets into a dedicated directory by using `assetsDirectory`:
 
 ```js
 import { build } from "@jsenv/core";
@@ -346,7 +329,7 @@ await build({
 });
 ```
 
-Resulting in the following structure in the build directory:
+This will produce the following structure:
 
 ```
 dist/
@@ -361,16 +344,16 @@ dist/
 
 ## 2.3 Bundling
 
-Bundling drastically reduces the number of files after build by concatenating file contents. It is enabled by default.
+Bundling combines multiple files into fewer files, improving performance. Bundling is enabled by default.
 
-The bundlers used under the hood are described in the table below:
+The bundlers used are:
 
-| File type | bundler used under the hood                                                 |
+| File type | bundler used                                                                |
 | --------- | --------------------------------------------------------------------------- |
 | js module | [rollup](https://github.com/rollup/rollup)<sup>↗</sup>                     |
 | css       | [lightningcss](https://github.com/parcel-bundler/lightningcss)<sup>↗</sup> |
 
-Use an object to configure what is bundled:
+You can configure which files to bundle:
 
 ```js
 import { build } from "@jsenv/core";
@@ -388,11 +371,11 @@ await build({
 });
 ```
 
-Or pass `bundling: false` to disable bundling entirely.
+Or completely disable bundling by setting `bundling: false`.
 
 ### 2.3.1 Js module chunks
 
-`chunks` parameter can be used to assign source files to build files. The code below puts the content of node module files and _a.js_ inside _vendors.js_:
+Use the `chunks` parameter to assign source files to specific build files. For instance, node module files and `a.js` can be grouped into `vendors.js`:
 
 ```js
 import { build } from "@jsenv/core";
@@ -420,18 +403,18 @@ The source files not assigned by `chunks` are distributed optimally into build f
 
 ## 2.4 Minification
 
-Minification decreases file size. It is enabled by default.
+Minification reduces file size and is enabled by default.
 
-The minifiers used under the hood are described in the table below:
+The minifiers used are:
 
-| File type                | Minifier used under the hood                                                |
+| File type                | Minifier used                                                               |
 | ------------------------ | --------------------------------------------------------------------------- |
 | js module and js classic | [terser](https://github.com/terser/terser)<sup>↗</sup>                     |
 | html and svg             | [html-minifier](https://github.com/kangax/html-minifier)<sup>↗</sup>       |
 | css                      | [lightningcss](https://github.com/parcel-bundler/lightningcss)<sup>↗</sup> |
 | json                     | White spaces are removed using JSON.stringify                               |
 
-Use an object to configure what is minified:
+You can configure which files to minify:
 
 ```js
 import { build } from "@jsenv/core";
@@ -453,11 +436,11 @@ await build({
 });
 ```
 
-Or pass `minification: false` to disable minification entirely.
+To disable minification, use `minification: false`.
 
 ## 2.5 Build urls
 
-Inside build files, url paths is absolute and versioned by default.
+By default, URLs in the build are absolute and versioned:
 
 _src/index.html_:
 
@@ -465,7 +448,7 @@ _src/index.html_:
 <script type="module" src="./main.js"></script>
 ```
 
-Becomes the following _dist/index.html_:
+Becomes _dist/index.html_:
 
 ```html
 <script type="module" src="/js/main.js?v=16e5f70d"></script>
@@ -473,14 +456,14 @@ Becomes the following _dist/index.html_:
 
 ### 2.5.1 Base
 
-It's possible to configure the build urls to obtain the following:
+You can configure the base URL for all files in the build:
 
 ```diff
 - <script type="module" src="/js/main.js?v=16e5f70d"></script>
 + <script type="module" src="https://cdn.example.com/js/main.js?v=16e5f70d"></script>
 ```
 
-Example of code putting `"https://cdn.example.com"` in front of every urls in the build file contents:
+Example:
 
 ```js
 import { build } from "@jsenv/core";
@@ -497,7 +480,7 @@ await build({
 
 ### 2.5.2 Versioning
 
-When versioning method is not specified, the version is injected as url search param:
+By default, versioning is added as a URL search parameter:
 
 ```html
 <script type="module" src="/js/main.js?v=16e5f70d"></script>
@@ -517,7 +500,7 @@ Effect of disabling versioning:
 + <script type="module" src="/js/main.js"></script>
 ```
 
-Example of code using filename versioning method:
+You can switch to filename versioning:
 
 ```js
 import { build } from "@jsenv/core";
@@ -532,7 +515,7 @@ await build({
 });
 ```
 
-Example of code disabling versioning:
+Or disable versioning entirely:
 
 ```js
 import { build } from "@jsenv/core";
@@ -549,7 +532,7 @@ await build({
 
 ## 2.6 Precise cache invalidation
 
-Build [avoids cascading hash changes](https://bundlers.tooling.report/hashing/avoid-cascade/)<sup>↗</sup> using [`<script type="importmap">`](https://github.com/WICG/import-maps)<sup>↗</sup>.
+Build [avoids cascading hash changes](https://bundlers.tooling.report/hashing/avoid-cascade/)<sup>↗</sup> by using [`<script type="importmap">`](https://github.com/WICG/import-maps)<sup>↗</sup> element.
 
 The following browsers are supporting importmap:
 
@@ -561,16 +544,15 @@ The following browsers are supporting importmap:
 - Safari on IOS 16.4+
 - Samsung Internet 15+
 
-If something in the `runtimeCompat` configured for the build does not support importmap, build converts js modules to the [systemjs format](https://github.com/systemjs/systemjs). This allow to keep versioning urls without introducing cascading hash changes.
+If the `runtimeCompat` doesn't support importmap, jsenv converts js modules to the [systemjs format](https://github.com/systemjs/systemjs). This allow to keep versioning without introducing cascading hash changes.
 
 ## 2.7 Resource hints
 
-If source file contains resource hints, they are updated by the build to reflect the state of the files after build.
-In some situations build will also inject resource hints and/or remove useless ones.
+During the build process, any resource hints (like `<link rel="preload">`) in the source files are updated to reflect the built files. If necessary, the build will also inject or remove resource hints.
 
 ### 2.7.2 Resource hint injection
 
-In a project with the following file structure
+For example, if your project contains preload links for `boot.js` and `app.js`:
 
 ```
 project/
@@ -581,15 +563,12 @@ project/
    ...many js files...
 ```
 
-With _index.html_ preloading _boot.js_ and _app.js_:
-
 ```html
 <link rel="preload" href="./boot.js" as="script" crossorigin="" />
 <link rel="preload" href="./app.js" as="script" crossorigin="" />
 ```
 
-During build, code shared by _boot.js_ and _app.js_ might be put into an intermediate file to improve code reuse.
-In that case build will inject a preload link to that new file introduced during build:
+The build might introduce new preloads to improve code reuse:
 
 ```html
 <link rel="preload" href="/js/boot.js?v=12345678" as="script" crossorigin="" />
@@ -608,30 +587,30 @@ In that case build will inject a preload link to that new file introduced during
 <link rel="preload" href="./main.js" as="script" crossorigin="" />
 ```
 
-☝️ Assuming nothing else in the code is referencing "main.js", the following warning is logged during build
+☝️ If “main.js” is not referenced elsewhere in the code, the following warning will appear during the build:
 
 ```console
 ⚠ remove resource hint because cannot find "file:///demo/main.js" in the graph
 ```
 
-To remove this warning, remove the resource hint from the html file.
+To remove this warning, simply delete the resource hint from the HTML file.
 
-A similar warning is logged whenever a file is no longer needed after build (like when the file is bundled into an other). In that case the warning is a bit different
+Similarly, when a file is no longer needed after build (such as when it is bundled into another file), a different warning is shown:
 
 ```console
 ⚠ remove resource hint on "file:///demo/main.js" because it was bundled
 ```
 
-Here again, remove the resource hint from the html file as it becomes useless after build.
+In this case, you can also remove the resource hint from the HTML file as it is no longer necessary after the build.
 
 ## 2.8 plugins
 
-Array of custom jsenv plugins that will be used while building files.  
-Read more in [G) Plugins](../g_plugins/g_plugins.md).
+An array of custom jsenv plugins that will be used during the build process.
+For more information, refer to [G) Plugins](../g_plugins/g_plugins.md).
 
 ## 2.9 Symbiosis with service worker
 
-Let's see what happens during build when some code registers a service worker:
+Here’s what happens during the build when code registers a service worker:
 
 _index.html_:
 
@@ -669,8 +648,8 @@ self.addEventListener("install", (event) => {
 });
 ```
 
-1. build recognize `navigator.serviceWorker.register` and consider _sw.js_ is a service worker entry file.
-2. build injects code at the top of _sw.js_:
+1. The build detects `navigator.serviceWorker.register` and consider _sw.js_ as the service worker entry file.
+2. The build injects the following code at the top of _sw.js_:
 
 ```diff
 + self.resourcesFromJsenvBuild = {
@@ -684,9 +663,9 @@ self.addEventListener("install", (event) => {
 + };
 ```
 
-Thanks to this the service worker becomes aware of all the files generated during the build. It can use this information to put all urls into browser cache and make the page work offline for instance.
+Thanks to this, the service worker becomes aware of all the files generated during the build and can cache all URLs to make the page available offline.
 
-To do this the code inside _sw.js_ need to be adjusted a bit:
+To accomplish this, the code inside sw.js needs to be adjusted as follows:
 
 ```diff
   const urls = ["/'];
@@ -702,15 +681,15 @@ To do this the code inside _sw.js_ need to be adjusted a bit:
 + }
 ```
 
-In case you don't have your own service worker already you can use [@jsenv/service-worker](../../../packages/independent/service-worker)
+If you don’t have your own service worker, you can use [@jsenv/service-worker](../../../packages/independent/service-worker)
 
 ## 2.10 sourcemaps
 
-Same as `sourcemaps` in [B) Dev](../b_dev/b_dev.md#28-sourcemaps) but default value is `"none"`
+Same as the `sourcemaps` options in [B) Dev](../b_dev/b_dev.md#28-sourcemaps), but default value is `"none"`.
 
 # 3. How to serve build files
 
-Start a server for build files; Acts as a server for static files without any logic.
+To start a server for build files, simply run the following:
 
 ```js
 import { startBuildServer } from "@jsenv/core";
@@ -723,15 +702,15 @@ const buildServer = await startBuildServer({
 
 ## 3.1 buildDirectoryUrl
 
-A string or url leading to the directory where build files are written. This parameter is **required**.
+This is a required parameter. It should be a string or URL pointing to the directory where the build files are stored.
 
 ## 3.2 port
 
-Number listened by the build server (default is 9779). `0` listen a random available port.
+This specifies the port the build server will listen on (default is `9779`). If you pass `0`, it will automatically use a random available port.
 
 ## 3.3 https
 
-Same as https in [B) Dev](../b_dev/b_dev.md#210-https)
+Same as the `https` option in [B) Dev](../b_dev/b_dev.md#210-https)
 
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
