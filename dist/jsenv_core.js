@@ -3226,6 +3226,27 @@ const readDirectory = async (url, { emfileMaxWait = 1000 } = {}) => {
   return attempt();
 };
 
+const generateWindowsEPERMErrorMessage = (
+  error,
+  { operation, path },
+) => {
+  const pathLengthIsExceedingUsualLimit = String(path).length >= 256;
+  let message = "";
+
+  if (operation) {
+    message += `error while trying to fix windows EPERM after ${operation} on ${path}`;
+  }
+
+  if (pathLengthIsExceedingUsualLimit) {
+    message += "\n";
+    message += `Maybe because path length is exceeding the usual limit of 256 characters of windows OS?`;
+    message += "\n";
+  }
+  message += "\n";
+  message += error.stack;
+  return message;
+};
+
 const writeEntryPermissions = async (source, permissions) => {
   const sourceUrl = assertAndNormalizeFileUrl(source);
 
@@ -3296,7 +3317,10 @@ const readEntryStat = async (
               return stats;
             } catch (e) {
               console.error(
-                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
+                generateWindowsEPERMErrorMessage(e, {
+                  operation: "stats",
+                  path: sourcePath,
+                }),
               );
               throw error;
             }
@@ -3398,7 +3422,10 @@ const readEntryStatSync = (
               return stats;
             } catch (e) {
               console.error(
-                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
+                generateWindowsEPERMErrorMessage(e, {
+                  operation: "stats",
+                  path: sourcePath,
+                }),
               );
               throw error;
             }
@@ -3816,7 +3843,10 @@ const removeDirectorySync$1 = (
                   return;
                 }
                 console.error(
-                  `error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`,
+                  generateWindowsEPERMErrorMessage(openOrCloseError, {
+                    path: directoryPath,
+                    operation: "readir",
+                  }),
                 );
                 throw error;
               }
@@ -4152,7 +4182,6 @@ const removeDirectory = async (
               console.error(
                 `trying to fix windows EPERM after readir on ${directoryPath}`,
               );
-
               let openOrCloseError;
               try {
                 const fd = openSync(directoryPath);
@@ -4166,7 +4195,10 @@ const removeDirectory = async (
                   return;
                 }
                 console.error(
-                  `error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`,
+                  generateWindowsEPERMErrorMessage(openOrCloseError, {
+                    operation: "readdir",
+                    path: directoryPath,
+                  }),
                 );
                 throw error;
               }
@@ -4305,7 +4337,10 @@ const createWatcher = (sourcePath, options) => {
             return;
           }
           console.error(
-            `error while trying to get rid of windows EPERM: ${e.stack}`,
+            generateWindowsEPERMErrorMessage(error, {
+              operation: "watch",
+              path: sourcePath,
+            }),
           );
           throw error;
         }

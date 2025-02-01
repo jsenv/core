@@ -1,4 +1,5 @@
 import { closeSync, openSync, watch } from "node:fs";
+import { generateWindowsEPERMErrorMessage } from "../window_eperm_error.js";
 
 const isWindows = process.platform === "win32";
 
@@ -17,7 +18,10 @@ export const createWatcher = (sourcePath, options) => {
             return;
           }
           console.error(
-            `error while trying to get rid of windows EPERM: ${e.stack}`,
+            generateWindowsEPERMErrorMessage(error, {
+              operation: "watch",
+              path: sourcePath,
+            }),
           );
           throw error;
         }

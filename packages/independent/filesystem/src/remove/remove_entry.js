@@ -9,6 +9,7 @@ import { closeSync, openSync, rmdir, unlink } from "node:fs";
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 import { readDirectory } from "../read_write/read_directory.js";
 import { readEntryStat } from "../read_write/stat/read_entry_stat.js";
+import { generateWindowsEPERMErrorMessage } from "../window_eperm_error.js";
 
 export const removeEntry = async (
   source,
@@ -168,7 +169,6 @@ const removeDirectory = async (
               console.error(
                 `trying to fix windows EPERM after readir on ${directoryPath}`,
               );
-
               let openOrCloseError;
               try {
                 const fd = openSync(directoryPath);
@@ -182,7 +182,10 @@ const removeDirectory = async (
                   return;
                 }
                 console.error(
-                  `error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`,
+                  generateWindowsEPERMErrorMessage(openOrCloseError, {
+                    operation: "readdir",
+                    path: directoryPath,
+                  }),
                 );
                 throw error;
               }

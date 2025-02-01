@@ -13,6 +13,7 @@ import {
 
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 import { readEntryStatSync } from "../read_write/stat/read_entry_stat_sync.js";
+import { generateWindowsEPERMErrorMessage } from "../window_eperm_error.js";
 
 export const removeEntrySync = (
   source,
@@ -153,7 +154,10 @@ const removeDirectorySync = (
                   return;
                 }
                 console.error(
-                  `error while trying to fix windows EPERM after readir on ${directoryPath}: ${openOrCloseError.stack}`,
+                  generateWindowsEPERMErrorMessage(openOrCloseError, {
+                    path: directoryPath,
+                    operation: "readir",
+                  }),
                 );
                 throw error;
               }

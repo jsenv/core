@@ -7,6 +7,7 @@ import { urlToFileSystemPath } from "@jsenv/urls";
 import { lstat, stat } from "node:fs";
 
 import { assertAndNormalizeFileUrl } from "../../path_and_url/file_url_validation.js";
+import { generateWindowsEPERMErrorMessage } from "../../window_eperm_error.js";
 import { writeEntryPermissions } from "./write_entry_permissions.js";
 
 const isWindows = process.platform === "win32";
@@ -54,7 +55,10 @@ export const readEntryStat = async (
               return stats;
             } catch (e) {
               console.error(
-                `error while trying to fix windows EPERM after stats on ${sourcePath}: ${e.stack}`,
+                generateWindowsEPERMErrorMessage(e, {
+                  operation: "stats",
+                  path: sourcePath,
+                }),
               );
               throw error;
             }
