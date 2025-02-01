@@ -33,8 +33,8 @@ Plugins extend jsenv’s core features, providing custom capabilities to suit sp
     </a>
   </li>
   <li>
-    <a href="#2-transversal-plugins">
-      Transversal plugins
+    <a href="#2-ecosystem-plugins">
+      Ecosystem plugins
     </a>
       <ul>
         <li>
@@ -100,13 +100,13 @@ await startDevServer({
 
 In this example, we import jsenv’s core alongside the React plugin, then add them to the `plugins` array.
 
-# 2. Transversal plugins
+# 2. Ecosystem plugins
 
-Transversal plugins enhance jsenv's fundamental capabilities. These plugins provides support for specific features or frameworks.
+Ecosystem plugins enhance jsenv's fundamental capabilities. These plugins provides support for specific features or frameworks.
 
 ## React
 
-The React plugin ensures seamless integration with projects using React.
+Adds compatibility with React JSX, allowing seamless integration of React components in your project.
 
 **Installation**
 
