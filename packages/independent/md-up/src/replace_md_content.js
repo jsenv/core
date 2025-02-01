@@ -31,6 +31,19 @@ export const replacePlaceholders = (string, replacers) => {
   return string;
 };
 
+const getTocPlaceholderIndex = (string) => {
+  const matchAllResult = string.matchAll(
+    /<!-- PLACEHOLDER_START:(\w+) -->[\s\S]*?<!-- PLACEHOLDER_END -->/g,
+  );
+  for (const match of matchAllResult) {
+    const [, placeholderName] = match;
+    if (placeholderName === "TOC" || placeholderName === "TOC_INLINE") {
+      return match.index;
+    }
+  }
+  return -1;
+};
+
 export const generateTableOfContents = (markdownFile, { tocMode }) => {
   const tableOfContentRootNode = {
     title: "Table of contents",
@@ -43,7 +56,37 @@ export const generateTableOfContents = (markdownFile, { tocMode }) => {
   const htmlNode = htmlTree.childNodes.find((node) => node.nodeName === "html");
   const body = htmlNode.childNodes.find((node) => node.nodeName === "body");
   let currentHeadingLink = null;
-  for (const child of body.childNodes) {
+  const bodyChildNodes = body.childNodes;
+  const tocNodeIndex = bodyChildNodes.findIndex((childCandidate) => {
+    return (
+      childCandidate.nodeName[0] === "h" &&
+      getHtmlNodeText(childCandidate) === "Table of contents"
+    );
+  });
+  let startIndex;
+  if (tocNodeIndex === -1) {
+    startIndex = 0;
+    const tocCommentStartIndex = getTocPlaceholderIndex(markdownFile.content);
+    let index = 0;
+    while (index < bodyChildNodes.length) {
+      const child = bodyChildNodes[index];
+      index++;
+      if (child.sourceCodeLocation.startOffset > tocCommentStartIndex) {
+        startIndex = index - 1;
+        break;
+      }
+    }
+  } else {
+    startIndex = tocNodeIndex + 1;
+  }
+  let index = startIndex;
+  while (index < bodyChildNodes.length) {
+    const child = bodyChildNodes[index];
+    index++;
+    const text = getHtmlNodeText(child);
+    if (text === "Conclusion") {
+      continue;
+    }
     if (child.nodeName === "h1") {
       const text = getHtmlNodeText(child);
       if (isFirstH1) {
@@ -159,15 +202,16 @@ ${"  ".repeat(indent + 2)}</a>`;
     return tableOfContent;
   }
   let indent = 0;
-  tableOfContent += `${`#`.repeat(3)} ${rootNode.title}`;
+  tableOfContent += `${`#`.repeat(1)} ${rootNode.title}`;
   tableOfContent += "\n";
   indent = 0;
   const visit = (node, indent) => {
+    let listTagName = node.level === undefined ? "ol" : "ul";
     if (tableOfContent) tableOfContent += "\n";
-    tableOfContent += `${"  ".repeat(indent)}<ol>`;
+    tableOfContent += `${"  ".repeat(indent)}<${listTagName}>`;
     for (const childNode of node.children) {
       let text = escapeHtml(childNode.text);
-      text = text.replace(/^[0-9+\\.] /, "");
+      text = text.replace(/^[0-9]+\.[0-9]* /, "");
       tableOfContent += `\n${"  ".repeat(indent + 1)}<li>`;
       tableOfContent += `\n${"  ".repeat(indent + 2)}<a href="${urlToRelativeUrl(childNode.href, markdownFileUrl)}">
 ${"  ".repeat(indent + 3)}${text}
@@ -177,7 +221,7 @@ ${"  ".repeat(indent + 2)}</a>`;
       }
       tableOfContent += `\n${"  ".repeat(indent + 1)}</li>`;
     }
-    tableOfContent += `\n${"  ".repeat(indent)}</ol>`;
+    tableOfContent += `\n${"  ".repeat(indent)}</${listTagName}>`;
   };
   visit(rootNode, indent);
   return tableOfContent;

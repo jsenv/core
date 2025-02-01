@@ -18,256 +18,251 @@
 
 <!-- PLACEHOLDER_END -->
 
-Official jsenv plugins written and maintained by jsenv.
+# Introduction to plugins
 
----
+Plugins in jsenv provide a powerful and flexible way to extend its standard functionality. By default, jsenv offers a "standard" behavior suitable for common use cases. However, every project has unique needs, and that’s where plugins come in.
+
+Plugins enable additional capabilities or integrations with external tools like popular frameworks such as React or Preact. They can also introduce non-standard features to address specific requirements.
+
+In short, plugins make jsenv a highly adaptable tool, seamlessly fitting into diverse environments and workflows. This document outlines the available plugins, their usage, and the possibilities they unlock for your projects.
 
 <!-- PLACEHOLDER_START:TOC_INLINE -->
 
-### Table of contents
+# Table of contents
 
 <ol>
   <li>
-    <a href="#1-dev-build-transversal">
-      1. Dev, build, transversal
+    <a href="#1-how-to-add-a-plugin">
+      How to add a plugin
     </a>
   </li>
   <li>
     <a href="#2-transversal-plugins">
-      2. Transversal plugins
+      Transversal plugins
     </a>
-      <ol>
+      <ul>
         <li>
-          <a href="#21-commonjs">
-            2.1 commonjs
+          <a href="#react">
+            React
           </a>
         </li>
         <li>
-          <a href="#22-asjsclassic">
-            2.2 asJsClassic
+          <a href="#commonjs">
+            CommonJs
           </a>
         </li>
         <li>
-          <a href="#23-preact">
-            2.3 preact
+          <a href="#asjsclassic">
+            asJsClassic
           </a>
         </li>
-        <li>
-          <a href="#24-react">
-            2.4 react
-          </a>
-        </li>
-      </ol>
+      </ul>
+  </li>
+  <li>
+    <a href="#preact">
+      Preact
+    </a>
   </li>
   <li>
     <a href="#3-dev-plugins">
-      3. Dev plugins
+      Dev plugins
     </a>
-      <ol>
+      <ul>
         <li>
           <a href="#31-explorer">
-            3.1 explorer
+            explorer
           </a>
         </li>
         <li>
           <a href="#32-toolbar">
-            3.2 toolbar
+            toolbar
           </a>
         </li>
-      </ol>
-  </li>
-  <li>
-    <a href="#4-build-plugins">
-      4. Build plugins
-    </a>
+      </ul>
   </li>
 </ol>
 
 <!-- PLACEHOLDER_END -->
 
----
+# 1. How to add a plugin
 
-# 1. Dev, build, transversal
+Adding a plugin is as simple as importing it and including it in your `plugins` array when calling jsenv functions.
 
-A plugin is either:
+**Example**
 
-- transversal: must be passed both to `startDevServer` and `build`.
-- dev only: must be passed to `startDevServer`; Passing it to `build` have no effect.
-- build only: must be passed to `build`; Passing it to `startDevServer` have no effect.
-
-Plugins are enabled during dev as follows:
-
-```js
-import { startDevServer } from "@jsenv/core";
-import { myJsenvPlugin } from "./my_jsenv_plugin.js";
-
-await startDevServer({
-  plugins: [myJsenvPlugin()],
-});
-```
-
-Plugins are enabled during build as follows:
-
-```js
-import { build } from "@jsenv/core";
-import { myJsenvPlugin } from "./my_jsenv_plugin.js";
-
-await build({
-  plugins: [myJsenvPlugin()],
-});
-```
-
-See [2. Transversal plugins](#2-transversal-plugins), [3. Dev plugins](#3-dev-plugins), [4. Build plugins](#4-build-plugins).
-
-# 2. Transversal plugins
-
-## 2.1 commonjs
-
-Use this plugin if:
-
-1. you want to import code written in commonJS format
-
-This plugin transforms file content written in commonjs into js modules so it can be imported:
-
-```diff
-- require("./file.js");
-- module.exports.answer = 42;
-- console.log(process.env.NODE_ENV);
-
-+ import "./file.js";
-+ export const answer = 42;
-+ console.log("development"); // would be "production" after build
-```
-
-**Installation and configuration**
-
-```console
-npm i --save-dev @jsenv/plugin-commonjs
-```
-
-```js
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
-
-await startDevServer({
-  plugins: [
-    jsenvPluginCommonJs({
-      include: {
-        "./main.js": true,
-      },
-    }),
-  ],
-});
-```
-
-Usually it's a package (a node module) that is written in commonjs format.
-In that case configure `include` like this:
-
-```js
-jsenvPluginCommonJs({
-  include: {
-    "file:///**/node_modules/react/": true,
-  },
-});
-```
-
-## 2.2 asJsClassic
-
-Use this plugin if:
-
-1. your js must be executed by a classic `<script>` and not by `<script type="module">`
-2. you still want the power of js modules (import, dynamic import, import.meta, ...)
-
-Conversion happens when a reference to a file uses "as_js_classic" query parameter:
-
-```html
-<!doctype html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <script src="./main.js?as_js_classic"></script>
-  </body>
-</html>
-```
-
-Content of _main.js_ is transformed to be executable by a regular `<script>`:
-
-```diff
-- import { foo } from "./foo.js";
-- console.log(import.meta.url);
-- console.log(foo);
-
-+ const foo = 42;
-+ console.log(document.currentScript.src);
-+ console.log(foo);
-```
-
-**Installation and configuration**
-
-```console
-npm i --save-dev @jsenv/plugin-as-js-classic
-```
-
-```js
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
-
-await startDevServer({
-  plugins: [jsenvPluginAsJsClassic()],
-});
-```
-
-## 2.3 preact
-
-1. Transpile jsx in some files (".jsx" and ".tsx")
-2. Inject `import { jsxDEV } from "preact-jsx-runtime";` in jsx files during dev
-3. Inject `import { jsx } from "preact-jsx-runtime";` in jsx files during build
-4. Inject `import.meta.hot` in jsx files (enable partial reload/HMR)
-5. Inject preact devtools during dev
-6. Inject name on preact hooks for preact devtools
-
-**Installation and configuration**
-
-```console
-npm i --save-dev @jsenv/plugin-preact
-```
-
-```js
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginPreact } from "@jsenv/plugin-preact";
-
-await startDevServer({
-  plugins: [jsenvPluginPreact()],
-});
-```
-
-## 2.4 react
-
-1. Transpile jsx in some files (".jsx" and ".tsx")
-2. Inject `import { jsx } from "react/jsx-dev-runtime";` in jsx files during dev
-3. Inject `import { jsx } from "react/jsx-runtime";` in jsx files during build
-4. Inject `import.meta.hot` in jsx files (enable partial reload/HMR)
-5. Transpiles react packages from commonjs to js modules
-
-**Installation and configuration**
-
-```console
-npm i --save-dev @jsenv/plugin-react
-```
+Here's a sample code demonstrating usage of multiple plugins:
 
 ```js
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
+import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
 await startDevServer({
-  plugins: [jsenvPluginReact()],
+  plugins: [jsenvPluginReact(), jsenvPluginAsJsClassic()],
 });
 ```
+
+# 2. Transversal plugins
+
+Transversal plugins enhance jsenv's fundamental capabilities. These plugins provides support for specific features or frameworks.
+
+## React
+
+- **Purpose**: Adds compatibility with React JSX.
+- **Usage**:
+
+  ```console
+  npm i --save-dev @jsenv/plugin-react
+  ```
+
+  ```js
+  import { startDevServer } from "@jsenv/core";
+  import { jsenvPluginReact } from "@jsenv/plugin-react";
+
+  await startDevServer({
+    plugins: [jsenvPluginReact()],
+  });
+  ```
+
+  ```js
+  import { build } from "@jsenv/core";
+  import { jsenvPluginReact } from "@jsenv/plugin-react";
+
+  await build({
+    plugins: [jsenvPluginReact()],
+  });
+  ```
+
+## CommonJs
+
+- **Purpose**: You want to import code written in CommonJS. This plugin transform file content written in CommonJs into js modules that can be imported.
+- **Example**:
+
+  ```diff
+  - require("./file.js");
+  - module.exports.answer = 42;
+  - console.log(process.env.NODE_ENV);
+
+  + import "./file.js";
+  + export const answer = 42;
+  + console.log("development"); // would be "production" after build
+  ```
+
+- **Usage**:
+
+  ```console
+  npm i --save-dev @jsenv/plugin-commonjs
+  ```
+
+  ```js
+  import { startDevServer } from "@jsenv/core";
+  import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+
+  await startDevServer({
+    plugins: [
+      jsenvPluginCommonJs({
+        include: {
+          "./main.js": true,
+        },
+      }),
+    ],
+  });
+  ```
+
+  Usually it's a package (a node module) that is written in commonjs format.
+  In that case configure `include` like this:
+
+  ```js
+  jsenvPluginCommonJs({
+    include: {
+      "file:///**/node_modules/react/": true,
+    },
+  });
+  ```
+
+## asJsClassic
+
+- **Purpose**: You want the power of js modules (import, dynamic import, import.meta, ...) but js MUST still be executed by a classic `<script>` for technical reasons.
+
+- **Example**: The following HTML file uses a script to load a js file:
+
+  ```html
+  <!doctype html>
+  <html>
+    <head>
+      <title>Title</title>
+      <meta charset="utf-8" />
+      <link rel="icon" href="data:," />
+    </head>
+
+    <body>
+      <script src="./main.js?as_js_classic"></script>
+    </body>
+  </html>
+  ```
+
+  This plugin transform file content when `?as_js_classic` query parameter is present. It could transforms a theorical `main.js` file content as follow:
+
+  ```diff
+  - import { foo } from "./foo.js";
+  - console.log(import.meta.url);
+  - console.log(foo);
+
+  + const foo = 42;
+  + console.log(document.currentScript.src);
+  + console.log(foo);
+  ```
+
+- **Usage**:
+
+  ```console
+  npm i --save-dev @jsenv/plugin-as-js-classic
+  ```
+
+  ```js
+  import { startDevServer } from "@jsenv/core";
+  import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+
+  await startDevServer({
+    plugins: [jsenvPluginAsJsClassic()],
+  });
+  ```
+
+  ```js
+  import { build } from "@jsenv/core";
+  import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+
+  await build({
+    plugins: [jsenvPluginAsJsClassic()],
+  });
+  ```
+
+# Preact
+
+- **Purpose**: Adds compatibility with React JSX but using preact instead of react
+- **Usage**:
+
+  ```console
+  npm i --save-dev @jsenv/plugin-preact
+  ```
+
+  ```js
+  import { startDevServer } from "@jsenv/core";
+  import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+
+  await startDevServer({
+    plugins: [jsenvPluginPreact()],
+  });
+  ```
+
+  ```js
+  import { build } from "@jsenv/core";
+  import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+
+  await build({
+    plugins: [jsenvPluginPreact()],
+  });
+  ```
 
 # 3. Dev plugins
 
@@ -386,9 +381,9 @@ await startDevServer({
 });
 ```
 
-# 4. Build plugins
+# Conclusion
 
-There is no plugin specific to build for now.
+Plugins are the key to unlocking jsenv’s full potential. Whether you need compatibility with a specific framework or advanced project-level capabilities, plugins ensure jsenv adapts seamlessly to your needs. Explore the available plugins and experiment with their configurations to customize your workflow.
 
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
