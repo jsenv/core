@@ -1,4 +1,4 @@
-Welcome on jsenv documentation for users.
+This section explains how users can integrate jsenv into their projects. It highlights the steps for installation, setup, and usage. It also includes advanced configurations and customization options to fit different project needs.
 
 # Table of content
 
