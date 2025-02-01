@@ -4,10 +4,10 @@
 
 Jsenv is a suite of tools that can be used in projects involving JavaScript.
 
-`@jsenv/core` goal is too provide the following tools:
+THe goal of `@jsenv/core` is to provide the following tools:
 
 1. **dev server**; A server that serves source files, facilitating development with live reloading.
-2. **build**; Generates an optimized version of source files into a specified directory for production.
+2. **build**; Optimizes source files into a specified directory for production.
 3. **build server**; Serves the built files, allowing for testing and verifying the production build.
 4. **test runner**; Runs test files concurrently, ensuring code reliability.
 
@@ -22,8 +22,8 @@ For more details, please refer to the [documentation](./docs/users/users.md)
 
 - **Test files are executed like standard files**.
 - **Isolated environment for each test file**: Ensures tests run independently, preventing side effects.
-- **Execute tests in multiple browsers**: Supports Chrome, Safari, and Firefox for comprehensive testing.
-- **Large browser support during dev**: Allows the use of various browsers beyond the latest Chrome, aiding in reproducing browser-specific bugs.
+- **Execute tests in multiple browsers**: Supports Chrome, Safari, and Firefox.
+- **Extensive browser support during dev**: Allows the use of various browsers beyond the latest Chrome, which is useful for reproducing browser-specific bugs.
 - **Large browser support after build**: Ensures compatibility with older versions of Firefox, Chrome, and Safari.
 - **Single set of files after build**: Simplifies support and deployement with a unified set of files.
 - **Robust versioning during build**: No <a href="https://bundlers.tooling.report/hashing/avoid-cascade/" target="_blank">cascading hash changes</a><sup>↗</sup>.
