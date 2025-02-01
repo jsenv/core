@@ -15,9 +15,9 @@
 
 <!-- PLACEHOLDER_END -->
 
-Jsenv works seamlessly with any directory structure and supports advanced use cases, such as [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
+Jsenv works seamlessly with any directory structure and advanced setups like [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
 
-Below is a basic project structure:
+Below is an example of a project structure:
 
 ```console
 project/       -> root directory
