@@ -56,12 +56,12 @@ In short, plugins make jsenv a highly adaptable tool, seamlessly fitting into di
             asJsClassic
           </a>
         </li>
+        <li>
+          <a href="#preact">
+            Preact
+          </a>
+        </li>
       </ul>
-  </li>
-  <li>
-    <a href="#preact">
-      Preact
-    </a>
   </li>
   <li>
     <a href="#3-dev-plugins">
@@ -237,7 +237,7 @@ Transversal plugins enhance jsenv's fundamental capabilities. These plugins prov
   });
   ```
 
-# Preact
+## Preact
 
 - **Purpose**: Adds compatibility with React JSX but using preact instead of react
 - **Usage**:
@@ -266,120 +266,106 @@ Transversal plugins enhance jsenv's fundamental capabilities. These plugins prov
 
 # 3. Dev plugins
 
+Dev plugins enchance jsenv dev server capabilities and behaviour. They can be added only to the dev server. They have no effect on jsenv build.
+
 ## 3.1 explorer
 
-This plugin adds a new behaviour on dev server: the root url displays an HTML page listing a subset of files from the source directory:
+- **Purpose**: Display a page listing a subset of your project files into groups. Helps to naviguate files, usually HTML files, are means to be used during development.
 
-![screenshot explorer.html](https://github.com/jsenv/core/assets/443639/4efd2fb9-4108-4413-86d0-3300a56e49d8)
+- **Example**:
 
-It is very useful when a project contains multiple HTML files.
+  ![screenshot explorer.html](https://github.com/jsenv/core/assets/443639/4efd2fb9-4108-4413-86d0-3300a56e49d8)
 
-**Installation and configuration**
+- **Usage**:
 
-```console
-npm i --save-dev @jsenv/plugin-explorer
-```
+  ```console
+  npm i --save-dev @jsenv/plugin-explorer
+  ```
 
-```js
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
+  ```js
+  import { startDevServer } from "@jsenv/core";
+  import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
 
-await startDevServer({
-  plugins: [jsenvPluginExplorer()],
-});
-```
+  await startDevServer({
+    plugins: [jsenvPluginExplorer()],
+  });
+  ```
 
-Your main HTML file can be opened by visiting the exact url, like `http://localhost:3456/index.html`:
+  Your main HTML file can be opened by visiting the exact url, like `http://localhost:3456/index.html`:
 
-![Title 2023-05-11 09-10-47](https://github.com/jsenv/core/assets/443639/8af16b6c-7641-4b63-9e15-fbcb42dc59c2)
+  ![Title 2023-05-11 09-10-47](https://github.com/jsenv/core/assets/443639/8af16b6c-7641-4b63-9e15-fbcb42dc59c2)
 
-It's possible to keep `http://localhost:3456` equivalent to `http://localhost:3456/index.html` by configuring a `pathname` where explorer should be served:
+  It's possible to keep `http://localhost:3456` equivalent to `http://localhost:3456/index.html` by configuring a `pathname` where explorer should be served:
 
-```js
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
+  ```js
+  jsenvPluginExplorer({
+    pathname: "/explore",
+  });
+  ```
 
-await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  plugins: [
-    jsenvPluginExplorer({
-      pathname: "/explore",
-    }),
-  ],
-});
-```
+  And it's possible to configure the group of files as follow:
 
-And it's possible to configure the group of files as follow:
-
-```js
-import { startDevServer } from "@jsenv/core";
-
-await startDevServer({
-  sourceDirectoryUrl: new URL("../src/", import.meta.url),
-  plugins: [
-    jsenvPluginExplorer({
-      pathname: "/explore",
-      groups: {
-        "main files": {
-          "./**/*.html": true,
-          "./**/*.test.html": false,
-        },
-        "spec files": {
-          "./**/*.test.html": true,
-        },
+  ```js
+  jsenvPluginExplorer({
+    pathname: "/explore",
+    groups: {
+      "main files": {
+        "./**/*.html": true,
+        "./**/*.test.html": false,
       },
-    }),
-  ],
-});
-```
+      "spec files": {
+        "./**/*.test.html": true,
+      },
+    },
+  });
+  ```
 
-The page now displays "main files" and "spec files":
+  The page now displays "main files" and "spec files":
 
-![Exploring 2023-05-22 16-02-14](https://github.com/jsenv/core/assets/443639/b9d4c7d1-5db7-4cc5-b1b9-fcb3e138b7bb)
+  ![Exploring 2023-05-22 16-02-14](https://github.com/jsenv/core/assets/443639/b9d4c7d1-5db7-4cc5-b1b9-fcb3e138b7bb)
 
 ## 3.2 toolbar
 
-Inject a toolbar in html files.
-This toolbar display various info and can configure jsenv behaviour during dev; for instance to disable autoreload on change for a moment.
+- **Purpose**: User interface to interact with jsenv dev server right from the page; for instance to disable autoreload on change for a moment.
 
-By default the toolbar is hidden, there is a discrete way to open it at the bottom right of the page.
+- **Usage**:
 
-![Title 2022-12-12 09-42-28](https://user-images.githubusercontent.com/443639/207000431-4948938b-a434-4a19-b80d-af918610382a.png)
+  ```console
+  npm i --save-dev @jsenv/plugin-toolbar
+  ```
 
-When hovering this area, a small strip is displayed
+  ```js
+  import { startDevServer } from "@jsenv/core";
+  import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 
-![Title 2022-12-12 09-45-19](https://user-images.githubusercontent.com/443639/207000795-afa7cb84-5e7c-45ae-99e4-8150001db95e.png)
+  await startDevServer({
+    plugins: [jsenvPluginToolbar()],
+  });
+  ```
 
-It can be clicked to open the toolbar
+  By default the toolbar is hidden, there is a discrete way to open it at the bottom right of the page.
 
-![Title 2022-12-12 09-46-14](https://user-images.githubusercontent.com/443639/207001058-3a04a103-8eaf-44ef-bd06-22b4621547dc.png)
+  ![Title 2022-12-12 09-42-28](https://user-images.githubusercontent.com/443639/207000431-4948938b-a434-4a19-b80d-af918610382a.png)
 
-The toolbar is composed as follows:
+  When hovering this area, a small strip is displayed
 
-![Title 2022-12-13 14-03-55](https://user-images.githubusercontent.com/443639/207327042-433329a6-3008-44f1-9b36-d976d574be3d.png)
+  ![Title 2022-12-12 09-45-19](https://user-images.githubusercontent.com/443639/207000795-afa7cb84-5e7c-45ae-99e4-8150001db95e.png)
 
-| Component           | Description                                        |
-| ------------------- | -------------------------------------------------- |
-| Index button        | Link to the explorer/index page                    |
-| Execution indicator | Displays state of this HTML page execution         |
-| Server indicator    | Displays state of connection with jsenv dev server |
-| Settings button     | Button to open toolbar settings                    |
-| Close button        | Button to close the toolbar                        |
+  It can be clicked to open the toolbar
 
-**Installation and configuration**
+  ![Title 2022-12-12 09-46-14](https://user-images.githubusercontent.com/443639/207001058-3a04a103-8eaf-44ef-bd06-22b4621547dc.png)
 
-```console
-npm i --save-dev @jsenv/plugin-toolbar
-```
+  The toolbar is composed as follows:
 
-```js
-import { startDevServer } from "@jsenv/core";
-import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
+  ![Title 2022-12-13 14-03-55](https://user-images.githubusercontent.com/443639/207327042-433329a6-3008-44f1-9b36-d976d574be3d.png)
 
-await startDevServer({
-  plugins: [jsenvPluginToolbar()],
-});
-```
+  | Component           | Description                                        |
+  | ------------------- | -------------------------------------------------- |
+  | Index button        | Link to the explorer/index page                    |
+  | Execution indicator | Displays state of this HTML page execution         |
+  | Server indicator    | Displays state of connection with jsenv dev server |
+  | Settings button     | Button to open toolbar settings                    |
+  | Close button        | Button to close the toolbar                        |
 
 # Conclusion
 
