@@ -22,17 +22,17 @@ This page explains how jsenv can be used to generate an optimized version of you
 
 Best parts of jsenv build:
 
-- **Large browser support**.
-- **Precise cache invalidation**: versioning invalidates only what has changed.
-- **Support for `<script type="importmap">`** with fallback if necessary.
-- **top level await support**.
-- **`import.meta.url` and `import.meta.resolve` support.**.
-- **Support for module scripts: `<script type="module" src="./file.js">`**.
-- **Support for inline module scripts: `<script type="module">console.log("hello");</script>`**.
-- **Support for classic scripts: `<scrit src="./file.js">`**.
-- **Support for inline classic script: `<script>console.log("hello");</script>`**.
-- **Support for inline style: `<style>body: { color: orange; }</style>`**.
-- **Support for module workers: `new Worker("./file.js", { type: "module"});`**.
+- Large browser support.
+- Precise cache invalidation\*\*: versioning invalidates only what has changed.
+- Support for `<script type="importmap">` with fallback if necessary.
+- top level await support.
+- `import.meta.url` and `import.meta.resolve` support.
+- Support for module scripts: `<script type="module" src="./file.js">`.
+- Support for inline module scripts: `<script type="module">console.log("hello");</script>`.
+- Support for classic scripts: `<scrit src="./file.js">`.
+- Support for inline classic script: `<script>console.log("hello");</script>`.
+- Support for inline style: `<style>body: { color: orange; }</style>`.
+- Support for module workers: `new Worker("./file.js", { type: "module"});`.
 
 And many more features...
 
