@@ -22,92 +22,91 @@ This page documents how jsenv can be used to start a server for source files.
 
 Best parts of jsenv dev server:
 
-- Standard web server; no hidden constraints or behavior deviating from standards.
-- Autoreload on save; instruct browser to autoreload when a file is saved.
-- Error resilient; everything still works when you do a syntax error for instance.
-- Large [browser support](#21-browser-support); code served is compatible with main browsers of the market, even old versions.
+- **Standard web server**: Complies with web standards, no hidden behavior.
+- **Auto-reload on save**: Automatically refreshes the browser when files are saved.
+- **Error resilient**: Continues to function even with syntax errors.
+- **Large browser support**: Code served is compatible with the main browsers, including older versions.
 
-<!-- PLACEHOLDER_START:TOC -->
+<!-- PLACEHOLDER_START:TOC_INLINE -->
 
-<details>
-  <summary>Table of contents</summary>
-  <ul>
-    <li>
-      <a href="#1-usage">
-        1. Usage
-      </a>
-        <ul>
-          <li>
-            <a href="#11-project-file-structure">
-              1.1 Project file structure
-            </a>
-          </li>
-          <li>
-            <a href="#12-starting-the-server">
-              1.2 Starting the server
-            </a>
-          </li>
-        </ul>
-    </li>
-    <li>
-      <a href="#2-features">
-        2. Features
-      </a>
-        <ul>
-          <li>
-            <a href="#21-browser-support">
-              2.1 Browser support
-            </a>
-          </li>
-          <li>
-            <a href="#22-directory-structure-agnostic">
-              2.2 Directory structure agnostic
-            </a>
-          </li>
-          <li>
-            <a href="#23-root-url-equivalence">
-              2.3 Root url equivalence
-            </a>
-          </li>
-          <li>
-            <a href="#24-ribbon">
-              2.4 ribbon
-            </a>
-          </li>
-          <li>
-            <a href="#25-error-overlay">
-              2.5 Error overlay
-            </a>
-          </li>
-          <li>
-            <a href="#26-autoreload">
-              2.6 Autoreload
-            </a>
-          </li>
-          <li>
-            <a href="#27-compatibility-with-frameworks">
-              2.7 Compatibility with frameworks
-            </a>
-          </li>
-          <li>
-            <a href="#28-sourcemaps">
-              2.8 sourcemaps
-            </a>
-          </li>
-          <li>
-            <a href="#29-port">
-              2.9 port
-            </a>
-          </li>
-          <li>
-            <a href="#210-https">
-              2.10 https
-            </a>
-          </li>
-        </ul>
-    </li>
-  </ul>
-</details>
+# Table of contents
+
+<ol>
+  <li>
+    <a href="#1-usage">
+      Usage
+    </a>
+      <ul>
+        <li>
+          <a href="#11-project-file-structure">
+            Project file structure
+          </a>
+        </li>
+        <li>
+          <a href="#12-starting-the-server">
+            Starting the server
+          </a>
+        </li>
+      </ul>
+  </li>
+  <li>
+    <a href="#2-features">
+      Features
+    </a>
+      <ul>
+        <li>
+          <a href="#21-browser-support">
+            Browser support
+          </a>
+        </li>
+        <li>
+          <a href="#22-directory-structure-agnostic">
+            Directory structure agnostic
+          </a>
+        </li>
+        <li>
+          <a href="#23-root-url-equivalence">
+            Root url equivalence
+          </a>
+        </li>
+        <li>
+          <a href="#24-ribbon">
+            ribbon
+          </a>
+        </li>
+        <li>
+          <a href="#25-error-overlay">
+            Error overlay
+          </a>
+        </li>
+        <li>
+          <a href="#26-autoreload">
+            Autoreload
+          </a>
+        </li>
+        <li>
+          <a href="#27-compatibility-with-frameworks">
+            Compatibility with frameworks
+          </a>
+        </li>
+        <li>
+          <a href="#28-sourcemaps">
+            sourcemaps
+          </a>
+        </li>
+        <li>
+          <a href="#29-port">
+            port
+          </a>
+        </li>
+        <li>
+          <a href="#210-https">
+            https
+          </a>
+        </li>
+      </ul>
+  </li>
+</ol>
 
 <!-- PLACEHOLDER_END -->
 
@@ -141,7 +140,7 @@ _src/index.html_:
 </html>
 ```
 
-Adding the dev server have the following impacts on the file structure:
+Add dev.mjs:
 
 ```diff
 project/
@@ -164,19 +163,19 @@ await startDevServer({
 
 ## 1.2 Starting the server
 
-Before starting the server, install dependencies with the following command:
+a. Install dependencies:
 
 ```console
 npm i --save-dev @jsenv/core
 ```
 
-Everything is ready, server can be started with the following command:
+b. Start the server
 
 ```console
 node ./scripts/dev.mjs
 ```
 
-It will display the following output in the terminal:
+Expected output:
 
 ```console
 ✔ start dev server (done in 0.009 second)
@@ -190,7 +189,9 @@ It will display the following output in the terminal:
 
 ## 2.1 Browser support
 
-Dev server support a large set of browsers:
+The dev server automatically serves the most compatible version of your code for the browser in use, ensuring your project works across different environments.
+
+Here is the browser support during dev:
 
 - Chrome 64+
 - Safari 11.3+
