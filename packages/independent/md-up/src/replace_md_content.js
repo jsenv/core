@@ -31,7 +31,7 @@ export const replacePlaceholders = (string, replacers) => {
   return string;
 };
 
-export const generateTableOfContents = (markdownFile) => {
+export const generateTableOfContents = (markdownFile, { tocMode }) => {
   const tableOfContentRootNode = {
     title: "Table of contents",
     canCollapse: true,
@@ -77,6 +77,7 @@ export const generateTableOfContents = (markdownFile) => {
   return renderTableOfContentsMarkdown(
     tableOfContentRootNode,
     markdownFile.url,
+    { tocMode },
   );
 };
 const markdownHrefFromText = (text) => {
@@ -90,6 +91,7 @@ export const generateDirectoryTableOfContents = (
   markdownFile,
   directoryContent,
   directoryUrl,
+  { tocMode },
 ) => {
   const tableOfContentRootNode = {
     title: "Table of contents",
@@ -119,35 +121,65 @@ export const generateDirectoryTableOfContents = (
   return renderTableOfContentsMarkdown(
     tableOfContentRootNode,
     markdownFile.url,
+    { tocMode },
   );
 };
-const renderTableOfContentsMarkdown = (rootNode, markdownFileUrl) => {
+const renderTableOfContentsMarkdown = (
+  rootNode,
+  markdownFileUrl,
+  { tocMode },
+) => {
   let tableOfContent = "";
-  let indent = 0;
-  if (rootNode.canCollapse) {
-    tableOfContent += `<details${rootNode.defaultOpen ? " open" : ""}>
+  if (tocMode === "summary") {
+    let indent = 0;
+    if (rootNode.canCollapse) {
+      tableOfContent += `<details${rootNode.defaultOpen ? " open" : ""}>
   <summary>${rootNode.title}</summary>`;
-    indent = 1;
+      indent = 1;
+    }
+    const visit = (node, indent) => {
+      if (tableOfContent) tableOfContent += "\n";
+      tableOfContent += `${"  ".repeat(indent)}<ul>`;
+      for (const childNode of node.children) {
+        tableOfContent += `\n${"  ".repeat(indent + 1)}<li>`;
+        tableOfContent += `\n${"  ".repeat(indent + 2)}<a href="${urlToRelativeUrl(childNode.href, markdownFileUrl)}">
+${"  ".repeat(indent + 3)}${escapeHtml(childNode.text)}
+${"  ".repeat(indent + 2)}</a>`;
+        if (childNode.children?.length) {
+          visit(childNode, indent + 3);
+        }
+        tableOfContent += `\n${"  ".repeat(indent + 1)}</li>`;
+      }
+      tableOfContent += `\n${"  ".repeat(indent)}</ul>`;
+    };
+    visit(rootNode, indent);
+    if (rootNode.canCollapse) {
+      tableOfContent += `\n</details>`;
+    }
+    return tableOfContent;
   }
+  let indent = 0;
+  tableOfContent += `${`#`.repeat(3)} ${rootNode.title}`;
+  tableOfContent += "\n";
+  indent = 0;
   const visit = (node, indent) => {
     if (tableOfContent) tableOfContent += "\n";
-    tableOfContent += `${"  ".repeat(indent)}<ul>`;
+    tableOfContent += `${"  ".repeat(indent)}<ol>`;
     for (const childNode of node.children) {
+      let text = escapeHtml(childNode.text);
+      text = text.replace(/^[0-9+\\.] /, "");
       tableOfContent += `\n${"  ".repeat(indent + 1)}<li>`;
       tableOfContent += `\n${"  ".repeat(indent + 2)}<a href="${urlToRelativeUrl(childNode.href, markdownFileUrl)}">
-${"  ".repeat(indent + 3)}${escapeHtml(childNode.text)}
+${"  ".repeat(indent + 3)}${text}
 ${"  ".repeat(indent + 2)}</a>`;
       if (childNode.children?.length) {
         visit(childNode, indent + 3);
       }
       tableOfContent += `\n${"  ".repeat(indent + 1)}</li>`;
     }
-    tableOfContent += `\n${"  ".repeat(indent)}</ul>`;
+    tableOfContent += `\n${"  ".repeat(indent)}</ol>`;
   };
   visit(rootNode, indent);
-  if (rootNode.canCollapse) {
-    tableOfContent += `\n</details>`;
-  }
   return tableOfContent;
 };
 
