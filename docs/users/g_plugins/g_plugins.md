@@ -18,13 +18,9 @@
 
 <!-- PLACEHOLDER_END -->
 
-# Introduction to plugins
+# Introduction
 
-Plugins in jsenv provide a powerful and flexible way to extend its standard functionality. By default, jsenv offers a "standard" behavior suitable for common use cases. However, every project has unique needs, and that’s where plugins come in.
-
-Plugins enable additional capabilities or integrations with external tools like popular frameworks such as React or Preact. They can also introduce non-standard features to address specific requirements.
-
-In short, plugins make jsenv a highly adaptable tool, seamlessly fitting into diverse environments and workflows. This document outlines the available plugins, their usage, and the possibilities they unlock for your projects.
+Plugins extend jsenv’s core features, providing custom capabilities to suit specific needs. By default, jsenv operates with a standard configuration, but plugins allow you to adapt it for frameworks like React or add non-standard functionality.
 
 <!-- PLACEHOLDER_START:TOC_INLINE -->
 
@@ -86,19 +82,14 @@ In short, plugins make jsenv a highly adaptable tool, seamlessly fitting into di
 
 # 1. How to add a plugin
 
-Adding a plugin is as simple as importing it and including it in your `plugins` array when calling jsenv functions.
-
-**Example**
-
-Here's a sample code demonstrating usage of multiple plugins:
+To use plugins, simply import them and include them in the plugins array. Here's an example with the React plugin:
 
 ```js
 import { startDevServer } from "@jsenv/core";
 import { jsenvPluginReact } from "@jsenv/plugin-react";
-import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
 await startDevServer({
-  plugins: [jsenvPluginReact(), jsenvPluginAsJsClassic()],
+  plugins: [jsenvPluginReact()],
 });
 ```
 
