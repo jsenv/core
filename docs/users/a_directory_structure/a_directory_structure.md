@@ -42,13 +42,11 @@ project/
   package.json
 ```
 
-**Scripts files**
+- `scripts/dev.mjs`: Starts the development server for files in _src/_. See [B) Dev](../b_dev/b_dev.md).
+- `scripts/build.mjs`: Optimize files from _src/_ and write then into _dist/_. See [C) Build](../c_build/c_build.md).
+- `scripts/test.mjs`: Execute test files. See [D) Test](../d_test/d_test.md).
 
-- **dev.mjs**: Starts the development server for files in _src/_. See [B) Dev](../b_dev/b_dev.md).
-- **build.mjs**: Optimize files from _src/_ and write then into \_dist/. See [C) Build](../c_build/c_build.md).
-- **test.mjs**: Execute test files. See [D) Test](../d_test/d_test.md).
-
-You can run these files directly with `node`:
+You can run script files directly with `node`:
 
 ```console
 node ./scripts/dev.mjs

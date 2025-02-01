@@ -25,7 +25,7 @@ Best parts of the jsenv dev server:
 - **Standard web server**: Complies with web standards, ensuring transparency and predictability.
 - **Auto-reload on save**: Automatically refreshes the browser when files are saved.
 - **Error resilient**: Remains functional even with syntax errors, allowing uninterrupted work.
-- **Large browser support**: Serves code compatible with majors browsers, including older versions.
+- Large browser support: Serves code compatible with majors browsers, including older versions.
 
 <!-- PLACEHOLDER_START:TOC_INLINE -->
 
