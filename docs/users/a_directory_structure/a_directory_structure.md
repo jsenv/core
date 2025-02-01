@@ -15,9 +15,9 @@
 
 <!-- PLACEHOLDER_END -->
 
-Jsenv works seamlessly with any directory structure and supports advanced setups, such as [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
+Jsenv works seamlessly with any directory structure and supports advanced use cases, such as [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
 
-**Suggested directory structure**
+Below is a basic project structure:
 
 ```console
 project/       -> root directory
@@ -27,7 +27,7 @@ project/       -> root directory
   package.json
 ```
 
-Example structure with some key files:
+For example:
 
 ```console
 project/
@@ -48,15 +48,13 @@ project/
 - **build.mjs**: Optimize files from _src/_ and write then into \_dist/. See [C) Build](../c_build/c_build.md).
 - **test.mjs**: Execute test files. See [D) Test](../d_test/d_test.md).
 
-**Running script files**
-
-You can execute these files directory with `node`:
+You can run these files directly with `node`:
 
 ```console
 node ./scripts/dev.mjs
 ```
 
-Alternatively add aliases in _package.json_:
+However, it is a good practice to use NPM scripts. Add the following aliases to package.json:
 
 ```json
 "scripts": {
@@ -66,7 +64,7 @@ Alternatively add aliases in _package.json_:
 }
 ```
 
-This allows execution via NPM:
+Then you can run them via NPM:
 
 ```console
 npm run dev
