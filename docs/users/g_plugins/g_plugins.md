@@ -60,18 +60,18 @@ Plugins extend jsenv’s core features, providing custom capabilities to suit sp
       </ul>
   </li>
   <li>
-    <a href="#3-dev-plugins">
-      Dev plugins
+    <a href="#3-development-plugins">
+      Development plugins
     </a>
       <ul>
         <li>
-          <a href="#31-explorer">
-            explorer
+          <a href="#explorer">
+            Explorer
           </a>
         </li>
         <li>
-          <a href="#32-toolbar">
-            toolbar
+          <a href="#toolbar">
+            Toolbar
           </a>
         </li>
       </ul>
@@ -82,7 +82,39 @@ Plugins extend jsenv’s core features, providing custom capabilities to suit sp
 
 # 1. How to add a plugin
 
-To use plugins, simply import them and include them in the plugins array. Here's an example with the React plugin:
+Adding a plugin is straightforward: import it and include it in the `plugins` array when calling jsenv’s core functions.
+
+**Example**
+
+```js
+import { startDevServer } from "@jsenv/core";
+import { jsenvPluginReact } from "@jsenv/plugin-react";
+
+await startDevServer({
+  plugins: [
+    jsenvPluginReact(),
+    // Add other plugins here
+  ],
+});
+```
+
+In this example, we import jsenv’s core alongside the React plugin, then add them to the `plugins` array.
+
+# 2. Transversal plugins
+
+Transversal plugins enhance jsenv's fundamental capabilities. These plugins provides support for specific features or frameworks.
+
+## React
+
+The React plugin ensures seamless integration with projects using React.
+
+**Installation**
+
+```console
+npm i --save-dev @jsenv/plugin-react
+```
+
+**Usage**
 
 ```js
 import { startDevServer } from "@jsenv/core";
@@ -93,270 +125,262 @@ await startDevServer({
 });
 ```
 
-# 2. Transversal plugins
+```js
+import { build } from "@jsenv/core";
+import { jsenvPluginReact } from "@jsenv/plugin-react";
 
-Transversal plugins enhance jsenv's fundamental capabilities. These plugins provides support for specific features or frameworks.
-
-## React
-
-- **Purpose**: Adds compatibility with React JSX.
-- **Usage**:
-
-  ```console
-  npm i --save-dev @jsenv/plugin-react
-  ```
-
-  ```js
-  import { startDevServer } from "@jsenv/core";
-  import { jsenvPluginReact } from "@jsenv/plugin-react";
-
-  await startDevServer({
-    plugins: [jsenvPluginReact()],
-  });
-  ```
-
-  ```js
-  import { build } from "@jsenv/core";
-  import { jsenvPluginReact } from "@jsenv/plugin-react";
-
-  await build({
-    plugins: [jsenvPluginReact()],
-  });
-  ```
+await build({
+  plugins: [jsenvPluginReact()],
+});
+```
 
 ## CommonJs
 
-- **Purpose**: You want to import code written in CommonJS. This plugin transform file content written in CommonJs into js modules that can be imported.
-- **Example**:
+The CommonJs plugin enables compatibility with CommonJS modules, ensuring your project can work with libraries or code not yet using ES modules.
 
-  ```diff
-  - require("./file.js");
-  - module.exports.answer = 42;
-  - console.log(process.env.NODE_ENV);
+**Example**
 
-  + import "./file.js";
-  + export const answer = 42;
-  + console.log("development"); // would be "production" after build
-  ```
+```diff
+- require("./file.js");
+- module.exports.answer = 42;
+- console.log(process.env.NODE_ENV);
 
-- **Usage**:
++ import "./file.js";
++ export const answer = 42;
++ console.log("development"); // would be "production" after build
+```
 
-  ```console
-  npm i --save-dev @jsenv/plugin-commonjs
-  ```
+**Installation**:
 
-  ```js
-  import { startDevServer } from "@jsenv/core";
-  import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
+```console
+npm i --save-dev @jsenv/plugin-commonjs
+```
 
-  await startDevServer({
-    plugins: [
-      jsenvPluginCommonJs({
-        include: {
-          "./main.js": true,
-        },
-      }),
-    ],
-  });
-  ```
+**Usage**
 
-  Usually it's a package (a node module) that is written in commonjs format.
-  In that case configure `include` like this:
+```js
+import { startDevServer } from "@jsenv/core";
+import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 
-  ```js
-  jsenvPluginCommonJs({
-    include: {
-      "file:///**/node_modules/react/": true,
-    },
-  });
-  ```
+await startDevServer({
+  plugins: [
+    jsenvPluginCommonJs({
+      include: {
+        "./main.js": true,
+      },
+    }),
+  ],
+});
+```
+
+Usually it's a package (a node module) that is written in commonjs format.
+In that case configure `include` like this:
+
+```js
+jsenvPluginCommonJs({
+  include: {
+    "file:///**/node_modules/react/": true,
+  },
+});
+```
 
 ## asJsClassic
 
-- **Purpose**: You want the power of js modules (import, dynamic import, import.meta, ...) but js MUST still be executed by a classic `<script>` for technical reasons.
+The asJsClassic plugin allows to load files written as ES modules using a classic script tag. YES YOU CAN!
 
-- **Example**: The following HTML file uses a script to load a js file:
+**Example**
 
-  ```html
-  <!doctype html>
-  <html>
-    <head>
-      <title>Title</title>
-      <meta charset="utf-8" />
-      <link rel="icon" href="data:," />
-    </head>
+The following HTML file uses a script to load a js file:
 
-    <body>
-      <script src="./main.js?as_js_classic"></script>
-    </body>
-  </html>
-  ```
+```html
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
 
-  This plugin transform file content when `?as_js_classic` query parameter is present. It could transforms a theorical `main.js` file content as follow:
+  <body>
+    <script src="./main.js?as_js_classic"></script>
+  </body>
+</html>
+```
 
-  ```diff
-  - import { foo } from "./foo.js";
-  - console.log(import.meta.url);
-  - console.log(foo);
+This plugin applies on js files loaded with `?as_js_classic` query parameter. It could transforms theorical `main.js` file content as follow:
 
-  + const foo = 42;
-  + console.log(document.currentScript.src);
-  + console.log(foo);
-  ```
+```diff
+- import { foo } from "./foo.js";
+- console.log(import.meta.url);
+- console.log(foo);
 
-- **Usage**:
++ const foo = 42;
++ console.log(document.currentScript.src);
++ console.log(foo);
+```
 
-  ```console
-  npm i --save-dev @jsenv/plugin-as-js-classic
-  ```
+**Installation**
 
-  ```js
-  import { startDevServer } from "@jsenv/core";
-  import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+```console
+npm i --save-dev @jsenv/plugin-as-js-classic
+```
 
-  await startDevServer({
-    plugins: [jsenvPluginAsJsClassic()],
-  });
-  ```
+**Usage**
 
-  ```js
-  import { build } from "@jsenv/core";
-  import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+```js
+import { startDevServer } from "@jsenv/core";
+import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
 
-  await build({
-    plugins: [jsenvPluginAsJsClassic()],
-  });
-  ```
+await startDevServer({
+  plugins: [jsenvPluginAsJsClassic()],
+});
+```
+
+```js
+import { build } from "@jsenv/core";
+import { jsenvPluginAsJsClassic } from "@jsenv/plugin-as-js-classic";
+
+await build({
+  plugins: [jsenvPluginAsJsClassic()],
+});
+```
 
 ## Preact
 
-- **Purpose**: Adds compatibility with React JSX but using preact instead of react
-- **Usage**:
+The Preact plugin facilitates easy integration with Preact projects, offering a lightweight alternative to React.
 
-  ```console
-  npm i --save-dev @jsenv/plugin-preact
-  ```
+**Installation**
 
-  ```js
-  import { startDevServer } from "@jsenv/core";
-  import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+```console
+npm i --save-dev @jsenv/plugin-preact
+```
 
-  await startDevServer({
-    plugins: [jsenvPluginPreact()],
-  });
-  ```
+**Usage**
 
-  ```js
-  import { build } from "@jsenv/core";
-  import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+```js
+import { startDevServer } from "@jsenv/core";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
-  await build({
-    plugins: [jsenvPluginPreact()],
-  });
-  ```
+await startDevServer({
+  plugins: [jsenvPluginPreact()],
+});
+```
 
-# 3. Dev plugins
+```js
+import { build } from "@jsenv/core";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
-Dev plugins enchance jsenv dev server capabilities and behaviour. They can be added only to the dev server. They have no effect on jsenv build.
+await build({
+  plugins: [jsenvPluginPreact()],
+});
+```
 
-## 3.1 explorer
+# 3. Development plugins
 
-- **Purpose**: Display a page listing a subset of your project files into groups. Helps to naviguate files, usually HTML files, are means to be used during development.
+Development plugins provide tools and features to improve your development experience.
 
-- **Example**:
+## Explorer
 
-  ![screenshot explorer.html](https://github.com/jsenv/core/assets/443639/4efd2fb9-4108-4413-86d0-3300a56e49d8)
+The Explorer plugin provides a user interface for browsing your project’s files during development.
 
-- **Usage**:
+**Example**
 
-  ```console
-  npm i --save-dev @jsenv/plugin-explorer
-  ```
+![screenshot explorer.html](https://github.com/jsenv/core/assets/443639/4efd2fb9-4108-4413-86d0-3300a56e49d8)
 
-  ```js
-  import { startDevServer } from "@jsenv/core";
-  import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
+**Installation**
 
-  await startDevServer({
-    plugins: [jsenvPluginExplorer()],
-  });
-  ```
+```console
+npm i --save-dev @jsenv/plugin-explorer
+```
 
-  Your main HTML file can be opened by visiting the exact url, like `http://localhost:3456/index.html`:
+**Usage**
 
-  ![Title 2023-05-11 09-10-47](https://github.com/jsenv/core/assets/443639/8af16b6c-7641-4b63-9e15-fbcb42dc59c2)
+```js
+import { startDevServer } from "@jsenv/core";
+import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
 
-  It's possible to keep `http://localhost:3456` equivalent to `http://localhost:3456/index.html` by configuring a `pathname` where explorer should be served:
+await startDevServer({
+  plugins: [jsenvPluginExplorer()],
+});
+```
 
-  ```js
-  jsenvPluginExplorer({
-    pathname: "/explore",
-  });
-  ```
+Your main HTML file can be opened by visiting the exact url, like `http://localhost:3456/index.html`:
 
-  And it's possible to configure the group of files as follow:
+![Title 2023-05-11 09-10-47](https://github.com/jsenv/core/assets/443639/8af16b6c-7641-4b63-9e15-fbcb42dc59c2)
 
-  ```js
-  jsenvPluginExplorer({
-    pathname: "/explore",
-    groups: {
-      "main files": {
-        "./**/*.html": true,
-        "./**/*.test.html": false,
-      },
-      "spec files": {
-        "./**/*.test.html": true,
-      },
+It's possible to keep `http://localhost:3456` equivalent to `http://localhost:3456/index.html` by configuring a `pathname` where explorer should be served:
+
+```js
+jsenvPluginExplorer({
+  pathname: "/explore",
+});
+```
+
+And it's possible to configure the group of files as follow:
+
+```js
+jsenvPluginExplorer({
+  pathname: "/explore",
+  groups: {
+    "main files": {
+      "./**/*.html": true,
+      "./**/*.test.html": false,
     },
-  });
-  ```
+    "spec files": {
+      "./**/*.test.html": true,
+    },
+  },
+});
+```
 
-  The page now displays "main files" and "spec files":
+The page now displays "main files" and "spec files":
 
-  ![Exploring 2023-05-22 16-02-14](https://github.com/jsenv/core/assets/443639/b9d4c7d1-5db7-4cc5-b1b9-fcb3e138b7bb)
+![Exploring 2023-05-22 16-02-14](https://github.com/jsenv/core/assets/443639/b9d4c7d1-5db7-4cc5-b1b9-fcb3e138b7bb)
 
-## 3.2 toolbar
+## Toolbar
 
-- **Purpose**: User interface to interact with jsenv dev server right from the page; for instance to disable autoreload on change for a moment.
+The Toolbar plugin adds an interactive toolbar to your application during development. Allow to temporarily disable autoreload on change for example.
 
-- **Usage**:
+**Installation**
 
-  ```console
-  npm i --save-dev @jsenv/plugin-toolbar
-  ```
+```console
+npm i --save-dev @jsenv/plugin-toolbar
+```
 
-  ```js
-  import { startDevServer } from "@jsenv/core";
-  import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
+**Usage**
 
-  await startDevServer({
-    plugins: [jsenvPluginToolbar()],
-  });
-  ```
+```js
+import { startDevServer } from "@jsenv/core";
+import { jsenvPluginToolbar } from "@jsenv/plugin-toolbar";
 
-  By default the toolbar is hidden, there is a discrete way to open it at the bottom right of the page.
+await startDevServer({
+  plugins: [jsenvPluginToolbar()],
+});
+```
 
-  ![Title 2022-12-12 09-42-28](https://user-images.githubusercontent.com/443639/207000431-4948938b-a434-4a19-b80d-af918610382a.png)
+By default the toolbar is hidden, there is a discrete way to open it at the bottom right of the page.
 
-  When hovering this area, a small strip is displayed
+![Title 2022-12-12 09-42-28](https://user-images.githubusercontent.com/443639/207000431-4948938b-a434-4a19-b80d-af918610382a.png)
 
-  ![Title 2022-12-12 09-45-19](https://user-images.githubusercontent.com/443639/207000795-afa7cb84-5e7c-45ae-99e4-8150001db95e.png)
+When hovering this area, a small strip is displayed
 
-  It can be clicked to open the toolbar
+![Title 2022-12-12 09-45-19](https://user-images.githubusercontent.com/443639/207000795-afa7cb84-5e7c-45ae-99e4-8150001db95e.png)
 
-  ![Title 2022-12-12 09-46-14](https://user-images.githubusercontent.com/443639/207001058-3a04a103-8eaf-44ef-bd06-22b4621547dc.png)
+It can be clicked to open the toolbar
 
-  The toolbar is composed as follows:
+![Title 2022-12-12 09-46-14](https://user-images.githubusercontent.com/443639/207001058-3a04a103-8eaf-44ef-bd06-22b4621547dc.png)
 
-  ![Title 2022-12-13 14-03-55](https://user-images.githubusercontent.com/443639/207327042-433329a6-3008-44f1-9b36-d976d574be3d.png)
+The toolbar is composed as follows:
 
-  | Component           | Description                                        |
-  | ------------------- | -------------------------------------------------- |
-  | Index button        | Link to the explorer/index page                    |
-  | Execution indicator | Displays state of this HTML page execution         |
-  | Server indicator    | Displays state of connection with jsenv dev server |
-  | Settings button     | Button to open toolbar settings                    |
-  | Close button        | Button to close the toolbar                        |
+![Title 2022-12-13 14-03-55](https://user-images.githubusercontent.com/443639/207327042-433329a6-3008-44f1-9b36-d976d574be3d.png)
+
+| Component           | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| Index button        | Link to the explorer/index page                    |
+| Execution indicator | Displays state of this HTML page execution         |
+| Server indicator    | Displays state of connection with jsenv dev server |
+| Settings button     | Button to open toolbar settings                    |
+| Close button        | Button to close the toolbar                        |
 
 # Conclusion
 
