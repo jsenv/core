@@ -15,29 +15,33 @@ import {
   getEntryMarkdownFile,
 } from "./resolve_md_entry_file.js";
 
-export const syncMarkdown = (markdownFileUrl) => {
+export const syncMarkdown = (markdownFileUrl, { tocMode = "summary" } = {}) => {
   const markdownFile = createMarkdownFile(markdownFileUrl);
   if (!markdownFile) {
     return;
   }
   const directoryUrl = new URL("./", markdownFileUrl);
-  syncMarkdownFile(markdownFile, { directoryUrl });
+  syncMarkdownFile(markdownFile, { directoryUrl, tocMode });
 };
 
 const syncMarkdownFile = (
   markdownFile,
-  { directoryUrl, prevDirectoryUrl, nextDirectoryUrl },
+  { directoryUrl, prevDirectoryUrl, nextDirectoryUrl, tocMode },
 ) => {
   const directoryContent = readDirectorySync(directoryUrl);
   syncMarkdownContent(markdownFile, {
+    TOC_INLINE: () => {
+      return generateTableOfContents(markdownFile, { tocMode: "inline" });
+    },
     TOC: () => {
-      return generateTableOfContents(markdownFile);
+      return generateTableOfContents(markdownFile, { tocMode });
     },
     TOC_DIRECTORY: () => {
       return generateDirectoryTableOfContents(
         markdownFile,
         directoryContent,
         directoryUrl,
+        { tocMode },
       );
     },
     NAV_PREV_NEXT: () => {
@@ -69,6 +73,7 @@ const syncMarkdownFile = (
         directoryUrl,
         prevDirectoryUrl: directoryUrls[i - 1],
         nextDirectoryUrl: directoryUrls[i + 1],
+        tocMode,
       });
     }
     i++;

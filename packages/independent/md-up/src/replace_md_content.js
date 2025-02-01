@@ -31,7 +31,20 @@ export const replacePlaceholders = (string, replacers) => {
   return string;
 };
 
-export const generateTableOfContents = (markdownFile) => {
+const getTocPlaceholderIndex = (string) => {
+  const matchAllResult = string.matchAll(
+    /<!-- PLACEHOLDER_START:(\w+) -->[\s\S]*?<!-- PLACEHOLDER_END -->/g,
+  );
+  for (const match of matchAllResult) {
+    const [, placeholderName] = match;
+    if (placeholderName === "TOC" || placeholderName === "TOC_INLINE") {
+      return match.index;
+    }
+  }
+  return -1;
+};
+
+export const generateTableOfContents = (markdownFile, { tocMode }) => {
   const tableOfContentRootNode = {
     title: "Table of contents",
     canCollapse: true,
@@ -43,7 +56,37 @@ export const generateTableOfContents = (markdownFile) => {
   const htmlNode = htmlTree.childNodes.find((node) => node.nodeName === "html");
   const body = htmlNode.childNodes.find((node) => node.nodeName === "body");
   let currentHeadingLink = null;
-  for (const child of body.childNodes) {
+  const bodyChildNodes = body.childNodes;
+  const tocNodeIndex = bodyChildNodes.findIndex((childCandidate) => {
+    return (
+      childCandidate.nodeName[0] === "h" &&
+      getHtmlNodeText(childCandidate) === "Table of contents"
+    );
+  });
+  let startIndex;
+  if (tocNodeIndex === -1) {
+    startIndex = 0;
+    const tocCommentStartIndex = getTocPlaceholderIndex(markdownFile.content);
+    let index = 0;
+    while (index < bodyChildNodes.length) {
+      const child = bodyChildNodes[index];
+      index++;
+      if (child.sourceCodeLocation.startOffset > tocCommentStartIndex) {
+        startIndex = index - 1;
+        break;
+      }
+    }
+  } else {
+    startIndex = tocNodeIndex + 1;
+  }
+  let index = startIndex;
+  while (index < bodyChildNodes.length) {
+    const child = bodyChildNodes[index];
+    index++;
+    const text = getHtmlNodeText(child);
+    if (text === "Conclusion") {
+      continue;
+    }
     if (child.nodeName === "h1") {
       const text = getHtmlNodeText(child);
       if (isFirstH1) {
@@ -77,6 +120,7 @@ export const generateTableOfContents = (markdownFile) => {
   return renderTableOfContentsMarkdown(
     tableOfContentRootNode,
     markdownFile.url,
+    { tocMode },
   );
 };
 const markdownHrefFromText = (text) => {
@@ -90,6 +134,7 @@ export const generateDirectoryTableOfContents = (
   markdownFile,
   directoryContent,
   directoryUrl,
+  { tocMode },
 ) => {
   const tableOfContentRootNode = {
     title: "Table of contents",
@@ -119,35 +164,66 @@ export const generateDirectoryTableOfContents = (
   return renderTableOfContentsMarkdown(
     tableOfContentRootNode,
     markdownFile.url,
+    { tocMode },
   );
 };
-const renderTableOfContentsMarkdown = (rootNode, markdownFileUrl) => {
+const renderTableOfContentsMarkdown = (
+  rootNode,
+  markdownFileUrl,
+  { tocMode },
+) => {
   let tableOfContent = "";
-  let indent = 0;
-  if (rootNode.canCollapse) {
-    tableOfContent += `<details${rootNode.defaultOpen ? " open" : ""}>
+  if (tocMode === "summary") {
+    let indent = 0;
+    if (rootNode.canCollapse) {
+      tableOfContent += `<details${rootNode.defaultOpen ? " open" : ""}>
   <summary>${rootNode.title}</summary>`;
-    indent = 1;
+      indent = 1;
+    }
+    const visit = (node, indent) => {
+      if (tableOfContent) tableOfContent += "\n";
+      tableOfContent += `${"  ".repeat(indent)}<ul>`;
+      for (const childNode of node.children) {
+        tableOfContent += `\n${"  ".repeat(indent + 1)}<li>`;
+        tableOfContent += `\n${"  ".repeat(indent + 2)}<a href="${urlToRelativeUrl(childNode.href, markdownFileUrl)}">
+${"  ".repeat(indent + 3)}${escapeHtml(childNode.text)}
+${"  ".repeat(indent + 2)}</a>`;
+        if (childNode.children?.length) {
+          visit(childNode, indent + 3);
+        }
+        tableOfContent += `\n${"  ".repeat(indent + 1)}</li>`;
+      }
+      tableOfContent += `\n${"  ".repeat(indent)}</ul>`;
+    };
+    visit(rootNode, indent);
+    if (rootNode.canCollapse) {
+      tableOfContent += `\n</details>`;
+    }
+    return tableOfContent;
   }
+  let indent = 0;
+  tableOfContent += `${`#`.repeat(1)} ${rootNode.title}`;
+  tableOfContent += "\n";
+  indent = 0;
   const visit = (node, indent) => {
+    let listTagName = node.level === undefined ? "ol" : "ul";
     if (tableOfContent) tableOfContent += "\n";
-    tableOfContent += `${"  ".repeat(indent)}<ul>`;
+    tableOfContent += `${"  ".repeat(indent)}<${listTagName}>`;
     for (const childNode of node.children) {
+      let text = escapeHtml(childNode.text);
+      text = text.replace(/^[0-9]+\.[0-9]* /, "");
       tableOfContent += `\n${"  ".repeat(indent + 1)}<li>`;
       tableOfContent += `\n${"  ".repeat(indent + 2)}<a href="${urlToRelativeUrl(childNode.href, markdownFileUrl)}">
-${"  ".repeat(indent + 3)}${escapeHtml(childNode.text)}
+${"  ".repeat(indent + 3)}${text}
 ${"  ".repeat(indent + 2)}</a>`;
       if (childNode.children?.length) {
         visit(childNode, indent + 3);
       }
       tableOfContent += `\n${"  ".repeat(indent + 1)}</li>`;
     }
-    tableOfContent += `\n${"  ".repeat(indent)}</ul>`;
+    tableOfContent += `\n${"  ".repeat(indent)}</${listTagName}>`;
   };
   visit(rootNode, indent);
-  if (rootNode.canCollapse) {
-    tableOfContent += `\n</details>`;
-  }
   return tableOfContent;
 };
 
