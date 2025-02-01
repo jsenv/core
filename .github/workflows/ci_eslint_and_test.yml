@@ -47,6 +47,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      ## --- WINDOWS LONG PATH START --- ##
+      - name: Check long path property
+        if: runner.os == 'Windows'
+        run: |
+          Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled"
+        shell: pwsh
+      - name: Enable long path
+        if: runner.os == 'Windows'
+        run: |
+          Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1
+          Write-Host "Long paths activated."
+        shell: pwsh
+      - name: Re-check long path property
+        if: runner.os == 'Windows'
+        run: |
+          Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled"
+        shell: pwsh
+      ## --- WINDOWS LONG PATH END --- ##
       ## --- NPM INSTALL START --- ##
       # sudo ulimit should prevent npm link failure
       - name: set linux fs limits
