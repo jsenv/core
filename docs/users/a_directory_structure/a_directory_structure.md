@@ -15,10 +15,9 @@
 
 <!-- PLACEHOLDER_END -->
 
-Jsenv is compatible with any directory structure. It is also compatible with advanced use cases like [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
+Jsenv works seamlessly with any directory structure and supports advanced setups, such as [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
 
-This page shows how directory and files can be organized.
-A few key directories and files are introduced like "source files" and "build files":
+**Suggested directory structure**
 
 ```console
 project/       -> root directory
@@ -28,7 +27,7 @@ project/       -> root directory
   package.json
 ```
 
-With a few files it gives the following result:
+Example structure with some key files:
 
 ```console
 project/
@@ -43,13 +42,13 @@ project/
   package.json
 ```
 
-`scripts/` contains files executable directly with `node` command.
+**Scripts files**
 
-| File        | Description                                            | Link to doc                       |
-| ----------- | ------------------------------------------------------ | --------------------------------- |
-| _dev.mjs_   | starts a dev server for files in _src/_                | [B) Dev](../b_dev/b_dev.md)       |
-| _build.mjs_ | optimize files from _src/_ and write then into _dist/_ | [C) Build](../c_build/c_build.md) |
-| _test.mjs_  | execute test files                                     | [D) Test](../d_test/d_test.md)    |
+- **dev.mjs**: Starts the development server for files in _src/_. See [B) Dev](../b_dev/b_dev.md).
+- **build.mjs**: Optimize files from _src/_ and write then into \_dist/. See [C) Build](../c_build/c_build.md).
+- **test.mjs**: Execute test files. See [D) Test](../d_test/d_test.md).
+
+**Running script files**
 
 You can execute these files directory with `node`:
 
@@ -57,8 +56,7 @@ You can execute these files directory with `node`:
 node ./scripts/dev.mjs
 ```
 
-In general it's recommended to execute files via an alias.  
-To achieve this, the following can be added to _package.json_:
+Alternatively add aliases in _package.json_:
 
 ```json
 "scripts": {
@@ -68,7 +66,7 @@ To achieve this, the following can be added to _package.json_:
 }
 ```
 
-Allowing to execute files using NPM as follows:
+This allows execution via NPM:
 
 ```console
 npm run dev
