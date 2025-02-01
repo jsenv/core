@@ -98,7 +98,7 @@ await startDevServer({
 });
 ```
 
-In this example, we import jsenv’s core alongside the React plugin, then add them to the `plugins` array.
+In this example, we import jsenv’s core alongside the React plugin, then add it to the `plugins` array.
 
 # 2. Ecosystem plugins
 
@@ -195,12 +195,6 @@ The following HTML file uses a script to load a js file:
 ```html
 <!doctype html>
 <html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
   <body>
     <script src="./main.js?as_js_classic"></script>
   </body>
