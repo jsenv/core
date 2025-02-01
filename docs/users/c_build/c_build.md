@@ -18,126 +18,126 @@
 
 <!-- PLACEHOLDER_END -->
 
-This page documents how jsenv can be used to generate an optimized version of source files into a directory.
+This page explains how jsenv can be used to generate an optimized version of your source files into a specified directory.
 
 Best parts of jsenv build:
 
-- Large [browser support](#21-browser-support)
-- [Precise cache invalidation](#26-precise-cache-invalidation); versioning invalidates only what has changed.
-- Support and use `<script type="importmap">` with fallback if needed
-- Support top level `await`
-- Support `import.meta.url`, `import.meta.resolve`
-- Support module scripts: `<script type="module" src="./file.js">`
-- Support inline module scripts: `<script type="module">console.log("hello");</script>`
-- Support classic scripts: `<scrit src="./file.js">`
-- Support inline classic script: `<script>console.log("hello");</script>`
-- Support inline style: `<style>body: { color: orange; }</style>`
-- Support module workers: `new Worker("./file.js", { type: "module"});`
-- And many more things...
+- **Large browser support**.
+- **Precise cache invalidation**: versioning invalidates only what has changed.
+- **Support for `<script type="importmap">`** with fallback if necessary.
+- **top level await support**.
+- **`import.meta.url` and `import.meta.resolve` support.**.
+- **Support for module scripts: `<script type="module" src="./file.js">`**.
+- **Support for inline module scripts: `<script type="module">console.log("hello");</script>`**.
+- **Support for classic scripts: `<scrit src="./file.js">`**.
+- **Support for inline classic script: `<script>console.log("hello");</script>`**.
+- **Support for inline style: `<style>body: { color: orange; }</style>`**.
+- **Support for module workers: `new Worker("./file.js", { type: "module"});`**.
 
-<!-- PLACEHOLDER_START:TOC -->
+And many more features...
 
-<details>
-  <summary>Table of contents</summary>
-  <ul>
-    <li>
-      <a href="#1-usage">
-        1. Usage
-      </a>
-        <ul>
-          <li>
-            <a href="#11-project-file-structure">
-              1.1 Project file structure
-            </a>
-          </li>
-          <li>
-            <a href="#12-generating-a-build">
-              1.2 Generating a build
-            </a>
-          </li>
-        </ul>
-    </li>
-    <li>
-      <a href="#2-features">
-        2. Features
-      </a>
-        <ul>
-          <li>
-            <a href="#21-browser-support">
-              2.1 Browser support
-            </a>
-          </li>
-          <li>
-            <a href="#22-build-directory-structure">
-              2.2 Build directory structure
-            </a>
-          </li>
-          <li>
-            <a href="#23-bundling">
-              2.3 Bundling
-            </a>
-          </li>
-          <li>
-            <a href="#24-minification">
-              2.4 Minification
-            </a>
-          </li>
-          <li>
-            <a href="#25-build-urls">
-              2.5 Build urls
-            </a>
-          </li>
-          <li>
-            <a href="#26-precise-cache-invalidation">
-              2.6 Precise cache invalidation
-            </a>
-          </li>
-          <li>
-            <a href="#27-resource-hints">
-              2.7 Resource hints
-            </a>
-          </li>
-          <li>
-            <a href="#28-plugins">
-              2.8 plugins
-            </a>
-          </li>
-          <li>
-            <a href="#29-symbiosis-with-service-worker">
-              2.9 Symbiosis with service worker
-            </a>
-          </li>
-          <li>
-            <a href="#210-sourcemaps">
-              2.10 sourcemaps
-            </a>
-          </li>
-        </ul>
-    </li>
-    <li>
-      <a href="#3-how-to-serve-build-files">
-        3. How to serve build files
-      </a>
-        <ul>
-          <li>
-            <a href="#31-builddirectoryurl">
-              3.1 buildDirectoryUrl
-            </a>
-          </li>
-          <li>
-            <a href="#32-port">
-              3.2 port
-            </a>
-          </li>
-          <li>
-            <a href="#33-https">
-              3.3 https
-            </a>
-          </li>
-        </ul>
-    </li>
-  </ul>
-</details>
+<!-- PLACEHOLDER_START:TOC_INLINE -->
+
+# Table of contents
+
+<ol>
+  <li>
+    <a href="#1-usage">
+      Usage
+    </a>
+      <ul>
+        <li>
+          <a href="#11-project-file-structure">
+            Project file structure
+          </a>
+        </li>
+        <li>
+          <a href="#12-generating-a-build">
+            Generating a build
+          </a>
+        </li>
+      </ul>
+  </li>
+  <li>
+    <a href="#2-features">
+      Features
+    </a>
+      <ul>
+        <li>
+          <a href="#21-browser-support">
+            Browser support
+          </a>
+        </li>
+        <li>
+          <a href="#22-build-directory-structure">
+            Build directory structure
+          </a>
+        </li>
+        <li>
+          <a href="#23-bundling">
+            Bundling
+          </a>
+        </li>
+        <li>
+          <a href="#24-minification">
+            Minification
+          </a>
+        </li>
+        <li>
+          <a href="#25-build-urls">
+            Build urls
+          </a>
+        </li>
+        <li>
+          <a href="#26-precise-cache-invalidation">
+            Precise cache invalidation
+          </a>
+        </li>
+        <li>
+          <a href="#27-resource-hints">
+            Resource hints
+          </a>
+        </li>
+        <li>
+          <a href="#28-plugins">
+            plugins
+          </a>
+        </li>
+        <li>
+          <a href="#29-symbiosis-with-service-worker">
+            Symbiosis with service worker
+          </a>
+        </li>
+        <li>
+          <a href="#210-sourcemaps">
+            sourcemaps
+          </a>
+        </li>
+      </ul>
+  </li>
+  <li>
+    <a href="#3-how-to-serve-build-files">
+      How to serve build files
+    </a>
+      <ul>
+        <li>
+          <a href="#31-builddirectoryurl">
+            buildDirectoryUrl
+          </a>
+        </li>
+        <li>
+          <a href="#32-port">
+            port
+          </a>
+        </li>
+        <li>
+          <a href="#33-https">
+            https
+          </a>
+        </li>
+      </ul>
+  </li>
+</ol>
 
 <!-- PLACEHOLDER_END -->
 
