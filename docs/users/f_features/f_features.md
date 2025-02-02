@@ -20,8 +20,6 @@
 
 This page outlines the key features provided by Jsenv, including Node ESM resolution, magic extensions, `import.meta.dev`, injections, inlining, and handling UMD/CommonJS modules.
 
-# Table of contents
-
 <!-- PLACEHOLDER_START:TOC_INLINE -->
 
 # Table of contents
