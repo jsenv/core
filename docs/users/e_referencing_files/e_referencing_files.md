@@ -313,7 +313,7 @@ console.log(jsonModule.default);
 
 ## 4.6 Text import
 
-Import text files using the type: "text" attribute (non-standard, supported by Jsenv).
+Import text files using the `type: "text"` attribute (non-standard, supported by Jsenv).
 
 **Example:**
 
