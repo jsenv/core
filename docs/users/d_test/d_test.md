@@ -18,18 +18,16 @@
 
 <!-- PLACEHOLDER_END -->
 
-This page documents how jsenv can be used to write and execute tests. The tests will be executed in a web browser.
+This page documents how jsenv can be used to write and execute tests in a web browser. For Node.js testing, refer to [I) Test in Node.js](../i_test_in_node/i_test_in_node.md).
 
-If you want to execute tests in Node.js go to [I) Test in Node.js](../i_test_in_node/i_test_in_node.md).
+Key features of jsenv tests:
 
-Best parts of jsenv tests:
-
-- [debugging a test file === debugging a source file](#14-executing-a-single-test)
-- Test execution is standard; switching from source files to test files is easy
-- [Isolated environment](#33-isolated-environment); each test file has a dedicated runtime
+- [debugging a test file is identical to debugging a source file](#14-executing-a-single-test).
+- Test execution is standard making it easy to switch between source and test files.
+- [Isolated environment](#33-isolated-environment); each test file runs in a a dedicated runtime.
 - Test files can be executed in [Chrome, Firefox and Safari](#32-execute-on-more-browsers)
 - [Smart parallelism](#34-parallelism)
-- Logs are [nice](../../../packages/related/test/tests/test_plan_execution/logs/browser/output/console.spec.html.gif); dynamic, colorful and human friendly
+- [Human friendly logs](../../../packages/related/test/tests/test_plan_execution/logs/browser/output/console.spec.html.gif): Dynamic, colorful and easy to read.
 
 <!--
 When coding, we spend most of our time working on source files. At some point we switch from source files to test files. Suddenly things are different:
@@ -144,7 +142,7 @@ This huge gap between source files and test files creates a context switching co
 
 # 1. Usage
 
-This section shows how to write a test for a source file and execute it using jsenv.
+This section demonstrates how to write execute tests for a source file using jsenv.
 
 ## 1.1 Project file structure
 
@@ -162,7 +160,7 @@ Let's write a test for _sum.js_:
 export const sum = (a, b) => a + b;
 ```
 
-In order to test _sum.js_ a few files will be needed. The impacts on the file structure are summarized below:
+To test sum.js, the following files are needed:
 
 ```diff
 project/
@@ -205,7 +203,7 @@ _src/sum.test.html_
 
 ## 1.3 Executing tests
 
-_scripts/dev.mjs_: start a web server that is needed to executed _sum.test.html_ in a browser.
+_scripts/dev.mjs_: Start a web server, will be used to execute _sum.test.html_ in a browser.
 
 ```js
 import { startDevServer } from "@jsenv/core";
@@ -216,7 +214,7 @@ await startDevServer({
 });
 ```
 
-_scripts/test.mjs_: execute test file(s).
+_scripts/test.mjs_: Execute test file(s).
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test";
@@ -238,7 +236,7 @@ await executeTestPlan({
 });
 ```
 
-Before executing test, install dependencies with the following commands
+Before executing test, install dependencies:
 
 ```console
 npm i --save-dev @jsenv/core
@@ -246,21 +244,21 @@ npm i --save-dev @jsenv/test
 npm i --save-dev @playwright/browser-chromium
 ```
 
-☝️ [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> is used by `@jsenv/test` to start a web browser (chromium).
+☝️ [playwright](https://github.com/microsoft/playwright)<sup>↗</sup> is used by `@jsenv/test` to start a web browser (Chromium).
 
-Everything is ready, test can be executed with the following command:
+Run the tests with the following command:
 
 ```console
 node ./scripts/test.mjs
 ```
 
-It will display the following output in the terminal:
+The terminal will display the following output:
 
 ![test](./test_terminal.svg)
 
 ## 1.4 Executing a single test
 
-In a real project there would be many test files:
+In a real project there may be many test files:
 
 ```
 project/
@@ -271,11 +269,11 @@ project/
     ... and so on ...
 ```
 
-Each test file can be executed in isolation, independently, directly in the browser:
+Each test file can be executed in isolation, directly in the browser:
 
 ![Title 2023-05-10 14-21-49](https://github.com/jsenv/core/assets/443639/81e27d23-4c82-482b-8124-6e63a9e08dfb)
 
-The page is blank because _sum.test.html_ execution completed without error and without displaying something on the page. Some test could render some UI but it's not the case here.
+The page is blank because _sum.test.html_ execution completed without error and without rendering anything. Some test maye render UI but this is not the case here.
 
 Debugging test execution can be done using browser dev tools:
 
@@ -283,8 +281,7 @@ Debugging test execution can be done using browser dev tools:
 
 # 2. Assertions
 
-To have a basic example, the part of the code comparing `actual` and `expect` was done without an assertion library.  
-In pratice a test would likely use one. The diff below shows how the assertion can be written using [@jsenv/assert](../../../packages/independent/assert). Note that any other assertion library would work.
+The example above compares actual and expect without an assertion library. In practice, tests often use assertion libraries. Below is an example using [@jsenv/assert](../../../packages/independent/assert). Note that any assertion library can be used.
 
 ```diff
 + import { assert } from "@jsenv/assert";
@@ -302,18 +299,18 @@ const expect = 3;
 
 ## 3.1 Web server autostart
 
-Your web server is automatically started if needed. This is done thanks to the `webServer` parameter.
+Your web server is automatically started if needed. This is doe using the `webServer` parameter.
 
-If there is a server listening at `webServer.origin`:
+If server is already running at `webServer.origin`:
 
-1. Tests are executed, using the server already running.
+1. Tests are executed using existing server.
 
-If there is no server listening at `webServer.origin`:
+If no server is running at `webServer.origin`:
 
-1. `webServer.moduleUrl` or `webServer.command` is executed in a separate process
-2. Code waits for the server to be started, if not started in less than 5s an error is thrown.
-3. Test are executed, using the server started in step 1.
-4. Once tests are done, server is stopped by killing the process used to start it
+1. `webServer.moduleUrl` or `webServer.command` is executed in a separate process.
+2. The code waits for the server to start. If it doesn't start within 5 seconds, an error is thrown.
+3. Test are executed using the server started in step 1.
+4. After tests complete, the server is stopped by killing the process.
 
 ## 3.2 Execute on more browsers
 
@@ -343,7 +340,7 @@ await executeTestPlan({
 });
 ```
 
-Before executing tests, install firefox and webkit dependencies with the following command:
+Before executing tests, install Firefox and Webkit dependencies:
 
 ```console
 npm i --save-dev @playwright/browser-firefox
@@ -358,8 +355,7 @@ The terminal output:
 
 Each test is executed in a browser tab using one instance of the browser.
 
-If you need to push isolation even further you can dedicate a browser instance per test.
-Use `chromiumIsolatedTab` instead of `chromium`. The same can be done for firefox and webkit.
+For further isolation, you can dedicate a browser instance per test by using chromiumIsolatedTab instead of chromium. The same applies to Firefox and WebKit.
 
 ```js
 import { executeTestPlan, chromiumIsolatedTab } from "@jsenv/test";
@@ -383,8 +379,7 @@ await executeTestPlan({
 
 ## 3.4 Parallelism
 
-Executions are started one after an other without waiting for the previous one to finish.  
-It's possible to configure parallelism using `parallel` parameter.
+Executions are started sequentially without waiting for the previous one to finish. Parallelism can be configured using the `parallel` parameter.
 
 ```js
 import { executeTestPlan, chromium } from "@jsenv/test";
@@ -413,7 +408,7 @@ await executeTestPlan({
 
 ### 3.4.1 parallel.max
 
-Controls the maximum number of execution started in parallel.
+Controls the maximum number of parallel executions.
 
 | max | Max executions in parallel            |
 | --- | ------------------------------------- |
@@ -421,26 +416,26 @@ Controls the maximum number of execution started in parallel.
 | 5   | 5                                     |
 | 80% | 80% of cores available on the machine |
 
-The default value is 80%: For a machine with 10 processors, as long as there is less than 8 executions ongoing, remaining executions tries to start in parallel.
+The default value is 80%: For a machine with 10 processors, up to 8 executions can run in parallel.
 
 Parallelism can also be disabled with `parallel: false` which is equivalent to `parallel: { max: 1 }`.
 
 ### 3.4.2 parallel.maxCpu
 
-This parameter prevent an execution to be started in parallel when the process cpu usage is too high.
+Prevents new executions from starting if CPU usage is too high
 
-The default value is 80%: As long as process cpu usage is below 80% of the total cpu available on the machine, remaining executions tries to start in parallel.
+The default value is 80%. New executions will start as long as CPU usage is below 80% of the total available CPU.
 
 ### 3.4.3 parallel.maxMemory
 
-This parameter prevent an execution to be started in parallel when memory usage is too high.
+Prevents new executions from starting if memory usage is too high.
 
-The default value is 50%: As long as process memory usage is below 50% of the total memory available on the machine, remaining executions tries to start in parallel.
+The default value is 50%. New executions will start as long as memory usage is below 50% of the total available memory.
 
 ## 3.5 Allocated time per test
 
-Each file is given 30s to execute.
-If this duration is exceeded the browser tab is closed and execution is considered as failed.
+Each test file is given 30s to execute.
+If this duration is exceeded, the browser tab is closed, and the execution is marked as failed.
 This duration can be configured as shown below:
 
 ```js
@@ -466,7 +461,7 @@ await executeTestPlan({
 
 ## 3.6 Code coverage
 
-It's possible to generate HTML files showing how much code was covered by the execution of test files:
+You can generate HTML files showing code coverage for test executions:
 
 ![file js](./file.js.png)
 
@@ -497,7 +492,7 @@ reportCoverageAsHtml(testResult, new URL("./coverage/", import.meta.url));
 
 ### 3.6.1 Coverage json
 
-Coverage can be written to a json file.
+Coverage can also be written to a JSON file.
 
 ```js
 import { executeTestPlan, chromium, reportCoverageAsJson } from "@jsenv/test";
@@ -522,11 +517,11 @@ const testResult = await executeTestPlan({
 reportCoverageAsJson(testResult, new URL("./coverage.json", import.meta.url));
 ```
 
-This JSON file can be given to other tools, for example https://github.com/codecov/codecov-action.
+This JSON file can be used with other tools, such as https://github.com/codecov/codecov-action.
 
 ### 3.6.2 Coverage from multiple browsers
 
-Now let's say we want to get code coverage for the following file:
+Now let's say we want to get code coverage for a file where code behaves differently depending on the browser:
 
 ```js
 if (window.navigator.userAgent.includes("Firefox")) {
@@ -540,26 +535,22 @@ if (window.navigator.userAgent.includes("Firefox")) {
 }
 ```
 
-The file will be executed by the following html file:
+The file is executed by the following HTML file:
 
 ```html
 <!doctype html>
 <html>
   <head>
     <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
   </head>
 
   <body>
-    <script type="module">
-      import "./many.js";
-    </script>
+    <script type="module" src="./demo.js"></script>
   </body>
 </html>
 ```
 
-Now let's use jsenv to execute the HTML file in Firefox, Chrome and Webkit and generate the coverage.
+Execute the HTML file in Firefox, Chrome, and Webkit, and generate the coverage:
 
 ```js
 import {
@@ -596,7 +587,7 @@ const testPlanResult = await executeTestPlan({
 reportCoverageAsHtml(testResult, new URL("./coverage/", import.meta.url));
 ```
 
-The resulting coverage looks as follow:
+The resulting coverage:
 
 ![many js](./many.js.png)
 
@@ -612,9 +603,13 @@ disable this warning with coverage.v8ConflictWarning: false
 force coverage using istanbul with coverage.methodForBrowsers: "istanbul"
 ```
 
-At this point either you disable the warning with `coverage: { v8ConflictWarning: false }`.
+At this point either you disable the warning with `coverage: { v8ConflictWarning: false }` or force Chromium coverage to be collected using "istanbul":
 
-Or you force chromium to use "istanbul" so that coverage can be merged with the one from firefox and webkit with `coverage: { methodForBrowsers: "istanbul" }`
+```js
+coverage: {
+  methodForBrowsers: "istanbul";
+}
+```
 
 ![many_istanbul js](./many_istanbul.js.png)
 
