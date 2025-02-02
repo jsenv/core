@@ -15,9 +15,9 @@
 
 <!-- PLACEHOLDER_END -->
 
-Jsenv works seamlessly with any directory structure and advanced setups like [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
+Jsenv works seamlessly with any directory structure, requiring no additional configuration. It also supports advanced setups like [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
 
-Below is an example of a project structure:
+Below is an example of a typical project structure:
 
 ```console
 project/       -> root directory
@@ -42,9 +42,9 @@ project/
   package.json
 ```
 
-- `scripts/dev.mjs`: Starts the development server for files in _src/_. See [B) Dev](../b_dev/b_dev.md).
-- `scripts/build.mjs`: Optimize files from _src/_ and write then into _dist/_. See [C) Build](../c_build/c_build.md).
-- `scripts/test.mjs`: Execute test files. See [D) Test](../d_test/d_test.md).
+- `scripts/dev.mjs`: Starts the development server for files in src/. This enables live reloading and debugging during development. See [B) Dev](../b_dev/b_dev.md).
+- `scripts/build.mjs`: Optimizes files from src/ and writes them into dist/. This is typically used for production deployment. See [C) Build](../c_build/c_build.md).
+- `scripts/test.mjs`: Executes test files to ensure code quality and functionality. See [D) Test](../d_test/d_test.md).
 
 You can run script files directly with `node`:
 
@@ -52,7 +52,7 @@ You can run script files directly with `node`:
 node ./scripts/dev.mjs
 ```
 
-However, it is a good practice to use NPM scripts. Add the following aliases to package.json:
+However, it is a best practice to use NPM scripts. Add the following aliases to `package.json`:
 
 ```json
 "scripts": {

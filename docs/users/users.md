@@ -1,6 +1,10 @@
-This section explains how users can integrate jsenv into their projects. It highlights the steps for installation, setup, and usage. It also includes advanced configurations and customization options to fit different project needs.
+# Getting started with jsenv
 
-# Table of content
+This guide explains how to integrate jsenv into your projects. It provides a step-by-step walkthrough for installation, setup, and usage, along with advanced configuration options to tailor jsenv to your specific project needs.
+
+Whether you are new to jsenv or an experienced user, this documentation will help you make the most of its features.
+
+# Table of contents
 
 <!-- PLACEHOLDER_START:TOC_DIRECTORY -->
 

@@ -185,6 +185,8 @@ Expected output:
 
 ![Title 2023-05-22 15-49-52](https://github.com/jsenv/core/assets/443639/7db147c2-2529-451b-8459-4d9326014a0c)
 
+_Figure: The development server in action, showing the served files and URLs_
+
 # 2. Features
 
 ## 2.1 Browser support
@@ -281,6 +283,8 @@ To differentiate source files from build files, the dev server injects a visual 
 
 ![ribbon screenshot](https://github.com/jsenv/core/assets/443639/25e8cd22-2efb-45a4-9d97-84f96ad1b2f7)
 
+_Figure: The ribbon in action, marking the page as served by the dev server_
+
 The code below shows how to disable the ribbon:
 
 ```js
@@ -297,6 +301,8 @@ await startDevServer({
 The dev server displays an error overlay when issues occur, complementing the browser’s dev tools:
 
 ![image](https://github.com/jsenv/core/assets/443639/3ecd51ac-7851-4201-93dd-30892e23f11c)
+
+_Figure: The error overlay showing a syntax error in the code._
 
 **Example HTML causing an error**:
 
