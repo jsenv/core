@@ -14,7 +14,7 @@
       <a href="../j_build_for_node/j_build_for_node.md">&gt; J) Build for Node.js</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->
 
@@ -378,6 +378,6 @@ Code coverage can be collected while executing test files.
       <a href="../j_build_for_node/j_build_for_node.md">&gt; J) Build for Node.js</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->

@@ -14,7 +14,7 @@
       <a href="../f_features/f_features.md">&gt; F) Features</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->
 
@@ -23,87 +23,86 @@ Jsenv relies on web standards for file referencing, so this guide focuses on sta
 
 <!-- PLACEHOLDER_START:TOC_INLINE -->
 
-<details>
-  <summary>Table of contents</summary>
-  <ul>
-    <li>
-      <a href="#1-general-notes">
-        1. General notes
-      </a>
-        <ul>
-          <li>
-            <a href="#11-leading-slash">
-              1.1 Leading slash
-            </a>
-          </li>
-          <li>
-            <a href="#12-external-urls">
-              1.2 External urls
-            </a>
-          </li>
-          <li>
-            <a href="#13-browser-compatibility">
-              1.3 Browser compatibility
-            </a>
-          </li>
-        </ul>
-    </li>
-    <li>
-      <a href="#2-html">
-        2. HTML
-      </a>
-        <ul>
-          <li>
-            <a href="#21-inline">
-              2.1 Inline 
-            </a>
-          </li>
-        </ul>
-    </li>
-    <li>
-      <a href="#3-css">
-        3. CSS
-      </a>
-    </li>
-    <li>
-      <a href="#4-js-module">
-        4. JS module
-      </a>
-        <ul>
-          <li>
-            <a href="#41-css-import">
-              4.1 CSS import
-            </a>
-          </li>
-          <li>
-            <a href="#42-urls">
-              4.2 Urls
-            </a>
-          </li>
-          <li>
-            <a href="#43-worker-urls">
-              4.3 Worker urls
-            </a>
-          </li>
-          <li>
-            <a href="#45-json-import">
-              4.5 JSON import
-            </a>
-          </li>
-          <li>
-            <a href="#46-text-import">
-              4.6 Text import
-            </a>
-          </li>
-        </ul>
-    </li>
-    <li>
-      <a href="#5-js-classic">
-        5. JS classic
-      </a>
-    </li>
-  </ul>
-</details>
+# Table of contents
+
+<ol>
+  <li>
+    <a href="#1-general-notes">
+      General notes
+    </a>
+      <ul>
+        <li>
+          <a href="#11-leading-slash">
+            Leading slash
+          </a>
+        </li>
+        <li>
+          <a href="#12-external-urls">
+            External urls
+          </a>
+        </li>
+        <li>
+          <a href="#13-browser-compatibility">
+            Browser compatibility
+          </a>
+        </li>
+      </ul>
+  </li>
+  <li>
+    <a href="#2-html">
+      HTML
+    </a>
+      <ul>
+        <li>
+          <a href="#21-inline">
+            Inline 
+          </a>
+        </li>
+      </ul>
+  </li>
+  <li>
+    <a href="#3-css">
+      CSS
+    </a>
+  </li>
+  <li>
+    <a href="#4-javascript-modules">
+      JavaScript modules
+    </a>
+      <ul>
+        <li>
+          <a href="#41-css-import">
+            CSS import
+          </a>
+        </li>
+        <li>
+          <a href="#42-urls">
+            Urls
+          </a>
+        </li>
+        <li>
+          <a href="#43-worker-urls">
+            Worker URLs
+          </a>
+        </li>
+        <li>
+          <a href="#45-json-import">
+            JSON import
+          </a>
+        </li>
+        <li>
+          <a href="#46-text-import">
+            Text import
+          </a>
+        </li>
+      </ul>
+  </li>
+  <li>
+    <a href="#5-classic-javascript">
+      Classic JavaScript
+    </a>
+  </li>
+</ol>
 
 <!-- PLACEHOLDER_END -->
 
@@ -167,7 +166,7 @@ In HTML, file references are recognized in elements like `<link>`, `<script>`, `
 
 ## 2.1 Inline `<script>` and `<style>`
 
-Inline <script> and <style> tags are supported.
+Inline `<script>` and `<style>` tags are supported.
 
 **Example:**
 
@@ -369,6 +368,6 @@ It is because `document.currentScript.src` is `undefined` for inline JavaScript.
       <a href="../f_features/f_features.md">&gt; F) Features</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->

@@ -14,7 +14,7 @@
       <a href="../h_going_further/h_going_further.md">&gt; H) Going further</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->
 
@@ -394,6 +394,6 @@ Plugins are the key to unlocking jsenv’s full potential. Whether you need comp
       <a href="../h_going_further/h_going_further.md">&gt; H) Going further</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->

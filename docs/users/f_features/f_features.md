@@ -14,7 +14,7 @@
       <a href="../g_plugins/g_plugins.md">&gt; G) Plugins</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->
 
@@ -478,6 +478,6 @@ It's possible to obtain this thanks to `jsenvPluginAsJsClassic` documented in [G
       <a href="../g_plugins/g_plugins.md">&gt; G) Plugins</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->

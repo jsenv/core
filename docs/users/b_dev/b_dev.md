@@ -14,7 +14,7 @@
       <a href="../c_build/c_build.md">&gt; C) Build</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->
 
@@ -464,6 +464,6 @@ await startDevServer({
       <a href="../c_build/c_build.md">&gt; C) Build</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->

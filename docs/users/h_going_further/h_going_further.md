@@ -14,7 +14,7 @@
       <a href="../i_test_in_node/i_test_in_node.md">&gt; I) Test in Node.js</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->
 
@@ -45,6 +45,6 @@ It represents the two JavaScript runtimes supported by jsenv.
       <a href="../i_test_in_node/i_test_in_node.md">&gt; I) Test in Node.js</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->

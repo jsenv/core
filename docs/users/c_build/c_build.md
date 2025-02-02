@@ -14,7 +14,7 @@
       <a href="../d_test/d_test.md">&gt; D) Test</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->
 
@@ -726,6 +726,6 @@ Same as the `https` option in [B) Dev](../b_dev/b_dev.md#210-https)
       <a href="../d_test/d_test.md">&gt; D) Test</a>
     </td>
   </tr>
-<table>
+</table>
 
 <!-- PLACEHOLDER_END -->

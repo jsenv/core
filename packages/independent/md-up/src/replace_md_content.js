@@ -306,7 +306,7 @@ export const generatePrevNextNav = (
       <a href="${nextUrlRelativeToCurrent}">${NEXT_CHAR} ${escapeHtml(nextTitle)}</a>
     </td>
   </tr>
-<table>`;
+</table>`;
 };
 const extractMarkdownFileTitle = (markdownFile) => {
   const htmlTree = mdAsHtml(markdownFile.content, markdownFile.url);

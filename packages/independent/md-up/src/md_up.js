@@ -56,13 +56,11 @@ const syncMarkdownFile = (
   for (const entryName of directoryContent) {
     const entryUrl = new URL(entryName, directoryUrl);
     const statsSync = readEntryStatSync(entryUrl);
-    if (statsSync.isDirectory()) {
-      entryUrl.pathname += "/";
-      directoryUrls.push(entryUrl);
-    } else {
-      // it's safe to break because directory comes first
-      break;
+    if (!statsSync.isDirectory()) {
+      continue;
     }
+    entryUrl.pathname += "/";
+    directoryUrls.push(entryUrl);
   }
   let i = 0;
   while (i < directoryUrls.length) {
