@@ -51,7 +51,7 @@ export const generateTableOfContents = (markdownFile, { tocMode }) => {
     defaultOpen: false,
     children: [],
   };
-  const htmlTree = mdAsHtml(markdownFile.content);
+  const htmlTree = mdAsHtml(markdownFile.content, markdownFile.url);
   let isFirstH1 = true;
   const htmlNode = htmlTree.childNodes.find((node) => node.nodeName === "html");
   const body = htmlNode.childNodes.find((node) => node.nodeName === "body");
@@ -309,7 +309,7 @@ export const generatePrevNextNav = (
 <table>`;
 };
 const extractMarkdownFileTitle = (markdownFile) => {
-  const htmlTree = mdAsHtml(markdownFile.content);
+  const htmlTree = mdAsHtml(markdownFile.content, markdownFile.url);
   let title;
   findHtmlNode(htmlTree, (node) => {
     if (node.nodeName === "#comment") {
