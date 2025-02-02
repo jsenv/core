@@ -18,74 +18,77 @@
 
 <!-- PLACEHOLDER_END -->
 
-<!-- PLACEHOLDER_START:TOC -->
+This page outlines the key features provided by Jsenv, including Node ESM resolution, magic extensions, `import.meta.dev`, injections, inlining, and handling UMD/CommonJS modules.
 
-<details>
-  <summary>Table of contents</summary>
-  <ul>
-    <li>
-      <a href="#1-node-esm-resolution">
-        1. Node ESM resolution
-      </a>
-        <ul>
-          <li>
-            <a href="#11-node-module-files-during-dev">
-              1.1 Node module files during dev
-            </a>
-          </li>
-        </ul>
-    </li>
-    <li>
-      <a href="#2-magic-extensions">
-        2. Magic extensions
-      </a>
-    </li>
-    <li>
-      <a href="#3-importmetadev">
-        3. import.meta.dev
-      </a>
-    </li>
-    <li>
-      <a href="#4-injections">
-        4. Injections
-      </a>
-    </li>
-    <li>
-      <a href="#5-inlining">
-        5. Inlining
-      </a>
-    </li>
-    <li>
-      <a href="#6-importing-umd">
-        6. Importing UMD
-      </a>
-    </li>
-    <li>
-      <a href="#7-importing-commonjs">
-        7. Importing CommonJs
-      </a>
-    </li>
-    <li>
-      <a href="#8-loading-js-module-with">
-        8. Loading js module with 
-      </a>
-    </li>
-  </ul>
-</details>
+# Table of contents
+
+<!-- PLACEHOLDER_START:TOC_INLINE -->
+
+# Table of contents
+
+<ol>
+  <li>
+    <a href="#1-node-esm-resolution">
+      Node ESM resolution
+    </a>
+      <ul>
+        <li>
+          <a href="#11-node-module-files-during-dev">
+            Node module files during dev
+          </a>
+        </li>
+      </ul>
+  </li>
+  <li>
+    <a href="#2-magic-extensions">
+      Magic extensions
+    </a>
+  </li>
+  <li>
+    <a href="#3-importmetadev">
+      import.meta.dev
+    </a>
+  </li>
+  <li>
+    <a href="#4-injections">
+      Injections
+    </a>
+  </li>
+  <li>
+    <a href="#5-inlining">
+      Inlining
+    </a>
+  </li>
+  <li>
+    <a href="#6-importing-umd">
+      Importing UMD
+    </a>
+  </li>
+  <li>
+    <a href="#7-importing-commonjs">
+      Importing CommonJs
+    </a>
+  </li>
+  <li>
+    <a href="#8-loading-js-module-with">
+      Loading js module with 
+    </a>
+  </li>
+</ol>
 
 <!-- PLACEHOLDER_END -->
 
 # 1. Node ESM resolution
 
-Jsenv implements Node ESM resolution on js imports.
+Jsenv implements Node.js ESM resolution for JavaScript imports, enabling compatibility with Node.js module resolution in the browser.
 
-Without node esm resolution, the following code would throw when executed in a browser:
+**Example:**
 
 ```js
 import "amazing-package";
 ```
 
-To be compatible with browsers, "amazing-package" is resolved and transformed into:
+This is transformed into:
 
 ```js
 import "/node_modules/amazing-package/index.js";
@@ -99,7 +102,9 @@ See some of the features provided by Node ESM resolution:
 
 ## 1.1 Node module files during dev
 
-During dev import inside node modules are versioned by their _package.json_ `"version"` field:
+During development, imports from `node_modules` are versioned using the package's version field from `package.json`.
+
+**Example:**
 
 ```js
 import "/node_modules/amazing-package/index.js?v=1.0.0";
@@ -107,8 +112,8 @@ import "/node_modules/amazing-package/index.js?v=1.0.0";
 
 ☝️ Here _amazing-package/package.json_ contains `"version": "1.0.0"`
 
-It allows to put node modules files into the browser cache. The cache duration is **1 year**.  
-A nice bonus: the version of the package is easy to spot.
+It allows to put node modules files into the browser cache up to **1 year**.  
+A nice bonus: the version of the package is easily identifiable.
 
 <!--
 It is possible to control in which files node esm resolution applies, code below would enable it inside HTML and CSS:
@@ -143,22 +148,23 @@ await build({
 # 2. Magic extensions
 
 > **Warning**
-> Magic extensions are fading away from the JavaScript ecosystem, it's recommended to avoid them. However many packages are still relying on this behaviour.
+> Magic extensions are becoming less common in the JavaScript ecosystem. Avoid using them when possible.
 
-Jsenv implements file magic extensions on js imports.  
-Without it the code below would throw 404 in a browser (assuming there is no "file" but "file.js")
+Jsenv supports magic extensions for resolving file imports without explicit extensions.
+
+**Example:**
 
 ```js
 import "./file";
 ```
 
-"file" must be resolved and transformed into:
+This is resolved to:
 
 ```js
 import "./file.js";
 ```
 
-Magic extensions can be disabled as follows:
+Disabling Magic Extensions:
 
 ```diff
 import { startDevServer } from "@jsenv/core";
@@ -182,8 +188,10 @@ await build({
 
 # 3. import.meta.dev
 
-`import.meta.dev` can be used to make code behave differently during dev and after build.<br />
-During build code specific to dev is marked as dead and removed.
+Use `import.meta.dev` to differentiate behavior between development and production builds.
+Code specific to development is removed during the build process.
+
+**Example:**
 
 ```js
 if (import.meta.dev) {
@@ -195,9 +203,9 @@ if (import.meta.dev) {
 
 # 4. Injections
 
-Jsenv can inject variables in file contents.
+Jsenv allows injecting variables into file content during development and build.
 
-For a file _main.js_ with the following content:
+**Example:**
 
 ```js
 // eslint-disable-next-line no-undef
@@ -205,18 +213,18 @@ window.__ENV__ = __ENV__;
 console.log(window.__ENV__);
 ```
 
-Code below replaces `__ENV__` inside _main.js_ during dev before serving it to the browser.
+**Development configuration:**
 
-```diff
+```js
 import { startDevServer } from "@jsenv/core";
 
 await startDevServer({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
-+ injections: {
-+   "./main.js": () => {
-+     return { __ENV__: "dev" }
-+   },
-+ },
+  injections: {
+    "./main.js": () => {
+      return { __ENV__: "dev" };
+    },
+  },
 });
 ```
 
@@ -228,20 +236,20 @@ The browser will see the following file content:
 console.log(window.__ENV__);
 ```
 
-Code below replaces `__ENV__` inside _main.js_ during build.
+**Build configuration:**
 
-```diff
+```js
 import { build } from "@jsenv/core";
 
 await build({
   sourceDirectoryUrl: new URL("../src/", import.meta.url),
   buildDirectoryUrl: new URL("../dist/", import.meta.url),
   entryPoints: { "./main.html": "main.html" },
-+ injections: {
-+   "./main.js": () => {
-+     return { __ENV__: "build" };
-+   },
-+ },
+  injections: {
+    "./main.js": () => {
+      return { __ENV__: "build" };
+    },
+  },
 });
 ```
 
@@ -303,10 +311,9 @@ export const getInjections = () => {
 
 # 5. Inlining
 
-It can be handy to put code that is meant to be inlined in a separate file.  
-This is doable by adding `inline` query parameter when referencing a file.
+Inlining allows embedding code from separate files directly into HTML or other files.
 
-_demo.html_:
+**Example:**
 
 ```html
 <!doctype html>
@@ -323,55 +330,19 @@ _demo.html_:
 </html>
 ```
 
-_demo.js_:
-
-```js
-console.log("Hello world");
-```
-
-Dev server and build ensure "demo.js" gets inlined into "demo.html" as follows:
+This inlines `demo.js` into the HTML:
 
 ```html
-<!doctype html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <script>
-      console.log("Hello world");
-    </script>
-  </body>
-</html>
+<script>
+  console.log("Hello world");
+</script>
 ```
-
-Inlining can also be used to inline code written as js module:
-
-```html
-<!doctype html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <script src="./demo.js?as_js_classic&inline"></script>
-  </body>
-</html>
-```
-
-Read more about `as_js_classic` query parameter in [G) Plugins#asJsClassic](../g_plugins/g_plugins.md#22-asjsclassic)
 
 # 6. Importing UMD
 
-UMD stands for Universal Module Definition. For a detailed explanation go to [What are UMD modules?](https://jameshfisher.com/2020/10/04/what-are-umd-modules/)<sup>↗</sup>.
+UMD (Universal Module Definition) modules can be imported directly. For packages like `jquery`:
 
-Such code can be imported directly as shown in the example below applied to jQuery:
+**Example:**
 
 ```js
 import "jquery";
@@ -379,15 +350,9 @@ import "jquery";
 const jquery = window.$;
 ```
 
-But some packages would throw in this situation with the following error:
+For packages like `hls.js` that require this to be defined, use the as_js_module query parameter:
 
-```console
-Cannot set property 'xxx' of undefined`
-```
-
-This happens because in a js module, `this` at the top level is `undefined`. hls.js library suffers from this for instance, see [video-dev/hls.js/#2911](https://github.com/video-dev/hls.js/issues/2911)<sup>↗</sup>.
-
-In this situation put "as_js_module" query param on the import:
+**Example:**
 
 ```js
 import "hls.js?as_js_module";
@@ -397,72 +362,45 @@ window.Hls;
 
 # 7. Importing CommonJs
 
-Let's see what happens if we try to execute code using CommonJs in a browser.
+CommonJS modules are not natively supported in browsers.
 
-> This example is simplified but correspond to what happens when code imports a package written in CommonJs, like react.
-
-_index.html_:
-
-```html
-<!doctype html>
-<html>
-  <head>
-    <title>Title</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <script type="module" src="./main.js"></script>
-  </body>
-</html>
-```
-
-_main.js_:
+**Example:**
 
 ```js
+// main.js
 module.exports = 42;
 ```
 
-Opening _index.html_ in a browser would lead to the following error:
+**Error:**
 
 ```console
 Uncaught ReferenceError: module is not defined
 ```
 
-Obviously.  
-And jsenv won't try to perform automatic module conversion. The conversion to js modules must be done using `jsenvPluginCommonJs` documented in [G) Plugins#commonjs](../g_plugins/g_plugins.md#21-commonjs).
+**Solution**: Use `jsenvPluginCommonJs` documented in [G) Plugins#commonjs](../g_plugins/g_plugins.md#21-commonjs).
 
-# 8. Loading js module with `<script></script>`
+# 8. Loading js module with `<script>`
 
-Let's see what happens if we try to load a js module with a regular script tag
+To load a JavaScript module with a classic `<script>` tag while retaining module features use `jsenvPluginAsJsClassic`.
 
-_index.html_:
+**Example**:
 
 ```html
-<script src="./file.js">
+<script src="file.js"></script>
 ```
 
-_file.js_:
-
 ```js
+// file.js
 console.log(import.meta.url);
 ```
 
-Opening _index.html_ in a browser would lead to the following error:
+**Error:**
 
 ```console
 Uncaught SyntaxError: Cannot use import statement outside a module
 ```
 
-It is normal, `<script type="module">` must be used to load js module.
-
-However in specific cases we want things from both worlds:
-
-- Features from js modules (import and dynamic import)
-- The behaviour of classic script tag: prevent execution of further scripts until this one is done
-
-It's possible to obtain this thanks to `jsenvPluginAsJsClassic` documented in [G) Plugins#asJsClassic](../g_plugins/g_plugins.md#22-asjsclassic).
+**Solution:** Use `jsenvPluginAsJsClassic` documented in [G) Plugins#asJsClassic](../g_plugins/g_plugins.md#22-asjsclassic).
 
 <!-- PLACEHOLDER_START:NAV_PREV_NEXT -->
 
