@@ -302,7 +302,7 @@ The dev server displays an error overlay when issues occur, complementing the br
 
 ![image](https://github.com/jsenv/core/assets/443639/3ecd51ac-7851-4201-93dd-30892e23f11c)
 
-_Figure: The error overlay showing a syntax error in the code._
+_Figure: The error overlay showing an error in the code._
 
 **Example HTML causing an error**:
 
