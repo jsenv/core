@@ -91,6 +91,8 @@
     return target;
   }
   const answer = 42;
+
+  // eslint-disable-next-line no-undef
   window.ask = () => answer;
   const [value] = [answer];
   console.log(_objectSpread2({}, {

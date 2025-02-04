@@ -32,7 +32,7 @@ jobs:
       matrix:
         # https://github.com/actions/runner-images
         os:
-          - ubuntu-22.04
+          # - ubuntu-22.04 # disabled for now (got segfault)
           - macos-14 # might cause https://github.com/microsoft/playwright/issues/30585
           # - windows-2022 disabled until got a windows to make it work again
         node: [22.13.1]

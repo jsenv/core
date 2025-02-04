@@ -19,11 +19,11 @@ base/client/main.html:15:40
   at callHook (@jsenv/core/src/plugins/plugin_controller.js:238:25)
   at Object.callHooks (@jsenv/core/src/plugins/plugin_controller.js:281:27)
   at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:208:26)
-  at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:375:38)
+  at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:377:38)
   at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:43:41)
   at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:58:23)
   at onExternalReference (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:100:44)
-  at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:148:7)
+  at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:149:7)
   at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:22:18)
 ```
 

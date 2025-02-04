@@ -304,6 +304,7 @@ const createReference = ({
   urlInfo = null,
   escape = null,
   importAttributes,
+  isSideEffectImport = false,
   astInfo = {},
   mutation,
 }) => {
@@ -367,6 +368,7 @@ const createReference = ({
     // used mostly by worker and import assertions
     astInfo,
     importAttributes,
+    isSideEffectImport,
     mutation,
   };
 

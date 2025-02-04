@@ -117,6 +117,7 @@ const parseAndTransformJsReferences = async (
         "document.currentScript.src": urlInfo.url,
       }[externalReferenceInfo.baseUrlType],
       importAttributes: externalReferenceInfo.importAttributes,
+      isSideEffectImport: externalReferenceInfo.isSideEffectImport,
       astInfo: externalReferenceInfo.astInfo,
     });
     parallelActions.push(async () => {
