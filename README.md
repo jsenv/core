@@ -20,7 +20,7 @@ For additional details, consult the [documentation](./docs/users/users.md)
 # The best parts
 
 - **Robust versioning during build**: Avoids <a href="https://bundlers.tooling.report/hashing/avoid-cascade/" target="_blank">cascading hash changes</a><sup>↗</sup>.
-- **Load js module with classic script**: See the [asJsClassic plugin](./docs/users/g_plugins/g_plugins.md#2asjsclassic>).
+- **Load js module with classic script**: See the [asJsClassic plugin](./docs/users/g_plugins/g_plugins.md#asjsclassic).
 - **Large browser support after build**: Ensures compatibility with older versions of Firefox, Chrome, and Safari.
 - **Advanced support of top level await**.
 - **Advanced support of web workers**.
