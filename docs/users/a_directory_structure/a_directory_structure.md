@@ -15,7 +15,8 @@
 
 <!-- PLACEHOLDER_END -->
 
-Jsenv works seamlessly with any directory structure, requiring no additional configuration. It also supports advanced setups like [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
+Jsenv works seamlessly with any directory structure, requiring no additional configuration.  
+It also supports advanced setups like [NPM workspaces](https://docs.npmjs.com/cli/v8/using-npm/workspaces).
 
 Below is an example of a typical project structure:
 
@@ -42,9 +43,9 @@ project/
   package.json
 ```
 
-- `scripts/dev.mjs`: Starts the development server for files in src/. This enables live reloading and debugging during development. See [B) Dev](../b_dev/b_dev.md).
-- `scripts/build.mjs`: Optimizes files from src/ and writes them into dist/. This is typically used for production deployment. See [C) Build](../c_build/c_build.md).
-- `scripts/test.mjs`: Executes test files to ensure code quality and functionality. See [D) Test](../d_test/d_test.md).
+- `scripts/dev.mjs`: Starts the development server for files in `src/`. See [B) Dev](../b_dev/b_dev.md).
+- `scripts/build.mjs`: Optimizes files from `src/` and writes them into `dist/`. See [C) Build](../c_build/c_build.md).
+- `scripts/test.mjs`: Executes test files. See [D) Test](../d_test/d_test.md).
 
 You can run script files directly with `node`:
 
