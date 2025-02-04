@@ -454,6 +454,8 @@ const createReference = ({
 
   reference.addImplicit = (props) => {
     const implicitReference = ownerUrlInfo.dependencies.inject({
+      importAttributes: reference.importAttributes,
+      isSideEffectImport: reference.isSideEffectImport,
       ...props,
       isImplicit: true,
     });

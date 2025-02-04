@@ -13,6 +13,7 @@ export const analyzeImportDeclaration = (node, { onUrl }) => {
     column: specifierNode.loc.start.column,
     expectedType: "js_module",
     astInfo: { node: specifierNode },
+    isSideEffectImport: node.specifiers.length === 0,
   };
   if (attributesInfo) {
     const { importAttributes, importNode, importTypeAttributeNode } =
