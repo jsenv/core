@@ -161,15 +161,30 @@ export const jsenvPluginImportAttributes = ({
       } else {
         inlineContentCall = `new __InlineContent__(${cssText}, { type: "text/css" })`;
       }
-      return {
-        content: `
-import ${JSON.stringify(cssUrlInfo.context.inlineContentClientFileUrl)};
+
+      let cssModuleHotCode = cssUrlInfo.context.dev
+        ? `
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+      (s) => s !== stylesheet,
+    );
+  });
+}
+`
+        : "";
+      let cssModuleContent = `import ${JSON.stringify(cssUrlInfo.context.inlineContentClientFileUrl)};
 
 const inlineContent = ${inlineContentCall};
 const stylesheet = new CSSStyleSheet();
 stylesheet.replaceSync(inlineContent.text);
 
-export default stylesheet;`,
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];${cssModuleHotCode}
+
+export default stylesheet;`;
+
+      return {
+        content: cssModuleContent,
         contentType: "text/javascript",
         type: "js_module",
         originalUrl: cssUrlInfo.originalUrl,
