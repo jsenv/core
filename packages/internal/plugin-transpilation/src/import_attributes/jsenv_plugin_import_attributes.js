@@ -15,7 +15,7 @@ import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
 
 export const jsenvPluginImportAttributes = ({
   json = "auto",
-  css = "auto",
+  css = true,
   text = "auto",
 }) => {
   const transpilations = { json, css, text };
@@ -170,8 +170,7 @@ if (import.meta.hot) {
       (s) => s !== stylesheet,
     );
   });
-}
-`
+};`
         : "";
       let cssModuleContent = `import ${JSON.stringify(cssUrlInfo.context.inlineContentClientFileUrl)};
 
