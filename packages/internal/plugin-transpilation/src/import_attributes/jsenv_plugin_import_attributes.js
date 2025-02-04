@@ -25,7 +25,11 @@ export const jsenvPluginImportAttributes = ({
       reference.filenameHint = `${urlToFilename(reference.url)}.js`;
     }
   };
-  const turnIntoJsModuleProxy = (reference, type) => {
+  const turnIntoJsModuleProxy = (
+    reference,
+    type,
+    { injectSearchParamForSideEffectImports },
+  ) => {
     reference.mutation = (magicSource) => {
       if (reference.subtype === "import_dynamic") {
         const { importTypeAttributeNode } = reference.astInfo;
@@ -52,12 +56,19 @@ export const jsenvPluginImportAttributes = ({
     };
     const newUrl = injectQueryParams(reference.url, {
       [`as_${type}_module`]: "",
+      ...(injectSearchParamForSideEffectImports && reference.isSideEffectImport
+        ? { side_effect: "" }
+        : {}),
     });
     markAsJsModuleProxy(reference, type);
     return newUrl;
   };
 
-  const createImportTypePlugin = ({ type, createUrlContent }) => {
+  const createImportTypePlugin = ({
+    type,
+    createUrlContent,
+    injectSearchParamForSideEffectImports,
+  }) => {
     return {
       name: `jsenv:import_type_${type}`,
       appliesDuring: "*",
@@ -95,7 +106,9 @@ export const jsenvPluginImportAttributes = ({
           return null;
         }
         if (reference.importAttributes.type === type) {
-          return turnIntoJsModuleProxy(reference, type);
+          return turnIntoJsModuleProxy(reference, type, {
+            injectSearchParamForSideEffectImports,
+          });
         }
         return null;
       },
@@ -144,6 +157,7 @@ export const jsenvPluginImportAttributes = ({
 
   const asCssModule = createImportTypePlugin({
     type: "css",
+    injectSearchParamForSideEffectImports: true,
     createUrlContent: (cssUrlInfo) => {
       const cssText = JS_QUOTES.escapeSpecialChars(cssUrlInfo.content, {
         // If template string is choosen and runtime do not support template literals
@@ -162,24 +176,33 @@ export const jsenvPluginImportAttributes = ({
         inlineContentCall = `new __InlineContent__(${cssText}, { type: "text/css" })`;
       }
 
-      let cssModuleHotCode = cssUrlInfo.context.dev
-        ? `
+      let autoInject = cssUrlInfo.searchParams.has("side_effect");
+      let cssModuleAutoInjectCode = ``;
+      if (autoInject) {
+        if (cssUrlInfo.context.dev) {
+          cssModuleAutoInjectCode = `
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
       (s) => s !== stylesheet,
     );
   });
-};`
-        : "";
+};
+`;
+        } else {
+          cssModuleAutoInjectCode = `
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+`;
+        }
+      }
       let cssModuleContent = `import ${JSON.stringify(cssUrlInfo.context.inlineContentClientFileUrl)};
 
 const inlineContent = ${inlineContentCall};
 const stylesheet = new CSSStyleSheet();
 stylesheet.replaceSync(inlineContent.text);
-
-document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];${cssModuleHotCode}
-
+${cssModuleAutoInjectCode}
 export default stylesheet;`;
 
       return {

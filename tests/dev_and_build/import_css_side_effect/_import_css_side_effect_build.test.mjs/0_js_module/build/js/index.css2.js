@@ -4,4 +4,6 @@ const inlineContent = new __InlineContent__("body {\n  background-color: green;\
 const stylesheet = new CSSStyleSheet();
 stylesheet.replaceSync(inlineContent.text);
 
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+
 export default stylesheet;
