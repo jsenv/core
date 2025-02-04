@@ -304,6 +304,7 @@ const createReference = ({
   urlInfo = null,
   escape = null,
   importAttributes,
+  isSideEffectImport = false,
   astInfo = {},
   mutation,
 }) => {
@@ -367,6 +368,7 @@ const createReference = ({
     // used mostly by worker and import assertions
     astInfo,
     importAttributes,
+    isSideEffectImport,
     mutation,
   };
 
@@ -454,8 +456,6 @@ const createReference = ({
 
   reference.addImplicit = (props) => {
     const implicitReference = ownerUrlInfo.dependencies.inject({
-      importAttributes: reference.importAttributes,
-      isSideEffectImport: reference.isSideEffectImport,
       ...props,
       isImplicit: true,
     });

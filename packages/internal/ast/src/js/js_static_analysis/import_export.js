@@ -3,6 +3,7 @@ import { isStringLiteralNode } from "./helpers.js";
 export const analyzeImportDeclaration = (node, { onUrl }) => {
   const specifierNode = node.source;
   const attributesInfo = extractImportAttributesInfo(node);
+  const isSideEffectImport = node.specifiers.length === 0;
   const info = {
     type: "js_import",
     subtype: "import_static",
@@ -13,7 +14,7 @@ export const analyzeImportDeclaration = (node, { onUrl }) => {
     column: specifierNode.loc.start.column,
     expectedType: "js_module",
     astInfo: { node: specifierNode },
-    isSideEffectImport: node.specifiers.length === 0,
+    isSideEffectImport,
   };
   if (attributesInfo) {
     const { importAttributes, importNode, importTypeAttributeNode } =
