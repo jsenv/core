@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/snapshot",
-  "version": "2.11.34",
+  "version": "2.11.35",
   "description": "Snapshot testing",
   "license": "MIT",
   "author": {
@@ -31,7 +31,7 @@
   ],
   "dependencies": {
     "@jsenv/assert": "4.4.2",
-    "@jsenv/ast": "6.5.0",
+    "@jsenv/ast": "6.5.1",
     "@jsenv/exception": "1.1.4",
     "@jsenv/humanize": "1.2.8",
     "@jsenv/filesystem": "4.13.4",

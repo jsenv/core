@@ -126,7 +126,7 @@ External URLs (e.g., `https://fonts.googleapis.com/css2?family=Roboto`) are pres
 
 ## 1.3 Browser compatibility
 
-Jsenv transforms modern features (e.g., import, import.meta, document.adoptedStyleSheets) to ensure compatibility with older browsers.
+Jsenv transforms modern features (e.g., `import`, `import.meta`, `document.adoptedStyleSheets`) to ensure compatibility with older browsers.
 
 # 2. HTML
 
@@ -235,6 +235,14 @@ const sheetB = await import("./b.css", {
   with: { type: "css" },
 });
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheetB];
+```
+
+**Tip**: When importing CSS with a side effect import the stylesheet is injected in the document for you.
+
+**Example:**
+
+```js
+import "./a.css" with { type: "css" }; // will inject CSS in the document for you
 ```
 
 ## 4.2 Urls
