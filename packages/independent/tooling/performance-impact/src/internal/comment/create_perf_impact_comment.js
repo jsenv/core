@@ -45,10 +45,10 @@ export const createPerfImpactComment = ({
     const beforeMergeMetrics = beforeMergeGroups[groupName];
     const bigImpacts = beforeMergeMetrics
       ? getBigImpacts({
-        afterMergeMetrics,
-        beforeMergeMetrics,
-        isPerformanceImpactBig,
-      })
+          afterMergeMetrics,
+          beforeMergeMetrics,
+          isPerformanceImpactBig,
+        })
       : {};
 
     groups.push(

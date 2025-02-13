@@ -1,11 +1,11 @@
 import { assert } from "@jsenv/assert";
+import { fetchUrl } from "@jsenv/fetch";
 import { startServer } from "@jsenv/server";
 import { createObservable } from "@jsenv/server/src/interfacing_with_node/observable.js";
 import {
   testServerCertificate,
   testServerCertificatePrivateKey,
 } from "@jsenv/server/tests/test_certificate.js";
-import { fetchUrl } from "@jsenv/fetch";
 
 let serverResponsePromise;
 const server = await startServer({
@@ -29,7 +29,7 @@ const server = await startServer({
 // cancel request before response is found
 {
   const abortController = new AbortController();
-  serverResponsePromise = new Promise(() => { });
+  serverResponsePromise = new Promise(() => {});
   const clientResponsePromise = fetchUrl(server.origin, {
     signal: abortController.signal,
   });

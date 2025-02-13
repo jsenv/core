@@ -72,7 +72,7 @@ export const commentGitHubPullRequestImpact = async ({
 
   const logger = createLogger({ logLevel });
 
-  let cleanup = () => { };
+  let cleanup = () => {};
 
   try {
     return await commentPrImpact({
@@ -165,9 +165,9 @@ const commentPrImpact = async ({
     runLink,
     commitLink: commitInGeneratedByInfo
       ? {
-        url: `https://github.com/${repositoryOwner}/${repositoryName}/pull/${pullRequestNumber}/commits/${pullRequest.head.sha}`,
-        text: shortenCommiSha(pullRequest.head.sha),
-      }
+          url: `https://github.com/${repositoryOwner}/${repositoryName}/pull/${pullRequestNumber}/commits/${pullRequest.head.sha}`,
+          text: shortenCommiSha(pullRequest.head.sha),
+        }
       : null,
   });
 
@@ -364,7 +364,7 @@ const ensureGitConfig = async (
 ) => {
   try {
     await execCommandInRootDirectory(`git config ${name}`);
-    return () => { };
+    return () => {};
   } catch {
     await execCommandInRootDirectory(`git config ${name} "${valueIfMissing}"`);
     return async () => {

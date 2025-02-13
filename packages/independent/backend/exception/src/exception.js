@@ -30,7 +30,7 @@ export const createException = (
   {
     jsenvCoreDirectoryUrl = new URL("../../../../../", import.meta.url),
     rootDirectoryUrl,
-    errorTransform = () => { },
+    errorTransform = () => {},
   } = {},
 ) => {
   const exception = {
@@ -285,10 +285,10 @@ const getStackInfo = (
     if (firstCallFrame) {
       site = firstCallFrame.url
         ? {
-          url: firstCallFrame.url,
-          line: firstCallFrame.line,
-          column: firstCallFrame.column,
-        }
+            url: firstCallFrame.url,
+            line: firstCallFrame.line,
+            column: firstCallFrame.column,
+          }
         : firstCallFrame.evalSite;
     }
   }

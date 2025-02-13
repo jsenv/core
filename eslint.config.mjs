@@ -16,7 +16,7 @@ export default [
     ],
     browserAndNodeFiles: [
       "packages/**/universal/**/*.js",
-      "packages/**/assert/**/*.js"
+      "packages/**/assert/**/*.js",
     ],
     jsxPragmaAuto: true,
   }),
