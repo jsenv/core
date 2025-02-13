@@ -29,6 +29,14 @@ navigation.addEventListener("navigatesuccess", () => {
   updateCanGoForward(navigation.canGoForward);
 });
 
+let isReloadFromNavigationAPI = false;
+const navigationReload = navigation.reload;
+navigation.reload = () => {
+  isReloadFromNavigationAPI = true;
+  navigationReload.call(navigation);
+  isReloadFromNavigationAPI = false;
+};
+
 export const installNavigation = ({ applyRouting }) => {
   navigation.addEventListener("navigate", (event) => {
     if (!event.canIntercept) {
@@ -40,7 +48,8 @@ export const installNavigation = ({ applyRouting }) => {
     if (
       !event.userInitiated &&
       event.navigationType === "reload" &&
-      event.isTrusted
+      event.isTrusted &&
+      !isReloadFromNavigationAPI
     ) {
       // let window.location.reload() reload the whole document
       // (used by jsenv hot reload)

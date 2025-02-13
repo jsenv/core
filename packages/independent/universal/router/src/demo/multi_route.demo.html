@@ -26,7 +26,7 @@
             urlTemplate: "/main",
             load: async ({ signal }) => {
               await new Promise((resolve) => {
-                const timeout = setTimeout(resolve, 2000);
+                const timeout = setTimeout(resolve, 1000);
                 signal.addEventListener("abort", () => {
                   clearTimeout(timeout);
                 });
