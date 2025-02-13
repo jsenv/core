@@ -16,7 +16,10 @@ on:
       # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#patterns-to-match-file-paths
     paths-ignore:
       - "docs/**"
-      - "packages/independent/workflow/**"
+      - "packages/independent/backend/**"
+      - "packages/independent/frontend/**"
+      - "packages/independent/tooling/**"
+      - "packages/independent/universal/**"
       - "www/**"
       - "**/readme.md"
   pull_request:
@@ -24,7 +27,10 @@ on:
       - "**"
     paths-ignore:
       - "docs/**"
-      - "packages/independent/workflow/**"
+      - "packages/independent/backend/**"
+      - "packages/independent/frontend/**"
+      - "packages/independent/tooling/**"
+      - "packages/independent/universal/**"
       - "www/**"
       - "**/readme.md"
 
