@@ -1,4 +1,3 @@
-/* globals window, document */
 import {
   createServiceWorkerFacade,
   navigatorControllerRef,

@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs";
-
 import { asDirectoryUrl, getParentUrl } from "./url_utils.js";
 
 export const defaultLookupPackageScope = (url) => {

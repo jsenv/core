@@ -11,7 +11,6 @@
  */
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-
 import { readCustomConditionsFromProcessArgs } from "./custom_conditions.js";
 import { defaultLookupPackageScope } from "./default_lookup_package_scope.js";
 import { defaultReadPackageJson } from "./default_read_package_json.js";

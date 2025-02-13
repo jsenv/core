@@ -1,5 +1,3 @@
-/* globals self */
-
 /*
  * We won't use this for now
  * to keep in mind: it's only when service worker is activated and controlling pages that

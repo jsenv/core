@@ -1,5 +1,3 @@
-/* globals self */
-
 self.importScripts("../../../../src/jsenv_service_worker.js");
 
 throw new Error("register error");

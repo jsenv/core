@@ -12,11 +12,12 @@ export default [
       "packages/related/cli/template-web-components/src/**/*.js",
       "packages/related/cli/template-web-preact/src/**/*",
       "packages/related/cli/template-web-react/src/**/*",
-      "packages/**/pwa/**/*.js",
-      "packages/**/custom-elements-redefine/**/*.js",
-      "**/jsenv_service_worker.js",
+      "packages/**/frontend/**/*.js",
     ],
-    browserAndNodeFiles: ["packages/**/assert/**/*.js"],
+    browserAndNodeFiles: [
+      "packages/**/universal/**/*.js",
+      "packages/**/assert/**/*.js"
+    ],
     jsxPragmaAuto: true,
   }),
   {
