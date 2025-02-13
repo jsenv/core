@@ -2,7 +2,7 @@
 
 <h4 id="perf-impact">Performance impact</h4>
 
-<p>Impact on 3 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/workflow/tree/main/packages/performance-impact#performance-variability">performance variability</a>.</p>
+<p>Impact on 3 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/core/tree/main/packages/tooling/performance-impact#performance-variability">performance variability</a>.</p>
 
 <details>
   <summary>timeout (+2%)</summary>
@@ -44,7 +44,7 @@
 
 <h4 id="perf-impact">Performance impact</h4>
 
-<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/workflow/tree/main/packages/performance-impact#performance-variability">performance variability</a>.</p>
+<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/core/tree/main/packages/tooling/performance-impact#performance-variability">performance variability</a>.</p>
 
 <details>
   <summary>timeout (+100%)</summary>
@@ -72,7 +72,7 @@
 
 <h4 id="perf-impact">Performance impact</h4>
 
-<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/workflow/tree/main/packages/performance-impact#performance-variability">performance variability</a>.</p>
+<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/core/tree/main/packages/tooling/performance-impact#performance-variability">performance variability</a>.</p>
 
 <details>
   <summary>timeout (-0.2%)</summary>
@@ -100,7 +100,7 @@
 
 <h4 id="perf-impact">Performance impact</h4>
 
-<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/workflow/tree/main/packages/performance-impact#performance-variability">performance variability</a>.</p>
+<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/core/tree/main/packages/tooling/performance-impact#performance-variability">performance variability</a>.</p>
 
 <details>
   <summary>timeout (-100%)</summary>
@@ -128,7 +128,7 @@
 
 <h4 id="perf-impact">Performance impact</h4>
 
-<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/workflow/tree/main/packages/performance-impact#performance-variability">performance variability</a>.</p>
+<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/core/tree/main/packages/tooling/performance-impact#performance-variability">performance variability</a>.</p>
 
 <details>
   <summary>timeout (no impact)</summary>
@@ -156,7 +156,7 @@
 
 <h4 id="perf-impact">Performance impact</h4>
 
-<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/workflow/tree/main/packages/performance-impact#performance-variability">performance variability</a>.</p>
+<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/core/tree/main/packages/tooling/performance-impact#performance-variability">performance variability</a>.</p>
 
 <details>
   <summary>timeout (new)</summary>
@@ -190,7 +190,7 @@
 
 <h4 id="perf-impact">Performance impact</h4>
 
-<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/workflow/tree/main/packages/performance-impact#performance-variability">performance variability</a>.</p>
+<p>Impact on 1 metrics when merging <em>head</em> into <em>base</em>. Before drawing conclusion, keep in mind <a href="https://github.com/jsenv/core/tree/main/packages/tooling/performance-impact#performance-variability">performance variability</a>.</p>
 
 <details>
   <summary>timeout (no impact)</summary>

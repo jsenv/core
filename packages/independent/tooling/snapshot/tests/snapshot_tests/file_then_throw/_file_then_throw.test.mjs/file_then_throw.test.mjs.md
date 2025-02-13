@@ -74,10 +74,10 @@ expect:  1| # [scenario](../../file_then_throw.test.mjs#L24)
         21| </sub>
         22| 
 --- details ---
-"@jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/git_ignored/scenario/scenario.md"
+"@jsenv/core/packages/independent/tooling/snapshot/tests/snapshot_tests/file_then_throw/git_ignored/scenario/scenario.md"
 ---------------
-  at async snapshotSideEffects.filesystemEffects (@jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:42:7)
-  at async @jsenv/core/packages/independent/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:38:1
+  at async snapshotSideEffects.filesystemEffects (@jsenv/core/packages/independent/tooling/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:42:7)
+  at async @jsenv/core/packages/independent/tooling/snapshot/tests/snapshot_tests/file_then_throw/file_then_throw.test.mjs:38:1
 ```
 
 </details>

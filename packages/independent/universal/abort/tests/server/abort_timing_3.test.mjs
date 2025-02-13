@@ -1,6 +1,5 @@
-import { assert } from "@jsenv/assert";
-
 import { Abort } from "@jsenv/abort";
+import { assert } from "@jsenv/assert";
 import { requestServer, startServer } from "./test_helpers.mjs";
 
 const abortController = new AbortController();

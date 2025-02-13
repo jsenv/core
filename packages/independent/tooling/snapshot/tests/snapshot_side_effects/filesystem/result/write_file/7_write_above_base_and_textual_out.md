@@ -9,7 +9,7 @@ writeFileSync(
 
 # 1/2 write file "../7_write_above_base_and_textual_out.txt"
 
-see [./7_write_above_base_and_textual_out/@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/7_write_above_base_and_textual_out.txt](./7_write_above_base_and_textual_out/@jsenv/core/packages/independent/snapshot/tests/snapshot_side_effects/7_write_above_base_and_textual_out.txt)
+see [./7_write_above_base_and_textual_out/@jsenv/core/packages/independent/tooling/snapshot/tests/snapshot_side_effects/7_write_above_base_and_textual_out.txt](./7_write_above_base_and_textual_out/@jsenv/core/packages/independent/tooling/snapshot/tests/snapshot_side_effects/7_write_above_base_and_textual_out.txt)
 
 # 2/2 return
 
