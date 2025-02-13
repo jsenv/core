@@ -10,6 +10,9 @@
   "eslint.validate": ["javascript", "html"],
   "eslint.runtime": "node",
   "editor.formatOnSave": true,
-  "html.validate.scripts": false
+  "html.validate.scripts": false,
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
   // "debug.javascript.autoAttachFilter": "always"
 }
