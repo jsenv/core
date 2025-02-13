@@ -87,16 +87,16 @@ const createRoute = (name, { urlTemplate, load = () => {} }, { baseUrl }) => {
   const urlSignal = computed(() => {
     return buildUrlFromDocument(addToUrl);
   });
+  const isMatchingSignal = signal(false);
   const readyStateSignal = signal(IDLE);
-  const isActiveSignal = computed(() => {
-    return readyStateSignal.value !== IDLE;
-  });
 
-  const onLeave = () => {
-    readyStateSignal.value = IDLE;
-  };
   const onEnter = () => {
+    isMatchingSignal.value = true;
     readyStateSignal.value = LOADING;
+  };
+  const onLeave = () => {
+    isMatchingSignal.value = false;
+    readyStateSignal.value = IDLE;
   };
   const onAbort = () => {
     readyStateSignal.value = ABORTED;
@@ -133,8 +133,8 @@ const createRoute = (name, { urlTemplate, load = () => {} }, { baseUrl }) => {
     onAbort,
     onLoadError,
     onLoadEnd,
+    isMatchingSignal,
     readyStateSignal,
-    isActiveSignal,
   };
 };
 export const registerRoutes = (
@@ -160,13 +160,12 @@ export const registerRoutes = (
  *   because when navigating to a new url the route might still be relevant
  *   in that case we don't want to abort it
  */
-const activeRouteSet = new Set();
-
+const matchingRouteSet = new Set();
 export const applyRouting = async ({ url, state, signal }) => {
   if (debug) {
     console.log("try to match routes against", { url });
   }
-  const nextActiveRouteSet = new Set();
+  const nextMatchingRouteSet = new Set();
   for (const routeCandidate of routeSet) {
     const urlObject = new URL(url);
     const returnValue = routeCandidate.test({
@@ -177,33 +176,33 @@ export const applyRouting = async ({ url, state, signal }) => {
       hash: urlObject.hash,
     });
     if (returnValue) {
-      nextActiveRouteSet.add(routeCandidate);
+      nextMatchingRouteSet.add(routeCandidate);
     }
   }
-  if (nextActiveRouteSet.size === 0) {
+  if (nextMatchingRouteSet.size === 0) {
     if (debug) {
       console.log("no route has matched -> use fallback route");
     }
-    nextActiveRouteSet.add(fallbackRoute);
+    nextMatchingRouteSet.add(fallbackRoute);
   }
   const routeToLeaveSet = new Set();
   const routeToEnterSet = new Set();
-  for (const activeRoute of activeRouteSet) {
-    if (!nextActiveRouteSet.has(activeRoute)) {
+  for (const activeRoute of matchingRouteSet) {
+    if (!nextMatchingRouteSet.has(activeRoute)) {
       routeToLeaveSet.add(activeRoute);
     }
   }
-  for (const nextActiveRoute of nextActiveRouteSet) {
-    if (!activeRouteSet.has(nextActiveRoute)) {
-      routeToEnterSet.add(nextActiveRoute);
+  for (const nextMatchingRoute of nextMatchingRouteSet) {
+    if (!matchingRouteSet.has(nextMatchingRoute)) {
+      routeToEnterSet.add(nextMatchingRoute);
     }
   }
-  nextActiveRouteSet.clear();
+  nextMatchingRouteSet.clear();
   for (const routeToLeave of routeToLeaveSet) {
     if (debug) {
       console.log(`"${routeToLeave.name}": leaving route`);
     }
-    activeRouteSet.delete(routeToLeave);
+    matchingRouteSet.delete(routeToLeave);
     routeToLeave.onLeave();
   }
   if (routeToEnterSet.size === 0) {
@@ -220,8 +219,8 @@ export const applyRouting = async ({ url, state, signal }) => {
     if (debug) {
       console.log("routing aborted");
     }
-    for (const activeRoute of activeRouteSet) {
-      activeRoute.onAbort();
+    for (const matchingRoute of matchingRouteSet) {
+      matchingRoute.onAbort();
     }
     endDocumentRouting();
   });
@@ -232,7 +231,7 @@ export const applyRouting = async ({ url, state, signal }) => {
       if (debug) {
         console.log(`"${routeToEnter.name}": entering route`);
       }
-      activeRouteSet.add(routeToEnter);
+      matchingRouteSet.add(routeToEnter);
       routeToEnter.onEnter();
       const loadPromise = Promise.resolve(routeToEnter.load({ signal }));
       loadPromise.then(
@@ -276,11 +275,10 @@ export const useRouteReadyState = (route) => {
   if (readyState.error) {
     return "load_error";
   }
-  console.log(readyState);
   return "loaded";
 };
-export const useRouteIsActive = (route) => {
-  return route.readyStateSignal.value !== IDLE;
+export const useRouteIsMatching = (route) => {
+  return route.isMatchingSignal.value;
 };
 export const useRouteIsLoading = (route) => {
   return route.readyStateSignal.value === LOADING;

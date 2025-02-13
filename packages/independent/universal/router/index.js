@@ -2,8 +2,8 @@ export { useCanGoBack, useCanGoForward } from "./src/can_go_back_forward.js";
 export { useDocumentUrl } from "./src/document_url.js";
 export {
   registerRoutes,
-  useRouteIsActive,
   useRouteIsLoading,
+  useRouteIsMatching,
   useRouteLoadData,
   useRouteLoadError,
   useRouteLoadIsAborted,

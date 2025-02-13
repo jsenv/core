@@ -14,7 +14,7 @@
         registerRoutes,
         useRouteUrl,
         useRouteLoadData,
-        useRouteIsActive,
+        useRouteIsMatching,
         useRouteReadyState,
         useRouteIsLoading,
         useRouteLoadIsAborted,
@@ -77,8 +77,8 @@
         const mainUrl = useRouteUrl(main);
         const pageAUrl = useRouteUrl(pageA);
         const pageBUrl = useRouteUrl(pageB);
-        const pageAIsActive = useRouteIsActive(pageA);
-        const pageBIsActive = useRouteIsActive(pageB);
+        const pageAIsMatching = useRouteIsMatching(pageA);
+        const pageBIsMatching = useRouteIsMatching(pageB);
 
         return (
           <div>
@@ -100,7 +100,7 @@
                   style={{
                     padding: "10px",
                     border: "1px solid black",
-                    backgroundColor: pageAIsActive ? "lightblue" : "white",
+                    backgroundColor: pageAIsMatching ? "lightblue" : "white",
                   }}
                 >
                   A
@@ -113,7 +113,7 @@
                   style={{
                     padding: "10px",
                     border: "1px solid black",
-                    backgroundColor: pageBIsActive ? "lightblue" : "white",
+                    backgroundColor: pageBIsMatching ? "lightblue" : "white",
                   }}
                 >
                   B
@@ -137,11 +137,11 @@
 
       // eslint-disable-next-line no-unused-vars
       const PageA = () => {
-        const isActive = useRouteIsActive(pageA);
+        const isMatching = useRouteIsMatching(pageA);
         const isLoading = useRouteIsLoading(pageA);
         const isAborted = useRouteLoadIsAborted(pageA);
-        if (!isActive) {
-          return "pageA not active";
+        if (!isMatching) {
+          return "pageA not matching";
         }
         if (isLoading) {
           return (
@@ -165,11 +165,11 @@
 
       // eslint-disable-next-line no-unused-vars
       const PageB = () => {
-        const isActive = useRouteIsActive(pageB);
+        const isMatching = useRouteIsMatching(pageB);
         const isLoading = useRouteIsLoading(pageB);
         const isAborted = useRouteLoadIsAborted(pageB);
-        if (!isActive) {
-          return "pageB not active";
+        if (!isMatching) {
+          return "pageB not matching";
         }
         if (isLoading) {
           return "page B loading...";
