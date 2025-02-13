@@ -40,16 +40,26 @@
           pageA: {
             urlTemplate: "/a",
             load: async ({ signal }) => {
-              signal.addEventListener("abort", () => {
-                console.log("pageA load aborted");
-              });
               await new Promise((resolve) => {
-                resolveNavigationToPageA = resolve;
+                const timeout = setTimeout(resolve, 1000);
+                signal.addEventListener("abort", () => {
+                  clearTimeout(timeout);
+                });
               });
+              return "Page A content";
             },
           },
           pageB: {
             urlTemplate: "/b",
+            load: async ({ signal }) => {
+              await new Promise((resolve) => {
+                const timeout = setTimeout(resolve, 1000);
+                signal.addEventListener("abort", () => {
+                  clearTimeout(timeout);
+                });
+              });
+              return "Page B content";
+            },
           },
           fallback: {
             load: () => {

@@ -1,8 +1,8 @@
 import { computed, signal } from "@preact/signals";
 import {
-  endDocumentNavigation,
-  startDocumentNavigation,
-} from "./document_navigating.js";
+  endDocumentRouting,
+  startDocumentRouting,
+} from "./document_routing.js";
 import { documentUrlSignal } from "./document_url.js";
 import { normalizeUrl } from "./normalize_url.js";
 import { goTo, installNavigation } from "./router.js";
@@ -159,8 +159,11 @@ export const registerRoutes = (
  *   in that case we don't want to abort it
  */
 const activeRouteSet = new Set();
+
 export const applyRouting = async ({ url, state, signal }) => {
-  startDocumentNavigation();
+  if (debug) {
+    console.log("try to match routes against", { url });
+  }
   const nextActiveRouteSet = new Set();
   for (const routeCandidate of routeSet) {
     const urlObject = new URL(url);
@@ -176,6 +179,9 @@ export const applyRouting = async ({ url, state, signal }) => {
     }
   }
   if (nextActiveRouteSet.size === 0) {
+    if (debug) {
+      console.log("no route has matched -> use fallback route");
+    }
     nextActiveRouteSet.add(fallbackRoute);
   }
   const routeToLeaveSet = new Set();
@@ -198,12 +204,24 @@ export const applyRouting = async ({ url, state, signal }) => {
     activeRouteSet.delete(routeToLeave);
     routeToLeave.onLeave();
   }
-
+  if (routeToEnterSet.size === 0) {
+    if (debug) {
+      console.log("no effect on routes, early return");
+    }
+    return;
+  }
+  if (debug) {
+    console.log("routing started");
+  }
+  startDocumentRouting();
   signal.addEventListener("abort", () => {
+    if (debug) {
+      console.log("routing aborted");
+    }
     for (const activeRoute of activeRouteSet) {
       activeRoute.onAbort();
     }
-    endDocumentNavigation();
+    endDocumentRouting();
   });
 
   try {
@@ -231,7 +249,10 @@ export const applyRouting = async ({ url, state, signal }) => {
     }
     await Promise.all(promises);
   } finally {
-    endDocumentNavigation();
+    if (debug) {
+      console.log("routing ended");
+    }
+    endDocumentRouting();
   }
 };
 

@@ -1,15 +1,15 @@
 import { computed } from "@preact/signals";
 import { documentIsLoadingSignal } from "./document_loading.js";
-import { documentIsNavigatingSignal } from "./document_navigating.js";
+import { documentIsRoutingSignal } from "./document_routing.js";
 
 const routerReadyStateSignal = computed(() => {
   const documentIsLoading = documentIsLoadingSignal.value;
   if (documentIsLoading) {
     return "document_loading";
   }
-  const documentIsNavigating = documentIsNavigatingSignal.value;
-  if (documentIsNavigating) {
-    return "document_navigating";
+  const documentIsRouting = documentIsRoutingSignal.value;
+  if (documentIsRouting) {
+    return "document_routing";
   }
   return "complete";
 });

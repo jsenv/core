@@ -1,6 +1,6 @@
 import { updateCanGoBack, updateCanGoForward } from "../can_go_back_forward.js";
 import { documentIsLoadingSignal } from "../document_loading.js";
-import { documentIsNavigatingSignal } from "../document_navigating.js";
+import { documentIsRoutingSignal } from "../document_routing.js";
 import { documentUrlSignal, updateDocumentUrl } from "../document_url.js";
 
 updateCanGoBack(true);
@@ -31,11 +31,11 @@ export const installNavigation = ({ applyRouting }) => {
     { capture: true },
   );
   window.addEventListener("popstate", async (popstateEvent) => {
-    if (abortNavigation) {
-      abortNavigation();
+    if (abortRouting) {
+      abortRouting();
     }
     let abortController = new AbortController();
-    abortNavigation = () => {
+    abortRouting = () => {
       abortController.abort();
     };
     const url = documentUrlSignal.peek();
@@ -49,12 +49,12 @@ export const installNavigation = ({ applyRouting }) => {
       await routingPromise;
     } finally {
       abortController = null;
-      abortNavigation = null;
+      abortRouting = null;
     }
   });
   window.history.replaceState(null, null, window.location.href);
 };
-let abortNavigation;
+let abortRouting;
 
 export const goTo = async (url, { state, replace } = {}) => {
   const currentUrl = documentUrlSignal.peek();
@@ -73,9 +73,9 @@ export const stopLoad = () => {
     window.stop();
     return;
   }
-  const documentIsNavigating = documentIsNavigatingSignal.value;
-  if (documentIsNavigating) {
-    abortNavigation();
+  const documentIsRouting = documentIsRoutingSignal.value;
+  if (documentIsRouting) {
+    abortRouting();
     return;
   }
 };

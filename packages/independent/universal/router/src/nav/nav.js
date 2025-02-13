@@ -8,7 +8,7 @@ next step is to see if we can cancel a pending navigation
 
 import { updateCanGoBack, updateCanGoForward } from "../can_go_back_forward.js";
 import { documentIsLoadingSignal } from "../document_loading.js";
-import { documentIsNavigatingSignal } from "../document_navigating.js";
+import { documentIsRoutingSignal } from "../document_routing.js";
 import { documentUrlSignal, updateDocumentUrl } from "../document_url.js";
 
 updateDocumentUrl(navigation.currentEntry.url);
@@ -83,8 +83,8 @@ export const stopLoad = () => {
     window.stop();
     return;
   }
-  const documentIsNavigating = documentIsNavigatingSignal.value;
-  if (documentIsNavigating) {
+  const documentIsRouting = documentIsRoutingSignal.value;
+  if (documentIsRouting) {
     window.stop();
     return;
   }
