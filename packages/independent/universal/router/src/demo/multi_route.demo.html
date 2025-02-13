@@ -26,7 +26,7 @@
       const { main, pageA, pageB } = registerRoutes(
         {
           main: {
-            urlTemplate: "/",
+            urlTemplate: "/main",
             load: async ({ signal }) => {
               await new Promise((resolve) => {
                 const timeout = setTimeout(resolve, 1000);
@@ -38,7 +38,7 @@
             },
           },
           pageA: {
-            urlTemplate: "/a",
+            urlTemplate: "/main/a",
             load: async ({ signal }) => {
               await new Promise((resolve) => {
                 const timeout = setTimeout(resolve, 1000);
@@ -50,7 +50,7 @@
             },
           },
           pageB: {
-            urlTemplate: "/b",
+            urlTemplate: "/main/b",
             load: async ({ signal }) => {
               await new Promise((resolve) => {
                 const timeout = setTimeout(resolve, 1000);
@@ -74,6 +74,7 @@
       const App = () => {
         const mainRouteReadyState = useRouteReadyState(main);
         const mainRouteLoadData = useRouteLoadData(main);
+        const mainUrl = useRouteUrl(main);
         const pageAUrl = useRouteUrl(pageA);
         const pageBUrl = useRouteUrl(pageB);
         const pageAIsActive = useRouteIsActive(pageA);
@@ -84,6 +85,7 @@
             <NavControls />
 
             <h2>Main section</h2>
+            <a href={mainUrl}>Go to main</a>
             <div>
               status: {mainRouteReadyState}
               <br />
