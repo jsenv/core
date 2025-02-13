@@ -7,7 +7,8 @@ import { documentUrlSignal } from "./document_url.js";
 import { normalizeUrl } from "./normalize_url.js";
 import { goTo, installNavigation } from "./router.js";
 
-let debug = true;
+let debug = false;
+let debugDocumentRouting = true;
 const IDLE = { id: "idle" };
 const LOADING = { id: "loading" };
 const ABORTED = { id: "aborted" };
@@ -163,6 +164,7 @@ export const registerRoutes = (
 const matchingRouteSet = new Set();
 const routeAbortLoadMap = new Map();
 export const applyRouting = async ({ url, state, signal }) => {
+  const stopSignal = signalToStopSignal(signal);
   if (debug) {
     console.log("try to match routes against", { url });
   }
@@ -224,7 +226,7 @@ export const applyRouting = async ({ url, state, signal }) => {
     }
     return;
   }
-  if (debug) {
+  if (debugDocumentRouting) {
     console.log("routing started");
   }
   startDocumentRouting();
@@ -249,15 +251,12 @@ export const applyRouting = async ({ url, state, signal }) => {
         routeLoadAbortController.abort();
         routeToEnter.onAbort();
       };
-      signal.addEventListener("abort", routeAbortLoad);
+      stopSignal.addEventListener("abort", routeAbortLoad);
       routeAbortLoadMap.set(routeToEnter, routeAbortLoad);
       const loadReturnValue = routeToEnter.load({
         signal: routeLoadAbortSignal,
       });
       const loadPromise = Promise.resolve(loadReturnValue);
-      const abortPromise = new Promise((resolve) => {
-        routeLoadAbortSignal.addEventListener("abort", resolve);
-      });
       loadPromise.then(
         (value) => {
           if (debug) {
@@ -276,17 +275,40 @@ export const applyRouting = async ({ url, state, signal }) => {
           throw e;
         },
       );
-      promises.push(Promise.race([abortPromise, loadPromise]));
+      promises.push(loadPromise);
     }
     await Promise.all(promises);
   } catch (e) {
     console.error(e);
   } finally {
-    if (debug) {
+    if (debugDocumentRouting) {
       console.log("routing ended");
     }
     endDocumentRouting();
   }
+};
+
+let applyRoutingEffect = () => {};
+const signalToStopSignal = (signal) => {
+  applyRoutingEffect();
+  const stopAbortController = new AbortController();
+  const stopSignal = stopAbortController.signal;
+  signal.addEventListener("abort", async () => {
+    const timeout = setTimeout(() => {
+      applyRoutingEffect = () => {};
+      if (debug) {
+        console.log("aborted because stop");
+      }
+      stopAbortController.abort();
+    });
+    applyRoutingEffect = () => {
+      if (debug) {
+        console.log("aborted because new navigation");
+      }
+      clearTimeout(timeout);
+    };
+  });
+  return stopSignal;
 };
 
 export const useRouteUrl = (route) => {
