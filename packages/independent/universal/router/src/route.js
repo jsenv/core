@@ -42,18 +42,20 @@ const createRoute = (name, { urlTemplate, load = () => {} }, { baseUrl }) => {
       if (routePathname && !pathname.startsWith(routePathname)) {
         return false;
       }
-      for (const [
-        routeSearchParamKey,
-        routeSearchParamValue,
-      ] of routeSearchParams) {
-        if (routeSearchParamValue === "") {
-          if (!searchParams.has(routeSearchParamKey)) {
+      if (routeSearchParams) {
+        for (const [
+          routeSearchParamKey,
+          routeSearchParamValue,
+        ] of routeSearchParams) {
+          if (routeSearchParamValue === "") {
+            if (!searchParams.has(routeSearchParamKey)) {
+              return false;
+            }
+          }
+          const value = searchParams.get(routeSearchParamKey);
+          if (value !== routeSearchParamValue) {
             return false;
           }
-        }
-        const value = searchParams.get(routeSearchParamKey);
-        if (value !== routeSearchParamValue) {
-          return false;
         }
       }
     }
