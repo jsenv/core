@@ -228,18 +228,6 @@ export const applyRouting = async ({ url, state, signal }) => {
     console.log("routing started");
   }
   startDocumentRouting();
-  signal.addEventListener("abort", () => {
-    if (debug) {
-      console.log(
-        "routing aborted from outside (stop or navigate again while routing)",
-      );
-    }
-    for (const matchingRoute of matchingRouteSet) {
-      matchingRoute.onAbort();
-    }
-    endDocumentRouting();
-  });
-
   try {
     const promises = [];
     for (const routeToEnter of routeToEnterSet) {
@@ -254,15 +242,22 @@ export const applyRouting = async ({ url, state, signal }) => {
       // if we reach the end we can safely clear the current load signals
       const routeLoadAbortController = new AbortController();
       const routeLoadAbortSignal = routeLoadAbortController.signal;
-      const routeAbortLoad = routeLoadAbortController.abort.bind(
-        routeLoadAbortController,
-      );
+      const routeAbortLoad = () => {
+        if (debug) {
+          console.log(`abort load of "${routeToEnter.name}"`);
+        }
+        routeLoadAbortController.abort();
+        routeToEnter.onAbort();
+      };
       signal.addEventListener("abort", routeAbortLoad);
       routeAbortLoadMap.set(routeToEnter, routeAbortLoad);
       const loadReturnValue = routeToEnter.load({
         signal: routeLoadAbortSignal,
       });
       const loadPromise = Promise.resolve(loadReturnValue);
+      const abortPromise = new Promise((resolve) => {
+        routeLoadAbortSignal.addEventListener("abort", resolve);
+      });
       loadPromise.then(
         (value) => {
           if (debug) {
@@ -281,7 +276,7 @@ export const applyRouting = async ({ url, state, signal }) => {
           throw e;
         },
       );
-      promises.push(loadPromise);
+      promises.push(Promise.race([abortPromise, loadPromise]));
     }
     await Promise.all(promises);
   } catch (e) {
