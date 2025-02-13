@@ -16,20 +16,17 @@
         useRouteLoadData,
         useRouteIsMatching,
         useRouteReadyState,
-        useRouteIsLoading,
-        useRouteLoadIsAborted,
       } from "@jsenv/router";
       // eslint-disable-next-line no-unused-vars
       import { NavControls } from "./nav_controls.jsx";
 
-      let resolveNavigationToPageA;
       const { main, pageA, pageB } = registerRoutes(
         {
           main: {
             urlTemplate: "/main",
             load: async ({ signal }) => {
               await new Promise((resolve) => {
-                const timeout = setTimeout(resolve, 1000);
+                const timeout = setTimeout(resolve, 2000);
                 signal.addEventListener("abort", () => {
                   clearTimeout(timeout);
                 });
@@ -137,47 +134,28 @@
 
       // eslint-disable-next-line no-unused-vars
       const PageA = () => {
-        const isMatching = useRouteIsMatching(pageA);
-        const isLoading = useRouteIsLoading(pageA);
-        const isAborted = useRouteLoadIsAborted(pageA);
-        if (!isMatching) {
-          return "pageA not matching";
-        }
-        if (isLoading) {
-          return (
-            <div>
-              page A loading...
-              <button
-                onClick={() => {
-                  resolveNavigationToPageA();
-                }}
-              >
-                resolve load
-              </button>
-            </div>
-          );
-        }
-        if (isAborted) {
-          return `page A load aborted`;
-        }
-        return "page A content";
+        const readyState = useRouteReadyState(pageA);
+        const loadedData = useRouteLoadData(pageA);
+        return (
+          <div>
+            pageA state: {readyState}
+            <br />
+            pageA content: {loadedData}
+          </div>
+        );
       };
 
       // eslint-disable-next-line no-unused-vars
       const PageB = () => {
-        const isMatching = useRouteIsMatching(pageB);
-        const isLoading = useRouteIsLoading(pageB);
-        const isAborted = useRouteLoadIsAborted(pageB);
-        if (!isMatching) {
-          return "pageB not matching";
-        }
-        if (isLoading) {
-          return "page B loading...";
-        }
-        if (isAborted) {
-          return `page B load aborted`;
-        }
-        return "page B content";
+        const readyState = useRouteReadyState(pageB);
+        const loadedData = useRouteLoadData(pageB);
+        return (
+          <div>
+            pageB state: {readyState}
+            <br />
+            pageB content: {loadedData}
+          </div>
+        );
       };
 
       render(<App />, document.getElementById("root"));

@@ -161,6 +161,7 @@ export const registerRoutes = (
  *   in that case we don't want to abort it
  */
 const matchingRouteSet = new Set();
+const routeAbortLoadMap = new Map();
 export const applyRouting = async ({ url, state, signal }) => {
   if (debug) {
     console.log("try to match routes against", { url });
@@ -195,13 +196,22 @@ export const applyRouting = async ({ url, state, signal }) => {
   for (const nextMatchingRoute of nextMatchingRouteSet) {
     if (
       !matchingRouteSet.has(nextMatchingRoute) ||
-      nextMatchingRoute.readyStateSignal.value === ABORTED
+      nextMatchingRoute.readyStateSignal.peek() === ABORTED
     ) {
       routeToEnterSet.add(nextMatchingRoute);
     }
   }
   nextMatchingRouteSet.clear();
   for (const routeToLeave of routeToLeaveSet) {
+    const routeLoadAbort = routeAbortLoadMap.get(routeToLeave);
+    if (routeLoadAbort) {
+      if (debug) {
+        console.log(`"${routeToLeave.name}": aborting route load`);
+      }
+      routeToLeave.onAbort();
+      routeAbortLoadMap.delete(routeToLeave);
+      routeLoadAbort();
+    }
     if (debug) {
       console.log(`"${routeToLeave.name}": leaving route`);
     }
@@ -220,7 +230,9 @@ export const applyRouting = async ({ url, state, signal }) => {
   startDocumentRouting();
   signal.addEventListener("abort", () => {
     if (debug) {
-      console.log("routing aborted");
+      console.log(
+        "routing aborted from outside (stop or navigate again while routing)",
+      );
     }
     for (const matchingRoute of matchingRouteSet) {
       matchingRoute.onAbort();
@@ -236,15 +248,35 @@ export const applyRouting = async ({ url, state, signal }) => {
       }
       matchingRouteSet.add(routeToEnter);
       routeToEnter.onEnter();
-      const loadPromise = Promise.resolve(routeToEnter.load({ signal }));
+      // here we must pass a signal that gets aborted when
+      // 1. any route is stopped (browser stop button)
+      // 2. route is left
+      // if we reach the end we can safely clear the current load signals
+      const routeLoadAbortController = new AbortController();
+      const routeLoadAbortSignal = routeLoadAbortController.signal;
+      const routeAbortLoad = routeLoadAbortController.abort.bind(
+        routeLoadAbortController,
+      );
+      signal.addEventListener("abort", routeAbortLoad);
+      routeAbortLoadMap.set(routeToEnter, routeAbortLoad);
+      const loadReturnValue = routeToEnter.load({
+        signal: routeLoadAbortSignal,
+      });
+      const loadPromise = Promise.resolve(loadReturnValue);
       loadPromise.then(
         (value) => {
-          routeToEnter.onLoadEnd(value);
           if (debug) {
             console.log(`"${routeToEnter.name}": route load end`);
           }
+          routeAbortLoadMap.delete(routeToEnter);
+          routeToEnter.onLoadEnd(value);
         },
         (e) => {
+          // TODO: catch abortError?
+          if (debug) {
+            console.log(`"${routeToEnter.name}": route load error`, e);
+          }
+          routeAbortLoadMap.delete(routeToEnter);
           routeToEnter.onLoadError(e);
           throw e;
         },
@@ -252,6 +284,8 @@ export const applyRouting = async ({ url, state, signal }) => {
       promises.push(loadPromise);
     }
     await Promise.all(promises);
+  } catch (e) {
+    console.error(e);
   } finally {
     if (debug) {
       console.log("routing ended");

@@ -11,6 +11,8 @@ import { documentIsLoadingSignal } from "../document_loading.js";
 import { documentIsRoutingSignal } from "../document_routing.js";
 import { documentUrlSignal, updateDocumentUrl } from "../document_url.js";
 
+let debug = false;
+
 updateDocumentUrl(navigation.currentEntry.url);
 navigation.addEventListener("currententrychange", () => {
   updateDocumentUrl(navigation.currentEntry.url);
@@ -47,6 +49,12 @@ export const installNavigation = ({ applyRouting }) => {
     const url = event.destination.url;
     const state = event.state;
     const { signal } = event;
+    if (debug) {
+      console.log("receive navigate event");
+      signal.addEventListener("abort", () => {
+        console.log("nav aborted");
+      });
+    }
     event.intercept({
       handler: async () => {
         await applyRouting({ url, state, signal });
