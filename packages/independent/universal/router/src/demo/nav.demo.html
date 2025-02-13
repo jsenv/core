@@ -19,16 +19,10 @@
         useRouteIsActive,
         useRouteIsLoading,
         useRouteLoadIsAborted,
-        useCanGoBack,
-        useCanGoForward,
-        goBack,
-        goForward,
-        reload,
-        useRouterReadyState,
-        useCanStopLoad,
-        stopLoad,
         useUrlBooleanParam,
       } from "@jsenv/router";
+      // eslint-disable-next-line no-unused-vars
+      import { NavControls } from "./nav_controls.jsx";
 
       let resolveNavigationToPageA;
       const { pageA, pageB, foo, bar } = registerRoutes({
@@ -137,54 +131,6 @@
       // eslint-disable-next-line no-unused-vars
       const Bar = () => {
         return "bar";
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const NavControls = () => {
-        const canGoBack = useCanGoBack();
-        const canGoForward = useCanGoForward();
-        const routerReadyState = useRouterReadyState();
-        const canStopLoad = useCanStopLoad();
-
-        return (
-          <fieldset>
-            <legend>nav controls (or use browser controls)</legend>
-
-            <div>router state: {routerReadyState}</div>
-
-            <button
-              disabled={!canStopLoad}
-              onClick={() => {
-                stopLoad();
-              }}
-            >
-              Stop
-            </button>
-            <button
-              disabled={!canGoBack}
-              onClick={() => {
-                goBack();
-              }}
-            >
-              back
-            </button>
-            <button
-              disabled={!canGoForward}
-              onClick={() => {
-                goForward();
-              }}
-            >
-              forward
-            </button>
-            <button
-              onClick={() => {
-                reload();
-              }}
-            >
-              reload
-            </button>
-          </fieldset>
-        );
       };
 
       // eslint-disable-next-line no-unused-vars

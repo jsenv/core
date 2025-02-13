@@ -21,17 +21,21 @@ const buildUrlFromDocument = (build) => {
 
 const routeSet = new Set();
 let fallbackRoute;
-const createRoute = (name, { urlTemplate, load = () => {} } = {}) => {
-  const documentRootUrl = new URL("/", window.location.origin);
-  const routeUrlInstance = new URL(urlTemplate, documentRootUrl);
-
+const createRoute = (name, { urlTemplate, load = () => {} }, { baseUrl }) => {
   let routePathname;
   let routeSearchParams;
-  if (routeUrlInstance.pathname !== "/") {
-    routePathname = routeUrlInstance.pathname;
-  }
-  if (routeUrlInstance.searchParams.toString() !== "") {
-    routeSearchParams = routeUrlInstance.searchParams;
+
+  if (urlTemplate) {
+    if (urlTemplate.startsWith("/")) {
+      urlTemplate = urlTemplate.slice(1);
+    }
+    const routeUrlInstance = new URL(urlTemplate, baseUrl);
+    if (routeUrlInstance.pathname !== "/") {
+      routePathname = routeUrlInstance.pathname;
+    }
+    if (routeUrlInstance.searchParams.toString() !== "") {
+      routeSearchParams = routeUrlInstance.searchParams;
+    }
   }
   const test = ({ pathname, searchParams }) => {
     if (urlTemplate) {
@@ -131,15 +135,18 @@ const createRoute = (name, { urlTemplate, load = () => {} } = {}) => {
     isActiveSignal,
   };
 };
-export const registerRoutes = ({ fallback, ...rest }) => {
+export const registerRoutes = (
+  { fallback, ...rest },
+  baseUrl = window.location.origin,
+) => {
   const routes = {};
   for (const key of Object.keys(rest)) {
-    const route = createRoute(key, rest[key]);
+    const route = createRoute(key, rest[key], { baseUrl });
     routeSet.add(route);
     routes[key] = route;
   }
   if (fallback) {
-    fallbackRoute = createRoute(fallback);
+    fallbackRoute = createRoute("fallback", fallback, { baseUrl });
   }
   installNavigation({ applyRouting });
   return routes;
@@ -209,8 +216,8 @@ export const applyRouting = async ({ url, state, signal }) => {
       routeToEnter.onEnter();
       const loadPromise = Promise.resolve(routeToEnter.load({ signal }));
       loadPromise.then(
-        () => {
-          routeToEnter.onLoadEnd();
+        (value) => {
+          routeToEnter.onLoadEnd(value);
           if (debug) {
             console.log(`"${routeToEnter.name}": route load end`);
           }
@@ -231,6 +238,23 @@ export const applyRouting = async ({ url, state, signal }) => {
 export const useRouteUrl = (route) => {
   const routeUrl = route.urlSignal.value;
   return routeUrl;
+};
+export const useRouteReadyState = (route) => {
+  const readyState = route.readyStateSignal.value;
+  if (readyState === IDLE) {
+    return "idle";
+  }
+  if (readyState === LOADING) {
+    return "loading";
+  }
+  if (readyState === ABORTED) {
+    return "aborted";
+  }
+  if (readyState.error) {
+    return "load_error";
+  }
+  console.log(readyState);
+  return "loaded";
 };
 export const useRouteIsActive = (route) => {
   return route.readyStateSignal.value !== IDLE;

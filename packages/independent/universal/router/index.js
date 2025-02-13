@@ -7,6 +7,7 @@ export {
   useRouteLoadData,
   useRouteLoadError,
   useRouteLoadIsAborted,
+  useRouteReadyState,
   useRouteUrl,
 } from "./src/route.js";
 export { goBack, goForward, goTo, reload, stopLoad } from "./src/router.js";
