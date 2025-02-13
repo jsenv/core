@@ -193,7 +193,10 @@ export const applyRouting = async ({ url, state, signal }) => {
     }
   }
   for (const nextMatchingRoute of nextMatchingRouteSet) {
-    if (!matchingRouteSet.has(nextMatchingRoute)) {
+    if (
+      !matchingRouteSet.has(nextMatchingRoute) ||
+      nextMatchingRoute.readyStateSignal.value === ABORTED
+    ) {
       routeToEnterSet.add(nextMatchingRoute);
     }
   }
