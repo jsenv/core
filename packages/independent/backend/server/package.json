@@ -10,7 +10,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/server"
+    "directory": "packages/independent/backend/server"
   },
   "engines": {
     "node": ">=16.13.0"

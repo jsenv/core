@@ -10,7 +10,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/snapshot"
+    "directory": "packages/independent/tooling/snapshot"
   },
   "engines": {
     "node": ">=20.0.0"

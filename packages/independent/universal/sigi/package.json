@@ -10,7 +10,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/sigi"
+    "directory": "packages/independent/universal/sigi"
   },
   "engines": {
     "node": ">=16.13.0"

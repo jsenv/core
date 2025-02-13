@@ -5,7 +5,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/node-esm-resolution"
+    "directory": "packages/independent/tooling/node-esm-resolution"
   },
   "publishConfig": {
     "access": "public"
