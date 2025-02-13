@@ -163,7 +163,7 @@ export const registerRoutes = (
  */
 const matchingRouteSet = new Set();
 const routeAbortLoadMap = new Map();
-export const applyRouting = async ({ url, state, signal }) => {
+export const applyRouting = async ({ url, state, signal, reload }) => {
   const stopSignal = signalToStopSignal(signal);
   if (debug) {
     console.log("try to match routes against", { url });
@@ -197,6 +197,7 @@ export const applyRouting = async ({ url, state, signal }) => {
   }
   for (const nextMatchingRoute of nextMatchingRouteSet) {
     if (
+      reload ||
       !matchingRouteSet.has(nextMatchingRoute) ||
       nextMatchingRoute.readyStateSignal.peek() === ABORTED
     ) {

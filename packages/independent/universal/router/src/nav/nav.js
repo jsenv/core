@@ -66,7 +66,12 @@ export const installNavigation = ({ applyRouting }) => {
     }
     event.intercept({
       handler: async () => {
-        await applyRouting({ url, state, signal });
+        await applyRouting({
+          url,
+          state,
+          signal,
+          reload: event.navigationType === "reload",
+        });
       },
     });
   });
