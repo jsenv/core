@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/ast",
-  "version": "6.5.1",
+  "version": "6.5.2",
   "description": "Parse and transform HTML, CSS and JS",
   "license": "MIT",
   "repository": {
