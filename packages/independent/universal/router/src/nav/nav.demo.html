@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Router test</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <img src="/__delayed__.js" />
+
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        useDocumentUrl,
+        registerRoutes,
+        useRouteUrl,
+        useRouteIsActive,
+        useRouteIsLoading,
+        useRouteLoadIsAborted,
+        useCanGoBack,
+        useCanGoForward,
+        goBack,
+        goForward,
+        reload,
+        useRouterReadyState,
+        useCanStopLoad,
+        stopLoad,
+        useUrlBooleanParam,
+      } from "@jsenv/router";
+
+      let resolveNavigationToPageA;
+      const { pageA, pageB, foo, bar } = registerRoutes({
+        pageA: {
+          urlTemplate: "?page=A",
+          load: async ({ signal }) => {
+            signal.addEventListener("abort", () => {
+              console.log("pageA load aborted");
+            });
+            await new Promise((resolve) => {
+              resolveNavigationToPageA = resolve;
+            });
+          },
+        },
+        pageB: {
+          urlTemplate: "?page=B",
+        },
+        foo: {
+          urlTemplate: "/foo",
+        },
+        bar: {
+          urlTemplate: "/bar",
+        },
+        fallback: {
+          load: () => {
+            // console.log("load fallback");
+          },
+        },
+      });
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const documentUrl = useDocumentUrl();
+        const [opened, openDetails, closeDetails] =
+          useUrlBooleanParam("opened");
+        const pageAUrl = useRouteUrl(pageA);
+        const pageBUrl = useRouteUrl(pageB);
+        const fooIsActive = useRouteIsActive(foo);
+        const barIsActive = useRouteIsActive(bar);
+        const fooUrl = useRouteUrl(foo);
+        const barUrl = useRouteUrl(bar);
+
+        return (
+          <div>
+            <div>url: {documentUrl}</div>
+
+            <button
+              onClick={async () => {
+                await window.fetch("/__delayed__.js", { method: "POST" });
+              }}
+            >
+              let window "load" occur
+            </button>
+
+            <NavControls />
+
+            <details
+              open={opened}
+              onToggle={(toggleEvent) => {
+                if (toggleEvent.newState === "open") {
+                  openDetails();
+                } else {
+                  closeDetails();
+                }
+              }}
+            >
+              <summary>Details summary</summary>
+              Details content
+            </details>
+
+            <div>
+              <div>
+                <a href={pageAUrl}>Go to page A</a>
+                <a href={pageBUrl}>Go to page B</a>
+              </div>
+            </div>
+
+            <div>
+              <div>Pages</div>
+              <div style="border: 1px solid black; padding: 10px">
+                <PageA />
+                <PageB />
+              </div>
+            </div>
+
+            <div>
+              <div>
+                <a href={fooUrl}>Go to foo/</a>
+                <a href={barUrl}>Go to bar/</a>
+              </div>
+            </div>
+
+            <div>
+              <div>ENDPOINT</div>
+              {fooIsActive ? <Foo /> : barIsActive ? <Bar /> : "nothing"}
+            </div>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const Foo = () => {
+        return "foo";
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const Bar = () => {
+        return "bar";
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const NavControls = () => {
+        const canGoBack = useCanGoBack();
+        const canGoForward = useCanGoForward();
+        const routerReadyState = useRouterReadyState();
+        const canStopLoad = useCanStopLoad();
+
+        return (
+          <fieldset>
+            <legend>nav controls (or use browser controls)</legend>
+
+            <div>router state: {routerReadyState}</div>
+
+            <button
+              disabled={!canStopLoad}
+              onClick={() => {
+                stopLoad();
+              }}
+            >
+              Stop
+            </button>
+            <button
+              disabled={!canGoBack}
+              onClick={() => {
+                goBack();
+              }}
+            >
+              back
+            </button>
+            <button
+              disabled={!canGoForward}
+              onClick={() => {
+                goForward();
+              }}
+            >
+              forward
+            </button>
+            <button
+              onClick={() => {
+                reload();
+              }}
+            >
+              reload
+            </button>
+          </fieldset>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const PageA = () => {
+        const isActive = useRouteIsActive(pageA);
+        const isLoading = useRouteIsLoading(pageA);
+        const isAborted = useRouteLoadIsAborted(pageA);
+        if (!isActive) {
+          return "pageA not active";
+        }
+        if (isLoading) {
+          return (
+            <div>
+              page A loading...
+              <button
+                onClick={() => {
+                  resolveNavigationToPageA();
+                }}
+              >
+                resolve load
+              </button>
+            </div>
+          );
+        }
+        if (isAborted) {
+          return `page A load aborted`;
+        }
+        return "page A content";
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const PageB = () => {
+        const isActive = useRouteIsActive(pageB);
+        const isLoading = useRouteIsLoading(pageB);
+        const isAborted = useRouteLoadIsAborted(pageB);
+        if (!isActive) {
+          return "pageB not active";
+        }
+        if (isLoading) {
+          return "page B loading...";
+        }
+        if (isAborted) {
+          return `page B load aborted`;
+        }
+        return "page B content";
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "name": "@jsenv/router",
+  "version": "0.0.8",
+  "description": "Url matching and routing",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/universal/sigi"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./index.js"
+    },
+    "./*": "./*"
+  },
+  "main": "./index.js",
+  "files": [
+    "index.js",
+    "/src/"
+  ]
+}

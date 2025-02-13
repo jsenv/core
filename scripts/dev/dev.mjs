@@ -1,6 +1,8 @@
 import { startDevServer } from "@jsenv/core";
 // import { requestCertificate } from "@jsenv/https-local";
 import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+import { clientControlledResourceService } from "@jsenv/router/server_stuff.js";
 
 // const { certificate, privateKey } = requestCertificate();
 await startDevServer({
@@ -10,20 +12,16 @@ await startDevServer({
   http2: false,
   port: 3456,
   // supervisor: { logs: true },
+  services: [clientControlledResourceService()],
   plugins: [
+    jsenvPluginPreact(),
     jsenvPluginExplorer({
       groups: {
-        main: {
-          "./dev_exploring/main/**/*.html": true,
-        },
-        autoreload: {
-          "./dev_exploring/autoreload/**/*.html": true,
-        },
         errors: {
-          "./dev_exploring/errors/**/*.html": true,
+          "./tests/dev_server/errors/stories/**/*.html": true,
         },
-        other: {
-          "./dev_exploring/other/**/*.html": true,
+        router: {
+          "./packages/independent/**/router/**/*.html": true,
         },
         tests: {
           "./tests/**/client/main.html": true,
