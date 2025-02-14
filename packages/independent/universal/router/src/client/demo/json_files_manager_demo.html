@@ -14,7 +14,7 @@ TODO: create a UI the allow the following:
     <meta charset="UTF-8" />
     <link rel="icon" href="data:," />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Form demo</title>
+    <title>JSON files manager demo</title>
   </head>
   <body>
     <div id="root" style="position: relative"></div>
@@ -34,15 +34,15 @@ TODO: create a UI the allow the following:
             load: async () => {},
           },
           list: {
-            urlTemplate: "/forms",
+            urlTemplate: "/json_files",
             load: async ({ signal }) => {
-              const response = await fetch("/forms", { signal });
+              const response = await fetch("/json_files", { signal });
               const responseJson = await response.json();
               return responseJson;
             },
           },
           see: {
-            urlTemplate: "/forms/:id",
+            urlTemplate: "/json_files/:id",
             load: async () => {},
           },
           // TODO update: '',
@@ -57,8 +57,8 @@ TODO: create a UI the allow the following:
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const listFormUrl = useRouteUrl(list);
-        const seeFormUrl = useRouteUrl(see);
+        const listUrl = useRouteUrl(list);
+        const seeUrl = useRouteUrl(see);
         const listIsMatching = useRouteIsMatching(list);
         const seeIsMatching = useRouteIsMatching(see);
 
@@ -80,7 +80,7 @@ TODO: create a UI the allow the following:
 
               <div style="display: flex; flex-direction: column; width: 200px">
                 <a
-                  href={listFormUrl}
+                  href={listUrl}
                   style={{
                     padding: "10px",
                     border: "1px solid black",
@@ -91,7 +91,7 @@ TODO: create a UI the allow the following:
               </div>
               <div style="display: flex; flex-direction: column; width: 200px">
                 <a
-                  href={seeFormUrl}
+                  href={seeUrl}
                   style={{
                     padding: "10px",
                     border: "1px solid black",
@@ -104,15 +104,15 @@ TODO: create a UI the allow the following:
 
             <h1>Content</h1>
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
-              {listIsMatching && <FormList />}
-              {seeIsMatching && <FormSee />}
+              {listIsMatching && <JSONFileList />}
+              {seeIsMatching && <JSONFileView />}
             </main>
           </div>
         );
       };
 
       // eslint-disable-next-line no-unused-vars
-      const FormList = () => {
+      const JSONFileList = () => {
         const nameArray = useRouteLoadData(list) || [];
 
         return (
@@ -125,8 +125,8 @@ TODO: create a UI the allow the following:
       };
 
       // eslint-disable-next-line no-unused-vars
-      const FormSee = () => {
-        return "Form see";
+      const JSONFileView = () => {
+        return "JSON file see";
       };
 
       render(<App />, document.getElementById("root"));

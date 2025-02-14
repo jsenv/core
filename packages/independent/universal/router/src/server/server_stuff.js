@@ -36,11 +36,11 @@ export const clientControlledResourceService = () => {
 
 const jsonDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 
-export const JSONFormService = () => {
+export const JSONFileManagerService = () => {
   return {
     handleRequest: {
       GET: async (request) => {
-        const getAllMatch = routeMatchUrl("/forms", request.url);
+        const getAllMatch = routeMatchUrl("/json_files", request.url);
         if (getAllMatch) {
           const jsonFiles = readdirSync(jsonDirectoryUrl);
           const body = JSON.stringify(jsonFiles);
@@ -53,7 +53,7 @@ export const JSONFormService = () => {
             body,
           };
         }
-        const getOneMatch = routeMatchUrl("/forms/:id", request.url);
+        const getOneMatch = routeMatchUrl("/json_files/:id", request.url);
         if (getOneMatch) {
           const { id } = getOneMatch;
           const jsonFileUrl = new URL(`./${id}.json`, jsonDirectoryUrl);
