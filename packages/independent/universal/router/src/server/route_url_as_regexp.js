@@ -2,17 +2,20 @@ import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_
 
 export const convertRouteUrlIntoRegexp = (urlPattern) => {
   const patternUrlObject = new URL(urlPattern, "http://example.com");
-  const patternPathname = patternUrlObject.pathname;
+  const pathnamePattern = patternUrlObject.pathname;
   let regexpSource = "";
   let lastIndex = 0;
-  for (const match of patternPathname.matchAll(/:\w+/g)) {
-    const [string, index] = match;
-    let before = patternPathname.slice(0, index - string.length);
+  regexpSource += "^";
+  for (const match of pathnamePattern.matchAll(/:\w+/g)) {
+    const string = match[0];
+    const index = match.index;
+    let before = pathnamePattern.slice(0, index);
     regexpSource += escapeRegexpSpecialChars(before);
-    regexpSource += `(?<${string.slice(1)}>[^/]+)`;
-    lastIndex = index;
+    regexpSource += `(?<${string.slice(1)}>[^\/]+)`;
+    lastIndex = index + string.length;
   }
-  const after = patternPathname.slice(lastIndex);
+  const after = pathnamePattern.slice(lastIndex);
   regexpSource += escapeRegexpSpecialChars(after);
+  regexpSource += "$";
   return new RegExp(regexpSource);
 };
