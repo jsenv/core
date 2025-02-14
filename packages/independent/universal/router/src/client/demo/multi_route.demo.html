@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multiroute demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        registerRoutes,
+        useRouteUrl,
+        useRouteLoadData,
+        useRouteIsMatching,
+        useRouteReadyState,
+      } from "@jsenv/router";
+      // eslint-disable-next-line no-unused-vars
+      import { NavControls } from "./nav_controls.jsx";
+
+      const { main, pageA, pageB } = registerRoutes(
+        {
+          main: {
+            urlTemplate: "/main",
+            load: async ({ signal }) => {
+              await new Promise((resolve) => {
+                const timeout = setTimeout(resolve, 1000);
+                signal.addEventListener("abort", () => {
+                  clearTimeout(timeout);
+                });
+              });
+              return "Main content";
+            },
+          },
+          pageA: {
+            urlTemplate: "/main/a",
+            load: async ({ signal }) => {
+              await new Promise((resolve) => {
+                const timeout = setTimeout(resolve, 1000);
+                signal.addEventListener("abort", () => {
+                  clearTimeout(timeout);
+                });
+              });
+              return "Page A content";
+            },
+          },
+          pageB: {
+            urlTemplate: "/main/b",
+            load: async ({ signal }) => {
+              await new Promise((resolve) => {
+                const timeout = setTimeout(resolve, 1000);
+                signal.addEventListener("abort", () => {
+                  clearTimeout(timeout);
+                });
+              });
+              return "Page B content";
+            },
+          },
+          fallback: {
+            load: () => {
+              // console.log("load fallback");
+            },
+          },
+        },
+        window.location.href,
+      );
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const mainRouteReadyState = useRouteReadyState(main);
+        const mainRouteLoadData = useRouteLoadData(main);
+        const mainUrl = useRouteUrl(main);
+        const pageAUrl = useRouteUrl(pageA);
+        const pageBUrl = useRouteUrl(pageB);
+        const pageAIsMatching = useRouteIsMatching(pageA);
+        const pageBIsMatching = useRouteIsMatching(pageB);
+
+        return (
+          <div>
+            <NavControls />
+
+            <h2>Main section</h2>
+            <a href={mainUrl}>Go to main</a>
+            <div>
+              status: {mainRouteReadyState}
+              <br />
+              data: {mainRouteLoadData}
+            </div>
+
+            <h2>Sub sections</h2>
+            <nav style="display: flex; gap: 0px">
+              <div style="display: flex; flex-direction: column; width: 200px">
+                <a
+                  href={pageAUrl}
+                  style={{
+                    padding: "10px",
+                    border: "1px solid black",
+                    backgroundColor: pageAIsMatching ? "lightblue" : "white",
+                  }}
+                >
+                  A
+                </a>
+                <PageA />
+              </div>
+              <div style="display: flex; flex-direction: column; width: 200px">
+                <a
+                  href={pageBUrl}
+                  style={{
+                    padding: "10px",
+                    border: "1px solid black",
+                    backgroundColor: pageBIsMatching ? "lightblue" : "white",
+                  }}
+                >
+                  B
+                </a>
+                <PageB />
+              </div>
+            </nav>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const Foo = () => {
+        return "foo";
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const Bar = () => {
+        return "bar";
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const PageA = () => {
+        const readyState = useRouteReadyState(pageA);
+        const loadedData = useRouteLoadData(pageA);
+        return (
+          <div>
+            pageA state: {readyState}
+            <br />
+            pageA content: {loadedData}
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const PageB = () => {
+        const readyState = useRouteReadyState(pageB);
+        const loadedData = useRouteLoadData(pageB);
+        return (
+          <div>
+            pageB state: {readyState}
+            <br />
+            pageB content: {loadedData}
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

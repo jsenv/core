@@ -64,7 +64,7 @@
     "test:ci": "CI=1 npm run test",
     "test:packages:ci": "CI=1 npm run workspace:test",
     "test:only_dev_server_errors": "node --conditions=development ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",
-    "dev": "node --conditions=development ./scripts/dev/dev.mjs",
+    "dev": "node --watch --conditions=development ./scripts/dev/dev.mjs",
     "playwright:install": "npx playwright install-deps && npx playwright install",
     "https:setup": "npx @jsenv/https-local setup",
     "prepublishOnly": "npm run build"
@@ -106,6 +106,7 @@
     "@jsenv/plugin-as-js-classic": "workspace:*",
     "@jsenv/snapshot": "workspace:*",
     "@jsenv/test": "workspace:*",
+    "@jsenv/router": "workspace:*",
     "@playwright/browser-chromium": "1.50.0",
     "@playwright/browser-firefox": "1.50.0",
     "@playwright/browser-webkit": "1.50.0",

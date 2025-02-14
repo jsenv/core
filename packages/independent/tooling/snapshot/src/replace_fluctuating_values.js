@@ -156,6 +156,14 @@ export const replaceFluctuatingValues = (
     if (Buffer.isBuffer(value)) {
       return value;
     }
+    if (value instanceof RegExp) {
+      let regexpSource = value.source;
+      if (regexpSource === "(?:)") {
+        regexpSource = "";
+      }
+      regexpSource = `/${regexpSource}/${value.flags}`;
+      return regexpSource;
+    }
     const jsValueReplaced = replaceInObject(value, { replace: replaceThings });
     return JSON.stringify(jsValueReplaced, null, "  ");
   }
