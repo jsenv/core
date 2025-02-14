@@ -18,7 +18,7 @@ export const createServiceController = (services) => {
 
   const addService = (service) => {
     for (const key of Object.keys(service)) {
-      if (key === "name") return;
+      if (key === "name") continue;
       const isHook = HOOK_NAMES.includes(key);
       if (!isHook) {
         console.warn(
