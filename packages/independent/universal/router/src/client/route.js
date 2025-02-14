@@ -196,10 +196,13 @@ export const applyRouting = async ({ url, state, signal, reload }) => {
     }
   }
   for (const nextMatchingRoute of nextMatchingRouteSet) {
+    const nextMatchingRouteReadyState =
+      nextMatchingRoute.readyStateSignal.peek();
     if (
       reload ||
       !matchingRouteSet.has(nextMatchingRoute) ||
-      nextMatchingRoute.readyStateSignal.peek() === ABORTED
+      nextMatchingRouteReadyState === ABORTED ||
+      nextMatchingRouteReadyState.error
     ) {
       routeToEnterSet.add(nextMatchingRoute);
     }

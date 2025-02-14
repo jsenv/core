@@ -7,3 +7,129 @@ TODO: create a UI the allow the following:
 - See a created form (GET /forms/:id)
 - Update a form (PATCH /forms/:id)
 -->
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Form demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        registerRoutes,
+        useRouteUrl,
+        useRouteIsMatching,
+        useRouteLoadData,
+      } from "@jsenv/router";
+
+      const { list, see } = registerRoutes(
+        {
+          main: {
+            urlTemplate: "/",
+            load: async () => {},
+          },
+          list: {
+            urlTemplate: "/forms",
+            load: async ({ signal }) => {
+              const response = await fetch("/forms", { signal });
+              const responseJson = await response.json();
+              return responseJson;
+            },
+          },
+          see: {
+            urlTemplate: "/forms/:id",
+            load: async () => {},
+          },
+          // TODO update: '',
+          fallback: {
+            load: () => {
+              // console.log("load fallback");
+            },
+          },
+        },
+        window.location.href,
+      );
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const listFormUrl = useRouteUrl(list);
+        const seeFormUrl = useRouteUrl(see);
+        const listIsMatching = useRouteIsMatching(list);
+        const seeIsMatching = useRouteIsMatching(see);
+
+        return (
+          <div>
+            <h1>Navigation</h1>
+            <nav style="display: flex; gap: 0px">
+              <div style="display: flex; flex-direction: column; width: 200px">
+                <a
+                  href="/packages/independent/universal/router/src/client/demo/form_demo.html"
+                  style={{
+                    padding: "10px",
+                    border: "1px solid black",
+                  }}
+                >
+                  Root
+                </a>
+              </div>
+
+              <div style="display: flex; flex-direction: column; width: 200px">
+                <a
+                  href={listFormUrl}
+                  style={{
+                    padding: "10px",
+                    border: "1px solid black",
+                  }}
+                >
+                  A
+                </a>
+              </div>
+              <div style="display: flex; flex-direction: column; width: 200px">
+                <a
+                  href={seeFormUrl}
+                  style={{
+                    padding: "10px",
+                    border: "1px solid black",
+                  }}
+                >
+                  B
+                </a>
+              </div>
+            </nav>
+
+            <h1>Content</h1>
+            <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
+              {listIsMatching && <FormList />}
+              {seeIsMatching && <FormSee />}
+            </main>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const FormList = () => {
+        const nameArray = useRouteLoadData(list) || [];
+
+        return (
+          <ul>
+            {nameArray.map((name) => {
+              return <li key={name}>{name}</li>;
+            })}
+          </ul>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const FormSee = () => {
+        return "Form see";
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>
