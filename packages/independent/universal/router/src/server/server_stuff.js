@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
+import { routeMatchUrl } from "./route_match_url.js";
 
 export const clientControlledResourceService = () => {
   let resolve;
@@ -39,12 +40,12 @@ export const JSONFormService = () => {
   return {
     handleRequest: {
       GET: async (request) => {
-        const getAllMatch = matchUrl(request.url, "/forms");
+        const getAllMatch = routeMatchUrl("/forms", request.url);
         if (getAllMatch) {
           const jsonFiles = readdirSync(jsonDirectoryUrl);
           const body = JSON.stringify(jsonFiles);
           return {
-            sttaus: 200,
+            status: 200,
             headers: {
               "content-type": "application/json",
               "content-length": Buffer.byteLength(body),
@@ -52,7 +53,7 @@ export const JSONFormService = () => {
             body,
           };
         }
-        const getOneMatch = matchUrl(request.url, "/forms/:id");
+        const getOneMatch = routeMatchUrl("/forms/:id", request.url);
         if (getOneMatch) {
           const { id } = getOneMatch;
           const jsonFileUrl = new URL(`./${id}.json`, jsonDirectoryUrl);
@@ -76,7 +77,7 @@ export const JSONFormService = () => {
         }
         return null;
       },
-      POST: async (request) => {
+      POST: async () => {
         // TODO
       },
     },
