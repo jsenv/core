@@ -1,6 +1,7 @@
 {
   "name": "@jsenv/router",
   "version": "0.0.8",
+  "private": true,
   "description": "Url matching and routing",
   "publishConfig": {
     "access": "public"
@@ -13,18 +14,18 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/universal/sigi"
+    "directory": "packages/independent/universal/router"
   },
   "type": "module",
   "exports": {
     ".": {
-      "import": "./index.js"
+      "node": "./src/server/server.js",
+      "browser": "./src/client/client.js"
     },
+    "./client": "./src/client/client.js",
     "./*": "./*"
   },
-  "main": "./index.js",
   "files": [
-    "index.js",
     "/src/"
   ]
 }

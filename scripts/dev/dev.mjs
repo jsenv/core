@@ -2,7 +2,10 @@ import { startDevServer } from "@jsenv/core";
 // import { requestCertificate } from "@jsenv/https-local";
 import { jsenvPluginExplorer } from "@jsenv/plugin-explorer";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
-import { clientControlledResourceService } from "@jsenv/router/server_stuff.js";
+import {
+  clientControlledResourceService,
+  JSONFormService,
+} from "@jsenv/router/src/server/server_stuff.js";
 
 // const { certificate, privateKey } = requestCertificate();
 await startDevServer({
@@ -12,7 +15,7 @@ await startDevServer({
   http2: false,
   port: 3456,
   // supervisor: { logs: true },
-  services: [clientControlledResourceService()],
+  services: [clientControlledResourceService(), JSONFormService()],
   plugins: [
     jsenvPluginPreact(),
     jsenvPluginExplorer({
