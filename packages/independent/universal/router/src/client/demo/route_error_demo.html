@@ -10,6 +10,7 @@
     <div id="root" style="position: relative"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
+      import { useState } from "preact/hooks";
       import {
         registerRoutes,
         useRouteUrl,
@@ -18,34 +19,41 @@
         connectRoute,
       } from "@jsenv/router";
 
-      const { load_throw_sync, load_throw_after_300_ms, throw_during_render } =
-        registerRoutes(
-          {
-            main: {
-              urlTemplate: "/",
-              load: async () => {},
-            },
-            load_throw_sync: {
-              urlTemplate: "?route=load_throw_sync",
-              load: async () => {
-                throw new Error("load_throw_sync");
-              },
-            },
-            load_throw_after_300_ms: {
-              urlTemplate: "?route=load_throw_after_300_ms",
-              load: async () => {
-                await new Promise((resolve) => {
-                  setTimeout(resolve, 300);
-                });
-                throw new Error("load_throw_sync");
-              },
-            },
-            throw_during_render: {
-              urlTemplate: "?route=throw_during_render",
+      const {
+        load_throw_sync,
+        load_throw_after_300_ms,
+        throw_during_render,
+        throw_after_click,
+      } = registerRoutes(
+        {
+          main: {
+            urlTemplate: "/",
+            load: async () => {},
+          },
+          load_throw_sync: {
+            urlTemplate: "?route=load_throw_sync",
+            load: async () => {
+              throw new Error("load_throw_sync");
             },
           },
-          window.location.href,
-        );
+          load_throw_after_300_ms: {
+            urlTemplate: "?route=load_throw_after_300_ms",
+            load: async () => {
+              await new Promise((resolve) => {
+                setTimeout(resolve, 300);
+              });
+              throw new Error("load_throw_sync");
+            },
+          },
+          throw_during_render: {
+            urlTemplate: "?route=throw_during_render",
+          },
+          throw_after_click: {
+            urlTemplate: "?route=throw_after_click",
+          },
+        },
+        window.location.href,
+      );
 
       // eslint-disable-next-line no-unused-vars
       const RouteDisplay = ({ route }) => {
@@ -59,17 +67,32 @@
         );
       };
 
-      const ThrowDuringRender = () => {
-        throw new Error("throw during render");
-      };
       // eslint-disable-next-line no-unused-vars
-      const ThrowDuringRenderRoute = connectRoute(
-        throw_during_render,
-        ThrowDuringRender,
-      );
+      const ThrowDuringRenderRoute = connectRoute(throw_during_render, () => {
+        throw new Error("throw during render");
+      });
+      // eslint-disable-next-line no-unused-vars
+      const ThrowAfterClickRoute = connectRoute(throw_after_click, () => {
+        // For this one we don't want to catch the click error
+        // it's the component responsability now to react to error outside of the first render
+        const [clicked, clickedSetter] = useState(false);
+        if (clicked) {
+          throw new Error("after click");
+        }
+        return (
+          <button
+            onClick={() => {
+              clickedSetter(true);
+            }}
+          >
+            Click me
+          </button>
+        );
+      });
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
+        const throwAfterClickUrl = useRouteUrl(throw_after_click);
         const loadThrowSyncUrl = useRouteUrl(load_throw_sync);
         const loadThrowAfter300MsUrl = useRouteUrl(load_throw_after_300_ms);
         const throwDuringRenderUrl = useRouteUrl(throw_during_render);
@@ -78,8 +101,6 @@
         const loadThrowAfter300MsIsMatching = useRouteIsMatching(
           load_throw_after_300_ms,
         );
-        const throwDuringRenderIsMatching =
-          useRouteIsMatching(throw_during_render);
 
         const links = [
           {
@@ -97,6 +118,10 @@
           {
             url: throwDuringRenderUrl,
             text: "throw during render",
+          },
+          {
+            url: throwAfterClickUrl,
+            text: "throw after click",
           },
         ];
 
@@ -129,7 +154,8 @@
               {loadThrowAfter300MsIsMatching && (
                 <RouteDisplay route={load_throw_after_300_ms} />
               )}
-              {throwDuringRenderIsMatching && <ThrowDuringRenderRoute />}
+              <ThrowDuringRenderRoute />
+              <ThrowAfterClickRoute />
             </main>
           </div>
         );

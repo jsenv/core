@@ -15,12 +15,12 @@ export const connectRoute = (route, Component) => {
       isFirstRenderAfterLoadRef.current = true;
       return null;
     }
-    if (error) {
-      if (isFirstRenderAfterLoadRef.current) {
-        isFirstRenderAfterLoadRef.current = false;
+    if (isFirstRenderAfterLoadRef.current) {
+      isFirstRenderAfterLoadRef.current = false;
+      if (error) {
         route.reportError(error);
+        return <p>An error occured: {error.message}</p>;
       }
-      return <p>An error occured: {error.message}</p>;
     }
     return <Component />;
   };
