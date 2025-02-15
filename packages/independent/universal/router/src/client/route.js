@@ -208,6 +208,7 @@ const createRoute = (name, { urlTemplate, load }, { baseUrl }) => {
 
     isMatchingSignal,
     readyStateSignal,
+    errorSignal,
     dataMapSignal,
 
     reportError,
