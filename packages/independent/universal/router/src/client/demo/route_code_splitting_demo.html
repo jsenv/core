@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Route code splitting demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { registerRoutes, useRouteUrl } from "@jsenv/router";
+      // eslint-disable-next-line no-unused-vars
+      import { Route } from "../route.jsx";
+
+      /*
+ou met-on le code splitting?
+
+loadedAsync: une fonction censé exporter un component 
+pour les versions async on les appelent des qu'on match (pour fetch en //)
+mais on render la valeur de retour que pour le cas (ici loaded)
+
+il faut qu'un abort puisse etre pris en compte (on passe le signal de la route a la fonction)
+il faut qu'un throw de cette fonction soit report comme une erreur pour entrer dans cette route
+
+notons que ça peut poser "souci" si le loadedAsync resolve tard
+et qu'entre temps on a changé de route
+il faut tester ce cas pour bien vérif que le code se comporte correctement une fois
+qu'un loadedAsync se resolve sur une route qui est "left"
+
+(pareil pour la fonction load dailleurs)
+(idéalement on stocke tout mais on laisse bien la route en aborted + left)
+
+
+*/
+
+      const { a, b } = registerRoutes(
+        {
+          a: {
+            urlTemplate: "?route=a",
+            load: async () => {
+              return "a";
+            },
+          },
+          b: {
+            urlTemplate: "?route=b",
+            load: async () => {
+              return "b";
+            },
+          },
+        },
+        window.location.href,
+      );
+
+      const Loading = () => {
+        return "loading...";
+      };
+      const RouteDisplay = ({ route, data }) => {
+        return (
+          <div>
+            {route.name}: {data}
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const aUrl = useRouteUrl(a);
+        const bUrl = useRouteUrl(b);
+        const links = [
+          {
+            url: "/packages/independent/universal/router/src/client/demo/route_error_demo.html",
+            text: "root",
+          },
+          {
+            url: aUrl,
+            text: "A",
+          },
+          {
+            url: bUrl,
+            text: "B",
+          },
+        ];
+
+        return (
+          <div>
+            <h1>Navigation</h1>
+            <nav style="display: flex; gap: 0px">
+              {links.map((link) => {
+                return (
+                  <div style="display: flex; flex-direction: column; width: 200px">
+                    <a
+                      href={link.url}
+                      style={{
+                        padding: "10px",
+                        border: "1px solid black",
+                      }}
+                    >
+                      {link.text}
+                    </a>
+                  </div>
+                );
+              })}
+            </nav>
+
+            <h1>Content</h1>
+            <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
+              <Route route={a} loading={Loading} loaded={RouteDisplay} />
+              <Route
+                route={b}
+                loading={Loading}
+                loaded={RouteDisplay}
+                loadedAsync={TotoLazy}
+              />
+            </main>
+          </div>
+        );
+      };
+
+      const TotoLazy = async () => {
+        const { Toto } = await import("./toto.jsx");
+        return Toto;
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>
