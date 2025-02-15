@@ -15,6 +15,7 @@
         useRouteUrl,
         useRouteIsMatching,
         useRouteLoadData,
+        connectRoute,
       } from "@jsenv/router";
 
       const { load_throw_sync, load_throw_after_300_ms, throw_during_render } =
@@ -47,6 +48,27 @@
         );
 
       // eslint-disable-next-line no-unused-vars
+      const RouteDisplay = ({ route }) => {
+        const data = useRouteLoadData(route);
+
+        return (
+          <div>
+            {route.name}
+            <pre>{data}</pre>
+          </div>
+        );
+      };
+
+      const ThrowDuringRender = () => {
+        throw new Error("throw during render");
+      };
+      // eslint-disable-next-line no-unused-vars
+      const ThrowDuringRenderRoute = connectRoute(
+        throw_during_render,
+        ThrowDuringRender,
+      );
+
+      // eslint-disable-next-line no-unused-vars
       const App = () => {
         const loadThrowSyncUrl = useRouteUrl(load_throw_sync);
         const loadThrowAfter300MsUrl = useRouteUrl(load_throw_after_300_ms);
@@ -56,6 +78,8 @@
         const loadThrowAfter300MsIsMatching = useRouteIsMatching(
           load_throw_after_300_ms,
         );
+        const throwDuringRenderIsMatching =
+          useRouteIsMatching(throw_during_render);
 
         const links = [
           {
@@ -105,19 +129,8 @@
               {loadThrowAfter300MsIsMatching && (
                 <RouteDisplay route={load_throw_after_300_ms} />
               )}
+              {throwDuringRenderIsMatching && <ThrowDuringRenderRoute />}
             </main>
-          </div>
-        );
-      };
-
-      // eslint-disable-next-line no-unused-vars
-      const RouteDisplay = ({ route }) => {
-        const data = useRouteLoadData(route);
-
-        return (
-          <div>
-            {route.name}
-            <pre>{data}</pre>
           </div>
         );
       };

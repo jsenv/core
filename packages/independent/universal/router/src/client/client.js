@@ -10,6 +10,7 @@ export {
   useRouteReadyState,
   useRouteUrl,
 } from "./route.js";
+export { connectRoute } from "./route.jsx";
 export { goBack, goForward, goTo, reload, stopLoad } from "./router.js";
 export {
   useCanStopLoad,

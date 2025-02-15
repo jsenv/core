@@ -12,6 +12,7 @@ let debugDocumentRouting = false;
 const IDLE = { id: "idle" };
 const LOADING = { id: "loading" };
 const ABORTED = { id: "aborted" };
+const LOADED = { id: "loaded" };
 
 const buildUrlFromDocument = (build) => {
   const documentUrl = documentUrlSignal.value;
@@ -21,8 +22,12 @@ const buildUrlFromDocument = (build) => {
 };
 
 const routeSet = new Set();
+const matchingRouteSet = new Set();
+const routeAbortEnterMap = new Map();
 let fallbackRoute;
-const createRoute = (name, { urlTemplate, load = () => {} }, { baseUrl }) => {
+const createRoute = (name, { urlTemplate, load }, { baseUrl }) => {
+  const route = {};
+
   let routePathname;
   let routeSearchParams;
 
@@ -90,53 +95,113 @@ const createRoute = (name, { urlTemplate, load = () => {} }, { baseUrl }) => {
   });
   const isMatchingSignal = signal(false);
   const readyStateSignal = signal(IDLE);
+  const dataMapSignal = signal();
 
-  const onEnter = () => {
-    isMatchingSignal.value = true;
-    readyStateSignal.value = LOADING;
-  };
-  const onLeave = () => {
-    isMatchingSignal.value = false;
-    readyStateSignal.value = IDLE;
-  };
-  const onAbort = () => {
-    readyStateSignal.value = ABORTED;
-  };
-  const onLoadError = (error) => {
-    readyStateSignal.value = {
-      error,
-    };
-  };
-  const onLoadEnd = (data) => {
-    readyStateSignal.value = {
-      data,
-    };
-  };
-  const enter = () => {
+  const activate = () => {
     const documentUrlWithRoute = buildUrlFromDocument(addToUrl);
     goTo(documentUrlWithRoute);
   };
-  const leave = () => {
+  const deactivate = () => {
     const documentUrlWithoutRoute = buildUrlFromDocument(removeFromUrl);
     goTo(documentUrlWithoutRoute);
   };
 
-  return {
+  const enterTaskSet = new Set();
+  const enter = async ({ signal }) => {
+    // here we must pass a signal that gets aborted when
+    // 1. any route is stopped (browser stop button)
+    // 2. route is left
+    // if we reach the end we can safely clear the current load signals
+    const enterAbortController = new AbortController();
+    const enterAbortSignal = enterAbortController.signal;
+    const abort = () => {
+      if (debug) {
+        console.log(`abort entering "${route.name}"`);
+      }
+      readyStateSignal.value = ABORTED;
+      enterAbortController.abort();
+    };
+    signal.addEventListener("abort", abort);
+    routeAbortEnterMap.set(route, abort);
+
+    isMatchingSignal.value = true;
+    readyStateSignal.value = LOADING;
+    matchingRouteSet.add(route);
+    if (debug) {
+      console.log(`"${route.name}": entering route`);
+    }
+    const dataMap = new Map();
+    const promises = [];
+    dataMapSignal.value = null;
+    for (const { token, callback } of enterTaskSet) {
+      const callbackPromise = Promise.resolve(
+        callback({ signal: enterAbortSignal }),
+      );
+      promises.push(
+        callbackPromise.then((result) => {
+          dataMap.set(token, result);
+        }),
+      );
+    }
+    try {
+      await Promise.all(promises);
+      readyStateSignal.value = LOADED;
+      dataMapSignal.value = dataMap;
+      if (debug) {
+        console.log(`"${route.name}": route enter end`);
+      }
+    } catch (e) {
+      // TODO: catch abortError?
+      readyStateSignal.value = { error: e };
+      console.error(`Error while entering route named "${route.name}":`, e);
+    } finally {
+      routeAbortEnterMap.delete(route);
+    }
+  };
+  const leave = () => {
+    const routeAbortEnter = routeAbortEnterMap.get(route);
+    if (routeAbortEnter) {
+      if (debug) {
+        console.log(`"${route.name}": aborting route enter`);
+      }
+      routeAbortEnterMap.delete(route);
+      routeAbortEnter();
+    }
+    if (debug) {
+      console.log(`"${route.name}": leaving route`);
+    }
+    isMatchingSignal.value = false;
+    readyStateSignal.value = IDLE;
+    matchingRouteSet.delete(route);
+  };
+
+  const addEnterTask = (callback) => {
+    const token = {};
+    enterTaskSet.add({ token, callback });
+    return token;
+  };
+
+  if (load) {
+    const loadDataToken = addEnterTask(load);
+    route.loadDataToken = loadDataToken;
+  }
+
+  Object.assign(route, {
     name,
     urlSignal,
     test,
-    load,
     enter,
     leave,
 
-    onLeave,
-    onEnter,
-    onAbort,
-    onLoadError,
-    onLoadEnd,
     isMatchingSignal,
     readyStateSignal,
-  };
+    dataMapSignal,
+
+    addEnterTask,
+    activate,
+    deactivate,
+  });
+  return route;
 };
 export const registerRoutes = (
   { fallback, ...rest },
@@ -155,14 +220,9 @@ export const registerRoutes = (
   return routes;
 };
 
-/*
- * TODO:
- * - each route should have its own signal
- *   because when navigating to a new url the route might still be relevant
- *   in that case we don't want to abort it
+/**
+ *
  */
-const matchingRouteSet = new Set();
-const routeAbortLoadMap = new Map();
 export const applyRouting = async ({ url, state, signal, reload }) => {
   const stopSignal = signalToStopSignal(signal);
   if (debug) {
@@ -209,20 +269,7 @@ export const applyRouting = async ({ url, state, signal, reload }) => {
   }
   nextMatchingRouteSet.clear();
   for (const routeToLeave of routeToLeaveSet) {
-    const routeLoadAbort = routeAbortLoadMap.get(routeToLeave);
-    if (routeLoadAbort) {
-      if (debug) {
-        console.log(`"${routeToLeave.name}": aborting route load`);
-      }
-      routeToLeave.onAbort();
-      routeAbortLoadMap.delete(routeToLeave);
-      routeLoadAbort();
-    }
-    if (debug) {
-      console.log(`"${routeToLeave.name}": leaving route`);
-    }
-    matchingRouteSet.delete(routeToLeave);
-    routeToLeave.onLeave();
+    routeToLeave.leave();
   }
   if (routeToEnterSet.size === 0) {
     if (debug) {
@@ -237,47 +284,10 @@ export const applyRouting = async ({ url, state, signal, reload }) => {
   try {
     const promises = [];
     for (const routeToEnter of routeToEnterSet) {
-      if (debug) {
-        console.log(`"${routeToEnter.name}": entering route`);
-      }
-      matchingRouteSet.add(routeToEnter);
-      routeToEnter.onEnter();
-      // here we must pass a signal that gets aborted when
-      // 1. any route is stopped (browser stop button)
-      // 2. route is left
-      // if we reach the end we can safely clear the current load signals
-      const routeLoadAbortController = new AbortController();
-      const routeLoadAbortSignal = routeLoadAbortController.signal;
-      const routeAbortLoad = () => {
-        if (debug) {
-          console.log(`abort load of "${routeToEnter.name}"`);
-        }
-        routeLoadAbortController.abort();
-        routeToEnter.onAbort();
-      };
-      stopSignal.addEventListener("abort", routeAbortLoad);
-      routeAbortLoadMap.set(routeToEnter, routeAbortLoad);
-      const loadReturnValue = routeToEnter.load({
-        signal: routeLoadAbortSignal,
+      const loadReturnValue = routeToEnter.enter({
+        signal: stopSignal,
       });
       const loadPromise = Promise.resolve(loadReturnValue);
-      loadPromise.then(
-        (value) => {
-          if (debug) {
-            console.log(`"${routeToEnter.name}": route load end`);
-          }
-          routeAbortLoadMap.delete(routeToEnter);
-          routeToEnter.onLoadEnd(value);
-        },
-        (e) => {
-          // TODO: catch abortError?
-          if (debug) {
-            console.log(`"${routeToEnter.name}": route load error`, e);
-          }
-          routeAbortLoadMap.delete(routeToEnter);
-          routeToEnter.onLoadError(e);
-        },
-      );
       promises.push(loadPromise);
     }
     await Promise.all(promises);
@@ -347,5 +357,13 @@ export const useRouteLoadError = (route) => {
   return route.readyStateSignal.value.error;
 };
 export const useRouteLoadData = (route) => {
-  return route.readyStateSignal.value.data;
+  const { loadDataToken } = route;
+  if (loadDataToken) {
+    const dataMap = route.dataMapSignal.value;
+    if (!dataMap) {
+      return undefined;
+    }
+    return dataMap.get(loadDataToken);
+  }
+  return undefined;
 };
