@@ -13,6 +13,7 @@ const IDLE = { id: "idle" };
 const LOADING = { id: "loading" };
 const ABORTED = { id: "aborted" };
 const LOADED = { id: "loaded" };
+const FAILED = { id: "failed" };
 
 const buildUrlFromDocument = (build) => {
   const documentUrl = documentUrlSignal.value;
@@ -95,6 +96,7 @@ const createRoute = (name, { urlTemplate, load }, { baseUrl }) => {
   });
   const isMatchingSignal = signal(false);
   const readyStateSignal = signal(IDLE);
+  const errorSignal = signal(null);
   const dataMapSignal = signal();
 
   const activate = () => {
@@ -126,37 +128,48 @@ const createRoute = (name, { urlTemplate, load }, { baseUrl }) => {
 
     isMatchingSignal.value = true;
     readyStateSignal.value = LOADING;
+    errorSignal.value = null;
     matchingRouteSet.add(route);
     if (debug) {
       console.log(`"${route.name}": entering route`);
     }
-    const dataMap = new Map();
     const promises = [];
-    dataMapSignal.value = null;
-    for (const { token, callback } of enterTaskSet) {
+    for (const { taskSignal, callback } of enterTaskSet) {
+      taskSignal.value = LOADING;
       const callbackPromise = Promise.resolve(
         callback({ signal: enterAbortSignal }),
       );
+      enterAbortSignal.addEventListener("abort", () => {
+        taskSignal.value = ABORTED;
+      });
       promises.push(
-        callbackPromise.then((result) => {
-          dataMap.set(token, result);
-        }),
+        callbackPromise.then(
+          (result) => {
+            taskSignal.value = { result };
+          },
+          (e) => {
+            // TODO: catch AbortError I guess
+            taskSignal.value = { error: e };
+            throw e;
+          },
+        ),
       );
     }
     try {
       await Promise.all(promises);
       readyStateSignal.value = LOADED;
-      dataMapSignal.value = dataMap;
       if (debug) {
         console.log(`"${route.name}": route enter end`);
       }
     } catch (e) {
-      // TODO: catch abortError?
-      readyStateSignal.value = { error: e };
-      console.error(`Error while entering route named "${route.name}":`, e);
-    } finally {
+      readyStateSignal.value = FAILED;
       routeAbortEnterMap.delete(route);
+      console.error(`Error while entering route named "${route.name}":`, e);
+      reportError(e);
     }
+  };
+  const reportError = (e) => {
+    errorSignal.value = e;
   };
   const leave = () => {
     const routeAbortEnter = routeAbortEnterMap.get(route);
@@ -176,14 +189,14 @@ const createRoute = (name, { urlTemplate, load }, { baseUrl }) => {
   };
 
   const addEnterTask = (callback) => {
-    const token = {};
-    enterTaskSet.add({ token, callback });
-    return token;
+    const taskSignal = {};
+    enterTaskSet.add({ taskSignal, callback });
+    return taskSignal;
   };
 
   if (load) {
-    const loadDataToken = addEnterTask(load);
-    route.loadDataToken = loadDataToken;
+    const loadTaskSignal = addEnterTask(load);
+    route.loadTaskSignal = loadTaskSignal;
   }
 
   Object.assign(route, {
@@ -197,6 +210,7 @@ const createRoute = (name, { urlTemplate, load }, { baseUrl }) => {
     readyStateSignal,
     dataMapSignal,
 
+    reportError,
     addEnterTask,
     activate,
     deactivate,
@@ -258,11 +272,12 @@ export const applyRouting = async ({ url, state, signal, reload }) => {
   for (const nextMatchingRoute of nextMatchingRouteSet) {
     const nextMatchingRouteReadyState =
       nextMatchingRoute.readyStateSignal.peek();
+    const nextMatchingRouteError = nextMatchingRoute.errorSignal.peek();
     if (
       reload ||
       !matchingRouteSet.has(nextMatchingRoute) ||
       nextMatchingRouteReadyState === ABORTED ||
-      nextMatchingRouteReadyState.error
+      nextMatchingRouteError
     ) {
       routeToEnterSet.add(nextMatchingRoute);
     }
@@ -354,16 +369,27 @@ export const useRouteLoadIsAborted = (route) => {
   return route.readyStateSignal.value === ABORTED;
 };
 export const useRouteLoadError = (route) => {
-  return route.readyStateSignal.value.error;
+  const readyState = route.readyStateSignal.value;
+  const error = route.errorSignal.value;
+  return readyState === FAILED ? error : null;
+};
+export const useRouteIsLoaded = (route) => {
+  return route.readyStateSignal.value === LOADED;
 };
 export const useRouteLoadData = (route) => {
-  const { loadDataToken } = route;
-  if (loadDataToken) {
-    const dataMap = route.dataMapSignal.value;
-    if (!dataMap) {
+  const { loadTaskSignal } = route;
+  if (loadTaskSignal) {
+    const loadTaskValue = loadTaskSignal.value;
+    if (loadTaskValue === LOADING) {
       return undefined;
     }
-    return dataMap.get(loadDataToken);
+    if (loadTaskValue === ABORTED) {
+      return undefined;
+    }
+    if (loadTaskValue.error) {
+      return undefined;
+    }
+    return loadTaskValue.result;
   }
   return undefined;
 };
