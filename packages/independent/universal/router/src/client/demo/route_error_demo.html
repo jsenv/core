@@ -38,7 +38,7 @@
               await new Promise((resolve) => {
                 setTimeout(resolve, 300);
               });
-              throw new Error("load_throw_sync");
+              throw new Error("load_throw_after_300");
             },
           },
           throw_during_render: {
@@ -51,11 +51,11 @@
         window.location.href,
       );
 
-      const LoadThrowSync = () => {
-        return <div>{load_throw_sync.name}</div>;
+      const Loading = () => {
+        return "loading...";
       };
-      const LoadThrowAfter300 = () => {
-        return <div>{load_throw_after_300_ms.name}</div>;
+      const RouteDisplay = ({ route }) => {
+        return <div>{route.name}</div>;
       };
       const ThrowDuringRender = () => {
         throw new Error("throw during render");
@@ -131,13 +131,26 @@
 
             <h1>Content</h1>
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
-              <Route route={load_throw_sync} loaded={LoadThrowSync} />
+              <Route
+                route={load_throw_sync}
+                loading={Loading}
+                loaded={RouteDisplay}
+              />
               <Route
                 route={load_throw_after_300_ms}
-                loaded={LoadThrowAfter300}
+                loading={Loading}
+                loaded={RouteDisplay}
               />
-              <Route route={throw_during_render} loaded={ThrowDuringRender} />
-              <Route route={throw_after_click} loaded={ThrowAfterClickRoute} />
+              <Route
+                route={throw_during_render}
+                loading={Loading}
+                loaded={ThrowDuringRender}
+              />
+              <Route
+                route={throw_after_click}
+                loading={Loading}
+                loaded={ThrowAfterClickRoute}
+              />
             </main>
           </div>
         );

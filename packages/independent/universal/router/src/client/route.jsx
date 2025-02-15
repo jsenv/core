@@ -52,10 +52,10 @@ export const Route = ({
     if (isMatchingFirstRenderRef.current === false) {
       isLoadingFirstRenderRef.current = true;
     }
-    return <ComponentRenderedWhileLoading />;
+    return <ComponentRenderedWhileLoading route={route} />;
   }
   if (routeError) {
-    return <ComponentRenderedWhileError error={routeError} />;
+    return <ComponentRenderedWhileError route={route} error={routeError} />;
   }
   if (routeIsLoaded) {
     if (errorFromBoundary && isLoadedFirstRenderRef.current) {
@@ -65,7 +65,7 @@ export const Route = ({
     if (isLoadedFirstRenderRef.current === false) {
       isLoadedFirstRenderRef.current = true;
     }
-    return <ComponentRenderWhileLoaded data={routeLoadedData} />;
+    return <ComponentRenderWhileLoaded route={route} data={routeLoadedData} />;
   }
   if (errorFromBoundary && isMatchingFirstRenderRef.current) {
     route.reportError(errorFromBoundary);
@@ -74,7 +74,7 @@ export const Route = ({
   if (isMatchingFirstRenderRef.current === false) {
     isMatchingFirstRenderRef.current = true;
   }
-  return <ComponentRenderedWhileMatching />;
+  return <ComponentRenderedWhileMatching route={route} />;
 };
 
 export const RouteV1 = ({ route, children }) => {
