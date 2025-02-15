@@ -8,7 +8,7 @@ import { normalizeUrl } from "./normalize_url.js";
 import { goTo, installNavigation } from "./router.js";
 
 let debug = false;
-let debugDocumentRouting = true;
+let debugDocumentRouting = false;
 const IDLE = { id: "idle" };
 const LOADING = { id: "loading" };
 const ABORTED = { id: "aborted" };
@@ -276,7 +276,6 @@ export const applyRouting = async ({ url, state, signal, reload }) => {
           }
           routeAbortLoadMap.delete(routeToEnter);
           routeToEnter.onLoadError(e);
-          throw e;
         },
       );
       promises.push(loadPromise);

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Route error demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import {
+        registerRoutes,
+        useRouteUrl,
+        useRouteIsMatching,
+        useRouteLoadData,
+      } from "@jsenv/router";
+
+      const { load_throw_sync, load_throw_after_300_ms, throw_during_render } =
+        registerRoutes(
+          {
+            main: {
+              urlTemplate: "/",
+              load: async () => {},
+            },
+            load_throw_sync: {
+              urlTemplate: "?route=load_throw_sync",
+              load: async () => {
+                throw new Error("load_throw_sync");
+              },
+            },
+            load_throw_after_300_ms: {
+              urlTemplate: "?route=load_throw_after_300_ms",
+              load: async () => {
+                await new Promise((resolve) => {
+                  setTimeout(resolve, 300);
+                });
+                throw new Error("load_throw_sync");
+              },
+            },
+            throw_during_render: {
+              urlTemplate: "?route=throw_during_render",
+            },
+          },
+          window.location.href,
+        );
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const loadThrowSyncUrl = useRouteUrl(load_throw_sync);
+        const loadThrowAfter300MsUrl = useRouteUrl(load_throw_after_300_ms);
+        const throwDuringRenderUrl = useRouteUrl(throw_during_render);
+
+        const loadThrowSyncIsIsMatching = useRouteIsMatching(load_throw_sync);
+        const loadThrowAfter300MsIsMatching = useRouteIsMatching(
+          load_throw_after_300_ms,
+        );
+
+        const links = [
+          {
+            url: "/packages/independent/universal/router/src/client/demo/route_error_demo.html",
+            text: "root",
+          },
+          {
+            url: loadThrowSyncUrl,
+            text: "load throw sync",
+          },
+          {
+            url: loadThrowAfter300MsUrl,
+            text: "load throw after 300ms",
+          },
+          {
+            url: throwDuringRenderUrl,
+            text: "throw during render",
+          },
+        ];
+
+        return (
+          <div>
+            <h1>Navigation</h1>
+            <nav style="display: flex; gap: 0px">
+              {links.map((link) => {
+                return (
+                  <div style="display: flex; flex-direction: column; width: 200px">
+                    <a
+                      href={link.url}
+                      style={{
+                        padding: "10px",
+                        border: "1px solid black",
+                      }}
+                    >
+                      {link.text}
+                    </a>
+                  </div>
+                );
+              })}
+            </nav>
+
+            <h1>Content</h1>
+            <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
+              {loadThrowSyncIsIsMatching && (
+                <RouteDisplay route={load_throw_sync} />
+              )}
+              {loadThrowAfter300MsIsMatching && (
+                <RouteDisplay route={load_throw_after_300_ms} />
+              )}
+            </main>
+          </div>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const RouteDisplay = ({ route }) => {
+        const data = useRouteLoadData(route);
+
+        return (
+          <div>
+            {route.name}
+            <pre>{data}</pre>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>
