@@ -60,7 +60,7 @@
       const ThrowDuringRender = () => {
         throw new Error("throw during render");
       };
-      const ThrowAfterClickRoute = () => {
+      const ThrowAfterClick = () => {
         // For this one we don't want to catch the click error
         // it's the component responsability now to react to error outside of the first render
         const [clicked, clickedSetter] = useState(false);
@@ -149,7 +149,7 @@
               <Route
                 route={throw_after_click}
                 loading={Loading}
-                loaded={ThrowAfterClickRoute}
+                loaded={ThrowAfterClick}
               />
             </main>
           </div>

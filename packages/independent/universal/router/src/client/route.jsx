@@ -14,7 +14,6 @@ const RouteErrorDefaultComponent = ({ error }) => {
 };
 const RouteLoadingDefaultComponent = () => null;
 
-// TODO: we likely want to catch eventual error while rendering matching and loading components
 export const Route = ({
   route,
   matching = RouteMatchingDefaultComponent,
@@ -26,55 +25,46 @@ export const Route = ({
   const ComponentRenderedWhileLoading = loading;
   const ComponentRenderedWhileError = error;
   const ComponentRenderWhileLoaded = loaded;
-
-  const [errorFromBoundary, resetError] = useErrorBoundary();
   const routeError = useRouteError(route);
   const routeIsMatching = useRouteIsMatching(route);
   const routeIsLoading = useRouteIsLoading(route);
   const routeIsLoaded = useRouteIsLoaded(route);
   const routeLoadedData = useRouteLoadData(route);
-  const isMatchingFirstRenderRef = useRef(false);
-  const isLoadingFirstRenderRef = useRef(false);
-  const isLoadedFirstRenderRef = useRef(false);
 
   if (!routeIsMatching) {
-    resetError();
-    isMatchingFirstRenderRef.current = false;
-    isLoadingFirstRenderRef.current = false;
-    isLoadedFirstRenderRef.current = false;
     return null;
-  }
-  if (routeIsLoading) {
-    if (errorFromBoundary && isLoadingFirstRenderRef.current) {
-      route.reportError(errorFromBoundary);
-      return null;
-    }
-    if (isMatchingFirstRenderRef.current === false) {
-      isLoadingFirstRenderRef.current = true;
-    }
-    return <ComponentRenderedWhileLoading route={route} />;
   }
   if (routeError) {
     return <ComponentRenderedWhileError route={route} error={routeError} />;
   }
-  if (routeIsLoaded) {
-    if (errorFromBoundary && isLoadedFirstRenderRef.current) {
-      route.reportError(errorFromBoundary);
-      return null;
-    }
-    if (isLoadedFirstRenderRef.current === false) {
-      isLoadedFirstRenderRef.current = true;
-    }
-    return <ComponentRenderWhileLoaded route={route} data={routeLoadedData} />;
+  if (routeIsLoading) {
+    return (
+      <RouteErrorBoundary route={route}>
+        <ComponentRenderedWhileLoading />
+      </RouteErrorBoundary>
+    );
   }
-  if (errorFromBoundary && isMatchingFirstRenderRef.current) {
-    route.reportError(errorFromBoundary);
+  if (routeIsLoaded) {
+    return (
+      <RouteErrorBoundary route={route}>
+        <ComponentRenderWhileLoaded data={routeLoadedData} />
+      </RouteErrorBoundary>
+    );
+  }
+  return (
+    <RouteErrorBoundary route={route}>
+      <ComponentRenderedWhileMatching />
+    </RouteErrorBoundary>
+  );
+};
+
+const RouteErrorBoundary = ({ route, children }) => {
+  const [error] = useErrorBoundary();
+  if (error) {
+    route.reportError(error);
     return null;
   }
-  if (isMatchingFirstRenderRef.current === false) {
-    isMatchingFirstRenderRef.current = true;
-  }
-  return <ComponentRenderedWhileMatching route={route} />;
+  return <>{children}</>;
 };
 
 export const RouteV1 = ({ route, children }) => {
