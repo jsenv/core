@@ -189,7 +189,7 @@ const createRoute = (name, { urlTemplate, load }, { baseUrl }) => {
   };
 
   const addEnterTask = (callback) => {
-    const taskSignal = {};
+    const taskSignal = signal(IDLE);
     enterTaskSet.add({ taskSignal, callback });
     return taskSignal;
   };
@@ -368,6 +368,9 @@ export const useRouteIsLoading = (route) => {
 };
 export const useRouteLoadIsAborted = (route) => {
   return route.readyStateSignal.value === ABORTED;
+};
+export const useRouteError = (route) => {
+  return route.errorSignal.value;
 };
 export const useRouteLoadError = (route) => {
   const readyState = route.readyStateSignal.value;

@@ -11,13 +11,9 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import {
-        registerRoutes,
-        useRouteUrl,
-        useRouteIsMatching,
-        useRouteLoadData,
-        connectRoute,
-      } from "@jsenv/router";
+      import { registerRoutes, useRouteUrl } from "@jsenv/router";
+      // eslint-disable-next-line no-unused-vars
+      import { Route } from "../route.jsx";
 
       const {
         load_throw_sync,
@@ -55,24 +51,16 @@
         window.location.href,
       );
 
-      // eslint-disable-next-line no-unused-vars
-      const RouteDisplay = ({ route }) => {
-        const data = useRouteLoadData(route);
-
-        return (
-          <div>
-            {route.name}
-            <pre>{data}</pre>
-          </div>
-        );
+      const LoadThrowSync = () => {
+        return <div>{load_throw_sync.name}</div>;
       };
-
-      // eslint-disable-next-line no-unused-vars
-      const ThrowDuringRenderRoute = connectRoute(throw_during_render, () => {
+      const LoadThrowAfter300 = () => {
+        return <div>{load_throw_after_300_ms.name}</div>;
+      };
+      const ThrowDuringRender = () => {
         throw new Error("throw during render");
-      });
-      // eslint-disable-next-line no-unused-vars
-      const ThrowAfterClickRoute = connectRoute(throw_after_click, () => {
+      };
+      const ThrowAfterClickRoute = () => {
         // For this one we don't want to catch the click error
         // it's the component responsability now to react to error outside of the first render
         const [clicked, clickedSetter] = useState(false);
@@ -88,7 +76,7 @@
             Click me
           </button>
         );
-      });
+      };
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
@@ -96,11 +84,6 @@
         const loadThrowSyncUrl = useRouteUrl(load_throw_sync);
         const loadThrowAfter300MsUrl = useRouteUrl(load_throw_after_300_ms);
         const throwDuringRenderUrl = useRouteUrl(throw_during_render);
-
-        const loadThrowSyncIsIsMatching = useRouteIsMatching(load_throw_sync);
-        const loadThrowAfter300MsIsMatching = useRouteIsMatching(
-          load_throw_after_300_ms,
-        );
 
         const links = [
           {
@@ -148,14 +131,13 @@
 
             <h1>Content</h1>
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
-              {loadThrowSyncIsIsMatching && (
-                <RouteDisplay route={load_throw_sync} />
-              )}
-              {loadThrowAfter300MsIsMatching && (
-                <RouteDisplay route={load_throw_after_300_ms} />
-              )}
-              <ThrowDuringRenderRoute />
-              <ThrowAfterClickRoute />
+              <Route route={load_throw_sync} loaded={LoadThrowSync} />
+              <Route
+                route={load_throw_after_300_ms}
+                loaded={LoadThrowAfter300}
+              />
+              <Route route={throw_during_render} loaded={ThrowDuringRender} />
+              <Route route={throw_after_click} loaded={ThrowAfterClickRoute} />
             </main>
           </div>
         );
