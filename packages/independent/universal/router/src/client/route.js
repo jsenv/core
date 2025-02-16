@@ -1,4 +1,4 @@
-import { computed, signal } from "@preact/signals";
+import { computed, effect, signal } from "@preact/signals";
 import {
   endDocumentRouting,
   startDocumentRouting,
@@ -26,12 +26,9 @@ const routeSet = new Set();
 const matchingRouteSet = new Set();
 const routeAbortEnterMap = new Map();
 let fallbackRoute;
-const createRoute = (name, { urlTemplate, load }, { baseUrl }) => {
-  const route = {};
-
+const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
   let routePathname;
   let routeSearchParams;
-
   if (urlTemplate) {
     if (urlTemplate.startsWith("/")) {
       urlTemplate = urlTemplate.slice(1);
@@ -44,30 +41,6 @@ const createRoute = (name, { urlTemplate, load }, { baseUrl }) => {
       routeSearchParams = routeUrlInstance.searchParams;
     }
   }
-  const test = ({ pathname, searchParams }) => {
-    if (urlTemplate) {
-      if (routePathname && !pathname.startsWith(routePathname)) {
-        return false;
-      }
-      if (routeSearchParams) {
-        for (const [
-          routeSearchParamKey,
-          routeSearchParamValue,
-        ] of routeSearchParams) {
-          if (routeSearchParamValue === "") {
-            if (!searchParams.has(routeSearchParamKey)) {
-              return false;
-            }
-          }
-          const value = searchParams.get(routeSearchParamKey);
-          if (value !== routeSearchParamValue) {
-            return false;
-          }
-        }
-      }
-    }
-    return true;
-  };
   const addToUrl = (urlObject) => {
     if (routePathname) {
       urlObject.pathname = routePathname;
@@ -90,131 +63,121 @@ const createRoute = (name, { urlTemplate, load }, { baseUrl }) => {
     }
     return urlObject;
   };
-
-  const urlSignal = computed(() => {
-    return buildUrlFromDocument(addToUrl);
-  });
-  const isMatchingSignal = signal(false);
-  const readyStateSignal = signal(IDLE);
-  const errorSignal = signal(null);
-  const dataMapSignal = signal();
-
-  const activate = () => {
-    const documentUrlWithRoute = buildUrlFromDocument(addToUrl);
-    goTo(documentUrlWithRoute);
-  };
-  const deactivate = () => {
-    const documentUrlWithoutRoute = buildUrlFromDocument(removeFromUrl);
-    goTo(documentUrlWithoutRoute);
-  };
-
-  const enterTaskSet = new Set();
-  const enter = async ({ signal }) => {
-    // here we must pass a signal that gets aborted when
-    // 1. any route is stopped (browser stop button)
-    // 2. route is left
-    // if we reach the end we can safely clear the current load signals
-    const enterAbortController = new AbortController();
-    const enterAbortSignal = enterAbortController.signal;
-    const abort = () => {
-      if (debug) {
-        console.log(`abort entering "${route.name}"`);
-      }
-      readyStateSignal.value = ABORTED;
-      enterAbortController.abort();
-    };
-    signal.addEventListener("abort", abort);
-    routeAbortEnterMap.set(route, abort);
-
-    isMatchingSignal.value = true;
-    readyStateSignal.value = LOADING;
-    errorSignal.value = null;
-    matchingRouteSet.add(route);
-    if (debug) {
-      console.log(`"${route.name}": entering route`);
-    }
-    const promises = [];
-    for (const { taskSignal, callback } of enterTaskSet) {
-      taskSignal.value = LOADING;
-      const callbackPromise = Promise.resolve(
-        callback({ signal: enterAbortSignal }),
-      );
-      enterAbortSignal.addEventListener("abort", () => {
-        taskSignal.value = ABORTED;
-      });
-      promises.push(
-        callbackPromise.then(
-          (result) => {
-            taskSignal.value = { result };
-          },
-          (e) => {
-            // TODO: catch AbortError I guess
-            taskSignal.value = { error: e };
-            throw e;
-          },
-        ),
-      );
-    }
-    try {
-      await Promise.all(promises);
-      readyStateSignal.value = LOADED;
-      if (debug) {
-        console.log(`"${route.name}": route enter end`);
-      }
-    } catch (e) {
-      readyStateSignal.value = FAILED;
-      routeAbortEnterMap.delete(route);
-      console.error(`Error while entering route named "${route.name}":`, e);
-      reportError(e);
-    }
-  };
-  const reportError = (e) => {
-    errorSignal.value = e;
-  };
-  const leave = () => {
-    const routeAbortEnter = routeAbortEnterMap.get(route);
-    if (routeAbortEnter) {
-      if (debug) {
-        console.log(`"${route.name}": aborting route enter`);
-      }
-      routeAbortEnterMap.delete(route);
-      routeAbortEnter();
-    }
-    if (debug) {
-      console.log(`"${route.name}": leaving route`);
-    }
-    isMatchingSignal.value = false;
-    readyStateSignal.value = IDLE;
-    matchingRouteSet.delete(route);
-  };
-
-  const addEnterTask = (callback) => {
-    const taskSignal = signal(IDLE);
-    enterTaskSet.add({ taskSignal, callback });
-    return taskSignal;
-  };
-
-  if (load) {
-    const loadTaskSignal = addEnterTask(load);
-    route.loadTaskSignal = loadTaskSignal;
-  }
-
-  Object.assign(route, {
+  const route = {
     name,
-    urlSignal,
-    test,
-    enter,
-    leave,
+    loadData,
+    loadUI,
+    urlSignal: computed(() => buildUrlFromDocument(addToUrl)),
+    isMatchingSignal: signal(false),
+    loadingStateSignal: signal(IDLE),
+    errorSignal: signal(null),
+    dataSignal: signal(undefined),
+    error: null,
+    data: undefined,
+    test: ({ pathname, searchParams }) => {
+      if (urlTemplate) {
+        if (routePathname && !pathname.startsWith(routePathname)) {
+          return false;
+        }
+        if (routeSearchParams) {
+          for (const [
+            routeSearchParamKey,
+            routeSearchParamValue,
+          ] of routeSearchParams) {
+            if (routeSearchParamValue === "") {
+              if (!searchParams.has(routeSearchParamKey)) {
+                return false;
+              }
+            }
+            const value = searchParams.get(routeSearchParamKey);
+            if (value !== routeSearchParamValue) {
+              return false;
+            }
+          }
+        }
+      }
+      return true;
+    },
+    enter: async ({ signal }) => {
+      // here we must pass a signal that gets aborted when
+      // 1. any route is stopped (browser stop button)
+      // 2. route is left
+      // if we reach the end we can safely clear the current load signals
+      const enterAbortController = new AbortController();
+      const enterAbortSignal = enterAbortController.signal;
+      const abort = () => {
+        if (debug) {
+          console.log(`abort entering "${route.name}"`);
+        }
+        route.loadingStateSignal.value = ABORTED;
+        enterAbortController.abort();
+      };
+      signal.addEventListener("abort", abort);
+      routeAbortEnterMap.set(route, abort);
 
-    isMatchingSignal,
-    readyStateSignal,
-    errorSignal,
-    dataMapSignal,
-
-    reportError,
-    addEnterTask,
-    activate,
-    deactivate,
+      route.isMatchingSignal.value = true;
+      route.loadingStateSignal.value = LOADING;
+      route.errorSignal.value = null;
+      matchingRouteSet.add(route);
+      if (debug) {
+        console.log(`"${route.name}": entering route`);
+      }
+      try {
+        const loadDataPromise = route.loadData
+          ? Promise.resolve(route.loadData({ signal: enterAbortSignal })).then(
+              (data) => {
+                route.dataSignal.value = data;
+              },
+            )
+          : Promise.resolve();
+        const loadUIPromise = route.loadUI
+          ? Promise.resolve(route.loadUI({ signal: enterAbortSignal }))
+          : Promise.resolve();
+        await Promise.all([loadDataPromise, loadUIPromise]);
+        route.loadingStateSignal.value = LOADED;
+        if (debug) {
+          console.log(`"${route.name}": route enter end`);
+        }
+      } catch (e) {
+        route.loadingStateSignal.value = FAILED;
+        routeAbortEnterMap.delete(route);
+        console.error(`Error while entering route named "${route.name}":`, e);
+        reportError(e);
+      }
+    },
+    reportError: (e) => {
+      route.errorSignal.value = e;
+    },
+    leave: () => {
+      const routeAbortEnter = routeAbortEnterMap.get(route);
+      if (routeAbortEnter) {
+        if (debug) {
+          console.log(`"${route.name}": aborting route enter`);
+        }
+        routeAbortEnterMap.delete(route);
+        routeAbortEnter();
+      }
+      if (debug) {
+        console.log(`"${route.name}": leaving route`);
+      }
+      route.isMatchingSignal.value = false;
+      route.loadingStateSignal.value = IDLE;
+      matchingRouteSet.delete(route);
+    },
+    activate: () => {
+      const documentUrlWithRoute = buildUrlFromDocument(addToUrl);
+      goTo(documentUrlWithRoute);
+    },
+    deactivate: () => {
+      const documentUrlWithoutRoute = buildUrlFromDocument(removeFromUrl);
+      goTo(documentUrlWithoutRoute);
+    },
+  };
+  effect(() => {
+    route.data = route.dataSignal.value;
+  });
+  effect(() => {
+    route.error = route.errorSignal.value;
   });
   return route;
 };
@@ -271,13 +234,13 @@ export const applyRouting = async ({ url, state, signal, reload }) => {
     }
   }
   for (const nextMatchingRoute of nextMatchingRouteSet) {
-    const nextMatchingRouteReadyState =
-      nextMatchingRoute.readyStateSignal.peek();
+    const nextMatchingRouteLoadingState =
+      nextMatchingRoute.loadingStateSignal.peek();
     const nextMatchingRouteError = nextMatchingRoute.errorSignal.peek();
     if (
       reload ||
       !matchingRouteSet.has(nextMatchingRoute) ||
-      nextMatchingRouteReadyState === ABORTED ||
+      nextMatchingRouteLoadingState === ABORTED ||
       nextMatchingRouteError
     ) {
       routeToEnterSet.add(nextMatchingRoute);
@@ -344,18 +307,18 @@ export const useRouteUrl = (route) => {
   const routeUrl = route.urlSignal.value;
   return routeUrl;
 };
-export const useRouteReadyState = (route) => {
-  const readyState = route.readyStateSignal.value;
-  if (readyState === IDLE) {
+export const useRouteLoadingState = (route) => {
+  const loadingState = route.loadingStateSignal.value;
+  if (loadingState === IDLE) {
     return "idle";
   }
-  if (readyState === LOADING) {
+  if (loadingState === LOADING) {
     return "loading";
   }
-  if (readyState === ABORTED) {
+  if (loadingState === ABORTED) {
     return "aborted";
   }
-  if (readyState.error) {
+  if (loadingState.error) {
     return "load_error";
   }
   return "loaded";
@@ -364,36 +327,17 @@ export const useRouteIsMatching = (route) => {
   return route.isMatchingSignal.value;
 };
 export const useRouteIsLoading = (route) => {
-  return route.readyStateSignal.value === LOADING;
+  return route.loadingStateSignal.value === LOADING;
 };
 export const useRouteLoadIsAborted = (route) => {
-  return route.readyStateSignal.value === ABORTED;
+  return route.loadingStateSignal.value === ABORTED;
+};
+export const useRouteIsLoaded = (route) => {
+  return route.loadingStateSignal.value === LOADED;
 };
 export const useRouteError = (route) => {
   return route.errorSignal.value;
 };
-export const useRouteLoadError = (route) => {
-  const readyState = route.readyStateSignal.value;
-  const error = route.errorSignal.value;
-  return readyState === FAILED ? error : null;
-};
-export const useRouteIsLoaded = (route) => {
-  return route.readyStateSignal.value === LOADED;
-};
-export const useRouteLoadData = (route) => {
-  const { loadTaskSignal } = route;
-  if (loadTaskSignal) {
-    const loadTaskValue = loadTaskSignal.value;
-    if (loadTaskValue === LOADING) {
-      return undefined;
-    }
-    if (loadTaskValue === ABORTED) {
-      return undefined;
-    }
-    if (loadTaskValue.error) {
-      return undefined;
-    }
-    return loadTaskValue.result;
-  }
-  return undefined;
+export const useRouteData = (route) => {
+  return route.dataSignal.value;
 };

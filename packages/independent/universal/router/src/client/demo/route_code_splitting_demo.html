@@ -14,28 +14,7 @@
       // eslint-disable-next-line no-unused-vars
       import { Route } from "../route.jsx";
 
-      /*
-ou met-on le code splitting?
-
-loadedAsync: une fonction censé exporter un component 
-pour les versions async on les appelent des qu'on match (pour fetch en //)
-mais on render la valeur de retour que pour le cas (ici loaded)
-
-il faut qu'un abort puisse etre pris en compte (on passe le signal de la route a la fonction)
-il faut qu'un throw de cette fonction soit report comme une erreur pour entrer dans cette route
-
-notons que ça peut poser "souci" si le loadedAsync resolve tard
-et qu'entre temps on a changé de route
-il faut tester ce cas pour bien vérif que le code se comporte correctement une fois
-qu'un loadedAsync se resolve sur une route qui est "left"
-
-(pareil pour la fonction load dailleurs)
-(idéalement on stocke tout mais on laisse bien la route en aborted + left)
-
-
-*/
-
-      const { a, b } = registerRoutes(
+      const { a, b, c } = registerRoutes(
         {
           a: {
             urlTemplate: "?route=a",
@@ -49,25 +28,21 @@ qu'un loadedAsync se resolve sur une route qui est "left"
               return "b";
             },
           },
+          c: {
+            urlTemplate: "?route=c",
+            load: async () => {
+              return "c";
+            },
+          },
         },
         window.location.href,
       );
-
-      const Loading = () => {
-        return "loading...";
-      };
-      const RouteDisplay = ({ route, data }) => {
-        return (
-          <div>
-            {route.name}: {data}
-          </div>
-        );
-      };
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
         const aUrl = useRouteUrl(a);
         const bUrl = useRouteUrl(b);
+        const cUrl = useRouteUrl(c);
         const links = [
           {
             url: "/packages/independent/universal/router/src/client/demo/route_error_demo.html",
@@ -80,6 +55,10 @@ qu'un loadedAsync se resolve sur une route qui est "left"
           {
             url: bUrl,
             text: "B",
+          },
+          {
+            url: cUrl,
+            text: "C",
           },
         ];
 
@@ -106,21 +85,32 @@ qu'un loadedAsync se resolve sur une route qui est "left"
 
             <h1>Content</h1>
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
-              <Route route={a} loading={Loading} loaded={RouteDisplay} />
+              <Route route={a} loading={Loading} loaded={TataLazy} />
+              <Route route={b} loading={Loading} loadedAsync={TotoLazy} />
               <Route
-                route={b}
+                route={c}
                 loading={Loading}
-                loaded={RouteDisplay}
-                loadedAsync={TotoLazy}
+                loadedAsync={ImportErrorLazy}
               />
             </main>
           </div>
         );
       };
 
+      const Loading = () => {
+        return "loading...";
+      };
+      const TataLazy = async () => {
+        const { Tata } = await import("./tata.jsx");
+        return Tata;
+      };
       const TotoLazy = async () => {
         const { Toto } = await import("./toto.jsx");
         return Toto;
+      };
+      const ImportErrorLazy = async () => {
+        // eslint-disable-next-line import-x/no-unresolved
+        return import("./not_found.jsx");
       };
 
       render(<App />, document.getElementById("root"));
