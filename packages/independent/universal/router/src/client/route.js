@@ -201,6 +201,13 @@ export const registerRoutes = (
 /**
  *
  */
+let resolveRouterUIReadyPromise;
+const routeUIReadyPromise = new Promise((resolve) => {
+  resolveRouterUIReadyPromise = resolve;
+});
+export const onRouterUILoaded = () => {
+  resolveRouterUIReadyPromise();
+};
 export const applyRouting = async ({ url, state, signal, reload }) => {
   const stopSignal = signalToStopSignal(signal);
   if (debug) {
@@ -261,13 +268,11 @@ export const applyRouting = async ({ url, state, signal, reload }) => {
   }
   startDocumentRouting();
   try {
+    await routeUIReadyPromise;
     const promises = [];
     for (const routeToEnter of routeToEnterSet) {
-      const loadReturnValue = routeToEnter.enter({
-        signal: stopSignal,
-      });
-      const loadPromise = Promise.resolve(loadReturnValue);
-      promises.push(loadPromise);
+      const routeEnterPromise = routeToEnter.enter({ signal: stopSignal });
+      promises.push(routeEnterPromise);
     }
     await Promise.all(promises);
   } catch (e) {

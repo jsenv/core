@@ -24,17 +24,17 @@
         {
           main: {
             urlTemplate: "/",
-            load: async () => {},
+            loadData: async () => {},
           },
           load_throw_sync: {
             urlTemplate: "?route=load_throw_sync",
-            load: async () => {
+            loadData: async () => {
               throw new Error("load_throw_sync");
             },
           },
           load_throw_after_300_ms: {
             urlTemplate: "?route=load_throw_after_300_ms",
-            load: async () => {
+            loadData: async () => {
               await new Promise((resolve) => {
                 setTimeout(resolve, 300);
               });

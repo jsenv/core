@@ -1,3 +1,3 @@
-export const Toto = () => {
+export const Tata = () => {
   return "tata";
 };

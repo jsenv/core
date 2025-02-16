@@ -1,5 +1,6 @@
-import { useErrorBoundary, useRef } from "preact/hooks";
+import { useErrorBoundary, useLayoutEffect, useState } from "preact/hooks";
 import {
+  onRouterUILoaded,
   useRouteError,
   useRouteIsLoaded,
   useRouteIsLoading,
@@ -15,72 +16,134 @@ const RouteErrorDefaultComponent = ({ route }) => {
 export const Route = ({
   route,
   matching,
-  error,
   loading,
+  error,
   loaded,
   loadedAsync,
 }) => {
-  let ComponentRenderedWhileMatching = matching;
-  let ComponentRenderedWhileLoading = loading;
-  let ComponentRenderedWhileError = error;
-  let ComponentRenderedWhileLoaded = loaded;
+  useLayoutEffect(() => {
+    onRouterUILoaded();
+  }, []);
   if (loaded) {
-    ComponentRenderedWhileMatching = matching || RouteMatchingDefaultComponent;
-    ComponentRenderedWhileError = error || RouteErrorDefaultComponent;
-    ComponentRenderedWhileLoading = loading || RouteLoadingDefaultComponent;
-    ComponentRenderedWhileLoaded = loaded;
-  } else if (matching) {
-    ComponentRenderedWhileMatching = matching;
-    ComponentRenderedWhileError = error || RouteErrorDefaultComponent;
-    ComponentRenderedWhileLoading = loading || matching;
-    ComponentRenderedWhileLoaded = matching;
-  }
-  const routeError = useRouteError(route);
-  const routeIsMatching = useRouteIsMatching(route);
-  const routeIsLoading = useRouteIsLoading(route);
-  const routeIsLoaded = useRouteIsLoaded(route);
-  const routeStartsMatchingRef = useRef(false);
-
-  if (!routeIsMatching) {
-    routeStartsMatchingRef.current = false;
-    return null;
-  }
-  if (routeStartsMatchingRef.current === false) {
-    routeStartsMatchingRef.current = true;
-    // this will keep the route in loading state until it resolves
-    route.loadUI = async () => {
-      ComponentRenderedWhileLoaded = await loadedAsync();
-    };
-  }
-  if (routeError) {
-    return <ComponentRenderedWhileError route={route} />;
-  }
-  if (routeIsLoading) {
     return (
-      <RouteErrorBoundary route={route}>
-        <ComponentRenderedWhileLoading route={route} />
-      </RouteErrorBoundary>
+      <RouteWithLoadedSync
+        route={route}
+        matching={matching}
+        loading={loading}
+        error={error}
+        loaded={loaded}
+      />
     );
   }
-  if (routeIsLoaded) {
+  if (loadedAsync) {
     return (
-      <RouteErrorBoundary route={route}>
-        <ComponentRenderedWhileLoaded route={route} />
-      </RouteErrorBoundary>
+      <RouteWithLoadedAsync
+        route={route}
+        matching={matching}
+        loading={loading}
+        error={error}
+        loadedAsync={loadedAsync}
+      />
     );
   }
-  return (
-    <RouteErrorBoundary route={route}>
-      <ComponentRenderedWhileMatching route={route} />
-    </RouteErrorBoundary>
-  );
+  if (matching) {
+    return (
+      <RouteWithMatchingSync
+        route={route}
+        matching={matching}
+        loading={loading}
+        error={error}
+      />
+    );
+  }
+  // TODO: throw error explaining loaded, loadedAsync or matching is required
+  return null;
 };
 
-const RouteErrorBoundary = ({ route, children }) => {
+// cas le plus courant: le composant qu'on veut render est disponible
+const RouteWithLoadedSync = ({ route, matching, error, loading, loaded }) => {
+  return (
+    <RouteHandler
+      route={route}
+      RouteMatching={matching || RouteMatchingDefaultComponent}
+      RouteLoading={loading || RouteLoadingDefaultComponent}
+      RouteError={error || RouteErrorDefaultComponent}
+      RouteLoaded={loaded}
+    />
+  );
+};
+// cas du code splitting, on doit faire un import dynamique pour obtenir le composant qu'on veut render
+const RouteWithLoadedAsync = ({
+  route,
+  matching,
+  error,
+  loading,
+  loadedAsync,
+}) => {
+  const [RouteLoaded, RouteLoadedSetter] = useState();
+  route.loadUI = async ({ signal }) => {
+    const loadedAsyncResult = await loadedAsync({ signal });
+    if (!loadedAsyncResult) {
+      throw new Error("loadedAsync did not return a component");
+    }
+    RouteLoadedSetter(() => loadedAsyncResult);
+  };
+  return (
+    <RouteHandler
+      route={route}
+      RouteMatching={matching || RouteMatchingDefaultComponent}
+      RouteLoading={loading || RouteLoadingDefaultComponent}
+      RouteError={error || RouteErrorDefaultComponent}
+      RouteLoaded={RouteLoaded}
+    />
+  );
+};
+// cas plus rare: on veut affiche le composant des qu'il match et gérer soit-meme
+// la logique pendant que la route load (en omettant la prop "loading")
+const RouteWithMatchingSync = ({ route, matching, loading, error }) => {
+  return (
+    <RouteHandler
+      route={route}
+      RouteMatching={matching}
+      RouteLoading={loading || matching}
+      RouteError={error || RouteErrorDefaultComponent}
+      RouteLoaded={matching}
+    />
+  );
+};
+// TODO: un 4eme cas avec matchingAsync
+const RouteHandler = ({
+  route,
+  RouteMatching,
+  RouteLoading,
+  RouteError,
+  RouteLoaded,
+}) => {
+  const routeIsMatching = useRouteIsMatching(route);
+  const routeIsLoading = useRouteIsLoading(route);
+  const routeError = useRouteError(route);
+  const routeIsLoaded = useRouteIsLoaded(route);
+
+  if (!routeIsMatching) {
+    return null;
+  }
+  if (routeError) {
+    return <RouteError route={route} />;
+  }
+  if (routeIsLoading) {
+    return <RouteErrorBoundary route={route} Child={RouteLoading} />;
+  }
+  if (routeIsLoaded) {
+    return <RouteErrorBoundary route={route} Child={RouteLoaded} />;
+  }
+  return <RouteErrorBoundary route={route} Child={RouteMatching} />;
+};
+
+const RouteErrorBoundary = ({ route, Child }) => {
   const [error] = useErrorBoundary();
   if (error) {
     route.reportError(error);
     return null;
   }
-  return <>{children}</>;
+  return <Child route={route} />;
 };

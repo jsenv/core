@@ -18,19 +18,19 @@
         {
           a: {
             urlTemplate: "?route=a",
-            load: async () => {
+            loadData: async () => {
               return "a";
             },
           },
           b: {
             urlTemplate: "?route=b",
-            load: async () => {
+            loadData: async () => {
               return "b";
             },
           },
           c: {
             urlTemplate: "?route=c",
-            load: async () => {
+            loadData: async () => {
               return "c";
             },
           },
@@ -85,7 +85,7 @@
 
             <h1>Content</h1>
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
-              <Route route={a} loading={Loading} loaded={TataLazy} />
+              <Route route={a} loading={Loading} loadedAsync={TataLazy} />
               <Route route={b} loading={Loading} loadedAsync={TotoLazy} />
               <Route
                 route={c}
@@ -113,7 +113,11 @@
         return import("./not_found.jsx");
       };
 
-      render(<App />, document.getElementById("root"));
+      // do as if the UI was loaded async and rendered once the route are already fully loaded
+      // (we should also do a test where UI kicks in while route is loading)
+      setTimeout(() => {
+        render(<App />, document.getElementById("root"));
+      }, 500);
     </script>
   </body>
 </html>
