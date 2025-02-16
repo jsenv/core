@@ -141,7 +141,7 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
         }
       } catch (e) {
         batch(() => {
-          reportError(e);
+          route.reportError(e);
           route.loadingStateSignal.value = FAILED;
         });
         routeAbortEnterMap.delete(route);

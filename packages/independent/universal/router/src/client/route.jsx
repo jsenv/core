@@ -13,6 +13,11 @@ const RouteErrorDefaultComponent = ({ route }) => {
   return <p>An error occured: {route.error.message}</p>;
 };
 
+// TODO: if route is registered more than once on a given route we should throw
+// <Route route={a} />
+// <Route route={a} />
+// The above should throw because there is no reason to do that. Doing so would cause strange bugs
+// and it's relatively hard to finally realize it's because the route is declared twice
 export const Route = ({
   route,
   matching,
