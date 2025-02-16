@@ -7,4 +7,10 @@ const buildRouteUrl = (pattern, url, params) =>
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_a", () =>
     buildRouteUrl("/before/:id", "http://example.com/", { id: "test" }));
+
+  test("0_b", () =>
+    buildRouteUrl("?route=:route&id=:id", "http://example.com", {
+      route: "route_value",
+      id: "id_value",
+    }));
 });
