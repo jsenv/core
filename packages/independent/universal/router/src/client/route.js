@@ -23,6 +23,13 @@ const buildUrlFromDocument = (build) => {
   return normalizeUrl(newDocumentUrl);
 };
 
+let resolveRouterUIReadyPromise;
+const routerUIReadyPromise = new Promise((resolve) => {
+  resolveRouterUIReadyPromise = resolve;
+});
+export const onRouterUILoaded = () => {
+  resolveRouterUIReadyPromise();
+};
 const routeSet = new Set();
 const matchingRouteSet = new Set();
 const routeAbortEnterMap = new Map();
@@ -124,16 +131,23 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
         console.log(`"${route.name}": entering route`);
       }
       try {
-        const loadDataPromise = route.loadData
-          ? Promise.resolve(route.loadData({ signal: enterAbortSignal })).then(
-              (data) => {
-                route.dataSignal.value = data;
-              },
-            )
-          : Promise.resolve();
-        const loadUIPromise = route.loadUI
-          ? Promise.resolve(route.loadUI({ signal: enterAbortSignal }))
-          : Promise.resolve();
+        const loadDataPromise = (async () => {
+          if (!route.loadData) {
+            return;
+          }
+          const data = await route.loadData({ signal: enterAbortSignal });
+          route.dataSignal.value = data;
+        })();
+        const loadUIPromise = (async () => {
+          await routerUIReadyPromise;
+          if (!route.loadUI) {
+            return;
+          }
+          if (enterAbortSignal.aborted) {
+            return;
+          }
+          await route.loadUI({ signal: enterAbortSignal });
+        })();
         await Promise.all([loadDataPromise, loadUIPromise]);
         route.loadingStateSignal.value = LOADED;
         if (debug) {
@@ -204,13 +218,7 @@ export const registerRoutes = (
 /**
  *
  */
-let resolveRouterUIReadyPromise;
-const routeUIReadyPromise = new Promise((resolve) => {
-  resolveRouterUIReadyPromise = resolve;
-});
-export const onRouterUILoaded = () => {
-  resolveRouterUIReadyPromise();
-};
+
 export const applyRouting = async ({ url, state, signal, reload }) => {
   const stopSignal = signalToStopSignal(signal);
   if (debug) {
@@ -271,7 +279,6 @@ export const applyRouting = async ({ url, state, signal, reload }) => {
   }
   startDocumentRouting();
   try {
-    await routeUIReadyPromise;
     const promises = [];
     for (const routeToEnter of routeToEnterSet) {
       const routeEnterPromise = routeToEnter.enter({ signal: stopSignal });
