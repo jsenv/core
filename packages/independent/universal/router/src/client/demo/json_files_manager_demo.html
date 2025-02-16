@@ -23,8 +23,8 @@ TODO: create a UI the allow the following:
       import {
         registerRoutes,
         useRouteUrl,
-        useRouteIsMatching,
-        useRouteLoadData,
+        // eslint-disable-next-line no-unused-vars
+        Route,
       } from "@jsenv/router";
 
       const { list, see } = registerRoutes(
@@ -34,15 +34,15 @@ TODO: create a UI the allow the following:
             load: async () => {},
           },
           list: {
-            urlTemplate: "/json_files",
-            load: async ({ signal }) => {
+            urlTemplate: "/?route=json_files",
+            loadData: async ({ signal }) => {
               const response = await fetch("/json_files", { signal });
               const responseJson = await response.json();
               return responseJson;
             },
           },
           see: {
-            urlTemplate: "/json_files/:id",
+            urlTemplate: "/?route=json_files&id=:id",
             load: async () => {},
           },
           // TODO update: '',
@@ -59,8 +59,6 @@ TODO: create a UI the allow the following:
       const App = () => {
         const listUrl = useRouteUrl(list);
         const seeUrl = useRouteUrl(see);
-        const listIsMatching = useRouteIsMatching(list);
-        const seeIsMatching = useRouteIsMatching(see);
 
         return (
           <div>
@@ -104,27 +102,29 @@ TODO: create a UI the allow the following:
 
             <h1>Content</h1>
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
-              {listIsMatching && <JSONFileList />}
-              {seeIsMatching && <JSONFileView />}
+              <Route route={list} loaded={JSONFileList} />
+              <Route route={see} loaded={JSONFileView} />
             </main>
           </div>
         );
       };
-
-      // eslint-disable-next-line no-unused-vars
-      const JSONFileList = () => {
-        const nameArray = useRouteLoadData(list) || [];
+      const JSONFileList = ({ route }) => {
+        const nameArray = route.data;
 
         return (
           <ul>
             {nameArray.map((name) => {
-              return <li key={name}>{name}</li>;
+              const jsonFileUrl = useRouteUrl(see, { id: name });
+
+              return (
+                <li key={name}>
+                  <a href={jsonFileUrl}>{name}</a>
+                </li>
+              );
             })}
           </ul>
         );
       };
-
-      // eslint-disable-next-line no-unused-vars
       const JSONFileView = () => {
         return "JSON file see";
       };

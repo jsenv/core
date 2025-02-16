@@ -49,7 +49,7 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
       routeSearchParams = routeUrlInstance.searchParams;
     }
   }
-  const addToUrl = (urlObject) => {
+  const addToUrl = (urlObject, params) => {
     if (routePathname) {
       urlObject.pathname = routePathname;
     }
@@ -60,7 +60,7 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
     }
     return urlObject;
   };
-  const removeFromUrl = (urlObject) => {
+  const removeFromUrl = (urlObject, params) => {
     if (routePathname) {
       urlObject.pathname = "/";
     }
@@ -75,7 +75,8 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
     name,
     loadData,
     loadUI,
-    urlSignal: computed(() => buildUrlFromDocument(addToUrl)),
+    buildUrl: (params) =>
+      buildUrlFromDocument((urlObject) => addToUrl(urlObject, params)),
     isMatchingSignal: signal(false),
     loadingStateSignal: signal(IDLE),
     errorSignal: signal(null),
@@ -181,12 +182,16 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
       route.loadingStateSignal.value = IDLE;
       matchingRouteSet.delete(route);
     },
-    activate: () => {
-      const documentUrlWithRoute = buildUrlFromDocument(addToUrl);
+    activate: (params) => {
+      const documentUrlWithRoute = buildUrlFromDocument((urlObject) =>
+        addToUrl(urlObject, params),
+      );
       goTo(documentUrlWithRoute);
     },
-    deactivate: () => {
-      const documentUrlWithoutRoute = buildUrlFromDocument(removeFromUrl);
+    deactivate: (params) => {
+      const documentUrlWithoutRoute = buildUrlFromDocument((urlObject) =>
+        removeFromUrl(urlObject, params),
+      );
       goTo(documentUrlWithoutRoute);
     },
   };
@@ -318,9 +323,8 @@ const signalToStopSignal = (signal) => {
   return stopSignal;
 };
 
-export const useRouteUrl = (route) => {
-  const routeUrl = route.urlSignal.value;
-  return routeUrl;
+export const useRouteUrl = (route, params) => {
+  return route.buildUrl(params);
 };
 export const useRouteLoadingState = (route) => {
   const loadingState = route.loadingStateSignal.value;

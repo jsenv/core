@@ -1,5 +1,7 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { convertRouteUrlIntoRegexp } from "../route_url_as_regexp.js";
+import { parseRouteUrl } from "../route_url_parser.js";
+
+const convertRouteUrlIntoRegexp = (pattern) => parseRouteUrl(pattern).regexp;
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_id_at_end", () => convertRouteUrlIntoRegexp("/before/:id"));
