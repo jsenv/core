@@ -243,6 +243,13 @@ export const jsenvPluginAutoreloadServer = ({
                 // happens when reloading the current html page for instance
                 continue;
               }
+              if (
+                lastReferenceFromOther.injected &&
+                lastReferenceFromOther.isWeak &&
+                lastReferenceFromOther.isImplicit
+              ) {
+                continue;
+              }
               const { ownerUrlInfo } = lastReferenceFromOther;
               if (!ownerUrlInfo.isUsed()) {
                 continue;
