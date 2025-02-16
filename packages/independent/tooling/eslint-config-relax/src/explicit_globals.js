@@ -46,4 +46,5 @@ export const explicitGlobals = {
   onpause: "off",
   onscroll: "off",
   onresize: "off",
+  reportError: "off",
 };
