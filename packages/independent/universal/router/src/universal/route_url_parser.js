@@ -1,7 +1,7 @@
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 
-export const parseRouteUrl = (urlPattern) => {
-  const resourcePattern = resourceFromUrl(urlPattern);
+export const parseRouteUrl = (urlPattern, baseUrl) => {
+  const resourcePattern = resourceFromUrl(urlPattern, baseUrl);
   let regexpSource = "";
   let lastIndex = 0;
   regexpSource += "^";
@@ -29,20 +29,25 @@ export const parseRouteUrl = (urlPattern) => {
       return match.groups || true;
     },
     build: (url, params) => {
-      const urlToReplace = new URL(urlPattern, url).href;
-      const urlWithValues = urlToReplace.replaceAll(/:\w+/g, (match) => {
-        const key = match.slice(1);
-        const value = params[key];
-        return encodeURIComponent(value);
-      });
+      const urlToReplace = new URL(urlPattern, url);
+      const ressourceToReplace = resourceFromUrl(urlToReplace);
+      const resourceWithValues = ressourceToReplace.replaceAll(
+        /:\w+/g,
+        (match) => {
+          const key = match.slice(1);
+          const value = params[key];
+          return encodeURIComponent(value);
+        },
+      );
+      const urlWithValues = new URL(resourceWithValues, url).href;
       return urlWithValues;
     },
   };
 };
 
-const resourceFromUrl = (url) => {
+const resourceFromUrl = (url, baseUrl = "http://example.com") => {
   // if (url[0] !== "/") url = `/${url}`;
-  const urlObject = new URL(url, "http://example.com");
+  const urlObject = new URL(url, baseUrl);
   const resource = urlObject.href.slice(urlObject.origin.length);
   return resource;
 };

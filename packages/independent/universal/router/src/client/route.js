@@ -1,4 +1,5 @@
-import { batch, computed, effect, signal } from "@preact/signals";
+import { batch, effect, signal } from "@preact/signals";
+import { parseRouteUrl } from "../universal/route_url_parser.js";
 import {
   endDocumentRouting,
   startDocumentRouting,
@@ -15,12 +16,11 @@ const ABORTED = { id: "aborted" };
 const LOADED = { id: "loaded" };
 const FAILED = { id: "failed" };
 
-const buildUrlFromDocument = (build) => {
+const getDocumentUrl = () => {
   const documentUrl = documentUrlSignal.value;
   const documentUrlObject = new URL(documentUrl);
   documentUrlObject.search = "";
-  const newDocumentUrl = build(documentUrlObject);
-  return normalizeUrl(newDocumentUrl);
+  return documentUrlObject;
 };
 
 let resolveRouterUIReadyPromise;
@@ -35,6 +35,8 @@ const matchingRouteSet = new Set();
 const routeAbortEnterMap = new Map();
 let fallbackRoute;
 const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
+  const routeUrlParsed = parseRouteUrl(urlTemplate, baseUrl);
+
   let routePathname;
   let routeSearchParams;
   if (urlTemplate) {
@@ -49,34 +51,15 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
       routeSearchParams = routeUrlInstance.searchParams;
     }
   }
-  const addToUrl = (urlObject, params) => {
-    if (routePathname) {
-      urlObject.pathname = routePathname;
-    }
-    if (routeSearchParams) {
-      for (const [key, value] of routeSearchParams) {
-        urlObject.searchParams.set(key, value);
-      }
-    }
-    return urlObject;
-  };
-  const removeFromUrl = (urlObject, params) => {
-    if (routePathname) {
-      urlObject.pathname = "/";
-    }
-    if (routeSearchParams) {
-      for (const [key] of routeSearchParams) {
-        urlObject.searchParams.delete(key);
-      }
-    }
-    return urlObject;
-  };
   const route = {
     name,
     loadData,
     loadUI,
-    buildUrl: (params) =>
-      buildUrlFromDocument((urlObject) => addToUrl(urlObject, params)),
+    buildUrl: (params) => {
+      const documentUrl = getDocumentUrl();
+      const documentUrlWithRoute = routeUrlParsed.build(documentUrl, params);
+      return normalizeUrl(documentUrlWithRoute);
+    },
     isMatchingSignal: signal(false),
     loadingStateSignal: signal(IDLE),
     errorSignal: signal(null),
@@ -183,16 +166,8 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
       matchingRouteSet.delete(route);
     },
     activate: (params) => {
-      const documentUrlWithRoute = buildUrlFromDocument((urlObject) =>
-        addToUrl(urlObject, params),
-      );
+      const documentUrlWithRoute = route.buildUrl(params);
       goTo(documentUrlWithRoute);
-    },
-    deactivate: (params) => {
-      const documentUrlWithoutRoute = buildUrlFromDocument((urlObject) =>
-        removeFromUrl(urlObject, params),
-      );
-      goTo(documentUrlWithoutRoute);
     },
   };
   effect(() => {
