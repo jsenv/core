@@ -36,21 +36,6 @@ const routeAbortEnterMap = new Map();
 let fallbackRoute;
 const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
   const routeUrlParsed = parseRouteUrl(urlTemplate, baseUrl);
-
-  let routePathname;
-  let routeSearchParams;
-  if (urlTemplate) {
-    if (urlTemplate.startsWith("/")) {
-      urlTemplate = urlTemplate.slice(1);
-    }
-    const routeUrlInstance = new URL(urlTemplate, baseUrl);
-    if (routeUrlInstance.pathname !== "/") {
-      routePathname = routeUrlInstance.pathname;
-    }
-    if (routeUrlInstance.searchParams.toString() !== "") {
-      routeSearchParams = routeUrlInstance.searchParams;
-    }
-  }
   const route = {
     name,
     loadData,
@@ -66,29 +51,8 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
     dataSignal: signal(undefined),
     error: null,
     data: undefined,
-    test: ({ pathname, searchParams }) => {
-      if (urlTemplate) {
-        if (routePathname && !pathname.startsWith(routePathname)) {
-          return false;
-        }
-        if (routeSearchParams) {
-          for (const [
-            routeSearchParamKey,
-            routeSearchParamValue,
-          ] of routeSearchParams) {
-            if (routeSearchParamValue === "") {
-              if (!searchParams.has(routeSearchParamKey)) {
-                return false;
-              }
-            }
-            const value = searchParams.get(routeSearchParamKey);
-            if (value !== routeSearchParamValue) {
-              return false;
-            }
-          }
-        }
-      }
-      return true;
+    test: ({ url }) => {
+      return Boolean(routeUrlParsed.match(url));
     },
     enter: async ({ signal }) => {
       // here we must pass a signal that gets aborted when

@@ -7,7 +7,10 @@
    b: routeMatchUrl("/users/:id", "/users"),
    c: routeMatchUrl("/users/:id", "/users/"),
    e: routeMatchUrl("/?route=a&id=:id", "/?route=a&id=id"),
-   f: routeMatchUrl("/?route=a/:id", "/?route=a/id"),
+   f: routeMatchUrl(
+     "/dir/file.html?route=a/:id",
+     "/dir/file.html?route=a/file.json",
+   ),
  })
 ```
 
@@ -23,7 +26,7 @@
     "id": "id"
   },
   "f": {
-    "id": "id"
+    "id": "file.json"
   }
 }
 ```
