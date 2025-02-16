@@ -112,6 +112,7 @@ const RouteWithMatchingSync = ({ route, matching, loading, error }) => {
   );
 };
 // TODO: un 4eme cas avec matchingAsync
+
 const RouteHandler = ({
   route,
   RouteMatching,

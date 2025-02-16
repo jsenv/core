@@ -1,4 +1,4 @@
-import { computed, effect, signal } from "@preact/signals";
+import { batch, computed, effect, signal } from "@preact/signals";
 import {
   endDocumentRouting,
   startDocumentRouting,
@@ -18,6 +18,7 @@ const FAILED = { id: "failed" };
 const buildUrlFromDocument = (build) => {
   const documentUrl = documentUrlSignal.value;
   const documentUrlObject = new URL(documentUrl);
+  documentUrlObject.search = "";
   const newDocumentUrl = build(documentUrlObject);
   return normalizeUrl(newDocumentUrl);
 };
@@ -139,10 +140,12 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
           console.log(`"${route.name}": route enter end`);
         }
       } catch (e) {
-        route.loadingStateSignal.value = FAILED;
+        batch(() => {
+          reportError(e);
+          route.loadingStateSignal.value = FAILED;
+        });
         routeAbortEnterMap.delete(route);
         console.error(`Error while entering route named "${route.name}":`, e);
-        reportError(e);
       }
     },
     reportError: (e) => {

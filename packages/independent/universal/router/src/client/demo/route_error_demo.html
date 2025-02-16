@@ -16,15 +16,16 @@
       import { Route } from "../route.jsx";
 
       const {
+        main,
         load_throw_sync,
         load_throw_after_300_ms,
         throw_during_render,
         throw_after_click,
+        throw_loaded_async,
       } = registerRoutes(
         {
           main: {
-            urlTemplate: "/",
-            loadData: async () => {},
+            urlTemplate: "/route_error_demo.html",
           },
           load_throw_sync: {
             urlTemplate: "?route=load_throw_sync",
@@ -32,21 +33,24 @@
               throw new Error("load_throw_sync");
             },
           },
-          load_throw_after_300_ms: {
-            urlTemplate: "?route=load_throw_after_300_ms",
-            loadData: async () => {
-              await new Promise((resolve) => {
-                setTimeout(resolve, 300);
-              });
-              throw new Error("load_throw_after_300");
-            },
-          },
-          throw_during_render: {
-            urlTemplate: "?route=throw_during_render",
-          },
-          throw_after_click: {
-            urlTemplate: "?route=throw_after_click",
-          },
+          // load_throw_after_300_ms: {
+          //   urlTemplate: "?route=load_throw_after_300_ms",
+          //   loadData: async () => {
+          //     await new Promise((resolve) => {
+          //       setTimeout(resolve, 300);
+          //     });
+          //     throw new Error("load_throw_after_300");
+          //   },
+          // },
+          // throw_during_render: {
+          //   urlTemplate: "?route=throw_during_render",
+          // },
+          // throw_after_click: {
+          //   urlTemplate: "?route=throw_after_click",
+          // },
+          // throw_loaded_async: {
+          //   urlTemplate: "?route=throw_loaded_async",
+          // },
         },
         window.location.href,
       );
@@ -80,32 +84,38 @@
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
-        const throwAfterClickUrl = useRouteUrl(throw_after_click);
+        const mainUrl = useRouteUrl(main);
         const loadThrowSyncUrl = useRouteUrl(load_throw_sync);
-        const loadThrowAfter300MsUrl = useRouteUrl(load_throw_after_300_ms);
-        const throwDuringRenderUrl = useRouteUrl(throw_during_render);
+        // const loadThrowAfter300MsUrl = useRouteUrl(load_throw_after_300_ms);
+        // const throwDuringRenderUrl = useRouteUrl(throw_during_render);
+        // const throwAfterClickUrl = useRouteUrl(throw_after_click);
+        // const throwLoadedAsyncUrl = useRouteUrl(throw_loaded_async);
 
         const links = [
           {
-            url: "/packages/independent/universal/router/src/client/demo/route_error_demo.html",
+            url: mainUrl,
             text: "root",
           },
           {
             url: loadThrowSyncUrl,
             text: "load throw sync",
           },
-          {
-            url: loadThrowAfter300MsUrl,
-            text: "load throw after 300ms",
-          },
-          {
-            url: throwDuringRenderUrl,
-            text: "throw during render",
-          },
-          {
-            url: throwAfterClickUrl,
-            text: "throw after click",
-          },
+          // {
+          //   url: loadThrowAfter300MsUrl,
+          //   text: "load throw after 300ms",
+          // },
+          // {
+          //   url: throwDuringRenderUrl,
+          //   text: "throw during render",
+          // },
+          // {
+          //   url: throwAfterClickUrl,
+          //   text: "throw after click",
+          // },
+          // {
+          //   url: throwLoadedAsyncUrl,
+          //   text: "throw loaded async",
+          // },
         ];
 
         return (
@@ -136,6 +146,7 @@
                 loading={Loading}
                 loaded={RouteDisplay}
               />
+              {/*
               <Route
                 route={load_throw_after_300_ms}
                 loading={Loading}
@@ -151,6 +162,15 @@
                 loading={Loading}
                 loaded={ThrowAfterClick}
               />
+              <Route
+                route={throw_after_click}
+                loading={Loading}
+                loadedAsync={async () => {
+                  await new Promise((resolve) => setTimeout(resolve, 100));
+                  throw new Error("throw in loadedAsync after 100ms");
+                }}
+              />
+              */}
             </main>
           </div>
         );
