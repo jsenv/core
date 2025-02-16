@@ -29,7 +29,7 @@ export const parseRouteUrl = (urlPattern, baseUrl) => {
       return match.groups || true;
     },
     build: (url, params) => {
-      const urlToReplace = new URL(urlPattern, url);
+      const urlToReplace = new URL(resourcePattern, url);
       const ressourceToReplace = resourceFromUrl(urlToReplace);
       const resourceWithValues = ressourceToReplace.replaceAll(
         /:\w+/g,
@@ -46,6 +46,10 @@ export const parseRouteUrl = (urlPattern, baseUrl) => {
 };
 
 const resourceFromUrl = (url, baseUrl = "http://example.com") => {
+  url = String(url);
+  if (url[0] === "/") {
+    url = url.slice(1);
+  }
   // if (url[0] !== "/") url = `/${url}`;
   const urlObject = new URL(url, baseUrl);
   const resource = urlObject.href.slice(urlObject.origin.length);

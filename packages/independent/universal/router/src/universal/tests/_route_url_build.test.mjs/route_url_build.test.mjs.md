@@ -1,9 +1,7 @@
 # [route_url_build.test.mjs](../route_url_build.test.mjs)
 
 
-- [0_a](0_a/0_a.md)
-- [1_b](1_b/1_b.md)
-- [2_c](2_c/2_c.md)
+- [0_basic](0_basic/0_basic.md)
 
 ---
 

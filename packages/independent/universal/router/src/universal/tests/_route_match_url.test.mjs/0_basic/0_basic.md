@@ -3,9 +3,11 @@
 ```js
 ({
    a: routeMatchUrl("/users/:id", "/users/123"),
+   d: routeMatchUrl("/users/:id", "/users/123/"),
    b: routeMatchUrl("/users/:id", "/users"),
    c: routeMatchUrl("/users/:id", "/users/"),
-   d: routeMatchUrl("/users/:id", "/users/123/"),
+   e: routeMatchUrl("/?route=a&id=:id", "/?route=a&id=id"),
+   f: routeMatchUrl("/?route=a/:id", "/?route=a/id"),
  })
 ```
 
@@ -14,9 +16,15 @@
   "a": {
     "id": "123"
   },
+  "d": null,
   "b": null,
   "c": null,
-  "d": null
+  "e": {
+    "id": "id"
+  },
+  "f": {
+    "id": "id"
+  }
 }
 ```
 

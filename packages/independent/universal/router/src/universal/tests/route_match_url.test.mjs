@@ -7,5 +7,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     d: routeMatchUrl("/users/:id", "/users/123/"),
     b: routeMatchUrl("/users/:id", "/users"),
     c: routeMatchUrl("/users/:id", "/users/"),
+    e: routeMatchUrl("/?route=a&id=:id", "/?route=a&id=id"),
+    f: routeMatchUrl("/?route=a/:id", "/?route=a/id"),
   }));
 });
