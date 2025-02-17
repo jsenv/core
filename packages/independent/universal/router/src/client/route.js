@@ -129,7 +129,7 @@ const createRoute = (method, resource, loadData) => {
           route.loadingStateSignal.value = FAILED;
         });
         routeAbortEnterMap.delete(route);
-        console.error(`Error while entering route "${route}":`, e);
+        throw e;
       }
     },
     reportError: (e) => {
@@ -327,8 +327,6 @@ export const applyRouting = async ({
       promises.push(routeEnterPromise);
     }
     await Promise.all(promises);
-  } catch (e) {
-    console.error(e);
   } finally {
     if (debugDocumentRouting) {
       console.log("routing ended");

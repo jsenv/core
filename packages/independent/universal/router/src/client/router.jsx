@@ -19,7 +19,7 @@ import { canUseNavigation } from "./router.js";
 export const SPAForm = ({ action, method, children }) => {
   const [formStatus, formStatusSetter] = useState({
     pending: false,
-    data: null,
+    error: null,
     // method,
     // action,
   });
@@ -28,28 +28,19 @@ export const SPAForm = ({ action, method, children }) => {
   return (
     <form
       onSubmit={async (submitEvent) => {
-        formStatusSetter({ pending: true });
+        formStatusSetter({ pending: true, error: null });
         submitEvent.preventDefault();
         const formData = new FormData(submitEvent.currentTarget);
-        if (canUseNavigation) {
-          try {
-            await navigation.navigate(window.location.href, {
-              history: "replace",
-              info: {
-                method,
-                formData,
-                formUrl: action,
-              },
-            }).finished;
-          } catch {
-            formStatusSetter({ pending: false });
-            // navigation aborted (or other type of error already handled bu the router)
-            return;
-          }
-          formStatusSetter({ pending: false });
-        } else {
-          // TODO
+        try {
+          await applyRoutingOnFormSubmission({ method, formData, action });
+        } catch (e) {
+          formStatusSetter({ pending: false, error: e });
+          return;
         }
+        // the data we don't need them here, we can read them from the route
+        // by the way the error is likely also stored on the PATH route
+        // but for now let's ignore
+        formStatusSetter({ pending: false });
       }}
       method={method === "get" ? "get" : "post"}
     >
@@ -59,3 +50,18 @@ export const SPAForm = ({ action, method, children }) => {
     </form>
   );
 };
+
+const applyRoutingOnFormSubmission = canUseNavigation
+  ? async ({ method, formData, action }) => {
+      await navigation.navigate(window.location.href, {
+        history: "replace",
+        info: {
+          method,
+          formData,
+          formUrl: action,
+        },
+      }).finished;
+    }
+  : () => {
+      // TODO
+    };

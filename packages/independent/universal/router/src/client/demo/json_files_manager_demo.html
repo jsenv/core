@@ -146,6 +146,18 @@ TODO: create a UI the allow the following:
         const patchUrl = useRouteUrl(PATCH_ONE, route.params);
 
         // eslint-disable-next-line no-unused-vars
+        const FormStatus = ({ formStatus }) => {
+          const { pending, error } = formStatus;
+          return (
+            <p>
+              pending: {pending ? "yes" : "no"}
+              <br />
+              error: {error ? error.message : "none"}
+            </p>
+          );
+        };
+
+        // eslint-disable-next-line no-unused-vars
         const ButtonSubmit = ({ formStatus }) => {
           const { pending } = formStatus;
           return (
@@ -157,6 +169,7 @@ TODO: create a UI the allow the following:
 
         return (
           <SPAForm action={patchUrl} method="PATCH">
+            <FormStatus />
             {Object.keys(content).map((key) => {
               const value = content[key];
               return (
