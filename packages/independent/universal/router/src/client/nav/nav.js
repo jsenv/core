@@ -55,7 +55,7 @@ export const installNavigation = ({ applyRouting }) => {
       // (used by jsenv hot reload)
       return;
     }
-    const url = event.destination.url;
+    const url = event.info?.url || event.destination.url;
     const state = event.state;
     const { signal } = event;
     if (debug) {

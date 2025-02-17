@@ -63,7 +63,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
       }
       return true;
     },
-    enter: async ({ signal, formData }) => {
+    enter: async ({ signal, url, formData }) => {
       // here we must pass a signal that gets aborted when
       // 1. any route is stopped (browser stop button)
       // 2. route is left
@@ -72,7 +72,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
       const enterAbortSignal = enterAbortController.signal;
       const abort = () => {
         if (debug) {
-          console.log(`abort entering "${route.name}"`);
+          console.log(`abort entering "${route.resource}"`);
         }
         route.loadingStateSignal.value = ABORTED;
         enterAbortController.abort();
@@ -85,7 +85,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
       route.errorSignal.value = null;
       matchingRouteSet.add(route);
       if (debug) {
-        console.log(`"${route.name}": entering route`);
+        console.log(`"${route.resource}": entering route`);
       }
       try {
         const loadDataPromise = (async () => {
@@ -94,7 +94,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
           }
           const data = await route.loadData({
             signal: enterAbortSignal,
-            params: route.params,
+            params: routeUrlParsed.match(url),
             formData,
           });
           route.dataSignal.value = data;
@@ -112,7 +112,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
         await Promise.all([loadDataPromise, loadUIPromise]);
         route.loadingStateSignal.value = LOADED;
         if (debug) {
-          console.log(`"${route.name}": route enter end`);
+          console.log(`"${route.resource}": route enter end`);
         }
       } catch (e) {
         batch(() => {
@@ -120,7 +120,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
           route.loadingStateSignal.value = FAILED;
         });
         routeAbortEnterMap.delete(route);
-        console.error(`Error while entering route named "${route.name}":`, e);
+        console.error(`Error while entering route "${route.resource}":`, e);
       }
     },
     reportError: (e) => {
@@ -130,13 +130,13 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
       const routeAbortEnter = routeAbortEnterMap.get(route);
       if (routeAbortEnter) {
         if (debug) {
-          console.log(`"${route.name}": aborting route enter`);
+          console.log(`"${route.resource}": aborting route enter`);
         }
         routeAbortEnterMap.delete(route);
         routeAbortEnter();
       }
       if (debug) {
-        console.log(`"${route.name}": leaving route`);
+        console.log(`"${route.resource}": leaving route`);
       }
       route.isMatchingSignal.value = false;
       route.loadingStateSignal.value = IDLE;
@@ -282,6 +282,7 @@ export const applyRouting = async ({
     const promises = [];
     for (const routeToEnter of routeToEnterSet) {
       const routeEnterPromise = routeToEnter.enter({
+        url,
         signal: stopSignal,
         formData,
       });
