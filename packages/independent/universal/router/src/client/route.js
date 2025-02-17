@@ -41,7 +41,8 @@ const routeAbortEnterMap = new Map();
 const fallbackRoutePerMethodMap = new Map();
 let fallbackRouteAnyMethod = null;
 const createRoute = (method, resource, loadData) => {
-  const resourcePatternParsed = parseResourcePattern(resource, baseUrl);
+  resource = resourceFromUrl(resource);
+  const resourcePatternParsed = parseResourcePattern(resource);
   const route = {
     method,
     resource,
@@ -155,6 +156,9 @@ const createRoute = (method, resource, loadData) => {
       goTo(documentUrlWithRoute);
     },
     toString: () => {
+      if (route.method === "*" && route.resource === "*") {
+        return "*";
+      }
       return `${route.method} ${route.resource}`;
     },
   };
@@ -224,14 +228,13 @@ export const applyRouting = async ({
 }) => {
   const sourceResource = resourceFromUrl(sourceUrl);
   const targetResource = resourceFromUrl(targetUrl);
-
   const stopSignal = signalToStopSignal(signal);
   if (debug) {
     console.log(`apply routing on ${method} ${targetResource}`);
   }
   const nextMatchingRouteSet = new Set();
   const testRouteAgainst = (route, methodCandidate, resourceCandidate) => {
-    const urlObject = new URL(resourceCandidate);
+    const urlObject = new URL(resourceCandidate, baseUrl);
     const testParams = {
       method: methodCandidate,
       resource: resourceCandidate,
