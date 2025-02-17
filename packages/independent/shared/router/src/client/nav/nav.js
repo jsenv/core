@@ -35,7 +35,7 @@ navigation.reload = () => {
   isReloadFromNavigationAPI = false;
 };
 
-export const installNavigation = ({ applyRouting }) => {
+export const installNavigation = ({ applyRouting, applyRoutingAroundCall }) => {
   navigation.addEventListener("navigate", (event) => {
     if (!event.canIntercept) {
       return;
@@ -65,9 +65,17 @@ export const installNavigation = ({ applyRouting }) => {
     const method = event.info?.method || "GET";
     const formData = event.formData || event.info?.formData;
     const formUrl = event.info?.formUrl;
+    const abortSignal = signal;
+    const stopSignal = signalToStopSignal(signal);
 
     event.intercept({
       handler: async () => {
+        if (event.info?.action) {
+          await applyRoutingAroundCall(event.info.action, {
+            signal,
+          });
+          return;
+        }
         if (formUrl) {
           const finishedPromise = event.target.transition.finished;
           (async () => {
@@ -84,7 +92,8 @@ export const installNavigation = ({ applyRouting }) => {
           targetUrl: formUrl || url,
           formData,
           state,
-          signal,
+          abortSignal,
+          stopSignal,
           reload: event.navigationType === "reload",
         });
       },
@@ -92,6 +101,29 @@ export const installNavigation = ({ applyRouting }) => {
   });
   navigation.navigate(window.location.href, { history: "replace" });
 };
+let callEffect = () => {};
+const signalToStopSignal = (signal) => {
+  callEffect();
+  const stopAbortController = new AbortController();
+  const stopSignal = stopAbortController.signal;
+  signal.addEventListener("abort", async () => {
+    const timeout = setTimeout(() => {
+      callEffect = () => {};
+      if (debug) {
+        console.log("aborted because stop");
+      }
+      stopAbortController.abort();
+    });
+    callEffect = () => {
+      if (debug) {
+        console.log("aborted because new navigation");
+      }
+      clearTimeout(timeout);
+    };
+  });
+  return stopSignal;
+};
+
 export const goTo = (url, { state, replace } = {}) => {
   if (replace) {
     navigation.navigate(url, { state, history: "replace" });

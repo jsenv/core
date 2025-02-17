@@ -43,7 +43,7 @@ export const installNavigation = ({ applyRouting }) => {
     const routingPromise = applyRouting({
       url,
       state: popstateEvent.state,
-      signal: abortController.signal,
+      stopSignal: abortController.signal,
     });
     try {
       await routingPromise;

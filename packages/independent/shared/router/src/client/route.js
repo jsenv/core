@@ -223,7 +223,7 @@ export const registerRoutes = (description) => {
       continue;
     }
   }
-  installNavigation({ applyRouting });
+  installNavigation({ applyRouting, applyRoutingAroundCall });
   return routes;
 };
 
@@ -238,12 +238,11 @@ export const applyRouting = async ({
   targetUrl,
   formData,
   state,
-  signal,
+  stopSignal,
   reload,
 }) => {
   const sourceResource = resourceFromUrl(sourceUrl);
   const targetResource = resourceFromUrl(targetUrl);
-  const stopSignal = signalToStopSignal(signal);
   if (debug) {
     console.log(`apply routing on ${method} ${targetResource}`);
   }
@@ -330,8 +329,7 @@ export const applyRouting = async ({
   if (debugDocumentRouting) {
     console.log("routing started");
   }
-  startDocumentRouting();
-  try {
+  await applyRoutingAroundCall(async () => {
     const promises = [];
     for (const routeToEnter of routeToEnterSet) {
       const routeEnterPromise = routeToEnter.enter({
@@ -342,10 +340,14 @@ export const applyRouting = async ({
       promises.push(routeEnterPromise);
     }
     await Promise.all(promises);
+  });
+};
+
+export const applyRoutingAroundCall = async (fn, ...args) => {
+  startDocumentRouting();
+  try {
+    await fn(...args);
   } finally {
-    if (debugDocumentRouting) {
-      console.log("routing ended");
-    }
     endDocumentRouting();
   }
 };
@@ -359,29 +361,6 @@ const resourceFromUrl = (url) => {
   const urlObject = new URL(url, baseUrl);
   const resource = urlObject.href.slice(urlObject.origin.length);
   return resource;
-};
-
-let applyRoutingEffect = () => {};
-const signalToStopSignal = (signal) => {
-  applyRoutingEffect();
-  const stopAbortController = new AbortController();
-  const stopSignal = stopAbortController.signal;
-  signal.addEventListener("abort", async () => {
-    const timeout = setTimeout(() => {
-      applyRoutingEffect = () => {};
-      if (debug) {
-        console.log("aborted because stop");
-      }
-      stopAbortController.abort();
-    });
-    applyRoutingEffect = () => {
-      if (debug) {
-        console.log("aborted because new navigation");
-      }
-      clearTimeout(timeout);
-    };
-  });
-  return stopSignal;
 };
 
 export const useRouteUrl = (route, params) => {

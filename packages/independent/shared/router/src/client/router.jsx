@@ -55,14 +55,34 @@ export const SPAForm = ({ action, method, children }) => {
 
 const applyRoutingOnFormSubmission = canUseNavigation
   ? async ({ method, formData, action }) => {
-      await navigation.navigate(window.location.href, {
-        history: "replace",
-        info: {
-          method,
-          formData,
-          formUrl: action,
-        },
-      }).finished;
+      const startNav = async () => {
+        if (typeof action === "function") {
+          await navigation.navigate(window.location.href, {
+            history: "replace",
+            info: {
+              action,
+            },
+          }).finished;
+        } else {
+          await navigation.navigate(window.location.href, {
+            history: "replace",
+            info: {
+              method,
+              formData,
+              formUrl: action,
+            },
+          }).finished;
+        }
+      };
+
+      try {
+        await startNav();
+      } catch (e) {
+        if (e && e.name === "AbortError") {
+          return;
+        }
+        throw e;
+      }
     }
   : () => {
       // TODO
