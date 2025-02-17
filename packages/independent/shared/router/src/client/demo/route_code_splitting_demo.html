@@ -10,33 +10,26 @@
     <div id="root" style="position: relative"></div>
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
-      import { registerRoutes, useRouteUrl } from "@jsenv/router";
-      // eslint-disable-next-line no-unused-vars
-      import { Route } from "../route.jsx";
+      import {
+        registerRoutes,
+        useRouteUrl,
+        // eslint-disable-next-line no-unused-vars
+        Route,
+      } from "@jsenv/router";
+      import { setBaseUrl } from "../route.js";
 
-      const { a, b, c } = registerRoutes(
-        {
-          a: {
-            urlTemplate: "?route=a",
-            loadData: async () => {
-              return "a";
-            },
-          },
-          b: {
-            urlTemplate: "?route=b",
-            loadData: async () => {
-              return "b";
-            },
-          },
-          c: {
-            urlTemplate: "?route=c",
-            loadData: async () => {
-              return "c";
-            },
-          },
+      setBaseUrl(window.location.href);
+      const [a, b, c] = registerRoutes({
+        "GET ?route=a": async () => {
+          return "a";
         },
-        window.location.href,
-      );
+        "GET ?route=b": async () => {
+          return "b";
+        },
+        "GET ?route=c": async () => {
+          return "c";
+        },
+      });
 
       // eslint-disable-next-line no-unused-vars
       const App = () => {
