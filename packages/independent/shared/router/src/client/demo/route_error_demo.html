@@ -11,49 +11,37 @@
     <script type="module" jsenv-type="module/jsx">
       import { render } from "preact";
       import { useState } from "preact/hooks";
-      import { registerRoutes, useRouteUrl } from "@jsenv/router";
-      // eslint-disable-next-line no-unused-vars
-      import { Route } from "../route.jsx";
+      import {
+        registerRoutes,
+        useRouteUrl,
+        // eslint-disable-next-line no-unused-vars
+        Route,
+      } from "@jsenv/router";
+      import { setBaseUrl } from "../route.js";
 
-      const {
+      setBaseUrl(window.location.href);
+      const [
         main,
         load_throw_sync,
         load_throw_after_300_ms,
         throw_during_render,
         throw_after_click,
         throw_loaded_async,
-      } = registerRoutes(
-        {
-          main: {
-            urlTemplate: "/route_error_demo.html",
-          },
-          load_throw_sync: {
-            urlTemplate: "?route=load_throw_sync",
-            loadData: async () => {
-              throw new Error("load_throw_sync");
-            },
-          },
-          load_throw_after_300_ms: {
-            urlTemplate: "?route=load_throw_after_300_ms",
-            loadData: async () => {
-              await new Promise((resolve) => {
-                setTimeout(resolve, 300);
-              });
-              throw new Error("load_throw_after_300");
-            },
-          },
-          throw_during_render: {
-            urlTemplate: "?route=throw_during_render",
-          },
-          throw_after_click: {
-            urlTemplate: "?route=throw_after_click",
-          },
-          throw_loaded_async: {
-            urlTemplate: "?route=throw_loaded_async",
-          },
+      ] = registerRoutes({
+        "GET /route_error_demo.html": null,
+        "GET ?route=load_throw_sync": async () => {
+          throw new Error("load_throw_sync");
         },
-        window.location.href,
-      );
+        "GET ?route=load_throw_after_300_ms": async () => {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 300);
+          });
+          throw new Error("load_throw_after_300");
+        },
+        "GET ?route=throw_during_render": null,
+        "GET ?route=throw_after_click": null,
+        "GET ?route=throw_loaded_async": null,
+      });
 
       const Loading = () => {
         return "loading...";
