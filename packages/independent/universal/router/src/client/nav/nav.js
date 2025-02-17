@@ -55,7 +55,7 @@ export const installNavigation = ({ applyRouting }) => {
       // (used by jsenv hot reload)
       return;
     }
-    const url = event.info?.url || event.destination.url;
+    const url = event.destination.url;
     const state = event.state;
     const { signal } = event;
     if (debug) {
@@ -66,12 +66,23 @@ export const installNavigation = ({ applyRouting }) => {
     }
     const method = event.info?.method || "GET";
     const formData = event.formData || event.info?.formData;
+    const formUrl = event.info?.formUrl;
 
     event.intercept({
       handler: async () => {
+        if (formUrl) {
+          const finishedPromise = event.target.transition.finished;
+          (async () => {
+            try {
+              await finishedPromise;
+            } finally {
+              navigation.navigate(window.location.href, { history: "replace" });
+            }
+          })();
+        }
         await applyRouting({
           method,
-          url,
+          url: formUrl || url,
           formData,
           state,
           signal,

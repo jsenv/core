@@ -12,12 +12,23 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
+import { cloneElement, toChildArray } from "preact";
+import { useState } from "preact/hooks";
 import { canUseNavigation } from "./router.js";
 
 export const SPAForm = ({ action, method, children }) => {
+  const [formStatus, formStatusSetter] = useState({
+    pending: false,
+    data: null,
+    // method,
+    // action,
+  });
+  children = toChildArray(children);
+
   return (
     <form
       onSubmit={async (submitEvent) => {
+        formStatusSetter({ pending: true });
         submitEvent.preventDefault();
         const formData = new FormData(submitEvent.currentTarget);
         if (canUseNavigation) {
@@ -26,22 +37,25 @@ export const SPAForm = ({ action, method, children }) => {
               history: "replace",
               info: {
                 method,
-                url: action,
                 formData,
+                formUrl: action,
               },
             }).finished;
           } catch {
+            formStatusSetter({ pending: false });
             // navigation aborted (or other type of error already handled bu the router)
             return;
           }
-          navigation.navigate(window.location.href, { history: "replace" });
+          formStatusSetter({ pending: false });
         } else {
           // TODO
         }
       }}
       method={method === "get" ? "get" : "post"}
     >
-      {children}
+      {children.map((child) => {
+        return cloneElement(child, { formStatus });
+      })}
     </form>
   );
 };

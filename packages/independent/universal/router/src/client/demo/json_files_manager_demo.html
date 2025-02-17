@@ -57,6 +57,9 @@ TODO: create a UI the allow the following:
             formData,
           }) => {
             console.log("will send the form: ", Array.from(formData.values()));
+            await new Promise((resolve) => {
+              setTimeout(resolve, 1000);
+            });
             const response = await fetch(`/json_files/${params.id}`, {
               method: "PATCH",
               signal,
@@ -142,6 +145,17 @@ TODO: create a UI the allow the following:
       const JSONFileEdit = ({ route }) => {
         const content = route.data;
         const patchUrl = useRouteUrl(PATCH_ONE, route.params);
+
+        // eslint-disable-next-line no-unused-vars
+        const ButtonSubmit = ({ formStatus }) => {
+          const { pending } = formStatus;
+          return (
+            <button type="submit" disabled={pending}>
+              Envoyer
+            </button>
+          );
+        };
+
         return (
           <SPAForm action={patchUrl} method="PATCH">
             {Object.keys(content).map((key) => {
@@ -153,6 +167,9 @@ TODO: create a UI the allow the following:
                 </label>
               );
             })}
+            <br />
+            <br />
+            <ButtonSubmit />
           </SPAForm>
         );
       };
