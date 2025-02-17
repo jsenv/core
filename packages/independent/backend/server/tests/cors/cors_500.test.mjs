@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
-
 import {
   jsenvServiceCORS,
   jsenvServiceErrorHandler,

@@ -6,7 +6,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/universal/abort"
+    "directory": "packages/independent/shared/abort"
   },
   "publishConfig": {
     "access": "public"

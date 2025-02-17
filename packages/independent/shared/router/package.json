@@ -1,0 +1,31 @@
+{
+  "name": "@jsenv/router",
+  "version": "0.0.8",
+  "private": true,
+  "description": "Url matching and routing",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/shared/router"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "node": "./src/server/server.js",
+      "browser": "./src/client/client.js"
+    },
+    "./client": "./src/client/client.js",
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ]
+}
