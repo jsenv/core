@@ -8,7 +8,7 @@ import { documentUrlSignal } from "./document_url.js";
 import { normalizeUrl } from "./normalize_url.js";
 import { goTo, installNavigation } from "./router.js";
 
-let debug = false;
+let debug = true;
 let debugDocumentRouting = false;
 const IDLE = { id: "idle" };
 const LOADING = { id: "loading" };
@@ -23,6 +23,11 @@ const getDocumentUrl = () => {
   return documentUrlObject;
 };
 
+let baseUrl = window.location.origin;
+export const setBaseUrl = (v) => {
+  baseUrl = v;
+};
+
 let resolveRouterUIReadyPromise;
 const routerUIReadyPromise = new Promise((resolve) => {
   resolveRouterUIReadyPromise = resolve;
@@ -35,7 +40,7 @@ const matchingRouteSet = new Set();
 const routeAbortEnterMap = new Map();
 const fallbackRoutePerMethodMap = new Map();
 let fallbackRouteAnyMethod = null;
-const createRoute = (method, resource, loadData, { baseUrl }) => {
+const createRoute = (method, resource, loadData) => {
   const routeUrlParsed = parseRouteUrl(resource, baseUrl);
   const route = {
     method,
@@ -54,16 +59,16 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
     error: null,
     data: undefined,
     params: {},
-    test: ({ method, url }) => {
+    test: ({ method, resource }) => {
       if (route.method !== method && route.method !== "*") {
         return false;
       }
-      if (!routeUrlParsed.match(url)) {
+      if (!routeUrlParsed.match(resource)) {
         return false;
       }
       return true;
     },
-    enter: async ({ signal, url, formData }) => {
+    enter: async ({ signal, resource, formData }) => {
       // here we must pass a signal that gets aborted when
       // 1. any route is stopped (browser stop button)
       // 2. route is left
@@ -72,7 +77,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
       const enterAbortSignal = enterAbortController.signal;
       const abort = () => {
         if (debug) {
-          console.log(`abort entering "${route.resource}"`);
+          console.log(`abort entering "${route}"`);
         }
         route.loadingStateSignal.value = ABORTED;
         enterAbortController.abort();
@@ -85,7 +90,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
       route.errorSignal.value = null;
       matchingRouteSet.add(route);
       if (debug) {
-        console.log(`"${route.resource}": entering route`);
+        console.log(`"${route}": entering route`);
       }
       try {
         const loadDataPromise = (async () => {
@@ -94,7 +99,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
           }
           const data = await route.loadData({
             signal: enterAbortSignal,
-            params: routeUrlParsed.match(url),
+            params: routeUrlParsed.match(resource),
             formData,
           });
           route.dataSignal.value = data;
@@ -112,7 +117,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
         await Promise.all([loadDataPromise, loadUIPromise]);
         route.loadingStateSignal.value = LOADED;
         if (debug) {
-          console.log(`"${route.resource}": route enter end`);
+          console.log(`"${route}": route enter end`);
         }
       } catch (e) {
         batch(() => {
@@ -120,7 +125,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
           route.loadingStateSignal.value = FAILED;
         });
         routeAbortEnterMap.delete(route);
-        console.error(`Error while entering route "${route.resource}":`, e);
+        console.error(`Error while entering route "${route}":`, e);
       }
     },
     reportError: (e) => {
@@ -130,13 +135,13 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
       const routeAbortEnter = routeAbortEnterMap.get(route);
       if (routeAbortEnter) {
         if (debug) {
-          console.log(`"${route.resource}": aborting route enter`);
+          console.log(`"${route}": aborting route enter`);
         }
         routeAbortEnterMap.delete(route);
         routeAbortEnter();
       }
       if (debug) {
-        console.log(`"${route.resource}": leaving route`);
+        console.log(`"${route}": leaving route`);
       }
       route.isMatchingSignal.value = false;
       route.loadingStateSignal.value = IDLE;
@@ -145,6 +150,9 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
     activate: (params) => {
       const documentUrlWithRoute = route.buildUrl(params);
       goTo(documentUrlWithRoute);
+    },
+    toString: () => {
+      return `${route.method} ${route.resource}`;
     },
   };
   effect(() => {
@@ -160,39 +168,36 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
 
   return route;
 };
-export const registerRoutes = (
-  description,
-  baseUrl = window.location.origin,
-) => {
+export const registerRoutes = (description) => {
   const routes = [];
   for (const key of Object.keys(description)) {
     const handler = description[key];
     if (key.startsWith("GET ")) {
       const resource = key.slice("GET ".length);
-      const route = createRoute("GET", resource, handler, { baseUrl });
+      const route = createRoute("GET", resource, handler);
       routeSet.add(route);
       routes.push(route);
       continue;
     }
     if (key.startsWith("PATCH ")) {
       const resource = key.slice("PATCH ".length);
-      const route = createRoute("PATCH", resource, handler, { baseUrl });
+      const route = createRoute("PATCH", resource, handler);
       routeSet.add(route);
       routes.push(route);
       continue;
     }
     if (key === "GET *") {
-      const fallbackGET = createRoute("GET", "*", handler, { baseUrl });
+      const fallbackGET = createRoute("GET", "*", handler);
       fallbackRoutePerMethodMap.set("GET", fallbackGET);
       continue;
     }
     if (key === "PATCH *") {
-      const fallbackPATCH = createRoute("PATCH", "*", handler, { baseUrl });
+      const fallbackPATCH = createRoute("PATCH", "*", handler);
       fallbackRoutePerMethodMap.set("GET", fallbackPATCH);
       continue;
     }
     if (key === "*") {
-      fallbackRouteAnyMethod = createRoute("*", "*", handler, { baseUrl });
+      fallbackRouteAnyMethod = createRoute("*", "*", handler);
       continue;
     }
   }
@@ -207,29 +212,42 @@ export const registerRoutes = (
 export const applyRouting = async ({
   method,
   // maybe rename url into resource (because we can't do anything about url outside out domain I guess? TO BE TESTED)
-  url,
+  sourceUrl,
+  targetUrl,
   formData,
   state,
   signal,
   reload,
 }) => {
+  const sourceResource = resourceFromUrl(sourceUrl);
+  const targetResource = resourceFromUrl(targetUrl);
+
   const stopSignal = signalToStopSignal(signal);
   if (debug) {
-    console.log("try to match routes against", { url });
+    console.log(`apply routing on ${method} ${targetResource}`);
   }
   const nextMatchingRouteSet = new Set();
-  for (const routeCandidate of routeSet) {
-    const urlObject = new URL(url);
-    const returnValue = routeCandidate.test({
-      method,
-      url,
+  const testRouteAgainst = (route, methodCandidate, resourceCandidate) => {
+    const urlObject = new URL(resourceCandidate);
+    const testParams = {
+      method: methodCandidate,
+      resource: resourceCandidate,
       state,
       searchParams: urlObject.searchParams,
       pathname: urlObject.pathname,
       hash: urlObject.hash,
       formData,
-    });
-    if (returnValue) {
+    };
+    return route.test(testParams);
+  };
+
+  for (const routeCandidate of routeSet) {
+    const isMatchingTargetUrl = testRouteAgainst(
+      routeCandidate,
+      method,
+      targetResource,
+    );
+    if (isMatchingTargetUrl) {
       nextMatchingRouteSet.add(routeCandidate);
     }
   }
@@ -247,9 +265,23 @@ export const applyRouting = async ({
   const routeToLeaveSet = new Set();
   const routeToEnterSet = new Set();
   for (const activeRoute of matchingRouteSet) {
-    if (!nextMatchingRouteSet.has(activeRoute)) {
-      routeToLeaveSet.add(activeRoute);
+    if (nextMatchingRouteSet.has(activeRoute)) {
+      continue;
     }
+    if (sourceResource !== targetResource) {
+      // when we route to a new url but we stay on the current url
+      // until routing is done (POST/PATCH/PUT)
+      // then we keep the route active during that time
+      if (testRouteAgainst(activeRoute, "GET", sourceResource)) {
+        if (debug) {
+          console.log(
+            `${activeRoute.ressource}: stays active while navigating to ${targetResource}`,
+          );
+        }
+        continue;
+      }
+    }
+    routeToLeaveSet.add(activeRoute);
   }
   for (const nextMatchingRoute of nextMatchingRouteSet) {
     const nextMatchingRouteLoadingState =
@@ -282,8 +314,8 @@ export const applyRouting = async ({
     const promises = [];
     for (const routeToEnter of routeToEnterSet) {
       const routeEnterPromise = routeToEnter.enter({
-        url,
         signal: stopSignal,
+        resource: targetResource,
         formData,
       });
       promises.push(routeEnterPromise);
@@ -297,6 +329,17 @@ export const applyRouting = async ({
     }
     endDocumentRouting();
   }
+};
+
+const resourceFromUrl = (url) => {
+  url = String(url);
+  if (url[0] === "/") {
+    url = url.slice(1);
+  }
+  // if (url[0] !== "/") url = `/${url}`;
+  const urlObject = new URL(url, baseUrl);
+  const resource = urlObject.href.slice(urlObject.origin.length);
+  return resource;
 };
 
 let applyRoutingEffect = () => {};

@@ -1,10 +1,8 @@
-/*
-next step is to see if we can cancel a pending navigation
-
-- https://github.com/WICG/navigation-api
-- https://developer.mozilla.org/en-US/docs/Web/API/Navigation
-- https://glitch.com/edit/#!/gigantic-honored-octagon?path=index.html%3A1%3A0
-*/
+/**
+ * - https://github.com/WICG/navigation-api
+ * - https://developer.mozilla.org/en-US/docs/Web/API/Navigation
+ * - https://glitch.com/edit/#!/gigantic-honored-octagon?path=index.html%3A1%3A0
+ */
 
 import { updateCanGoBack, updateCanGoForward } from "../can_go_back_forward.js";
 import { documentIsLoadingSignal } from "../document_loading.js";
@@ -82,7 +80,8 @@ export const installNavigation = ({ applyRouting }) => {
         }
         await applyRouting({
           method,
-          url: formUrl || url,
+          sourceUrl: url,
+          targetUrl: formUrl || url,
           formData,
           state,
           signal,
