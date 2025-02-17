@@ -1,7 +1,6 @@
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 
-export const parseRouteUrl = (urlPattern, baseUrl) => {
-  const resourcePattern = resourceFromUrl(urlPattern, baseUrl);
+export const parseResourcePattern = (resourcePattern) => {
   let regexpSource = "";
   let lastIndex = 0;
   regexpSource += "^";

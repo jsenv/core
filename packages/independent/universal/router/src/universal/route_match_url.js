@@ -1,6 +1,6 @@
-import { parseRouteUrl } from "./route_url_parser.js";
+import { parseResourcePattern } from "./resource_pattern.js";
 
-export const routeMatchUrl = (routeUrlPattern, url) => {
-  const { match } = parseRouteUrl(routeUrlPattern);
+export const routeMatchUrl = (resourcePattern, url) => {
+  const { match } = parseResourcePattern(resourcePattern);
   return match(url);
 };

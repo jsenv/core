@@ -1,5 +1,5 @@
 import { batch, effect, signal } from "@preact/signals";
-import { parseRouteUrl } from "../universal/route_url_parser.js";
+import { parseResourcePattern } from "../universal/resource_pattern.js";
 import {
   endDocumentRouting,
   startDocumentRouting,
@@ -41,7 +41,7 @@ const routeAbortEnterMap = new Map();
 const fallbackRoutePerMethodMap = new Map();
 let fallbackRouteAnyMethod = null;
 const createRoute = (method, resource, loadData) => {
-  const routeUrlParsed = parseRouteUrl(resource, baseUrl);
+  const resourcePatternParsed = parseResourcePattern(resource, baseUrl);
   const route = {
     method,
     resource,
@@ -49,7 +49,10 @@ const createRoute = (method, resource, loadData) => {
     loadUI: null,
     buildUrl: (params) => {
       const documentUrl = getDocumentUrl();
-      const documentUrlWithRoute = routeUrlParsed.build(documentUrl, params);
+      const documentUrlWithRoute = resourcePatternParsed.build(
+        documentUrl,
+        params,
+      );
       return normalizeUrl(documentUrlWithRoute);
     },
     isMatchingSignal: signal(false),
@@ -63,7 +66,7 @@ const createRoute = (method, resource, loadData) => {
       if (route.method !== method && route.method !== "*") {
         return false;
       }
-      if (!routeUrlParsed.match(resource)) {
+      if (!resourcePatternParsed.match(resource)) {
         return false;
       }
       return true;
@@ -99,7 +102,7 @@ const createRoute = (method, resource, loadData) => {
           }
           const data = await route.loadData({
             signal: enterAbortSignal,
-            params: routeUrlParsed.match(resource),
+            params: resourcePatternParsed.match(resource),
             formData,
           });
           route.dataSignal.value = data;
@@ -163,7 +166,7 @@ const createRoute = (method, resource, loadData) => {
   });
   effect(() => {
     const documentUrl = documentUrlSignal.value;
-    route.params = routeUrlParsed.match(documentUrl);
+    route.params = resourcePatternParsed.match(documentUrl);
   });
 
   return route;
