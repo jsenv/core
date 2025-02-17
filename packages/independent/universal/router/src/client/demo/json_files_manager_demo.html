@@ -27,6 +27,7 @@ TODO: create a UI the allow the following:
         Route,
         // eslint-disable-next-line no-unused-vars
         SPAForm,
+        useSPAFormStatus,
       } from "@jsenv/router";
       import { setBaseUrl } from "../route.js";
 
@@ -146,8 +147,8 @@ TODO: create a UI the allow the following:
         const patchUrl = useRouteUrl(PATCH_ONE, route.params);
 
         // eslint-disable-next-line no-unused-vars
-        const FormStatus = ({ formStatus }) => {
-          const { pending, error } = formStatus;
+        const FormStatus = () => {
+          const { pending, error } = useSPAFormStatus();
           return (
             <p>
               pending: {pending ? "yes" : "no"}
@@ -158,8 +159,8 @@ TODO: create a UI the allow the following:
         };
 
         // eslint-disable-next-line no-unused-vars
-        const ButtonSubmit = ({ formStatus }) => {
-          const { pending } = formStatus;
+        const ButtonSubmit = () => {
+          const { pending } = useSPAFormStatus();
           return (
             <button type="submit" disabled={pending}>
               Envoyer

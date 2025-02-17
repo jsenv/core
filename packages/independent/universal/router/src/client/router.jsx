@@ -12,18 +12,22 @@
  *    right now it's just logged to the console I need to see how we can achieve this
  */
 
-import { cloneElement, toChildArray } from "preact";
-import { useState } from "preact/hooks";
+import { createContext } from "preact";
+import { useContext, useState } from "preact/hooks";
 import { canUseNavigation } from "./router.js";
+
+const FormContext = createContext();
+export const useSPAFormStatus = () => {
+  return useContext(FormContext);
+};
 
 export const SPAForm = ({ action, method, children }) => {
   const [formStatus, formStatusSetter] = useState({
     pending: false,
     error: null,
     // method,
-    // action,
+    // action
   });
-  children = toChildArray(children);
 
   return (
     <form
@@ -44,9 +48,7 @@ export const SPAForm = ({ action, method, children }) => {
       }}
       method={method === "get" ? "get" : "post"}
     >
-      {children.map((child) => {
-        return cloneElement(child, { formStatus });
-      })}
+      <FormContext.Provider value={formStatus}>{children}</FormContext.Provider>
     </form>
   );
 };
