@@ -51,6 +51,7 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
     dataSignal: signal(undefined),
     error: null,
     data: undefined,
+    params: {},
     test: ({ url }) => {
       return Boolean(routeUrlParsed.match(url));
     },
@@ -85,7 +86,7 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
           }
           const data = await route.loadData({
             signal: enterAbortSignal,
-            params: routeUrlParsed.match(documentUrlSignal.peek()),
+            params: route.params,
           });
           route.dataSignal.value = data;
         })();
@@ -143,6 +144,11 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
   effect(() => {
     route.error = route.errorSignal.value;
   });
+  effect(() => {
+    const documentUrl = documentUrlSignal.value;
+    route.params = routeUrlParsed.match(documentUrl);
+  });
+
   return route;
 };
 export const registerRoutes = (

@@ -27,7 +27,7 @@ TODO: create a UI the allow the following:
         Route,
       } from "@jsenv/router";
 
-      const { list, see } = registerRoutes(
+      const { list, see, edit } = registerRoutes(
         {
           main: {
             urlTemplate: "/",
@@ -43,6 +43,16 @@ TODO: create a UI the allow the following:
           },
           see: {
             urlTemplate: "/?route=json_files/:id",
+            loadData: async ({ signal, params }) => {
+              const response = await fetch(`/json_files/${params.id}`, {
+                signal,
+              });
+              const responseJSON = await response.json();
+              return responseJSON;
+            },
+          },
+          edit: {
+            urlTemplate: "/?route=json_files/:id/edit",
             loadData: async ({ signal, params }) => {
               const response = await fetch(`/json_files/${params.id}`, {
                 signal,
@@ -98,6 +108,7 @@ TODO: create a UI the allow the following:
             <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
               <Route route={list} loaded={JSONFileList} />
               <Route route={see} loaded={JSONFileView} />
+              <Route route={edit} loaded={JSONFileEdit} />
             </main>
           </div>
         );
@@ -108,11 +119,16 @@ TODO: create a UI the allow the following:
         return (
           <ul>
             {nameArray.map((name) => {
-              const jsonFileUrl = useRouteUrl(see, { id: name });
+              const seeJsonFileUrl = useRouteUrl(see, { id: name });
+              const editJsonFileUrl = useRouteUrl(edit, { id: name });
 
               return (
                 <li key={name}>
-                  <a href={jsonFileUrl}>{name}</a>
+                  <div style="display: flex; gap: 10px;">
+                    {name}
+                    <a href={seeJsonFileUrl}>View</a>
+                    <a href={editJsonFileUrl}>Edit</a>
+                  </div>
                 </li>
               );
             })}
@@ -123,6 +139,22 @@ TODO: create a UI the allow the following:
         let content = route.data;
         const jsonText = JSON.stringify(content, null, "  ");
         return <pre>{jsonText}</pre>;
+      };
+      const JSONFileEdit = ({ route }) => {
+        const content = route.data;
+        return (
+          <form action={`/json_files/${route.params.id}`} method="patch">
+            {Object.keys(content).map((key) => {
+              const value = content[key];
+              return (
+                <label>
+                  {key}:
+                  <input name={key} type="text" value={value} />
+                </label>
+              );
+            })}
+          </form>
+        );
       };
 
       render(<App />, document.getElementById("root"));
