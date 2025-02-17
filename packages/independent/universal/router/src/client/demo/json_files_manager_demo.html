@@ -43,7 +43,13 @@ TODO: create a UI the allow the following:
           },
           see: {
             urlTemplate: "/?route=json_files/:id",
-            load: async () => {},
+            loadData: async ({ signal, params }) => {
+              const response = await fetch(`/json_files/${params.id}`, {
+                signal,
+              });
+              const responseJSON = await response.json();
+              return responseJSON;
+            },
           },
           // TODO update: '',
           fallback: {
@@ -113,8 +119,10 @@ TODO: create a UI the allow the following:
           </ul>
         );
       };
-      const JSONFileView = () => {
-        return "JSON file see";
+      const JSONFileView = ({ route }) => {
+        let content = route.data;
+        const jsonText = JSON.stringify(content, null, "  ");
+        return <pre>{jsonText}</pre>;
       };
 
       render(<App />, document.getElementById("root"));

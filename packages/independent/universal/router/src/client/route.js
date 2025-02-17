@@ -8,7 +8,7 @@ import { documentUrlSignal } from "./document_url.js";
 import { normalizeUrl } from "./normalize_url.js";
 import { goTo, installNavigation } from "./router.js";
 
-let debug = true;
+let debug = false;
 let debugDocumentRouting = false;
 const IDLE = { id: "idle" };
 const LOADING = { id: "loading" };
@@ -83,7 +83,10 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
           if (!route.loadData) {
             return;
           }
-          const data = await route.loadData({ signal: enterAbortSignal });
+          const data = await route.loadData({
+            signal: enterAbortSignal,
+            params: routeUrlParsed.match(documentUrlSignal.peek()),
+          });
           route.dataSignal.value = data;
         })();
         const loadUIPromise = (async () => {

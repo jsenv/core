@@ -56,10 +56,10 @@ export const JSONFileManagerService = () => {
         const getOneMatch = routeMatchUrl("/json_files/:id", request.url);
         if (getOneMatch) {
           const { id } = getOneMatch;
-          const jsonFileUrl = new URL(`./${id}.json`, jsonDirectoryUrl);
+          const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
           try {
-            const json = readFileSync(jsonFileUrl);
-            const body = JSON.stringify(json);
+            const jsonBuffer = readFileSync(jsonFileUrl);
+            const body = String(jsonBuffer);
             return {
               status: 200,
               headers: {
