@@ -20,6 +20,7 @@ const RouteErrorDefaultComponent = ({ route }) => {
 // and it's relatively hard to finally realize it's because the route is declared twice
 export const Route = ({
   route,
+  always,
   matching,
   loading,
   error,
@@ -60,6 +61,10 @@ export const Route = ({
         error={error}
       />
     );
+  }
+  if (always) {
+    const Always = always;
+    return <Always route={route}></Always>;
   }
   // TODO: throw error explaining loaded, loadedAsync or matching is required
   return null;
