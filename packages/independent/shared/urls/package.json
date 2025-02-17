@@ -1,22 +1,18 @@
 {
-  "name": "@jsenv/sigi",
-  "version": "0.0.8",
-  "description": "State management",
+  "name": "@jsenv/urls",
+  "version": "2.6.0",
   "license": "MIT",
-  "author": {
-    "name": "dmail",
-    "email": "dmaillard06@gmail.com"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jsenv/core",
-    "directory": "packages/independent/universal/sigi"
-  },
-  "engines": {
-    "node": ">=16.13.0"
+    "directory": "packages/independent/shared/urls"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
   },
   "type": "module",
   "exports": {
@@ -25,12 +21,11 @@
     },
     "./*": "./*"
   },
-  "main": "./src/main.js",
   "files": [
     "/src/"
   ],
   "sideEffects": false,
   "dependencies": {
-    "@preact/signals": "2.0.1"
+    "@jsenv/humanize": "1.2.8"
   }
 }

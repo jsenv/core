@@ -19,7 +19,7 @@ on:
       - "packages/independent/backend/**"
       - "packages/independent/frontend/**"
       - "packages/independent/tooling/**"
-      - "packages/independent/universal/**"
+      - "packages/independent/shared/**"
       - "www/**"
       - "**/readme.md"
   pull_request:
@@ -30,7 +30,7 @@ on:
       - "packages/independent/backend/**"
       - "packages/independent/frontend/**"
       - "packages/independent/tooling/**"
-      - "packages/independent/universal/**"
+      - "packages/independent/shared/**"
       - "www/**"
       - "**/readme.md"
 

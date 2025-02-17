@@ -1,5 +1,5 @@
 import { batch, effect, signal } from "@preact/signals";
-import { parseResourcePattern } from "../universal/resource_pattern.js";
+import { parseResourcePattern } from "../shared/resource_pattern.js";
 import {
   endDocumentRouting,
   startDocumentRouting,

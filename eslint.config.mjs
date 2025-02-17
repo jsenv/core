@@ -15,7 +15,7 @@ export default [
       "packages/**/frontend/**/*.js",
     ],
     browserAndNodeFiles: [
-      "packages/**/universal/**/*.js",
+      "packages/**/shared/**/*.js",
       "packages/**/assert/**/*.js",
     ],
     jsxPragmaAuto: true,

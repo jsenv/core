@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { routeMatchUrl } from "../universal/route_match_url.js";
+import { routeMatchUrl } from "../shared/route_match_url.js";
 
 export const clientControlledResourceService = () => {
   let resolve;

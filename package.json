@@ -41,7 +41,7 @@
     "./packages/independent/backend/*",
     "./packages/independent/frontend/*",
     "./packages/independent/tooling/*",
-    "./packages/independent/universal/*",
+    "./packages/independent/shared/*",
     "./packages/internal/*",
     "./packages/related/*",
     "./packages/related/cli/*"
