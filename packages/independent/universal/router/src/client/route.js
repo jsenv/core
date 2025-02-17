@@ -34,12 +34,13 @@ const routeSet = new Set();
 const matchingRouteSet = new Set();
 const routeAbortEnterMap = new Map();
 let fallbackRoute;
-const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
-  const routeUrlParsed = parseRouteUrl(urlTemplate, baseUrl);
+const createRoute = (method, resource, loadData, { baseUrl }) => {
+  const routeUrlParsed = parseRouteUrl(resource, baseUrl);
   const route = {
-    name,
+    method,
+    resource,
     loadData,
-    loadUI,
+    loadUI: null,
     buildUrl: (params) => {
       const documentUrl = getDocumentUrl();
       const documentUrlWithRoute = routeUrlParsed.build(documentUrl, params);
@@ -52,8 +53,8 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
     error: null,
     data: undefined,
     params: {},
-    test: ({ url }) => {
-      return Boolean(routeUrlParsed.match(url));
+    test: ({ method, url }) => {
+      return route.method === method && Boolean(routeUrlParsed.match(url));
     },
     enter: async ({ signal }) => {
       // here we must pass a signal that gets aborted when
@@ -152,17 +153,30 @@ const createRoute = (name, { urlTemplate, loadData, loadUI }, { baseUrl }) => {
   return route;
 };
 export const registerRoutes = (
-  { fallback, ...rest },
+  description,
   baseUrl = window.location.origin,
 ) => {
-  const routes = {};
-  for (const key of Object.keys(rest)) {
-    const route = createRoute(key, rest[key], { baseUrl });
-    routeSet.add(route);
-    routes[key] = route;
-  }
-  if (fallback) {
-    fallbackRoute = createRoute("fallback", fallback, { baseUrl });
+  const routes = [];
+  for (const key of Object.keys(description)) {
+    const handler = description[key];
+    if (key.startsWith("GET ")) {
+      const resource = key.slice("GET ".length);
+      const route = createRoute("GET", resource, handler, { baseUrl });
+      routeSet.add(route);
+      routes.push(route);
+      continue;
+    }
+    if (key.startsWith("PATCH ")) {
+      const resource = key.slice("PATCH ".length);
+      const route = createRoute("PATCH", resource, handler, { baseUrl });
+      routeSet.add(route);
+      routes.push(route);
+      continue;
+    }
+    if (key === "GET") {
+      fallbackRoute = createRoute("GET", "", handler, { baseUrl });
+      continue;
+    }
   }
   installNavigation({ applyRouting });
   return routes;
@@ -172,7 +186,14 @@ export const registerRoutes = (
  *
  */
 
-export const applyRouting = async ({ url, state, signal, reload }) => {
+export const applyRouting = async ({
+  method,
+  // maybe rename url into resource (because we can't do anything about url outside out domain I guess? TO BE TESTED)
+  url,
+  state,
+  signal,
+  reload,
+}) => {
   const stopSignal = signalToStopSignal(signal);
   if (debug) {
     console.log("try to match routes against", { url });
@@ -181,6 +202,7 @@ export const applyRouting = async ({ url, state, signal, reload }) => {
   for (const routeCandidate of routeSet) {
     const urlObject = new URL(url);
     const returnValue = routeCandidate.test({
+      method,
       url,
       state,
       searchParams: urlObject.searchParams,

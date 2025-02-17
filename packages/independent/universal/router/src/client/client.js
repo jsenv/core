@@ -12,6 +12,7 @@ export {
 } from "./route.js";
 export { Route } from "./route.jsx";
 export { goBack, goForward, goTo, reload, stopLoad } from "./router.js";
+export { SPAForm } from "./router.jsx";
 export {
   useCanStopLoad,
   useRouterIsBusy,

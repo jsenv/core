@@ -1,7 +1,7 @@
 import * as HistoryModule from "./history/history.js";
 import * as NavModule from "./nav/nav.js";
 
-const canUseNavigation = Boolean(window.navigation);
+export const canUseNavigation = Boolean(window.navigation);
 export const installNavigation = canUseNavigation
   ? NavModule.installNavigation
   : HistoryModule.installNavigation;

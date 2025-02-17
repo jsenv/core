@@ -64,10 +64,15 @@ export const installNavigation = ({ applyRouting }) => {
         console.log("nav aborted");
       });
     }
+    const method = event.info?.method || "GET";
+    const formData = event.formData || event.info?.formData;
+
     event.intercept({
       handler: async () => {
         await applyRouting({
+          method,
           url,
+          formData,
           state,
           signal,
           reload: event.navigationType === "reload",
