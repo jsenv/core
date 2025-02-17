@@ -18,7 +18,8 @@ import { canUseNavigation } from "./router.js";
 
 const FormContext = createContext();
 export const useSPAFormStatus = () => {
-  return useContext(FormContext);
+  const [formStatus] = useContext(FormContext);
+  return formStatus;
 };
 
 export const SPAForm = ({ action, method, children }) => {
@@ -26,7 +27,7 @@ export const SPAForm = ({ action, method, children }) => {
     pending: false,
     error: null,
     // method,
-    // action
+    action,
   });
 
   return (
@@ -36,7 +37,13 @@ export const SPAForm = ({ action, method, children }) => {
         submitEvent.preventDefault();
         const formData = new FormData(submitEvent.currentTarget);
         try {
-          await applyRoutingOnFormSubmission({ method, formData, action });
+          await applyRoutingOnFormSubmission({
+            method,
+            formData,
+            action: submitEvent.submitter.hasAttribute("data-custom-action")
+              ? formStatus.action
+              : action,
+          });
         } catch (e) {
           formStatusSetter({ pending: false, error: e });
           return;
@@ -48,10 +55,31 @@ export const SPAForm = ({ action, method, children }) => {
       }}
       method={method === "get" ? "get" : "post"}
     >
-      <FormContext.Provider value={formStatus}>{children}</FormContext.Provider>
+      <FormContext.Provider value={[formStatus, formStatusSetter]}>
+        {children}
+      </FormContext.Provider>
     </form>
   );
 };
+
+const SPAFormButton = ({ action, children, ...props }) => {
+  const [, formStatusSetter] = useContext(FormContext);
+  return (
+    <button
+      data-custom-action=""
+      {...props}
+      onClick={(clickEvent) => {
+        if (props.onClick) {
+          props.onClick(clickEvent);
+        }
+        formStatusSetter({ action });
+      }}
+    >
+      {children}
+    </button>
+  );
+};
+SPAForm.Button = SPAFormButton;
 
 const applyRoutingOnFormSubmission = canUseNavigation
   ? async ({ method, formData, action }) => {

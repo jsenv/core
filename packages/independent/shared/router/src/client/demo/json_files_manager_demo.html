@@ -194,6 +194,20 @@ TODO: create a UI the allow the following:
             <br />
             <br />
             <ButtonSubmit />
+            <SPAForm.Button
+              action={async ({ signal }) => {
+                console.log("custom action");
+                await new Promise((resolve) => {
+                  const timeout = setTimeout(resolve, 1000);
+                  signal.addEventListener("abort", () => {
+                    console.log("cleared");
+                    clearTimeout(timeout);
+                  });
+                });
+              }}
+            >
+              Test
+            </SPAForm.Button>
           </SPAForm>
         );
       };
