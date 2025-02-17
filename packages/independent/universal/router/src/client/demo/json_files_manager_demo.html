@@ -29,7 +29,7 @@ TODO: create a UI the allow the following:
         SPAForm,
       } from "@jsenv/router";
 
-      const [, GET_ALL, GET_ONE, EDIT_ONE] = registerRoutes(
+      const [, GET_ALL, GET_ONE, EDIT_ONE, PATCH_ONE] = registerRoutes(
         {
           "GET /": () => {},
           "GET /?route=json_files": async ({ signal }) => {
@@ -51,16 +51,22 @@ TODO: create a UI the allow the following:
             const responseJSON = await response.json();
             return responseJSON;
           },
-          "PATCH /?route=json_files/:id": async ({ signal, params }) => {
-            // TODO: pass the body
+          "PATCH /?route=json_files/:id": async ({
+            signal,
+            params,
+            formData,
+          }) => {
+            console.log("will send the form: ", Array.from(formData.values()));
+            await new Promise((resolve) => {});
             const response = await fetch(`/json_files/${params.id}`, {
               method: "PATCH",
               signal,
+              body: formData,
             });
             const responseJSON = await response.json();
             return responseJSON;
           },
-          "": () => {},
+          "*": () => {},
         },
         window.location.href,
       );
@@ -136,8 +142,9 @@ TODO: create a UI the allow the following:
       };
       const JSONFileEdit = ({ route }) => {
         const content = route.data;
+        const patchUrl = useRouteUrl(PATCH_ONE, route.params);
         return (
-          <SPAForm action={`/json_files/${route.params.id}`} method="PATCH">
+          <SPAForm action={patchUrl} method="PATCH">
             {Object.keys(content).map((key) => {
               const value = content[key];
               return (

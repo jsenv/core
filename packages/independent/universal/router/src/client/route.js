@@ -33,7 +33,8 @@ export const onRouterUILoaded = () => {
 const routeSet = new Set();
 const matchingRouteSet = new Set();
 const routeAbortEnterMap = new Map();
-let fallbackRoute;
+const fallbackRoutePerMethodMap = new Map();
+let fallbackRouteAnyMethod = null;
 const createRoute = (method, resource, loadData, { baseUrl }) => {
   const routeUrlParsed = parseRouteUrl(resource, baseUrl);
   const route = {
@@ -54,9 +55,15 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
     data: undefined,
     params: {},
     test: ({ method, url }) => {
-      return route.method === method && Boolean(routeUrlParsed.match(url));
+      if (route.method !== method && route.method !== "*") {
+        return false;
+      }
+      if (!routeUrlParsed.match(url)) {
+        return false;
+      }
+      return true;
     },
-    enter: async ({ signal }) => {
+    enter: async ({ signal, formData }) => {
       // here we must pass a signal that gets aborted when
       // 1. any route is stopped (browser stop button)
       // 2. route is left
@@ -88,6 +95,7 @@ const createRoute = (method, resource, loadData, { baseUrl }) => {
           const data = await route.loadData({
             signal: enterAbortSignal,
             params: route.params,
+            formData,
           });
           route.dataSignal.value = data;
         })();
@@ -173,8 +181,18 @@ export const registerRoutes = (
       routes.push(route);
       continue;
     }
-    if (key === "GET") {
-      fallbackRoute = createRoute("GET", "", handler, { baseUrl });
+    if (key === "GET *") {
+      const fallbackGET = createRoute("GET", "*", handler, { baseUrl });
+      fallbackRoutePerMethodMap.set("GET", fallbackGET);
+      continue;
+    }
+    if (key === "PATCH *") {
+      const fallbackPATCH = createRoute("PATCH", "*", handler, { baseUrl });
+      fallbackRoutePerMethodMap.set("GET", fallbackPATCH);
+      continue;
+    }
+    if (key === "*") {
+      fallbackRouteAnyMethod = createRoute("*", "*", handler, { baseUrl });
       continue;
     }
   }
@@ -190,6 +208,7 @@ export const applyRouting = async ({
   method,
   // maybe rename url into resource (because we can't do anything about url outside out domain I guess? TO BE TESTED)
   url,
+  formData,
   state,
   signal,
   reload,
@@ -208,6 +227,7 @@ export const applyRouting = async ({
       searchParams: urlObject.searchParams,
       pathname: urlObject.pathname,
       hash: urlObject.hash,
+      formData,
     });
     if (returnValue) {
       nextMatchingRouteSet.add(routeCandidate);
@@ -217,7 +237,12 @@ export const applyRouting = async ({
     if (debug) {
       console.log("no route has matched -> use fallback route");
     }
-    nextMatchingRouteSet.add(fallbackRoute);
+    const fallbackRouteForThisMethod = fallbackRoutePerMethodMap.get(method);
+    if (fallbackRouteForThisMethod) {
+      nextMatchingRouteSet.add(fallbackRouteForThisMethod);
+    } else if (fallbackRouteAnyMethod) {
+      nextMatchingRouteSet.add(fallbackRouteAnyMethod);
+    }
   }
   const routeToLeaveSet = new Set();
   const routeToEnterSet = new Set();
@@ -256,7 +281,10 @@ export const applyRouting = async ({
   try {
     const promises = [];
     for (const routeToEnter of routeToEnterSet) {
-      const routeEnterPromise = routeToEnter.enter({ signal: stopSignal });
+      const routeEnterPromise = routeToEnter.enter({
+        signal: stopSignal,
+        formData,
+      });
       promises.push(routeEnterPromise);
     }
     await Promise.all(promises);
