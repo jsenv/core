@@ -48,6 +48,8 @@ const createRoute = (method, resource, loadData) => {
     resource,
     loadData,
     loadUI: null,
+    renderUI: null,
+    node: null,
     buildUrl: (params) => {
       const documentUrl = getDocumentUrl();
       const documentUrlWithRoute = resourcePatternParsed.build(
@@ -118,8 +120,21 @@ const createRoute = (method, resource, loadData) => {
           }
           await route.loadUI({ signal: enterAbortSignal });
         })();
+
         await Promise.all([loadDataPromise, loadUIPromise]);
         route.loadingStateSignal.value = LOADED;
+
+        const renderUIPromise = (async () => {
+          if (!route.renderUI) {
+            return;
+          }
+          if (enterAbortSignal.aborted) {
+            return;
+          }
+          route.node = await route.renderUI();
+        })();
+        await renderUIPromise;
+
         if (debug) {
           console.log(`"${route}": route enter end`);
         }

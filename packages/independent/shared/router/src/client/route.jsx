@@ -1,4 +1,9 @@
-import { useErrorBoundary, useLayoutEffect, useState } from "preact/hooks";
+import {
+  useErrorBoundary,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "preact/hooks";
 import {
   onRouterUILoaded,
   useRouteError,
@@ -135,6 +140,27 @@ const RouteHandler = ({
   const routeError = useRouteError(route);
   const routeIsLoaded = useRouteIsLoaded(route);
 
+  const routeIsLoadingPreviousRef = useRef(false);
+  const routeBecomesLoading =
+    !routeIsLoadingPreviousRef.current && routeIsLoading;
+  routeIsLoadingPreviousRef.current = routeIsLoading;
+  const routeIsLoadedPreviousRef = useRef(false);
+  const routeBecomesLoaded = !routeIsLoadedPreviousRef.current && routeIsLoaded;
+  routeIsLoadedPreviousRef.current = routeIsLoaded;
+  const routeUIRenderedPromiseRef = useRef();
+
+  if (routeBecomesLoading) {
+    let resolve;
+    const promise = new Promise((res) => {
+      resolve = res;
+    });
+    routeUIRenderedPromiseRef.current = { promise, resolve };
+  }
+
+  route.renderUI = () => {
+    return routeUIRenderedPromiseRef.current.promise;
+  };
+
   if (!routeIsMatching) {
     return null;
   }
@@ -145,6 +171,22 @@ const RouteHandler = ({
     return <RouteErrorBoundary route={route} Child={RouteLoading} />;
   }
   if (routeIsLoaded) {
+    if (routeBecomesLoaded) {
+      const RouteLoadedOriginal = RouteLoaded;
+      // there is no better way to find the child node than wrapping in a <div>, erf
+      RouteLoaded = function RouteLoadedWrapper(props) {
+        const ref = useRef();
+        useLayoutEffect(() => {
+          const routeNode = ref.current.firstChild;
+          routeUIRenderedPromiseRef.current.resolve(routeNode);
+        }, []);
+        return (
+          <div ref={ref} style="display:inline">
+            <RouteLoadedOriginal {...props} />
+          </div>
+        );
+      };
+    }
     return <RouteErrorBoundary route={route} Child={RouteLoaded} />;
   }
   return <RouteErrorBoundary route={route} Child={RouteMatching} />;
