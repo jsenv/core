@@ -198,7 +198,7 @@ const createAndRegisterRoute = ({
 };
 export const registerRoutes = (description) => {
   const routes = createRoutes(description, createAndRegisterRoute);
-  installNavigation({ applyRouting, applyRoutingAroundCall });
+  installNavigation({ applyRouting, routingWhile });
   return routes;
 };
 
@@ -206,7 +206,7 @@ export const registerRoutes = (description) => {
  *
  */
 
-export const applyRouting = async ({
+const applyRouting = async ({
   method,
   // maybe rename url into resource (because we can't do anything about url outside out domain I guess? TO BE TESTED)
   sourceUrl,
@@ -300,7 +300,7 @@ export const applyRouting = async ({
   if (debugDocumentRouting) {
     console.log("routing started");
   }
-  await applyRoutingAroundCall(async () => {
+  await routingWhile(async () => {
     const promises = [];
     for (const routeToEnter of routeToEnterSet) {
       const routeEnterPromise = routeToEnter.enter({
@@ -313,8 +313,7 @@ export const applyRouting = async ({
     await Promise.all(promises);
   });
 };
-
-export const applyRoutingAroundCall = async (fn, ...args) => {
+const routingWhile = async (fn, ...args) => {
   startDocumentRouting();
   try {
     await fn(...args);

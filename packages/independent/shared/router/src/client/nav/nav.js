@@ -35,7 +35,7 @@ navigation.reload = () => {
   isReloadFromNavigationAPI = false;
 };
 
-export const installNavigation = ({ applyRouting, applyRoutingAroundCall }) => {
+export const installNavigation = ({ applyRouting, routingWhile }) => {
   navigation.addEventListener("navigate", (event) => {
     if (!event.canIntercept) {
       return;
@@ -75,7 +75,7 @@ export const installNavigation = ({ applyRouting, applyRoutingAroundCall }) => {
           // any navigation or window.stop must stop this action
           // unlike for routes where window.stop() prevent route from loading
           // but an other nav does not as long as the route keeps matching
-          await applyRoutingAroundCall(event.info.action, {
+          await routingWhile(event.info.action, {
             signal,
             formData,
           });
