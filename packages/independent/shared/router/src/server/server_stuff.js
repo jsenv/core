@@ -82,8 +82,8 @@ export const JSONFileManagerService = () => {
             const jsonFileContentAsString = readFileSync(jsonFileUrl, "utf8");
             const jsonFileContentAsObject = JSON.parse(jsonFileContentAsString);
             Object.assign(jsonFileContentAsObject, fields);
-            writeFileSync(jsonFileUrl, fields);
             const body = JSON.stringify(jsonFileContentAsObject);
+            writeFileSync(jsonFileUrl, body);
             return {
               status: 200,
               headers: {
