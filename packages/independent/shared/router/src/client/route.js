@@ -42,14 +42,14 @@ const routeAbortEnterMap = new Map();
 const createAndRegisterRoute = ({
   methodPattern,
   resourcePattern,
-  callback,
+  handler,
 }) => {
   resourcePattern = resourceFromUrl(resourcePattern);
   const resourcePatternParsed = parseResourcePattern(resourcePattern);
   const route = {
     methodPattern,
     resourcePattern,
-    loadData: callback,
+    loadData: handler,
     loadUI: null,
     renderUI: null,
     node: null,

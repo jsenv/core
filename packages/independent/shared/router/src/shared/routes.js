@@ -3,12 +3,12 @@ import { parseResourcePattern } from "./resource_pattern.js";
 export const createRoutes = (description, create = createRoute) => {
   const routeArray = [];
   for (const key of Object.keys(description)) {
-    const callback = description[key];
+    const handler = description[key];
     if (key === "*") {
       const route = create({
         methodPattern: "*",
         resourcePattern: "*",
-        callback,
+        handler,
       });
       routeArray.push(route);
     } else {
@@ -16,7 +16,7 @@ export const createRoutes = (description, create = createRoute) => {
       const route = create({
         methodPattern,
         resourcePattern,
-        callback,
+        handler,
       });
       routeArray.push(route);
     }
@@ -51,7 +51,7 @@ export const createRoutes = (description, create = createRoute) => {
   return routeArray;
 };
 
-const createRoute = ({ methodPattern, resourcePattern, callback }) => {
+const createRoute = ({ methodPattern, resourcePattern, handler }) => {
   const resourcePatternParsed = parseResourcePattern(resourcePattern);
   const route = {
     methodPattern,
@@ -69,7 +69,7 @@ const createRoute = ({ methodPattern, resourcePattern, callback }) => {
     build: (url, params) => {
       return resourcePatternParsed.build(url, params);
     },
-    callback,
+    handler,
   };
 
   return route;

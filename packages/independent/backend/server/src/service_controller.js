@@ -1,4 +1,5 @@
 import { timeStart } from "./server_timing/timing_measure.js";
+import { jsenvServiceRouting } from "./services/routing/jsenv_service_routing.js";
 
 const HOOK_NAMES = [
   "serverListening",
@@ -16,6 +17,15 @@ export const createServiceController = (services) => {
   const flatServices = flattenAndFilterServices(services);
   const hookSetMap = new Map();
 
+  const addHook = (hook) => {
+    let hookSet = hookSetMap.get(hook.name);
+    if (!hookSet) {
+      hookSet = new Set();
+      hookSetMap.set(hook.name, hookSet);
+    }
+    hookSet.add(hook);
+  };
+
   const addService = (service) => {
     for (const key of Object.keys(service)) {
       if (key === "name") continue;
@@ -27,13 +37,23 @@ export const createServiceController = (services) => {
       }
       const hookName = key;
       const hookValue = service[hookName];
-      if (hookValue) {
-        let hookSet = hookSetMap.get(hookName);
-        if (!hookSet) {
-          hookSet = new Set();
-          hookSetMap.set(hookName, hookSet);
-        }
-        hookSet.add({
+      if (!hookValue) {
+        continue;
+      }
+      if (hookName === "handleRequest" && typeof hookValue === "object") {
+        const routing = jsenvServiceRouting(hookValue);
+        addHook({
+          service,
+          name: hookName,
+          value: routing.handleRequest,
+        });
+        addHook({
+          service,
+          name: "injectResponseHeaders",
+          value: routing.injectResponseHeaders,
+        });
+      } else {
+        addHook({
           service,
           name: hookName,
           value: hookValue,

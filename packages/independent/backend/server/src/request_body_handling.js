@@ -1,87 +1,82 @@
-/*
-
-TODO: a revoir pour ceci:
-
-return handleRequestBody(request, {
-  'multipart/form-data': async (formData) => {
-  },
-  'application/json': async (json) => {
-  }
-});
-
-// et si pas accepté alors 
-return {
-    status: 415, // Unsupported Media Type
-    'accept-post': 'multipart/form-data, application/json'
-  }
-*/
-
 import { parse } from "node:querystring";
 
 export const handleRequestBody = async (request, handlers) => {
-  const requestBodyContentType = request.headers["content-type"];
   const acceptedContentTypeArray = Object.keys(handlers);
-  if (!requestBodyContentType) {
-    return {
-      status: 415,
-      [`accept-${request.method}`]: acceptedContentTypeArray.join(", "),
-    };
+  const contentTypeSelected = pickRequestContentType(
+    request,
+    acceptedContentTypeArray,
+  );
+  if (!contentTypeSelected) {
+    return createUnsupportedMediaTypeResponse(
+      request,
+      acceptedContentTypeArray,
+    );
   }
-  let contentTypeChoosed;
+  const handler = handlers[contentTypeSelected];
+  const requestBody = await getRequestBody(request, contentTypeSelected);
+  const response = await handler(requestBody);
+  return response;
+};
+
+export const pickRequestContentType = (request, acceptedContentTypeArray) => {
+  const requestBodyContentType = request.headers["content-type"];
+  if (!requestBodyContentType) {
+    return null;
+  }
   for (const acceptedContentType of acceptedContentTypeArray) {
     if (requestBodyContentType.includes(acceptedContentType)) {
-      contentTypeChoosed = acceptedContentType;
-      break;
+      return acceptedContentType;
     }
   }
-  if (!contentTypeChoosed) {
-    return {
-      status: 415,
-      [`accept-${request.method}`]: acceptedContentTypeArray.join(", "),
-    };
-  }
+  return null;
+};
 
-  const handler = handlers[contentTypeChoosed];
-  const onBodyReady = async (requestBody) => {
-    const response = await handler(requestBody);
-    return response;
+export const createUnsupportedMediaTypeResponse = (
+  request,
+  acceptedContentTypeArray = [],
+) => {
+  return {
+    status: 415,
+    [`accept-${request.method}`]: acceptedContentTypeArray.join(", "),
   };
+};
 
+export const getRequestBody = async (request, contentType) => {
   // https://github.com/node-formidable/formidable/tree/master/src/parsers
-  if (contentTypeChoosed === "multipart/form-data") {
+  if (contentType === "multipart/form-data") {
     const { formidable } = await import("formidable");
     const form = formidable({});
     request.__nodeRequest.resume(); // was paused in start_server.js
     const [fields, files] = await form.parse(request.__nodeRequest);
     const requestBodyFormData = { fields, files };
-    return onBodyReady(requestBodyFormData);
+    return requestBodyFormData;
   }
-  if (contentTypeChoosed === "application/x-www-form-urlencoded") {
+  if (contentType === "application/x-www-form-urlencoded") {
     const requestBodyBuffer = await readRequestBody(request);
     const requestBodyString = String(requestBodyBuffer);
     const requestBodyQueryStringParsed = parse(requestBodyString);
-    return onBodyReady(requestBodyQueryStringParsed);
+    return requestBodyQueryStringParsed;
   }
-  if (contentTypeChoosed === "application/json") {
+  if (contentType === "application/json") {
     const requestBodyBuffer = await readRequestBody(request);
     const requestBodyString = String(requestBodyBuffer);
     const requestBodyJSON = JSON.parse(requestBodyString);
-    return onBodyReady(requestBodyJSON);
+    return requestBodyJSON;
   }
-  if (contentTypeChoosed === "text/plain") {
+  if (contentType === "text/plain") {
     const requestBodyBuffer = await readRequestBody(request);
     const requestBodyString = String(requestBodyBuffer);
-    return onBodyReady(requestBodyString);
+    return requestBodyString;
   }
-  if (contentTypeChoosed === "application/octet-stream") {
+  if (contentType === "application/octet-stream") {
     const requestBodyBuffer = await readRequestBody(request);
-    return onBodyReady(requestBodyBuffer);
+    return requestBodyBuffer;
   }
-  throw new Error(`unknown content type ${contentTypeChoosed}`);
+  throw new Error(`unknown content type ${contentType}`);
 };
 
 // exported for unit tests
-export const readRequestBody = (request, { as } = {}) => {
+export const readRequestBody = (request, { as }) => {
   return new Promise((resolve, reject) => {
     const bufferArray = [];
     request.body.subscribe({

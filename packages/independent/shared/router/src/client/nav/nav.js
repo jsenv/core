@@ -71,6 +71,10 @@ export const installNavigation = ({ applyRouting, applyRoutingAroundCall }) => {
     event.intercept({
       handler: async () => {
         if (event.info?.action) {
+          // here we pass signal and not stopSignal because:
+          // any navigation or window.stop must stop this action
+          // unlike for routes where window.stop() prevent route from loading
+          // but an other nav does not as long as the route keeps matching
           await applyRoutingAroundCall(event.info.action, {
             signal,
             formData,

@@ -72,53 +72,58 @@ Read more at https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams.
 
 ### Reading request body
 
-`handleRequestBody` can be used to call code depending on the content-type send by the client. If request content-type is not in the one you've listed, a reponse with status 415 (Unsupported Media Type) is returned.
+Pass an object with accepted request content-types to the route declared on `handleRequest`.  
+The request body will be passed to your function. If the request uses a content-type you do not support a reponse with status 415 (Unsupported Media Type) will be sent automatically.
 
 ```js
-import { startServer, handleRequestBody } from "@jsenv/server";
+import { startServer } from "@jsenv/server";
 
 await startServer({
   services: [
     {
-      handleRequest: async (request) => {
-        const response = await handleRequestBody(request, {
-          "application/json": (requestBodyFields) => {
+      handleRequest: {
+        "POST /users/:id": {
+          "application/json": async (request, { id }) => {
+            const requestBodyJson = await request.body.read();
             return {
               status: 200,
               headers: { "content-type": "text/plain" },
               body: 'Server have received "application/json" body',
             };
           },
-          "multipart/form-data": ({ fields, files }) => {
+          "multipart/form-data": async (request, { id }) => {
+            const { fields, files } = await request.body.read();
             return {
               status: 200,
               headers: { "content-type": "text/plain" },
               body: 'Server have received "multipart/form-data" body',
             };
           },
-          "application/x-www-form-urlencoded": (requestBodyFields) => {
+          "application/x-www-form-urlencoded": async (request, { id }) => {
+            const requestBodyFields = await request.body.read();
             return {
               status: 200,
               headers: { "content-type": "text/plain" },
               body: 'Server have received "application/x-www-form-urlencoded" body',
             };
           },
-          "text/plain": (requestBodyAsString) => {
+          "text/plain": async (request, { id }) => {
+            const requestBodyText = await request.body.read();
             return {
               status: 200,
               headers: { "content-type": "text/plain" },
               body: 'Server have received "text/plain" body',
             };
           },
-          "application/octet-stream": (requestBodyAsBuffer) => {
+          "application/octet-stream": async (request, { id }) => {
+            const requestBodyBuffer = await request.body.read();
             return {
               status: 200,
               headers: { "content-type": "text/plain" },
               body: 'Server have received "application/octet-stream" body',
             };
           },
-        });
-        return response;
+        },
       },
     },
   ],

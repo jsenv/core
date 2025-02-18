@@ -1,20 +1,10 @@
-import { handleRequestBody } from "@jsenv/server";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { routeClientRequest } from "./client_request_routing.js";
 
 export const clientControlledResourceService = () => {
   let resolve;
   return {
-    handleRequest: async (request) => {
-      if (request.pathname === "/__delayed__.js") {
-        if (request.method === "POST") {
-          if (resolve) {
-            resolve();
-          }
-          return {
-            status: 200,
-          };
-        }
+    handleRequest: {
+      "GET /__delayed__.js": async () => {
         if (resolve) {
           resolve();
         }
@@ -29,8 +19,15 @@ export const clientControlledResourceService = () => {
             "content-length": 0,
           },
         };
-      }
-      return null;
+      },
+      "POST /__delayed__.js": async () => {
+        if (resolve) {
+          resolve();
+        }
+        return {
+          status: 200,
+        };
+      },
     },
   };
 };
@@ -39,7 +36,7 @@ const jsonDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 
 export const JSONFileManagerService = () => {
   return {
-    handleRequest: routeClientRequest({
+    handleRequest: {
       "GET /json_files": () => {
         const jsonFiles = readdirSync(jsonDirectoryUrl);
         const body = JSON.stringify(jsonFiles);
@@ -73,28 +70,27 @@ export const JSONFileManagerService = () => {
           return { status: 500 };
         }
       },
-      "PATCH /json_files/:id": async (request, { id }) => {
-        return handleRequestBody(request, {
-          "multipart/form-data": ({ fields }) => {
-            // TODO: attention le format form-data fait que key:value devient key: [value]
-            // donc on peut pas juste faire ça, mais bon pour l'instant c'est good
-            const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
-            const jsonFileContentAsString = readFileSync(jsonFileUrl, "utf8");
-            const jsonFileContentAsObject = JSON.parse(jsonFileContentAsString);
-            Object.assign(jsonFileContentAsObject, fields);
-            const body = JSON.stringify(jsonFileContentAsObject);
-            writeFileSync(jsonFileUrl, body);
-            return {
-              status: 200,
-              headers: {
-                "content-type": "application/json",
-                "content-length": Buffer.byteLength(body),
-              },
-              body,
-            };
-          },
-        });
+      "PATCH /json_files/:id": {
+        "multipart/form-data": async (request, { id }) => {
+          const { fields } = await request.body.read();
+          // TODO: attention le format form-data fait que key:value devient key: [value]
+          // donc on peut pas juste faire ça, mais bon pour l'instant c'est good
+          const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
+          const jsonFileContentAsString = readFileSync(jsonFileUrl, "utf8");
+          const jsonFileContentAsObject = JSON.parse(jsonFileContentAsString);
+          Object.assign(jsonFileContentAsObject, fields);
+          const body = JSON.stringify(jsonFileContentAsObject);
+          writeFileSync(jsonFileUrl, body);
+          return {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(body),
+            },
+            body,
+          };
+        },
       },
-    }),
+    },
   };
 };
