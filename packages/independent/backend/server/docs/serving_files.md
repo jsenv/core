@@ -8,13 +8,15 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-          },
-        );
+      handleRequest: {
+        "GET *": (request) => {
+          return fetchFileSystem(
+            new URL(request.resource.slice(1), import.meta.url),
+            {
+              headers: request.headers,
+            },
+          );
+        },
       },
     },
   ],
@@ -41,14 +43,16 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            etagEnabled: true,
-          },
-        );
+      handleRequest: {
+        "GET *": (request) => {
+          return fetchFileSystem(
+            new URL(request.resource.slice(1), import.meta.url),
+            {
+              headers: request.headers,
+              etagEnabled: true,
+            },
+          );
+        },
       },
     },
   ],
@@ -66,14 +70,16 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            mtimeEnabled: true,
-          },
-        );
+      handleRequest: {
+        "GET *": (request) => {
+          return fetchFileSystem(
+            new URL(request.resource.slice(1), import.meta.url),
+            {
+              headers: request.headers,
+              mtimeEnabled: true,
+            },
+          );
+        },
       },
     },
   ],
@@ -96,17 +102,19 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            cacheControl:
-              request.resource === "/"
-                ? `private,max-age=0,must-revalidate`
-                : `private,max-age=3600,immutable`,
-          },
-        );
+      handleRequest: {
+        "GET *": (request) => {
+          return fetchFileSystem(
+            new URL(request.resource.slice(1), import.meta.url),
+            {
+              headers: request.headers,
+              cacheControl:
+                request.resource === "/"
+                  ? `private,max-age=0,must-revalidate`
+                  : `private,max-age=3600,immutable`,
+            },
+          );
+        },
       },
     },
   ],
@@ -130,15 +138,17 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            compressionEnabled: true,
-            compressionSizeThreshold: 1024,
-          },
-        );
+      handleRequest: {
+        "GET *": (request) => {
+          return fetchFileSystem(
+            new URL(request.resource.slice(1), import.meta.url),
+            {
+              headers: request.headers,
+              compressionEnabled: true,
+              compressionSizeThreshold: 1024,
+            },
+          );
+        },
       },
     },
   ],

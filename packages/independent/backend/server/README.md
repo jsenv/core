@@ -9,14 +9,16 @@ await startServer({
   port: 8080,
   services: [
     {
-      handleRequest: () => {
-        return {
-          status: 200,
-          headers: {
-            "content-type": "text/plain",
-          },
-          body: "Hello world",
-        };
+      handleRequest: {
+        "GET *": () => {
+          return {
+            status: 200,
+            headers: {
+              "content-type": "text/plain",
+            },
+            body: "Hello world",
+          };
+        },
       },
     },
   ],
@@ -41,17 +43,13 @@ const server = await startServer({
   services: [
     {
       name: "index",
-      handleRequest: (request) => {
-        if (request.resource === "/") {
+      handleRequest: {
+        "GET /": (request) => {
           return { status: 200 };
-        }
-        return null;
-      },
-    },
-    {
-      name: "otherwise",
-      handleRequest: () => {
-        return { status: 404 };
+        },
+        "GET *": () => {
+          return { status: 404 };
+        },
       },
     },
   ],
@@ -79,16 +77,17 @@ await startServer({
   allowHttpRequestOnHttps: true,
   services: [
     {
-      handleRequest: (request) => {
-        const clientUsesHttp = request.origin.startsWith("http:");
-
-        return {
-          status: 200,
-          headers: {
-            "content-type": "text/plain",
-          },
-          body: clientUsesHttp ? `Welcome http user` : `Welcome https user`,
-        };
+      handleRequest: {
+        "GET *": (request) => {
+          const clientUsesHttp = request.origin.startsWith("http:");
+          return {
+            status: 200,
+            headers: {
+              "content-type": "text/plain",
+            },
+            body: clientUsesHttp ? `Welcome http user` : `Welcome https user`,
+          };
+        },
       },
     },
   ],
@@ -103,10 +102,12 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: async (request) => {
-        const fileUrl = new URL(request.resource.slice(1), import.meta.url);
-        const response = await fetchFileSystem(fileUrl, request);
-        return response;
+      handleRequest: {
+        "GET *": async (request) => {
+          const fileUrl = new URL(request.resource.slice(1), import.meta.url);
+          const response = await fetchFileSystem(fileUrl, request);
+          return response;
+        },
       },
     },
   ],

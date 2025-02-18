@@ -41,24 +41,23 @@ export const buildServer = await startBuildServer({
   buildMainFilePath: "main.html",
   services: [
     {
-      handleRequest: async (request) => {
-        if (request.pathname === "/update_animal_to_dog") {
+      handleRequest: {
+        "GET /update_animal_to_dog": async () => {
           await buildStory("dog");
           return { status: 200 };
-        }
-        if (request.pathname === "/update_animal_to_horse") {
+        },
+        "GET /update_animal_to_horse": async () => {
           await buildStory("horse");
           return { status: 200 };
-        }
-        if (request.pathname === "/update_animal_to_cat") {
+        },
+        "GET /update_animal_to_cat": async () => {
           await buildStory("cat");
           return { status: 200 };
-        }
-        if (request.pathname === "/update_animal_to_bear") {
+        },
+        "GET /update_animal_to_bear": async () => {
           await buildStory("bear");
           return { status: 200 };
-        }
-        return null;
+        },
       },
     },
   ],

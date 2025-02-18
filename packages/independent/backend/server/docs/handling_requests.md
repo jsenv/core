@@ -247,17 +247,13 @@ await startServer({
   services: [
     {
       name: "index",
-      handleRequest: (request) => {
-        if (request.resource === "/") {
+      handleRequest: {
+        "GET /": (request) => {
           return { status: 200 };
-        }
-        return null; // means "I don't handle that request"
-      },
-    },
-    {
-      name: "otherwise",
-      handleRequest: () => {
-        return { status: 404 };
+        },
+        "GET *": () => {
+          return { status: 404 };
+        },
       },
     },
   ],

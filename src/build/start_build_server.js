@@ -161,34 +161,36 @@ export const startBuildServer = async ({
 };
 
 const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
-  return (request) => {
-    const urlIsVersioned = new URL(request.url).searchParams.has("v");
-    if (buildMainFilePath && request.resource === "/") {
-      request = {
-        ...request,
-        resource: `/${buildMainFilePath}`,
-      };
-    }
-    const urlObject = new URL(request.resource.slice(1), buildDirectoryUrl);
-    return fetchFileSystem(urlObject, {
-      headers: request.headers,
-      cacheControl: urlIsVersioned
-        ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-        : "private,max-age=0,must-revalidate",
-      etagEnabled: true,
-      compressionEnabled: true,
-      rootDirectoryUrl: buildDirectoryUrl,
-      canReadDirectory: true,
-      ENOENTFallback: () => {
-        if (
-          !urlToExtension(urlObject) &&
-          !urlToPathname(urlObject).endsWith("/")
-        ) {
-          return new URL(buildMainFilePath, buildDirectoryUrl);
-        }
-        return null;
-      },
-    });
+  return {
+    "GET *": (request) => {
+      const urlIsVersioned = new URL(request.url).searchParams.has("v");
+      if (buildMainFilePath && request.resource === "/") {
+        request = {
+          ...request,
+          resource: `/${buildMainFilePath}`,
+        };
+      }
+      const urlObject = new URL(request.resource.slice(1), buildDirectoryUrl);
+      return fetchFileSystem(urlObject, {
+        headers: request.headers,
+        cacheControl: urlIsVersioned
+          ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+          : "private,max-age=0,must-revalidate",
+        etagEnabled: true,
+        compressionEnabled: true,
+        rootDirectoryUrl: buildDirectoryUrl,
+        canReadDirectory: true,
+        ENOENTFallback: () => {
+          if (
+            !urlToExtension(urlObject) &&
+            !urlToPathname(urlObject).endsWith("/")
+          ) {
+            return new URL(buildMainFilePath, buildDirectoryUrl);
+          }
+          return null;
+        },
+      });
+    },
   };
 };
 

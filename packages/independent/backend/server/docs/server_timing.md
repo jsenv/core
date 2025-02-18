@@ -26,16 +26,18 @@ await startServer({
   services: [
     {
       name: "service:nocontent",
-      handleRequest: (request) => {
-        if (request.pathname !== "/") return null;
-        return { status: 204 };
+      handleRequest: {
+        "GET /": (request) => {
+          return { status: 204 };
+        },
       },
     },
     {
       name: "service:ok",
-      handleRequest: (request) => {
-        if (request.pathname !== "/whatever") return null;
-        return { status: 200 };
+      handleRequest: {
+        "GET /whatever": (request) => {
+          return { status: 200 };
+        },
       },
     },
   ],
@@ -57,28 +59,30 @@ await startServer({
   serverTiming: true,
   services: [
     {
-      handleRequest: async () => {
-        const timeoutStart = performance.now();
-        const [waitTiming] = await timeFunction("waiting 50ms", async () => {
-          await new Promise((resolve) => {
-            setTimeout(resolve, 50);
+      handleRequest: {
+        "GET *": async () => {
+          const timeoutStart = performance.now();
+          const [waitTiming] = await timeFunction("waiting 50ms", async () => {
+            await new Promise((resolve) => {
+              setTimeout(resolve, 50);
+            });
           });
-        });
-        const timeoutDuration = performance.now() - timeoutStart;
-        const additionStart = performance.now();
-        1 + 1;
-        const additionDuration = performance.now() - additionStart;
-        return {
-          status: 200,
-          headers: {
-            "content-type": "text/plain",
-          },
-          body: message,
-          timing: {
-            "setTimeout(50)": timeoutDuration,
-            "1+1": additionDuration,
-          },
-        };
+          const timeoutDuration = performance.now() - timeoutStart;
+          const additionStart = performance.now();
+          1 + 1;
+          const additionDuration = performance.now() - additionStart;
+          return {
+            status: 200,
+            headers: {
+              "content-type": "text/plain",
+            },
+            body: message,
+            timing: {
+              "setTimeout(50)": timeoutDuration,
+              "1+1": additionDuration,
+            },
+          };
+        },
       },
     },
   ],

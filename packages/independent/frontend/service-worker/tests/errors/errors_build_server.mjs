@@ -41,24 +41,23 @@ export const buildServer = await startBuildServer({
   buildMainFilePath: "main.html",
   services: [
     {
-      handleRequest: async (request) => {
-        if (request.pathname === "/build_no_error") {
+      handleRequest: {
+        "GET /build_no_error": async () => {
           await buildStory("no_error");
           return { status: 200 };
-        }
-        if (request.pathname === "/build_error_during_register") {
+        },
+        "GET /build_error_during_register": async () => {
           await buildStory("error_during_register");
           return { status: 200 };
-        }
-        if (request.pathname === "/build_error_during_install") {
+        },
+        "GET /build_error_during_install": async () => {
           await buildStory("error_during_install");
           return { status: 200 };
-        }
-        if (request.pathname === "/build_error_during_activate") {
+        },
+        "GET /build_error_during_activate": async () => {
           await buildStory("error_during_activate");
           return { status: 200 };
-        }
-        return null;
+        },
       },
     },
   ],

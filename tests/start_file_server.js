@@ -19,18 +19,20 @@ export const startFileServer = ({
       ...services,
       jsenvServiceErrorHandler({ sendErrorDetails: true }),
       {
-        handleRequest: (request) =>
-          fetchFileSystem(
-            new URL(request.resource.slice(1), rootDirectoryUrl),
-            {
-              rootDirectoryUrl,
-              canReadDirectory: true,
-              headers: request.headers,
-              cacheControl: canUseLongTermCache(request)
-                ? `private,max-age=3600,immutable` // 1hour
-                : "private,max-age=0,must-revalidate",
-            },
-          ),
+        handleRequest: {
+          "GET *": (request) =>
+            fetchFileSystem(
+              new URL(request.resource.slice(1), rootDirectoryUrl),
+              {
+                rootDirectoryUrl,
+                canReadDirectory: true,
+                headers: request.headers,
+                cacheControl: canUseLongTermCache(request)
+                  ? `private,max-age=3600,immutable` // 1hour
+                  : "private,max-age=0,must-revalidate",
+              },
+            ),
+        },
       },
     ],
     ...rest,

@@ -8,37 +8,41 @@ import { startServer, pickContentType } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: (request) => {
-        const bestContentType = pickContentType(request, [
-          "application/json",
-          "text/plain",
-        ]);
-        const responseContentType = bestContentType || "text/plain";
-
-        return {
-          "application/json": () => {
-            const body = JSON.stringify({
-              data: "Hello world",
-            });
-            return {
-              headers: {
-                "content-type": "application/json",
-                "content-length": Buffer.byteLength(body),
-              },
-              body,
-            };
-          },
-          "text/plain": () => {
-            const body = `Hello world`;
-            return {
-              headers: {
-                "content-type": "text/plain",
-                "content-length": Buffer.byteLength(body),
-              },
-              body,
-            };
-          },
-        }[responseContentType];
+      handleRequest: {
+        "GET *": (request) => {
+          const bestContentType = pickContentType(request, [
+            "application/json",
+            "text/plain",
+          ]);
+          const responseContentType = bestContentType || "text/plain";
+          const availableContentTypes = {
+            "application/json": () => {
+              const body = JSON.stringify({
+                data: "Hello world",
+              });
+              return {
+                headers: {
+                  "content-type": "application/json",
+                  "content-length": Buffer.byteLength(body),
+                },
+                body,
+              };
+            },
+            "text/plain": () => {
+              const body = `Hello world`;
+              return {
+                headers: {
+                  "content-type": "text/plain",
+                  "content-length": Buffer.byteLength(body),
+                },
+                body,
+              };
+            },
+          };
+          const responseInNegotiatedContentType =
+            availableContentTypes[responseContentType]();
+          return responseInNegotiatedContentType;
+        },
       },
     },
   ],
@@ -53,34 +57,38 @@ import { startServer, pickContentLanguage } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: (request) => {
-        const bestLanguage = pickContentLanguage(request, ["fr", "en"]);
-        const responseLanguage = bestLanguage || "en";
-
-        return {
-          fr: () => {
-            const body = "Bonjour tout le monde !";
-            return {
-              headers: {
-                "content-type": "text/plain",
-                "content-length": Buffer.byteLength(body),
-                "content-language": "fr",
-              },
-              body,
-            };
-          },
-          en: () => {
-            const body = `Hello world!`;
-            return {
-              headers: {
-                "content-type": "text/plain",
-                "content-length": Buffer.byteLength(body),
-                "content-language": "en",
-              },
-              body,
-            };
-          },
-        }[responseLanguage];
+      handleRequest: {
+        "GET *": (request) => {
+          const bestLanguage = pickContentLanguage(request, ["fr", "en"]);
+          const responseLanguage = bestLanguage || "en";
+          const availableLanguages = {
+            fr: () => {
+              const body = "Bonjour tout le monde !";
+              return {
+                headers: {
+                  "content-type": "text/plain",
+                  "content-length": Buffer.byteLength(body),
+                  "content-language": "fr",
+                },
+                body,
+              };
+            },
+            en: () => {
+              const body = `Hello world!`;
+              return {
+                headers: {
+                  "content-type": "text/plain",
+                  "content-length": Buffer.byteLength(body),
+                  "content-language": "en",
+                },
+                body,
+              };
+            },
+          };
+          const responseInNegotiatedLanguage =
+            availableLanguages[responseLanguage]();
+          return responseInNegotiatedLanguage;
+        },
       },
     },
   ],
@@ -96,35 +104,39 @@ import { startServer, pickContentEncoding } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: (request) => {
-        const acceptedEncoding = pickContentEncoding(request, [
-          "gzip",
-          "identity",
-        ]);
-        const responseEncoding = acceptedEncoding || "identity";
-
-        return {
-          gzip: () => {
-            const body = gzipSync(Buffer.from(`Hello world!`));
-            return {
-              headers: {
-                "content-type": "text/plain",
-                "content-encoding": "gzip",
-              },
-              body,
-            };
-          },
-          identity: () => {
-            const body = "Hello world!";
-            return {
-              headers: {
-                "content-type": "text/plain",
-                "content-length": Buffer.byteLength(body),
-              },
-              body,
-            };
-          },
-        }[responseEncoding];
+      handleRequest: {
+        "GET *": (request) => {
+          const acceptedEncoding = pickContentEncoding(request, [
+            "gzip",
+            "identity",
+          ]);
+          const responseEncoding = acceptedEncoding || "identity";
+          const availableEncodings = {
+            gzip: () => {
+              const body = gzipSync(Buffer.from(`Hello world!`));
+              return {
+                headers: {
+                  "content-type": "text/plain",
+                  "content-encoding": "gzip",
+                },
+                body,
+              };
+            },
+            identity: () => {
+              const body = "Hello world!";
+              return {
+                headers: {
+                  "content-type": "text/plain",
+                  "content-length": Buffer.byteLength(body),
+                },
+                body,
+              };
+            },
+          };
+          const responseInNegotiatedEncoding =
+            availableEncodings[responseEncoding]();
+          return responseInNegotiatedEncoding;
+        },
       },
     },
   ],

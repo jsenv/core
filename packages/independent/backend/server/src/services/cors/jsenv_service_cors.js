@@ -33,18 +33,17 @@ export const jsenvServiceCORS = ({
   return {
     name: "jsenv:cors",
 
-    handleRequest: (request) => {
-      // when request method is "OPTIONS" we must return a 200 without body
-      // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
-      if (request.method === "OPTIONS") {
+    handleRequest: {
+      "OPTIONS *": () => {
+        // when request method is "OPTIONS" we must return a 200 without body
+        // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
         return {
           status: 200,
           headers: {
             "content-length": 0,
           },
         };
-      }
-      return null;
+      },
     },
 
     injectResponseHeaders: (response, { request }) => {

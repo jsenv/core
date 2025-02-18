@@ -154,11 +154,14 @@ export const startDevServer = async ({
   // x-server-inspect service
   {
     finalServices.push({
-      handleRequest: (request) => {
-        if (request.headers["x-server-inspect"]) {
-          return { status: 200 };
-        }
-        if (request.pathname === "/__params__.json") {
+      handleRequest: {
+        "GET *": (request) => {
+          if (request.headers["x-server-inspect"]) {
+            return { status: 200 };
+          }
+          return null;
+        },
+        "GET /__params__.json": () => {
           const json = JSON.stringify({
             sourceDirectoryUrl,
           });
@@ -170,8 +173,7 @@ export const startDevServer = async ({
             },
             body: json,
           };
-        }
-        return null;
+        },
       },
       injectResponseHeaders: () => {
         return { server: "jsenv_dev_server/1" };
@@ -376,205 +378,209 @@ export const startDevServer = async ({
 
     finalServices.push({
       name: "jsenv:omega_file_service",
-      handleRequest: async (request) => {
-        const kitchen = getOrCreateKitchen(request);
-        const serveHookInfo = {
-          ...kitchen.context,
-          request,
-        };
-        const responseFromPlugin =
-          await kitchen.pluginController.callAsyncHooksUntil(
-            "serve",
-            serveHookInfo,
-          );
-        if (responseFromPlugin) {
-          return responseFromPlugin;
-        }
-        const { rootDirectoryUrl, mainFilePath } = kitchen.context;
-        let requestResource = request.resource;
-        let requestedUrl;
-        if (requestResource.startsWith("/@fs/")) {
-          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
-          requestedUrl = `file:///${fsRootRelativeUrl}`;
-        } else {
-          const requestedUrlObject = new URL(
-            requestResource === "/" ? mainFilePath : requestResource.slice(1),
-            rootDirectoryUrl,
-          );
-          requestedUrlObject.searchParams.delete("hot");
-          requestedUrl = requestedUrlObject.href;
-        }
-        const { referer } = request.headers;
-        const parentUrl = referer
-          ? WEB_URL_CONVERTER.asFileUrl(referer, {
-              origin: request.origin,
-              rootDirectoryUrl: sourceDirectoryUrl,
-            })
-          : sourceDirectoryUrl;
-        let reference = kitchen.graph.inferReference(
-          request.resource,
-          parentUrl,
-        );
-        if (reference) {
-          reference.urlInfo.context.request = request;
-          reference.urlInfo.context.requestedUrl = requestedUrl;
-        } else {
-          const rootUrlInfo = kitchen.graph.rootUrlInfo;
-          rootUrlInfo.context.request = request;
-          rootUrlInfo.context.requestedUrl = requestedUrl;
-          reference = rootUrlInfo.dependencies.createResolveAndFinalize({
-            trace: { message: parentUrl },
-            type: "http_request",
-            specifier: request.resource,
-          });
-          rootUrlInfo.context.request = null;
-          rootUrlInfo.context.requestedUrl = null;
-        }
-        const urlInfo = reference.urlInfo;
-        const ifNoneMatch = request.headers["if-none-match"];
-        const urlInfoTargetedByCache = urlInfo.findParentIfInline() || urlInfo;
-
-        try {
-          if (!urlInfo.error && ifNoneMatch) {
-            const [clientOriginalContentEtag, clientContentEtag] =
-              ifNoneMatch.split("_");
-            if (
-              urlInfoTargetedByCache.originalContentEtag ===
-                clientOriginalContentEtag &&
-              urlInfoTargetedByCache.contentEtag === clientContentEtag &&
-              urlInfoTargetedByCache.isValid()
-            ) {
-              const headers = {
-                "cache-control": `private,max-age=0,must-revalidate`,
-              };
-              Object.keys(urlInfo.headers).forEach((key) => {
-                if (key !== "content-length") {
-                  headers[key] = urlInfo.headers[key];
-                }
-              });
-              return {
-                status: 304,
-                headers,
-              };
-            }
-          }
-          await urlInfo.cook({ request, reference });
-          let { response } = urlInfo;
-          if (response) {
-            return response;
-          }
-          response = {
-            url: reference.url,
-            status: 200,
-            headers: {
-              // when we send eTag to the client the next request to the server
-              // will send etag in request headers.
-              // If they match jsenv bypass cooking and returns 304
-              // This must not happen when a plugin uses "no-store" or "no-cache" as it means
-              // plugin logic wants to happens for every request to this url
-              ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
-                ? {
-                    "cache-control": "no-store", // for inline file we force no-store when parent is no-store
-                  }
-                : {
-                    "cache-control": `private,max-age=0,must-revalidate`,
-                    // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
-                    "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
-                  }),
-              ...urlInfo.headers,
-              "content-type": urlInfo.contentType,
-              "content-length": urlInfo.contentLength,
-            },
-            body: urlInfo.content,
-            timing: urlInfo.timing,
-          };
-          const augmentResponseInfo = {
+      handleRequest: {
+        "GET *": async (request) => {
+          const kitchen = getOrCreateKitchen(request);
+          const serveHookInfo = {
             ...kitchen.context,
-            reference,
-            urlInfo,
+            request,
           };
-          kitchen.pluginController.callHooks(
-            "augmentResponse",
-            augmentResponseInfo,
-            (returnValue) => {
-              response = composeTwoResponses(response, returnValue);
-            },
-          );
-          return response;
-        } catch (error) {
-          const originalError = error ? error.cause || error : error;
-          if (originalError.asResponse) {
-            return originalError.asResponse();
+          const responseFromPlugin =
+            await kitchen.pluginController.callAsyncHooksUntil(
+              "serve",
+              serveHookInfo,
+            );
+          if (responseFromPlugin) {
+            return responseFromPlugin;
           }
-          const code = originalError.code;
-          if (code === "PARSE_ERROR") {
-            // when possible let browser re-throw the syntax error
-            // it's not possible to do that when url info content is not available
-            // (happens for js_module_fallback for instance)
-            if (urlInfo.content !== undefined) {
-              kitchen.context.logger.error(`Error while handling ${request.url}:
+          const { rootDirectoryUrl, mainFilePath } = kitchen.context;
+          let requestResource = request.resource;
+          let requestedUrl;
+          if (requestResource.startsWith("/@fs/")) {
+            const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
+            requestedUrl = `file:///${fsRootRelativeUrl}`;
+          } else {
+            const requestedUrlObject = new URL(
+              requestResource === "/" ? mainFilePath : requestResource.slice(1),
+              rootDirectoryUrl,
+            );
+            requestedUrlObject.searchParams.delete("hot");
+            requestedUrl = requestedUrlObject.href;
+          }
+          const { referer } = request.headers;
+          const parentUrl = referer
+            ? WEB_URL_CONVERTER.asFileUrl(referer, {
+                origin: request.origin,
+                rootDirectoryUrl: sourceDirectoryUrl,
+              })
+            : sourceDirectoryUrl;
+          let reference = kitchen.graph.inferReference(
+            request.resource,
+            parentUrl,
+          );
+          if (reference) {
+            reference.urlInfo.context.request = request;
+            reference.urlInfo.context.requestedUrl = requestedUrl;
+          } else {
+            const rootUrlInfo = kitchen.graph.rootUrlInfo;
+            rootUrlInfo.context.request = request;
+            rootUrlInfo.context.requestedUrl = requestedUrl;
+            reference = rootUrlInfo.dependencies.createResolveAndFinalize({
+              trace: { message: parentUrl },
+              type: "http_request",
+              specifier: request.resource,
+            });
+            rootUrlInfo.context.request = null;
+            rootUrlInfo.context.requestedUrl = null;
+          }
+          const urlInfo = reference.urlInfo;
+          const ifNoneMatch = request.headers["if-none-match"];
+          const urlInfoTargetedByCache =
+            urlInfo.findParentIfInline() || urlInfo;
+
+          try {
+            if (!urlInfo.error && ifNoneMatch) {
+              const [clientOriginalContentEtag, clientContentEtag] =
+                ifNoneMatch.split("_");
+              if (
+                urlInfoTargetedByCache.originalContentEtag ===
+                  clientOriginalContentEtag &&
+                urlInfoTargetedByCache.contentEtag === clientContentEtag &&
+                urlInfoTargetedByCache.isValid()
+              ) {
+                const headers = {
+                  "cache-control": `private,max-age=0,must-revalidate`,
+                };
+                Object.keys(urlInfo.headers).forEach((key) => {
+                  if (key !== "content-length") {
+                    headers[key] = urlInfo.headers[key];
+                  }
+                });
+                return {
+                  status: 304,
+                  headers,
+                };
+              }
+            }
+            await urlInfo.cook({ request, reference });
+            let { response } = urlInfo;
+            if (response) {
+              return response;
+            }
+            response = {
+              url: reference.url,
+              status: 200,
+              headers: {
+                // when we send eTag to the client the next request to the server
+                // will send etag in request headers.
+                // If they match jsenv bypass cooking and returns 304
+                // This must not happen when a plugin uses "no-store" or "no-cache" as it means
+                // plugin logic wants to happens for every request to this url
+                ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
+                  ? {
+                      "cache-control": "no-store", // for inline file we force no-store when parent is no-store
+                    }
+                  : {
+                      "cache-control": `private,max-age=0,must-revalidate`,
+                      // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
+                      "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
+                    }),
+                ...urlInfo.headers,
+                "content-type": urlInfo.contentType,
+                "content-length": urlInfo.contentLength,
+              },
+              body: urlInfo.content,
+              timing: urlInfo.timing,
+            };
+            const augmentResponseInfo = {
+              ...kitchen.context,
+              reference,
+              urlInfo,
+            };
+            kitchen.pluginController.callHooks(
+              "augmentResponse",
+              augmentResponseInfo,
+              (returnValue) => {
+                response = composeTwoResponses(response, returnValue);
+              },
+            );
+            return response;
+          } catch (error) {
+            const originalError = error ? error.cause || error : error;
+            if (originalError.asResponse) {
+              return originalError.asResponse();
+            }
+            const code = originalError.code;
+            if (code === "PARSE_ERROR") {
+              // when possible let browser re-throw the syntax error
+              // it's not possible to do that when url info content is not available
+              // (happens for js_module_fallback for instance)
+              if (urlInfo.content !== undefined) {
+                kitchen.context.logger
+                  .error(`Error while handling ${request.url}:
 ${originalError.reasonCode || originalError.code}
 ${error.trace?.message}`);
+                return {
+                  url: reference.url,
+                  status: 200,
+                  // reason becomes the http response statusText, it must not contain invalid chars
+                  // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+                  statusText: error.reason,
+                  statusMessage: originalError.message,
+                  headers: {
+                    "content-type": urlInfo.contentType,
+                    "content-length": urlInfo.contentLength,
+                    "cache-control": "no-store",
+                  },
+                  body: urlInfo.content,
+                };
+              }
               return {
                 url: reference.url,
-                status: 200,
-                // reason becomes the http response statusText, it must not contain invalid chars
-                // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+                status: 500,
                 statusText: error.reason,
                 statusMessage: originalError.message,
                 headers: {
-                  "content-type": urlInfo.contentType,
-                  "content-length": urlInfo.contentLength,
                   "cache-control": "no-store",
                 },
                 body: urlInfo.content,
+              };
+            }
+            if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+              return serveDirectory(reference.url, {
+                headers: {
+                  accept: "text/html",
+                },
+                canReadDirectory: true,
+                rootDirectoryUrl: sourceDirectoryUrl,
+              });
+            }
+            if (code === "NOT_ALLOWED") {
+              return {
+                url: reference.url,
+                status: 403,
+                statusText: originalError.reason,
+              };
+            }
+            if (code === "NOT_FOUND") {
+              return {
+                url: reference.url,
+                status: 404,
+                statusText: originalError.reason,
+                statusMessage: originalError.message,
               };
             }
             return {
               url: reference.url,
               status: 500,
               statusText: error.reason,
-              statusMessage: originalError.message,
+              statusMessage: error.stack,
               headers: {
                 "cache-control": "no-store",
               },
-              body: urlInfo.content,
             };
           }
-          if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-            return serveDirectory(reference.url, {
-              headers: {
-                accept: "text/html",
-              },
-              canReadDirectory: true,
-              rootDirectoryUrl: sourceDirectoryUrl,
-            });
-          }
-          if (code === "NOT_ALLOWED") {
-            return {
-              url: reference.url,
-              status: 403,
-              statusText: originalError.reason,
-            };
-          }
-          if (code === "NOT_FOUND") {
-            return {
-              url: reference.url,
-              status: 404,
-              statusText: originalError.reason,
-              statusMessage: originalError.message,
-            };
-          }
-          return {
-            url: reference.url,
-            status: 500,
-            statusText: error.reason,
-            statusMessage: error.stack,
-            headers: {
-              "cache-control": "no-store",
-            },
-          };
-        }
+        },
       },
       handleWebsocket: async (websocket, { request }) => {
         // if (true || logLevel === "debug") {
