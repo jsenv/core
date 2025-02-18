@@ -16,7 +16,7 @@
         useDocumentUrl,
         registerRoutes,
         useRouteUrl,
-        useRouteIsActive,
+        useRouteIsMatching,
         useRouteIsLoading,
         useRouteLoadIsAborted,
         useUrlBooleanParam,
@@ -60,8 +60,8 @@
           useUrlBooleanParam("opened");
         const pageAUrl = useRouteUrl(pageA);
         const pageBUrl = useRouteUrl(pageB);
-        const fooIsActive = useRouteIsActive(foo);
-        const barIsActive = useRouteIsActive(bar);
+        const fooIsActive = useRouteIsMatching(foo);
+        const barIsActive = useRouteIsMatching(bar);
         const fooUrl = useRouteUrl(foo);
         const barUrl = useRouteUrl(bar);
 
@@ -135,7 +135,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const PageA = () => {
-        const isActive = useRouteIsActive(pageA);
+        const isActive = useRouteIsMatching(pageA);
         const isLoading = useRouteIsLoading(pageA);
         const isAborted = useRouteLoadIsAborted(pageA);
         if (!isActive) {
@@ -163,7 +163,7 @@
 
       // eslint-disable-next-line no-unused-vars
       const PageB = () => {
-        const isActive = useRouteIsActive(pageB);
+        const isActive = useRouteIsMatching(pageB);
         const isLoading = useRouteIsLoading(pageB);
         const isAborted = useRouteLoadIsAborted(pageB);
         if (!isActive) {
