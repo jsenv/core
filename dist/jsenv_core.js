@@ -12,6 +12,8 @@ import { Readable, Stream, Writable } from "node:stream";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
 import { performance as performance$1 } from "node:perf_hooks";
+import { createRoutes } from "@jsenv/router/src/shared/routes.js";
+import { parse } from "node:querystring";
 import { lookup } from "node:dns";
 import { parseJsUrls, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, removeHtmlNode, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
@@ -5096,6 +5098,7 @@ const fromNodeRequest = (
     method: nodeRequest.method,
     headers,
     body,
+    __nodeRequest: nodeRequest,
   });
 };
 
@@ -5657,6 +5660,9 @@ const HEADER_NAMES_COMPOSITION = {
   "access-control-allow-headers": composeHeaderValues,
   "access-control-allow-methods": composeHeaderValues,
   "access-control-allow-origin": composeHeaderValues,
+  "accept-patch": composeHeaderValues,
+  "accept-post": composeHeaderValues,
+  "allow": composeHeaderValues,
   // https://www.w3.org/TR/server-timing/
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
   "server-timing": composeHeaderValues,
@@ -6427,6 +6433,200 @@ const timeFunction = (name, fn) => {
   return [timeEnd(), returnValue];
 };
 
+const pickRequestContentType = (request, acceptedContentTypeArray) => {
+  const requestBodyContentType = request.headers["content-type"];
+  if (!requestBodyContentType) {
+    return null;
+  }
+  for (const acceptedContentType of acceptedContentTypeArray) {
+    if (requestBodyContentType.includes(acceptedContentType)) {
+      return acceptedContentType;
+    }
+  }
+  return null;
+};
+
+const createUnsupportedMediaTypeResponse = (
+  request,
+  acceptedContentTypeArray = [],
+) => {
+  return {
+    status: 415,
+    [`accept-${request.method}`]: acceptedContentTypeArray.join(", "),
+  };
+};
+
+const getRequestBody = async (request, contentType) => {
+  // https://github.com/node-formidable/formidable/tree/master/src/parsers
+  if (contentType === "multipart/form-data") {
+    const { formidable } = await import("formidable");
+    const form = formidable({});
+    request.__nodeRequest.resume(); // was paused in start_server.js
+    const [fields, files] = await form.parse(request.__nodeRequest);
+    const requestBodyFormData = { fields, files };
+    return requestBodyFormData;
+  }
+  if (contentType === "application/x-www-form-urlencoded") {
+    const requestBodyBuffer = await readRequestBody(request);
+    const requestBodyString = String(requestBodyBuffer);
+    const requestBodyQueryStringParsed = parse(requestBodyString);
+    return requestBodyQueryStringParsed;
+  }
+  if (contentType === "application/json") {
+    const requestBodyBuffer = await readRequestBody(request);
+    const requestBodyString = String(requestBodyBuffer);
+    const requestBodyJSON = JSON.parse(requestBodyString);
+    return requestBodyJSON;
+  }
+  if (contentType === "text/plain") {
+    const requestBodyBuffer = await readRequestBody(request);
+    const requestBodyString = String(requestBodyBuffer);
+    return requestBodyString;
+  }
+  if (contentType === "application/octet-stream") {
+    const requestBodyBuffer = await readRequestBody(request);
+    return requestBodyBuffer;
+  }
+  throw new Error(`unknown content type ${contentType}`);
+};
+
+// exported for unit tests
+const readRequestBody = (request, { as }) => {
+  return new Promise((resolve, reject) => {
+    const bufferArray = [];
+    request.body.subscribe({
+      error: reject,
+      next: (buffer) => {
+        bufferArray.push(buffer);
+      },
+      complete: () => {
+        const bodyAsBuffer = Buffer.concat(bufferArray);
+        if (as === "buffer") {
+          resolve(bodyAsBuffer);
+          return;
+        }
+        if (as === "string") {
+          const bodyAsString = bodyAsBuffer.toString();
+          resolve(bodyAsString);
+          return;
+        }
+        if (as === "json") {
+          const bodyAsString = bodyAsBuffer.toString();
+          const bodyAsJSON = JSON.parse(bodyAsString);
+          resolve(bodyAsJSON);
+          return;
+        }
+      },
+    });
+  });
+};
+
+const jsenvServiceRouting = (description) => {
+  const routes = createRoutes(description);
+  for (const route of routes) {
+    if (
+      typeof route.handler === "object" &&
+      route.methodPattern !== "POST" &&
+      route.methodPattern !== "PATCH" &&
+      route.methodPattern !== "PUT"
+    ) {
+      throw new Error(
+        "route handler can be an object only when method is POST|PATCH|PUT",
+      );
+    }
+  }
+
+  return {
+    handleRequest: (request) => {
+      for (const route of routes) {
+        const matchResult = route.match({
+          method: request.method,
+          resource: request.resource,
+        });
+        if (!matchResult) {
+          continue;
+        }
+        return getResponseFromRoute(route, request, matchResult);
+      }
+      return null;
+    },
+    injectResponseHeaders: (response, { request }) => {
+      if (request.method !== "OPTIONS") {
+        return null;
+      }
+      const METHODS = [
+        "OPTIONS",
+        "HEAD",
+        "GET",
+        "POST",
+        "PATCH",
+        "PUT",
+        "DELETE",
+      ];
+      const acceptedContentTypeSet = new Set();
+      const postAcceptedContentTypeSet = new Set();
+      const patchAcceptedContentTypeSet = new Set();
+      const allowedMethodSet = new Set();
+      for (const route of routes) {
+        for (const METHOD of METHODS) {
+          const matchResult = route.match({
+            method: METHOD,
+            resource: request.resource,
+          });
+          if (matchResult) {
+            allowedMethodSet.add(METHOD);
+            if (typeof route.handler === "object") {
+              for (const acceptedContentType of Object.keys(route.handler)) {
+                acceptedContentTypeSet.add(acceptedContentType);
+                if (METHOD === "POST") {
+                  postAcceptedContentTypeSet.add(acceptedContentType);
+                }
+                if (METHOD === "PATCH") {
+                  patchAcceptedContentTypeSet.add(acceptedContentType);
+                }
+              }
+            }
+          }
+        }
+      }
+      return {
+        "accept": Array.from(acceptedContentTypeSet).join(", "),
+        "accept-post": Array.from(postAcceptedContentTypeSet).join(", "),
+        "accept-patch": Array.from(patchAcceptedContentTypeSet).join(", "),
+        "allow": Array.from(allowedMethodSet).join(", "),
+      };
+    },
+  };
+};
+
+const getResponseFromRoute = async (route, request, matchResult) => {
+  const handler = route.handler;
+  if (typeof handler === "function") {
+    const response = await handler(request, matchResult);
+    return response;
+  }
+  if (typeof handler === "object") {
+    const acceptedRequestContentTypeArray = Object.keys(handler);
+    const acceptedContentType = pickRequestContentType(
+      request,
+      acceptedRequestContentTypeArray,
+    );
+    if (!acceptedContentType) {
+      return createUnsupportedMediaTypeResponse(
+        request,
+        acceptedRequestContentTypeArray,
+      );
+    }
+    request.body.read = async () => {
+      const requestBody = await getRequestBody(request, acceptedContentType);
+      return requestBody;
+    };
+    const response = await handler[acceptedContentType](request, matchResult);
+    return response;
+  }
+  return null;
+};
+
 const HOOK_NAMES$1 = [
   "serverListening",
   "redirectRequest",
@@ -6441,11 +6641,20 @@ const HOOK_NAMES$1 = [
 
 const createServiceController = (services) => {
   const flatServices = flattenAndFilterServices(services);
-  const hookGroups = {};
+  const hookSetMap = new Map();
+
+  const addHook = (hook) => {
+    let hookSet = hookSetMap.get(hook.name);
+    if (!hookSet) {
+      hookSet = new Set();
+      hookSetMap.set(hook.name, hookSet);
+    }
+    hookSet.add(hook);
+  };
 
   const addService = (service) => {
-    Object.keys(service).forEach((key) => {
-      if (key === "name") return;
+    for (const key of Object.keys(service)) {
+      if (key === "name") continue;
       const isHook = HOOK_NAMES$1.includes(key);
       if (!isHook) {
         console.warn(
@@ -6454,24 +6663,38 @@ const createServiceController = (services) => {
       }
       const hookName = key;
       const hookValue = service[hookName];
-      if (hookValue) {
-        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
-        group.push({
+      if (!hookValue) {
+        continue;
+      }
+      if (hookName === "handleRequest" && typeof hookValue === "object") {
+        const routing = jsenvServiceRouting(hookValue);
+        addHook({
+          service,
+          name: hookName,
+          value: routing.handleRequest,
+        });
+        addHook({
+          service,
+          name: "injectResponseHeaders",
+          value: routing.injectResponseHeaders,
+        });
+      } else {
+        addHook({
           service,
           name: hookName,
           value: hookValue,
         });
       }
-    });
+    }
   };
-  flatServices.forEach((service) => {
-    addService(service);
-  });
+  for (const flatService of flatServices) {
+    addService(flatService);
+  }
 
   let currentService = null;
   let currentHookName = null;
   const callHook = (hook, info, context) => {
-    const hookFn = hook.value;
+    const hookFn = getHookFunction$1(hook, info);
     if (!hookFn) {
       return null;
     }
@@ -6492,7 +6715,7 @@ const createServiceController = (services) => {
     return valueReturned;
   };
   const callAsyncHook = async (hook, info, context) => {
-    const hookFn = hook.value;
+    const hookFn = getHookFunction$1(hook, info);
     if (!hookFn) {
       return null;
     }
@@ -6514,13 +6737,14 @@ const createServiceController = (services) => {
   };
 
   const callHooks = (hookName, info, context, callback = () => {}) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
-        if (returnValue) {
-          callback(returnValue);
-        }
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info, context);
+      if (returnValue) {
+        callback(returnValue);
       }
     }
   };
@@ -6530,42 +6754,43 @@ const createServiceController = (services) => {
     context,
     until = (returnValue) => returnValue,
   ) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
-        const untilReturnValue = until(returnValue);
-        if (untilReturnValue) {
-          return untilReturnValue;
-        }
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return null;
+    }
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info, context);
+      const untilReturnValue = until(returnValue);
+      if (untilReturnValue) {
+        return untilReturnValue;
       }
     }
     return null;
   };
-  const callAsyncHooksUntil = (hookName, info, context) => {
-    const hooks = hookGroups[hookName];
-    if (!hooks) {
+  const callAsyncHooksUntil = async (hookName, info, context) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
       return null;
     }
-    if (hooks.length === 0) {
+    if (hookSet.size === 0) {
       return null;
     }
-    return new Promise((resolve, reject) => {
-      const visit = (index) => {
-        if (index >= hooks.length) {
-          return resolve();
-        }
-        const hook = hooks[index];
-        const returnValue = callAsyncHook(hook, info, context);
-        return Promise.resolve(returnValue).then((output) => {
-          if (output) {
-            return resolve(output);
-          }
-          return visit(index + 1);
-        }, reject);
-      };
-      visit(0);
-    });
+    const iterator = hookSet.values()[Symbol.iterator]();
+    let result;
+    const visit = async () => {
+      const { done, value: hook } = iterator.next();
+      if (done) {
+        return;
+      }
+      const returnValue = await callAsyncHook(hook, info, context);
+      if (returnValue) {
+        result = returnValue;
+        return;
+      }
+      await visit();
+    };
+    await visit();
+    return result;
   };
 
   return {
@@ -6578,6 +6803,19 @@ const createServiceController = (services) => {
     getCurrentService: () => currentService,
     getCurrentHookName: () => currentHookName,
   };
+};
+
+const getHookFunction$1 = (hook, info) => {
+  const hookValue = hook.value;
+  if (hook.name === "handleRequest" && typeof hookValue === "object") {
+    const request = info;
+    const hookForMethod = hookValue[request.method] || hookValue["*"];
+    if (!hookForMethod) {
+      return null;
+    }
+    return hookForMethod;
+  }
+  return hookValue;
 };
 
 const flattenAndFilterServices = (services) => {
@@ -8689,18 +8927,17 @@ const jsenvServiceCORS = ({
   return {
     name: "jsenv:cors",
 
-    handleRequest: (request) => {
-      // when request method is "OPTIONS" we must return a 200 without body
-      // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
-      if (request.method === "OPTIONS") {
+    handleRequest: {
+      "OPTIONS *": () => {
+        // when request method is "OPTIONS" we must return a 200 without body
+        // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
         return {
           status: 200,
           headers: {
             "content-length": 0,
           },
         };
-      }
-      return null;
+      },
     },
 
     injectResponseHeaders: (response, { request }) => {
@@ -21199,6 +21436,13 @@ const jsenvPluginAutoreloadServer = ({
                 // happens when reloading the current html page for instance
                 continue;
               }
+              if (
+                lastReferenceFromOther.injected &&
+                lastReferenceFromOther.isWeak &&
+                lastReferenceFromOther.isImplicit
+              ) {
+                continue;
+              }
               const { ownerUrlInfo } = lastReferenceFromOther;
               if (!ownerUrlInfo.isUsed()) {
                 continue;
@@ -24304,11 +24548,14 @@ const startDevServer = async ({
   // x-server-inspect service
   {
     finalServices.push({
-      handleRequest: (request) => {
-        if (request.headers["x-server-inspect"]) {
-          return { status: 200 };
-        }
-        if (request.pathname === "/__params__.json") {
+      handleRequest: {
+        "GET *": (request) => {
+          if (request.headers["x-server-inspect"]) {
+            return { status: 200 };
+          }
+          return null;
+        },
+        "GET /__params__.json": () => {
           const json = JSON.stringify({
             sourceDirectoryUrl,
           });
@@ -24320,8 +24567,7 @@ const startDevServer = async ({
             },
             body: json,
           };
-        }
-        return null;
+        },
       },
       injectResponseHeaders: () => {
         return { server: "jsenv_dev_server/1" };
@@ -24526,205 +24772,209 @@ const startDevServer = async ({
 
     finalServices.push({
       name: "jsenv:omega_file_service",
-      handleRequest: async (request) => {
-        const kitchen = getOrCreateKitchen(request);
-        const serveHookInfo = {
-          ...kitchen.context,
-          request,
-        };
-        const responseFromPlugin =
-          await kitchen.pluginController.callAsyncHooksUntil(
-            "serve",
-            serveHookInfo,
-          );
-        if (responseFromPlugin) {
-          return responseFromPlugin;
-        }
-        const { rootDirectoryUrl, mainFilePath } = kitchen.context;
-        let requestResource = request.resource;
-        let requestedUrl;
-        if (requestResource.startsWith("/@fs/")) {
-          const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
-          requestedUrl = `file:///${fsRootRelativeUrl}`;
-        } else {
-          const requestedUrlObject = new URL(
-            requestResource === "/" ? mainFilePath : requestResource.slice(1),
-            rootDirectoryUrl,
-          );
-          requestedUrlObject.searchParams.delete("hot");
-          requestedUrl = requestedUrlObject.href;
-        }
-        const { referer } = request.headers;
-        const parentUrl = referer
-          ? WEB_URL_CONVERTER.asFileUrl(referer, {
-              origin: request.origin,
-              rootDirectoryUrl: sourceDirectoryUrl,
-            })
-          : sourceDirectoryUrl;
-        let reference = kitchen.graph.inferReference(
-          request.resource,
-          parentUrl,
-        );
-        if (reference) {
-          reference.urlInfo.context.request = request;
-          reference.urlInfo.context.requestedUrl = requestedUrl;
-        } else {
-          const rootUrlInfo = kitchen.graph.rootUrlInfo;
-          rootUrlInfo.context.request = request;
-          rootUrlInfo.context.requestedUrl = requestedUrl;
-          reference = rootUrlInfo.dependencies.createResolveAndFinalize({
-            trace: { message: parentUrl },
-            type: "http_request",
-            specifier: request.resource,
-          });
-          rootUrlInfo.context.request = null;
-          rootUrlInfo.context.requestedUrl = null;
-        }
-        const urlInfo = reference.urlInfo;
-        const ifNoneMatch = request.headers["if-none-match"];
-        const urlInfoTargetedByCache = urlInfo.findParentIfInline() || urlInfo;
-
-        try {
-          if (!urlInfo.error && ifNoneMatch) {
-            const [clientOriginalContentEtag, clientContentEtag] =
-              ifNoneMatch.split("_");
-            if (
-              urlInfoTargetedByCache.originalContentEtag ===
-                clientOriginalContentEtag &&
-              urlInfoTargetedByCache.contentEtag === clientContentEtag &&
-              urlInfoTargetedByCache.isValid()
-            ) {
-              const headers = {
-                "cache-control": `private,max-age=0,must-revalidate`,
-              };
-              Object.keys(urlInfo.headers).forEach((key) => {
-                if (key !== "content-length") {
-                  headers[key] = urlInfo.headers[key];
-                }
-              });
-              return {
-                status: 304,
-                headers,
-              };
-            }
-          }
-          await urlInfo.cook({ request, reference });
-          let { response } = urlInfo;
-          if (response) {
-            return response;
-          }
-          response = {
-            url: reference.url,
-            status: 200,
-            headers: {
-              // when we send eTag to the client the next request to the server
-              // will send etag in request headers.
-              // If they match jsenv bypass cooking and returns 304
-              // This must not happen when a plugin uses "no-store" or "no-cache" as it means
-              // plugin logic wants to happens for every request to this url
-              ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
-                ? {
-                    "cache-control": "no-store", // for inline file we force no-store when parent is no-store
-                  }
-                : {
-                    "cache-control": `private,max-age=0,must-revalidate`,
-                    // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
-                    "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
-                  }),
-              ...urlInfo.headers,
-              "content-type": urlInfo.contentType,
-              "content-length": urlInfo.contentLength,
-            },
-            body: urlInfo.content,
-            timing: urlInfo.timing,
-          };
-          const augmentResponseInfo = {
+      handleRequest: {
+        "GET *": async (request) => {
+          const kitchen = getOrCreateKitchen(request);
+          const serveHookInfo = {
             ...kitchen.context,
-            reference,
-            urlInfo,
+            request,
           };
-          kitchen.pluginController.callHooks(
-            "augmentResponse",
-            augmentResponseInfo,
-            (returnValue) => {
-              response = composeTwoResponses(response, returnValue);
-            },
-          );
-          return response;
-        } catch (error) {
-          const originalError = error ? error.cause || error : error;
-          if (originalError.asResponse) {
-            return originalError.asResponse();
+          const responseFromPlugin =
+            await kitchen.pluginController.callAsyncHooksUntil(
+              "serve",
+              serveHookInfo,
+            );
+          if (responseFromPlugin) {
+            return responseFromPlugin;
           }
-          const code = originalError.code;
-          if (code === "PARSE_ERROR") {
-            // when possible let browser re-throw the syntax error
-            // it's not possible to do that when url info content is not available
-            // (happens for js_module_fallback for instance)
-            if (urlInfo.content !== undefined) {
-              kitchen.context.logger.error(`Error while handling ${request.url}:
+          const { rootDirectoryUrl, mainFilePath } = kitchen.context;
+          let requestResource = request.resource;
+          let requestedUrl;
+          if (requestResource.startsWith("/@fs/")) {
+            const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
+            requestedUrl = `file:///${fsRootRelativeUrl}`;
+          } else {
+            const requestedUrlObject = new URL(
+              requestResource === "/" ? mainFilePath : requestResource.slice(1),
+              rootDirectoryUrl,
+            );
+            requestedUrlObject.searchParams.delete("hot");
+            requestedUrl = requestedUrlObject.href;
+          }
+          const { referer } = request.headers;
+          const parentUrl = referer
+            ? WEB_URL_CONVERTER.asFileUrl(referer, {
+                origin: request.origin,
+                rootDirectoryUrl: sourceDirectoryUrl,
+              })
+            : sourceDirectoryUrl;
+          let reference = kitchen.graph.inferReference(
+            request.resource,
+            parentUrl,
+          );
+          if (reference) {
+            reference.urlInfo.context.request = request;
+            reference.urlInfo.context.requestedUrl = requestedUrl;
+          } else {
+            const rootUrlInfo = kitchen.graph.rootUrlInfo;
+            rootUrlInfo.context.request = request;
+            rootUrlInfo.context.requestedUrl = requestedUrl;
+            reference = rootUrlInfo.dependencies.createResolveAndFinalize({
+              trace: { message: parentUrl },
+              type: "http_request",
+              specifier: request.resource,
+            });
+            rootUrlInfo.context.request = null;
+            rootUrlInfo.context.requestedUrl = null;
+          }
+          const urlInfo = reference.urlInfo;
+          const ifNoneMatch = request.headers["if-none-match"];
+          const urlInfoTargetedByCache =
+            urlInfo.findParentIfInline() || urlInfo;
+
+          try {
+            if (!urlInfo.error && ifNoneMatch) {
+              const [clientOriginalContentEtag, clientContentEtag] =
+                ifNoneMatch.split("_");
+              if (
+                urlInfoTargetedByCache.originalContentEtag ===
+                  clientOriginalContentEtag &&
+                urlInfoTargetedByCache.contentEtag === clientContentEtag &&
+                urlInfoTargetedByCache.isValid()
+              ) {
+                const headers = {
+                  "cache-control": `private,max-age=0,must-revalidate`,
+                };
+                Object.keys(urlInfo.headers).forEach((key) => {
+                  if (key !== "content-length") {
+                    headers[key] = urlInfo.headers[key];
+                  }
+                });
+                return {
+                  status: 304,
+                  headers,
+                };
+              }
+            }
+            await urlInfo.cook({ request, reference });
+            let { response } = urlInfo;
+            if (response) {
+              return response;
+            }
+            response = {
+              url: reference.url,
+              status: 200,
+              headers: {
+                // when we send eTag to the client the next request to the server
+                // will send etag in request headers.
+                // If they match jsenv bypass cooking and returns 304
+                // This must not happen when a plugin uses "no-store" or "no-cache" as it means
+                // plugin logic wants to happens for every request to this url
+                ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
+                  ? {
+                      "cache-control": "no-store", // for inline file we force no-store when parent is no-store
+                    }
+                  : {
+                      "cache-control": `private,max-age=0,must-revalidate`,
+                      // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
+                      "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
+                    }),
+                ...urlInfo.headers,
+                "content-type": urlInfo.contentType,
+                "content-length": urlInfo.contentLength,
+              },
+              body: urlInfo.content,
+              timing: urlInfo.timing,
+            };
+            const augmentResponseInfo = {
+              ...kitchen.context,
+              reference,
+              urlInfo,
+            };
+            kitchen.pluginController.callHooks(
+              "augmentResponse",
+              augmentResponseInfo,
+              (returnValue) => {
+                response = composeTwoResponses(response, returnValue);
+              },
+            );
+            return response;
+          } catch (error) {
+            const originalError = error ? error.cause || error : error;
+            if (originalError.asResponse) {
+              return originalError.asResponse();
+            }
+            const code = originalError.code;
+            if (code === "PARSE_ERROR") {
+              // when possible let browser re-throw the syntax error
+              // it's not possible to do that when url info content is not available
+              // (happens for js_module_fallback for instance)
+              if (urlInfo.content !== undefined) {
+                kitchen.context.logger
+                  .error(`Error while handling ${request.url}:
 ${originalError.reasonCode || originalError.code}
 ${error.trace?.message}`);
+                return {
+                  url: reference.url,
+                  status: 200,
+                  // reason becomes the http response statusText, it must not contain invalid chars
+                  // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+                  statusText: error.reason,
+                  statusMessage: originalError.message,
+                  headers: {
+                    "content-type": urlInfo.contentType,
+                    "content-length": urlInfo.contentLength,
+                    "cache-control": "no-store",
+                  },
+                  body: urlInfo.content,
+                };
+              }
               return {
                 url: reference.url,
-                status: 200,
-                // reason becomes the http response statusText, it must not contain invalid chars
-                // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+                status: 500,
                 statusText: error.reason,
                 statusMessage: originalError.message,
                 headers: {
-                  "content-type": urlInfo.contentType,
-                  "content-length": urlInfo.contentLength,
                   "cache-control": "no-store",
                 },
                 body: urlInfo.content,
+              };
+            }
+            if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+              return serveDirectory(reference.url, {
+                headers: {
+                  accept: "text/html",
+                },
+                canReadDirectory: true,
+                rootDirectoryUrl: sourceDirectoryUrl,
+              });
+            }
+            if (code === "NOT_ALLOWED") {
+              return {
+                url: reference.url,
+                status: 403,
+                statusText: originalError.reason,
+              };
+            }
+            if (code === "NOT_FOUND") {
+              return {
+                url: reference.url,
+                status: 404,
+                statusText: originalError.reason,
+                statusMessage: originalError.message,
               };
             }
             return {
               url: reference.url,
               status: 500,
               statusText: error.reason,
-              statusMessage: originalError.message,
+              statusMessage: error.stack,
               headers: {
                 "cache-control": "no-store",
               },
-              body: urlInfo.content,
             };
           }
-          if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-            return serveDirectory(reference.url, {
-              headers: {
-                accept: "text/html",
-              },
-              canReadDirectory: true,
-              rootDirectoryUrl: sourceDirectoryUrl,
-            });
-          }
-          if (code === "NOT_ALLOWED") {
-            return {
-              url: reference.url,
-              status: 403,
-              statusText: originalError.reason,
-            };
-          }
-          if (code === "NOT_FOUND") {
-            return {
-              url: reference.url,
-              status: 404,
-              statusText: originalError.reason,
-              statusMessage: originalError.message,
-            };
-          }
-          return {
-            url: reference.url,
-            status: 500,
-            statusText: error.reason,
-            statusMessage: error.stack,
-            headers: {
-              "cache-control": "no-store",
-            },
-          };
-        }
+        },
       },
       handleWebsocket: async (websocket, { request }) => {
         // if (true || logLevel === "debug") {
@@ -24991,34 +25241,36 @@ const startBuildServer = async ({
 };
 
 const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
-  return (request) => {
-    const urlIsVersioned = new URL(request.url).searchParams.has("v");
-    if (buildMainFilePath && request.resource === "/") {
-      request = {
-        ...request,
-        resource: `/${buildMainFilePath}`,
-      };
-    }
-    const urlObject = new URL(request.resource.slice(1), buildDirectoryUrl);
-    return fetchFileSystem(urlObject, {
-      headers: request.headers,
-      cacheControl: urlIsVersioned
-        ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-        : "private,max-age=0,must-revalidate",
-      etagEnabled: true,
-      compressionEnabled: true,
-      rootDirectoryUrl: buildDirectoryUrl,
-      canReadDirectory: true,
-      ENOENTFallback: () => {
-        if (
-          !urlToExtension$1(urlObject) &&
-          !urlToPathname$1(urlObject).endsWith("/")
-        ) {
-          return new URL(buildMainFilePath, buildDirectoryUrl);
-        }
-        return null;
-      },
-    });
+  return {
+    "GET *": (request) => {
+      const urlIsVersioned = new URL(request.url).searchParams.has("v");
+      if (buildMainFilePath && request.resource === "/") {
+        request = {
+          ...request,
+          resource: `/${buildMainFilePath}`,
+        };
+      }
+      const urlObject = new URL(request.resource.slice(1), buildDirectoryUrl);
+      return fetchFileSystem(urlObject, {
+        headers: request.headers,
+        cacheControl: urlIsVersioned
+          ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+          : "private,max-age=0,must-revalidate",
+        etagEnabled: true,
+        compressionEnabled: true,
+        rootDirectoryUrl: buildDirectoryUrl,
+        canReadDirectory: true,
+        ENOENTFallback: () => {
+          if (
+            !urlToExtension$1(urlObject) &&
+            !urlToPathname$1(urlObject).endsWith("/")
+          ) {
+            return new URL(buildMainFilePath, buildDirectoryUrl);
+          }
+          return null;
+        },
+      });
+    },
   };
 };
 
