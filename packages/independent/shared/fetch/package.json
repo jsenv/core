@@ -35,5 +35,8 @@
     "@jsenv/urls": "2.6.0",
     "@jsenv/server": "15.5.2",
     "node-fetch": "3.3.2"
+  },
+  "devDependencies": {
+    "@jsenv/server": "16.0.0"
   }
 }

@@ -21,7 +21,7 @@ export const jsenvServiceRouting = (description) => {
   }
 
   return {
-    handleRequest: (request) => {
+    handleRequest: async (request) => {
       for (const route of routes) {
         const matchResult = route.match({
           method: request.method,
@@ -30,7 +30,14 @@ export const jsenvServiceRouting = (description) => {
         if (!matchResult) {
           continue;
         }
-        return getResponseFromRoute(route, request, matchResult);
+        const response = await getResponseFromRoute(
+          route,
+          request,
+          matchResult,
+        );
+        if (response) {
+          return response;
+        }
       }
       return null;
     },

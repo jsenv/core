@@ -154,6 +154,7 @@ export const startDevServer = async ({
   // x-server-inspect service
   {
     finalServices.push({
+      name: "jsenv:server_header",
       handleRequest: {
         "GET *": (request) => {
           if (request.headers["x-server-inspect"]) {

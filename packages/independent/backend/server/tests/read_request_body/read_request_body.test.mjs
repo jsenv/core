@@ -12,7 +12,7 @@ import { readRequestBody } from "@jsenv/server/src/request_body_handling.js";
     services: [
       {
         handleRequest: async (request) => {
-          requestBody = await readRequestBody(request);
+          requestBody = await readRequestBody(request, { as: "string" });
           return {
             status: 200,
             headers: {
