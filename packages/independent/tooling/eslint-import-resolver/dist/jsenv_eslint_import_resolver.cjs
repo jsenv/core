@@ -582,7 +582,7 @@ const assertAndNormalizeFileUrl = (
   return value;
 };
 
-const isWindows$1 = process.platform === "win32";
+const isWindows = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 
 /**
@@ -605,7 +605,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
-  if (!isWindows$1) {
+  if (!isWindows) {
     return url;
   }
 
@@ -649,27 +649,6 @@ const extractDriveLetter = (resource) => {
   return null;
 };
 
-const generateWindowsEPERMErrorMessage = (
-  error,
-  { operation, path },
-) => {
-  const pathLengthIsExceedingUsualLimit = String(path).length >= 256;
-  let message = "";
-
-  if (operation) {
-    message += `error while trying to fix windows EPERM after ${operation} on ${path}`;
-  }
-
-  if (pathLengthIsExceedingUsualLimit) {
-    message += "\n";
-    message += `Maybe because path length is exceeding the usual limit of 256 characters of windows OS?`;
-    message += "\n";
-  }
-  message += "\n";
-  message += error.stack;
-  return message;
-};
-
 /*
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
@@ -678,107 +657,13 @@ const generateWindowsEPERMErrorMessage = (
 
 process.platform === "win32";
 
-const writeEntryPermissionsSync = (source, permissions) => {
-  const sourceUrl = assertAndNormalizeFileUrl(source);
-
-  let binaryFlags;
-  {
-    binaryFlags = permissions;
-  }
-
-  node_fs.chmodSync(new URL(sourceUrl), binaryFlags);
-};
-
 /*
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
 
 
-const isWindows = process.platform === "win32";
-
-const readEntryStatSync = (
-  source,
-  { nullIfNotFound = false, followLink = true } = {},
-) => {
-  let sourceUrl = assertAndNormalizeFileUrl(source);
-  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
-
-  const sourcePath = urlToFileSystemPath(sourceUrl);
-
-  const handleNotFoundOption = nullIfNotFound
-    ? {
-        handleNotFoundError: () => null,
-      }
-    : {};
-
-  return statSyncNaive(sourcePath, {
-    followLink,
-    ...handleNotFoundOption,
-    ...(isWindows
-      ? {
-          // Windows can EPERM on stat
-          handlePermissionDeniedError: (error) => {
-            console.error(
-              `trying to fix windows EPERM after stats on ${sourcePath}`,
-            );
-
-            try {
-              // unfortunately it means we mutate the permissions
-              // without being able to restore them to the previous value
-              // (because reading current permission would also throw)
-              writeEntryPermissionsSync(sourceUrl, 0o666);
-              const stats = statSyncNaive(sourcePath, {
-                followLink,
-                ...handleNotFoundOption,
-                // could not fix the permission error, give up and throw original error
-                handlePermissionDeniedError: () => {
-                  console.error(`still got EPERM after stats on ${sourcePath}`);
-                  throw error;
-                },
-              });
-              return stats;
-            } catch (e) {
-              console.error(
-                generateWindowsEPERMErrorMessage(e, {
-                  operation: "stats",
-                  path: sourcePath,
-                }),
-              );
-              throw error;
-            }
-          },
-        }
-      : {}),
-  });
-};
-
-const statSyncNaive = (
-  sourcePath,
-  {
-    followLink,
-    handleNotFoundError = null,
-    handlePermissionDeniedError = null,
-  } = {},
-) => {
-  const nodeMethod = followLink ? node_fs.statSync : node_fs.lstatSync;
-
-  try {
-    const stats = nodeMethod(sourcePath);
-    return stats;
-  } catch (error) {
-    if (handleNotFoundError && error.code === "ENOENT") {
-      return handleNotFoundError(error);
-    }
-    if (
-      handlePermissionDeniedError &&
-      (error.code === "EPERM" || error.code === "EACCES")
-    ) {
-      return handlePermissionDeniedError(error);
-    }
-    throw error;
-  }
-};
+process.platform === "win32";
 
 const mediaTypeInfos = {
   "application/json": {
@@ -1073,7 +958,7 @@ process.platform === "freebsd";
 // https://nodejs.org/api/packages.html#resolving-user-conditions
 const readCustomConditionsFromProcessArgs = () => {
   const packageConditions = [];
-  for (const arg of process.execArgv) {
+  process.execArgv.forEach((arg) => {
     if (arg.includes("-C=")) {
       const packageCondition = arg.slice(0, "-C=".length);
       packageConditions.push(packageCondition);
@@ -1082,7 +967,7 @@ const readCustomConditionsFromProcessArgs = () => {
       const packageCondition = arg.slice("--conditions=".length);
       packageConditions.push(packageCondition);
     }
-  }
+  });
   return packageConditions;
 };
 
@@ -2144,7 +2029,7 @@ const applyFileSystemMagicResolution = (
 
   if (fileStat === undefined) {
     try {
-      fileStat = readEntryStatSync(new URL(fileUrl));
+      fileStat = node_fs.statSync(new URL(fileUrl));
     } catch (e) {
       if (e.code === "ENOENT") {
         result.lastENOENTError = e;
@@ -2186,7 +2071,7 @@ const applyFileSystemMagicResolution = (
       const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
       let stat;
       try {
-        stat = readEntryStatSync(new URL(urlCandidate));
+        stat = node_fs.statSync(new URL(urlCandidate));
       } catch (e) {
         if (e.code === "ENOENT") {
           stat = null;
