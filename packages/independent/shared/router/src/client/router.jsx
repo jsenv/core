@@ -13,7 +13,14 @@
  */
 
 import { createContext } from "preact";
-import { useContext, useState } from "preact/hooks";
+import { forwardRef } from "preact/compat";
+import {
+  useContext,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "preact/hooks";
 import { canUseNavigation } from "./router.js";
 
 const FormContext = createContext();
@@ -26,9 +33,10 @@ export const SPAForm = ({ action, method, children }) => {
   const [formStatus, formStatusSetter] = useState({
     pending: false,
     error: null,
-    // method,
+    method,
     action,
   });
+  const formActionMapRef = useRef(new Map());
 
   return (
     <form
@@ -36,13 +44,13 @@ export const SPAForm = ({ action, method, children }) => {
         formStatusSetter({ pending: true, error: null });
         submitEvent.preventDefault();
         const formData = new FormData(submitEvent.currentTarget);
+        const actionToPerform =
+          formActionMapRef.current.get(submitEvent.submitter) || action;
         try {
           await applyRoutingOnFormSubmission({
             method,
             formData,
-            action: submitEvent.submitter.hasAttribute("data-custom-action")
-              ? formStatus.action
-              : action,
+            action: actionToPerform,
           });
         } catch (e) {
           formStatusSetter({ pending: false, error: e });
@@ -55,30 +63,39 @@ export const SPAForm = ({ action, method, children }) => {
       }}
       method={method === "get" ? "get" : "post"}
     >
-      <FormContext.Provider value={[formStatus, formStatusSetter]}>
+      <FormContext.Provider value={[formStatus, formActionMapRef]}>
         {children}
       </FormContext.Provider>
     </form>
   );
 };
 
-const SPAFormButton = ({ action, children, ...props }) => {
-  const [, formStatusSetter] = useContext(FormContext);
+const SPAFormButton = forwardRef(({ formAction, children, ...props }, ref) => {
+  const innerRef = useRef();
+  const [, formActionMapRef] = useContext(FormContext);
+  useImperativeHandle(ref, () => innerRef.current);
+
+  useEffect(() => {
+    return () => {
+      formActionMapRef.current.delete(innerRef.current);
+    };
+  }, []);
+
   return (
     <button
-      data-custom-action=""
+      ref={innerRef}
       {...props}
       onClick={(clickEvent) => {
         if (props.onClick) {
           props.onClick(clickEvent);
         }
-        formStatusSetter({ action });
+        formActionMapRef.current.set(innerRef.current, formAction);
       }}
     >
       {children}
     </button>
   );
-};
+});
 SPAForm.Button = SPAFormButton;
 
 const applyRoutingOnFormSubmission = canUseNavigation

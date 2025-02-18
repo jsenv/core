@@ -8,7 +8,7 @@ import { documentUrlSignal } from "./document_url.js";
 import { normalizeUrl } from "./normalize_url.js";
 import { goTo, installNavigation } from "./router.js";
 
-let debug = true;
+let debug = false;
 let debugDocumentRouting = false;
 const IDLE = { id: "idle" };
 const LOADING = { id: "loading" };

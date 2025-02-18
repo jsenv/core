@@ -195,7 +195,7 @@ TODO: create a UI the allow the following:
             <br />
             <ButtonSubmit />
             <SPAForm.Button
-              action={async ({ signal }) => {
+              formAction={async ({ signal }) => {
                 console.log("custom action");
                 await new Promise((resolve) => {
                   const timeout = setTimeout(resolve, 1000);
