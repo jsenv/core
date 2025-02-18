@@ -190,7 +190,8 @@ const createAndRegisterRoute = ({
   });
   effect(() => {
     const documentUrl = documentUrlSignal.value;
-    route.params = route.match(documentUrl);
+    const documentResource = resourceFromUrl(documentUrl);
+    route.params = route.match({ method: "GET", resource: documentResource });
   });
   routeSet.add(route);
   return route;

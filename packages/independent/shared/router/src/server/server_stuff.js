@@ -1,3 +1,4 @@
+import { readRequestBody } from "@jsenv/server";
 import { readdirSync, readFileSync } from "node:fs";
 import { routeClientRequest } from "./client_request_routing.js";
 
@@ -72,7 +73,11 @@ export const JSONFileManagerService = () => {
           return { status: 500 };
         }
       },
-      "PATCH /json_files/:id": () => {},
+      "PATCH /json_files/:id": async (request, { id }) => {
+        const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
+        const { fields } = await readRequestBody(request);
+        debugger;
+      },
     }),
   };
 };

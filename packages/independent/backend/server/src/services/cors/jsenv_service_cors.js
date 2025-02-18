@@ -41,6 +41,7 @@ export const jsenvServiceCORS = ({
           status: 200,
           headers: {
             "content-length": 0,
+            // ideally we should send accept-post and accept-patch??
           },
         };
       }

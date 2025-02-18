@@ -3,7 +3,7 @@ import { fetchUrl } from "@jsenv/fetch";
 
 import { readRequestBody, startServer } from "@jsenv/server";
 
-// read request body as string
+// read request body as string from string
 {
   let requestBody;
   const { origin } = await startServer({
@@ -33,7 +33,7 @@ import { readRequestBody, startServer } from "@jsenv/server";
   assert({ actual, expect });
 }
 
-// read request body as json
+// read request body as json from text
 {
   let requestBody;
   const { origin } = await startServer({
@@ -65,7 +65,7 @@ import { readRequestBody, startServer } from "@jsenv/server";
   assert({ actual, expect });
 }
 
-// read request body as buffer
+// read request body as buffer from string
 {
   let requestBody;
   const { origin } = await startServer({

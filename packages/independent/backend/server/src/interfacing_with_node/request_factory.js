@@ -48,6 +48,7 @@ export const fromNodeRequest = (
     method: nodeRequest.method,
     headers,
     body,
+    __nodeRequest: nodeRequest,
   });
 };
 
