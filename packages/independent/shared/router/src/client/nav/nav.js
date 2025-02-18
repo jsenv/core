@@ -73,6 +73,7 @@ export const installNavigation = ({ applyRouting, applyRoutingAroundCall }) => {
         if (event.info?.action) {
           await applyRoutingAroundCall(event.info.action, {
             signal,
+            formData,
           });
           return;
         }

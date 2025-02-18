@@ -1,6 +1,13 @@
 import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_special_chars.js";
 
 export const parseResourcePattern = (resourcePattern) => {
+  if (resourcePattern === "*") {
+    return {
+      regexp: /.*/,
+      match: () => true,
+      build: (url) => url,
+    };
+  }
   let regexpSource = "";
   let lastIndex = 0;
   regexpSource += "^";

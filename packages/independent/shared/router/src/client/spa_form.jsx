@@ -106,6 +106,7 @@ const applyRoutingOnFormSubmission = canUseNavigation
             history: "replace",
             info: {
               action,
+              formData,
             },
           }).finished;
         } else {

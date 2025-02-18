@@ -12,10 +12,10 @@ export {
 } from "./route.js";
 export { Route } from "./route.jsx";
 export { goBack, goForward, goTo, reload, stopLoad } from "./router.js";
-export { SPAForm, useSPAFormStatus } from "./router.jsx";
 export {
   useCanStopLoad,
   useRouterIsBusy,
   useRouterReadyState,
 } from "./router_ready_state.js";
+export { SPAForm, useSPAFormStatus } from "./spa_form.jsx";
 export { useUrlBooleanParam, withUrlStringParam } from "./url.js";
