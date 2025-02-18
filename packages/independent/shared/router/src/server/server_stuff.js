@@ -1,5 +1,5 @@
-import { readRequestBody } from "@jsenv/server";
-import { readdirSync, readFileSync } from "node:fs";
+import { handleRequestBody } from "@jsenv/server";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { routeClientRequest } from "./client_request_routing.js";
 
 export const clientControlledResourceService = () => {
@@ -74,9 +74,26 @@ export const JSONFileManagerService = () => {
         }
       },
       "PATCH /json_files/:id": async (request, { id }) => {
-        const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
-        const { fields } = await readRequestBody(request);
-        debugger;
+        return handleRequestBody(request, {
+          "multipart/form-data": ({ fields }) => {
+            // TODO: attention le format form-data fait que key:value devient key: [value]
+            // donc on peut pas juste faire ça, mais bon pour l'instant c'est good
+            const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
+            const jsonFileContentAsString = readFileSync(jsonFileUrl, "utf8");
+            const jsonFileContentAsObject = JSON.parse(jsonFileContentAsString);
+            Object.assign(jsonFileContentAsObject, fields);
+            writeFileSync(jsonFileUrl, fields);
+            const body = JSON.stringify(jsonFileContentAsObject);
+            return {
+              status: 200,
+              headers: {
+                "content-type": "application/json",
+                "content-length": Buffer.byteLength(body),
+              },
+              body,
+            };
+          },
+        });
       },
     }),
   };

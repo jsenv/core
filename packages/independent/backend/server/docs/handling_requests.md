@@ -72,20 +72,53 @@ Read more at https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams.
 
 ### Reading request body
 
+`handleRequestBody` can be used to call code depending on the content-type send by the client. If request content-type is not in the one you've listed, a reponse with status 415 (Unsupported Media Type) is returned.
+
 ```js
-import { startServer, readRequestBody } from "@jsenv/server";
+import { startServer, handleRequestBody } from "@jsenv/server";
 
 await startServer({
   services: [
     {
       handleRequest: async (request) => {
-        const requestBodyAsString = await readRequestBody(request);
-        const requestBodyAsJson = await readRequestBody(request, {
-          as: "json",
+        const response = await handleRequestBody(request, {
+          "application/json": (requestBodyFields) => {
+            return {
+              status: 200,
+              headers: { "content-type": "text/plain" },
+              body: 'Server have received "application/json" body',
+            };
+          },
+          "multipart/form-data": ({ fields, files }) => {
+            return {
+              status: 200,
+              headers: { "content-type": "text/plain" },
+              body: 'Server have received "multipart/form-data" body',
+            };
+          },
+          "application/x-www-form-urlencoded": (requestBodyFields) => {
+            return {
+              status: 200,
+              headers: { "content-type": "text/plain" },
+              body: 'Server have received "application/x-www-form-urlencoded" body',
+            };
+          },
+          "text/plain": (requestBodyAsString) => {
+            return {
+              status: 200,
+              headers: { "content-type": "text/plain" },
+              body: 'Server have received "text/plain" body',
+            };
+          },
+          "application/octet-stream": (requestBodyAsBuffer) => {
+            return {
+              status: 200,
+              headers: { "content-type": "text/plain" },
+              body: 'Server have received "application/octet-stream" body',
+            };
+          },
         });
-        const requestBodyAsBuffer = await readRequestBody(request, {
-          as: "buffer",
-        });
+        return response;
       },
     },
   ],

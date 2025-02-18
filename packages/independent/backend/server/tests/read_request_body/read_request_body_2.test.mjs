@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
-
-import { readRequestBody, startServer } from "@jsenv/server";
+import { startServer } from "@jsenv/server";
+import { readRequestBody } from "@jsenv/server/src/request_body_handling.js";
 import { fetchUsingNodeBuiltin } from "@jsenv/server/tests/test_helpers.mjs";
 
 const { origin } = await startServer({

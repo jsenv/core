@@ -8,7 +8,7 @@
 
 export { startServer } from "./start_server.js";
 export { setupRoutes } from "./service_composition/routing.js";
-export { readRequestBody } from "./readRequestBody.js";
+export { handleRequestBody } from "./request_body_handling.js";
 export { fetchFileSystem } from "./fetch_filesystem.js";
 export {
   STOP_REASON_INTERNAL_ERROR,
