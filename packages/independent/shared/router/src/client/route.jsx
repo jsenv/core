@@ -140,16 +140,16 @@ const RouteHandler = ({
   const routeError = useRouteError(route);
   const routeIsLoaded = useRouteIsLoaded(route);
 
-  const routeIsLoadingPreviousRef = useRef(false);
-  const routeBecomesLoading =
-    !routeIsLoadingPreviousRef.current && routeIsLoading;
-  routeIsLoadingPreviousRef.current = routeIsLoading;
+  const routeIsMatchingPreviousRef = useRef(false);
+  const routeBecomesMatching =
+    !routeIsMatchingPreviousRef.current && routeIsMatching;
+  routeIsMatchingPreviousRef.current = routeIsMatching;
   const routeIsLoadedPreviousRef = useRef(false);
   const routeBecomesLoaded = !routeIsLoadedPreviousRef.current && routeIsLoaded;
   routeIsLoadedPreviousRef.current = routeIsLoaded;
   const routeUIRenderedPromiseRef = useRef();
 
-  if (routeBecomesLoading) {
+  if (routeBecomesMatching) {
     let resolve;
     const promise = new Promise((res) => {
       resolve = res;

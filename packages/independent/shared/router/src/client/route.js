@@ -121,7 +121,8 @@ const createRoute = (method, resource, loadData) => {
           await route.loadUI({ signal: enterAbortSignal });
         })();
 
-        await Promise.all([loadDataPromise, loadUIPromise]);
+        await loadDataPromise;
+        await loadUIPromise;
         route.loadingStateSignal.value = LOADED;
 
         const renderUIPromise = (async () => {
