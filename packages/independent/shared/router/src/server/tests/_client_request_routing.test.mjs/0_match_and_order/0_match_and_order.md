@@ -1,7 +1,7 @@
-# [0_match_and_order](../../routes.test.mjs#L5)
+# [0_match_and_order](../../client_request_routing.test.mjs#L5)
 
 ```js
-const match = createRoutes({
+const match = routeClientRequest({
   "*": () => "*",
   "GET *": () => "GET *",
   "GET /a": () => "GET /a",

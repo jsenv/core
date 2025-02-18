@@ -1,9 +1,9 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { createRoutes } from "../routes.js";
+import { routeClientRequest } from "../client_request_routing.js";
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_match_and_order", () => {
-    const match = createRoutes({
+    const match = routeClientRequest({
       "*": () => "*",
       "GET *": () => "GET *",
       "GET /a": () => "GET /a",

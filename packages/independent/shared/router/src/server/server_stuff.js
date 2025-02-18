@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { routeMatchUrl } from "../shared/route_match_url.js";
+import { routeClientRequest } from "./client_request_routing.js";
 
 export const clientControlledResourceService = () => {
   let resolve;
@@ -38,12 +38,25 @@ const jsonDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 
 export const JSONFileManagerService = () => {
   return {
-    handleRequest: {
-      GET: async (request) => {
-        const getAllMatch = routeMatchUrl("/json_files", request.url);
-        if (getAllMatch) {
-          const jsonFiles = readdirSync(jsonDirectoryUrl);
-          const body = JSON.stringify(jsonFiles);
+    handleRequest: routeClientRequest({
+      "GET /json_files": () => {
+        const jsonFiles = readdirSync(jsonDirectoryUrl);
+        const body = JSON.stringify(jsonFiles);
+        return {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            "content-length": Buffer.byteLength(body),
+          },
+          body,
+        };
+      },
+      "POST /json_files/": () => {},
+      "GET /json_files/:id": (request, { id }) => {
+        const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
+        try {
+          const jsonBuffer = readFileSync(jsonFileUrl);
+          const body = String(jsonBuffer);
           return {
             status: 200,
             headers: {
@@ -52,34 +65,14 @@ export const JSONFileManagerService = () => {
             },
             body,
           };
-        }
-        const getOneMatch = routeMatchUrl("/json_files/:id", request.url);
-        if (getOneMatch) {
-          const { id } = getOneMatch;
-          const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
-          try {
-            const jsonBuffer = readFileSync(jsonFileUrl);
-            const body = String(jsonBuffer);
-            return {
-              status: 200,
-              headers: {
-                "content-type": "application/json",
-                "content-length": Buffer.byteLength(body),
-              },
-              body,
-            };
-          } catch (e) {
-            if (e.code === "ENOENT") {
-              return { status: 404 };
-            }
-            return { status: 500 };
+        } catch (e) {
+          if (e.code === "ENOENT") {
+            return { status: 404 };
           }
+          return { status: 500 };
         }
-        return null;
       },
-      POST: async () => {
-        // TODO
-      },
-    },
+      "PATCH /json_files/:id": () => {},
+    }),
   };
 };

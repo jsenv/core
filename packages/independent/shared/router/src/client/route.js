@@ -1,5 +1,6 @@
 import { batch, effect, signal } from "@preact/signals";
 import { parseResourcePattern } from "../shared/resource_pattern.js";
+import { createRoutes } from "../shared/routes.js";
 import {
   endDocumentRouting,
   startDocumentRouting,
@@ -38,15 +39,17 @@ export const onRouterUILoaded = () => {
 const routeSet = new Set();
 const matchingRouteSet = new Set();
 const routeAbortEnterMap = new Map();
-const fallbackRoutePerMethodMap = new Map();
-let fallbackRouteAnyMethod = null;
-const createRoute = (method, resource, loadData) => {
-  resource = resourceFromUrl(resource);
-  const resourcePatternParsed = parseResourcePattern(resource);
+const createAndRegisterRoute = ({
+  methodPattern,
+  resourcePattern,
+  callback,
+}) => {
+  resourcePattern = resourceFromUrl(resourcePattern);
+  const resourcePatternParsed = parseResourcePattern(resourcePattern);
   const route = {
-    method,
-    resource,
-    loadData,
+    methodPattern,
+    resourcePattern,
+    loadData: callback,
     loadUI: null,
     renderUI: null,
     node: null,
@@ -65,14 +68,15 @@ const createRoute = (method, resource, loadData) => {
     error: null,
     data: undefined,
     params: {},
-    test: ({ method, resource }) => {
-      if (route.method !== method && route.method !== "*") {
+    match: ({ method, resource }) => {
+      if (route.methodPattern !== method && route.methodPattern !== "*") {
         return false;
       }
-      if (!resourcePatternParsed.match(resource)) {
+      const matchResult = resourcePatternParsed.match(resource);
+      if (!matchResult) {
         return false;
       }
-      return true;
+      return matchResult;
     },
     enter: async ({ signal, resource, formData }) => {
       // here we must pass a signal that gets aborted when
@@ -172,10 +176,10 @@ const createRoute = (method, resource, loadData) => {
       goTo(documentUrlWithRoute);
     },
     toString: () => {
-      if (route.method === "*" && route.resource === "*") {
+      if (route.methodPattern === "*" && route.resourcePattern === "*") {
         return "*";
       }
-      return `${route.method} ${route.resource}`;
+      return `${route.methodPattern} ${route.resourcePattern}`;
     },
   };
   effect(() => {
@@ -186,44 +190,13 @@ const createRoute = (method, resource, loadData) => {
   });
   effect(() => {
     const documentUrl = documentUrlSignal.value;
-    route.params = resourcePatternParsed.match(documentUrl);
+    route.params = route.match(documentUrl);
   });
-
+  routeSet.add(route);
   return route;
 };
 export const registerRoutes = (description) => {
-  const routes = [];
-  for (const key of Object.keys(description)) {
-    const handler = description[key];
-    if (key.startsWith("GET ")) {
-      const resource = key.slice("GET ".length);
-      const route = createRoute("GET", resource, handler);
-      routeSet.add(route);
-      routes.push(route);
-      continue;
-    }
-    if (key.startsWith("PATCH ")) {
-      const resource = key.slice("PATCH ".length);
-      const route = createRoute("PATCH", resource, handler);
-      routeSet.add(route);
-      routes.push(route);
-      continue;
-    }
-    if (key === "GET *") {
-      const fallbackGET = createRoute("GET", "*", handler);
-      fallbackRoutePerMethodMap.set("GET", fallbackGET);
-      continue;
-    }
-    if (key === "PATCH *") {
-      const fallbackPATCH = createRoute("PATCH", "*", handler);
-      fallbackRoutePerMethodMap.set("GET", fallbackPATCH);
-      continue;
-    }
-    if (key === "*") {
-      fallbackRouteAnyMethod = createRoute("*", "*", handler);
-      continue;
-    }
-  }
+  const routes = createRoutes(description, createAndRegisterRoute);
   installNavigation({ applyRouting, applyRoutingAroundCall });
   return routes;
 };
@@ -245,12 +218,14 @@ export const applyRouting = async ({
   const sourceResource = resourceFromUrl(sourceUrl);
   const targetResource = resourceFromUrl(targetUrl);
   if (debug) {
-    console.log(`apply routing on ${method} ${targetResource}`);
+    console.log(
+      `start routing ${method} ${targetResource} against ${routeSet.size} routes`,
+    );
   }
   const nextMatchingRouteSet = new Set();
-  const testRouteAgainst = (route, methodCandidate, resourceCandidate) => {
+  const matchRouteAgainst = (route, methodCandidate, resourceCandidate) => {
     const urlObject = new URL(resourceCandidate, baseUrl);
-    const testParams = {
+    const matchParams = {
       method: methodCandidate,
       resource: resourceCandidate,
       state,
@@ -259,11 +234,11 @@ export const applyRouting = async ({
       hash: urlObject.hash,
       formData,
     };
-    return route.test(testParams);
+    return route.match(matchParams);
   };
 
   for (const routeCandidate of routeSet) {
-    const isMatchingTargetUrl = testRouteAgainst(
+    const isMatchingTargetUrl = matchRouteAgainst(
       routeCandidate,
       method,
       targetResource,
@@ -274,13 +249,7 @@ export const applyRouting = async ({
   }
   if (nextMatchingRouteSet.size === 0) {
     if (debug) {
-      console.log("no route has matched -> use fallback route");
-    }
-    const fallbackRouteForThisMethod = fallbackRoutePerMethodMap.get(method);
-    if (fallbackRouteForThisMethod) {
-      nextMatchingRouteSet.add(fallbackRouteForThisMethod);
-    } else if (fallbackRouteAnyMethod) {
-      nextMatchingRouteSet.add(fallbackRouteAnyMethod);
+      console.log("no route has matched");
     }
   }
   const routeToLeaveSet = new Set();
@@ -293,7 +262,7 @@ export const applyRouting = async ({
       // when we route to a new url but we stay on the current url
       // until routing is done (POST/PATCH/PUT)
       // then we keep the route active during that time
-      if (testRouteAgainst(activeRoute, "GET", sourceResource)) {
+      if (matchRouteAgainst(activeRoute, "GET", sourceResource)) {
         if (debug) {
           console.log(
             `${activeRoute.ressource}: stays active while navigating to ${targetResource}`,

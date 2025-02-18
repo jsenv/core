@@ -1,78 +1,76 @@
 import { parseResourcePattern } from "./resource_pattern.js";
 
-export const createRoutes = (description) => {
-  const createCandidate = ({ method, resource, callback }) => {
-    const resourcePatternParsed = parseResourcePattern(resource);
-
-    const route = {
-      method,
-      resource,
-      match: ({ method, resource }) => {
-        if (route.method !== method && route.method !== "*") {
-          return false;
-        }
-        if (!resourcePatternParsed.match(resource)) {
-          return false;
-        }
-        return true;
-      },
-      callback,
-    };
-
-    return route;
-  };
-  const candidateArray = [];
+export const createRoutes = (description, create = createRoute) => {
+  const routeArray = [];
   for (const key of Object.keys(description)) {
     const callback = description[key];
     if (key === "*") {
-      const candidate = createCandidate({
-        method: "*",
-        resource: "*",
+      const route = create({
+        methodPattern: "*",
+        resourcePattern: "*",
         callback,
       });
-      candidateArray.push(candidate);
+      routeArray.push(route);
     } else {
-      const [method, resource] = key.split(" ");
-      const candidate = createCandidate({ method, resource, callback });
-      candidateArray.push(candidate);
+      const [methodPattern, resourcePattern] = key.split(" ");
+      const route = create({
+        methodPattern,
+        resourcePattern,
+        callback,
+      });
+      routeArray.push(route);
     }
   }
-  candidateArray.sort((left, right) => {
-    const leftIsAnyMethod = left.method === "*";
-    const rightIsAnyMethod = right.method === "*";
-    if (leftIsAnyMethod && !rightIsAnyMethod) {
-      return 1;
-    }
-    if (rightIsAnyMethod && !leftIsAnyMethod) {
-      return -1;
-    }
-    const leftIsAnyResource = left.resource === "*";
-    const rightIsAnyResource = right.resource === "*";
-    if (leftIsAnyResource && !rightIsAnyResource) {
-      return 1;
-    }
-    if (rightIsAnyResource && !leftIsAnyResource) {
-      return -1;
-    }
-    const leftResourceLength = left.resource.length;
-    const rightResourceLength = right.resource.length;
-    if (leftResourceLength > rightResourceLength) {
-      return -1;
-    }
-    if (rightResourceLength > leftResourceLength) {
-      return 1;
-    }
-    return 0;
-  });
+  // routeArray.sort((left, right) => {
+  //   const leftIsAnyMethod = left.method === "*";
+  //   const rightIsAnyMethod = right.method === "*";
+  //   if (leftIsAnyMethod && !rightIsAnyMethod) {
+  //     return 1;
+  //   }
+  //   if (rightIsAnyMethod && !leftIsAnyMethod) {
+  //     return -1;
+  //   }
+  //   const leftIsAnyResource = left.resource === "*";
+  //   const rightIsAnyResource = right.resource === "*";
+  //   if (leftIsAnyResource && !rightIsAnyResource) {
+  //     return 1;
+  //   }
+  //   if (rightIsAnyResource && !leftIsAnyResource) {
+  //     return -1;
+  //   }
+  //   const leftResourceLength = left.resource.length;
+  //   const rightResourceLength = right.resource.length;
+  //   if (leftResourceLength > rightResourceLength) {
+  //     return -1;
+  //   }
+  //   if (rightResourceLength > leftResourceLength) {
+  //     return 1;
+  //   }
+  //   return 0;
+  // });
+  return routeArray;
+};
 
-  return (request) => {
-    for (const candidate of candidateArray) {
-      const matchResult = candidate.match(request);
-      if (!matchResult) {
-        continue;
+const createRoute = ({ methodPattern, resourcePattern, callback }) => {
+  const resourcePatternParsed = parseResourcePattern(resourcePattern);
+  const route = {
+    methodPattern,
+    resourcePattern,
+    match: ({ method, resource }) => {
+      if (route.methodPattern !== method && route.methodPattern !== "*") {
+        return false;
       }
-      return candidate.callback(request, matchResult);
-    }
-    return null;
+      const matchResult = resourcePatternParsed.match(resource);
+      if (!matchResult) {
+        return false;
+      }
+      return matchResult;
+    },
+    build: (url, params) => {
+      return resourcePatternParsed.build(url, params);
+    },
+    callback,
   };
+
+  return route;
 };
