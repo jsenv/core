@@ -72,7 +72,7 @@ export const JSONFileManagerService = () => {
       },
       "PATCH /json_files/:id": {
         "multipart/form-data": async (request, { id }) => {
-          const { fields } = await request.body.read();
+          const { fields } = await request.formData();
           // TODO: attention le format form-data fait que key:value devient key: [value]
           // donc on peut pas juste faire ça, mais bon pour l'instant c'est good
           const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);

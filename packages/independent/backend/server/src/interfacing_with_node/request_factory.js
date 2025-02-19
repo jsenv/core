@@ -1,4 +1,6 @@
 import { Abort } from "@jsenv/abort";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { parse } from "node:querystring";
 import { headersFromObject } from "../internal/headersFromObject.js";
 import { observableFromNodeStream } from "./observable_from_node_stream.js";
 
@@ -37,6 +39,69 @@ export const fromNodeRequest = (
     requestOrigin = serverOrigin;
   }
 
+  // check the following parsers if we want to support more request body content types
+  // https://github.com/node-formidable/formidable/tree/master/src/parsers
+  const buffer = async () => {
+    // here we don't really need to warn, one might want to read anything as binary
+    // const contentType = headers["content-type"];
+    // if (!CONTENT_TYPE.isBinary(contentType)) {
+    //   console.warn(
+    //     `buffer() called on a request with content-type: "${contentType}". A binary content-type was expected.`,
+    //   );
+    // }
+    const requestBodyBuffer = await readBody(body, { as: "buffer" });
+    return requestBodyBuffer;
+  };
+  // maybe we could use https://github.com/form-data/form-data
+  // for now we'll just return { fields, files } it's good enough to work with
+  const formData = async () => {
+    const contentType = headers["content-type"];
+    if (contentType !== "multipart/form-data") {
+      console.warn(
+        `formData() called on a request with content-type: "${contentType}". multipart/form-data was expected.`,
+      );
+    }
+    const { formidable } = await import("formidable");
+    const form = formidable({});
+    nodeRequest.resume(); // was paused in start_server.js
+    const [fields, files] = await form.parse(nodeRequest);
+    const requestBodyFormData = { fields, files };
+    return requestBodyFormData;
+  };
+
+  const text = async () => {
+    const contentType = headers["content-type"];
+    if (!CONTENT_TYPE.isTextual(contentType)) {
+      console.warn(
+        `text() called on a request with content-type "${contentType}". A textual content-type was expected.`,
+      );
+    }
+    const requestBodyString = await readBody(body, { as: "string" });
+    return requestBodyString;
+  };
+  const json = async () => {
+    const contentType = headers["content-type"];
+    if (!CONTENT_TYPE.isJson(contentType)) {
+      console.warn(
+        `json() called on a request with content-type "${contentType}". A json content-type was expected.`,
+      );
+    }
+    const requestBodyString = await readBody(body, { as: "string" });
+    const requestBodyJSON = JSON.parse(requestBodyString);
+    return requestBodyJSON;
+  };
+  const queryString = async () => {
+    const contentType = headers["content-type"];
+    if (contentType !== "application/x-www-form-urlencoded") {
+      console.warn(
+        `queryString() called on a request with content-type "${contentType}". application/x-www-form-urlencoded was expected.`,
+      );
+    }
+    const requestBodyString = await readBody(body, { as: "string" });
+    const requestBodyQueryStringParsed = parse(requestBodyString);
+    return requestBodyQueryStringParsed;
+  };
+
   return Object.freeze({
     signal: handleRequestOperation.signal,
     http2: Boolean(nodeRequest.stream),
@@ -48,8 +113,70 @@ export const fromNodeRequest = (
     method: nodeRequest.method,
     headers,
     body,
-    __nodeRequest: nodeRequest,
+    buffer,
+    formData,
+    text,
+    json,
+    queryString,
   });
+};
+
+export const getRequestBody = async (request, contentType) => {
+  if (contentType === "multipart/form-data") {
+  }
+  if (contentType === "application/x-www-form-urlencoded") {
+  }
+  if (contentType === "application/json") {
+  }
+  if (contentType === "text/plain") {
+  }
+  if (contentType === "application/octet-stream") {
+    const requestBodyBuffer = await readRequestBody(request);
+    return requestBodyBuffer;
+  }
+  throw new Error(`unknown content type ${contentType}`);
+};
+const readBody = (request, { as }) => {
+  return new Promise((resolve, reject) => {
+    const bufferArray = [];
+    request.body.subscribe({
+      error: reject,
+      next: (buffer) => {
+        bufferArray.push(buffer);
+      },
+      complete: () => {
+        const bodyAsBuffer = Buffer.concat(bufferArray);
+        if (as === "buffer") {
+          resolve(bodyAsBuffer);
+          return;
+        }
+        if (as === "string") {
+          const bodyAsString = bodyAsBuffer.toString();
+          resolve(bodyAsString);
+          return;
+        }
+        if (as === "json") {
+          const bodyAsString = bodyAsBuffer.toString();
+          const bodyAsJSON = JSON.parse(bodyAsString);
+          resolve(bodyAsJSON);
+          return;
+        }
+      },
+    });
+  });
+};
+// exported for unit tests
+export const readRequestBody = (request, { as }) => {
+  if (as === "string") {
+    return request.text();
+  }
+  if (as === "buffer") {
+    return request.buffer();
+  }
+  if (as === "json") {
+    return request.json();
+  }
+  throw new Error(`unsupported ${as}`);
 };
 
 export const applyRedirectionToRequest = (
@@ -72,7 +199,6 @@ export const applyRedirectionToRequest = (
     ...rest,
   };
 };
-
 const getPropertiesFromResource = ({ resource, baseUrl }) => {
   const urlObject = new URL(resource, baseUrl);
   let pathname = urlObject.pathname;
@@ -84,7 +210,6 @@ const getPropertiesFromResource = ({ resource, baseUrl }) => {
     resource,
   };
 };
-
 const getPropertiesFromPathname = ({ pathname, baseUrl }) => {
   return getPropertiesFromResource({
     resource: `${pathname}${new URL(baseUrl).search}`,

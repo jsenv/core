@@ -8,12 +8,14 @@ import { startServer } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: () => {
-        return {
-          status: 200,
-          headers: { "content-type": "text/plain" },
-          body: "Hello world",
-        };
+      handleRequest: {
+        "GET /": () => {
+          return {
+            status: 200,
+            headers: { "content-type": "text/plain" },
+            body: "Hello world",
+          };
+        },
       },
     },
   ],
@@ -22,12 +24,12 @@ await startServer({
 
 ## handleRequest
 
-_handleRequest_ is a function responsible to generate a response from a request.
+_handleRequest_ is an object associating routes to functions responsible to generate a response from a request.
 
 - It is optional
-- It receives a _request_ object in argument
-- It is expect to return a _response_, `null` or `undefined`
-- It can be an async function
+- Each function receives a _request_ object in argument
+- Each function is expected to return a _response_, `null` or `undefined`
+- Function can be an `async`
 
 When there is no service handling the request, server respond with _501 Not implemented_.
 
@@ -45,6 +47,7 @@ const request = {
   url: "http://127.0.0.1:8080/index.html?param=1",
   origin: "http://127.0.0.1:8080",
   pathname: "/index.html",
+  searchParams: new URLSearchParams("?param=1"),
   resource: "/index.html?param=1",
   method: "GET",
   headers: { accept: "text/html" },
@@ -60,8 +63,10 @@ import { startServer } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: async (request) => {
-        const page = new URL(request.url).searchParams.get("page");
+      handleRequest: {
+        "GET *": async (request) => {
+          const page = request.searchParams.get("page");
+        },
       },
     },
   ],
@@ -82,17 +87,25 @@ await startServer({
   services: [
     {
       handleRequest: {
-        "POST /users/:id": {
+        "PATCH /users/:id": {
           "application/json": async (request, { id }) => {
-            const requestBodyJson = await request.body.read();
+            const requestBodyJson = await request.json();
             return {
               status: 200,
               headers: { "content-type": "text/plain" },
               body: 'Server have received "application/json" body',
             };
           },
+          "application/merge-patch+json": async (request, { id }) => {
+            const requestBodyJson = await request.json();
+            return {
+              status: 200,
+              headers: { "content-type": "text/plain" },
+              body: 'Server have received "merge-patch+json" body',
+            };
+          },
           "multipart/form-data": async (request, { id }) => {
-            const { fields, files } = await request.body.read();
+            const { fields, files } = await request.formData();
             return {
               status: 200,
               headers: { "content-type": "text/plain" },
@@ -100,7 +113,7 @@ await startServer({
             };
           },
           "application/x-www-form-urlencoded": async (request, { id }) => {
-            const requestBodyFields = await request.body.read();
+            const requestBodyFields = await request.queryString();
             return {
               status: 200,
               headers: { "content-type": "text/plain" },
@@ -108,7 +121,7 @@ await startServer({
             };
           },
           "text/plain": async (request, { id }) => {
-            const requestBodyText = await request.body.read();
+            const requestBodyText = await request.text();
             return {
               status: 200,
               headers: { "content-type": "text/plain" },
@@ -116,7 +129,7 @@ await startServer({
             };
           },
           "application/octet-stream": async (request, { id }) => {
-            const requestBodyBuffer = await request.body.read();
+            const requestBodyBuffer = await request.buffer();
             return {
               status: 200,
               headers: { "content-type": "text/plain" },
@@ -142,13 +155,15 @@ import { startServer } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: () => {
-        const response = {
-          status: 200,
-          headers: { "content-type": "text/plain" },
-          body: "Hello world",
-        };
-        return response;
+      handleRequest: {
+        "GET /": () => {
+          const response = {
+            status: 200,
+            headers: { "content-type": "text/plain" },
+            body: "Hello world",
+          };
+          return response;
+        },
       },
     },
   ],
@@ -163,13 +178,15 @@ import { startServer } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: () => {
-        const response = {
-          status: 200,
-          headers: { "content-type": "text/plain" },
-          body: Buffer.from("Hello world"),
-        };
-        return response;
+      handleRequest: {
+        "GET /": () => {
+          const response = {
+            status: 200,
+            headers: { "content-type": "text/plain" },
+            body: Buffer.from("Hello world"),
+          };
+          return response;
+        },
       },
     },
   ],
@@ -185,13 +202,15 @@ import { startServer } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: () => {
-        const response = {
-          status: 200,
-          headers: { "content-type": "text/plain" },
-          body: createReadStream("/User/you/folder/file.txt"),
-        };
-        return response;
+      handleRequest: {
+        "GET /": () => {
+          const response = {
+            status: 200,
+            headers: { "content-type": "text/plain" },
+            body: createReadStream("/User/you/folder/file.txt"),
+          };
+          return response;
+        },
       },
     },
   ],
@@ -206,22 +225,24 @@ import { startServer } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: () => {
-        const response = {
-          status: 200,
-          headers: { "content-type": "text/plain" },
-          body: {
-            [Symbol.observable]: () => {
-              return {
-                subscribe: ({ next, complete }) => {
-                  next("Hello world");
-                  complete();
-                },
-              };
+      handleRequest: {
+        "GET /": () => {
+          const response = {
+            status: 200,
+            headers: { "content-type": "text/plain" },
+            body: {
+              [Symbol.observable]: () => {
+                return {
+                  subscribe: ({ next, complete }) => {
+                    next("Hello world");
+                    complete();
+                  },
+                };
+              },
             },
-          },
-        };
-        return response;
+          };
+          return response;
+        },
       },
     },
   ],
