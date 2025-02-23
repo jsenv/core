@@ -1,37 +1,30 @@
 # Handling requests
 
-Request are handled by the first service returning something in a "handleRequest" function.
+Request are handled by the first route matching and with "response" function returning something.
 
 ```js
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET /": () => {
-          return {
-            status: 200,
-            headers: { "content-type": "text/plain" },
-            body: "Hello world",
-          };
-        },
+      endpoint: "GET /",
+      response: () => {
+        return Response.text("Hello world");
       },
     },
   ],
 });
 ```
 
-## handleRequest
+## response
 
-_handleRequest_ is an object associating routes to functions responsible to generate a response from a request.
+_response_ is a function responsible to generate a response from a request.
 
-- It is optional
-- Each function receives a _request_ object in argument
-- Each function is expected to return a _response_, `null` or `undefined`
-- Function can be an `async`
+- It is expected to return a _response_, `null` or `undefined`
+- It can be an `async`
 
-When there is no service handling the request, server respond with _501 Not implemented_.
+When there is no route producing a response for the request, server respond with _501 Not implemented_.
 
 ## request
 
@@ -61,12 +54,11 @@ const request = {
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET *": async (request) => {
-          const page = request.searchParams.get("page");
-        },
+      endpoint: "GET /",
+      response: (request) => {
+        const page = request.searchParams.get("page");
       },
     },
   ],
@@ -84,59 +76,48 @@ The request body will be passed to your function. If the request uses a content-
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "PATCH /users/:id": {
-          "application/json": async (request, { id }) => {
-            const requestBodyJson = await request.json();
-            return {
-              status: 200,
-              headers: { "content-type": "text/plain" },
-              body: 'Server have received "application/json" body',
-            };
-          },
-          "application/merge-patch+json": async (request, { id }) => {
-            const requestBodyJson = await request.json();
-            return {
-              status: 200,
-              headers: { "content-type": "text/plain" },
-              body: 'Server have received "merge-patch+json" body',
-            };
-          },
-          "multipart/form-data": async (request, { id }) => {
-            const { fields, files } = await request.formData();
-            return {
-              status: 200,
-              headers: { "content-type": "text/plain" },
-              body: 'Server have received "multipart/form-data" body',
-            };
-          },
-          "application/x-www-form-urlencoded": async (request, { id }) => {
-            const requestBodyFields = await request.queryString();
-            return {
-              status: 200,
-              headers: { "content-type": "text/plain" },
-              body: 'Server have received "application/x-www-form-urlencoded" body',
-            };
-          },
-          "text/plain": async (request, { id }) => {
-            const requestBodyText = await request.text();
-            return {
-              status: 200,
-              headers: { "content-type": "text/plain" },
-              body: 'Server have received "text/plain" body',
-            };
-          },
-          "application/octet-stream": async (request, { id }) => {
-            const requestBodyBuffer = await request.buffer();
-            return {
-              status: 200,
-              headers: { "content-type": "text/plain" },
-              body: 'Server have received "application/octet-stream" body',
-            };
-          },
-        },
+      endpoint: "PATCH /users/:id",
+      acceptedContentTypes: [
+        "application/json",
+        "application/merge-patch+json",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded",
+        "text/plain",
+        "application/octet-stream",
+      ],
+      response: async (request, { id }) => {
+        const requestContentType = request.headers["content-type"];
+        if (requestContentType === "application/json") {
+          const requestBodyJson = await request.json();
+          return Response.text(`Server have received "application/json" body`);
+        }
+        if (requestContentType === "application/merge-patch+json") {
+          const requestBodyJson = await request.json();
+          return Response.text(`Server have received "merge-patch+json" body`);
+        }
+        if (requestContentType === "multipart/form-data") {
+          const { fields, files } = await request.formData();
+          return Response.text(
+            `Server have received "multipart/form-data" body`,
+          );
+        }
+        if (requestContentType === "application/x-www-form-urlencoded") {
+          const requestBodyFields = await request.queryString();
+          return Response.text(
+            `Server have received "application/x-www-form-urlencoded" body`,
+          );
+        }
+        if (requestContentType === "application/x-www-form-urlencoded") {
+          const requestBodyText = await request.text();
+          return Response.text(`Server have received "text/plain" body`);
+        }
+        // "application/octet-stream"
+        const requestBodyBuffer = await request.buffer();
+        return Response.text(
+          `Server have received "application/octet-stream" body`,
+        );
       },
     },
   ],
@@ -153,17 +134,11 @@ _response body declared with a string_
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET /": () => {
-          const response = {
-            status: 200,
-            headers: { "content-type": "text/plain" },
-            body: "Hello world",
-          };
-          return response;
-        },
+      endpoint: "GET /",
+      response: () => {
+        return Response.text("Hello world");
       },
     },
   ],
@@ -176,17 +151,16 @@ _response body declared with a buffer_
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET /": () => {
-          const response = {
-            status: 200,
-            headers: { "content-type": "text/plain" },
-            body: Buffer.from("Hello world"),
-          };
-          return response;
-        },
+      endpoint: "GET /",
+      response: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: Buffer.from("Hello world"),
+        };
+        return response;
       },
     },
   ],
@@ -200,17 +174,16 @@ import { createReadStream } from "node:fs";
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET /": () => {
-          const response = {
-            status: 200,
-            headers: { "content-type": "text/plain" },
-            body: createReadStream("/User/you/folder/file.txt"),
-          };
-          return response;
-        },
+      endpoint: "GET /",
+      response: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: createReadStream("/User/you/folder/file.txt"),
+        };
+        return response;
       },
     },
   ],
@@ -223,33 +196,32 @@ _response body declared with an observable_
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET /": () => {
-          const response = {
-            status: 200,
-            headers: { "content-type": "text/plain" },
-            body: {
-              [Symbol.observable]: () => {
-                return {
-                  subscribe: ({ next, complete }) => {
-                    next("Hello world");
-                    complete();
-                  },
-                };
-              },
+      endpoint: "GET /",
+      response: () => {
+        const response = {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: {
+            [Symbol.observable]: () => {
+              return {
+                subscribe: ({ next, complete }) => {
+                  next("Hello world");
+                  complete();
+                },
+              };
             },
-          };
-          return response;
-        },
+          },
+        };
+        return response;
       },
     },
   ],
 });
 ```
 
-## Services and composition
+<!-- ## Routes and composition
 
 Composition allows to split complex server logic into smaller units.
 The following code is an example of composition where a server logic is split in two functions.
@@ -265,20 +237,20 @@ The following code is an example of composition where a server logic is split in
 import { startServer, composeServices } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      name: "index",
-      handleRequest: {
-        "GET /": (request) => {
-          return { status: 200 };
-        },
-        "GET *": () => {
-          return { status: 404 };
-        },
-      },
+      url: "/",
+      method: "GET",
+      response: () => ({ status: 200 }),
+    },
+    {
+      url: "*",
+      method: "GET",
+      response: () => ({ status: 404 }),
     },
   ],
-});
+}); -->
+
 ```
 
 <!-- > Code above implement a server that could be described as follow:
@@ -289,3 +261,4 @@ await startServer({
 <!-- A service can be described as an async function receiving a request and returning a response or null.
 
 On a real use case _requestToResponse_ needs to be splitted into smaller functions (services) to keep it maintainable. `@jsenv/server` provides an helper for this called _composeService_. It is an async function returning the first response produced by a list of async functions called in sequence. -->
+```

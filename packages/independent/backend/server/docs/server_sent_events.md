@@ -16,13 +16,11 @@ setInterval(() => {
 
 startServer({
   port: 3456,
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
-        const { accept = "" } = request.headers;
-        if (!accept.includes("text/event-stream")) {
-          return null;
-        }
+      endpoint: "GET *",
+      availableContentTypes: "text/event-stream",
+      response: (request) => {
         return room.join(request);
       },
     },

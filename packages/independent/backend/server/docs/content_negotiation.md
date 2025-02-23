@@ -60,40 +60,15 @@ You can use _pickContentLanguage_ to respond with request prefered language:
 import { startServer, pickContentLanguage } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET *": (request) => {
-          const bestLanguage = pickContentLanguage(request, ["fr", "en"]);
-          const responseLanguage = bestLanguage || "en";
-          const availableLanguages = {
-            fr: () => {
-              const body = "Bonjour tout le monde !";
-              return {
-                headers: {
-                  "content-type": "text/plain",
-                  "content-length": Buffer.byteLength(body),
-                  "content-language": "fr",
-                },
-                body,
-              };
-            },
-            en: () => {
-              const body = `Hello world!`;
-              return {
-                headers: {
-                  "content-type": "text/plain",
-                  "content-length": Buffer.byteLength(body),
-                  "content-language": "en",
-                },
-                body,
-              };
-            },
-          };
-          const responseInNegotiatedLanguage =
-            availableLanguages[responseLanguage]();
-          return responseInNegotiatedLanguage;
-        },
+      endpoint: "GET *",
+      availableLanguages: ["fr", "en"],
+      response: ({ negotiatedLanguage }) => {
+        if (negotiatedLanguage === "fr") {
+          return Response.text("Bonjour tout le monde !");
+        }
+        return Response.text("Hello world!");
       },
     },
   ],
@@ -107,41 +82,19 @@ import { gzipSync } from "node:zlib";
 import { startServer, pickContentEncoding } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET *": (request) => {
-          const acceptedEncoding = pickContentEncoding(request, [
-            "gzip",
-            "identity",
-          ]);
-          const responseEncoding = acceptedEncoding || "identity";
-          const availableEncodings = {
-            gzip: () => {
-              const body = gzipSync(Buffer.from(`Hello world!`));
-              return {
-                headers: {
-                  "content-type": "text/plain",
-                  "content-encoding": "gzip",
-                },
-                body,
-              };
+      endpoint: "GET *",
+      availableEncodings: ["gzip", "identity"],
+      response: ({ negotiatedEncoding }) => {
+        if (negotiatedEncoding === "gzip") {
+          return Response.text(gzipSync(Buffer.from(`Hello world!`)), {
+            headers: {
+              "content-encoding": "gzip",
             },
-            identity: () => {
-              const body = "Hello world!";
-              return {
-                headers: {
-                  "content-type": "text/plain",
-                  "content-length": Buffer.byteLength(body),
-                },
-                body,
-              };
-            },
-          };
-          const responseInNegotiatedEncoding =
-            availableEncodings[responseEncoding]();
-          return responseInNegotiatedEncoding;
-        },
+          });
+        }
+        return Response.text("Hello world!");
       },
     },
   ],
@@ -154,10 +107,9 @@ await startServer({
 await startServer({
   routes: [
     {
-      url: "/",
-      method: "GET",
-      responseAvailableContentTypes: ["application/json", "text/plain"],
-      responseAvailableLanguagues: ["fr", "en"],
+      method: "GET *",
+      availableContentTypes: ["application/json", "text/plain"],
+      availableLanguages: ["fr", "en"],
       response: ({ contentTypeNegotiated, languageNegotiated }) => {
         const message =
           languageNegotiated === "fr" ? "Bonjour tout le monde" : "Hello world";

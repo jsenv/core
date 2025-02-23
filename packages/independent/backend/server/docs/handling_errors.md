@@ -6,11 +6,16 @@ Errors are handled by the first service returning something in a "handleError" f
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET *",
+      response: () => {
         throw new Error("toto");
       },
+    },
+  ],
+  services: [
+    {
       handleError: (error, { request }) => {
         const body = `An error occured: ${error.message}`;
         return {
@@ -46,14 +51,15 @@ _jsenvServiceErrorHandler_ is a generic error handler. It can be used to catch e
 import { startServer, jsenvServiceErrorHandler } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET *",
+      response: () => {
         throw new Error("toto");
       },
     },
-    jsenvServiceErrorHandler(),
   ],
+  services: [jsenvServiceErrorHandler()],
 });
 ```
 

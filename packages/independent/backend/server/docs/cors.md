@@ -39,8 +39,11 @@ const server = await startServer({
       accessControlAllowRequestHeaders: true,
       accessControlAllowCredentials: true,
     }),
+  ],
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET *",
+      response: () => {
         throw new Error("test");
       },
     },

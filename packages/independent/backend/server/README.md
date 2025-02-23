@@ -7,19 +7,10 @@ import { startServer } from "@jsenv/server";
 
 await startServer({
   port: 8080,
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET *": () => {
-          return {
-            status: 200,
-            headers: {
-              "content-type": "text/plain",
-            },
-            body: "Hello world",
-          };
-        },
-      },
+      endpoint: "GET *",
+      response: () => Response.text("Hello world"),
     },
   ],
 });
@@ -40,18 +31,9 @@ _Code starting a server with 2 request handlers:_
 import { startServer, composeServices } from "@jsenv/server";
 
 const server = await startServer({
-  services: [
-    {
-      name: "index",
-      handleRequest: {
-        "GET /": (request) => {
-          return { status: 200 };
-        },
-        "GET *": () => {
-          return { status: 404 };
-        },
-      },
-    },
+  routes: [
+    { endpoint: "GET /", response: () => ({ status: 200 }) },
+    { endpoint: "GET * ", response: () => ({ status: 404 }) },
   ],
 });
 
@@ -75,19 +57,14 @@ await startServer({
     privateKey: readFileSync(new URL("./server.key", import.meta.url), "utf8"),
   },
   allowHttpRequestOnHttps: true,
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET *": (request) => {
-          const clientUsesHttp = request.origin.startsWith("http:");
-          return {
-            status: 200,
-            headers: {
-              "content-type": "text/plain",
-            },
-            body: clientUsesHttp ? `Welcome http user` : `Welcome https user`,
-          };
-        },
+      endpoint: "GET * ",
+      response: (request) => {
+        const clientUsesHttp = request.origin.startsWith("http:");
+        return Response.text(
+          clientUsesHttp ? `Welcome http user` : `Welcome https user`,
+        );
       },
     },
   ],
@@ -100,14 +77,13 @@ _Code starting a server for static files:_
 import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET *": async (request) => {
-          const fileUrl = new URL(request.resource.slice(1), import.meta.url);
-          const response = await fetchFileSystem(fileUrl, request);
-          return response;
-        },
+      endpoint: "GET *",
+      response: async (request) => {
+        const fileUrl = new URL(request.resource.slice(1), import.meta.url);
+        const response = await fetchFileSystem(fileUrl, request);
+        return response;
       },
     },
   ],

@@ -132,10 +132,12 @@ export const startBuildServer = async ({
       ...services,
       {
         name: "jsenv:build_files_service",
-        handleRequest: createBuildFilesService({
-          buildDirectoryUrl,
-          buildMainFilePath,
-        }),
+        routes: [
+          createBuildFilesService({
+            buildDirectoryUrl,
+            buildMainFilePath,
+          }),
+        ],
       },
       jsenvServiceErrorHandler({
         sendErrorDetails: true,
@@ -162,7 +164,9 @@ export const startBuildServer = async ({
 
 const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
   return {
-    "GET *": (request) => {
+    url: "*",
+    method: "GET",
+    response: (request) => {
       const urlIsVersioned = new URL(request.url).searchParams.has("v");
       if (buildMainFilePath && request.resource === "/") {
         request = {

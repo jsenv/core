@@ -6,17 +6,16 @@ A server often needs to serve file without routing logic. Either the file is the
 import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET *": (request) => {
-          return fetchFileSystem(
-            new URL(request.resource.slice(1), import.meta.url),
-            {
-              headers: request.headers,
-            },
-          );
-        },
+      endpoint: "GET *",
+      response: (request) => {
+        return fetchFileSystem(
+          new URL(request.resource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+          },
+        );
       },
     },
   ],
@@ -41,18 +40,18 @@ By default _fetchFileSystem_ will always respond with 200. You can unlock 304 re
 import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET *": (request) => {
-          return fetchFileSystem(
-            new URL(request.resource.slice(1), import.meta.url),
-            {
-              headers: request.headers,
-              etagEnabled: true,
-            },
-          );
-        },
+      url: "*",
+      method: "GET",
+      response: (request) => {
+        return fetchFileSystem(
+          new URL(request.resource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            etagEnabled: true,
+          },
+        );
       },
     },
   ],
@@ -68,18 +67,18 @@ When etag generated from the file content equals the one found in request header
 import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET *": (request) => {
-          return fetchFileSystem(
-            new URL(request.resource.slice(1), import.meta.url),
-            {
-              headers: request.headers,
-              mtimeEnabled: true,
-            },
-          );
-        },
+      url: "*",
+      method: "GET",
+      response: (request) => {
+        return fetchFileSystem(
+          new URL(request.resource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            mtimeEnabled: true,
+          },
+        );
       },
     },
   ],
@@ -102,19 +101,19 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: {
-        "GET *": (request) => {
-          return fetchFileSystem(
-            new URL(request.resource.slice(1), import.meta.url),
-            {
-              headers: request.headers,
-              cacheControl:
-                request.resource === "/"
-                  ? `private,max-age=0,must-revalidate`
-                  : `private,max-age=3600,immutable`,
-            },
-          );
-        },
+      url: "*",
+      method: "GET",
+      response: (request) => {
+        return fetchFileSystem(
+          new URL(request.resource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            cacheControl:
+              request.resource === "/"
+                ? `private,max-age=0,must-revalidate`
+                : `private,max-age=3600,immutable`,
+          },
+        );
       },
     },
   ],
@@ -138,17 +137,17 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: {
-        "GET *": (request) => {
-          return fetchFileSystem(
-            new URL(request.resource.slice(1), import.meta.url),
-            {
-              headers: request.headers,
-              compressionEnabled: true,
-              compressionSizeThreshold: 1024,
-            },
-          );
-        },
+      url: "*",
+      method: "GET",
+      response: (request) => {
+        return fetchFileSystem(
+          new URL(request.resource.slice(1), import.meta.url),
+          {
+            headers: request.headers,
+            compressionEnabled: true,
+            compressionSizeThreshold: 1024,
+          },
+        );
       },
     },
   ],

@@ -39,25 +39,33 @@ export const buildServer = await startBuildServer({
   https: { certificate, privateKey },
   buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
   buildMainFilePath: "main.html",
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET /update_animal_to_dog": async () => {
-          await buildStory("dog");
-          return { status: 200 };
-        },
-        "GET /update_animal_to_horse": async () => {
-          await buildStory("horse");
-          return { status: 200 };
-        },
-        "GET /update_animal_to_cat": async () => {
-          await buildStory("cat");
-          return { status: 200 };
-        },
-        "GET /update_animal_to_bear": async () => {
-          await buildStory("bear");
-          return { status: 200 };
-        },
+      endpoint: "GET /update_animal_to_dog",
+      response: async () => {
+        await buildStory("dog");
+        return { status: 200 };
+      },
+    },
+    {
+      endpoint: "GET /update_animal_to_horse",
+      response: async () => {
+        await buildStory("horse");
+        return { status: 200 };
+      },
+    },
+    {
+      endpoint: "GET /update_animal_to_cat",
+      response: async () => {
+        await buildStory("cat");
+        return { status: 200 };
+      },
+    },
+    {
+      endpoint: "GET /update_animal_to_bear",
+      response: async () => {
+        await buildStory("bear");
+        return { status: 200 };
       },
     },
   ],
