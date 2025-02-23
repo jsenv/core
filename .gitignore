@@ -14,7 +14,7 @@
 /secrets.json
 /yarn.lock
 .DS_STORE
-todo.txt
+todo.*
 **/tests/**/git_ignored/
 **/tests/**/.jsenv_b/
 !**/tests/**/_*.test.*/**
