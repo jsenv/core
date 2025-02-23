@@ -30,7 +30,7 @@ const { origin } = await startServer({
   const response = await fetchUrl(`${origin}/a.js`);
   const actual = {
     status: response.status,
-    body: await response.text(),
+    body: await new Response(),
   };
   const expect = {
     status: 200,
@@ -43,7 +43,7 @@ const { origin } = await startServer({
   const response = await fetchUrl(`${origin}/a.js?foo=true`);
   const actual = {
     status: response.status,
-    body: await response.text(),
+    body: await new Response(),
   };
   const expect = {
     status: 200,
@@ -56,7 +56,7 @@ const { origin } = await startServer({
   const response = await fetchUrl(`${origin}/34rtys.js`);
   const actual = {
     status: response.status,
-    body: await response.text(),
+    body: await new Response(),
   };
   const expect = {
     status: 200,

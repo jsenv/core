@@ -89,9 +89,10 @@ await startServer({
   https: { certificate, privateKey },
   http2: true,
   port: 3679,
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
+      endpoint: "GET *",
+      response: (request) => {
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
           {
@@ -116,10 +117,11 @@ await startServer({
   logLevel: "info",
   https: { certificate, privateKey },
   port: 3679,
-  services: [
+  routes: [
     {
--     handleRequest: (request) => {
-+     handleRequest: (request, { pushResponse }) => {
+      endpoint: "GET *",
+-     response: (request) => {
++     response: (request, { pushResponse }) => {
 +       if (request.resource === "/main.html") {
 +       pushResponse({ path: "/script.js" })
 +       pushResponse({ path: "/style.css" })

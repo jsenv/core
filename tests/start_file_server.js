@@ -18,9 +18,13 @@ export const startFileServer = ({
     services: [
       ...services,
       jsenvServiceErrorHandler({ sendErrorDetails: true }),
+    ],
+    routes: [
       {
-        handleRequest: (request) =>
-          fetchFileSystem(
+        url: "*",
+        method: "GET",
+        response: (request) => {
+          return fetchFileSystem(
             new URL(request.resource.slice(1), rootDirectoryUrl),
             {
               rootDirectoryUrl,
@@ -30,7 +34,8 @@ export const startFileServer = ({
                 ? `private,max-age=3600,immutable` // 1hour
                 : "private,max-age=0,must-revalidate",
             },
-          ),
+          );
+        },
       },
     ],
     ...rest,

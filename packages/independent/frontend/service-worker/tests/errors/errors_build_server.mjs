@@ -39,26 +39,33 @@ export const buildServer = await startBuildServer({
   https: { certificate, privateKey },
   buildDirectoryUrl: new URL("./project/dist/", import.meta.url),
   buildMainFilePath: "main.html",
-  services: [
+  routes: [
     {
-      handleRequest: async (request) => {
-        if (request.pathname === "/build_no_error") {
-          await buildStory("no_error");
-          return { status: 200 };
-        }
-        if (request.pathname === "/build_error_during_register") {
-          await buildStory("error_during_register");
-          return { status: 200 };
-        }
-        if (request.pathname === "/build_error_during_install") {
-          await buildStory("error_during_install");
-          return { status: 200 };
-        }
-        if (request.pathname === "/build_error_during_activate") {
-          await buildStory("error_during_activate");
-          return { status: 200 };
-        }
-        return null;
+      endpoint: "GET /build_no_error",
+      response: async () => {
+        await buildStory("no_error");
+        return { status: 200 };
+      },
+    },
+    {
+      endpoint: "GET /build_error_during_register",
+      response: async () => {
+        await buildStory("error_during_register");
+        return { status: 200 };
+      },
+    },
+    {
+      endpoint: "GET /build_error_during_install",
+      response: async () => {
+        await buildStory("error_during_install");
+        return { status: 200 };
+      },
+    },
+    {
+      endpoint: "GET /build_error_during_activate",
+      response: async () => {
+        await buildStory("error_during_activate");
+        return { status: 200 };
       },
     },
   ],

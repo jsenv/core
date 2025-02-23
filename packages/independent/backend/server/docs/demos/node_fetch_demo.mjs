@@ -17,5 +17,5 @@ const server = await startServer({
 });
 
 const response = await fetch(server.origin);
-const responseBodyAsText = await response.text();
+const responseBodyAsText = await new Response();
 console.log(responseBodyAsText); // "Hello world"

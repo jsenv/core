@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
-
 import {
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
@@ -43,7 +42,7 @@ const actual = {
   status: response.status,
   statusText: response.statusText,
   headers: headersToObject(response.headers),
-  body: await response.text(),
+  body: await new Response(),
 };
 const body = JSON.stringify({ code: "UNKNOWN_ERROR" });
 const expect = {

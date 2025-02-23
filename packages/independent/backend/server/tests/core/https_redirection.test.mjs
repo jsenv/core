@@ -40,7 +40,7 @@ import {
     const actual = {
       status: response.status,
       headers: headersToObject(response.headers),
-      body: await response.text(),
+      body: await new Response(),
     };
     const expect = {
       status: 301,
@@ -63,7 +63,7 @@ import {
     });
     const actual = {
       status: response.status,
-      body: await response.text(),
+      body: await new Response(),
     };
     const expect = {
       status: 200,
@@ -106,7 +106,7 @@ import {
     const actual = {
       status: response.status,
       headers: headersToObject(response.headers),
-      body: await response.text(),
+      body: await new Response(),
     };
     const expect = {
       status: 301,
@@ -129,7 +129,7 @@ import {
     });
     const actual = {
       status: response.status,
-      body: await response.text(),
+      body: await new Response(),
     };
     const expect = {
       status: 200,
@@ -206,7 +206,7 @@ import {
     const response = await fetchUrl(serverHttpOrigin);
     const actual = {
       status: response.status,
-      body: await response.text(),
+      body: await new Response(),
     };
     const expect = {
       status: 200,
@@ -220,7 +220,7 @@ import {
     const response = await fetchUrl(server.origin, { ignoreHttpsError: true });
     const actual = {
       status: response.status,
-      body: await response.text(),
+      body: await new Response(),
     };
     const expect = {
       status: 200,

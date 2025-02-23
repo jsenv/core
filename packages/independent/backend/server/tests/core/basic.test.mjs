@@ -30,7 +30,7 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
     status: response.status,
     statusText: response.statusText,
     headers: headersToObject(response.headers),
-    body: await response.text(),
+    body: await new Response(),
   };
   const expect = {
     url: `${server.origin}/`,

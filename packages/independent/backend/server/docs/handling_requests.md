@@ -1,35 +1,30 @@
 # Handling requests
 
-Request are handled by the first service returning something in a "handleRequest" function.
+Request are handled by the first route matching and with "response" function returning something.
 
 ```js
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: () => {
-        return {
-          status: 200,
-          headers: { "content-type": "text/plain" },
-          body: "Hello world",
-        };
+      endpoint: "GET /",
+      response: () => {
+        return new Response("Hello world");
       },
     },
   ],
 });
 ```
 
-## handleRequest
+## response
 
-_handleRequest_ is a function responsible to generate a response from a request.
+_response_ is a function responsible to generate a response from a request.
 
-- It is optional
-- It receives a _request_ object in argument
-- It is expect to return a _response_, `null` or `undefined`
-- It can be an async function
+- It is expected to return a _response_, `null` or `undefined`
+- It can be an `async`
 
-When there is no service handling the request, server respond with _501 Not implemented_.
+When there is no route producing a response for the request, server respond with _501 Not implemented_.
 
 ## request
 
@@ -45,6 +40,7 @@ const request = {
   url: "http://127.0.0.1:8080/index.html?param=1",
   origin: "http://127.0.0.1:8080",
   pathname: "/index.html",
+  searchParams: new URLSearchParams("?param=1"),
   resource: "/index.html?param=1",
   method: "GET",
   headers: { accept: "text/html" },
@@ -58,10 +54,11 @@ const request = {
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: async (request) => {
-        const page = new URL(request.url).searchParams.get("page");
+      endpoint: "GET /",
+      response: (request) => {
+        const page = request.searchParams.get("page");
       },
     },
   ],
@@ -72,20 +69,55 @@ Read more at https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams.
 
 ### Reading request body
 
+Pass an object with accepted request content-types to the route declared on `handleRequest`.  
+The request body will be passed to your function. If the request uses a content-type you do not support a reponse with status 415 (Unsupported Media Type) will be sent automatically.
+
 ```js
-import { startServer, readRequestBody } from "@jsenv/server";
+import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: async (request) => {
-        const requestBodyAsString = await readRequestBody(request);
-        const requestBodyAsJson = await readRequestBody(request, {
-          as: "json",
-        });
-        const requestBodyAsBuffer = await readRequestBody(request, {
-          as: "buffer",
-        });
+      endpoint: "PATCH /users/:id",
+      acceptedContentTypes: [
+        "application/json",
+        "application/merge-patch+json",
+        "multipart/form-data",
+        "application/x-www-form-urlencoded",
+        "text/plain",
+        "application/octet-stream",
+      ],
+      response: async (request, { id }) => {
+        const requestContentType = request.headers["content-type"];
+        if (requestContentType === "application/json") {
+          const requestBodyJson = await request.json();
+          return new Response(`Server have received "application/json" body`);
+        }
+        if (requestContentType === "application/merge-patch+json") {
+          const requestBodyJson = await request.json();
+          return new Response(`Server have received "merge-patch+json" body`);
+        }
+        if (requestContentType === "multipart/form-data") {
+          const { fields, files } = await request.formData();
+          return new Response(
+            `Server have received "multipart/form-data" body`,
+          );
+        }
+        if (requestContentType === "application/x-www-form-urlencoded") {
+          const requestBodyFields = await request.queryString();
+          return new Response(
+            `Server have received "application/x-www-form-urlencoded" body`,
+          );
+        }
+        if (requestContentType === "application/x-www-form-urlencoded") {
+          const requestBodyText = await request.text();
+          return new Response(`Server have received "text/plain" body`);
+        }
+        // "application/octet-stream"
+        const requestBodyBuffer = await request.buffer();
+        return new Response(
+          `Server have received "application/octet-stream" body`,
+        );
       },
     },
   ],
@@ -102,15 +134,11 @@ _response body declared with a string_
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: () => {
-        const response = {
-          status: 200,
-          headers: { "content-type": "text/plain" },
-          body: "Hello world",
-        };
-        return response;
+      endpoint: "GET /",
+      response: () => {
+        return new Response("Hello world");
       },
     },
   ],
@@ -123,9 +151,10 @@ _response body declared with a buffer_
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET /",
+      response: () => {
         const response = {
           status: 200,
           headers: { "content-type": "text/plain" },
@@ -145,9 +174,10 @@ import { createReadStream } from "node:fs";
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET /",
+      response: () => {
         const response = {
           status: 200,
           headers: { "content-type": "text/plain" },
@@ -166,9 +196,10 @@ _response body declared with an observable_
 import { startServer } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET /",
+      response: () => {
         const response = {
           status: 200,
           headers: { "content-type": "text/plain" },
@@ -190,7 +221,7 @@ await startServer({
 });
 ```
 
-## Services and composition
+<!-- ## Routes and composition
 
 Composition allows to split complex server logic into smaller units.
 The following code is an example of composition where a server logic is split in two functions.
@@ -206,24 +237,20 @@ The following code is an example of composition where a server logic is split in
 import { startServer, composeServices } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      name: "index",
-      handleRequest: (request) => {
-        if (request.resource === "/") {
-          return { status: 200 };
-        }
-        return null; // means "I don't handle that request"
-      },
+      url: "/",
+      method: "GET",
+      response: () => ({ status: 200 }),
     },
     {
-      name: "otherwise",
-      handleRequest: () => {
-        return { status: 404 };
-      },
+      url: "*",
+      method: "GET",
+      response: () => ({ status: 404 }),
     },
   ],
-});
+}); -->
+
 ```
 
 <!-- > Code above implement a server that could be described as follow:
@@ -234,3 +261,4 @@ await startServer({
 <!-- A service can be described as an async function receiving a request and returning a response or null.
 
 On a real use case _requestToResponse_ needs to be splitted into smaller functions (services) to keep it maintainable. `@jsenv/server` provides an helper for this called _composeService_. It is an async function returning the first response produced by a list of async functions called in sequence. -->
+```

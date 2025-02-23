@@ -6,9 +6,10 @@ A server often needs to serve file without routing logic. Either the file is the
 import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
+      endpoint: "GET *",
+      response: (request) => {
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
           {
@@ -39,9 +40,11 @@ By default _fetchFileSystem_ will always respond with 200. You can unlock 304 re
 import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
+      url: "*",
+      method: "GET",
+      response: (request) => {
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
           {
@@ -64,9 +67,11 @@ When etag generated from the file content equals the one found in request header
 import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
+      url: "*",
+      method: "GET",
+      response: (request) => {
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
           {
@@ -96,7 +101,9 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: (request) => {
+      url: "*",
+      method: "GET",
+      response: (request) => {
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
           {
@@ -130,7 +137,9 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 await startServer({
   services: [
     {
-      handleRequest: (request) => {
+      url: "*",
+      method: "GET",
+      response: (request) => {
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
           {

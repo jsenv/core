@@ -67,18 +67,15 @@ await startServer({
   https: { certificate, privateKey },
   redirectHttpToHttps: false,
   allowHttpRequestOnHttps: true,
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
-        const clientUsesHttp = request.origin.startsWith("http:");
-
-        return {
-          status: 200,
-          headers: {
-            "content-type": "text/plain",
-          },
-          body: clientUsesHttp ? `Welcome http user` : `Welcome https user`,
-        };
+      endpoint: "GET *",
+      response: (request) => {
+        return new Response(
+          request.origin.startsWith("http:")
+            ? `Welcome http user`
+            : `Welcome https user`,
+        );
       },
     },
   ],

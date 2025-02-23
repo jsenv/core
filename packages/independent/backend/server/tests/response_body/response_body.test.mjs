@@ -27,7 +27,7 @@ import { fromFetchResponse, startServer } from "@jsenv/server";
   });
   const response = await fetchUrl(server.origin);
 
-  const actual = await response.text();
+  const actual = await new Response();
   const expect = "Hello";
   assert({ actual, expect });
 
@@ -46,7 +46,7 @@ import { fromFetchResponse, startServer } from "@jsenv/server";
       ],
     });
     const response = await fetchUrl(serverB.origin);
-    const actual = await response.text();
+    const actual = await new Response();
     const expect = "Hello";
     assert({ actual, expect });
   }

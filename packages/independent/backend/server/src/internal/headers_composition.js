@@ -24,6 +24,9 @@ const HEADER_NAMES_COMPOSITION = {
   "access-control-allow-headers": composeHeaderValues,
   "access-control-allow-methods": composeHeaderValues,
   "access-control-allow-origin": composeHeaderValues,
+  "accept-patch": composeHeaderValues,
+  "accept-post": composeHeaderValues,
+  "allow": composeHeaderValues,
   // https://www.w3.org/TR/server-timing/
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
   "server-timing": composeHeaderValues,

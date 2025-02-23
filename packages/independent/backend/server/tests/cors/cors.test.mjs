@@ -42,17 +42,21 @@ const actual = {
   status: response.status,
   statusText: response.statusText,
   headers: headersToObject(response.headers),
-  body: await response.text(),
+  body: await new Response(),
 };
 const expect = {
   url: `${server.origin}/`,
   status: 200,
   statusText: "OK",
   headers: {
+    "accept": "",
+    "accept-patch": "",
+    "accept-post": "",
     "access-control-allow-headers": "x-requested-with, x-whatever",
     "access-control-allow-methods": "GET",
     "access-control-allow-origin": "http://example.com:80",
     "access-control-max-age": "400",
+    "allow": "OPTIONS",
     "connection": "keep-alive",
     "keep-alive": "timeout=5",
     "content-length": "0",

@@ -1,9 +1,9 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
+import { startServer } from "@jsenv/server";
+import { readRequestBody } from "@jsenv/server/src/request_body_handling.js";
 
-import { readRequestBody, startServer } from "@jsenv/server";
-
-// read request body as string
+// read request body as string from string
 {
   let requestBody;
   const { origin } = await startServer({
@@ -12,7 +12,7 @@ import { readRequestBody, startServer } from "@jsenv/server";
     services: [
       {
         handleRequest: async (request) => {
-          requestBody = await readRequestBody(request);
+          requestBody = await readRequestBody(request, { as: "string" });
           return {
             status: 200,
             headers: {
@@ -33,7 +33,7 @@ import { readRequestBody, startServer } from "@jsenv/server";
   assert({ actual, expect });
 }
 
-// read request body as json
+// read request body as json from text
 {
   let requestBody;
   const { origin } = await startServer({
@@ -65,7 +65,7 @@ import { readRequestBody, startServer } from "@jsenv/server";
   assert({ actual, expect });
 }
 
-// read request body as buffer
+// read request body as buffer from string
 {
   let requestBody;
   const { origin } = await startServer({

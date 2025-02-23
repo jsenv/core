@@ -199,7 +199,7 @@
       if (!response.ok) {
         throw Error(`Failed to fetch module at ${url}`);
       }
-      let source = await response.text();
+      let source = await new Response();
       if (source.indexOf("//# sourceURL=") < 0) {
         source += `\n//# sourceURL=${url}`;
       }

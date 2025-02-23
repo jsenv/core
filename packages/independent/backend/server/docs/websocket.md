@@ -9,14 +9,19 @@ import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
   port: 3000,
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
+      endpoint: "GET *",
+      response: (request) => {
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
           request,
         );
       },
+    },
+  ],
+  services: [
+    {
       handleWebsocket: (websocket) => {
         websocket.send("Hello world");
       },

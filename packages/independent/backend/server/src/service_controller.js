@@ -1,4 +1,5 @@
 import { timeStart } from "./server_timing/timing_measure.js";
+import { jsenvServiceRouting } from "./services/routing/jsenv_service_routing.js";
 
 const HOOK_NAMES = [
   "serverListening",
@@ -14,11 +15,20 @@ const HOOK_NAMES = [
 
 export const createServiceController = (services) => {
   const flatServices = flattenAndFilterServices(services);
-  const hookGroups = {};
+  const hookSetMap = new Map();
+
+  const addHook = (hook) => {
+    let hookSet = hookSetMap.get(hook.name);
+    if (!hookSet) {
+      hookSet = new Set();
+      hookSetMap.set(hook.name, hookSet);
+    }
+    hookSet.add(hook);
+  };
 
   const addService = (service) => {
-    Object.keys(service).forEach((key) => {
-      if (key === "name") return;
+    for (const key of Object.keys(service)) {
+      if (key === "name") continue;
       const isHook = HOOK_NAMES.includes(key);
       if (!isHook) {
         console.warn(
@@ -27,24 +37,38 @@ export const createServiceController = (services) => {
       }
       const hookName = key;
       const hookValue = service[hookName];
-      if (hookValue) {
-        const group = hookGroups[hookName] || (hookGroups[hookName] = []);
-        group.push({
+      if (!hookValue) {
+        continue;
+      }
+      if (hookName === "handleRequest" && typeof hookValue === "object") {
+        const routing = jsenvServiceRouting(hookValue);
+        addHook({
+          service,
+          name: hookName,
+          value: routing.handleRequest,
+        });
+        addHook({
+          service,
+          name: "injectResponseHeaders",
+          value: routing.injectResponseHeaders,
+        });
+      } else {
+        addHook({
           service,
           name: hookName,
           value: hookValue,
         });
       }
-    });
+    }
   };
-  flatServices.forEach((service) => {
-    addService(service);
-  });
+  for (const flatService of flatServices) {
+    addService(flatService);
+  }
 
   let currentService = null;
   let currentHookName = null;
   const callHook = (hook, info, context) => {
-    const hookFn = hook.value;
+    const hookFn = getHookFunction(hook, info);
     if (!hookFn) {
       return null;
     }
@@ -65,7 +89,7 @@ export const createServiceController = (services) => {
     return valueReturned;
   };
   const callAsyncHook = async (hook, info, context) => {
-    const hookFn = hook.value;
+    const hookFn = getHookFunction(hook, info);
     if (!hookFn) {
       return null;
     }
@@ -87,13 +111,14 @@ export const createServiceController = (services) => {
   };
 
   const callHooks = (hookName, info, context, callback = () => {}) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
-        if (returnValue) {
-          callback(returnValue);
-        }
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info, context);
+      if (returnValue) {
+        callback(returnValue);
       }
     }
   };
@@ -103,42 +128,43 @@ export const createServiceController = (services) => {
     context,
     until = (returnValue) => returnValue,
   ) => {
-    const hooks = hookGroups[hookName];
-    if (hooks) {
-      for (const hook of hooks) {
-        const returnValue = callHook(hook, info, context);
-        const untilReturnValue = until(returnValue);
-        if (untilReturnValue) {
-          return untilReturnValue;
-        }
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return null;
+    }
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info, context);
+      const untilReturnValue = until(returnValue);
+      if (untilReturnValue) {
+        return untilReturnValue;
       }
     }
     return null;
   };
-  const callAsyncHooksUntil = (hookName, info, context) => {
-    const hooks = hookGroups[hookName];
-    if (!hooks) {
+  const callAsyncHooksUntil = async (hookName, info, context) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
       return null;
     }
-    if (hooks.length === 0) {
+    if (hookSet.size === 0) {
       return null;
     }
-    return new Promise((resolve, reject) => {
-      const visit = (index) => {
-        if (index >= hooks.length) {
-          return resolve();
-        }
-        const hook = hooks[index];
-        const returnValue = callAsyncHook(hook, info, context);
-        return Promise.resolve(returnValue).then((output) => {
-          if (output) {
-            return resolve(output);
-          }
-          return visit(index + 1);
-        }, reject);
-      };
-      visit(0);
-    });
+    const iterator = hookSet.values()[Symbol.iterator]();
+    let result;
+    const visit = async () => {
+      const { done, value: hook } = iterator.next();
+      if (done) {
+        return;
+      }
+      const returnValue = await callAsyncHook(hook, info, context);
+      if (returnValue) {
+        result = returnValue;
+        return;
+      }
+      await visit();
+    };
+    await visit();
+    return result;
   };
 
   return {
@@ -151,6 +177,19 @@ export const createServiceController = (services) => {
     getCurrentService: () => currentService,
     getCurrentHookName: () => currentHookName,
   };
+};
+
+const getHookFunction = (hook, info) => {
+  const hookValue = hook.value;
+  if (hook.name === "handleRequest" && typeof hookValue === "object") {
+    const request = info;
+    const hookForMethod = hookValue[request.method] || hookValue["*"];
+    if (!hookForMethod) {
+      return null;
+    }
+    return hookForMethod;
+  }
+  return hookValue;
 };
 
 const flattenAndFilterServices = (services) => {

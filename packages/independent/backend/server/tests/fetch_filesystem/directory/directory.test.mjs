@@ -35,7 +35,7 @@ const actual = {
   status: response.status,
   statusText: response.statusText,
   headers: headersToObject(response.headers),
-  body: await response.text(),
+  body: await new Response(),
 };
 const expectedBody = `<!DOCTYPE html>
 <html>
