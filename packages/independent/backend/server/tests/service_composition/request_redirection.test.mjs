@@ -33,6 +33,6 @@ const { origin } = await startServer({
   ],
 });
 const response = await fetchUrl(origin);
-const actual = await response.text();
+const actual = await new Response();
 const expect = "/toto.js";
 assert({ actual, expect });

@@ -32,7 +32,7 @@
         document.querySelector("#gif").src = "";
 
         const sourceResponse = await fetch(sourceUrl);
-        const source = await sourceResponse.text();
+        const source = await sourcenew Response();
         let lines = source.split("\n");
         // lines = lines.slice(0, 12);
         for (const line of lines) {

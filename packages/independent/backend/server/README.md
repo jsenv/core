@@ -10,7 +10,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: () => Response.text("Hello world"),
+      response: () => new Response("Hello world"),
     },
   ],
 });
@@ -62,7 +62,7 @@ await startServer({
       endpoint: "GET * ",
       response: (request) => {
         const clientUsesHttp = request.origin.startsWith("http:");
-        return Response.text(
+        return new Response(
           clientUsesHttp ? `Welcome http user` : `Welcome https user`,
         );
       },

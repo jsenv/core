@@ -11,7 +11,7 @@ export const fetchUsingFetch = async (
     status: response.status,
     statusText: "",
     headers: responseToHeaders(response),
-    text: () => response.text(),
+    text: () => new Response(),
     json: () => response.json(),
     blob: () => response.blob(),
     arrayBuffer: () => response.arrayBuffer(),

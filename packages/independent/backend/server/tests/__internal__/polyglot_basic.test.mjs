@@ -35,7 +35,7 @@ const port = await listen({
   const actual = {
     status: response.status,
     headers: headersToObject(response.headers),
-    body: await response.text(),
+    body: await new Response(),
   };
   const expect = {
     status: 200,
@@ -59,7 +59,7 @@ const port = await listen({
   const actual = {
     status: response.status,
     headers: headersToObject(response.headers),
-    body: await response.text(),
+    body: await new Response(),
   };
   const expect = {
     status: 200,

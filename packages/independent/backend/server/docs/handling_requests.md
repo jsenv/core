@@ -10,7 +10,7 @@ await startServer({
     {
       endpoint: "GET /",
       response: () => {
-        return Response.text("Hello world");
+        return new Response("Hello world");
       },
     },
   ],
@@ -91,31 +91,31 @@ await startServer({
         const requestContentType = request.headers["content-type"];
         if (requestContentType === "application/json") {
           const requestBodyJson = await request.json();
-          return Response.text(`Server have received "application/json" body`);
+          return new Response(`Server have received "application/json" body`);
         }
         if (requestContentType === "application/merge-patch+json") {
           const requestBodyJson = await request.json();
-          return Response.text(`Server have received "merge-patch+json" body`);
+          return new Response(`Server have received "merge-patch+json" body`);
         }
         if (requestContentType === "multipart/form-data") {
           const { fields, files } = await request.formData();
-          return Response.text(
+          return new Response(
             `Server have received "multipart/form-data" body`,
           );
         }
         if (requestContentType === "application/x-www-form-urlencoded") {
           const requestBodyFields = await request.queryString();
-          return Response.text(
+          return new Response(
             `Server have received "application/x-www-form-urlencoded" body`,
           );
         }
         if (requestContentType === "application/x-www-form-urlencoded") {
           const requestBodyText = await request.text();
-          return Response.text(`Server have received "text/plain" body`);
+          return new Response(`Server have received "text/plain" body`);
         }
         // "application/octet-stream"
         const requestBodyBuffer = await request.buffer();
-        return Response.text(
+        return new Response(
           `Server have received "application/octet-stream" body`,
         );
       },
@@ -138,7 +138,7 @@ await startServer({
     {
       endpoint: "GET /",
       response: () => {
-        return Response.text("Hello world");
+        return new Response("Hello world");
       },
     },
   ],

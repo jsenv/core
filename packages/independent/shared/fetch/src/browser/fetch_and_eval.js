@@ -4,11 +4,11 @@ export const fetchAndEval = async (url) => {
   const response = await fetchUrl(url);
 
   if (response.status >= 200 && response.status <= 299) {
-    const text = await response.text();
+    const text = await new Response();
     // eslint-disable-next-line no-eval
     window.eval(appendSourceURL(text, url));
   } else {
-    const text = await response.text();
+    const text = await new Response();
     throw new Error(
       `Unexpected response for script.
 --- script url ---

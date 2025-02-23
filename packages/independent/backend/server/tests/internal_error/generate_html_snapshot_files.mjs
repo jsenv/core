@@ -31,7 +31,7 @@ const generateInternalErrorHtmlFile = async (htmlFilename, serverParams) => {
     });
     stop();
     const htmlFileUrl = new URL(htmlFilename, htmlFilesDirectoryUrl).href;
-    await writeFile(htmlFileUrl, await response.text());
+    await writeFile(htmlFileUrl, await new Response());
   }
 };
 

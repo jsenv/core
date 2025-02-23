@@ -31,7 +31,7 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
       status: response.status,
       statusText: response.statusText,
       headers: headersToObject(response.headers),
-      body: await response.text(),
+      body: await new Response(),
     };
     const body = JSON.stringify({
       code: "TEST_CODE",
@@ -81,7 +81,7 @@ import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
       status: response.status,
       statusText: response.statusText,
       headers: headersToObject(response.headers),
-      body: await response.text(),
+      body: await new Response(),
     };
     const body = JSON.stringify({
       code: "VALUE_THROWED",

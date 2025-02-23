@@ -70,7 +70,7 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
       const isTextual = CONTENT_TYPE.isTextual(contentType);
       let content;
       if (isTextual) {
-        content = await response.text();
+        content = await new Response();
       } else {
         content = await response.buffer;
       }

@@ -13,7 +13,7 @@ export const initJsSupervisorMiddleware = async (
 
   const interceptHtmlToExecute = async ({ route }) => {
     const response = await route.fetch();
-    const originalBody = await response.text();
+    const originalBody = await new Response();
     const injectionResult = await injectSupervisorIntoHTML(
       {
         content: originalBody,

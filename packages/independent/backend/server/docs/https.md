@@ -71,7 +71,7 @@ await startServer({
     {
       endpoint: "GET *",
       response: (request) => {
-        return Response.text(
+        return new Response(
           request.origin.startsWith("http:")
             ? `Welcome http user`
             : `Welcome https user`,

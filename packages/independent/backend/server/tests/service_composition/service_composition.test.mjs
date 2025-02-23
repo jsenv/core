@@ -36,7 +36,7 @@ const { origin } = await startServer({
     status: response.status,
     statusText: response.statusText,
     headers: headersToObject(response.headers),
-    body: await response.text(),
+    body: await new Response(),
   };
   const expect = {
     url: `${origin}/`,
@@ -59,7 +59,7 @@ const { origin } = await startServer({
     status: response.status,
     statusText: response.statusText,
     headers: headersToObject(response.headers),
-    body: await response.text(),
+    body: await new Response(),
   };
   const expect = {
     url: `${origin}/whatever`,

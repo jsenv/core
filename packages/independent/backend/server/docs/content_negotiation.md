@@ -18,7 +18,7 @@ await startServer({
           "text/plain",
         ]);
         if (!contentTypeNegotiated) {
-          return Response.text(
+          return new Response(
             `Server cannot respond in the content-type you have requested. Server can only response in the following content types: "application/json", "text/plain"`,
             { status: 415 },
           );
@@ -31,7 +31,7 @@ await startServer({
             },
           );
         }
-        return Response.text("Hello world", {
+        return new Response("Hello world", {
           headers: { vary: "accept" },
         });
       },
@@ -47,7 +47,7 @@ await startServer({
         if (request.contentTypeNegotiated === "application/json") {
           return Response.json({ data: "Hello world" });
         }
-        return Response.text("Hello world");
+        return new Response("Hello world");
       },
     },
   ],
@@ -66,9 +66,9 @@ await startServer({
       availableLanguages: ["fr", "en"],
       response: ({ negotiatedLanguage }) => {
         if (negotiatedLanguage === "fr") {
-          return Response.text("Bonjour tout le monde !");
+          return new Response("Bonjour tout le monde !");
         }
-        return Response.text("Hello world!");
+        return new Response("Hello world!");
       },
     },
   ],
@@ -88,13 +88,13 @@ await startServer({
       availableEncodings: ["gzip", "identity"],
       response: ({ negotiatedEncoding }) => {
         if (negotiatedEncoding === "gzip") {
-          return Response.text(gzipSync(Buffer.from(`Hello world!`)), {
+          return new Response(gzipSync(Buffer.from(`Hello world!`)), {
             headers: {
               "content-encoding": "gzip",
             },
           });
         }
-        return Response.text("Hello world!");
+        return new Response("Hello world!");
       },
     },
   ],
@@ -119,7 +119,7 @@ await startServer({
         if (contentTypeNegotiated === "application/json") {
           return Response.json({ data: message }, { headers });
         }
-        return Response.text(message, { headers });
+        return new Response(message, { headers });
       },
     },
   ],

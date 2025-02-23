@@ -30,7 +30,7 @@ export const fetchLatestInRegistry = async ({
       writeUnexpectedResponseStatus({
         requestUrl,
         responseStatus,
-        responseText: await response.text(),
+        responseText: await new Response(),
       }),
     );
   }
