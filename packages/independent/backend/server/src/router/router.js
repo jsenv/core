@@ -22,6 +22,118 @@ const HTTP_METHODS = [
 export const createRouter = () => {
   const routeSet = new Set();
 
+  const constructAvailableEndpoints = (request) => {
+    // TODO: memoize
+    // TODO: construct only if the route is visible to that client
+    const availableEndpoints = [];
+    const createEndpoint = ({ method, resource }) => {
+      return {
+        method,
+        resource,
+        toString: () => {
+          return `${method} ${resource}`;
+        },
+      };
+    };
+
+    for (const route of routeSet) {
+      const endpointResource = route.resourcePattern.generateExample(
+        request.origin,
+      );
+      if (route.method === "*") {
+        for (const HTTP_METHOD of HTTP_METHODS) {
+          availableEndpoints.push(
+            createEndpoint(HTTP_METHOD, endpointResource),
+          );
+        }
+      } else {
+        availableEndpoints.push(createEndpoint(route.method, endpointResource));
+      }
+    }
+    return availableEndpoints;
+  };
+
+  const createResourceOptions = () => {
+    const acceptedContentTypeSet = new Set();
+    const postAcceptedContentTypeSet = new Set();
+    const patchAcceptedContentTypeSet = new Set();
+    const allowedMethodSet = new Set();
+    return {
+      onMethodAllowed: (route, method) => {
+        allowedMethodSet.add(method);
+        for (const acceptedContentType of route.acceptedContentTypes) {
+          acceptedContentTypeSet.add(acceptedContentType);
+          if (method === "POST") {
+            postAcceptedContentTypeSet.add(acceptedContentType);
+          }
+          if (method === "PATCH") {
+            patchAcceptedContentTypeSet.add(acceptedContentType);
+          }
+        }
+      },
+      asResponseHeaders: () => {
+        const headers = {};
+        if (acceptedContentTypeSet.size) {
+          headers["accept"] = Array.from(acceptedContentTypeSet).join(", ");
+        }
+        if (postAcceptedContentTypeSet.size) {
+          headers["accept-post"] = Array.from(postAcceptedContentTypeSet).join(
+            ", ",
+          );
+        }
+        if (patchAcceptedContentTypeSet.size) {
+          headers["accept-patch"] = Array.from(
+            patchAcceptedContentTypeSet,
+          ).join(", ");
+        }
+        if (allowedMethodSet.size) {
+          headers["allow"] = Array.from(allowedMethodSet).join(", ");
+        }
+        return headers;
+      },
+    };
+  };
+  const forEachMethodAllowed = (route, onMethodAllowed) => {
+    const supportedMethods =
+      route.method === "*" ? HTTP_METHODS : [route.method];
+    for (const supportedMethod of supportedMethods) {
+      onMethodAllowed(supportedMethod);
+    }
+  };
+  const inferResourceOPTIONS = (request) => {
+    const resourceOptions = createResourceOptions();
+    for (const route of routeSet) {
+      if (!route.matchResource(request.resource)) {
+        continue;
+      }
+      forEachMethodAllowed(route, (methodAllowed) => {
+        resourceOptions.onMethodAllowed(route, methodAllowed);
+      });
+    }
+    return resourceOptions;
+  };
+  const inferServerOPTIONS = () => {
+    const serverOptions = createResourceOptions();
+    const resourceOptionsMap = new Map();
+
+    for (const route of routeSet) {
+      const routeResource = route.resource;
+      let resourceOptions = resourceOptionsMap.get(routeResource);
+      if (!resourceOptions) {
+        resourceOptions = createResourceOptions();
+        resourceOptionsMap.set(routeResource, resourceOptions);
+      }
+      forEachMethodAllowed(route, (method) => {
+        serverOptions.onMethodAllowed(route, method);
+        resourceOptions.onMethodAllowed(route, method);
+      });
+    }
+    return {
+      server: serverOptions,
+      resourceOptionsMap,
+    };
+  };
+
   const add = ({
     endpoint,
     headers,
@@ -33,7 +145,7 @@ export const createRouter = () => {
   }) => {
     const [method, resource] = endpoint.split(" ");
     const resourcePattern = createResourcePattern(resource);
-    const headersPattern = createHeadersPattern(headers);
+    const headersPattern = headers ? createHeadersPattern(headers) : null;
 
     const route = {
       method,
@@ -66,72 +178,7 @@ export const createRouter = () => {
     };
     routeSet.add(route);
   };
-
-  const constructAvailableEndpoints = (request) => {
-    // TODO: memoize
-    // TODO: construct only if the route is visible to that client
-    const availableEndpoints = [];
-    const createEndpoint = ({ method, resource }) => {
-      return {
-        method,
-        resource,
-        toString: () => {
-          return `${method} ${resource}`;
-        },
-      };
-    };
-
-    for (const route of routeSet) {
-      const endpointResource = route.resourcePattern.generateExample(
-        request.origin,
-      );
-      if (route.method === "*") {
-        for (const HTTP_METHOD of HTTP_METHODS) {
-          availableEndpoints.push(
-            createEndpoint(HTTP_METHOD, endpointResource),
-          );
-        }
-      } else {
-        availableEndpoints.push(createEndpoint(route.method, endpointResource));
-      }
-    }
-    return availableEndpoints;
-  };
-
-  const matchOptions = (request) => {
-    const acceptedContentTypeSet = new Set();
-    const postAcceptedContentTypeSet = new Set();
-    const patchAcceptedContentTypeSet = new Set();
-    const allowedMethodSet = new Set();
-    for (const route of routeSet) {
-      if (!route.matchResource(request.resource)) {
-        continue;
-      }
-      for (const HTTP_METHOD of HTTP_METHODS) {
-        if (!route.matchMethod(HTTP_METHOD)) {
-          continue;
-        }
-        allowedMethodSet.add(HTTP_METHOD);
-        for (const acceptedContentType of route.acceptedContentTypes) {
-          acceptedContentTypeSet.add(acceptedContentType);
-          if (HTTP_METHOD === "POST") {
-            postAcceptedContentTypeSet.add(acceptedContentType);
-          }
-          if (HTTP_METHOD === "PATCH") {
-            patchAcceptedContentTypeSet.add(acceptedContentType);
-          }
-        }
-      }
-    }
-    return {
-      acceptedContentTypeSet,
-      postAcceptedContentTypeSet,
-      patchAcceptedContentTypeSet,
-      allowedMethodSet,
-    };
-  };
-
-  const match = async (request, { injectResponseHeader }) => {
+  const match = async (request, { injectResponseHeader } = {}) => {
     const allowedMethods = [];
     for (const route of routeSet) {
       const resourceMatchResult = route.matchResource(request.resource);
@@ -197,12 +244,14 @@ export const createRouter = () => {
         resourceMatchResult,
         headersMatchResult,
       );
-      const params = [
-        ...(named ? [named] : []),
+      let responseReturnValue = route.response(
+        request,
+        {
+          ...named,
+          contentNegotiation: contentNegotiationResult,
+        },
         ...stars,
-        contentNegotiationResult,
-      ];
-      let responseReturnValue = route.response(request, ...params);
+      );
       if (
         responseReturnValue !== null &&
         typeof responseReturnValue === "object" &&
@@ -225,6 +274,15 @@ export const createRouter = () => {
       }
       return responseReturnValue;
     }
+    if (request.method === "OPTIONS") {
+      const isForAnyRoute = request.resource === "*";
+      if (isForAnyRoute) {
+        const serverOPTIONS = inferServerOPTIONS(request);
+        return createServerResourceOptionsResponse(request, serverOPTIONS);
+      }
+      const resourceOPTIONS = inferResourceOPTIONS(request);
+      return createResourceOptionsResponse(request, resourceOPTIONS);
+    }
     // nothing has matched fully
     // if nothing matches at all we'll send 404
     // but if url matched but METHOD was not supported we send 405
@@ -234,8 +292,7 @@ export const createRouter = () => {
     const availableEndpoints = constructAvailableEndpoints(request);
     return createRouteNotFoundResponse(request, { availableEndpoints });
   };
-
-  return { add, matchOptions, match };
+  return { add, match };
 };
 
 const isRequestBodyContentTypeSupported = (
@@ -254,6 +311,34 @@ const isRequestBodyContentTypeSupported = (
   return false;
 };
 
+const createServerResourceOptionsResponse = (
+  request,
+  {
+    server,
+    // resourceOptionsMap
+  },
+) => {
+  const headers = server.asResponseHeaders();
+
+  // TODO: send resourceOptionsMap in the body
+  // (json, html, etc)
+  return {
+    status: 200,
+    headers: {
+      ...headers,
+    },
+  };
+};
+const createResourceOptionsResponse = (request, resourceOptions) => {
+  const headers = resourceOptions.asResponseHeaders();
+  return {
+    status: 200,
+    headers: {
+      ...headers,
+      "content-length": 0,
+    },
+  };
+};
 const createMethodNotAllowedResponse = (
   request,
   { allowedMethods = [] } = {},

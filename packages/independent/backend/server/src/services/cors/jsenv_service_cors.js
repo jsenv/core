@@ -21,7 +21,7 @@ export const jsenvServiceCORS = ({
   accessControlMaxAge = 600,
   timingAllowOrigin = false,
 } = {}) => {
-  // TODO: we should check access control params to throw or warn if we find strange values
+  // TODO: we should check access control params and throw/warn if we find strange values
 
   const corsEnabled =
     accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
@@ -32,23 +32,6 @@ export const jsenvServiceCORS = ({
 
   return {
     name: "jsenv:cors",
-
-    routes: [
-      {
-        endpoint: "OPTIONS *",
-        response: () => {
-          // when request method is "OPTIONS" we must return a 200 without body
-          // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
-          return {
-            status: 200,
-            headers: {
-              "content-length": 0,
-            },
-          };
-        },
-      },
-    ],
-
     injectResponseHeaders: (response, { request }) => {
       const accessControlHeaders = generateAccessControlHeaders({
         request,
