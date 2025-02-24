@@ -11,12 +11,19 @@ export const parseResourcePattern = (resourcePattern) => {
   let regexpSource = "";
   let lastIndex = 0;
   regexpSource += "^";
-  for (const match of resourcePattern.matchAll(/:\w+/g)) {
+  let starIndex = 0;
+  for (const match of resourcePattern.matchAll(/:\w+|\*/g)) {
     const string = match[0];
     const index = match.index;
-    let before = resourcePattern.slice(0, index);
+    let before = resourcePattern.slice(lastIndex, index);
     regexpSource += escapeRegexpSpecialChars(before);
-    regexpSource += `(?<${string.slice(1)}>[^\/]+)`;
+    if (string === "*") {
+      regexpSource += `(?<star_${starIndex}>.+)`;
+      starIndex++;
+    } else {
+      regexpSource += `(?<${string.slice(1)}>[^\/]+)`;
+    }
+
     lastIndex = index + string.length;
   }
   const after = resourcePattern.slice(lastIndex);
@@ -32,7 +39,21 @@ export const parseResourcePattern = (resourcePattern) => {
       if (!match) {
         return null;
       }
-      return match.groups || true;
+      const groups = match.groups;
+      if (groups && Object.keys(groups).length) {
+        const stars = [];
+        const named = {};
+        for (const key of Object.keys(groups)) {
+          if (key.startsWith("star_")) {
+            const index = parseInt(key.slice("star_".length));
+            stars[index] = groups[key];
+          } else {
+            named[key] = groups[key];
+          }
+        }
+        return { named, stars };
+      }
+      return { named: {}, stars: [] };
     },
     build: (url, params) => {
       const urlToReplace = new URL(resourcePattern, url);

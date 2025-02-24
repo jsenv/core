@@ -9,9 +9,7 @@ await startServer({
   routes: [
     // can be written like this
     {
-      url: "*",
-      method: "GET",
-      responseAvailableContentTypes: ["application/json", "text/plain"],
+      endpoint: "GET *",
       response: (request) => {
         const contentTypeNegotiated = pickContentType(request, [
           "application/json",
@@ -40,9 +38,8 @@ await startServer({
     // - 415 Unsupported media type is handled for you
     // - request.contentTypeNegotiated gives you the prefered content-type for this request
     {
-      url: "*",
-      method: "GET",
-      responseAvailableContentTypes: ["application/json", "text/plain"],
+      endpoint: "GET *",
+      availableContentTypes: ["application/json", "text/plain"],
       response: (request) => {
         if (request.contentTypeNegotiated === "application/json") {
           return Response.json({ data: "Hello world" });
@@ -107,7 +104,7 @@ await startServer({
 await startServer({
   routes: [
     {
-      method: "GET *",
+      endpoint: "GET *",
       availableContentTypes: ["application/json", "text/plain"],
       availableLanguages: ["fr", "en"],
       response: ({ contentTypeNegotiated, languageNegotiated }) => {

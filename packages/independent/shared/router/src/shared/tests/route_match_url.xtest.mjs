@@ -12,5 +12,6 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "/dir/file.html?route=a/:id",
       "/dir/file.html?route=a/file.json",
     ),
+    g: routeMatchUrl("/users/:id/dir/*", `/users/id/dir/a/b`),
   }));
 });
