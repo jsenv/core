@@ -65,6 +65,7 @@ export const startServer = async ({
   // auto close when requestToResponse throw an error
   stopOnInternalError = false,
   keepProcessAlive = true,
+  routes = [],
   services = [],
   nagle = true,
   serverTiming = false,
@@ -140,7 +141,9 @@ export const startServer = async ({
   }
 
   const server = {};
-  const serviceController = createServiceController(services);
+  const serviceController = createServiceController(services, {
+    routesFromParam: routes,
+  });
   const processTeardownEvents = {
     SIGHUP: stopOnExit,
     SIGTERM: stopOnExit,
@@ -781,7 +784,7 @@ export const startServer = async ({
           }
         } else {
           const {
-            status = 501,
+            status = 404,
             statusText,
             statusMessage,
             headers = {},
@@ -949,12 +952,12 @@ export const startServer = async ({
   websocket: {
     // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
     const websocketHandlers = [];
-    serviceController.services.forEach((service) => {
+    for (const service of serviceController.services) {
       const { handleWebsocket } = service;
       if (handleWebsocket) {
         websocketHandlers.push(handleWebsocket);
       }
-    });
+    }
     if (websocketHandlers.length > 0) {
       const websocketClients = new Set();
       const { WebSocketServer } = await import("ws");

@@ -40,8 +40,8 @@ await startServer({
     {
       endpoint: "GET *",
       availableContentTypes: ["application/json", "text/plain"],
-      response: (request) => {
-        if (request.contentTypeNegotiated === "application/json") {
+      response: (request, contentNegotiation) => {
+        if (contentNegotiation.contentType === "application/json") {
           return Response.json({ data: "Hello world" });
         }
         return new Response("Hello world");
@@ -61,8 +61,8 @@ await startServer({
     {
       endpoint: "GET *",
       availableLanguages: ["fr", "en"],
-      response: ({ negotiatedLanguage }) => {
-        if (negotiatedLanguage === "fr") {
+      response: (request, contentNegotiation) => {
+        if (contentNegotiation.contentLanguage === "fr") {
           return new Response("Bonjour tout le monde !");
         }
         return new Response("Hello world!");
@@ -83,8 +83,8 @@ await startServer({
     {
       endpoint: "GET *",
       availableEncodings: ["gzip", "identity"],
-      response: ({ negotiatedEncoding }) => {
-        if (negotiatedEncoding === "gzip") {
+      response: (request, contentNegotiation) => {
+        if (contentNegotiation.contentEncoding === "gzip") {
           return new Response(gzipSync(Buffer.from(`Hello world!`)), {
             headers: {
               "content-encoding": "gzip",
@@ -107,13 +107,15 @@ await startServer({
       endpoint: "GET *",
       availableContentTypes: ["application/json", "text/plain"],
       availableLanguages: ["fr", "en"],
-      response: ({ contentTypeNegotiated, languageNegotiated }) => {
+      response: (request, contentNegotiation) => {
         const message =
-          languageNegotiated === "fr" ? "Bonjour tout le monde" : "Hello world";
+          contentNegotiation.contentLanguage === "fr"
+            ? "Bonjour tout le monde"
+            : "Hello world";
         const headers = {
-          "content-language": languageNegotiated,
+          "content-language": contentNegotiation.contentLanguage,
         };
-        if (contentTypeNegotiated === "application/json") {
+        if (contentNegotiation.contentType === "application/json") {
           return Response.json({ data: message }, { headers });
         }
         return new Response(message, { headers });

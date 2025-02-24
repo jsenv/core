@@ -1,10 +1,11 @@
+import { jsenvServiceRouting } from "./router/jsenv_service_routing.js";
 import { timeStart } from "./server_timing/timing_measure.js";
-import { jsenvServiceRouting } from "./services/routing/jsenv_service_routing.js";
 
 const HOOK_NAMES = [
   "serverListening",
   "redirectRequest",
   "handleRequest",
+  "routes",
   "handleWebsocket",
   "handleError",
   "onResponsePush",
@@ -13,7 +14,7 @@ const HOOK_NAMES = [
   "serverStopped",
 ];
 
-export const createServiceController = (services) => {
+export const createServiceController = (services, { routesFromParam }) => {
   const flatServices = flattenAndFilterServices(services);
   const hookSetMap = new Map();
 
@@ -40,18 +41,7 @@ export const createServiceController = (services) => {
       if (!hookValue) {
         continue;
       }
-      if (hookName === "handleRequest" && typeof hookValue === "object") {
-        const routing = jsenvServiceRouting(hookValue);
-        addHook({
-          service,
-          name: hookName,
-          value: routing.handleRequest,
-        });
-        addHook({
-          service,
-          name: "injectResponseHeaders",
-          value: routing.injectResponseHeaders,
-        });
+      if (hookName === "routes") {
       } else {
         addHook({
           service,
@@ -61,6 +51,15 @@ export const createServiceController = (services) => {
       }
     }
   };
+
+  const routes = [...routesFromParam];
+  for (const flatService of flatServices) {
+    const serviceRoutes = flatService.routes;
+    if (serviceRoutes) {
+      routes.push(...serviceRoutes);
+    }
+  }
+  flatServices.unshift(jsenvServiceRouting(routes));
   for (const flatService of flatServices) {
     addService(flatService);
   }

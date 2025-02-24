@@ -1,9 +1,23 @@
-import { parseResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
+import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
+import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
+import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
 import { readFileSync } from "node:fs";
+import { pickContentEncoding } from "../content_negotiation/pick_content_encoding.js";
+import { pickContentLanguage } from "../content_negotiation/pick_content_language.js";
 import { pickContentType } from "../content_negotiation/pick_content_type.js";
 import { replacePlaceholdersInHtml } from "./replace_placeholder_in_html.js";
 
 const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/4xx.html");
+
+const HTTP_METHODS = [
+  "OPTIONS",
+  "HEAD",
+  "GET",
+  "POST",
+  "PATCH",
+  "PUT",
+  "DELETE",
+];
 
 export const createRouter = () => {
   const routeSet = new Set();
@@ -18,7 +32,8 @@ export const createRouter = () => {
     response,
   }) => {
     const [method, resource] = endpoint.split(" ");
-    const resourcePatternParsed = parseResourcePattern(resource);
+    const resourcePattern = createResourcePattern(resource);
+    const headersPattern = createHeadersPattern(headers);
 
     const route = {
       method,
@@ -35,21 +50,88 @@ export const createRouter = () => {
         resource === "*"
           ? () => true
           : (requestResource) => {
-              return resourcePatternParsed.match(requestResource);
+              return resourcePattern.match(requestResource);
             },
       matchHeaders:
         headers === undefined
           ? () => true
           : (requestHeaders) => {
-              // TODO
-              return true;
+              return headersPattern.match(requestHeaders);
             },
       response,
+      toString: () => {
+        return `${method} ${resource}`;
+      },
+      resourcePattern,
     };
     routeSet.add(route);
   };
 
-  const match = async (request) => {
+  const constructAvailableEndpoints = (request) => {
+    // TODO: memoize
+    // TODO: construct only if the route is visible to that client
+    const availableEndpoints = [];
+    const createEndpoint = ({ method, resource }) => {
+      return {
+        method,
+        resource,
+        toString: () => {
+          return `${method} ${resource}`;
+        },
+      };
+    };
+
+    for (const route of routeSet) {
+      const endpointResource = route.resourcePattern.generateExample(
+        request.origin,
+      );
+      if (route.method === "*") {
+        for (const HTTP_METHOD of HTTP_METHODS) {
+          availableEndpoints.push(
+            createEndpoint(HTTP_METHOD, endpointResource),
+          );
+        }
+      } else {
+        availableEndpoints.push(createEndpoint(route.method, endpointResource));
+      }
+    }
+    return availableEndpoints;
+  };
+
+  const matchOptions = (request) => {
+    const acceptedContentTypeSet = new Set();
+    const postAcceptedContentTypeSet = new Set();
+    const patchAcceptedContentTypeSet = new Set();
+    const allowedMethodSet = new Set();
+    for (const route of routeSet) {
+      if (!route.matchResource(request.resource)) {
+        continue;
+      }
+      for (const HTTP_METHOD of HTTP_METHODS) {
+        if (!route.matchMethod(HTTP_METHOD)) {
+          continue;
+        }
+        allowedMethodSet.add(HTTP_METHOD);
+        for (const acceptedContentType of route.acceptedContentTypes) {
+          acceptedContentTypeSet.add(acceptedContentType);
+          if (HTTP_METHOD === "POST") {
+            postAcceptedContentTypeSet.add(acceptedContentType);
+          }
+          if (HTTP_METHOD === "PATCH") {
+            patchAcceptedContentTypeSet.add(acceptedContentType);
+          }
+        }
+      }
+    }
+    return {
+      acceptedContentTypeSet,
+      postAcceptedContentTypeSet,
+      patchAcceptedContentTypeSet,
+      allowedMethodSet,
+    };
+  };
+
+  const match = async (request, { injectResponseHeader }) => {
     const allowedMethods = [];
     for (const route of routeSet) {
       const resourceMatchResult = route.matchResource(request.resource);
@@ -62,7 +144,8 @@ export const createRouter = () => {
         allowedMethods.push(route.method);
         continue;
       }
-      if (!route.matchHeaders(request.headers)) {
+      const headersMatchResult = route.matchHeaders(request.headers);
+      if (!headersMatchResult) {
         continue;
       }
       if (
@@ -82,15 +165,77 @@ export const createRouter = () => {
       }
 
       // now we are "good", let's try to generate a response
-      route.response(request);
+      // now put negotiated stuff at the end
+      const contentNegotiationResult = {};
+      content_negotiation: {
+        const { availableContentTypes } = route;
+        if (availableContentTypes.length) {
+          const contentTypeNegotiated = pickContentType(
+            request,
+            availableContentTypes,
+          );
+          contentNegotiationResult.contentType = contentTypeNegotiated;
+        }
+        const { availableLanguages } = route;
+        if (availableLanguages.length) {
+          const contentLanguageNegotiated = pickContentLanguage(
+            request,
+            availableContentTypes,
+          );
+          contentNegotiationResult.contentLanguage = contentLanguageNegotiated;
+        }
+        const { availableEncodings } = route;
+        if (availableEncodings.length) {
+          const contentEncodingNegotiated = pickContentEncoding(
+            request,
+            availableEncodings,
+          );
+          contentNegotiationResult.contentEncoding = contentEncodingNegotiated;
+        }
+      }
+      const { named, stars } = PATTERN.composeTwoMatchResults(
+        resourceMatchResult,
+        headersMatchResult,
+      );
+      const params = [
+        ...(named ? [named] : []),
+        ...stars,
+        contentNegotiationResult,
+      ];
+      let responseReturnValue = route.response(request, ...params);
+      if (
+        responseReturnValue !== null &&
+        typeof responseReturnValue === "object" &&
+        typeof responseReturnValue.then === "function"
+      ) {
+        responseReturnValue = await responseReturnValue;
+      }
+      // he decided not to handle in the end
+      if (responseReturnValue === null || responseReturnValue === undefined) {
+        continue;
+      }
+      if (contentNegotiationResult.contentType) {
+        injectResponseHeader("vary", "accept");
+      }
+      if (contentNegotiationResult.contentLanguage) {
+        injectResponseHeader("vary", "accept-language");
+      }
+      if (contentNegotiationResult.contentEncoding) {
+        injectResponseHeader("vary", "accept-encoding");
+      }
+      return responseReturnValue;
     }
-
+    // nothing has matched fully
+    // if nothing matches at all we'll send 404
+    // but if url matched but METHOD was not supported we send 405
     if (allowedMethods.length) {
       return createMethodNotAllowedResponse(request, { allowedMethods });
     }
+    const availableEndpoints = constructAvailableEndpoints(request);
+    return createRouteNotFoundResponse(request, { availableEndpoints });
   };
 
-  return { add, match };
+  return { add, matchOptions, match };
 };
 
 const isRequestBodyContentTypeSupported = (
@@ -122,7 +267,7 @@ const createMethodNotAllowedResponse = (
     message: {
       text: `The HTTP method ${request.method} is not supported for this resource.
 Allowed methods: ${allowedMethods.join(", ")}`,
-      html: `The HTTP method <strong>${request.method}</strong> is not supported for this resource.
+      html: `The HTTP method <strong>${request.method}</strong> is not supported for this resource.<br />
 Allowed methods: <strong>${allowedMethods.join(", ")}</strong>`,
     },
     data: {
@@ -146,12 +291,33 @@ const createUnsupportedMediaTypeResponse = (
     message: {
       text: `The media type ${requestMediaType} is not supported for this resource.
 Supported media types: ${acceptedContentTypes.join(", ")}`,
-      html: `The media type <strong>${requestMediaType}</strong> is not supported for this resource.
+      html: `The media type <strong>${requestMediaType}</strong> is not supported for this resource.<br />
 Supported media types: <strong>${acceptedContentTypes.join(", ")}</strong>`,
     },
     data: {
       requestMediaType,
       acceptedContentTypes,
+    },
+  });
+};
+const createRouteNotFoundResponse = (request, { availableEndpoints }) => {
+  return createClientErrorResponse({
+    status: 404,
+    statusText: "Not Found",
+    message: {
+      text: `The URL ${request.ressource} does not exists on this server.
+The following urls are available: ${availableEndpoints.join("\n")}`,
+      html: `The URL <strong>${request.ressource}</strong> does not exists on this server.<br />
+The following urls are available:
+<ul>
+  ${availableEndpoints.map((availableEndpoint) => {
+    return `
+<li>
+    <a href="${availableEndpoint.resource}">${availableEndpoint.method} ${availableEndpoint.resource}</a>
+</li>
+    `;
+  })}
+</ul>`,
     },
   });
 };
