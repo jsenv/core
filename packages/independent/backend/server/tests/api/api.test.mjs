@@ -22,7 +22,7 @@ const actual = {
   body: await response.text(),
 };
 const expect = {
-  url: `${apiServer.origin}`,
+  url: `${apiServer.origin}/`,
   status: 200,
   statusText: "",
   headers: {
