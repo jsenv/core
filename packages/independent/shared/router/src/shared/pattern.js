@@ -16,6 +16,7 @@ const createPattern = (
     };
   }
 
+  const parts = [];
   const namedParams = [];
   let starParamCount = 0;
   let regexpSource = "";
@@ -25,68 +26,67 @@ const createPattern = (
     const string = match[0];
     const index = match.index;
     let before = pattern.slice(lastIndex, index);
+    parts.push({ type: "static", value: before });
     regexpSource += escapeRegexpSpecialChars(before);
     if (string === "*") {
       starParamCount++;
       regexpSource += `(?<star_${starParamCount - 1}>.+)`;
+      parts.push({ type: "star", value: starParamCount - 1 });
     } else {
       const paramName = string.slice(1);
       namedParams.push(paramName);
       regexpSource += `(?<${paramName}>[^\/]+)`;
+      parts.push({ type: "named", value: paramName });
     }
     lastIndex = index + string.length;
   }
   const after = pattern.slice(lastIndex);
+  parts.push({ type: "static", value: after });
   regexpSource += escapeRegexpSpecialChars(after);
   regexpSource += "$";
 
   const regexp = new RegExp(regexpSource);
 
-  const generateWhenPatternIsStatic = (stringToGenerate) => {
-    return prepareStringToGenerate(stringToGenerate);
+  const generateWhenPatternIsStatic = () => {
+    return prepareStringToGenerate(pattern);
   };
-  const generateWhenPatternUsesOnlyStarParams = (
-    stringToGenerate,
-    ...values
-  ) => {
-    stringToGenerate = prepareStringToGenerate(stringToGenerate);
-    let valueIndex = 0;
-    const generatedString = stringToGenerate.replaceAll(/\*/g, () => {
-      const value = values[valueIndex];
-      valueIndex++;
-      return encodeURIComponent(value);
-    });
-    return finalizeGeneratedString(generatedString, stringToGenerate);
-  };
-  const generateWhenPatternUsesOnlyNamedParams = (
-    stringToGenerate,
-    namedValues,
-  ) => {
-    const generatedString = stringToGenerate.replaceAll(/:\w+/g, (match) => {
-      const key = match.slice(1);
-      const value = namedValues[key];
-      return encodeURIComponent(value);
-    });
-    return finalizeGeneratedString(generatedString, stringToGenerate);
-  };
-
-  const generateWhenPatternUsesNamedAndStarParams = (
-    stringToGenerate,
-    namedValues,
-    ...values
-  ) => {
-    let valueIndex = 0;
-    const generatedString = stringToGenerate.replaceAll(/:\w+|\*/g, (match) => {
-      if (match === "*") {
-        const value = values[valueIndex];
-        valueIndex++;
-        return encodeURIComponent(value);
+  const generateWhenPatternUsesOnlyStarParams = (...values) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else {
+        generatedString += values[part.value];
       }
-      const key = match.slice(1);
-      const value = namedValues[key];
-      return encodeURIComponent(value);
-    });
-    return finalizeGeneratedString(generatedString, stringToGenerate);
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+  const generateWhenPatternUsesOnlyNamedParams = (namedValues) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else {
+        generatedString += namedValues[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+  const generateWhenPatternUsesNamedAndStarParams = (
+    namedValues,
+    ...values
+  ) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else if (part.type === "named") {
+        generatedString += namedValues[part.value];
+      } else {
+        generatedString += values[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
   };
 
   const isStatic = namedParams.length === 0 && starParamCount === 0;
@@ -129,21 +129,20 @@ const createPattern = (
       return { named: null, stars: null };
     },
     generate,
-    generateExample: (url) => {
+    generateExample: () => {
       if (usesNamedAndStarParams) {
         return generate(
-          url,
           generateNamedParamsExample(namedParams),
           ...generateStarParamsExample(starParamCount),
         );
       }
       if (usesOnlyNamedParams) {
-        return generate(url, generateNamedParamsExample(namedParams));
+        return generate(generateNamedParamsExample(namedParams));
       }
       if (usesOnlyStarParams) {
-        return generate(url, ...generateStarParamsExample(starParamCount));
+        return generate(...generateStarParamsExample(starParamCount));
       }
-      return generate(url);
+      return generate();
     },
   };
 };
