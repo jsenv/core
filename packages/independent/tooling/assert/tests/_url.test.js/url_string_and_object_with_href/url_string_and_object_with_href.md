@@ -17,9 +17,9 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: "http://example.com/"
+actual: "http://example.com"
 expect: {
-  href: "http://example.com/",
+  href: "http://example.com",
 }
 ```
 

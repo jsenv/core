@@ -19,7 +19,7 @@ assert({
 AssertionError: actual and expect are different
 
 actual: Signal("http://a.com/")
-expect: "http://b.com/"
+expect: "http://b.com"
 ```
 
 </details>

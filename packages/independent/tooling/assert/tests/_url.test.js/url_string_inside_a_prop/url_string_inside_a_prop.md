@@ -22,11 +22,11 @@ assert({
 AssertionError: actual and expect are different
 
 actual: {
-  a: "http://example.com/",
+  a: "http://example.com",
   b: true,
 }
 expect: {
-  a: "http://example.com/",
+  a: "http://example.com",
   b: false,
 }
 ```

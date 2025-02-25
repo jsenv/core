@@ -1,9 +1,9 @@
-# [url string and url string](../../url.test.js#L127)
+# [extra trailing slash](../../url.test.js#L221)
 
 ```js
 assert({
-  actual: "http://example.com",
-  expect: "http://example.com:8000",
+  actual: `http://example.com/`,
+  expect: `http://example.com`,
 });
 ```
 
@@ -15,8 +15,8 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: "http://example.com"
-expect: "http://example.com:8000"
+actual: "http://example.com/"
+expect: "http://example.com"
 ```
 
 </details>

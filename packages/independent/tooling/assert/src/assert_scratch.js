@@ -1877,15 +1877,21 @@ let createRootNode;
             quoteMarkerRef,
             childGenerator() {
               const {
+                origin,
                 protocol,
                 username,
                 password,
                 hostname,
                 port,
-                pathname,
                 search,
                 hash,
               } = urlObject;
+
+              // urlObject.pathname always append a trailing slash
+              // meaning "http://example.com" and "http://example.com/" would match
+              const resource = value.slice(origin.length);
+              const pathname = resourceToPathname(resource);
+
               const appendUrlPartNode = (name, value, params) => {
                 urlPartsNode.appendChild(name, {
                   value,
@@ -4533,4 +4539,16 @@ const generateHeaderValueParts = (
     throw new Error("wtf");
   }
   part.end();
+};
+
+const resourceToPathname = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?");
+  if (searchSeparatorIndex > -1) {
+    return resource.slice(0, searchSeparatorIndex);
+  }
+  const hashIndex = resource.indexOf("#");
+  if (hashIndex > -1) {
+    return resource.slice(0, hashIndex);
+  }
+  return resource;
 };

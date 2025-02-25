@@ -16,7 +16,7 @@ assert({
 AssertionError: actual and expect are different
 
 actual: URL("http://example.com/")
-expect: "http://example.com:8000/"
+expect: "http://example.com:8000"
 ```
 
 </details>

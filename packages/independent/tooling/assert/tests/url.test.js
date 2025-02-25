@@ -218,4 +218,10 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
       expect: "file:///dir/b.js",
     });
   });
+  test("extra trailing slash", () => {
+    assert({
+      actual: `http://example.com/`,
+      expect: `http://example.com`,
+    });
+  });
 });

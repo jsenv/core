@@ -32,6 +32,7 @@
 - [internal string vs url object](internal_string_vs_url_object/internal_string_vs_url_object.md)
 - [internal url string vs url string](internal_url_string_vs_url_string/internal_url_string_vs_url_string.md)
 - [file url inside array](file_url_inside_array/file_url_inside_array.md)
+- [extra trailing slash](extra_trailing_slash/extra_trailing_slash.md)
 
 ---
 
