@@ -2,8 +2,8 @@
 
 ```js
 assert({
-  actual: "http://example/file.txt",
-  expect: "file://example/file.js",
+  actual: "http://example/dir/file.txt",
+  expect: "file:///example/dir/file.js",
 });
 ```
 
@@ -15,8 +15,8 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: "http://example/file.txt"
-expect: "file://example/file.js"
+actual: "http://example/dir/file.txt"
+expect: "file:///example/dir/file.js"
 ```
 
 </details>

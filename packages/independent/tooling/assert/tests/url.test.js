@@ -178,8 +178,8 @@ await snapshotAssertTests(import.meta.url, ({ test }) => {
   });
   test("file protocol vs http protocol", () => {
     assert({
-      actual: "http://example/file.txt",
-      expect: "file://example/file.js",
+      actual: "http://example/dir/file.txt",
+      expect: "file:///example/dir/file.js",
     });
   });
   test("url origin is case insensitive", () => {

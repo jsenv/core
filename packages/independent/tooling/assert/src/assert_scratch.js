@@ -1881,16 +1881,23 @@ let createRootNode;
                 protocol,
                 username,
                 password,
-                hostname,
                 port,
                 search,
                 hash,
               } = urlObject;
-
               // urlObject.pathname always append a trailing slash
               // meaning "http://example.com" and "http://example.com/" would match
-              const resource = value.slice(origin.length);
-              const pathname = resourceToPathname(resource);
+              // also for "file://example/file.js" hostname is "example" and pathname is "/file.js"
+              // which is incorrect
+              let pathname;
+              let hostname;
+              if (protocol === "file:") {
+                hostname = "";
+                pathname = resourceToPathname(value.slice("file://".length));
+              } else {
+                hostname = urlObject.hostname;
+                pathname = resourceToPathname(value.slice(origin.length));
+              }
 
               const appendUrlPartNode = (name, value, params) => {
                 urlPartsNode.appendChild(name, {
