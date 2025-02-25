@@ -30,17 +30,15 @@ return {
 ```js
 {
   "/": {
-    "status": 200,
+    "status": 204,
     "headers": {
       "accept": "text/plain, application/json",
       "accept-patch": "text/plain",
       "accept-post": "application/json",
       "allow": "GET, PATCH, POST",
       "connection": "keep-alive",
-      "content-type": "text/plain;charset=UTF-8",
-      "date": "Tue, 25 Feb 2025 14:42:12 GMT",
-      "keep-alive": "timeout=5",
-      "transfer-encoding": "chunked"
+      "date": "<X>",
+      "keep-alive": "timeout=5"
     },
     "body": ""
   },
@@ -52,7 +50,7 @@ return {
       "accept-post": "application/json",
       "allow": "GET, PATCH, POST",
       "content-type": "text/plain;charset=UTF-8",
-      "date": "Tue, 25 Feb 2025 14:42:12 GMT",
+      "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"

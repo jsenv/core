@@ -350,7 +350,7 @@ const createServerResourceOptionsResponse = (
 };
 const createResourceOptionsResponse = (request, resourceOptions) => {
   const headers = resourceOptions.asResponseHeaders();
-  return new Response("", { headers });
+  return new Response(undefined, { status: 204, headers });
 };
 const createMethodNotAllowedResponse = (
   request,

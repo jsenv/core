@@ -196,7 +196,10 @@ const replaceInObject = (object, { replace }) => {
       for (const keyToVisit of keysToVisit) {
         const nestedValue = value[keyToVisit];
         copy[keyToVisit] = deepCopy(nestedValue, {
-          shouldReplaceStrings: shouldReplaceStrings || keyToVisit === "os",
+          shouldReplaceStrings:
+            shouldReplaceStrings ||
+            keyToVisit === "os" ||
+            keyToVisit === "date",
           shouldReplaceNumbers:
             shouldReplaceNumbers ||
             keyToVisit === "timings" ||
