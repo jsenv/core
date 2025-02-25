@@ -2,6 +2,7 @@ import { Abort } from "@jsenv/abort";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { parse } from "node:querystring";
 import { headersFromObject } from "../internal/headersFromObject.js";
+import { parseSingleHeaderWithAttributes } from "../internal/multiple-header.js";
 import { observableFromNodeStream } from "./observable_from_node_stream.js";
 
 export const fromNodeRequest = (
@@ -102,7 +103,32 @@ export const fromNodeRequest = (
     return requestBodyQueryStringParsed;
   };
 
+  const forwarded = headers["forwarded"];
+  let ip;
+  let host;
+  if (forwarded) {
+    const forwardedParsed = parseSingleHeaderWithAttributes(forwarded);
+    ip = forwardedParsed.for;
+    host = forwardedParsed.host;
+  } else {
+    const forwardedFor = headers["x-forwarded-for"];
+    const forwardedHost = headers["x-forwarded-host"];
+    if (forwardedFor) {
+      // format is <client-ip>, <proxy1>, <proxy2>
+      ip = forwardedFor.split(",")[0];
+    } else {
+      ip = nodeRequest.socket.remoteAddress;
+    }
+    if (forwardedHost) {
+      host = forwardedHost;
+    } else {
+      host = headers["host"];
+    }
+  }
+
   return Object.freeze({
+    ip,
+    host,
     signal: handleRequestOperation.signal,
     http2: Boolean(nodeRequest.stream),
     origin: requestOrigin,

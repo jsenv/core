@@ -25,29 +25,44 @@ export const parseMultipleHeader = (
     if (!nameValidation) {
       return;
     }
-
-    const properties = parseHeaderProperties(valueParts.slice(1), {
-      validateProperty,
-    });
+    const afterName = valueParts.slice(1);
+    const properties = parseHeaderProperties(afterName, { validateProperty });
     multipleHeader[name] = properties;
   });
   return multipleHeader;
 };
 
+export const parseSingleHeaderWithAttributes = (
+  string,
+  { validateAttribute = () => true } = {},
+) => {
+  const props = {};
+  const attributes = string.split(";");
+  for (const attr of attributes) {
+    let [name, value] = attr.split("=");
+    name = name.trim();
+    value = value.trim();
+    if (validateAttribute({ name, value })) {
+      props[name] = value;
+    }
+  }
+  return props;
+};
+
 const parseHeaderProperties = (headerProperties, { validateProperty }) => {
-  const properties = headerProperties.reduce((previous, valuePart) => {
-    const [propertyName, propertyValueString] = valuePart.split("=");
+  const properties = {};
+  for (const propertySource of headerProperties) {
+    const [propertyName, propertyValueString] = propertySource
+      .trim()
+      .split("=");
     const propertyValue = parseHeaderPropertyValue(propertyValueString);
     const property = { name: propertyName, value: propertyValue };
     const propertyValidation = validateProperty(property);
     if (!propertyValidation) {
-      return previous;
+      continue;
     }
-    return {
-      ...previous,
-      [property.name]: property.value,
-    };
-  }, {});
+    properties[propertyName] = propertyValue;
+  }
   return properties;
 };
 

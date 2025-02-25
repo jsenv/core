@@ -8,7 +8,7 @@ import {
   applyRedirectionToRequest,
   createPushRequest,
   fromNodeRequest,
-} from "./interfacing_with_node/request_factory.js";
+} from "./interfacing_with_node/from_node_request.js";
 import { writeNodeResponse } from "./interfacing_with_node/write_node_response.js";
 import {
   colorizeResponseStatus,
