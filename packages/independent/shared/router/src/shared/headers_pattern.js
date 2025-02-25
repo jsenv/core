@@ -5,8 +5,19 @@ export const createHeadersPattern = (headers) => {
   const headerNames = Object.keys(headers);
   for (const headerName of headerNames) {
     const headerValue = headers[headerName];
-    const headerValuePattern = PATTERN.create(headerValue);
-    headerPatternMap.set(headerName, headerValuePattern);
+    if (typeof headerValue === "function") {
+      headerPatternMap.set(headerName, {
+        match: (value) => {
+          return Boolean(headerValue(value));
+        },
+        generate: () => {
+          return "?";
+        },
+      });
+    } else {
+      const headerValuePattern = PATTERN.create(headerValue);
+      headerPatternMap.set(headerName, headerValuePattern);
+    }
   }
   return {
     match: (headersToMatch) => {

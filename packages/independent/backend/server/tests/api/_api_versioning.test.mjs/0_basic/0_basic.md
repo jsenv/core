@@ -12,10 +12,18 @@ const routes = [
   },
   {
     endpoint: "GET /users",
+    headers: { "accept-version": (v) => parseInt(v) === 2 },
+    response: () =>
+      new Response("users v2", {
+        headers: { "content-version": "2" },
+      }),
+  },
+  {
+    endpoint: "GET /users",
     headers: { "accept-version": "*" },
     response: () =>
       new Response("latest users", {
-        headers: { "content-version": "2" },
+        headers: { "content-version": "3" },
       }),
   },
 ];
@@ -41,6 +49,14 @@ return {
       "accept-version": "2",
     },
   }),
+  "GET /users with accept-version: 3": await run({
+    routes,
+    method: "GET",
+    path: "/users",
+    headers: {
+      "accept-version": "3",
+    },
+  }),
 };
 ```
 
@@ -50,7 +66,7 @@ return {
     "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
-      "content-version": "2",
+      "content-version": "3",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -75,6 +91,18 @@ return {
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
       "content-version": "2",
+      "date": "<X>",
+      "connection": "keep-alive",
+      "keep-alive": "timeout=5",
+      "transfer-encoding": "chunked"
+    },
+    "body": "users v2"
+  },
+  "GET /users with accept-version: 3": {
+    "status": 200,
+    "headers": {
+      "content-type": "text/plain;charset=UTF-8",
+      "content-version": "3",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",

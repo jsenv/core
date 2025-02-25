@@ -37,10 +37,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
       },
       {
         endpoint: "GET /users",
+        headers: { "accept-version": (v) => parseInt(v) === 2 },
+        response: () =>
+          new Response("users v2", {
+            headers: { "content-version": "2" },
+          }),
+      },
+      {
+        endpoint: "GET /users",
         headers: { "accept-version": "*" },
         response: () =>
           new Response("latest users", {
-            headers: { "content-version": "2" },
+            headers: { "content-version": "3" },
           }),
       },
     ];
@@ -64,6 +72,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
         path: "/users",
         headers: {
           "accept-version": "2",
+        },
+      }),
+      "GET /users with accept-version: 3": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept-version": "3",
         },
       }),
     };
