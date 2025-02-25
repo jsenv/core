@@ -783,6 +783,7 @@ export const startServer = async ({
             );
           }
         } else {
+          // TODO: ici il faut gérer l'objet Response natif
           const {
             status = 404,
             statusText,

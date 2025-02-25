@@ -91,6 +91,14 @@ export const createRouter = () => {
         }
         return headers;
       },
+      toJSON: () => {
+        return {
+          acceptedContentTypes: Array.from(acceptedContentTypeSet),
+          postAcceptedContentTypes: Array.from(postAcceptedContentTypeSet),
+          patchAcceptedContentTypes: Array.from(patchAcceptedContentTypeSet),
+          allowedMethods: Array.from(allowedMethodSet),
+        };
+      },
     };
   };
   const forEachMethodAllowed = (route, onMethodAllowed) => {
@@ -313,21 +321,32 @@ const isRequestBodyContentTypeSupported = (
 
 const createServerResourceOptionsResponse = (
   request,
-  {
-    server,
-    // resourceOptionsMap
-  },
+  { server, resourceOptionsMap },
 ) => {
   const headers = server.asResponseHeaders();
-
-  // TODO: send resourceOptionsMap in the body
-  // (json, html, etc)
-  return {
-    status: 200,
-    headers: {
-      ...headers,
-    },
-  };
+  const contentTypeNegotiated = pickContentType(request, [
+    "application/json",
+    "text/plain",
+  ]);
+  if (contentTypeNegotiated === "application/json") {
+    const perResource = {};
+    for (const [resource, resourceOptions] of resourceOptionsMap) {
+      perResource[resource] = resourceOptions.toJSON();
+    }
+    return Response.json(
+      {
+        server: server.toJSON(),
+        perResource,
+      },
+      { status: 200, headers },
+    );
+  }
+  // text/plain
+  const endpointUIUrl = `${request.origin}/TODO`;
+  return new Response(
+    `The list of endpoints available can be seen at ${endpointUIUrl}`,
+    { status: 200, headers },
+  );
 };
 const createResourceOptionsResponse = (request, resourceOptions) => {
   const headers = resourceOptions.asResponseHeaders();
