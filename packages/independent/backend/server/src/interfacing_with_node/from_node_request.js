@@ -103,32 +103,44 @@ export const fromNodeRequest = (
     return requestBodyQueryStringParsed;
   };
 
+  // request.ip          -> request ip as received by the server
+  // request.ipForwarded -> ip of the client before proxying, undefined when there is no proxy
+  // same applies on request.proto and request.host
+  let ip = nodeRequest.socket.remoteAddress;
+  let proto = requestOrigin.startsWith("http:") ? "http" : "https";
+  let host = headers["host"];
   const forwarded = headers["forwarded"];
-  let ip;
-  let host;
+  let hostForwarded;
+  let ipForwarded;
+  let protoForwarded;
   if (forwarded) {
     const forwardedParsed = parseSingleHeaderWithAttributes(forwarded);
-    ip = forwardedParsed.for;
-    host = forwardedParsed.host;
+    ipForwarded = forwardedParsed.for;
+    protoForwarded = forwardedParsed.proto;
+    hostForwarded = forwardedParsed.host;
   } else {
     const forwardedFor = headers["x-forwarded-for"];
+    const forwardedProto = headers["x-forwarded-proto"];
     const forwardedHost = headers["x-forwarded-host"];
     if (forwardedFor) {
       // format is <client-ip>, <proxy1>, <proxy2>
-      ip = forwardedFor.split(",")[0];
-    } else {
-      ip = nodeRequest.socket.remoteAddress;
+      ipForwarded = forwardedFor.split(",")[0];
+    }
+    if (forwardedProto) {
+      protoForwarded = forwardedProto;
     }
     if (forwardedHost) {
-      host = forwardedHost;
-    } else {
-      host = headers["host"];
+      hostForwarded = forwardedHost;
     }
   }
 
   return Object.freeze({
     ip,
+    ipForwarded,
+    proto,
+    protoForwarded,
     host,
+    hostForwarded,
     signal: handleRequestOperation.signal,
     http2: Boolean(nodeRequest.stream),
     origin: requestOrigin,
