@@ -796,21 +796,25 @@ export const startServer = async ({
               headers[name] = value;
             }
             body = handleRequestReturnValue.body;
-          } else {
-            if (handleRequestReturnValue) {
-              status = handleRequestReturnValue.status;
-              statusText = handleRequestReturnValue.statusText;
-              statusMessage = handleRequestReturnValue.statusMessage;
-              headers = handleRequestReturnValue.headers;
-              body = handleRequestReturnValue.body;
-            }
-
+          } else if (
+            handleRequestReturnValue !== null &&
+            typeof handleRequestReturnValue === "object"
+          ) {
+            status = handleRequestReturnValue.status;
+            statusText = handleRequestReturnValue.statusText;
+            statusMessage = handleRequestReturnValue.statusMessage;
+            headers = handleRequestReturnValue.headers;
+            body = handleRequestReturnValue.body;
             if (status === undefined) {
               status = 404;
             }
             if (headers === undefined) {
               headers = {};
             }
+          } else {
+            throw new TypeError(
+              `response must be a Response, or an Object, received ${handleRequestReturnValue}`,
+            );
           }
           responseProperties = {
             status,

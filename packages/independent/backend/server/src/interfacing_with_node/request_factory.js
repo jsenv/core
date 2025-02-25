@@ -121,25 +121,10 @@ export const fromNodeRequest = (
   });
 };
 
-export const getRequestBody = async (request, contentType) => {
-  if (contentType === "multipart/form-data") {
-  }
-  if (contentType === "application/x-www-form-urlencoded") {
-  }
-  if (contentType === "application/json") {
-  }
-  if (contentType === "text/plain") {
-  }
-  if (contentType === "application/octet-stream") {
-    const requestBodyBuffer = await readRequestBody(request);
-    return requestBodyBuffer;
-  }
-  throw new Error(`unknown content type ${contentType}`);
-};
-const readBody = (request, { as }) => {
+const readBody = (body, { as }) => {
   return new Promise((resolve, reject) => {
     const bufferArray = [];
-    request.body.subscribe({
+    body.subscribe({
       error: reject,
       next: (buffer) => {
         bufferArray.push(buffer);

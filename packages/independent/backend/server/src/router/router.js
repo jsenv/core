@@ -380,17 +380,21 @@ const createUnsupportedMediaTypeResponse = (
 ) => {
   const requestMediaType = request.headers["content-type"];
 
-  return createClientErrorResponse({
+  return createClientErrorResponse(request, {
     status: 415,
     statusText: "Unsupported Media Type",
     headers: {
       "supported-media": acceptedContentTypes.join(", "),
     },
     message: {
-      text: `The media type ${requestMediaType} is not supported for this resource.
-Supported media types: ${acceptedContentTypes.join(", ")}`,
-      html: `The media type <strong>${requestMediaType}</strong> is not supported for this resource.<br />
-Supported media types: <strong>${acceptedContentTypes.join(", ")}</strong>`,
+      text: requestMediaType
+        ? `The media type "${requestMediaType}" is not supported for this resource.
+Supported media types: ${acceptedContentTypes.join(", ")}`
+        : `The media type was not specified in the request "content-type" header`,
+      html: requestMediaType
+        ? `The media type <strong>${requestMediaType}</strong> is not supported for this resource.<br />
+Supported media types: <strong>${acceptedContentTypes.join(", ")}</strong>`
+        : `The media type was not specified in the request "content-type" header`,
     },
     data: {
       requestMediaType,
@@ -399,7 +403,7 @@ Supported media types: <strong>${acceptedContentTypes.join(", ")}</strong>`,
   });
 };
 const createRouteNotFoundResponse = (request, { availableEndpoints }) => {
-  return createClientErrorResponse({
+  return createClientErrorResponse(request, {
     status: 404,
     statusText: "Not Found",
     message: {
@@ -426,23 +430,26 @@ const createClientErrorResponse = (
 ) => {
   const contentTypeNegotiated = pickContentType(request, [
     "application/json",
-    "text/plain",
     "text/html",
+    "text/plain",
   ]);
+  if (contentTypeNegotiated === "text/html") {
+    const htmlTemplate = readFileSync(
+      new URL(clientErrorHtmlTemplateFileUrl),
+      "utf8",
+    );
+    const html = replacePlaceholdersInHtml(htmlTemplate, {
+      message: message.html,
+      ...data,
+    });
+    return new Response(html, {
+      status,
+      statusText,
+      headers: { ...headers, "content-type": "text/html" },
+    });
+  }
   if (contentTypeNegotiated === "application/json") {
     return Response.json({ data }, { status, statusText, headers });
   }
-  if (contentTypeNegotiated === "text/plain") {
-    return new Response(message.text, { status, statusText, headers });
-  }
-  const htmlTemplate = readFileSync(clientErrorHtmlTemplateFileUrl, "utf8");
-  const html = replacePlaceholdersInHtml(htmlTemplate, {
-    message: message.html,
-    ...data,
-  });
-  return new Response(html, {
-    status,
-    statusText,
-    headers: { ...headers, "content-type": "text/html" },
-  });
+  return new Response(message.text, { status, statusText, headers });
 };
