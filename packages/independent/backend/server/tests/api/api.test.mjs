@@ -11,6 +11,7 @@ const apiServer = await startServer({
       response: () => new Response("Hello world"),
     },
   ],
+  keepProcessAlive: false,
 });
 const response = await fetchUrl(`${apiServer.origin}`);
 const actual = {

@@ -1,5 +1,4 @@
-// https://github.com/jamestalmage/stream-to-observable/blob/master/index.js
-
+// https://nodejs.org/api/webstreams.html#readablestreamgetreaderoptions
 import { createObservable } from "./observable.js";
 
 export const observableFromNodeWebReadableStream = (nodeWebReadableStream) => {
@@ -21,7 +20,6 @@ export const observableFromNodeWebReadableStream = (nodeWebReadableStream) => {
     };
     readNext();
     return () => {
-      // reader.releaseLock();
       reader.cancel();
     };
   });
