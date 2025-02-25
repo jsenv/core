@@ -18,11 +18,13 @@ const routes = [
 return {
   "/": await run({
     routes,
-    optionsTarget: "/",
+    method: "OPTIONS",
+    path: "/",
   }),
   "*": await run({
     routes,
-    optionsTarget: "*",
+    method: "OPTIONS",
+    path: "*",
   }),
 };
 ```

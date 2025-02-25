@@ -2,15 +2,15 @@ import { startServer } from "@jsenv/server";
 import { snapshotTests } from "@jsenv/snapshot";
 import { fetchUsingNodeBuiltin } from "../test_helpers.mjs";
 
-const run = async ({ routes, optionsTarget }) => {
+const run = async ({ routes, method, path }) => {
   const apiServer = await startServer({
     logLevel: "warn",
     routes,
     keepProcessAlive: false,
   });
   const response = await fetchUsingNodeBuiltin(apiServer.origin, {
-    path: optionsTarget,
-    method: "OPTIONS",
+    method,
+    path,
   });
   const actual = {
     status: response.status,
@@ -39,11 +39,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
     return {
       "/": await run({
         routes,
-        optionsTarget: "/",
+        method: "OPTIONS",
+        path: "/",
       }),
       "*": await run({
         routes,
-        optionsTarget: "*",
+        method: "OPTIONS",
+        path: "*",
       }),
     };
   });
