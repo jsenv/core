@@ -39,10 +39,8 @@ await snapshotTests(import.meta.url, ({ test }) => {
         endpoint: "GET /users",
         headers: { "accept-version": "*" },
         response: () =>
-          new Response("users latest", {
-            headers: {
-              "content-version": "2",
-            },
+          new Response("latest users", {
+            headers: { "content-version": "2" },
           }),
       },
     ];
@@ -50,17 +48,23 @@ await snapshotTests(import.meta.url, ({ test }) => {
       "GET /users without accept-version": await run({
         routes,
         method: "GET",
-        path: "/",
+        path: "/users",
       }),
       "GET /users with accept-version: 1": await run({
         routes,
         method: "GET",
-        path: "/",
+        path: "/users",
+        headers: {
+          "accept-version": "1",
+        },
       }),
       "GET /users with accept-version: 2": await run({
         routes,
         method: "GET",
-        path: "/",
+        path: "/users",
+        headers: {
+          "accept-version": "2",
+        },
       }),
     };
   });

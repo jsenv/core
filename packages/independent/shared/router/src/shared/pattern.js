@@ -104,8 +104,11 @@ const createPattern = (
 
   return {
     regexp,
-    match: (string) => {
-      const match = string.match(regexp);
+    match: (value) => {
+      if (value === undefined) {
+        return null;
+      }
+      const match = String(value).match(regexp);
       if (!match) {
         return null;
       }

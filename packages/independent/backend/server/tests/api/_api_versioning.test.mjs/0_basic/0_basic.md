@@ -14,10 +14,8 @@ const routes = [
     endpoint: "GET /users",
     headers: { "accept-version": "*" },
     response: () =>
-      new Response("users latest", {
-        headers: {
-          "content-version": "2",
-        },
+      new Response("latest users", {
+        headers: { "content-version": "2" },
       }),
   },
 ];
@@ -25,76 +23,64 @@ return {
   "GET /users without accept-version": await run({
     routes,
     method: "GET",
-    path: "/",
+    path: "/users",
   }),
   "GET /users with accept-version: 1": await run({
     routes,
     method: "GET",
-    path: "/",
+    path: "/users",
+    headers: {
+      "accept-version": "1",
+    },
   }),
   "GET /users with accept-version: 2": await run({
     routes,
     method: "GET",
-    path: "/",
+    path: "/users",
+    headers: {
+      "accept-version": "2",
+    },
   }),
 };
 ```
 
-# 1/2 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-GET http://127.0.0.1/
-  404 Not Found
-GET http://127.0.0.1/
-  404 Not Found
-GET http://127.0.0.1/
-  404 Not Found
-```
-
-</details>
-
-
-# 2/2 resolve
-
 ```js
 {
   "GET /users without accept-version": {
-    "status": 404,
+    "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
+      "content-version": "2",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The URL undefined does not exists on this server.\nThe following urls are available: GET /users\nGET /users"
+    "body": "latest users"
   },
   "GET /users with accept-version: 1": {
-    "status": 404,
+    "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
+      "content-version": "1",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The URL undefined does not exists on this server.\nThe following urls are available: GET /users\nGET /users"
+    "body": "users v1"
   },
   "GET /users with accept-version: 2": {
-    "status": 404,
+    "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
+      "content-version": "2",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The URL undefined does not exists on this server.\nThe following urls are available: GET /users\nGET /users"
+    "body": "latest users"
   }
 }
 ```
