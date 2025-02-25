@@ -22,7 +22,7 @@ const HTTP_METHODS = [
 export const createRouter = () => {
   const routeSet = new Set();
 
-  const constructAvailableEndpoints = (request) => {
+  const constructAvailableEndpoints = () => {
     // TODO: memoize
     // TODO: construct only if the route is visible to that client
     const availableEndpoints = [];
@@ -37,17 +37,23 @@ export const createRouter = () => {
     };
 
     for (const route of routeSet) {
-      const endpointResource = route.resourcePattern.generateExample(
-        request.origin,
-      );
+      const endpointResource = route.resourcePattern.generateExample();
       if (route.method === "*") {
         for (const HTTP_METHOD of HTTP_METHODS) {
           availableEndpoints.push(
-            createEndpoint(HTTP_METHOD, endpointResource),
+            createEndpoint({
+              method: HTTP_METHOD,
+              resource: endpointResource,
+            }),
           );
         }
       } else {
-        availableEndpoints.push(createEndpoint(route.method, endpointResource));
+        availableEndpoints.push(
+          createEndpoint({
+            method: route.method,
+            resource: endpointResource,
+          }),
+        );
       }
     }
     return availableEndpoints;
