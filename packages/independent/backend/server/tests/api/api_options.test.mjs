@@ -1,45 +1,6 @@
 import { startServer } from "@jsenv/server";
 import { snapshotTests } from "@jsenv/snapshot";
-import http from "node:http";
-
-const sendGlobalOptionsHttpRequest = async (url) => {
-  return new Promise((resolve, reject) => {
-    const { hostname, port } = new URL(url);
-    const req = http.request(
-      {
-        host: hostname,
-        port,
-        method: "OPTIONS",
-        path: "*",
-      },
-      (res) => {
-        const bodyBufferPromise = new Promise((resolve, reject) => {
-          const bufferArray = [];
-          res.on("data", (chunk) => {
-            bufferArray.push(chunk);
-          });
-          res.on("end", () => {
-            const bodyBuffer = Buffer.concat(bufferArray);
-            resolve(bodyBuffer);
-          });
-          res.on("error", (e) => {
-            reject(e);
-          });
-        });
-        resolve({
-          status: res.statusCode,
-          headers: new Map(Object.entries(res.headers)),
-          text: async () => {
-            const bodyBuffer = await bodyBufferPromise;
-            return String(bodyBuffer);
-          },
-        });
-      },
-    );
-    req.on("error", reject);
-    req.end();
-  });
-};
+import { fetchUsingNodeBuiltin } from "../test_helpers.mjs";
 
 const run = async ({ routes, optionsTarget }) => {
   const apiServer = await startServer({
@@ -47,14 +8,10 @@ const run = async ({ routes, optionsTarget }) => {
     routes,
     keepProcessAlive: false,
   });
-  let response;
-  if (optionsTarget === "*") {
-    response = await sendGlobalOptionsHttpRequest(apiServer.origin);
-  } else {
-    response = await fetch(apiServer.origin, {
-      method: "OPTIONS",
-    });
-  }
+  const response = await fetchUsingNodeBuiltin(apiServer.origin, {
+    path: optionsTarget,
+    method: "OPTIONS",
+  });
   const actual = {
     status: response.status,
     headers: Object.fromEntries(response.headers),

@@ -1,4 +1,4 @@
-# [0_basic](../../api_options.test.mjs#L67)
+# [0_basic](../../api_options.test.mjs#L24)
 
 ```js
 const routes = [
@@ -36,8 +36,8 @@ return {
       "accept-patch": "text/plain",
       "accept-post": "application/json",
       "allow": "GET, PATCH, POST",
-      "connection": "keep-alive",
       "date": "<X>",
+      "connection": "keep-alive",
       "keep-alive": "timeout=5"
     },
     "body": ""

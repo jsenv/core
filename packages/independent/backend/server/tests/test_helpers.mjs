@@ -2,9 +2,10 @@ import { request } from "node:http";
 
 export const fetchUsingNodeBuiltin = async (
   url,
-  { method = "GET", headers = {}, body } = {},
+  { method = "GET", headers = {}, body, path } = {},
 ) => {
-  const { port, hostname } = new URL(url);
+  const urlObject = new URL(url);
+  const { port, hostname } = urlObject;
 
   const nodeRequest = request({
     hostname,
@@ -14,38 +15,51 @@ export const fetchUsingNodeBuiltin = async (
       ...(body ? { "content-length": Buffer.byteLength(body) } : {}),
       ...headers,
     },
+    path: path || urlObject.pathname,
   });
   if (body) {
     nodeRequest.write(body);
   }
   nodeRequest.end();
 
+  let responseBodyBufferPromise;
   const nodeResponse = await new Promise((resolve, reject) => {
     nodeRequest.on("error", (error) => {
       console.error(`error event triggered on request to ${url}`);
       reject(error);
     });
-    nodeRequest.on("response", resolve);
+    nodeRequest.on("response", (nodeResponse) => {
+      responseBodyBufferPromise = new Promise((resolve, reject) => {
+        const bufferArray = [];
+        nodeResponse.on("error", (e) => {
+          reject(e);
+        });
+        nodeResponse.on("data", (chunk) => {
+          bufferArray.push(chunk);
+        });
+        nodeResponse.on("end", () => {
+          const bodyBuffer = Buffer.concat(bufferArray);
+          resolve(bodyBuffer);
+        });
+      });
+      resolve(nodeResponse);
+    });
   });
 
   return {
     url,
-    text: () => {
-      return readNodeResponseAsText(nodeResponse);
+    status: nodeResponse.statusCode,
+    statusText: nodeResponse.statusText,
+    headers: new Map(Object.entries(nodeResponse.headers)),
+    text: async () => {
+      const responseBodyBuffer = await responseBodyBufferPromise;
+      return responseBodyBuffer.toString();
     },
   };
 };
 
-const readNodeResponseAsText = async (nodeResponse) => {
-  return new Promise((resolve) => {
-    // nodeResponse.setEncoding("utf8")
-    const bufferArray = [];
-    nodeResponse.on("data", (chunk) => {
-      bufferArray.push(chunk);
-    });
-    nodeResponse.on("end", () => {
-      const bodyAsBuffer = Buffer.concat(bufferArray);
-      resolve(bodyAsBuffer.toString());
-    });
+export const sendGlobalOptionsHttpRequest = async (url) => {
+  return fetchUsingNodeBuiltin(url, {
+    method: "OPTIONS",
   });
 };
