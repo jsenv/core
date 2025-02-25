@@ -783,22 +783,41 @@ export const startServer = async ({
             );
           }
         } else {
-          // TODO: ici il faut gérer l'objet Response natif
-          const {
-            status = 404,
-            statusText,
-            statusMessage,
-            headers = {},
-            body,
-            ...rest
-          } = handleRequestReturnValue || {};
+          let status;
+          let statusText;
+          let statusMessage;
+          let headers;
+          let body;
+          if (handleRequestReturnValue instanceof Response) {
+            status = handleRequestReturnValue.status;
+            statusText = handleRequestReturnValue.statusText;
+            headers = {};
+            for (const [name, value] of handleRequestReturnValue.headers) {
+              headers[name] = value;
+            }
+            body = handleRequestReturnValue.body;
+          } else {
+            if (handleRequestReturnValue) {
+              status = handleRequestReturnValue.status;
+              statusText = handleRequestReturnValue.statusText;
+              statusMessage = handleRequestReturnValue.statusMessage;
+              headers = handleRequestReturnValue.headers;
+              body = handleRequestReturnValue.body;
+            }
+
+            if (status === undefined) {
+              status = 404;
+            }
+            if (headers === undefined) {
+              headers = {};
+            }
+          }
           responseProperties = {
             status,
             statusText,
             statusMessage,
             headers,
             body,
-            ...rest,
           };
         }
 

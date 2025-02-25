@@ -248,7 +248,7 @@ export const createRouter = () => {
           contentNegotiationResult.contentEncoding = contentEncodingNegotiated;
         }
       }
-      const { named, stars } = PATTERN.composeTwoMatchResults(
+      const { named, stars = [] } = PATTERN.composeTwoMatchResults(
         resourceMatchResult,
         headersMatchResult,
       );

@@ -1,8 +1,10 @@
 import { createReadStream } from "node:fs";
 import { Readable, Stream, Writable } from "node:stream";
+import { ReadableStream } from "node:stream/web";
 
 import { isObservable, observableFromValue } from "./observable.js";
 import { observableFromNodeStream } from "./observable_from_node_stream.js";
+import { observableFromNodeWebReadableStream } from "./observable_from_node_web_readable_stream.js";
 
 export const normalizeBodyMethods = (body) => {
   if (isObservable(body)) {
@@ -29,6 +31,17 @@ export const normalizeBodyMethods = (body) => {
       },
     };
   }
+
+  if (body instanceof ReadableStream) {
+    return {
+      asObservable: () => observableFromNodeWebReadableStream(body),
+      destroy: () => {
+        body.cancel();
+      },
+    };
+  }
+
+  // https://nodejs.org/api/webstreams.html
 
   return {
     asObservable: () => observableFromValue(body),
