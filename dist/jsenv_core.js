@@ -3512,203 +3512,6 @@ const writeDirectory = async (
   }
 };
 
-const mediaTypeInfos = {
-  "application/json": {
-    extensions: ["json", "map"],
-    isTextual: true,
-  },
-  "application/importmap+json": {
-    extensions: ["importmap"],
-    isTextual: true,
-  },
-  "application/manifest+json": {
-    extensions: ["webmanifest"],
-    isTextual: true,
-  },
-  "application/octet-stream": {},
-  "application/pdf": {
-    extensions: ["pdf"],
-  },
-  "application/xml": {
-    extensions: ["xml"],
-    isTextual: true,
-  },
-  "application/x-gzip": {
-    extensions: ["gz"],
-  },
-  "application/wasm": {
-    extensions: ["wasm"],
-  },
-  "application/zip": {
-    extensions: ["zip"],
-  },
-  "audio/basic": {
-    extensions: ["au", "snd"],
-  },
-  "audio/mpeg": {
-    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
-  },
-  "audio/midi": {
-    extensions: ["midi", "mid", "kar", "rmi"],
-  },
-  "audio/mp4": {
-    extensions: ["m4a", "mp4a"],
-  },
-  "audio/ogg": {
-    extensions: ["oga", "ogg", "spx"],
-  },
-  "audio/webm": {
-    extensions: ["weba"],
-  },
-  "audio/x-wav": {
-    extensions: ["wav"],
-  },
-  "font/ttf": {
-    extensions: ["ttf"],
-  },
-  "font/woff": {
-    extensions: ["woff"],
-  },
-  "font/woff2": {
-    extensions: ["woff2"],
-  },
-  "image/png": {
-    extensions: ["png"],
-  },
-  "image/gif": {
-    extensions: ["gif"],
-  },
-  "image/jpeg": {
-    extensions: ["jpg"],
-  },
-  "image/svg+xml": {
-    extensions: ["svg", "svgz"],
-    isTextual: true,
-  },
-  "text/plain": {
-    extensions: ["txt"],
-    isTextual: true,
-  },
-  "text/html": {
-    extensions: ["html"],
-    isTextual: true,
-  },
-  "text/css": {
-    extensions: ["css"],
-    isTextual: true,
-  },
-  "text/javascript": {
-    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
-    isTextual: true,
-  },
-  "text/markdown": {
-    extensions: ["md", "mdx"],
-    isTextual: true,
-  },
-  "text/x-sass": {
-    extensions: ["sass"],
-    isTextual: true,
-  },
-  "text/x-scss": {
-    extensions: ["scss"],
-    isTextual: true,
-  },
-  "text/cache-manifest": {
-    extensions: ["appcache"],
-  },
-  "video/mp4": {
-    extensions: ["mp4", "mp4v", "mpg4"],
-  },
-  "video/mpeg": {
-    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
-  },
-  "video/ogg": {
-    extensions: ["ogv"],
-  },
-  "video/webm": {
-    extensions: ["webm"],
-  },
-};
-
-const CONTENT_TYPE = {
-  parse: (string) => {
-    const [mediaType, charset] = string.split(";");
-    return { mediaType: normalizeMediaType(mediaType), charset };
-  },
-
-  stringify: ({ mediaType, charset }) => {
-    if (charset) {
-      return `${mediaType};${charset}`;
-    }
-    return mediaType;
-  },
-
-  asMediaType: (value) => {
-    if (typeof value === "string") {
-      return CONTENT_TYPE.parse(value).mediaType;
-    }
-    if (typeof value === "object") {
-      return value.mediaType;
-    }
-    return null;
-  },
-
-  isJson: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    return (
-      mediaType === "application/json" ||
-      /^application\/\w+\+json$/.test(mediaType)
-    );
-  },
-
-  isTextual: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    if (mediaType.startsWith("text/")) {
-      return true;
-    }
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
-      return true;
-    }
-    // catch things like application/manifest+json, application/importmap+json
-    if (/^application\/\w+\+json$/.test(mediaType)) {
-      return true;
-    }
-    return false;
-  },
-
-  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
-
-  asFileExtension: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
-    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
-  },
-
-  fromUrlExtension: (url) => {
-    const { pathname } = new URL(url);
-    const extensionWithDot = extname(pathname);
-    if (!extensionWithDot || extensionWithDot === ".") {
-      return "application/octet-stream";
-    }
-    const extension = extensionWithDot.slice(1);
-    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
-      const mediaTypeInfo = mediaTypeInfos[mediaType];
-      return (
-        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
-      );
-    });
-    return mediaTypeFound || "application/octet-stream";
-  },
-};
-
-const normalizeMediaType = (value) => {
-  if (value === "application/javascript") {
-    return "text/javascript";
-  }
-  return value;
-};
-
 const removeEntrySync = (
   source,
   {
@@ -7786,6 +7589,203 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   exit: STOP_REASON_PROCESS_EXIT,
 };
 
+const mediaTypeInfos$1 = {
+  "application/json": {
+    extensions: ["json", "map"],
+    isTextual: true,
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true,
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true,
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"],
+  },
+  "application/xml": {
+    extensions: ["xml"],
+    isTextual: true,
+  },
+  "application/x-gzip": {
+    extensions: ["gz"],
+  },
+  "application/wasm": {
+    extensions: ["wasm"],
+  },
+  "application/zip": {
+    extensions: ["zip"],
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"],
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"],
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"],
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"],
+  },
+  "audio/webm": {
+    extensions: ["weba"],
+  },
+  "audio/x-wav": {
+    extensions: ["wav"],
+  },
+  "font/ttf": {
+    extensions: ["ttf"],
+  },
+  "font/woff": {
+    extensions: ["woff"],
+  },
+  "font/woff2": {
+    extensions: ["woff2"],
+  },
+  "image/png": {
+    extensions: ["png"],
+  },
+  "image/gif": {
+    extensions: ["gif"],
+  },
+  "image/jpeg": {
+    extensions: ["jpg"],
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true,
+  },
+  "text/plain": {
+    extensions: ["txt"],
+    isTextual: true,
+  },
+  "text/html": {
+    extensions: ["html"],
+    isTextual: true,
+  },
+  "text/css": {
+    extensions: ["css"],
+    isTextual: true,
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+    isTextual: true,
+  },
+  "text/markdown": {
+    extensions: ["md", "mdx"],
+    isTextual: true,
+  },
+  "text/x-sass": {
+    extensions: ["sass"],
+    isTextual: true,
+  },
+  "text/x-scss": {
+    extensions: ["scss"],
+    isTextual: true,
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"],
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"],
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
+  },
+  "video/ogg": {
+    extensions: ["ogv"],
+  },
+  "video/webm": {
+    extensions: ["webm"],
+  },
+};
+
+const CONTENT_TYPE$1 = {
+  parse: (string) => {
+    const [mediaType, charset] = string.split(";");
+    return { mediaType: normalizeMediaType$1(mediaType), charset };
+  },
+
+  stringify: ({ mediaType, charset }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+    return mediaType;
+  },
+
+  asMediaType: (value) => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE$1.parse(value).mediaType;
+    }
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+    return null;
+  },
+
+  isJson: (value) => {
+    const mediaType = CONTENT_TYPE$1.asMediaType(value);
+    return (
+      mediaType === "application/json" ||
+      /^application\/\w+\+json$/.test(mediaType)
+    );
+  },
+
+  isTextual: (value) => {
+    const mediaType = CONTENT_TYPE$1.asMediaType(value);
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+    const mediaTypeInfo = mediaTypeInfos$1[mediaType];
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    }
+    // catch things like application/manifest+json, application/importmap+json
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+    return false;
+  },
+
+  isBinary: (value) => !CONTENT_TYPE$1.isTextual(value),
+
+  asFileExtension: (value) => {
+    const mediaType = CONTENT_TYPE$1.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos$1[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+
+  fromUrlExtension: (url) => {
+    const { pathname } = new URL(url);
+    const extensionWithDot = extname(pathname);
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+    const extension = extensionWithDot.slice(1);
+    const mediaTypeFound = Object.keys(mediaTypeInfos$1).find((mediaType) => {
+      const mediaTypeInfo = mediaTypeInfos$1[mediaType];
+      return (
+        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
+      );
+    });
+    return mediaTypeFound || "application/octet-stream";
+  },
+};
+
+const normalizeMediaType$1 = (value) => {
+  if (value === "application/javascript") {
+    return "text/javascript";
+  }
+  return value;
+};
+
 const pickAcceptedContent = ({
   availables,
   accepteds,
@@ -8468,8 +8468,8 @@ const getMtimeResponse = async ({ headers, fileStat }) => {
 };
 
 const getCompressedResponse = async ({ fileUrl, headers }) => {
-  const contentType = CONTENT_TYPE.fromUrlExtension(fileUrl);
-  if (CONTENT_TYPE.isBinary(contentType)) {
+  const contentType = CONTENT_TYPE$1.fromUrlExtension(fileUrl);
+  if (CONTENT_TYPE$1.isBinary(contentType)) {
     return null;
   }
   const acceptedCompressionFormat = pickContentEncoding(
@@ -8523,7 +8523,7 @@ const getRawResponse = async ({ fileUrl, fileStat }) => {
   return {
     status: 200,
     headers: {
-      "content-type": CONTENT_TYPE.fromUrlExtension(fileUrl),
+      "content-type": CONTENT_TYPE$1.fromUrlExtension(fileUrl),
       "content-length": fileStat.size,
     },
     body: fileUrlToReadableStream(fileUrl),
@@ -11748,6 +11748,207 @@ const watchSourceFiles = (
 };
 
 const jsenvCoreDirectoryUrl = new URL("../", import.meta.url);
+
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json", "map"],
+    isTextual: true,
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true,
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true,
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"],
+  },
+  "application/xml": {
+    extensions: ["xml"],
+    isTextual: true,
+  },
+  "application/x-gzip": {
+    extensions: ["gz"],
+  },
+  "application/yaml": {
+    extensions: ["yml", "yaml"],
+    isTextual: true,
+  },
+  "application/wasm": {
+    extensions: ["wasm"],
+  },
+  "application/zip": {
+    extensions: ["zip"],
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"],
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"],
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"],
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"],
+  },
+  "audio/webm": {
+    extensions: ["weba"],
+  },
+  "audio/x-wav": {
+    extensions: ["wav"],
+  },
+  "font/ttf": {
+    extensions: ["ttf"],
+  },
+  "font/woff": {
+    extensions: ["woff"],
+  },
+  "font/woff2": {
+    extensions: ["woff2"],
+  },
+  "image/png": {
+    extensions: ["png"],
+  },
+  "image/gif": {
+    extensions: ["gif"],
+  },
+  "image/jpeg": {
+    extensions: ["jpg"],
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true,
+  },
+  "text/plain": {
+    extensions: ["txt"],
+    isTextual: true,
+  },
+  "text/html": {
+    extensions: ["html"],
+    isTextual: true,
+  },
+  "text/css": {
+    extensions: ["css"],
+    isTextual: true,
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+    isTextual: true,
+  },
+  "text/markdown": {
+    extensions: ["md", "mdx"],
+    isTextual: true,
+  },
+  "text/x-sass": {
+    extensions: ["sass"],
+    isTextual: true,
+  },
+  "text/x-scss": {
+    extensions: ["scss"],
+    isTextual: true,
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"],
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"],
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
+  },
+  "video/ogg": {
+    extensions: ["ogv"],
+  },
+  "video/webm": {
+    extensions: ["webm"],
+  },
+};
+
+const CONTENT_TYPE = {
+  parse: (string) => {
+    const [mediaType, charset] = string.split(";");
+    return { mediaType: normalizeMediaType(mediaType), charset };
+  },
+
+  stringify: ({ mediaType, charset }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+    return mediaType;
+  },
+
+  asMediaType: (value) => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
+    }
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+    return null;
+  },
+
+  isJson: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return (
+      mediaType === "application/json" ||
+      /^application\/\w+\+json$/.test(mediaType)
+    );
+  },
+
+  isTextual: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    }
+    // catch things like application/manifest+json, application/importmap+json
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+    return false;
+  },
+
+  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
+
+  asFileExtension: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+
+  fromUrlExtension: (url) => {
+    const { pathname } = new URL(url);
+    const extensionWithDot = extname(pathname);
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+    const extension = extensionWithDot.slice(1);
+    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
+      const mediaTypeInfo = mediaTypeInfos[mediaType];
+      return (
+        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
+      );
+    });
+    return mediaTypeFound || "application/octet-stream";
+  },
+};
+
+const normalizeMediaType = (value) => {
+  if (value === "application/javascript") {
+    return "text/javascript";
+  }
+  return value;
+};
 
 const jsenvPluginHtmlSyntaxErrorFallback = () => {
   const htmlSyntaxErrorFileUrl = new URL(
