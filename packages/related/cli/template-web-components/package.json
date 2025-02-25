@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "npm run dev -- --open",
-    "dev": "node ./scripts/dev.mjs",
+    "dev": "node --watch ./scripts/dev.mjs",
     "test": "node ./scripts/test.mjs",
     "test:coverage": "npm run test -- --coverage",
     "build": "node ./scripts/build.mjs",
