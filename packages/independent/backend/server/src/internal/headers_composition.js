@@ -8,13 +8,18 @@ export const composeTwoHeaders = (firstHeaders, secondHeaders) => {
 };
 
 const composeHeaderValues = (value, nextValue) => {
-  const headerValues = value.split(", ");
-  nextValue.split(", ").forEach((value) => {
-    if (!headerValues.includes(value)) {
-      headerValues.push(value);
+  const currentValues = value
+    .split(", ")
+    .map((part) => part.trim().toLowercase());
+  const nextValues = nextValue
+    .split(", ")
+    .map((part) => part.trim().toLowercase());
+  for (const nextValue of nextValues) {
+    if (!currentValues.includes(nextValue)) {
+      currentValues.push(nextValue);
     }
-  });
-  return headerValues.join(", ");
+  }
+  return currentValues.join(", ");
 };
 
 const HEADER_NAMES_COMPOSITION = {
