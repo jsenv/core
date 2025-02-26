@@ -17,61 +17,159 @@
   </head>
   <body>
     <div id="app"></div>
+
+    <style>
+      .progress-container {
+        width: 100%;
+        height: 100%;
+        background-color: rgba(25, 118, 210, 0.2);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+        margin: 20px 0;
+      }
+      .progress-indeterminate .progress-bar-long,
+      .progress-indeterminate .progress-bar-short {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        background-color: #1976d2;
+        border-radius: 4px;
+        animation-duration: 2.2s;
+        animation-iteration-count: infinite;
+      }
+
+      .progress-indeterminate .progress-bar-long {
+        animation-name: indeterminate-ltr;
+        width: 75%;
+      }
+
+      .progress-indeterminate .progress-bar-short {
+        animation-name: indeterminate-short-ltr;
+        width: 20%;
+      }
+
+      @keyframes indeterminate-ltr {
+        0% {
+          left: -90%;
+          right: 100%;
+        }
+        60% {
+          left: -90%;
+          right: 100%;
+        }
+        100% {
+          left: 100%;
+          right: -35%;
+        }
+      }
+
+      @keyframes indeterminate-short-ltr {
+        0% {
+          left: -200%;
+          right: 100%;
+        }
+        60% {
+          left: 107%;
+          right: -8%;
+        }
+        100% {
+          left: 107%;
+          right: -8%;
+        }
+      }
+
+      /* Styles pour les routes */
+      .route-list {
+        margin-top: 20px;
+      }
+      .route-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .route-method {
+        font-weight: bold;
+        min-width: 60px;
+      }
+      .route-resource {
+        margin-left: 8px;
+      }
+    </style>
     <script type="module">
       import { render } from "preact";
       import { html } from "htm/preact";
+      import { signal } from "@preact/signals";
 
-      // now we do a fetch to get the list of routes and we display something nice, swagger like
+      const routesLoadingSignal = signal(false);
+      const routeLoadingError = signal(null);
+      const routesSignal = signal([]);
 
-      export function App() {
-        return html`<h1>Hello, World!</h1>`;
-      }
+      const loadRoutes = async () => {
+        routesLoadingSignal.value = true;
+        try {
+          const response = await fetch(window.location.href, {
+            headers: {
+              accept: "application/json",
+            },
+          });
+          const routes = await response.json();
+          routesLoadingSignal.value = false;
+          routesSignal.value = routes;
+        } catch (e) {
+          routesLoadingSignal.value = false;
+          routeLoadingError.value = e;
+          throw e;
+        }
+      };
+      loadRoutes();
+
+      const ProgressBar = ({ width = "100%", height = 6, loading }) => {
+        if (!loading) {
+          return null;
+        }
+        return html`
+          <div
+            class="progress-bar"
+            style=${{
+              width: typeof Number(width) === "number" ? `${width}px` : width,
+              height:
+                typeof Number(height) === "number" ? `${height}px` : height,
+            }}
+          >
+            <div class="progress-container progress-indeterminate">
+              <div class="progress-bar-long"></div>
+              <div class="progress-bar-short"></div>
+            </div>
+          </div>
+        `;
+      };
+
+      const App = () => {
+        const routes = routesSignal.value;
+        const loading = routesLoadingSignal.value;
+
+        return html`
+          <h1>Route inspector</h1>
+          ${loading ? html`<p>Loading...</p>` : null}
+          <${ProgressBar} width="150" loading=${loading} />
+          <${RouteList} routes=${routes} />
+        `;
+      };
+      const RouteList = ({ routes }) => {
+        return html`<div>
+          ${routes.map((route) => html`<${Route} ...${route} />`)}
+        </div>`;
+      };
+      const Route = ({ method, resource }) => {
+        return html`<div style="display: flex">
+          <span>${method}</span>
+          <p>${resource}</p>
+        </div>`;
+      };
 
       render(html`<${App} />`, document.getElementById("app"));
     </script>
-
-    <script>
-      const autoreloadOnServerReconnect = async () => {
-        const connect = () => {
-          const websocket = new WebSocket(websocketUrl, ["jsenv_server"]);
-          const connectedPromise = new Promise((resolve) => {
-            websocket.onerror = () => {
-              resolve(null);
-            };
-            websocket.onopen = () => {
-              resolve(websocket);
-            };
-          });
-          return connectedPromise;
-        };
-
-        const websocketScheme =
-          self.location.protocol === "https:" ? "wss" : "ws";
-        const websocketUrl = `${websocketScheme}://${self.location.host}${self.location.pathname}${self.location.search}`;
-        const initialWebSocket = await connect();
-        initialWebSocket.onclose = async () => {
-          console.info("connection to server lost, trying to reconnect");
-          let attemptCount = 0;
-          const tryToReconnect = async () => {
-            const newWebsocket = await connect();
-            if (newWebsocket) {
-              console.info("reconnected to server, reloading the page...");
-              window.location.reload(true);
-              return;
-            }
-            attemptCount++;
-            if (attemptCount === 5) {
-              console.info("failed to reconnect to server");
-              return;
-            }
-            // retry after a delay
-            await new Promise((resolve) => setTimeout(resolve, 200));
-            await tryToReconnect();
-          };
-          await tryToReconnect();
-        };
-      };
-      autoreloadOnServerReconnect();
-    </script>
+    <script src="/jsenv_autoreload_on_server_restart.js"></script>
   </body>
 </html>
