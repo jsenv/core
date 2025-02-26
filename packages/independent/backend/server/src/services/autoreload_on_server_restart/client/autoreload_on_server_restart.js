@@ -97,14 +97,12 @@ if (!customElements.get("jsenv-autoreload-on-server-restart")) {
 
 const jsenvAutoreloadOnServerRestartElement =
   new JsenvAutoreloadOnServerRestart({
-    url:
-      document.currentScript.getAttribute("url") ||
-      (() => {
-        const websocketScheme =
-          self.location.protocol === "https:" ? "wss" : "ws";
-        const websocketUrl = `${websocketScheme}://${self.location.host}${self.location.pathname}${self.location.search}`;
-        return websocketUrl;
-      })(),
+    url: (() => {
+      const websocketScheme =
+        self.location.protocol === "https:" ? "wss" : "ws";
+      const websocketUrl = `${websocketScheme}://${self.location.host}${self.location.pathname}${self.location.search}`;
+      return websocketUrl;
+    })(),
   });
 
 document.currentScript.parentNode.replaceChild(

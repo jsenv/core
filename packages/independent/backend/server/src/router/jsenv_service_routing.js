@@ -13,7 +13,8 @@ export const jsenvServiceRouting = (routes) => {
   router.add({
     endpoint: "GET /__inspect__/routes",
     availableContentTypes: ["text/html"],
-    response: () => {
+    response: (request) => {
+      debugger;
       const inspectorHtml = readFileSync(
         new URL(routeInspectorHtmlFileUrl),
         "utf8",
@@ -26,7 +27,8 @@ export const jsenvServiceRouting = (routes) => {
   router.add({
     endpoint: "GET /__inspect__/routes",
     availableContentTypes: ["application/json"],
-    response: () => {
+    response: (request) => {
+      debugger;
       const routeJSON = router.inspect();
       return Response.json(routeJSON);
     },
@@ -50,13 +52,6 @@ export const jsenvServiceRouting = (routes) => {
         headersToInjectMap.delete(request);
       });
       return response;
-    },
-    handleWebsocket: (websocket) => {
-      if (websocket.protocol === "jsenv_server") {
-        websocket.send("Hello world");
-        return true;
-      }
-      return false;
     },
     injectResponseHeaders: (response, { request }) => {
       const headers = headersToInjectMap.get(request);

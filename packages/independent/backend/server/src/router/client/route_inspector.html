@@ -97,6 +97,7 @@
       }
     </style>
     <script type="module">
+      // https://preactjs.com/guide/v10/no-build-workflows/
       import { render } from "preact";
       import { html } from "htm/preact";
       import { signal } from "@preact/signals";
@@ -170,6 +171,6 @@
 
       render(html`<${App} />`, document.getElementById("app"));
     </script>
-    <script src="/jsenv_autoreload_on_server_restart.js"></script>
+    <script src="/@jsenv/server/src/router/client/jsenv_autoreload_on_server_restart.js"></script>
   </body>
 </html>

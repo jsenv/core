@@ -1,6 +1,7 @@
 import { jsenvServiceRouting } from "./router/jsenv_service_routing.js";
 import { timeStart } from "./server_timing/timing_measure.js";
 import { jsenvServiceAutoreloadOnRestart } from "./services/autoreload_on_server_restart/jsenv_service_autoreload_on_server_restart.js";
+import { jsenvServiceInternalClientFiles } from "./services/internal_client_files/jsenv_service_internal_client_files.js";
 
 const HOOK_NAMES = [
   "serverListening",
@@ -16,7 +17,11 @@ const HOOK_NAMES = [
 ];
 
 export const createServiceController = (services, { routesFromParam }) => {
-  const flatServices = flattenAndFilterServices(services);
+  const flatServices = [
+    jsenvServiceInternalClientFiles(),
+    jsenvServiceAutoreloadOnRestart(),
+    ...flattenAndFilterServices(services),
+  ];
   const hookSetMap = new Map();
 
   const addHook = (hook) => {
@@ -54,7 +59,6 @@ export const createServiceController = (services, { routesFromParam }) => {
   };
 
   const routes = [...routesFromParam];
-  flatServices.unshift(jsenvServiceAutoreloadOnRestart());
   for (const flatService of flatServices) {
     const serviceRoutes = flatService.routes;
     if (serviceRoutes) {
