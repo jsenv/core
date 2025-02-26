@@ -148,6 +148,20 @@ export const createRouter = () => {
     };
   };
 
+  /**
+   * Adds a route to the router.
+   *
+   * @param {Object} params - Route configuration object
+   * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
+   * @param {Object} [params.headers] - Optional headers pattern to match
+   * @param {Array<string>} [params.availableContentTypes=[]] - Content types this route can produce
+   * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
+   * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
+   * @param {Array<string>} [params.acceptedContentTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
+   * @param {Function} params.response - Function to generate response for matching requests
+   * @throws {TypeError} If endpoint is not a string
+   * @returns {void}
+   */
   const add = ({
     endpoint,
     headers,
@@ -157,6 +171,9 @@ export const createRouter = () => {
     acceptedContentTypes = [], // useful only for POST/PATCH/PUT
     response,
   }) => {
+    if (!endpoint || typeof endpoint !== "string") {
+      throw new TypeError(`endpoint must be a string, received ${endpoint}`);
+    }
     const [method, resource] = endpoint.split(" ");
     const resourcePattern = createResourcePattern(resource);
     const headersPattern = headers ? createHeadersPattern(headers) : null;
@@ -187,6 +204,16 @@ export const createRouter = () => {
       response,
       toString: () => {
         return `${method} ${resource}`;
+      },
+      toJSON: () => {
+        return {
+          method,
+          resource,
+          availableContentTypes,
+          availableLanguages,
+          availableEncodings,
+          acceptedContentTypes,
+        };
       },
       resourcePattern,
     };
@@ -306,7 +333,16 @@ export const createRouter = () => {
     const availableEndpoints = constructAvailableEndpoints(request);
     return createRouteNotFoundResponse(request, { availableEndpoints });
   };
-  return { add, match };
+  const inspect = () => {
+    // I want all the info I can gather about the routes
+    const data = [];
+    for (const route of routeSet) {
+      data.push(route.toJSON());
+    }
+    return data;
+  };
+
+  return { add, match, inspect };
 };
 
 const isRequestBodyContentTypeSupported = (
