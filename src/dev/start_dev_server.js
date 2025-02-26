@@ -157,14 +157,12 @@ export const startDevServer = async ({
       name: "jsenv:server_header",
       routes: [
         {
-          url: "*",
-          method: "GET",
+          endpoint: "GET *",
           headers: { "x-server-inspect": "*" },
           response: () => ({ status: 200 }),
         },
         {
-          url: "/__params__.json",
-          method: "GET",
+          endpoint: "GET /__params__.json",
           response: () => Response.json({ sourceDirectoryUrl }),
         },
       ],
@@ -373,8 +371,7 @@ export const startDevServer = async ({
       name: "jsenv:omega_file_service",
       routes: [
         {
-          url: "*",
-          method: "GET",
+          endpoint: "GET *",
           response: async (request) => {
             const kitchen = getOrCreateKitchen(request);
             const serveHookInfo = {
