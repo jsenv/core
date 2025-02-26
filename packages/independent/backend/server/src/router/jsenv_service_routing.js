@@ -51,6 +51,13 @@ export const jsenvServiceRouting = (routes) => {
       });
       return response;
     },
+    handleWebsocket: (websocket) => {
+      if (websocket.protocol === "jsenv_server") {
+        websocket.send("Hello world");
+        return true;
+      }
+      return false;
+    },
     injectResponseHeaders: (response, { request }) => {
       const headers = headersToInjectMap.get(request);
       headersToInjectMap.delete(request);

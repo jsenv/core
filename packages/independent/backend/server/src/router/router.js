@@ -8,6 +8,7 @@ import { pickContentType } from "../content_negotiation/pick_content_type.js";
 import { replacePlaceholdersInHtml } from "./replace_placeholder_in_html.js";
 
 const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/4xx.html");
+const endpointInspectorUrl = `/__inspect__/routes`;
 
 const HTTP_METHODS = [
   "OPTIONS",
@@ -384,7 +385,6 @@ const createServerResourceOptionsResponse = (
     );
   }
   // text/plain
-  const endpointInspectorUrl = `/__inspect__/routes`;
   return new Response(
     `The list of endpoints available can be seen at ${endpointInspectorUrl}`,
     { status: 200, headers },
@@ -444,24 +444,16 @@ Supported media types: <strong>${acceptedContentTypes.join(", ")}</strong>`
     },
   });
 };
-const createRouteNotFoundResponse = (request, { availableEndpoints }) => {
+const createRouteNotFoundResponse = (request) => {
   return createClientErrorResponse(request, {
     status: 404,
     statusText: "Not Found",
     message: {
-      text: `The URL ${request.ressource} does not exists on this server.
-The following urls are available: ${availableEndpoints.join("\n")}`,
-      html: `The URL <strong>${request.ressource}</strong> does not exists on this server.<br />
-The following urls are available:
-<ul>
-  ${availableEndpoints.map((availableEndpoint) => {
-    return `
-<li>
-    <a href="${availableEndpoint.resource}">${availableEndpoint.method} ${availableEndpoint.resource}</a>
-</li>
-    `;
-  })}
-</ul>`,
+      text: `The URL ${request.resource} does not exists on this server.
+The list of existing endpoints is available at ${endpointInspectorUrl}`,
+      html: `The URL <strong>${request.resource}</strong> does not exists on this server.<br />
+The list of existing endpoints is available at:
+<a href="${endpointInspectorUrl}">${endpointInspectorUrl}</a>`,
     },
   });
 };
@@ -482,6 +474,8 @@ const createClientErrorResponse = (
     );
     const html = replacePlaceholdersInHtml(htmlTemplate, {
       message: message.html,
+      status,
+      statusText,
       ...data,
     });
     return new Response(html, {
