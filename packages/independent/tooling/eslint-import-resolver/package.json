@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "rollup": "4.31.0",
+    "@jsenv/ast": "6.5.2",
     "@jsenv/filesystem": "../filesystem/",
     "@jsenv/importmap": "1.2.1",
     "@jsenv/node-esm-resolution": "1.0.7"

@@ -1,22 +1,11 @@
 import { resolveImport } from "@jsenv/importmap";
 
-import { readImportmap } from "./read_importmap.js";
-
 export const applyImportmapResolution = (
   specifier,
-  {
-    logger,
-    rootDirectoryUrl,
-    importmapFileRelativeUrl,
-    importDefaultExtension,
-    importer,
-  },
+  importer,
+  importmap,
+  { logger, importDefaultExtension },
 ) => {
-  const importmap = readImportmap({
-    logger,
-    rootDirectoryUrl,
-    importmapFileRelativeUrl,
-  });
   try {
     return resolveImport({
       specifier,

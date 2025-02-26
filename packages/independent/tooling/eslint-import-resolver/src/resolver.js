@@ -15,11 +15,13 @@ import {
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
-import { urlToFileSystemPath } from "@jsenv/urls";
+import { urlToExtension, urlToFileSystemPath } from "@jsenv/urls";
 import { createRequire } from "node:module";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { parseHtmlForImportmap } from "./find_importmap_in_html_file.js";
 import { applyImportmapResolution } from "./importmap_resolution.js";
 import { createLogger } from "./logger.js";
+import { readImportmapFromFile } from "./read_importmap.js";
 import { applyUrlResolution } from "./url_resolution.js";
 
 export const interfaceVersion = 2;
@@ -149,19 +151,20 @@ ${packageConditions.join(",")}`);
         resolvedBy: "url",
       });
     }
-    if (importmapFileRelativeUrl) {
-      const urlFromImportmap = applyImportmapResolution(specifier, {
-        logger,
-        rootDirectoryUrl,
-        importmapFileRelativeUrl,
-        importer,
+
+    const importmapResolution = tryToResolveWithImportmap({
+      rootDirectoryUrl,
+      importmapFileRelativeUrl,
+      logger,
+      specifier,
+      importer,
+    });
+    if (importmapResolution) {
+      return onUrl(importmapResolution.url, {
+        resolvedBy: importmapResolution.resolvedBy,
       });
-      if (urlFromImportmap) {
-        return onUrl(urlFromImportmap, {
-          resolvedBy: "importmap",
-        });
-      }
     }
+
     const moduleSystem = determineModuleSystem(importer, {
       ambiguousExtensions,
     });
@@ -225,6 +228,84 @@ ${e.stack}`);
       found: false,
       path: null,
     };
+  }
+};
+
+const tryToResolveWithImportmap = ({
+  rootDirectoryUrl,
+  importmapFileRelativeUrl,
+  logger,
+  specifier,
+  importer,
+}) => {
+  try {
+    const extension = urlToExtension(importer);
+    if (extension === ".html") {
+      const importmap = parseHtmlForImportmap(importer);
+      if (importmap) {
+        const urlFromImportmap = applyImportmapResolution(
+          specifier,
+          importer,
+          importmap,
+          {
+            logger,
+          },
+        );
+        if (urlFromImportmap) {
+          return {
+            url: urlFromImportmap,
+            resolvedBy: "importmap_inside_html",
+          };
+        }
+      }
+    }
+    if (importmapFileRelativeUrl) {
+      if (typeof importmapFileRelativeUrl === "undefined") {
+        return null;
+      }
+      if (typeof importmapFileRelativeUrl !== "string") {
+        throw new TypeError(
+          `importmapFileRelativeUrl must be a string, got ${importmapFileRelativeUrl}`,
+        );
+      }
+      const importmapFileUrl = applyUrlResolution(
+        importmapFileRelativeUrl,
+        rootDirectoryUrl,
+      );
+      if (!importmapFileUrl.startsWith(`${rootDirectoryUrl}`)) {
+        logger.warn(`import map file is outside root directory.
+--- import map file ---
+${fileURLToPath(importmapFileUrl)}
+--- root directory ---
+${fileURLToPath(rootDirectoryUrl)}`);
+      }
+      const importmap = readImportmapFromFile(importmapFileUrl);
+      const urlFromImportmap = applyImportmapResolution(
+        specifier,
+        importer,
+        importmap,
+        { logger },
+      );
+      if (urlFromImportmap) {
+        return {
+          url: urlFromImportmap,
+          resolvedBy: "importmap_from_param",
+        };
+      }
+    }
+    return null;
+  } catch (e) {
+    if (e && e.code === "SyntaxError") {
+      logger.error(`syntax error in importmap
+--- error stack ---
+${e.stack}`);
+      return null;
+    }
+    if (e && e.code === "ENOENT") {
+      logger.error(`importmap file not found`);
+      return null;
+    }
+    throw e;
   }
 };
 
