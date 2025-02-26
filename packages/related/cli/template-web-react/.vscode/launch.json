@@ -6,6 +6,27 @@
       "type": "node",
       "request": "launch",
       "program": "${file}",
+      "runtimeArgs": ["--inspect"],
+      "console": "integratedTerminal",
+      "autoAttachChildProcesses": true,
+      "sourceMaps": true,
+      "smartStep": true,
+      "skipFiles": [
+        // force-array-multiline
+        // "node_modules/**",
+        "node_modules/playwright/**",
+        "node_modules/playwright-chromium/**",
+        "node_modules/playwright-webkit/**",
+        "node_modules/playwright-firefox/**",
+        "node_modules/playwright-core/**",
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "node watch",
+      "type": "node",
+      "request": "launch",
+      "program": "${file}",
       "runtimeArgs": ["--inspect", "--watch"],
       "console": "integratedTerminal",
       "autoAttachChildProcesses": true,
