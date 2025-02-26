@@ -14,11 +14,11 @@ export const jsenvServiceRouting = (routes) => {
     endpoint: "GET __inspect__/routes",
     availableContentTypes: ["text/html"],
     response: () => {
-      const routeInspectorHtml = readFileSync(
+      const inspectorHtml = readFileSync(
         new URL(routeInspectorHtmlFileUrl),
         "utf8",
       );
-      return new Response(routeInspectorHtml, {
+      return new Response(inspectorHtml, {
         headers: { "content-type": "html" },
       });
     },

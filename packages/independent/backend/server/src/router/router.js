@@ -384,9 +384,9 @@ const createServerResourceOptionsResponse = (
     );
   }
   // text/plain
-  const endpointUIUrl = `${request.origin}/TODO`;
+  const endpointInspectorUrl = `/__inspect__/routes`;
   return new Response(
-    `The list of endpoints available can be seen at ${endpointUIUrl}`,
+    `The list of endpoints available can be seen at ${endpointInspectorUrl}`,
     { status: 200, headers },
   );
 };

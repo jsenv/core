@@ -65,6 +65,7 @@
     "test:packages:ci": "CI=1 npm run workspace:test",
     "test:only_dev_server_errors": "node --conditions=development ./tests/dev_server/errors/dev_errors_snapshots.test.mjs",
     "dev": "node --watch --conditions=development ./scripts/dev/dev.mjs",
+    "dev:route-inspector": "node --watch --conditions=development ./packages/independent/backend/server/tests/route_inspector/start_server.js",
     "playwright:install": "npx playwright install-deps && npx playwright install",
     "https:setup": "npx @jsenv/https-local setup",
     "prepublishOnly": "npm run build"
