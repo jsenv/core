@@ -1,5 +1,6 @@
 import { jsenvServiceRouting } from "./router/jsenv_service_routing.js";
 import { timeStart } from "./server_timing/timing_measure.js";
+import { jsenvServiceAutoreloadOnRestart } from "./services/autoreload_on_server_restart/jsenv_service_autoreload_on_server_restart.js";
 
 const HOOK_NAMES = [
   "serverListening",
@@ -53,6 +54,7 @@ export const createServiceController = (services, { routesFromParam }) => {
   };
 
   const routes = [...routesFromParam];
+  flatServices.unshift(jsenvServiceAutoreloadOnRestart());
   for (const flatService of flatServices) {
     const serviceRoutes = flatService.routes;
     if (serviceRoutes) {

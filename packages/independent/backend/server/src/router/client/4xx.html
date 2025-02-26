@@ -56,48 +56,6 @@
       <p class="error_message">${message}</p>
       <a href="/" class="home_link">Return to Home</a>
     </div>
-    <script>
-      const autoreloadOnServerReconnect = async () => {
-        const connect = () => {
-          const websocket = new WebSocket(websocketUrl, ["jsenv_server"]);
-          const connectedPromise = new Promise((resolve) => {
-            websocket.onerror = () => {
-              resolve(null);
-            };
-            websocket.onopen = () => {
-              resolve(websocket);
-            };
-          });
-          return connectedPromise;
-        };
-
-        const websocketScheme =
-          self.location.protocol === "https:" ? "wss" : "ws";
-        const websocketUrl = `${websocketScheme}://${self.location.host}${self.location.pathname}${self.location.search}`;
-        const initialWebSocket = await connect();
-        initialWebSocket.onclose = async () => {
-          console.info("connection to server lost, trying to reconnect");
-          let attemptCount = 0;
-          const tryToReconnect = async () => {
-            const newWebsocket = await connect();
-            if (newWebsocket) {
-              console.info("reconnected to server, reloading the page...");
-              window.location.reload(true);
-              return;
-            }
-            attemptCount++;
-            if (attemptCount === 5) {
-              console.info("failed to reconnect to server");
-              return;
-            }
-            // retry after a delay
-            await new Promise((resolve) => setTimeout(resolve, 200));
-            await tryToReconnect();
-          };
-          await tryToReconnect();
-        };
-      };
-      autoreloadOnServerReconnect();
-    </script>
+    <script src="/jsenv_autoreload_on_server_restart.js"></script>
   </body>
 </html>
