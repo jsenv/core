@@ -11,7 +11,7 @@ export const jsenvServiceRouting = (routes) => {
     router.add(route);
   }
   router.add({
-    endpoint: "GET __inspect__/routes",
+    endpoint: "GET /__inspect__/routes",
     availableContentTypes: ["text/html"],
     response: () => {
       const inspectorHtml = readFileSync(
@@ -24,7 +24,7 @@ export const jsenvServiceRouting = (routes) => {
     },
   });
   router.add({
-    endpoint: "GET __inspect__/routes",
+    endpoint: "GET /__inspect__/routes",
     availableContentTypes: ["application/json"],
     response: () => {
       const routeJSON = router.inspect();

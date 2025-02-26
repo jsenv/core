@@ -176,6 +176,12 @@ export const createRouter = () => {
       throw new TypeError(`endpoint must be a string, received ${endpoint}`);
     }
     const [method, resource] = endpoint.split(" ");
+    if (!HTTP_METHODS.includes(method)) {
+      throw new TypeError(`Invalid HTTP method: ${method}`);
+    }
+    if (resource[0] !== "/") {
+      throw new TypeError(`Resource must start with /, received ${resource}`);
+    }
     const resourcePattern = createResourcePattern(resource);
     const headersPattern = headers ? createHeadersPattern(headers) : null;
 
