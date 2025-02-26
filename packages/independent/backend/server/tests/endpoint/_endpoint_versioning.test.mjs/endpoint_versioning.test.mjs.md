@@ -1,4 +1,4 @@
-# [api_patch_content_type.test.mjs](../api_patch_content_type.test.mjs)
+# [endpoint_versioning.test.mjs](../endpoint_versioning.test.mjs)
 
 
 - [0_basic](0_basic/0_basic.md)

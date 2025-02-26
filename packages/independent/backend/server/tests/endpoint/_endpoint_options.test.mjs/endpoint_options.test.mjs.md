@@ -1,4 +1,4 @@
-# [api_options.test.mjs](../api_options.test.mjs)
+# [endpoint_options.test.mjs](../endpoint_options.test.mjs)
 
 
 - [0_basic](0_basic/0_basic.md)

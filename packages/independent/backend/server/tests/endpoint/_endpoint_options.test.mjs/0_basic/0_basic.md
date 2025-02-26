@@ -1,4 +1,4 @@
-# [0_basic](../../api_options.test.mjs#L24)
+# [0_basic](../../endpoint_options.test.mjs#L24)
 
 ```js
 const routes = [

@@ -1,4 +1,4 @@
-# [0_basic](../../api_versioning.test.mjs#L28)
+# [0_basic](../../endpoint_versioning.test.mjs#L28)
 
 ```js
 const routes = [
