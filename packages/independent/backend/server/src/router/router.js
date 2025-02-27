@@ -318,6 +318,9 @@ export const createRouter = () => {
         }
         return true;
       }
+      if (websocket) {
+        continue;
+      }
       let responseReturnValue = route.response(
         request,
         {

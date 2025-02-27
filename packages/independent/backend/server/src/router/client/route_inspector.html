@@ -107,21 +107,21 @@
       const routesSignal = signal([]);
 
       const loadRoutes = async () => {
-        routesLoadingSignal.value = true;
-        try {
-          const response = await fetch(window.location.href, {
-            headers: {
-              accept: "application/json",
-            },
-          });
-          const routes = await response.json();
-          routesLoadingSignal.value = false;
-          routesSignal.value = routes;
-        } catch (e) {
-          routesLoadingSignal.value = false;
-          routeLoadingError.value = e;
-          throw e;
-        }
+        // routesLoadingSignal.value = true;
+        // try {
+        //   const response = await fetch(window.location.href, {
+        //     headers: {
+        //       accept: "application/json",
+        //     },
+        //   });
+        //   const routes = await response.json();
+        //   routesLoadingSignal.value = false;
+        //   routesSignal.value = routes;
+        // } catch (e) {
+        //   routesLoadingSignal.value = false;
+        //   routeLoadingError.value = e;
+        //   throw e;
+        // }
       };
       loadRoutes();
 

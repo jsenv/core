@@ -1,7 +1,6 @@
 import { raceCallbacks } from "@jsenv/abort";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
-
 import { normalizeBodyMethods } from "./body.js";
 
 export const writeNodeResponse = async (
