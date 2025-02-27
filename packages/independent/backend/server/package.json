@@ -38,16 +38,17 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "string-width": "7.2.0",
+    "@jsenv/router": "0.0.8"
+  },
+  "devDependencies": {
+    "eventsource": "3.0.2",
+    "undici": "7.2.3",
+    "ws": "8.18.0",
     "@jsenv/abort": "4.3.0",
     "formidable": "3.5.2",
     "@jsenv/humanize": "1.2.8",
     "@jsenv/url-meta": "8.5.3",
-    "@jsenv/utils": "2.1.2",
-    "@jsenv/router": "0.0.8",
-    "ws": "8.18.0"
-  },
-  "devDependencies": {
-    "eventsource": "3.0.2",
-    "undici": "7.2.3"
+    "@jsenv/utils": "2.1.2"
   }
 }

@@ -1,13 +1,14 @@
-import { Abort, raceCallbacks, raceProcessTeardownEvents } from "@jsenv/abort";
-import { createDetailedMessage, createLogger } from "@jsenv/humanize";
-import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
+import process$1 from "node:process";
+import os, { networkInterfaces } from "node:os";
+import tty from "node:tty";
+import "string-width";
 import cluster from "node:cluster";
 import http from "node:http";
 import net, { createServer, isIP } from "node:net";
 import { createReadStream, readFileSync, readdirSync, lstatSync, statSync, readFile } from "node:fs";
 import { Readable, Stream, Writable } from "node:stream";
 import { ReadableStream } from "node:stream/web";
-import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { extname } from "node:path";
 import { parse as parse$1 } from "node:querystring";
 import { Http2ServerResponse } from "node:http2";
 import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
@@ -15,10 +16,1031 @@ import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
 import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
 import { performance as performance$1 } from "node:perf_hooks";
 import { lookup } from "node:dns";
-import { networkInterfaces } from "node:os";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
-import { URL_META } from "@jsenv/url-meta";
+
+const createCallbackListNotifiedOnce = () => {
+  let callbacks = [];
+  let status = "waiting";
+  let currentCallbackIndex = -1;
+
+  const callbackListOnce = {};
+
+  const add = (callback) => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({ action: "add", status });
+      return removeNoop;
+    }
+
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    }
+
+    // don't register twice
+    const existingCallback = callbacks.find((callbackCandidate) => {
+      return callbackCandidate === callback;
+    });
+    if (existingCallback) {
+      emitCallbackDuplicationWarning();
+      return removeNoop;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      if (status === "notified") {
+        // once called removing does nothing
+        // as the callbacks array is frozen to null
+        return;
+      }
+
+      const index = callbacks.indexOf(callback);
+      if (index === -1) {
+        return;
+      }
+
+      if (status === "looping") {
+        if (index <= currentCallbackIndex) {
+          // The callback was already called (or is the current callback)
+          // We don't want to mutate the callbacks array
+          // or it would alter the looping done in "call" and the next callback
+          // would be skipped
+          return;
+        }
+
+        // Callback is part of the next callback to call,
+        // we mutate the callbacks array to prevent this callback to be called
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = (param) => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({ action: "call", status });
+      return [];
+    }
+    status = "looping";
+    const values = callbacks.map((callback, index) => {
+      currentCallbackIndex = index;
+      return callback(param);
+    });
+    callbackListOnce.notified = true;
+    status = "notified";
+    // we reset callbacks to null after looping
+    // so that it's possible to remove during the loop
+    callbacks = null;
+    currentCallbackIndex = -1;
+
+    return values;
+  };
+
+  callbackListOnce.notified = false;
+  callbackListOnce.add = add;
+  callbackListOnce.notify = notify;
+
+  return callbackListOnce;
+};
+
+const emitUnexpectedActionWarning = ({ action, status }) => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(
+      `"${action}" should not happen when callback list is ${status}`,
+      {
+        CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
+        detail: `Code is potentially executed when it should not`,
+      },
+    );
+  } else {
+    console.warn(
+      `"${action}" should not happen when callback list is ${status}`,
+    );
+  }
+};
+
+const emitCallbackDuplicationWarning = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`,
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop = () => {};
+
+/*
+ * See callback_race.md
+ */
+
+const raceCallbacks = (raceDescription, winnerCallback) => {
+  let cleanCallbacks = [];
+  let status = "racing";
+
+  const clean = () => {
+    cleanCallbacks.forEach((clean) => {
+      clean();
+    });
+    cleanCallbacks = null;
+  };
+
+  const cancel = () => {
+    if (status !== "racing") {
+      return;
+    }
+    status = "cancelled";
+    clean();
+  };
+
+  Object.keys(raceDescription).forEach((candidateName) => {
+    const register = raceDescription[candidateName];
+    const returnValue = register((data) => {
+      if (status !== "racing") {
+        return;
+      }
+      status = "done";
+      clean();
+      winnerCallback({
+        name: candidateName,
+        data,
+      });
+    });
+    if (typeof returnValue === "function") {
+      cleanCallbacks.push(returnValue);
+    }
+  });
+
+  return cancel;
+};
+
+/*
+ * https://github.com/whatwg/dom/issues/920
+ */
+
+
+const Abort = {
+  isAbortError: (error) => {
+    return error && error.name === "AbortError";
+  },
+
+  startOperation: () => {
+    return createOperation();
+  },
+
+  throwIfAborted: (signal) => {
+    if (signal.aborted) {
+      const error = new Error(`The operation was aborted`);
+      error.name = "AbortError";
+      error.type = "aborted";
+      throw error;
+    }
+  },
+};
+
+const createOperation = () => {
+  const operationAbortController = new AbortController();
+  // const abortOperation = (value) => abortController.abort(value)
+  const operationSignal = operationAbortController.signal;
+
+  // abortCallbackList is used to ignore the max listeners warning from Node.js
+  // this warning is useful but becomes problematic when it's expect
+  // (a function doing 20 http call in parallel)
+  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
+  // uses abortCallbackList to know when something is aborted
+  const abortCallbackList = createCallbackListNotifiedOnce();
+  const endCallbackList = createCallbackListNotifiedOnce();
+
+  let isAbortAfterEnd = false;
+
+  operationSignal.onabort = () => {
+    operationSignal.onabort = null;
+
+    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
+    if (!isAbortAfterEnd) {
+      addEndCallback(async () => {
+        await allAbortCallbacksPromise;
+      });
+    }
+  };
+
+  const throwIfAborted = () => {
+    Abort.throwIfAborted(operationSignal);
+  };
+
+  // add a callback called on abort
+  // differences with signal.addEventListener('abort')
+  // - operation.end awaits the return value of this callback
+  // - It won't increase the count of listeners for "abort" that would
+  //   trigger max listeners warning when count > 10
+  const addAbortCallback = (callback) => {
+    // It would be painful and not super redable to check if signal is aborted
+    // before deciding if it's an abort or end callback
+    // with pseudo-code below where we want to stop server either
+    // on abort or when ended because signal is aborted
+    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
+    //   await server.stop()
+    // })
+    if (operationSignal.aborted) {
+      return addEndCallback(callback);
+    }
+    return abortCallbackList.add(callback);
+  };
+
+  const addEndCallback = (callback) => {
+    return endCallbackList.add(callback);
+  };
+
+  const end = async ({ abortAfterEnd = false } = {}) => {
+    await Promise.all(endCallbackList.notify());
+
+    // "abortAfterEnd" can be handy to ensure "abort" callbacks
+    // added with { once: true } are removed
+    // It might also help garbage collection because
+    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
+    // as settled and clean up things
+    if (abortAfterEnd) {
+      // because of operationSignal.onabort = null
+      // + abortCallbackList.clear() this won't re-call
+      // callbacks
+      if (!operationSignal.aborted) {
+        isAbortAfterEnd = true;
+        operationAbortController.abort();
+      }
+    }
+  };
+
+  const addAbortSignal = (
+    signal,
+    { onAbort = callbackNoop, onRemove = callbackNoop } = {},
+  ) => {
+    const applyAbortEffects = () => {
+      const onAbortCallback = onAbort;
+      onAbort = callbackNoop;
+      onAbortCallback();
+    };
+    const applyRemoveEffects = () => {
+      const onRemoveCallback = onRemove;
+      onRemove = callbackNoop;
+      onAbort = callbackNoop;
+      onRemoveCallback();
+    };
+
+    if (operationSignal.aborted) {
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    if (signal.aborted) {
+      operationAbortController.abort();
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    const cancelRace = raceCallbacks(
+      {
+        operation_abort: (cb) => {
+          return addAbortCallback(cb);
+        },
+        operation_end: (cb) => {
+          return addEndCallback(cb);
+        },
+        child_abort: (cb) => {
+          return addEventListener(signal, "abort", cb);
+        },
+      },
+      (winner) => {
+        const raceEffects = {
+          // Both "operation_abort" and "operation_end"
+          // means we don't care anymore if the child aborts.
+          // So we can:
+          // - remove "abort" event listener on child (done by raceCallback)
+          // - remove abort callback on operation (done by raceCallback)
+          // - remove end callback on operation (done by raceCallback)
+          // - call any custom cancel function
+          operation_abort: () => {
+            applyAbortEffects();
+            applyRemoveEffects();
+          },
+          operation_end: () => {
+            // Exists to
+            // - remove abort callback on operation
+            // - remove "abort" event listener on child
+            // - call any custom cancel function
+            applyRemoveEffects();
+          },
+          child_abort: () => {
+            applyAbortEffects();
+            operationAbortController.abort();
+          },
+        };
+        raceEffects[winner.name](winner.value);
+      },
+    );
+
+    return () => {
+      cancelRace();
+      applyRemoveEffects();
+    };
+  };
+
+  const addAbortSource = (abortSourceCallback) => {
+    const abortSource = {
+      cleaned: false,
+      signal: null,
+      remove: callbackNoop,
+    };
+    const abortSourceController = new AbortController();
+    const abortSourceSignal = abortSourceController.signal;
+    abortSource.signal = abortSourceSignal;
+    if (operationSignal.aborted) {
+      return abortSource;
+    }
+    const returnValue = abortSourceCallback((value) => {
+      abortSourceController.abort(value);
+    });
+    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
+      onRemove: () => {
+        if (typeof returnValue === "function") {
+          returnValue();
+        }
+        abortSource.cleaned = true;
+      },
+    });
+    abortSource.remove = removeAbortSignal;
+    return abortSource;
+  };
+
+  const timeout = (ms) => {
+    return addAbortSource((abort) => {
+      const timeoutId = setTimeout(abort, ms);
+      // an abort source return value is called when:
+      // - operation is aborted (by an other source)
+      // - operation ends
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    });
+  };
+
+  const wait = (ms) => {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        removeAbortCallback();
+        resolve();
+      }, ms);
+      const removeAbortCallback = addAbortCallback(() => {
+        clearTimeout(timeoutId);
+      });
+    });
+  };
+
+  const withSignal = async (asyncCallback) => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      },
+    });
+    try {
+      const value = await asyncCallback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const withSignalSync = (callback) => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      },
+    });
+    try {
+      const value = callback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const fork = () => {
+    const forkedOperation = createOperation();
+    forkedOperation.addAbortSignal(operationSignal);
+    return forkedOperation;
+  };
+
+  return {
+    // We could almost hide the operationSignal
+    // But it can be handy for 2 things:
+    // - know if operation is aborted (operation.signal.aborted)
+    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
+    signal: operationSignal,
+
+    throwIfAborted,
+    addAbortCallback,
+    addAbortSignal,
+    addAbortSource,
+    fork,
+    timeout,
+    wait,
+    withSignal,
+    withSignalSync,
+    addEndCallback,
+    end,
+  };
+};
+
+const callbackNoop = () => {};
+
+const addEventListener = (target, eventName, cb) => {
+  target.addEventListener(eventName, cb);
+  return () => {
+    target.removeEventListener(eventName, cb);
+  };
+};
+
+const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
+  return raceCallbacks(
+    {
+      ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
+      ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
+      ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
+      ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
+      ...(processTeardownEvents.exit ? EXIT_CALLBACK : {}),
+    },
+    callback,
+  );
+};
+
+const SIGHUP_CALLBACK = {
+  SIGHUP: (cb) => {
+    process.on("SIGHUP", cb);
+    return () => {
+      process.removeListener("SIGHUP", cb);
+    };
+  },
+};
+
+const SIGTERM_CALLBACK = {
+  SIGTERM: (cb) => {
+    process.on("SIGTERM", cb);
+    return () => {
+      process.removeListener("SIGTERM", cb);
+    };
+  },
+};
+
+const BEFORE_EXIT_CALLBACK = {
+  beforeExit: (cb) => {
+    process.on("beforeExit", cb);
+    return () => {
+      process.removeListener("beforeExit", cb);
+    };
+  },
+};
+
+const EXIT_CALLBACK = {
+  exit: (cb) => {
+    process.on("exit", cb);
+    return () => {
+      process.removeListener("exit", cb);
+    };
+  },
+};
+
+const SIGINT_CALLBACK = {
+  SIGINT: (cb) => {
+    process.on("SIGINT", cb);
+    return () => {
+      process.removeListener("SIGINT", cb);
+    };
+  },
+};
+
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
+
+  Object.keys(details).forEach((key) => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
+  });
+
+  return string;
+};
+
+// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
+/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
+function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
+	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
+	const position = argv.indexOf(prefix + flag);
+	const terminatorPosition = argv.indexOf('--');
+	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+}
+
+const {env} = process$1;
+
+let flagForceColor;
+if (
+	hasFlag('no-color')
+	|| hasFlag('no-colors')
+	|| hasFlag('color=false')
+	|| hasFlag('color=never')
+) {
+	flagForceColor = 0;
+} else if (
+	hasFlag('color')
+	|| hasFlag('colors')
+	|| hasFlag('color=true')
+	|| hasFlag('color=always')
+) {
+	flagForceColor = 1;
+}
+
+function envForceColor() {
+	if (!('FORCE_COLOR' in env)) {
+		return;
+	}
+
+	if (env.FORCE_COLOR === 'true') {
+		return 1;
+	}
+
+	if (env.FORCE_COLOR === 'false') {
+		return 0;
+	}
+
+	if (env.FORCE_COLOR.length === 0) {
+		return 1;
+	}
+
+	const level = Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+
+	if (![0, 1, 2, 3].includes(level)) {
+		return;
+	}
+
+	return level;
+}
+
+function translateLevel(level) {
+	if (level === 0) {
+		return false;
+	}
+
+	return {
+		level,
+		hasBasic: true,
+		has256: level >= 2,
+		has16m: level >= 3,
+	};
+}
+
+function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
+	const noFlagForceColor = envForceColor();
+	if (noFlagForceColor !== undefined) {
+		flagForceColor = noFlagForceColor;
+	}
+
+	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+
+	if (forceColor === 0) {
+		return 0;
+	}
+
+	if (sniffFlags) {
+		if (hasFlag('color=16m')
+			|| hasFlag('color=full')
+			|| hasFlag('color=truecolor')) {
+			return 3;
+		}
+
+		if (hasFlag('color=256')) {
+			return 2;
+		}
+	}
+
+	// Check for Azure DevOps pipelines.
+	// Has to be above the `!streamIsTTY` check.
+	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
+		return 1;
+	}
+
+	if (haveStream && !streamIsTTY && forceColor === undefined) {
+		return 0;
+	}
+
+	const min = forceColor || 0;
+
+	if (env.TERM === 'dumb') {
+		return min;
+	}
+
+	if (process$1.platform === 'win32') {
+		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
+		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+		const osRelease = os.release().split('.');
+		if (
+			Number(osRelease[0]) >= 10
+			&& Number(osRelease[2]) >= 10_586
+		) {
+			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
+		}
+
+		return 1;
+	}
+
+	if ('CI' in env) {
+		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env)) {
+			return 3;
+		}
+
+		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
+			return 1;
+		}
+
+		return min;
+	}
+
+	if ('TEAMCITY_VERSION' in env) {
+		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+	}
+
+	if (env.COLORTERM === 'truecolor') {
+		return 3;
+	}
+
+	if (env.TERM === 'xterm-kitty') {
+		return 3;
+	}
+
+	if ('TERM_PROGRAM' in env) {
+		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+
+		switch (env.TERM_PROGRAM) {
+			case 'iTerm.app': {
+				return version >= 3 ? 3 : 2;
+			}
+
+			case 'Apple_Terminal': {
+				return 2;
+			}
+			// No default
+		}
+	}
+
+	if (/-256(color)?$/i.test(env.TERM)) {
+		return 2;
+	}
+
+	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+		return 1;
+	}
+
+	if ('COLORTERM' in env) {
+		return 1;
+	}
+
+	return min;
+}
+
+function createSupportsColor(stream, options = {}) {
+	const level = _supportsColor(stream, {
+		streamIsTTY: stream && stream.isTTY,
+		...options,
+	});
+
+	return translateLevel(level);
+}
+
+({
+	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
+	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
+});
+
+// https://github.com/Marak/colors.js/blob/master/lib/styles.js
+// https://stackoverflow.com/a/75985833/2634179
+const RESET = "\x1b[0m";
+
+const createAnsi = ({ supported }) => {
+  const ANSI = {
+    supported,
+
+    RED: "\x1b[31m",
+    GREEN: "\x1b[32m",
+    YELLOW: "\x1b[33m",
+    BLUE: "\x1b[34m",
+    MAGENTA: "\x1b[35m",
+    CYAN: "\x1b[36m",
+    GREY: "\x1b[90m",
+    color: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set color of blank chars
+        return text;
+      }
+      return `${color}${text}${RESET}`;
+    },
+
+    BOLD: "\x1b[1m",
+    UNDERLINE: "\x1b[4m",
+    STRIKE: "\x1b[9m",
+    effect: (text, effect) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!effect) {
+        return text;
+      }
+      // cannot add effect to empty string
+      if (text === "") {
+        return text;
+      }
+      return `${effect}${text}${RESET}`;
+    },
+  };
+
+  return ANSI;
+};
+
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+
+const ANSI = createAnsi({
+  supported:
+    process.env.FORCE_COLOR === "1" ||
+    processSupportsBasicColor ||
+    // GitHub workflow does support ANSI but "supports-color" returns false
+    // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+    process.env.GITHUB_WORKFLOW,
+});
+
+function isUnicodeSupported() {
+	const {env} = process$1;
+	const {TERM, TERM_PROGRAM} = env;
+
+	if (process$1.platform !== 'win32') {
+		return TERM !== 'linux'; // Linux console (kernel)
+	}
+
+	return Boolean(env.WT_SESSION) // Windows Terminal
+		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+		|| TERM_PROGRAM === 'Terminus-Sublime'
+		|| TERM_PROGRAM === 'vscode'
+		|| TERM === 'xterm-256color'
+		|| TERM === 'alacritty'
+		|| TERM === 'rxvt-unicode'
+		|| TERM === 'rxvt-unicode-256color'
+		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
+
+// see also https://github.com/sindresorhus/figures
+
+const createUnicode = ({ supported, ANSI }) => {
+  const UNICODE = {
+    supported,
+    get COMMAND_RAW() {
+      return UNICODE.supported ? `❯` : `>`;
+    },
+    get OK_RAW() {
+      return UNICODE.supported ? `✔` : `√`;
+    },
+    get FAILURE_RAW() {
+      return UNICODE.supported ? `✖` : `×`;
+    },
+    get DEBUG_RAW() {
+      return UNICODE.supported ? `◆` : `♦`;
+    },
+    get INFO_RAW() {
+      return UNICODE.supported ? `ℹ` : `i`;
+    },
+    get WARNING_RAW() {
+      return UNICODE.supported ? `⚠` : `‼`;
+    },
+    get CIRCLE_CROSS_RAW() {
+      return UNICODE.supported ? `ⓧ` : `(×)`;
+    },
+    get CIRCLE_DOTTED_RAW() {
+      return UNICODE.supported ? `◌` : `*`;
+    },
+    get COMMAND() {
+      return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+    },
+    get OK() {
+      return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+    },
+    get FAILURE() {
+      return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+    },
+    get DEBUG() {
+      return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+    },
+    get INFO() {
+      return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+    },
+    get WARNING() {
+      return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+    },
+    get CIRCLE_CROSS() {
+      return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+    },
+    get ELLIPSIS() {
+      return UNICODE.supported ? `…` : `...`;
+    },
+  };
+  return UNICODE;
+};
+
+createUnicode({
+  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
+  ANSI,
+});
+
+const LOG_LEVEL_OFF = "off";
+
+const LOG_LEVEL_DEBUG = "debug";
+
+const LOG_LEVEL_INFO = "info";
+
+const LOG_LEVEL_WARN = "warn";
+
+const LOG_LEVEL_ERROR = "error";
+
+const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG) {
+    return {
+      level: "debug",
+      levels: { debug: true, info: true, warn: true, error: true },
+      debug,
+      info,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_INFO) {
+    return {
+      level: "info",
+      levels: { debug: false, info: true, warn: true, error: true },
+      debug: debugDisabled,
+      info,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_WARN) {
+    return {
+      level: "warn",
+      levels: { debug: false, info: false, warn: true, error: true },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_ERROR) {
+    return {
+      level: "error",
+      levels: { debug: false, info: false, warn: false, error: true },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_OFF) {
+    return {
+      level: "off",
+      levels: { debug: false, info: false, warn: false, error: false },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled,
+    };
+  }
+  throw new Error(`unexpected logLevel.
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`);
+};
+
+const debug = (...args) => console.debug(...args);
+
+const debugDisabled = () => {};
+
+const info = (...args) => console.info(...args);
+
+const infoDisabled = () => {};
+
+const warn = (...args) => console.warn(...args);
+
+const warnDisabled = () => {};
+
+const error = (...args) => console.error(...args);
+
+const errorDisabled = () => {};
+
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+
+globalThis.process?.versions?.node !== undefined;
+
+globalThis.process?.versions?.bun !== undefined;
+
+globalThis.Deno?.version?.deno !== undefined;
+
+globalThis.process?.versions?.electron !== undefined;
+
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+
+platform === 'macOS'
+	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
+	|| globalThis.process?.platform === 'darwin';
+
+platform === 'Windows'
+	|| globalThis.navigator?.platform === 'Win32'
+	|| globalThis.process?.platform === 'win32';
+
+platform === 'Linux'
+	|| globalThis.navigator?.platform?.startsWith('Linux') === true
+	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
+	|| globalThis.process?.platform === 'linux';
+
+platform === 'Android'
+	|| globalThis.navigator?.platform === 'Android'
+	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
+	|| globalThis.process?.platform === 'android';
+
+!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+!isBrowser && process$1.platform === 'win32';
+
+isBrowser ? () => {
+	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
+
+const memoize = (compute) => {
+  let memoized = false;
+  let memoizedValue;
+
+  const fnWithMemoization = (...args) => {
+    if (memoized) {
+      return memoizedValue;
+    }
+    // if compute is recursive wait for it to be fully done before storing the lockValue
+    // so set locked later
+    memoizedValue = compute(...args);
+    memoized = true;
+    return memoizedValue;
+  };
+
+  fnWithMemoization.forget = () => {
+    const value = memoizedValue;
+    memoized = false;
+    memoizedValue = undefined;
+    return value;
+  };
+
+  return fnWithMemoization;
+};
 
 if ("observable" in Symbol === false) {
   Symbol.observable = Symbol.for("observable");
@@ -377,6 +1399,203 @@ const isNodeStream = (value) => {
   }
 
   return false;
+};
+
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json", "map"],
+    isTextual: true,
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true,
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true,
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"],
+  },
+  "application/xml": {
+    extensions: ["xml"],
+    isTextual: true,
+  },
+  "application/x-gzip": {
+    extensions: ["gz"],
+  },
+  "application/wasm": {
+    extensions: ["wasm"],
+  },
+  "application/zip": {
+    extensions: ["zip"],
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"],
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"],
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"],
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"],
+  },
+  "audio/webm": {
+    extensions: ["weba"],
+  },
+  "audio/x-wav": {
+    extensions: ["wav"],
+  },
+  "font/ttf": {
+    extensions: ["ttf"],
+  },
+  "font/woff": {
+    extensions: ["woff"],
+  },
+  "font/woff2": {
+    extensions: ["woff2"],
+  },
+  "image/png": {
+    extensions: ["png"],
+  },
+  "image/gif": {
+    extensions: ["gif"],
+  },
+  "image/jpeg": {
+    extensions: ["jpg"],
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true,
+  },
+  "text/plain": {
+    extensions: ["txt"],
+    isTextual: true,
+  },
+  "text/html": {
+    extensions: ["html"],
+    isTextual: true,
+  },
+  "text/css": {
+    extensions: ["css"],
+    isTextual: true,
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+    isTextual: true,
+  },
+  "text/markdown": {
+    extensions: ["md", "mdx"],
+    isTextual: true,
+  },
+  "text/x-sass": {
+    extensions: ["sass"],
+    isTextual: true,
+  },
+  "text/x-scss": {
+    extensions: ["scss"],
+    isTextual: true,
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"],
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"],
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
+  },
+  "video/ogg": {
+    extensions: ["ogv"],
+  },
+  "video/webm": {
+    extensions: ["webm"],
+  },
+};
+
+const CONTENT_TYPE = {
+  parse: (string) => {
+    const [mediaType, charset] = string.split(";");
+    return { mediaType: normalizeMediaType(mediaType), charset };
+  },
+
+  stringify: ({ mediaType, charset }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+    return mediaType;
+  },
+
+  asMediaType: (value) => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
+    }
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+    return null;
+  },
+
+  isJson: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return (
+      mediaType === "application/json" ||
+      /^application\/\w+\+json$/.test(mediaType)
+    );
+  },
+
+  isTextual: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    }
+    // catch things like application/manifest+json, application/importmap+json
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+    return false;
+  },
+
+  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
+
+  asFileExtension: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+
+  fromUrlExtension: (url) => {
+    const { pathname } = new URL(url);
+    const extensionWithDot = extname(pathname);
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+    const extension = extensionWithDot.slice(1);
+    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
+      const mediaTypeInfo = mediaTypeInfos[mediaType];
+      return (
+        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
+      );
+    });
+    return mediaTypeFound || "application/octet-stream";
+  },
+};
+
+const normalizeMediaType = (value) => {
+  if (value === "application/javascript") {
+    return "text/javascript";
+  }
+  return value;
 };
 
 // https://github.com/Marak/colors.js/blob/b63ef88e521b42920a9e908848de340b31e68c9d/lib/styles.js#L29
@@ -4002,7 +5221,7 @@ const startServer = async ({
         : `ws://${hostname}:${port}`;
       server.websocketOrigin = websocketOrigin;
       const websocketClientSet = new Set();
-      const { WebSocketServer } = await import("ws");
+      const { WebSocketServer } = await import("./js/ws.js");
       let websocketServer = new WebSocketServer({ noServer: true });
 
       const upgradeEventHandler = async (nodeRequest, socket, head) => {
@@ -5819,6 +7038,562 @@ const fromFetchResponse = (fetchResponse) => {
     headers: responseHeaders,
     body: fetchResponse.body, // node-fetch assumed
   };
+};
+
+/*
+ * Link to things doing pattern matching:
+ * https://git-scm.com/docs/gitignore
+ * https://github.com/kaelzhang/node-ignore
+ */
+
+/** @module jsenv_url_meta **/
+/**
+ * An object representing the result of applying a pattern to an url
+ * @typedef {Object} MatchResult
+ * @property {boolean} matched Indicates if url matched pattern
+ * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
+ * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
+ * @property {Array} matchGroups Array of strings captured during pattern matching
+ */
+
+/**
+ * Apply a pattern to an url
+ * @param {Object} applyPatternMatchingParams
+ * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
+ * @param {string} applyPatternMatchingParams.url a string representing an url
+ * @return {MatchResult}
+ */
+const applyPattern = ({ url, pattern }) => {
+  const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
+  const matchGroups = [];
+  let groupIndex = 0;
+  for (const group of groups) {
+    if (group.name) {
+      matchGroups[group.name] = group.string;
+    } else {
+      matchGroups[groupIndex] = group.string;
+      groupIndex++;
+    }
+  }
+  return {
+    matched,
+    patternIndex,
+    urlIndex: index,
+    matchGroups,
+  };
+};
+
+const applyMatching = (pattern, string) => {
+  const groups = [];
+  let patternIndex = 0;
+  let index = 0;
+  let remainingPattern = pattern;
+  let remainingString = string;
+  let restoreIndexes = true;
+
+  const consumePattern = (count) => {
+    const subpattern = remainingPattern.slice(0, count);
+    remainingPattern = remainingPattern.slice(count);
+    patternIndex += count;
+    return subpattern;
+  };
+  const consumeString = (count) => {
+    const substring = remainingString.slice(0, count);
+    remainingString = remainingString.slice(count);
+    index += count;
+    return substring;
+  };
+  const consumeRemainingString = () => {
+    return consumeString(remainingString.length);
+  };
+
+  let matched;
+  const iterate = () => {
+    const patternIndexBefore = patternIndex;
+    const indexBefore = index;
+    matched = matchOne();
+    if (matched === undefined) {
+      consumePattern(1);
+      consumeString(1);
+      iterate();
+      return;
+    }
+    if (matched === false && restoreIndexes) {
+      patternIndex = patternIndexBefore;
+      index = indexBefore;
+    }
+  };
+  const matchOne = () => {
+    // pattern consumed
+    if (remainingPattern === "") {
+      if (remainingString === "") {
+        return true; // string fully matched pattern
+      }
+      if (remainingString[0] === "?") {
+        // match search params
+        consumeRemainingString();
+
+        return true;
+      }
+      // if remainingString
+      return false; // fails because string longer than expect
+    }
+    // -- from this point pattern is not consumed --
+    // string consumed, pattern not consumed
+    if (remainingString === "") {
+      if (remainingPattern === "**") {
+        // trailing "**" is optional
+        consumePattern(2);
+        return true;
+      }
+      if (remainingPattern === "*") {
+        groups.push({ string: "" });
+      }
+      return false; // fail because string shorter than expect
+    }
+    // -- from this point pattern and string are not consumed --
+    // fast path trailing slash
+    if (remainingPattern === "/") {
+      if (remainingString[0] === "/") {
+        // trailing slash match remaining
+        consumePattern(1);
+        groups.push({ string: consumeRemainingString() });
+        return true;
+      }
+      return false;
+    }
+    // fast path trailing '**'
+    if (remainingPattern === "**") {
+      consumePattern(2);
+      consumeRemainingString();
+      return true;
+    }
+    if (remainingPattern.slice(0, 4) === "/**/") {
+      consumePattern(3); // consumes "/**/"
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: true,
+      });
+      groups.push(...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeRemainingString();
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+    // pattern leading **
+    if (remainingPattern.slice(0, 2) === "**") {
+      consumePattern(2); // consumes "**"
+      let skipAllowed = true;
+      if (remainingPattern[0] === "/") {
+        consumePattern(1); // consumes "/"
+        // when remainingPattern was preceeded by "**/"
+        // and remainingString have no "/"
+        // then skip is not allowed, a regular match will be performed
+        if (!remainingString.includes("/")) {
+          skipAllowed = false;
+        }
+      }
+      // pattern ending with "**" or "**/" match remaining string
+      if (remainingPattern === "") {
+        consumeRemainingString();
+        return true;
+      }
+      if (skipAllowed) {
+        const skipResult = skipUntilMatch({
+          pattern: remainingPattern,
+          string: remainingString,
+          canSkipSlash: true,
+        });
+        groups.push(...skipResult.groups);
+        consumePattern(skipResult.patternIndex);
+        consumeRemainingString();
+        restoreIndexes = false;
+        return skipResult.matched;
+      }
+    }
+    if (remainingPattern[0] === "*") {
+      consumePattern(1); // consumes "*"
+      if (remainingPattern === "") {
+        // matches everything except "/"
+        const slashIndex = remainingString.indexOf("/");
+        if (slashIndex === -1) {
+          groups.push({ string: consumeRemainingString() });
+          return true;
+        }
+        groups.push({ string: consumeString(slashIndex) });
+        return false;
+      }
+      // the next char must not the one expect by remainingPattern[0]
+      // because * is greedy and expect to skip at least one char
+      if (remainingPattern[0] === remainingString[0]) {
+        groups.push({ string: "" });
+        patternIndex = patternIndex - 1;
+        return false;
+      }
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: false,
+      });
+      groups.push(skipResult.group, ...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeString(skipResult.index);
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+    if (remainingPattern[0] !== remainingString[0]) {
+      return false;
+    }
+    return undefined;
+  };
+  iterate();
+
+  return {
+    matched,
+    patternIndex,
+    index,
+    groups,
+  };
+};
+
+const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
+  let index = 0;
+  let remainingString = string;
+  let longestAttemptRange = null;
+  let isLastAttempt = false;
+
+  const failure = () => {
+    return {
+      matched: false,
+      patternIndex: longestAttemptRange.patternIndex,
+      index: longestAttemptRange.index + longestAttemptRange.length,
+      groups: longestAttemptRange.groups,
+      group: {
+        string: string.slice(0, longestAttemptRange.index),
+      },
+    };
+  };
+
+  const tryToMatch = () => {
+    const matchAttempt = applyMatching(pattern, remainingString);
+    if (matchAttempt.matched) {
+      return {
+        matched: true,
+        patternIndex: matchAttempt.patternIndex,
+        index: index + matchAttempt.index,
+        groups: matchAttempt.groups,
+        group: {
+          string:
+            remainingString === ""
+              ? string
+              : string.slice(0, -remainingString.length),
+        },
+      };
+    }
+    const attemptIndex = matchAttempt.index;
+    const attemptRange = {
+      patternIndex: matchAttempt.patternIndex,
+      index,
+      length: attemptIndex,
+      groups: matchAttempt.groups,
+    };
+    if (
+      !longestAttemptRange ||
+      longestAttemptRange.length < attemptRange.length
+    ) {
+      longestAttemptRange = attemptRange;
+    }
+    if (isLastAttempt) {
+      return failure();
+    }
+    const nextIndex = attemptIndex + 1;
+    if (nextIndex >= remainingString.length) {
+      return failure();
+    }
+    if (remainingString[0] === "/") {
+      if (!canSkipSlash) {
+        return failure();
+      }
+      // when it's the last slash, the next attempt is the last
+      if (remainingString.indexOf("/", 1) === -1) {
+        isLastAttempt = true;
+      }
+    }
+    // search against the next unattempted string
+    index += nextIndex;
+    remainingString = remainingString.slice(nextIndex);
+    return tryToMatch();
+  };
+  return tryToMatch();
+};
+
+const applyPatternMatching = ({ url, pattern }) => {
+  assertUrlLike(pattern, "pattern");
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url, "url");
+  return applyPattern({ url, pattern });
+};
+
+const resolveAssociations = (associations, baseUrl) => {
+  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
+  assertUrlLike(baseUrl, "baseUrl");
+
+  const associationsResolved = {};
+  for (const key of Object.keys(associations)) {
+    const value = associations[key];
+    if (typeof value === "object" && value !== null) {
+      const valueMapResolved = {};
+      for (const pattern of Object.keys(value)) {
+        const valueAssociated = value[pattern];
+        let patternResolved;
+        try {
+          patternResolved = String(new URL(pattern, baseUrl));
+        } catch {
+          // it's not really an url, no need to perform url resolution nor encoding
+          patternResolved = pattern;
+        }
+
+        valueMapResolved[patternResolved] = valueAssociated;
+      }
+      associationsResolved[key] = valueMapResolved;
+    } else {
+      associationsResolved[key] = value;
+    }
+  }
+  return associationsResolved;
+};
+
+const asFlatAssociations = (associations) => {
+  if (!isPlainObject(associations)) {
+    throw new TypeError(
+      `associations must be a plain object, got ${associations}`,
+    );
+  }
+  const flatAssociations = {};
+  for (const associationName of Object.keys(associations)) {
+    const associationValue = associations[associationName];
+    if (!isPlainObject(associationValue)) {
+      continue;
+    }
+    for (const pattern of Object.keys(associationValue)) {
+      const patternValue = associationValue[pattern];
+      const previousValue = flatAssociations[pattern];
+      if (isPlainObject(previousValue)) {
+        flatAssociations[pattern] = {
+          ...previousValue,
+          [associationName]: patternValue,
+        };
+      } else {
+        flatAssociations[pattern] = {
+          [associationName]: patternValue,
+        };
+      }
+    }
+  }
+  return flatAssociations;
+};
+
+const applyAssociations = ({ url, associations }) => {
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url);
+  const flatAssociations = asFlatAssociations(associations);
+  let associatedValue = {};
+  for (const pattern of Object.keys(flatAssociations)) {
+    const { matched } = applyPatternMatching({
+      pattern,
+      url,
+    });
+    if (matched) {
+      const value = flatAssociations[pattern];
+      associatedValue = deepAssign(associatedValue, value);
+    }
+  }
+  return associatedValue;
+};
+
+const deepAssign = (firstValue, secondValue) => {
+  if (!isPlainObject(firstValue)) {
+    if (isPlainObject(secondValue)) {
+      return deepAssign({}, secondValue);
+    }
+    return secondValue;
+  }
+  if (!isPlainObject(secondValue)) {
+    return secondValue;
+  }
+  for (const key of Object.keys(secondValue)) {
+    const leftPopertyValue = firstValue[key];
+    const rightPropertyValue = secondValue[key];
+    firstValue[key] = deepAssign(leftPopertyValue, rightPropertyValue);
+  }
+  return firstValue;
+};
+
+const urlChildMayMatch = ({ url, associations, predicate }) => {
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url, "url");
+  // the function was meants to be used on url ending with '/'
+  if (!url.endsWith("/")) {
+    throw new Error(`url should end with /, got ${url}`);
+  }
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+  const flatAssociations = asFlatAssociations(associations);
+  // for full match we must create an object to allow pattern to override previous ones
+  let fullMatchMeta = {};
+  let someFullMatch = false;
+  // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+  const partialMatchMetaArray = [];
+  for (const pattern of Object.keys(flatAssociations)) {
+    const value = flatAssociations[pattern];
+    const matchResult = applyPatternMatching({
+      pattern,
+      url,
+    });
+    if (matchResult.matched) {
+      someFullMatch = true;
+      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
+        fullMatchMeta = {
+          ...fullMatchMeta,
+          ...value,
+        };
+      } else {
+        fullMatchMeta = value;
+      }
+    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
+      partialMatchMetaArray.push(value);
+    }
+  }
+  if (someFullMatch) {
+    return Boolean(predicate(fullMatchMeta));
+  }
+  return partialMatchMetaArray.some((partialMatchMeta) =>
+    predicate(partialMatchMeta),
+  );
+};
+
+const applyAliases = ({ url, aliases }) => {
+  let aliasFullMatchResult;
+  const aliasMatchingKey = Object.keys(aliases).find((key) => {
+    const aliasMatchResult = applyPatternMatching({
+      pattern: key,
+      url,
+    });
+    if (aliasMatchResult.matched) {
+      aliasFullMatchResult = aliasMatchResult;
+      return true;
+    }
+    return false;
+  });
+  if (!aliasMatchingKey) {
+    return url;
+  }
+  const { matchGroups } = aliasFullMatchResult;
+  const alias = aliases[aliasMatchingKey];
+  const parts = alias.split("*");
+  let newUrl = "";
+  let index = 0;
+  for (const part of parts) {
+    newUrl += `${part}`;
+    if (index < parts.length - 1) {
+      newUrl += matchGroups[index];
+    }
+    index++;
+  }
+  return newUrl;
+};
+
+const matches = (url, patterns) => {
+  return Boolean(
+    applyAssociations({
+      url,
+      associations: {
+        yes: patterns,
+      },
+    }).yes,
+  );
+};
+
+// const assertSpecifierMetaMap = (value, checkComposition = true) => {
+//   if (!isPlainObject(value)) {
+//     throw new TypeError(
+//       `specifierMetaMap must be a plain object, got ${value}`,
+//     );
+//   }
+//   if (checkComposition) {
+//     const plainObject = value;
+//     Object.keys(plainObject).forEach((key) => {
+//       assertUrlLike(key, "specifierMetaMap key");
+//       const value = plainObject[key];
+//       if (value !== null && !isPlainObject(value)) {
+//         throw new TypeError(
+//           `specifierMetaMap value must be a plain object or null, got ${value} under key ${key}`,
+//         );
+//       }
+//     });
+//   }
+// };
+const assertUrlLike = (value, name = "url") => {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be a url string, got ${value}`);
+  }
+  if (isWindowsPathnameSpecifier(value)) {
+    throw new TypeError(
+      `${name} must be a url but looks like a windows pathname, got ${value}`,
+    );
+  }
+  if (!hasScheme(value)) {
+    throw new TypeError(
+      `${name} must be a url and no scheme found, got ${value}`,
+    );
+  }
+};
+const isPlainObject = (value) => {
+  if (value === null) {
+    return false;
+  }
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+};
+const isWindowsPathnameSpecifier = (specifier) => {
+  const firstChar = specifier[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = specifier[1];
+  if (secondChar !== ":") return false;
+  const thirdChar = specifier[2];
+  return thirdChar === "/" || thirdChar === "\\";
+};
+const hasScheme = (specifier) => /^[a-zA-Z]+:/.test(specifier);
+
+const createFilter = (patterns, url, map = (v) => v) => {
+  const associations = resolveAssociations(
+    {
+      yes: patterns,
+    },
+    url,
+  );
+  return (url) => {
+    const meta = applyAssociations({ url, associations });
+    return Boolean(map(meta.yes));
+  };
+};
+
+const URL_META = {
+  resolveAssociations,
+  applyAssociations,
+  applyAliases,
+  applyPatternMatching,
+  urlChildMayMatch,
+  matches,
+  createFilter,
 };
 
 const jsenvServiceRequestAliases = (resourceAliases) => {
