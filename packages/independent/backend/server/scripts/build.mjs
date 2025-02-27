@@ -42,8 +42,8 @@ await build({
       name: "jsenv_server_internal_client_files_resolver",
       appliesDuring: "*",
       resolveReference: (reference) => {
-        if (reference.specifierPathname.startsWith("/@jsenv/server/")) {
-          const urlRelativeToJsenvServer = reference.specifierPathname.slice(
+        if (reference.specifier.startsWith("/@jsenv/server/")) {
+          const urlRelativeToJsenvServer = reference.specifier.slice(
             "/@jsenv/server/".length,
           );
           const url = new URL(
