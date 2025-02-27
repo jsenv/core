@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>405 Method Not Allowed</title>
+    <style>body {
+  color: #333;
+  background-color: #f8f9fa;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  display: flex;
+}
+
+.error_container {
+  text-align: center;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 6px #0000001a;
+}
+
+.error_status {
+  color: #dc3545;
+  margin: 0;
+  font-size: 5rem;
+}
+
+.error_status_text {
+  margin: 10px 0;
+  font-size: 1.5rem;
+}
+
+.error_message {
+  color: #555;
+  font-size: 1rem;
+}
+
+.home_link {
+  color: #fff;
+  background-color: #007bff;
+  border-radius: 5px;
+  margin-top: 15px;
+  padding: 10px 15px;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.home_link:hover {
+  background-color: #0056b3;
+}
+</style>
+  </head>
+  <body>
+    <div class="error_container">
+      <p class="error_status">${status}</p>
+      <p class="error_status_text">${statusText}</p>
+      <p class="error_message">${message}</p>
+      <a href="/" jsenv-ignore="" class="home_link">Return to Home</a>
+    </div>
+    <script src="../js/autoreload_on_server_restart.js" jsenv-inline=""></script>
+  </body>
+</html>

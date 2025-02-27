@@ -1,106 +1,102 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Route inspector</title>
-    <script type="importmap">
-      {
-        "imports": {
-          "preact": "https://esm.sh/preact@10.23.1",
-          "preact/": "https://esm.sh/preact@10.23.1/",
-          "@preact/signals": "https://esm.sh/@preact/signals@1.3.0?external=preact",
-          "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
-        }
-      }
-    </script>
+    
   </head>
   <body>
     <div id="app"></div>
 
-    <style>
-      .progress-container {
-        width: 100%;
-        height: 100%;
-        background-color: rgba(25, 118, 210, 0.2);
-        border-radius: 4px;
-        overflow: hidden;
-        position: relative;
-        margin: 20px 0;
-      }
-      .progress-indeterminate .progress-bar-long,
-      .progress-indeterminate .progress-bar-short {
-        position: absolute;
-        top: 0;
-        height: 100%;
-        background-color: #1976d2;
-        border-radius: 4px;
-        animation-duration: 2.2s;
-        animation-iteration-count: infinite;
-      }
+    <style>.progress-container {
+  background-color: #1976d233;
+  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  margin: 20px 0;
+  position: relative;
+  overflow: hidden;
+}
 
-      .progress-indeterminate .progress-bar-long {
-        animation-name: indeterminate-ltr;
-        width: 75%;
-      }
+.progress-indeterminate .progress-bar-long, .progress-indeterminate .progress-bar-short {
+  background-color: #1976d2;
+  border-radius: 4px;
+  height: 100%;
+  animation-duration: 2.2s;
+  animation-iteration-count: infinite;
+  position: absolute;
+  top: 0;
+}
 
-      .progress-indeterminate .progress-bar-short {
-        animation-name: indeterminate-short-ltr;
-        width: 20%;
-      }
+.progress-indeterminate .progress-bar-long {
+  width: 75%;
+  animation-name: indeterminate-ltr;
+}
 
-      @keyframes indeterminate-ltr {
-        0% {
-          left: -90%;
-          right: 100%;
-        }
-        60% {
-          left: -90%;
-          right: 100%;
-        }
-        100% {
-          left: 100%;
-          right: -35%;
-        }
-      }
+.progress-indeterminate .progress-bar-short {
+  width: 20%;
+  animation-name: indeterminate-short-ltr;
+}
 
-      @keyframes indeterminate-short-ltr {
-        0% {
-          left: -200%;
-          right: 100%;
-        }
-        60% {
-          left: 107%;
-          right: -8%;
-        }
-        100% {
-          left: 107%;
-          right: -8%;
-        }
-      }
+@keyframes indeterminate-ltr {
+  0% {
+    left: -90%;
+    right: 100%;
+  }
 
-      /* Styles pour les routes */
-      .route-list {
-        margin-top: 20px;
-      }
-      .route-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-      .route-method {
-        font-weight: bold;
-        min-width: 60px;
-      }
-      .route-resource {
-        margin-left: 8px;
-      }
-    </style>
+  60% {
+    left: -90%;
+    right: 100%;
+  }
+
+  100% {
+    left: 100%;
+    right: -35%;
+  }
+}
+
+@keyframes indeterminate-short-ltr {
+  0% {
+    left: -200%;
+    right: 100%;
+  }
+
+  60% {
+    left: 107%;
+    right: -8%;
+  }
+
+  100% {
+    left: 107%;
+    right: -8%;
+  }
+}
+
+.route-list {
+  margin-top: 20px;
+}
+
+.route-item {
+  align-items: center;
+  margin-bottom: 8px;
+  display: flex;
+}
+
+.route-method {
+  min-width: 60px;
+  font-weight: bold;
+}
+
+.route-resource {
+  margin-left: 8px;
+}
+</style>
     <script type="module">
       // https://preactjs.com/guide/v10/no-build-workflows/
-      import { render } from "preact";
-      import { html } from "htm/preact";
-      import { signal } from "@preact/signals";
+      import { render } from "https://esm.sh/preact@10.23.1";
+      import { html } from "https://esm.sh/htm@3.1.1/preact?external=preact";
+      import { signal } from "https://esm.sh/@preact/signals@1.3.0?external=preact";
 
       const routesLoadingSignal = signal(false);
       const routeLoadingError = signal(null);

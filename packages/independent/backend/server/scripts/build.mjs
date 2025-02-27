@@ -35,6 +35,13 @@ await build({
   runtimeCompat: {
     node: "20.0",
   },
+  directoryReferenceEffect: (reference) => {
+    // jsenv server directory url
+    if (reference.url === new URL("../", import.meta.url).href) {
+      return "resolve";
+    }
+    return "error";
+  },
   scenarioPlaceholders: false,
   plugins: [
     jsenvPluginCommonJs({
@@ -42,6 +49,23 @@ await build({
         "file:///**/node_modules/ws/": true,
       },
     }),
+    {
+      name: "jsenv_server_internal_client_files_resolver",
+      appliesDuring: "*",
+      resolveReference: (reference) => {
+        if (reference.specifierPathname.startsWith("/@jsenv/server/")) {
+          const urlRelativeToJsenvServer = reference.specifierPathname.slice(
+            "/@jsenv/server/".length,
+          );
+          const url = new URL(
+            urlRelativeToJsenvServer,
+            new URL("../", import.meta.url),
+          );
+          return url;
+        }
+        return null;
+      },
+    },
   ],
   // for debug
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),

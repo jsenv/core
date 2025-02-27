@@ -54,8 +54,11 @@
       <p class="error_status">${status}</p>
       <p class="error_status_text">${statusText}</p>
       <p class="error_message">${message}</p>
-      <a href="/" class="home_link">Return to Home</a>
+      <a href="/" jsenv-ignore class="home_link">Return to Home</a>
     </div>
-    <script src="/@jsenv/server/src/router/client/jsenv_autoreload_on_server_restart.js"></script>
+    <script
+      src="/@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js"
+      jsenv-inline
+    ></script>
   </body>
 </html>
