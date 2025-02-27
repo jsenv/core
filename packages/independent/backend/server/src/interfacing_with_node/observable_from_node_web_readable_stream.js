@@ -1,4 +1,5 @@
 // https://nodejs.org/api/webstreams.html#readablestreamgetreaderoptions
+// we can read as text using TextDecoder, see https://developer.mozilla.org/fr/docs/Web/API/Fetch_API/Using_Fetch#traiter_un_fichier_texte_ligne_%C3%A0_ligne
 import { createObservable } from "./observable.js";
 
 export const observableFromNodeWebReadableStream = (nodeWebReadableStream) => {

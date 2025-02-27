@@ -12,6 +12,7 @@ import {
   fromNodeRequest,
 } from "./interfacing_with_node/from_node_request.js";
 import { writeNodeResponse } from "./interfacing_with_node/write_node_response.js";
+import { websocketSuffixColorized } from "./internal/colorizeResponseStatus.js";
 import { composeTwoHeaders } from "./internal/headers_composition.js";
 import { listen, stopListening } from "./internal/listen.js";
 import { listenEvent } from "./internal/listenEvent.js";
@@ -382,7 +383,9 @@ export const startServer = async ({
       request.logger.info(
         request.parent
           ? `Push ${request.resource}`
-          : `${request.method} ${request.url}`,
+          : request.headers["upgrade"] === "websocket"
+            ? `${request.method} ${request.url} ${websocketSuffixColorized}`
+            : `${request.method} ${request.url}`,
       );
       let requestWaitingTimeout;
       if (requestWaitingMs) {
@@ -902,7 +905,6 @@ export const startServer = async ({
             observable.subscribe({
               next: (data) => {
                 socket.write(data);
-                websocket.send(data);
               },
               error: (value) => {
                 socket.emit("error", value);
@@ -941,7 +943,11 @@ export const startServer = async ({
             websocket.emit("error", value);
           },
           complete: () => {
-            websocket.terminate();
+            // we can explicitely say we are done sending data by putting
+            // connection: "close" on response headers
+            if (headers["connection"] === "close") {
+              websocket.terminate();
+            }
           },
         });
         websocket.once("close", () => {

@@ -241,6 +241,9 @@ export const createRouter = () => {
       if (route.websocket && request.headers["upgrade"] !== "websocket") {
         continue;
       }
+      if (request.headers["upgrade"] === "websocket" && !route.websocket) {
+        continue;
+      }
       const resourceMatchResult = route.matchResource(request.resource);
       if (!resourceMatchResult) {
         continue;

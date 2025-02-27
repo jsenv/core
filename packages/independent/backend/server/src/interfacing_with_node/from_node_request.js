@@ -233,6 +233,7 @@ const createRequestLogger = (nodeRequest, write) => {
     },
     onHeadersSent: ({ status, statusText }) => {
       const statusType = statusToType(status);
+      let message = `${colorizeResponseStatus(status)} ${statusText}`;
       add({
         type:
           status === 404 && nodeRequest.path === "/favicon.ico"
@@ -244,7 +245,7 @@ const createRequestLogger = (nodeRequest, write) => {
                 client_error: "warn",
                 server_error: "error",
               }[statusType],
-        value: `${colorizeResponseStatus(status)} ${statusText}`,
+        value: message,
       });
     },
     ended: false,
