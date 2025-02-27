@@ -66,13 +66,15 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
       }
       const responseHeaders = response.headers;
       const responseContentType = responseHeaders.get("content-type");
-      const contentType = responseContentType || "application/octet-stream";
+      const contentType = responseContentType
+        ? CONTENT_TYPE.asMediaType(responseContentType)
+        : "application/octet-stream";
       const isTextual = CONTENT_TYPE.isTextual(contentType);
       let content;
       if (isTextual) {
-        content = await new Response();
+        content = await response.text();
       } else {
-        content = await response.buffer;
+        content = Buffer.from(await response.arrayBuffer());
       }
       return {
         content,

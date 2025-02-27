@@ -1,21 +1,22 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="importmap">
       {
         "imports": {
-          "preact": "https://esm.sh/preact@10.23.1"
+          "/js/preact@10.23.1": "/js/preact@10.23.1?v=a68c9886"
         }
       }
     </script>
+    
   </head>
   <body>
     <div id="app"></div>
     <script type="module">
       // https://preactjs.com/guide/v10/no-build-workflows/
-      import { render } from "preact";
+      import { render } from "/js/preact@10.23.1";
       // import { html } from "htm/preact";
 
       const App = () => {

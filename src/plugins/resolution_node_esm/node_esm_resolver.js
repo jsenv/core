@@ -36,7 +36,9 @@ export const createNodeEsmResolver = ({
     if (reference.specifierPathname[0] === "/") {
       const url = new URL(
         reference.specifier.slice(1),
-        ownerUrlInfo.context.rootDirectoryUrl,
+        ownerUrlInfo.originalUrl?.startsWith("http")
+          ? ownerUrlInfo.originalUrl
+          : ownerUrlInfo.context.rootDirectoryUrl,
       );
       return url;
     }

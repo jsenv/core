@@ -2,6 +2,7 @@
 
 
 - [0_js_module](0_js_module/0_js_module.md)
+- [0_js_module_http_enabled](0_js_module_http_enabled/0_js_module_http_enabled.md)
 
 ---
 
