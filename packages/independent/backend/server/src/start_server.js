@@ -150,7 +150,10 @@ export const startServer = async ({
   const router = createRouter();
   services = [
     jsenvServiceRouting(router),
-    jsenvServiceInternalClientFiles(),
+    ...(import.meta.build
+      ? // after build internal client files are inlined, no need for this service anymore
+        []
+      : [jsenvServiceInternalClientFiles()]),
     jsenvServiceAutoreloadOnRestart(),
     ...flattenAndFilterServices(services),
   ];

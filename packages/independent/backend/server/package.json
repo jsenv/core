@@ -21,14 +21,22 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./src/main.js"
+      "import": {
+        "development": "./src/main.js",
+        "default": "./dist/jsenv_server.js"
+      }
     },
     "./*": "./*"
   },
   "main": "./src/main.js",
   "files": [
+    "/dist/",
     "/src/"
   ],
+  "scripts": {
+    "build": "node --experimental-import-meta-resolve ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  },
   "dependencies": {
     "@jsenv/abort": "4.3.0",
     "formidable": "3.5.2",
