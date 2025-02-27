@@ -9,8 +9,9 @@ export const jsenvServiceAutoreloadOnRestart = () => {
           "upgrade": "websocket",
           "sec-websocket-protocol": "jsenv_server",
         },
-        websocket: (websocket) => {
-          websocket.send("Hello world");
+        websocket: true,
+        response: () => {
+          return new Response("hello world");
         },
       },
     ],

@@ -5,6 +5,7 @@ import cluster from "node:cluster";
 import http from "node:http";
 import { isIP } from "node:net";
 
+import { normalizeBodyMethods } from "./interfacing_with_node/body.js";
 import {
   applyRedirectionToRequest,
   createPushRequest,
@@ -373,12 +374,12 @@ export const startServer = async ({
   });
 
   request: {
-    const getResponse = async (request, { pushResponse }) => {
+    const getResponseProperties = async (request, { pushResponse }) => {
       let requestReceivedMeasure;
       if (serverTiming) {
         requestReceivedMeasure = performance.now();
       }
-      request.console.info(
+      request.logger.info(
         request.parent
           ? `Push ${request.resource}`
           : `${request.method} ${request.url}`,
@@ -475,7 +476,7 @@ export const startServer = async ({
           if (!handleErrorReturnValue) {
             throw errorWhileHandlingRequest;
           }
-          request.console.error(
+          request.logger.error(
             createDetailedMessage(`internal error while handling request`, {
               "error stack": errorWhileHandlingRequest.stack,
             }),
@@ -558,7 +559,7 @@ export const startServer = async ({
         responseProperties.headers["content-length"] > 0 &&
         !responseProperties.body
       ) {
-        request.console.warn(
+        request.logger.warn(
           `content-length header is ${responseProperties.headers["content-length"]} but body is empty`,
         );
       }
@@ -623,6 +624,7 @@ export const startServer = async ({
       const request = fromNodeRequest(nodeRequest, {
         signal: stopAbortSignal,
         serverOrigin,
+        requestBodyLifetime,
         logger,
       });
 
@@ -637,33 +639,33 @@ export const startServer = async ({
         // To let a chance to pushed streams we wait a little before sending the response
         const ignoreBody = request.method === "HEAD";
         const bodyIsEmpty = !responseProperties.body || ignoreBody;
-        if (bodyIsEmpty && request.console.children.length > 0) {
+        if (bodyIsEmpty && request.logger.hasPushChild) {
           await new Promise((resolve) => setTimeout(resolve));
         }
         await writeNodeResponse(responseStream, responseProperties, {
           signal,
           ignoreBody,
           onAbort: () => {
-            request.console.info(`response aborted`);
-            request.console.end();
+            request.logger.info(`response aborted`);
+            request.logger.end();
           },
           onError: (error) => {
-            request.console.error(
+            request.logger.error(
               createDetailedMessage(`An error occured while sending response`, {
                 "error stack": error.stack,
               }),
             );
-            request.console.end();
+            request.logger.end();
           },
           onHeadersSent: ({ status, statusText }) => {
-            request.console.onResponseHeaders({
+            request.logger.onHeadersSent({
               status,
               statusText: responseProperties.statusMessage || statusText,
             });
-            request.console.end();
+            request.logger.end();
           },
           onEnd: () => {
-            request.console.end();
+            request.logger.end();
           },
         });
       };
@@ -679,29 +681,26 @@ export const startServer = async ({
         if (!nagle) {
           nodeRequest.connection.setNoDelay(true);
         }
-        const responseProperties = await getResponse(request, {
+        const responseProperties = await getResponseProperties(request, {
           pushResponse: async ({ path, method }) => {
-            const pushRequestConsole = request.console.forPush();
+            const pushRequestLogger = request.logger.forPush();
             if (typeof path !== "string" || path[0] !== "/") {
-              pushRequestConsole.add({
-                type: "warn",
-                value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
-              });
+              pushRequestLogger.warn(
+                `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
+              );
               return;
             }
             if (!request.http2) {
-              pushRequestConsole.add({
-                type: "warn",
-                value: `response push ignored because request is not http2`,
-              });
+              pushRequestLogger.warn(
+                `response push ignored because request is not http2`,
+              );
               return;
             }
             const canPushStream = testCanPushStream(nodeResponse.stream);
             if (!canPushStream.can) {
-              pushRequestConsole.add({
-                type: "debug",
-                value: `response push ignored because ${canPushStream.reason}`,
-              });
+              pushRequestLogger.debug(
+                `response push ignored because ${canPushStream.reason}`,
+              );
               return;
             }
 
@@ -716,10 +715,9 @@ export const startServer = async ({
               () => preventedByService,
             );
             if (preventedByService) {
-              pushRequestConsole.add({
-                type: "debug",
-                value: `response push prevented by "${preventedByService.name}" service`,
-              });
+              pushRequestLogger.debug(
+                `response push prevented by "${preventedByService.name}" service`,
+              );
               return;
             }
 
@@ -728,15 +726,14 @@ export const startServer = async ({
             // being able to push a stream is nice to have
             // so when it fails it's not critical
             const onPushStreamError = (e) => {
-              pushRequestConsole.add({
-                type: "error",
-                value: createDetailedMessage(
+              pushRequestLogger.error(
+                createDetailedMessage(
                   `An error occured while pushing a stream to the response for ${request.resource}`,
                   {
                     "error stack": e.stack,
                   },
                 ),
-              });
+              );
             };
 
             // not aborted, let's try to push a stream into that response
@@ -787,18 +784,20 @@ export const startServer = async ({
                 signal: pushResponseOperation.signal,
                 pathname: path,
                 method,
-                console: pushRequestConsole,
+                logger: pushRequestLogger,
               });
 
               try {
-                const responseProperties = await getResponse(pushRequest, {
-                  pushResponse: () => {
-                    pushRequest.console.add({
-                      type: "warn",
-                      value: `response push ignored because nested push is not supported`,
-                    });
+                const responseProperties = await getResponseProperties(
+                  pushRequest,
+                  {
+                    pushResponse: () => {
+                      pushRequest.logger.warn(
+                        `response push ignored because nested push is not supported`,
+                      );
+                    },
                   },
-                });
+                );
                 if (!abortController.signal.aborted) {
                   if (pushStream.destroyed) {
                     abortController.abort();
@@ -814,10 +813,9 @@ export const startServer = async ({
                       effectiveRecvDataLength + responseLength >
                       remoteWindowSize
                     ) {
-                      pushRequest.console.add({
-                        type: "debug",
-                        value: `Aborting stream to prevent exceeding remoteWindowSize`,
-                      });
+                      pushRequest.logger.debug(
+                        `Aborting stream to prevent exceeding remoteWindowSize`,
+                      );
                       abortController.abort();
                     }
                   }
@@ -869,8 +867,9 @@ export const startServer = async ({
           signal: stopAbortSignal,
           serverOrigin,
           requestBodyLifetime,
+          logger,
         });
-        const responseProperties = await getResponse(request, {});
+        const responseProperties = await getResponseProperties(request, {});
         // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
         let {
           status,
@@ -880,40 +879,74 @@ export const startServer = async ({
         } = responseProperties;
 
         if (status !== 200) {
+          body = await body;
           headers = {
             connection: "close",
             ...headers,
           };
-          // we should await + read body as string
           if (body && headers["content-length"] === undefined) {
-            headers["content-length"] = Buffer.byteLength(body);
+            headers["transfer-encoding"] = "chunked";
           }
           const headersString = Object.keys(headers)
             .map((h) => `${h}: ${headers[h]}`)
             .join("\r\n");
-          socket.once("finish", socket.destroy);
-          socket.end(
-            `HTTP/1.1 ${status} ${statusText}\r\n${headersString.join("\r\n")}\r\n\r\n${body}`,
+          socket.write(
+            `HTTP/1.1 ${status} ${statusText}\r\n${headersString.join("\r\n")}\r\n\r\n`,
           );
-          request.console.end();
+          request.logger.onHeadersSent({ status, statusText });
+          request.logger.end();
+          socket.once("finish", socket.destroy);
+          if (body) {
+            const bodyMethods = normalizeBodyMethods(body);
+            const observable = bodyMethods.asObservable();
+            observable.subscribe({
+              next: (data) => {
+                socket.write(data);
+                websocket.send(data);
+              },
+              error: (value) => {
+                socket.emit("error", value);
+              },
+              complete: () => {
+                socket.end();
+              },
+            });
+          } else {
+            socket.end();
+          }
           return;
         }
-        websocketServer.handleUpgrade(
-          nodeRequest,
-          socket,
-          head,
-          (websocket) => {
-            const websocketAbortController = new AbortController();
-            websocketClientSet.add(websocket);
-            websocket.signal = websocketAbortController.signal;
-            websocket.once("close", () => {
-              websocketClientSet.delete(websocket);
-              websocketAbortController.abort();
-            });
-            request.console.end();
-            // TODO: connect the body of the response with the websocket
+        const websocket = await new Promise((resolve) => {
+          websocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
+        });
+        request.logger.onHeadersSent({ status, statusText });
+        request.logger.end();
+        const websocketAbortController = new AbortController();
+        websocketClientSet.add(websocket);
+        websocket.once("close", () => {
+          websocketClientSet.delete(websocket);
+          websocketAbortController.abort();
+        });
+        body = await body;
+        if (!body) {
+          return;
+        }
+        const bodyMethods = normalizeBodyMethods(body);
+        const observable = bodyMethods.asObservable();
+        let subscription = observable.subscribe({
+          next: (data) => {
+            websocket.send(data);
           },
-        );
+          error: (value) => {
+            websocket.emit("error", value);
+          },
+          complete: () => {
+            websocket.terminate();
+          },
+        });
+        websocket.once("close", () => {
+          subscription.unsubscribe();
+        });
       };
 
       // see server-polyglot.js, upgrade must be listened on https server when used

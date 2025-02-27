@@ -14,17 +14,19 @@ export const fromNodeRequest = (
   nodeRequest,
   { serverOrigin, signal, requestBodyLifetime, logger },
 ) => {
-  const requestConsole = createRequestConsole(nodeRequest, logger);
+  const requestLogger = createRequestLogger(nodeRequest, (type, value) => {
+    logger[type](value);
+  });
   nodeRequest.on("error", (error) => {
     if (error.message === "aborted") {
-      requestConsole.debug(
+      requestLogger.debug(
         createDetailedMessage(`request aborted by client`, {
           "error message": error.message,
         }),
       );
     } else {
       // I'm not sure this can happen but it's here in case
-      requestConsole.error(
+      requestLogger.error(
         createDetailedMessage(`"error" event emitted on request`, {
           "error stack": error.stack,
         }),
@@ -157,6 +159,7 @@ export const fromNodeRequest = (
   }
 
   return Object.freeze({
+    logger: requestLogger,
     ip,
     ipForwarded,
     proto,
@@ -181,45 +184,56 @@ export const fromNodeRequest = (
   });
 };
 
-const createRequestConsole = (nodeRequest, logger) => {
+const createRequestLogger = (nodeRequest, write) => {
   // Handling request is asynchronous, we buffer logs for that request
   // until we know what happens with that request
   // It delays logs until we know of the request will be handled
   // but it's mandatory to make logs readable.
 
-  const requestConsole = {
-    logs: [],
-    children: [],
+  const logArray = [];
+  const childArray = [];
+  const add = ({ type, value }) => {
+    logArray.push({ type, value });
+  };
+
+  const requestLogger = {
+    logArray,
+    childArray,
+    hasPushChild: false,
     forPush: () => {
-      const childLogBuffer = createRequestConsole(nodeRequest, logger);
+      const childLogBuffer = requestLogger(nodeRequest, write);
       childLogBuffer.isChild = true;
-      requestConsole.children.push(childLogBuffer);
+      childArray.push(childLogBuffer);
+      requestLogger.hasPushChild = true;
       return childLogBuffer;
     },
-    add: ({ type, value }) => {
-      requestConsole.logs.push({ type, value });
+    debug: (value) => {
+      add({
+        type: "debug",
+        value,
+      });
     },
     info: (value) => {
-      requestConsole.add({
+      add({
         type: "info",
         value,
       });
     },
     warn: (value) => {
-      requestConsole.add({
+      add({
         type: "warn",
         value,
       });
     },
     error: (value) => {
-      requestConsole.add({
+      add({
         type: "error",
         value,
       });
     },
-    onResponseHeaders: ({ status, statusText }) => {
+    onHeadersSent: ({ status, statusText }) => {
       const statusType = statusToType(status);
-      requestConsole.add({
+      add({
         type:
           status === 404 && nodeRequest.path === "/favicon.ico"
             ? "debug"
@@ -233,9 +247,13 @@ const createRequestConsole = (nodeRequest, logger) => {
         value: `${colorizeResponseStatus(status)} ${statusText}`,
       });
     },
-
+    ended: false,
     end: () => {
-      if (requestConsole.isChild) {
+      if (requestLogger.ended) {
+        return;
+      }
+      requestLogger.ended = true;
+      if (requestLogger.isChild) {
         // keep buffering until root request write logs for everyone
         return;
       }
@@ -256,12 +274,12 @@ const createRequestConsole = (nodeRequest, logger) => {
             type = "warn";
           }
         }
-        logger[type](value);
+        write(type, value);
       };
-      const visitBufferToLog = (bufferToLog, depth) => {
+      const writeLogs = (loggerToWrite, depth) => {
         let someLogIsError = false;
         let someLogIsWarn = false;
-        for (const log of bufferToLog.logs) {
+        for (const log of loggerToWrite.logArray) {
           if (log.type === "error") {
             someLogIsError = true;
           }
@@ -269,9 +287,12 @@ const createRequestConsole = (nodeRequest, logger) => {
             someLogIsWarn = true;
           }
         }
-        const firstLog = bufferToLog.logs.shift();
-        const lastLog = bufferToLog.logs.pop();
-        const middleLogs = bufferToLog.logs;
+        const firstLog = loggerToWrite.logArray.shift();
+        const lastLog = loggerToWrite.logArray.pop();
+        const middleLogs = loggerToWrite.logArray;
+        if (!firstLog) {
+          debugger;
+        }
         writeLog(firstLog, {
           someLogIsError,
           someLogIsWarn,
@@ -284,8 +305,8 @@ const createRequestConsole = (nodeRequest, logger) => {
             depth,
           });
         }
-        for (const childToLog of bufferToLog.children) {
-          visitBufferToLog(childToLog, depth + 1);
+        for (const childLoggerToWrite of loggerToWrite.childArray) {
+          writeLogs(childLoggerToWrite, depth + 1);
         }
         if (lastLog) {
           writeLog(lastLog, {
@@ -295,11 +316,11 @@ const createRequestConsole = (nodeRequest, logger) => {
           });
         }
       };
-      visitBufferToLog(requestConsole, 0);
+      writeLogs(requestLogger, 0);
     },
   };
 
-  return requestConsole;
+  return requestLogger;
 };
 
 const readBody = (body, { as }) => {
@@ -385,11 +406,11 @@ const getPropertiesFromPathname = ({ pathname, baseUrl }) => {
 
 export const createPushRequest = (
   request,
-  { signal, pathname, method, console },
+  { signal, pathname, method, logger },
 ) => {
   const pushRequest = Object.freeze({
     ...request,
-    console,
+    logger,
     parent: request,
     signal,
     http2: true,

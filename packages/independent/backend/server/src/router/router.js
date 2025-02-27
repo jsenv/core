@@ -235,10 +235,10 @@ export const createRouter = () => {
     };
     routeSet.add(route);
   };
-  const match = async (request, { websocket, injectResponseHeader } = {}) => {
+  const match = async (request, { injectResponseHeader } = {}) => {
     const allowedMethods = [];
     for (const route of routeSet) {
-      if (route.websocket && !websocket) {
+      if (route.websocket && request.headers["upgrade"] !== "websocket") {
         continue;
       }
       const resourceMatchResult = route.matchResource(request.resource);
@@ -304,23 +304,6 @@ export const createRouter = () => {
         resourceMatchResult,
         headersMatchResult,
       );
-      if (route.websocket) {
-        const websocketReturnValue = route.websocket(
-          websocket,
-          {
-            ...named,
-            contentNegotiation: contentNegotiationResult,
-          },
-          ...stars,
-        );
-        if (websocketReturnValue === null || websocketReturnValue === false) {
-          continue;
-        }
-        return true;
-      }
-      if (websocket) {
-        continue;
-      }
       let responseReturnValue = route.response(
         request,
         {
