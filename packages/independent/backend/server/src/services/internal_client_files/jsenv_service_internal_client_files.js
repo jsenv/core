@@ -1,6 +1,8 @@
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { readFileSync } from "node:fs";
 
+const jsenvServerRootDirectoryUrl = import.meta.resolve("../../../");
+
 export const jsenvServiceInternalClientFiles = () => {
   return {
     name: "jsenv:internal_client_files",
@@ -10,10 +12,10 @@ export const jsenvServiceInternalClientFiles = () => {
         endpoint: "GET /@jsenv/server/*",
         availableContentTypes: ["text/javascript"],
         hidden: true,
-        response: (request, path) => {
+        response: (request, params, path) => {
           const jsenvServerClientFileUrl = new URL(
             `./${path}`,
-            import.meta.url,
+            jsenvServerRootDirectoryUrl,
           );
           const fileContent = readFileSync(jsenvServerClientFileUrl, "utf8");
           return new Response(fileContent, {
