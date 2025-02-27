@@ -1,20 +1,14 @@
 import { readFileSync } from "node:fs";
-import { createRouter } from "./router.js";
 
 const routeInspectorHtmlFileUrl = import.meta.resolve(
   "./client/route_inspector.html",
 );
 
-export const jsenvServiceRouting = (routes) => {
-  const router = createRouter();
-  for (const route of routes) {
-    router.add(route);
-  }
+export const jsenvServiceRouting = (router) => {
   router.add({
     endpoint: "GET /__inspect__/routes",
     availableContentTypes: ["text/html"],
-    response: (request) => {
-      debugger;
+    response: () => {
       const inspectorHtml = readFileSync(
         new URL(routeInspectorHtmlFileUrl),
         "utf8",
@@ -27,8 +21,7 @@ export const jsenvServiceRouting = (routes) => {
   router.add({
     endpoint: "GET /__inspect__/routes",
     availableContentTypes: ["application/json"],
-    response: (request) => {
-      debugger;
+    response: () => {
       const routeJSON = router.inspect();
       return Response.json(routeJSON);
     },
@@ -37,8 +30,9 @@ export const jsenvServiceRouting = (routes) => {
 
   return {
     name: "jsenv:routing",
-    handleRequest: async (request) => {
+    handleRequest: async (request, { websocket }) => {
       const response = await router.match(request, {
+        websocket,
         injectResponseHeader: (name, value) => {
           const headers = headersToInjectMap.get(request);
           if (headers) {

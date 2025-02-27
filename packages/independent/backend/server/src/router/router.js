@@ -149,6 +149,10 @@ export const createRouter = () => {
     };
   };
 
+  const router = {
+    hasSomeWebsocketRoute: false,
+  };
+
   /**
    * Adds a route to the router.
    *
@@ -171,16 +175,20 @@ export const createRouter = () => {
     availableEncodings = [],
     acceptedContentTypes = [], // useful only for POST/PATCH/PUT
     response,
+    websocket,
   }) => {
     if (!endpoint || typeof endpoint !== "string") {
       throw new TypeError(`endpoint must be a string, received ${endpoint}`);
     }
-    const [method, resource] = endpoint.split(" ");
-    if (!HTTP_METHODS.includes(method)) {
+    const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
+    if (method !== "*" && !HTTP_METHODS.includes(method)) {
       throw new TypeError(`Invalid HTTP method: ${method}`);
     }
-    if (resource[0] !== "/") {
+    if (resource[0] !== "/" && resource[0] !== "*") {
       throw new TypeError(`Resource must start with /, received ${resource}`);
+    }
+    if (websocket) {
+      router.hasSomeWebsocketRoute = true;
     }
     const resourcePattern = createResourcePattern(resource);
     const headersPattern = headers ? createHeadersPattern(headers) : null;
@@ -209,6 +217,7 @@ export const createRouter = () => {
               return headersPattern.match(requestHeaders);
             },
       response,
+      websocket,
       toString: () => {
         return `${method} ${resource}`;
       },
@@ -226,9 +235,12 @@ export const createRouter = () => {
     };
     routeSet.add(route);
   };
-  const match = async (request, { injectResponseHeader } = {}) => {
+  const match = async (request, { websocket, injectResponseHeader } = {}) => {
     const allowedMethods = [];
     for (const route of routeSet) {
+      if (route.websocket && !websocket) {
+        continue;
+      }
       const resourceMatchResult = route.matchResource(request.resource);
       if (!resourceMatchResult) {
         continue;
@@ -292,6 +304,20 @@ export const createRouter = () => {
         resourceMatchResult,
         headersMatchResult,
       );
+      if (route.websocket) {
+        const websocketReturnValue = route.websocket(
+          websocket,
+          {
+            ...named,
+            contentNegotiation: contentNegotiationResult,
+          },
+          ...stars,
+        );
+        if (websocketReturnValue === null || websocketReturnValue === false) {
+          continue;
+        }
+        return true;
+      }
       let responseReturnValue = route.response(
         request,
         {
@@ -349,7 +375,12 @@ export const createRouter = () => {
     return data;
   };
 
-  return { add, match, inspect };
+  Object.assign(router, {
+    add,
+    match,
+    inspect,
+  });
+  return router;
 };
 
 const isRequestBodyContentTypeSupported = (

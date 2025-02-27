@@ -23,8 +23,15 @@ import { composeTwoResponses } from "./internal/response_composition.js";
 import { createPolyglotServer } from "./internal/server-polyglot.js";
 import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js";
 import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js";
+import { jsenvServiceRouting } from "./router/jsenv_service_routing.js";
+import { createRouter } from "./router/router.js";
 import { timingToServerTimingResponseHeaders } from "./server_timing/timing_header.js";
-import { createServiceController } from "./service_controller.js";
+import {
+  createServiceController,
+  flattenAndFilterServices,
+} from "./service_controller.js";
+import { jsenvServiceAutoreloadOnRestart } from "./services/autoreload_on_server_restart/jsenv_service_autoreload_on_server_restart.js";
+import { jsenvServiceInternalClientFiles } from "./services/internal_client_files/jsenv_service_internal_client_files.js";
 import {
   STOP_REASON_INTERNAL_ERROR,
   STOP_REASON_NOT_SPECIFIED,
@@ -141,9 +148,26 @@ export const startServer = async ({
   }
 
   const server = {};
-  const serviceController = createServiceController(services, {
-    routesFromParam: routes,
-  });
+  const router = createRouter();
+  services = [
+    jsenvServiceRouting(router),
+    jsenvServiceInternalClientFiles(),
+    jsenvServiceAutoreloadOnRestart(),
+    ...flattenAndFilterServices(services),
+  ];
+  for (const route of routes) {
+    router.add(route);
+  }
+  for (const service of services) {
+    const serviceRoutes = service.routes;
+    if (serviceRoutes) {
+      for (const serviceRoute of serviceRoutes) {
+        router.add(serviceRoute);
+      }
+    }
+  }
+
+  const serviceController = createServiceController(services);
   const processTeardownEvents = {
     SIGHUP: stopOnExit,
     SIGTERM: stopOnExit,
@@ -556,9 +580,10 @@ export const startServer = async ({
           });
 
           try {
-            const responseProperties = await handleRequest(pushRequest, {
-              requestNode,
-            });
+            const responseProperties = await getResponseProperties(
+              pushRequest,
+              { requestNode },
+            );
             if (!abortController.signal.aborted) {
               if (pushStream.destroyed) {
                 abortController.abort();
@@ -595,7 +620,7 @@ export const startServer = async ({
         });
       };
 
-      const handleRequest = async (request, { requestNode }) => {
+      const getResponseProperties = async (request, { requestNode }) => {
         let requestReceivedMeasure;
         if (serverTiming) {
           requestReceivedMeasure = performance.now();
@@ -942,7 +967,7 @@ export const startServer = async ({
         if (receiveRequestOperation.signal.aborted) {
           return;
         }
-        const responseProperties = await handleRequest(request, {
+        const responseProperties = await getResponseProperties(request, {
           requestNode: rootRequestNode,
         });
         nodeRequest.resume();
@@ -971,18 +996,12 @@ export const startServer = async ({
     const removeRequestListener = listenRequest(nodeServer, requestCallback);
     // ensure we don't try to handle new requests while server is stopping
     stopCallbackSet.add(removeRequestListener);
-  }
 
-  websocket: {
-    // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
-    const websocketHandlers = [];
-    for (const service of serviceController.services) {
-      const { handleWebsocket } = service;
-      if (handleWebsocket) {
-        websocketHandlers.push(handleWebsocket);
+    websocket: {
+      // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
+      if (!router.hasSomeWebsocketRoute) {
+        break websocket;
       }
-    }
-    if (websocketHandlers.length > 0) {
       const websocketClients = new Set();
       const { WebSocketServer } = await import("ws");
       let websocketServer = new WebSocketServer({ noServer: true });
@@ -1005,16 +1024,13 @@ export const startServer = async ({
             });
             const request = fromNodeRequest(nodeRequest, {
               signal: stopAbortSignal,
-              serverOrigin: websocketOrigin,
+              serverOrigin,
               requestBodyLifetime,
             });
-            serviceController.callAsyncHooksUntil(
-              "handleWebsocket",
+            websocket.request = request;
+            serviceController.callAsyncHooksUntil("handleRequest", request, {
               websocket,
-              {
-                request,
-              },
-            );
+            });
           },
         );
       };

@@ -2,12 +2,17 @@ export const jsenvServiceAutoreloadOnRestart = () => {
   return {
     name: "jsenv:autoreload_on_server_restart",
 
-    handleWebsocket: (websocket) => {
-      if (websocket.protocol === "jsenv_server") {
-        websocket.send("Hello world");
-        return true;
-      }
-      return false;
-    },
+    routes: [
+      {
+        endpoint: "GET *",
+        headers: {
+          "upgrade": "websocket",
+          "sec-websocket-protocol": "jsenv_server",
+        },
+        websocket: (websocket) => {
+          websocket.send("Hello world");
+        },
+      },
+    ],
   };
 };
