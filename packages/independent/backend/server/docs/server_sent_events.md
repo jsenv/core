@@ -19,7 +19,7 @@ startServer({
   routes: [
     {
       endpoint: "GET *",
-      availableContentTypes: "text/event-stream",
+      availableContentTypes: ["text/event-stream"],
       response: (request) => {
         return room.join(request);
       },

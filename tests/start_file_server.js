@@ -21,8 +21,7 @@ export const startFileServer = ({
     ],
     routes: [
       {
-        url: "*",
-        method: "GET",
+        endpoint: "GET *",
         response: (request) => {
           return fetchFileSystem(
             new URL(request.resource.slice(1), rootDirectoryUrl),

@@ -61,6 +61,13 @@ await startServer({
         const page = request.searchParams.get("page");
       },
     },
+    // OR
+    {
+      endpoint: "GET /?page=:page",
+      response: (request) => {
+        const { page } = request.params;
+      },
+    },
   ],
 });
 ```
@@ -87,7 +94,8 @@ await startServer({
         "text/plain",
         "application/octet-stream",
       ],
-      response: async (request, { id }) => {
+      response: async (request) => {
+        const { id } = request.params;
         const requestContentType = request.headers["content-type"];
         if (requestContentType === "application/json") {
           const requestBodyJson = await request.json();

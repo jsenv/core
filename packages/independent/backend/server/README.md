@@ -59,7 +59,7 @@ await startServer({
   allowHttpRequestOnHttps: true,
   routes: [
     {
-      endpoint: "GET * ",
+      endpoint: "GET *",
       response: (request) => {
         const clientUsesHttp = request.origin.startsWith("http:");
         return new Response(

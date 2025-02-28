@@ -40,7 +40,7 @@ await startServer({
     {
       endpoint: "GET *",
       availableContentTypes: ["application/json", "text/plain"],
-      response: (request, contentNegotiation) => {
+      response: (request, { contentNegotiation }) => {
         if (contentNegotiation.contentType === "application/json") {
           return Response.json({ data: "Hello world" });
         }
@@ -61,7 +61,7 @@ await startServer({
     {
       endpoint: "GET *",
       availableLanguages: ["fr", "en"],
-      response: (request, contentNegotiation) => {
+      response: (request, { contentNegotiation }) => {
         if (contentNegotiation.contentLanguage === "fr") {
           return new Response("Bonjour tout le monde !");
         }
@@ -83,7 +83,7 @@ await startServer({
     {
       endpoint: "GET *",
       availableEncodings: ["gzip", "identity"],
-      response: (request, contentNegotiation) => {
+      response: (request, { contentNegotiation }) => {
         if (contentNegotiation.contentEncoding === "gzip") {
           return new Response(gzipSync(Buffer.from(`Hello world!`)), {
             headers: {
@@ -107,7 +107,7 @@ await startServer({
       endpoint: "GET *",
       availableContentTypes: ["application/json", "text/plain"],
       availableLanguages: ["fr", "en"],
-      response: (request, contentNegotiation) => {
+      response: (request, { contentNegotiation }) => {
         const message =
           contentNegotiation.contentLanguage === "fr"
             ? "Bonjour tout le monde"

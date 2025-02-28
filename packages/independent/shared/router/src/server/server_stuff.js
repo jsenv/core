@@ -56,7 +56,8 @@ export const JSONFileManagerService = () => {
       },
       {
         endpoint: "GET /json_files/:id",
-        response: (request, { id }) => {
+        response: (request) => {
+          const { id } = request.params;
           const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
           try {
             const jsonBuffer = readFileSync(jsonFileUrl);

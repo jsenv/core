@@ -12,7 +12,8 @@ export const jsenvServiceInternalClientFiles = () => {
         endpoint: "GET /@jsenv/server/*",
         availableContentTypes: ["text/javascript"],
         hidden: true,
-        response: (request, params, path) => {
+        response: (request) => {
+          const path = request.params[0];
           const jsenvServerClientFileUrl = new URL(
             `./${path}`,
             jsenvServerRootDirectoryUrl,

@@ -166,6 +166,7 @@ export const fromNodeRequest = (
     protoForwarded,
     host,
     hostForwarded,
+    params: {},
     signal: handleRequestOperation.signal,
     http2: Boolean(nodeRequest.stream),
     origin: requestOrigin,

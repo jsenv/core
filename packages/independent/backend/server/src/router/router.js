@@ -236,26 +236,27 @@ export const createRouter = () => {
     routeSet.add(route);
   };
   const match = async (request, { injectResponseHeader } = {}) => {
-    const allowedMethods = [];
+    const wouldHaveMatched = {
+      // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
+      methodSet: new Set(),
+      contentTypeSet: new Set(),
+      websocket: false,
+    };
+
     for (const route of routeSet) {
-      if (route.websocket && request.headers["upgrade"] !== "websocket") {
+      const resourceMatchResult = route.matchResource(request.resource);
+      if (!resourceMatchResult) {
         continue;
       }
       if (request.headers["upgrade"] === "websocket" && !route.websocket) {
         continue;
       }
-      const resourceMatchResult = route.matchResource(request.resource);
-      if (!resourceMatchResult) {
+      if (route.websocket && request.headers["upgrade"] !== "websocket") {
+        wouldHaveMatched.websocket = true;
         continue;
       }
       if (!route.matchMethod(request.method)) {
-        // we can already collect the fact resource has matched
-        // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
-        allowedMethods.push(route.method);
-        continue;
-      }
-      const headersMatchResult = route.matchHeaders(request.headers);
-      if (!headersMatchResult) {
+        wouldHaveMatched.methodSet.add(route.method);
         continue;
       }
       if (
@@ -268,14 +269,18 @@ export const createRouter = () => {
           acceptedContentTypes.length &&
           !isRequestBodyContentTypeSupported(request, { acceptedContentTypes })
         ) {
-          return createUnsupportedMediaTypeResponse(request, {
-            acceptedContentTypes,
-          });
+          for (const acceptedContentType of acceptedContentTypes) {
+            wouldHaveMatched.contentTypeSet.add(acceptedContentType);
+          }
+          continue;
         }
+      }
+      const headersMatchResult = route.matchHeaders(request.headers);
+      if (!headersMatchResult) {
+        continue;
       }
 
       // now we are "good", let's try to generate a response
-      // now put negotiated stuff at the end
       const contentNegotiationResult = {};
       content_negotiation: {
         const { availableContentTypes } = route;
@@ -307,14 +312,10 @@ export const createRouter = () => {
         resourceMatchResult,
         headersMatchResult,
       );
-      let responseReturnValue = route.response(
-        request,
-        {
-          ...named,
-          contentNegotiation: contentNegotiationResult,
-        },
-        ...stars,
-      );
+      Object.assign(request.params, named, stars);
+      let responseReturnValue = route.response(request, {
+        contentNegotiation: contentNegotiationResult,
+      });
       if (
         responseReturnValue !== null &&
         typeof responseReturnValue === "object" &&
@@ -349,8 +350,25 @@ export const createRouter = () => {
     // nothing has matched fully
     // if nothing matches at all we'll send 404
     // but if url matched but METHOD was not supported we send 405
-    if (allowedMethods.length) {
-      return createMethodNotAllowedResponse(request, { allowedMethods });
+    if (wouldHaveMatched.methodSet.size) {
+      return createMethodNotAllowedResponse(request, {
+        allowedMethods: [...wouldHaveMatched.methodSet],
+      });
+    }
+    if (wouldHaveMatched.contentTypeSet.size) {
+      return createUnsupportedMediaTypeResponse(request, {
+        acceptedContentTypes: [...wouldHaveMatched.contentTypeSet],
+      });
+    }
+    if (wouldHaveMatched.websocket) {
+      return createClientErrorResponse(request, {
+        status: 426,
+        statusText: "Upgrade Required",
+        message: {
+          text: `The request requires the upgrade to a websocket connection`,
+          html: `The request requires the upgrade to a websocket connection`,
+        },
+      });
     }
     const availableEndpoints = constructAvailableEndpoints(request);
     return createRouteNotFoundResponse(request, { availableEndpoints });
