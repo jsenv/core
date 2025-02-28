@@ -148,25 +148,6 @@ export const startServer = async ({
   const router = createRouter();
 
   const headersToInjectMap = new Map();
-  const handleRequest = async (request) => {
-    const response = await router.match(request, {
-      injectResponseHeader: (name, value) => {
-        const headers = headersToInjectMap.get(request);
-        if (headers) {
-          headers[name] = value;
-        } else {
-          headersToInjectMap.set(request, { [name]: value });
-        }
-      },
-    });
-    request.signal.addEventListener("abort", () => {
-      headersToInjectMap.delete(request);
-    });
-    return response;
-  };
-  const handleWebsocket = async (request, { connectSocket }) => {
-    await router.match(request, { connectSocket });
-  };
 
   services = [
     jsenvServiceRouteInspector(router),
@@ -458,13 +439,25 @@ export const startServer = async ({
             });
           }, responseTimeout);
         });
-        const handleRequestPromise = handleRequest(request, {
+
+        const routerMatchPromise = router.match(request, {
           timing: handleRequestTimings,
           pushResponse,
+          injectResponseHeader: (name, value) => {
+            const headers = headersToInjectMap.get(request);
+            if (headers) {
+              headers[name] = value;
+            } else {
+              headersToInjectMap.set(request, { [name]: value });
+              request.signal.addEventListener("abort", () => {
+                headersToInjectMap.delete(request);
+              });
+            }
+          },
         });
         handleRequestResult = await Promise.race([
           timeoutPromise,
-          handleRequestPromise,
+          routerMatchPromise,
         ]);
       } catch (e) {
         errorWhileHandlingRequest = e;
@@ -941,7 +934,7 @@ export const startServer = async ({
       let errorWhileHandlingWebsocket = null;
       // let handleWebsocketResult;
       try {
-        await handleWebsocket(request, {
+        await router.match(request, {
           closeSocket,
           connectSocket: async () => {
             const websocket = await new Promise((resolve) => {
