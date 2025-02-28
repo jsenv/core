@@ -72,6 +72,12 @@ export const CONTENT_TYPE = {
     });
     return mediaTypeFound || "application/octet-stream";
   },
+
+  toUrlExtension: (contentType) => {
+    const mediaType = CONTENT_TYPE.asMediaType(contentType);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
 };
 
 const normalizeMediaType = (value) => {

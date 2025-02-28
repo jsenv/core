@@ -6,7 +6,8 @@
     <script type="importmap">
       {
         "imports": {
-          "preact": "https://esm.sh/preact@10.23.1"
+          "preact": "https://esm.sh/preact@10.23.1",
+          "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
         }
       }
     </script>
@@ -16,7 +17,7 @@
     <script type="module">
       // https://preactjs.com/guide/v10/no-build-workflows/
       import { render } from "preact";
-      // import { html } from "htm/preact";
+      import { html } from "htm/preact";
 
       const App = () => {
         return html`Hello world`;

@@ -1,4 +1,5 @@
 import { URL_META } from "@jsenv/url-meta";
+import { setUrlExtension, urlToExtension, urlToFilename } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 export const jsenvPluginProtocolHttp = ({ include }) => {
@@ -66,9 +67,7 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
       }
       const responseHeaders = response.headers;
       const responseContentType = responseHeaders.get("content-type");
-      const contentType = responseContentType
-        ? CONTENT_TYPE.asMediaType(responseContentType)
-        : "application/octet-stream";
+      const contentType = responseContentType || "application/octet-stream";
       const isTextual = CONTENT_TYPE.isTextual(contentType);
       let content;
       if (isTextual) {
@@ -76,10 +75,32 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
       } else {
         content = Buffer.from(await response.arrayBuffer());
       }
+      // When fetching content from http it's possible to request something like
+      // "https://esm.sh/preact@10.23.1
+      // and receive content-type "application/javascript"
+      // if we do nothing, after build there will be a "preact@10.23.1" file without ".js" extension
+      // and the build server will serve this as "application/octet-stream".
+      // We want to build files to be compatible with any server and keep build server logic simple.
+      // -> We auto-append the extension corresponding to the content-type
+      let filenameHint;
+      const extension = urlToExtension(originalUrl);
+      if (extension === "") {
+        const wellKnownExtensionForThisContentType =
+          CONTENT_TYPE.toUrlExtension(contentType);
+        if (wellKnownExtensionForThisContentType) {
+          const urlWithExtension = setUrlExtension(
+            originalUrl,
+            wellKnownExtensionForThisContentType,
+          );
+          filenameHint = urlToFilename(urlWithExtension);
+        }
+      }
+
       return {
         content,
         contentType,
         contentLength: responseHeaders.get("content-length") || undefined,
+        filenameHint,
       };
     },
   };

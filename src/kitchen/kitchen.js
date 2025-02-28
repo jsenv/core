@@ -338,12 +338,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         headers = {},
         body,
         isEntryPoint,
+        filenameHint,
       } = fetchUrlContentReturnValue;
       if (content === undefined) {
         content = body;
       }
       if (contentType === undefined) {
         contentType = headers["content-type"] || "application/octet-stream";
+      }
+      if (filenameHint) {
+        urlInfo.filenameHint = filenameHint;
       }
       urlInfo.status = status;
       urlInfo.contentType = contentType;
@@ -672,18 +676,18 @@ const memoizeIsSupported = (runtimeCompat) => {
 
 const inferUrlInfoType = (urlInfo) => {
   const { type, typeHint } = urlInfo;
-  const { contentType } = urlInfo;
+  const mediaType = CONTENT_TYPE.asMediaType(urlInfo.contentType);
   const { expectedType } = urlInfo.firstReference;
   if (type === "sourcemap" || typeHint === "sourcemap") {
     return "sourcemap";
   }
-  if (contentType === "text/html") {
+  if (mediaType === "text/html") {
     return "html";
   }
-  if (contentType === "text/css") {
+  if (mediaType === "text/css") {
     return "css";
   }
-  if (contentType === "text/javascript") {
+  if (mediaType === "text/javascript") {
     if (expectedType === "js_classic") {
       return "js_classic";
     }
@@ -692,19 +696,19 @@ const inferUrlInfoType = (urlInfo) => {
     }
     return "js_module";
   }
-  if (contentType === "application/importmap+json") {
+  if (mediaType === "application/importmap+json") {
     return "importmap";
   }
-  if (contentType === "application/manifest+json") {
+  if (mediaType === "application/manifest+json") {
     return "webmanifest";
   }
-  if (contentType === "image/svg+xml") {
+  if (mediaType === "image/svg+xml") {
     return "svg";
   }
-  if (CONTENT_TYPE.isJson(contentType)) {
+  if (CONTENT_TYPE.isJson(mediaType)) {
     return "json";
   }
-  if (CONTENT_TYPE.isTextual(contentType)) {
+  if (CONTENT_TYPE.isTextual(mediaType)) {
     return "text";
   }
   return expectedType || "other";
