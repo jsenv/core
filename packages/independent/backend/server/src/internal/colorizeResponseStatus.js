@@ -9,7 +9,7 @@ const magenta = "\x1b[35m";
 const cyan = "\x1b[36m";
 // const white = "\x1b[37m"
 
-export const websocketSuffixColorized = `${magenta}[websocket]${close}`;
+export const websocketSuffixColorized = `{ upgrade: ${magenta}websocket${close} }`;
 
 export const colorizeResponseStatus = (status) => {
   const statusType = statusToType(status);

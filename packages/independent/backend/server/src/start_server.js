@@ -377,6 +377,23 @@ export const startServer = async ({
     });
   });
 
+  const applyRequestInternalRedirection = (request) => {
+    serviceController.callHooks(
+      "redirectRequest",
+      request,
+      {},
+      (newRequestProperties) => {
+        if (newRequestProperties) {
+          request = applyRedirectionToRequest(request, {
+            original: request.original || request,
+            previous: request,
+            ...newRequestProperties,
+          });
+        }
+      },
+    );
+  };
+
   request: {
     const getResponseProperties = async (request, { pushResponse }) => {
       let requestReceivedMeasure;
@@ -386,9 +403,7 @@ export const startServer = async ({
       request.logger.info(
         request.parent
           ? `Push ${request.resource}`
-          : request.headers["upgrade"] === "websocket"
-            ? `${request.method} ${request.url} ${websocketSuffixColorized}`
-            : `${request.method} ${request.url}`,
+          : `${request.method} ${request.url}`,
       );
       let requestWaitingTimeout;
       if (requestWaitingMs) {
@@ -401,21 +416,7 @@ export const startServer = async ({
           requestWaitingMs,
         ).unref();
       }
-
-      serviceController.callHooks(
-        "redirectRequest",
-        request,
-        {},
-        (newRequestProperties) => {
-          if (newRequestProperties) {
-            request = applyRedirectionToRequest(request, {
-              original: request.original || request,
-              previous: request,
-              ...newRequestProperties,
-            });
-          }
-        },
-      );
+      applyRequestInternalRedirection(request);
 
       let handleRequestReturnValue;
       let errorWhileHandlingRequest = null;
@@ -855,133 +856,136 @@ export const startServer = async ({
       }
     };
 
-    websocket: {
-      // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
-      if (!router.hasSomeWebsocketRoute) {
-        break websocket;
-      }
-      const websocketOrigin = https
-        ? `wss://${hostname}:${port}`
-        : `ws://${hostname}:${port}`;
-      server.websocketOrigin = websocketOrigin;
-      const websocketClientSet = new Set();
-      const { WebSocketServer } = await import("ws");
-      let websocketServer = new WebSocketServer({ noServer: true });
-
-      const upgradeEventHandler = async (nodeRequest, socket, head) => {
-        const request = fromNodeRequest(nodeRequest, {
-          signal: stopAbortSignal,
-          serverOrigin,
-          requestBodyLifetime,
-          logger,
-        });
-        const responseProperties = await getResponseProperties(request, {});
-        // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
-        let {
-          status,
-          statusText = statusTextFromStatus(status),
-          headers,
-          body,
-        } = responseProperties;
-
-        if (status !== 200) {
-          body = await body;
-          headers = {
-            connection: "close",
-            ...headers,
-          };
-          if (body && headers["content-length"] === undefined) {
-            headers["transfer-encoding"] = "chunked";
-          }
-          const headersString = Object.keys(headers)
-            .map((h) => `${h}: ${headers[h]}`)
-            .join("\r\n");
-          socket.write(
-            `HTTP/1.1 ${status} ${statusText}\r\n${headersString.join("\r\n")}\r\n\r\n`,
-          );
-          request.logger.onHeadersSent({ status, statusText });
-          request.logger.end();
-          socket.once("finish", socket.destroy);
-          if (body) {
-            const bodyMethods = normalizeBodyMethods(body);
-            const observable = bodyMethods.asObservable();
-            observable.subscribe({
-              next: (data) => {
-                socket.write(data);
-              },
-              error: (value) => {
-                socket.emit("error", value);
-              },
-              complete: () => {
-                socket.end();
-              },
-            });
-          } else {
-            socket.end();
-          }
-          return;
-        }
-        const websocket = await new Promise((resolve) => {
-          websocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
-        });
-        request.logger.onHeadersSent({ status, statusText });
-        request.logger.end();
-        const websocketAbortController = new AbortController();
-        websocketClientSet.add(websocket);
-        websocket.once("close", () => {
-          websocketClientSet.delete(websocket);
-          websocketAbortController.abort();
-        });
-        body = await body;
-        if (!body) {
-          return;
-        }
-        const bodyMethods = normalizeBodyMethods(body);
-        const observable = bodyMethods.asObservable();
-        let subscription = observable.subscribe({
-          next: (data) => {
-            websocket.send(data);
-          },
-          error: (value) => {
-            websocket.emit("error", value);
-          },
-          complete: () => {
-            // we can explicitely say we are done sending data by putting
-            // connection: "close" on response headers
-            if (headers["connection"] === "close") {
-              websocket.terminate();
-            }
-          },
-        });
-        websocket.once("close", () => {
-          subscription.unsubscribe();
-        });
-      };
-
-      // see server-polyglot.js, upgrade must be listened on https server when used
-      const facadeServer = nodeServer._tlsServer || nodeServer;
-      const removeUpgradeCallback = listenEvent(
-        facadeServer,
-        "upgrade",
-        upgradeEventHandler,
-      );
-      stopCallbackSet.add(removeUpgradeCallback);
-      stopCallbackSet.add(() => {
-        for (const websocketClient of websocketClientSet) {
-          websocketClient.close();
-        }
-        websocketClientSet.clear();
-        websocketServer.close();
-        websocketServer = null;
-      });
-    }
-
     const removeRequestListener = listenRequest(
       nodeServer,
       requestEventHandler,
     );
     // ensure we don't try to handle new requests while server is stopping
     stopCallbackSet.add(removeRequestListener);
+  }
+
+  websocket: {
+    // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
+    if (!router.hasSomeWebsocketRoute) {
+      break websocket;
+    }
+    const websocketOrigin = https
+      ? `wss://${hostname}:${port}`
+      : `ws://${hostname}:${port}`;
+    server.websocketOrigin = websocketOrigin;
+    const websocketClientSet = new Set();
+    const { WebSocketServer } = await import("ws");
+    let websocketServer = new WebSocketServer({ noServer: true });
+
+    const upgradeEventHandler = async (nodeRequest, socket, head) => {
+      const request = fromNodeRequest(nodeRequest, {
+        signal: stopAbortSignal,
+        serverOrigin,
+        requestBodyLifetime,
+        logger,
+      });
+      request.logger.info(`GET ${request.url} ${websocketSuffixColorized}`);
+      applyRequestInternalRedirection(request);
+
+      const responseProperties = await getResponseProperties(request, {});
+      // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
+      let {
+        status,
+        statusText = statusTextFromStatus(status),
+        headers,
+        body,
+      } = responseProperties;
+
+      if (status !== 200) {
+        body = await body;
+        headers = {
+          connection: "close",
+          ...headers,
+        };
+        if (body && headers["content-length"] === undefined) {
+          headers["transfer-encoding"] = "chunked";
+        }
+        const headersString = Object.keys(headers)
+          .map((h) => `${h}: ${headers[h]}`)
+          .join("\r\n");
+        socket.write(
+          `HTTP/1.1 ${status} ${statusText}\r\n${headersString.join("\r\n")}\r\n\r\n`,
+        );
+        request.logger.onHeadersSent({ status, statusText });
+        request.logger.end();
+        socket.once("finish", socket.destroy);
+        if (body) {
+          const bodyMethods = normalizeBodyMethods(body);
+          const observable = bodyMethods.asObservable();
+          observable.subscribe({
+            next: (data) => {
+              socket.write(data);
+            },
+            error: (value) => {
+              socket.emit("error", value);
+            },
+            complete: () => {
+              socket.end();
+            },
+          });
+        } else {
+          socket.end();
+        }
+        return;
+      }
+      const websocket = await new Promise((resolve) => {
+        websocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
+      });
+      request.logger.onHeadersSent({ status, statusText });
+      request.logger.end();
+      const websocketAbortController = new AbortController();
+      websocketClientSet.add(websocket);
+      websocket.once("close", () => {
+        websocketClientSet.delete(websocket);
+        websocketAbortController.abort();
+      });
+      body = await body;
+      if (!body) {
+        return;
+      }
+      const bodyMethods = normalizeBodyMethods(body);
+      const observable = bodyMethods.asObservable();
+      let subscription = observable.subscribe({
+        next: (data) => {
+          websocket.send(data);
+        },
+        error: (value) => {
+          websocket.emit("error", value);
+        },
+        complete: () => {
+          // we can explicitely say we are done sending data by putting
+          // connection: "close" on response headers
+          if (headers["connection"] === "close") {
+            websocket.terminate();
+          }
+        },
+      });
+      websocket.once("close", () => {
+        subscription.unsubscribe();
+      });
+    };
+
+    // see server-polyglot.js, upgrade must be listened on https server when used
+    const facadeServer = nodeServer._tlsServer || nodeServer;
+    const removeUpgradeCallback = listenEvent(
+      facadeServer,
+      "upgrade",
+      upgradeEventHandler,
+    );
+    stopCallbackSet.add(removeUpgradeCallback);
+    stopCallbackSet.add(() => {
+      for (const websocketClient of websocketClientSet) {
+        websocketClient.close();
+      }
+      websocketClientSet.clear();
+      websocketServer.close();
+      websocketServer = null;
+    });
   }
 
   if (startLog) {
