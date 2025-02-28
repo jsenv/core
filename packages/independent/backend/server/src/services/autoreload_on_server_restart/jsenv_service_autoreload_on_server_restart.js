@@ -4,7 +4,9 @@ export const jsenvServiceAutoreloadOnRestart = () => {
 
     routes: [
       {
-        endpoint: "GET /.internal/websocket",
+        endpoint: "GET /.internal/alive.websocket",
+        description:
+          "Websocket client can connect to this endpoint to detect when server connection is lost (when server restarts).",
         websocket: () => {
           return {
             open: (websocket) => {

@@ -10,6 +10,8 @@ export const jsenvServiceRouteInspector = (router) => {
     routes: [
       {
         endpoint: "GET /.internal/route_inspector",
+        description:
+          "Explore the routes available on this server using a web interface.",
         availableContentTypes: ["text/html"],
         response: () => {
           const inspectorHtml = readFileSync(
@@ -22,8 +24,9 @@ export const jsenvServiceRouteInspector = (router) => {
         },
       },
       {
-        endpoint: "GET /.internal/route_inspector.json",
+        endpoint: "GET /.internal/routes.json",
         availableContentTypes: ["application/json"],
+        description: "Get the routes available on this server in JSON.",
         response: () => {
           const routeJSON = router.inspect();
           return Response.json(routeJSON);

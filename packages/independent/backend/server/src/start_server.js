@@ -150,13 +150,13 @@ export const startServer = async ({
   const headersToInjectMap = new Map();
 
   services = [
+    ...flattenAndFilterServices(services),
     jsenvServiceRouteInspector(router),
     ...(import.meta.build
       ? // after build internal client files are inlined, no need for this service anymore
         []
       : [jsenvServiceInternalClientFiles()]),
     jsenvServiceAutoreloadOnRestart(),
-    ...flattenAndFilterServices(services),
   ];
   for (const route of routes) {
     router.add(route);
