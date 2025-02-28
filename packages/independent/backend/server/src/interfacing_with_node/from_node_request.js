@@ -15,7 +15,8 @@ export const fromNodeRequest = (
   { serverOrigin, signal, requestBodyLifetime, logger },
 ) => {
   const requestLogger = createRequestLogger(nodeRequest, (type, value) => {
-    logger[type](value);
+    const logFunction = logger[type];
+    logFunction(value);
   });
   nodeRequest.on("error", (error) => {
     if (error.message === "aborted") {
@@ -245,7 +246,7 @@ const createRequestLogger = (nodeRequest, write) => {
                 redirection: "info",
                 client_error: "warn",
                 server_error: "error",
-              }[statusType],
+              }[statusType] || "error",
         value: message,
       });
     },

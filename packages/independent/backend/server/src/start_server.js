@@ -947,7 +947,10 @@ export const startServer = async ({
             const websocket = await new Promise((resolve) => {
               websocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
             });
-            request.logger.onHeadersSent({ status, statusText: "" });
+            request.logger.onHeadersSent({
+              status: 101,
+              statusText: "Switching Protocols",
+            });
             request.logger.end();
             const websocketAbortController = new AbortController();
             websocketClientSet.add(websocket);

@@ -254,10 +254,6 @@ export const createRouter = () => {
       if (request.headers["upgrade"] === "websocket" && !route.websocket) {
         continue;
       }
-      if (route.websocket && request.headers["upgrade"] !== "websocket") {
-        wouldHaveMatched.websocket = true;
-        continue;
-      }
       if (!route.matchMethod(request.method)) {
         wouldHaveMatched.methodSet.add(route.method);
         continue;
@@ -282,7 +278,10 @@ export const createRouter = () => {
       if (!headersMatchResult) {
         continue;
       }
-
+      if (route.websocket && request.headers["upgrade"] !== "websocket") {
+        wouldHaveMatched.websocket = true;
+        continue;
+      }
       // now we are "good", let's try to generate a response
       const contentNegotiationResult = {};
       content_negotiation: {
