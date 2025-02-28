@@ -61,3 +61,9 @@ import { urlToExtension } from "@jsenv/urls";
   const expect = "";
   assert({ actual, expect });
 }
+
+{
+  const actual = urlToExtension("https://esm.sh/preact@10.23.1");
+  const expect = "";
+  assert({ actual, expect });
+}
