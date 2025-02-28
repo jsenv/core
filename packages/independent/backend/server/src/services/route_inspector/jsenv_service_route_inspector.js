@@ -9,7 +9,7 @@ export const jsenvServiceRouteInspector = (router) => {
     name: "jsenv:route_inspector",
     routes: [
       {
-        endpoint: "GET /__inspect__/routes",
+        endpoint: "GET /.internal/route_inspector",
         availableContentTypes: ["text/html"],
         response: () => {
           const inspectorHtml = readFileSync(
@@ -22,7 +22,7 @@ export const jsenvServiceRouteInspector = (router) => {
         },
       },
       {
-        endpoint: "GET /__inspect__/routes",
+        endpoint: "GET /.internal/route_inspector.json",
         availableContentTypes: ["application/json"],
         response: () => {
           const routeJSON = router.inspect();

@@ -100,7 +100,7 @@ const jsenvAutoreloadOnServerRestartElement =
     url: (() => {
       const websocketScheme =
         self.location.protocol === "https:" ? "wss" : "ws";
-      const websocketUrl = `${websocketScheme}://${self.location.host}${self.location.pathname}${self.location.search}`;
+      const websocketUrl = `${websocketScheme}://${self.location.host}/.internal/websocket`;
       return websocketUrl;
     })(),
   });

@@ -8,7 +8,7 @@ import { pickContentType } from "../content_negotiation/pick_content_type.js";
 import { replacePlaceholdersInHtml } from "./replace_placeholder_in_html.js";
 
 const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/4xx.html");
-const endpointInspectorUrl = `/__inspect__/routes`;
+const routeInspectorUrl = `/.internal/route_inspector`;
 
 const HTTP_METHODS = [
   "OPTIONS",
@@ -464,7 +464,7 @@ const createServerResourceOptionsResponse = (
   }
   // text/plain
   return new Response(
-    `The list of endpoints available can be seen at ${endpointInspectorUrl}`,
+    `The list of endpoints available can be seen at ${routeInspectorUrl}`,
     { status: 200, headers },
   );
 };
@@ -528,10 +528,10 @@ const createRouteNotFoundResponse = (request) => {
     statusText: "Not Found",
     message: {
       text: `The URL ${request.resource} does not exists on this server.
-The list of existing endpoints is available at ${endpointInspectorUrl}`,
+The list of existing endpoints is available at ${routeInspectorUrl}`,
       html: `The URL <strong>${request.resource}</strong> does not exists on this server.<br />
 The list of existing endpoints is available at:
-<a href="${endpointInspectorUrl}">${endpointInspectorUrl}</a>`,
+<a href="${routeInspectorUrl}">${routeInspectorUrl}</a>`,
     },
   });
 };

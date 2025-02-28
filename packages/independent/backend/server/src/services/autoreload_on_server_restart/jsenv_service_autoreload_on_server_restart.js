@@ -4,10 +4,7 @@ export const jsenvServiceAutoreloadOnRestart = () => {
 
     routes: [
       {
-        endpoint: "GET *",
-        headers: {
-          "sec-websocket-protocol": "jsenv_server", // au lieu de ça on va faire un endpoint spécial
-        },
+        endpoint: "GET /.internal/websocket",
         websocket: () => {
           return {
             open: (websocket) => {
