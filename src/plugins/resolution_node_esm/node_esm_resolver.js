@@ -34,13 +34,7 @@ export const createNodeEsmResolver = ({
     }
     const { ownerUrlInfo } = reference;
     if (reference.specifierPathname[0] === "/") {
-      const url = new URL(
-        reference.specifier.slice(1),
-        ownerUrlInfo.originalUrl?.startsWith("http")
-          ? ownerUrlInfo.originalUrl
-          : ownerUrlInfo.context.rootDirectoryUrl,
-      );
-      return url;
+      return null; // let it to jsenv_web_resolution
     }
     let parentUrl;
     if (reference.baseUrl) {
@@ -51,8 +45,7 @@ export const createNodeEsmResolver = ({
       parentUrl = ownerUrlInfo.url;
     }
     if (!parentUrl.startsWith("file:")) {
-      const url = new URL(reference.specifier, parentUrl);
-      return url;
+      return null; // let it to jsenv_web_resolution
     }
     const { url, type, packageDirectoryUrl } = applyNodeEsmResolution({
       conditions: packageConditions,

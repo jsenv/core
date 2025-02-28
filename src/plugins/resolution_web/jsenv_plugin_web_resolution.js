@@ -5,11 +5,13 @@ export const jsenvPluginWebResolution = () => {
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
       if (reference.specifierPathname[0] === "/") {
+        const resource = reference.specifier;
+        if (ownerUrlInfo.originalUrl?.startsWith("http")) {
+          return new URL(resource, ownerUrlInfo.originalUrl);
+        }
         const url = new URL(
-          reference.specifier.slice(1),
-          ownerUrlInfo.originalUrl?.startsWith("http")
-            ? ownerUrlInfo.originalUrl
-            : ownerUrlInfo.context.rootDirectoryUrl,
+          resource.slice(1),
+          ownerUrlInfo.context.rootDirectoryUrl,
         );
         return url;
       }

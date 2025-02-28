@@ -1,8 +1,3 @@
-// TODO: when fetched content type is js we will auto append js to the file extension when there is none
-// otherwise files after build could not be served
-// contentType.toExtension
-// et aussi url.contentType devrait contenir le contentType, et on fair eCONTENT_TYPE.parse lorsqu'on veut comparer mediaType
-
 import { build, startBuildServer } from "@jsenv/core";
 import { executeHtml } from "@jsenv/core/tests/execute_html.js";
 import { snapshotBuildTests } from "@jsenv/core/tests/snapshot_build_side_effects.js";
@@ -31,10 +26,9 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
       runtimeCompat: { chrome: "89" },
     }));
 
-  test.ONLY("0_js_module_http_enabled", () =>
+  test("0_js_module_http_enabled", () =>
     run({
       runtimeCompat: { chrome: "89" },
       http: true,
-    }),
-  );
+    }));
 });

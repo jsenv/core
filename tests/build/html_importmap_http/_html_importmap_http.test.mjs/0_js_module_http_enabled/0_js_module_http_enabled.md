@@ -7,17 +7,11 @@ run({
 })
 ```
 
-# 1/3 write 2 files into "./build/"
+# 1/2 write 3 files into "./build/"
 
 see [./build/](./build/)
 
-# 2/3 console.error
-
-```console
-chromium console.error > Failed to load module script: Expected a JavaScript module script but the server responded with a MIME type of "application/octet-stream". Strict MIME type checking is enforced for module scripts per HTML spec.
-```
-
-# 3/3 resolve
+# 2/2 resolve
 
 ```js
 undefined
