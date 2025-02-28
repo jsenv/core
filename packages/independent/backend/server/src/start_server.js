@@ -2,10 +2,8 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { createDetailedMessage, createLogger } from "@jsenv/humanize";
 import { memoize } from "@jsenv/utils/src/memoize/memoize.js";
 import cluster from "node:cluster";
-import http from "node:http";
 import { isIP } from "node:net";
 
-import { normalizeBodyMethods } from "./interfacing_with_node/body.js";
 import {
   applyRedirectionToRequest,
   createPushRequest,
@@ -22,7 +20,6 @@ import { composeTwoResponses } from "./internal/response_composition.js";
 import { createPolyglotServer } from "./internal/server-polyglot.js";
 import { trackServerPendingConnections } from "./internal/trackServerPendingConnections.js";
 import { trackServerPendingRequests } from "./internal/trackServerPendingRequests.js";
-import { jsenvServiceRouting } from "./router/jsenv_service_routing.js";
 import { createRouter } from "./router/router.js";
 import { timingToServerTimingResponseHeaders } from "./server_timing/timing_header.js";
 import {
@@ -31,6 +28,7 @@ import {
 } from "./service_controller.js";
 import { jsenvServiceAutoreloadOnRestart } from "./services/autoreload_on_server_restart/jsenv_service_autoreload_on_server_restart.js";
 import { jsenvServiceInternalClientFiles } from "./services/internal_client_files/jsenv_service_internal_client_files.js";
+import { jsenvServiceRouteInspector } from "./services/route_inspector/jsenv_service_route_inspector.js";
 import {
   STOP_REASON_INTERNAL_ERROR,
   STOP_REASON_NOT_SPECIFIED,
@@ -148,8 +146,30 @@ export const startServer = async ({
 
   const server = {};
   const router = createRouter();
+
+  const headersToInjectMap = new Map();
+  const handleRequest = async (request) => {
+    const response = await router.match(request, {
+      injectResponseHeader: (name, value) => {
+        const headers = headersToInjectMap.get(request);
+        if (headers) {
+          headers[name] = value;
+        } else {
+          headersToInjectMap.set(request, { [name]: value });
+        }
+      },
+    });
+    request.signal.addEventListener("abort", () => {
+      headersToInjectMap.delete(request);
+    });
+    return response;
+  };
+  const handleWebsocket = async (request, { connectSocket }) => {
+    await router.match(request, { connectSocket });
+  };
+
   services = [
-    jsenvServiceRouting(router),
+    jsenvServiceRouteInspector(router),
     ...(import.meta.build
       ? // after build internal client files are inlined, no need for this service anymore
         []
@@ -418,35 +438,31 @@ export const startServer = async ({
       }
       applyRequestInternalRedirection(request);
 
-      let handleRequestReturnValue;
       let errorWhileHandlingRequest = null;
       let handleRequestTimings = serverTiming ? {} : null;
+      let handleRequestResult;
 
       let timeout;
-      const timeoutPromise = new Promise((resolve) => {
-        timeout = setTimeout(() => {
-          resolve({
-            // the correct status code should be 500 because it's
-            // we don't really know what takes time
-            // in practice it's often because server is trying to reach an other server
-            // that is not responding so 504 is more correct
-            status: 504,
-            statusText: `server timeout after ${
-              responseTimeout / 1000
-            }s waiting to handle request`,
-          });
-        }, responseTimeout);
-      });
-      const handleRequestPromise = serviceController.callAsyncHooksUntil(
-        "handleRequest",
-        request,
-        {
+      try {
+        const timeoutPromise = new Promise((resolve) => {
+          timeout = setTimeout(() => {
+            resolve({
+              // the correct status code should be 500 because it's
+              // we don't really know what takes time
+              // in practice it's often because server is trying to reach an other server
+              // that is not responding so 504 is more correct
+              status: 504,
+              statusText: `server timeout after ${
+                responseTimeout / 1000
+              }s waiting to handle request`,
+            });
+          }, responseTimeout);
+        });
+        const handleRequestPromise = handleRequest(request, {
           timing: handleRequestTimings,
           pushResponse,
-        },
-      );
-      try {
-        handleRequestReturnValue = await Promise.race([
+        });
+        handleRequestResult = await Promise.race([
           timeoutPromise,
           handleRequestPromise,
         ]);
@@ -507,23 +523,23 @@ export const startServer = async ({
         let statusMessage;
         let headers;
         let body;
-        if (handleRequestReturnValue instanceof Response) {
-          status = handleRequestReturnValue.status;
-          statusText = handleRequestReturnValue.statusText;
+        if (handleRequestResult instanceof Response) {
+          status = handleRequestResult.status;
+          statusText = handleRequestResult.statusText;
           headers = {};
-          for (const [name, value] of handleRequestReturnValue.headers) {
+          for (const [name, value] of handleRequestResult.headers) {
             headers[name] = value;
           }
-          body = handleRequestReturnValue.body;
+          body = handleRequestResult.body;
         } else if (
-          handleRequestReturnValue !== null &&
-          typeof handleRequestReturnValue === "object"
+          handleRequestResult !== null &&
+          typeof handleRequestResult === "object"
         ) {
-          status = handleRequestReturnValue.status;
-          statusText = handleRequestReturnValue.statusText;
-          statusMessage = handleRequestReturnValue.statusMessage;
-          headers = handleRequestReturnValue.headers;
-          body = handleRequestReturnValue.body;
+          status = handleRequestResult.status;
+          statusText = handleRequestResult.statusText;
+          statusMessage = handleRequestResult.statusMessage;
+          headers = handleRequestResult.headers;
+          body = handleRequestResult.body;
           if (status === undefined) {
             status = 404;
           }
@@ -532,7 +548,7 @@ export const startServer = async ({
           }
         } else {
           throw new TypeError(
-            `response must be a Response, or an Object, received ${handleRequestReturnValue}`,
+            `response must be a Response, or an Object, received ${handleRequestResult}`,
           );
         }
         responseProperties = {
@@ -568,6 +584,15 @@ export const startServer = async ({
       ) {
         request.logger.warn(
           `content-length header is ${responseProperties.headers["content-length"]} but body is empty`,
+        );
+      }
+
+      const headers = headersToInjectMap.get(request);
+      if (headers) {
+        headersToInjectMap.delete(request);
+        responseProperties.headers = composeTwoHeaders(
+          responseProperties.headers,
+          headers,
         );
       }
       serviceController.callHooks(
@@ -887,17 +912,8 @@ export const startServer = async ({
       request.logger.info(`GET ${request.url} ${websocketSuffixColorized}`);
       applyRequestInternalRedirection(request);
 
-      const responseProperties = await getResponseProperties(request, {});
       // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
-      let {
-        status,
-        statusText = statusTextFromStatus(status),
-        headers,
-        body,
-      } = responseProperties;
-
-      if (status !== 200) {
-        body = await body;
+      const closeSocket = ({ status, statusText, headers = {}, body }) => {
         headers = {
           connection: "close",
           ...headers,
@@ -915,59 +931,63 @@ export const startServer = async ({
         request.logger.end();
         socket.once("finish", socket.destroy);
         if (body) {
-          const bodyMethods = normalizeBodyMethods(body);
-          const observable = bodyMethods.asObservable();
-          observable.subscribe({
-            next: (data) => {
-              socket.write(data);
-            },
-            error: (value) => {
-              socket.emit("error", value);
-            },
-            complete: () => {
-              socket.end();
-            },
-          });
+          socket.write(body);
+          socket.end();
         } else {
           socket.end();
         }
+      };
+
+      let errorWhileHandlingWebsocket = null;
+      // let handleWebsocketResult;
+      try {
+        await handleWebsocket(request, {
+          closeSocket,
+          connectSocket: async () => {
+            const websocket = await new Promise((resolve) => {
+              websocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
+            });
+            request.logger.onHeadersSent({ status, statusText: "" });
+            request.logger.end();
+            const websocketAbortController = new AbortController();
+            websocketClientSet.add(websocket);
+            websocket.once("close", () => {
+              websocketClientSet.delete(websocket);
+              websocketAbortController.abort();
+            });
+            return websocket;
+          },
+        });
+      } catch (e) {
+        errorWhileHandlingWebsocket = e;
+      }
+
+      if (errorWhileHandlingWebsocket) {
+        if (stopOnInternalError) {
+          stop(STOP_REASON_INTERNAL_ERROR);
+          return;
+        }
+        const handleErrorResult = await serviceController.callAsyncHooksUntil(
+          "handleError",
+          errorWhileHandlingWebsocket,
+          { request },
+        );
+        if (!handleErrorResult) {
+          throw errorWhileHandlingWebsocket;
+        }
+        request.logger.error(
+          createDetailedMessage(
+            `internal error while handling websocket request`,
+            {
+              "error stack": errorWhileHandlingWebsocket.stack,
+            },
+          ),
+        );
+        closeSocket({ status: 500, statusText: "Internal Server Error" });
         return;
       }
-      const websocket = await new Promise((resolve) => {
-        websocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
-      });
-      request.logger.onHeadersSent({ status, statusText });
-      request.logger.end();
-      const websocketAbortController = new AbortController();
-      websocketClientSet.add(websocket);
-      websocket.once("close", () => {
-        websocketClientSet.delete(websocket);
-        websocketAbortController.abort();
-      });
-      body = await body;
-      if (!body) {
-        return;
-      }
-      const bodyMethods = normalizeBodyMethods(body);
-      const observable = bodyMethods.asObservable();
-      let subscription = observable.subscribe({
-        next: (data) => {
-          websocket.send(data);
-        },
-        error: (value) => {
-          websocket.emit("error", value);
-        },
-        complete: () => {
-          // we can explicitely say we are done sending data by putting
-          // connection: "close" on response headers
-          if (headers["connection"] === "close") {
-            websocket.terminate();
-          }
-        },
-      });
-      websocket.once("close", () => {
-        subscription.unsubscribe();
-      });
+      // we also want to allow handleWebsocket to response
+      // websocket request with things like 401 unauthorized etc, we'll see that later
     };
 
     // see server-polyglot.js, upgrade must be listened on https server when used
@@ -1043,9 +1063,6 @@ const createNodeServer = async ({
   const { createServer } = await import("node:http");
   return createServer();
 };
-
-const statusTextFromStatus = (status) =>
-  http.STATUS_CODES[status] || "not specified";
 
 const testCanPushStream = (http2Stream) => {
   if (!http2Stream.pushAllowed) {

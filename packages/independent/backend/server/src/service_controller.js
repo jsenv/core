@@ -3,9 +3,7 @@ import { timeStart } from "./server_timing/timing_measure.js";
 const HOOK_NAMES = [
   "serverListening",
   "redirectRequest",
-  "handleRequest",
   "routes",
-  "handleWebsocket",
   "handleError",
   "onResponsePush",
   "injectResponseHeaders",

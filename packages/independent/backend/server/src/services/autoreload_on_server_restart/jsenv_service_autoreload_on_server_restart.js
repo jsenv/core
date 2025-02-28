@@ -6,12 +6,20 @@ export const jsenvServiceAutoreloadOnRestart = () => {
       {
         endpoint: "GET *",
         headers: {
-          "upgrade": "websocket",
-          "sec-websocket-protocol": "jsenv_server",
+          "sec-websocket-protocol": "jsenv_server", // au lieu de ça on va faire un endpoint spécial
         },
-        websocket: true,
-        response: () => {
-          return new Response("hello world");
+        websocket: () => {
+          return {
+            open: (websocket) => {
+              websocket.send("Hello world!");
+              websocket.onmessage = () => {
+                console.log("websocket message");
+              };
+              return () => {
+                console.log("websocket closed");
+              };
+            },
+          };
         },
       },
     ],

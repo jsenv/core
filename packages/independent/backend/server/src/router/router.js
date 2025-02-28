@@ -235,7 +235,10 @@ export const createRouter = () => {
     };
     routeSet.add(route);
   };
-  const match = async (request, { injectResponseHeader } = {}) => {
+  const match = async (
+    request,
+    { pushResponse, injectResponseHeader, connectSocket } = {},
+  ) => {
     const wouldHaveMatched = {
       // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
       methodSet: new Set(),
@@ -313,30 +316,62 @@ export const createRouter = () => {
         headersMatchResult,
       );
       Object.assign(request.params, named, stars);
-      let responseReturnValue = route.response(request, {
-        contentNegotiation: contentNegotiationResult,
-      });
-      if (
-        responseReturnValue !== null &&
-        typeof responseReturnValue === "object" &&
-        typeof responseReturnValue.then === "function"
-      ) {
-        responseReturnValue = await responseReturnValue;
+
+      websocket_request: {
+        if (route.websocket) {
+          let websocketReturnValue = await route.websocket(request, {
+            contentNegotiation: contentNegotiationResult, // not sure we ever need this but let's pass it for now
+          });
+          if (
+            websocketReturnValue !== null &&
+            typeof websocketReturnValue === "object" &&
+            typeof websocketReturnValue.then === "function"
+          ) {
+            websocketReturnValue = await websocketReturnValue;
+          }
+          if (
+            websocketReturnValue === null ||
+            websocketReturnValue === undefined
+          ) {
+            // route decided not to handle in the end
+            continue;
+          }
+          const { open } = websocketReturnValue;
+          const websocket = await connectSocket();
+          const openReturnValue = open(websocket);
+          if (typeof openReturnValue === "function") {
+            websocket.once("close", openReturnValue);
+          }
+          return true;
+        }
       }
-      // he decided not to handle in the end
-      if (responseReturnValue === null || responseReturnValue === undefined) {
-        continue;
+      regular_request: {
+        let responseReturnValue = route.response(request, {
+          pushResponse,
+          contentNegotiation: contentNegotiationResult,
+        });
+        if (
+          responseReturnValue !== null &&
+          typeof responseReturnValue === "object" &&
+          typeof responseReturnValue.then === "function"
+        ) {
+          responseReturnValue = await responseReturnValue;
+        }
+        // route decided not to handle in the end
+        if (responseReturnValue === null || responseReturnValue === undefined) {
+          continue;
+        }
+        if (contentNegotiationResult.contentType) {
+          injectResponseHeader("vary", "accept");
+        }
+        if (contentNegotiationResult.contentLanguage) {
+          injectResponseHeader("vary", "accept-language");
+        }
+        if (contentNegotiationResult.contentEncoding) {
+          injectResponseHeader("vary", "accept-encoding");
+        }
+        return responseReturnValue;
       }
-      if (contentNegotiationResult.contentType) {
-        injectResponseHeader("vary", "accept");
-      }
-      if (contentNegotiationResult.contentLanguage) {
-        injectResponseHeader("vary", "accept-language");
-      }
-      if (contentNegotiationResult.contentEncoding) {
-        injectResponseHeader("vary", "accept-encoding");
-      }
-      return responseReturnValue;
     }
     if (request.method === "OPTIONS") {
       const isForAnyRoute = request.resource === "*";
