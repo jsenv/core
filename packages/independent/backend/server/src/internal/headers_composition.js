@@ -10,10 +10,10 @@ export const composeTwoHeaders = (firstHeaders, secondHeaders) => {
 const composeHeaderValues = (value, nextValue) => {
   const currentValues = value
     .split(", ")
-    .map((part) => part.trim().toLowercase());
+    .map((part) => part.trim().toLowerCase());
   const nextValues = nextValue
     .split(", ")
-    .map((part) => part.trim().toLowercase());
+    .map((part) => part.trim().toLowerCase());
   for (const nextValue of nextValues) {
     if (!currentValues.includes(nextValue)) {
       currentValues.push(nextValue);
