@@ -291,6 +291,9 @@ export const createRouter = () => {
             request,
             availableContentTypes,
           );
+          if (!contentTypeNegotiated) {
+            continue;
+          }
           contentNegotiationResult.contentType = contentTypeNegotiated;
         }
         const { availableLanguages } = route;
@@ -299,6 +302,9 @@ export const createRouter = () => {
             request,
             availableContentTypes,
           );
+          if (!contentLanguageNegotiated) {
+            continue;
+          }
           contentNegotiationResult.contentLanguage = contentLanguageNegotiated;
         }
         const { availableEncodings } = route;
@@ -307,6 +313,9 @@ export const createRouter = () => {
             request,
             availableEncodings,
           );
+          if (!contentEncodingNegotiated) {
+            continue;
+          }
           contentNegotiationResult.contentEncoding = contentEncodingNegotiated;
         }
       }
@@ -472,6 +481,25 @@ const createResourceOptionsResponse = (request, resourceOptions) => {
   const headers = resourceOptions.asResponseHeaders();
   return new Response(undefined, { status: 204, headers });
 };
+const createNotAcceptableResponse = (request, { acceptedContentTypes }) => {
+  const requestAcceptHeader = request.headers["accept"];
+
+  return createClientErrorResponse(request, {
+    status: 406,
+    statusText: "Not Acceptable",
+    headers: {},
+    message: {
+      text: `The resource does not support content-type requested in accept header: "${requestAcceptHeader}".
+Supported content types: ${acceptedContentTypes.join(", ")}`,
+      html: `The resource does not support the content type requested: "${requestAcceptHeader}".<br />
+Supported content types: <strong>${acceptedContentTypes.join(", ")}</strong>`,
+    },
+    data: {
+      requestAcceptHeader,
+      acceptedContentTypes,
+    },
+  });
+};
 const createMethodNotAllowedResponse = (
   request,
   { allowedMethods = [] } = {},
@@ -483,7 +511,7 @@ const createMethodNotAllowedResponse = (
       allow: allowedMethods.join(", "),
     },
     message: {
-      text: `The HTTP method ${request.method} is not supported for this resource.
+      text: `The HTTP method "${request.method}" is not supported for this resource.
 Allowed methods: ${allowedMethods.join(", ")}`,
       html: `The HTTP method <strong>${request.method}</strong> is not supported for this resource.<br />
 Allowed methods: <strong>${allowedMethods.join(", ")}</strong>`,
@@ -498,26 +526,35 @@ const createUnsupportedMediaTypeResponse = (
   request,
   { acceptedContentTypes },
 ) => {
-  const requestMediaType = request.headers["content-type"];
+  const requestContentType = request.headers["content-type"];
+  const methodSpecificHeader =
+    request.method === "POST"
+      ? "accept-post"
+      : request.method === "PATCH"
+        ? "accept-patch"
+        : "accept";
+  const headers = {
+    [methodSpecificHeader]: acceptedContentTypes.join(", "),
+  };
+  const requestMethod = request.method;
 
   return createClientErrorResponse(request, {
     status: 415,
     statusText: "Unsupported Media Type",
-    headers: {
-      "supported-media": acceptedContentTypes.join(", "),
-    },
+    headers,
     message: {
-      text: requestMediaType
-        ? `The media type "${requestMediaType}" is not supported for this resource.
-Supported media types: ${acceptedContentTypes.join(", ")}`
-        : `The media type was not specified in the request "content-type" header`,
-      html: requestMediaType
-        ? `The media type <strong>${requestMediaType}</strong> is not supported for this resource.<br />
-Supported media types: <strong>${acceptedContentTypes.join(", ")}</strong>`
-        : `The media type was not specified in the request "content-type" header`,
+      text: requestContentType
+        ? `The content type "${requestContentType}" specified in the Content-Type header is not supported for ${requestMethod} requests to this resource.
+Supported content types: ${acceptedContentTypes.join(", ")}`
+        : `The Content-Type header is missing. It must be declared for ${requestMethod} requests to this resource.`,
+      html: requestContentType
+        ? `The content type <strong>${requestContentType}</strong> is not supported for ${requestMethod} requests to this resource.<br />
+Supported content types: <strong>${acceptedContentTypes.join(", ")}</strong>`
+        : `The Content-Type header is missing. It must be declared for ${requestMethod} requests to this resource.`,
     },
     data: {
-      requestMediaType,
+      requestMethod,
+      requestContentType,
       acceptedContentTypes,
     },
   });
@@ -527,7 +564,7 @@ const createRouteNotFoundResponse = (request) => {
     status: 404,
     statusText: "Not Found",
     message: {
-      text: `The URL ${request.resource} does not exists on this server.
+      text: `The URL ${request.resource} does not exist on this server.
 The list of existing endpoints is available at ${routeInspectorUrl}`,
       html: `The URL <strong>${request.resource}</strong> does not exists on this server.<br />
 The list of existing endpoints is available at:

@@ -1,5 +1,3 @@
-// TODO: ability to pass a callback for the value like accept-version: (v) => parseInt(v) <2
-
 import { startServer } from "@jsenv/server";
 import { snapshotTests } from "@jsenv/snapshot";
 import { fetchUsingNodeBuiltin } from "../test_helpers.mjs";
