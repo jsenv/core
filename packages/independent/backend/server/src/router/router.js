@@ -290,49 +290,63 @@ export const createRouter = () => {
       content_negotiation: {
         const { availableContentTypes } = route;
         if (availableContentTypes.length) {
-          const contentTypeNegotiated = pickContentType(
-            request,
-            availableContentTypes,
-          );
-          if (!contentTypeNegotiated) {
-            for (const availableContentType of availableContentTypes) {
-              wouldHaveMatched.responseContentTypeSet.add(availableContentType);
+          if (request.headers["accept"]) {
+            const contentTypeNegotiated = pickContentType(
+              request,
+              availableContentTypes,
+            );
+            if (!contentTypeNegotiated) {
+              for (const availableContentType of availableContentTypes) {
+                wouldHaveMatched.responseContentTypeSet.add(
+                  availableContentType,
+                );
+              }
+              continue;
             }
-            continue;
+            contentNegotiationResult.contentType = contentTypeNegotiated;
+          } else {
+            contentNegotiationResult.contentType = availableContentTypes[0];
           }
-          contentNegotiationResult.contentType = contentTypeNegotiated;
         }
         const { availableLanguages } = route;
         if (availableLanguages.length) {
-          const languageNegotiated = pickContentLanguage(
-            request,
-            availableContentTypes,
-          );
-          if (!languageNegotiated) {
-            for (const availableLanguage of availableLanguages) {
-              wouldHaveMatched.responseContentLanguageSet.add(
-                availableLanguage,
-              );
+          if (request.headers["accept-language"]) {
+            const languageNegotiated = pickContentLanguage(
+              request,
+              availableLanguages,
+            );
+            if (!languageNegotiated) {
+              for (const availableLanguage of availableLanguages) {
+                wouldHaveMatched.responseContentLanguageSet.add(
+                  availableLanguage,
+                );
+              }
+              continue;
             }
-            continue;
+            contentNegotiationResult.language = languageNegotiated;
+          } else {
+            contentNegotiationResult.language = availableLanguages[0];
           }
-          contentNegotiationResult.language = languageNegotiated;
         }
         const { availableEncodings } = route;
         if (availableEncodings.length) {
-          const encodingNegotiated = pickContentEncoding(
-            request,
-            availableEncodings,
-          );
-          if (!encodingNegotiated) {
-            for (const availableEncoding of availableEncodings) {
-              wouldHaveMatched.responseContentEncodingSet.add(
-                availableEncoding,
-              );
+          if (request.headers["accept-encoding"]) {
+            const encodingNegotiated = pickContentEncoding(
+              request,
+              availableEncodings,
+            );
+            if (!encodingNegotiated) {
+              for (const availableEncoding of availableEncodings) {
+                wouldHaveMatched.responseContentEncodingSet.add(
+                  availableEncoding,
+                );
+              }
+              continue;
             }
-            continue;
+            contentNegotiationResult.encoding = encodingNegotiated;
+          } else {
+            contentNegotiationResult.encoding = availableEncodings[0];
           }
-          contentNegotiationResult.encoding = encodingNegotiated;
         }
       }
       const { named, stars = [] } = PATTERN.composeTwoMatchResults(

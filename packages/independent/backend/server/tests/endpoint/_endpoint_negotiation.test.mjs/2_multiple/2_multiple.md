@@ -1,49 +1,38 @@
-# [0_basic](../../endpoint_negotiation_content_type.test.mjs#L26)
+# [2_multiple](../../endpoint_negotiation.test.mjs#L132)
 
 ```js
 const routes = [
   {
     endpoint: "GET /users",
     availableContentTypes: ["application/json", "text/plain"],
+    availableLanguages: ["fr", "en"],
     response: (request, { contentNegotiation }) => {
+      const message =
+        contentNegotiation.language === "fr" ? "Bonjour" : "Hello";
       if (contentNegotiation.contentType === "application/json") {
-        return Response.json({ data: "Hello" });
+        return Response.json({ message });
       }
-      return new Response("Hello");
+      return new Response(message);
     },
   },
 ];
 return {
-  "GET /users with accept: text/css": await run({
+  "GET users accepting css and language DE": await run({
     routes,
     method: "GET",
     path: "/users",
     headers: {
-      accept: "text/css",
+      "accept": "text/css",
+      "accept-language": "de",
     },
   }),
-  "GET /users with accept: anything": await run({
+  "GET users accepting text and language FR": await run({
     routes,
     method: "GET",
     path: "/users",
     headers: {
-      accept: "*/*",
-    },
-  }),
-  "GET /users with accept: application/json": await run({
-    routes,
-    method: "GET",
-    path: "/users",
-    headers: {
-      accept: "application/json",
-    },
-  }),
-  "GET /users with accept: text/*": await run({
-    routes,
-    method: "GET",
-    path: "/users",
-    headers: {
-      accept: "text/*",
+      "accept": "text/plain",
+      "accept-language": "fr",
     },
   }),
 };
@@ -68,7 +57,7 @@ GET http://127.0.0.1/users
 
 ```js
 {
-  "GET /users with accept: text/css": {
+  "GET users accepting css and language DE": {
     "status": 406,
     "headers": {
       "available-content-types": "application/json, text/plain",
@@ -80,29 +69,7 @@ GET http://127.0.0.1/users
     },
     "body": "The server cannot produce a response in any of the content types accepted by the request: \"text/css\".\nAvailable content types: application/json, text/plain"
   },
-  "GET /users with accept: anything": {
-    "status": 200,
-    "headers": {
-      "content-type": "application/json",
-      "date": "<X>",
-      "connection": "keep-alive",
-      "keep-alive": "timeout=5",
-      "transfer-encoding": "chunked"
-    },
-    "body": "{\"data\":\"Hello\"}"
-  },
-  "GET /users with accept: application/json": {
-    "status": 200,
-    "headers": {
-      "content-type": "application/json",
-      "date": "<X>",
-      "connection": "keep-alive",
-      "keep-alive": "timeout=5",
-      "transfer-encoding": "chunked"
-    },
-    "body": "{\"data\":\"Hello\"}"
-  },
-  "GET /users with accept: text/*": {
+  "GET users accepting text and language FR": {
     "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
@@ -111,7 +78,7 @@ GET http://127.0.0.1/users
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "Hello"
+    "body": "Bonjour"
   }
 }
 ```

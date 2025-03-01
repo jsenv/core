@@ -1,0 +1,169 @@
+import { startServer } from "@jsenv/server";
+import { snapshotTests } from "@jsenv/snapshot";
+import { fetchUsingNodeBuiltin } from "../test_helpers.mjs";
+
+const run = async ({ routes, method, path, headers, body }) => {
+  const apiServer = await startServer({
+    logLevel: "warn",
+    routes,
+    keepProcessAlive: false,
+  });
+  const response = await fetchUsingNodeBuiltin(apiServer.origin, {
+    method,
+    path,
+    headers,
+    body,
+  });
+  const actual = {
+    status: response.status,
+    headers: Object.fromEntries(response.headers),
+    body: await response.text(),
+  };
+  return actual;
+};
+
+await snapshotTests(import.meta.url, ({ test }) => {
+  test("0_basic_content_type", async () => {
+    const routes = [
+      {
+        endpoint: "GET /users",
+        availableContentTypes: ["application/json", "text/plain"],
+        response: (request, { contentNegotiation }) => {
+          if (contentNegotiation.contentType === "application/json") {
+            return Response.json({ data: "Hello" });
+          }
+          return new Response("Hello");
+        },
+      },
+    ];
+    return {
+      "GET users without accept header": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {},
+      }),
+      "GET users accepting text/css": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          accept: "text/css",
+        },
+      }),
+      "GET users accepting anything": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          accept: "*/*",
+        },
+      }),
+      "GET users accepting json": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          accept: "application/json",
+        },
+      }),
+      "GET users accepting textual responses": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          accept: "text/*",
+        },
+      }),
+    };
+  });
+
+  test("1_basic_language", async () => {
+    const routes = [
+      {
+        endpoint: "GET /users",
+        availableLanguages: ["fr"],
+        response: () => {
+          return new Response("Bonjour");
+        },
+      },
+      {
+        endpoint: "GET /users",
+        availableLanguages: ["en"],
+        response: () => {
+          return new Response("Hello");
+        },
+      },
+    ];
+    return {
+      "GET users without accept-language header": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {},
+      }),
+      "GET users accepting DE language": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept-language": "de",
+        },
+      }),
+      "GET users accepting FR language": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept-language": "fr",
+        },
+      }),
+      "GET users accepting EN language": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept-language": "en",
+        },
+      }),
+    };
+  });
+
+  test.ONLY("2_multiple", async () => {
+    const routes = [
+      {
+        endpoint: "GET /users",
+        availableContentTypes: ["application/json", "text/plain"],
+        availableLanguages: ["fr", "en"],
+        response: (request, { contentNegotiation }) => {
+          const message =
+            contentNegotiation.language === "fr" ? "Bonjour" : "Hello";
+          if (contentNegotiation.contentType === "application/json") {
+            return Response.json({ message });
+          }
+          return new Response(message);
+        },
+      },
+    ];
+    return {
+      "GET users accepting css and language DE": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept": "text/css",
+          "accept-language": "de",
+        },
+      }),
+      "GET users accepting text and language FR": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept": "text/plain",
+          "accept-language": "fr",
+        },
+      }),
+    };
+  });
+});
