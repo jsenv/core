@@ -288,6 +288,13 @@ export const createRouter = () => {
       // now we are "good", let's try to generate a response
       const contentNegotiationResult = {};
       content_negotiation: {
+        // when content nego fails
+        // we will check the remaining accept headers to properly inform client of all the things are failing
+        // Example:
+        // client says "I want text in french"
+        // but server only provide json in english
+        // we want to tell client both text and french are not available
+        let hasFailed = false;
         const { availableContentTypes } = route;
         if (availableContentTypes.length) {
           if (request.headers["accept"]) {
@@ -301,7 +308,7 @@ export const createRouter = () => {
                   availableContentType,
                 );
               }
-              continue;
+              hasFailed = true;
             }
             contentNegotiationResult.contentType = contentTypeNegotiated;
           } else {
@@ -321,7 +328,7 @@ export const createRouter = () => {
                   availableLanguage,
                 );
               }
-              continue;
+              hasFailed = true;
             }
             contentNegotiationResult.language = languageNegotiated;
           } else {
@@ -341,12 +348,15 @@ export const createRouter = () => {
                   availableEncoding,
                 );
               }
-              continue;
+              hasFailed = true;
             }
             contentNegotiationResult.encoding = encodingNegotiated;
           } else {
             contentNegotiationResult.encoding = availableEncodings[0];
           }
+        }
+        if (hasFailed) {
+          continue;
         }
       }
       const { named, stars = [] } = PATTERN.composeTwoMatchResults(

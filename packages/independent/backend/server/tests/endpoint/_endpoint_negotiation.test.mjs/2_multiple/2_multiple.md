@@ -61,13 +61,14 @@ GET http://127.0.0.1/users
     "status": 406,
     "headers": {
       "available-content-types": "application/json, text/plain",
+      "available-languages": "fr, en",
       "content-type": "text/plain;charset=UTF-8",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The server cannot produce a response in any of the content types accepted by the request: \"text/css\".\nAvailable content types: application/json, text/plain"
+    "body": "The server cannot produce a response in a format acceptable to the client:\n- content-type The server cannot produce a response in any of the content types accepted by the request: \"text/css\".\nAvailable content types: application/json, text/plain\n- language The server cannot produce a response in any of the languages accepted by the request: \"de\".\nAvailable languages: fr, en"
   },
   "GET users accepting text and language FR": {
     "status": 200,
