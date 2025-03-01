@@ -58,7 +58,7 @@ return {
 
 ```console
 GET http://127.0.0.1/users
-  404 Not Found
+  406 Not Acceptable
 ```
 
 </details>
@@ -69,15 +69,16 @@ GET http://127.0.0.1/users
 ```js
 {
   "GET /users with accept: text/css": {
-    "status": 404,
+    "status": 406,
     "headers": {
+      "available-content-types": "application/json, text/plain",
       "content-type": "text/plain;charset=UTF-8",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The URL /users does not exists on this server.\nThe list of existing endpoints is available at /.internal/route_inspector"
+    "body": "The server cannot produce a response in any of the content types accepted by the request: \"text/css\".\nAvailable content types: application/json, text/plain"
   },
   "GET /users with accept: anything": {
     "status": 200,

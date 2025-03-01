@@ -242,7 +242,10 @@ export const createRouter = () => {
     const wouldHaveMatched = {
       // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
       methodSet: new Set(),
-      contentTypeSet: new Set(),
+      requestContentTypeSet: new Set(),
+      responseContentTypeSet: new Set(),
+      responseContentLanguageSet: new Set(),
+      responseContentEncodingSet: new Set(),
       websocket: false,
     };
 
@@ -269,7 +272,7 @@ export const createRouter = () => {
           !isRequestBodyContentTypeSupported(request, { acceptedContentTypes })
         ) {
           for (const acceptedContentType of acceptedContentTypes) {
-            wouldHaveMatched.contentTypeSet.add(acceptedContentType);
+            wouldHaveMatched.requestContentTypeSet.add(acceptedContentType);
           }
           continue;
         }
@@ -292,31 +295,44 @@ export const createRouter = () => {
             availableContentTypes,
           );
           if (!contentTypeNegotiated) {
+            for (const availableContentType of availableContentTypes) {
+              wouldHaveMatched.responseContentTypeSet.add(availableContentType);
+            }
             continue;
           }
           contentNegotiationResult.contentType = contentTypeNegotiated;
         }
         const { availableLanguages } = route;
         if (availableLanguages.length) {
-          const contentLanguageNegotiated = pickContentLanguage(
+          const languageNegotiated = pickContentLanguage(
             request,
             availableContentTypes,
           );
-          if (!contentLanguageNegotiated) {
+          if (!languageNegotiated) {
+            for (const availableLanguage of availableLanguages) {
+              wouldHaveMatched.responseContentLanguageSet.add(
+                availableLanguage,
+              );
+            }
             continue;
           }
-          contentNegotiationResult.contentLanguage = contentLanguageNegotiated;
+          contentNegotiationResult.language = languageNegotiated;
         }
         const { availableEncodings } = route;
         if (availableEncodings.length) {
-          const contentEncodingNegotiated = pickContentEncoding(
+          const encodingNegotiated = pickContentEncoding(
             request,
             availableEncodings,
           );
-          if (!contentEncodingNegotiated) {
+          if (!encodingNegotiated) {
+            for (const availableEncoding of availableEncodings) {
+              wouldHaveMatched.responseContentEncodingSet.add(
+                availableEncoding,
+              );
+            }
             continue;
           }
-          contentNegotiationResult.contentEncoding = contentEncodingNegotiated;
+          contentNegotiationResult.encoding = encodingNegotiated;
         }
       }
       const { named, stars = [] } = PATTERN.composeTwoMatchResults(
@@ -398,9 +414,20 @@ export const createRouter = () => {
         allowedMethods: [...wouldHaveMatched.methodSet],
       });
     }
-    if (wouldHaveMatched.contentTypeSet.size) {
+    if (wouldHaveMatched.requestContentTypeSet.size) {
       return createUnsupportedMediaTypeResponse(request, {
-        acceptedContentTypes: [...wouldHaveMatched.contentTypeSet],
+        acceptedContentTypes: [...wouldHaveMatched.requestContentTypeSet],
+      });
+    }
+    if (
+      wouldHaveMatched.responseContentTypeSet.size ||
+      wouldHaveMatched.responseContentLanguageSet.size ||
+      wouldHaveMatched.responseContentEncodingSet.size
+    ) {
+      return createNotAcceptableResponse(request, {
+        availableContentTypes: [...wouldHaveMatched.responseContentTypeSet],
+        availableLanguages: [...wouldHaveMatched.responseContentLanguageSet],
+        availableEncodings: [...wouldHaveMatched.responseContentEncodingSet],
       });
     }
     if (wouldHaveMatched.websocket) {
@@ -481,23 +508,118 @@ const createResourceOptionsResponse = (request, resourceOptions) => {
   const headers = resourceOptions.asResponseHeaders();
   return new Response(undefined, { status: 204, headers });
 };
-const createNotAcceptableResponse = (request, { acceptedContentTypes }) => {
-  const requestAcceptHeader = request.headers["accept"];
+
+/**
+ * Creates a 406 Not Acceptable response when content negotiation fails
+ *
+ * @param {Object} request - The HTTP request object
+ * @param {Object} params - Content negotiation parameters
+ * @param {Array<string>} params.availableContentTypes - Content types the server can produce
+ * @param {Array<string>} params.availableLanguages - Languages the server can respond with
+ * @param {Array<string>} params.availableEncodings - Encodings the server supports
+ * @returns {Response} A 406 Not Acceptable response
+ */
+const createNotAcceptableResponse = (
+  request,
+  { availableContentTypes, availableLanguages, availableEncodings },
+) => {
+  const unsupported = [];
+  const headers = {};
+  const data = {};
+
+  if (availableContentTypes.length) {
+    const requestAcceptHeader = request.headers["accept"];
+
+    // Use a non-standard but semantic header name
+    headers["available-content-types"] = availableContentTypes.join(", ");
+
+    Object.assign(data, {
+      requestAcceptHeader,
+      availableContentTypes,
+    });
+
+    unsupported.push({
+      type: "content-type",
+      message: {
+        text: `The server cannot produce a response in any of the content types accepted by the request: "${requestAcceptHeader}".
+Available content types: ${availableContentTypes.join(", ")}`,
+        html: `The server cannot produce a response in any of the content types accepted by the request: <strong>${requestAcceptHeader}</strong>.<br />
+Available content types: <strong>${availableContentTypes.join(", ")}</strong>`,
+      },
+    });
+  }
+  if (availableLanguages.length) {
+    const requestAcceptLanguageHeader = request.headers["accept-language"];
+
+    // Use a non-standard but semantic header name
+    headers["available-languages"] = availableLanguages.join(", ");
+
+    Object.assign(data, {
+      requestAcceptLanguageHeader,
+      availableLanguages,
+    });
+
+    unsupported.push({
+      type: "language",
+      message: {
+        text: `The server cannot produce a response in any of the languages accepted by the request: "${requestAcceptLanguageHeader}".
+Available languages: ${availableLanguages.join(", ")}`,
+        html: `The server cannot produce a response in any of the languages accepted by the request: <strong>${requestAcceptLanguageHeader}</strong>.<br />
+Available languages: <strong>${availableLanguages.join(", ")}</strong>`,
+      },
+    });
+  }
+  if (availableEncodings.length) {
+    const requestAcceptEncodingHeader = request.headers["accept-encoding"];
+
+    // Use a non-standard but semantic header name
+    headers["available-encodings"] = availableEncodings.join(", ");
+
+    Object.assign(data, {
+      requestAcceptEncodingHeader,
+      availableEncodings,
+    });
+
+    unsupported.push({
+      type: "encoding",
+      message: {
+        text: `The server cannot encode the response in any of the encodings accepted by the request: "${requestAcceptEncodingHeader}".
+Available encodings: ${availableEncodings.join(", ")}`,
+        html: `The server cannot encode the response in any of the encodings accepted by the request: <strong>${requestAcceptEncodingHeader}</strong>.<br />
+Available encodings: <strong>${availableEncodings.join(", ")}</strong>`,
+      },
+    });
+  }
+
+  // Special case for single negotiation failure
+  if (unsupported.length === 1) {
+    const [{ message }] = unsupported;
+    return createClientErrorResponse(request, {
+      status: 406,
+      statusText: "Not Acceptable",
+      headers,
+      message,
+      data,
+    });
+  }
+  // Handle multiple negotiation failures
+  let message = {
+    text: `The server cannot produce a response in a format acceptable to the client:`,
+    html: `The server cannot produce a response in a format acceptable to the client:`,
+  };
+  message.html += "<ul>";
+  for (const info of unsupported) {
+    message.text += `\n- ${info.type} ${info.message.text}`;
+    message.html += `<li>${info.type} ${info.message.html}</li>`;
+  }
+  message.html += "</ul>";
 
   return createClientErrorResponse(request, {
     status: 406,
     statusText: "Not Acceptable",
-    headers: {},
-    message: {
-      text: `The resource does not support content-type requested in accept header: "${requestAcceptHeader}".
-Supported content types: ${acceptedContentTypes.join(", ")}`,
-      html: `The resource does not support the content type requested: "${requestAcceptHeader}".<br />
-Supported content types: <strong>${acceptedContentTypes.join(", ")}</strong>`,
-    },
-    data: {
-      requestAcceptHeader,
-      acceptedContentTypes,
-    },
+    headers,
+    message,
+    data,
   });
 };
 const createMethodNotAllowedResponse = (

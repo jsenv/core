@@ -6,8 +6,8 @@
     <svg width="238.44" height="61.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">GET http://127.0.0.1/users</text>
-        <text x="26.8" y="43.55" fill="#DAA520">404</text>
-        <text x="60.41" y="43.55"> Not Found</text>
+        <text x="26.8" y="43.55" fill="#DAA520">406</text>
+        <text x="60.41" y="43.55"> Not Acceptable</text>
       </g>
     </svg>
   </foreignObject>
