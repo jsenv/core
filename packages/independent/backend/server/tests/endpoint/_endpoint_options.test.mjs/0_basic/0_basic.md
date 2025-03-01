@@ -57,7 +57,7 @@ return {
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The list of endpoints available can be seen at http://127.0.0.1/TODO"
+    "body": "The list of endpoints available can be seen at /.internal/route_inspector"
   }
 }
 ```
