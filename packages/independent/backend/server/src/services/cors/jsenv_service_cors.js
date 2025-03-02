@@ -32,7 +32,7 @@ export const jsenvServiceCORS = ({
 
   return {
     name: "jsenv:cors",
-    injectResponseHeaders: (response, { request }) => {
+    injectResponseHeaders: (request) => {
       const accessControlHeaders = generateAccessControlHeaders({
         request,
         accessControlAllowedOrigins,

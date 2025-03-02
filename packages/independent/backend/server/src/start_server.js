@@ -147,8 +147,6 @@ export const startServer = async ({
   const server = {};
   const router = createRouter();
 
-  const headersToInjectMap = new Map();
-
   services = [
     ...flattenAndFilterServices(services),
     jsenvServiceRouteInspector(router),
@@ -422,6 +420,7 @@ export const startServer = async ({
       let errorWhileHandlingRequest = null;
       let handleRequestTimings = serverTiming ? {} : null;
       let handleRequestResult;
+      let headersToInject;
 
       let timeout;
       try {
@@ -444,15 +443,10 @@ export const startServer = async ({
           timing: handleRequestTimings,
           pushResponse,
           injectResponseHeader: (name, value) => {
-            const headers = headersToInjectMap.get(request);
-            if (headers) {
-              headers[name] = value;
-            } else {
-              headersToInjectMap.set(request, { [name]: value });
-              request.signal.addEventListener("abort", () => {
-                headersToInjectMap.delete(request);
-              });
+            if (!headersToInject) {
+              headersToInject = {};
             }
+            headersToInject[name] = value;
           },
         });
         handleRequestResult = await Promise.race([
@@ -580,20 +574,16 @@ export const startServer = async ({
         );
       }
 
-      const headers = headersToInjectMap.get(request);
-      if (headers) {
-        headersToInjectMap.delete(request);
+      if (headersToInject) {
         responseProperties.headers = composeTwoHeaders(
           responseProperties.headers,
-          headers,
+          headersToInject,
         );
       }
       serviceController.callHooks(
         "injectResponseHeaders",
+        request,
         responseProperties,
-        {
-          request,
-        },
         (returnValue) => {
           if (returnValue) {
             responseProperties.headers = composeTwoHeaders(
