@@ -4,6 +4,7 @@
 - [0_basic_content_type](0_basic_content_type/0_basic_content_type.md)
 - [1_basic_language](1_basic_language/1_basic_language.md)
 - [2_multiple](2_multiple/2_multiple.md)
+- [3_versioning](3_versioning/3_versioning.md)
 
 ---
 

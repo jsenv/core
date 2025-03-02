@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { pickContentEncoding } from "../content_negotiation/pick_content_encoding.js";
 import { pickContentLanguage } from "../content_negotiation/pick_content_language.js";
 import { pickContentType } from "../content_negotiation/pick_content_type.js";
+import { pickContentVersion } from "../content_negotiation/pick_content_version.js";
 import { replacePlaceholdersInHtml } from "./replace_placeholder_in_html.js";
 
 const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/4xx.html");
@@ -172,6 +173,7 @@ export const createRouter = () => {
     headers,
     availableContentTypes = [],
     availableLanguages = [],
+    availableVersions = [],
     availableEncodings = [],
     acceptedContentTypes = [], // useful only for POST/PATCH/PUT
     response,
@@ -198,6 +200,7 @@ export const createRouter = () => {
       resource,
       availableContentTypes,
       availableLanguages,
+      availableVersions,
       availableEncodings,
       acceptedContentTypes,
       matchMethod:
@@ -227,6 +230,7 @@ export const createRouter = () => {
           resource,
           availableContentTypes,
           availableLanguages,
+          availableVersions,
           availableEncodings,
           acceptedContentTypes,
         };
@@ -244,8 +248,9 @@ export const createRouter = () => {
       methodSet: new Set(),
       requestContentTypeSet: new Set(),
       responseContentTypeSet: new Set(),
-      responseContentLanguageSet: new Set(),
-      responseContentEncodingSet: new Set(),
+      responseLanguageSet: new Set(),
+      responseVersionSet: new Set(),
+      responseEncodingSet: new Set(),
       websocket: false,
     };
 
@@ -324,15 +329,31 @@ export const createRouter = () => {
             );
             if (!languageNegotiated) {
               for (const availableLanguage of availableLanguages) {
-                wouldHaveMatched.responseContentLanguageSet.add(
-                  availableLanguage,
-                );
+                wouldHaveMatched.responseLanguageSet.add(availableLanguage);
               }
               hasFailed = true;
             }
             contentNegotiationResult.language = languageNegotiated;
           } else {
             contentNegotiationResult.language = availableLanguages[0];
+          }
+        }
+        const { availableVersions } = route;
+        if (availableVersions.length) {
+          if (request.headers["accept-version"]) {
+            const versionNegotiated = pickContentVersion(
+              request,
+              availableVersions,
+            );
+            if (!versionNegotiated) {
+              for (const availableVersion of availableVersions) {
+                wouldHaveMatched.responseVersionSet.add(availableVersion);
+              }
+              hasFailed = true;
+            }
+            contentNegotiationResult.version = versionNegotiated;
+          } else {
+            contentNegotiationResult.version = availableVersions[0];
           }
         }
         const { availableEncodings } = route;
@@ -344,9 +365,7 @@ export const createRouter = () => {
             );
             if (!encodingNegotiated) {
               for (const availableEncoding of availableEncodings) {
-                wouldHaveMatched.responseContentEncodingSet.add(
-                  availableEncoding,
-                );
+                wouldHaveMatched.responseEncodingSet.add(availableEncoding);
               }
               hasFailed = true;
             }
@@ -418,6 +437,9 @@ export const createRouter = () => {
         if (contentNegotiationResult.contentEncoding) {
           injectResponseHeader("vary", "accept-encoding");
         }
+        // TODO: check response headers to warn if headers[content-version] is missing
+        // when a route set availableVersions for example
+        // same for language, content type, etc
         return responseReturnValue;
       }
     }
@@ -445,13 +467,14 @@ export const createRouter = () => {
     }
     if (
       wouldHaveMatched.responseContentTypeSet.size ||
-      wouldHaveMatched.responseContentLanguageSet.size ||
-      wouldHaveMatched.responseContentEncodingSet.size
+      wouldHaveMatched.responseLanguageSet.size ||
+      wouldHaveMatched.responseEncodingSet.size
     ) {
       return createNotAcceptableResponse(request, {
         availableContentTypes: [...wouldHaveMatched.responseContentTypeSet],
-        availableLanguages: [...wouldHaveMatched.responseContentLanguageSet],
-        availableEncodings: [...wouldHaveMatched.responseContentEncodingSet],
+        availableLanguages: [...wouldHaveMatched.responseLanguageSet],
+        availableVersions: [...wouldHaveMatched.responseVersionSet],
+        availableEncodings: [...wouldHaveMatched.responseEncodingSet],
       });
     }
     if (wouldHaveMatched.websocket) {
@@ -545,7 +568,12 @@ const createResourceOptionsResponse = (request, resourceOptions) => {
  */
 const createNotAcceptableResponse = (
   request,
-  { availableContentTypes, availableLanguages, availableEncodings },
+  {
+    availableContentTypes,
+    availableLanguages,
+    availableVersions,
+    availableEncodings,
+  },
 ) => {
   const unsupported = [];
   const headers = {};
@@ -590,6 +618,27 @@ Available content types: <strong>${availableContentTypes.join(", ")}</strong>`,
 Available languages: ${availableLanguages.join(", ")}`,
         html: `The server cannot produce a response in any of the languages accepted by the request: <strong>${requestAcceptLanguageHeader}</strong>.<br />
 Available languages: <strong>${availableLanguages.join(", ")}</strong>`,
+      },
+    });
+  }
+  if (availableVersions.length) {
+    const requestAcceptVersionHeader = request.headers["accept-version"];
+
+    // Use a non-standard but semantic header name
+    headers["available-versions"] = availableVersions.join(", ");
+
+    Object.assign(data, {
+      requestAcceptVersionHeader,
+      availableLanguages,
+    });
+
+    unsupported.push({
+      type: "version",
+      message: {
+        text: `The server cannot produce a response in any of the versions accepted by the request: "${requestAcceptVersionHeader}".
+Available versions: ${availableVersions.join(", ")}`,
+        html: `The server cannot produce a response in any of the versions accepted by the request: <strong>${requestAcceptVersionHeader}</strong>.<br />
+Available versions: <strong>${availableVersions.join(", ")}</strong>`,
       },
     });
   }

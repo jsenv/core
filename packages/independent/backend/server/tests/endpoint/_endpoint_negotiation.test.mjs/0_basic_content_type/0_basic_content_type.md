@@ -78,6 +78,7 @@ GET http://127.0.0.1/users
     "status": 200,
     "headers": {
       "content-type": "application/json",
+      "vary": "accept",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -101,6 +102,7 @@ GET http://127.0.0.1/users
     "status": 200,
     "headers": {
       "content-type": "application/json",
+      "vary": "accept",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -112,6 +114,7 @@ GET http://127.0.0.1/users
     "status": 200,
     "headers": {
       "content-type": "application/json",
+      "vary": "accept",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -123,6 +126,7 @@ GET http://127.0.0.1/users
     "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
+      "vary": "accept",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",

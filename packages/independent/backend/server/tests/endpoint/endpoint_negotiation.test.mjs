@@ -129,7 +129,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
     };
   });
 
-  test.ONLY("2_multiple", async () => {
+  test("2_multiple", async () => {
     const routes = [
       {
         endpoint: "GET /users",
@@ -162,6 +162,90 @@ await snapshotTests(import.meta.url, ({ test }) => {
         headers: {
           "accept": "text/plain",
           "accept-language": "fr",
+        },
+      }),
+    };
+  });
+
+  test("3_versioning", async () => {
+    const routes = [
+      {
+        endpoint: "GET /users",
+        availableVersions: [(value) => parseInt(value) > 2],
+        response: () =>
+          new Response("latest users", {
+            headers: { "content-version": "3" },
+          }),
+      },
+      {
+        endpoint: "GET /users",
+        availableVersions: ["alpha"],
+        response: () =>
+          new Response("alpha users", {
+            headers: { "content-version": "alpha" },
+          }),
+      },
+      {
+        endpoint: "GET /users",
+        availableVersions: [1],
+        response: () =>
+          new Response("users v1", {
+            headers: { "content-version": "1" },
+          }),
+      },
+      {
+        endpoint: "GET /users",
+        availableVersions: [2],
+        response: () =>
+          new Response("users v2", {
+            headers: { "content-version": "2" },
+          }),
+      },
+    ];
+    return {
+      "GET /users without setting accept-version": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+      }),
+      "GET /users accepting any version": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept-version": "*",
+        },
+      }),
+      "GET /users accepting alpha version": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept-version": "alpha",
+        },
+      }),
+      "GET /users accepting version 1": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept-version": "1",
+        },
+      }),
+      "GET /users accepting version 2": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept-version": "2",
+        },
+      }),
+      "GET /users accepting version 3": await run({
+        routes,
+        method: "GET",
+        path: "/users",
+        headers: {
+          "accept-version": "3",
         },
       }),
     };
