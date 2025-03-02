@@ -1,3 +1,8 @@
+/**
+ * @jsenv/server is already registering a route to handle OPTIONS request
+ * so here we just need to add the CORS headers to the response
+ */
+
 export const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
 
 export const jsenvAccessControlAllowedMethods = [
