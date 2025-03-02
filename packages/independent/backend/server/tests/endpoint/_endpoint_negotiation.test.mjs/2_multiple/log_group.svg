@@ -1,68 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 1106.45" background-color="#282c34">
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 61.45" background-color="#282c34">
   <g id="background">
-    <rect x="1" y="1" width="638" height="1104.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+    <rect x="1" y="1" width="638" height="59.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
-  <foreignObject id="body" y="0" width="100%" height="1116.45" overflow="hidden">
-    <svg width="1675.07" height="1106.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+  <foreignObject id="body" y="0" width="100%" height="71.45" overflow="hidden">
+    <svg width="238.44" height="61.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">GET http://127.0.0.1/users</text>
         <text x="26.8" y="43.55" fill="#DAA520">406</text>
         <text x="60.41" y="43.55"> Not Acceptable</text>
-        <text x="10" y="62.55">(node:38768) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 SIGHUP listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit</text>
-        <text x="43.61" y="81.55">    at genericNodeError (node:internal/errors:983:15)</text>
-        <text x="43.61" y="100.55">    at wrappedFn (node:internal/errors:537:14)</text>
-        <text x="43.61" y="119.55">    at _addListener (node:events:598:17)</text>
-        <text x="43.61" y="138.55">    at process.addListener (node:events:616:10)</text>
-        <text x="43.61" y="157.55">    at SIGHUP (@jsenv/core/packages/independent/shared/abort/src/process_teardown_events.js:18:13)</text>
-        <text x="43.61" y="176.55">    at @jsenv/core/packages/independent/shared/abort/src/callback_race.js:26:25</text>
-        <text x="43.61" y="195.55">    at Array.forEach (&lt;anonymous&gt;)</text>
-        <text x="43.61" y="214.55">    at raceCallbacks (@jsenv/core/packages/independent/shared/abort/src/callback_race.js:24:32)</text>
-        <text x="43.61" y="233.55">    at raceProcessTeardownEvents (@jsenv/core/packages/independent/shared/abort/src/process_teardown_events.js:4:10)</text>
-        <text x="43.61" y="252.55">    at @jsenv/core/packages/independent/backend/server/src/start_server.js:193:14</text>
-        <text x="10" y="271.55">(node:38768) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 SIGTERM listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit</text>
-        <text x="43.61" y="290.55">    at genericNodeError (node:internal/errors:983:15)</text>
-        <text x="43.61" y="309.55">    at wrappedFn (node:internal/errors:537:14)</text>
-        <text x="43.61" y="328.55">    at _addListener (node:events:598:17)</text>
-        <text x="43.61" y="347.55">    at process.addListener (node:events:616:10)</text>
-        <text x="43.61" y="366.55">    at SIGTERM (@jsenv/core/packages/independent/shared/abort/src/process_teardown_events.js:27:13)</text>
-        <text x="43.61" y="385.55">    at @jsenv/core/packages/independent/shared/abort/src/callback_race.js:26:25</text>
-        <text x="43.61" y="404.55">    at Array.forEach (&lt;anonymous&gt;)</text>
-        <text x="43.61" y="423.55">    at raceCallbacks (@jsenv/core/packages/independent/shared/abort/src/callback_race.js:24:32)</text>
-        <text x="43.61" y="442.55">    at raceProcessTeardownEvents (@jsenv/core/packages/independent/shared/abort/src/process_teardown_events.js:4:10)</text>
-        <text x="43.61" y="461.55">    at @jsenv/core/packages/independent/backend/server/src/start_server.js:193:14</text>
-        <text x="10" y="480.55">(node:38768) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 SIGINT listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit</text>
-        <text x="43.61" y="499.55">    at genericNodeError (node:internal/errors:983:15)</text>
-        <text x="43.61" y="518.55">    at wrappedFn (node:internal/errors:537:14)</text>
-        <text x="43.61" y="537.55">    at _addListener (node:events:598:17)</text>
-        <text x="43.61" y="556.55">    at process.addListener (node:events:616:10)</text>
-        <text x="43.61" y="575.55">    at SIGINT (@jsenv/core/packages/independent/shared/abort/src/process_teardown_events.js:54:13)</text>
-        <text x="43.61" y="594.55">    at @jsenv/core/packages/independent/shared/abort/src/callback_race.js:26:25</text>
-        <text x="43.61" y="613.55">    at Array.forEach (&lt;anonymous&gt;)</text>
-        <text x="43.61" y="632.55">    at raceCallbacks (@jsenv/core/packages/independent/shared/abort/src/callback_race.js:24:32)</text>
-        <text x="43.61" y="651.55">    at raceProcessTeardownEvents (@jsenv/core/packages/independent/shared/abort/src/process_teardown_events.js:4:10)</text>
-        <text x="43.61" y="670.55">    at @jsenv/core/packages/independent/backend/server/src/start_server.js:193:14</text>
-        <text x="10" y="689.55">(node:38768) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 beforeExit listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit</text>
-        <text x="43.61" y="708.55">    at genericNodeError (node:internal/errors:983:15)</text>
-        <text x="43.61" y="727.55">    at wrappedFn (node:internal/errors:537:14)</text>
-        <text x="43.61" y="746.55">    at _addListener (node:events:598:17)</text>
-        <text x="43.61" y="765.55">    at process.addListener (node:events:616:10)</text>
-        <text x="43.61" y="784.55">    at beforeExit (@jsenv/core/packages/independent/shared/abort/src/process_teardown_events.js:36:13)</text>
-        <text x="43.61" y="803.55">    at @jsenv/core/packages/independent/shared/abort/src/callback_race.js:26:25</text>
-        <text x="43.61" y="822.55">    at Array.forEach (&lt;anonymous&gt;)</text>
-        <text x="43.61" y="841.55">    at raceCallbacks (@jsenv/core/packages/independent/shared/abort/src/callback_race.js:24:32)</text>
-        <text x="43.61" y="860.55">    at raceProcessTeardownEvents (@jsenv/core/packages/independent/shared/abort/src/process_teardown_events.js:4:10)</text>
-        <text x="43.61" y="879.55">    at @jsenv/core/packages/independent/backend/server/src/start_server.js:193:14</text>
-        <text x="10" y="898.55">(node:38768) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 exit listeners added to [process]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit</text>
-        <text x="43.61" y="917.55">    at genericNodeError (node:internal/errors:983:15)</text>
-        <text x="43.61" y="936.55">    at wrappedFn (node:internal/errors:537:14)</text>
-        <text x="43.61" y="955.55">    at _addListener (node:events:598:17)</text>
-        <text x="43.61" y="974.55">    at process.addListener (node:events:616:10)</text>
-        <text x="43.61" y="993.55">    at exit (@jsenv/core/packages/independent/shared/abort/src/process_teardown_events.js:45:13)</text>
-        <text x="43.61" y="1012.55">    at @jsenv/core/packages/independent/shared/abort/src/callback_race.js:26:25</text>
-        <text x="43.61" y="1031.55">    at Array.forEach (&lt;anonymous&gt;)</text>
-        <text x="43.61" y="1050.55">    at raceCallbacks (@jsenv/core/packages/independent/shared/abort/src/callback_race.js:24:32)</text>
-        <text x="43.61" y="1069.55">    at raceProcessTeardownEvents (@jsenv/core/packages/independent/shared/abort/src/process_teardown_events.js:4:10)</text>
-        <text x="43.61" y="1088.55">    at @jsenv/core/packages/independent/backend/server/src/start_server.js:193:14</text>
       </g>
     </svg>
   </foreignObject>

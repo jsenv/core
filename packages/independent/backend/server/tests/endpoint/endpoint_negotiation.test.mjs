@@ -19,6 +19,10 @@ const run = async ({ routes, method, path, headers, body }) => {
     headers: Object.fromEntries(response.headers),
     body: await response.text(),
   };
+  // not mandatory but allow to avoir having to omany server opened in parallel for this test
+  // also we set a listeners to SIGHUP when starting a server and starting too many server in parallel
+  // triggers process maxListeners warning from Node.js
+  apiServer.stop();
   return actual;
 };
 
