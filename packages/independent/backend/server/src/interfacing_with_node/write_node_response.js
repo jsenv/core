@@ -1,7 +1,8 @@
 import { raceCallbacks } from "@jsenv/abort";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
-import { normalizeBodyMethods } from "./body.js";
+import { getObservableValueType } from "./get_observable_value_type.js";
+import { observableFromValue } from "./observable_from.js";
 
 export const writeNodeResponse = async (
   responseStream,
@@ -9,10 +10,24 @@ export const writeNodeResponse = async (
   { signal, ignoreBody, onAbort, onError, onHeadersSent, onEnd } = {},
 ) => {
   body = await body;
-  const bodyMethods = normalizeBodyMethods(body);
+  const bodyObservableType = getObservableValueType(body);
+  const destroyBody = () => {
+    if (bodyObservableType === "file_handle") {
+      body.close();
+      return;
+    }
+    if (bodyObservableType === "node_stream") {
+      body.destroy();
+      return;
+    }
+    if (bodyObservableType === "node_web_stream") {
+      body.cancel();
+      return;
+    }
+  };
 
   if (signal.aborted) {
-    bodyMethods.destroy();
+    destroyBody();
     responseStream.destroy();
     onAbort();
     return;
@@ -33,7 +48,7 @@ export const writeNodeResponse = async (
 
   if (ignoreBody) {
     onEnd();
-    bodyMethods.destroy();
+    destroyBody();
     responseStream.end();
     return;
   }
@@ -43,33 +58,37 @@ export const writeNodeResponse = async (
   }
 
   await new Promise((resolve) => {
-    const observable = bodyMethods.asObservable();
-    const subscription = observable.subscribe({
-      next: (data) => {
-        try {
-          responseStream.write(data);
-        } catch (e) {
-          // Something inside Node.js sometimes puts stream
-          // in a state where .write() throw despites nodeResponse.destroyed
-          // being undefined and "close" event not being emitted.
-          // I have tested if we are the one calling destroy
-          // (I have commented every .destroy() call)
-          // but issue still occurs
-          // For the record it's "hard" to reproduce but can be by running
-          // a lot of tests against a browser in the context of @jsenv/core testing
-          if (e.code === "ERR_HTTP2_INVALID_STREAM") {
-            return;
+    const observable = observableFromValue(body);
+    const abortController = new AbortController();
+    observable.subscribe(
+      {
+        next: (data) => {
+          try {
+            responseStream.write(data);
+          } catch (e) {
+            // Something inside Node.js sometimes puts stream
+            // in a state where .write() throw despites nodeResponse.destroyed
+            // being undefined and "close" event not being emitted.
+            // I have tested if we are the one calling destroy
+            // (I have commented every .destroy() call)
+            // but issue still occurs
+            // For the record it's "hard" to reproduce but can be by running
+            // a lot of tests against a browser in the context of @jsenv/core testing
+            if (e.code === "ERR_HTTP2_INVALID_STREAM") {
+              return;
+            }
+            responseStream.emit("error", e);
           }
-          responseStream.emit("error", e);
-        }
+        },
+        error: (value) => {
+          responseStream.emit("error", value);
+        },
+        complete: () => {
+          responseStream.end();
+        },
       },
-      error: (value) => {
-        responseStream.emit("error", value);
-      },
-      complete: () => {
-        responseStream.end();
-      },
-    });
+      { signal: abortController.signal },
+    );
 
     raceCallbacks(
       {
@@ -101,13 +120,13 @@ export const writeNodeResponse = async (
       (winner) => {
         const raceEffects = {
           abort: () => {
-            subscription.unsubscribe();
+            abortController.abort();
             responseStream.destroy();
             onAbort();
             resolve();
           },
           error: (error) => {
-            subscription.unsubscribe();
+            abortController.abort();
             responseStream.destroy();
             onError(error);
             resolve();
@@ -118,7 +137,7 @@ export const writeNodeResponse = async (
             // it may happen in case of server sent event
             // where body is kept open to write to client
             // and the browser is reloaded or closed for instance
-            subscription.unsubscribe();
+            abortController.abort();
             responseStream.destroy();
             onAbort();
             resolve();

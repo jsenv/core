@@ -48,7 +48,7 @@ export const fromNodeRequest = (
 
   const headers = headersFromObject(nodeRequest.headers);
   const body = observableFromNodeStream(nodeRequest, {
-    readableStreamLifetime: requestBodyLifetime,
+    readableLifetime: requestBodyLifetime,
   });
 
   let requestOrigin;

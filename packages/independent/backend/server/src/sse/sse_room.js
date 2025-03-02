@@ -1,5 +1,4 @@
 import { createLogger } from "@jsenv/humanize";
-
 import {
   createCompositeProducer,
   createObservable,
@@ -51,76 +50,78 @@ export const createSSERoom = ({
       };
     }
 
-    const sseRoomObservable = createObservable(({ next, complete }) => {
-      const client = {
-        next,
-        complete,
-        request,
-      };
-      if (clients.size === 0) {
-        const effectReturnValue = effect();
-        if (typeof effectReturnValue === "function") {
-          cleanupEffect = effectReturnValue;
-        } else {
-          cleanupEffect = CLEANUP_NOOP;
-        }
-      }
-      clients.add(client);
-      logger.debug(
-        `A client has joined. Number of client in room: ${clients.size}`,
-      );
-
-      if (lastKnownId !== undefined) {
-        const previousEvents = getAllEventSince(lastKnownId);
-        const eventMissedCount = previousEvents.length;
-        if (eventMissedCount > 0) {
-          logger.info(
-            `send ${eventMissedCount} event missed by client since event with id "${lastKnownId}"`,
-          );
-          previousEvents.forEach((previousEvent) => {
-            next(stringifySourceEvent(previousEvent));
-          });
-        }
-      }
-
-      if (welcomeEventEnabled) {
-        const welcomeEvent = {
-          retry: retryDuration,
-          type: "welcome",
-          data: new Date().toLocaleTimeString(),
+    const sseRoomObservable = createObservable(
+      ({ next, complete, addTeardown }) => {
+        const client = {
+          next,
+          complete,
+          request,
         };
-        addEventToHistory(welcomeEvent);
-
-        // send to everyone
-        if (welcomeEventPublic) {
-          sendEventToAllClients(welcomeEvent, {
-            history: false,
-          });
-        }
-        // send only to this client
-        else {
-          next(stringifySourceEvent(welcomeEvent));
-        }
-      } else {
-        const firstEvent = {
-          retry: retryDuration,
-          type: "comment",
-          data: new Date().toLocaleTimeString(),
-        };
-        next(stringifySourceEvent(firstEvent));
-      }
-
-      return () => {
-        clients.delete(client);
         if (clients.size === 0) {
-          cleanupEffect();
-          cleanupEffect = CLEANUP_NOOP;
+          const effectReturnValue = effect();
+          if (typeof effectReturnValue === "function") {
+            cleanupEffect = effectReturnValue;
+          } else {
+            cleanupEffect = CLEANUP_NOOP;
+          }
         }
+        clients.add(client);
         logger.debug(
-          `A client left. Number of client in room: ${clients.size}`,
+          `A client has joined. Number of client in room: ${clients.size}`,
         );
-      };
-    });
+
+        if (lastKnownId !== undefined) {
+          const previousEvents = getAllEventSince(lastKnownId);
+          const eventMissedCount = previousEvents.length;
+          if (eventMissedCount > 0) {
+            logger.info(
+              `send ${eventMissedCount} event missed by client since event with id "${lastKnownId}"`,
+            );
+            previousEvents.forEach((previousEvent) => {
+              next(stringifySourceEvent(previousEvent));
+            });
+          }
+        }
+
+        if (welcomeEventEnabled) {
+          const welcomeEvent = {
+            retry: retryDuration,
+            type: "welcome",
+            data: new Date().toLocaleTimeString(),
+          };
+          addEventToHistory(welcomeEvent);
+
+          // send to everyone
+          if (welcomeEventPublic) {
+            sendEventToAllClients(welcomeEvent, {
+              history: false,
+            });
+          }
+          // send only to this client
+          else {
+            next(stringifySourceEvent(welcomeEvent));
+          }
+        } else {
+          const firstEvent = {
+            retry: retryDuration,
+            type: "comment",
+            data: new Date().toLocaleTimeString(),
+          };
+          next(stringifySourceEvent(firstEvent));
+        }
+
+        addTeardown(() => {
+          clients.delete(client);
+          if (clients.size === 0) {
+            cleanupEffect();
+            cleanupEffect = CLEANUP_NOOP;
+          }
+          logger.debug(
+            `A client left. Number of client in room: ${clients.size}`,
+          );
+        });
+      },
+    );
 
     const requestSSEObservable = connectRequestAndRoom(
       request,

@@ -4,45 +4,49 @@ import { createObservable } from "./observable.js";
 
 export const observableFromNodeStream = (
   nodeStream,
-  {
-    readableStreamLifetime = 120_000, // 2s
-  } = {},
+  { readableLifeTime } = {},
 ) => {
-  const observable = createObservable(({ next, error, complete }) => {
-    if (nodeStream.isPaused()) {
-      nodeStream.resume();
-    } else if (nodeStream.complete) {
-      complete();
-      return null;
-    }
-    const cleanup = () => {
-      nodeStream.removeListener("data", next);
-      nodeStream.removeListener("error", error);
-      nodeStream.removeListener("end", complete);
-      nodeStream.removeListener("close", cleanup);
-      nodeStream.destroy();
-    };
-    // should we do nodeStream.resume() in case the stream was paused ?
-    nodeStream.once("error", error);
-    nodeStream.on("data", (data) => {
-      next(data);
-    });
-    nodeStream.once("close", () => {
-      cleanup();
-    });
-    nodeStream.once("end", () => {
-      complete();
-    });
-    return cleanup;
-  });
+  const observable = createObservable(
+    ({ next, error, complete, addTeardown }) => {
+      if (nodeStream.complete) {
+        complete();
+        return;
+      }
+      const errorEventCallback = (e) => {
+        error(e);
+      };
+      const dataEventCallback = (data) => {
+        next(data);
+      };
+      const closeEventCallback = () => {
+        complete();
+      };
+      const endEventCallback = () => {
+        complete();
+      };
+      nodeStream.once("error", errorEventCallback);
+      nodeStream.on("data", dataEventCallback);
+      nodeStream.once("end", endEventCallback);
+      nodeStream.once("close", closeEventCallback); // not sure it's required
+      addTeardown(() => {
+        nodeStream.removeListener("error", errorEventCallback);
+        nodeStream.removeListener("data", dataEventCallback);
+        nodeStream.removeListener("end", endEventCallback);
+        nodeStream.removeListener("close", closeEventCallback); // not sure it's required
+      });
+      if (nodeStream.isPaused()) {
+        nodeStream.resume();
+      }
+    },
+  );
 
-  if (nodeStream instanceof Readable) {
+  if (readableLifeTime && nodeStream instanceof Readable) {
     // safe measure, ensure the readable stream gets
     // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
     const timeout = setTimeout(() => {
       process.emitWarning(
         `Readable stream not used after ${
-          readableStreamLifetime / 1000
+          readableLifeTime / 1000
         } seconds. It will be destroyed to release resources`,
         {
           CODE: "READABLE_STREAM_TIMEOUT",
@@ -51,8 +55,7 @@ export const observableFromNodeStream = (
         },
       );
       nodeStream.destroy();
-    }, readableStreamLifetime);
-    observable.timeout = timeout;
+    }, readableLifeTime);
     onceReadableStreamUsedOrClosed(nodeStream, () => {
       clearTimeout(timeout);
     });

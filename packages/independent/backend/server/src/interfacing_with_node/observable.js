@@ -1,3 +1,5 @@
+// https://wicg.github.io/observable/#core-infrastructure
+
 if ("observable" in Symbol === false) {
   Symbol.observable = Symbol.for("observable");
 }
@@ -9,40 +11,69 @@ export const createObservable = (producer) => {
 
   const observable = {
     [Symbol.observable]: () => observable,
-    subscribe: ({
-      next = () => {},
-      error = (value) => {
-        throw value;
+    subscribe: (
+      {
+        next = () => {},
+        error = (value) => {
+          throw value;
+        },
+        complete = () => {},
       },
-      complete = () => {},
-    }) => {
+      { signal = new AbortController().signal } = {},
+    ) => {
       let cleanup = () => {};
       const subscription = {
-        closed: false,
+        active: true,
+        signal,
         unsubscribe: () => {
           subscription.closed = true;
           cleanup();
         },
       };
 
+      const teardownCallbackList = [];
+      const close = () => {
+        subscription.active = false;
+        let i = 0;
+        while (i--) {
+          teardownCallbackList[i]();
+        }
+        teardownCallbackList.length = 0;
+      };
+
       const producerReturnValue = producer({
         next: (value) => {
-          if (subscription.closed) return;
+          if (!subscription.active) {
+            return;
+          }
           next(value);
         },
         error: (value) => {
-          if (subscription.closed) return;
+          if (!subscription.active) {
+            return;
+          }
           error(value);
+          close();
         },
         complete: () => {
-          if (subscription.closed) return;
+          if (!subscription.active) {
+            return;
+          }
           complete();
+          close();
+        },
+        addTeardown: (teardownCallback) => {
+          if (!subscription.active) {
+            teardownCallback();
+            return;
+          }
+          teardownCallbackList.push(teardownCallback);
         },
       });
       if (typeof producerReturnValue === "function") {
         cleanup = producerReturnValue;
       }
-      return subscription;
+      return undefined;
     },
   };
 
@@ -61,47 +92,27 @@ export const isObservable = (value) => {
   return false;
 };
 
-export const observableFromValue = (value) => {
-  if (isObservable(value)) {
-    return value;
-  }
-
-  return createObservable(({ next, complete }) => {
-    next(value);
-    const timer = setTimeout(() => {
-      complete();
-    });
-    return () => {
-      clearTimeout(timer);
-    };
-  });
-};
-
 export const createCompositeProducer = ({ cleanup = () => {} } = {}) => {
-  const observables = new Set();
-  const observers = new Set();
-
+  const observableSet = new Set();
+  const observerSet = new Set();
   const addObservable = (observable) => {
-    if (observables.has(observable)) {
+    if (observableSet.has(observable)) {
       return false;
     }
-
-    observables.add(observable);
-    observers.forEach((observer) => {
+    observableSet.add(observable);
+    for (const observer of observerSet) {
       observer.observe(observable);
-    });
+    }
     return true;
   };
-
   const removeObservable = (observable) => {
-    if (!observables.has(observable)) {
+    if (!observableSet.has(observable)) {
       return false;
     }
-
-    observables.delete(observable);
-    observers.forEach((observer) => {
+    observableSet.delete(observable);
+    for (const observer of observerSet) {
       observer.unobserve(observable);
-    });
+    }
     return true;
   };
 
@@ -109,63 +120,58 @@ export const createCompositeProducer = ({ cleanup = () => {} } = {}) => {
     next = () => {},
     complete = () => {},
     error = () => {},
+    addTeardown = () => {},
   }) => {
     let completeCount = 0;
-
     const checkComplete = () => {
-      if (completeCount === observables.size) {
+      if (completeCount === observableSet.size) {
         complete();
       }
     };
+    addTeardown(cleanup);
 
-    const subscriptions = new Map();
+    const abortMap = new Map();
     const observe = (observable) => {
-      const subscription = observable.subscribe({
-        next: (value) => {
-          next(value);
+      const abortController = new AbortController();
+      observable.subscribe(
+        {
+          next: (value) => {
+            next(value);
+          },
+          error: (value) => {
+            error(value);
+          },
+          complete: () => {
+            abortMap.delete(observable);
+            completeCount++;
+            checkComplete();
+          },
         },
-        error: (value) => {
-          error(value);
-        },
-        complete: () => {
-          subscriptions.delete(observable);
-          completeCount++;
-          checkComplete();
-        },
+        { signal: abortController.signal },
+      );
+      abortMap.set(observable, () => {
+        abortController.abort();
       });
-      subscriptions.set(observable, subscription);
     };
     const unobserve = (observable) => {
-      const subscription = subscriptions.get(observable);
-      if (!subscription) {
+      const abort = abortMap.get(observable);
+      if (!abort) {
         return;
       }
-
-      subscription.unsubscribe();
-      subscriptions.delete(observable);
+      abortMap.delete(observable);
+      abort();
       checkComplete();
     };
     const observer = {
       observe,
       unobserve,
     };
-    observers.add(observer);
-    observables.forEach((observable) => {
+    observerSet.add(observer);
+    for (const observable of observableSet) {
       observe(observable);
-    });
-
-    return () => {
-      observers.delete(observer);
-      subscriptions.forEach((subscription) => {
-        subscription.unsubscribe();
-      });
-      subscriptions.clear();
-      cleanup();
-    };
+    }
   };
-
   producer.addObservable = addObservable;
   producer.removeObservable = removeObservable;
-
   return producer;
 };
