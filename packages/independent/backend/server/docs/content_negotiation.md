@@ -1,6 +1,6 @@
 # Content negotiation
 
-Content negotiation is a mechanism that allows the server to select the best representation of a resource when there are multiple options available. `@jsenv/server` provides tools to handle content type, language, and encoding negotiation.
+Content negotiation is a mechanism that allows the server to select the best representation of a resource when there are multiple options available. `@jsenv/server` provides tools to handle content type, language, version and encoding negotiation.
 
 ## Content type Negotiation
 
@@ -68,9 +68,36 @@ await startServer({
       availableLanguages: ["fr", "en"],
       response: (request, { contentNegotiation }) => {
         if (contentNegotiation.language === "fr") {
-          return new Response("Bonjour tout le monde !");
+          return new Response("Bonjour tout le monde !", {
+            "content-language": "fr",
+          });
         }
-        return new Response("Hello world!");
+        return new Response("Hello world!", {
+          "content-language": "en",
+        });
+      },
+    },
+  ],
+});
+```
+
+## Versioning
+
+You can use `availableVersions` to respond with the client's desired version:
+
+```js
+import { startServer } from "@jsenv/server";
+
+await startServer({
+  routes: [
+    {
+      endpoint: "GET *",
+      availableVersions: ["1", "2"],
+      response: (request, { contentNegotiation }) => {
+        if (contentNegotiation.version === "1") {
+          return new Response("v1");
+        }
+        return new Response("v2");
       },
     },
   ],
@@ -83,7 +110,7 @@ You can use `availableEncodings` to compress responses based on client preferenc
 
 ```js
 import { gzipSync } from "node:zlib";
-import { startServer, pickContentEncoding } from "@jsenv/server";
+import { startServer } from "@jsenv/server";
 
 await startServer({
   routes: [
