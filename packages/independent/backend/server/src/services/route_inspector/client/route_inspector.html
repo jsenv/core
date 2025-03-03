@@ -144,15 +144,13 @@
 
       .route_details_content {
         border-top: 1px solid var(--method-color);
-        display: flex;
-        flex-direction: column;
         padding: 10px;
       }
       .route_description {
         margin: 0;
       }
       .route_content_nego_title {
-        margin-top: 10px;
+        font-weight: bold;
       }
     </style>
     <script type="module">
@@ -272,6 +270,7 @@
         websocket,
       }) => {
         return html`<div class="route_details_content">
+          <p style="margin-top: 0"><strong>Description:</strong></p>
           <p class="route_description">
             ${description || "No description available"}
           </p>
@@ -318,7 +317,7 @@
         availableValues,
       }) => {
         return html`<div class="route_content_nego" data-nego-type="${type}">
-          <h3 class="route_content_nego_title">${title}</h3>
+          <p class="route_content_nego_title">${title}:</p>
           <ul>
             ${availableValues.map(
               (availableValue) => html`<li>${availableValue}</li>`,
@@ -328,7 +327,7 @@
       };
       const RouteAcceptableContentSection = ({ acceptedContentTypes }) => {
         return html`<div class="route_accepted_content_type">
-          <h3>Accepted content types</h3>
+          <p><strong>Accepted content types:</strong></p>
           <ul>
             ${acceptedContentTypes.map(
               (acceptedContentType) => html`<li>${acceptedContentType}</li>`,
