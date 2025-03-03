@@ -10,8 +10,8 @@ export const jsenvServiceInternalClientFiles = () => {
     routes: [
       {
         endpoint: "GET /@jsenv/server/*",
+        description: "Serve @jsenv/server internal files.",
         availableContentTypes: ["text/javascript"],
-        hidden: true,
         response: (request) => {
           const path = request.params[0];
           const jsenvServerClientFileUrl = new URL(
