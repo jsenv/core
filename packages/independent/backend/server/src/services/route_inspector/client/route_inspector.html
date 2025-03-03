@@ -64,8 +64,8 @@
         --secondary-color: #f5f5f5;
         --success-color: #4caf50;
         --warning-color: #ff9800;
-        --method-get-color: #4caf50;
-        --method-post-color: #2196f3;
+        --method-get-color: #61affe;
+        --method-post-color: #49cc90;
         --method-put-color: #ff9800;
         --method-delete-color: #f44336;
         --method-patch-color: #9c27b0;
@@ -293,20 +293,26 @@
         margin-top: 0;
         margin-bottom: 0;
       }
+      .route_details[data-method="HEAD"] {
+        --method-color: var(--method-head-color);
+      }
+      .route_details[data-method="OPTIONS"] {
+        --method-color: var(--method-options-color);
+      }
       .route_details[data-method="GET"] {
-        --method-color: #61affe;
+        --method-color: var(--method-get-color);
       }
       .route_details[data-method="POST"] {
-        --method-color: #49cc90;
+        --method-color: var(--method-post-color);
       }
       .route_details[data-method="PUT"] {
-        --method-color: #fca130;
+        --method-color: var(--method-put-color);
       }
       .route_details[data-method="PATCH"] {
-        --method-color: #50e3c2;
+        --method-color: var(--method-patch-color);
       }
       .route_details[data-method="DELETE"] {
-        --method-color: #f93e3e;
+        --method-color: var(--method-delete-color);
       }
 
       .route_details_content {

@@ -24,6 +24,7 @@ const HTTP_METHODS = [
 
 export const createRouter = () => {
   const routeSet = new Set();
+  const fallbackRouteSet = new Set();
 
   const constructAvailableEndpoints = () => {
     // TODO: memoize
@@ -39,7 +40,8 @@ export const createRouter = () => {
       };
     };
 
-    for (const route of routeSet) {
+    const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
+    for (const route of allRouteSet) {
       const endpointResource = route.resourcePattern.generateExample();
       if (route.method === "*") {
         for (const HTTP_METHOD of HTTP_METHODS) {
@@ -119,7 +121,8 @@ export const createRouter = () => {
   };
   const inferResourceOPTIONS = (request) => {
     const resourceOptions = createResourceOptions();
-    for (const route of routeSet) {
+    const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
+    for (const route of allRouteSet) {
       if (!route.matchResource(request.resource)) {
         continue;
       }
@@ -133,7 +136,8 @@ export const createRouter = () => {
     const serverOptions = createResourceOptions();
     const resourceOptionsMap = new Map();
 
-    for (const route of routeSet) {
+    const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
+    for (const route of allRouteSet) {
       const routeResource = route.resource;
       let resourceOptions = resourceOptionsMap.get(routeResource);
       if (!resourceOptions) {
@@ -181,6 +185,7 @@ export const createRouter = () => {
     response,
     websocket,
     clientCodeExample,
+    isFallback,
   }) => {
     if (!endpoint || typeof endpoint !== "string") {
       throw new TypeError(`endpoint must be a string, received ${endpoint}`);
@@ -249,7 +254,11 @@ export const createRouter = () => {
       },
       resourcePattern,
     };
-    routeSet.add(route);
+    if (isFallback) {
+      fallbackRouteSet.add(route);
+    } else {
+      routeSet.add(route);
+    }
   };
   const match = async (
     request,
@@ -266,7 +275,8 @@ export const createRouter = () => {
       websocket: false,
     };
 
-    for (const route of routeSet) {
+    const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
+    for (const route of allRouteSet) {
       const resourceMatchResult = route.matchResource(request.resource);
       if (!resourceMatchResult) {
         continue;
@@ -455,15 +465,6 @@ export const createRouter = () => {
         return responseReturnValue;
       }
     }
-    if (request.method === "OPTIONS") {
-      const isForAnyRoute = request.resource === "*";
-      if (isForAnyRoute) {
-        const serverOPTIONS = inferServerOPTIONS(request);
-        return createServerResourceOptionsResponse(request, serverOPTIONS);
-      }
-      const resourceOPTIONS = inferResourceOPTIONS(request);
-      return createResourceOptionsResponse(request, resourceOPTIONS);
-    }
     // nothing has matched fully
     // if nothing matches at all we'll send 404
     // but if url matched but METHOD was not supported we send 405
@@ -505,11 +506,28 @@ export const createRouter = () => {
   const inspect = () => {
     // I want all the info I can gather about the routes
     const data = [];
-    for (const route of routeSet) {
+    const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
+    for (const route of allRouteSet) {
       data.push(route.toJSON());
     }
     return data;
   };
+
+  add({
+    endpoint: "OPTIONS *",
+    description:
+      "Auto generate an OPTIONS response about a resource or the whole server.",
+    response: (request) => {
+      const isForAnyRoute = request.resource === "*";
+      if (isForAnyRoute) {
+        const serverOPTIONS = inferServerOPTIONS(request);
+        return createServerResourceOptionsResponse(request, serverOPTIONS);
+      }
+      const resourceOPTIONS = inferResourceOPTIONS(request);
+      return createResourceOptionsResponse(request, resourceOPTIONS);
+    },
+    isFallback: true,
+  });
 
   Object.assign(router, {
     add,
