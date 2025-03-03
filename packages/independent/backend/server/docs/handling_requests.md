@@ -17,34 +17,35 @@ await startServer({
 });
 ```
 
-## response
+## response functions
 
-_response_ is a function responsible to generate a response from a request.
+A _response_ function is responsible for generating a response from a request.
 
 - It is expected to return a _response_, `null` or `undefined`
 - It can be an `async`
+- Returning `null` or `undefined` indicates the route doesn't handle the request
 
-When there is no route producing a response for the request, server respond with _501 Not implemented_.
+When no route produces a response for the request, the server responds with _404 Not Found_.
 
-## request
+## request object
 
-_request_ is an object representing an http request.
-_request_ are passed as first argument to _handleRequest_.
+The request object represents an HTTP request and is passed as the first argument to each response function.
 
-_Request object example_
+**Request object example**:
 
+<!-- prettier-ignore -->
 ```js
 const request = {
-  signal,
-  http2: false,
-  url: "http://127.0.0.1:8080/index.html?param=1",
-  origin: "http://127.0.0.1:8080",
-  pathname: "/index.html",
-  searchParams: new URLSearchParams("?param=1"),
-  resource: "/index.html?param=1",
-  method: "GET",
-  headers: { accept: "text/html" },
-  body,
+  signal,                                          // AbortSignal to detect cancellation
+  http2: false,                                    // Whether request uses HTTP/2
+  url: "http://127.0.0.1:8080/index.html?param=1", // Full URL
+  origin: "http://127.0.0.1:8080",                 // Origin part
+  pathname: "/index.html",                         // Path portion
+  searchParams: new URLSearchParams("?param=1"),   // Query parameters
+  resource: "/index.html?param=1",                 // Resource identifier
+  method: "GET",                                   // HTTP method
+  headers: { accept: "text/html" },                // Request headers
+  body,                                            // Request body
 };
 ```
 
@@ -59,6 +60,7 @@ await startServer({
       endpoint: "GET /",
       response: (request) => {
         const page = request.searchParams.get("page");
+        return new Response(`Current page: ${page}`);
       },
     },
     // OR
@@ -66,18 +68,18 @@ await startServer({
       endpoint: "GET /?page=:page",
       response: (request) => {
         const { page } = request.params;
+        return new Response(`Current page: ${page}`);
       },
     },
   ],
 });
 ```
 
-Read more at https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams.
+Read more at [MDN URLSearchParams documentation](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams).
 
 ### Reading request body
 
-Pass an object with accepted request content-types to the route declared on `handleRequest`.  
-The request body will be passed to your function. If the request uses a content-type you do not support a reponse with status 415 (Unsupported Media Type) will be sent automatically.
+Pass an `acceptedContentTypes` array to the route to specify which content types your handler can process. If the request uses a content-type you don't support, a response with status 415 (Unsupported Media Type) will be sent automatically.
 
 ```js
 import { startServer } from "@jsenv/server";
@@ -97,30 +99,36 @@ await startServer({
       response: async (request) => {
         const { id } = request.params;
         const requestContentType = request.headers["content-type"];
+
         if (requestContentType === "application/json") {
           const requestBodyJson = await request.json();
           return new Response(`Server have received "application/json" body`);
         }
+
         if (requestContentType === "application/merge-patch+json") {
           const requestBodyJson = await request.json();
           return new Response(`Server have received "merge-patch+json" body`);
         }
+
         if (requestContentType === "multipart/form-data") {
           const { fields, files } = await request.formData();
           return new Response(
             `Server have received "multipart/form-data" body`,
           );
         }
+
         if (requestContentType === "application/x-www-form-urlencoded") {
           const requestBodyFields = await request.queryString();
           return new Response(
             `Server have received "application/x-www-form-urlencoded" body`,
           );
         }
-        if (requestContentType === "application/x-www-form-urlencoded") {
+
+        if (requestContentType === "text/plain") {
           const requestBodyText = await request.text();
           return new Response(`Server have received "text/plain" body`);
         }
+
         // "application/octet-stream"
         const requestBodyBuffer = await request.buffer();
         return new Response(
@@ -132,11 +140,11 @@ await startServer({
 });
 ```
 
-## response
+## response formats
 
-_response_ is an object describing a server response. See below some examples that you could return in [handleRequest](#handleRequest)
+Responses can be created in two different ways:
 
-_response body declared with a string_
+1. Using the standard Response constructor
 
 ```js
 import { startServer } from "@jsenv/server";
@@ -146,14 +154,17 @@ await startServer({
     {
       endpoint: "GET /",
       response: () => {
-        return new Response("Hello world");
+        return new Response("Hello world", {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+        });
       },
     },
   ],
 });
 ```
 
-_response body declared with a buffer_
+2. Using a response object
 
 ```js
 import { startServer } from "@jsenv/server";
@@ -163,19 +174,64 @@ await startServer({
     {
       endpoint: "GET /",
       response: () => {
-        const response = {
+        return {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: "Hello world",
+        };
+      },
+    },
+  ],
+});
+```
+
+### Response body types
+
+The response body can be created from various sources:
+
+**String body**
+
+```js
+import { startServer } from "@jsenv/server";
+
+await startServer({
+  routes: [
+    {
+      endpoint: "GET /",
+      response: () => {
+        return {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: "hello world",
+        };
+      },
+    },
+  ],
+});
+```
+
+**Buffer body**
+
+```js
+import { startServer } from "@jsenv/server";
+
+await startServer({
+  routes: [
+    {
+      endpoint: "GET /",
+      response: () => {
+        return {
           status: 200,
           headers: { "content-type": "text/plain" },
           body: Buffer.from("Hello world"),
         };
-        return response;
       },
     },
   ],
 });
 ```
 
-_response body declared with a readable stream_
+**Stream body**
 
 ```js
 import { createReadStream } from "node:fs";
@@ -186,19 +242,44 @@ await startServer({
     {
       endpoint: "GET /",
       response: () => {
-        const response = {
+        return {
           status: 200,
           headers: { "content-type": "text/plain" },
           body: createReadStream("/User/you/folder/file.txt"),
         };
-        return response;
       },
     },
   ],
 });
 ```
 
-_response body declared with an observable_
+**Observable body**
+
+```js
+import { startServer, createObservableBody } from "@jsenv/server";
+
+await startServer({
+  routes: [
+    {
+      endpoint: "GET /",
+      response: () => {
+        return {
+          status: 200,
+          headers: { "content-type": "text/plain" },
+          body: createObservableBody(({ next, complete }) => {
+            next("hello world");
+            complete();
+          }),
+        };
+      },
+    },
+  ],
+});
+```
+
+## Error handling
+
+When an exception occurs in a response handler, the server automatically returns a 500 Internal Server Error. For custom error handling, use try/catch blocks:
 
 ```js
 import { startServer } from "@jsenv/server";
@@ -206,23 +287,18 @@ import { startServer } from "@jsenv/server";
 await startServer({
   routes: [
     {
-      endpoint: "GET /",
-      response: () => {
-        const response = {
-          status: 200,
-          headers: { "content-type": "text/plain" },
-          body: {
-            [Symbol.observable]: () => {
-              return {
-                subscribe: ({ next, complete }) => {
-                  next("Hello world");
-                  complete();
-                },
-              };
-            },
-          },
-        };
-        return response;
+      endpoint: "GET /api/data",
+      response: async (request) => {
+        try {
+          const data = await fetchExternalData();
+          return Response.json(data);
+        } catch (error) {
+          console.error("Failed to fetch data:", error);
+          return Response.json(
+            { error: "Could not retrieve data" },
+            { status: 500 },
+          );
+        }
       },
     },
   ],

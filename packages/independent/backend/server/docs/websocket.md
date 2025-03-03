@@ -11,19 +11,20 @@ await startServer({
   port: 3000,
   routes: [
     {
+      endpoint: "GET /websocket",
+      websocket: () => {
+        return {
+          opened: (websocket) => {
+            websocket.send("Hello world");
+          },
+        };
+      },
       endpoint: "GET *",
       response: (request) => {
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
           request,
         );
-      },
-    },
-  ],
-  services: [
-    {
-      handleWebsocket: (websocket) => {
-        websocket.send("Hello world");
       },
     },
   ],
@@ -42,7 +43,7 @@ _client.html_
 
   <body>
     <script>
-      const websocket = new WebSocket("ws://localhost:3000");
+      const websocket = new WebSocket("ws://localhost:3000/websocket");
       websocket.onmessage = (message) => {
         document.body.appendChild(document.createTextNode(message.data));
       };
