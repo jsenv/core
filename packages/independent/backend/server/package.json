@@ -1,7 +1,7 @@
 {
   "name": "@jsenv/server",
   "version": "16.0.0",
-  "description": "Write your Node.js server using pure functions",
+  "description": "A modern Node.js HTTP server with declarative routing, content negotiation, and WebSocket support",
   "license": "MIT",
   "author": {
     "name": "dmail",
