@@ -1,3 +1,4 @@
+import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
 import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
 import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
 import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
@@ -179,6 +180,7 @@ export const createRouter = () => {
     acceptedContentTypes = [], // useful only for POST/PATCH/PUT
     response,
     websocket,
+    clientCodeExample,
   }) => {
     if (!endpoint || typeof endpoint !== "string") {
       throw new TypeError(`endpoint must be a string, received ${endpoint}`);
@@ -237,6 +239,12 @@ export const createRouter = () => {
           availableEncodings,
           acceptedContentTypes,
           websocket: Boolean(websocket),
+          clientCodeExample:
+            typeof clientCodeExample === "function"
+              ? parseFunction(clientCodeExample).body
+              : typeof clientCodeExample === "string"
+                ? clientCodeExample
+                : undefined,
         };
       },
       resourcePattern,

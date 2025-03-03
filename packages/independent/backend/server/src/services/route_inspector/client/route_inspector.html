@@ -18,8 +18,60 @@
     <script src="/@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js?inline"></script>
   </head>
   <body>
-    <div id="app"></div>
+    <div class="container">
+      <h1 style="margin-top: 0">Route inspector</h1>
+
+      <div class="note">
+        <strong>Note:</strong> This page displays all routes configured in your
+        server. Every GET route also automatically supports HEAD requests
+        without additional configuration.
+      </div>
+      <div id="app"></div>
+    </div>
     <style>
+      :root {
+        --background-color: #fff;
+        --text-color: #333;
+        --border-color: #e0e0e0;
+        --primary-color: #1976d2;
+        --secondary-color: #f5f5f5;
+        --success-color: #4caf50;
+        --warning-color: #ff9800;
+        --method-get-color: #4caf50;
+        --method-post-color: #2196f3;
+        --method-put-color: #ff9800;
+        --method-delete-color: #f44336;
+        --method-patch-color: #9c27b0;
+        --method-options-color: #607d8b;
+        --method-head-color: #00bcd4;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background-color: #121212;
+          --text-color: #e0e0e0;
+          --border-color: #333;
+          --primary-color: #4f9eff;
+          --secondary-color: #1e1e1e;
+        }
+      }
+
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Arial,
+          sans-serif;
+        line-height: 1.5;
+        color: var(--text-color);
+        background-color: var(--background-color);
+        margin: 0;
+        padding: 20px;
+      }
+
       .progress-container {
         width: 100%;
         height: 100%;
@@ -81,6 +133,30 @@
       }
 
       /* Styles pour les routes */
+      .auto_head_note {
+        margin-top: 10px;
+        font-size: 14px;
+        color: var(--method-head-color);
+        display: flex;
+        align-items: center;
+      }
+      .note {
+        background-color: rgba(255, 152, 0, 0.1);
+        border-left: 4px solid var(--warning-color);
+        padding: 12px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+      }
+      .info_pill {
+        display: inline-flex;
+        align-items: center;
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 14px;
+        padding: 4px 10px;
+        font-size: 13px;
+        margin-left: 10px;
+      }
+
       .route_list {
         margin-top: 20px;
       }
@@ -205,13 +281,16 @@
         const loading = routesLoadingSignal.value;
 
         return html`
-          <h1>Route inspector</h1>
           ${loading ? html`<p>Loading...</p>` : null}
           <${ProgressBar} width="150" loading=${loading} />
           <${RouteList} routes=${routes} />
         `;
       };
       const RouteList = ({ routes }) => {
+        if (!routes || routes.length === 0) {
+          return html`<p>No routes configured.</p>`;
+        }
+
         return html`<div class="route_list">
           ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
         </div>`;
@@ -226,6 +305,7 @@
         availableEncodings,
         acceptedContentTypes,
         websocket,
+        clientCodeExample,
       }) => {
         const [opened, setOpened] = useState(false);
 
@@ -254,6 +334,7 @@
             availableEncodings=${availableEncodings}
             acceptedContentTypes=${acceptedContentTypes}
             websocket=${websocket}
+            clientCodeExample=${clientCodeExample}
           />
         </details>`;
       };
@@ -268,6 +349,7 @@
         availableEncodings,
         acceptedContentTypes,
         websocket,
+        clientCodeExample,
       }) => {
         return html`<div class="route_details_content">
           <p style="margin-top: 0"><strong>Description:</strong></p>
@@ -308,6 +390,7 @@
             resource=${resource}
             availableContentTypes=${availableContentTypes}
             websocket=${websocket}
+            clientCodeExample=${clientCodeExample}
           />
         </div>`;
       };
@@ -341,9 +424,12 @@
         resource,
         availableContentTypes,
         websocket,
+        clientCodeExample,
       }) => {
         let jsSource;
-        if (websocket) {
+        if (clientCodeExample) {
+          jsSource = clientCodeExample;
+        } else if (websocket) {
           const websocketScheme =
             self.location.protocol === "https:" ? "wss" : "ws";
           const websocketOrigin = `${websocketScheme}://${self.location.host}`;
