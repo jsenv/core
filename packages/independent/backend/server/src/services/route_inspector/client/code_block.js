@@ -208,10 +208,6 @@ ${css}
   customElements.define("code-block", CodeBlock);
 
   const escape = document.createElement("textarea");
-  function escapeHtml(html) {
-    escape.textContent = html;
-    return escape.innerHTML;
-  }
   function unescapeHTML(html) {
     escape.innerHTML = html;
     return escape.textContent;

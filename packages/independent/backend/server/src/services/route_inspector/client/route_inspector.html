@@ -247,6 +247,7 @@
             </div>
           </summary>
           <${RouteDetailsContent}
+            method=${method}
             resource=${resource}
             description=${description}
             availableContentTypes=${availableContentTypes}
@@ -260,6 +261,7 @@
       };
 
       const RouteDetailsContent = ({
+        method,
         resource,
         description,
         availableContentTypes,
@@ -301,8 +303,13 @@
           html`<${RouteAcceptableContentSection}
             acceptedContentTypes=${acceptedContentTypes}
           />`}
-          <h3>Request code example</h3>
-          <${RouteCodeExample} websocket=${websocket} resource=${resource} />
+          <h3>Example</h3>
+          <${RouteCodeExample}
+            method=${method}
+            resource=${resource}
+            availableContentTypes=${availableContentTypes}
+            websocket=${websocket}
+          />
         </div>`;
       };
       const RouteContentNegotiationSection = ({
@@ -330,12 +337,19 @@
         </div>`;
       };
 
-      const RouteCodeExample = ({ resource, websocket }) => {
+      const RouteCodeExample = ({
+        method,
+        resource,
+        availableContentTypes,
+        websocket,
+      }) => {
+        let jsSource;
         if (websocket) {
           const websocketScheme =
             self.location.protocol === "https:" ? "wss" : "ws";
           const websocketOrigin = `${websocketScheme}://${self.location.host}`;
-          const websocketExampleJs = /*js */ `const websocket = new WebSocket("${websocketOrigin}${resource}");
+          jsSource = /*js */ `
+const websocket = new WebSocket("${websocketOrigin}${resource}");
 websocket.onerror = () => {
   console.error("Failed to connect to websocket endpoint");
 };
@@ -344,17 +358,33 @@ websocket.onopen = () => {
 };
 websocket.onmessage = (event) => {
   console.log("Received message", event.data);
-};`;
-          const jsSource = websocketExampleJs;
-          return html`<code-block lang="js" data-escaped data-copy-button
-            >${jsSource}</code-block
-          >`;
+};
+`;
+        } else {
+          let fetchLine;
+          if (method === "GET") {
+            fetchLine = `const response = await window.fetch("${resource}");`;
+          } else {
+            fetchLine = `const response = await window.fetch("${resource}", {
+  method: "${method}",
+}`;
+          }
+          let readResponseLine;
+          if (availableContentTypes.includes("application/json")) {
+            readResponseLine = `const json = await response.json();`;
+          } else {
+            readResponseLine = `const text = await response.text();`;
+          }
+
+          jsSource = /*js */ `
+${fetchLine}
+${readResponseLine}
+`;
         }
-        return html`<pre><code>
-const response = await window.fetch("${resource}");
-const data = await response.json();
-console.log(data);
-</code></pre>`;
+
+        return html`<code-block lang="js" data-escaped data-copy-button
+          >${jsSource}</code-block
+        >`;
       };
 
       const ArrowDown = () => {
