@@ -1,6 +1,6 @@
 # Handling requests
 
-Request are handled by the first route matching and with "response" function returning something.
+Requests are handled by the first route matching and with "response" function returning something.
 
 ```js
 import { startServer } from "@jsenv/server";
@@ -22,7 +22,7 @@ await startServer({
 A _response_ function is responsible for generating a response from a request.
 
 - It is expected to return a _response_, `null` or `undefined`
-- It can be an `async`
+- It can be `async`
 - Returning `null` or `undefined` indicates the route doesn't handle the request
 
 When no route produces a response for the request, the server responds with _404 Not Found_.
@@ -102,37 +102,35 @@ await startServer({
 
         if (requestContentType === "application/json") {
           const requestBodyJson = await request.json();
-          return new Response(`Server have received "application/json" body`);
+          return new Response(`Server has received "application/json" body`);
         }
 
         if (requestContentType === "application/merge-patch+json") {
           const requestBodyJson = await request.json();
-          return new Response(`Server have received "merge-patch+json" body`);
+          return new Response(`Server has received "merge-patch+json" body`);
         }
 
         if (requestContentType === "multipart/form-data") {
           const { fields, files } = await request.formData();
-          return new Response(
-            `Server have received "multipart/form-data" body`,
-          );
+          return new Response(`Server has received "multipart/form-data" body`);
         }
 
         if (requestContentType === "application/x-www-form-urlencoded") {
           const requestBodyFields = await request.queryString();
           return new Response(
-            `Server have received "application/x-www-form-urlencoded" body`,
+            `Server has received "application/x-www-form-urlencoded" body`,
           );
         }
 
         if (requestContentType === "text/plain") {
           const requestBodyText = await request.text();
-          return new Response(`Server have received "text/plain" body`);
+          return new Response(`Server has received "text/plain" body`);
         }
 
         // "application/octet-stream"
         const requestBodyBuffer = await request.buffer();
         return new Response(
-          `Server have received "application/octet-stream" body`,
+          `Server has received "application/octet-stream" body`,
         );
       },
     },
