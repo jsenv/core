@@ -14,10 +14,11 @@
         }
       }
     </script>
+    <script src="/@jsenv/server/src/services/route_inspector/client/code_block.js?inlin"></script>
+    <script src="/@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js?inline"></script>
   </head>
   <body>
     <div id="app"></div>
-
     <style>
       .progress-container {
         width: 100%;
@@ -226,6 +227,7 @@
         availableVersions,
         availableEncodings,
         acceptedContentTypes,
+        websocket,
       }) => {
         const [opened, setOpened] = useState(false);
 
@@ -245,23 +247,27 @@
             </div>
           </summary>
           <${RouteDetailsContent}
+            resource=${resource}
             description=${description}
             availableContentTypes=${availableContentTypes}
             availableLanguages=${availableLanguages}
             availableVersions=${availableVersions}
             availableEncodings=${availableEncodings}
             acceptedContentTypes=${acceptedContentTypes}
+            websocket=${websocket}
           />
         </details>`;
       };
 
       const RouteDetailsContent = ({
+        resource,
         description,
         availableContentTypes,
         availableLanguages,
         availableVersions,
         availableEncodings,
         acceptedContentTypes,
+        websocket,
       }) => {
         return html`<div class="route_details_content">
           <p class="route_description">
@@ -295,9 +301,10 @@
           html`<${RouteAcceptableContentSection}
             acceptedContentTypes=${acceptedContentTypes}
           />`}
+          <h3>Request code example</h3>
+          <${RouteCodeExample} websocket=${websocket} resource=${resource} />
         </div>`;
       };
-
       const RouteContentNegotiationSection = ({
         type,
         title,
@@ -312,7 +319,6 @@
           </ul>
         </div>`;
       };
-
       const RouteAcceptableContentSection = ({ acceptedContentTypes }) => {
         return html`<div class="route_accepted_content_type">
           <h3>Accepted content types</h3>
@@ -322,6 +328,33 @@
             )}
           </ul>
         </div>`;
+      };
+
+      const RouteCodeExample = ({ resource, websocket }) => {
+        if (websocket) {
+          const websocketScheme =
+            self.location.protocol === "https:" ? "wss" : "ws";
+          const websocketOrigin = `${websocketScheme}://${self.location.host}`;
+          const websocketExampleJs = /*js */ `const websocket = new WebSocket("${websocketOrigin}${resource}");
+websocket.onerror = () => {
+  console.error("Failed to connect to websocket endpoint");
+};
+websocket.onopen = () => {
+  console.info("Connected to websocket endpoint")
+};
+websocket.onmessage = (event) => {
+  console.log("Received message", event.data);
+};`;
+          const jsSource = websocketExampleJs;
+          return html`<code-block lang="js" data-escaped data-copy-button
+            >${jsSource}</code-block
+          >`;
+        }
+        return html`<pre><code>
+const response = await window.fetch("${resource}");
+const data = await response.json();
+console.log(data);
+</code></pre>`;
       };
 
       const ArrowDown = () => {
@@ -347,6 +380,5 @@
 
       render(html`<${App} />`, document.getElementById("app"));
     </script>
-    <script src="/@jsenv/server/src/services/autoreload_on_server_restart/client/autoreload_on_server_restart.js?inline"></script>
   </body>
 </html>

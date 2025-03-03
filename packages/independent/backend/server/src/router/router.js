@@ -236,6 +236,7 @@ export const createRouter = () => {
           availableVersions,
           availableEncodings,
           acceptedContentTypes,
+          websocket: Boolean(websocket),
         };
       },
       resourcePattern,

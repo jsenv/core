@@ -40,7 +40,7 @@ class JsenvAutoreloadOnServerRestart extends HTMLElement {
 
     (async () => {
       const connect = () => {
-        const websocket = new WebSocket(url, ["jsenv_server"]);
+        const websocket = new WebSocket(url);
         const connectedPromise = new Promise((resolve) => {
           websocket.onerror = () => {
             resolve(null);
