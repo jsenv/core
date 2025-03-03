@@ -37,7 +37,7 @@ return {
       "accept": "text/plain, application/json",
       "accept-patch": "text/plain",
       "accept-post": "application/json",
-      "allow": "GET, PATCH, POST",
+      "allow": "GET, PATCH, POST, OPTIONS",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5"
@@ -50,7 +50,7 @@ return {
       "accept": "text/plain, application/json",
       "accept-patch": "text/plain",
       "accept-post": "application/json",
-      "allow": "GET, PATCH, POST",
+      "allow": "GET, PATCH, POST, OPTIONS",
       "content-type": "text/plain;charset=UTF-8",
       "date": "<X>",
       "connection": "keep-alive",

@@ -105,7 +105,19 @@ const jsenvAutoreloadOnServerRestartElement =
     })(),
   });
 
-document.currentScript.parentNode.replaceChild(
-  jsenvAutoreloadOnServerRestartElement,
-  document.currentScript,
-);
+// script is injected into document.body
+if (document.body) {
+  document.currentScript.parentNode.replaceChild(
+    jsenvAutoreloadOnServerRestartElement,
+    document.currentScript,
+  );
+}
+// script injected outisde document.body (likely in head)
+else {
+  document.currentScript.parentNode.removeChild(document.currentScript);
+  document.onreadystatechange = () => {
+    if (document.readyState === "interactive") {
+      document.body.appendChild(jsenvAutoreloadOnServerRestartElement);
+    }
+  };
+}
