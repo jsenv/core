@@ -1,6 +1,8 @@
 # server [![npm package](https://img.shields.io/npm/v/@jsenv/server.svg?logo=npm&label=package)](https://www.npmjs.com/package/@jsenv/server)
 
-`@jsenv/server` helps to write flexible server code with a declarative API.
+> A modern, flexible Node.js HTTP server with declarative routing, content negotiation, and WebSocket support.
+
+`@jsenv/server` simplifies server development with a declarative API that handles common web server needs like routing, content negotiation, file serving, and real-time communication.
 
 ```js
 import { startServer } from "@jsenv/server";
@@ -16,36 +18,75 @@ await startServer({
 });
 ```
 
-# Examples
+# Features
 
-_Code starting a server with 2 request handlers:_
+✅ Declarative routing with path parameters and pattern matching
+✅ Content negotiation for type, language, version and encoding
+✅ Real-time communication via WebSockets and Server-Sent Events
+✅ File serving with ETags, conditional requests, and compression
+✅ Security with HTTPS and automatic HTTP-to-HTTPS redirection
+✅ HTTP/2 support including server push
+✅ CORS handling built-in
+✅ Performance monitoring with server timing
+✅ Sacalability through cluster mode for multi-core utilization
 
-```js
-/*
- * starts a server which:
- * - when requested at "/"
- *   -> respond with 200
- * - otherwise
- *   -> respond with 404
- */
-import { startServer, composeServices } from "@jsenv/server";
+# Installation
 
-const server = await startServer({
-  routes: [
-    { endpoint: "GET /", response: () => ({ status: 200 }) },
-    { endpoint: "GET * ", response: () => ({ status: 404 }) },
-  ],
-});
-
-const fetch = await import("node-fetch");
-const responseForOrigin = await fetch(server.origin);
-responseForOrigin.status; // 200
-
-const responseForFoo = await fetch(`${server.origin}/foo`);
-responseForFoo.status; // 404
+```console
+npm install @jsenv/server
 ```
 
-_Code starting a server in https:_
+**Requirements:**
+
+- Node.js 22.13.1 or higher
+- ES modules support
+
+# Quick Examples
+
+**Basic API Server**
+
+```js
+import { startServer } from "@jsenv/server";
+
+await startServer({
+  port: 3000,
+  routes: [
+    {
+      endpoint: "GET /api/users",
+      response: () => Response.json([{ id: 1, name: "John" }]),
+    },
+    {
+      endpoint: "GET /api/users/:id",
+      response: (request) =>
+        Response.json({ id: request.params.id, name: "John" }),
+    },
+    {
+      endpoint: "GET *",
+      response: () => new Response("Not found", { status: 404 }),
+    },
+  ],
+});
+```
+
+**Static File Server**
+
+```js
+import { startServer, fetchFileSystem } from "@jsenv/server";
+
+await startServer({
+  routes: [
+    {
+      endpoint: "GET *",
+      response: async (request) => {
+        const fileUrl = new URL(request.resource.slice(1), import.meta.url);
+        return await fetchFileSystem(fileUrl, request);
+      },
+    },
+  ],
+});
+```
+
+**HTTPS Server**
 
 ```js
 import { readFileSync } from "node:fs";
@@ -56,7 +97,7 @@ await startServer({
     certificate: readFileSync(new URL("./server.crt", import.meta.url), "utf8"),
     privateKey: readFileSync(new URL("./server.key", import.meta.url), "utf8"),
   },
-  allowHttpRequestOnHttps: true,
+  allowHttpRequestOnHttps: true, // will disable https redirection and let you handle http request
   routes: [
     {
       endpoint: "GET *",
@@ -71,41 +112,18 @@ await startServer({
 });
 ```
 
-_Code starting a server for static files:_
-
-```js
-import { startServer, fetchFileSystem } from "@jsenv/server";
-
-await startServer({
-  routes: [
-    {
-      endpoint: "GET *",
-      response: async (request) => {
-        const fileUrl = new URL(request.resource.slice(1), import.meta.url);
-        const response = await fetchFileSystem(fileUrl, request);
-        return response;
-      },
-    },
-  ],
-});
-```
-
 # Documentation
 
-- [Handling requests](./docs/handling_requests.md)
-- [Handling errors](./docs/handling_errors.md)
-- [Server timing](./docs/server_timing.md)
-- [CORS](./docs/cors.md)
-- [https](./docs/https.md)
-- [Serving files](./docs/serving_files.md)
-- [Content negotiation](./docs/content_negotiation.md)
-- [Websocket](./docs/websocket.md)
-- [Server Sent Events](./docs/server_sent_events.md)
-- [Cluster](./docs/cluster.md)
-- [Http2 push](./docs/http2_push.md)
-
-# Installation
-
-```console
-npm install @jsenv/server
-```
+| Topic                                                | Description                                      |
+| ---------------------------------------------------- | ------------------------------------------------ |
+| [Handling requests](./docs/handling_requests.md)     | Process HTTP requests and generate responses     |
+| [Handling errors](./docs/handling_errors.md)         | Error handling strategies and custom responses   |
+| [Server timing](./docs/server_timing.md)             | Measure and report server performance metrics    |
+| [CORS](./docs/cors.md)                               | Configure Cross-Origin Resource Sharing          |
+| [HTTPS](./docs/https.md)                             | Set up secure HTTPS connections                  |
+| [Serving files](./docs/serving_files.md)             | Static file serving with caching and compression |
+| [Content negotiation](./docs/content_negotiation.md) | Content type, language and encoding negotiation  |
+| [Websocket](./docs/websocket.md)                     | Bi-directional real-time communication           |
+| [Server Sent Events](./docs/server_sent_events.md)   | Push updates to clients over HTTP                |
+| [Cluster](./docs/cluster.md)                         | Scale your server across multiple CPU cores      |
+| [HTTP/2 Push](./docs/http2_push.md)                  | Optimize loading with server push                |

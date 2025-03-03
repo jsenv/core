@@ -13,7 +13,7 @@
     "directory": "packages/independent/backend/server"
   },
   "engines": {
-    "node": ">=16.13.0"
+    "node": ">=22.13.1"
   },
   "publishConfig": {
     "access": "public"
