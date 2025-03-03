@@ -223,6 +223,9 @@
         description,
         availableContentTypes,
         availableLanguages,
+        availableVersions,
+        availableEncodings,
+        acceptedContentTypes,
       }) => {
         const [opened, setOpened] = useState(false);
 
@@ -245,6 +248,9 @@
             description=${description}
             availableContentTypes=${availableContentTypes}
             availableLanguages=${availableLanguages}
+            availableVersions=${availableVersions}
+            availableEncodings=${availableEncodings}
+            acceptedContentTypes=${acceptedContentTypes}
           />
         </details>`;
       };
@@ -253,6 +259,9 @@
         description,
         availableContentTypes,
         availableLanguages,
+        availableVersions,
+        availableEncodings,
+        acceptedContentTypes,
       }) => {
         return html`<div class="route_details_content">
           <p class="route_description">
@@ -270,6 +279,22 @@
             title="Available languages"
             availableValues=${availableLanguages}
           />`}
+          ${availableVersions.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="version"
+            title="Available versions"
+            availableValues=${availableVersions}
+          />`}
+          ${availableEncodings.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="encoding"
+            title="Available encodings"
+            availableValues=${availableEncodings}
+          />`}
+          ${acceptedContentTypes.length > 0 &&
+          html`<${RouteAcceptableContentSection}
+            acceptedContentTypes=${acceptedContentTypes}
+          />`}
         </div>`;
       };
 
@@ -283,6 +308,17 @@
           <ul>
             ${availableValues.map(
               (availableValue) => html`<li>${availableValue}</li>`,
+            )}
+          </ul>
+        </div>`;
+      };
+
+      const RouteAcceptableContentSection = ({ acceptedContentTypes }) => {
+        return html`<div class="route_accepted_content_type">
+          <h3>Accepted content types</h3>
+          <ul>
+            ${acceptedContentTypes.map(
+              (acceptedContentType) => html`<li>${acceptedContentType}</li>`,
             )}
           </ul>
         </div>`;
