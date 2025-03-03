@@ -1,5 +1,6 @@
 import { Readable, Stream, Writable } from "node:stream";
 import { isObservable } from "./observable.js";
+import { isFileHandle } from "./observable_from_file_handle.js";
 
 export const getObservableValueType = (value) => {
   if (value && typeof value.then === "function") {
@@ -23,10 +24,6 @@ export const getObservableValueType = (value) => {
   }
 
   return "js_value";
-};
-
-export const isFileHandle = (value) => {
-  return value && value.constructor && value.constructor.name === "FileHandle";
 };
 
 const isNodeStream = (value) => {

@@ -41,7 +41,6 @@ export { jsenvServiceResponseAcceptanceCheck } from "./services/response_accepta
 
 // others
 export { serveDirectory } from "./serve_directory.js";
-export { fromFetchResponse } from "./from_fetch_response.js";
 export { composeTwoResponses } from "./internal/response_composition.js";
 export { jsenvServiceRequestAliases } from "./services/request_aliases/jsenv_service_request_aliases.js";
 export { findFreePort } from "./internal/listen.js";

@@ -1,17 +1,17 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
+import { startServer } from "@jsenv/server";
 import { promises } from "node:fs";
-
-import { fromFetchResponse, startServer } from "@jsenv/server";
 
 // file handle
 {
   const server = await startServer({
     keepProcessAlive: false,
     logLevel: "warn",
-    services: [
+    routes: [
       {
-        handleRequest: async () => {
+        endpoint: "GET *",
+        response: async () => {
           const response = {
             status: 200,
             headers: { "content-type": "text/plain" },
@@ -26,8 +26,7 @@ import { fromFetchResponse, startServer } from "@jsenv/server";
     ],
   });
   const response = await fetchUrl(server.origin);
-
-  const actual = await new Response();
+  const actual = await response.text();
   const expect = "Hello";
   assert({ actual, expect });
 
@@ -36,17 +35,18 @@ import { fromFetchResponse, startServer } from "@jsenv/server";
     const serverB = await startServer({
       keepProcessAlive: false,
       logLevel: "warn",
-      services: [
+      routes: [
         {
-          handleRequest: async () => {
+          endpoint: "GET *",
+          response: async () => {
             const response = await fetchUrl(server.origin);
-            return fromFetchResponse(response);
+            return response;
           },
         },
       ],
     });
     const response = await fetchUrl(serverB.origin);
-    const actual = await new Response();
+    const actual = await response.text();
     const expect = "Hello";
     assert({ actual, expect });
   }

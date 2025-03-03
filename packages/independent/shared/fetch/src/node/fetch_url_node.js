@@ -4,7 +4,7 @@ import { fetchFileSystem } from "@jsenv/server";
 import {
   fileHandleToReadableStream,
   isFileHandle,
-} from "@jsenv/server/src/interfacing_with_node/body.js";
+} from "@jsenv/server/src/interfacing_with_node/observable_from_file_handle.js";
 import { DATA_URL } from "@jsenv/urls";
 import nodeFetch, { Response } from "node-fetch";
 import { Agent } from "node:https";
