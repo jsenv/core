@@ -16,12 +16,9 @@ const apiServer = await startServer({
           },
           body: createObservableBody({
             opened: ({ write, close }) => {
-              // we must write something for fetch promise to resolve
-              // this is conform to HTTP spec where client expect body to starts writing
-              // before resolving response promise client side
-              write("");
               _write = write;
               _close = close;
+              return "";
             },
           }),
         };
