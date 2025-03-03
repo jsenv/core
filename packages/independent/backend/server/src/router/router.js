@@ -170,6 +170,7 @@ export const createRouter = () => {
    */
   const add = ({
     endpoint,
+    description,
     headers,
     availableContentTypes = [],
     availableLanguages = [],
@@ -198,6 +199,7 @@ export const createRouter = () => {
     const route = {
       method,
       resource,
+      description,
       availableContentTypes,
       availableLanguages,
       availableVersions,
@@ -228,6 +230,7 @@ export const createRouter = () => {
         return {
           method,
           resource,
+          description,
           availableContentTypes,
           availableLanguages,
           availableVersions,

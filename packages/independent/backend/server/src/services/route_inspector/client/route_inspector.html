@@ -140,10 +140,18 @@
       .route_details[data-method="DELETE"] {
         --method-color: #f93e3e;
       }
+
       .route_details_content {
         border-top: 1px solid var(--method-color);
         display: flex;
+        flex-direction: column;
         padding: 10px;
+      }
+      .route_description {
+        margin: 0;
+      }
+      .route_content_nego_title {
+        margin-top: 10px;
       }
     </style>
     <script type="module">
@@ -209,7 +217,13 @@
           ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
         </div>`;
       };
-      const RouteDetails = ({ method, resource }) => {
+      const RouteDetails = ({
+        method,
+        resource,
+        description,
+        availableContentTypes,
+        availableLanguages,
+      }) => {
         const [opened, setOpened] = useState(false);
 
         return html`<details
@@ -227,13 +241,50 @@
               ${opened ? html`<${ArrowUp} />` : html`<${ArrowDown} />`}
             </div>
           </summary>
-          <${RouteDetailsContent} />
+          <${RouteDetailsContent}
+            description=${description}
+            availableContentTypes=${availableContentTypes}
+            availableLanguages=${availableLanguages}
+          />
         </details>`;
       };
 
-      const RouteDetailsContent = () => {
+      const RouteDetailsContent = ({
+        description,
+        availableContentTypes,
+        availableLanguages,
+      }) => {
         return html`<div class="route_details_content">
-          Route item content
+          <p class="route_description">
+            ${description || "No description available"}
+          </p>
+          ${availableContentTypes.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="content-type"
+            title="Available content types"
+            availableValues=${availableContentTypes}
+          />`}
+          ${availableLanguages.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="language"
+            title="Available languages"
+            availableValues=${availableLanguages}
+          />`}
+        </div>`;
+      };
+
+      const RouteContentNegotiationSection = ({
+        type,
+        title,
+        availableValues,
+      }) => {
+        return html`<div class="route_content_nego" data-nego-type="${type}">
+          <h3 class="route_content_nego_title">${title}</h3>
+          <ul>
+            ${availableValues.map(
+              (availableValue) => html`<li>${availableValue}</li>`,
+            )}
+          </ul>
         </div>`;
       };
 
