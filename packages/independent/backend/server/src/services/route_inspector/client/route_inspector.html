@@ -80,20 +80,70 @@
       }
 
       /* Styles pour les routes */
-      .route-list {
+      .route_list {
         margin-top: 20px;
       }
-      .route-item {
+      .route_details {
+        margin-bottom: 8px;
+        box-shadow: 0 0 3px rgba(0, 0, 0, 0.19);
+        border: 1px solid #000;
+        border-radius: 4px;
+        margin: 0 0 15px;
+        border-color: var(--method-color);
+        background: color-mix(in srgb, var(--method-color), transparent 90%);
+      }
+      .route_details > summary {
+        cursor: pointer;
+        list-style: none;
+      }
+      .route_details > summary::marker {
+        display: none;
+      }
+      .route_summary_container {
         display: flex;
         align-items: center;
-        margin-bottom: 8px;
+        padding: 5px;
       }
-      .route-method {
-        font-weight: bold;
-        min-width: 60px;
+      .route_method {
+        border-radius: 3px;
+        color: #fff;
+        font-family: sans-serif;
+        font-size: 14px;
+        font-weight: 700;
+        min-width: 80px;
+        padding: 6px 0;
+        text-align: center;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+        background: var(--method-color);
       }
-      .route-resource {
+      .route_resource {
         margin-left: 8px;
+        font-family: monospace;
+        font-size: 16px;
+        font-weight: 600;
+        word-break: break-word;
+        margin-top: 0;
+        margin-bottom: 0;
+      }
+      .route_details[data-method="GET"] {
+        --method-color: #61affe;
+      }
+      .route_details[data-method="POST"] {
+        --method-color: #49cc90;
+      }
+      .route_details[data-method="PUT"] {
+        --method-color: #fca130;
+      }
+      .route_details[data-method="PATCH"] {
+        --method-color: #50e3c2;
+      }
+      .route_details[data-method="DELETE"] {
+        --method-color: #f93e3e;
+      }
+      .route_details_content {
+        border-top: 1px solid var(--method-color);
+        display: flex;
+        padding: 10px;
       }
     </style>
     <script type="module">
@@ -101,27 +151,24 @@
       import { render } from "preact";
       import { html } from "htm/preact";
       import { signal } from "@preact/signals";
+      import { useState } from "preact/hooks";
 
       const routesLoadingSignal = signal(false);
       const routeLoadingError = signal(null);
       const routesSignal = signal([]);
 
       const loadRoutes = async () => {
-        // routesLoadingSignal.value = true;
-        // try {
-        //   const response = await fetch(window.location.href, {
-        //     headers: {
-        //       accept: "application/json",
-        //     },
-        //   });
-        //   const routes = await response.json();
-        //   routesLoadingSignal.value = false;
-        //   routesSignal.value = routes;
-        // } catch (e) {
-        //   routesLoadingSignal.value = false;
-        //   routeLoadingError.value = e;
-        //   throw e;
-        // }
+        routesLoadingSignal.value = true;
+        try {
+          const response = await fetch("/.internal/routes.json");
+          const routes = await response.json();
+          routesLoadingSignal.value = false;
+          routesSignal.value = routes;
+        } catch (e) {
+          routesLoadingSignal.value = false;
+          routeLoadingError.value = e;
+          throw e;
+        }
       };
       loadRoutes();
 
@@ -158,15 +205,57 @@
         `;
       };
       const RouteList = ({ routes }) => {
-        return html`<div>
-          ${routes.map((route) => html`<${Route} ...${route} />`)}
+        return html`<div class="route_list">
+          ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
         </div>`;
       };
-      const Route = ({ method, resource }) => {
-        return html`<div style="display: flex">
-          <span>${method}</span>
-          <p>${resource}</p>
+      const RouteDetails = ({ method, resource }) => {
+        const [opened, setOpened] = useState(false);
+
+        return html`<details
+          class="route_details"
+          onToggle=${(e) => {
+            setOpened(e.newState === "open");
+          }}
+          data-method=${method}
+        >
+          <summary>
+            <div class="route_summary_container">
+              <span class="route_method">${method}</span>
+              <p class="route_resource">${resource}</p>
+              <span style="flex:1"></span>
+              ${opened ? html`<${ArrowUp} />` : html`<${ArrowDown} />`}
+            </div>
+          </summary>
+          <${RouteDetailsContent} />
+        </details>`;
+      };
+
+      const RouteDetailsContent = () => {
+        return html`<div class="route_details_content">
+          Route item content
         </div>`;
+      };
+
+      const ArrowDown = () => {
+        return html`<svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 -960 960 960"
+          width="24"
+          height="24"
+        >
+          <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
+        </svg>`;
+      };
+      const ArrowUp = () => {
+        return html`<svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 -960 960 960"
+          width="24"
+          height="24"
+        >
+          <path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" />
+        </svg>`;
       };
 
       render(html`<${App} />`, document.getElementById("app"));
