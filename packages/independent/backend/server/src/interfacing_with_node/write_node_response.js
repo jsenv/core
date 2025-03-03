@@ -9,7 +9,9 @@ export const writeNodeResponse = async (
   { status, statusText, headers, body, bodyEncoding },
   { signal, ignoreBody, onAbort, onError, onHeadersSent, onEnd } = {},
 ) => {
-  body = await body;
+  if (body && body.isObservableBody && headers["connection"] === undefined) {
+    headers["transfer-encoding"] = "chunked";
+  }
   const bodyObservableType = getObservableValueType(body);
   const destroyBody = () => {
     if (bodyObservableType === "file_handle") {

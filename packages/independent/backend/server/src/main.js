@@ -33,6 +33,9 @@ export { timeFunction, timeStart } from "./server_timing/timing_measure.js";
 // SSE
 export { createSSERoom } from "./sse/sse_room.js";
 
+// long polling
+export { createObservableBody } from "./interfacing_with_node/observable_body.js";
+
 // content-negotiation
 export { pickContentType } from "./content_negotiation/pick_content_type.js";
 export { pickContentEncoding } from "./content_negotiation/pick_content_encoding.js";
