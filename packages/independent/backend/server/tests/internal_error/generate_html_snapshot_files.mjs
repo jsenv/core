@@ -1,6 +1,4 @@
-import { fetchUrl } from "@jsenv/fetch";
 import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
-
 import { jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 
 const htmlFilesDirectoryUrl = new URL("./snapshots/", import.meta.url).href;
@@ -24,24 +22,25 @@ const generateInternalErrorHtmlFile = async (htmlFilename, serverParams) => {
     ...serverParams,
   });
   {
-    const response = await fetchUrl(origin, {
+    const response = await fetch(origin, {
       headers: {
         accept: "text/html",
       },
     });
     stop();
     const htmlFileUrl = new URL(htmlFilename, htmlFilesDirectoryUrl).href;
-    await writeFile(htmlFileUrl, await new Response());
+    await writeFile(htmlFileUrl, await response.text());
   }
 };
 
 await ensureEmptyDirectory(htmlFilesDirectoryUrl);
 
 await generateInternalErrorHtmlFile("basic.html", {
-  services: [
-    jsenvServiceErrorHandler(),
+  services: [jsenvServiceErrorHandler()],
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET *",
+      response: () => {
         const error = new Error("test");
         throw error;
       },
@@ -54,8 +53,11 @@ await generateInternalErrorHtmlFile("basic_with_details.html", {
     jsenvServiceErrorHandler({
       sendErrorDetails: true,
     }),
+  ],
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET *",
+      response: () => {
         const error = new Error("test");
         error.stack = deterministicStackTrace;
         throw error;
@@ -73,8 +75,11 @@ await generateInternalErrorHtmlFile("basic_with_code_and_details.html", {
     jsenvServiceErrorHandler({
       sendErrorDetails: true,
     }),
+  ],
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET *",
+      response: () => {
         const error = new Error("test");
         error.code = "TEST_CODE";
         error.stack = deterministicStackTrace;
@@ -85,10 +90,11 @@ await generateInternalErrorHtmlFile("basic_with_code_and_details.html", {
 });
 
 await generateInternalErrorHtmlFile("literal.html", {
-  services: [
-    jsenvServiceErrorHandler(),
+  services: [jsenvServiceErrorHandler()],
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET *",
+      response: () => {
         const error = "a string";
         throw error;
       },
@@ -97,10 +103,11 @@ await generateInternalErrorHtmlFile("literal.html", {
 });
 
 await generateInternalErrorHtmlFile("literal_with_details.html", {
-  services: [
-    jsenvServiceErrorHandler({ sendErrorDetails: true }),
+  services: [jsenvServiceErrorHandler({ sendErrorDetails: true })],
+  routes: [
     {
-      handleRequest: () => {
+      endpoint: "GET *",
+      response: () => {
         const error = "a string";
         throw error;
       },
