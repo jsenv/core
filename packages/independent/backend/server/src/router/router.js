@@ -22,11 +22,135 @@ const HTTP_METHODS = [
   "DELETE",
 ];
 
+/**
+ * Adds a route to the router.
+ *
+ * @param {Object} params - Route configuration object
+ * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
+ * @param {Object} [params.headers] - Optional headers pattern to match
+ * @param {Array<string>} [params.availableContentTypes=[]] - Content types this route can produce
+ * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
+ * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
+ * @param {Array<string>} [params.acceptedContentTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
+ * @param {Function} params.response - Function to generate response for matching requests
+ * @throws {TypeError} If endpoint is not a string
+ * @returns {void}
+ */
+export const createRoute = ({
+  endpoint,
+  description,
+  headers,
+  service,
+  availableContentTypes = [],
+  availableLanguages = [],
+  availableVersions = [],
+  availableEncodings = [],
+  acceptedContentTypes = [], // useful only for POST/PATCH/PUT
+  response,
+  websocket,
+  clientCodeExample,
+  isFallback,
+  subroutes,
+}) => {
+  if (!endpoint || typeof endpoint !== "string") {
+    throw new TypeError(`endpoint must be a string, received ${endpoint}`);
+  }
+  const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
+  if (method !== "*" && !HTTP_METHODS.includes(method)) {
+    throw new TypeError(`"${method}" is not an HTTP method`);
+  }
+  if (resource[0] !== "/" && resource[0] !== "*") {
+    throw new TypeError(`resource must start with /, received ${resource}`);
+  }
+  if (websocket) {
+    if (typeof websocket !== "function") {
+      throw new TypeError(
+        `websocket must be a function, received ${websocket}`,
+      );
+    }
+  } else if (typeof response !== "function") {
+    throw new TypeError(`response must be a function, received ${response}`);
+  }
+  const resourcePattern = createResourcePattern(resource);
+  const headersPattern = headers ? createHeadersPattern(headers) : null;
+
+  const route = {
+    method,
+    resource,
+    description,
+    service,
+    availableContentTypes,
+    availableLanguages,
+    availableVersions,
+    availableEncodings,
+    acceptedContentTypes,
+    matchMethod:
+      method === "*" ? () => true : (requestMethod) => requestMethod === method,
+    matchResource:
+      resource === "*"
+        ? () => true
+        : (requestResource) => {
+            return resourcePattern.match(requestResource);
+          },
+    matchHeaders:
+      headers === undefined
+        ? () => true
+        : (requestHeaders) => {
+            return headersPattern.match(requestHeaders);
+          },
+    response,
+    websocket,
+    toString: () => {
+      return `${method} ${resource}`;
+    },
+    toJSON: () => {
+      return {
+        method,
+        resource,
+        description,
+        availableContentTypes,
+        availableLanguages,
+        availableVersions,
+        availableEncodings,
+        acceptedContentTypes,
+        websocket: Boolean(websocket),
+        clientCodeExample:
+          typeof clientCodeExample === "function"
+            ? parseFunction(clientCodeExample).body
+            : typeof clientCodeExample === "string"
+              ? clientCodeExample
+              : undefined,
+      };
+    },
+    resourcePattern,
+    isFallback,
+    subroutes,
+  };
+  return route;
+};
+
 export const createRouter = ({ optionsFallback } = {}) => {
   const routeSet = new Set();
   const fallbackRouteSet = new Set();
 
-  const constructAvailableEndpoints = () => {
+  const getAllRouteSet = (request, helpers) => {
+    const allRouteSet = new Set();
+    for (const route of routeSet) {
+      if (route.subroutes) {
+        const subroutes = route.subroutes(request, helpers);
+        for (const subroute of subroutes) {
+          allRouteSet.add(subroute);
+        }
+      }
+      allRouteSet.add(route);
+    }
+    for (const fallbackRoute of fallbackRouteSet) {
+      allRouteSet.add(fallbackRoute);
+    }
+    return allRouteSet;
+  };
+
+  const constructAvailableEndpoints = (request, helpers) => {
     // TODO: memoize
     // TODO: construct only if the route is visible to that client
     const availableEndpoints = [];
@@ -40,7 +164,7 @@ export const createRouter = ({ optionsFallback } = {}) => {
       };
     };
 
-    const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
+    const allRouteSet = getAllRouteSet(request, helpers);
     for (const route of allRouteSet) {
       const endpointResource = route.resourcePattern.generateExample();
       if (route.method === "*") {
@@ -119,9 +243,9 @@ export const createRouter = ({ optionsFallback } = {}) => {
       onMethodAllowed(supportedMethod);
     }
   };
-  const inferResourceOPTIONS = (request) => {
+  const inferResourceOPTIONS = (request, helpers) => {
     const resourceOptions = createResourceOptions();
-    const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
+    const allRouteSet = getAllRouteSet(request, helpers);
     for (const route of allRouteSet) {
       if (!route.matchResource(request.resource)) {
         continue;
@@ -143,11 +267,11 @@ export const createRouter = ({ optionsFallback } = {}) => {
     }
     return resourceOptions;
   };
-  const inferServerOPTIONS = () => {
+  const inferServerOPTIONS = (request, helpers) => {
     const serverOptions = createResourceOptions();
     const resourceOptionsMap = new Map();
+    const allRouteSet = getAllRouteSet(request, helpers);
 
-    const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
     for (const route of allRouteSet) {
       const routeResource = route.resource;
       let resourceOptions = resourceOptionsMap.get(routeResource);
@@ -170,116 +294,20 @@ export const createRouter = ({ optionsFallback } = {}) => {
     hasSomeWebsocketRoute: false,
   };
 
-  /**
-   * Adds a route to the router.
-   *
-   * @param {Object} params - Route configuration object
-   * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
-   * @param {Object} [params.headers] - Optional headers pattern to match
-   * @param {Array<string>} [params.availableContentTypes=[]] - Content types this route can produce
-   * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
-   * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
-   * @param {Array<string>} [params.acceptedContentTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
-   * @param {Function} params.response - Function to generate response for matching requests
-   * @throws {TypeError} If endpoint is not a string
-   * @returns {void}
-   */
-  const add = ({
-    endpoint,
-    description,
-    headers,
-    service,
-    availableContentTypes = [],
-    availableLanguages = [],
-    availableVersions = [],
-    availableEncodings = [],
-    acceptedContentTypes = [], // useful only for POST/PATCH/PUT
-    response,
-    websocket,
-    clientCodeExample,
-    isFallback,
-  }) => {
-    if (!endpoint || typeof endpoint !== "string") {
-      throw new TypeError(`endpoint must be a string, received ${endpoint}`);
-    }
-    const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
-    if (method !== "*" && !HTTP_METHODS.includes(method)) {
-      throw new TypeError(`"${method}" is not an HTTP method`);
-    }
-    if (resource[0] !== "/" && resource[0] !== "*") {
-      throw new TypeError(`resource must start with /, received ${resource}`);
-    }
-    if (websocket) {
-      if (typeof websocket !== "function") {
-        throw new TypeError(
-          `websocket must be a function, received ${websocket}`,
-        );
-      }
+  const append = (route) => {
+    if (route.websocket) {
       router.hasSomeWebsocketRoute = true;
-    } else if (typeof response !== "function") {
-      throw new TypeError(`response must be a function, received ${response}`);
     }
-    const resourcePattern = createResourcePattern(resource);
-    const headersPattern = headers ? createHeadersPattern(headers) : null;
-
-    const route = {
-      method,
-      resource,
-      description,
-      service,
-      availableContentTypes,
-      availableLanguages,
-      availableVersions,
-      availableEncodings,
-      acceptedContentTypes,
-      matchMethod:
-        method === "*"
-          ? () => true
-          : (requestMethod) => requestMethod === method,
-      matchResource:
-        resource === "*"
-          ? () => true
-          : (requestResource) => {
-              return resourcePattern.match(requestResource);
-            },
-      matchHeaders:
-        headers === undefined
-          ? () => true
-          : (requestHeaders) => {
-              return headersPattern.match(requestHeaders);
-            },
-      response,
-      websocket,
-      toString: () => {
-        return `${method} ${resource}`;
-      },
-      toJSON: () => {
-        return {
-          method,
-          resource,
-          description,
-          availableContentTypes,
-          availableLanguages,
-          availableVersions,
-          availableEncodings,
-          acceptedContentTypes,
-          websocket: Boolean(websocket),
-          clientCodeExample:
-            typeof clientCodeExample === "function"
-              ? parseFunction(clientCodeExample).body
-              : typeof clientCodeExample === "string"
-                ? clientCodeExample
-                : undefined,
-        };
-      },
-      resourcePattern,
-      isFallback,
-    };
-    if (isFallback) {
+    if (route.isFallback) {
       fallbackRouteSet.add(route);
     } else {
       routeSet.add(route);
     }
+  };
+
+  const add = (params) => {
+    const route = createRoute(params);
+    append(route);
   };
   const match = async (
     request,
@@ -319,7 +347,8 @@ export const createRouter = ({ optionsFallback } = {}) => {
       onRouteGroupEnd(route);
     };
 
-    const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
+    const helpers = { timing, pushResponse, contentNegotiation: null };
+    const allRouteSet = getAllRouteSet(request, helpers);
     for (const route of allRouteSet) {
       onRouteMatchStart(route);
       const resourceMatchResult = route.matchResource(request.resource);
@@ -452,7 +481,7 @@ export const createRouter = ({ optionsFallback } = {}) => {
         headersMatchResult,
       );
       Object.assign(request.params, named, stars);
-
+      helpers.contentNegotiation = contentNegotiationResult;
       websocket_request: {
         if (route.websocket) {
           let websocketReturnValue = await route.websocket(request, {
@@ -483,11 +512,7 @@ export const createRouter = ({ optionsFallback } = {}) => {
         }
       }
       regular_request: {
-        let responseReturnValue = route.response(request, {
-          timing,
-          pushResponse,
-          contentNegotiation: contentNegotiationResult,
-        });
+        let responseReturnValue = route.response(request, helpers);
         if (
           responseReturnValue !== null &&
           typeof responseReturnValue === "object" &&
@@ -550,13 +575,13 @@ export const createRouter = ({ optionsFallback } = {}) => {
         },
       });
     }
-    const availableEndpoints = constructAvailableEndpoints(request);
+    const availableEndpoints = constructAvailableEndpoints(request, { timing });
     return createRouteNotFoundResponse(request, { availableEndpoints });
   };
-  const inspect = () => {
+  const inspect = (request, helpers) => {
     // I want all the info I can gather about the routes
     const data = [];
-    const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
+    const allRouteSet = getAllRouteSet(request, helpers);
     for (const route of allRouteSet) {
       data.push(route.toJSON());
     }
@@ -568,13 +593,13 @@ export const createRouter = ({ optionsFallback } = {}) => {
       endpoint: "OPTIONS *",
       description:
         "Auto generate an OPTIONS response about a resource or the whole server.",
-      response: (request) => {
+      response: (request, helpers) => {
         const isForAnyRoute = request.resource === "*";
         if (isForAnyRoute) {
-          const serverOPTIONS = inferServerOPTIONS(request);
+          const serverOPTIONS = inferServerOPTIONS(request, helpers);
           return createServerResourceOptionsResponse(request, serverOPTIONS);
         }
-        const resourceOPTIONS = inferResourceOPTIONS(request);
+        const resourceOPTIONS = inferResourceOPTIONS(request, helpers);
         return createResourceOptionsResponse(request, resourceOPTIONS);
       },
       isFallback: true,
@@ -585,6 +610,9 @@ export const createRouter = ({ optionsFallback } = {}) => {
     add,
     match,
     inspect,
+
+    createRoute,
+    append,
   });
   return router;
 };

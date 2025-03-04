@@ -376,13 +376,12 @@ export const startDevServer = async ({
         {
           endpoint: "GET *",
           description: "Serve project source files during dev",
-          response: async (request) => {
+          subroutes: (request, helpers) => {
             const kitchen = getOrCreateKitchen(request);
-            const responseFromPlugin =
-              await kitchen.pluginController.matchDevServerRoutes(request);
-            if (responseFromPlugin) {
-              return responseFromPlugin;
-            }
+            helpers.kitchen = kitchen; // make kitchen accessible to routes
+            return kitchen.pluginController.devServerRoutes;
+          },
+          response: async (request, { kitchen }) => {
             const { rootDirectoryUrl, mainFilePath } = kitchen.context;
             let requestResource = request.resource;
             let requestedUrl;

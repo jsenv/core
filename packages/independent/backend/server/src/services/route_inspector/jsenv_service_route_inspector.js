@@ -27,8 +27,8 @@ export const jsenvServiceRouteInspector = (router) => {
         endpoint: "GET /.internal/routes.json",
         availableContentTypes: ["application/json"],
         description: "Get the routes available on this server in JSON.",
-        response: () => {
-          const routeJSON = router.inspect();
+        response: (request, helpers) => {
+          const routeJSON = router.inspect(request, helpers);
           return Response.json(routeJSON);
         },
       },

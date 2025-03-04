@@ -1,4 +1,4 @@
-import { createRouter } from "@jsenv/server/src/router/router.js";
+import { createRoute } from "@jsenv/server/src/router/router.js";
 import { performance } from "node:perf_hooks";
 
 const HOOK_NAMES = [
@@ -24,7 +24,7 @@ export const createPluginController = (
   initialPuginsMeta = {},
 ) => {
   const pluginsMeta = initialPuginsMeta;
-  let router = createRouter();
+  const allDevServerRoutes = [];
 
   kitchenContext.getPluginMeta = (id) => {
     const value = pluginsMeta[id];
@@ -123,7 +123,7 @@ export const createPluginController = (
 
     // 1.
     activePlugins.length = 0;
-    router = createRouter();
+    allDevServerRoutes.length = 0;
     // 2.
     for (const { cleanup } of activeEffectSet) {
       cleanup();
@@ -188,7 +188,7 @@ export const createPluginController = (
         if (key === "devServerRoutes") {
           const devServerRoutes = activePlugin.devServerRoutes;
           for (const devServerRoute of devServerRoutes) {
-            router.add(devServerRoute);
+            allDevServerRoutes.push(createRoute(devServerRoute));
           }
           continue;
         }
@@ -345,13 +345,6 @@ export const createPluginController = (
     return result;
   };
 
-  const matchDevServerRoutes = (request, helpers) => {
-    return router.match(request, {
-      ...helpers,
-      kitchen: kitchenContext.kitchen,
-    });
-  };
-
   return {
     pluginsMeta,
     activePlugins,
@@ -364,7 +357,7 @@ export const createPluginController = (
     callHooksUntil,
     callAsyncHooks,
     callAsyncHooksUntil,
-    matchDevServerRoutes,
+    devServerRoutes: allDevServerRoutes,
 
     getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,
