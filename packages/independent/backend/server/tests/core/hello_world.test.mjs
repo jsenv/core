@@ -5,8 +5,15 @@ const run = async () => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
+    routes: [
+      {
+        endpoint: "GET /",
+        response: () => {
+          return new Response("hello world");
+        },
+      },
+    ],
   });
-
   const response = await fetch(server.origin);
   const actual = {
     status: response.status,
