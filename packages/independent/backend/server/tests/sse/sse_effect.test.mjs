@@ -6,7 +6,7 @@ import { closeEventSource, openEventSource } from "./sse_test_helpers.mjs";
 let effectCallCount = 0;
 let effectCleanupCallCount = 0;
 const room = createSSERoom({
-  // logLevel: "debug",
+  logLevel: "debug",
   effect: () => {
     effectCallCount++;
     return () => {
@@ -17,9 +17,10 @@ const room = createSSERoom({
 const server = await startServer({
   logLevel: "warn",
   keepProcessAlive: false,
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
+      endpoint: "GET *",
+      response: (request) => {
         return room.join(request);
       },
     },

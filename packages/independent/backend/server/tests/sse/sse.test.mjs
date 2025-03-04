@@ -14,9 +14,10 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: (request) => {
+        endpoint: "GET *",
+        response: (request) => {
           return room.join(request);
         },
       },
@@ -53,9 +54,10 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: (request) => {
+        endpoint: "GET *",
+        response: (request) => {
           return room.join(request);
         },
       },
@@ -120,16 +122,17 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: (request) => {
-          if (request.pathname === "/roomA") {
-            return roomA.join(request);
-          }
-          if (request.pathname === "/roomB") {
-            return roomB.join(request);
-          }
-          return null;
+        endpoint: "/roomA",
+        response: (request) => {
+          return roomA.join(request);
+        },
+      },
+      {
+        endpoint: "GET /roomB",
+        response: (request) => {
+          return roomB.join(request);
         },
       },
     ],
@@ -183,9 +186,10 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: (request) => {
+        endpoint: "GET *",
+        response: (request) => {
           return room.join(request);
         },
       },
@@ -243,9 +247,10 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "off",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: (request) => {
+        endpoint: "GET *",
+        response: (request) => {
           return room.join(request);
         },
       },
@@ -280,9 +285,10 @@ const timeEllapsedPromise = (ms) => {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: (request) => {
+        endpoint: "GET *",
+        response: (request) => {
           return room.join(request);
         },
       },

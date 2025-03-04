@@ -21,7 +21,7 @@ export const createSSERoom = ({
   const logger = createLogger({ logLevel });
 
   const room = {};
-  const clients = new Set();
+  const clientSet = new Set();
   const eventHistory = createEventHistory(historyLength);
   // what about previousEventId that keeps growing ?
   // we could add some limit
@@ -38,7 +38,7 @@ export const createSSERoom = ({
       request.headers["last-event-id"] ||
       new URL(request.url).searchParams.get("last-event-id");
 
-    if (clients.size >= maxClientAllowed) {
+    if (clientSet.size >= maxClientAllowed) {
       return {
         status: 503,
       };
@@ -57,7 +57,7 @@ export const createSSERoom = ({
           complete,
           request,
         };
-        if (clients.size === 0) {
+        if (clientSet.size === 0) {
           const effectReturnValue = effect();
           if (typeof effectReturnValue === "function") {
             cleanupEffect = effectReturnValue;
@@ -65,9 +65,9 @@ export const createSSERoom = ({
             cleanupEffect = CLEANUP_NOOP;
           }
         }
-        clients.add(client);
+        clientSet.add(client);
         logger.debug(
-          `A client has joined. Number of client in room: ${clients.size}`,
+          `A client has joined. Number of client in room: ${clientSet.size}`,
         );
 
         if (lastKnownId !== undefined) {
@@ -77,9 +77,9 @@ export const createSSERoom = ({
             logger.info(
               `send ${eventMissedCount} event missed by client since event with id "${lastKnownId}"`,
             );
-            previousEvents.forEach((previousEvent) => {
+            for (const previousEvent of previousEvents) {
               next(stringifySourceEvent(previousEvent));
-            });
+            }
           }
         }
 
@@ -111,13 +111,13 @@ export const createSSERoom = ({
         }
 
         addTeardown(() => {
-          clients.delete(client);
-          if (clients.size === 0) {
+          clientSet.delete(client);
+          if (clientSet.size === 0) {
             cleanupEffect();
             cleanupEffect = CLEANUP_NOOP;
           }
           logger.debug(
-            `A client left. Number of client in room: ${clients.size}`,
+            `A client left. Number of client in room: ${clientSet.size}`,
           );
         });
       },
@@ -157,12 +157,12 @@ export const createSSERoom = ({
       addEventToHistory(event);
     }
     logger.debug(
-      `send "${event.type}" event to ${clients.size} client in the room`,
+      `send "${event.type}" event to ${clientSet.size} client in the room`,
     );
     const eventString = stringifySourceEvent(event);
-    clients.forEach((client) => {
+    for (const client of clientSet) {
       client.next(eventString);
-    });
+    }
   };
 
   const getAllEventSince = (id) => {
@@ -176,7 +176,7 @@ export const createSSERoom = ({
   const keepAlive = () => {
     // maybe that, when an event occurs, we can delay the keep alive event
     logger.debug(
-      `send keep alive event, number of client listening event source: ${clients.size}`,
+      `send keep alive event, number of client listening event source: ${clientSet.size}`,
     );
     sendEventToAllClients(
       {
@@ -188,7 +188,9 @@ export const createSSERoom = ({
   };
 
   const open = () => {
-    if (opened) return;
+    if (opened) {
+      return;
+    }
     opened = true;
     interval = setInterval(keepAlive, keepaliveDuration);
     if (!keepProcessAlive) {
@@ -197,10 +199,16 @@ export const createSSERoom = ({
   };
 
   const close = () => {
-    if (!opened) return;
-    logger.debug(`closing room, number of client in the room: ${clients.size}`);
-    clients.forEach((client) => client.complete());
-    clients.clear();
+    if (!opened) {
+      return;
+    }
+    logger.debug(
+      `closing room, number of client in the room: ${clientSet.size}`,
+    );
+    for (const client of clientSet) {
+      client.complete();
+    }
+    clientSet.clear();
     clearInterval(interval);
     eventHistory.reset();
     opened = false;
@@ -219,7 +227,7 @@ export const createSSERoom = ({
 
     // should rarely be necessary, get information about the room
     getAllEventSince,
-    getRoomClientCount: () => clients.size,
+    getRoomClientCount: () => clientSet.size,
 
     // should rarely be used
     close,
