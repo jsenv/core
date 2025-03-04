@@ -13,6 +13,8 @@ export const jsenvPluginProtocolFile = ({
   magicDirectoryIndex,
   preserveSymlinks,
   directoryListing,
+  rootDirectoryUrl,
+  mainFilePath,
 }) => {
   return [
     jsenvPluginFsRedirection({
@@ -73,6 +75,8 @@ export const jsenvPluginProtocolFile = ({
           jsenvPluginDirectoryListing({
             ...directoryListing,
             directoryContentMagicName,
+            rootDirectoryUrl,
+            mainFilePath,
           }),
         ]
       : []),

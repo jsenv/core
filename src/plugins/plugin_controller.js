@@ -3,7 +3,6 @@ import { performance } from "node:perf_hooks";
 const HOOK_NAMES = [
   "init",
   "serve", // is called only during dev/tests
-  "serveWebsocket",
   "resolveReference",
   "redirectReference",
   "transformReferenceSearchParams",

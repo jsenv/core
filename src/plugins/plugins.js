@@ -26,6 +26,7 @@ import { jsenvPluginCleanHTML } from "./clean_html/jsenv_plugin_clean_html.js";
 
 export const getCorePlugins = ({
   rootDirectoryUrl,
+  mainFilePath,
   runtimeCompat,
 
   referenceAnalysis = {},
@@ -82,6 +83,8 @@ export const getCorePlugins = ({
       magicExtensions,
       magicDirectoryIndex,
       directoryListing,
+      rootDirectoryUrl,
+      mainFilePath,
     }),
     {
       name: "jsenv:resolve_root_as_main",

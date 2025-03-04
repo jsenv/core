@@ -256,6 +256,7 @@ export const startDevServer = async ({
           ...plugins,
           ...getCorePlugins({
             rootDirectoryUrl: sourceDirectoryUrl,
+            mainFilePath: sourceMainFilePath,
             runtimeCompat,
 
             referenceAnalysis,
@@ -578,21 +579,6 @@ export const startDevServer = async ({
           },
         },
       ],
-      handleWebsocket: async (websocket, { request }) => {
-        // if (true || logLevel === "debug") {
-        //   console.log("handleWebsocket", websocket, request.headers);
-        // }
-        const kitchen = getOrCreateKitchen(request);
-        const serveWebsocketHookInfo = {
-          request,
-          websocket,
-          context: kitchen.context,
-        };
-        await kitchen.pluginController.callAsyncHooksUntil(
-          "serveWebsocket",
-          serveWebsocketHookInfo,
-        );
-      },
     });
   }
   // jsenv error handler service

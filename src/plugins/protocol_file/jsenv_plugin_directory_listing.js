@@ -49,6 +49,8 @@ export const jsenvPluginDirectoryListing = ({
   urlMocks = false,
   autoreload = true,
   directoryContentMagicName,
+  rootDirectoryUrl,
+  mainFilePath,
 }) => {
   return {
     name: "jsenv:directory_listing",
@@ -130,65 +132,71 @@ export const jsenvPluginDirectoryListing = ({
         );
       },
     },
-    serveWebsocket: ({ websocket, request, context }) => {
-      if (!autoreload) {
-        return false;
-      }
-      const secProtocol = request.headers["sec-websocket-protocol"];
-      if (secProtocol !== "watch-directory") {
-        return false;
-      }
-      const { rootDirectoryUrl, mainFilePath } = context;
-      const requestedUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
-        request.pathname,
-        rootDirectoryUrl,
-      );
-      const closestDirectoryUrl = getFirstExistingDirectoryUrl(requestedUrl);
-      const sendMessage = (message) => {
-        websocket.send(JSON.stringify(message));
-      };
-      const generateItems = () => {
-        const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
-          requestedUrl,
-          rootDirectoryUrl,
-        );
-        const items = getDirectoryContentItems({
-          serverRootDirectoryUrl: rootDirectoryUrl,
-          mainFilePath,
-          requestedUrl,
-          firstExistingDirectoryUrl,
-        });
-        return items;
-      };
+    routes: [
+      {
+        endpoint:
+          "GET /.internal/directory_content.websocket?directory=:directory",
+        response: (request) => {
+          if (!autoreload) {
+            return null;
+          }
+          return {
+            opened: (websocket) => {
+              const directoryRelativeUrl = request.params.directory;
+              const requestedUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
+                directoryRelativeUrl,
+                rootDirectoryUrl,
+              );
+              const closestDirectoryUrl =
+                getFirstExistingDirectoryUrl(requestedUrl);
+              const sendMessage = (message) => {
+                websocket.send(JSON.stringify(message));
+              };
+              const generateItems = () => {
+                const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
+                  requestedUrl,
+                  rootDirectoryUrl,
+                );
+                const items = getDirectoryContentItems({
+                  serverRootDirectoryUrl: rootDirectoryUrl,
+                  mainFilePath,
+                  requestedUrl,
+                  firstExistingDirectoryUrl,
+                });
+                return items;
+              };
 
-      const unwatch = registerDirectoryLifecycle(closestDirectoryUrl, {
-        added: ({ relativeUrl }) => {
-          sendMessage({
-            type: "change",
-            reason: `${relativeUrl} added`,
-            items: generateItems(),
-          });
+              const unwatch = registerDirectoryLifecycle(closestDirectoryUrl, {
+                added: ({ relativeUrl }) => {
+                  sendMessage({
+                    type: "change",
+                    reason: `${relativeUrl} added`,
+                    items: generateItems(),
+                  });
+                },
+                updated: ({ relativeUrl }) => {
+                  sendMessage({
+                    type: "change",
+                    reason: `${relativeUrl} updated`,
+                    items: generateItems(),
+                  });
+                },
+                removed: ({ relativeUrl }) => {
+                  sendMessage({
+                    type: "change",
+                    reason: `${relativeUrl} removed`,
+                    items: generateItems(),
+                  });
+                },
+              });
+              return () => {
+                unwatch();
+              };
+            },
+          };
         },
-        updated: ({ relativeUrl }) => {
-          sendMessage({
-            type: "change",
-            reason: `${relativeUrl} updated`,
-            items: generateItems(),
-          });
-        },
-        removed: ({ relativeUrl }) => {
-          sendMessage({
-            type: "change",
-            reason: `${relativeUrl} removed`,
-            items: generateItems(),
-          });
-        },
-      });
-      websocket.signal.addEventListener("abort", () => {
-        unwatch();
-      });
-      return true;
-    },
+      },
+    ],
   };
 };
 
@@ -257,7 +265,7 @@ const generateDirectoryListingInjection = (
     );
   const websocketScheme = request.protocol === "https" ? "wss" : "ws";
   const { host } = new URL(request.url);
-  const websocketUrl = `${websocketScheme}://${host}${directoryUrlRelativeToServer}`;
+  const websocketUrl = `${websocketScheme}://${host}/.internal/directory_content.websocket?directory=${encodeURIComponent(directoryUrlRelativeToServer)}`;
 
   const navItems = [];
   nav_items: {
