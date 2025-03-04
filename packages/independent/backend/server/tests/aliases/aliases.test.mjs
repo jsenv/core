@@ -1,6 +1,4 @@
 import { assert } from "@jsenv/assert";
-import { fetchUrl } from "@jsenv/fetch";
-
 import {
   fetchFileSystem,
   jsenvServiceRequestAliases,
@@ -9,7 +7,7 @@ import {
 
 let resourceBeforeAlias;
 let resource;
-const { origin } = await startServer({
+const server = await startServer({
   logLevel: "error",
   keepProcessAlive: false,
   services: [
@@ -20,21 +18,26 @@ const { origin } = await startServer({
       "/*/deep/*.js": "/*/deep/file.js",
     }),
     {
-      handleRequest: (request) => {
-        resourceBeforeAlias = request.original
-          ? request.original.resource
-          : undefined;
-        resource = request.resource;
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-        );
-      },
+      routes: [
+        {
+          endpoint: "GET *",
+          response: (request) => {
+            resourceBeforeAlias = request.original
+              ? request.original.resource
+              : undefined;
+            resource = request.resource;
+            return fetchFileSystem(
+              new URL(request.resource.slice(1), import.meta.url),
+            );
+          },
+        },
+      ],
     },
   ],
 });
 
 {
-  const response = await fetchUrl(`${origin}/src/deep/whatever.js`);
+  const response = await fetch(`${server.origin}/src/deep/whatever.js`);
   const actual = {
     resourceBeforeAlias,
     resource,
@@ -55,7 +58,7 @@ const { origin } = await startServer({
 }
 
 {
-  const response = await fetchUrl(`${origin}/alias.json?foo=foo&test=1`);
+  const response = await fetch(`${server.origin}/alias.json?foo=foo&test=1`);
   const actual = {
     resourceBeforeAlias,
     resource,
@@ -76,7 +79,7 @@ const { origin } = await startServer({
 }
 
 {
-  const response = await fetchUrl(`${origin}/diuei.js`);
+  const response = await fetch(`${server.origin}/diuei.js`);
   const actual = {
     resourceBeforeAlias,
     status: response.status,
@@ -95,7 +98,7 @@ const { origin } = await startServer({
 }
 
 {
-  const response = await fetchUrl(`${origin}/diuei.js/`);
+  const response = await fetch(`${server.origin}/diuei.js/`);
   const actual = {
     resourceBeforeAlias,
     status: response.status,
@@ -108,7 +111,7 @@ const { origin } = await startServer({
 }
 
 {
-  const response = await fetchUrl(`${origin}/dir/toto`);
+  const response = await fetch(`${server.origin}/dir/toto`);
   const actual = {
     resourceBeforeAlias,
     status: response.status,
@@ -125,3 +128,5 @@ const { origin } = await startServer({
   };
   assert({ actual, expect });
 }
+
+server.stop();

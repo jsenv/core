@@ -391,6 +391,7 @@ export const startServer = async ({
         }
       },
     );
+    return request;
   };
 
   request: {
@@ -423,7 +424,7 @@ export const startServer = async ({
 
       let timeout;
       try {
-        applyRequestInternalRedirection(request);
+        request = applyRequestInternalRedirection(request);
         const timeoutPromise = new Promise((resolve) => {
           timeout = setTimeout(() => {
             resolve({
@@ -903,7 +904,7 @@ export const startServer = async ({
     let websocketServer = new WebSocketServer({ noServer: true });
 
     const upgradeEventHandler = async (nodeRequest, socket, head) => {
-      const request = fromNodeRequest(nodeRequest, {
+      let request = fromNodeRequest(nodeRequest, {
         signal: stopAbortSignal,
         serverOrigin,
         requestBodyLifetime,
@@ -940,7 +941,7 @@ export const startServer = async ({
       let errorWhileHandlingWebsocket = null;
       // let handleWebsocketResult;
       try {
-        applyRequestInternalRedirection(request);
+        request = applyRequestInternalRedirection(request);
         await router.match(request, {
           closeSocket,
           connectSocket: async () => {
