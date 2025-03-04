@@ -1,13 +1,12 @@
 // https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#server-side-example
-// organize-imports-ignore
 import { requestCertificate } from "@jsenv/https-local";
 import {
   fetchFileSystem,
   jsenvServiceErrorHandler,
   startServer,
 } from "@jsenv/server";
-import { connect } from "node:http2";
 import { snapshotTests } from "@jsenv/snapshot";
+import { connect } from "node:http2";
 
 if (process.env.CI && process.platform !== "linux") {
   // certificates only generated on linux
