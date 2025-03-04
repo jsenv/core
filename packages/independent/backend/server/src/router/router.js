@@ -206,10 +206,17 @@ export const createRouter = () => {
       throw new TypeError(`Invalid HTTP method: ${method}`);
     }
     if (resource[0] !== "/" && resource[0] !== "*") {
-      throw new TypeError(`Resource must start with /, received ${resource}`);
+      throw new TypeError(`resource must start with /, received ${resource}`);
     }
     if (websocket) {
+      if (typeof websocket !== "function") {
+        throw new TypeError(
+          `websocket must be a function, received ${websocket}`,
+        );
+      }
       router.hasSomeWebsocketRoute = true;
+    } else if (typeof response !== "function") {
+      throw new TypeError(`response must be a function, received ${response}`);
     }
     const resourcePattern = createResourcePattern(resource);
     const headersPattern = headers ? createHeadersPattern(headers) : null;

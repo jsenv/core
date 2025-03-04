@@ -4,14 +4,10 @@ import { createObservable } from "./observable.js";
 
 export const observableFromNodeStream = (
   nodeStream,
-  { readableLifeTime } = {},
+  { readableLifetime } = {},
 ) => {
   const observable = createObservable(
     ({ next, error, complete, addTeardown }) => {
-      if (nodeStream.complete) {
-        complete();
-        return;
-      }
       const errorEventCallback = (e) => {
         error(e);
       };
@@ -36,17 +32,19 @@ export const observableFromNodeStream = (
       });
       if (nodeStream.isPaused()) {
         nodeStream.resume();
+      } else if (nodeStream.complete) {
+        complete();
       }
     },
   );
 
-  if (readableLifeTime && nodeStream instanceof Readable) {
+  if (readableLifetime && nodeStream instanceof Readable) {
     // safe measure, ensure the readable stream gets
     // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
     const timeout = setTimeout(() => {
       process.emitWarning(
         `Readable stream not used after ${
-          readableLifeTime / 1000
+          readableLifetime / 1000
         } seconds. It will be destroyed to release resources`,
         {
           CODE: "READABLE_STREAM_TIMEOUT",
@@ -55,7 +53,7 @@ export const observableFromNodeStream = (
         },
       );
       nodeStream.destroy();
-    }, readableLifeTime);
+    }, readableLifetime);
     onceReadableStreamUsedOrClosed(nodeStream, () => {
       clearTimeout(timeout);
     });

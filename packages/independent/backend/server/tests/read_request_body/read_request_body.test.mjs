@@ -1,136 +1,114 @@
 import { assert } from "@jsenv/assert";
-import { fetchUrl } from "@jsenv/fetch";
 import { startServer } from "@jsenv/server";
-import { readRequestBody } from "@jsenv/server/src/request_body_handling.js";
 
 // read request body as string from string
 {
-  let requestBody;
-  const { origin } = await startServer({
+  const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: async (request) => {
-          requestBody = await readRequestBody(request, { as: "string" });
-          return {
-            status: 200,
-            headers: {
-              "Content-Type": "text/plain",
-            },
-            body: "",
-          };
+        endpoint: "POST *",
+        response: async (request) => {
+          const requestBody = await request.text();
+          return new Response(requestBody.toUpperCase());
         },
       },
     ],
   });
-  await fetchUrl(origin, {
+  const response = await fetch(server.origin, {
     method: "POST",
     body: "toto",
   });
-  const actual = requestBody;
-  const expect = "toto";
+  const actual = await response.text();
+  const expect = "TOTO";
   assert({ actual, expect });
+  server.stop();
 }
 
-// read request body as json from text
+// read request body as json
 {
-  let requestBody;
-  const { origin } = await startServer({
+  const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: async (request) => {
-          requestBody = await readRequestBody(request, { as: "json" });
-
-          return {
-            status: 200,
-            headers: {
-              "Content-Type": "text/plain",
-            },
-            body: "",
-          };
+        endpoint: "PUT *",
+        response: async (request) => {
+          const requestBody = await request.json();
+          return Response.json({ foo: requestBody.foo.toUpperCase() });
         },
       },
     ],
   });
-
-  await fetchUrl(origin, {
+  const response = await fetch(server.origin, {
     method: "PUT",
-    body: JSON.stringify({ foo: true }),
+    body: JSON.stringify({ foo: "foo" }),
+    headers: {
+      "content-type": "application/json",
+    },
   });
-  const actual = requestBody;
-  const expect = { foo: true };
+  const actual = await response.json();
+  const expect = { foo: "FOO" };
   assert({ actual, expect });
+  server.stop();
 }
 
-// read request body as buffer from string
+// read request body as buffer
 {
-  let requestBody;
-  const { origin } = await startServer({
+  const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: async (request) => {
-          requestBody = await readRequestBody(request, { as: "buffer" });
-
-          return {
-            status: 200,
-            headers: {
-              "Content-Type": "text/plain",
-            },
-            body: "",
-          };
+        endpoint: "PATCH *",
+        response: async (request) => {
+          const requestBuffer = await request.buffer();
+          return new Response(requestBuffer);
         },
       },
     ],
   });
-  await fetchUrl(origin, {
+  const response = await fetch(server.origin, {
     method: "PATCH",
     body: "toto",
   });
-  const actual = requestBody;
+  const actual = Buffer.from(await response.arrayBuffer());
   const expect = Buffer.from("toto");
   assert({ actual, expect });
+  server.stop();
 }
 
 // read request body a bit late
 {
-  let requestBody;
   let resolveReadPromise;
   const readPromise = new Promise((resolve) => {
     resolveReadPromise = resolve;
   });
-  const { origin } = await startServer({
+  const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: async (request) => {
+        endpoint: "POST *",
+        response: async (request) => {
           await readPromise;
-          requestBody = await readRequestBody(request, { as: "string" });
-          return {
-            status: 200,
-            headers: {
-              "Content-Type": "text/plain",
-            },
-            body: "",
-          };
+          const requestBody = await request.text();
+          return new Response(requestBody.toUpperCase());
         },
       },
     ],
   });
-  const responsePromise = fetchUrl(origin, {
+  const responsePromise = fetch(server.origin, {
     method: "POST",
     body: "toto",
   });
   // wait Xms before reading the request body
   await new Promise((resolve) => setTimeout(resolve, 200));
   resolveReadPromise();
-  await responsePromise;
-  const actual = requestBody;
-  const expect = "toto";
+  const response = await responsePromise;
+  const actual = await response.text();
+  const expect = "TOTO";
   assert({ actual, expect });
+  server.stop();
 }

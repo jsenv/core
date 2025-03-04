@@ -661,6 +661,7 @@ export const startServer = async ({
         serverOrigin,
         requestBodyLifetime,
         logger,
+        nagle,
       });
 
       const sendResponse = async (
@@ -708,13 +709,6 @@ export const startServer = async ({
       try {
         if (receiveRequestOperation.signal.aborted) {
           return;
-        }
-        // pause the stream to let a chance to "handleRequest" to read request body.
-        // Without this the request body readable stream
-        // might be closed when we'll try to attach "data" and "end" listeners to it
-        nodeRequest.pause();
-        if (!nagle) {
-          nodeRequest.connection.setNoDelay(true);
         }
         const responseProperties = await getResponseProperties(request, {
           pushResponse: async ({ path, method }) => {
@@ -911,6 +905,7 @@ export const startServer = async ({
         serverOrigin,
         requestBodyLifetime,
         logger,
+        nagle,
       });
       request.logger.info(`GET ${request.url} ${websocketSuffixColorized}`);
 

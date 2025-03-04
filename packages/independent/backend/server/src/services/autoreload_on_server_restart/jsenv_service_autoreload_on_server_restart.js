@@ -44,7 +44,7 @@ export const jsenvServiceAutoreloadOnRestart = () => {
           // server connection closed
           window.location.reload();
         },
-        request: () => {
+        response: () => {
           return {
             status: 200,
             headers: {

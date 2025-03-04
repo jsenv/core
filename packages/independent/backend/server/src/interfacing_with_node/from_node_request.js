@@ -12,7 +12,7 @@ import { observableFromNodeStream } from "./observable_from_node_stream.js";
 
 export const fromNodeRequest = (
   nodeRequest,
-  { serverOrigin, signal, requestBodyLifetime, logger },
+  { serverOrigin, signal, requestBodyLifetime, logger, nagle },
 ) => {
   const requestLogger = createRequestLogger(nodeRequest, (type, value) => {
     const logFunction = logger[type];
@@ -47,6 +47,13 @@ export const fromNodeRequest = (
   });
 
   const headers = headersFromObject(nodeRequest.headers);
+  // pause the request body stream to let a chance for other parts of the code to subscribe to the stream
+  // Without this the request body readable stream
+  // might be closed when we'll try to attach "data" and "end" listeners to it
+  nodeRequest.pause();
+  if (!nagle) {
+    nodeRequest.connection.setNoDelay(true);
+  }
   const body = observableFromNodeStream(nodeRequest, {
     readableLifetime: requestBodyLifetime,
   });
