@@ -44,5 +44,6 @@ export { urlToResource } from "./url_to_resource.js";
 export { urlToScheme } from "./url_to_scheme.js";
 
 export { getCommonPathname } from "./common_pathname.js";
+export { resourceToParts } from "./resource_to_parts.js";
 
 export { yieldAncestorUrls } from "./yield_ancestor_urls.js";
