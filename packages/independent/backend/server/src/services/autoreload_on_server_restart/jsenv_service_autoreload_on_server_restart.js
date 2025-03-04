@@ -25,7 +25,7 @@ export const jsenvServiceAutoreloadOnRestart = () => {
         /* eslint-enable no-undef */
         websocket: () => {
           return {
-            open: (websocket) => {
+            opened: (websocket) => {
               websocket.send("Hello world!");
               websocket.onmessage = () => {
                 console.log("websocket message");

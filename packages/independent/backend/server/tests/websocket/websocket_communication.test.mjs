@@ -1,24 +1,27 @@
+// organize-imports-ignore
+import { assert } from "@jsenv/assert";
+import { requestCertificate } from "@jsenv/https-local";
+import { startServer } from "@jsenv/server";
 import { WebSocket } from "ws";
 
-import { requestCertificate } from "@jsenv/https-local";
-
-import { assert } from "@jsenv/assert";
-import { startServer } from "@jsenv/server";
-
-const test = async (params) => {
+const run = async (params) => {
   let messageFromClientToServerPromise;
   const server = await startServer({
     logLevel: "warn",
-    services: [
+    routes: [
       {
-        handleWebsocket: (websocket) => {
-          messageFromClientToServerPromise = new Promise((resolve) => {
-            websocket.on("message", (buffer) => {
-              resolve(String(buffer));
-            });
-          });
-
-          websocket.send("hello client");
+        endpoint: "GET /",
+        websocket: () => {
+          return {
+            opened: (websocket) => {
+              messageFromClientToServerPromise = new Promise((resolve) => {
+                websocket.on("message", (buffer) => {
+                  resolve(String(buffer));
+                });
+              });
+              websocket.send("hello client");
+            },
+          };
         },
       },
     ],
@@ -56,13 +59,13 @@ const test = async (params) => {
 };
 
 // http
-await test();
+await run();
 
 // https
 // certificates only generated on linux
-if (process.platform === "linux") {
+if (!process.env.CI || process.platform === "linux") {
   const { certificate, privateKey } = requestCertificate();
-  await test({
+  await run({
     https: { certificate, privateKey },
   });
 }

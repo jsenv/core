@@ -53,7 +53,7 @@ export const observableFromNodeStream = (
         },
       );
       nodeStream.destroy();
-    }, readableLifetime);
+    }, readableLifetime).unref();
     onceReadableStreamUsedOrClosed(nodeStream, () => {
       clearTimeout(timeout);
     });

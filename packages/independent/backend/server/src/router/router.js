@@ -473,9 +473,9 @@ export const createRouter = () => {
             continue;
           }
           onRouteMatch(route);
-          const { open } = websocketReturnValue;
+          const { opened } = websocketReturnValue;
           const websocket = await connectSocket();
-          const openReturnValue = open(websocket);
+          const openReturnValue = opened(websocket);
           if (typeof openReturnValue === "function") {
             websocket.once("close", openReturnValue);
           }
