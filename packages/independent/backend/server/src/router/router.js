@@ -22,7 +22,7 @@ const HTTP_METHODS = [
   "DELETE",
 ];
 
-export const createRouter = () => {
+export const createRouter = ({ optionsFallback } = {}) => {
   const routeSet = new Set();
   const fallbackRouteSet = new Set();
 
@@ -563,21 +563,23 @@ export const createRouter = () => {
     return data;
   };
 
-  add({
-    endpoint: "OPTIONS *",
-    description:
-      "Auto generate an OPTIONS response about a resource or the whole server.",
-    response: (request) => {
-      const isForAnyRoute = request.resource === "*";
-      if (isForAnyRoute) {
-        const serverOPTIONS = inferServerOPTIONS(request);
-        return createServerResourceOptionsResponse(request, serverOPTIONS);
-      }
-      const resourceOPTIONS = inferResourceOPTIONS(request);
-      return createResourceOptionsResponse(request, resourceOPTIONS);
-    },
-    isFallback: true,
-  });
+  if (optionsFallback) {
+    add({
+      endpoint: "OPTIONS *",
+      description:
+        "Auto generate an OPTIONS response about a resource or the whole server.",
+      response: (request) => {
+        const isForAnyRoute = request.resource === "*";
+        if (isForAnyRoute) {
+          const serverOPTIONS = inferServerOPTIONS(request);
+          return createServerResourceOptionsResponse(request, serverOPTIONS);
+        }
+        const resourceOPTIONS = inferResourceOPTIONS(request);
+        return createResourceOptionsResponse(request, resourceOPTIONS);
+      },
+      isFallback: true,
+    });
+  }
 
   Object.assign(router, {
     add,

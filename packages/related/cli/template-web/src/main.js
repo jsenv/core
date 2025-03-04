@@ -14,7 +14,7 @@ document.querySelector("#root").innerHTML = `<h1>Hello world!</h1>
   </p>
 </p>
 <p>
-  Edit <a href="javascript:window.fetch('/__open_in_editor__/jsenv_logo.svg')">jsenv_logo.svg</a> and save to test HMR updates.
+  Edit <a href="javascript:window.fetch('/.internal/open_in_editor/jsenv_logo.svg')">jsenv_logo.svg</a> and save to test HMR updates.
 </p>
 <a href="https://github.com/jsenv/core" target="_blank">Documentation</a>`;
 

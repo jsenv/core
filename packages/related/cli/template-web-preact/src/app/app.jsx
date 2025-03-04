@@ -30,7 +30,7 @@ export const App = () => {
           <a
             className="app_link"
             // eslint-disable-next-line no-script-url
-            href="javascript:window.fetch('/__open_in_editor__/app/app.jsx')"
+            href="javascript:window.fetch('/internal/open_in_editor/app/app.jsx')"
           >
             app.jsx
           </a>{" "}

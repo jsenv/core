@@ -333,21 +333,23 @@ export const jsenvPluginAutoreloadServer = ({
         );
       },
     },
-    serve: (serveInfo) => {
-      if (serveInfo.request.pathname === "/__graph__") {
-        const graphJson = JSON.stringify(
-          serveInfo.kitchen.graph.toJSON(serveInfo.rootDirectoryUrl),
-        );
-        return {
-          status: 200,
-          headers: {
-            "content-type": "application/json",
-            "content-length": Buffer.byteLength(graphJson),
-          },
-          body: graphJson,
-        };
-      }
-      return null;
-    },
+    devServerRoutes: [
+      {
+        endpoint: "/.internal/graph.json",
+        response: (request, { kitchen }) => {
+          const graphJson = JSON.stringify(
+            kitchen.graph.toJSON(kitchen.context.rootDirectoryUrl),
+          );
+          return {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(graphJson),
+            },
+            body: graphJson,
+          };
+        },
+      },
+    ],
   };
 };

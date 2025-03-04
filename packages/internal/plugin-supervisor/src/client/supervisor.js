@@ -1041,7 +1041,7 @@ window.__supervisor__ = (() => {
                   const errorCauseFile = exception.site.ownerSite
                     ? exception.site.ownerSite.url
                     : exception.site.url;
-                  const errorCauseAPIUrl = `/__get_error_cause__/${encodeURIComponent(
+                  const errorCauseAPIUrl = `/.internal/get_error_cause/${encodeURIComponent(
                     errorCauseFile,
                   )}`;
                   const response = await window.fetch(errorCauseAPIUrl);
@@ -1064,7 +1064,7 @@ window.__supervisor__ = (() => {
                         column: exception.site.ownerSite.inlineColumn,
                       })
                     : stringifyUrlSite(exception.site);
-                  const errorTraceAPIUrl = `/__get_cause_trace__/${encodeURIComponent(
+                  const errorTraceAPIUrl = `/.internal/get_cause_trace/${encodeURIComponent(
                     errorTraceFile,
                   )}`;
                   const urlToFetch = new URL(errorTraceAPIUrl, window.origin);
@@ -1107,7 +1107,7 @@ window.__supervisor__ = (() => {
             return {
               href:
                 urlSite.url.startsWith("file:") && openInEditor
-                  ? `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
+                  ? `javascript:window.fetch('/.internal/open_in_editor/${encodeURIComponent(
                       urlWithLineAndColumn,
                     )}')`
                   : urlSite.url,

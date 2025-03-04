@@ -162,7 +162,7 @@ export const startDevServer = async ({
           response: () => ({ status: 200 }),
         },
         {
-          endpoint: "GET /__params__.json",
+          endpoint: "GET /.internal/server_params.json",
           response: () => Response.json({ sourceDirectoryUrl }),
         },
       ],
@@ -375,15 +375,8 @@ export const startDevServer = async ({
           endpoint: "GET *",
           response: async (request) => {
             const kitchen = getOrCreateKitchen(request);
-            const serveHookInfo = {
-              ...kitchen.context,
-              request,
-            };
             const responseFromPlugin =
-              await kitchen.pluginController.callAsyncHooksUntil(
-                "serve",
-                serveHookInfo,
-              );
+              await kitchen.pluginController.matchDevServerRoutes(request);
             if (responseFromPlugin) {
               return responseFromPlugin;
             }

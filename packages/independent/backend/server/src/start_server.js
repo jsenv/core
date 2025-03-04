@@ -145,7 +145,9 @@ export const startServer = async ({
   }
 
   const server = {};
-  const router = createRouter();
+  const router = createRouter({
+    optionsFallback: true,
+  });
 
   services = [
     ...flattenAndFilterServices(services),

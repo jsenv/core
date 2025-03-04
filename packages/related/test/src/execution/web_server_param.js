@@ -46,9 +46,12 @@ export const assertAndNormalizeWebServer = async (
   });
   if (String(headers["server"]).includes("jsenv_dev_server")) {
     webServer.isJsenvDevServer = true;
-    const response = await basicFetch(`${webServer.origin}/__params__.json`, {
-      rejectUnauthorized: false,
-    });
+    const response = await basicFetch(
+      `${webServer.origin}/.internal/server_params.json`,
+      {
+        rejectUnauthorized: false,
+      },
+    );
     if (webServer.rootDirectoryUrl === undefined) {
       const jsenvDevServerParams = await response.json();
       webServer.rootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl;
