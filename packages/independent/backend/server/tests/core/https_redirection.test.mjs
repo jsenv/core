@@ -1,8 +1,6 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
-
 import { startServer } from "@jsenv/server";
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 import {
   testServerCertificate,
   testServerCertificatePrivateKey,
@@ -17,9 +15,10 @@ import {
       certificate: testServerCertificate,
       privateKey: testServerCertificatePrivateKey,
     },
-    services: [
+    routes: [
       {
-        handleRequest: () => {
+        endpoint: "GET *",
+        response: () => {
           return {
             status: 200,
             body: "Welcome, HTTPS user!",
@@ -34,13 +33,13 @@ import {
     const serverHttpOriginUrl = new URL(server.origin);
     serverHttpOriginUrl.protocol = "http";
     const serverHttpOrigin = serverHttpOriginUrl.href.slice(0, -1);
-    const response = await fetchUrl(`${serverHttpOrigin}/file.js?page=2`, {
+    const response = await fetch(`${serverHttpOrigin}/file.js?page=2`, {
       redirect: "manual",
     });
     const actual = {
       status: response.status,
-      headers: headersToObject(response.headers),
-      body: await new Response(),
+      headers: Object.fromEntries(response.headers),
+      body: await response.text(),
     };
     const expect = {
       status: 301,
@@ -63,7 +62,7 @@ import {
     });
     const actual = {
       status: response.status,
-      body: await new Response(),
+      body: await response.text(),
     };
     const expect = {
       status: 200,
@@ -71,6 +70,8 @@ import {
     };
     assert({ actual, expect });
   }
+
+  server.stop();
 }
 
 // http2 server
@@ -83,9 +84,10 @@ import {
       privateKey: testServerCertificatePrivateKey,
     },
     http2: true,
-    services: [
+    routes: [
       {
-        handleRequest: () => {
+        endpoint: "GET *",
+        response: () => {
           return {
             status: 200,
             body: "Welcome, HTTPS user!",
@@ -100,19 +102,19 @@ import {
     const serverHttpOriginUrl = new URL(server.origin);
     serverHttpOriginUrl.protocol = "http";
     const serverHttpOrigin = serverHttpOriginUrl.href.slice(0, -1);
-    const response = await fetchUrl(`${serverHttpOrigin}`, {
+    const response = await fetch(`${serverHttpOrigin}`, {
       redirect: "manual",
     });
     const actual = {
       status: response.status,
-      headers: headersToObject(response.headers),
-      body: await new Response(),
+      headers: Object.fromEntries(response.headers),
+      body: await response.text(),
     };
     const expect = {
       status: 301,
       headers: {
         "connection": "keep-alive",
-        "date": actual.headers.date,
+        "date": assert.any(String),
         "keep-alive": "timeout=5",
         "location": `${server.origin}/`,
         "transfer-encoding": "chunked",
@@ -121,7 +123,6 @@ import {
     };
     assert({ actual, expect });
   }
-
   // 200 in https
   {
     const response = await fetchUrl(`${server.origin}`, {
@@ -129,7 +130,7 @@ import {
     });
     const actual = {
       status: response.status,
-      body: await new Response(),
+      body: await response.text(),
     };
     const expect = {
       status: 200,
@@ -137,6 +138,8 @@ import {
     };
     assert({ actual, expect });
   }
+
+  server.stop();
 }
 
 // redirection disabled, no http request received
@@ -157,20 +160,22 @@ import {
     serverHttpOriginUrl.protocol = "http";
     const serverHttpOrigin = serverHttpOriginUrl.href.slice(0, -1);
     try {
-      await fetchUrl(serverHttpOrigin, { redirect: "manual" });
+      await fetch(serverHttpOrigin, { redirect: "manual" });
       throw new Error("should throw");
     } catch (e) {
       const actual = {
-        code: e.code,
+        cause: e.cause,
         message: e.message,
       };
       const expect = {
-        code: "ECONNRESET",
-        message: `request to ${serverHttpOrigin}/ failed, reason: socket hang up`,
+        cause: assert.any(Error),
+        message: `fetch failed`,
       };
       assert({ actual, expect });
     }
   }
+
+  server.stop();
 }
 
 // allowHttpRequestOnHttps enabled (means we want to handle http request)
@@ -183,9 +188,10 @@ import {
       privateKey: testServerCertificatePrivateKey,
     },
     allowHttpRequestOnHttps: true,
-    services: [
+    routes: [
       {
-        handleRequest: (request) => {
+        endpoint: "GET *",
+        response: (request) => {
           return {
             status: 200,
             headers: {
@@ -203,10 +209,10 @@ import {
     const serverHttpOriginUrl = new URL(server.origin);
     serverHttpOriginUrl.protocol = "http";
     const serverHttpOrigin = serverHttpOriginUrl.href.slice(0, -1);
-    const response = await fetchUrl(serverHttpOrigin);
+    const response = await fetch(serverHttpOrigin);
     const actual = {
       status: response.status,
-      body: await new Response(),
+      body: await response.text(),
     };
     const expect = {
       status: 200,
@@ -220,7 +226,7 @@ import {
     const response = await fetchUrl(server.origin, { ignoreHttpsError: true });
     const actual = {
       status: response.status,
-      body: await new Response(),
+      body: await response.text(),
     };
     const expect = {
       status: 200,
@@ -228,4 +234,6 @@ import {
     };
     assert({ actual, expect });
   }
+
+  server.stop();
 }
