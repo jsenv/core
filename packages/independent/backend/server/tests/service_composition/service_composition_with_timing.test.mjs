@@ -1,31 +1,39 @@
 import { assert } from "@jsenv/assert";
-import { fetchUrl } from "@jsenv/fetch";
-
 import { startServer } from "@jsenv/server";
 import { parseServerTimingHeader } from "@jsenv/server/src/server_timing/timing_header.js";
 
-const noContentService = (request) => {
-  if (request.pathname !== "/") return null;
-  return { status: 204 };
-};
-
-const okService = (request) => {
-  if (request.pathname !== "/whatever") return null;
-  return { status: 200 };
-};
-
-const { origin } = await startServer({
+const server = await startServer({
   keepProcessAlive: false,
   logLevel: "warn",
   serverTiming: true,
   services: [
-    { name: "service:no content", handleRequest: noContentService },
-    { name: "service:ok", handleRequest: okService },
+    {
+      name: "service:no content",
+      routes: [
+        {
+          endpoint: "GET /",
+          response: () => {
+            return { status: 204 };
+          },
+        },
+      ],
+    },
+    {
+      name: "service:ok",
+      routes: [
+        {
+          endpoint: "GET /whatever",
+          response: () => {
+            return { status: 200 };
+          },
+        },
+      ],
+    },
   ],
 });
 
 {
-  const response = await fetchUrl(origin);
+  const response = await fetch(server.origin);
   const actual = {
     status: response.status,
     timing: parseServerTimingHeader(response.headers.get("server-timing")),
@@ -34,12 +42,12 @@ const { origin } = await startServer({
     status: 204,
     timing: {
       a: {
-        description: "service:no content.handleRequest",
-        duration: actual.timing.a.duration,
+        description: "time to start responding",
+        duration: assert.any(Number),
       },
       b: {
-        description: "time to start responding",
-        duration: actual.timing.b.duration,
+        description: "service:no content.routing",
+        duration: assert.any(Number),
       },
     },
   };
@@ -47,7 +55,7 @@ const { origin } = await startServer({
 }
 
 {
-  const response = await fetchUrl(`${origin}/whatever`);
+  const response = await fetch(`${server.origin}/whatever`);
   const actual = {
     status: response.status,
     timing: parseServerTimingHeader(response.headers.get("server-timing")),
@@ -56,16 +64,16 @@ const { origin } = await startServer({
     status: 200,
     timing: {
       a: {
-        description: "service:no content.handleRequest",
-        duration: actual.timing.a.duration,
+        description: "time to start responding",
+        duration: assert.any(Number),
       },
       b: {
-        description: "service:ok.handleRequest",
-        duration: actual.timing.b.duration,
+        description: "service:no content.routing",
+        duration: assert.any(Number),
       },
       c: {
-        description: "time to start responding",
-        duration: actual.timing.c.duration,
+        description: "service:ok.routing",
+        duration: assert.any(Number),
       },
     },
   };

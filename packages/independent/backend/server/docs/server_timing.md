@@ -60,25 +60,22 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: async () => {
-        const [timeoutDuration] = await timeFunction(async () => {
-          await new Promise((resolve) => {
-            setTimeout(resolve, 50);
-          });
+      response: async (request, { timing }) => {
+        const waitTiming = timing("waiting 50ms");
+        await new Promise((resolve) => {
+          setTimeout(resolve, 50);
         });
-        const additionStart = performance.now();
+        waitTiming.end();
+
+        const addTiming = timing("1+1");
         1 + 1;
-        const additionDuration = performance.now() - additionStart;
+        addTiming.end();
         return {
           status: 200,
           headers: {
             "content-type": "text/plain",
           },
           body: message,
-          timing: {
-            "waiting 50ms": timeoutDuration,
-            "1+1": additionDuration,
-          },
         };
       },
     },
@@ -89,5 +86,5 @@ await startServer({
 Code aboves generates a server timing response headers that looks as below
 
 ```console
-server-timing: a;desc="setTimeout(50)";dur=50.7546901, b;desc="1+1";dur=0.0018849
+server-timing: a;desc="waiting 50ms";dur=50.7546901, b;desc="1+1";dur=0.0018849
 ```

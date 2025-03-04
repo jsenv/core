@@ -485,7 +485,7 @@ export const startDevServer = async ({
                   "content-length": urlInfo.contentLength,
                 },
                 body: urlInfo.content,
-                timing: urlInfo.timing,
+                timing: urlInfo.timing, // TODO: use something else
               };
               const augmentResponseInfo = {
                 ...kitchen.context,

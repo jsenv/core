@@ -580,7 +580,9 @@ export const startServer = async ({
 
       if (serverTiming) {
         startRespondingTiming.end();
-
+        if (responseProperties.timing) {
+          Object.assign(timings, responseProperties.timing);
+        }
         responseProperties.headers = composeTwoHeaders(
           responseProperties.headers,
           timingToServerTimingResponseHeaders(timings),

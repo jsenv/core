@@ -296,21 +296,24 @@ export const createRouter = () => {
       websocket: false,
     };
 
-    const topLevelRoutingTiming = timing("routing");
     let currentService;
-    let currentRoutingTiming = topLevelRoutingTiming;
+    let currentRoutingTiming;
     const onRouteMatchStart = (route) => {
       if (route.service === currentService) {
         return;
       }
       onRouteGroupEnd(route);
       currentRoutingTiming = timing(
-        `${route.service.name.replace("jsenv:", "")}.routing`,
+        route.service
+          ? `${route.service.name.replace("jsenv:", "")}.routing`
+          : "routing",
       );
       currentService = route.service;
     };
     const onRouteGroupEnd = () => {
-      currentRoutingTiming.end();
+      if (currentRoutingTiming) {
+        currentRoutingTiming.end();
+      }
     };
     const onRouteMatch = (route) => {
       onRouteGroupEnd(route);
