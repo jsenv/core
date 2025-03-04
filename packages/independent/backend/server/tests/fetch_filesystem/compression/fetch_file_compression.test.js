@@ -13,12 +13,17 @@ await ensureEmptyDirectory(fixturesDirectoryUrl);
 
   const response = await fetchFileSystem(
     {
+      method: "GET",
       resource: "/file.js",
       headers: {
         "accept-encoding": "gzip",
       },
     },
-    { timing: () => {} },
+    {
+      timing: () => {
+        return { end: () => {} };
+      },
+    },
     fixturesDirectoryUrl,
     {
       compressionEnabled: true,
@@ -29,7 +34,6 @@ await ensureEmptyDirectory(fixturesDirectoryUrl);
     status: response.status,
     headers: response.headers,
     body: response.body,
-    timing: response.timing,
   };
   const expect = {
     status: 200,
