@@ -204,7 +204,7 @@ export const createRouter = () => {
     }
     const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
     if (method !== "*" && !HTTP_METHODS.includes(method)) {
-      throw new TypeError(`Invalid HTTP method: ${method}`);
+      throw new TypeError(`"${method}" is not an HTTP method`);
     }
     if (resource[0] !== "/" && resource[0] !== "*") {
       throw new TypeError(`resource must start with /, received ${resource}`);

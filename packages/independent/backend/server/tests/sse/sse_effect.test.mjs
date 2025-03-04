@@ -6,7 +6,7 @@ import { closeEventSource, openEventSource } from "./sse_test_helpers.mjs";
 let effectCallCount = 0;
 let effectCleanupCallCount = 0;
 const room = createSSERoom({
-  logLevel: "debug",
+  // logLevel: "debug",
   effect: () => {
     effectCallCount++;
     return () => {

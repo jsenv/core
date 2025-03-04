@@ -124,7 +124,7 @@ const timeEllapsedPromise = (ms) => {
     keepProcessAlive: false,
     routes: [
       {
-        endpoint: "/roomA",
+        endpoint: "GET /roomA",
         response: (request) => {
           return roomA.join(request);
         },
