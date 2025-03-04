@@ -57,32 +57,29 @@ import { startServer, pluginServerTimings } from "@jsenv/server";
 
 await startServer({
   serverTiming: true,
-  services: [
+  routes: [
     {
-      handleRequest: {
-        "GET *": async () => {
-          const timeoutStart = performance.now();
-          const [waitTiming] = await timeFunction("waiting 50ms", async () => {
-            await new Promise((resolve) => {
-              setTimeout(resolve, 50);
-            });
+      endpoint: "GET *",
+      response: async () => {
+        const [timeoutDuration] = await timeFunction(async () => {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 50);
           });
-          const timeoutDuration = performance.now() - timeoutStart;
-          const additionStart = performance.now();
-          1 + 1;
-          const additionDuration = performance.now() - additionStart;
-          return {
-            status: 200,
-            headers: {
-              "content-type": "text/plain",
-            },
-            body: message,
-            timing: {
-              "setTimeout(50)": timeoutDuration,
-              "1+1": additionDuration,
-            },
-          };
-        },
+        });
+        const additionStart = performance.now();
+        1 + 1;
+        const additionDuration = performance.now() - additionStart;
+        return {
+          status: 200,
+          headers: {
+            "content-type": "text/plain",
+          },
+          body: message,
+          timing: {
+            "waiting 50ms": timeoutDuration,
+            "1+1": additionDuration,
+          },
+        };
       },
     },
   ],

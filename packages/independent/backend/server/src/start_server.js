@@ -163,6 +163,7 @@ export const startServer = async ({
     const serviceRoutes = service.routes;
     if (serviceRoutes) {
       for (const serviceRoute of serviceRoutes) {
+        serviceRoute.service = service;
         router.add(serviceRoute);
       }
     }
@@ -398,10 +399,21 @@ export const startServer = async ({
 
   request: {
     const getResponseProperties = async (request, { pushResponse }) => {
-      let requestReceivedMeasure;
-      if (serverTiming) {
-        requestReceivedMeasure = performance.now();
-      }
+      const timings = {};
+      const timing = (name) => {
+        const start = performance.now();
+        timings[name] = null;
+        return {
+          name,
+          end: () => {
+            const end = performance.now();
+            const duration = end - start;
+            timings[name] = duration;
+          },
+        };
+      };
+      const startRespondingTiming = timing("time to start responding");
+
       request.logger.info(
         request.parent
           ? `Push ${request.resource}`
@@ -420,7 +432,6 @@ export const startServer = async ({
       }
 
       let errorWhileHandlingRequest = null;
-      let handleRequestTimings = serverTiming ? {} : null;
       let handleRequestResult;
       let headersToInject;
 
@@ -443,7 +454,7 @@ export const startServer = async ({
         });
 
         const routerMatchPromise = router.match(request, {
-          timing: handleRequestTimings,
+          timing,
           pushResponse,
           injectResponseHeader: (name, value) => {
             if (!headersToInject) {
@@ -568,17 +579,11 @@ export const startServer = async ({
       }
 
       if (serverTiming) {
-        const responseReadyMeasure = performance.now();
-        const timeToStartResponding =
-          responseReadyMeasure - requestReceivedMeasure;
-        const serverTiming = {
-          ...handleRequestTimings,
-          ...responseProperties.timing,
-          "time to start responding": timeToStartResponding,
-        };
+        startRespondingTiming.end();
+
         responseProperties.headers = composeTwoHeaders(
           responseProperties.headers,
-          timingToServerTimingResponseHeaders(serverTiming),
+          timingToServerTimingResponseHeaders(timings),
         );
       }
       if (requestWaitingMs) {

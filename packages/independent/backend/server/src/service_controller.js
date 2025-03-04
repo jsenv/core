@@ -63,13 +63,12 @@ export const createServiceController = (services) => {
     currentHookName = hook.name;
     let timeEnd;
     if (context && context.timing) {
-      timeEnd = timeStart(
-        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
-      );
+      timeEnd = timeStart();
     }
     let valueReturned = hookFn(info, context);
     if (context && context.timing) {
-      Object.assign(context.timing, timeEnd());
+      const serviceHookTimingName = `${currentService.name.replace("jsenv:", "")}.${currentHookName}`;
+      context.timing[serviceHookTimingName] = timeEnd();
     }
     currentService = null;
     currentHookName = null;
@@ -84,13 +83,12 @@ export const createServiceController = (services) => {
     currentHookName = hook.name;
     let timeEnd;
     if (context && context.timing) {
-      timeEnd = timeStart(
-        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
-      );
+      timeEnd = timeStart();
     }
     let valueReturned = await hookFn(info, context);
     if (context && context.timing) {
-      Object.assign(context.timing, timeEnd());
+      const serviceHookTimingName = `${currentService.name.replace("jsenv:", "")}.${currentHookName}`;
+      context.timing[serviceHookTimingName] = timeEnd();
     }
     currentService = null;
     currentHookName = null;

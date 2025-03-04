@@ -94,9 +94,8 @@ export const fetchFileSystem = async (
 
   const serveFile = async (fileUrl) => {
     try {
-      const [readStatTiming, fileStat] = timeFunction(
-        "file service>read file stat",
-        () => statSync(new URL(fileUrl)),
+      const [readStatDuration, fileStat] = timeFunction(() =>
+        statSync(new URL(fileUrl)),
       );
       if (fileStat.isDirectory()) {
         if (canReadDirectory) {
@@ -115,7 +114,9 @@ export const fetchFileSystem = async (
       if (!fileStat.isFile()) {
         return {
           status: 404,
-          timing: readStatTiming,
+          timing: {
+            "file service>read file stat": readStatDuration,
+          },
         };
       }
 
@@ -134,7 +135,9 @@ export const fetchFileSystem = async (
       if (clientCacheResponse.status === 304) {
         return composeTwoResponses(
           {
-            timing: readStatTiming,
+            timing: {
+              "file service>read file stat": readStatDuration,
+            },
             headers: {
               ...(cacheControl ? { "cache-control": cacheControl } : {}),
             },
@@ -162,7 +165,9 @@ export const fetchFileSystem = async (
 
       const intermediateResponse = composeTwoResponses(
         {
-          timing: readStatTiming,
+          timing: {
+            "file service>read file stat": readStatDuration,
+          },
           headers: {
             ...(cacheControl ? { "cache-control": cacheControl } : {}),
             // even if client cache is disabled, server can still
@@ -256,15 +261,13 @@ const getEtagResponse = async ({
   fileUrl,
   fileStat,
 }) => {
-  const [computeEtagTiming, fileContentEtag] = await timeFunction(
-    "file service>generate file etag",
-    () =>
-      computeEtag({
-        etagMemory,
-        etagMemoryMaxSize,
-        fileUrl,
-        fileStat,
-      }),
+  const [computeEtagDuration, fileContentEtag] = await timeFunction(() =>
+    computeEtag({
+      etagMemory,
+      etagMemoryMaxSize,
+      fileUrl,
+      fileStat,
+    }),
   );
 
   const requestHasIfNoneMatchHeader = "if-none-match" in headers;
@@ -274,7 +277,9 @@ const getEtagResponse = async ({
   ) {
     return {
       status: 304,
-      timing: computeEtagTiming,
+      timing: {
+        "file service>generate file etag": computeEtagDuration,
+      },
     };
   }
 
@@ -283,7 +288,9 @@ const getEtagResponse = async ({
     headers: {
       etag: fileContentEtag,
     },
-    timing: computeEtagTiming,
+    timing: {
+      "file service>generate file etag": computeEtagDuration,
+    },
   };
 };
 

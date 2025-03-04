@@ -188,6 +188,7 @@ export const createRouter = () => {
     endpoint,
     description,
     headers,
+    service,
     availableContentTypes = [],
     availableLanguages = [],
     availableVersions = [],
@@ -225,6 +226,7 @@ export const createRouter = () => {
       method,
       resource,
       description,
+      service,
       availableContentTypes,
       availableLanguages,
       availableVersions,
@@ -281,7 +283,7 @@ export const createRouter = () => {
   };
   const match = async (
     request,
-    { pushResponse, injectResponseHeader, connectSocket } = {},
+    { pushResponse, injectResponseHeader, connectSocket, timing } = {},
   ) => {
     const wouldHaveMatched = {
       // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
@@ -294,8 +296,29 @@ export const createRouter = () => {
       websocket: false,
     };
 
+    const topLevelRoutingTiming = timing("routing");
+    let currentService;
+    let currentRoutingTiming = topLevelRoutingTiming;
+    const onRouteMatchStart = (route) => {
+      if (route.service === currentService) {
+        return;
+      }
+      onRouteGroupEnd(route);
+      currentRoutingTiming = timing(
+        `${route.service.name.replace("jsenv:", "")}.routing`,
+      );
+      currentService = route.service;
+    };
+    const onRouteGroupEnd = () => {
+      currentRoutingTiming.end();
+    };
+    const onRouteMatch = (route) => {
+      onRouteGroupEnd(route);
+    };
+
     const allRouteSet = new Set([...routeSet, ...fallbackRouteSet]);
     for (const route of allRouteSet) {
+      onRouteMatchStart(route);
       const resourceMatchResult = route.matchResource(request.resource);
       if (!resourceMatchResult) {
         continue;
@@ -446,6 +469,7 @@ export const createRouter = () => {
             // route decided not to handle in the end
             continue;
           }
+          onRouteMatch(route);
           const { open } = websocketReturnValue;
           const websocket = await connectSocket();
           const openReturnValue = open(websocket);
@@ -457,6 +481,7 @@ export const createRouter = () => {
       }
       regular_request: {
         let responseReturnValue = route.response(request, {
+          timing,
           pushResponse,
           contentNegotiation: contentNegotiationResult,
         });
@@ -480,6 +505,7 @@ export const createRouter = () => {
         if (contentNegotiationResult.contentEncoding) {
           injectResponseHeader("vary", "accept-encoding");
         }
+        onRouteMatch(route);
         // TODO: check response headers to warn if headers[content-version] is missing
         // when a route set availableVersions for example
         // same for language, content type, etc
