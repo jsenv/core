@@ -1,7 +1,9 @@
 # [0_named_only](../../pattern.test.mjs#L5)
 
 ```js
-const pattern = PATTERN.create("before/:id/after");
+const pattern = PATTERN.create("before/:id/after", {
+  namedGroupDelimiter: "/",
+});
 const a = pattern.generate({ id: "a" });
 const b = pattern.generate({ id: "b" });
 const auto = pattern.generateExample();

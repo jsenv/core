@@ -1,7 +1,9 @@
-# [1_star_only](../../pattern.test.mjs#L17)
+# [1_star_only](../../pattern.test.mjs#L19)
 
 ```js
-const pattern = PATTERN.create("start/*/middle/*/end");
+const pattern = PATTERN.create("start/*/middle/*/end", {
+  namedGroupDelimiter: "/",
+});
 const a = pattern.generate("a", "b");
 const b = pattern.generate("c", "d");
 const auto = pattern.generateExample();

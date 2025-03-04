@@ -2,6 +2,7 @@ import { PATTERN } from "./pattern.js";
 
 export const createResourcePattern = (pattern) => {
   const resourcePattern = PATTERN.create(pattern, {
+    namedGroupDelimiter: "/",
     // prepareStringToGenerate: (url) => {
     //   const urlToGenerate = new URL(pattern, url);
     //   const ressourceToGenerate = resourceFromUrl(urlToGenerate);

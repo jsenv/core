@@ -1,7 +1,9 @@
-# [2_named_and_star](../../pattern.test.mjs#L29)
+# [2_named_and_star](../../pattern.test.mjs#L33)
 
 ```js
-const pattern = PATTERN.create("start/:id/*");
+const pattern = PATTERN.create("start/:id/*", {
+  namedGroupDelimiter: "/",
+});
 const a = pattern.generate({ id: "id_value" }, "path_value");
 const auto = pattern.generateExample();
 return {

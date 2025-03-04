@@ -3,6 +3,7 @@ import { escapeRegexpSpecialChars } from "@jsenv/utils/src/string/escape_regexp_
 const createPattern = (
   pattern,
   {
+    namedGroupDelimiter,
     prepareStringToGenerate = (stringToBuild) => stringToBuild,
     finalizeGeneratedString = (generatedString) => generatedString,
   } = {},
@@ -35,7 +36,9 @@ const createPattern = (
     } else {
       const paramName = string.slice(1);
       namedParams.push(paramName);
-      regexpSource += `(?<${paramName}>[^\/]+)`;
+      regexpSource += namedGroupDelimiter
+        ? `(?<${paramName}>[^${escapeRegexpSpecialChars(namedGroupDelimiter)}]+)`
+        : `(?<${paramName}>.+)`;
       parts.push({ type: "named", value: paramName });
     }
     lastIndex = index + string.length;
