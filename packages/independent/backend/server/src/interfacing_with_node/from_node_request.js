@@ -203,7 +203,7 @@ const createRequestLogger = (nodeRequest, write) => {
     childArray,
     hasPushChild: false,
     forPush: () => {
-      const childLogBuffer = requestLogger(nodeRequest, write);
+      const childLogBuffer = createRequestLogger(nodeRequest, write);
       childLogBuffer.isChild = true;
       childArray.push(childLogBuffer);
       requestLogger.hasPushChild = true;

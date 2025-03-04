@@ -77,7 +77,7 @@ export const createReplaceFilesystemWellKnownValues = ({
       url: urlWithoutTrailingSlash,
       replace: (string, { willBeWrittenOnFilesystem }) => {
         const replacement = wellKnown.getReplacement({
-          preferFileUrl: true,
+          preferFileUrl: false,
           willBeWrittenOnFilesystem,
         });
         return string.replaceAll(urlWithoutTrailingSlash, replacement);

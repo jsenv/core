@@ -367,7 +367,13 @@ ${extraUrls.join("\n")}`);
   try {
     const directoryItemArray = readdirSync(directoryUrl);
     for (const directoryItem of directoryItemArray) {
-      const directoryItemUrl = new URL(directoryItem, directoryUrl);
+      let directoryItemUrl;
+      if (directoryItem === "file:") {
+        // without this check it would create infinite loop
+        directoryItemUrl = new URL(`${directoryUrl}${directoryItem}`);
+      } else {
+        directoryItemUrl = new URL(directoryItem, directoryUrl);
+      }
       let directoryItemStat;
       try {
         directoryItemStat = readEntryStatSync(directoryItemUrl);

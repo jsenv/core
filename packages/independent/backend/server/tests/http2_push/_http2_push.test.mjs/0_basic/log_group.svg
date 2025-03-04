@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 137.45" background-color="#282c34">
+  <g id="background">
+    <rect x="1" y="1" width="638" height="135.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+  </g>
+  <foreignObject id="body" y="0" width="100%" height="147.45" overflow="hidden">
+    <svg width="406.46" height="137.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+      <g>
+        <text x="10" y="24.55">server started at https://127.0.0.1</text>
+        <text x="10" y="43.55">GET https://127.0.0.1/main.html</text>
+        <text x="26.8" y="62.55">  Push /script.js</text>
+        <text x="26.8" y="81.55">  Push /style.css</text>
+        <text x="26.8" y="100.55" fill="#11bc79">200</text>
+        <text x="60.41" y="100.55"> OK</text>
+        <text x="10" y="119.55">server stopping server (reason: not specified)</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>
