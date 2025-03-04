@@ -10,9 +10,10 @@ export const createResourcePattern = (pattern) => {
   });
   let searchPattern;
   if (searchPatternString) {
-    searchPattern = PATTERN.create(searchPatternString, {
-      namedGroupDelimiter: "&",
-    });
+    const searchParams = Object.fromEntries(
+      new URLSearchParams(searchPatternString),
+    );
+    searchPattern = PATTERN.createKeyValue(searchParams);
   }
   let hashPattern;
   if (hashPatternString) {
@@ -24,17 +25,23 @@ export const createResourcePattern = (pattern) => {
   return {
     match: (resource) => {
       const [pathname, search, hash] = resourceToParts(resource);
-      const pathnameResult = pathnamePattern.match(pathname);
-      if (!pathnameResult) {
+      let result = pathnamePattern.match(pathname);
+      if (!result) {
         return null;
       }
 
       let searchResult;
       let hashResult;
       if (searchPattern) {
-        searchResult = searchPattern.match(search);
+        const searchParams = Object.fromEntries(new URLSearchParams(search));
+        searchResult = searchPattern.match(searchParams);
         if (!searchResult) {
           return null;
+        }
+        if (result.named) {
+          Object.assign(result.named, searchResult);
+        } else {
+          result.named = searchResult;
         }
       }
       if (hashPattern) {
@@ -42,12 +49,6 @@ export const createResourcePattern = (pattern) => {
         if (!hashResult) {
           return null;
         }
-      }
-      let result = pathnameResult;
-      if (searchResult) {
-        result = PATTERN.composeTwoMatchResults(result, searchResult);
-      }
-      if (hashResult) {
         result = PATTERN.composeTwoMatchResults(result, hashResult);
       }
       return result;
@@ -56,7 +57,13 @@ export const createResourcePattern = (pattern) => {
       let resource = "";
       resource += pathnamePattern.generate(...args);
       if (searchPatternString) {
-        resource += `?${searchPattern.generate(args[0])}`;
+        const generatedSearchParams = searchPattern.generate(args[0]);
+        const searchParams = new URLSearchParams();
+        for (const key of Object.keys(generatedSearchParams)) {
+          searchParams.set(key, generatedSearchParams[key]);
+        }
+        const search = searchParams.toString();
+        resource += `?${search}`;
       }
       if (hashPatternString) {
         resource += `#${hashPattern.generate(args[0])}`;

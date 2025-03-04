@@ -1,16 +1,27 @@
 # [0_basic](../../resource_pattern.test.mjs#L5)
 
 ```js
-const pattern = createResourcePattern("before/:id/*?url=:url");
-const a = pattern.match("/before/foo/dir/file.js?url=hey");
+const pattern = createResourcePattern("/before/:id/*?url=:url");
+const match = pattern.match("/before/foo/dir/file.js?url=hey");
+const a = pattern.generate({ id: "foo", url: "bar" }, "/path/to/toto.js");
 return {
+  match,
   a,
 };
 ```
 
 ```js
 {
-  "a": null
+  "match": {
+    "named": {
+      "id": "foo",
+      "url": "hey"
+    },
+    "stars": [
+      "dir/file.js"
+    ]
+  },
+  "a": "/before/foo//path/to/toto.js?url=bar"
 }
 ```
 

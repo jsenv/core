@@ -183,6 +183,48 @@ const composeTwoMatchResults = (left, right) => {
 export const PATTERN = {
   create: createPattern,
   composeTwoMatchResults,
+  createKeyValue: (object) => {
+    const patternMap = new Map();
+    const keys = Object.keys(object);
+    for (const key of keys) {
+      const value = object[key];
+      if (typeof value === "function") {
+        patternMap.set(key, {
+          match: (value) => {
+            return Boolean(value(value));
+          },
+          generate: () => {
+            return "?";
+          },
+        });
+      } else {
+        const valuePattern = PATTERN.create(value);
+        patternMap.set(key, valuePattern);
+      }
+    }
+    return {
+      match: (objectToMatch) => {
+        const namedValues = {};
+        for (const [key, pattern] of patternMap) {
+          const value = objectToMatch[key];
+          const matchResult = pattern.match(value);
+          if (!matchResult) {
+            return false;
+          }
+          const named = matchResult.named;
+          Object.assign(namedValues, named);
+        }
+        return namedValues;
+      },
+      generate: (values) => {
+        const generatedObject = {};
+        for (const [key, pattern] of patternMap) {
+          generatedObject[key] = pattern.generate(values);
+        }
+        return generatedObject;
+      },
+    };
+  },
 };
 
 const generateNamedParamsExample = (namedParams) => {
