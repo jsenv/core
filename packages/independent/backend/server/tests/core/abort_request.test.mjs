@@ -1,7 +1,6 @@
-import { request } from "node:http";
-
 import { startServer } from "@jsenv/server";
 import { createObservable } from "@jsenv/server/src/interfacing_with_node/observable.js";
+import { request } from "node:http";
 
 // aborting request while producing response
 {
@@ -9,9 +8,10 @@ import { createObservable } from "@jsenv/server/src/interfacing_with_node/observ
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: () => {
+        endpoint: "GET *",
+        response: () => {
           return {
             status: 200,
             body: new Promise((resolve) => {
@@ -53,9 +53,10 @@ import { createObservable } from "@jsenv/server/src/interfacing_with_node/observ
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: async () => {
+        endpoint: "GET *",
+        response: async () => {
           return {
             status: 200,
             body: createObservable(({ next, complete }) => {
@@ -97,9 +98,10 @@ import { createObservable } from "@jsenv/server/src/interfacing_with_node/observ
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: async () => {
+        endpoint: "GET *",
+        response: async () => {
           return {
             status: 200,
             body: createObservable(({ next, complete }) => {
