@@ -40,11 +40,20 @@ export const fetchFileSystem = async (
       `directoryUrlString must be a string or an url, got ${directoryUrlString}`,
     );
   }
+  if (!directoryUrlString.startsWith("file://")) {
+    return create500Response(
+      `directoryUrlString must start with "file://", got ${directoryUrlString}`,
+    );
+  }
   if (!directoryUrlString.endsWith("/")) {
     directoryUrlString = `${directoryUrlString}/`;
   }
   const filesystemUrl = new URL(request.resource.slice(1), directoryUrl);
   const urlString = asUrlString(filesystemUrl);
+
+  if (typeof cacheControl === "function") {
+    cacheControl = cacheControl(request);
+  }
 
   // here you might be tempted to add || cacheControl === 'no-cache'
   // but no-cache means resource can be cached but must be revalidated (yeah naming is strange)
@@ -72,9 +81,9 @@ export const fetchFileSystem = async (
 
   const serveFile = async (fileUrl) => {
     try {
-      const readStatTiming = helpers.timing("file service>read file stat");
+      const readStatTiming = helpers?.timing("file service>read file stat");
       const fileStat = statSync(new URL(fileUrl));
-      readStatTiming.end();
+      readStatTiming?.end();
 
       if (fileStat.isDirectory()) {
         if (canReadDirectory) {
@@ -235,14 +244,14 @@ const getEtagResponse = async ({
   fileUrl,
   fileStat,
 }) => {
-  const etagTiming = helpers.timing("file service>generate file etag");
+  const etagTiming = helpers?.timing("file service>generate file etag");
   const fileContentEtag = await computeEtag({
     etagMemory,
     etagMemoryMaxSize,
     fileUrl,
     fileStat,
   });
-  etagTiming.end();
+  etagTiming?.end();
 
   const requestHasIfNoneMatchHeader = "if-none-match" in headers;
   if (

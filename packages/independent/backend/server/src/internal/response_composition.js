@@ -15,7 +15,4 @@ const RESPONSE_KEYS_COMPOSITION = {
   headers: composeTwoHeaders,
   body: (prevBody, body) => body,
   bodyEncoding: (prevEncoding, encoding) => encoding,
-  timing: (prevTiming, timing) => {
-    return { ...prevTiming, ...timing };
-  },
 };
