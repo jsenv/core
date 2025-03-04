@@ -1,17 +1,15 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
-
 import { fetchFileSystem, startServer } from "@jsenv/server";
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
 const testDirectoryUrl = new URL("./", import.meta.url).href;
-
 const server = await startServer({
   logLevel: "warn",
   keepProcessAlive: false,
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
+      endpoint: "GET *",
+      response: (request) => {
         return fetchFileSystem(
           new URL(request.resource.slice(1), import.meta.url),
           {
@@ -34,8 +32,8 @@ const actual = {
   url: response.url,
   status: response.status,
   statusText: response.statusText,
-  headers: headersToObject(response.headers),
-  body: await new Response(),
+  headers: Object.fromEntries(response.headers),
+  body: await response.text(),
 };
 const expectedBody = `<!DOCTYPE html>
 <html>

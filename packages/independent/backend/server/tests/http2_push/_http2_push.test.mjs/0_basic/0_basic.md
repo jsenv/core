@@ -1,14 +1,10 @@
-# [0_basic](../../http2_push.test.mjs#L100)
+# [0_basic](../../http2_push.test.mjs#L105)
 
 ```js
 return run();
 ```
 
-# 1/3 write file "../../../../../../../../../Library/Application%20Support/https_local/https_local_certificate_authority.json"
-
-see [./[homedir]/Library/Application%20Support/https_local/https_local_certificate_authority.json](./[homedir]/Library/Application%20Support/https_local/https_local_certificate_authority.json)
-
-# 2/3 logs
+# 1/2 logs
 
 ![img](log_group.svg)
 
@@ -21,13 +17,12 @@ GET https://127.0.0.1/main.html
   Push /script.js
   Push /style.css
   200 OK
-server stopping server (reason: not specified)
 ```
 
 </details>
 
 
-# 3/3 resolve
+# 2/2 resolve
 
 ```js
 {
@@ -36,13 +31,13 @@ server stopping server (reason: not specified)
     {
       ":path": "/script.js",
       ":method": "GET",
-      ":authority": "localhost:63327",
+      ":authority": "localhost:64401",
       ":scheme": "https"
     },
     {
       ":path": "/style.css",
       ":method": "GET",
-      ":authority": "localhost:63327",
+      ":authority": "localhost:64401",
       ":scheme": "https"
     }
   ]

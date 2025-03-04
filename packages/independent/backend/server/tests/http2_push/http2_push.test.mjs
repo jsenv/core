@@ -1,13 +1,13 @@
 // https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#server-side-example
-
+// organize-imports-ignore
 import { requestCertificate } from "@jsenv/https-local";
 import {
   fetchFileSystem,
   jsenvServiceErrorHandler,
   startServer,
 } from "@jsenv/server";
-import { snapshotTests } from "@jsenv/snapshot";
 import { connect } from "node:http2";
+import { snapshotTests } from "@jsenv/snapshot";
 
 if (process.env.CI && process.platform !== "linux") {
   // certificates only generated on linux
@@ -88,6 +88,7 @@ const run = async () => {
     "/main.html",
   );
   client1.close();
+  client1.destroy();
   // do not stop server manually, a part of the test is also to ensure
   // server can close itself when there is nothing keeping it alive
   // server.stop();
@@ -98,8 +99,14 @@ const run = async () => {
   };
 };
 
-await snapshotTests(import.meta.url, ({ test }) => {
-  test("0_basic", async () => {
-    return run();
-  });
-});
+await snapshotTests(
+  import.meta.url,
+  ({ test }) => {
+    test("0_basic", () => {
+      return run();
+    });
+  },
+  {
+    filesystemEffects: false,
+  },
+);
