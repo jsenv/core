@@ -7,7 +7,7 @@ import { pickContentEncoding } from "../content_negotiation/pick_content_encodin
 import { pickContentLanguage } from "../content_negotiation/pick_content_language.js";
 import { pickContentType } from "../content_negotiation/pick_content_type.js";
 import { pickContentVersion } from "../content_negotiation/pick_content_version.js";
-import { replacePlaceholdersInHtml } from "./replace_placeholder_in_html.js";
+import { replacePlaceholdersInHtml } from "../replace_placeholder_in_html.js";
 
 const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/4xx.html");
 const routeInspectorUrl = `/.internal/route_inspector`;
@@ -126,9 +126,20 @@ export const createRouter = () => {
       if (!route.matchResource(request.resource)) {
         continue;
       }
-      forEachMethodAllowed(route, (methodAllowed) => {
-        resourceOptions.onMethodAllowed(route, methodAllowed);
-      });
+      const accessControlRequestMethodHeader =
+        request.headers["access-control-request-method"];
+      if (accessControlRequestMethodHeader) {
+        if (route.matchMethod(accessControlRequestMethodHeader)) {
+          resourceOptions.onMethodAllowed(
+            route,
+            accessControlRequestMethodHeader,
+          );
+        }
+      } else {
+        forEachMethodAllowed(route, (methodAllowed) => {
+          resourceOptions.onMethodAllowed(route, methodAllowed);
+        });
+      }
     }
     return resourceOptions;
   };

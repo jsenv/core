@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 289.45" background-color="#282c34">
+  <g id="background">
+    <rect x="1" y="1" width="638" height="287.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+  </g>
+  <foreignObject id="body" y="0" width="100%" height="299.45" overflow="hidden">
+    <svg width="986.16" height="289.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+      <g>
+        <text x="10" y="24.55">OPTIONS http://127.0.0.1/</text>
+        <text x="10" y="43.55">internal error while handling request</text>
+        <text x="10" y="62.55">--- error stack ---</text>
+        <text x="10" y="81.55">Error: here</text>
+        <text x="43.61" y="100.55">    at redirectRequest (base/cors.test.mjs:29:19)</text>
+        <text x="43.61" y="119.55">    at callHook (@jsenv/core/packages/independent/backend/server/src/service_controller.js:70:25)</text>
+        <text x="43.61" y="138.55">    at Object.callHooks (@jsenv/core/packages/independent/backend/server/src/service_controller.js:106:27)</text>
+        <text x="43.61" y="157.55">    at applyRequestInternalRedirection (@jsenv/core/packages/independent/backend/server/src/start_server.js:380:23)</text>
+        <text x="43.61" y="176.55">    at getResponseProperties (@jsenv/core/packages/independent/backend/server/src/start_server.js:426:9)</text>
+        <text x="43.61" y="195.55">    at Server.requestEventHandler (@jsenv/core/packages/independent/backend/server/src/start_server.js:716:42)</text>
+        <text x="43.61" y="214.55">    at Server.emit (node:events:536:35)</text>
+        <text x="43.61" y="233.55">    at parserOnIncoming (node:_http_server:1153:12)</text>
+        <text x="43.61" y="252.55">    at HTTPParser.parserOnHeadersComplete (node:_http_common:117:17)</text>
+        <text x="26.8" y="271.55" fill="#cd5555">500</text>
+        <text x="60.41" y="271.55"> Internal Server Error</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>

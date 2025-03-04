@@ -1,4 +1,8 @@
+import { readFileSync } from "node:fs";
 import { pickContentType } from "../../content_negotiation/pick_content_type.js";
+import { replacePlaceholdersInHtml } from "../../replace_placeholder_in_html.js";
+
+const internalErrorHtmlFileUrl = import.meta.resolve("./client/500.html");
 
 export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {
@@ -31,7 +35,6 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
           const renderHtmlForErrorWithoutDetails = () => {
             return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
           };
-
           const renderHtmlForErrorWithDetails = () => {
             if (serverInternalErrorIsAPrimitive) {
               return `<pre>${JSON.stringify(
@@ -43,38 +46,54 @@ export const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
             return `<pre>${serverInternalError.stack}</pre>`;
           };
 
-          const body = `<!DOCTYPE html>
-<html>
-  <head>
-    <title>Internal server error</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <h1>Internal server error</h1>
-    <p>${
-      serverInternalErrorIsAPrimitive
-        ? `Code inside server has thrown a literal.`
-        : `Code inside server has thrown an error.`
-    }</p>
-    <details>
-      <summary>See internal error details</summary>
-      ${
-        sendErrorDetails
-          ? renderHtmlForErrorWithDetails()
-          : renderHtmlForErrorWithoutDetails()
-      }
-    </details>
-  </body>
-</html>`;
+          const internalErrorHtmlTemplate = readFileSync(
+            new URL(internalErrorHtmlFileUrl),
+            "utf8",
+          );
+          const internalErrorHtml = replacePlaceholdersInHtml(
+            internalErrorHtmlTemplate,
+            {
+              errorMessage: serverInternalErrorIsAPrimitive
+                ? `Code inside server has thrown a literal.`
+                : `Code inside server has thrown an error.`,
+              errorDetailsContent: sendErrorDetails
+                ? renderHtmlForErrorWithDetails()
+                : renderHtmlForErrorWithoutDetails(),
+            },
+          );
 
           return {
             headers: {
               "content-type": "text/html",
-              "content-length": Buffer.byteLength(body),
+              "content-length": Buffer.byteLength(internalErrorHtml),
             },
-            body,
+            body: internalErrorHtml,
+          };
+        },
+        "text/plain": () => {
+          let internalErrorMessage = serverInternalErrorIsAPrimitive
+            ? `Code inside server has thrown a literal:`
+            : `Code inside server has thrown an error:`;
+          if (sendErrorDetails) {
+            if (serverInternalErrorIsAPrimitive) {
+              internalErrorMessage += `\n${JSON.stringify(
+                serverInternalError,
+                null,
+                "  ",
+              )}`;
+            } else {
+              internalErrorMessage += `\n${serverInternalError.stack}`;
+            }
+          } else {
+            internalErrorMessage += `\nDetails not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).`;
+          }
+
+          return {
+            headers: {
+              "content-type": "text/plain",
+              "content-length": Buffer.byteLength(internalErrorMessage),
+            },
+            body: internalErrorMessage,
           };
         },
         "application/json": () => {

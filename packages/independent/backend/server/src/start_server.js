@@ -415,7 +415,6 @@ export const startServer = async ({
           requestWaitingMs,
         ).unref();
       }
-      applyRequestInternalRedirection(request);
 
       let errorWhileHandlingRequest = null;
       let handleRequestTimings = serverTiming ? {} : null;
@@ -424,6 +423,7 @@ export const startServer = async ({
 
       let timeout;
       try {
+        applyRequestInternalRedirection(request);
         const timeoutPromise = new Promise((resolve) => {
           timeout = setTimeout(() => {
             resolve({
@@ -910,7 +910,6 @@ export const startServer = async ({
         logger,
       });
       request.logger.info(`GET ${request.url} ${websocketSuffixColorized}`);
-      applyRequestInternalRedirection(request);
 
       // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
       const closeSocket = ({ status, statusText, headers = {}, body }) => {
@@ -941,6 +940,7 @@ export const startServer = async ({
       let errorWhileHandlingWebsocket = null;
       // let handleWebsocketResult;
       try {
+        applyRequestInternalRedirection(request);
         await router.match(request, {
           closeSocket,
           connectSocket: async () => {
