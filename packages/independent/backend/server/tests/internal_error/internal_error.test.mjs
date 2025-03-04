@@ -1,107 +1,42 @@
-import { assert } from "@jsenv/assert";
-import { fetchUrl } from "@jsenv/fetch";
-
 import { jsenvServiceErrorHandler, startServer } from "@jsenv/server";
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
+import { snapshotTests } from "@jsenv/snapshot";
 
-// throw an error in "handleRequest"
-{
-  const { origin, stop } = await startServer({
-    logLevel: "off",
+const run = async (errorToThrow) => {
+  const server = await startServer({
     keepProcessAlive: false,
-    services: [
-      jsenvServiceErrorHandler(),
+    services: [jsenvServiceErrorHandler()],
+    routes: [
       {
-        handleRequest: () => {
-          const error = new Error("message");
-          error.code = "TEST_CODE";
-          throw error;
+        endpoint: "GET *",
+        response: () => {
+          throw errorToThrow;
         },
       },
     ],
   });
-  {
-    const response = await fetchUrl(origin, {
-      headers: {
-        accept: "application/json",
-      },
-    });
-    const actual = {
-      url: response.url,
-      status: response.status,
-      statusText: response.statusText,
-      headers: headersToObject(response.headers),
-      body: await new Response(),
-    };
-    const body = JSON.stringify({
-      code: "TEST_CODE",
-    });
-    const expect = {
-      url: `${origin}/`,
-      status: 500,
-      statusText: "Internal Server Error",
-      headers: {
-        "cache-control": "no-store",
-        "connection": "keep-alive",
-        "content-length": String(Buffer.byteLength(body)),
-        "content-type": "application/json",
-        "date": actual.headers.date,
-        "keep-alive": "timeout=5",
-      },
-      body,
-    };
-    assert({ actual, expect });
-    stop();
-  }
-}
-
-// throw a primitive in "handleRequest"
-{
-  const { origin, stop } = await startServer({
-    logLevel: "off",
-    keepProcessAlive: false,
-    services: [
-      jsenvServiceErrorHandler(),
-      {
-        handleRequest: () => {
-          // eslint-disable-next-line no-throw-literal
-          throw "here";
-        },
-      },
-    ],
+  const response = await fetch(server.origin, {
+    headers: {
+      accept: "application/json",
+    },
   });
-  {
-    const response = await fetchUrl(origin, {
-      headers: {
-        accept: "application/json",
-      },
-    });
-    const actual = {
-      url: response.url,
-      status: response.status,
-      statusText: response.statusText,
-      headers: headersToObject(response.headers),
-      body: await new Response(),
-    };
-    const body = JSON.stringify({
-      code: "VALUE_THROWED",
-      value: "here",
-    });
-    const expect = {
-      url: `${origin}/`,
-      status: 500,
-      statusText: "Internal Server Error",
-      headers: {
-        "cache-control": "no-store",
-        "connection": "keep-alive",
-        "content-length": String(Buffer.byteLength(body)),
-        "content-type": "application/json",
-        "date": actual.headers.date,
-        "keep-alive": "timeout=5",
-      },
-      body,
-    };
-    assert({ actual, expect });
-    stop();
-  }
-}
+  const actual = {
+    url: response.url,
+    status: response.status,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers),
+    body: await response.text(),
+  };
+  return actual;
+};
+
+await snapshotTests(import.meta.url, ({ test }) => {
+  test("0_throw_error", () => {
+    const error = new Error("message");
+    error.code = "TEST_CODE";
+    return run(error);
+  });
+
+  test("1_throw_primitive", () => {
+    return run("here");
+  });
+});

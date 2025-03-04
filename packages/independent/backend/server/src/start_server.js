@@ -305,7 +305,9 @@ export const startServer = async ({
   // we can proceed to create a stop function to stop it gacefully
   // and add a request handler
   stopCallbackSet.add(({ reason }) => {
-    logger.info(`${serverName} stopping server (reason: ${reason})`);
+    if (reason !== STOP_REASON_PROCESS_BEFORE_EXIT) {
+      logger.info(`${serverName} stopping server (reason: ${reason})`);
+    }
   });
   stopCallbackSet.add(async () => {
     await stopListening(nodeServer);
