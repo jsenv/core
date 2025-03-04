@@ -132,7 +132,7 @@ export const jsenvPluginDirectoryListing = ({
         );
       },
     },
-    routes: [
+    devServerRoutes: [
       {
         endpoint:
           "GET /.internal/directory_content.websocket?directory=:directory",

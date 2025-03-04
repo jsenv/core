@@ -70,13 +70,6 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
         serverEventsDispatcher = undefined;
       };
     },
-    serveWebsocket: async ({ websocket, request }) => {
-      if (request.headers["sec-websocket-protocol"] !== "jsenv") {
-        return false;
-      }
-      serverEventsDispatcher.addWebsocket(websocket, request);
-      return true;
-    },
     transformUrlContent: {
       html: (urlInfo) => {
         const htmlAst = parseHtml({
@@ -96,5 +89,17 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
         return stringifyHtmlAst(htmlAst);
       },
     },
+    devServerRoutes: [
+      {
+        endpoint: "GET /.internal/events.websocket",
+        websocket: (request) => {
+          return {
+            opened: (websocket) => {
+              serverEventsDispatcher.addWebsocket(websocket, request);
+            },
+          };
+        },
+      },
+    ],
   };
 };
