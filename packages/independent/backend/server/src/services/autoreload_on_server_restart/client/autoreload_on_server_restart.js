@@ -57,6 +57,7 @@ class JsenvAutoreloadOnServerRestart extends HTMLElement {
         console.info("connection to server lost, trying to reconnect");
         const retry = async () => {
           let attemptCount = 0;
+          let timeToWait = 100;
           const tryToReconnect = async () => {
             const newWebsocket = await connect();
             if (newWebsocket) {
@@ -66,7 +67,7 @@ class JsenvAutoreloadOnServerRestart extends HTMLElement {
               return;
             }
             attemptCount++;
-            if (attemptCount === 5) {
+            if (attemptCount === 10) {
               dialog.showModal();
               reconnectButton.onclick = async () => {
                 reconnectButton.disabled = true;
@@ -78,7 +79,8 @@ class JsenvAutoreloadOnServerRestart extends HTMLElement {
               };
               return;
             }
-            await new Promise((resolve) => setTimeout(resolve, 200));
+            timeToWait += 100;
+            await new Promise((resolve) => setTimeout(resolve, timeToWait));
             await tryToReconnect();
           };
           await tryToReconnect();

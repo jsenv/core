@@ -375,6 +375,7 @@ export const startDevServer = async ({
       routes: [
         {
           endpoint: "GET *",
+          description: "Serve project source files during dev",
           response: async (request) => {
             const kitchen = getOrCreateKitchen(request);
             const responseFromPlugin =
