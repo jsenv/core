@@ -335,7 +335,7 @@ export const jsenvPluginAutoreloadServer = ({
     },
     devServerRoutes: [
       {
-        endpoint: "/.internal/graph.json",
+        endpoint: "GET /.internal/graph.json",
         response: (request, { kitchen }) => {
           const graphJson = JSON.stringify(
             kitchen.graph.toJSON(kitchen.context.rootDirectoryUrl),

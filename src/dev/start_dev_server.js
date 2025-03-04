@@ -157,13 +157,14 @@ export const startDevServer = async ({
       name: "jsenv:server_header",
       routes: [
         {
-          endpoint: "GET *",
-          headers: { "x-server-inspect": "*" },
-          response: () => ({ status: 200 }),
-        },
-        {
-          endpoint: "GET /.internal/server_params.json",
-          response: () => Response.json({ sourceDirectoryUrl }),
+          endpoint: "GET /.internal/server.json",
+          description: "Get information about jsenv dev server",
+          availableContentTypes: ["application/json"],
+          response: () =>
+            Response.json({
+              server: "jsenv_dev_server/1",
+              sourceDirectoryUrl,
+            }),
         },
       ],
       injectResponseHeaders: () => {
@@ -368,6 +369,7 @@ export const startDevServer = async ({
       return kitchen;
     };
 
+    // this service should go after .internal services .... hummmm
     finalServices.push({
       name: "jsenv:omega_file_service",
       routes: [

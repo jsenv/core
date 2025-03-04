@@ -223,6 +223,13 @@ export const PATTERN = {
         }
         return generatedObject;
       },
+      generateExample: () => {
+        const generatedObject = {};
+        for (const [key, pattern] of patternMap) {
+          generatedObject[key] = pattern.generateExample();
+        }
+        return generatedObject;
+      },
     };
   },
 };

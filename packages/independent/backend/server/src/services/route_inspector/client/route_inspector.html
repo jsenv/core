@@ -362,11 +362,12 @@
       import { useState } from "preact/hooks";
 
       const routesLoadingSignal = signal(false);
-      const routeLoadingError = signal(null);
+      const routeLoadingErrorSignal = signal(null);
       const routesSignal = signal([]);
 
       const loadRoutes = async () => {
         routesLoadingSignal.value = true;
+        routeLoadingErrorSignal.value = null;
         try {
           const response = await fetch("/.internal/routes.json");
           const routes = await response.json();
@@ -374,7 +375,7 @@
           routesSignal.value = routes;
         } catch (e) {
           routesLoadingSignal.value = false;
-          routeLoadingError.value = e;
+          routeLoadingErrorSignal.value = e;
           throw e;
         }
       };
@@ -402,16 +403,23 @@
       };
 
       const App = () => {
+        return html` <${RouteList} /> `;
+      };
+      const RouteList = () => {
         const routes = routesSignal.value;
         const loading = routesLoadingSignal.value;
+        const routeLoadingError = routeLoadingErrorSignal.value;
 
-        return html`
-          ${loading ? html`<p>Loading...</p>` : null}
-          <${ProgressBar} width="150" loading=${loading} />
-          <${RouteList} routes=${routes} />
-        `;
-      };
-      const RouteList = ({ routes }) => {
+        if (loading) {
+          return html`<${ProgressBar} width="150" loading=${true} />`;
+        }
+
+        if (routeLoadingError) {
+          return html`<p>
+            Error loading routes: ${routeLoadingError.message}
+          </p>`;
+        }
+
         if (!routes || routes.length === 0) {
           return html`<p>No routes configured.</p>`;
         }

@@ -37,23 +37,19 @@ export const assertAndNormalizeWebServer = async (
     teardownCallbackSet,
     logger,
   });
-  const { headers } = await basicFetch(webServer.origin, {
-    method: "GET",
-    rejectUnauthorized: false,
-    headers: {
-      "x-server-inspect": "1",
+  const serverJsonResponse = await basicFetch(
+    `${webServer.origin}/.internal/server.json`,
+    {
+      method: "GET",
+      rejectUnauthorized: false,
     },
-  });
-  if (String(headers["server"]).includes("jsenv_dev_server")) {
+  );
+  if (
+    String(serverJsonResponse.headers["server"]).includes("jsenv_dev_server")
+  ) {
     webServer.isJsenvDevServer = true;
-    const response = await basicFetch(
-      `${webServer.origin}/.internal/server_params.json`,
-      {
-        rejectUnauthorized: false,
-      },
-    );
     if (webServer.rootDirectoryUrl === undefined) {
-      const jsenvDevServerParams = await response.json();
+      const jsenvDevServerParams = await serverJsonResponse.json();
       webServer.rootDirectoryUrl = jsenvDevServerParams.sourceDirectoryUrl;
     } else {
       webServer.rootDirectoryUrl = assertAndNormalizeDirectoryUrl(

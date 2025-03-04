@@ -43,6 +43,10 @@ import { applyDnsResolution } from "./internal/dns_resolution.js";
 import { parseHostname } from "./internal/hostname_parser.js";
 import { createIpGetters } from "./internal/server_ips.js";
 
+const TIMING_NOOP = () => {
+  return { end: () => {} };
+};
+
 export const startServer = async ({
   signal = new AbortController().signal,
   logLevel,
@@ -150,13 +154,13 @@ export const startServer = async ({
   });
 
   services = [
-    ...flattenAndFilterServices(services),
     jsenvServiceRouteInspector(router),
     ...(import.meta.build
       ? // after build internal client files are inlined, no need for this service anymore
         []
       : [jsenvServiceInternalClientFiles()]),
     jsenvServiceAutoreloadOnRestart(),
+    ...flattenAndFilterServices(services),
   ];
   for (const route of routes) {
     router.add(route);
@@ -402,18 +406,20 @@ export const startServer = async ({
   request: {
     const getResponseProperties = async (request, { pushResponse }) => {
       const timings = {};
-      const timing = (name) => {
-        const start = performance.now();
-        timings[name] = null;
-        return {
-          name,
-          end: () => {
-            const end = performance.now();
-            const duration = end - start;
-            timings[name] = duration;
-          },
-        };
-      };
+      const timing = serverTiming
+        ? (name) => {
+            const start = performance.now();
+            timings[name] = null;
+            return {
+              name,
+              end: () => {
+                const end = performance.now();
+                const duration = end - start;
+                timings[name] = duration;
+              },
+            };
+          }
+        : TIMING_NOOP;
       const startRespondingTiming = timing("time to start responding");
 
       request.logger.info(
@@ -931,7 +937,7 @@ export const startServer = async ({
           .map((h) => `${h}: ${headers[h]}`)
           .join("\r\n");
         socket.write(
-          `HTTP/1.1 ${status} ${statusText}\r\n${headersString.join("\r\n")}\r\n\r\n`,
+          `HTTP/1.1 ${status} ${statusText}\r\n${headersString}\r\n\r\n`,
         );
         request.logger.onHeadersSent({ status, statusText });
         request.logger.end();
@@ -949,6 +955,7 @@ export const startServer = async ({
       try {
         request = applyRequestInternalRedirection(request);
         await router.match(request, {
+          timing: TIMING_NOOP,
           closeSocket,
           connectSocket: async () => {
             const websocket = await new Promise((resolve) => {
@@ -993,7 +1000,11 @@ export const startServer = async ({
             },
           ),
         );
-        closeSocket({ status: 500, statusText: "Internal Server Error" });
+        closeSocket({
+          status: 500,
+          statusText: "Internal Server Error",
+          body: errorWhileHandlingWebsocket.message,
+        });
         return;
       }
       // we also want to allow handleWebsocket to response

@@ -20,15 +20,16 @@ await startServer({
 
 # Features
 
-✅ Declarative routing with path parameters and pattern matching
-✅ Content negotiation for type, language, version and encoding
-✅ Real-time communication via WebSockets and Server-Sent Events
-✅ File serving with ETags, conditional requests, and compression
-✅ Security with HTTPS and automatic HTTP-to-HTTPS redirection
-✅ HTTP/2 support including server push
-✅ CORS handling built-in
-✅ Performance monitoring with server timing
-✅ Sacalability through cluster mode for multi-core utilization
+- [*] Declarative routing with path parameters and pattern matching
+- [*] Content negotiation for type, language, version and encoding
+- [*] Real-time communication via WebSockets and Server-Sent Events
+- [*] File serving with ETags, conditional requests, and compression
+- [*] Security with HTTPS and automatic HTTP-to-HTTPS redirection
+- [*] HTTP/2 support including server push
+- [*] CORS handling built-in
+- [*] Performance monitoring with server timing
+- [*] Sacalability through cluster mode for multi-core utilization
+- [ ] Request authentification with JWT, OAuth etc
 
 # Installation
 
