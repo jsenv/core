@@ -264,6 +264,7 @@ export const createRouter = () => {
         };
       },
       resourcePattern,
+      isFallback,
     };
     if (isFallback) {
       fallbackRouteSet.add(route);
@@ -296,7 +297,9 @@ export const createRouter = () => {
         continue;
       }
       if (!route.matchMethod(request.method)) {
-        wouldHaveMatched.methodSet.add(route.method);
+        if (!route.isFallback) {
+          wouldHaveMatched.methodSet.add(route.method);
+        }
         continue;
       }
       if (
@@ -836,7 +839,10 @@ const createClientErrorResponse = (
     });
   }
   if (contentTypeNegotiated === "application/json") {
-    return Response.json({ data }, { status, statusText, headers });
+    return Response.json(
+      { message: message.text, data },
+      { status, statusText, headers },
+    );
   }
   return new Response(message.text, { status, statusText, headers });
 };
