@@ -1,9 +1,7 @@
 import { assert } from "@jsenv/assert";
-import { fetchUrl } from "@jsenv/fetch";
-
 import { startServer } from "@jsenv/server";
 
-const { origin } = await startServer({
+const server = await startServer({
   logLevel: "warn",
   keepProcessAlive: false,
   services: [
@@ -18,21 +16,17 @@ const { origin } = await startServer({
         };
       },
     },
+  ],
+  routes: [
     {
-      name: "otherwise",
-      handleRequest: (request) => {
-        return {
-          status: 200,
-          headers: {
-            "Content-Type": "text/plain",
-          },
-          body: request.resource,
-        };
+      endpoint: "GET *",
+      response: (request) => {
+        return new Response(request.resource);
       },
     },
   ],
 });
-const response = await fetchUrl(origin);
-const actual = await new Response();
+const response = await fetch(server.origin);
+const actual = await response.text();
 const expect = "/toto.js";
 assert({ actual, expect });
