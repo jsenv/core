@@ -1,7 +1,6 @@
 // import { createGunzip } from "zlib"
 import { assert } from "@jsenv/assert";
 import { ensureEmptyDirectory, writeFile } from "@jsenv/filesystem";
-
 import { fetchFileSystem } from "@jsenv/server";
 
 const fixturesDirectoryUrl = new URL("./fixtures/", import.meta.url).href;
@@ -13,11 +12,15 @@ await ensureEmptyDirectory(fixturesDirectoryUrl);
   await writeFile(fileUrl, fileBuffer);
 
   const response = await fetchFileSystem(
-    new URL("./file.js", fixturesDirectoryUrl),
     {
+      resource: "/file.js",
       headers: {
         "accept-encoding": "gzip",
       },
+    },
+    { timing: () => {} },
+    fixturesDirectoryUrl,
+    {
       compressionEnabled: true,
       compressionSizeThreshold: 1,
     },
@@ -37,10 +40,6 @@ await ensureEmptyDirectory(fixturesDirectoryUrl);
       "vary": "accept-encoding",
     },
     body: actual.body,
-    timing: {
-      "file service>read file stat":
-        actual.timing["file service>read file stat"],
-    },
   };
   assert({ actual, expect });
 }

@@ -6,23 +6,21 @@
 
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { createReadStream, readFile, statSync } from "node:fs";
-import { pickContentEncoding } from "./content_negotiation/pick_content_encoding.js";
-import { convertFileSystemErrorToResponseProperties } from "./internal/convertFileSystemErrorToResponseProperties.js";
-import { bufferToEtag } from "./internal/etag.js";
+import { pickContentEncoding } from "../content_negotiation/pick_content_encoding.js";
+import { convertFileSystemErrorToResponseProperties } from "../internal/convertFileSystemErrorToResponseProperties.js";
+import { bufferToEtag } from "../internal/etag.js";
 import {
   fileSystemPathToUrl,
   isFileSystemPath,
-} from "./internal/filesystem.js";
-import { composeTwoResponses } from "./internal/response_composition.js";
+} from "../internal/filesystem.js";
+import { composeTwoResponses } from "../internal/response_composition.js";
 import { serveDirectory } from "./serve_directory.js";
-import { timeFunction } from "./server_timing/timing_measure.js";
 
 export const fetchFileSystem = async (
-  filesystemUrl,
+  request,
+  helpers,
+  directoryUrl,
   {
-    // signal,
-    method = "GET",
-    headers = {},
     etagEnabled = false,
     etagMemory = true,
     etagMemoryMaxSize = 1000,
@@ -33,38 +31,20 @@ export const fetchFileSystem = async (
       ? "private,max-age=0,must-revalidate"
       : "no-store",
     canReadDirectory = false,
-    rootDirectoryUrl, //  = `${pathToFileURL(process.cwd())}/`,
     ENOENTFallback = () => {},
   } = {},
 ) => {
+  let directoryUrlString = asUrlString(directoryUrl);
+  if (!directoryUrlString) {
+    return create500Response(
+      `directoryUrlString must be a string or an url, got ${directoryUrlString}`,
+    );
+  }
+  if (!directoryUrlString.endsWith("/")) {
+    directoryUrlString = `${directoryUrlString}/`;
+  }
+  const filesystemUrl = new URL(request.resource.slice(1), directoryUrl);
   const urlString = asUrlString(filesystemUrl);
-  if (!urlString) {
-    return create500Response(
-      `fetchFileSystem first parameter must be a file url, got ${filesystemUrl}`,
-    );
-  }
-  if (!urlString.startsWith("file://")) {
-    return create500Response(
-      `fetchFileSystem url must use "file://" scheme, got ${filesystemUrl}`,
-    );
-  }
-  if (rootDirectoryUrl) {
-    let rootDirectoryUrlString = asUrlString(rootDirectoryUrl);
-    if (!rootDirectoryUrlString) {
-      return create500Response(
-        `rootDirectoryUrl must be a string or an url, got ${rootDirectoryUrl}`,
-      );
-    }
-    if (!rootDirectoryUrlString.endsWith("/")) {
-      rootDirectoryUrlString = `${rootDirectoryUrlString}/`;
-    }
-    if (!urlString.startsWith(rootDirectoryUrlString)) {
-      return create500Response(
-        `fetchFileSystem url must be inside root directory, got ${urlString}`,
-      );
-    }
-    rootDirectoryUrl = rootDirectoryUrlString;
-  }
 
   // here you might be tempted to add || cacheControl === 'no-cache'
   // but no-cache means resource can be cached but must be revalidated (yeah naming is strange)
@@ -86,23 +66,22 @@ export const fetchFileSystem = async (
     mtimeEnabled = false;
   }
 
-  if (method !== "GET" && method !== "HEAD") {
-    return {
-      status: 501,
-    };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return null;
   }
 
   const serveFile = async (fileUrl) => {
     try {
-      const [readStatDuration, fileStat] = timeFunction(() =>
-        statSync(new URL(fileUrl)),
-      );
+      const readStatTiming = helpers.timing("file service>read file stat");
+      const fileStat = statSync(new URL(fileUrl));
+      readStatTiming.end();
+
       if (fileStat.isDirectory()) {
         if (canReadDirectory) {
           return serveDirectory(fileUrl, {
-            headers,
+            headers: request.headers,
             canReadDirectory,
-            rootDirectoryUrl,
+            rootDirectoryUrl: directoryUrl,
           });
         }
         return {
@@ -114,14 +93,12 @@ export const fetchFileSystem = async (
       if (!fileStat.isFile()) {
         return {
           status: 404,
-          timing: {
-            "file service>read file stat": readStatDuration,
-          },
         };
       }
 
       const clientCacheResponse = await getClientCacheResponse({
-        headers,
+        headers: request.headers,
+        helpers,
         etagEnabled,
         etagMemory,
         etagMemoryMaxSize,
@@ -135,9 +112,6 @@ export const fetchFileSystem = async (
       if (clientCacheResponse.status === 304) {
         return composeTwoResponses(
           {
-            timing: {
-              "file service>read file stat": readStatDuration,
-            },
             headers: {
               ...(cacheControl ? { "cache-control": cacheControl } : {}),
             },
@@ -149,7 +123,7 @@ export const fetchFileSystem = async (
       let response;
       if (compressionEnabled && fileStat.size >= compressionSizeThreshold) {
         const compressedResponse = await getCompressedResponse({
-          headers,
+          headers: request.headers,
           fileUrl,
         });
         if (compressedResponse) {
@@ -165,9 +139,6 @@ export const fetchFileSystem = async (
 
       const intermediateResponse = composeTwoResponses(
         {
-          timing: {
-            "file service>read file stat": readStatDuration,
-          },
           headers: {
             ...(cacheControl ? { "cache-control": cacheControl } : {}),
             // even if client cache is disabled, server can still
@@ -215,6 +186,7 @@ const create500Response = (message) => {
 
 const getClientCacheResponse = async ({
   headers,
+  helpers,
   etagEnabled,
   etagMemory,
   etagMemoryMaxSize,
@@ -237,6 +209,7 @@ const getClientCacheResponse = async ({
   if (etagEnabled) {
     return getEtagResponse({
       headers,
+      helpers,
       etagMemory,
       etagMemoryMaxSize,
       fileStat,
@@ -256,19 +229,20 @@ const getClientCacheResponse = async ({
 
 const getEtagResponse = async ({
   headers,
+  helpers,
   etagMemory,
   etagMemoryMaxSize,
   fileUrl,
   fileStat,
 }) => {
-  const [computeEtagDuration, fileContentEtag] = await timeFunction(() =>
-    computeEtag({
-      etagMemory,
-      etagMemoryMaxSize,
-      fileUrl,
-      fileStat,
-    }),
-  );
+  const etagTiming = helpers.timing("file service>generate file etag");
+  const fileContentEtag = await computeEtag({
+    etagMemory,
+    etagMemoryMaxSize,
+    fileUrl,
+    fileStat,
+  });
+  etagTiming.end();
 
   const requestHasIfNoneMatchHeader = "if-none-match" in headers;
   if (
@@ -277,9 +251,6 @@ const getEtagResponse = async ({
   ) {
     return {
       status: 304,
-      timing: {
-        "file service>generate file etag": computeEtagDuration,
-      },
     };
   }
 
@@ -287,9 +258,6 @@ const getEtagResponse = async ({
     status: 200,
     headers: {
       etag: fileContentEtag,
-    },
-    timing: {
-      "file service>generate file etag": computeEtagDuration,
     },
   };
 };

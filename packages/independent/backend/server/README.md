@@ -71,16 +71,13 @@ await startServer({
 **Static File Server**
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server";
+import { startServer, createFileSystemRequestHandler } from "@jsenv/server";
 
 await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: async (request) => {
-        const fileUrl = new URL(request.resource.slice(1), import.meta.url);
-        return await fetchFileSystem(fileUrl, request);
-      },
+      response: createFileSystemRequestHandler(import.meta.resolve("./")),
     },
   ],
 });

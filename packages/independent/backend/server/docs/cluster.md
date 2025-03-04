@@ -1,20 +1,13 @@
 _cluster_demo_server.mjs:_
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server";
+import { startServer, createFileSystemRequestHandler } from "@jsenv/server";
 
 await startServer({
   routes: [
     {
       endpoint: "GET /",
-      response: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            ...request,
-          },
-        );
-      },
+      response: createFileSystemRequestHandler(import.meta.resolve("./")),
     },
   ],
 });

@@ -1,5 +1,5 @@
 import {
-  fetchFileSystem,
+  createFileSystemRequestHandler,
   jsenvServiceErrorHandler,
   startServer,
 } from "@jsenv/server";
@@ -22,19 +22,13 @@ export const startFileServer = ({
     routes: [
       {
         endpoint: "GET *",
-        response: (request) => {
-          return fetchFileSystem(
-            new URL(request.resource.slice(1), rootDirectoryUrl),
-            {
-              rootDirectoryUrl,
-              canReadDirectory: true,
-              headers: request.headers,
-              cacheControl: canUseLongTermCache(request)
-                ? `private,max-age=3600,immutable` // 1hour
-                : "private,max-age=0,must-revalidate",
-            },
-          );
-        },
+        response: createFileSystemRequestHandler(rootDirectoryUrl, {
+          canReadDirectory: true,
+          cacheControl: (request) =>
+            canUseLongTermCache(request)
+              ? `private,max-age=3600,immutable` // 1hour
+              : "private,max-age=0,must-revalidate",
+        }),
       },
     ],
     ...rest,

@@ -1,7 +1,10 @@
 import { assert } from "@jsenv/assert";
+import {
+  createFileSystemRequestHandler,
+  createSSERoom,
+  startServer,
+} from "@jsenv/server";
 import { chromium } from "playwright";
-
-import { createSSERoom, fetchFileSystem, startServer } from "@jsenv/server";
 
 if (process.platform !== "win32") {
   const room = createSSERoom({
@@ -11,15 +14,15 @@ if (process.platform !== "win32") {
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: (request) => {
-          const { accept = "" } = request.headers;
-          if (accept.includes("text/event-stream")) {
-            return room.join(request);
-          }
-          return fetchFileSystem(new URL("./main.html", import.meta.url));
-        },
+        endpoint: "GET *",
+        acceptedContentTypes: ["text/event-stream"],
+        response: (request) => room.join(request),
+      },
+      {
+        endpoint: "GET *",
+        response: createFileSystemRequestHandler(import.meta.resolve("./")),
       },
     ],
   });

@@ -1,7 +1,6 @@
 import { requestCertificate } from "@jsenv/https-local";
-
 import {
-  fetchFileSystem,
+  createFileSystemRequestHandler,
   jsenvServiceErrorHandler,
   startServer,
 } from "@jsenv/server";
@@ -14,19 +13,14 @@ await startServer({
   https: { certificate, privateKey },
   services: [
     {
-      handleRequest: (request, { pushResponse }) => {
+      handleRequest: (request, helpers) => {
         if (request.pathname === "/main.html") {
-          pushResponse({ path: "/script.js" });
-          pushResponse({ path: "/style.css" });
+          helpers.pushResponse({ path: "/script.js" });
+          helpers.pushResponse({ path: "/style.css" });
         }
-
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            canReadDirectory: true,
-          },
-        );
+        return createFileSystemRequestHandler(import.meta.resolve("./"), {
+          canReadDirectory: true,
+        })(request, helpers);
       },
     },
     jsenvServiceErrorHandler({ sendErrorDetails: true }),

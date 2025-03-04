@@ -1,17 +1,17 @@
-import { fetchFileSystem, startServer } from "@jsenv/server";
+import { createFileSystemRequestHandler, startServer } from "@jsenv/server";
 
 await startServer({
   port: 3000,
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          request,
-        );
-      },
-      handleWebsocket: (websocket) => {
-        websocket.send("Hello world");
+      endpoint: "GET *",
+      response: createFileSystemRequestHandler(import.meta.resolve("./")),
+      websocket: () => {
+        return {
+          opened: (websocket) => {
+            websocket.send("Hello world");
+          },
+        };
       },
     },
   ],

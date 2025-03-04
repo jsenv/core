@@ -3,20 +3,13 @@
 A server often needs to serve file without routing logic. Either the file is there and server sends it, or it responds with a 404 status code. You can use _fetchFileSystem_ for that, an async function that will search for a file on the filesystem and produce a response for it.
 
 ```js
-import { startServer, fetchFileSystem } from "@jsenv/server";
+import { startServer, createFileSystemRequestHandler } from "@jsenv/server";
 
 await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-          },
-        );
-      },
+      response: createFileSystemRequestHandler(import.meta.resolve("./")),
     },
   ],
 });
@@ -43,15 +36,9 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            etagEnabled: true,
-          },
-        );
-      },
+      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+        eTagEnabled: true,
+      }),
     },
   ],
 });
@@ -69,15 +56,9 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            mtimeEnabled: true,
-          },
-        );
-      },
+      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+        mtimeEnabled: true,
+      }),
     },
   ],
 });
@@ -97,22 +78,16 @@ Things to know:
 import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      url: "*",
-      method: "GET",
-      response: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            cacheControl:
-              request.resource === "/"
-                ? `private,max-age=0,must-revalidate`
-                : `private,max-age=3600,immutable`,
-          },
-        );
-      },
+      endpoint: "GET *",
+      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+        mtimeEnabled: true,
+        cacheControl: (request) =>
+          request.resource === "/"
+            ? `private,max-age=0,must-revalidate`
+            : `private,max-age=3600,immutable`,
+      }),
     },
   ],
 });
@@ -133,20 +108,13 @@ To enable compression, use _compressionEnabled_ and _compressionSizeThreshold_ p
 import { startServer, fetchFileSystem } from "@jsenv/server";
 
 await startServer({
-  services: [
+  routes: [
     {
-      url: "*",
-      method: "GET",
-      response: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            compressionEnabled: true,
-            compressionSizeThreshold: 1024,
-          },
-        );
-      },
+      endpoint: "GET *",
+      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+        compressionEnabled: true,
+        compressionSizeThreshold: 1024,
+      }),
     },
   ],
 });

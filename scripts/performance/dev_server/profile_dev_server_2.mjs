@@ -11,7 +11,7 @@
 
 import { ensureEmptyDirectory } from "@jsenv/filesystem";
 import { requestCertificate } from "@jsenv/https-local";
-import { fetchFileSystem, startServer } from "@jsenv/server";
+import { createFileSystemRequestHandler, startServer } from "@jsenv/server";
 import { resolveUrl, urlToRelativeUrl } from "@jsenv/urls";
 
 const { certificate, privateKey } = requestCertificate();
@@ -35,16 +35,10 @@ await startServer({
   https: { certificate, privateKey },
   port: 6789,
   serverTiming: true,
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), projectDirectoryUrl),
-          {
-            headers: request.headers,
-          },
-        );
-      },
+      endpoint: "GET *",
+      response: createFileSystemRequestHandler(projectDirectoryUrl),
     },
   ],
 });

@@ -1,4 +1,8 @@
-import { fetchFileSystem, jsenvServiceCORS, startServer } from "@jsenv/server";
+import {
+  createFileSystemRequestHandler,
+  jsenvServiceCORS,
+  startServer,
+} from "@jsenv/server";
 
 const serverDirectoryUrl = new URL("./client/", import.meta.url);
 
@@ -14,14 +18,11 @@ export const localServer = await startServer({
       accessControlAllowRequestHeaders: true,
       accessControlAllowCredentials: true,
     }),
+  ],
+  routes: [
     {
-      handleRequest: async (request) => {
-        const fileUrl = new URL(request.resource.slice(1), serverDirectoryUrl);
-        const response = await fetchFileSystem(fileUrl, {
-          ...request,
-        });
-        return response;
-      },
+      endpoint: "GET *",
+      response: createFileSystemRequestHandler(serverDirectoryUrl),
     },
   ],
 });

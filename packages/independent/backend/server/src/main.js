@@ -7,7 +7,7 @@
 // tslint:disable:ordered-imports
 
 export { startServer } from "./start_server.js";
-export { fetchFileSystem } from "./fetch_filesystem.js";
+
 export {
   STOP_REASON_INTERNAL_ERROR,
   STOP_REASON_PROCESS_SIGHUP,
@@ -18,6 +18,10 @@ export {
   STOP_REASON_NOT_SPECIFIED,
 } from "./stopReasons.js";
 export { jsenvServiceErrorHandler } from "./services/error_handler/jsenv_service_error_handler.js";
+
+// filesystem
+export { createFileSystemRequestHandler } from "./filesystem/filesystem_request_handler.js";
+export { fetchFileSystem } from "./filesystem/fetch_filesystem.js";
 
 // CORS
 export {
@@ -42,7 +46,7 @@ export { pickContentLanguage } from "./content_negotiation/pick_content_language
 export { jsenvServiceResponseAcceptanceCheck } from "./services/response_acceptance_check/jsenv_service_response_acceptance_check.js";
 
 // others
-export { serveDirectory } from "./serve_directory.js";
+export { serveDirectory } from "./filesystem/serve_directory.js";
 export { composeTwoResponses } from "./internal/response_composition.js";
 export { jsenvServiceRequestAliases } from "./services/request_aliases/jsenv_service_request_aliases.js";
 export { findFreePort } from "./internal/listen.js";

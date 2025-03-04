@@ -17,7 +17,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
 import {
-  fetchFileSystem,
+  createFileSystemRequestHandler,
   jsenvAccessControlAllowedHeaders,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
@@ -165,7 +165,7 @@ export const startBuildServer = async ({
 const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
   return {
     endpoint: "GET *",
-    response: (request) => {
+    response: (request, helpers) => {
       const urlIsVersioned = new URL(request.url).searchParams.has("v");
       if (buildMainFilePath && request.resource === "/") {
         request = {
@@ -174,8 +174,7 @@ const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
         };
       }
       const urlObject = new URL(request.resource.slice(1), buildDirectoryUrl);
-      return fetchFileSystem(urlObject, {
-        headers: request.headers,
+      return createFileSystemRequestHandler(buildDirectoryUrl, {
         cacheControl: urlIsVersioned
           ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
           : "private,max-age=0,must-revalidate",
@@ -192,7 +191,7 @@ const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
           }
           return null;
         },
-      });
+      })(request, helpers);
     },
   };
 };

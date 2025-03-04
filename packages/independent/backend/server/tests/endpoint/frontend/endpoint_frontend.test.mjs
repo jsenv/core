@@ -8,7 +8,7 @@
  */
 
 import { replaceFileStructureSync, writeFileSync } from "@jsenv/filesystem";
-import { fetchFileSystem, startServer } from "@jsenv/server";
+import { createFileSystemRequestHandler, startServer } from "@jsenv/server";
 import { chromium } from "playwright";
 
 let debug = false;
@@ -19,14 +19,7 @@ const frontendServer = await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), clientDirectoryUrl),
-          {
-            headers: request.headers,
-          },
-        );
-      },
+      response: createFileSystemRequestHandler(clientDirectoryUrl),
     },
   ],
 });

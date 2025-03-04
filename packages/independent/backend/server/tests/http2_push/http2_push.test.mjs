@@ -1,7 +1,7 @@
 // https://nodejs.org/dist/latest-v16.x/docs/api/http2.html#server-side-example
 import { requestCertificate } from "@jsenv/https-local";
 import {
-  fetchFileSystem,
+  createFileSystemRequestHandler,
   jsenvServiceErrorHandler,
   startServer,
 } from "@jsenv/server";
@@ -27,18 +27,14 @@ const run = async () => {
     routes: [
       {
         endpoint: "GET *",
-        response: (request, { pushResponse }) => {
+        response: (request, helpers) => {
           if (request.pathname === "/main.html") {
-            pushResponse({ path: "/script.js" });
-            pushResponse({ path: "/style.css" });
+            helpers.pushResponse({ path: "/script.js" });
+            helpers.pushResponse({ path: "/style.css" });
           }
-          return fetchFileSystem(
-            new URL(request.resource.slice(1), import.meta.url),
-            {
-              headers: request.headers,
-              canReadDirectory: true,
-            },
-          );
+          return createFileSystemRequestHandler(import.meta.resolve("./"), {
+            canReadDirectory: true,
+          })(request, helpers);
         },
       },
     ],

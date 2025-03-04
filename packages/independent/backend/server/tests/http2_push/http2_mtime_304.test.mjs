@@ -1,5 +1,5 @@
 import { requestCertificate } from "@jsenv/https-local";
-import { fetchFileSystem, startServer } from "@jsenv/server";
+import { createFileSystemRequestHandler, startServer } from "@jsenv/server";
 import { snapshotTests } from "@jsenv/snapshot";
 import { connect } from "node:http2";
 
@@ -18,19 +18,15 @@ const run = async () => {
     routes: [
       {
         endpoint: "GET *",
-        response: (request, { pushResponse }) => {
+        response: (request, helpers) => {
           if (request.pathname === "/main.html") {
-            pushResponse({ path: "/script.js" });
-            pushResponse({ path: "/style.css" });
+            helpers.pushResponse({ path: "/script.js" });
+            helpers.pushResponse({ path: "/style.css" });
           }
-          return fetchFileSystem(
-            new URL(request.resource.slice(1), import.meta.url),
-            {
-              headers: request.headers,
-              canReadDirectory: true,
-              mtimeEnabled: true,
-            },
-          );
+          return createFileSystemRequestHandler(import.meta.resolve("./"), {
+            canReadDirectory: true,
+            mtimeEnabled: true,
+          })(request, helpers);
         },
       },
     ],

@@ -20,12 +20,7 @@ await startServer({
         };
       },
       endpoint: "GET *",
-      response: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          request,
-        );
-      },
+      response: createFileSystemRequestHandler(import.meta.resolve("./")),
     },
   ],
 });

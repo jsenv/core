@@ -1,7 +1,6 @@
 import { requestCertificate } from "@jsenv/https-local";
-
 import {
-  fetchFileSystem,
+  createFileSystemRequestHandler,
   jsenvAccessControlAllowedHeaders,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
@@ -29,21 +28,19 @@ await startServer({
     jsenvServiceErrorHandler({
       sendErrorDetails: true,
     }),
+  ],
+  routes: [
     {
-      handleRequest: (request, { pushResponse }) => {
+      endpoint: "GET *",
+      response: (request, helpers) => {
         if (request.pathname === "/main.html") {
-          pushResponse({ path: "/script.js" });
-          pushResponse({ path: "/style.css" });
+          helpers.pushResponse({ path: "/script.js" });
+          helpers.pushResponse({ path: "/style.css" });
         }
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), new URL("./", import.meta.url)),
-          {
-            headers: request.headers,
-            rootDirectoryUrl: new URL("./", import.meta.url),
-            canReadDirectory: true,
-            mtimeEnabled: true,
-          },
-        );
+        return createFileSystemRequestHandler(import.meta.resolve("./"), {
+          canReadDirectory: true,
+          mtimeEnabled: true,
+        })(request, helpers);
       },
     },
   ],

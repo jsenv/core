@@ -81,7 +81,7 @@ _start_server.mjs:_
 
 ```js
 import { requestCertificate } from "@jsenv/https-local";
-import { startServer, fetchFileSystem } from "@jsenv/server";
+import { startServer, createFileSystemRequestHandler } from "@jsenv/server";
 
 const { certificate, privateKey } = requestCertificate();
 await startServer({
@@ -92,49 +92,39 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: (request) => {
-        return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            canReadDirectory: true,
-          },
-        );
-      },
+      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+        canReadDirectory: true,
+      }),
     },
   ],
 });
 ```
 
-The following diff shows how http2 push can be added to the server:
+The following shows how http2 push can be added to the server:
 
-```diff
-import { requestCertificate } from "@jsenv/https-local"
-import { startServer, fetchFileSystem } from "@jsenv/server"
+```js
+import { requestCertificate } from "@jsenv/https-local";
+import { startServer, createFileSystemRequestHandler } from "@jsenv/server";
 
-const { certificate, privateKey } = requestCertificate()
+const { certificate, privateKey } = requestCertificate();
 await startServer({
   logLevel: "info",
   https: { certificate, privateKey },
   port: 3679,
   routes: [
     {
-      endpoint: "GET *",
--     response: (request) => {
-+     response: (request, { pushResponse }) => {
-+       if (request.resource === "/main.html") {
-+       pushResponse({ path: "/script.js" })
-+       pushResponse({ path: "/style.css" })
-+     }
-      return fetchFileSystem(
-          new URL(request.resource.slice(1), import.meta.url),
-          {
-            headers: request.headers,
-            canReadDirectory: true,
-          },
-        )
+      endpoint: "GET /main.html",
+      response: (request, helpers) => {
+        helpers.pushResponse({ path: "/script.js" });
+        helpers.pushResponse({ path: "/style.css" });
       },
     },
+    {
+      endpoint: "GET *",
+      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+        canReadDirectory: true,
+      }),
+    },
   ],
-})
+});
 ```

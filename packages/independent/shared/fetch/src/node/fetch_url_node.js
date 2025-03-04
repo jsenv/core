@@ -1,6 +1,6 @@
 // https://github.com/node-fetch/node-fetch/blob/8c197f8982a238b3c345c64b17bfa92e16b4f7c4/src/response.js#L1
 
-import { fetchFileSystem } from "@jsenv/server";
+import { createFileSystemRequestHandler } from "@jsenv/server";
 import {
   fileHandleToReadableStream,
   isFileHandle,
@@ -31,16 +31,23 @@ export const fetchUrl = async (
   }
 
   if (url.startsWith("file://")) {
-    const responseProperties = await fetchFileSystem(url, {
-      signal,
-      method,
-      headers,
-      rootDirectoryUrl: "file://",
+    const responseProperties = await createFileSystemRequestHandler("file://", {
       cacheStrategy,
       canReadDirectory,
       contentTypeMap,
-      ...rest,
-    });
+    })(
+      {
+        signal,
+        method,
+        headers,
+        resource: new URL(url).pathname,
+      },
+      {
+        timing: () => {
+          return { end: () => {} };
+        },
+      },
+    );
     const responseBody = responseProperties.body;
 
     const response = new Response(
