@@ -34,12 +34,16 @@ export const createObservable = (producer) => {
       const teardownCallbackList = [];
       const close = () => {
         subscription.active = false;
-        let i = 0;
+        let i = teardownCallbackList.length;
         while (i--) {
           teardownCallbackList[i]();
         }
         teardownCallbackList.length = 0;
       };
+
+      signal.addEventListener("abort", () => {
+        close();
+      });
 
       const producerReturnValue = producer({
         next: (value) => {
@@ -128,7 +132,13 @@ export const createCompositeProducer = ({ cleanup = () => {} } = {}) => {
         complete();
       }
     };
-    addTeardown(cleanup);
+    addTeardown(() => {
+      for (const [, abort] of abortMap) {
+        abort();
+      }
+      abortMap.clear();
+      cleanup();
+    });
 
     const abortMap = new Map();
     const observe = (observable) => {

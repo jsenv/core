@@ -8,11 +8,13 @@ const room = createSSERoom({
   maxClientAllowed: 1,
 });
 const server = await startServer({
+  // logLevel: "debug",
   logLevel: "warn",
   keepProcessAlive: false,
-  services: [
+  routes: [
     {
-      handleRequest: (request) => {
+      endpoint: "GET *",
+      response: (request) => {
         return room.join(request);
       },
     },

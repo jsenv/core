@@ -62,6 +62,9 @@ export const writeNodeResponse = async (
   await new Promise((resolve) => {
     const observable = observableFromValue(body);
     const abortController = new AbortController();
+    signal.addEventListener("abort", () => {
+      abortController.abort();
+    });
     observable.subscribe(
       {
         next: (data) => {
