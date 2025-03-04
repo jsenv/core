@@ -36,13 +36,13 @@ export const fetchFileSystem = async (
 ) => {
   let directoryUrlString = asUrlString(directoryUrl);
   if (!directoryUrlString) {
-    return create500Response(
-      `directoryUrlString must be a string or an url, got ${directoryUrlString}`,
+    throw new TypeError(
+      `directoryUrl must be a string or an url, got ${directoryUrl}`,
     );
   }
   if (!directoryUrlString.startsWith("file://")) {
-    return create500Response(
-      `directoryUrlString must start with "file://", got ${directoryUrlString}`,
+    throw new Error(
+      `directoryUrl must start with "file://", got ${directoryUrlString}`,
     );
   }
   if (!directoryUrlString.endsWith("/")) {
@@ -180,17 +180,6 @@ export const fetchFileSystem = async (
   };
 
   return serveFile(`file://${new URL(urlString).pathname}`);
-};
-
-const create500Response = (message) => {
-  return {
-    status: 500,
-    headers: {
-      "content-type": "text/plain",
-      "content-length": Buffer.byteLength(message),
-    },
-    body: message,
-  };
 };
 
 const getClientCacheResponse = async ({

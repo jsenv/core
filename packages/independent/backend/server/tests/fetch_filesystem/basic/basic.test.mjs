@@ -192,12 +192,12 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
   writeFileStructureSync(gitIgnoredDirectoryUrl, {});
   const fileUrl = new URL("./file.js", gitIgnoredDirectoryUrl).href;
   const fileBuffer = Buffer.from(`const a = true`);
-
   writeFileSync(fileUrl, fileBuffer);
   const response = await fetchFileSystem(
     {
       method: "GET",
       resource: "/file.js",
+      headers: {},
     },
     null,
     gitIgnoredDirectoryUrl,
@@ -338,36 +338,32 @@ const gitIgnoredDirectoryUrl = import.meta.resolve("./git_ignored/");
 }
 
 // directory url missing
-{
-  const actual = await fetchFileSystem({});
-  const expect = {
-    status: 500,
-    headers: {
-      "content-type": "text/plain",
-      "content-length": actual.headers["content-length"],
-    },
-    body: `fetchFileSystem directory url must be a file url, got undefined`,
-  };
+try {
+  await fetchFileSystem({});
+  throw new Error("should throw");
+} catch (e) {
+  const actual = e;
+  const expect = new TypeError(
+    `directoryUrl must be a string or an url, got undefined`,
+  );
   assert({ actual, expect });
 }
 
 // directory url starts with http
-{
-  const actual = await fetchFileSystem(
+try {
+  await fetchFileSystem(
     {
       resource: "/toto.js",
     },
     null,
     "https://example.com/file.js",
   );
-  const expect = {
-    status: 500,
-    headers: {
-      "content-type": "text/plain",
-      "content-length": actual.headers["content-length"],
-    },
-    body: `fetchFileSystem directory url must use "file://" scheme, got https://example.com/file.js`,
-  };
+  throw new Error("should throw");
+} catch (e) {
+  const actual = e;
+  const expect = new Error(
+    `directoryUrl must start with "file://", got https://example.com/file.js`,
+  );
   assert({ actual, expect });
 }
 
