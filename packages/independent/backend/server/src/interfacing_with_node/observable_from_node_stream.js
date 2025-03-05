@@ -57,6 +57,7 @@ export const observableFromNodeStream = (
     onceReadableStreamUsedOrClosed(nodeStream, () => {
       clearTimeout(timeout);
     });
+    observable.timeout = timeout;
   }
 
   return observable;

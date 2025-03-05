@@ -438,9 +438,61 @@ export const startServer = async ({
       ).unref();
     }
 
-    let errorWhileHandlingRequest = null;
-    let handleRequestResult;
     let headersToInject;
+    const finalizeResponseProperties = (responseProperties) => {
+      if (serverTiming) {
+        startRespondingTiming.end();
+        responseProperties.headers = composeTwoHeaders(
+          responseProperties.headers,
+          timingToServerTimingResponseHeaders(timings),
+        );
+      }
+      if (requestWaitingMs) {
+        clearTimeout(requestWaitingTimeout);
+      }
+      if (
+        request.method !== "HEAD" &&
+        responseProperties.headers["content-length"] > 0 &&
+        !responseProperties.body
+      ) {
+        request.logger.warn(
+          `content-length response header found without body`,
+        );
+      }
+
+      if (headersToInject) {
+        responseProperties.headers = composeTwoHeaders(
+          responseProperties.headers,
+          headersToInject,
+        );
+      }
+      serviceController.callHooks(
+        "injectResponseHeaders",
+        request,
+        responseProperties,
+        (returnValue) => {
+          if (returnValue) {
+            responseProperties.headers = composeTwoHeaders(
+              responseProperties.headers,
+              returnValue,
+            );
+          }
+        },
+      );
+      serviceController.callHooks("responseReady", responseProperties, {
+        request,
+      });
+      // the node request readable stream is never closed because
+      // the response headers contains "connection: keep-alive"
+      // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
+      if (
+        responseProperties.headers.connection === "keep-alive" &&
+        request.body
+      ) {
+        clearTimeout(request.body.timeout);
+      }
+      return responseProperties;
+    };
 
     let timeout;
     try {
@@ -459,7 +511,6 @@ export const startServer = async ({
           });
         }, responseTimeout);
       });
-
       const routerMatchPromise = router.match(request, {
         timing,
         pushResponse,
@@ -470,165 +521,77 @@ export const startServer = async ({
           headersToInject[name] = value;
         },
       });
-      handleRequestResult = await Promise.race([
+      const handleRequestResult = await Promise.race([
         timeoutPromise,
         routerMatchPromise,
       ]);
-    } catch (e) {
-      errorWhileHandlingRequest = e;
-    }
-    clearTimeout(timeout);
-
-    let responseProperties;
-    if (errorWhileHandlingRequest) {
-      if (
-        errorWhileHandlingRequest.name === "AbortError" &&
-        request.signal.aborted
-      ) {
-        responseProperties = { requestAborted: true };
-      } else {
-        // internal error, create 500 response
-        if (
-          // stopOnInternalError stops server only if requestToResponse generated
-          // a non controlled error (internal error).
-          // if requestToResponse gracefully produced a 500 response (it did not throw)
-          // then we can assume we are still in control of what we are doing
-          stopOnInternalError
-        ) {
-          // il faudrais pouvoir stop que les autres response ?
-          stop(STOP_REASON_INTERNAL_ERROR);
-        }
-        const handleErrorReturnValue =
-          await serviceController.callAsyncHooksUntil(
-            "handleError",
-            errorWhileHandlingRequest,
-            { request },
-          );
-        if (!handleErrorReturnValue) {
-          throw errorWhileHandlingRequest;
-        }
-        request.logger.error(
-          createDetailedMessage(`internal error while handling request`, {
-            "error stack": errorWhileHandlingRequest.stack,
-          }),
-        );
-        responseProperties = composeTwoResponses(
-          {
-            status: 500,
-            statusText: "Internal Server Error",
-            headers: {
-              // ensure error are not cached
-              "cache-control": "no-store",
-              "content-type": "text/plain",
-            },
-          },
-          handleErrorReturnValue,
-        );
-      }
-    } else {
-      let status;
-      let statusText;
-      let statusMessage;
-      let headers;
-      let body;
-
-      // export const fromFetchResponse = (fetchResponse) => {
-      //   const responseHeaders = {};
-      //   const headersToIgnore = ["connection"];
-      //   fetchResponse.headers.forEach((value, name) => {
-      //     if (!headersToIgnore.includes(name)) {
-      //       responseHeaders[name] = value;
-      //     }
-      //   });
-      //   return {
-      //     status: fetchResponse.status,
-      //     statusText: fetchResponse.statusText,
-      //     headers: responseHeaders,
-      //     body: fetchResponse.body, // node-fetch assumed
-      //   };
-      // };
+      clearTimeout(timeout);
 
       if (handleRequestResult instanceof Response) {
-        status = handleRequestResult.status;
-        statusText = handleRequestResult.statusText;
-        headers = {};
-        for (const [name, value] of handleRequestResult.headers) {
-          headers[name] = value;
-        }
-        body = handleRequestResult.body;
-      } else if (
+        return finalizeResponseProperties({
+          status: handleRequestResult.status,
+          statusText: handleRequestResult.statusText,
+          headers: Object.fromEntries(handleRequestResult.headers.entries()),
+          body: handleRequestResult.body,
+        });
+      }
+      if (
         handleRequestResult !== null &&
         typeof handleRequestResult === "object"
       ) {
-        status = handleRequestResult.status;
-        statusText = handleRequestResult.statusText;
-        statusMessage = handleRequestResult.statusMessage;
-        headers = handleRequestResult.headers;
-        body = handleRequestResult.body;
-        if (status === undefined) {
-          status = 404;
-        }
-        if (headers === undefined) {
-          headers = {};
-        }
-      } else {
-        throw new TypeError(
-          `response must be a Response, or an Object, received ${handleRequestResult}`,
-        );
+        return finalizeResponseProperties({
+          status: handleRequestResult.status || 404,
+          statusText: handleRequestResult.statusText,
+          statusMessage: handleRequestResult.statusMessage,
+          headers: handleRequestResult.headers || {},
+          body: handleRequestResult.body,
+        });
       }
-      responseProperties = {
-        status,
-        statusText,
-        statusMessage,
-        headers,
-        body,
-      };
-    }
-
-    if (serverTiming) {
-      startRespondingTiming.end();
-      if (responseProperties.timing) {
-        Object.assign(timings, responseProperties.timing);
+      throw new TypeError(
+        `response must be a Response, or an Object, received ${handleRequestResult}`,
+      );
+    } catch (e) {
+      clearTimeout(timeout);
+      if (e.name === "AbortError" && request.signal.aborted) {
+        // let it propagate to the caller that should catch this
+        throw e;
       }
-      responseProperties.headers = composeTwoHeaders(
-        responseProperties.headers,
-        timingToServerTimingResponseHeaders(timings),
+      // internal error, create 500 response
+      if (
+        // stopOnInternalError stops server only if requestToResponse generated
+        // a non controlled error (internal error).
+        // if requestToResponse gracefully produced a 500 response (it did not throw)
+        // then we can assume we are still in control of what we are doing
+        stopOnInternalError
+      ) {
+        // il faudrais pouvoir stop que les autres response ?
+        stop(STOP_REASON_INTERNAL_ERROR);
+      }
+      const handleErrorReturnValue =
+        await serviceController.callAsyncHooksUntil("handleError", e, {
+          request,
+        });
+      if (!handleErrorReturnValue) {
+        throw e;
+      }
+      request.logger.error(
+        createDetailedMessage(`internal error while handling request`, {
+          "error stack": e.stack,
+        }),
       );
-    }
-    if (requestWaitingMs) {
-      clearTimeout(requestWaitingTimeout);
-    }
-    if (
-      request.method !== "HEAD" &&
-      responseProperties.headers["content-length"] > 0 &&
-      !responseProperties.body
-    ) {
-      request.logger.warn(`content-length response header found without body`);
-    }
-
-    if (headersToInject) {
-      responseProperties.headers = composeTwoHeaders(
-        responseProperties.headers,
-        headersToInject,
+      const responseProperties = composeTwoResponses(
+        {
+          status: 500,
+          statusText: "Internal Server Error",
+          headers: {
+            // ensure error are not cached
+            "cache-control": "no-store",
+          },
+        },
+        handleErrorReturnValue,
       );
+      return finalizeResponseProperties(responseProperties);
     }
-    serviceController.callHooks(
-      "injectResponseHeaders",
-      request,
-      responseProperties,
-      (returnValue) => {
-        if (returnValue) {
-          responseProperties.headers = composeTwoHeaders(
-            responseProperties.headers,
-            returnValue,
-          );
-        }
-      },
-    );
-    serviceController.callHooks("responseReady", responseProperties, {
-      request,
-    });
-    return responseProperties;
   };
 
   request: {
@@ -875,12 +838,6 @@ export const startServer = async ({
         nodeRequest.resume();
         if (receiveRequestOperation.signal.aborted) {
           return;
-        }
-        // the node request readable stream is never closed because
-        // the response headers contains "connection: keep-alive"
-        // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
-        if (responseProperties.headers.connection === "keep-alive") {
-          clearTimeout(request.body.timeout);
         }
         await sendResponse(nodeResponse, responseProperties, {
           signal: sendResponseOperation.signal,
