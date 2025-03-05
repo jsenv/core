@@ -129,27 +129,13 @@ export const createRoute = ({
   return route;
 };
 
-export const createRouter = ({ optionsFallback } = {}) => {
+export const createRouter = (
+  routeDescriptionArray,
+  { optionsFallback } = {},
+) => {
   const routeSet = new Set();
-  const fallbackRouteSet = new Set();
 
-  const getAllRouteSet = (request, helpers) => {
-    const allRouteSet = new Set();
-    for (const route of routeSet) {
-      if (route.subroutes) {
-        const subroutes = route.subroutes(request, helpers);
-        for (const subroute of subroutes) {
-          allRouteSet.add(subroute);
-        }
-      }
-      allRouteSet.add(route);
-    }
-    for (const fallbackRoute of fallbackRouteSet) {
-      allRouteSet.add(fallbackRoute);
-    }
-    return allRouteSet;
-  };
-  const constructAvailableEndpoints = (request, helpers) => {
+  const constructAvailableEndpoints = () => {
     // TODO: memoize
     // TODO: construct only if the route is visible to that client
     const availableEndpoints = [];
@@ -163,8 +149,7 @@ export const createRouter = ({ optionsFallback } = {}) => {
       };
     };
 
-    const allRouteSet = getAllRouteSet(request, helpers);
-    for (const route of allRouteSet) {
+    for (const route of routeSet) {
       const endpointResource = route.resourcePattern.generateExample();
       if (route.method === "*") {
         for (const HTTP_METHOD of HTTP_METHODS) {
@@ -241,10 +226,9 @@ export const createRouter = ({ optionsFallback } = {}) => {
       onMethodAllowed(supportedMethod);
     }
   };
-  const inferResourceOPTIONS = (request, helpers) => {
+  const inferResourceOPTIONS = (request) => {
     const resourceOptions = createResourceOptions();
-    const allRouteSet = getAllRouteSet(request, helpers);
-    for (const route of allRouteSet) {
+    for (const route of routeSet) {
       if (!route.matchResource(request.resource)) {
         continue;
       }
@@ -265,12 +249,11 @@ export const createRouter = ({ optionsFallback } = {}) => {
     }
     return resourceOptions;
   };
-  const inferServerOPTIONS = (request, helpers) => {
+  const inferServerOPTIONS = () => {
     const serverOptions = createResourceOptions();
     const resourceOptionsMap = new Map();
-    const allRouteSet = getAllRouteSet(request, helpers);
 
-    for (const route of allRouteSet) {
+    for (const route of routeSet) {
       const routeResource = route.resource;
       let resourceOptions = resourceOptionsMap.get(routeResource);
       if (!resourceOptions) {
@@ -289,18 +272,17 @@ export const createRouter = ({ optionsFallback } = {}) => {
   };
 
   const router = {};
-
-  const append = (route) => {
-    if (route.isFallback) {
-      fallbackRouteSet.add(route);
-    } else {
-      routeSet.add(route);
+  for (const routeDescription of routeDescriptionArray) {
+    const route = createRoute(routeDescription);
+    if (route.subroutes) {
+      const subroutes = route.subroutes();
+      for (const subroute of subroutes) {
+        routeSet.add(subroute);
+      }
     }
-  };
-  const add = (params) => {
-    const route = createRoute(params);
-    append(route);
-  };
+    routeSet.add(route);
+  }
+
   const match = async (
     request,
     { pushResponse, injectResponseHeader, timing } = {},
@@ -340,8 +322,7 @@ export const createRouter = ({ optionsFallback } = {}) => {
     };
 
     const helpers = { timing, pushResponse, contentNegotiation: null };
-    const allRouteSet = getAllRouteSet(request, helpers);
-    for (const route of allRouteSet) {
+    for (const route of routeSet) {
       onRouteMatchStart(route);
       const resourceMatchResult = route.matchResource(request.resource);
       if (!resourceMatchResult) {
@@ -541,18 +522,17 @@ export const createRouter = ({ optionsFallback } = {}) => {
     const availableEndpoints = constructAvailableEndpoints(request, { timing });
     return createRouteNotFoundResponse(request, { availableEndpoints });
   };
-  const inspect = (request, helpers) => {
+  const inspect = () => {
     // I want all the info I can gather about the routes
     const data = [];
-    const allRouteSet = getAllRouteSet(request, helpers);
-    for (const route of allRouteSet) {
+    for (const route of routeSet) {
       data.push(route.toJSON());
     }
     return data;
   };
 
   if (optionsFallback) {
-    add({
+    const optionRouteFallback = createRoute({
       endpoint: "OPTIONS *",
       description:
         "Auto generate an OPTIONS response about a resource or the whole server.",
@@ -567,15 +547,12 @@ export const createRouter = ({ optionsFallback } = {}) => {
       },
       isFallback: true,
     });
+    routeSet.add(optionRouteFallback);
   }
 
   Object.assign(router, {
-    add,
     match,
     inspect,
-
-    createRoute,
-    append,
   });
   return router;
 };

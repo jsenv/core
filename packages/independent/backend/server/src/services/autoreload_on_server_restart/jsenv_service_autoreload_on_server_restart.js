@@ -1,7 +1,6 @@
-import { createObservableBody } from "../../interfacing_with_node/observable_body.js";
-import { createSSERoom } from "../../sse/sse_room.js";
+import { ServerEventSource } from "../../server_event_source/server_event_source.js";
 
-const aliveRoom = createSSERoom();
+const aliveServerEventSource = new ServerEventSource();
 
 export const jsenvServiceAutoreloadOnRestart = () => {
   return {
@@ -22,19 +21,8 @@ export const jsenvServiceAutoreloadOnRestart = () => {
             window.location.reload();
           };
         },
-        /* eslint-enable no-undef */
-        websocket: () => {
-          return {
-            opened: (websocket) => {
-              websocket.send("Hello world!");
-              websocket.onmessage = () => {
-                console.log("websocket message");
-              };
-              return () => {
-                console.log("websocket closed");
-              };
-            },
-          };
+        fetch: (request) => {
+          return aliveServerEventSource.fetch(request);
         },
       },
       {
@@ -50,8 +38,8 @@ This endpoint exists mostly to demo eventsource as there is already the websocke
           };
         },
         /* eslint-enable no-undef */
-        response: (request) => {
-          return aliveRoom.join(request);
+        fetch: (request) => {
+          return aliveServerEventSource.fetch(request);
         },
       },
       {
@@ -65,16 +53,8 @@ This endpoint exists mostly to demo longpolling as there is already the websocke
           window.location.reload();
         },
         /* eslint-enable no-undef */
-        response: () => {
-          return {
-            status: 200,
-            headers: {
-              "content-type": "text/plain",
-            },
-            body: createObservableBody({
-              opened: () => "",
-            }),
-          };
+        fetch: (request) => {
+          return aliveServerEventSource.fetch(request);
         },
       },
     ],

@@ -1,14 +1,13 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
 import { startServer } from "@jsenv/server";
-import { headersToObject } from "@jsenv/server/src/internal/headersToObject.js";
 
 const apiServer = await startServer({
   logLevel: "warn",
   routes: [
     {
       endpoint: "GET /",
-      response: () => new Response("Hello world"),
+      fetch: () => new Response("Hello world"),
     },
   ],
   keepProcessAlive: false,
@@ -18,7 +17,7 @@ const actual = {
   url: response.url,
   status: response.status,
   statusText: response.statusText,
-  headers: headersToObject(response.headers),
+  headers: Object.fromEntries(response.headers),
   body: await response.text(),
 };
 const expect = {

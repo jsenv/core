@@ -149,10 +149,24 @@ export const startServer = async ({
     }
   }
 
-  const server = {};
-  const router = createRouter({
+  const allRouteArray = [];
+  for (const route of routes) {
+    allRouteArray.push(route);
+  }
+  for (const service of services) {
+    const serviceRoutes = service.routes;
+    if (serviceRoutes) {
+      for (const serviceRoute of serviceRoutes) {
+        serviceRoute.service = service;
+        allRouteArray.push(serviceRoute);
+      }
+    }
+  }
+  const router = createRouter(allRouteArray, {
     optionsFallback: true,
   });
+
+  const server = {};
 
   services = [
     jsenvServiceRouteInspector(router),
@@ -163,18 +177,6 @@ export const startServer = async ({
     jsenvServiceAutoreloadOnRestart(),
     ...flattenAndFilterServices(services),
   ];
-  for (const route of routes) {
-    router.add(route);
-  }
-  for (const service of services) {
-    const serviceRoutes = service.routes;
-    if (serviceRoutes) {
-      for (const serviceRoute of serviceRoutes) {
-        serviceRoute.service = service;
-        router.add(serviceRoute);
-      }
-    }
-  }
 
   const serviceController = createServiceController(services);
   const processTeardownEvents = {
