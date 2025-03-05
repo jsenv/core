@@ -1,3 +1,5 @@
+import { pathnameToExtension } from "./internal/pathname_to_extension.js";
+
 export const resourceToParts = (resource) => {
   const searchSeparatorIndex = resource.indexOf("?");
   if (searchSeparatorIndex === -1) {
@@ -37,4 +39,9 @@ export const resourceToPathname = (resource) => {
     return resource.slice(0, hashIndex);
   }
   return resource;
+};
+
+export const resourceToExtension = (resource) => {
+  const pathname = resourceToPathname(resource);
+  return pathnameToExtension(pathname);
 };

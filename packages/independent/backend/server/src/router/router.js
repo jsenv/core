@@ -2,6 +2,7 @@ import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
 import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
 import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
 import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
+import { resourceToExtension } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 import { pickContentEncoding } from "../content_negotiation/pick_content_encoding.js";
 import { pickContentLanguage } from "../content_negotiation/pick_content_language.js";
@@ -47,7 +48,6 @@ export const createRoute = ({
   availableEncodings = [],
   acceptedContentTypes = [], // useful only for POST/PATCH/PUT
   response,
-  websocket,
   clientCodeExample,
   isFallback,
   subroutes,
@@ -62,17 +62,15 @@ export const createRoute = ({
   if (resource[0] !== "/" && resource[0] !== "*") {
     throw new TypeError(`resource must start with /, received ${resource}`);
   }
-  if (websocket) {
-    if (typeof websocket !== "function") {
-      throw new TypeError(
-        `websocket must be a function, received ${websocket}`,
-      );
-    }
-  } else if (typeof response !== "function") {
+  if (typeof response !== "function") {
     throw new TypeError(`response must be a function, received ${response}`);
   }
   const resourcePattern = createResourcePattern(resource);
   const headersPattern = headers ? createHeadersPattern(headers) : null;
+
+  const isForWebSocket =
+    (headers && headers["upgrade"] === "websocket") ||
+    resourceToExtension(resource) === ".websocket";
 
   const route = {
     method,
@@ -99,7 +97,6 @@ export const createRoute = ({
             return headersPattern.match(requestHeaders);
           },
     response,
-    websocket,
     toString: () => {
       return `${method} ${resource}`;
     },
@@ -113,7 +110,7 @@ export const createRoute = ({
         availableVersions,
         availableEncodings,
         acceptedContentTypes,
-        websocket: Boolean(websocket),
+        isForWebSocket,
         clientCodeExample:
           typeof clientCodeExample === "function"
             ? parseFunction(clientCodeExample).body
@@ -123,6 +120,7 @@ export const createRoute = ({
       };
     },
     resourcePattern,
+    isForWebSocket,
     isFallback,
     subroutes,
   };
@@ -290,14 +288,9 @@ export const createRouter = ({ optionsFallback } = {}) => {
     };
   };
 
-  const router = {
-    hasSomeWebsocketRoute: false,
-  };
+  const router = {};
 
   const append = (route) => {
-    if (route.websocket) {
-      router.hasSomeWebsocketRoute = true;
-    }
     if (route.isFallback) {
       fallbackRouteSet.add(route);
     } else {
@@ -311,7 +304,7 @@ export const createRouter = ({ optionsFallback } = {}) => {
   };
   const match = async (
     request,
-    { pushResponse, injectResponseHeader, connectSocket, timing } = {},
+    { pushResponse, injectResponseHeader, timing } = {},
   ) => {
     const wouldHaveMatched = {
       // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
@@ -321,7 +314,7 @@ export const createRouter = ({ optionsFallback } = {}) => {
       responseLanguageSet: new Set(),
       responseVersionSet: new Set(),
       responseEncodingSet: new Set(),
-      websocket: false,
+      upgrade: false,
     };
 
     let currentService;
@@ -355,7 +348,7 @@ export const createRouter = ({ optionsFallback } = {}) => {
       if (!resourceMatchResult) {
         continue;
       }
-      if (request.headers["upgrade"] === "websocket" && !route.websocket) {
+      if (request.headers["upgrade"] === "websocket" && !route.isForWebSocket) {
         continue;
       }
       if (!route.matchMethod(request.method)) {
@@ -384,8 +377,8 @@ export const createRouter = ({ optionsFallback } = {}) => {
       if (!headersMatchResult) {
         continue;
       }
-      if (route.websocket && request.headers["upgrade"] !== "websocket") {
-        wouldHaveMatched.websocket = true;
+      if (route.isForWebSocket && request.headers["upgrade"] !== "websocket") {
+        wouldHaveMatched.upgrade = true;
         continue;
       }
       // now we are "good", let's try to generate a response
@@ -482,63 +475,32 @@ export const createRouter = ({ optionsFallback } = {}) => {
       );
       Object.assign(request.params, named, stars);
       helpers.contentNegotiation = contentNegotiationResult;
-      websocket_request: {
-        if (route.websocket) {
-          let websocketReturnValue = await route.websocket(request, {
-            contentNegotiation: contentNegotiationResult, // not sure we ever need this but let's pass it for now
-          });
-          if (
-            websocketReturnValue !== null &&
-            typeof websocketReturnValue === "object" &&
-            typeof websocketReturnValue.then === "function"
-          ) {
-            websocketReturnValue = await websocketReturnValue;
-          }
-          if (
-            websocketReturnValue === null ||
-            websocketReturnValue === undefined
-          ) {
-            // route decided not to handle in the end
-            continue;
-          }
-          onRouteMatch(route);
-          const { opened } = websocketReturnValue;
-          const websocket = await connectSocket();
-          const openReturnValue = opened(websocket);
-          if (typeof openReturnValue === "function") {
-            websocket.once("close", openReturnValue);
-          }
-          return true;
-        }
+      let responseReturnValue = route.response(request, helpers);
+      if (
+        responseReturnValue !== null &&
+        typeof responseReturnValue === "object" &&
+        typeof responseReturnValue.then === "function"
+      ) {
+        responseReturnValue = await responseReturnValue;
       }
-      regular_request: {
-        let responseReturnValue = route.response(request, helpers);
-        if (
-          responseReturnValue !== null &&
-          typeof responseReturnValue === "object" &&
-          typeof responseReturnValue.then === "function"
-        ) {
-          responseReturnValue = await responseReturnValue;
-        }
-        // route decided not to handle in the end
-        if (responseReturnValue === null || responseReturnValue === undefined) {
-          continue;
-        }
-        if (contentNegotiationResult.contentType) {
-          injectResponseHeader("vary", "accept");
-        }
-        if (contentNegotiationResult.contentLanguage) {
-          injectResponseHeader("vary", "accept-language");
-        }
-        if (contentNegotiationResult.contentEncoding) {
-          injectResponseHeader("vary", "accept-encoding");
-        }
-        onRouteMatch(route);
-        // TODO: check response headers to warn if headers[content-version] is missing
-        // when a route set availableVersions for example
-        // same for language, content type, etc
-        return responseReturnValue;
+      // route decided not to handle in the end
+      if (responseReturnValue === null || responseReturnValue === undefined) {
+        continue;
       }
+      if (contentNegotiationResult.contentType) {
+        injectResponseHeader("vary", "accept");
+      }
+      if (contentNegotiationResult.contentLanguage) {
+        injectResponseHeader("vary", "accept-language");
+      }
+      if (contentNegotiationResult.contentEncoding) {
+        injectResponseHeader("vary", "accept-encoding");
+      }
+      onRouteMatch(route);
+      // TODO: check response headers to warn if headers[content-version] is missing
+      // when a route set availableVersions for example
+      // same for language, content type, etc
+      return responseReturnValue;
     }
     // nothing has matched fully
     // if nothing matches at all we'll send 404
@@ -565,13 +527,13 @@ export const createRouter = ({ optionsFallback } = {}) => {
         availableEncodings: [...wouldHaveMatched.responseEncodingSet],
       });
     }
-    if (wouldHaveMatched.websocket) {
+    if (wouldHaveMatched.upgrade) {
       return createClientErrorResponse(request, {
         status: 426,
         statusText: "Upgrade Required",
         message: {
-          text: `The request requires the upgrade to a websocket connection`,
-          html: `The request requires the upgrade to a websocket connection`,
+          text: `The request requires the upgrade to a webSocket connection`,
+          html: `The request requires the upgrade to a webSocket connection`,
         },
       });
     }
