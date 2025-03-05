@@ -15,7 +15,14 @@
  */
 
 export class WebSocketResponse {
-  constructor(webSocketHandler, { status, statusText, headers } = {}) {
+  constructor(
+    webSocketHandler,
+    {
+      status = 101,
+      statusText = status === 101 ? "Switching Protocols" : undefined,
+      headers,
+    } = {},
+  ) {
     const webSocketHandlerAsBody = {
       [webSocketHandlerAsBodySymbol]: true,
       webSocketHandler,

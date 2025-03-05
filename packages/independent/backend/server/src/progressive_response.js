@@ -2,7 +2,7 @@ import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { createObservable } from "./interfacing_with_node/observable.js";
 
 export class ProgressiveResponse {
-  constructor(responseBodyHandler, { status, statusText, headers } = {}) {
+  constructor(responseBodyHandler, { status = 200, statusText, headers } = {}) {
     const contentType = headers ? headers["content-type"] : "text/plain";
     const progressiveResponse = {
       status,

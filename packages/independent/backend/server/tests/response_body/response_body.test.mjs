@@ -11,7 +11,7 @@ import { promises } from "node:fs";
     routes: [
       {
         endpoint: "GET *",
-        response: async () => {
+        fetch: async () => {
           const response = {
             status: 200,
             headers: { "content-type": "text/plain" },
@@ -38,7 +38,7 @@ import { promises } from "node:fs";
       routes: [
         {
           endpoint: "GET *",
-          response: async () => {
+          fetch: async () => {
             const response = await fetchUrl(server.origin);
             return response;
           },

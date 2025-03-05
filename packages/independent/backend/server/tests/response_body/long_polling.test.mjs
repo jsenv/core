@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert";
-import { createObservableBody, startServer } from "@jsenv/server";
+import { ProgressiveResponse, startServer } from "@jsenv/server";
 
 let _write;
 let _close;
@@ -8,20 +8,18 @@ const apiServer = await startServer({
   routes: [
     {
       endpoint: "GET /",
-      response: () => {
-        return {
-          status: 200,
-          headers: {
-            "content-type": "text/plain",
+      fetch: () => {
+        return new ProgressiveResponse(
+          ({ write, end }) => {
+            _write = write;
+            _close = end;
           },
-          body: createObservableBody({
-            opened: ({ write, close }) => {
-              _write = write;
-              _close = close;
-              return "";
+          {
+            headers: {
+              "content-type": "text/plain",
             },
-          }),
-        };
+          },
+        );
       },
     },
   ],
