@@ -12,7 +12,7 @@ const server = await startServer({
       routes: [
         {
           endpoint: "GET *",
-          response: async (request, { timing }) => {
+          fetch: async (request, { timing }) => {
             const waitTiming = timing("waiting 50ms");
             await new Promise((resolve) => {
               setTimeout(resolve, 50);
@@ -37,14 +37,10 @@ const server = await startServer({
       duration: assert.between(0, 500),
     },
     b: {
-      description: "routing",
-      duration: assert.between(0, 500),
-    },
-    c: {
       description: "toto.routing",
       duration: assert.between(0, 500),
     },
-    d: {
+    c: {
       description: "waiting 50ms",
       duration: assert.between(30, 80),
     },
