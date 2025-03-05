@@ -20,7 +20,7 @@ const server = await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: (request) => {
+      fetch: (request) => {
         return new Response(request.resource);
       },
     },

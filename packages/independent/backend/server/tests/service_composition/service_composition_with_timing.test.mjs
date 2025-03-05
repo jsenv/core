@@ -12,7 +12,7 @@ const server = await startServer({
       routes: [
         {
           endpoint: "GET /",
-          response: () => {
+          fetch: () => {
             return { status: 204 };
           },
         },
@@ -23,7 +23,7 @@ const server = await startServer({
       routes: [
         {
           endpoint: "GET /whatever",
-          response: () => {
+          fetch: () => {
             return { status: 200 };
           },
         },
