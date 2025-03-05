@@ -9,7 +9,7 @@ import { startServer } from "@jsenv/server";
     routes: [
       {
         endpoint: "POST *",
-        response: async (request) => {
+        fetch: async (request) => {
           const requestBody = await request.text();
           return new Response(requestBody.toUpperCase());
         },
@@ -34,7 +34,7 @@ import { startServer } from "@jsenv/server";
     routes: [
       {
         endpoint: "PUT *",
-        response: async (request) => {
+        fetch: async (request) => {
           const requestBody = await request.json();
           return Response.json({ foo: requestBody.foo.toUpperCase() });
         },
@@ -62,7 +62,7 @@ import { startServer } from "@jsenv/server";
     routes: [
       {
         endpoint: "PATCH *",
-        response: async (request) => {
+        fetch: async (request) => {
           const requestBuffer = await request.buffer();
           return new Response(requestBuffer);
         },
@@ -91,7 +91,7 @@ import { startServer } from "@jsenv/server";
     routes: [
       {
         endpoint: "POST *",
-        response: async (request) => {
+        fetch: async (request) => {
           await readPromise;
           const requestBody = await request.text();
           return new Response(requestBody.toUpperCase());

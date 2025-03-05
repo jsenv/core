@@ -7,7 +7,7 @@ const server = await startServer({
   routes: [
     {
       endpoint: "POST *",
-      response: async (request) => {
+      fetch: async (request) => {
         const requestBody = await request.text();
         return new Response(`${requestBody} world`);
       },
