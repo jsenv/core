@@ -27,8 +27,8 @@ export { fetchFileSystem } from "./filesystem/fetch_filesystem.js";
 export { WebSocketResponse } from "./web_socket_response.js";
 // long polling
 export { ProgressiveResponse } from "./progressive_response.js";
-// SSE
-export { createSSERoom } from "./sse/sse_room.js";
+// Server event source (can be used to push events to clients that can be connected with WebSocket, EventSource or long polling)
+export { ServerEventSource } from "./server_event_source/server_event_source.js";
 
 // CORS
 export {
@@ -36,9 +36,6 @@ export {
   jsenvAccessControlAllowedHeaders,
   jsenvAccessControlAllowedMethods,
 } from "./services/cors/jsenv_service_cors.js";
-
-// server timing
-export { timeFunction, timeStart } from "./server_timing/timing_measure.js";
 
 // content-negotiation
 export { pickContentType } from "./content_negotiation/pick_content_type.js";

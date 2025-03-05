@@ -1,5 +1,3 @@
-import { timeStart } from "./server_timing/timing_measure.js";
-
 const HOOK_NAMES = [
   "serverListening",
   "redirectRequest",
@@ -61,15 +59,7 @@ export const createServiceController = (services) => {
     }
     currentService = hook.service;
     currentHookName = hook.name;
-    let timeEnd;
-    if (context && context.timing) {
-      timeEnd = timeStart();
-    }
     let valueReturned = hookFn(info, context);
-    if (context && context.timing) {
-      const serviceHookTimingName = `${currentService.name.replace("jsenv:", "")}.${currentHookName}`;
-      context.timing[serviceHookTimingName] = timeEnd();
-    }
     currentService = null;
     currentHookName = null;
     return valueReturned;
@@ -81,15 +71,7 @@ export const createServiceController = (services) => {
     }
     currentService = hook.service;
     currentHookName = hook.name;
-    let timeEnd;
-    if (context && context.timing) {
-      timeEnd = timeStart();
-    }
     let valueReturned = await hookFn(info, context);
-    if (context && context.timing) {
-      const serviceHookTimingName = `${currentService.name.replace("jsenv:", "")}.${currentHookName}`;
-      context.timing[serviceHookTimingName] = timeEnd();
-    }
     currentService = null;
     currentHookName = null;
     return valueReturned;
