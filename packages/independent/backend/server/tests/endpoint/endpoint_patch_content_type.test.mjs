@@ -26,9 +26,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
   test("0_basic", async () => {
     const routes = [
       {
-        acceptedContentTypes: ["text/plain"],
+        acceptedMediaTypes: ["text/plain"],
         endpoint: "PATCH /",
-        response: async (request) => {
+        fetch: async (request) => {
           const text = await request.text();
           return new Response(text.toUpperCase());
         },

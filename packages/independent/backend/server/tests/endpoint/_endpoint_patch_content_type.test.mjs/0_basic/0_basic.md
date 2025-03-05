@@ -3,9 +3,9 @@
 ```js
 const routes = [
   {
-    acceptedContentTypes: ["text/plain"],
+    acceptedMediaTypes: ["text/plain"],
     endpoint: "PATCH /",
-    response: async (request) => {
+    fetch: async (request) => {
       const text = await request.text();
       return new Response(text.toUpperCase());
     },
@@ -45,26 +45,26 @@ return {
   "PATCH / without content-type": {
     "status": 415,
     "headers": {
+      "accept-patch": "text/plain",
       "content-type": "text/plain;charset=UTF-8",
-      "supported-media": "text/plain",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The media type was not specified in the request \"content-type\" header"
+    "body": "The Content-Type header is missing. It must be declared for PATCH requests to this resource."
   },
   "PATCH / with xml": {
     "status": 415,
     "headers": {
+      "accept-patch": "text/plain",
       "content-type": "text/plain;charset=UTF-8",
-      "supported-media": "text/plain",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The media type \"application/xml\" is not supported for this resource.\nSupported media types: text/plain"
+    "body": "The media type \"application/xml\" specified in the Content-Type header is not supported for PATCH requests to this resource.\nSupported media types: text/plain"
   },
   "PATCH / with text": {
     "status": 200,
