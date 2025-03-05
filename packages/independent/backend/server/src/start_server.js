@@ -403,237 +403,235 @@ export const startServer = async ({
     return request;
   };
 
-  request: {
-    const getResponseProperties = async (request, { pushResponse }) => {
-      const timings = {};
-      const timing = serverTiming
-        ? (name) => {
-            const start = performance.now();
-            timings[name] = null;
-            return {
-              name,
-              end: () => {
-                const end = performance.now();
-                const duration = end - start;
-                timings[name] = duration;
-              },
-            };
-          }
-        : TIMING_NOOP;
-      const startRespondingTiming = timing("time to start responding");
-
-      request.logger.info(
-        request.parent
-          ? `Push ${request.resource}`
-          : `${request.method} ${request.url}`,
-      );
-      let requestWaitingTimeout;
-      if (requestWaitingMs) {
-        requestWaitingTimeout = setTimeout(
-          () =>
-            requestWaitingCallback({
-              request,
-              requestWaitingMs,
-            }),
-          requestWaitingMs,
-        ).unref();
-      }
-
-      let errorWhileHandlingRequest = null;
-      let handleRequestResult;
-      let headersToInject;
-
-      let timeout;
-      try {
-        request = applyRequestInternalRedirection(request);
-        const timeoutPromise = new Promise((resolve) => {
-          timeout = setTimeout(() => {
-            resolve({
-              // the correct status code should be 500 because it's
-              // we don't really know what takes time
-              // in practice it's often because server is trying to reach an other server
-              // that is not responding so 504 is more correct
-              status: 504,
-              statusText: `server timeout after ${
-                responseTimeout / 1000
-              }s waiting to handle request`,
-            });
-          }, responseTimeout);
-        });
-
-        const routerMatchPromise = router.match(request, {
-          timing,
-          pushResponse,
-          injectResponseHeader: (name, value) => {
-            if (!headersToInject) {
-              headersToInject = {};
-            }
-            headersToInject[name] = value;
-          },
-        });
-        handleRequestResult = await Promise.race([
-          timeoutPromise,
-          routerMatchPromise,
-        ]);
-      } catch (e) {
-        errorWhileHandlingRequest = e;
-      }
-      clearTimeout(timeout);
-
-      let responseProperties;
-      if (errorWhileHandlingRequest) {
-        if (
-          errorWhileHandlingRequest.name === "AbortError" &&
-          request.signal.aborted
-        ) {
-          responseProperties = { requestAborted: true };
-        } else {
-          // internal error, create 500 response
-          if (
-            // stopOnInternalError stops server only if requestToResponse generated
-            // a non controlled error (internal error).
-            // if requestToResponse gracefully produced a 500 response (it did not throw)
-            // then we can assume we are still in control of what we are doing
-            stopOnInternalError
-          ) {
-            // il faudrais pouvoir stop que les autres response ?
-            stop(STOP_REASON_INTERNAL_ERROR);
-          }
-          const handleErrorReturnValue =
-            await serviceController.callAsyncHooksUntil(
-              "handleError",
-              errorWhileHandlingRequest,
-              { request },
-            );
-          if (!handleErrorReturnValue) {
-            throw errorWhileHandlingRequest;
-          }
-          request.logger.error(
-            createDetailedMessage(`internal error while handling request`, {
-              "error stack": errorWhileHandlingRequest.stack,
-            }),
-          );
-          responseProperties = composeTwoResponses(
-            {
-              status: 500,
-              statusText: "Internal Server Error",
-              headers: {
-                // ensure error are not cached
-                "cache-control": "no-store",
-                "content-type": "text/plain",
-              },
+  const getResponseProperties = async (request, { pushResponse }) => {
+    const timings = {};
+    const timing = serverTiming
+      ? (name) => {
+          const start = performance.now();
+          timings[name] = null;
+          return {
+            name,
+            end: () => {
+              const end = performance.now();
+              const duration = end - start;
+              timings[name] = duration;
             },
-            handleErrorReturnValue,
+          };
+        }
+      : TIMING_NOOP;
+    const startRespondingTiming = timing("time to start responding");
+
+    request.logger.info(
+      request.parent
+        ? `Push ${request.resource}`
+        : `${request.method} ${request.url}`,
+    );
+    let requestWaitingTimeout;
+    if (requestWaitingMs) {
+      requestWaitingTimeout = setTimeout(
+        () =>
+          requestWaitingCallback({
+            request,
+            requestWaitingMs,
+          }),
+        requestWaitingMs,
+      ).unref();
+    }
+
+    let errorWhileHandlingRequest = null;
+    let handleRequestResult;
+    let headersToInject;
+
+    let timeout;
+    try {
+      request = applyRequestInternalRedirection(request);
+      const timeoutPromise = new Promise((resolve) => {
+        timeout = setTimeout(() => {
+          resolve({
+            // the correct status code should be 500 because it's
+            // we don't really know what takes time
+            // in practice it's often because server is trying to reach an other server
+            // that is not responding so 504 is more correct
+            status: 504,
+            statusText: `server timeout after ${
+              responseTimeout / 1000
+            }s waiting to handle request`,
+          });
+        }, responseTimeout);
+      });
+
+      const routerMatchPromise = router.match(request, {
+        timing,
+        pushResponse,
+        injectResponseHeader: (name, value) => {
+          if (!headersToInject) {
+            headersToInject = {};
+          }
+          headersToInject[name] = value;
+        },
+      });
+      handleRequestResult = await Promise.race([
+        timeoutPromise,
+        routerMatchPromise,
+      ]);
+    } catch (e) {
+      errorWhileHandlingRequest = e;
+    }
+    clearTimeout(timeout);
+
+    let responseProperties;
+    if (errorWhileHandlingRequest) {
+      if (
+        errorWhileHandlingRequest.name === "AbortError" &&
+        request.signal.aborted
+      ) {
+        responseProperties = { requestAborted: true };
+      } else {
+        // internal error, create 500 response
+        if (
+          // stopOnInternalError stops server only if requestToResponse generated
+          // a non controlled error (internal error).
+          // if requestToResponse gracefully produced a 500 response (it did not throw)
+          // then we can assume we are still in control of what we are doing
+          stopOnInternalError
+        ) {
+          // il faudrais pouvoir stop que les autres response ?
+          stop(STOP_REASON_INTERNAL_ERROR);
+        }
+        const handleErrorReturnValue =
+          await serviceController.callAsyncHooksUntil(
+            "handleError",
+            errorWhileHandlingRequest,
+            { request },
           );
+        if (!handleErrorReturnValue) {
+          throw errorWhileHandlingRequest;
+        }
+        request.logger.error(
+          createDetailedMessage(`internal error while handling request`, {
+            "error stack": errorWhileHandlingRequest.stack,
+          }),
+        );
+        responseProperties = composeTwoResponses(
+          {
+            status: 500,
+            statusText: "Internal Server Error",
+            headers: {
+              // ensure error are not cached
+              "cache-control": "no-store",
+              "content-type": "text/plain",
+            },
+          },
+          handleErrorReturnValue,
+        );
+      }
+    } else {
+      let status;
+      let statusText;
+      let statusMessage;
+      let headers;
+      let body;
+
+      // export const fromFetchResponse = (fetchResponse) => {
+      //   const responseHeaders = {};
+      //   const headersToIgnore = ["connection"];
+      //   fetchResponse.headers.forEach((value, name) => {
+      //     if (!headersToIgnore.includes(name)) {
+      //       responseHeaders[name] = value;
+      //     }
+      //   });
+      //   return {
+      //     status: fetchResponse.status,
+      //     statusText: fetchResponse.statusText,
+      //     headers: responseHeaders,
+      //     body: fetchResponse.body, // node-fetch assumed
+      //   };
+      // };
+
+      if (handleRequestResult instanceof Response) {
+        status = handleRequestResult.status;
+        statusText = handleRequestResult.statusText;
+        headers = {};
+        for (const [name, value] of handleRequestResult.headers) {
+          headers[name] = value;
+        }
+        body = handleRequestResult.body;
+      } else if (
+        handleRequestResult !== null &&
+        typeof handleRequestResult === "object"
+      ) {
+        status = handleRequestResult.status;
+        statusText = handleRequestResult.statusText;
+        statusMessage = handleRequestResult.statusMessage;
+        headers = handleRequestResult.headers;
+        body = handleRequestResult.body;
+        if (status === undefined) {
+          status = 404;
+        }
+        if (headers === undefined) {
+          headers = {};
         }
       } else {
-        let status;
-        let statusText;
-        let statusMessage;
-        let headers;
-        let body;
+        throw new TypeError(
+          `response must be a Response, or an Object, received ${handleRequestResult}`,
+        );
+      }
+      responseProperties = {
+        status,
+        statusText,
+        statusMessage,
+        headers,
+        body,
+      };
+    }
 
-        // export const fromFetchResponse = (fetchResponse) => {
-        //   const responseHeaders = {};
-        //   const headersToIgnore = ["connection"];
-        //   fetchResponse.headers.forEach((value, name) => {
-        //     if (!headersToIgnore.includes(name)) {
-        //       responseHeaders[name] = value;
-        //     }
-        //   });
-        //   return {
-        //     status: fetchResponse.status,
-        //     statusText: fetchResponse.statusText,
-        //     headers: responseHeaders,
-        //     body: fetchResponse.body, // node-fetch assumed
-        //   };
-        // };
+    if (serverTiming) {
+      startRespondingTiming.end();
+      if (responseProperties.timing) {
+        Object.assign(timings, responseProperties.timing);
+      }
+      responseProperties.headers = composeTwoHeaders(
+        responseProperties.headers,
+        timingToServerTimingResponseHeaders(timings),
+      );
+    }
+    if (requestWaitingMs) {
+      clearTimeout(requestWaitingTimeout);
+    }
+    if (
+      request.method !== "HEAD" &&
+      responseProperties.headers["content-length"] > 0 &&
+      !responseProperties.body
+    ) {
+      request.logger.warn(`content-length response header found without body`);
+    }
 
-        if (handleRequestResult instanceof Response) {
-          status = handleRequestResult.status;
-          statusText = handleRequestResult.statusText;
-          headers = {};
-          for (const [name, value] of handleRequestResult.headers) {
-            headers[name] = value;
-          }
-          body = handleRequestResult.body;
-        } else if (
-          handleRequestResult !== null &&
-          typeof handleRequestResult === "object"
-        ) {
-          status = handleRequestResult.status;
-          statusText = handleRequestResult.statusText;
-          statusMessage = handleRequestResult.statusMessage;
-          headers = handleRequestResult.headers;
-          body = handleRequestResult.body;
-          if (status === undefined) {
-            status = 404;
-          }
-          if (headers === undefined) {
-            headers = {};
-          }
-        } else {
-          throw new TypeError(
-            `response must be a Response, or an Object, received ${handleRequestResult}`,
+    if (headersToInject) {
+      responseProperties.headers = composeTwoHeaders(
+        responseProperties.headers,
+        headersToInject,
+      );
+    }
+    serviceController.callHooks(
+      "injectResponseHeaders",
+      request,
+      responseProperties,
+      (returnValue) => {
+        if (returnValue) {
+          responseProperties.headers = composeTwoHeaders(
+            responseProperties.headers,
+            returnValue,
           );
         }
-        responseProperties = {
-          status,
-          statusText,
-          statusMessage,
-          headers,
-          body,
-        };
-      }
+      },
+    );
+    serviceController.callHooks("responseReady", responseProperties, {
+      request,
+    });
+    return responseProperties;
+  };
 
-      if (serverTiming) {
-        startRespondingTiming.end();
-        if (responseProperties.timing) {
-          Object.assign(timings, responseProperties.timing);
-        }
-        responseProperties.headers = composeTwoHeaders(
-          responseProperties.headers,
-          timingToServerTimingResponseHeaders(timings),
-        );
-      }
-      if (requestWaitingMs) {
-        clearTimeout(requestWaitingTimeout);
-      }
-      if (
-        request.method !== "HEAD" &&
-        responseProperties.headers["content-length"] > 0 &&
-        !responseProperties.body
-      ) {
-        request.logger.warn(
-          `content-length header is ${responseProperties.headers["content-length"]} but body is empty`,
-        );
-      }
-
-      if (headersToInject) {
-        responseProperties.headers = composeTwoHeaders(
-          responseProperties.headers,
-          headersToInject,
-        );
-      }
-      serviceController.callHooks(
-        "injectResponseHeaders",
-        request,
-        responseProperties,
-        (returnValue) => {
-          if (returnValue) {
-            responseProperties.headers = composeTwoHeaders(
-              responseProperties.headers,
-              returnValue,
-            );
-          }
-        },
-      );
-      serviceController.callHooks("responseReady", responseProperties, {
-        request,
-      });
-      return responseProperties;
-    };
-
+  request: {
     const requestEventHandler = async (nodeRequest, nodeResponse) => {
       if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
         nodeResponse.writeHead(301, {
@@ -892,7 +890,6 @@ export const startServer = async ({
         await sendResponseOperation.end();
       }
     };
-
     const removeRequestListener = listenRequest(
       nodeServer,
       requestEventHandler,
@@ -903,16 +900,37 @@ export const startServer = async ({
 
   websocket: {
     // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
-    if (!router.hasSomeWebsocketRoute) {
-      break websocket;
-    }
     const websocketOrigin = https
       ? `wss://${hostname}:${port}`
       : `ws://${hostname}:${port}`;
     server.websocketOrigin = websocketOrigin;
     const websocketClientSet = new Set();
-    const { WebSocketServer } = await import("ws");
-    let websocketServer = new WebSocketServer({ noServer: true });
+    let upgradeRequestToWebsocketPromise;
+    let upgradeRequestToWebsocket;
+    const loadUpgradeRequestToWebsocket = async () => {
+      if (upgradeRequestToWebsocketPromise) {
+        return upgradeRequestToWebsocketPromise;
+      }
+      if (upgradeRequestToWebsocket) {
+        return upgradeRequestToWebsocket;
+      }
+      upgradeRequestToWebsocketPromise = (async () => {
+        const { WebSocketServer } = await import("ws");
+        let websocketServer = new WebSocketServer({ noServer: true });
+        stopCallbackSet.add(() => {
+          websocketServer.close();
+          websocketServer = null;
+        });
+        upgradeRequestToWebsocket = async (nodeRequest, socket, head) => {
+          const websocket = await new Promise((resolve) => {
+            websocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
+          });
+          return websocket;
+        };
+        return upgradeRequestToWebsocket;
+      })();
+      return upgradeRequestToWebsocketPromise;
+    };
 
     const upgradeEventHandler = async (nodeRequest, socket, head) => {
       let request = fromNodeRequest(nodeRequest, {
@@ -951,30 +969,37 @@ export const startServer = async ({
       };
 
       let errorWhileHandlingWebsocket = null;
-      // let handleWebsocketResult;
+
       try {
         request = applyRequestInternalRedirection(request);
-        await router.match(request, {
-          timing: TIMING_NOOP,
-          closeSocket,
-          connectSocket: async () => {
-            const websocket = await new Promise((resolve) => {
-              websocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
-            });
-            request.logger.onHeadersSent({
-              status: 101,
-              statusText: "Switching Protocols",
-            });
-            request.logger.end();
-            const websocketAbortController = new AbortController();
-            websocketClientSet.add(websocket);
-            websocket.once("close", () => {
-              websocketClientSet.delete(websocket);
-              websocketAbortController.abort();
-            });
-            return websocket;
+        const responseProperties = await getResponseProperties(request, {
+          pushResponse: () => {
+            request.logger.warn(
+              `pushResponse ignored because it's not supported in websocket`,
+            );
           },
         });
+        // TODO: react according to responseProperties
+        // if we don't receive what we expect (a new WebsocketResponse)
+        // we throw
+        const upgradeRequestToWebsocket = await loadUpgradeRequestToWebsocket();
+        const websocket = await upgradeRequestToWebsocket(
+          nodeRequest,
+          socket,
+          head,
+        );
+        request.logger.onHeadersSent({
+          status: 101,
+          statusText: "Switching Protocols",
+        });
+        request.logger.end();
+        const websocketAbortController = new AbortController();
+        websocketClientSet.add(websocket);
+        websocket.once("close", () => {
+          websocketClientSet.delete(websocket);
+          websocketAbortController.abort();
+        });
+        return;
       } catch (e) {
         errorWhileHandlingWebsocket = e;
       }
@@ -1007,8 +1032,6 @@ export const startServer = async ({
         });
         return;
       }
-      // we also want to allow handleWebsocket to response
-      // websocket request with things like 401 unauthorized etc, we'll see that later
     };
 
     // see server-polyglot.js, upgrade must be listened on https server when used
@@ -1024,8 +1047,6 @@ export const startServer = async ({
         websocketClient.close();
       }
       websocketClientSet.clear();
-      websocketServer.close();
-      websocketServer = null;
     });
   }
 
