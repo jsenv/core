@@ -63,7 +63,7 @@ GET http://127.0.0.1/users
       "available-languages": "fr, en",
       "available-media-types": "application/json, text/plain",
       "content-type": "text/plain;charset=UTF-8",
-      "vary": "accept-language",
+      "vary": "accept, accept-language",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -75,7 +75,7 @@ GET http://127.0.0.1/users
     "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
-      "vary": "accept-language",
+      "vary": "accept, accept-language",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",

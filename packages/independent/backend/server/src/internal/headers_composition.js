@@ -7,7 +7,20 @@ export const composeTwoHeaders = (firstHeaders, secondHeaders) => {
   });
 };
 
-const composeHeaderValues = (value, nextValue) => {
+export const composeTwoHeaderValues = (name, leftValue, rightValue) => {
+  if (HEADER_NAMES_COMPOSITION[name]) {
+    return HEADER_NAMES_COMPOSITION[name](leftValue, rightValue);
+  }
+  return rightValue;
+};
+
+const composeTwoCommaSeparatedValues = (value, nextValue) => {
+  if (!value) {
+    return nextValue;
+  }
+  if (!nextValue) {
+    return value;
+  }
   const currentValues = value
     .split(", ")
     .map((part) => part.trim().toLowerCase());
@@ -23,18 +36,18 @@ const composeHeaderValues = (value, nextValue) => {
 };
 
 const HEADER_NAMES_COMPOSITION = {
-  "accept": composeHeaderValues,
-  "accept-charset": composeHeaderValues,
-  "accept-language": composeHeaderValues,
-  "access-control-allow-headers": composeHeaderValues,
-  "access-control-allow-methods": composeHeaderValues,
-  "access-control-allow-origin": composeHeaderValues,
-  "accept-patch": composeHeaderValues,
-  "accept-post": composeHeaderValues,
-  "allow": composeHeaderValues,
+  "accept": composeTwoCommaSeparatedValues,
+  "accept-charset": composeTwoCommaSeparatedValues,
+  "accept-language": composeTwoCommaSeparatedValues,
+  "access-control-allow-headers": composeTwoCommaSeparatedValues,
+  "access-control-allow-methods": composeTwoCommaSeparatedValues,
+  "access-control-allow-origin": composeTwoCommaSeparatedValues,
+  "accept-patch": composeTwoCommaSeparatedValues,
+  "accept-post": composeTwoCommaSeparatedValues,
+  "allow": composeTwoCommaSeparatedValues,
   // https://www.w3.org/TR/server-timing/
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
-  "server-timing": composeHeaderValues,
+  "server-timing": composeTwoCommaSeparatedValues,
   // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
-  "vary": composeHeaderValues,
+  "vary": composeTwoCommaSeparatedValues,
 };

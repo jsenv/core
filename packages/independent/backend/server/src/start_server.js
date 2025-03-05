@@ -11,7 +11,10 @@ import {
 } from "./interfacing_with_node/from_node_request.js";
 import { writeNodeResponse } from "./interfacing_with_node/write_node_response.js";
 import { websocketSuffixColorized } from "./internal/colorizeResponseStatus.js";
-import { composeTwoHeaders } from "./internal/headers_composition.js";
+import {
+  composeTwoHeaders,
+  composeTwoHeaderValues,
+} from "./internal/headers_composition.js";
 import { listen, stopListening } from "./internal/listen.js";
 import { listenEvent } from "./internal/listenEvent.js";
 import { listenRequest } from "./internal/listenRequest.js";
@@ -523,7 +526,11 @@ export const startServer = async ({
           if (!headersToInject) {
             headersToInject = {};
           }
-          headersToInject[name] = value;
+          headersToInject[name] = composeTwoHeaderValues(
+            name,
+            headersToInject[name],
+            value,
+          );
         },
       });
       const handleRequestResult = await Promise.race([
