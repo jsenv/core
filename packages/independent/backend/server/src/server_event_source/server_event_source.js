@@ -23,6 +23,7 @@ export const createServerEventSource = (
     computeEventId = (event, lastEventId) => lastEventId + 1,
     welcomeEventEnabled = false,
     welcomeEventPublic = false, // decides if welcome event are sent to other clients
+    actionOnClientLimitReached = "refuse", // "kick-oldest" or "refuse"
   } = {},
 ) => {
   const logger = createLogger({ logLevel });
@@ -30,7 +31,7 @@ export const createServerEventSource = (
   const serverEventSource = {
     closed: false,
   };
-  const clientSet = new Set();
+  const clientArray = new Set();
   const eventHistory = createEventHistory(historyLength);
   // what about previousEventId that keeps growing ?
   // we could add some limit
@@ -40,14 +41,14 @@ export const createServerEventSource = (
   let producerReturnValue;
 
   const addClient = (client) => {
-    if (clientSet.size === 0) {
+    if (clientArray.length === 0) {
       producerReturnValue = producer({
         sendEvent: sendEventToAllClients,
       });
     }
-    clientSet.add(client);
+    clientArray.push(client);
     logger.debug(
-      `A client has joined. Number of client in room: ${clientSet.size}`,
+      `A client has joined. Number of client: ${clientArray.length}`,
     );
     if (client.lastKnownId !== undefined) {
       const previousEvents = getAllEventSince(client.lastKnownId);
@@ -89,9 +90,13 @@ export const createServerEventSource = (
     }
   };
   const removeClient = (client) => {
-    clientSet.delete(client);
-    logger.debug(`A client left. Number of client in room: ${clientSet.size}`);
-    if (clientSet.size === 0) {
+    const index = clientArray.indexOf(client);
+    if (index === -1) {
+      return;
+    }
+    clientArray.splice(index, 1);
+    logger.debug(`A client left. Number of client: ${clientArray.length}`);
+    if (clientArray.length === 0) {
       if (typeof producerReturnValue === "function") {
         producerReturnValue();
         producerReturnValue = undefined;
@@ -100,10 +105,15 @@ export const createServerEventSource = (
   };
 
   const fetch = (request) => {
-    if (clientSet.size >= maxClientAllowed) {
-      return {
-        status: 503,
-      };
+    if (clientArray.length >= maxClientAllowed) {
+      if (actionOnClientLimitReached === "refuse") {
+        return {
+          status: 503,
+        };
+      }
+      // "kick-oldest"
+      const oldestClient = clientArray.shift();
+      oldestClient.close();
     }
 
     if (serverEventSource.closed) {
@@ -202,10 +212,8 @@ export const createServerEventSource = (
     if (history) {
       addEventToHistory(event);
     }
-    logger.debug(
-      `send "${event.type}" event to ${clientSet.size} client in the room`,
-    );
-    for (const client of clientSet) {
+    logger.debug(`send "${event.type}" event to ${clientArray.size} client(s)`);
+    for (const client of clientArray) {
       client.sendEvent(event);
     }
   };
@@ -221,7 +229,7 @@ export const createServerEventSource = (
   const keepAlive = () => {
     // maybe that, when an event occurs, we can delay the keep alive event
     logger.debug(
-      `send keep alive event, number of client listening event source: ${clientSet.size}`,
+      `send keep alive event, number of client listening this event source: ${clientArray.length}`,
     );
     sendEventToAllClients(
       {
@@ -247,11 +255,11 @@ export const createServerEventSource = (
     if (serverEventSource.closed) {
       return;
     }
-    logger.debug(`closing, number of client in the room: ${clientSet.size}`);
-    for (const client of clientSet) {
+    logger.debug(`closing, number of client : ${clientArray.length}`);
+    for (const client of clientArray) {
       client.close();
     }
-    clientSet.clear();
+    clientArray.length = 0;
     clearInterval(interval);
     eventHistory.reset();
     serverEventSource.closed = true;
@@ -267,7 +275,7 @@ export const createServerEventSource = (
 
     // should rarely be necessary, get information about the room
     getAllEventSince,
-    getClientCount: () => clientSet.size,
+    getClientCount: () => clientArray.length,
 
     // should rarely be used
     close,
