@@ -38,6 +38,7 @@ import {
   STOP_REASON_PROCESS_SIGINT,
   STOP_REASON_PROCESS_SIGTERM,
 } from "./stopReasons.js";
+import { getWebSocketHandler } from "./web_socket_response.js";
 
 import { applyDnsResolution } from "./internal/dns_resolution.js";
 import { parseHostname } from "./internal/hostname_parser.js";
@@ -422,9 +423,11 @@ export const startServer = async ({
     const startRespondingTiming = timing("time to start responding");
 
     request.logger.info(
-      request.parent
-        ? `Push ${request.resource}`
-        : `${request.method} ${request.url}`,
+      request.headers["upgrade"] === "websocket"
+        ? `GET ${request.url} ${websocketSuffixColorized}`
+        : request.parent
+          ? `Push ${request.resource}`
+          : `${request.method} ${request.url}`,
     );
     let requestWaitingTimeout;
     if (requestWaitingMs) {
@@ -857,38 +860,59 @@ export const startServer = async ({
 
   websocket: {
     // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
-    const websocketOrigin = https
+    const webSocketOrigin = https
       ? `wss://${hostname}:${port}`
       : `ws://${hostname}:${port}`;
-    server.websocketOrigin = websocketOrigin;
-    const websocketClientSet = new Set();
-    let upgradeRequestToWebsocketPromise;
-    let upgradeRequestToWebsocket;
-    const loadUpgradeRequestToWebsocket = async () => {
-      if (upgradeRequestToWebsocketPromise) {
-        return upgradeRequestToWebsocketPromise;
+    server.webSocketOrigin = webSocketOrigin;
+    const webSocketSet = new Set();
+    let upgradeRequestToWebSocketPromise;
+    let upgradeRequestToWebSocket;
+    const loadUpgradeRequestToWebSocket = async () => {
+      if (upgradeRequestToWebSocketPromise) {
+        await upgradeRequestToWebSocketPromise;
+        return;
       }
-      if (upgradeRequestToWebsocket) {
-        return upgradeRequestToWebsocket;
-      }
-      upgradeRequestToWebsocketPromise = (async () => {
-        const { WebSocketServer } = await import("ws");
-        let websocketServer = new WebSocketServer({ noServer: true });
-        stopCallbackSet.add(() => {
-          websocketServer.close();
-          websocketServer = null;
+      const { WebSocketServer } = await import("ws");
+      let webSocketServer = new WebSocketServer({ noServer: true });
+      stopCallbackSet.add(() => {
+        webSocketServer.close();
+        webSocketServer = null;
+      });
+      upgradeRequestToWebSocket = async (nodeRequest, socket, head) => {
+        const websocket = await new Promise((resolve) => {
+          webSocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
         });
-        upgradeRequestToWebsocket = async (nodeRequest, socket, head) => {
-          const websocket = await new Promise((resolve) => {
-            websocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
-          });
-          return websocket;
-        };
-        return upgradeRequestToWebsocket;
-      })();
-      return upgradeRequestToWebsocketPromise;
+        return websocket;
+      };
     };
-
+    // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
+    const closeSocket = (
+      socket,
+      { status, statusText, headers = {}, body },
+      { onHeadersSent },
+    ) => {
+      headers = {
+        connection: "close",
+        ...headers,
+      };
+      if (body && headers["content-length"] === undefined) {
+        headers["transfer-encoding"] = "chunked";
+      }
+      const headersString = Object.keys(headers)
+        .map((h) => `${h}: ${headers[h]}`)
+        .join("\r\n");
+      socket.write(
+        `HTTP/1.1 ${status} ${statusText}\r\n${headersString}\r\n\r\n`,
+      );
+      onHeadersSent({ status, statusText });
+      socket.once("finish", socket.destroy);
+      if (body) {
+        socket.write(body);
+        socket.end();
+      } else {
+        socket.end();
+      }
+    };
     const upgradeEventHandler = async (nodeRequest, socket, head) => {
       let request = fromNodeRequest(nodeRequest, {
         signal: stopAbortSignal,
@@ -897,100 +921,55 @@ export const startServer = async ({
         logger,
         nagle,
       });
-      request.logger.info(`GET ${request.url} ${websocketSuffixColorized}`);
-
-      // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
-      const closeSocket = ({ status, statusText, headers = {}, body }) => {
-        headers = {
-          connection: "close",
-          ...headers,
-        };
-        if (body && headers["content-length"] === undefined) {
-          headers["transfer-encoding"] = "chunked";
-        }
-        const headersString = Object.keys(headers)
-          .map((h) => `${h}: ${headers[h]}`)
-          .join("\r\n");
-        socket.write(
-          `HTTP/1.1 ${status} ${statusText}\r\n${headersString}\r\n\r\n`,
-        );
-        request.logger.onHeadersSent({ status, statusText });
-        request.logger.end();
-        socket.once("finish", socket.destroy);
-        if (body) {
-          socket.write(body);
-          socket.end();
-        } else {
-          socket.end();
-        }
-      };
-
-      let errorWhileHandlingWebsocket = null;
-
-      try {
-        request = applyRequestInternalRedirection(request);
-        const responseProperties = await getResponseProperties(request, {
-          pushResponse: () => {
-            request.logger.warn(
-              `pushResponse ignored because it's not supported in websocket`,
-            );
+      const responseProperties = await getResponseProperties(request, {
+        pushResponse: () => {
+          request.logger.warn(
+            `pushResponse ignored because it's not supported in websocket`,
+          );
+        },
+      });
+      if (responseProperties.status !== 101) {
+        await closeSocket(socket, responseProperties, {
+          onHeadersSent: ({ status, statusText }) => {
+            request.logger.onHeadersSent({ status, statusText });
+            request.logger.end();
           },
         });
-        // TODO: react according to responseProperties
-        // if we don't receive what we expect (a new WebsocketResponse)
-        // we throw
-        const upgradeRequestToWebsocket = await loadUpgradeRequestToWebsocket();
-        const websocket = await upgradeRequestToWebsocket(
-          nodeRequest,
-          socket,
-          head,
-        );
-        request.logger.onHeadersSent({
-          status: 101,
-          statusText: "Switching Protocols",
-        });
-        request.logger.end();
-        const websocketAbortController = new AbortController();
-        websocketClientSet.add(websocket);
-        websocket.once("close", () => {
-          websocketClientSet.delete(websocket);
-          websocketAbortController.abort();
-        });
-        return;
-      } catch (e) {
-        errorWhileHandlingWebsocket = e;
       }
-
-      if (errorWhileHandlingWebsocket) {
-        if (stopOnInternalError) {
-          stop(STOP_REASON_INTERNAL_ERROR);
-          return;
-        }
-        const handleErrorResult = await serviceController.callAsyncHooksUntil(
-          "handleError",
-          errorWhileHandlingWebsocket,
-          { request },
+      const webSocketHandler = getWebSocketHandler(responseProperties);
+      if (!webSocketHandler) {
+        throw new Error(
+          "unexpected response received for request requesting to be upgraded to websocket. Response must be created with new WebSocketResponse()",
         );
-        if (!handleErrorResult) {
-          throw errorWhileHandlingWebsocket;
-        }
-        request.logger.error(
-          createDetailedMessage(
-            `internal error while handling websocket request`,
-            {
-              "error stack": errorWhileHandlingWebsocket.stack,
-            },
-          ),
-        );
-        closeSocket({
-          status: 500,
-          statusText: "Internal Server Error",
-          body: errorWhileHandlingWebsocket.message,
-        });
-        return;
       }
+      if (!upgradeRequestToWebSocket) {
+        await loadUpgradeRequestToWebSocket();
+      }
+      const webSocket = await upgradeRequestToWebSocket(
+        nodeRequest,
+        socket,
+        head,
+      );
+      const webSocketAbortController = new AbortController();
+      webSocketSet.add(webSocket);
+      webSocket.once("close", () => {
+        webSocketSet.delete(webSocket);
+        webSocketAbortController.abort();
+      });
+      request.logger.onHeadersSent({
+        status: 101,
+        statusText: "Switching Protocols",
+      });
+      request.logger.end();
+      let websocketHandlerReturnValue = await webSocketHandler(webSocket);
+      if (typeof websocketHandlerReturnValue === "function") {
+        webSocket.once("close", () => {
+          websocketHandlerReturnValue();
+          websocketHandlerReturnValue = undefined;
+        });
+      }
+      return;
     };
-
     // see server-polyglot.js, upgrade must be listened on https server when used
     const facadeServer = nodeServer._tlsServer || nodeServer;
     const removeUpgradeCallback = listenEvent(
@@ -1000,10 +979,10 @@ export const startServer = async ({
     );
     stopCallbackSet.add(removeUpgradeCallback);
     stopCallbackSet.add(() => {
-      for (const websocketClient of websocketClientSet) {
-        websocketClient.close();
+      for (const websocket of webSocketSet) {
+        websocket.close();
       }
-      websocketClientSet.clear();
+      webSocketSet.clear();
     });
   }
 

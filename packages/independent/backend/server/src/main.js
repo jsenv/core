@@ -23,6 +23,9 @@ export { jsenvServiceErrorHandler } from "./services/error_handler/jsenv_service
 export { createFileSystemRequestHandler } from "./filesystem/filesystem_request_handler.js";
 export { fetchFileSystem } from "./filesystem/fetch_filesystem.js";
 
+// webSocket
+export { WebSocketResponse } from "./web_socket_response.js";
+
 // CORS
 export {
   jsenvServiceCORS,

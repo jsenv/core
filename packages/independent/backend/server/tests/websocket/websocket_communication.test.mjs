@@ -29,7 +29,7 @@ const run = async (params) => {
     ...params,
   });
 
-  const wsClient = new WebSocket(server.websocketOrigin, {
+  const wsClient = new WebSocket(server.webSocketOrigin, {
     rejectUnauthorized: false, // allow self signed cert
   });
 
