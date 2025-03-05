@@ -4,9 +4,9 @@
 const routes = [
   {
     endpoint: "GET /users",
-    availableContentTypes: ["application/json", "text/plain"],
-    response: (request, { contentNegotiation }) => {
-      if (contentNegotiation.contentType === "application/json") {
+    availableMediaTypes: ["application/json", "text/plain"],
+    fetch: (request, { contentNegotiation }) => {
+      if (contentNegotiation.mediaType === "application/json") {
         return Response.json({ data: "Hello" });
       }
       return new Response("Hello");
@@ -89,14 +89,14 @@ GET http://127.0.0.1/users
   "GET users accepting text/css": {
     "status": 406,
     "headers": {
-      "available-content-types": "application/json, text/plain",
+      "available-media-types": "application/json, text/plain",
       "content-type": "text/plain;charset=UTF-8",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The server cannot produce a response in any of the content types accepted by the request: \"text/css\".\nAvailable content types: application/json, text/plain"
+    "body": "The server cannot produce a response in any of the media types accepted by the request: \"text/css\".\nAvailable media types: application/json, text/plain"
   },
   "GET users accepting anything": {
     "status": 200,

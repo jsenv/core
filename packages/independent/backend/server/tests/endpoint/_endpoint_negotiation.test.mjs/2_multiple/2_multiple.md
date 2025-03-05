@@ -4,12 +4,12 @@
 const routes = [
   {
     endpoint: "GET /users",
-    availableContentTypes: ["application/json", "text/plain"],
+    availableMediaTypes: ["application/json", "text/plain"],
     availableLanguages: ["fr", "en"],
-    response: (request, { contentNegotiation }) => {
+    fetch: (request, { contentNegotiation }) => {
       const message =
         contentNegotiation.language === "fr" ? "Bonjour" : "Hello";
-      if (contentNegotiation.contentType === "application/json") {
+      if (contentNegotiation.mediaType === "application/json") {
         return Response.json({ message });
       }
       return new Response(message);
@@ -60,21 +60,21 @@ GET http://127.0.0.1/users
   "GET users accepting css and language DE": {
     "status": 406,
     "headers": {
-      "available-content-types": "application/json, text/plain",
       "available-languages": "fr, en",
+      "available-media-types": "application/json, text/plain",
       "content-type": "text/plain;charset=UTF-8",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The server cannot produce a response in a format acceptable to the client:\n- content-type The server cannot produce a response in any of the content types accepted by the request: \"text/css\".\nAvailable content types: application/json, text/plain\n- language The server cannot produce a response in any of the languages accepted by the request: \"de\".\nAvailable languages: fr, en"
+    "body": "The server cannot produce a response in a format acceptable to the client:\n- content-type The server cannot produce a response in any of the media types accepted by the request: \"text/css\".\nAvailable media types: application/json, text/plain\n- language The server cannot produce a response in any of the languages accepted by the request: \"de\".\nAvailable languages: fr, en"
   },
   "GET users accepting text and language FR": {
     "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
-      "vary": "accept",
+      "vary": "accept-language",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",

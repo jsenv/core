@@ -31,9 +31,9 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const routes = [
       {
         endpoint: "GET /users",
-        availableContentTypes: ["application/json", "text/plain"],
-        response: (request, { contentNegotiation }) => {
-          if (contentNegotiation.contentType === "application/json") {
+        availableMediaTypes: ["application/json", "text/plain"],
+        fetch: (request, { contentNegotiation }) => {
+          if (contentNegotiation.mediaType === "application/json") {
             return Response.json({ data: "Hello" });
           }
           return new Response("Hello");
@@ -87,14 +87,14 @@ await snapshotTests(import.meta.url, ({ test }) => {
       {
         endpoint: "GET /users",
         availableLanguages: ["fr"],
-        response: () => {
+        fetch: () => {
           return new Response("Bonjour");
         },
       },
       {
         endpoint: "GET /users",
         availableLanguages: ["en"],
-        response: () => {
+        fetch: () => {
           return new Response("Hello");
         },
       },
@@ -137,12 +137,12 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const routes = [
       {
         endpoint: "GET /users",
-        availableContentTypes: ["application/json", "text/plain"],
+        availableMediaTypes: ["application/json", "text/plain"],
         availableLanguages: ["fr", "en"],
-        response: (request, { contentNegotiation }) => {
+        fetch: (request, { contentNegotiation }) => {
           const message =
             contentNegotiation.language === "fr" ? "Bonjour" : "Hello";
-          if (contentNegotiation.contentType === "application/json") {
+          if (contentNegotiation.mediaType === "application/json") {
             return Response.json({ message });
           }
           return new Response(message);
@@ -176,7 +176,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       {
         endpoint: "GET /users",
         availableVersions: [(value) => parseInt(value) > 2],
-        response: () =>
+        fetch: () =>
           new Response("latest users", {
             headers: { "content-version": "3" },
           }),
@@ -184,7 +184,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       {
         endpoint: "GET /users",
         availableVersions: ["alpha"],
-        response: () =>
+        fetch: () =>
           new Response("alpha users", {
             headers: { "content-version": "alpha" },
           }),
@@ -192,7 +192,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       {
         endpoint: "GET /users",
         availableVersions: [1],
-        response: () =>
+        fetch: () =>
           new Response("users v1", {
             headers: { "content-version": "1" },
           }),
@@ -200,7 +200,7 @@ await snapshotTests(import.meta.url, ({ test }) => {
       {
         endpoint: "GET /users",
         availableVersions: [2],
-        response: () =>
+        fetch: () =>
           new Response("users v2", {
             headers: { "content-version": "2" },
           }),

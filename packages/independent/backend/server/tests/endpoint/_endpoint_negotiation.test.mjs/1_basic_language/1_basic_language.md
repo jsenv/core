@@ -5,14 +5,14 @@ const routes = [
   {
     endpoint: "GET /users",
     availableLanguages: ["fr"],
-    response: () => {
+    fetch: () => {
       return new Response("Bonjour");
     },
   },
   {
     endpoint: "GET /users",
     availableLanguages: ["en"],
-    response: () => {
+    fetch: () => {
       return new Response("Hello");
     },
   },
@@ -74,6 +74,7 @@ GET http://127.0.0.1/users
     "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
+      "vary": "accept-language",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -97,6 +98,7 @@ GET http://127.0.0.1/users
     "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
+      "vary": "accept-language",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -108,6 +110,7 @@ GET http://127.0.0.1/users
     "status": 200,
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
+      "vary": "accept-language",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",

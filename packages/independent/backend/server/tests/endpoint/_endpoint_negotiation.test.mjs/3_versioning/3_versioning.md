@@ -5,7 +5,7 @@ const routes = [
   {
     endpoint: "GET /users",
     availableVersions: [(value) => parseInt(value) > 2],
-    response: () =>
+    fetch: () =>
       new Response("latest users", {
         headers: { "content-version": "3" },
       }),
@@ -13,7 +13,7 @@ const routes = [
   {
     endpoint: "GET /users",
     availableVersions: ["alpha"],
-    response: () =>
+    fetch: () =>
       new Response("alpha users", {
         headers: { "content-version": "alpha" },
       }),
@@ -21,7 +21,7 @@ const routes = [
   {
     endpoint: "GET /users",
     availableVersions: [1],
-    response: () =>
+    fetch: () =>
       new Response("users v1", {
         headers: { "content-version": "1" },
       }),
@@ -29,7 +29,7 @@ const routes = [
   {
     endpoint: "GET /users",
     availableVersions: [2],
-    response: () =>
+    fetch: () =>
       new Response("users v2", {
         headers: { "content-version": "2" },
       }),
@@ -91,6 +91,7 @@ return {
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
       "content-version": "3",
+      "vary": "accept-version",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -103,6 +104,7 @@ return {
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
       "content-version": "3",
+      "vary": "accept-version",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -115,6 +117,7 @@ return {
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
       "content-version": "alpha",
+      "vary": "accept-version",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -127,6 +130,7 @@ return {
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
       "content-version": "1",
+      "vary": "accept-version",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -139,6 +143,7 @@ return {
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
       "content-version": "2",
+      "vary": "accept-version",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
@@ -151,6 +156,7 @@ return {
     "headers": {
       "content-type": "text/plain;charset=UTF-8",
       "content-version": "3",
+      "vary": "accept-version",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
