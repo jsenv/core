@@ -27,7 +27,7 @@ export const createSSERoom = ({
   // we could add some limit
   // one limit could be that an event older than 24h is deleted
   let previousEventId = 0;
-  let opened = false;
+  let closed = false;
   let interval;
   let cleanupEffect = CLEANUP_NOOP;
 
@@ -36,7 +36,7 @@ export const createSSERoom = ({
 
     const lastKnownId =
       request.headers["last-event-id"] ||
-      new URL(request.url).searchParams.get("last-event-id");
+      request.searchParams.get("last-event-id");
 
     if (clientSet.size >= maxClientAllowed) {
       return {
@@ -44,7 +44,7 @@ export const createSSERoom = ({
       };
     }
 
-    if (!opened) {
+    if (!closed) {
       return {
         status: 204,
       };
@@ -188,10 +188,10 @@ export const createSSERoom = ({
   };
 
   const open = () => {
-    if (opened) {
+    if (!closed) {
       return;
     }
-    opened = true;
+    closed = false;
     interval = setInterval(keepAlive, keepaliveDuration);
     if (!keepProcessAlive) {
       interval.unref();
@@ -199,7 +199,7 @@ export const createSSERoom = ({
   };
 
   const close = () => {
-    if (!opened) {
+    if (closed) {
       return;
     }
     logger.debug(
@@ -211,10 +211,8 @@ export const createSSERoom = ({
     clientSet.clear();
     clearInterval(interval);
     eventHistory.reset();
-    opened = false;
+    closed = true;
   };
-
-  open();
 
   Object.assign(room, {
     // main api:
