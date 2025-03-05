@@ -1,4 +1,4 @@
-# [0_basic](../../http2_push.test.mjs#L105)
+# [0_basic](../../http2_push.test.mjs#L98)
 
 ```js
 return run();
@@ -31,13 +31,13 @@ GET https://127.0.0.1/main.html
     {
       ":path": "/script.js",
       ":method": "GET",
-      ":authority": "localhost:64401",
+      ":authority": "127.0.0.1",
       ":scheme": "https"
     },
     {
       ":path": "/style.css",
       ":method": "GET",
-      ":authority": "localhost:64401",
+      ":authority": "127.0.0.1",
       ":scheme": "https"
     }
   ]
