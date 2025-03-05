@@ -9,7 +9,7 @@ const run = async ({ waitForEver }) => {
     routes: [
       {
         endpoint: "GET *",
-        response: async () => {
+        fetch: async () => {
           if (waitForEver) {
             await new Promise(() => {});
           }

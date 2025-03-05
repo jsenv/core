@@ -11,7 +11,7 @@ import { request } from "node:http";
     routes: [
       {
         endpoint: "GET *",
-        response: () => {
+        fetch: () => {
           return {
             status: 200,
             body: new Promise((resolve) => {
@@ -56,7 +56,7 @@ import { request } from "node:http";
     routes: [
       {
         endpoint: "GET *",
-        response: async () => {
+        fetch: async () => {
           return {
             status: 200,
             body: createObservable(({ next, complete }) => {
@@ -101,7 +101,7 @@ import { request } from "node:http";
     routes: [
       {
         endpoint: "GET *",
-        response: async () => {
+        fetch: async () => {
           return {
             status: 200,
             body: createObservable(({ next, complete }) => {

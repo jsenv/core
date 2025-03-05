@@ -1,4 +1,4 @@
-# [0_basic](../../not_found_by_default.test.mjs#L21)
+# [0_basic](../../not_found_by_default.test.mjs#L20)
 
 ```js
 return run({ cors: false });

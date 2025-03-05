@@ -18,7 +18,7 @@ import {
     routes: [
       {
         endpoint: "GET *",
-        response: () => {
+        fetch: () => {
           return {
             status: 200,
             body: "Welcome, HTTPS user!",
@@ -87,7 +87,7 @@ import {
     routes: [
       {
         endpoint: "GET *",
-        response: () => {
+        fetch: () => {
           return {
             status: 200,
             body: "Welcome, HTTPS user!",
@@ -191,7 +191,7 @@ import {
     routes: [
       {
         endpoint: "GET *",
-        response: (request) => {
+        fetch: (request) => {
           return {
             status: 200,
             headers: {

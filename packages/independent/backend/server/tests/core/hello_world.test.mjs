@@ -8,7 +8,7 @@ const run = async () => {
     routes: [
       {
         endpoint: "GET /",
-        response: () => {
+        fetch: () => {
           return new Response("hello world");
         },
       },
