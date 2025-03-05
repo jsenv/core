@@ -1,4 +1,4 @@
-# [0_basic](../../http2_mtime_304.test.mjs#L96)
+# [0_basic](../../http2_mtime_304.test.mjs#L90)
 
 ```js
 return run();
@@ -11,13 +11,13 @@ return run();
     {
       ":path": "/script.js",
       ":method": "GET",
-      ":authority": "localhost:64491",
+      ":authority": "127.0.0.1",
       ":scheme": "https"
     },
     {
       ":path": "/style.css",
       ":method": "GET",
-      ":authority": "localhost:64491",
+      ":authority": "127.0.0.1",
       ":scheme": "https"
     }
   ]

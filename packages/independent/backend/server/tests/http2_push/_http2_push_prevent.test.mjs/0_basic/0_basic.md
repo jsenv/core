@@ -1,4 +1,4 @@
-# [0_basic](../../http2_push_prevent.test.mjs#L100)
+# [0_basic](../../http2_push_prevent.test.mjs#L94)
 
 ```js
 return run();
@@ -30,7 +30,7 @@ GET https://127.0.0.1/main.html
     {
       ":path": "/style.css",
       ":method": "GET",
-      ":authority": "localhost:64614",
+      ":authority": "127.0.0.1",
       ":scheme": "https"
     }
   ]

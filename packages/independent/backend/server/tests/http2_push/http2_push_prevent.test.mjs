@@ -8,8 +8,8 @@ if (process.env.CI && process.platform !== "linux") {
   process.exit();
 }
 
+const { certificate, privateKey } = requestCertificate();
 const run = async () => {
-  const { certificate, privateKey } = requestCertificate();
   const server = await startServer({
     https: { certificate, privateKey },
     http2: true,
@@ -26,7 +26,7 @@ const run = async () => {
     routes: [
       {
         endpoint: "GET *",
-        response: (request, helpers) => {
+        fetch: (request, helpers) => {
           if (request.pathname === "/main.html") {
             helpers.pushResponse({ path: "/preventme" });
             helpers.pushResponse({ path: "/style.css" });
@@ -90,14 +90,8 @@ const run = async () => {
   };
 };
 
-await snapshotTests(
-  import.meta.url,
-  ({ test }) => {
-    test("0_basic", () => {
-      return run();
-    });
-  },
-  {
-    filesystemEffects: false,
-  },
-);
+await snapshotTests(import.meta.url, ({ test }) => {
+  test("0_basic", () => {
+    return run();
+  });
+});
