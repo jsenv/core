@@ -1,4 +1,3 @@
-import { fetchUrl } from "@jsenv/fetch";
 import {
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
@@ -41,7 +40,7 @@ const run = async ({ cors, triggerInternalError }) => {
     ],
   });
 
-  const response = await fetchUrl(server.origin, {
+  const response = await fetch(server.origin, {
     method: "OPTIONS",
     headers: {
       "accept": "text/plain",

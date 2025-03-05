@@ -1,4 +1,4 @@
-# [2_with_cors](../../cors.test.mjs#L68)
+# [2_with_cors](../../cors.test.mjs#L67)
 
 ```js
 return run({ cors: true });

@@ -9,7 +9,7 @@
         <text x="10" y="43.55">internal error while handling request</text>
         <text x="10" y="62.55">--- error stack ---</text>
         <text x="10" y="81.55">Error: here</text>
-        <text x="43.61" y="100.55">    at redirectRequest (base/cors.test.mjs:29:19)</text>
+        <text x="43.61" y="100.55">    at redirectRequest (base/cors.test.mjs:28:19)</text>
         <text x="43.61" y="119.55">    at callHook (@jsenv/core/packages/independent/backend/server/src/service_controller.js:62:25)</text>
         <text x="43.61" y="138.55">    at Object.callHooks (@jsenv/core/packages/independent/backend/server/src/service_controller.js:86:27)</text>
         <text x="43.61" y="157.55">    at applyRequestInternalRedirection (@jsenv/core/packages/independent/backend/server/src/start_server.js:395:23)</text>

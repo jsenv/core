@@ -1,4 +1,4 @@
-# [3_error_with_cors](../../cors.test.mjs#L71)
+# [3_error_with_cors](../../cors.test.mjs#L70)
 
 ```js
 return run({ cors: true, triggerInternalError: true });
@@ -16,7 +16,7 @@ OPTIONS http://127.0.0.1/
 internal error while handling request
 --- error stack ---
 Error: here
-    at redirectRequest (base/cors.test.mjs:29:19)
+    at redirectRequest (base/cors.test.mjs:28:19)
     at callHook (@jsenv/core/packages/independent/backend/server/src/service_controller.js:62:25)
     at Object.callHooks (@jsenv/core/packages/independent/backend/server/src/service_controller.js:86:27)
     at applyRequestInternalRedirection (@jsenv/core/packages/independent/backend/server/src/start_server.js:395:23)

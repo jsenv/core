@@ -1,4 +1,4 @@
-# [0_without_cors](../../cors.test.mjs#L62)
+# [0_without_cors](../../cors.test.mjs#L61)
 
 ```js
 return run({ cors: false });
