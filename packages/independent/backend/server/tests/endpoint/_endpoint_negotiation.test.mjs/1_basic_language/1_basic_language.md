@@ -87,6 +87,7 @@ GET http://127.0.0.1/users
     "headers": {
       "available-languages": "fr, en",
       "content-type": "text/plain;charset=UTF-8",
+      "vary": "accept-language",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",

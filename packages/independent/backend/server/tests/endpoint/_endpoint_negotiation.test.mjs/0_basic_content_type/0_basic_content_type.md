@@ -91,6 +91,7 @@ GET http://127.0.0.1/users
     "headers": {
       "available-media-types": "application/json, text/plain",
       "content-type": "text/plain;charset=UTF-8",
+      "vary": "accept",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",

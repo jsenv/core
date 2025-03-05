@@ -373,6 +373,7 @@ export const createRouter = (
         let hasFailed = false;
         const { availableMediaTypes } = route;
         if (availableMediaTypes.length) {
+          injectResponseHeader("vary", "accept");
           if (request.headers["accept"]) {
             const mediaTypeNegotiated = pickContentType(
               request,
@@ -391,6 +392,7 @@ export const createRouter = (
         }
         const { availableLanguages } = route;
         if (availableLanguages.length) {
+          injectResponseHeader("vary", "accept-language");
           if (request.headers["accept-language"]) {
             const languageNegotiated = pickContentLanguage(
               request,
@@ -409,6 +411,7 @@ export const createRouter = (
         }
         const { availableVersions } = route;
         if (availableVersions.length) {
+          injectResponseHeader("vary", "accept-version");
           if (request.headers["accept-version"]) {
             const versionNegotiated = pickContentVersion(
               request,
@@ -427,6 +430,7 @@ export const createRouter = (
         }
         const { availableEncodings } = route;
         if (availableEncodings.length) {
+          injectResponseHeader("vary", "accept-encoding");
           if (request.headers["accept-encoding"]) {
             const encodingNegotiated = pickContentEncoding(
               request,
@@ -465,19 +469,6 @@ export const createRouter = (
       if (fetchReturnValue === null || fetchReturnValue === undefined) {
         continue;
       }
-      if (contentNegotiationResult.mediaType) {
-        injectResponseHeader("vary", "accept");
-      }
-      if (contentNegotiationResult.language) {
-        injectResponseHeader("vary", "accept-language");
-      }
-      if (contentNegotiationResult.version) {
-        injectResponseHeader("vary", "accept-version");
-      }
-      if (contentNegotiationResult.encoding) {
-        injectResponseHeader("vary", "accept-encoding");
-      }
-
       onRouteMatch(route);
       // TODO: check response headers to warn if headers[content-version] is missing
       // when a route set availableVersions for example
@@ -500,6 +491,7 @@ export const createRouter = (
     if (
       wouldHaveMatched.responseMediaTypeSet.size ||
       wouldHaveMatched.responseLanguageSet.size ||
+      wouldHaveMatched.responseVersionSet.size ||
       wouldHaveMatched.responseEncodingSet.size
     ) {
       return createNotAcceptableResponse(request, {
