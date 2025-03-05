@@ -1,5 +1,4 @@
 import { extname } from "node:path";
-
 import { mediaTypeInfos } from "./media_type_infos.js";
 
 export const CONTENT_TYPE = {
@@ -57,13 +56,7 @@ export const CONTENT_TYPE = {
     return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
   },
 
-  fromUrlExtension: (url) => {
-    const { pathname } = new URL(url);
-    const extensionWithDot = extname(pathname);
-    if (!extensionWithDot || extensionWithDot === ".") {
-      return "application/octet-stream";
-    }
-    const extension = extensionWithDot.slice(1);
+  fromExtension: (extension) => {
     const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
       const mediaTypeInfo = mediaTypeInfos[mediaType];
       return (
@@ -71,6 +64,16 @@ export const CONTENT_TYPE = {
       );
     });
     return mediaTypeFound || "application/octet-stream";
+  },
+
+  fromUrlExtension: (url) => {
+    const { pathname } = new URL(url);
+    const extensionWithDot = extname(pathname);
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+    const extension = extensionWithDot.slice(1);
+    return CONTENT_TYPE.fromExtension(extension);
   },
 
   toUrlExtension: (contentType) => {

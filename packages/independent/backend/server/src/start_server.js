@@ -505,7 +505,7 @@ export const startServer = async ({
     let timeout;
     try {
       request = applyRequestInternalRedirection(request);
-      const timeoutPromise = new Promise((resolve) => {
+      const timeoutResponsePropertiesPromise = new Promise((resolve) => {
         timeout = setTimeout(() => {
           resolve({
             // the correct status code should be 500 because it's
@@ -519,49 +519,29 @@ export const startServer = async ({
           });
         }, responseTimeout);
       });
-      const routerMatchPromise = router.match(request, {
-        timing,
-        pushResponse,
-        injectResponseHeader: (name, value) => {
-          if (!headersToInject) {
-            headersToInject = {};
-          }
-          headersToInject[name] = composeTwoHeaderValues(
-            name,
-            headersToInject[name],
-            value,
-          );
-        },
-      });
-      const handleRequestResult = await Promise.race([
-        timeoutPromise,
-        routerMatchPromise,
+      const routerResponsePropertiesPromise = (async () => {
+        const routerResponseProperties = await router.match(request, {
+          timing,
+          pushResponse,
+          injectResponseHeader: (name, value) => {
+            if (!headersToInject) {
+              headersToInject = {};
+            }
+            headersToInject[name] = composeTwoHeaderValues(
+              name,
+              headersToInject[name],
+              value,
+            );
+          },
+        });
+        return routerResponseProperties;
+      })();
+      const responseProperties = await Promise.race([
+        timeoutResponsePropertiesPromise,
+        routerResponsePropertiesPromise,
       ]);
       clearTimeout(timeout);
-
-      if (handleRequestResult instanceof Response) {
-        return finalizeResponseProperties({
-          status: handleRequestResult.status,
-          statusText: handleRequestResult.statusText,
-          headers: Object.fromEntries(handleRequestResult.headers.entries()),
-          body: handleRequestResult.body,
-        });
-      }
-      if (
-        handleRequestResult !== null &&
-        typeof handleRequestResult === "object"
-      ) {
-        return finalizeResponseProperties({
-          status: handleRequestResult.status || 404,
-          statusText: handleRequestResult.statusText,
-          statusMessage: handleRequestResult.statusMessage,
-          headers: handleRequestResult.headers || {},
-          body: handleRequestResult.body,
-        });
-      }
-      throw new TypeError(
-        `response must be a Response, or an Object, received ${handleRequestResult}`,
-      );
+      return finalizeResponseProperties(responseProperties);
     } catch (e) {
       clearTimeout(timeout);
       if (e.name === "AbortError" && request.signal.aborted) {

@@ -3,6 +3,7 @@ import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.j
 import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
 import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
 import { resourceToExtension } from "@jsenv/urls";
+import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { readFileSync } from "node:fs";
 import { pickContentEncoding } from "../content_negotiation/pick_content_encoding.js";
 import { pickContentLanguage } from "../content_negotiation/pick_content_language.js";
@@ -67,12 +68,19 @@ export const createRoute = ({
       `fetch must be a function, received ${routeFetchMethod}`,
     );
   }
+  const extension = resourceToExtension(resource);
+  const extensionWellKnownContentType = extension
+    ? CONTENT_TYPE.fromExtension(extension)
+    : null;
+  if (availableMediaTypes.length === 0 && extensionWellKnownContentType) {
+    availableMediaTypes.push(extensionWellKnownContentType);
+  }
   const resourcePattern = createResourcePattern(resource);
   const headersPattern = headers ? createHeadersPattern(headers) : null;
 
   const isForWebSocket =
     (headers && headers["upgrade"] === "websocket") ||
-    resourceToExtension(resource) === ".websocket";
+    extension === ".websocket";
 
   const route = {
     method,
@@ -321,6 +329,46 @@ export const createRouter = (
       onRouteGroupEnd(route);
     };
 
+    const checkResponseContentHeader = (route, responseHeaders, name) => {
+      const routePropertyName = {
+        type: "availableMediaTypes",
+        language: "availableLanguages",
+        version: "availableVersions",
+        encoding: "availableEncodings",
+      }[name];
+      const availableValues = route[routePropertyName];
+      if (availableValues.length === 0) {
+        return;
+      }
+      const responseHeaderName = {
+        type: "content-type",
+        language: "content-language",
+        version: "content-version",
+        encoding: "content-encoding",
+      }[name];
+      const responseHeaderValue = responseHeaders[responseHeaderName];
+      if (!responseHeaderValue) {
+        request.logger.warn(
+          `The response header ${responseHeaderName} is missing.
+It should be set to one of route.${routePropertyName}: ${availableValues.join(", ")}.`,
+        );
+        return;
+      }
+      if (!availableValues.includes(responseHeaderValue)) {
+        request.logger.warn(
+          `The value "${responseHeaderValue}" found in response header ${responseHeaderName} is strange.
+It should be should be one of route.${routePropertyName}: ${availableValues.join(", ")}.`,
+        );
+        return;
+      }
+    };
+    const onResponseHeaders = (request, route, responseHeaders) => {
+      checkResponseContentHeader(route, responseHeaders, "type");
+      checkResponseContentHeader(route, responseHeaders, "language");
+      checkResponseContentHeader(route, responseHeaders, "version");
+      checkResponseContentHeader(route, responseHeaders, "encoding");
+    };
+
     const helpers = { timing, pushResponse, contentNegotiation: null };
     for (const route of routeSet) {
       onRouteMatchStart(route);
@@ -470,10 +518,30 @@ export const createRouter = (
         continue;
       }
       onRouteMatch(route);
-      // TODO: check response headers to warn if headers[content-version] is missing
-      // when a route set availableVersions for example
-      // same for language, content type, etc
-      return fetchReturnValue;
+      if (fetchReturnValue instanceof Response) {
+        const headers = Object.fromEntries(fetchReturnValue.headers);
+        onResponseHeaders(request, route, headers);
+        return {
+          status: fetchReturnValue.status,
+          statusText: fetchReturnValue.statusText,
+          headers,
+          body: fetchReturnValue.body,
+        };
+      }
+      if (fetchReturnValue !== null && typeof fetchReturnValue === "object") {
+        const headers = fetchReturnValue.headers || {};
+        onResponseHeaders(request, route, headers);
+        return {
+          status: fetchReturnValue.status || 404,
+          statusText: fetchReturnValue.statusText,
+          statusMessage: fetchReturnValue.statusMessage,
+          headers,
+          body: fetchReturnValue.body,
+        };
+      }
+      throw new TypeError(
+        `response must be a Response, or an Object, received ${fetchReturnValue}`,
+      );
     }
     // nothing has matched fully
     // if nothing matches at all we'll send 404
