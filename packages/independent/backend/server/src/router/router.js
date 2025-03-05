@@ -29,11 +29,11 @@ const HTTP_METHODS = [
  * @param {Object} params - Route configuration object
  * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
  * @param {Object} [params.headers] - Optional headers pattern to match
- * @param {Array<string>} [params.availableContentTypes=[]] - Content types this route can produce
+ * @param {Array<string>} [params.availableMediaTypes=[]] - Content types this route can produce
  * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
  * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
- * @param {Array<string>} [params.acceptedContentTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
- * @param {Function} params.response - Function to generate response for matching requests
+ * @param {Array<string>} [params.acceptedMediaTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
+ * @param {Function} params.fetch - Function to generate response for matching requests
  * @throws {TypeError} If endpoint is not a string
  * @returns {void}
  */
@@ -42,12 +42,12 @@ export const createRoute = ({
   description,
   headers,
   service,
-  availableContentTypes = [],
+  availableMediaTypes = [],
   availableLanguages = [],
   availableVersions = [],
   availableEncodings = [],
-  acceptedContentTypes = [], // useful only for POST/PATCH/PUT
-  response,
+  acceptedMediaTypes = [], // useful only for POST/PATCH/PUT
+  fetch: routeFetchMethod, // rename because there is global.fetch and we want to be explicit
   clientCodeExample,
   isFallback,
   subroutes,
@@ -62,8 +62,10 @@ export const createRoute = ({
   if (resource[0] !== "/" && resource[0] !== "*") {
     throw new TypeError(`resource must start with /, received ${resource}`);
   }
-  if (typeof response !== "function") {
-    throw new TypeError(`response must be a function, received ${response}`);
+  if (typeof routeFetchMethod !== "function") {
+    throw new TypeError(
+      `fetch must be a function, received ${routeFetchMethod}`,
+    );
   }
   const resourcePattern = createResourcePattern(resource);
   const headersPattern = headers ? createHeadersPattern(headers) : null;
@@ -77,11 +79,11 @@ export const createRoute = ({
     resource,
     description,
     service,
-    availableContentTypes,
+    availableMediaTypes,
     availableLanguages,
     availableVersions,
     availableEncodings,
-    acceptedContentTypes,
+    acceptedMediaTypes,
     matchMethod:
       method === "*" ? () => true : (requestMethod) => requestMethod === method,
     matchResource:
@@ -96,7 +98,7 @@ export const createRoute = ({
         : (requestHeaders) => {
             return headersPattern.match(requestHeaders);
           },
-    response,
+    fetch: routeFetchMethod,
     toString: () => {
       return `${method} ${resource}`;
     },
@@ -105,11 +107,11 @@ export const createRoute = ({
         method,
         resource,
         description,
-        availableContentTypes,
+        availableMediaTypes,
         availableLanguages,
         availableVersions,
         availableEncodings,
-        acceptedContentTypes,
+        acceptedMediaTypes,
         isForWebSocket,
         clientCodeExample:
           typeof clientCodeExample === "function"
@@ -147,7 +149,6 @@ export const createRouter = ({ optionsFallback } = {}) => {
     }
     return allRouteSet;
   };
-
   const constructAvailableEndpoints = (request, helpers) => {
     // TODO: memoize
     // TODO: construct only if the route is visible to that client
@@ -185,39 +186,38 @@ export const createRouter = ({ optionsFallback } = {}) => {
     }
     return availableEndpoints;
   };
-
   const createResourceOptions = () => {
-    const acceptedContentTypeSet = new Set();
-    const postAcceptedContentTypeSet = new Set();
-    const patchAcceptedContentTypeSet = new Set();
+    const acceptedMediaTypeSet = new Set();
+    const postAcceptedMediaTypeSet = new Set();
+    const patchAcceptedMediaTypeSet = new Set();
     const allowedMethodSet = new Set();
     return {
       onMethodAllowed: (route, method) => {
         allowedMethodSet.add(method);
-        for (const acceptedContentType of route.acceptedContentTypes) {
-          acceptedContentTypeSet.add(acceptedContentType);
+        for (const acceptedMediaType of route.acceptedMediaTypes) {
+          acceptedMediaTypeSet.add(acceptedMediaType);
           if (method === "POST") {
-            postAcceptedContentTypeSet.add(acceptedContentType);
+            postAcceptedMediaTypeSet.add(acceptedMediaType);
           }
           if (method === "PATCH") {
-            patchAcceptedContentTypeSet.add(acceptedContentType);
+            patchAcceptedMediaTypeSet.add(acceptedMediaType);
           }
         }
       },
       asResponseHeaders: () => {
         const headers = {};
-        if (acceptedContentTypeSet.size) {
-          headers["accept"] = Array.from(acceptedContentTypeSet).join(", ");
+        if (acceptedMediaTypeSet.size) {
+          headers["accept"] = Array.from(acceptedMediaTypeSet).join(", ");
         }
-        if (postAcceptedContentTypeSet.size) {
-          headers["accept-post"] = Array.from(postAcceptedContentTypeSet).join(
+        if (postAcceptedMediaTypeSet.size) {
+          headers["accept-post"] = Array.from(postAcceptedMediaTypeSet).join(
             ", ",
           );
         }
-        if (patchAcceptedContentTypeSet.size) {
-          headers["accept-patch"] = Array.from(
-            patchAcceptedContentTypeSet,
-          ).join(", ");
+        if (patchAcceptedMediaTypeSet.size) {
+          headers["accept-patch"] = Array.from(patchAcceptedMediaTypeSet).join(
+            ", ",
+          );
         }
         if (allowedMethodSet.size) {
           headers["allow"] = Array.from(allowedMethodSet).join(", ");
@@ -226,9 +226,9 @@ export const createRouter = ({ optionsFallback } = {}) => {
       },
       toJSON: () => {
         return {
-          acceptedContentTypes: Array.from(acceptedContentTypeSet),
-          postAcceptedContentTypes: Array.from(postAcceptedContentTypeSet),
-          patchAcceptedContentTypes: Array.from(patchAcceptedContentTypeSet),
+          acceptedMediaTypes: Array.from(acceptedMediaTypeSet),
+          postAcceptedMediaTypes: Array.from(postAcceptedMediaTypeSet),
+          patchAcceptedMediaTypes: Array.from(patchAcceptedMediaTypeSet),
           allowedMethods: Array.from(allowedMethodSet),
         };
       },
@@ -297,7 +297,6 @@ export const createRouter = ({ optionsFallback } = {}) => {
       routeSet.add(route);
     }
   };
-
   const add = (params) => {
     const route = createRoute(params);
     append(route);
@@ -309,8 +308,8 @@ export const createRouter = ({ optionsFallback } = {}) => {
     const wouldHaveMatched = {
       // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
       methodSet: new Set(),
-      requestContentTypeSet: new Set(),
-      responseContentTypeSet: new Set(),
+      requestMediaTypeSet: new Set(),
+      responseMediaTypeSet: new Set(),
       responseLanguageSet: new Set(),
       responseVersionSet: new Set(),
       responseEncodingSet: new Set(),
@@ -362,13 +361,13 @@ export const createRouter = ({ optionsFallback } = {}) => {
         request.method === "PATCH" ||
         request.method === "PUT"
       ) {
-        const { acceptedContentTypes } = route;
+        const { acceptedMediaTypes } = route;
         if (
-          acceptedContentTypes.length &&
-          !isRequestBodyContentTypeSupported(request, { acceptedContentTypes })
+          acceptedMediaTypes.length &&
+          !isRequestBodyMediaTypeSupported(request, { acceptedMediaTypes })
         ) {
-          for (const acceptedContentType of acceptedContentTypes) {
-            wouldHaveMatched.requestContentTypeSet.add(acceptedContentType);
+          for (const acceptedMediaType of acceptedMediaTypes) {
+            wouldHaveMatched.requestMediaTypeSet.add(acceptedMediaType);
           }
           continue;
         }
@@ -391,24 +390,22 @@ export const createRouter = ({ optionsFallback } = {}) => {
         // but server only provide json in english
         // we want to tell client both text and french are not available
         let hasFailed = false;
-        const { availableContentTypes } = route;
-        if (availableContentTypes.length) {
+        const { availableMediaTypes } = route;
+        if (availableMediaTypes.length) {
           if (request.headers["accept"]) {
-            const contentTypeNegotiated = pickContentType(
+            const mediaTypeNegotiated = pickContentType(
               request,
-              availableContentTypes,
+              availableMediaTypes,
             );
-            if (!contentTypeNegotiated) {
-              for (const availableContentType of availableContentTypes) {
-                wouldHaveMatched.responseContentTypeSet.add(
-                  availableContentType,
-                );
+            if (!mediaTypeNegotiated) {
+              for (const availableMediaType of availableMediaTypes) {
+                wouldHaveMatched.responseMediaTypeSet.add(availableMediaType);
               }
               hasFailed = true;
             }
-            contentNegotiationResult.contentType = contentTypeNegotiated;
+            contentNegotiationResult.mediaType = mediaTypeNegotiated;
           } else {
-            contentNegotiationResult.contentType = availableContentTypes[0];
+            contentNegotiationResult.mediaType = availableMediaTypes[0];
           }
         }
         const { availableLanguages } = route;
@@ -475,32 +472,36 @@ export const createRouter = ({ optionsFallback } = {}) => {
       );
       Object.assign(request.params, named, stars);
       helpers.contentNegotiation = contentNegotiationResult;
-      let responseReturnValue = route.response(request, helpers);
+      let fetchReturnValue = route.fetch(request, helpers);
       if (
-        responseReturnValue !== null &&
-        typeof responseReturnValue === "object" &&
-        typeof responseReturnValue.then === "function"
+        fetchReturnValue !== null &&
+        typeof fetchReturnValue === "object" &&
+        typeof fetchReturnValue.then === "function"
       ) {
-        responseReturnValue = await responseReturnValue;
+        fetchReturnValue = await fetchReturnValue;
       }
       // route decided not to handle in the end
-      if (responseReturnValue === null || responseReturnValue === undefined) {
+      if (fetchReturnValue === null || fetchReturnValue === undefined) {
         continue;
       }
-      if (contentNegotiationResult.contentType) {
+      if (contentNegotiationResult.mediaType) {
         injectResponseHeader("vary", "accept");
       }
-      if (contentNegotiationResult.contentLanguage) {
+      if (contentNegotiationResult.language) {
         injectResponseHeader("vary", "accept-language");
       }
-      if (contentNegotiationResult.contentEncoding) {
+      if (contentNegotiationResult.version) {
+        injectResponseHeader("vary", "accept-version");
+      }
+      if (contentNegotiationResult.encoding) {
         injectResponseHeader("vary", "accept-encoding");
       }
+
       onRouteMatch(route);
       // TODO: check response headers to warn if headers[content-version] is missing
       // when a route set availableVersions for example
       // same for language, content type, etc
-      return responseReturnValue;
+      return fetchReturnValue;
     }
     // nothing has matched fully
     // if nothing matches at all we'll send 404
@@ -510,18 +511,18 @@ export const createRouter = ({ optionsFallback } = {}) => {
         allowedMethods: [...wouldHaveMatched.methodSet],
       });
     }
-    if (wouldHaveMatched.requestContentTypeSet.size) {
+    if (wouldHaveMatched.requestMediaTypeSet.size) {
       return createUnsupportedMediaTypeResponse(request, {
-        acceptedContentTypes: [...wouldHaveMatched.requestContentTypeSet],
+        acceptedMediaTypes: [...wouldHaveMatched.requestMediaTypeSet],
       });
     }
     if (
-      wouldHaveMatched.responseContentTypeSet.size ||
+      wouldHaveMatched.responseMediaTypeSet.size ||
       wouldHaveMatched.responseLanguageSet.size ||
       wouldHaveMatched.responseEncodingSet.size
     ) {
       return createNotAcceptableResponse(request, {
-        availableContentTypes: [...wouldHaveMatched.responseContentTypeSet],
+        availableMediaTypes: [...wouldHaveMatched.responseMediaTypeSet],
         availableLanguages: [...wouldHaveMatched.responseLanguageSet],
         availableVersions: [...wouldHaveMatched.responseVersionSet],
         availableEncodings: [...wouldHaveMatched.responseEncodingSet],
@@ -555,7 +556,7 @@ export const createRouter = ({ optionsFallback } = {}) => {
       endpoint: "OPTIONS *",
       description:
         "Auto generate an OPTIONS response about a resource or the whole server.",
-      response: (request, helpers) => {
+      fetch: (request, helpers) => {
         const isForAnyRoute = request.resource === "*";
         if (isForAnyRoute) {
           const serverOPTIONS = inferServerOPTIONS(request, helpers);
@@ -579,16 +580,13 @@ export const createRouter = ({ optionsFallback } = {}) => {
   return router;
 };
 
-const isRequestBodyContentTypeSupported = (
-  request,
-  { acceptedContentTypes },
-) => {
+const isRequestBodyMediaTypeSupported = (request, { acceptedMediaTypes }) => {
   const requestBodyContentType = request.headers["content-type"];
   if (!requestBodyContentType) {
     return false;
   }
-  for (const acceptedContentType of acceptedContentTypes) {
-    if (requestBodyContentType.includes(acceptedContentType)) {
+  for (const acceptedMediaType of acceptedMediaTypes) {
+    if (requestBodyContentType.includes(acceptedMediaType)) {
       return true;
     }
   }
@@ -600,11 +598,11 @@ const createServerResourceOptionsResponse = (
   { server, resourceOptionsMap },
 ) => {
   const headers = server.asResponseHeaders();
-  const contentTypeNegotiated = pickContentType(request, [
+  const mediaTypeNegotiated = pickContentType(request, [
     "application/json",
     "text/plain",
   ]);
-  if (contentTypeNegotiated === "application/json") {
+  if (mediaTypeNegotiated === "application/json") {
     const perResource = {};
     for (const [resource, resourceOptions] of resourceOptionsMap) {
       perResource[resource] = resourceOptions.toJSON();
@@ -633,7 +631,7 @@ const createResourceOptionsResponse = (request, resourceOptions) => {
  *
  * @param {Object} request - The HTTP request object
  * @param {Object} params - Content negotiation parameters
- * @param {Array<string>} params.availableContentTypes - Content types the server can produce
+ * @param {Array<string>} params.availableMediaTypes - Content types the server can produce
  * @param {Array<string>} params.availableLanguages - Languages the server can respond with
  * @param {Array<string>} params.availableEncodings - Encodings the server supports
  * @returns {Response} A 406 Not Acceptable response
@@ -641,7 +639,7 @@ const createResourceOptionsResponse = (request, resourceOptions) => {
 const createNotAcceptableResponse = (
   request,
   {
-    availableContentTypes,
+    availableMediaTypes,
     availableLanguages,
     availableVersions,
     availableEncodings,
@@ -651,24 +649,24 @@ const createNotAcceptableResponse = (
   const headers = {};
   const data = {};
 
-  if (availableContentTypes.length) {
+  if (availableMediaTypes.length) {
     const requestAcceptHeader = request.headers["accept"];
 
     // Use a non-standard but semantic header name
-    headers["available-content-types"] = availableContentTypes.join(", ");
+    headers["available-media-types"] = availableMediaTypes.join(", ");
 
     Object.assign(data, {
       requestAcceptHeader,
-      availableContentTypes,
+      availableMediaTypes,
     });
 
     unsupported.push({
       type: "content-type",
       message: {
-        text: `The server cannot produce a response in any of the content types accepted by the request: "${requestAcceptHeader}".
-Available content types: ${availableContentTypes.join(", ")}`,
-        html: `The server cannot produce a response in any of the content types accepted by the request: <strong>${requestAcceptHeader}</strong>.<br />
-Available content types: <strong>${availableContentTypes.join(", ")}</strong>`,
+        text: `The server cannot produce a response in any of the media types accepted by the request: "${requestAcceptHeader}".
+Available media types: ${availableMediaTypes.join(", ")}`,
+        html: `The server cannot produce a response in any of the media types accepted by the request: <strong>${requestAcceptHeader}</strong>.<br />
+Available content types: <strong>${availableMediaTypes.join(", ")}</strong>`,
       },
     });
   }
@@ -791,7 +789,7 @@ Allowed methods: <strong>${allowedMethods.join(", ")}</strong>`,
 };
 const createUnsupportedMediaTypeResponse = (
   request,
-  { acceptedContentTypes },
+  { acceptedMediaTypes },
 ) => {
   const requestContentType = request.headers["content-type"];
   const methodSpecificHeader =
@@ -801,7 +799,7 @@ const createUnsupportedMediaTypeResponse = (
         ? "accept-patch"
         : "accept";
   const headers = {
-    [methodSpecificHeader]: acceptedContentTypes.join(", "),
+    [methodSpecificHeader]: acceptedMediaTypes.join(", "),
   };
   const requestMethod = request.method;
 
@@ -811,18 +809,18 @@ const createUnsupportedMediaTypeResponse = (
     headers,
     message: {
       text: requestContentType
-        ? `The content type "${requestContentType}" specified in the Content-Type header is not supported for ${requestMethod} requests to this resource.
-Supported content types: ${acceptedContentTypes.join(", ")}`
+        ? `The media type "${requestContentType}" specified in the Content-Type header is not supported for ${requestMethod} requests to this resource.
+Supported media types: ${acceptedMediaTypes.join(", ")}`
         : `The Content-Type header is missing. It must be declared for ${requestMethod} requests to this resource.`,
       html: requestContentType
         ? `The content type <strong>${requestContentType}</strong> is not supported for ${requestMethod} requests to this resource.<br />
-Supported content types: <strong>${acceptedContentTypes.join(", ")}</strong>`
+Supported media types: <strong>${acceptedMediaTypes.join(", ")}</strong>`
         : `The Content-Type header is missing. It must be declared for ${requestMethod} requests to this resource.`,
     },
     data: {
       requestMethod,
       requestContentType,
-      acceptedContentTypes,
+      acceptedMediaTypes,
     },
   });
 };
