@@ -25,14 +25,17 @@ await snapshotTests(import.meta.url, ({ test }) => {
     const routes = [
       {
         endpoint: "GET /",
+        fetch: () => {},
       },
       {
-        acceptedContentTypes: ["text/plain"],
+        acceptedMediaTypes: ["text/plain"],
         endpoint: "PATCH /",
+        fetch: () => {},
       },
       {
-        acceptedContentTypes: ["application/json"],
+        acceptedMediaTypes: ["application/json"],
         endpoint: "POST /",
+        fetch: () => {},
       },
     ];
 
