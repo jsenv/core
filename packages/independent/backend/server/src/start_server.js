@@ -827,6 +827,12 @@ export const startServer = async ({
             });
           },
         });
+        const webSocketHandler = getWebSocketHandler(responseProperties);
+        if (webSocketHandler) {
+          throw new Error(
+            "unexpected websocketResponse received for request that does not want to be upgraded to websocket. A regular response was expected.",
+          );
+        }
         if (receiveRequestOperation.signal.aborted) {
           return;
         }
@@ -927,7 +933,7 @@ export const startServer = async ({
       const webSocketHandler = getWebSocketHandler(responseProperties);
       if (!webSocketHandler) {
         throw new Error(
-          "unexpected response received for request requesting to be upgraded to websocket. Response must be created with new WebSocketResponse()",
+          "unexpected response received for request that wants to be upgraded to websocket. A webSocketResponse was expected.",
         );
       }
       if (!upgradeRequestToWebSocket) {

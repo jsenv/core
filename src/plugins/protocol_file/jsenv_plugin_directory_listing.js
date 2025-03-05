@@ -27,7 +27,7 @@ import {
   readEntryStatSync,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem";
-import { pickContentType } from "@jsenv/server";
+import { pickContentType, WebSocketResponse } from "@jsenv/server";
 import {
   asUrlWithoutSearch,
   ensurePathnameTrailingSlash,
@@ -138,64 +138,62 @@ export const jsenvPluginDirectoryListing = ({
           "GET /.internal/directory_content.websocket?directory=:directory",
         description:
           "Emit events when a directory content changes. Used to update directory content when it is displayed in the browser by jsenv.",
-        response: (request) => {
+        fetch: (request) => {
           if (!autoreload) {
             return null;
           }
-          return {
-            opened: (websocket) => {
-              const directoryRelativeUrl = request.params.directory;
-              const requestedUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
-                directoryRelativeUrl,
+          return new WebSocketResponse((websocket) => {
+            const directoryRelativeUrl = request.params.directory;
+            const requestedUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
+              directoryRelativeUrl,
+              rootDirectoryUrl,
+            );
+            const closestDirectoryUrl =
+              getFirstExistingDirectoryUrl(requestedUrl);
+            const sendMessage = (message) => {
+              websocket.send(JSON.stringify(message));
+            };
+            const generateItems = () => {
+              const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
+                requestedUrl,
                 rootDirectoryUrl,
               );
-              const closestDirectoryUrl =
-                getFirstExistingDirectoryUrl(requestedUrl);
-              const sendMessage = (message) => {
-                websocket.send(JSON.stringify(message));
-              };
-              const generateItems = () => {
-                const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
-                  requestedUrl,
-                  rootDirectoryUrl,
-                );
-                const items = getDirectoryContentItems({
-                  serverRootDirectoryUrl: rootDirectoryUrl,
-                  mainFilePath,
-                  requestedUrl,
-                  firstExistingDirectoryUrl,
-                });
-                return items;
-              };
-
-              const unwatch = registerDirectoryLifecycle(closestDirectoryUrl, {
-                added: ({ relativeUrl }) => {
-                  sendMessage({
-                    type: "change",
-                    reason: `${relativeUrl} added`,
-                    items: generateItems(),
-                  });
-                },
-                updated: ({ relativeUrl }) => {
-                  sendMessage({
-                    type: "change",
-                    reason: `${relativeUrl} updated`,
-                    items: generateItems(),
-                  });
-                },
-                removed: ({ relativeUrl }) => {
-                  sendMessage({
-                    type: "change",
-                    reason: `${relativeUrl} removed`,
-                    items: generateItems(),
-                  });
-                },
+              const items = getDirectoryContentItems({
+                serverRootDirectoryUrl: rootDirectoryUrl,
+                mainFilePath,
+                requestedUrl,
+                firstExistingDirectoryUrl,
               });
-              return () => {
-                unwatch();
-              };
-            },
-          };
+              return items;
+            };
+
+            const unwatch = registerDirectoryLifecycle(closestDirectoryUrl, {
+              added: ({ relativeUrl }) => {
+                sendMessage({
+                  type: "change",
+                  reason: `${relativeUrl} added`,
+                  items: generateItems(),
+                });
+              },
+              updated: ({ relativeUrl }) => {
+                sendMessage({
+                  type: "change",
+                  reason: `${relativeUrl} updated`,
+                  items: generateItems(),
+                });
+              },
+              removed: ({ relativeUrl }) => {
+                sendMessage({
+                  type: "change",
+                  reason: `${relativeUrl} removed`,
+                  items: generateItems(),
+                });
+              },
+            });
+            return () => {
+              unwatch();
+            };
+          });
         },
       },
     ],
