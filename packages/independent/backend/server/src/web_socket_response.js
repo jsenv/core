@@ -11,13 +11,23 @@
  * })
  * ```
  *
- * But we don't really need a class so we are just calling a regular function under the hood
+ * But we don't really need a class so we are just returning a regular object under the hood
  */
 
 export class WebSocketResponse {
-  constructor(...args) {
+  constructor(webSocketHandler, { status, statusText, headers } = {}) {
+    const webSocketHandlerAsBody = {
+      [webSocketHandlerAsBodySymbol]: true,
+      webSocketHandler,
+    };
+    const webSocketResponse = {
+      status,
+      statusText,
+      headers,
+      body: webSocketHandlerAsBody,
+    };
     // eslint-disable-next-line no-constructor-return
-    return createWebSocketResponse(...args);
+    return webSocketResponse;
   }
 }
 
@@ -34,20 +44,3 @@ export const getWebSocketHandler = (responseProperties) => {
 };
 
 const webSocketHandlerAsBodySymbol = Symbol.for("web_socket_handler_as_body");
-
-const createWebSocketResponse = (
-  webSocketHandler,
-  { status, statusText, headers } = {},
-) => {
-  const webSocketHandlerAsBody = {
-    [webSocketHandlerAsBodySymbol]: true,
-    webSocketHandler,
-  };
-  const webSocketResponse = {
-    status,
-    statusText,
-    headers,
-    body: webSocketHandlerAsBody,
-  };
-  return webSocketResponse;
-};

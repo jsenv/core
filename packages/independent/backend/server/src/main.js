@@ -25,6 +25,10 @@ export { fetchFileSystem } from "./filesystem/fetch_filesystem.js";
 
 // webSocket
 export { WebSocketResponse } from "./web_socket_response.js";
+// long polling
+export { ProgressiveResponse } from "./progressive_response.js";
+// SSE
+export { createSSERoom } from "./sse/sse_room.js";
 
 // CORS
 export {
@@ -35,12 +39,6 @@ export {
 
 // server timing
 export { timeFunction, timeStart } from "./server_timing/timing_measure.js";
-
-// SSE
-export { createSSERoom } from "./sse/sse_room.js";
-
-// long polling
-export { createObservableBody } from "./interfacing_with_node/observable_body.js";
 
 // content-negotiation
 export { pickContentType } from "./content_negotiation/pick_content_type.js";
