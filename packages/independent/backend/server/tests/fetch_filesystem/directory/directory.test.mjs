@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 import { fetchUrl } from "@jsenv/fetch";
-import { createFileSystemRequestHandler, startServer } from "@jsenv/server";
+import { createFileSystemFetch, startServer } from "@jsenv/server";
 
 const testDirectoryUrl = new URL("./", import.meta.url).href;
 const server = await startServer({
@@ -9,7 +9,7 @@ const server = await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(testDirectoryUrl, {
+      response: createFileSystemFetch(testDirectoryUrl, {
         canReadDirectory: true,
       }),
     },

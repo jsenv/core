@@ -1,5 +1,5 @@
 import {
-  createFileSystemRequestHandler,
+  createFileSystemFetch,
   jsenvServiceCORS,
   startServer,
 } from "@jsenv/server";
@@ -22,7 +22,7 @@ export const localServer = await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(serverDirectoryUrl),
+      response: createFileSystemFetch(serverDirectoryUrl),
     },
   ],
 });

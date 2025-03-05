@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 import {
-  createFileSystemRequestHandler,
+  createFileSystemFetch,
   createSSERoom,
   startServer,
 } from "@jsenv/server";
@@ -26,9 +26,7 @@ const server = await startServer({
     },
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(
-        import.meta.resolve("./client/"),
-      ),
+      response: createFileSystemFetch(import.meta.resolve("./client/")),
     },
   ],
 });

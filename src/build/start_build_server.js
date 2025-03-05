@@ -17,7 +17,7 @@ import { Abort, raceProcessTeardownEvents } from "@jsenv/abort";
 import { assertAndNormalizeDirectoryUrl } from "@jsenv/filesystem";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
 import {
-  createFileSystemRequestHandler,
+  createFileSystemFetch,
   jsenvAccessControlAllowedHeaders,
   jsenvServiceCORS,
   jsenvServiceErrorHandler,
@@ -174,7 +174,7 @@ const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
         };
       }
       const urlObject = new URL(request.resource.slice(1), buildDirectoryUrl);
-      return createFileSystemRequestHandler(buildDirectoryUrl, {
+      return createFileSystemFetch(buildDirectoryUrl, {
         cacheControl: urlIsVersioned
           ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
           : "private,max-age=0,must-revalidate",

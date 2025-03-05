@@ -1,5 +1,5 @@
 import { requestCertificate } from "@jsenv/https-local";
-import { createFileSystemRequestHandler, startServer } from "@jsenv/server";
+import { createFileSystemFetch, startServer } from "@jsenv/server";
 
 const { certificate, privateKey } = requestCertificate();
 await startServer({
@@ -14,7 +14,7 @@ await startServer({
           helpers.pushResponse({ path: "/script.js" });
           helpers.pushResponse({ path: "/style.css" });
         }
-        return createFileSystemRequestHandler(import.meta.resolve("./"), {
+        return createFileSystemFetch(import.meta.resolve("./"), {
           canReadDirectory: true,
           mtimeEnabled: true,
         })(request, helpers);

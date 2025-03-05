@@ -1,6 +1,6 @@
 import { assert } from "@jsenv/assert";
 import {
-  createFileSystemRequestHandler,
+  createFileSystemFetch,
   jsenvServiceRequestAliases,
   startServer,
 } from "@jsenv/server";
@@ -26,7 +26,7 @@ const server = await startServer({
               ? request.original.resource
               : undefined;
             resource = request.resource;
-            return createFileSystemRequestHandler(import.meta.resolve("./"))(
+            return createFileSystemFetch(import.meta.resolve("./"))(
               request,
               helpers,
             );

@@ -81,7 +81,7 @@ _start_server.mjs:_
 
 ```js
 import { requestCertificate } from "@jsenv/https-local";
-import { startServer, createFileSystemRequestHandler } from "@jsenv/server";
+import { startServer, createFileSystemFetch } from "@jsenv/server";
 
 const { certificate, privateKey } = requestCertificate();
 await startServer({
@@ -92,7 +92,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+      response: createFileSystemFetch(import.meta.resolve("./"), {
         canReadDirectory: true,
       }),
     },
@@ -104,7 +104,7 @@ The following shows how http2 push can be added to the server:
 
 ```js
 import { requestCertificate } from "@jsenv/https-local";
-import { startServer, createFileSystemRequestHandler } from "@jsenv/server";
+import { startServer, createFileSystemFetch } from "@jsenv/server";
 
 const { certificate, privateKey } = requestCertificate();
 await startServer({
@@ -121,7 +121,7 @@ await startServer({
     },
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+      response: createFileSystemFetch(import.meta.resolve("./"), {
         canReadDirectory: true,
       }),
     },

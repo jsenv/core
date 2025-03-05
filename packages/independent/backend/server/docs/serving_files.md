@@ -3,13 +3,13 @@
 A server often needs to serve file without routing logic. Either the file is there and server sends it, or it responds with a 404 status code. You can use _fetchFileSystem_ for that, an async function that will search for a file on the filesystem and produce a response for it.
 
 ```js
-import { startServer, createFileSystemRequestHandler } from "@jsenv/server";
+import { startServer, createFileSystemFetch } from "@jsenv/server";
 
 await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(import.meta.resolve("./")),
+      response: createFileSystemFetch(import.meta.resolve("./")),
     },
   ],
 });
@@ -36,7 +36,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+      response: createFileSystemFetch(import.meta.resolve("./"), {
         eTagEnabled: true,
       }),
     },
@@ -56,7 +56,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+      response: createFileSystemFetch(import.meta.resolve("./"), {
         mtimeEnabled: true,
       }),
     },
@@ -81,7 +81,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+      response: createFileSystemFetch(import.meta.resolve("./"), {
         mtimeEnabled: true,
         cacheControl: (request) =>
           request.resource === "/"
@@ -111,7 +111,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(import.meta.resolve("./"), {
+      response: createFileSystemFetch(import.meta.resolve("./"), {
         compressionEnabled: true,
         compressionSizeThreshold: 1024,
       }),

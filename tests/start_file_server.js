@@ -1,5 +1,5 @@
 import {
-  createFileSystemRequestHandler,
+  createFileSystemFetch,
   jsenvServiceErrorHandler,
   startServer,
 } from "@jsenv/server";
@@ -22,7 +22,7 @@ export const startFileServer = ({
     routes: [
       {
         endpoint: "GET *",
-        response: createFileSystemRequestHandler(rootDirectoryUrl, {
+        response: createFileSystemFetch(rootDirectoryUrl, {
           canReadDirectory: true,
           cacheControl: (request) =>
             canUseLongTermCache(request)

@@ -1,10 +1,10 @@
-import { createFileSystemRequestHandler, startServer } from "@jsenv/server";
+import { createFileSystemFetch, startServer } from "@jsenv/server";
 
 await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(import.meta.resolve("./")),
+      response: createFileSystemFetch(import.meta.resolve("./")),
     },
   ],
 });

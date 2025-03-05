@@ -31,16 +31,14 @@ const startLocalServer = async () => {
   }
 
   const serverDirectoryUrl = new URL("../dist/", import.meta.url);
-  const { startServer, createFileSystemRequestHandler } = await import(
-    "@jsenv/server"
-  );
+  const { startServer, createFileSystemFetch } = await import("@jsenv/server");
   const server = await startServer({
     logLevel: "warn",
     port: 0,
     routes: [
       {
         endpoint: "GET *",
-        response: createFileSystemRequestHandler(serverDirectoryUrl),
+        response: createFileSystemFetch(serverDirectoryUrl),
       },
     ],
   });

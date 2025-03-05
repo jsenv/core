@@ -1,5 +1,5 @@
 import { requestCertificate } from "@jsenv/https-local";
-import { createFileSystemRequestHandler, startServer } from "@jsenv/server";
+import { createFileSystemFetch, startServer } from "@jsenv/server";
 import { snapshotTests } from "@jsenv/snapshot";
 import { connect } from "node:http2";
 
@@ -31,7 +31,7 @@ const run = async () => {
             helpers.pushResponse({ path: "/preventme" });
             helpers.pushResponse({ path: "/style.css" });
           }
-          return createFileSystemRequestHandler(import.meta.resolve("./"), {
+          return createFileSystemFetch(import.meta.resolve("./"), {
             canReadDirectory: true,
           })(request, helpers);
         },

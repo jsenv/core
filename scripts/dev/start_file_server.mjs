@@ -1,5 +1,5 @@
 import { requestCertificate } from "@jsenv/https-local";
-import { createFileSystemRequestHandler, startServer } from "@jsenv/server";
+import { createFileSystemFetch, startServer } from "@jsenv/server";
 
 const { certificate, privateKey } = requestCertificate({ altNames: ["local"] });
 const directoryUrl = new URL("../../", import.meta.url).href;
@@ -9,7 +9,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(directoryUrl, {
+      response: createFileSystemFetch(directoryUrl, {
         canReadDirectory: true,
       }),
     },

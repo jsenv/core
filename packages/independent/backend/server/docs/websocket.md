@@ -20,7 +20,7 @@ await startServer({
         };
       },
       endpoint: "GET *",
-      response: createFileSystemRequestHandler(import.meta.resolve("./")),
+      response: createFileSystemFetch(import.meta.resolve("./")),
     },
   ],
 });
