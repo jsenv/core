@@ -1,4 +1,4 @@
-# [0_regular](../../request_handling_timeout.test.mjs#L31)
+# [0_regular](../../request_handling_timeout.test.mjs#L29)
 
 ```js
 return run({ waitForEver: false });
@@ -15,7 +15,6 @@ return run({ waitForEver: false });
 server started at http://127.0.0.1
 GET http://127.0.0.1/
   200 OK
-server stopping server (reason: not specified)
 ```
 
 </details>

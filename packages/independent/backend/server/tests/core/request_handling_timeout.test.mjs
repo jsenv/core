@@ -19,8 +19,6 @@ const run = async ({ waitForEver }) => {
     ],
   });
   const response = await fetch(server.origin);
-
-  server.stop();
   return {
     status: response.status,
     statusText: response.statusText,

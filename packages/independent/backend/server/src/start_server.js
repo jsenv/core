@@ -847,7 +847,6 @@ export const startServer = async ({
             });
           },
         });
-        nodeRequest.resume();
         if (receiveRequestOperation.signal.aborted) {
           return;
         }

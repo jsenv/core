@@ -1,15 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 99.45" background-color="#282c34">
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 175.45" background-color="#282c34">
   <g id="background">
-    <rect x="1" y="1" width="638" height="97.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+    <rect x="1" y="1" width="638" height="173.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
-  <foreignObject id="body" y="0" width="100%" height="109.45" overflow="hidden">
-    <svg width="498.88" height="99.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+  <foreignObject id="body" y="0" width="100%" height="185.45" overflow="hidden">
+    <svg width="1179.39" height="175.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">server started at http://127.0.0.1</text>
-        <text x="10" y="43.55">GET http://127.0.0.1/</text>
-        <text x="26.8" y="62.55" fill="#cd5555">504</text>
-        <text x="60.41" y="62.55"> server timeout after &lt;X&gt;s waiting to handle request</text>
-        <text x="10" y="81.55">server stopping server (reason: not specified)</text>
+        <text x="10" y="43.55">(node:992) Warning: Readable stream not used after &lt;X&gt; second.</text>
+        <text x="43.61" y="62.55">    at Timeout._onTimeout (@jsenv/core/packages/independent/backend/server/src/interfacing_with_node/observable_from_node_stream.js:43:15)</text>
+        <text x="43.61" y="81.55">    at listOnTimeout (node:internal/timers:594:17)</text>
+        <text x="43.61" y="100.55">    at process.processTimers (node:internal/timers:529:7)</text>
+        <text x="10" y="119.55">path: undefined, fd: undefined, url: /</text>
+        <text x="10" y="138.55">GET http://127.0.0.1/</text>
+        <text x="26.8" y="157.55" fill="#cd5555">504</text>
+        <text x="60.41" y="157.55"> server timeout after &lt;X&gt;s waiting to handle request</text>
       </g>
     </svg>
   </foreignObject>

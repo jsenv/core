@@ -39,20 +39,15 @@ export const observableFromNodeStream = (
   );
 
   if (readableLifetime && nodeStream instanceof Readable) {
-    // safe measure, ensure the readable stream gets
-    // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
     const timeout = setTimeout(() => {
       process.emitWarning(
-        `Readable stream not used after ${
-          readableLifetime / 1000
-        } seconds. It will be destroyed to release resources`,
+        `Readable stream not used after ${readableLifetime / 1000} seconds.`,
         {
           CODE: "READABLE_STREAM_TIMEOUT",
           // url is for http client request
           detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`,
         },
       );
-      nodeStream.destroy();
     }, readableLifetime).unref();
     onceReadableStreamUsedOrClosed(nodeStream, () => {
       clearTimeout(timeout);

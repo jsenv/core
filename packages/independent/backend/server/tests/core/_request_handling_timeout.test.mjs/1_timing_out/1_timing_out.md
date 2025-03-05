@@ -1,4 +1,4 @@
-# [1_timing_out](../../request_handling_timeout.test.mjs#L34)
+# [1_timing_out](../../request_handling_timeout.test.mjs#L32)
 
 ```js
 return run({ waitForEver: true });
@@ -13,9 +13,13 @@ return run({ waitForEver: true });
 
 ```console
 server started at http://127.0.0.1
+(node:992) Warning: Readable stream not used after <X> second.
+    at Timeout._onTimeout (@jsenv/core/packages/independent/backend/server/src/interfacing_with_node/observable_from_node_stream.js:43:15)
+    at listOnTimeout (node:internal/timers:594:17)
+    at process.processTimers (node:internal/timers:529:7)
+path: undefined, fd: undefined, url: /
 GET http://127.0.0.1/
   504 server timeout after <X>s waiting to handle request
-server stopping server (reason: not specified)
 ```
 
 </details>
