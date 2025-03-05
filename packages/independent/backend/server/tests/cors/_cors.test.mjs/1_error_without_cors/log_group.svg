@@ -10,11 +10,11 @@
         <text x="10" y="62.55">--- error stack ---</text>
         <text x="10" y="81.55">Error: here</text>
         <text x="43.61" y="100.55">    at redirectRequest (base/cors.test.mjs:29:19)</text>
-        <text x="43.61" y="119.55">    at callHook (@jsenv/core/packages/independent/backend/server/src/service_controller.js:70:25)</text>
-        <text x="43.61" y="138.55">    at Object.callHooks (@jsenv/core/packages/independent/backend/server/src/service_controller.js:106:27)</text>
-        <text x="43.61" y="157.55">    at applyRequestInternalRedirection (@jsenv/core/packages/independent/backend/server/src/start_server.js:380:23)</text>
-        <text x="43.61" y="176.55">    at getResponseProperties (@jsenv/core/packages/independent/backend/server/src/start_server.js:426:9)</text>
-        <text x="43.61" y="195.55">    at Server.requestEventHandler (@jsenv/core/packages/independent/backend/server/src/start_server.js:716:42)</text>
+        <text x="43.61" y="119.55">    at callHook (@jsenv/core/packages/independent/backend/server/src/service_controller.js:62:25)</text>
+        <text x="43.61" y="138.55">    at Object.callHooks (@jsenv/core/packages/independent/backend/server/src/service_controller.js:86:27)</text>
+        <text x="43.61" y="157.55">    at applyRequestInternalRedirection (@jsenv/core/packages/independent/backend/server/src/start_server.js:395:23)</text>
+        <text x="43.61" y="176.55">    at getResponseProperties (@jsenv/core/packages/independent/backend/server/src/start_server.js:507:17)</text>
+        <text x="43.61" y="195.55">    at Server.requestEventHandler (@jsenv/core/packages/independent/backend/server/src/start_server.js:701:42)</text>
         <text x="43.61" y="214.55">    at Server.emit (node:events:536:35)</text>
         <text x="43.61" y="233.55">    at parserOnIncoming (node:_http_server:1153:12)</text>
         <text x="43.61" y="252.55">    at HTTPParser.parserOnHeadersComplete (node:_http_common:117:17)</text>

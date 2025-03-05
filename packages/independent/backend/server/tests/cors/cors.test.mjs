@@ -32,7 +32,7 @@ const run = async ({ cors, triggerInternalError }) => {
         routes: [
           {
             endpoint: "GET *",
-            response: () => {
+            fetch: () => {
               return new Response("ok");
             },
           },
