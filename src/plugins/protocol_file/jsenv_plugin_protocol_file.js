@@ -15,6 +15,7 @@ export const jsenvPluginProtocolFile = ({
   directoryListing,
   rootDirectoryUrl,
   mainFilePath,
+  sourceFilesConfig,
 }) => {
   return [
     jsenvPluginFsRedirection({
@@ -77,6 +78,7 @@ export const jsenvPluginProtocolFile = ({
             directoryContentMagicName,
             rootDirectoryUrl,
             mainFilePath,
+            sourceFilesConfig,
           }),
         ]
       : []),

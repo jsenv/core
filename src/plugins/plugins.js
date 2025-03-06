@@ -28,6 +28,7 @@ export const getCorePlugins = ({
   rootDirectoryUrl,
   mainFilePath,
   runtimeCompat,
+  sourceFilesConfig,
 
   referenceAnalysis = {},
   nodeEsmResolution = {},
@@ -85,6 +86,7 @@ export const getCorePlugins = ({
       directoryListing,
       rootDirectoryUrl,
       mainFilePath,
+      sourceFilesConfig,
     }),
     {
       name: "jsenv:resolve_root_as_main",

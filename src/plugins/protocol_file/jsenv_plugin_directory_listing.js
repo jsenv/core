@@ -37,6 +37,7 @@ import {
 } from "@jsenv/urls";
 import { existsSync, lstatSync, readdirSync } from "node:fs";
 import { lookupPackageDirectory } from "../../helpers/lookup_package_directory.js";
+import { getDirectoryWatchPatterns } from "../../helpers/watch_source_files.js";
 import { replacePlaceholders } from "../injections/jsenv_plugin_injections.js";
 import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";
 
@@ -51,6 +52,7 @@ export const jsenvPluginDirectoryListing = ({
   directoryContentMagicName,
   rootDirectoryUrl,
   mainFilePath,
+  sourceFilesConfig,
 }) => {
   return {
     name: "jsenv:directory_listing",
@@ -189,6 +191,13 @@ export const jsenvPluginDirectoryListing = ({
                   items: generateItems(),
                 });
               },
+              watchPatterns: getDirectoryWatchPatterns(
+                closestDirectoryUrl,
+                closestDirectoryUrl,
+                {
+                  sourceFilesConfig,
+                },
+              ),
             });
             return () => {
               unwatch();

@@ -60,7 +60,7 @@ export const startDevServer = async ({
   keepProcessAlive = true,
   onStop = () => {},
 
-  sourceFilesConfig,
+  sourceFilesConfig = {},
   clientAutoreload = true,
 
   // runtimeCompat is the runtimeCompat for the build
@@ -227,6 +227,7 @@ export const startDevServer = async ({
         rootDirectoryUrl: sourceDirectoryUrl,
         mainFilePath: sourceMainFilePath,
         runtimeCompat,
+        sourceFilesConfig,
 
         referenceAnalysis,
         nodeEsmResolution,

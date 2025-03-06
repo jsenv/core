@@ -3,10 +3,32 @@ import { urlToRelativeUrl } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 import { lookupPackageDirectory } from "./lookup_package_directory.js";
 
+export const getDirectoryWatchPatterns = (
+  directoryUrl,
+  watchedDirectoryUrl,
+  { sourceFilesConfig },
+) => {
+  const directoryUrlRelativeToWatchedDirectory = urlToRelativeUrl(
+    directoryUrl,
+    watchedDirectoryUrl,
+  );
+  const watchPatterns = {
+    [`${directoryUrlRelativeToWatchedDirectory}**/*`]: true, // by default watch everything inside the source directory
+    [`${directoryUrlRelativeToWatchedDirectory}**/.*`]: false, // file starting with a dot -> do not watch
+    [`${directoryUrlRelativeToWatchedDirectory}**/.*/`]: false, // directory starting with a dot -> do not watch
+    [`${directoryUrlRelativeToWatchedDirectory}**/node_modules/`]: false, // node_modules directory -> do not watch
+  };
+  for (const key of Object.keys(sourceFilesConfig)) {
+    watchPatterns[`${directoryUrlRelativeToWatchedDirectory}${key}`] =
+      sourceFilesConfig[key];
+  }
+  return watchPatterns;
+};
+
 export const watchSourceFiles = (
   sourceDirectoryUrl,
   callback,
-  { sourceFileConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
+  { sourceFilesConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
 ) => {
   // Project should use a dedicated directory (usually "src/")
   // passed to the dev server via "sourceDirectoryUrl" param
@@ -15,23 +37,18 @@ export const watchSourceFiles = (
   // In that case source directory might contain files matching "node_modules/*" or ".git/*"
   // And jsenv should not consider these as source files and watch them (to not hurt performances)
   const watchPatterns = {};
-  const addDirectoryToWatch = (directoryUrlRelativeToRoot) => {
-    Object.assign(watchPatterns, {
-      [`${directoryUrlRelativeToRoot}**/*`]: true, // by default watch everything inside the source directory
-      // line below is commented until @jsenv/url-meta fixes the fact that is matches
-      // any file with an extension
-      [`${directoryUrlRelativeToRoot}**/.*`]: false, // file starting with a dot -> do not watch
-      [`${directoryUrlRelativeToRoot}**/.*/`]: false, // directory starting with a dot -> do not watch
-      [`${directoryUrlRelativeToRoot}**/node_modules/`]: false, // node_modules directory -> do not watch
-    });
-    for (const key of Object.keys(sourceFileConfig)) {
-      watchPatterns[`${directoryUrlRelativeToRoot}${key}`] =
-        sourceFileConfig[key];
-    }
+  let watchedDirectoryUrl = "";
+  const addDirectoryToWatch = (directoryUrl) => {
+    Object.assign(
+      watchPatterns,
+      getDirectoryWatchPatterns(directoryUrl, watchedDirectoryUrl, {
+        sourceFilesConfig,
+      }),
+    );
   };
-  const watch = (rootDirectoryUrl) => {
+  const watch = () => {
     const stopWatchingSourceFiles = registerDirectoryLifecycle(
-      rootDirectoryUrl,
+      watchedDirectoryUrl,
       {
         watchPatterns,
         cooldownBetweenFileEvents,
@@ -39,19 +56,19 @@ export const watchSourceFiles = (
         recursive: true,
         added: ({ relativeUrl }) => {
           callback({
-            url: new URL(relativeUrl, rootDirectoryUrl).href,
+            url: new URL(relativeUrl, watchedDirectoryUrl).href,
             event: "added",
           });
         },
         updated: ({ relativeUrl }) => {
           callback({
-            url: new URL(relativeUrl, rootDirectoryUrl).href,
+            url: new URL(relativeUrl, watchedDirectoryUrl).href,
             event: "modified",
           });
         },
         removed: ({ relativeUrl }) => {
           callback({
-            url: new URL(relativeUrl, rootDirectoryUrl).href,
+            url: new URL(relativeUrl, watchedDirectoryUrl).href,
             event: "removed",
           });
         },
@@ -75,31 +92,26 @@ export const watchSourceFiles = (
     if (!workspaces || !Array.isArray(workspaces) || workspaces.length === 0) {
       break npm_workspaces;
     }
+    watchedDirectoryUrl = packageDirectoryUrl;
     for (const workspace of workspaces) {
       if (workspace.endsWith("*")) {
-        const workspaceRelativeUrl = urlToRelativeUrl(
-          new URL(workspace.slice(0, -1), packageDirectoryUrl),
+        const workspaceDirectoryUrl = new URL(
+          workspace.slice(0, -1),
           packageDirectoryUrl,
         );
-        addDirectoryToWatch(workspaceRelativeUrl);
+        addDirectoryToWatch(workspaceDirectoryUrl);
       } else {
-        const workspaceRelativeUrl = urlToRelativeUrl(
-          new URL(workspace, packageDirectoryUrl),
-          packageDirectoryUrl,
-        );
+        const workspaceRelativeUrl = new URL(workspace, packageDirectoryUrl);
         addDirectoryToWatch(workspaceRelativeUrl);
       }
     }
     // we are updating the root directory
     // we must make the patterns relative to source directory relative to the new root directory
-    const sourceRelativeToPackage = urlToRelativeUrl(
-      sourceDirectoryUrl,
-      packageDirectoryUrl,
-    );
-    addDirectoryToWatch(sourceRelativeToPackage);
-    return watch(packageDirectoryUrl);
+    addDirectoryToWatch(sourceDirectoryUrl);
+    return watch();
   }
 
-  addDirectoryToWatch("");
-  return watch(sourceDirectoryUrl);
+  watchedDirectoryUrl = sourceDirectoryUrl;
+  addDirectoryToWatch(sourceDirectoryUrl);
+  return watch();
 };
