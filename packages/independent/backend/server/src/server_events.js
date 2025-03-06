@@ -7,10 +7,23 @@ import { createLogger } from "@jsenv/humanize";
 import { createObservable } from "./interfacing_with_node/observable.js";
 import { WebSocketResponse } from "./web_socket_response.js";
 
-export class SSE {
+export class ServerEvents {
   constructor(...args) {
     // eslint-disable-next-line no-constructor-return
-    return createSSE(...args);
+    return createServerEvents(...args);
+  }
+}
+
+export class LazyServerEvents {
+  constructor(producer, options = {}) {
+    const serverEvents = createServerEvents({
+      producer,
+      ...options,
+    });
+    // eslint-disable-next-line no-constructor-return
+    return {
+      fetch: serverEvents.fetch,
+    };
   }
 }
 
@@ -60,7 +73,7 @@ export class SSE {
  *   response: (request) => sseController.fetch(request)
  * }
  */
-export const createSSE = ({
+const createServerEvents = ({
   producer,
   logLevel,
   // do not keep process alive because of event source, something else must keep it alive
@@ -155,6 +168,17 @@ export const createSSE = ({
   };
 
   const fetch = (request) => {
+    const isWebsocketUpgradeRequest =
+      request.headers["upgrade"] === "websocket";
+    const isEventSourceRequest =
+      request.headers["accept"].includes("text/event-stream");
+    if (!isWebsocketUpgradeRequest && !isEventSourceRequest) {
+      return {
+        status: 400,
+        body: "Bad Request, this endpoint only accepts WebSocket or EventSource requests",
+      };
+    }
+
     if (clientArray.length >= maxClientAllowed) {
       if (actionOnClientLimitReached === "refuse") {
         return {
@@ -175,8 +199,7 @@ export const createSSE = ({
     const lastKnownId =
       request.headers["last-event-id"] ||
       request.searchParams.get("last-event-id");
-
-    if (request.headers["upgrade"] === "websocket") {
+    if (isWebsocketUpgradeRequest) {
       return new WebSocketResponse((websocket) => {
         const webSocketClient = {
           type: "websocket",
@@ -196,50 +219,24 @@ export const createSSE = ({
         };
       });
     }
-    if (request.headers["accept"].includes("text/event-stream")) {
-      return {
-        status: 200,
-        headers: {
-          "content-type": "text/event-stream",
-          "cache-control": "no-store",
-          "connection": "keep-alive",
-        },
-        body: createObservable(({ next, complete, addTeardown }) => {
-          const client = {
-            type: "event_source",
-            lastKnownId,
-            request,
-            sendEvent: (event) => {
-              next(stringifySourceEvent(event));
-            },
-            close: () => {
-              complete(); // will terminate the http connection as body ends
-            },
-          };
-          addClient(client);
-          addTeardown(() => {
-            removeClient(client);
-          });
-        }),
-      };
-    }
+    // event source request
     return {
       status: 200,
       headers: {
-        "content-type": "application/json",
+        "content-type": "text/event-stream",
         "cache-control": "no-store",
         "connection": "keep-alive",
       },
       body: createObservable(({ next, complete, addTeardown }) => {
         const client = {
-          type: "http",
+          type: "event_source",
           lastKnownId,
           request,
           sendEvent: (event) => {
-            next(JSON.stringify(event));
+            next(stringifySourceEvent(event));
           },
           close: () => {
-            complete();
+            complete(); // will terminate the http connection as body ends
           },
         };
         addClient(client);

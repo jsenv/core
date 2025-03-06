@@ -27,8 +27,8 @@ export { fetchFileSystem } from "./filesystem/fetch_filesystem.js";
 export { WebSocketResponse } from "./web_socket_response.js";
 // long polling
 export { ProgressiveResponse } from "./progressive_response.js";
-// Server event source (can be used to push events to clients that can be connected with WebSocket, EventSource or long polling)
-export { SSE } from "./sse.js";
+// Server event (can be used to push events to clients that can be connected with WebSocket or EventSource)
+export { ServerEvents, LazyServerEvents } from "./server_events.js";
 
 // CORS
 export {

@@ -1,8 +1,8 @@
-import { SSE } from "../../sse.js";
-
-const aliveServerSentEvents = new SSE();
+import { LazyServerEvents } from "../../server_events.js";
 
 export const jsenvServiceAutoreloadOnRestart = () => {
+  const aliveServerEvents = new LazyServerEvents(() => {});
+
   return {
     name: "jsenv:autoreload_on_server_restart",
 
@@ -21,7 +21,7 @@ export const jsenvServiceAutoreloadOnRestart = () => {
             window.location.reload();
           };
         },
-        fetch: aliveServerSentEvents.fetch,
+        fetch: aliveServerEvents.fetch,
       },
       {
         endpoint: "GET /.internal/alive.eventsource",
@@ -36,20 +36,7 @@ This endpoint exists mostly to demo eventsource as there is already the websocke
           };
         },
         /* eslint-enable no-undef */
-        fetch: aliveServerSentEvents.fetch,
-      },
-      {
-        endpoint: "GET /.internal/alive.longpolling",
-        description: `Client can connect to this endpoint to detect when server connection is lost.
-This endpoint exists mostly to demo longpolling as there is already the websocket endpoint.`,
-        /* eslint-disable no-undef */
-        clientCodeExample: async () => {
-          await fetch("/.internal/alive.longpolling");
-          // server connection closed
-          window.location.reload();
-        },
-        /* eslint-enable no-undef */
-        fetch: aliveServerSentEvents.fetch,
+        fetch: aliveServerEvents.fetch,
       },
     ],
   };

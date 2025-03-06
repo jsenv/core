@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert";
-import { SSE, startServer } from "@jsenv/server";
+import { ServerEvents, startServer } from "@jsenv/server";
 import { closeEventSource, openEventSource } from "./sse_test_helpers.mjs";
 
 const timeEllapsedPromise = (ms) => {
@@ -10,19 +10,19 @@ const timeEllapsedPromise = (ms) => {
 
 // a client is notified from an event
 {
-  const sse = new SSE();
+  const serverEvents = new ServerEvents();
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     routes: [
       {
         endpoint: "GET *",
-        fetch: sse.fetch,
+        fetch: serverEvents.fetch,
       },
     ],
   });
   const eventSource = await openEventSource(server.origin);
-  sse.sendEventToAllClients({ data: 42 });
+  serverEvents.sendEventToAllClients({ data: 42 });
   await timeEllapsedPromise(200);
   const [firstMessageEvent] = eventSource.getAllMessageEvents();
   const actual = {
@@ -39,31 +39,31 @@ const timeEllapsedPromise = (ms) => {
   };
   assert({ actual, expect });
   await closeEventSource(eventSource);
-  sse.close();
+  serverEvents.close();
 }
 
 // a client is notified of events occuring while he is disconnected
 {
-  const sse = new SSE({ logLevel: "warn" });
+  const serverEvents = new ServerEvents({ logLevel: "warn" });
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     routes: [
       {
         endpoint: "GET *",
-        fetch: sse.fetch,
+        fetch: serverEvents.fetch,
       },
     ],
   });
   let eventSource = await openEventSource(server.origin);
-  sse.sendEventToAllClients({
+  serverEvents.sendEventToAllClients({
     type: "message",
     data: 42,
   });
   await timeEllapsedPromise(200);
   const [firstMessageEvent] = eventSource.getAllMessageEvents();
   await closeEventSource(eventSource);
-  sse.sendEventToAllClients({
+  serverEvents.sendEventToAllClients({
     type: "message",
     data: true,
   });
@@ -90,7 +90,7 @@ const timeEllapsedPromise = (ms) => {
   assert({ actual, expect });
 
   {
-    const actual = sse.getClientCount();
+    const actual = serverEvents.getClientCount();
     const expect = 1;
     assert({ actual, expect });
   }
@@ -100,38 +100,38 @@ const timeEllapsedPromise = (ms) => {
   // ensure event source is properly closed
   // and room takes that into accout
   {
-    const actual = sse.getClientCount();
+    const actual = serverEvents.getClientCount();
     const expect = 0;
     assert({ actual, expect });
   }
-  sse.close();
+  serverEvents.close();
 }
 
 // a server can have many rooms and client can connect the one he wants
 {
-  const sseA = new SSE();
-  const sseB = new SSE();
+  const serverEventsA = new ServerEvents();
+  const serverEventsB = new ServerEvents();
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     routes: [
       {
         endpoint: "GET /a",
-        fetch: sseA.fetch,
+        fetch: serverEventsA.fetch,
       },
       {
         endpoint: "GET /b",
-        fetch: sseB.fetch,
+        fetch: serverEventsB.fetch,
       },
     ],
   });
   const aClientEventSource = await openEventSource(`${server.origin}/a`);
   const bClientEventSource = await openEventSource(`${server.origin}/b`);
-  sseA.sendEventToAllClients({
+  serverEventsA.sendEventToAllClients({
     type: "message",
     data: "a",
   });
-  sseB.sendEventToAllClients({
+  serverEventsB.sendEventToAllClients({
     type: "message",
     data: "b",
   });
@@ -164,32 +164,32 @@ const timeEllapsedPromise = (ms) => {
 
   await closeEventSource(aClientEventSource);
   await closeEventSource(bClientEventSource);
-  sseA.close();
-  sseB.close();
+  serverEventsA.close();
+  serverEventsB.close();
 }
 
 // a room can have many clients
 {
-  const sse = new SSE();
+  const serverEvents = new ServerEvents();
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     routes: [
       {
         endpoint: "GET *",
-        fetch: sse.fetch,
+        fetch: serverEvents.fetch,
       },
     ],
   });
   const clientA = await openEventSource(server.origin);
   const clientB = await openEventSource(server.origin);
-  sse.sendEventToAllClients({
+  serverEvents.sendEventToAllClients({
     type: "message",
     data: 42,
   });
   await timeEllapsedPromise(200);
   {
-    const actual = sse.getClientCount();
+    const actual = serverEvents.getClientCount();
     const expect = 2;
     assert({ actual, expect });
   }
@@ -222,12 +222,12 @@ const timeEllapsedPromise = (ms) => {
 
   await closeEventSource(clientA);
   await closeEventSource(clientB);
-  sse.close();
+  serverEvents.close();
 }
 
 // there can be a limit to number of clients (100 by default)
 {
-  const sse = new SSE({
+  const serverEvents = new ServerEvents({
     maxClientAllowed: 1,
   });
   const server = await startServer({
@@ -236,7 +236,7 @@ const timeEllapsedPromise = (ms) => {
     routes: [
       {
         endpoint: "GET *",
-        fetch: sse.fetch,
+        fetch: serverEvents.fetch,
       },
     ],
   });
@@ -258,21 +258,21 @@ const timeEllapsedPromise = (ms) => {
     assert({ actual, expect });
   } finally {
     await closeEventSource(clientA);
-    sse.close();
+    serverEvents.close();
   }
 }
 
-// test whats happens when client tries to connect a closed sse
+// test whats happens when client tries to connect a closed serverEvents
 {
-  const sse = new SSE();
-  sse.close();
+  const serverEvents = new ServerEvents();
+  serverEvents.close();
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     routes: [
       {
         endpoint: "GET *",
-        fetch: sse.fetch,
+        fetch: serverEvents.fetch,
       },
     ],
   });

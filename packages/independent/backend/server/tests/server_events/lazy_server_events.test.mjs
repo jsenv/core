@@ -1,18 +1,14 @@
 import { assert } from "@jsenv/assert";
-
-import { SSE, startServer } from "@jsenv/server";
+import { LazyServerEvents, startServer } from "@jsenv/server";
 import { closeEventSource, openEventSource } from "./sse_test_helpers.mjs";
 
 let producerCallCount = 0;
 let producerCleanupCallCount = 0;
-const sse = new SSE({
-  // logLevel: "debug",
-  producer: () => {
-    producerCallCount++;
-    return () => {
-      producerCleanupCallCount++;
-    };
-  },
+const serverEvents = new LazyServerEvents(() => {
+  producerCallCount++;
+  return () => {
+    producerCleanupCallCount++;
+  };
 });
 const server = await startServer({
   logLevel: "warn",
@@ -20,7 +16,7 @@ const server = await startServer({
   routes: [
     {
       endpoint: "GET *",
-      fetch: sse.fetch,
+      fetch: serverEvents.fetch,
     },
   ],
 });
