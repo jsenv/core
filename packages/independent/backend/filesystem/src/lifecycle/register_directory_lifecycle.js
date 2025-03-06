@@ -249,50 +249,16 @@ export const registerDirectoryLifecycle = (
     handleEntryUpdated(entryInfo);
   };
   const handleEntryFound = (entryInfo, { notify = true } = {}) => {
-    infoMap.set(entryInfo.relativeUrl, entryInfo);
-    if (entryInfo.type === "directory") {
-      const directoryUrl = `${entryInfo.url}/`;
-      let entryNameArray;
-      try {
-        const directoryUrlObject = new URL(directoryUrl);
-        entryNameArray = readdirSync(directoryUrlObject);
-      } catch (e) {
-        if (
-          e.code === "ENOENT" ||
-          e.code === "EACCES" ||
-          e.code === "EPERM" ||
-          e.code === "ENOTDIR"
-        ) {
-          return;
-        }
-        throw e;
-      }
-      for (const entryName of entryNameArray) {
-        const childEntryUrl = new URL(entryName, directoryUrl).href;
-        const childEntryInfo = readEntryInfo(childEntryUrl);
-        if (childEntryInfo.type !== null && childEntryInfo.patternValue) {
-          handleEntryFound(childEntryInfo, { notify });
-        }
-      }
-      // we must watch manually every directory we find
-      if (!fsWatchSupportsRecursive) {
+    const seenSet = new Set();
+    const applyEntryDiscoveredEffects = (entryInfo) => {
+      seenSet.add(entryInfo.url);
+      infoMap.set(entryInfo.relativeUrl, entryInfo);
+      if (entryInfo.type === "directory") {
+        const directoryUrl = `${entryInfo.url}/`;
+        let entryNameArray;
         try {
-          const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
-            persistent: keepProcessAlive,
-          });
-          tracker.registerCleanupCallback(() => {
-            watcher.close();
-          });
-          watcher.on("change", (eventType, filename) => {
-            handleDirectoryEvent({
-              directoryRelativeUrl: entryInfo.relativeUrl,
-              filename: filename
-                ? // replace back slashes with slashes
-                  filename.replace(/\\/g, "/")
-                : "",
-              eventType,
-            });
-          });
+          const directoryUrlObject = new URL(directoryUrl);
+          entryNameArray = readdirSync(directoryUrlObject);
         } catch (e) {
           if (
             e.code === "ENOENT" ||
@@ -304,16 +270,58 @@ export const registerDirectoryLifecycle = (
           }
           throw e;
         }
+        for (const entryName of entryNameArray) {
+          const childEntryUrl = new URL(entryName, directoryUrl).href;
+          if (seenSet.has(childEntryUrl)) {
+            continue;
+          }
+          const childEntryInfo = readEntryInfo(childEntryUrl);
+          if (childEntryInfo.type !== null && childEntryInfo.patternValue) {
+            applyEntryDiscoveredEffects(childEntryInfo);
+          }
+        }
+        // we must watch manually every directory we find
+        if (!fsWatchSupportsRecursive) {
+          try {
+            const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
+              persistent: keepProcessAlive,
+            });
+            tracker.registerCleanupCallback(() => {
+              watcher.close();
+            });
+            watcher.on("change", (eventType, filename) => {
+              handleDirectoryEvent({
+                directoryRelativeUrl: entryInfo.relativeUrl,
+                filename: filename
+                  ? // replace back slashes with slashes
+                    filename.replace(/\\/g, "/")
+                  : "",
+                eventType,
+              });
+            });
+          } catch (e) {
+            if (
+              e.code === "ENOENT" ||
+              e.code === "EACCES" ||
+              e.code === "EPERM" ||
+              e.code === "ENOTDIR"
+            ) {
+              return;
+            }
+            throw e;
+          }
+        }
       }
-    }
-    if (added && entryInfo.patternValue && notify) {
-      added({
-        relativeUrl: entryInfo.relativeUrl,
-        type: entryInfo.type,
-        patternValue: entryInfo.patternValue,
-        mtime: entryInfo.stat.mtimeMs,
-      });
-    }
+      if (added && entryInfo.patternValue && notify) {
+        added({
+          relativeUrl: entryInfo.relativeUrl,
+          type: entryInfo.type,
+          patternValue: entryInfo.patternValue,
+          mtime: entryInfo.stat.mtimeMs,
+        });
+      }
+    };
+    applyEntryDiscoveredEffects(entryInfo);
   };
   const handleEntryLost = (entryInfo) => {
     infoMap.delete(entryInfo.relativeUrl);
@@ -339,16 +347,9 @@ export const registerDirectoryLifecycle = (
     }
   };
 
-  const entries = readdirSync(new URL(sourceUrl));
-  for (const entry of entries) {
-    const entryUrl = new URL(entry, sourceUrl).href;
-    const entryInfo = readEntryInfo(entryUrl);
-    if (entryInfo.type !== null && entryInfo.patternValue) {
-      handleEntryFound(entryInfo, {
-        notify: notifyExistent,
-      });
-    }
-  }
+  handleEntryFound(readEntryInfo(sourceUrl), {
+    notify: notifyExistent,
+  });
   if (debug) {
     const relativeUrls = Array.from(infoMap.keys());
     if (relativeUrls.length === 0) {
