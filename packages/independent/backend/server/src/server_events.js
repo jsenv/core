@@ -7,31 +7,12 @@ import { createLogger } from "@jsenv/humanize";
 import { createObservable } from "./interfacing_with_node/observable.js";
 import { WebSocketResponse } from "./web_socket_response.js";
 
-export class ServerEvents {
-  constructor(...args) {
-    // eslint-disable-next-line no-constructor-return
-    return createServerEvents(...args);
-  }
-}
-
-export class LazyServerEvents {
-  constructor(producer, options = {}) {
-    const serverEvents = createServerEvents({
-      producer,
-      ...options,
-    });
-    // eslint-disable-next-line no-constructor-return
-    return {
-      fetch: serverEvents.fetch,
-    };
-  }
-}
-
 /**
- * Creates a Server-Sent Events (SSE) controller that manages client connections and event distribution.
+ * Creates a Server-Sent Events controller that manages client connections and event distribution.
+ * Supports both SSE (EventSource) and WebSocket connections with automatic event history tracking.
  *
+ * @class
  * @param {Object} options - Configuration options for the SSE controller
- * @param {Function} [options.producer] - Function called when first client connects, receives an object with a sendEvent method
  * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
  * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
  * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
@@ -52,27 +33,96 @@ export class LazyServerEvents {
  * @returns {Function} .open - Reopens the controller after closing
  *
  * @example
- * // Basic usage with auto-producer
- * const sseController = createSSE({
- *   producer: ({sendEvent}) => {
- *     const interval = setInterval(() => {
- *       sendEvent({
- *         type: "update",
- *         data: JSON.stringify({ timestamp: Date.now() })
- *       });
- *     }, 2000);
+ * import { ServerEvents } from "@jsenv/server";
  *
- *     // Return cleanup function
- *     return () => clearInterval(interval);
- *   }
+ * const serverEvents = new ServerEvents({
+ *   welcomeEventEnabled: true,
+ *   historyLength: 50
+ * });
+ *
+ * // Send events to all connected clients
+ * serverEvents.sendEventToAllClients({
+ *   type: "update",
+ *   data: JSON.stringify({ timestamp: Date.now() })
  * });
  *
  * // Use in server route
  * {
  *   endpoint: "GET /events",
- *   response: (request) => sseController.fetch(request)
+ *   response: (request) => serverEvents.fetch(request)
  * }
  */
+export class ServerEvents {
+  constructor(...args) {
+    // eslint-disable-next-line no-constructor-return
+    return createServerEvents(...args);
+  }
+}
+
+/**
+ * Creates a minimal Server-Sent Events controller that exposes only the fetch method
+ * to handle client connections, keeping other controller methods private.
+ *
+ * This is useful when you want to provide a minimal API surface and ensure
+ * the events can only be pushed through a given function.
+ *
+ * @class
+ * @param {Function} producer - Function called when first client connects
+ * @param {Object} [options] - Configuration options for the SSE controller
+ * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
+ * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
+ * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
+ * @param {Number} [options.maxClientAllowed=100] - Maximum number of concurrent client connections allowed
+ * @param {Function} [options.computeEventId] - Function to generate event IDs, receives (event, lastEventId) and returns new ID
+ * @param {Boolean} [options.welcomeEventEnabled=false] - Whether to send a welcome event to new clients
+ * @param {Boolean} [options.welcomeEventPublic=false] - If true, welcome events are broadcast to all clients, not just the new one
+ * @param {String} [options.actionOnClientLimitReached='refuse'] - Action when client limit is reached ('refuse' or 'kick-oldest')
+ *
+ * @returns {Object} An object with only the fetch method to handle client connections
+ *
+ * @example
+ * import { LazyServerEvents } from "@jsenv/server";
+ *
+ * // Events can only be sent through the producer function
+ * const events = new LazyServerEvents((api) => {
+ *   console.log("First client connected");
+ *
+ *   // Setup interval, database watchers, etc.
+ *   const interval = setInterval(() => {
+ *     api.sendEvent({
+ *       type: "tick",
+ *       data: new Date().toISOString()
+ *     });
+ *   }, 1000);
+ *
+ *   // Return cleanup function that runs when last client disconnects
+ *   return () => {
+ *     console.log("Last client disconnected");
+ *     clearInterval(interval);
+ *   };
+ * });
+ *
+ * // Use in server route
+ * {
+ *   endpoint: "GET /events",
+ *   response: (request) => events.fetch(request)
+ * }
+ */
+export class LazyServerEvents {
+  constructor(producer, options = {}) {
+    const serverEvents = createServerEvents({
+      producer,
+      ...options,
+    });
+    // eslint-disable-next-line no-constructor-return
+    return {
+      fetch: serverEvents.fetch,
+    };
+  }
+}
+
 const createServerEvents = ({
   producer,
   logLevel,
