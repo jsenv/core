@@ -1,5 +1,5 @@
 import { assert } from "@jsenv/assert";
-import { createSSERoom, startServer } from "@jsenv/server";
+import { SSE, startServer } from "@jsenv/server";
 import { closeEventSource, openEventSource } from "./sse_test_helpers.mjs";
 
 const timeEllapsedPromise = (ms) => {
@@ -10,23 +10,19 @@ const timeEllapsedPromise = (ms) => {
 
 // a client is notified from an event
 {
-  const room = createSSERoom();
+  const sse = new SSE();
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     routes: [
       {
         endpoint: "GET *",
-        response: (request) => {
-          return room.join(request);
-        },
+        fetch: sse.fetch,
       },
     ],
   });
   const eventSource = await openEventSource(server.origin);
-  room.sendEventToAllClients({
-    data: 42,
-  });
+  sse.sendEventToAllClients({ data: 42 });
   await timeEllapsedPromise(200);
   const [firstMessageEvent] = eventSource.getAllMessageEvents();
   const actual = {
@@ -43,35 +39,31 @@ const timeEllapsedPromise = (ms) => {
   };
   assert({ actual, expect });
   await closeEventSource(eventSource);
-  room.close();
+  sse.close();
 }
 
 // a client is notified of events occuring while he is disconnected
 {
-  const room = createSSERoom({
-    logLevel: "warn",
-  });
+  const sse = new SSE({ logLevel: "warn" });
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     routes: [
       {
         endpoint: "GET *",
-        response: (request) => {
-          return room.join(request);
-        },
+        fetch: sse.fetch,
       },
     ],
   });
   let eventSource = await openEventSource(server.origin);
-  room.sendEventToAllClients({
+  sse.sendEventToAllClients({
     type: "message",
     data: 42,
   });
   await timeEllapsedPromise(200);
   const [firstMessageEvent] = eventSource.getAllMessageEvents();
   await closeEventSource(eventSource);
-  room.sendEventToAllClients({
+  sse.sendEventToAllClients({
     type: "message",
     data: true,
   });
@@ -98,7 +90,7 @@ const timeEllapsedPromise = (ms) => {
   assert({ actual, expect });
 
   {
-    const actual = room.getRoomClientCount();
+    const actual = sse.getClientCount();
     const expect = 1;
     assert({ actual, expect });
   }
@@ -108,49 +100,45 @@ const timeEllapsedPromise = (ms) => {
   // ensure event source is properly closed
   // and room takes that into accout
   {
-    const actual = room.getRoomClientCount();
+    const actual = sse.getClientCount();
     const expect = 0;
     assert({ actual, expect });
   }
-  room.close();
+  sse.close();
 }
 
 // a server can have many rooms and client can connect the one he wants
 {
-  const roomA = createSSERoom();
-  const roomB = createSSERoom();
+  const sseA = new SSE();
+  const sseB = new SSE();
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     routes: [
       {
-        endpoint: "GET /roomA",
-        response: (request) => {
-          return roomA.join(request);
-        },
+        endpoint: "GET /a",
+        fetch: sseA.fetch,
       },
       {
-        endpoint: "GET /roomB",
-        response: (request) => {
-          return roomB.join(request);
-        },
+        endpoint: "GET /b",
+        fetch: sseB.fetch,
       },
     ],
   });
-  const roomAEventSource = await openEventSource(`${server.origin}/roomA`);
-  const roomBEventSource = await openEventSource(`${server.origin}/roomB`);
-  roomA.sendEventToAllClients({
+  const aClientEventSource = await openEventSource(`${server.origin}/roomA`);
+  const bClientEventSource = await openEventSource(`${server.origin}/roomB`);
+  sseA.sendEventToAllClients({
     type: "message",
     data: "a",
   });
-  roomB.sendEventToAllClients({
+  sseB.sendEventToAllClients({
     type: "message",
     data: "b",
   });
   await timeEllapsedPromise(200);
 
   {
-    const actual = roomAEventSource.getAllMessageEvents();
+    const actual = aClientEventSource.getAllMessageEvents();
     const expect = [
       {
         type: "message",
@@ -162,7 +150,7 @@ const timeEllapsedPromise = (ms) => {
     assert({ actual, expect });
   }
   {
-    const actual = roomBEventSource.getAllMessageEvents();
+    const actual = bClientEventSource.getAllMessageEvents();
     const expect = [
       {
         type: "message",
@@ -174,36 +162,34 @@ const timeEllapsedPromise = (ms) => {
     assert({ actual, expect });
   }
 
-  await closeEventSource(roomAEventSource);
-  await closeEventSource(roomBEventSource);
-  roomA.close();
-  roomB.close();
+  await closeEventSource(aClientEventSource);
+  await closeEventSource(bClientEventSource);
+  sseA.close();
+  sseB.close();
 }
 
 // a room can have many clients
 {
-  const room = createSSERoom();
+  const sse = new SSE();
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     routes: [
       {
         endpoint: "GET *",
-        response: (request) => {
-          return room.join(request);
-        },
+        fetch: sse.fetch,
       },
     ],
   });
   const clientA = await openEventSource(server.origin);
   const clientB = await openEventSource(server.origin);
-  room.sendEventToAllClients({
+  sse.sendEventToAllClients({
     type: "message",
     data: 42,
   });
   await timeEllapsedPromise(200);
   {
-    const actual = room.getRoomClientCount();
+    const actual = sse.getlientCount();
     const expect = 2;
     assert({ actual, expect });
   }
@@ -236,12 +222,12 @@ const timeEllapsedPromise = (ms) => {
 
   await closeEventSource(clientA);
   await closeEventSource(clientB);
-  room.close();
+  sse.close();
 }
 
 // there can be a limit to number of clients (100 by default)
 {
-  const room = createSSERoom({
+  const sse = new SSE({
     maxClientAllowed: 1,
   });
   const server = await startServer({
@@ -250,9 +236,7 @@ const timeEllapsedPromise = (ms) => {
     routes: [
       {
         endpoint: "GET *",
-        response: (request) => {
-          return room.join(request);
-        },
+        fetch: sse.fetch,
       },
     ],
   });
@@ -274,23 +258,21 @@ const timeEllapsedPromise = (ms) => {
     assert({ actual, expect });
   } finally {
     await closeEventSource(clientA);
-    room.close();
+    sse.close();
   }
 }
 
-// test whats happens with a room that is not started or is stopped
+// test whats happens when client tries to connect a closed sse
 {
-  const room = createSSERoom();
-  room.close();
+  const sse = new SSE();
+  sse.close();
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
     routes: [
       {
         endpoint: "GET *",
-        response: (request) => {
-          return room.join(request);
-        },
+        fetch: sse.fetch,
       },
     ],
   });

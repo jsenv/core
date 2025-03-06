@@ -28,7 +28,7 @@ export { WebSocketResponse } from "./web_socket_response.js";
 // long polling
 export { ProgressiveResponse } from "./progressive_response.js";
 // Server event source (can be used to push events to clients that can be connected with WebSocket, EventSource or long polling)
-export { ServerEventSource } from "./server_event_source/server_event_source.js";
+export { SSE } from "./sse.js";
 
 // CORS
 export {

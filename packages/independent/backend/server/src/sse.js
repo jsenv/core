@@ -1,31 +1,29 @@
 import { createLogger } from "@jsenv/humanize";
-import { createObservable } from "../interfacing_with_node/observable.js";
-import { WebSocketResponse } from "../web_socket_response.js";
+import { createObservable } from "./interfacing_with_node/observable.js";
+import { WebSocketResponse } from "./web_socket_response.js";
 
-export class ServerEventSource {
+export class SSE {
   constructor(...args) {
     // eslint-disable-next-line no-constructor-return
-    return createServerEventSource(...args);
+    return createSSE(...args);
   }
 }
 
 // https://www.html5rocks.com/en/tutorials/eventsource/basics/
-export const createServerEventSource = (
+export const createSSE = ({
   producer,
-  {
-    logLevel,
-    // do not keep process alive because of event source, something else must keep it alive
-    keepProcessAlive = false,
-    keepaliveDuration = 30 * 1000,
-    retryDuration = 1 * 1000,
-    historyLength = 1 * 1000,
-    maxClientAllowed = 100, // max 100 clients accepted
-    computeEventId = (event, lastEventId) => lastEventId + 1,
-    welcomeEventEnabled = false,
-    welcomeEventPublic = false, // decides if welcome event are sent to other clients
-    actionOnClientLimitReached = "refuse", // "kick-oldest" or "refuse"
-  } = {},
-) => {
+  logLevel,
+  // do not keep process alive because of event source, something else must keep it alive
+  keepProcessAlive = false,
+  keepaliveDuration = 30 * 1000,
+  retryDuration = 1 * 1000,
+  historyLength = 1 * 1000,
+  maxClientAllowed = 100, // max 100 clients accepted
+  computeEventId = (event, lastEventId) => lastEventId + 1,
+  welcomeEventEnabled = false,
+  welcomeEventPublic = false, // decides if welcome event are sent to other clients
+  actionOnClientLimitReached = "refuse", // "kick-oldest" or "refuse"
+} = {}) => {
   const logger = createLogger({ logLevel });
 
   const serverEventSource = {
@@ -42,9 +40,11 @@ export const createServerEventSource = (
 
   const addClient = (client) => {
     if (clientArray.length === 0) {
-      producerReturnValue = producer({
-        sendEvent: sendEventToAllClients,
-      });
+      if (typeof producer === "function") {
+        producerReturnValue = producer({
+          sendEvent: sendEventToAllClients,
+        });
+      }
     }
     clientArray.push(client);
     logger.debug(
