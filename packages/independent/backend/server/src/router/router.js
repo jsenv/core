@@ -366,9 +366,6 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       if (!resourceMatchResult) {
         continue;
       }
-      if (request.headers["upgrade"] === "websocket" && !route.isForWebSocket) {
-        continue;
-      }
       if (!route.matchMethod(request.method)) {
         if (!route.isFallback) {
           wouldHaveMatched.methodSet.add(route.method);

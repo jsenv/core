@@ -600,6 +600,48 @@ export const startServer = async ({
     }
   };
 
+  const sendResponse = async (
+    responseStream,
+    responseProperties,
+    { signal, request },
+  ) => {
+    // When "pushResponse" is called and the parent response has no body
+    // the parent response is immediatly ended. It means child responses (pushed streams)
+    // won't get a chance to be pushed.
+    // To let a chance to pushed streams we wait a little before sending the response
+    const ignoreBody = request.method === "HEAD";
+    const bodyIsEmpty = !responseProperties.body || ignoreBody;
+    if (bodyIsEmpty && request.logger.hasPushChild) {
+      await new Promise((resolve) => setTimeout(resolve));
+    }
+    await writeNodeResponse(responseStream, responseProperties, {
+      signal,
+      ignoreBody,
+      onAbort: () => {
+        request.logger.info(`response aborted`);
+        request.logger.end();
+      },
+      onError: (error) => {
+        request.logger.error(
+          createDetailedMessage(`An error occured while sending response`, {
+            "error stack": error.stack,
+          }),
+        );
+        request.logger.end();
+      },
+      onHeadersSent: ({ status, statusText }) => {
+        request.logger.onHeadersSent({
+          status,
+          statusText: responseProperties.statusMessage || statusText,
+        });
+        request.logger.end();
+      },
+      onEnd: () => {
+        request.logger.end();
+      },
+    });
+  };
+
   request: {
     const requestEventHandler = async (nodeRequest, nodeResponse) => {
       if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
@@ -645,48 +687,6 @@ export const startServer = async ({
         logger,
         nagle,
       });
-
-      const sendResponse = async (
-        responseStream,
-        responseProperties,
-        { signal, request },
-      ) => {
-        // When "pushResponse" is called and the parent response has no body
-        // the parent response is immediatly ended. It means child responses (pushed streams)
-        // won't get a chance to be pushed.
-        // To let a chance to pushed streams we wait a little before sending the response
-        const ignoreBody = request.method === "HEAD";
-        const bodyIsEmpty = !responseProperties.body || ignoreBody;
-        if (bodyIsEmpty && request.logger.hasPushChild) {
-          await new Promise((resolve) => setTimeout(resolve));
-        }
-        await writeNodeResponse(responseStream, responseProperties, {
-          signal,
-          ignoreBody,
-          onAbort: () => {
-            request.logger.info(`response aborted`);
-            request.logger.end();
-          },
-          onError: (error) => {
-            request.logger.error(
-              createDetailedMessage(`An error occured while sending response`, {
-                "error stack": error.stack,
-              }),
-            );
-            request.logger.end();
-          },
-          onHeadersSent: ({ status, statusText }) => {
-            request.logger.onHeadersSent({
-              status,
-              statusText: responseProperties.statusMessage || statusText,
-            });
-            request.logger.end();
-          },
-          onEnd: () => {
-            request.logger.end();
-          },
-        });
-      };
 
       try {
         if (receiveRequestOperation.signal.aborted) {
@@ -894,33 +894,6 @@ export const startServer = async ({
       };
     };
     // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
-    const closeSocket = (
-      socket,
-      { status, statusText, headers = {}, body },
-      { onHeadersSent },
-    ) => {
-      headers = {
-        connection: "close",
-        ...headers,
-      };
-      if (body && headers["content-length"] === undefined) {
-        headers["transfer-encoding"] = "chunked";
-      }
-      const headersString = Object.keys(headers)
-        .map((h) => `${h}: ${headers[h]}`)
-        .join("\r\n");
-      socket.write(
-        `HTTP/1.1 ${status} ${statusText}\r\n${headersString}\r\n\r\n`,
-      );
-      onHeadersSent({ status, statusText });
-      socket.once("finish", socket.destroy);
-      if (body) {
-        socket.write(body);
-        socket.end();
-      } else {
-        socket.end();
-      }
-    };
     const upgradeEventHandler = async (nodeRequest, socket, head) => {
       let request = fromNodeRequest(nodeRequest, {
         signal: stopAbortSignal,
@@ -937,12 +910,11 @@ export const startServer = async ({
         },
       });
       if (responseProperties.status !== 101) {
-        await closeSocket(socket, responseProperties, {
-          onHeadersSent: ({ status, statusText }) => {
-            request.logger.onHeadersSent({ status, statusText });
-            request.logger.end();
-          },
+        await sendResponse(socket, responseProperties, {
+          signal: new AbortController().signal,
+          request,
         });
+        return;
       }
       const webSocketHandler = getWebSocketHandler(responseProperties);
       if (!webSocketHandler) {

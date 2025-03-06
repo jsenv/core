@@ -1,7 +1,7 @@
 // organize-imports-ignore
 import { assert } from "@jsenv/assert";
 import { requestCertificate } from "@jsenv/https-local";
-import { startServer } from "@jsenv/server";
+import { startServer, WebSocketResponse } from "@jsenv/server";
 import { WebSocket } from "ws";
 
 const run = async (params) => {
@@ -11,17 +11,15 @@ const run = async (params) => {
     routes: [
       {
         endpoint: "GET /",
-        websocket: () => {
-          return {
-            opened: (websocket) => {
-              messageFromClientToServerPromise = new Promise((resolve) => {
-                websocket.on("message", (buffer) => {
-                  resolve(String(buffer));
-                });
+        fetch: () => {
+          return new WebSocketResponse((websocket) => {
+            messageFromClientToServerPromise = new Promise((resolve) => {
+              websocket.on("message", (buffer) => {
+                resolve(String(buffer));
               });
-              websocket.send("hello client");
-            },
-          };
+            });
+            websocket.send("hello client");
+          });
         },
       },
     ],

@@ -23,15 +23,13 @@ export class WebSocketResponse {
       headers,
     } = {},
   ) {
-    const webSocketHandlerAsBody = {
-      [webSocketHandlerAsBodySymbol]: true,
-      webSocketHandler,
-    };
     const webSocketResponse = {
       status,
       statusText,
       headers,
-      body: webSocketHandlerAsBody,
+      body: {
+        websocket: webSocketHandler,
+      },
     };
     // eslint-disable-next-line no-constructor-return
     return webSocketResponse;
@@ -39,15 +37,17 @@ export class WebSocketResponse {
 }
 
 export const isWebSocketResponse = (responseProperties) => {
-  return Boolean(responseProperties.body[webSocketHandlerAsBodySymbol]);
+  return (
+    responseProperties.body &&
+    typeof responseProperties.body.websocket === "function"
+  );
 };
 
 export const getWebSocketHandler = (responseProperties) => {
-  const webSocketHandlerAsBody =
-    responseProperties.body[webSocketHandlerAsBodySymbol];
-  return webSocketHandlerAsBody
-    ? webSocketHandlerAsBody.webSocketHandler
-    : undefined;
+  const responseBody = responseProperties.body;
+  if (!responseBody) {
+    return undefined;
+  }
+  const webSocketHandler = responseBody.websocket;
+  return webSocketHandler;
 };
-
-const webSocketHandlerAsBodySymbol = Symbol.for("web_socket_handler_as_body");

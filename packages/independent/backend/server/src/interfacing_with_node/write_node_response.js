@@ -1,6 +1,7 @@
 import { raceCallbacks } from "@jsenv/abort";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
+import { Socket } from "node:net";
 import { getObservableValueType } from "./get_observable_value_type.js";
 import { observableFromValue } from "./observable_from.js";
 
@@ -9,9 +10,19 @@ export const writeNodeResponse = async (
   { status, statusText, headers, body, bodyEncoding },
   { signal, ignoreBody, onAbort, onError, onHeadersSent, onEnd } = {},
 ) => {
-  if (body && body.isObservableBody && headers["connection"] === undefined) {
+  const isNetSocket = responseStream instanceof Socket;
+  if (
+    body &&
+    body.isObservableBody &&
+    headers["connection"] === undefined &&
+    headers["content-length"] === undefined
+  ) {
     headers["transfer-encoding"] = "chunked";
   }
+  // if (body && headers["content-length"] === undefined) {
+  //   headers["transfer-encoding"] = "chunked";
+  // }
+
   const bodyObservableType = getObservableValueType(body);
   const destroyBody = () => {
     if (bodyObservableType === "file_handle") {
@@ -55,7 +66,7 @@ export const writeNodeResponse = async (
     return;
   }
 
-  if (bodyEncoding) {
+  if (bodyEncoding && !isNetSocket) {
     responseStream.setEncoding(bodyEncoding);
   }
 
@@ -162,6 +173,7 @@ const writeHead = (
   responseStream,
   { status, statusText, headers, onHeadersSent },
 ) => {
+  const responseIsNetSocket = responseStream instanceof Socket;
   const responseIsHttp2ServerResponse =
     responseStream instanceof Http2ServerResponse;
   const responseIsServerHttp2Stream =
@@ -192,6 +204,16 @@ const writeHead = (
     responseIsHttp2ServerResponse
   ) {
     responseStream.writeHead(status, nodeHeaders);
+    onHeadersSent({ nodeHeaders, status, statusText });
+    return;
+  }
+  if (responseIsNetSocket) {
+    const headersString = Object.keys(nodeHeaders)
+      .map((h) => `${h}: ${nodeHeaders[h]}`)
+      .join("\r\n");
+    responseStream.write(
+      `HTTP/1.1 ${status} ${statusText}\r\n${headersString}\r\n\r\n`,
+    );
     onHeadersSent({ nodeHeaders, status, statusText });
     return;
   }
