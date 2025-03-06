@@ -409,6 +409,28 @@ export const startServer = async ({
     return request;
   };
 
+  const prepareHandleRequestOperations = (nodeRequest, nodeResponse) => {
+    const receiveRequestOperation = Abort.startOperation();
+    receiveRequestOperation.addAbortSignal(stopAbortSignal);
+    const sendResponseOperation = Abort.startOperation();
+    sendResponseOperation.addAbortSignal(stopAbortSignal);
+    receiveRequestOperation.addAbortSource((abort) => {
+      const closeEventCallback = () => {
+        if (nodeRequest.complete) {
+          receiveRequestOperation.end();
+        } else {
+          nodeResponse.destroy();
+          abort();
+        }
+      };
+      nodeRequest.once("close", closeEventCallback);
+      return () => {
+        nodeRequest.removeListener("close", closeEventCallback);
+      };
+    });
+    sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
+    return [receiveRequestOperation, sendResponseOperation];
+  };
   const getResponseProperties = async (request, { pushResponse }) => {
     const timings = {};
     const timing = serverTiming
@@ -599,7 +621,6 @@ export const startServer = async ({
       return finalizeResponseProperties(responseProperties);
     }
   };
-
   const sendResponse = async (
     responseStream,
     responseProperties,
@@ -660,26 +681,8 @@ export const startServer = async ({
         return;
       }
 
-      const receiveRequestOperation = Abort.startOperation();
-      receiveRequestOperation.addAbortSignal(stopAbortSignal);
-      const sendResponseOperation = Abort.startOperation();
-      sendResponseOperation.addAbortSignal(stopAbortSignal);
-      receiveRequestOperation.addAbortSource((abort) => {
-        const closeEventCallback = () => {
-          if (nodeRequest.complete) {
-            receiveRequestOperation.end();
-          } else {
-            nodeResponse.destroy();
-            abort();
-          }
-        };
-        nodeRequest.once("close", closeEventCallback);
-        return () => {
-          nodeRequest.removeListener("close", closeEventCallback);
-        };
-      });
-      sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
-
+      const [receiveRequestOperation, sendResponseOperation] =
+        prepareHandleRequestOperations(nodeRequest, nodeResponse);
       const request = fromNodeRequest(nodeRequest, {
         signal: stopAbortSignal,
         serverOrigin,
@@ -689,9 +692,6 @@ export const startServer = async ({
       });
 
       try {
-        if (receiveRequestOperation.signal.aborted) {
-          return;
-        }
         const responseProperties = await getResponseProperties(request, {
           pushResponse: async ({ path, method }) => {
             const pushRequestLogger = request.logger.forPush();
@@ -886,7 +886,7 @@ export const startServer = async ({
         webSocketServer.close();
         webSocketServer = null;
       });
-      upgradeRequestToWebSocket = async (nodeRequest, socket, head) => {
+      upgradeRequestToWebSocket = async ({ nodeRequest, socket, head }) => {
         const websocket = await new Promise((resolve) => {
           webSocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
         });
@@ -902,6 +902,8 @@ export const startServer = async ({
         logger,
         nagle,
       });
+      const [receiveRequestOperation, sendResponseOperation] =
+        prepareHandleRequestOperations(nodeRequest, socket);
       const responseProperties = await getResponseProperties(request, {
         pushResponse: () => {
           request.logger.warn(
@@ -909,9 +911,12 @@ export const startServer = async ({
           );
         },
       });
+      if (receiveRequestOperation.signal.aborted) {
+        return;
+      }
       if (responseProperties.status !== 101) {
         await sendResponse(socket, responseProperties, {
-          signal: new AbortController().signal,
+          signal: sendResponseOperation.signal,
           request,
         });
         return;
@@ -925,11 +930,18 @@ export const startServer = async ({
       if (!upgradeRequestToWebSocket) {
         await loadUpgradeRequestToWebSocket();
       }
-      const webSocket = await upgradeRequestToWebSocket(
+      if (sendResponseOperation.signal.aborted) {
+        return;
+      }
+      const webSocket = await upgradeRequestToWebSocket({
         nodeRequest,
         socket,
         head,
-      );
+      });
+      if (sendResponseOperation.signal.aborted) {
+        webSocket.destroy();
+        return;
+      }
       const webSocketAbortController = new AbortController();
       webSocketSet.add(webSocket);
       webSocket.once("close", () => {
