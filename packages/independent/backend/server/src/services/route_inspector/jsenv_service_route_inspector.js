@@ -4,7 +4,7 @@ const routeInspectorHtmlFileUrl = import.meta.resolve(
   "./client/route_inspector.html",
 );
 
-export const jsenvServiceRouteInspector = (router) => {
+export const jsenvServiceRouteInspector = () => {
   return {
     name: "jsenv:route_inspector",
     routes: [
@@ -13,7 +13,7 @@ export const jsenvServiceRouteInspector = (router) => {
         description:
           "Explore the routes available on this server using a web interface.",
         availableContentTypes: ["text/html"],
-        response: () => {
+        fetch: () => {
           const inspectorHtml = readFileSync(
             new URL(routeInspectorHtmlFileUrl),
             "utf8",
@@ -27,8 +27,8 @@ export const jsenvServiceRouteInspector = (router) => {
         endpoint: "GET /.internal/routes.json",
         availableContentTypes: ["application/json"],
         description: "Get the routes available on this server in JSON.",
-        response: (request, helpers) => {
-          const routeJSON = router.inspect(request, helpers);
+        fetch: (request, helpers) => {
+          const routeJSON = helpers.router.inspect(request, helpers);
           return Response.json(routeJSON);
         },
       },

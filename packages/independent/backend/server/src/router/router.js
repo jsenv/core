@@ -290,6 +290,7 @@ export const createRouter = (
   }
 
   const match = async (request, fetchSecondArg) => {
+    fetchSecondArg.router = router;
     const wouldHaveMatched = {
       // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
       methodSet: new Set(),

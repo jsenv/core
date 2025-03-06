@@ -152,6 +152,16 @@ export const startServer = async ({
     }
   }
 
+  services = [
+    jsenvServiceRouteInspector(),
+    ...(import.meta.build
+      ? // after build internal client files are inlined, no need for this service anymore
+        []
+      : [jsenvServiceInternalClientFiles()]),
+    jsenvServiceAutoreloadOnRestart(),
+    ...flattenAndFilterServices(services),
+  ];
+
   const allRouteArray = [];
   for (const route of routes) {
     allRouteArray.push(route);
@@ -170,16 +180,6 @@ export const startServer = async ({
   });
 
   const server = {};
-
-  services = [
-    jsenvServiceRouteInspector(router),
-    ...(import.meta.build
-      ? // after build internal client files are inlined, no need for this service anymore
-        []
-      : [jsenvServiceInternalClientFiles()]),
-    jsenvServiceAutoreloadOnRestart(),
-    ...flattenAndFilterServices(services),
-  ];
 
   const serviceController = createServiceController(services);
   const processTeardownEvents = {

@@ -68,6 +68,11 @@ const ErrorMessage = () => {
         </code>
         .
       </span>
+      <br />
+      <span className="error_text" style="font-size: 70%;">
+        See also available routes in the{" "}
+        <a href="/.internal/route_inspector">route inspector</a>.
+      </span>
     </p>
   );
 };
