@@ -339,7 +339,7 @@ export const jsenvPluginAutoreloadServer = ({
         description:
           "Return a url graph of the project as a JSON file. This is useful to debug the project graph.",
         availableContentTypes: ["application/json"],
-        response: (request, { kitchen }) => {
+        fetch: (request, { kitchen }) => {
           const graphJson = JSON.stringify(
             kitchen.graph.toJSON(kitchen.context.rootDirectoryUrl),
           );

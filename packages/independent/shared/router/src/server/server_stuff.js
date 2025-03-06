@@ -6,7 +6,7 @@ export const clientControlledResourceService = () => {
     routes: [
       {
         endpoint: "GET /__delayed__.js",
-        response: async () => {
+        fetch: async () => {
           if (resolve) {
             resolve();
           }
@@ -25,7 +25,7 @@ export const clientControlledResourceService = () => {
       },
       {
         endpoint: "POST /__delayed__.js",
-        response: async () => {
+        fetch: async () => {
           if (resolve) {
             resolve();
           }
@@ -45,18 +45,18 @@ export const JSONFileManagerService = () => {
     routes: [
       {
         endpoint: "GET /json_files",
-        response: () => {
+        fetch: () => {
           const jsonFiles = readdirSync(jsonDirectoryUrl);
           return Response.json(jsonFiles);
         },
       },
       {
         endpoint: "POST /json_files",
-        response: () => {},
+        fetch: () => {},
       },
       {
         endpoint: "GET /json_files/:id",
-        response: (request) => {
+        fetch: (request) => {
           const { id } = request.params;
           const jsonFileUrl = new URL(`./${id}`, jsonDirectoryUrl);
           try {
@@ -81,7 +81,7 @@ export const JSONFileManagerService = () => {
       {
         endpoint: "PATCH /json_files/:id",
         acceptedContentTypes: ["multipart/form-data"],
-        response: async (request, { id }) => {
+        fetch: async (request, { id }) => {
           const { fields } = await request.formData();
           // TODO: attention le format form-data fait que key:value devient key: [value]
           // donc on peut pas juste faire ça, mais bon pour l'instant c'est good

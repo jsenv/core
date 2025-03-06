@@ -65,7 +65,7 @@ export const createRoute = ({
   }
   if (typeof routeFetchMethod !== "function") {
     throw new TypeError(
-      `fetch must be a function, received ${routeFetchMethod}`,
+      `fetch must be a function, received ${routeFetchMethod} on endpoint "${endpoint}"`,
     );
   }
   const extension = resourceToExtension(resource);

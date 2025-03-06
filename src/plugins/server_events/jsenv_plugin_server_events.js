@@ -4,7 +4,7 @@
  */
 
 import { injectJsenvScript, parseHtml, stringifyHtmlAst } from "@jsenv/ast";
-import { createServerEventsDispatcher } from "./server_events_dispatcher.js";
+import { ServerEvents } from "@jsenv/server";
 
 const serverEventsClientFileUrl = new URL(
   "./client/server_events_client.js",
@@ -12,8 +12,9 @@ const serverEventsClientFileUrl = new URL(
 ).href;
 
 export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
-  let serverEventsDispatcher;
-
+  let serverEvents = new ServerEvents({
+    actionOnClientLimitReached: "kick-oldest",
+  });
   const { clientServerEventsConfig } = clientAutoreload;
   const { logs = true } = clientServerEventsConfig;
 
@@ -37,9 +38,9 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
       if (serverEventNames.length === 0) {
         return false;
       }
-      serverEventsDispatcher = createServerEventsDispatcher();
+
       const onabort = () => {
-        serverEventsDispatcher.destroy();
+        serverEvents.close();
       };
       kitchenContext.signal.addEventListener("abort", onabort);
       for (const serverEventName of Object.keys(allServerEvents)) {
@@ -48,14 +49,14 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
           // serverEventsDispatcher variable is safe, we can disable esling warning
           // eslint-disable-next-line no-loop-func
           sendServerEvent: (data) => {
-            if (!serverEventsDispatcher) {
+            if (!serverEvents) {
               // this can happen if a plugin wants to send a server event but
               // server is closing or the plugin got destroyed but still wants to do things
               // if plugin code is correctly written it is never supposed to happen
               // because it means a plugin is still trying to do stuff after being destroyed
               return;
             }
-            serverEventsDispatcher.dispatch({
+            serverEvents.sendEventToAllClients({
               type: serverEventName,
               data,
             });
@@ -66,8 +67,8 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
       }
       return () => {
         kitchenContext.signal.removeEventListener("abort", onabort);
-        serverEventsDispatcher.destroy();
-        serverEventsDispatcher = undefined;
+        serverEvents.close();
+        serverEvents = undefined;
       };
     },
     transformUrlContent: {
@@ -93,13 +94,7 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
       {
         endpoint: "GET /.internal/events.websocket",
         description: `Jsenv dev server emit server events on this endpoint. When a file is saved the "reload" event is sent here.`,
-        websocket: (request) => {
-          return {
-            opened: (websocket) => {
-              serverEventsDispatcher.addWebsocket(websocket, request);
-            },
-          };
-        },
+        fetch: serverEvents.fetch,
       },
     ],
   };

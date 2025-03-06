@@ -1,35 +1,37 @@
 import { performance } from "node:perf_hooks";
 import { jsenvPluginHtmlSyntaxErrorFallback } from "./html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 
-export const createPluginStore = (pluginsToStore) => {
+export const createPluginStore = (plugins) => {
   const allDevServerRoutes = [];
-  const plugins = [];
-  const pushPlugin = (...plugins) => {
-    for (const plugin of plugins) {
-      if (Array.isArray(plugin)) {
-        pushPlugin(...plugins);
-        continue;
+  const pluginArray = [];
+  const addPlugin = (plugin) => {
+    if (Array.isArray(plugin)) {
+      for (const subplugin of plugin) {
+        addPlugin(subplugin);
       }
-      if (plugin === null || typeof plugin !== "object") {
-        throw new TypeError(`plugin must be objects, got ${plugin}`);
-      }
-      if (!plugin.name) {
-        plugin.name = "anonymous";
-      }
-      if (plugin.devServerRoutes) {
-        const devServerRoutes = plugin.devServerRoutes;
-        for (const devServerRoute of devServerRoutes) {
-          allDevServerRoutes.push(devServerRoute);
-        }
-        continue;
-      }
-      plugins.push(plugin);
+      return;
     }
+    if (plugin === null || typeof plugin !== "object") {
+      throw new TypeError(`plugin must be objects, got ${plugin}`);
+    }
+    if (!plugin.name) {
+      plugin.name = "anonymous";
+    }
+    if (plugin.devServerRoutes) {
+      const devServerRoutes = plugin.devServerRoutes;
+      for (const devServerRoute of devServerRoutes) {
+        allDevServerRoutes.push(devServerRoute);
+      }
+    }
+    pluginArray.push(plugin);
   };
-  pushPlugin(jsenvPluginHtmlSyntaxErrorFallback(), ...pluginsToStore);
+  addPlugin(jsenvPluginHtmlSyntaxErrorFallback());
+  for (const plugin of plugins) {
+    addPlugin(plugin);
+  }
 
   return {
-    plugins,
+    plugins: pluginArray,
     allDevServerRoutes,
   };
 };
@@ -37,7 +39,7 @@ export const createPluginStore = (pluginsToStore) => {
 export const createPluginController = (
   pluginStore,
   kitchen,
-  { initialPuginsMeta } = {},
+  { initialPuginsMeta = {} } = {},
 ) => {
   const activeEffectSet = new Set();
   const activePlugins = [];

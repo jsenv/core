@@ -164,7 +164,7 @@ export const startDevServer = async ({
           endpoint: "GET /.internal/server.json",
           description: "Get information about jsenv dev server",
           availableContentTypes: ["application/json"],
-          response: () =>
+          fetch: () =>
             Response.json({
               server: "jsenv_dev_server/1",
               sourceDirectoryUrl,
@@ -379,7 +379,7 @@ export const startDevServer = async ({
     };
 
     finalServices.push({
-      name: "jsenv:omega_file_service",
+      name: "jsenv:dev_server_routes",
       augmentRouteFetchSecondArg: (request) => {
         const kitchen = getOrCreateKitchen(request);
         return { kitchen };
@@ -388,7 +388,7 @@ export const startDevServer = async ({
         ...devServerPluginStore.allDevServerRoutes,
         {
           endpoint: "GET *",
-          description: "Serve project source files during dev",
+          description: "Serve project files.",
           fetch: async (request, { kitchen }) => {
             const { rootDirectoryUrl, mainFilePath } = kitchen.context;
             let requestResource = request.resource;
