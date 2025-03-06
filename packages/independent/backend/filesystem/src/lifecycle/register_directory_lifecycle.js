@@ -254,7 +254,9 @@ export const registerDirectoryLifecycle = (
       seenSet.add(entryInfo.url);
       infoMap.set(entryInfo.relativeUrl, entryInfo);
       if (entryInfo.type === "directory") {
-        const directoryUrl = `${entryInfo.url}/`;
+        const directoryUrl = entryInfo.url.endsWith("/")
+          ? entryInfo.url
+          : `${entryInfo.url}/`;
         let entryNameArray;
         try {
           const directoryUrlObject = new URL(directoryUrl);
@@ -322,6 +324,7 @@ export const registerDirectoryLifecycle = (
       }
     };
     applyEntryDiscoveredEffects(entryInfo);
+    seenSet.clear();
   };
   const handleEntryLost = (entryInfo) => {
     infoMap.delete(entryInfo.relativeUrl);
