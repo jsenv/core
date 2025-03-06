@@ -1,16 +1,12 @@
 import { assert } from "@jsenv/assert";
-import {
-  createFileSystemFetch,
-  createSSERoom,
-  startServer,
-} from "@jsenv/server";
+import { createFileSystemFetch, SSE, startServer } from "@jsenv/server";
 import { chromium } from "playwright";
 
 if (process.platform === "win32") {
   process.exit(0);
 }
 
-const room = createSSERoom({
+const sse = new SSE({
   // logLevel: "debug",
   maxClientAllowed: 1,
 });
@@ -20,13 +16,11 @@ const server = await startServer({
   routes: [
     {
       endpoint: "GET /test.eventsource",
-      response: (request) => {
-        return room.join(request);
-      },
+      fetch: sse.fetch,
     },
     {
       endpoint: "GET *",
-      response: createFileSystemFetch(import.meta.resolve("./client/")),
+      fetch: createFileSystemFetch(import.meta.resolve("./client/")),
     },
   ],
 });
@@ -55,7 +49,7 @@ await page.evaluate(() => {
 });
 
 {
-  const actual = room.getRoomClientCount();
+  const actual = sse.getClientCount();
   const expect = 1;
   assert({ actual, expect });
 }
@@ -67,7 +61,7 @@ await page.evaluate(() => {
 await new Promise((resolve) => setTimeout(resolve, 2000));
 
 {
-  const actual = room.getRoomClientCount();
+  const actual = sse.getClientCount();
   const expect = 0;
   assert({ actual, expect });
 }

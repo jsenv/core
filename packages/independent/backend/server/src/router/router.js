@@ -72,7 +72,11 @@ export const createRoute = ({
   const extensionWellKnownContentType = extension
     ? CONTENT_TYPE.fromExtension(extension)
     : null;
-  if (availableMediaTypes.length === 0 && extensionWellKnownContentType) {
+  if (
+    availableMediaTypes.length === 0 &&
+    extensionWellKnownContentType &&
+    extensionWellKnownContentType !== "application/octet-stream" // this is the default extension
+  ) {
     availableMediaTypes.push(extensionWellKnownContentType);
   }
   const resourcePattern = createResourcePattern(resource);
