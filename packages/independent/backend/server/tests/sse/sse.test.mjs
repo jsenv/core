@@ -125,8 +125,8 @@ const timeEllapsedPromise = (ms) => {
       },
     ],
   });
-  const aClientEventSource = await openEventSource(`${server.origin}/roomA`);
-  const bClientEventSource = await openEventSource(`${server.origin}/roomB`);
+  const aClientEventSource = await openEventSource(`${server.origin}/a`);
+  const bClientEventSource = await openEventSource(`${server.origin}/b`);
   sseA.sendEventToAllClients({
     type: "message",
     data: "a",
@@ -189,7 +189,7 @@ const timeEllapsedPromise = (ms) => {
   });
   await timeEllapsedPromise(200);
   {
-    const actual = sse.getlientCount();
+    const actual = sse.getClientCount();
     const expect = 2;
     assert({ actual, expect });
   }

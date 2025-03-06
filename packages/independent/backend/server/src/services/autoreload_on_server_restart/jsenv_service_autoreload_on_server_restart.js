@@ -1,6 +1,6 @@
-import { ServerEventSource } from "../../server_event_source/server_event_source.js";
+import { SSE } from "../../sse.js";
 
-const aliveServerEventSource = new ServerEventSource();
+const aliveServerSentEvents = new SSE();
 
 export const jsenvServiceAutoreloadOnRestart = () => {
   return {
@@ -21,9 +21,7 @@ export const jsenvServiceAutoreloadOnRestart = () => {
             window.location.reload();
           };
         },
-        fetch: (request) => {
-          return aliveServerEventSource.fetch(request);
-        },
+        fetch: aliveServerSentEvents.fetch,
       },
       {
         endpoint: "GET /.internal/alive.eventsource",
@@ -38,9 +36,7 @@ This endpoint exists mostly to demo eventsource as there is already the websocke
           };
         },
         /* eslint-enable no-undef */
-        fetch: (request) => {
-          return aliveServerEventSource.fetch(request);
-        },
+        fetch: aliveServerSentEvents.fetch,
       },
       {
         endpoint: "GET /.internal/alive.longpolling",
@@ -53,9 +49,7 @@ This endpoint exists mostly to demo longpolling as there is already the websocke
           window.location.reload();
         },
         /* eslint-enable no-undef */
-        fetch: (request) => {
-          return aliveServerEventSource.fetch(request);
-        },
+        fetch: aliveServerSentEvents.fetch,
       },
     ],
   };

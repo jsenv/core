@@ -1,3 +1,8 @@
+/**
+ * https://www.html5rocks.com/en/tutorials/eventsource/basics/
+ *
+ */
+
 import { createLogger } from "@jsenv/humanize";
 import { createObservable } from "./interfacing_with_node/observable.js";
 import { WebSocketResponse } from "./web_socket_response.js";
@@ -9,7 +14,52 @@ export class SSE {
   }
 }
 
-// https://www.html5rocks.com/en/tutorials/eventsource/basics/
+/**
+ * Creates a Server-Sent Events (SSE) controller that manages client connections and event distribution.
+ *
+ * @param {Object} options - Configuration options for the SSE controller
+ * @param {Function} [options.producer] - Function called when first client connects, receives an object with a sendEvent method
+ * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
+ * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
+ * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
+ * @param {Number} [options.maxClientAllowed=100] - Maximum number of concurrent client connections allowed
+ * @param {Function} [options.computeEventId] - Function to generate event IDs, receives (event, lastEventId) and returns new ID
+ * @param {Boolean} [options.welcomeEventEnabled=false] - Whether to send a welcome event to new clients
+ * @param {Boolean} [options.welcomeEventPublic=false] - If true, welcome events are broadcast to all clients, not just the new one
+ * @param {String} [options.actionOnClientLimitReached='refuse'] - Action when client limit is reached ('refuse' or 'kick-oldest')
+ *
+ * @returns {Object} SSE controller with the following methods:
+ * @returns {Function} .sendEventToAllClients - Sends an event to all connected clients
+ * @returns {Function} .fetch - Handles HTTP requests and upgrades them to SSE/WebSocket connections
+ * @returns {Function} .getAllEventSince - Retrieves events since a specific ID
+ * @returns {Function} .getClientCount - Returns the number of connected clients
+ * @returns {Function} .close - Closes all connections and stops the controller
+ * @returns {Function} .open - Reopens the controller after closing
+ *
+ * @example
+ * // Basic usage with auto-producer
+ * const sseController = createSSE({
+ *   producer: ({sendEvent}) => {
+ *     const interval = setInterval(() => {
+ *       sendEvent({
+ *         type: "update",
+ *         data: JSON.stringify({ timestamp: Date.now() })
+ *       });
+ *     }, 2000);
+ *
+ *     // Return cleanup function
+ *     return () => clearInterval(interval);
+ *   }
+ * });
+ *
+ * // Use in server route
+ * {
+ *   endpoint: "GET /events",
+ *   response: (request) => sseController.fetch(request)
+ * }
+ */
 export const createSSE = ({
   producer,
   logLevel,
@@ -21,15 +71,15 @@ export const createSSE = ({
   maxClientAllowed = 100, // max 100 clients accepted
   computeEventId = (event, lastEventId) => lastEventId + 1,
   welcomeEventEnabled = false,
-  welcomeEventPublic = false, // decides if welcome event are sent to other clients
-  actionOnClientLimitReached = "refuse", // "kick-oldest" or "refuse"
+  welcomeEventPublic = false,
+  actionOnClientLimitReached = "refuse",
 } = {}) => {
   const logger = createLogger({ logLevel });
 
   const serverEventSource = {
     closed: false,
   };
-  const clientArray = new Set();
+  const clientArray = [];
   const eventHistory = createEventHistory(historyLength);
   // what about previousEventId that keeps growing ?
   // we could add some limit
