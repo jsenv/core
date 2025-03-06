@@ -36,6 +36,10 @@ import { createUrlGraphSummary } from "../kitchen/url_graph/url_graph_report.js"
 import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { jsenvPluginDirectoryReferenceEffect } from "../plugins/directory_reference_effect/jsenv_plugin_directory_reference_effect.js";
 import { jsenvPluginInlining } from "../plugins/inlining/jsenv_plugin_inlining.js";
+import {
+  createPluginController,
+  createPluginStore,
+} from "../plugins/plugin_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginReferenceAnalysis } from "../plugins/reference_analysis/jsenv_plugin_reference_analysis.js";
 import { createBuildSpecifierManager } from "./build_specifier_manager.js";
@@ -300,46 +304,52 @@ build ${entryPointKeys.length} entry points`);
       build: true,
       runtimeCompat,
       initialContext: contextSharedDuringBuild,
-      plugins: [
-        ...plugins,
-        ...(bundling ? [jsenvPluginBundling(bundling)] : []),
-        ...(minification ? [jsenvPluginMinification(minification)] : []),
-        {
-          appliesDuring: "build",
-          fetchUrlContent: (urlInfo) => {
-            if (urlInfo.firstReference.original) {
-              rawRedirections.set(
-                urlInfo.firstReference.original.url,
-                urlInfo.firstReference.url,
-              );
-            }
-          },
-        },
-        ...getCorePlugins({
-          rootDirectoryUrl: sourceDirectoryUrl,
-          runtimeCompat,
-          referenceAnalysis,
-          nodeEsmResolution,
-          magicExtensions,
-          magicDirectoryIndex,
-          directoryReferenceEffect,
-          injections,
-          transpilation: {
-            babelHelpersAsImport: !explicitJsModuleConversion,
-            ...transpilation,
-            jsModuleFallback: false,
-          },
-          inlining: false,
-          http,
-          scenarioPlaceholders,
-        }),
-      ],
       sourcemaps,
       sourcemapsSourcesContent,
       outDirectoryUrl: outDirectoryUrl
         ? new URL("craft/", outDirectoryUrl)
         : undefined,
     });
+    const rawPluginStore = createPluginStore([
+      ...plugins,
+      ...(bundling ? [jsenvPluginBundling(bundling)] : []),
+      ...(minification ? [jsenvPluginMinification(minification)] : []),
+      {
+        appliesDuring: "build",
+        fetchUrlContent: (urlInfo) => {
+          if (urlInfo.firstReference.original) {
+            rawRedirections.set(
+              urlInfo.firstReference.original.url,
+              urlInfo.firstReference.url,
+            );
+          }
+        },
+      },
+      ...getCorePlugins({
+        rootDirectoryUrl: sourceDirectoryUrl,
+        runtimeCompat,
+        referenceAnalysis,
+        nodeEsmResolution,
+        magicExtensions,
+        magicDirectoryIndex,
+        directoryReferenceEffect,
+        injections,
+        transpilation: {
+          babelHelpersAsImport: !explicitJsModuleConversion,
+          ...transpilation,
+          jsModuleFallback: false,
+        },
+        inlining: false,
+        http,
+        scenarioPlaceholders,
+      }),
+    ]);
+    const rawPluginController = createPluginController(
+      rawPluginStore,
+      rawKitchen,
+    );
+    rawKitchen.setPluginController(rawPluginController);
+
     craft: {
       const generateSourceGraph = createBuildTask("generate source graph");
       try {
@@ -384,37 +394,6 @@ build ${entryPointKeys.length} entry points`);
       build: true,
       runtimeCompat,
       initialContext: contextSharedDuringBuild,
-      initialPluginsMeta: rawKitchen.pluginController.pluginsMeta,
-      plugins: [
-        jsenvPluginReferenceAnalysis({
-          ...referenceAnalysis,
-          fetchInlineUrls: false,
-          // inlineContent: false,
-        }),
-        jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
-        ...(lineBreakNormalization
-          ? [jsenvPluginLineBreakNormalization()]
-          : []),
-        jsenvPluginJsModuleFallback({
-          remapImportSpecifier: (specifier, parentUrl) => {
-            return buildSpecifierManager.remapPlaceholder(specifier, parentUrl);
-          },
-        }),
-        jsenvPluginInlining(),
-        {
-          name: "jsenv:optimize",
-          appliesDuring: "build",
-          transformUrlContent: async (urlInfo) => {
-            await rawKitchen.pluginController.callAsyncHooks(
-              "optimizeUrlContent",
-              urlInfo,
-              (optimizeReturnValue) => {
-                urlInfo.mutateContent(optimizeReturnValue);
-              },
-            );
-          },
-        },
-      ],
       sourcemaps,
       sourcemapsComment: "relative",
       sourcemapsSourcesContent,
@@ -422,7 +401,6 @@ build ${entryPointKeys.length} entry points`);
         ? new URL("shape/", outDirectoryUrl)
         : undefined,
     });
-
     const buildSpecifierManager = createBuildSpecifierManager({
       rawKitchen,
       finalKitchen,
@@ -443,9 +421,43 @@ build ${entryPointKeys.length} entry points`);
         }) &&
         rawKitchen.context.isSupportedOnCurrentClients("importmap"),
     });
-    finalKitchen.pluginController.pushPlugin(
+    const finalPluginStore = createPluginStore([
+      jsenvPluginReferenceAnalysis({
+        ...referenceAnalysis,
+        fetchInlineUrls: false,
+        // inlineContent: false,
+      }),
+      jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
+      ...(lineBreakNormalization ? [jsenvPluginLineBreakNormalization()] : []),
+      jsenvPluginJsModuleFallback({
+        remapImportSpecifier: (specifier, parentUrl) => {
+          return buildSpecifierManager.remapPlaceholder(specifier, parentUrl);
+        },
+      }),
+      jsenvPluginInlining(),
+      {
+        name: "jsenv:optimize",
+        appliesDuring: "build",
+        transformUrlContent: async (urlInfo) => {
+          await rawKitchen.pluginController.callAsyncHooks(
+            "optimizeUrlContent",
+            urlInfo,
+            (optimizeReturnValue) => {
+              urlInfo.mutateContent(optimizeReturnValue);
+            },
+          );
+        },
+      },
       buildSpecifierManager.jsenvPluginMoveToBuildDirectory,
+    ]);
+    const finalPluginController = createPluginController(
+      finalPluginStore,
+      finalKitchen,
+      {
+        initialPuginsMeta: rawKitchen.pluginController.pluginsMeta,
+      },
     );
+    finalKitchen.setPluginController(finalPluginController);
 
     const bundlers = {};
     bundle: {

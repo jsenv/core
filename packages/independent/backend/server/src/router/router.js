@@ -282,19 +282,10 @@ export const createRouter = (
   const router = {};
   for (const routeDescription of routeDescriptionArray) {
     const route = createRoute(routeDescription);
-    if (route.subroutes) {
-      const subroutes = route.subroutes();
-      for (const subroute of subroutes) {
-        routeSet.add(subroute);
-      }
-    }
     routeSet.add(route);
   }
 
-  const match = async (
-    request,
-    { pushResponse, injectResponseHeader, timing } = {},
-  ) => {
+  const match = async (request, fetchSecondArg) => {
     const wouldHaveMatched = {
       // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
       methodSet: new Set(),
@@ -313,7 +304,7 @@ export const createRouter = (
         return;
       }
       onRouteGroupEnd(route);
-      currentRoutingTiming = timing(
+      currentRoutingTiming = fetchSecondArg.timing(
         route.service
           ? `${route.service.name.replace("jsenv:", "")}.routing`
           : "routing",
@@ -369,7 +360,6 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       checkResponseContentHeader(route, responseHeaders, "encoding");
     };
 
-    const helpers = { timing, pushResponse, contentNegotiation: null };
     for (const route of routeSet) {
       onRouteMatchStart(route);
       const resourceMatchResult = route.matchResource(request.resource);
@@ -421,7 +411,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         let hasFailed = false;
         const { availableMediaTypes } = route;
         if (availableMediaTypes.length) {
-          injectResponseHeader("vary", "accept");
+          fetchSecondArg.injectResponseHeader("vary", "accept");
           if (request.headers["accept"]) {
             const mediaTypeNegotiated = pickContentType(
               request,
@@ -440,7 +430,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         }
         const { availableLanguages } = route;
         if (availableLanguages.length) {
-          injectResponseHeader("vary", "accept-language");
+          fetchSecondArg.injectResponseHeader("vary", "accept-language");
           if (request.headers["accept-language"]) {
             const languageNegotiated = pickContentLanguage(
               request,
@@ -459,7 +449,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         }
         const { availableVersions } = route;
         if (availableVersions.length) {
-          injectResponseHeader("vary", "accept-version");
+          fetchSecondArg.injectResponseHeader("vary", "accept-version");
           if (request.headers["accept-version"]) {
             const versionNegotiated = pickContentVersion(
               request,
@@ -478,7 +468,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         }
         const { availableEncodings } = route;
         if (availableEncodings.length) {
-          injectResponseHeader("vary", "accept-encoding");
+          fetchSecondArg.injectResponseHeader("vary", "accept-encoding");
           if (request.headers["accept-encoding"]) {
             const encodingNegotiated = pickContentEncoding(
               request,
@@ -504,8 +494,8 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         headersMatchResult,
       );
       Object.assign(request.params, named, stars);
-      helpers.contentNegotiation = contentNegotiationResult;
-      let fetchReturnValue = route.fetch(request, helpers);
+      fetchSecondArg.contentNegotiation = contentNegotiationResult;
+      let fetchReturnValue = route.fetch(request, fetchSecondArg);
       if (
         fetchReturnValue !== null &&
         typeof fetchReturnValue === "object" &&
@@ -579,7 +569,10 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
         },
       });
     }
-    const availableEndpoints = constructAvailableEndpoints(request, { timing });
+    const availableEndpoints = constructAvailableEndpoints(
+      request,
+      fetchSecondArg,
+    );
     return createRouteNotFoundResponse(request, { availableEndpoints });
   };
   const inspect = () => {

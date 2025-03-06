@@ -1,6 +1,7 @@
 const HOOK_NAMES = [
   "serverListening",
   "redirectRequest",
+  "augmentRouteFetchSecondArg",
   "routes",
   "handleError",
   "onResponsePush",

@@ -1,233 +1,146 @@
-import { createRoute } from "@jsenv/server/src/router/router.js";
 import { performance } from "node:perf_hooks";
+import { jsenvPluginHtmlSyntaxErrorFallback } from "./html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
 
-const HOOK_NAMES = [
-  "init",
-  "devServerRoutes", // is called only during dev/tests
-  "resolveReference",
-  "redirectReference",
-  "transformReferenceSearchParams",
-  "formatReference",
-  "fetchUrlContent",
-  "transformUrlContent",
-  "finalizeUrlContent",
-  "bundle", // is called only during build
-  "optimizeUrlContent", // is called only during build
-  "cooked",
-  "augmentResponse", // is called only during dev/tests
-  "destroy",
-  "effect",
-];
+export const createPluginStore = (pluginsToStore) => {
+  const allDevServerRoutes = [];
+  const plugins = [];
+  const pushPlugin = (...plugins) => {
+    for (const plugin of plugins) {
+      if (Array.isArray(plugin)) {
+        pushPlugin(...plugins);
+        continue;
+      }
+      if (plugin === null || typeof plugin !== "object") {
+        throw new TypeError(`plugin must be objects, got ${plugin}`);
+      }
+      if (!plugin.name) {
+        plugin.name = "anonymous";
+      }
+      if (plugin.devServerRoutes) {
+        const devServerRoutes = plugin.devServerRoutes;
+        for (const devServerRoute of devServerRoutes) {
+          allDevServerRoutes.push(devServerRoute);
+        }
+        continue;
+      }
+      plugins.push(plugin);
+    }
+  };
+  pushPlugin(jsenvPluginHtmlSyntaxErrorFallback(), ...pluginsToStore);
+
+  return {
+    plugins,
+    allDevServerRoutes,
+  };
+};
 
 export const createPluginController = (
-  kitchenContext,
-  initialPuginsMeta = {},
+  pluginStore,
+  kitchen,
+  { initialPuginsMeta } = {},
 ) => {
-  const pluginsMeta = initialPuginsMeta;
-  const allDevServerRoutes = [];
-
-  kitchenContext.getPluginMeta = (id) => {
-    const value = pluginsMeta[id];
-    return value;
-  };
-
-  const pluginCandidates = [];
   const activeEffectSet = new Set();
   const activePlugins = [];
   // precompute a list of hooks per hookName because:
   // 1. [MAJOR REASON] when debugging, there is less iteration (so much better)
   // 2. [MINOR REASON] it should increase perf as there is less work to do
   const hookSetMap = new Map();
-  const addPlugin = (plugin, options) => {
-    if (Array.isArray(plugin)) {
-      for (const value of plugin) {
-        addPlugin(value, options);
-      }
-      return;
-    }
-    if (plugin === null || typeof plugin !== "object") {
-      throw new TypeError(`plugin must be objects, got ${plugin}`);
-    }
-    if (!plugin.name) {
-      plugin.name = "anonymous";
-    }
-    if (!testAppliesDuring(plugin) || !initPlugin(plugin)) {
-      plugin.destroy?.();
-      return;
-    }
-    pluginCandidates.push(plugin);
-  };
-  const testAppliesDuring = (plugin) => {
-    const { appliesDuring } = plugin;
-    if (appliesDuring === undefined) {
-      // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
-      return true;
-    }
-    if (appliesDuring === "*") {
-      return true;
-    }
-    if (typeof appliesDuring === "string") {
-      if (appliesDuring !== "dev" && appliesDuring !== "build") {
-        throw new TypeError(
-          `"appliesDuring" must be "dev" or "build", got ${appliesDuring}`,
-        );
-      }
-      if (kitchenContext[appliesDuring]) {
-        return true;
-      }
-      return false;
-    }
-    if (typeof appliesDuring === "object") {
-      for (const key of Object.keys(appliesDuring)) {
-        if (!appliesDuring[key] && kitchenContext[key]) {
-          return false;
-        }
-        if (appliesDuring[key] && kitchenContext[key]) {
-          return true;
-        }
-      }
-      // throw new Error(`"appliesDuring" is empty`)
-      return false;
-    }
-    throw new TypeError(
-      `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
-    );
-  };
-  const initPlugin = (plugin) => {
-    const { init } = plugin;
-    if (!init) {
-      return true;
-    }
-    const initReturnValue = init(kitchenContext, { plugin });
-    if (initReturnValue === false) {
-      return false;
-    }
-    if (typeof initReturnValue === "function" && !plugin.destroy) {
-      plugin.destroy = initReturnValue;
-    }
-    return true;
-  };
-  const pushPlugin = (...args) => {
-    for (const arg of args) {
-      addPlugin(arg);
-    }
-    updateActivePlugins();
-  };
-  const updateActivePlugins = () => {
-    // construct activePlugins and hooks according
-    // to the one present in candidates and their effects
-    // 1. active plugins is an empty array
-    // 2. all active effects are cleaned-up
-    // 3. all effects are re-activated if still relevant
-    // 4. hooks are precomputed according to plugin order
 
-    // 1.
-    activePlugins.length = 0;
-    allDevServerRoutes.length = 0;
-    // 2.
-    for (const { cleanup } of activeEffectSet) {
-      cleanup();
-    }
-    activeEffectSet.clear();
-    for (const pluginCandidate of pluginCandidates) {
-      const effect = pluginCandidate.effect;
-      if (!effect) {
-        activePlugins.push(pluginCandidate);
-        continue;
-      }
-    }
-    // 3.
-    for (const pluginCandidate of pluginCandidates) {
-      const effect = pluginCandidate.effect;
-      if (!effect) {
-        continue;
-      }
-      const returnValue = effect({
-        kitchenContext,
-        otherPlugins: activePlugins,
-      });
-      if (!returnValue) {
-        continue;
-      }
-      activePlugins.push(pluginCandidate);
-      activeEffectSet.add({
-        plugin: pluginCandidate,
-        cleanup: typeof returnValue === "function" ? returnValue : () => {},
-      });
-    }
-    // 4.
-    activePlugins.sort((a, b) => {
-      return pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b);
-    });
-    hookSetMap.clear();
-    for (const activePlugin of activePlugins) {
-      for (const key of Object.keys(activePlugin)) {
-        if (key === "meta") {
-          const value = activePlugin[key];
-          if (typeof value !== "object" || value === null) {
-            console.warn(`plugin.meta must be an object, got ${value}`);
-            continue;
-          }
-          Object.assign(pluginsMeta, value);
-          // any extension/modification on plugin.meta
-          // won't be taken into account so we freeze object
-          // to throw in case it happen
-          Object.freeze(value);
-          continue;
-        }
-        if (
-          key === "name" ||
-          key === "appliesDuring" ||
-          key === "init" ||
-          key === "serverEvents" ||
-          key === "mustStayFirst" ||
-          key === "effect"
-        ) {
-          continue;
-        }
-        if (key === "devServerRoutes") {
-          const devServerRoutes = activePlugin.devServerRoutes;
-          for (const devServerRoute of devServerRoutes) {
-            allDevServerRoutes.push(createRoute(devServerRoute));
-          }
-          continue;
-        }
-        const isHook = HOOK_NAMES.includes(key);
-        if (!isHook) {
-          console.warn(
-            `Unexpected "${key}" property on "${activePlugin.name}" plugin`,
-          );
-          continue;
-        }
-        const hookName = key;
-        const hookValue = activePlugin[hookName];
-        if (hookValue) {
-          let hookSet = hookSetMap.get(hookName);
-          if (!hookSet) {
-            hookSet = new Set();
-            hookSetMap.set(hookName, hookSet);
-          }
-          const hook = {
-            plugin: activePlugin,
-            name: hookName,
-            value: hookValue,
-          };
-          // if (position === "start") {
-          //   let i = 0;
-          //   while (i < group.length) {
-          //     const before = group[i];
-          //     if (!before.plugin.mustStayFirst) {
-          //       break;
-          //     }
-          //     i++;
-          //   }
-          //   group.splice(i, 0, hook);
-          // } else {
-          hookSet.add(hook);
-        }
-      }
-    }
+  const pluginsMeta = initialPuginsMeta;
+  kitchen.context.getPluginMeta = (id) => {
+    const value = pluginsMeta[id];
+    return value;
   };
+
+  const pluginCandidates = pluginStore.plugins;
+  for (const pluginCandidate of pluginCandidates) {
+    if (!testAppliesDuring(pluginCandidate, kitchen)) {
+      pluginCandidate.destroy?.();
+      continue;
+    }
+    if (!initPlugin(pluginCandidate, kitchen)) {
+      pluginCandidate.destroy?.();
+      continue;
+    }
+    if (
+      !applyPluginEffect(pluginCandidate, kitchen, activePlugins, {
+        registerEffect: (cleanup) => {
+          activeEffectSet.add({
+            plugin: pluginCandidate,
+            cleanup: typeof cleanup === "function" ? cleanup : () => {},
+          });
+        },
+      })
+    ) {
+      pluginCandidate.destroy?.();
+      continue;
+    }
+    activePlugins.push(pluginCandidate);
+  }
+  activePlugins.sort((a, b) => {
+    return pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b);
+  });
+
+  for (const activePlugin of activePlugins) {
+    for (const key of Object.keys(activePlugin)) {
+      if (key === "meta") {
+        const value = activePlugin[key];
+        if (typeof value !== "object" || value === null) {
+          console.warn(`plugin.meta must be an object, got ${value}`);
+          continue;
+        }
+        Object.assign(pluginsMeta, value);
+        // any extension/modification on plugin.meta
+        // won't be taken into account so we freeze object
+        // to throw in case it happen
+        Object.freeze(value);
+        continue;
+      }
+      if (
+        key === "name" ||
+        key === "appliesDuring" ||
+        key === "init" ||
+        key === "serverEvents" ||
+        key === "mustStayFirst" ||
+        key === "effect"
+      ) {
+        continue;
+      }
+      const isHook = HOOK_NAMES.includes(key);
+      if (!isHook) {
+        console.warn(
+          `Unexpected "${key}" property on "${activePlugin.name}" plugin`,
+        );
+        continue;
+      }
+      const hookName = key;
+      const hookValue = activePlugin[hookName];
+      if (hookValue) {
+        let hookSet = hookSetMap.get(hookName);
+        if (!hookSet) {
+          hookSet = new Set();
+          hookSetMap.set(hookName, hookSet);
+        }
+        const hook = {
+          plugin: activePlugin,
+          name: hookName,
+          value: hookValue,
+        };
+        // if (position === "start") {
+        //   let i = 0;
+        //   while (i < group.length) {
+        //     const before = group[i];
+        //     if (!before.plugin.mustStayFirst) {
+        //       break;
+        //     }
+        //     i++;
+        //   }
+        //   group.splice(i, 0, hook);
+        // } else {
+        hookSet.add(hook);
+      }
+    }
+  }
 
   let lastPluginUsed = null;
   let currentPlugin = null;
@@ -277,7 +190,6 @@ export const createPluginController = (
     currentHookName = null;
     return valueReturned;
   };
-
   const callHooks = (hookName, info, callback) => {
     const hookSet = hookSetMap.get(hookName);
     if (!hookSet) {
@@ -305,7 +217,6 @@ export const createPluginController = (
       }
     }
   };
-
   const callHooksUntil = (hookName, info) => {
     const hookSet = hookSetMap.get(hookName);
     if (!hookSet) {
@@ -346,18 +257,14 @@ export const createPluginController = (
   };
 
   return {
-    pluginsMeta,
     activePlugins,
-    pushPlugin,
-    getHookFunction,
+
     callHook,
     callAsyncHook,
-
     callHooks,
     callHooksUntil,
     callAsyncHooks,
     callAsyncHooksUntil,
-    devServerRoutes: allDevServerRoutes,
 
     getLastPluginUsed: () => lastPluginUsed,
     getCurrentPlugin: () => currentPlugin,
@@ -365,6 +272,94 @@ export const createPluginController = (
   };
 };
 
+const HOOK_NAMES = [
+  "init",
+  "devServerRoutes", // is called only during dev/tests
+  "resolveReference",
+  "redirectReference",
+  "transformReferenceSearchParams",
+  "formatReference",
+  "fetchUrlContent",
+  "transformUrlContent",
+  "finalizeUrlContent",
+  "bundle", // is called only during build
+  "optimizeUrlContent", // is called only during build
+  "cooked",
+  "augmentResponse", // is called only during dev/tests
+  "destroy",
+  "effect",
+];
+
+const testAppliesDuring = (plugin, kitchen) => {
+  const { appliesDuring } = plugin;
+  if (appliesDuring === undefined) {
+    // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+    return true;
+  }
+  if (appliesDuring === "*") {
+    return true;
+  }
+  if (typeof appliesDuring === "string") {
+    if (appliesDuring !== "dev" && appliesDuring !== "build") {
+      throw new TypeError(
+        `"appliesDuring" must be "dev" or "build", got ${appliesDuring}`,
+      );
+    }
+    if (kitchen.context[appliesDuring]) {
+      return true;
+    }
+    return false;
+  }
+  if (typeof appliesDuring === "object") {
+    for (const key of Object.keys(appliesDuring)) {
+      if (!appliesDuring[key] && kitchen.context[key]) {
+        return false;
+      }
+      if (appliesDuring[key] && kitchen.context[key]) {
+        return true;
+      }
+    }
+    // throw new Error(`"appliesDuring" is empty`)
+    return false;
+  }
+  throw new TypeError(
+    `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
+  );
+};
+const initPlugin = (plugin, kitchen) => {
+  const { init } = plugin;
+  if (!init) {
+    return true;
+  }
+  const initReturnValue = init(kitchen.context, { plugin });
+  if (initReturnValue === false) {
+    return false;
+  }
+  if (typeof initReturnValue === "function" && !plugin.destroy) {
+    plugin.destroy = initReturnValue;
+  }
+  return true;
+};
+const applyPluginEffect = (
+  plugin,
+  kitchen,
+  activePlugins,
+  { registerEffect },
+) => {
+  const effect = plugin.effect;
+  if (!effect) {
+    return true;
+  }
+  const returnValue = effect({
+    kitchenContext: kitchen.context,
+    otherPlugins: activePlugins,
+  });
+  if (!returnValue) {
+    return false;
+  }
+  registerEffect(returnValue);
+  return true;
+};
 const getHookFunction = (
   hook,
   // can be undefined, reference, or urlInfo
@@ -401,7 +396,6 @@ const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
   }
   return returnValue;
 };
-
 const returnValueAssertions = [
   {
     name: "url_assertion",

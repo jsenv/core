@@ -520,7 +520,7 @@ export const startServer = async ({
         }, responseTimeout);
       });
       const routerResponsePropertiesPromise = (async () => {
-        const routerResponseProperties = await router.match(request, {
+        const fetchSecondArg = {
           timing,
           pushResponse,
           injectResponseHeader: (name, value) => {
@@ -533,7 +533,21 @@ export const startServer = async ({
               value,
             );
           },
-        });
+        };
+        serviceController.callHooks(
+          "augmentRouteFetchSecondArg",
+          request,
+          fetchSecondArg,
+          (properties) => {
+            if (properties) {
+              Object.assign(fetchSecondArg, properties);
+            }
+          },
+        );
+        const routerResponseProperties = await router.match(
+          request,
+          fetchSecondArg,
+        );
         return routerResponseProperties;
       })();
       const responseProperties = await Promise.race([

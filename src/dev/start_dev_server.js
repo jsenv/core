@@ -22,6 +22,10 @@ import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";
+import {
+  createPluginController,
+  createPluginStore,
+} from "../plugins/plugin_controller.js";
 import { getCorePlugins } from "../plugins/plugins.js";
 import { jsenvPluginServerEvents } from "../plugins/server_events/jsenv_plugin_server_events.js";
 import { parseUserAgentHeader } from "./user_agent.js";
@@ -216,6 +220,28 @@ export const startDevServer = async ({
     );
     serverStopCallbackSet.add(stopWatchingSourceFiles);
 
+    const devServerPluginStore = createPluginStore([
+      jsenvPluginServerEvents({ clientAutoreload }),
+      ...plugins,
+      ...getCorePlugins({
+        rootDirectoryUrl: sourceDirectoryUrl,
+        mainFilePath: sourceMainFilePath,
+        runtimeCompat,
+
+        referenceAnalysis,
+        nodeEsmResolution,
+        magicExtensions,
+        magicDirectoryIndex,
+        directoryListing,
+        supervisor,
+        injections,
+        transpilation,
+
+        clientAutoreload,
+        cacheControl,
+        ribbon,
+      }),
+    ]);
     const getOrCreateKitchen = (request) => {
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
         request.headers["user-agent"] || "",
@@ -252,28 +278,6 @@ export const startDevServer = async ({
         dev: true,
         runtimeCompat,
         clientRuntimeCompat,
-        plugins: [
-          jsenvPluginServerEvents({ clientAutoreload }),
-          ...plugins,
-          ...getCorePlugins({
-            rootDirectoryUrl: sourceDirectoryUrl,
-            mainFilePath: sourceMainFilePath,
-            runtimeCompat,
-
-            referenceAnalysis,
-            nodeEsmResolution,
-            magicExtensions,
-            magicDirectoryIndex,
-            directoryListing,
-            supervisor,
-            injections,
-            transpilation,
-
-            clientAutoreload,
-            cacheControl,
-            ribbon,
-          }),
-        ],
         supervisor,
         minification: false,
         sourcemaps,
@@ -360,28 +364,32 @@ export const startDevServer = async ({
           );
         },
       );
+      const devServerPluginController = createPluginController(
+        devServerPluginStore,
+        kitchen,
+      );
+      kitchen.setPluginController(devServerPluginController);
 
       serverStopCallbackSet.add(() => {
-        kitchen.pluginController.callHooks("destroy", kitchen.context);
+        devServerPluginController.callHooks("destroy", kitchen.context);
       });
       kitchenCache.set(runtimeId, kitchen);
       onKitchenCreated(kitchen);
       return kitchen;
     };
 
-    // this service should go after .internal services .... hummmm
     finalServices.push({
       name: "jsenv:omega_file_service",
+      augmentRouteFetchSecondArg: (request) => {
+        const kitchen = getOrCreateKitchen(request);
+        return { kitchen };
+      },
       routes: [
+        ...devServerPluginStore.allDevServerRoutes,
         {
           endpoint: "GET *",
           description: "Serve project source files during dev",
-          subroutes: (request, helpers) => {
-            const kitchen = getOrCreateKitchen(request);
-            helpers.kitchen = kitchen; // make kitchen accessible to routes
-            return kitchen.pluginController.devServerRoutes;
-          },
-          response: async (request, { kitchen }) => {
+          fetch: async (request, { kitchen }) => {
             const { rootDirectoryUrl, mainFilePath } = kitchen.context;
             let requestResource = request.resource;
             let requestedUrl;

@@ -3,8 +3,6 @@ import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { URL_META } from "@jsenv/url-meta";
 import { normalizeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { jsenvPluginHtmlSyntaxErrorFallback } from "../plugins/html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js";
-import { createPluginController } from "../plugins/plugin_controller.js";
 import {
   createFetchUrlContentError,
   createFinalizeUrlContentError,
@@ -42,7 +40,6 @@ export const createKitchen = ({
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
-  plugins,
   supervisor,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
   sourcemapsComment,
@@ -51,9 +48,9 @@ export const createKitchen = ({
   sourcemapsSourcesContent,
   outDirectoryUrl,
   initialContext = {},
-  initialPluginsMeta = {},
 }) => {
   const logger = createLogger({ logLevel });
+
   const kitchen = {
     context: {
       ...initialContext,
@@ -74,11 +71,16 @@ export const createKitchen = ({
       outDirectoryUrl,
     },
     graph: null,
-    pluginController: null,
     urlInfoTransformer: null,
+    pluginController: null,
   };
   const kitchenContext = kitchen.context;
   kitchenContext.kitchen = kitchen;
+
+  let pluginController;
+  kitchen.setPluginController = (value) => {
+    pluginController = kitchen.pluginController = value;
+  };
 
   const graph = createUrlGraph({
     name,
@@ -86,13 +88,6 @@ export const createKitchen = ({
     kitchen,
   });
   kitchen.graph = graph;
-
-  const pluginController = createPluginController(
-    kitchenContext,
-    initialPluginsMeta,
-  );
-  kitchen.pluginController = pluginController;
-  pluginController.pushPlugin(jsenvPluginHtmlSyntaxErrorFallback(), ...plugins);
 
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
