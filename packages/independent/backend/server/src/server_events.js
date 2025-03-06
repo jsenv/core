@@ -220,8 +220,10 @@ const createServerEvents = ({
   const fetch = (request) => {
     const isWebsocketUpgradeRequest =
       request.headers["upgrade"] === "websocket";
-    const isEventSourceRequest =
-      request.headers["accept"].includes("text/event-stream");
+    const isEventSourceRequest = isWebsocketUpgradeRequest
+      ? false
+      : request.headers["accept"] &&
+        request.headers["accept"].includes("text/event-stream");
     if (!isWebsocketUpgradeRequest && !isEventSourceRequest) {
       return {
         status: 400,
@@ -257,7 +259,7 @@ const createServerEvents = ({
           request,
           websocket,
           sendEvent: (event) => {
-            websocket.write(JSON.stringify(event));
+            websocket.send(JSON.stringify(event));
           },
           close: () => {
             websocket.close();
