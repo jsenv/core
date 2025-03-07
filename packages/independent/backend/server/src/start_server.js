@@ -165,9 +165,6 @@ export const startServer = async ({
   ];
 
   const allRouteArray = [];
-  for (const route of routes) {
-    allRouteArray.push(route);
-  }
   for (const service of services) {
     const serviceRoutes = service.routes;
     if (serviceRoutes) {
@@ -177,6 +174,10 @@ export const startServer = async ({
       }
     }
   }
+  for (const route of routes) {
+    allRouteArray.push(route);
+  }
+
   const router = createRouter(allRouteArray, {
     optionsFallback: true,
   });
