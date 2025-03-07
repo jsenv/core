@@ -48,7 +48,12 @@ const generateBadStatusResponse = (
       statusMessage = statusMessage.replace(
         /(^|\s)(\/\S+)/g,
         (match, startOrSpace, resource) => {
-          return `${startOrSpace}<a href="${resource}">${resource}</a>`;
+          let end = "";
+          if (resource[resource.length - 1] === ".") {
+            resource = resource.slice(0, -1);
+            end = ".";
+          }
+          return `${startOrSpace}<a href="${resource}">${resource}</a>${end}`;
         },
       );
       statusMessage = statusMessage.replace(/\r\n|\r|\n/g, "<br />");
