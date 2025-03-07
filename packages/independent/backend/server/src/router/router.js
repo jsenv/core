@@ -689,7 +689,7 @@ const createNotAcceptableResponse = (
     unsupported.push({
       type: "content-type",
       message: `The server cannot produce a response in any of the media types accepted by the request: "${requestAcceptHeader}".
-Available media types: ${availableMediaTypes.join(", ")}`,
+Available media types: ${availableMediaTypes.join(", ")}.`,
     });
   }
   if (availableLanguages.length) {
@@ -706,7 +706,7 @@ Available media types: ${availableMediaTypes.join(", ")}`,
     unsupported.push({
       type: "language",
       message: `The server cannot produce a response in any of the languages accepted by the request: "${requestAcceptLanguageHeader}".
-Available languages: ${availableLanguages.join(", ")}`,
+Available languages: ${availableLanguages.join(", ")}.`,
     });
   }
   if (availableVersions.length) {
@@ -723,7 +723,7 @@ Available languages: ${availableLanguages.join(", ")}`,
     unsupported.push({
       type: "version",
       message: `The server cannot produce a response in any of the versions accepted by the request: "${requestAcceptVersionHeader}".
-Available versions: ${availableVersions.join(", ")}`,
+Available versions: ${availableVersions.join(", ")}.`,
     });
   }
   if (availableEncodings.length) {
@@ -740,7 +740,7 @@ Available versions: ${availableVersions.join(", ")}`,
     unsupported.push({
       type: "encoding",
       message: `The server cannot encode the response in any of the encodings accepted by the request: "${requestAcceptEncodingHeader}".
-Available encodings: ${availableEncodings.join(", ")}`,
+Available encodings: ${availableEncodings.join(", ")}.`,
     });
   }
 
@@ -811,7 +811,7 @@ const createRouteNotFoundResponse = (request) => {
     status: 404,
     statusText: "Not Found",
     statusMessage: `The URL ${request.resource} does not exist on this server.
-The list of existing endpoints is available at ${routeInspectorUrl}`,
+The list of existing endpoints is available at ${routeInspectorUrl}.`,
     headers: {},
   };
 };

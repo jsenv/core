@@ -8,7 +8,7 @@ if (process.platform === "win32") {
 
 writeFileStructureSync(new URL("./output/screenshots/", import.meta.url), {});
 
-let debug = true;
+let debug = false;
 const { server } = await import("./start_server.mjs");
 const browser = await chromium.launch({ headless: !debug });
 const page = await browser.newPage();
@@ -19,6 +19,7 @@ try {
 }
 await page.setViewportSize({ width: 900, height: 550 }); // generate smaller screenshots
 
+let index = 0;
 const takeSnapshotsForScenario = async (
   scenario,
   { resource, method = "GET", headers = {} },
@@ -38,25 +39,42 @@ const takeSnapshotsForScenario = async (
 
   const sceenshotBuffer = await page.screenshot();
   writeFileSync(
-    new URL(`./output/screenshots/${scenario}.png`, import.meta.url),
+    new URL(`./output/screenshots/${index}_${scenario}.png`, import.meta.url),
     sceenshotBuffer,
   );
+  index++;
 };
 
-await takeSnapshotsForScenario("0_no_route_matching", {
+await takeSnapshotsForScenario("no_route_matching", {
   resource: "/404",
 });
-await takeSnapshotsForScenario("1_404_file_not_found", {
+await takeSnapshotsForScenario("no_route_matching_accept_text", {
+  resource: "/404",
+  headers: {
+    accept: "text/plain",
+  },
+});
+await takeSnapshotsForScenario("file_not_found", {
   resource: "/public/404",
 });
-await takeSnapshotsForScenario("1_416_accept_text_but_json", {
+await takeSnapshotsForScenario("file_not_found_accept_text", {
+  resource: "/public/404",
+});
+await takeSnapshotsForScenario("json_accept_text", {
   resource: "/api/data.json",
   headers: {
     accept: "text/plain",
+  },
+});
+await takeSnapshotsForScenario("json_accept_html", {
+  resource: "/api/data.json",
+  headers: {
+    accept: "text/html",
   },
 });
 
 if (!debug) {
   await page.close();
   await browser.close();
+  await server.stop();
 }

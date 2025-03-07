@@ -57,13 +57,19 @@ export const CONTENT_TYPE = {
   },
 
   fromExtension: (extension) => {
-    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
-      const mediaTypeInfo = mediaTypeInfos[mediaType];
-      return (
-        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
-      );
-    });
-    return mediaTypeFound || "application/octet-stream";
+    if (extension[0] === ".") {
+      extension = extension.slice(1);
+    }
+    for (const mediaTypeCandidate of Object.keys(mediaTypeInfos)) {
+      const mediaTypeCandidateInfo = mediaTypeInfos[mediaTypeCandidate];
+      if (
+        mediaTypeCandidateInfo.extensions &&
+        mediaTypeCandidateInfo.extensions.includes(extension)
+      ) {
+        return mediaTypeCandidate;
+      }
+    }
+    return "application/octet-stream";
   },
 
   fromUrlExtension: (url) => {

@@ -37,6 +37,23 @@ const generateClientErrorResponse = (
       new URL(clientErrorHtmlTemplateFileUrl),
       "utf8",
     );
+    if (statusMessage) {
+      statusMessage = statusMessage.replace(
+        /(?:https?|ftp|file):\/\/\S+/g,
+        (match) => {
+          const url = match[0];
+          return `<a href="${url}">${url}</a>`;
+        },
+      );
+      statusMessage = statusMessage.replace(
+        /(^|\s)(\/\S+)/g,
+        (match, startOrSpace, resource) => {
+          return `${startOrSpace}<a href="${resource}">${resource}</a>`;
+        },
+      );
+      statusMessage = statusMessage.replace(/\r\n|\r|\n/g, "<br />");
+    }
+
     const html = replacePlaceholdersInHtml(htmlTemplate, {
       status,
       statusText,
