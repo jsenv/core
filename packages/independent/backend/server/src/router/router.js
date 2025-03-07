@@ -594,6 +594,10 @@ const createRoute = ({
             const packageJson = JSON.parse(packageFileText);
             if (packageJson.name) {
               meta.packageName = packageJson.name;
+              meta.ownerLink = {
+                url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(packageFileUrl)}")`,
+                text: packageJson.name,
+              };
             }
           } catch {}
         }

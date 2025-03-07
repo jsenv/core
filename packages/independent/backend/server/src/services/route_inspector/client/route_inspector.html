@@ -319,14 +319,14 @@
         --method-color: var(--method-delete-color);
       }
 
-      .route_badge {
+      .route_owner_name {
         background-color: #ffefd2;
         color: #666;
         padding: 4px 8px;
         text-align: center;
         border-radius: 5px;
       }
-      :root[data-theme="dark"] .route_badge {
+      :root[data-theme="dark"] .route_owner_name {
         background-color: rgb(96, 59, 13);
         color: white;
       }
@@ -499,7 +499,9 @@
         }
         let text = meta.packageName;
         let title = `This endpoint is declared by ${meta.packageName}`;
-        return html`<span title=${title} class="route_badge">${text}</span>`;
+        return html`<span title=${title} class="route_owner_name"
+          >${text}</span
+        >`;
       };
 
       const RouteDetailsContent = ({
@@ -569,11 +571,21 @@
         }
         return html`<p style="margin-top: 0"><strong>Declaration:</strong></p>
           <p>
-            This route is declared in${" "}
-            <a href="${meta.declarationLink.url}"
-              >${meta.declarationLink.text}</a
-            >
+            <${RouteDeclarationText}
+              ownerLink=${meta.ownerLink}
+              declarationLink=${meta.declarationLink}
+            />
           </p>`;
+      };
+      const RouteDeclarationText = ({ ownerLink, declarationLink }) => {
+        if (ownerLink) {
+          return html`This route is declared by${" "}
+            <a href=${ownerLink.url}>${ownerLink.text}</a>
+            ${" "}in${" "}
+            <a href="${declarationLink.url}">${declarationLink.text}</a>`;
+        }
+        return html`This route is declared in${" "}
+          <a href="${declarationLink.url}">${declarationLink.text}</a>`;
       };
       const RouteContentNegotiationSection = ({
         type,
