@@ -341,6 +341,64 @@
       .route_content_nego_title {
         font-weight: bold;
       }
+
+      .filter_container {
+        margin-bottom: 20px;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        background: var(--secondary-color);
+      }
+      .filter_container summary::marker {
+        display: none;
+      }
+      .filter_container summary {
+        padding: 10px 15px;
+        cursor: pointer;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .filter_list {
+        display: flex;
+        background: var(--background-color);
+        border-top: 1px solid var(--border-color);
+      }
+      .filter_item {
+        padding: 15px;
+      }
+      .filter_badge {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        margin-left: 10px;
+      }
+
+      select {
+        min-width: 200px;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        background-color: var(--background-color);
+        color: var(--text-color);
+        font-family: inherit;
+      }
+      select option {
+        padding: 8px;
+      }
+      select option:checked {
+        background-color: var(--primary-color);
+        color: white;
+      }
+      .filter_label {
+        font-weight: bold;
+        display: flex;
+        flex-direction: column;
+        user-select: none;
+      }
     </style>
     <script>
       // Theme toggling functionality
@@ -380,27 +438,8 @@
       const routesLoadingSignal = signal(false);
       const routeLoadingErrorSignal = signal(null);
       const routesSignal = signal([]);
-      const routeCheckedGroupArraySignal = signal(["unset"]);
-
-      const checkGroup = (groupName) => {
-        const routeCheckedGroupArray = routeCheckedGroupArraySignal.peek();
-        if (routeCheckedGroupArray.includes(groupName)) {
-          return;
-        }
-        routeCheckedGroupArraySignal.value = [
-          ...routeCheckedGroupArray,
-          groupName,
-        ];
-      };
-      const uncheckGroup = (groupName) => {
-        const routeCheckedGroupArray = routeCheckedGroupArraySignal.peek();
-        const index = routeCheckedGroupArray.indexOf(groupName);
-        if (index === -1) {
-          return;
-        }
-        routeCheckedGroupArray.splice(index, 1);
-        routeCheckedGroupArraySignal.value = [...routeCheckedGroupArray];
-      };
+      const methodCheckedArraySignal = signal([]);
+      const groupCheckedArraySignal = signal([]);
 
       const loadRoutes = async () => {
         routesLoadingSignal.value = true;
@@ -462,58 +501,122 @@
         }
 
         return html`<div class="route_list">
-          <${RouteFilters} routes=${routes} />
+          <${FiltersPanel} routes=${routes} />
           ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
         </div>`;
       };
-      const RouteFilters = ({ routes }) => {
-        const routeCheckedGroupArray = routeCheckedGroupArraySignal.value;
-        const groupCounters = {
-          unset: 0,
-        };
+
+      // TODO: ideally the filters would be on the left
+      const FiltersPanel = ({ routes }) => {
+        let activeFiltersCount = 0;
+        if (methodCheckedArraySignal.value.length > 0) {
+          activeFiltersCount++;
+        }
+        if (groupCheckedArraySignal.value.length > 0) {
+          activeFiltersCount++;
+        }
+        return html`
+          <details class="filter_container">
+            <summary>
+              <span>
+                Filters
+                ${activeFiltersCount > 0
+                  ? html`
+                      <span class="filter_badge">${activeFiltersCount}</span>
+                    `
+                  : null}
+              </span>
+              <${ArrowDown} />
+            </summary>
+            <div class="filter_list">
+              <div class="filter_item">
+                <${MethodFilter} routes=${routes} />
+              </div>
+              <div class="filter_item">
+                <${PackageFilter} routes=${routes} />
+              </div>
+            </div>
+          </details>
+        `;
+      };
+
+      const MethodFilter = ({ routes }) => {
+        const methodCheckedArray = methodCheckedArraySignal.value;
+        const methodCounters = {};
         for (const route of routes) {
-          const packageName = route.meta.packageName;
-          if (packageName) {
-            if (!groupCounters[packageName]) {
-              groupCounters[packageName] = 0;
-            }
-            groupCounters[packageName]++;
-          } else {
-            groupCounters.unset++;
+          const method = route.method;
+          if (!methodCounters[method]) {
+            methodCounters[method] = 0;
           }
+          methodCounters[method]++;
+        }
+        const methodNames = Object.keys(methodCounters);
+        return html`
+          <${FilterSelector}
+            label="Methods:"
+            options=${methodNames.map((methodName) => {
+              return {
+                value: methodName,
+                text: `${methodName} (${methodCounters[methodName]})`,
+                selected: methodCheckedArray.includes(methodName),
+              };
+            })}
+            onChange=${(selectedValues) => {
+              methodCheckedArraySignal.value = selectedValues;
+            }}
+          />
+        `;
+      };
+      const PackageFilter = ({ routes }) => {
+        const groupeCheckedArray = groupCheckedArraySignal.value;
+        const groupCounters = {};
+        for (const route of routes) {
+          const packageName = String(route.meta.packageName);
+          if (!groupCounters[packageName]) {
+            groupCounters[packageName] = 0;
+          }
+          groupCounters[packageName]++;
         }
         const groupNames = Object.keys(groupCounters);
-
-        return html`<p>Filter by owner:</p>
-          <ul>
-            ${groupNames.map((groupName) => {
-              return html`<li>
-                <label>
-                  <input
-                    type="checkbox"
-                    name="route_group"
-                    value=${groupName}
-                    checked=${routeCheckedGroupArray.includes(groupName)}
-                    onChange=${(event) => {
-                      const value = event.target.value;
-                      if (routeCheckedGroupArray.value.includes(value)) {
-                        routeCheckedGroupArray.value =
-                          routeCheckedGroupArray.value.filter(
-                            (v) => v !== value,
-                          );
-                      } else {
-                        routeCheckedGroupArray.value = [
-                          ...routeCheckedGroupArray.value,
-                          value,
-                        ];
-                      }
-                    }}
-                  />
-                  ${groupName} <span>(${groupCounters[groupName]})</span>
-                </label>
-              </li>`;
+        return html`
+          <${FilterSelector}
+            label="Packages:"
+            options=${groupNames.map((groupName) => {
+              return {
+                value: groupName,
+                text: `${groupName} (${groupCounters[groupName]})`,
+                selected: groupeCheckedArray.includes(groupName),
+              };
             })}
-          </ul>`;
+            onChange=${(selectedValues) => {
+              groupeCheckedArray.value = selectedValues;
+            }}
+          />
+        `;
+      };
+
+      const FilterSelector = ({ label, options, onChange }) => {
+        return html`<label class="filter_label">
+          ${label}
+          <select
+            multiple
+            onChange=${(event) => {
+              const selectedOptions = Array.from(
+                event.target.selectedOptions,
+              ).map((option) => option.value);
+              onChange(selectedOptions);
+            }}
+          >
+            ${options.map((option) => {
+              return html`<option
+                value=${option.value}
+                selected=${option.selected}
+              >
+                ${option.text}
+              </option>`;
+            })}
+          </select>
+        </label>`;
       };
 
       const RouteDetails = ({
@@ -531,6 +634,20 @@
         declarationLocation,
       }) => {
         const [opened, setOpened] = useState(false);
+        const methodCheckedArray = methodCheckedArraySignal.value;
+        const groupCheckedArray = groupCheckedArraySignal.value;
+        if (
+          methodCheckedArray.length > 0 &&
+          !methodCheckedArray.includes(method)
+        ) {
+          return null;
+        }
+        if (
+          groupCheckedArray.length > 0 &&
+          !groupCheckedArray.includes(meta.packageName)
+        ) {
+          return null;
+        }
 
         return html`<details
           class="route_details"
