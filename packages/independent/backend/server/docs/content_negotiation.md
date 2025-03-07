@@ -4,7 +4,7 @@ Content negotiation is a mechanism that allows the server to select the best rep
 
 ## Content type Negotiation
 
-You can declare `availableContentTypes` and respond with client's preferred content type:
+You can declare `availableMediaTypes` and respond with client's preferred content type:
 
 ```js
 import { startServer, pickContentType } from "@jsenv/server";
@@ -42,9 +42,9 @@ await startServer({
     // - contentNegotiation gives you the negotiated values
     {
       endpoint: "GET *",
-      availableContentTypes: ["application/json", "text/plain"],
+      availableMediaTypes: ["application/json", "text/plain"],
       response: (request, { contentNegotiation }) => {
-        if (contentNegotiation.contentType === "application/json") {
+        if (contentNegotiation.mediaType === "application/json") {
           return Response.json({ data: "Hello world" });
         }
         return new Response("Hello world");
@@ -141,7 +141,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      availableContentTypes: ["application/json", "text/plain"],
+      availableMediaTypes: ["application/json", "text/plain"],
       availableLanguages: ["fr", "en"],
       response: (request, { contentNegotiation }) => {
         const message =
@@ -151,7 +151,7 @@ await startServer({
         const headers = {
           "content-language": contentNegotiation.language,
         };
-        if (contentNegotiation.contentType === "application/json") {
+        if (contentNegotiation.mediaType === "application/json") {
           return Response.json({ data: message }, { headers });
         }
         return new Response(message, { headers });

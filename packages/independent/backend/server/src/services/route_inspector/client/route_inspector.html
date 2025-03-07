@@ -432,11 +432,11 @@
         method,
         resource,
         description,
-        availableContentTypes,
+        availableMediaTypes,
         availableLanguages,
         availableVersions,
         availableEncodings,
-        acceptedContentTypes,
+        acceptedMediaTypes,
         websocket,
         clientCodeExample,
       }) => {
@@ -461,11 +461,11 @@
             method=${method}
             resource=${resource}
             description=${description}
-            availableContentTypes=${availableContentTypes}
+            availableMediaTypes=${availableMediaTypes}
             availableLanguages=${availableLanguages}
             availableVersions=${availableVersions}
             availableEncodings=${availableEncodings}
-            acceptedContentTypes=${acceptedContentTypes}
+            acceptedMediaTypes=${acceptedMediaTypes}
             websocket=${websocket}
             clientCodeExample=${clientCodeExample}
           />
@@ -476,11 +476,11 @@
         method,
         resource,
         description,
-        availableContentTypes,
+        availableMediaTypes,
         availableLanguages,
         availableVersions,
         availableEncodings,
-        acceptedContentTypes,
+        acceptedMediaTypes,
         websocket,
         clientCodeExample,
       }) => {
@@ -489,11 +489,11 @@
           <p class="route_description">
             ${description || "No description available"}
           </p>
-          ${availableContentTypes.length > 0 &&
+          ${availableMediaTypes.length > 0 &&
           html`<${RouteContentNegotiationSection}
             type="content-type"
-            title="Available content types"
-            availableValues=${availableContentTypes}
+            title="Available media types"
+            availableValues=${availableMediaTypes}
           />`}
           ${availableLanguages.length > 0 &&
           html`<${RouteContentNegotiationSection}
@@ -513,15 +513,15 @@
             title="Available encodings"
             availableValues=${availableEncodings}
           />`}
-          ${acceptedContentTypes.length > 0 &&
+          ${acceptedMediaTypes.length > 0 &&
           html`<${RouteAcceptableContentSection}
-            acceptedContentTypes=${acceptedContentTypes}
+            acceptedMediaTypes=${acceptedMediaTypes}
           />`}
           <p style="margin-bottom:0; font-weight:bold">Example:</p>
           <${RouteCodeExample}
             method=${method}
             resource=${resource}
-            availableContentTypes=${availableContentTypes}
+            availableMediaTypes=${availableMediaTypes}
             websocket=${websocket}
             clientCodeExample=${clientCodeExample}
           />
@@ -541,12 +541,12 @@
           </ul>
         </div>`;
       };
-      const RouteAcceptableContentSection = ({ acceptedContentTypes }) => {
+      const RouteAcceptableContentSection = ({ acceptedMediaTypes }) => {
         return html`<div class="route_accepted_content_type">
           <p><strong>Accepted content types:</strong></p>
           <ul>
-            ${acceptedContentTypes.map(
-              (acceptedContentType) => html`<li>${acceptedContentType}</li>`,
+            ${acceptedMediaTypes.map(
+              (acceptedMediaType) => html`<li>${acceptedMediaType}</li>`,
             )}
           </ul>
         </div>`;
@@ -555,7 +555,7 @@
       const RouteCodeExample = ({
         method,
         resource,
-        availableContentTypes,
+        availableMediaTypes,
         websocket,
         clientCodeExample,
       }) => {
@@ -588,7 +588,7 @@ websocket.onmessage = (event) => {
 }`;
           }
           let readResponseLine;
-          if (availableContentTypes.includes("application/json")) {
+          if (availableMediaTypes.includes("application/json")) {
             readResponseLine = `const json = await response.json();`;
           } else {
             readResponseLine = `const text = await response.text();`;

@@ -27,7 +27,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET /events",
-      availableContentTypes: ["text/event-stream"],
+      availableMediaTypes: ["text/event-stream"],
       response: (request) => {
         return room.join(request);
       },

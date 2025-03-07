@@ -163,7 +163,7 @@ export const startDevServer = async ({
         {
           endpoint: "GET /.internal/server.json",
           description: "Get information about jsenv dev server",
-          availableContentTypes: ["application/json"],
+          availableMediaTypes: ["application/json"],
           fetch: () =>
             Response.json({
               server: "jsenv_dev_server/1",

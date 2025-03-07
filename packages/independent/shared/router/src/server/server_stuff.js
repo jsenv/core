@@ -80,7 +80,7 @@ export const JSONFileManagerService = () => {
       },
       {
         endpoint: "PATCH /json_files/:id",
-        acceptedContentTypes: ["multipart/form-data"],
+        acceptedMediaTypes: ["multipart/form-data"],
         fetch: async (request, { id }) => {
           const { fields } = await request.formData();
           // TODO: attention le format form-data fait que key:value devient key: [value]

@@ -79,7 +79,7 @@ Read more at [MDN URLSearchParams documentation](https://developer.mozilla.org/e
 
 ### Reading request body
 
-Pass an `acceptedContentTypes` array to the route to specify which content types your handler can process. If the request uses a content-type you don't support, a response with status 415 (Unsupported Media Type) will be sent automatically.
+Pass an `acceptedMediaTypes` array to the route to specify which content types your handler can process. If the request uses a content-type you don't support, a response with status 415 (Unsupported Media Type) will be sent automatically.
 
 ```js
 import { startServer } from "@jsenv/server";
@@ -88,7 +88,7 @@ await startServer({
   routes: [
     {
       endpoint: "PATCH /users/:id",
-      acceptedContentTypes: [
+      acceptedMediaTypes: [
         "application/json",
         "application/merge-patch+json",
         "multipart/form-data",
