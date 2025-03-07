@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Controllable client</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script>
+      window.fetchResourceAndDisplayResultInDocument = async ({
+        resource,
+        method,
+        headers,
+      }) => {
+        const response = await window.fetch(resource, { method, headers });
+        const responseHeaders = response.headers;
+        const responseContentType = responseHeaders.get("content-type") || "";
+        if (responseContentType.includes("text/html")) {
+          const html = await response.text();
+          document.body.innerHTML = html;
+        } else if (responseContentType.includes("application/json")) {
+          const json = await response.json();
+          document.body.innerHTML = `<pre>${JSON.stringify(json, null, "  ")}</pre>`;
+        } else {
+          const text = await response.text();
+          document.body.innerHTML = `<pre>${text}</pre>`;
+        }
+      };
+    </script>
+  </body>
+</html>
