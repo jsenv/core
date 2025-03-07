@@ -393,11 +393,40 @@
         background-color: var(--primary-color);
         color: white;
       }
-      .filter_label {
+      .filter_legend {
         font-weight: bold;
         display: flex;
         flex-direction: column;
         user-select: none;
+      }
+
+      .checkbox_group {
+        display: flex;
+        flex-direction: column;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 15px;
+      }
+      .filter_actions {
+        display: flex;
+        gap: 10px;
+      }
+      .filter_button {
+        background-color: var(--secondary-color);
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+      }
+      .filter_button:hover {
+        background-color: color-mix(
+          in srgb,
+          var(--primary-color) 15%,
+          transparent
+        );
       }
     </style>
     <script>
@@ -433,7 +462,7 @@
       import { render } from "preact";
       import { html } from "htm/preact";
       import { signal } from "@preact/signals";
-      import { useState } from "preact/hooks";
+      import { useState, useRef } from "preact/hooks";
 
       const routesLoadingSignal = signal(false);
       const routeLoadingErrorSignal = signal(null);
@@ -506,7 +535,6 @@
         </div>`;
       };
 
-      // TODO: ideally the filters would be on the left
       const FiltersPanel = ({ routes }) => {
         let activeFiltersCount = 0;
         if (methodCheckedArraySignal.value.length > 0) {
@@ -595,28 +623,58 @@
         `;
       };
 
-      const FilterSelector = ({ label, options, onChange }) => {
-        return html`<label class="filter_label">
-          ${label}
-          <select
-            multiple
-            onChange=${(event) => {
-              const selectedOptions = Array.from(
-                event.target.selectedOptions,
-              ).map((option) => option.value);
-              onChange(selectedOptions);
-            }}
-          >
+      const FilterSelector = ({ label, options, onChange, actions }) => {
+        const groupRef = useRef();
+
+        return html`<div class="filter">
+          <div class="filter_legend">${label}</div>
+          <div ref=${groupRef} class="checkbox_group">
             ${options.map((option) => {
-              return html`<option
-                value=${option.value}
-                selected=${option.selected}
-              >
+              return html`<label>
+                <input
+                  type="checkbox"
+                  checked=${option.selected}
+                  value=${option.value}
+                  onChange=${() => {
+                    const groupNode = groupRef.current;
+                    const checkboxNodeArray = Array.from(
+                      groupNode.querySelectorAll('input[type="checkbox"]'),
+                    );
+                    const valueCheckedArray = [];
+                    for (const checkboxNode of checkboxNodeArray) {
+                      if (checkboxNode.checked) {
+                        valueCheckedArray.push(checkboxNode.value);
+                      }
+                    }
+                    onChange(valueCheckedArray);
+                  }}
+                />
                 ${option.text}
-              </option>`;
+              </label>`;
             })}
-          </select>
-        </label>`;
+          </div>
+          ${actions &&
+          html` <div class="filter_actions">
+            <button
+              type="button"
+              class="filter_button"
+              onClick=${() => {
+                onChange(options.map((option) => option.value));
+              }}
+            >
+              Select All
+            </button>
+            <button
+              type="button"
+              class="filter_button"
+              onClick=${() => {
+                onChange([]);
+              }}
+            >
+              Clear All
+            </button>
+          </div>`}
+        </div>`;
       };
 
       const RouteDetails = ({
