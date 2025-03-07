@@ -17,7 +17,7 @@ try {
 } catch (e) {
   throw new Error(`error while loading page: ${e.stack}`);
 }
-await page.setViewportSize({ width: 900, height: 750 }); // generate smaller screenshots
+await page.setViewportSize({ width: 900, height: 900 }); // generate smaller screenshots
 
 let index = 0;
 const takeSnapshotsForScenario = async (

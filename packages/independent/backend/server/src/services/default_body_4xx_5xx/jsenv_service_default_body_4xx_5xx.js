@@ -13,24 +13,24 @@ export const jsenvServiceDefaultBody4xx5xx = () => {
         return null;
       }
       if (responseProperties.status >= 400 && responseProperties.status < 500) {
-        return generateClientErrorResponse(request, responseProperties);
+        return generateBadStatusResponse(request, responseProperties);
       }
       if (responseProperties.status >= 500 && responseProperties.status < 600) {
-        return generateClientErrorResponse(request, responseProperties);
+        return generateBadStatusResponse(request, responseProperties);
       }
       return null;
     },
   };
 };
 
-const generateClientErrorResponse = (
+const generateBadStatusResponse = (
   request,
   { status, statusText, statusMessage },
 ) => {
   const contentTypeNegotiated = pickContentType(request, [
     "text/html",
-    "application/json",
     "text/plain",
+    "application/json",
   ]);
   if (contentTypeNegotiated === "text/html") {
     const htmlTemplate = readFileSync(
@@ -65,8 +65,17 @@ const generateClientErrorResponse = (
       statusText,
     });
   }
-  if (contentTypeNegotiated === "application/json") {
-    return Response.json({ statusMessage }, { status, statusText });
+  if (contentTypeNegotiated === "text/plain") {
+    return new Response(statusMessage, {
+      status,
+      statusText,
+    });
   }
-  return new Response(statusMessage, { status, statusText });
+  return Response.json(
+    { statusMessage },
+    {
+      status,
+      statusText,
+    },
+  );
 };

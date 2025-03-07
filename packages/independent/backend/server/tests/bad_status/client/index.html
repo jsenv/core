@@ -18,16 +18,21 @@
         headers,
       }) => {
         const response = await window.fetch(resource, { method, headers });
-        const responseHeaders = response.headers;
-        const responseContentType = responseHeaders.get("content-type") || "";
+        const responseHeaders = Object.fromEntries(response.headers);
+        const responseContentType = responseHeaders["content-type"] || "";
+        delete responseHeaders.date;
+        delete responseHeaders["keep-alive"];
+
         if (responseContentType.includes("text/html")) {
           const html = await response.text();
           output.innerHTML = `
-<h1>Status</h1>
+<h1>Response status</h1>
 <p>${response.status}</p>
-<h1>StatusText</h1>
+<h1>Response status text</h1>
 <p>${response.statusText}</p>
-<h1>Body (HTML):</h1>
+<h1>Response headers</h1>
+<pre>${JSON.stringify(responseHeaders, null, "  ")}</pre>
+<h1>Response body (HTML):</h1>
 <div id="iframe_placeholder"></div>`;
           const iframe = document.createElement("iframe");
           iframe.style.width = "100%";
@@ -49,20 +54,24 @@
         } else if (responseContentType.includes("application/json")) {
           const json = await response.json();
           output.innerHTML = `
-<h1>Status</h1>
+<h1>Response status</h1>
 <p>${response.status}</p>
-<h1>StatusText</h1>
+<h1>Response status text</h1>
 <p>${response.statusText}</p>
-<h1>Body (JSON):</h1>
+<h1>Response headers</h1>
+<pre>${JSON.stringify(responseHeaders, null, "  ")}</pre>
+<h1>Response body (JSON):</h1>
 <pre>${JSON.stringify(json, null, "  ")}</pre>`;
         } else {
           const text = await response.text();
           output.innerHTML = `
-<h1>Status</h1>
+<h1>Response status</h1>
 <p>${response.status}</p>
-<h1>StatusText</h1>
+<h1>Response status text</h1>
 <p>${response.statusText}</p>
-<h1>Body (TEXT):</h1>
+<h1>Response headers</h1>
+<pre>${JSON.stringify(responseHeaders, null, "  ")}</pre>
+<h1>Response body (TEXT):</h1>
 <pre>${text}</pre>`;
         }
       };
