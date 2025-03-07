@@ -17,7 +17,7 @@ try {
 } catch (e) {
   throw new Error(`error while loading page: ${e.stack}`);
 }
-await page.setViewportSize({ width: 900, height: 550 }); // generate smaller screenshots
+await page.setViewportSize({ width: 900, height: 750 }); // generate smaller screenshots
 
 let index = 0;
 const takeSnapshotsForScenario = async (
@@ -65,6 +65,9 @@ await takeSnapshotsForScenario("file_not_found_accept_text", {
 });
 await takeSnapshotsForScenario("json_accept_text", {
   resource: "/api/data.json",
+  headers: {
+    accept: "text/plain",
+  },
 });
 await takeSnapshotsForScenario("json_accept_html", {
   resource: "/api/data.json",

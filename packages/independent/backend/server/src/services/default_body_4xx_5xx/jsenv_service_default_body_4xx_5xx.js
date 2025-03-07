@@ -61,6 +61,8 @@ const generateClientErrorResponse = (
     });
     return new Response(html, {
       headers: { "content-type": "text/html" },
+      status,
+      statusText,
     });
   }
   if (contentTypeNegotiated === "application/json") {
