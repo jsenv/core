@@ -38,13 +38,9 @@ const generateBadStatusResponse = (
       "utf8",
     );
     if (statusMessage) {
-      statusMessage = statusMessage.replace(
-        /(?:https?|ftp|file):\/\/\S+/g,
-        (match) => {
-          const url = match[0];
-          return `<a href="${url}">${url}</a>`;
-        },
-      );
+      statusMessage = statusMessage.replace(/https?:\/\/\S+/g, (url) => {
+        return `<a href="${url}">${url}</a>`;
+      });
       statusMessage = statusMessage.replace(
         /(^|\s)(\/\S+)/g,
         (match, startOrSpace, resource) => {
