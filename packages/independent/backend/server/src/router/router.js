@@ -812,5 +812,6 @@ const createRouteNotFoundResponse = (request) => {
     statusText: "Not Found",
     statusMessage: `The URL ${request.resource} does not exist on this server.
 The list of existing endpoints is available at ${routeInspectorUrl}`,
+    headers: {},
   };
 };

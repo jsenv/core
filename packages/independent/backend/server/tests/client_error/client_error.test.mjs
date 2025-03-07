@@ -1,4 +1,4 @@
-import { writeFileSync } from "@jsenv/filesystem";
+import { writeFileStructureSync, writeFileSync } from "@jsenv/filesystem";
 import { chromium } from "playwright";
 
 if (process.platform === "win32") {
@@ -6,12 +6,14 @@ if (process.platform === "win32") {
   process.exit(0);
 }
 
+writeFileStructureSync(new URL("./output/screenshots/", import.meta.url), {});
+
 let debug = true;
 const { server } = await import("./start_server.mjs");
 const browser = await chromium.launch({ headless: !debug });
 const page = await browser.newPage();
 try {
-  await page.goto(`${server.origin}/index.html`);
+  await page.goto(`${server.origin}/public/index.html`);
 } catch (e) {
   throw new Error(`error while loading page: ${e.stack}`);
 }
@@ -39,14 +41,19 @@ const takeSnapshotsForScenario = async (
     new URL(`./output/screenshots/${scenario}.png`, import.meta.url),
     sceenshotBuffer,
   );
-
-  // if (!process.env.CI && !process.env.JSENV) {
-  //   console.log(`"${story}" snapshot generated for ${browserName}`);
-  // }
 };
 
-await takeSnapshotsForScenario("0_404", {
+await takeSnapshotsForScenario("0_no_route_matching", {
   resource: "/404",
+});
+await takeSnapshotsForScenario("1_404_file_not_found", {
+  resource: "/public/404",
+});
+await takeSnapshotsForScenario("1_416_accept_text_but_json", {
+  resource: "/api/data.json",
+  headers: {
+    accept: "text/plain",
+  },
 });
 
 if (!debug) {

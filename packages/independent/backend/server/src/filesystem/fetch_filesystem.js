@@ -48,7 +48,13 @@ export const fetchFileSystem = async (
   if (!directoryUrlString.endsWith("/")) {
     directoryUrlString = `${directoryUrlString}/`;
   }
-  const filesystemUrl = new URL(request.resource.slice(1), directoryUrl);
+  let resource;
+  if ("0" in request.params) {
+    resource = request.params["0"];
+  } else {
+    resource = request.resource.slice(1);
+  }
+  const filesystemUrl = new URL(resource, directoryUrl);
   const urlString = asUrlString(filesystemUrl);
 
   if (typeof cacheControl === "function") {
