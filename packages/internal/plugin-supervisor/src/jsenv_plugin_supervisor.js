@@ -6,8 +6,7 @@
 import { generateContentFrame } from "@jsenv/humanize";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
 import { getOriginalPosition } from "@jsenv/sourcemap";
-import { injectQueryParams, urlToFileSystemPath } from "@jsenv/urls";
-import { createRequire } from "node:module";
+import { injectQueryParams } from "@jsenv/urls";
 import {
   injectSupervisorIntoHTML,
   supervisorFileUrl,
@@ -200,33 +199,6 @@ export const jsenvPluginSupervisor = ({
               "content-length": Buffer.byteLength(body),
             },
             body,
-          };
-        },
-      },
-      {
-        endpoint: "GET /.internal/open_in_editor/*",
-        description:
-          "Requesting this endpoint will open a given file in your editor. Jsenv dev server use this to provide link to source file, mostly when there is an error.",
-        fetch: (request, { kitchen }) => {
-          let file = decodeURIComponent(request.params[0]);
-          if (!file) {
-            return {
-              status: 400,
-              body: "Missing file in url",
-            };
-          }
-          const fileUrl = new URL(file, kitchen.context.rootDirectoryUrl);
-          const filePath = urlToFileSystemPath(fileUrl);
-          const require = createRequire(import.meta.url);
-          const launch = require("launch-editor");
-          launch(filePath, () => {
-            // ignore error for now
-          });
-          return {
-            status: 200,
-            headers: {
-              "cache-control": "no-store",
-            },
           };
         },
       },

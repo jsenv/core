@@ -88,6 +88,10 @@
         --secondary-color: #1e1e1e;
       }
 
+      :root[data-theme="dark"] a {
+        color: dodgerblue;
+      }
+
       body {
         font-family:
           system-ui,
@@ -452,6 +456,7 @@
         acceptedMediaTypes,
         websocket,
         clientCodeExample,
+        declarationLocation,
       }) => {
         const [opened, setOpened] = useState(false);
 
@@ -482,6 +487,8 @@
             acceptedMediaTypes=${acceptedMediaTypes}
             websocket=${websocket}
             clientCodeExample=${clientCodeExample}
+            declarationLocation=${declarationLocation}
+            meta=${meta}
           />
         </details>`;
       };
@@ -491,7 +498,7 @@
           return null;
         }
         let text = meta.packageName;
-        let title = `This endpoint is defined by ${meta.packageName}`;
+        let title = `This endpoint is declared by ${meta.packageName}`;
         return html`<span title=${title} class="route_badge">${text}</span>`;
       };
 
@@ -506,8 +513,14 @@
         acceptedMediaTypes,
         websocket,
         clientCodeExample,
+        declarationLocation,
+        meta,
       }) => {
         return html`<div class="route_details_content">
+          <${RouteDeclarationLocation}
+            meta=${meta}
+            declarationLocation=${declarationLocation}
+          />
           <p style="margin-top: 0"><strong>Description:</strong></p>
           <p class="route_description">
             ${description || "No description available"}
@@ -549,6 +562,18 @@
             clientCodeExample=${clientCodeExample}
           />
         </div>`;
+      };
+      const RouteDeclarationLocation = ({ meta, declarationLocation }) => {
+        if (!declarationLocation) {
+          return null;
+        }
+        return html`<p style="margin-top: 0"><strong>Declaration:</strong></p>
+          <p>
+            This route is declared in${" "}
+            <a href="${meta.declarationLink.url}"
+              >${meta.declarationLink.text}</a
+            >
+          </p>`;
       };
       const RouteContentNegotiationSection = ({
         type,

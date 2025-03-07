@@ -597,6 +597,11 @@ const createRoute = ({
             }
           } catch {}
         }
+
+        meta.declarationLink = {
+          url: `/.internal/open_file/${encodeURIComponent(declarationLocation)}`,
+          text: "",
+        };
       }
 
       return {

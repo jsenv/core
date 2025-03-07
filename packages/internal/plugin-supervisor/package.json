@@ -28,8 +28,7 @@
   "dependencies": {
     "@jsenv/ast": "6.5.2",
     "@jsenv/urls": "2.6.0",
-    "@jsenv/sourcemap": "1.2.30",
-    "launch-editor": "2.9.1"
+    "@jsenv/sourcemap": "1.2.30"
   },
   "scripts": {
     "build": "node ./scripts/build.mjs",

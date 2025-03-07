@@ -39,7 +39,8 @@
   },
   "dependencies": {
     "string-width": "7.2.0",
-    "@jsenv/router": "0.0.8"
+    "@jsenv/router": "0.0.8",
+    "launch-editor": "2.10.0"
   },
   "devDependencies": {
     "eventsource": "3.0.2",

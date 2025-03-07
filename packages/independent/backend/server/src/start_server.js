@@ -32,6 +32,7 @@ import {
 import { jsenvServiceAutoreloadOnRestart } from "./services/autoreload_on_server_restart/jsenv_service_autoreload_on_server_restart.js";
 import { jsenvServiceDefaultBody4xx5xx } from "./services/default_body_4xx_5xx/jsenv_service_default_body_4xx_5xx.js";
 import { jsenvServiceInternalClientFiles } from "./services/internal_client_files/jsenv_service_internal_client_files.js";
+import { jsenvServiceOpenFile } from "./services/open_file/jsenv_service_open_file.js";
 import { jsenvServiceRouteInspector } from "./services/route_inspector/jsenv_service_route_inspector.js";
 import {
   STOP_REASON_INTERNAL_ERROR,
@@ -154,6 +155,7 @@ export const startServer = async ({
   }
 
   services = [
+    jsenvServiceOpenFile(),
     jsenvServiceDefaultBody4xx5xx(),
     jsenvServiceRouteInspector(),
     ...(import.meta.build
