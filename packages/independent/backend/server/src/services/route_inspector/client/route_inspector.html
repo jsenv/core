@@ -380,6 +380,27 @@
       const routesLoadingSignal = signal(false);
       const routeLoadingErrorSignal = signal(null);
       const routesSignal = signal([]);
+      const routeCheckedGroupArraySignal = signal(["unset"]);
+
+      const checkGroup = (groupName) => {
+        const routeCheckedGroupArray = routeCheckedGroupArraySignal.peek();
+        if (routeCheckedGroupArray.includes(groupName)) {
+          return;
+        }
+        routeCheckedGroupArraySignal.value = [
+          ...routeCheckedGroupArray,
+          groupName,
+        ];
+      };
+      const uncheckGroup = (groupName) => {
+        const routeCheckedGroupArray = routeCheckedGroupArraySignal.peek();
+        const index = routeCheckedGroupArray.indexOf(groupName);
+        if (index === -1) {
+          return;
+        }
+        routeCheckedGroupArray.splice(index, 1);
+        routeCheckedGroupArraySignal.value = [...routeCheckedGroupArray];
+      };
 
       const loadRoutes = async () => {
         routesLoadingSignal.value = true;
@@ -441,9 +462,60 @@
         }
 
         return html`<div class="route_list">
+          <${RouteFilters} routes=${routes} />
           ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
         </div>`;
       };
+      const RouteFilters = ({ routes }) => {
+        const routeCheckedGroupArray = routeCheckedGroupArraySignal.value;
+        const groupCounters = {
+          unset: 0,
+        };
+        for (const route of routes) {
+          const packageName = route.meta.packageName;
+          if (packageName) {
+            if (!groupCounters[packageName]) {
+              groupCounters[packageName] = 0;
+            }
+            groupCounters[packageName]++;
+          } else {
+            groupCounters.unset++;
+          }
+        }
+        const groupNames = Object.keys(groupCounters);
+
+        return html`<p>Filter by owner:</p>
+          <ul>
+            ${groupNames.map((groupName) => {
+              return html`<li>
+                <label>
+                  <input
+                    type="checkbox"
+                    name="route_group"
+                    value=${groupName}
+                    checked=${routeCheckedGroupArray.includes(groupName)}
+                    onChange=${(event) => {
+                      const value = event.target.value;
+                      if (routeCheckedGroupArray.value.includes(value)) {
+                        routeCheckedGroupArray.value =
+                          routeCheckedGroupArray.value.filter(
+                            (v) => v !== value,
+                          );
+                      } else {
+                        routeCheckedGroupArray.value = [
+                          ...routeCheckedGroupArray.value,
+                          value,
+                        ];
+                      }
+                    }}
+                  />
+                  ${groupName} <span>(${groupCounters[groupName]})</span>
+                </label>
+              </li>`;
+            })}
+          </ul>`;
+      };
+
       const RouteDetails = ({
         meta,
         method,
@@ -621,25 +693,25 @@
             self.location.protocol === "https:" ? "wss" : "ws";
           const websocketOrigin = `${websocketScheme}://${self.location.host}`;
           jsSource = /*js */ `
-const websocket = new WebSocket("${websocketOrigin}${resource}");
-websocket.onerror = () => {
-  console.error("Failed to connect to websocket endpoint");
-};
-websocket.onopen = () => {
-  console.info("Connected to websocket endpoint")
-};
-websocket.onmessage = (event) => {
-  console.log("Received message", event.data);
-};
-`;
+          const websocket = new WebSocket("${websocketOrigin}${resource}");
+          websocket.onerror = () => {
+            console.error("Failed to connect to websocket endpoint");
+          };
+          websocket.onopen = () => {
+            console.info("Connected to websocket endpoint")
+          };
+          websocket.onmessage = (event) => {
+            console.log("Received message", event.data);
+          };
+          `;
         } else {
           let fetchLine;
           if (method === "GET") {
             fetchLine = `const response = await window.fetch("${resource}");`;
           } else {
             fetchLine = `const response = await window.fetch("${resource}", {
-  method: "${method}",
-}`;
+            method: "${method}",
+          }`;
           }
           let readResponseLine;
           if (availableMediaTypes.includes("application/json")) {
@@ -649,9 +721,9 @@ websocket.onmessage = (event) => {
           }
 
           jsSource = /*js */ `
-${fetchLine}
-${readResponseLine}
-`;
+          ${fetchLine}
+          ${readResponseLine}
+          `;
         }
 
         return html`<code-block lang="js" data-escaped data-copy-button
