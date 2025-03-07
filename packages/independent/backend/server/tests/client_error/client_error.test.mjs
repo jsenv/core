@@ -59,12 +59,12 @@ await takeSnapshotsForScenario("file_not_found", {
 });
 await takeSnapshotsForScenario("file_not_found_accept_text", {
   resource: "/public/404",
-});
-await takeSnapshotsForScenario("json_accept_text", {
-  resource: "/api/data.json",
   headers: {
     accept: "text/plain",
   },
+});
+await takeSnapshotsForScenario("json_accept_text", {
+  resource: "/api/data.json",
 });
 await takeSnapshotsForScenario("json_accept_html", {
   resource: "/api/data.json",
