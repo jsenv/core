@@ -19,41 +19,44 @@
   </head>
   <body>
     <div class="container">
-      <div class="header-row">
-        <h1 style="margin: 0">Route inspector</h1>
-        <div class="theme-toggle">
-          <button id="theme-toggle-btn" aria-label="Toggle dark/light mode">
-            <svg
-              class="sun-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              height="24"
-              viewBox="0 -960 960 960"
-              width="24"
-            >
-              <path
-                d="M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM80-440q0 17 11.5 28.5T120-400h80q17 0 28.5-11.5T240-440q0-17-11.5-28.5T200-480h-80q-17 0-28.5 11.5T80-440Zm680 0q0 17 11.5 28.5T800-400h80q17 0 28.5-11.5T920-440q0-17-11.5-28.5T880-480h-80q-17 0-28.5 11.5T760-440ZM440-760q0 17 11.5 28.5T480-720q17 0 28.5-11.5T520-760v-80q0-17-11.5-28.5T480-880q-17 0-28.5 11.5T440-840v80Zm0 680q0 17 11.5 28.5T480-40q17 0 28.5-11.5T520-80v-80q0-17-11.5-28.5T480-200q-17 0-28.5 11.5T440-160v80ZM226-678l56 56q12 12 28.5 12t28.5-12q12-12 12-28.5T339-679l-56-56q-12-12-28.5-12T226-735q-12 12-12 28.5t12 28.5Zm452 452 56 56q12 12 28.5 12t28.5-12q12-12 12-28.5T791-227l-56-56q-12-12-28.5-12T678-283q-12 12-12 28.5t12 28.5ZM791-678q12 12 28.5 12t28.5-12q12-12 12-28.5T848-735l-56-56q-12-12-28.5-12T735-791q-12 12-12 28.5t12 28.5l56 56Zm-508 452q12 12 28.5 12t28.5-12q12-12 12-28.5T340-283l-56-56q-12-12-28.5-12T227-339q-12 12-12 28.5t12 28.5l56 56Z"
-              />
-            </svg>
-            <svg
-              class="moon-icon"
-              xmlns="http://www.w3.org/2000/svg"
-              height="24"
-              viewBox="0 -960 960 960"
-              width="24"
-            >
-              <path
-                d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q8 0 17 .5t23 1.5q-36 32-56 79t-20 99q0 83 58.5 141.5T643-460q52 0 99-20t79-56q1 14 1.5 23t.5 17q0 150-105 255T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z"
-              />
-            </svg>
-          </button>
+      <aside></aside>
+      <main>
+        <div class="header_row">
+          <h1 style="margin: 0">Route inspector</h1>
+          <div class="theme-toggle">
+            <button id="theme-toggle-btn" aria-label="Toggle dark/light mode">
+              <svg
+                class="sun-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                height="24"
+                viewBox="0 -960 960 960"
+                width="24"
+              >
+                <path
+                  d="M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM80-440q0 17 11.5 28.5T120-400h80q17 0 28.5-11.5T240-440q0-17-11.5-28.5T200-480h-80q-17 0-28.5 11.5T80-440Zm680 0q0 17 11.5 28.5T800-400h80q17 0 28.5-11.5T920-440q0-17-11.5-28.5T880-480h-80q-17 0-28.5 11.5T760-440ZM440-760q0 17 11.5 28.5T480-720q17 0 28.5-11.5T520-760v-80q0-17-11.5-28.5T480-880q-17 0-28.5 11.5T440-840v80Zm0 680q0 17 11.5 28.5T480-40q17 0 28.5-11.5T520-80v-80q0-17-11.5-28.5T480-200q-17 0-28.5 11.5T440-160v80ZM226-678l56 56q12 12 28.5 12t28.5-12q12-12 12-28.5T339-679l-56-56q-12-12-28.5-12T226-735q-12 12-12 28.5t12 28.5Zm452 452 56 56q12 12 28.5 12t28.5-12q12-12 12-28.5T791-227l-56-56q-12-12-28.5-12T678-283q-12 12-12 28.5t12 28.5ZM791-678q12 12 28.5 12t28.5-12q12-12 12-28.5T848-735l-56-56q-12-12-28.5-12T735-791q-12 12-12 28.5t12 28.5l56 56Zm-508 452q12 12 28.5 12t28.5-12q12-12 12-28.5T340-283l-56-56q-12-12-28.5-12T227-339q-12 12-12 28.5t12 28.5l56 56Z"
+                />
+              </svg>
+              <svg
+                class="moon-icon"
+                xmlns="http://www.w3.org/2000/svg"
+                height="24"
+                viewBox="0 -960 960 960"
+                width="24"
+              >
+                <path
+                  d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q8 0 17 .5t23 1.5q-36 32-56 79t-20 99q0 83 58.5 141.5T643-460q52 0 99-20t79-56q1 14 1.5 23t.5 17q0 150-105 255T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
-      <div class="note">
-        <strong>Note:</strong> This page displays all routes configured in your
-        server. Every GET route also automatically supports HEAD requests
-        without additional configuration.
-      </div>
-      <div id="app"></div>
+        <div class="note">
+          <strong>Note:</strong> This page displays all routes configured in
+          your server. Every GET route also automatically supports HEAD requests
+          without additional configuration.
+        </div>
+        <div id="app"></div>
+      </main>
     </div>
     <style>
       :root {
@@ -105,18 +108,41 @@
         color: var(--text-color);
         background-color: var(--background-color);
         margin: 0;
-        padding: 20px;
+
         transition:
           background-color 0.3s ease,
           color 0.3s ease;
       }
 
       .container {
-        max-width: 1200px;
-        margin: 0 auto;
+        display: flex;
+        flex-direction: row;
+      }
+      aside {
+        width: 250px;
+        flex-shrink: 0;
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--background-color);
+        transition:
+          width 0.3s ease,
+          margin-left 0.3s ease;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        margin-right: 20px;
+        padding-top: 20px;
+        padding-left: 10px;
+      }
+      main {
+        flex-grow: 1;
+        flex-basis: 0;
+        min-width: 0;
+        transition: margin-left 0.3s ease;
+        padding-top: 10px;
+        padding-right: 20px;
       }
 
-      .header-row {
+      .header_row {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -252,8 +278,54 @@
         margin-left: 10px;
       }
 
+      .route_container {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+      }
+      .filters_sidebar {
+        width: 250px;
+        flex-shrink: 0;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        background: var(--secondary-color);
+      }
+      .sidebar_header {
+        padding: 12px 15px;
+        font-weight: 500;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .filters_content {
+        padding: 15px;
+        background: var(--background-color);
+      }
+      .filters_count {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: normal;
+      }
+      @media (max-width: 768px) {
+        .route_container {
+          flex-direction: column;
+        }
+
+        .filters_sidebar {
+          width: 100%;
+          margin-bottom: 20px;
+        }
+      }
+
       .route_list {
         margin-top: 20px;
+        flex-grow: 1;
+        min-width: 0; /* Prevent flexbox from expanding beyond available space */
       }
       .route_details {
         margin-bottom: 8px;
@@ -349,24 +421,28 @@
         border: 1px solid var(--border-color);
         background: var(--secondary-color);
       }
-      .filter_container summary::marker {
+      .filter_container::marker {
         display: none;
       }
-      .filter_container summary {
-        padding: 10px 15px;
+      .filter_summary {
         cursor: pointer;
         font-weight: 500;
         display: flex;
+        flex-direction: row;
         align-items: center;
         justify-content: space-between;
+        user-select: none;
+      }
+      .filter:open .arrow_down {
+        transform: rotate(180deg);
       }
       .filter_list {
-        display: flex;
         background: var(--background-color);
         border-top: 1px solid var(--border-color);
+        overflow: hidden;
       }
       .filter_item {
-        padding: 15px;
+        margin: 15px;
       }
       .filter_badge {
         background-color: var(--primary-color);
@@ -393,18 +469,12 @@
         background-color: var(--primary-color);
         color: white;
       }
-      .filter_legend {
-        font-weight: bold;
-        display: flex;
-        flex-direction: column;
-        user-select: none;
-      }
-
       .checkbox_group {
         display: flex;
         flex-direction: column;
         flex-wrap: wrap;
         gap: 8px;
+        margin-top: 15px;
         margin-bottom: 15px;
       }
       .filter_actions {
@@ -486,6 +556,17 @@
       };
       loadRoutes();
 
+      const Sidebar = () => {
+        const routes = routesSignal.value;
+        if (routes.length === 0) {
+          return null;
+        }
+        return html` <${FiltersPanel} routes=${routes} /> `;
+      };
+
+      const App = () => {
+        return html` <${RouteList} /> `;
+      };
       const ProgressBar = ({ width = "100%", height = 6, loading }) => {
         if (!loading) {
           return null;
@@ -506,10 +587,6 @@
           </div>
         `;
       };
-
-      const App = () => {
-        return html` <${RouteList} /> `;
-      };
       const RouteList = () => {
         const routes = routesSignal.value;
         const loading = routesLoadingSignal.value;
@@ -529,33 +606,16 @@
           return html`<p>No routes configured.</p>`;
         }
 
-        return html`<div class="route_list">
-          <${FiltersPanel} routes=${routes} />
-          ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
+        return html`<div class="route_container">
+          <div class="route_list">
+            ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
+          </div>
         </div>`;
       };
 
       const FiltersPanel = ({ routes }) => {
-        let activeFiltersCount = 0;
-        if (methodCheckedArraySignal.value.length > 0) {
-          activeFiltersCount++;
-        }
-        if (groupCheckedArraySignal.value.length > 0) {
-          activeFiltersCount++;
-        }
         return html`
-          <details class="filter_container">
-            <summary>
-              <span>
-                Filters
-                ${activeFiltersCount > 0
-                  ? html`
-                      <span class="filter_badge">${activeFiltersCount}</span>
-                    `
-                  : null}
-              </span>
-              <${ArrowDown} />
-            </summary>
+          <div class="filter_container">
             <div class="filter_list">
               <div class="filter_item">
                 <${MethodFilter} routes=${routes} />
@@ -564,7 +624,7 @@
                 <${PackageFilter} routes=${routes} />
               </div>
             </div>
-          </details>
+          </div>
         `;
       };
 
@@ -581,7 +641,7 @@
         const methodNames = Object.keys(methodCounters);
         return html`
           <${FilterSelector}
-            label="Methods:"
+            label="Methods"
             options=${methodNames.map((methodName) => {
               return {
                 value: methodName,
@@ -608,7 +668,7 @@
         const groupNames = Object.keys(groupCounters);
         return html`
           <${FilterSelector}
-            label="Packages:"
+            label="Packages"
             options=${groupNames.map((groupName) => {
               return {
                 value: groupName,
@@ -626,8 +686,11 @@
       const FilterSelector = ({ label, options, onChange, actions }) => {
         const groupRef = useRef();
 
-        return html`<div class="filter">
-          <div class="filter_legend">${label}</div>
+        return html`<details open class="filter">
+          <summary class="filter_summary">
+            ${label}
+            <${ArrowDown} />
+          </summary>
           <div ref=${groupRef} class="checkbox_group">
             ${options.map((option) => {
               return html`<label>
@@ -653,27 +716,29 @@
               </label>`;
             })}
           </div>
-          ${actions &&
-          html` <div class="filter_actions">
-            <button
-              type="button"
-              class="filter_button"
-              onClick=${() => {
-                onChange(options.map((option) => option.value));
-              }}
-            >
-              Select All
-            </button>
-            <button
-              type="button"
-              class="filter_button"
-              onClick=${() => {
-                onChange([]);
-              }}
-            >
-              Clear All
-            </button>
-          </div>`}
+          ${
+            actions &&
+            html` <div class="filter_actions">
+              <button
+                type="button"
+                class="filter_button"
+                onClick=${() => {
+                  onChange(options.map((option) => option.value));
+                }}
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                class="filter_button"
+                onClick=${() => {
+                  onChange([]);
+                }}
+              >
+                Clear All
+              </button>
+            </div>`
+          }
         </div>`;
       };
 
@@ -913,6 +978,7 @@
           width="24"
           height="24"
           fill="currentColor"
+          class="arrow_down"
         >
           <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
         </svg>`;
@@ -924,12 +990,14 @@
           width="24"
           height="24"
           fill="currentColor"
+          class="arrow_up"
         >
           <path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" />
         </svg>`;
       };
 
-      render(html`<${App} />`, document.getElementById("app"));
+      render(html`<${Sidebar} />`, document.querySelector("aside"));
+      render(html`<${App} />`, document.querySelector("#app"));
     </script>
   </body>
 </html>
