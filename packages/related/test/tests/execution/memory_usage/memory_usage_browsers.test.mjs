@@ -11,10 +11,12 @@ const test = async (params) => {
     port: 0,
     services: [
       {
-        injectResponseHeaders: () => {
+        injectResponseProperties: () => {
           return {
-            "Cross-Origin-Opener-Policy": "same-origin",
-            "Cross-Origin-Embedder-Policy": "require-corp",
+            headers: {
+              "Cross-Origin-Opener-Policy": "same-origin",
+              "Cross-Origin-Embedder-Policy": "require-corp",
+            },
           };
         },
       },

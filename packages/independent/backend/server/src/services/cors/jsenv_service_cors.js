@@ -37,7 +37,7 @@ export const jsenvServiceCORS = ({
 
   return {
     name: "jsenv:cors",
-    injectResponseHeaders: (request) => {
+    injectResponseProperties: (request) => {
       const accessControlHeaders = generateAccessControlHeaders({
         request,
         accessControlAllowedOrigins,
@@ -50,7 +50,9 @@ export const jsenvServiceCORS = ({
         accessControlMaxAge,
         timingAllowOrigin,
       });
-      return accessControlHeaders;
+      return {
+        headers: accessControlHeaders,
+      };
     },
   };
 };

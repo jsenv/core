@@ -30,6 +30,7 @@ import {
   flattenAndFilterServices,
 } from "./service_controller.js";
 import { jsenvServiceAutoreloadOnRestart } from "./services/autoreload_on_server_restart/jsenv_service_autoreload_on_server_restart.js";
+import { jsenvServiceDefaultBody4xx5xx } from "./services/default_body_4xx_5xx/jsenv_service_default_body_4xx_5xx.js";
 import { jsenvServiceInternalClientFiles } from "./services/internal_client_files/jsenv_service_internal_client_files.js";
 import { jsenvServiceRouteInspector } from "./services/route_inspector/jsenv_service_route_inspector.js";
 import {
@@ -153,6 +154,7 @@ export const startServer = async ({
   }
 
   services = [
+    jsenvServiceDefaultBody4xx5xx(),
     jsenvServiceRouteInspector(),
     ...(import.meta.build
       ? // after build internal client files are inlined, no need for this service anymore
@@ -497,21 +499,19 @@ export const startServer = async ({
         );
       }
       serviceController.callHooks(
-        "injectResponseHeaders",
+        "injectResponseProperties",
         request,
         responseProperties,
         (returnValue) => {
-          if (returnValue) {
-            responseProperties.headers = composeTwoHeaders(
-              responseProperties.headers,
-              returnValue,
-            );
+          if (!returnValue) {
+            return;
           }
+          responseProperties = composeTwoResponses(
+            responseProperties,
+            returnValue,
+          );
         },
       );
-      serviceController.callHooks("responseReady", responseProperties, {
-        request,
-      });
       // the node request readable stream is never closed because
       // the response headers contains "connection: keep-alive"
       // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
@@ -653,7 +653,7 @@ export const startServer = async ({
       onHeadersSent: ({ status, statusText }) => {
         request.logger.onHeadersSent({
           status,
-          statusText: responseProperties.statusMessage || statusText,
+          statusText: statusText || responseProperties.statusMessage,
         });
         request.logger.end();
       },

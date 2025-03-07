@@ -4,14 +4,11 @@ import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
 import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
 import { resourceToExtension } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
-import { readFileSync } from "node:fs";
 import { pickContentEncoding } from "../content_negotiation/pick_content_encoding.js";
 import { pickContentLanguage } from "../content_negotiation/pick_content_language.js";
 import { pickContentType } from "../content_negotiation/pick_content_type.js";
 import { pickContentVersion } from "../content_negotiation/pick_content_version.js";
-import { replacePlaceholdersInHtml } from "../replace_placeholder_in_html.js";
 
-const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./client/4xx.html");
 const routeInspectorUrl = `/.internal/route_inspector`;
 
 const HTTP_METHODS = [
@@ -562,14 +559,11 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       });
     }
     if (wouldHaveMatched.upgrade) {
-      return createClientErrorResponse(request, {
+      return {
         status: 426,
         statusText: "Upgrade Required",
-        message: {
-          text: `The request requires the upgrade to a webSocket connection`,
-          html: `The request requires the upgrade to a webSocket connection`,
-        },
-      });
+        statusMessage: `The request requires the upgrade to a webSocket connection`,
+      };
     }
     const availableEndpoints = constructAvailableEndpoints(
       request,
@@ -694,12 +688,8 @@ const createNotAcceptableResponse = (
 
     unsupported.push({
       type: "content-type",
-      message: {
-        text: `The server cannot produce a response in any of the media types accepted by the request: "${requestAcceptHeader}".
+      message: `The server cannot produce a response in any of the media types accepted by the request: "${requestAcceptHeader}".
 Available media types: ${availableMediaTypes.join(", ")}`,
-        html: `The server cannot produce a response in any of the media types accepted by the request: <strong>${requestAcceptHeader}</strong>.<br />
-Available content types: <strong>${availableMediaTypes.join(", ")}</strong>`,
-      },
     });
   }
   if (availableLanguages.length) {
@@ -715,12 +705,8 @@ Available content types: <strong>${availableMediaTypes.join(", ")}</strong>`,
 
     unsupported.push({
       type: "language",
-      message: {
-        text: `The server cannot produce a response in any of the languages accepted by the request: "${requestAcceptLanguageHeader}".
+      message: `The server cannot produce a response in any of the languages accepted by the request: "${requestAcceptLanguageHeader}".
 Available languages: ${availableLanguages.join(", ")}`,
-        html: `The server cannot produce a response in any of the languages accepted by the request: <strong>${requestAcceptLanguageHeader}</strong>.<br />
-Available languages: <strong>${availableLanguages.join(", ")}</strong>`,
-      },
     });
   }
   if (availableVersions.length) {
@@ -736,12 +722,8 @@ Available languages: <strong>${availableLanguages.join(", ")}</strong>`,
 
     unsupported.push({
       type: "version",
-      message: {
-        text: `The server cannot produce a response in any of the versions accepted by the request: "${requestAcceptVersionHeader}".
+      message: `The server cannot produce a response in any of the versions accepted by the request: "${requestAcceptVersionHeader}".
 Available versions: ${availableVersions.join(", ")}`,
-        html: `The server cannot produce a response in any of the versions accepted by the request: <strong>${requestAcceptVersionHeader}</strong>.<br />
-Available versions: <strong>${availableVersions.join(", ")}</strong>`,
-      },
     });
   }
   if (availableEncodings.length) {
@@ -757,67 +739,46 @@ Available versions: <strong>${availableVersions.join(", ")}</strong>`,
 
     unsupported.push({
       type: "encoding",
-      message: {
-        text: `The server cannot encode the response in any of the encodings accepted by the request: "${requestAcceptEncodingHeader}".
+      message: `The server cannot encode the response in any of the encodings accepted by the request: "${requestAcceptEncodingHeader}".
 Available encodings: ${availableEncodings.join(", ")}`,
-        html: `The server cannot encode the response in any of the encodings accepted by the request: <strong>${requestAcceptEncodingHeader}</strong>.<br />
-Available encodings: <strong>${availableEncodings.join(", ")}</strong>`,
-      },
     });
   }
 
   // Special case for single negotiation failure
   if (unsupported.length === 1) {
     const [{ message }] = unsupported;
-    return createClientErrorResponse(request, {
+    return {
       status: 406,
       statusText: "Not Acceptable",
+      statusMessage: message,
       headers,
-      message,
-      data,
-    });
+    };
   }
   // Handle multiple negotiation failures
-  let message = {
-    text: `The server cannot produce a response in a format acceptable to the client:`,
-    html: `The server cannot produce a response in a format acceptable to the client:`,
-  };
-  message.html += "<ul>";
+  let message = `The server cannot produce a response in a format acceptable to the client:`;
   for (const info of unsupported) {
-    message.text += `\n- ${info.type} ${info.message.text}`;
-    message.html += `<li>${info.type} ${info.message.html}</li>`;
+    message += `\n- ${info.type} ${info.message.text}`;
   }
-  message.html += "</ul>";
-
-  return createClientErrorResponse(request, {
+  return {
     status: 406,
     statusText: "Not Acceptable",
+    statusMessage: message,
     headers,
-    message,
-    data,
-  });
+  };
 };
 const createMethodNotAllowedResponse = (
   request,
   { allowedMethods = [] } = {},
 ) => {
-  return createClientErrorResponse(request, {
+  return {
     status: 405,
     statusText: "Method Not Allowed",
+    statusmessage: `The HTTP method "${request.method}" is not supported for this resource.
+Allowed methods: ${allowedMethods.join(", ")}`,
     headers: {
       allow: allowedMethods.join(", "),
     },
-    message: {
-      text: `The HTTP method "${request.method}" is not supported for this resource.
-Allowed methods: ${allowedMethods.join(", ")}`,
-      html: `The HTTP method <strong>${request.method}</strong> is not supported for this resource.<br />
-Allowed methods: <strong>${allowedMethods.join(", ")}</strong>`,
-    },
-    data: {
-      requestMethod: request.method,
-      allowedMethods,
-    },
-  });
+  };
 };
 const createUnsupportedMediaTypeResponse = (
   request,
@@ -835,72 +796,21 @@ const createUnsupportedMediaTypeResponse = (
   };
   const requestMethod = request.method;
 
-  return createClientErrorResponse(request, {
+  return {
     status: 415,
     statusText: "Unsupported Media Type",
+    statusMessage: requestContentType
+      ? `The media type "${requestContentType}" specified in the Content-Type header is not supported for ${requestMethod} requests to this resource.
+    Supported media types: ${acceptedMediaTypes.join(", ")}`
+      : `The Content-Type header is missing. It must be declared for ${requestMethod} requests to this resource.`,
     headers,
-    message: {
-      text: requestContentType
-        ? `The media type "${requestContentType}" specified in the Content-Type header is not supported for ${requestMethod} requests to this resource.
-Supported media types: ${acceptedMediaTypes.join(", ")}`
-        : `The Content-Type header is missing. It must be declared for ${requestMethod} requests to this resource.`,
-      html: requestContentType
-        ? `The content type <strong>${requestContentType}</strong> is not supported for ${requestMethod} requests to this resource.<br />
-Supported media types: <strong>${acceptedMediaTypes.join(", ")}</strong>`
-        : `The Content-Type header is missing. It must be declared for ${requestMethod} requests to this resource.`,
-    },
-    data: {
-      requestMethod,
-      requestContentType,
-      acceptedMediaTypes,
-    },
-  });
+  };
 };
 const createRouteNotFoundResponse = (request) => {
-  return createClientErrorResponse(request, {
+  return {
     status: 404,
     statusText: "Not Found",
-    message: {
-      text: `The URL ${request.resource} does not exist on this server.
+    statusMessage: `The URL ${request.resource} does not exist on this server.
 The list of existing endpoints is available at ${routeInspectorUrl}`,
-      html: `The URL <strong>${request.resource}</strong> does not exists on this server.<br />
-The list of existing endpoints is available at:
-<a href="${routeInspectorUrl}">${routeInspectorUrl}</a>`,
-    },
-  });
-};
-
-const createClientErrorResponse = (
-  request,
-  { status, statusText, headers, message, data },
-) => {
-  const contentTypeNegotiated = pickContentType(request, [
-    "application/json",
-    "text/html",
-    "text/plain",
-  ]);
-  if (contentTypeNegotiated === "text/html") {
-    const htmlTemplate = readFileSync(
-      new URL(clientErrorHtmlTemplateFileUrl),
-      "utf8",
-    );
-    const html = replacePlaceholdersInHtml(htmlTemplate, {
-      message: message.html,
-      status,
-      statusText,
-      ...data,
-    });
-    return new Response(html, {
-      status,
-      statusText,
-      headers: { ...headers, "content-type": "text/html" },
-    });
-  }
-  if (contentTypeNegotiated === "application/json") {
-    return Response.json(
-      { message: message.text, data },
-      { status, statusText, headers },
-    );
-  }
-  return new Response(message.text, { status, statusText, headers });
+  };
 };

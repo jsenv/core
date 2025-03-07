@@ -5,8 +5,7 @@ const HOOK_NAMES = [
   "routes",
   "handleError",
   "onResponsePush",
-  "injectResponseHeaders",
-  "responseReady",
+  "injectResponseProperties",
   "serverStopped",
 ];
 

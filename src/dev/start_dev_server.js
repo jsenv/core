@@ -171,8 +171,12 @@ export const startDevServer = async ({
             }),
         },
       ],
-      injectResponseHeaders: () => {
-        return { server: "jsenv_dev_server/1" };
+      injectResponseProperties: () => {
+        return {
+          headers: {
+            server: "jsenv_dev_server/1",
+          },
+        };
       },
     });
   }
