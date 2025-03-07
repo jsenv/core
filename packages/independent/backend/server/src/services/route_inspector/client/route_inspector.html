@@ -577,13 +577,7 @@
             />
           </p>`;
       };
-      const RouteDeclarationText = ({ ownerLink, declarationLink }) => {
-        if (ownerLink) {
-          return html`This route is declared by${" "}
-            <a href=${ownerLink.url}>${ownerLink.text}</a>
-            ${" "}in${" "}
-            <a href="${declarationLink.url}">${declarationLink.text}</a>`;
-        }
+      const RouteDeclarationText = ({ declarationLink }) => {
         return html`This route is declared in${" "}
           <a href="${declarationLink.url}">${declarationLink.text}</a>`;
       };

@@ -2,7 +2,7 @@ import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
 import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
 import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
 import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
-import { resourceToExtension } from "@jsenv/urls";
+import { resourceToExtension, urlToRelativeUrl } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { readFileSync } from "node:fs";
 import { pickContentEncoding } from "../content_negotiation/pick_content_encoding.js";
@@ -470,6 +470,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       endpoint: "OPTIONS *",
       description:
         "Auto generate an OPTIONS response about a resource or the whole server.",
+      declarationLocation: import.meta.url,
       fetch: (request, helpers) => {
         const isForAnyRoute = request.resource === "*";
         if (isForAnyRoute) {
@@ -586,26 +587,32 @@ const createRoute = ({
       const meta = {};
 
       if (declarationLocation) {
+        meta.declarationLink = {
+          url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(declarationLocation)}")`,
+          text: declarationLocation,
+        };
+
         const packageDirectory = lookupPackageDirectory(declarationLocation);
         if (packageDirectory) {
           const packageFileUrl = new URL("package.json", packageDirectory);
           try {
             const packageFileText = readFileSync(packageFileUrl, "utf8");
             const packageJson = JSON.parse(packageFileText);
+            const packageName = packageJson.name;
             if (packageJson.name) {
-              meta.packageName = packageJson.name;
+              meta.packageName = packageName;
               meta.ownerLink = {
                 url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(packageFileUrl)}")`,
-                text: packageJson.name,
+                text: packageName,
               };
+              const declarationUrlRelativeToOwnerPackage = urlToRelativeUrl(
+                declarationLocation,
+                packageFileUrl,
+              );
+              meta.declarationLink.text = `${packageName}/${declarationUrlRelativeToOwnerPackage}`;
             }
           } catch {}
         }
-
-        meta.declarationLink = {
-          url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(declarationLocation)}")`,
-          text: declarationLocation,
-        };
       }
 
       return {
