@@ -70,16 +70,24 @@ export const jsenvPluginDirectoryListing = ({
         fsStat = readEntryStatSync(url, { nullIfNotFound: true });
         reference.fsStat = fsStat;
       }
-      const { request, requestedUrl } = reference.ownerUrlInfo.context;
+      const { request, requestedUrl, mainFilePath, rootDirectoryUrl } =
+        reference.ownerUrlInfo.context;
       if (!fsStat) {
-        if (
-          requestedUrl === url &&
-          request &&
-          request.headers["sec-fetch-dest"] === "document"
-        ) {
-          return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
+        if (!request || request.headers["sec-fetch-dest"] !== "document") {
+          return null;
         }
-        return null;
+        if (url !== requestedUrl) {
+          const mainFileUrl = new URL(mainFilePath, rootDirectoryUrl);
+          mainFileUrl.search = "";
+          mainFileUrl.hash = "";
+          const referenceUrl = new URL(url);
+          referenceUrl.search = "";
+          referenceUrl.hash = "";
+          if (mainFileUrl.href !== referenceUrl.href) {
+            return null;
+          }
+        }
+        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
       }
       const isDirectory = fsStat?.isDirectory();
       if (!isDirectory) {
