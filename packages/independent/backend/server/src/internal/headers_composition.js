@@ -1,6 +1,12 @@
 import { composeTwoObjects } from "./object_composition.js";
 
 export const composeTwoHeaders = (firstHeaders, secondHeaders) => {
+  if (firstHeaders && typeof firstHeaders.entries === "function") {
+    firstHeaders = Object.fromEntries(firstHeaders.entries());
+  }
+  if (secondHeaders && typeof secondHeaders.entries === "function") {
+    secondHeaders = Object.fromEntries(secondHeaders.entries());
+  }
   return composeTwoObjects(firstHeaders, secondHeaders, {
     keysComposition: HEADER_NAMES_COMPOSITION,
     forceLowerCase: true,

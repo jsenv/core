@@ -8,7 +8,10 @@
 
   <body>
     <div id="root"></div>
+    <div id="output" style="width: 100%"></div>
     <script>
+      const output = document.querySelector("#output");
+
       window.fetchResourceAndDisplayResultInDocument = async ({
         resource,
         method,
@@ -19,13 +22,36 @@
         const responseContentType = responseHeaders.get("content-type") || "";
         if (responseContentType.includes("text/html")) {
           const html = await response.text();
-          document.body.innerHTML = html;
+          output.innerHTML = `
+<h1>HTML:</h1>
+<div id="iframe_placeholder"></div>`;
+          const iframe = document.createElement("iframe");
+          iframe.style.width = "100%";
+          // iframe.style.border = "none";
+          output.replaceChild(
+            iframe,
+            output.querySelector("#iframe_placeholder"),
+          );
+          const iframeDoc = iframe.contentDocument;
+          iframeDoc.open();
+          iframeDoc.write(html);
+          iframeDoc.close();
+          await new Promise((resolve) => {
+            iframe.onload = () => {
+              iframe.style.height = `${iframeDoc.documentElement.scrollHeight}px`;
+              resolve();
+            };
+          });
         } else if (responseContentType.includes("application/json")) {
           const json = await response.json();
-          document.body.innerHTML = `<pre>${JSON.stringify(json, null, "  ")}</pre>`;
+          output.innerHTML = `
+<h1>JSON:</h1>
+<pre>${JSON.stringify(json, null, "  ")}</pre>`;
         } else {
           const text = await response.text();
-          document.body.innerHTML = `<pre>${text}</pre>`;
+          output.innerHTML = `
+<h1>Text:</h1>
+<pre>${text}</pre>`;
         }
       };
     </script>

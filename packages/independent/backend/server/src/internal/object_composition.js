@@ -23,7 +23,7 @@ const applyCaseSensitiveComposition = (
 ) => {
   if (strict) {
     const composed = {};
-    Object.keys(keysComposition).forEach((key) => {
+    for (const key of Object.keys(keysComposition)) {
       composed[key] = composeValueAtKey({
         firstObject,
         secondObject,
@@ -32,7 +32,7 @@ const applyCaseSensitiveComposition = (
         firstKey: keyExistsIn(key, firstObject) ? key : null,
         secondKey: keyExistsIn(key, secondObject) ? key : null,
       });
-    });
+    }
     return composed;
   }
 

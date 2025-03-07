@@ -8,7 +8,7 @@ export const jsenvServiceDefaultBody4xx5xx = () => {
   return {
     name: "jsenv:default_body_4xx_5xx",
 
-    injectResponseProperties: (responseProperties, { request }) => {
+    injectResponseProperties: (request, responseProperties) => {
       if (responseProperties.body !== undefined) {
         return null;
       }
@@ -25,11 +25,11 @@ export const jsenvServiceDefaultBody4xx5xx = () => {
 
 const generateClientErrorResponse = (
   request,
-  { status, statusText, statusMessage, headers = {} },
+  { status, statusText, statusMessage },
 ) => {
   const contentTypeNegotiated = pickContentType(request, [
-    "application/json",
     "text/html",
+    "application/json",
     "text/plain",
   ]);
   if (contentTypeNegotiated === "text/html") {
@@ -40,14 +40,14 @@ const generateClientErrorResponse = (
     const html = replacePlaceholdersInHtml(htmlTemplate, {
       status,
       statusText,
-      statusMessage,
+      statusMessage: statusMessage || "",
     });
     return new Response(html, {
-      headers: { ...headers, "content-type": "text/html" },
+      headers: { "content-type": "text/html" },
     });
   }
   if (contentTypeNegotiated === "application/json") {
-    return Response.json({ statusMessage }, { status, statusText, headers });
+    return Response.json({ statusMessage }, { status, statusText });
   }
-  return new Response(statusMessage, { status, statusText, headers });
+  return new Response(statusMessage, { status, statusText });
 };
