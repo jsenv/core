@@ -4,10 +4,12 @@ import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
 import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
 import { resourceToExtension } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
+import { readFileSync } from "node:fs";
 import { pickContentEncoding } from "../content_negotiation/pick_content_encoding.js";
 import { pickContentLanguage } from "../content_negotiation/pick_content_language.js";
 import { pickContentType } from "../content_negotiation/pick_content_type.js";
 import { pickContentVersion } from "../content_negotiation/pick_content_version.js";
+import { lookupPackageDirectory } from "../internal/lookup_package_directory.js";
 
 const routeInspectorUrl = `/.internal/route_inspector`;
 
@@ -20,123 +22,6 @@ const HTTP_METHODS = [
   "PUT",
   "DELETE",
 ];
-
-/**
- * Adds a route to the router.
- *
- * @param {Object} params - Route configuration object
- * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
- * @param {Object} [params.headers] - Optional headers pattern to match
- * @param {Array<string>} [params.availableMediaTypes=[]] - Content types this route can produce
- * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
- * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
- * @param {Array<string>} [params.acceptedMediaTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
- * @param {Function} params.fetch - Function to generate response for matching requests
- * @throws {TypeError} If endpoint is not a string
- * @returns {void}
- */
-export const createRoute = ({
-  endpoint,
-  description,
-  headers,
-  service,
-  availableMediaTypes = [],
-  availableLanguages = [],
-  availableVersions = [],
-  availableEncodings = [],
-  acceptedMediaTypes = [], // useful only for POST/PATCH/PUT
-  fetch: routeFetchMethod, // rename because there is global.fetch and we want to be explicit
-  clientCodeExample,
-  isFallback,
-  subroutes,
-}) => {
-  if (!endpoint || typeof endpoint !== "string") {
-    throw new TypeError(`endpoint must be a string, received ${endpoint}`);
-  }
-  const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
-  if (method !== "*" && !HTTP_METHODS.includes(method)) {
-    throw new TypeError(`"${method}" is not an HTTP method`);
-  }
-  if (resource[0] !== "/" && resource[0] !== "*") {
-    throw new TypeError(`resource must start with /, received ${resource}`);
-  }
-  if (typeof routeFetchMethod !== "function") {
-    throw new TypeError(
-      `fetch must be a function, received ${routeFetchMethod} on endpoint "${endpoint}"`,
-    );
-  }
-  const extension = resourceToExtension(resource);
-  const extensionWellKnownContentType = extension
-    ? CONTENT_TYPE.fromExtension(extension)
-    : null;
-  if (
-    availableMediaTypes.length === 0 &&
-    extensionWellKnownContentType &&
-    extensionWellKnownContentType !== "application/octet-stream" // this is the default extension
-  ) {
-    availableMediaTypes.push(extensionWellKnownContentType);
-  }
-  const resourcePattern = createResourcePattern(resource);
-  const headersPattern = headers ? createHeadersPattern(headers) : null;
-
-  const isForWebSocket =
-    (headers && headers["upgrade"] === "websocket") ||
-    extension === ".websocket";
-
-  const route = {
-    method,
-    resource,
-    description,
-    service,
-    availableMediaTypes,
-    availableLanguages,
-    availableVersions,
-    availableEncodings,
-    acceptedMediaTypes,
-    matchMethod:
-      method === "*" ? () => true : (requestMethod) => requestMethod === method,
-    matchResource:
-      resource === "*"
-        ? () => true
-        : (requestResource) => {
-            return resourcePattern.match(requestResource);
-          },
-    matchHeaders:
-      headers === undefined
-        ? () => true
-        : (requestHeaders) => {
-            return headersPattern.match(requestHeaders);
-          },
-    fetch: routeFetchMethod,
-    toString: () => {
-      return `${method} ${resource}`;
-    },
-    toJSON: () => {
-      return {
-        method,
-        resource,
-        description,
-        availableMediaTypes,
-        availableLanguages,
-        availableVersions,
-        availableEncodings,
-        acceptedMediaTypes,
-        isForWebSocket,
-        clientCodeExample:
-          typeof clientCodeExample === "function"
-            ? parseFunction(clientCodeExample).body
-            : typeof clientCodeExample === "string"
-              ? clientCodeExample
-              : undefined,
-      };
-    },
-    resourcePattern,
-    isForWebSocket,
-    isFallback,
-    subroutes,
-  };
-  return route;
-};
 
 export const createRouter = (
   routeDescriptionArray,
@@ -604,6 +489,142 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
     inspect,
   });
   return router;
+};
+
+/**
+ * Adds a route to the router.
+ *
+ * @param {Object} params - Route configuration object
+ * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
+ * @param {Object} [params.headers] - Optional headers pattern to match
+ * @param {Array<string>} [params.availableMediaTypes=[]] - Content types this route can produce
+ * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
+ * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
+ * @param {Array<string>} [params.acceptedMediaTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
+ * @param {Function} params.fetch - Function to generate response for matching requests
+ * @throws {TypeError} If endpoint is not a string
+ * @returns {void}
+ */
+const createRoute = ({
+  endpoint,
+  description,
+  headers,
+  service,
+  availableMediaTypes = [],
+  availableLanguages = [],
+  availableVersions = [],
+  availableEncodings = [],
+  acceptedMediaTypes = [], // useful only for POST/PATCH/PUT
+  fetch: routeFetchMethod, // rename because there is global.fetch and we want to be explicit
+  clientCodeExample,
+  isFallback,
+  subroutes,
+  declarationLocation,
+}) => {
+  if (!endpoint || typeof endpoint !== "string") {
+    throw new TypeError(`endpoint must be a string, received ${endpoint}`);
+  }
+  const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
+  if (method !== "*" && !HTTP_METHODS.includes(method)) {
+    throw new TypeError(`"${method}" is not an HTTP method`);
+  }
+  if (resource[0] !== "/" && resource[0] !== "*") {
+    throw new TypeError(`resource must start with /, received ${resource}`);
+  }
+  if (typeof routeFetchMethod !== "function") {
+    throw new TypeError(
+      `fetch must be a function, received ${routeFetchMethod} on endpoint "${endpoint}"`,
+    );
+  }
+  const extension = resourceToExtension(resource);
+  const extensionWellKnownContentType = extension
+    ? CONTENT_TYPE.fromExtension(extension)
+    : null;
+  if (
+    availableMediaTypes.length === 0 &&
+    extensionWellKnownContentType &&
+    extensionWellKnownContentType !== "application/octet-stream" // this is the default extension
+  ) {
+    availableMediaTypes.push(extensionWellKnownContentType);
+  }
+  const resourcePattern = createResourcePattern(resource);
+  const headersPattern = headers ? createHeadersPattern(headers) : null;
+
+  const isForWebSocket =
+    (headers && headers["upgrade"] === "websocket") ||
+    extension === ".websocket";
+
+  const route = {
+    method,
+    resource,
+    description,
+    service,
+    availableMediaTypes,
+    availableLanguages,
+    availableVersions,
+    availableEncodings,
+    acceptedMediaTypes,
+    matchMethod:
+      method === "*" ? () => true : (requestMethod) => requestMethod === method,
+    matchResource:
+      resource === "*"
+        ? () => true
+        : (requestResource) => {
+            return resourcePattern.match(requestResource);
+          },
+    matchHeaders:
+      headers === undefined
+        ? () => true
+        : (requestHeaders) => {
+            return headersPattern.match(requestHeaders);
+          },
+    fetch: routeFetchMethod,
+    toString: () => {
+      return `${method} ${resource}`;
+    },
+    toJSON: () => {
+      const meta = {};
+
+      if (declarationLocation) {
+        const packageDirectory = lookupPackageDirectory(declarationLocation);
+        if (packageDirectory) {
+          const packageFileUrl = new URL("package.json", packageDirectory);
+          try {
+            const packageFileText = readFileSync(packageFileUrl, "utf8");
+            const packageJson = JSON.parse(packageFileText);
+            if (packageJson.name) {
+              meta.packageName = packageJson.name;
+            }
+          } catch {}
+        }
+      }
+
+      return {
+        method,
+        resource,
+        description,
+        availableMediaTypes,
+        availableLanguages,
+        availableVersions,
+        availableEncodings,
+        acceptedMediaTypes,
+        isForWebSocket,
+        clientCodeExample:
+          typeof clientCodeExample === "function"
+            ? parseFunction(clientCodeExample).body
+            : typeof clientCodeExample === "string"
+              ? clientCodeExample
+              : undefined,
+        declarationLocation,
+        meta,
+      };
+    },
+    resourcePattern,
+    isForWebSocket,
+    isFallback,
+    subroutes,
+  };
+  return route;
 };
 
 const isRequestBodyMediaTypeSupported = (request, { acceptedMediaTypes }) => {

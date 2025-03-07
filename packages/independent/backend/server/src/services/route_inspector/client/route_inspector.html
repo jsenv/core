@@ -315,6 +315,18 @@
         --method-color: var(--method-delete-color);
       }
 
+      .route_badge {
+        background-color: #ffefd2;
+        color: #666;
+        padding: 4px 8px;
+        text-align: center;
+        border-radius: 5px;
+      }
+      :root[data-theme="dark"] .route_badge {
+        background-color: rgb(96, 59, 13);
+        color: white;
+      }
+
       .route_details_content {
         border-top: 1px solid var(--method-color);
         padding: 10px;
@@ -429,6 +441,7 @@
         </div>`;
       };
       const RouteDetails = ({
+        meta,
         method,
         resource,
         description,
@@ -454,6 +467,7 @@
               <span class="route_method">${method}</span>
               <p class="route_resource">${resource}</p>
               <span style="flex:1"></span>
+              <${RouteBadge} meta=${meta} />
               ${opened ? html`<${ArrowUp} />` : html`<${ArrowDown} />`}
             </div>
           </summary>
@@ -470,6 +484,15 @@
             clientCodeExample=${clientCodeExample}
           />
         </details>`;
+      };
+
+      const RouteBadge = ({ meta }) => {
+        if (!meta.packageName) {
+          return null;
+        }
+        let text = meta.packageName;
+        let title = `This endpoint is defined by ${meta.packageName}`;
+        return html`<span title=${title} class="route_badge">${text}</span>`;
       };
 
       const RouteDetailsContent = ({
