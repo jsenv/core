@@ -31,7 +31,7 @@ export const App = () => {
             className="app_link"
             onClick={(e) => {
               e.preventDefault();
-              window.fetch("/.internal/open_in_editor/app/app.jsx");
+              window.fetch("/.internal/open_file/app/app.jsx");
             }}
           >
             app.jsx

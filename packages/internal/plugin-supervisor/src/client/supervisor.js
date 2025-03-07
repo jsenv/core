@@ -1107,7 +1107,7 @@ window.__supervisor__ = (() => {
             return {
               href:
                 urlSite.url.startsWith("file:") && openInEditor
-                  ? `javascript:window.fetch('/.internal/open_in_editor/${encodeURIComponent(
+                  ? `javascript:window.fetch('/.internal/open_file/${encodeURIComponent(
                       urlWithLineAndColumn,
                     )}')`
                   : urlSite.url,

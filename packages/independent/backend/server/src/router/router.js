@@ -599,8 +599,8 @@ const createRoute = ({
         }
 
         meta.declarationLink = {
-          url: `/.internal/open_file/${encodeURIComponent(declarationLocation)}`,
-          text: "",
+          url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(declarationLocation)}")`,
+          text: declarationLocation,
         };
       }
 

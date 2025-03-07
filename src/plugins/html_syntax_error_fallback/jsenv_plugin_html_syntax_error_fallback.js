@@ -66,7 +66,7 @@ const generateHtmlForSyntaxError = (
   const replacers = {
     fileRelativeUrl: htmlRelativeUrl,
     reasonCode: htmlSyntaxError.reasonCode,
-    errorLinkHref: `javascript:window.fetch('/.internal/open_in_editor/${encodeURIComponent(
+    errorLinkHref: `javascript:window.fetch('/.internal/open_file/${encodeURIComponent(
       urlWithLineAndColumn,
     )}')`,
     errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
