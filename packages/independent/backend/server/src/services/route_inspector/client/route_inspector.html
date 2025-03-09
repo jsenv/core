@@ -481,7 +481,7 @@
         background-color: var(--primary-color);
         color: white;
       }
-      .checkbox_group {
+      .filter_form {
         display: flex;
         flex-direction: column;
         flex-wrap: wrap;
@@ -490,6 +490,54 @@
         margin-bottom: 15px;
         user-select: none;
       }
+      .filter_form label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+      }
+      .method_filter_option {
+        border-radius: 3px;
+        font-family: sans-serif;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+        padding: 6px;
+      }
+      .method_filter_option[data-method] {
+        background: var(--method-color);
+        color: #fff;
+      }
+      .method_filter_option[data-method="HEAD"] {
+        --method-color: var(--method-head-color);
+      }
+      .method_filter_option[data-method="OPTIONS"] {
+        --method-color: var(--method-options-color);
+      }
+      .method_filter_option[data-method="GET"] {
+        --method-color: var(--method-get-color);
+      }
+      .method_filter_option[data-method="POST"] {
+        --method-color: var(--method-post-color);
+      }
+      .method_filter_option[data-method="PUT"] {
+        --method-color: var(--method-put-color);
+      }
+      .method_filter_option[data-method="PATCH"] {
+        --method-color: var(--method-patch-color);
+      }
+      .method_filter_option[data-method="DELETE"] {
+        --method-color: var(--method-delete-color);
+      }
+
+      .filter_count {
+        background-color: #eee;
+        color: #666;
+        opacity: 0.8;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        margin-left: auto;
+      }
+
       .filter_actions {
         display: flex;
         gap: 10px;
@@ -794,9 +842,6 @@
 
           const set = useCallback(
             (newValue) => {
-              if (availableValues && !availableValues.includes(newValue)) {
-                return;
-              }
               const urlObject = new URL(documentUrlSignal.peek());
               const { searchParams } = urlObject;
               if (!newValue) {
@@ -805,6 +850,9 @@
                 if (urlWithoutStringParam !== window.location.href) {
                   goTo(urlWithoutStringParam);
                 }
+                return;
+              }
+              if (availableValues && !availableValues.includes(newValue)) {
                 return;
               }
               searchParams.set(name, newValue);
@@ -873,13 +921,25 @@
           const options = [
             {
               value: "",
-              text: `all (${routes.length})`,
+              text: html`
+                <span class="method_filter_option">all</span>
+                <span class="filter_count">${routes.length}</span>
+              `,
               selected: !selectedMethod,
             },
             ...availableMethodNames.map((availableMethodName) => {
               return {
                 value: availableMethodName,
-                text: `${availableMethodName} (${availableMethodRepartition[availableMethodName]})`,
+                text: html`
+                  <span
+                    class="method_filter_option"
+                    data-method="${availableMethodName}"
+                    >${availableMethodName}
+                  </span>
+                  <span class="filter_count">
+                    ${availableMethodRepartition[availableMethodName]}
+                  </span>
+                `,
                 selected: availableMethodName === selectedMethod,
               };
             }),
@@ -900,16 +960,21 @@
           const packageRepartition = packageRepartitionSignal.value;
           const [selectedPackageName, setSelectedPackageName] =
             usePackageUrlStringParam();
+
           const options = [
             {
               value: "",
-              text: `all (${routes.length})`,
+              text: html`<span>all</span>
+                <span class="filter_count">${routes.length}</span>`,
               selected: !selectedPackageName,
             },
             ...availablePackageNames.map((availablePackageName) => {
               return {
                 value: availablePackageName,
-                text: `${availablePackageName} (${packageRepartition[availablePackageName]})`,
+                text: html` <span>${availablePackageName}</span>
+                  <span class="filter_count"
+                    >${packageRepartition[availablePackageName]}</span
+                  >`,
                 selected: availablePackageName === selectedPackageName,
               };
             }),
@@ -938,7 +1003,7 @@
                   ${label}
                   <${ArrowDown} />
                 </summary>
-                <form ref=${formRef} class="checkbox_group">
+                <form ref=${formRef} class="filter_form">
                   ${options.map((option) => {
                     return html`<label>
                       <input
