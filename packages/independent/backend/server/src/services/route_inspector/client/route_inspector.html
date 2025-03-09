@@ -644,14 +644,12 @@
       // https://preactjs.com/guide/v10/no-build-workflows/
       import { render } from "preact";
       import { html } from "htm/preact";
-      import { signal } from "@preact/signals";
-      import { useState, useRef } from "preact/hooks";
+      import { signal, computed } from "@preact/signals";
+      import { useState, useRef, useCallback } from "preact/hooks";
 
       const routesLoadingSignal = signal(false);
       const routeLoadingErrorSignal = signal(null);
       const routesSignal = signal([]);
-      const methodCheckedArraySignal = signal([]);
-      const groupCheckedArraySignal = signal([]);
 
       const loadRoutes = async () => {
         routesLoadingSignal.value = true;
@@ -726,109 +724,206 @@
         </div>`;
       };
 
-      const FiltersPanel = ({ routes }) => {
-        return html`
-          <div class="filter_container">
-            <div class="filter_list">
-              <div class="filter_item">
-                <${MethodFilter} routes=${routes} />
-              </div>
-              <div class="filter_item">
-                <${PackageFilter} routes=${routes} />
+      const documentUrlSignal = signal(window.location.href);
+      window.addEventListener("popstate", async (popstateEvent) => {
+        documentUrlSignal.value = popstateEvent.target.location.href;
+      });
+      const goTo = (url, { replace } = {}) => {
+        if (replace) {
+          window.history.replaceState(null, null, url);
+          documentUrlSignal.value = url;
+        } else {
+          window.history.pushState(null, null, url);
+          documentUrlSignal.value = url;
+        }
+      };
+      goTo(window.location.href, { replace: true });
+
+      let useUrlStringParam;
+      url_string_param: {
+        useUrlStringParam = (name) => {
+          const urlStringParamSignal = signalForUrlParam(name, (url) => {
+            return new URL(url).searchParams.get(name);
+          });
+          const urlStringParam = urlStringParamSignal.value;
+          const value = urlStringParam || "";
+          const set = useCallback(
+            (newValue) => {
+              const urlObject = new URL(documentUrlSignal.peek());
+              const { searchParams } = urlObject;
+              if (!newValue) {
+                searchParams.delete(name);
+                const urlWithoutStringParam = urlObject.href;
+                if (urlWithoutStringParam !== window.location.href) {
+                  goTo(urlWithoutStringParam);
+                }
+                return;
+              }
+              searchParams.set(name, newValue);
+              const urlWithStringParam = urlObject.href;
+              if (urlWithStringParam !== window.location.href) {
+                goTo(urlWithStringParam);
+              }
+              return;
+            },
+            [name],
+          );
+          return [value, set];
+        };
+
+        const urlParamSignalMap = new Map();
+        // can be called multiple times by hooks
+        const signalForUrlParam = (name, getter) => {
+          const existingSignal = urlParamSignalMap.get(name);
+          if (existingSignal) {
+            return existingSignal;
+          }
+          const signalForFirstCall = computed(() => {
+            const url = documentUrlSignal.value;
+            const valueInUrl = getter(url);
+            return valueInUrl;
+          });
+          urlParamSignalMap.set(name, signalForFirstCall);
+          return signalForFirstCall;
+        };
+      }
+
+      let FiltersPanel;
+      filters: {
+        FiltersPanel = ({ routes }) => {
+          return html`
+            <div class="filter_container">
+              <div class="filter_list">
+                <div class="filter_item">
+                  <${MethodFilter} routes=${routes} />
+                </div>
+                <div class="filter_item">
+                  <${PackageFilter} routes=${routes} />
+                </div>
               </div>
             </div>
-          </div>
-        `;
-      };
-
-      const MethodFilter = ({ routes }) => {
-        const methodCheckedArray = methodCheckedArraySignal.value;
-        const methodCounters = {};
-        for (const route of routes) {
-          const method = route.method;
-          if (!methodCounters[method]) {
-            methodCounters[method] = 0;
+          `;
+        };
+        const MethodFilter = ({ routes }) => {
+          const methodRepartition = {};
+          for (const route of routes) {
+            const method = route.method;
+            if (!methodRepartition[method]) {
+              methodRepartition[method] = 0;
+            }
+            methodRepartition[method]++;
           }
-          methodCounters[method]++;
-        }
-        const methodNames = Object.keys(methodCounters);
-        return html`
-          <${FilterSelector}
-            label="Methods"
-            options=${methodNames.map((methodName) => {
+          const availableMethods = Object.keys(methodRepartition);
+          const [selectedMethod, setSelectedMethod] =
+            useUrlStringParam("method");
+          const options = [
+            {
+              value: "",
+              text: `all (${routes.length})`,
+              selected: !selectedMethod,
+            },
+            ...availableMethods.map((availableMethod) => {
               return {
-                value: methodName,
-                text: `${methodName} (${methodCounters[methodName]})`,
-                selected: methodCheckedArray.includes(methodName),
+                value: availableMethod,
+                text: `${availableMethod} (${methodRepartition[availableMethod]})`,
+                selected: availableMethod === selectedMethod,
               };
-            })}
-            onChange=${(selectedValues) => {
-              methodCheckedArraySignal.value = selectedValues;
-            }}
-          />
-        `;
-      };
-      const PackageFilter = ({ routes }) => {
-        const groupeCheckedArray = groupCheckedArraySignal.value;
-        const groupCounters = {};
-        for (const route of routes) {
-          const packageName = String(route.meta.packageName);
-          if (!groupCounters[packageName]) {
-            groupCounters[packageName] = 0;
+            }),
+          ];
+
+          return html`
+            <${FilterSelector}
+              label="Methods"
+              options=${options}
+              onChange=${(methodToSelect) => {
+                setSelectedMethod(methodToSelect);
+              }}
+            />
+          `;
+        };
+        const PackageFilter = ({ routes }) => {
+          const packageRepartition = {};
+          for (const route of routes) {
+            const packageName = String(route.meta.packageName);
+            if (!packageRepartition[packageName]) {
+              packageRepartition[packageName] = 0;
+            }
+            packageRepartition[packageName]++;
           }
-          groupCounters[packageName]++;
-        }
-        const groupNames = Object.keys(groupCounters);
-        return html`
-          <${FilterSelector}
-            label="Packages"
-            options=${groupNames.map((groupName) => {
+          const availablePackageNames = Object.keys(packageRepartition);
+          const [selectedPackageName, setSelectedPackageName] =
+            useUrlStringParam("package");
+          const options = [
+            {
+              value: "",
+              text: `all (${routes.length})`,
+              selected: !selectedPackageName,
+            },
+            ...availablePackageNames.map((availablePackageName) => {
               return {
-                value: groupName,
-                text: `${groupName} (${groupCounters[groupName]})`,
-                selected: groupeCheckedArray.includes(groupName),
+                value: availablePackageName,
+                text: `${availablePackageName} (${packageRepartition[availablePackageName]})`,
+                selected: availablePackageName === selectedPackageName,
               };
-            })}
-            onChange=${(selectedValues) => {
-              groupeCheckedArray.value = selectedValues;
-            }}
-          />
-        `;
-      };
+            }),
+          ];
+          return html`
+            <${FilterSelector}
+              label="Packages"
+              options=${options}
+              onChange=${(packageNameToSelect) => {
+                setSelectedPackageName(packageNameToSelect);
+              }}
+            />
+          `;
+        };
+        const FilterSelector = ({
+          label,
+          multiple,
+          options,
+          onChange,
+          actions,
+        }) => {
+          const formRef = useRef();
 
-      const FilterSelector = ({ label, options, onChange, actions }) => {
-        const groupRef = useRef();
-
-        return html`<details open class="filter">
+          return html`<details open class="filter">
           <summary class="filter_summary">
             ${label}
             <${ArrowDown} />
           </summary>
-          <div ref=${groupRef} class="checkbox_group">
+          <form ref=${formRef} class="checkbox_group">
             ${options.map((option) => {
               return html`<label>
                 <input
-                  type="checkbox"
+                  type="${multiple ? "checkbox" : "radio"}"
+                  name="${label}"
                   checked=${option.selected}
                   value=${option.value}
-                  onChange=${() => {
-                    const groupNode = groupRef.current;
-                    const checkboxNodeArray = Array.from(
-                      groupNode.querySelectorAll('input[type="checkbox"]'),
-                    );
-                    const valueCheckedArray = [];
-                    for (const checkboxNode of checkboxNodeArray) {
-                      if (checkboxNode.checked) {
-                        valueCheckedArray.push(checkboxNode.value);
+                  onChange=${multiple
+                    ? () => {
+                        const formNode = formRef.current;
+                        // even if we create a checkbox list the HTML spec
+                        // return a radio node list and we have to gather the checked values
+                        const radioNodeList = formNode.elements[label];
+                        const selectedValues = [];
+                        for (const checkboxNode of Array.from(radioNodeList)) {
+                          if (checkboxNode.checked) {
+                            selectedValues.push(checkboxNode.value);
+                          }
+                        }
+                        onChange(selectedValues);
                       }
-                    }
-                    onChange(valueCheckedArray);
-                  }}
+                    : () => {
+                        const formNode = formRef.current;
+                        const radioNodeList = formNode.elements[label];
+                        const selectedValue = radioNodeList.value;
+                        onChange(selectedValue);
+                      }}
                 />
                 ${option.text}
               </label>`;
             })}
-          </div>
+          </form>
           ${
             actions &&
             html` <div class="filter_actions">
@@ -853,7 +948,8 @@
             </div>`
           }
         </div>`;
-      };
+        };
+      }
 
       const RouteDetails = ({
         meta,
@@ -870,18 +966,13 @@
         declarationLocation,
       }) => {
         const [opened, setOpened] = useState(false);
-        const methodCheckedArray = methodCheckedArraySignal.value;
-        const groupCheckedArray = groupCheckedArraySignal.value;
-        if (
-          methodCheckedArray.length > 0 &&
-          !methodCheckedArray.includes(method)
-        ) {
+        const [selectedMethod] = useUrlStringParam("method");
+        const [selectedPackageName] = useUrlStringParam("package");
+
+        if (selectedMethod && method !== selectedMethod) {
           return null;
         }
-        if (
-          groupCheckedArray.length > 0 &&
-          !groupCheckedArray.includes(meta.packageName)
-        ) {
+        if (selectedPackageName && meta.packageName !== selectedPackageName) {
           return null;
         }
 
@@ -1063,8 +1154,8 @@
             fetchLine = `const response = await window.fetch("${resource}");`;
           } else {
             fetchLine = `const response = await window.fetch("${resource}", {
-            method: "${method}",
-          }`;
+  method: "${method}",
+}`;
           }
           let readResponseLine;
           if (availableMediaTypes.includes("application/json")) {
@@ -1074,8 +1165,8 @@
           }
 
           jsSource = /*js */ `
-          ${fetchLine}
-          ${readResponseLine}
+${fetchLine}
+${readResponseLine}
           `;
         }
 
