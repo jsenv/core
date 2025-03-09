@@ -650,6 +650,42 @@
       const routesLoadingSignal = signal(false);
       const routeLoadingErrorSignal = signal(null);
       const routesSignal = signal([]);
+      const NO_PACKAGE_NAME = "unknown";
+
+      const repartitionsSignal = computed(() => {
+        const routes = routesSignal.value;
+        const methodRepartition = {};
+        const packageRepartition = {};
+        for (const route of routes) {
+          const method = route.method;
+          if (!methodRepartition[method]) {
+            methodRepartition[method] = 0;
+          }
+          methodRepartition[method]++;
+
+          const packageName = route.meta.packageName || NO_PACKAGE_NAME;
+          if (!packageRepartition[packageName]) {
+            packageRepartition[packageName] = 0;
+          }
+          packageRepartition[packageName]++;
+        }
+        return {
+          methodRepartition,
+          packageRepartition,
+        };
+      });
+      const methodRepartitionSignal = computed(() => {
+        return repartitionsSignal.value.methodRepartition;
+      });
+      const packageRepartitionSignal = computed(() => {
+        return repartitionsSignal.value.packageRepartition;
+      });
+      const availableMethodNamesSignal = computed(() => {
+        return Object.keys(methodRepartitionSignal.value);
+      });
+      const availablePackageNamesSignal = computed(() => {
+        return Object.keys(packageRepartitionSignal.value);
+      });
 
       const loadRoutes = async () => {
         routesLoadingSignal.value = true;
@@ -741,14 +777,26 @@
 
       let useUrlStringParam;
       url_string_param: {
-        useUrlStringParam = (name) => {
+        useUrlStringParam = (name, { availableValues } = {}) => {
           const urlStringParamSignal = signalForUrlParam(name, (url) => {
             return new URL(url).searchParams.get(name);
           });
           const urlStringParam = urlStringParamSignal.value;
-          const value = urlStringParam || "";
+          let value;
+          if (urlStringParam) {
+            value = urlStringParam;
+            if (availableValues && !availableValues.includes(value)) {
+              value = "";
+            }
+          } else {
+            value = "";
+          }
+
           const set = useCallback(
             (newValue) => {
+              if (availableValues && !availableValues.includes(newValue)) {
+                return;
+              }
               const urlObject = new URL(documentUrlSignal.peek());
               const { searchParams } = urlObject;
               if (!newValue) {
@@ -788,6 +836,20 @@
         };
       }
 
+      const useMethodUrlStringParam = () => {
+        const availableMethodNames = availableMethodNamesSignal.value;
+        return useUrlStringParam("method", {
+          availableValues: availableMethodNames,
+        });
+      };
+
+      const usePackageUrlStringParam = () => {
+        const availablePackageNames = availablePackageNamesSignal.value;
+        return useUrlStringParam("package", {
+          availableValues: availablePackageNames,
+        });
+      };
+
       let FiltersPanel;
       filters: {
         FiltersPanel = ({ routes }) => {
@@ -805,28 +867,20 @@
           `;
         };
         const MethodFilter = ({ routes }) => {
-          const methodRepartition = {};
-          for (const route of routes) {
-            const method = route.method;
-            if (!methodRepartition[method]) {
-              methodRepartition[method] = 0;
-            }
-            methodRepartition[method]++;
-          }
-          const availableMethods = Object.keys(methodRepartition);
-          const [selectedMethod, setSelectedMethod] =
-            useUrlStringParam("method");
+          const availableMethodNames = availableMethodNamesSignal.value;
+          const availableMethodRepartition = methodRepartitionSignal.value;
+          const [selectedMethod, setSelectedMethod] = useMethodUrlStringParam();
           const options = [
             {
               value: "",
               text: `all (${routes.length})`,
               selected: !selectedMethod,
             },
-            ...availableMethods.map((availableMethod) => {
+            ...availableMethodNames.map((availableMethodName) => {
               return {
-                value: availableMethod,
-                text: `${availableMethod} (${methodRepartition[availableMethod]})`,
-                selected: availableMethod === selectedMethod,
+                value: availableMethodName,
+                text: `${availableMethodName} (${availableMethodRepartition[availableMethodName]})`,
+                selected: availableMethodName === selectedMethod,
               };
             }),
           ];
@@ -842,17 +896,10 @@
           `;
         };
         const PackageFilter = ({ routes }) => {
-          const packageRepartition = {};
-          for (const route of routes) {
-            const packageName = String(route.meta.packageName);
-            if (!packageRepartition[packageName]) {
-              packageRepartition[packageName] = 0;
-            }
-            packageRepartition[packageName]++;
-          }
-          const availablePackageNames = Object.keys(packageRepartition);
+          const availablePackageNames = availablePackageNamesSignal.value;
+          const packageRepartition = packageRepartitionSignal.value;
           const [selectedPackageName, setSelectedPackageName] =
-            useUrlStringParam("package");
+            usePackageUrlStringParam();
           const options = [
             {
               value: "",
@@ -887,67 +934,69 @@
           const formRef = useRef();
 
           return html`<details open class="filter">
-          <summary class="filter_summary">
-            ${label}
-            <${ArrowDown} />
-          </summary>
-          <form ref=${formRef} class="checkbox_group">
-            ${options.map((option) => {
-              return html`<label>
-                <input
-                  type="${multiple ? "checkbox" : "radio"}"
-                  name="${label}"
-                  checked=${option.selected}
-                  value=${option.value}
-                  onChange=${multiple
-                    ? () => {
-                        const formNode = formRef.current;
-                        // even if we create a checkbox list the HTML spec
-                        // return a radio node list and we have to gather the checked values
-                        const radioNodeList = formNode.elements[label];
-                        const selectedValues = [];
-                        for (const checkboxNode of Array.from(radioNodeList)) {
-                          if (checkboxNode.checked) {
-                            selectedValues.push(checkboxNode.value);
-                          }
-                        }
-                        onChange(selectedValues);
-                      }
-                    : () => {
-                        const formNode = formRef.current;
-                        const radioNodeList = formNode.elements[label];
-                        const selectedValue = radioNodeList.value;
-                        onChange(selectedValue);
+                <summary class="filter_summary">
+                  ${label}
+                  <${ArrowDown} />
+                </summary>
+                <form ref=${formRef} class="checkbox_group">
+                  ${options.map((option) => {
+                    return html`<label>
+                      <input
+                        type="${multiple ? "checkbox" : "radio"}"
+                        name="${label}"
+                        checked=${option.selected}
+                        value=${option.value}
+                        onChange=${multiple
+                          ? () => {
+                              const formNode = formRef.current;
+                              // even if we create a checkbox list the HTML spec
+                              // return a radio node list and we have to gather the checked values
+                              const radioNodeList = formNode.elements[label];
+                              const selectedValues = [];
+                              for (const checkboxNode of Array.from(
+                                radioNodeList,
+                              )) {
+                                if (checkboxNode.checked) {
+                                  selectedValues.push(checkboxNode.value);
+                                }
+                              }
+                              onChange(selectedValues);
+                            }
+                          : () => {
+                              const formNode = formRef.current;
+                              const radioNodeList = formNode.elements[label];
+                              const selectedValue = radioNodeList.value;
+                              onChange(selectedValue);
+                            }}
+                      />
+                      ${option.text}
+                    </label>`;
+                  })}
+                </form>
+                ${
+                  actions &&
+                  html` <div class="filter_actions">
+                    <button
+                      type="button"
+                      class="filter_button"
+                      onClick=${() => {
+                        onChange(options.map((option) => option.value));
                       }}
-                />
-                ${option.text}
-              </label>`;
-            })}
-          </form>
-          ${
-            actions &&
-            html` <div class="filter_actions">
-              <button
-                type="button"
-                class="filter_button"
-                onClick=${() => {
-                  onChange(options.map((option) => option.value));
-                }}
-              >
-                Select All
-              </button>
-              <button
-                type="button"
-                class="filter_button"
-                onClick=${() => {
-                  onChange([]);
-                }}
-              >
-                Clear All
-              </button>
-            </div>`
-          }
-        </div>`;
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      class="filter_button"
+                      onClick=${() => {
+                        onChange([]);
+                      }}
+                    >
+                      Clear All
+                    </button>
+                  </div>`
+                }
+              </div>`;
         };
       }
 
@@ -967,12 +1016,13 @@
       }) => {
         const [opened, setOpened] = useState(false);
         const [selectedMethod] = useUrlStringParam("method");
-        const [selectedPackageName] = useUrlStringParam("package");
+        const [selectedPackageName] = usePackageUrlStringParam();
 
         if (selectedMethod && method !== selectedMethod) {
           return null;
         }
-        if (selectedPackageName && meta.packageName !== selectedPackageName) {
+        const packageName = meta.packageName || NO_PACKAGE_NAME;
+        if (selectedPackageName && packageName !== selectedPackageName) {
           return null;
         }
 
@@ -1137,25 +1187,25 @@
             self.location.protocol === "https:" ? "wss" : "ws";
           const websocketOrigin = `${websocketScheme}://${self.location.host}`;
           jsSource = /*js */ `
-          const websocket = new WebSocket("${websocketOrigin}${resource}");
-          websocket.onerror = () => {
-            console.error("Failed to connect to websocket endpoint");
-          };
-          websocket.onopen = () => {
-            console.info("Connected to websocket endpoint")
-          };
-          websocket.onmessage = (event) => {
-            console.log("Received message", event.data);
-          };
-          `;
+                const websocket = new WebSocket("${websocketOrigin}${resource}");
+                websocket.onerror = () => {
+                  console.error("Failed to connect to websocket endpoint");
+                };
+                websocket.onopen = () => {
+                  console.info("Connected to websocket endpoint")
+                };
+                websocket.onmessage = (event) => {
+                  console.log("Received message", event.data);
+                };
+                `;
         } else {
           let fetchLine;
           if (method === "GET") {
             fetchLine = `const response = await window.fetch("${resource}");`;
           } else {
             fetchLine = `const response = await window.fetch("${resource}", {
-  method: "${method}",
-}`;
+        method: "${method}",
+      }`;
           }
           let readResponseLine;
           if (availableMediaTypes.includes("application/json")) {
@@ -1165,9 +1215,9 @@
           }
 
           jsSource = /*js */ `
-${fetchLine}
-${readResponseLine}
-          `;
+      ${fetchLine}
+      ${readResponseLine}
+                `;
         }
 
         return html`<code-block lang="js" data-escaped data-copy-button

@@ -20,7 +20,7 @@ export const jsenvServiceRouteInspector = () => {
             "utf8",
           );
           return new Response(inspectorHtml, {
-            headers: { "content-type": "html" },
+            headers: { "content-type": "text/html" },
           });
         },
       },
