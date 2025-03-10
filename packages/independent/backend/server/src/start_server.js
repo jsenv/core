@@ -84,8 +84,8 @@ export const startServer = async ({
   nagle = true,
   serverTiming = false,
   requestWaitingMs = 0,
-  requestWaitingCallback = ({ request, warn, requestWaitingMs }) => {
-    warn(
+  requestWaitingCallback = ({ request, requestWaitingMs }) => {
+    request.logger.warn(
       createDetailedMessage(
         `still no response found for request after ${requestWaitingMs} ms`,
         {

@@ -130,15 +130,10 @@ export const startBuildServer = async ({
         timingAllowOrigin: true,
       }),
       ...services,
-      {
-        name: "jsenv:build_files_service",
-        routes: [
-          createBuildFilesService({
-            buildDirectoryUrl,
-            buildMainFilePath,
-          }),
-        ],
-      },
+      jsenvBuildFileService({
+        buildDirectoryUrl,
+        buildMainFilePath,
+      }),
       jsenvServiceErrorHandler({
         sendErrorDetails: true,
       }),
@@ -162,38 +157,46 @@ export const startBuildServer = async ({
   };
 };
 
-const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
+const jsenvBuildFileService = ({ buildDirectoryUrl, buildMainFilePath }) => {
   return {
-    endpoint: "GET *",
-    description: "Serve static files",
-    fetch: (request, helpers) => {
-      const urlIsVersioned = new URL(request.url).searchParams.has("v");
-      if (buildMainFilePath && request.resource === "/") {
-        request = {
-          ...request,
-          resource: `/${buildMainFilePath}`,
-        };
-      }
-      const urlObject = new URL(request.resource.slice(1), buildDirectoryUrl);
-      return createFileSystemFetch(buildDirectoryUrl, {
-        cacheControl: urlIsVersioned
-          ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-          : "private,max-age=0,must-revalidate",
-        etagEnabled: true,
-        compressionEnabled: true,
-        rootDirectoryUrl: buildDirectoryUrl,
-        canReadDirectory: true,
-        ENOENTFallback: () => {
-          if (
-            !urlToExtension(urlObject) &&
-            !urlToPathname(urlObject).endsWith("/")
-          ) {
-            return new URL(buildMainFilePath, buildDirectoryUrl);
+    name: "jsenv:build_files",
+    routes: [
+      {
+        endpoint: "GET *",
+        description: "Serve static files.",
+        fetch: (request, helpers) => {
+          const urlIsVersioned = new URL(request.url).searchParams.has("v");
+          if (buildMainFilePath && request.resource === "/") {
+            request = {
+              ...request,
+              resource: `/${buildMainFilePath}`,
+            };
           }
-          return null;
+          const urlObject = new URL(
+            request.resource.slice(1),
+            buildDirectoryUrl,
+          );
+          return createFileSystemFetch(buildDirectoryUrl, {
+            cacheControl: urlIsVersioned
+              ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+              : "private,max-age=0,must-revalidate",
+            etagEnabled: true,
+            compressionEnabled: true,
+            rootDirectoryUrl: buildDirectoryUrl,
+            canReadDirectory: true,
+            ENOENTFallback: () => {
+              if (
+                !urlToExtension(urlObject) &&
+                !urlToPathname(urlObject).endsWith("/")
+              ) {
+                return new URL(buildMainFilePath, buildDirectoryUrl);
+              }
+              return null;
+            },
+          })(request, helpers);
         },
-      })(request, helpers);
-    },
+      },
+    ],
   };
 };
 
