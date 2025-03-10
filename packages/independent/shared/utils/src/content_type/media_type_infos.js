@@ -22,6 +22,10 @@ export const mediaTypeInfos = {
   "application/x-gzip": {
     extensions: ["gz"],
   },
+  "application/yaml": {
+    extensions: ["yml", "yaml"],
+    isTextual: true,
+  },
   "application/wasm": {
     extensions: ["wasm"],
   },
