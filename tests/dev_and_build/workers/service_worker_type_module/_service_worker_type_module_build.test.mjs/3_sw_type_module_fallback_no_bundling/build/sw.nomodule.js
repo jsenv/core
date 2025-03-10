@@ -219,7 +219,7 @@ self.resourcesFromJsenvBuild = {
       if (!response.ok) {
         throw Error(`Failed to fetch module at ${url}`);
       }
-      let source = await new Response();
+      let source = await response.text();
       if (source.indexOf("//# sourceURL=") < 0) {
         source += `\n//# sourceURL=${url}`;
       }

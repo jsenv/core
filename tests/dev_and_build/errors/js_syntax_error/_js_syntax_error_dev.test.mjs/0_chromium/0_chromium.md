@@ -12,8 +12,8 @@ see [./.jsenv/chrome@133.00/](./.jsenv/chrome@133.00/)
 
 ```console
 Error while handling http://127.0.0.1/js_syntax_error.js:
-PARSE_ERROR
-base/client/js_syntax_error.js:1:11
+  PARSE_ERROR
+  base/client/js_syntax_error.js:1:11
 1 | const a = (
               ^
 ```

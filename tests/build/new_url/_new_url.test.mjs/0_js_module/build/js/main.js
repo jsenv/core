@@ -10,7 +10,7 @@ const windowLocationRelativeUrl = {
   toto: new URL(__v__("/other/file.txt"), window.location).href,
 }.toto;
 const windowOriginRelativeUrl = new URL(__v__("/other/file.txt"), window.origin).href;
-const absoluteBaseUrl = new URL("http://jsenv.dev/file.txt", "http://jsenv.dev/").href;
+const absoluteBaseUrl = new URL(__v__("/other/file.txt"), "http://jsenv.dev/").href;
 
 window.resolveResultPromise({
   textFileUrl: textFileUrl.replace(window.origin, "window.origin"),

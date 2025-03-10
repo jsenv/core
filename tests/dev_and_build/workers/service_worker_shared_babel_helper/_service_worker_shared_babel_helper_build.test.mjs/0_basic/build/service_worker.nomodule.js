@@ -301,7 +301,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (!response.ok) {
           throw Error("Failed to fetch module at ".concat(url));
         }
-        return _await(new Response(), function (source) {
+        return _await(response.text(), function (source) {
           if (source.indexOf("//# sourceURL=") < 0) {
             source += "\n//# sourceURL=".concat(url);
           }

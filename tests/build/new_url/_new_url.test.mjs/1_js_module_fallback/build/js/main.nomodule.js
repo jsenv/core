@@ -13,7 +13,7 @@ System.register([__v__("/js/file.nomodule.js")], function (_export, _context) {
         toto: new URL(__v__("/other/file.txt"), window.location).href
       }.toto;
       windowOriginRelativeUrl = new URL(__v__("/other/file.txt"), window.origin).href;
-      absoluteBaseUrl = new URL("http://jsenv.dev/file.txt", "http://jsenv.dev/").href;
+      absoluteBaseUrl = new URL(__v__("/other/file.txt"), "http://jsenv.dev/").href;
       window.resolveResultPromise({
         textFileUrl: textFileUrl.replace(window.origin, "window.origin"),
         absoluteUrl,

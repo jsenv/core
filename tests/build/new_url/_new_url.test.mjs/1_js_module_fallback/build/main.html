@@ -191,7 +191,7 @@
             if (!response.ok) {
               throw Error(`Failed to fetch module at ${url}`);
             }
-            let source = await new Response();
+            let source = await response.text();
             if (source.indexOf("//# sourceURL=") < 0) {
               source += `\n//# sourceURL=${url}`;
             }
@@ -430,6 +430,6 @@
     <script>window.resultPromise = new Promise(resolve => {
   window.resolveResultPromise = resolve;
 });</script>
-    <script src="/js/main.nomodule.js?v=b1512c99"></script>
+    <script src="/js/main.nomodule.js?v=c7c728b2"></script>
   </body>
 </html>

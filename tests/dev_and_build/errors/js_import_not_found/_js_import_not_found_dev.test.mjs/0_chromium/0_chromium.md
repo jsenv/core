@@ -17,14 +17,7 @@ see [./.jsenv/chrome@133.00/](./.jsenv/chrome@133.00/)
 
 ```console
 GET http://127.0.0.1/not_found.js
-  404 Failed to fetch url content
-  base/client/intermediate.js:2:7
-  1 | // eslint-disable-next-line import-x/no-unresolved
-  2 | import "./not_found.js";
-            ^
-  no entry on filesystem
-  --- plugin name ---
-  "jsenv:file_url_fetching"
+  404 no entry on filesystem
 chromium console.error > Failed to load resource: the server responded with a status of 404 (no entry on filesystem)
 ```
 
