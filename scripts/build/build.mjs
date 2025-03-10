@@ -34,7 +34,7 @@ await build({
     "file://**/node_modules/preact/": false,
   },
   directoryReferenceEffect: (reference) => {
-    // jsenv core directory url
+    // @jsenv/core root dir
     if (reference.url === new URL("../../", import.meta.url).href) {
       return "resolve";
     }
@@ -44,7 +44,7 @@ await build({
     return "error";
   },
   runtimeCompat: {
-    node: "16.14",
+    node: "20.0",
   },
   scenarioPlaceholders: false,
   plugins: [
@@ -54,6 +54,18 @@ await build({
       },
     }),
     jsenvPluginPreact({}),
+    {
+      name: "jsenv:alias",
+      resolveReference: (reference) => {
+        if (reference.specifier === "@jsenv/server") {
+          return new URL(
+            "../../packages/independent/backend/server/dist/jsenv_server.js",
+            import.meta.url,
+          );
+        }
+        return null;
+      },
+    },
   ],
   // for debug
   outDirectoryUrl: new URL("./.jsenv/", import.meta.url),

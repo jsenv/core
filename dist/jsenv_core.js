@@ -3,23 +3,26 @@ import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, unlinkSync, openSync, closeSync, readdirSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, watch, createReadStream, readFile, existsSync, realpathSync } from "node:fs";
+import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, unlinkSync, openSync, closeSync, readdirSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, watch, existsSync, readFile, createReadStream, realpathSync } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import cluster from "node:cluster";
-import net, { createServer, isIP } from "node:net";
+import net, { isIP, createServer, Socket } from "node:net";
+import { parse } from "node:querystring";
 import { Readable, Stream, Writable } from "node:stream";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
-import { performance as performance$1 } from "node:perf_hooks";
-import { createRoutes } from "@jsenv/router/src/shared/routes.js";
-import { parse } from "node:querystring";
+import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
+import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
+import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
+import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
+import { createRequire } from "node:module";
 import { lookup } from "node:dns";
 import { parseJsUrls, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, removeHtmlNode, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
-import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
+import { performance as performance$1 } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 
 /*
@@ -73,7 +76,7 @@ const DATA_URL = {
   },
 };
 
-const createDetailedMessage$1 = (message, details = {}) => {
+const createDetailedMessage$2 = (message, details = {}) => {
   let string = `${message}`;
 
   Object.keys(details).forEach((key) => {
@@ -93,50 +96,50 @@ ${
 
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
-function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
+function hasFlag$1(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
 	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
 	const position = argv.indexOf(prefix + flag);
 	const terminatorPosition = argv.indexOf('--');
 	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
 }
 
-const {env} = process$1;
+const {env: env$1} = process$1;
 
-let flagForceColor;
+let flagForceColor$1;
 if (
-	hasFlag('no-color')
-	|| hasFlag('no-colors')
-	|| hasFlag('color=false')
-	|| hasFlag('color=never')
+	hasFlag$1('no-color')
+	|| hasFlag$1('no-colors')
+	|| hasFlag$1('color=false')
+	|| hasFlag$1('color=never')
 ) {
-	flagForceColor = 0;
+	flagForceColor$1 = 0;
 } else if (
-	hasFlag('color')
-	|| hasFlag('colors')
-	|| hasFlag('color=true')
-	|| hasFlag('color=always')
+	hasFlag$1('color')
+	|| hasFlag$1('colors')
+	|| hasFlag$1('color=true')
+	|| hasFlag$1('color=always')
 ) {
-	flagForceColor = 1;
+	flagForceColor$1 = 1;
 }
 
-function envForceColor() {
-	if (!('FORCE_COLOR' in env)) {
+function envForceColor$1() {
+	if (!('FORCE_COLOR' in env$1)) {
 		return;
 	}
 
-	if (env.FORCE_COLOR === 'true') {
+	if (env$1.FORCE_COLOR === 'true') {
 		return 1;
 	}
 
-	if (env.FORCE_COLOR === 'false') {
+	if (env$1.FORCE_COLOR === 'false') {
 		return 0;
 	}
 
-	if (env.FORCE_COLOR.length === 0) {
+	if (env$1.FORCE_COLOR.length === 0) {
 		return 1;
 	}
 
-	const level = Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+	const level = Math.min(Number.parseInt(env$1.FORCE_COLOR, 10), 3);
 
 	if (![0, 1, 2, 3].includes(level)) {
 		return;
@@ -145,7 +148,7 @@ function envForceColor() {
 	return level;
 }
 
-function translateLevel(level) {
+function translateLevel$1(level) {
 	if (level === 0) {
 		return false;
 	}
@@ -158,33 +161,33 @@ function translateLevel(level) {
 	};
 }
 
-function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
-	const noFlagForceColor = envForceColor();
+function _supportsColor$1(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
+	const noFlagForceColor = envForceColor$1();
 	if (noFlagForceColor !== undefined) {
-		flagForceColor = noFlagForceColor;
+		flagForceColor$1 = noFlagForceColor;
 	}
 
-	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+	const forceColor = sniffFlags ? flagForceColor$1 : noFlagForceColor;
 
 	if (forceColor === 0) {
 		return 0;
 	}
 
 	if (sniffFlags) {
-		if (hasFlag('color=16m')
-			|| hasFlag('color=full')
-			|| hasFlag('color=truecolor')) {
+		if (hasFlag$1('color=16m')
+			|| hasFlag$1('color=full')
+			|| hasFlag$1('color=truecolor')) {
 			return 3;
 		}
 
-		if (hasFlag('color=256')) {
+		if (hasFlag$1('color=256')) {
 			return 2;
 		}
 	}
 
 	// Check for Azure DevOps pipelines.
 	// Has to be above the `!streamIsTTY` check.
-	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
+	if ('TF_BUILD' in env$1 && 'AGENT_NAME' in env$1) {
 		return 1;
 	}
 
@@ -194,7 +197,7 @@ function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
 
 	const min = forceColor || 0;
 
-	if (env.TERM === 'dumb') {
+	if (env$1.TERM === 'dumb') {
 		return min;
 	}
 
@@ -212,34 +215,34 @@ function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
 		return 1;
 	}
 
-	if ('CI' in env) {
-		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env)) {
+	if ('CI' in env$1) {
+		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env$1)) {
 			return 3;
 		}
 
-		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
+		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env$1) || env$1.CI_NAME === 'codeship') {
 			return 1;
 		}
 
 		return min;
 	}
 
-	if ('TEAMCITY_VERSION' in env) {
-		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+	if ('TEAMCITY_VERSION' in env$1) {
+		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env$1.TEAMCITY_VERSION) ? 1 : 0;
 	}
 
-	if (env.COLORTERM === 'truecolor') {
+	if (env$1.COLORTERM === 'truecolor') {
 		return 3;
 	}
 
-	if (env.TERM === 'xterm-kitty') {
+	if (env$1.TERM === 'xterm-kitty') {
 		return 3;
 	}
 
-	if ('TERM_PROGRAM' in env) {
-		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+	if ('TERM_PROGRAM' in env$1) {
+		const version = Number.parseInt((env$1.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
 
-		switch (env.TERM_PROGRAM) {
+		switch (env$1.TERM_PROGRAM) {
 			case 'iTerm.app': {
 				return version >= 3 ? 3 : 2;
 			}
@@ -251,40 +254,40 @@ function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
 		}
 	}
 
-	if (/-256(color)?$/i.test(env.TERM)) {
+	if (/-256(color)?$/i.test(env$1.TERM)) {
 		return 2;
 	}
 
-	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env$1.TERM)) {
 		return 1;
 	}
 
-	if ('COLORTERM' in env) {
+	if ('COLORTERM' in env$1) {
 		return 1;
 	}
 
 	return min;
 }
 
-function createSupportsColor(stream, options = {}) {
-	const level = _supportsColor(stream, {
+function createSupportsColor$1(stream, options = {}) {
+	const level = _supportsColor$1(stream, {
 		streamIsTTY: stream && stream.isTTY,
 		...options,
 	});
 
-	return translateLevel(level);
+	return translateLevel$1(level);
 }
 
 ({
-	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
-	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
+	stdout: createSupportsColor$1({isTTY: tty.isatty(1)}),
+	stderr: createSupportsColor$1({isTTY: tty.isatty(2)}),
 });
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
-const RESET = "\x1b[0m";
+const RESET$1 = "\x1b[0m";
 
-const createAnsi = ({ supported }) => {
+const createAnsi$1 = ({ supported }) => {
   const ANSI = {
     supported,
 
@@ -306,7 +309,7 @@ const createAnsi = ({ supported }) => {
         // cannot set color of blank chars
         return text;
       }
-      return `${color}${text}${RESET}`;
+      return `${color}${text}${RESET$1}`;
     },
 
     BOLD: "\x1b[1m",
@@ -323,25 +326,25 @@ const createAnsi = ({ supported }) => {
       if (text === "") {
         return text;
       }
-      return `${effect}${text}${RESET}`;
+      return `${effect}${text}${RESET$1}`;
     },
   };
 
   return ANSI;
 };
 
-const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+const processSupportsBasicColor$1 = createSupportsColor$1(process.stdout).hasBasic;
 
-const ANSI = createAnsi({
+const ANSI$1 = createAnsi$1({
   supported:
     process.env.FORCE_COLOR === "1" ||
-    processSupportsBasicColor ||
+    processSupportsBasicColor$1 ||
     // GitHub workflow does support ANSI but "supports-color" returns false
     // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
     process.env.GITHUB_WORKFLOW,
 });
 
-function isUnicodeSupported() {
+function isUnicodeSupported$1() {
 	const {env} = process$1;
 	const {TERM, TERM_PROGRAM} = env;
 
@@ -363,7 +366,7 @@ function isUnicodeSupported() {
 
 // see also https://github.com/sindresorhus/figures
 
-const createUnicode = ({ supported, ANSI }) => {
+const createUnicode$1 = ({ supported, ANSI }) => {
   const UNICODE = {
     supported,
     get COMMAND_RAW() {
@@ -418,9 +421,9 @@ const createUnicode = ({ supported, ANSI }) => {
   return UNICODE;
 };
 
-const UNICODE = createUnicode({
-  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
-  ANSI,
+const UNICODE = createUnicode$1({
+  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported$1(),
+  ANSI: ANSI$1,
 });
 
 const getPrecision = (number) => {
@@ -867,97 +870,97 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
-const LOG_LEVEL_OFF = "off";
+const LOG_LEVEL_OFF$1 = "off";
 
-const LOG_LEVEL_DEBUG = "debug";
+const LOG_LEVEL_DEBUG$1 = "debug";
 
-const LOG_LEVEL_INFO = "info";
+const LOG_LEVEL_INFO$1 = "info";
 
-const LOG_LEVEL_WARN = "warn";
+const LOG_LEVEL_WARN$1 = "warn";
 
-const LOG_LEVEL_ERROR = "error";
+const LOG_LEVEL_ERROR$1 = "error";
 
-const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
-  if (logLevel === LOG_LEVEL_DEBUG) {
+const createLogger$1 = ({ logLevel = LOG_LEVEL_INFO$1 } = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG$1) {
     return {
       level: "debug",
       levels: { debug: true, info: true, warn: true, error: true },
-      debug,
-      info,
-      warn,
-      error,
+      debug: debug$1,
+      info: info$1,
+      warn: warn$1,
+      error: error$1,
     };
   }
-  if (logLevel === LOG_LEVEL_INFO) {
+  if (logLevel === LOG_LEVEL_INFO$1) {
     return {
       level: "info",
       levels: { debug: false, info: true, warn: true, error: true },
-      debug: debugDisabled,
-      info,
-      warn,
-      error,
+      debug: debugDisabled$1,
+      info: info$1,
+      warn: warn$1,
+      error: error$1,
     };
   }
-  if (logLevel === LOG_LEVEL_WARN) {
+  if (logLevel === LOG_LEVEL_WARN$1) {
     return {
       level: "warn",
       levels: { debug: false, info: false, warn: true, error: true },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn,
-      error,
+      debug: debugDisabled$1,
+      info: infoDisabled$1,
+      warn: warn$1,
+      error: error$1,
     };
   }
-  if (logLevel === LOG_LEVEL_ERROR) {
+  if (logLevel === LOG_LEVEL_ERROR$1) {
     return {
       level: "error",
       levels: { debug: false, info: false, warn: false, error: true },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error,
+      debug: debugDisabled$1,
+      info: infoDisabled$1,
+      warn: warnDisabled$1,
+      error: error$1,
     };
   }
-  if (logLevel === LOG_LEVEL_OFF) {
+  if (logLevel === LOG_LEVEL_OFF$1) {
     return {
       level: "off",
       levels: { debug: false, info: false, warn: false, error: false },
-      debug: debugDisabled,
-      info: infoDisabled,
-      warn: warnDisabled,
-      error: errorDisabled,
+      debug: debugDisabled$1,
+      info: infoDisabled$1,
+      warn: warnDisabled$1,
+      error: errorDisabled$1,
     };
   }
   throw new Error(`unexpected logLevel.
 --- logLevel ---
 ${logLevel}
 --- allowed log levels ---
-${LOG_LEVEL_OFF}
-${LOG_LEVEL_ERROR}
-${LOG_LEVEL_WARN}
-${LOG_LEVEL_INFO}
-${LOG_LEVEL_DEBUG}`);
+${LOG_LEVEL_OFF$1}
+${LOG_LEVEL_ERROR$1}
+${LOG_LEVEL_WARN$1}
+${LOG_LEVEL_INFO$1}
+${LOG_LEVEL_DEBUG$1}`);
 };
 
-const debug = (...args) => console.debug(...args);
+const debug$1 = (...args) => console.debug(...args);
 
-const debugDisabled = () => {};
+const debugDisabled$1 = () => {};
 
-const info = (...args) => console.info(...args);
+const info$1 = (...args) => console.info(...args);
 
-const infoDisabled = () => {};
+const infoDisabled$1 = () => {};
 
-const warn = (...args) => console.warn(...args);
+const warn$1 = (...args) => console.warn(...args);
 
-const warnDisabled = () => {};
+const warnDisabled$1 = () => {};
 
-const error = (...args) => console.error(...args);
+const error$1 = (...args) => console.error(...args);
 
-const errorDisabled = () => {};
+const errorDisabled$1 = () => {};
 
 /* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
 
-const isBrowser = globalThis.window?.document !== undefined;
+const isBrowser$1 = globalThis.window?.document !== undefined;
 
 globalThis.process?.versions?.node !== undefined;
 
@@ -978,33 +981,33 @@ typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWo
 typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
 
 // Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
+const platform$1 = globalThis.navigator?.userAgentData?.platform;
 
-platform === 'macOS'
+platform$1 === 'macOS'
 	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
 	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
 	|| globalThis.process?.platform === 'darwin';
 
-platform === 'Windows'
+platform$1 === 'Windows'
 	|| globalThis.navigator?.platform === 'Win32'
 	|| globalThis.process?.platform === 'win32';
 
-platform === 'Linux'
+platform$1 === 'Linux'
 	|| globalThis.navigator?.platform?.startsWith('Linux') === true
 	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
 	|| globalThis.process?.platform === 'linux';
 
-platform === 'Android'
+platform$1 === 'Android'
 	|| globalThis.navigator?.platform === 'Android'
 	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
 	|| globalThis.process?.platform === 'android';
 
 const ESC = '\u001B[';
 
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows$4 = !isBrowser && process$1.platform === 'win32';
+!isBrowser$1 && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+const isWindows$4 = !isBrowser$1 && process$1.platform === 'win32';
 
-isBrowser ? () => {
+isBrowser$1 ? () => {
 	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
 } : process$1.cwd;
 
@@ -1248,7 +1251,7 @@ const startSpinner = ({
   spinner.update = update;
 
   let cleanup;
-  if (animated && ANSI.supported) {
+  if (animated && ANSI$1.supported) {
     running = true;
     cleanup = effect();
     dynamicLog.update(update(render()));
@@ -1369,6 +1372,34 @@ const stringifyUrlSite = (
 ${sourceLoc}`;
 };
 
+const pathnameToExtension$2 = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1 ? pathname : pathname.slice(slashLastIndex + 1);
+  if (filename.match(/@([0-9])+(\.[0-9]+)?(\.[0-9]+)?$/)) {
+    return "";
+  }
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return "";
+  }
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex);
+  return extension;
+};
+
+const resourceToPathname$1 = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?");
+  if (searchSeparatorIndex > -1) {
+    return resource.slice(0, searchSeparatorIndex);
+  }
+  const hashIndex = resource.indexOf("#");
+  if (hashIndex > -1) {
+    return resource.slice(0, hashIndex);
+  }
+  return resource;
+};
+
 const urlToScheme$1 = (url) => {
   const urlString = String(url);
   const colonIndex = urlString.indexOf(":");
@@ -1402,20 +1433,8 @@ const urlToResource = (url) => {
 
 const urlToPathname$1 = (url) => {
   const resource = urlToResource(url);
-  const pathname = resourceToPathname(resource);
+  const pathname = resourceToPathname$1(resource);
   return pathname;
-};
-
-const resourceToPathname = (resource) => {
-  const searchSeparatorIndex = resource.indexOf("?");
-  if (searchSeparatorIndex > -1) {
-    return resource.slice(0, searchSeparatorIndex);
-  }
-  const hashIndex = resource.indexOf("#");
-  if (hashIndex > -1) {
-    return resource.slice(0, hashIndex);
-  }
-  return resource;
 };
 
 const urlToFilename$1 = (url) => {
@@ -1452,20 +1471,15 @@ const filenameToBasename = (filename) => {
 
 const urlToExtension$1 = (url) => {
   const pathname = urlToPathname$1(url);
-  return pathnameToExtension$1(pathname);
+  return pathnameToExtension$2(pathname);
 };
 
-const pathnameToExtension$1 = (pathname) => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex !== -1) {
-    pathname = pathname.slice(slashLastIndex + 1);
+const urlToOrigin$1 = (url) => {
+  const urlString = String(url);
+  if (urlString.startsWith("file://")) {
+    return `file://`;
   }
-
-  const dotLastIndex = pathname.lastIndexOf(".");
-  if (dotLastIndex === -1) return "";
-  // if (dotLastIndex === pathname.length - 1) return ""
-  const extension = pathname.slice(dotLastIndex);
-  return extension;
+  return new URL(urlString).origin;
 };
 
 const asUrlWithoutSearch = (url) => {
@@ -1611,6 +1625,29 @@ const renderUrlOrRelativeUrlFilename = (urlOrRelativeUrl, renderer) => {
   return `${beforeFilename}${newFilename}${afterQuestion}`;
 };
 
+const setUrlExtension = (url, extension) => {
+  const origin = urlToOrigin$1(url);
+  const currentExtension = urlToExtension$1(url);
+  if (typeof extension === "function") {
+    extension = extension(currentExtension);
+  }
+  const resource = urlToResource(url);
+  const [pathname, search] = resource.split("?");
+  const pathnameWithoutExtension = currentExtension
+    ? pathname.slice(0, -currentExtension.length)
+    : pathname;
+  let newPathname;
+  if (pathnameWithoutExtension.endsWith("/")) {
+    newPathname = pathnameWithoutExtension.slice(0, -1);
+    newPathname += extension;
+    newPathname += "/";
+  } else {
+    newPathname = pathnameWithoutExtension;
+    newPathname += extension;
+  }
+  return `${origin}${newPathname}${search ? `?${search}` : ""}`;
+};
+
 const setUrlFilename = (url, filename) => {
   const parentPathname = new URL("./", url).pathname;
   return transformUrlPathname(url, (pathname) => {
@@ -1712,7 +1749,7 @@ const resolveUrl$1 = (specifier, baseUrl) => {
   return String(new URL(specifier, baseUrl));
 };
 
-const getCommonPathname = (pathname, otherPathname) => {
+const getCommonPathname$1 = (pathname, otherPathname) => {
   if (pathname === otherPathname) {
     return pathname;
   }
@@ -1749,7 +1786,7 @@ const getCommonPathname = (pathname, otherPathname) => {
   return commonPathname;
 };
 
-const urlToRelativeUrl = (
+const urlToRelativeUrl$1 = (
   url,
   baseUrl,
   { preferRelativeNotation } = {},
@@ -1778,7 +1815,7 @@ const urlToRelativeUrl = (
   }
 
   const basePathname = baseUrlObject.pathname;
-  const commonPathname = getCommonPathname(pathname, basePathname);
+  const commonPathname = getCommonPathname$1(pathname, basePathname);
   if (!commonPathname) {
     const urlAsString = String(url);
     return urlAsString;
@@ -1787,7 +1824,7 @@ const urlToRelativeUrl = (
   const baseSpecificPathname = basePathname.slice(commonPathname.length);
   if (baseSpecificPathname.includes("/")) {
     const baseSpecificParentPathname =
-      pathnameToParentPathname$1(baseSpecificPathname);
+      pathnameToParentPathname$2(baseSpecificPathname);
     const relativeDirectoriesNotation = baseSpecificParentPathname.replace(
       /.*?\//g,
       "../",
@@ -1800,7 +1837,7 @@ const urlToRelativeUrl = (
   return preferRelativeNotation ? `./${relativeUrl}` : relativeUrl;
 };
 
-const pathnameToParentPathname$1 = (pathname) => {
+const pathnameToParentPathname$2 = (pathname) => {
   const slashLastIndex = pathname.lastIndexOf("/");
   if (slashLastIndex === -1) {
     return "/";
@@ -1809,14 +1846,14 @@ const pathnameToParentPathname$1 = (pathname) => {
 };
 
 const moveUrl = ({ url, from, to, preferRelative }) => {
-  let relativeUrl = urlToRelativeUrl(url, from);
+  let relativeUrl = urlToRelativeUrl$1(url, from);
   if (relativeUrl.slice(0, 2) === "//") {
     // restore the protocol
     relativeUrl = new URL(relativeUrl, url).href;
   }
   const absoluteUrl = new URL(relativeUrl, to).href;
   if (preferRelative) {
-    return urlToRelativeUrl(absoluteUrl, to);
+    return urlToRelativeUrl$1(absoluteUrl, to);
   }
   return absoluteUrl;
 };
@@ -1839,7 +1876,7 @@ const urlIsInsideOf = (url, otherUrl) => {
   return isInside;
 };
 
-const urlToFileSystemPath = (url) => {
+const urlToFileSystemPath$1 = (url) => {
   const urlObject = new URL(url);
   let { origin, pathname, hash } = urlObject;
   if (urlObject.protocol === "file:") {
@@ -2126,7 +2163,7 @@ const findAncestorDirectoryUrl = (url, callback) => {
   return null;
 };
 
-const createCallbackListNotifiedOnce = () => {
+const createCallbackListNotifiedOnce$1 = () => {
   let callbacks = [];
   let status = "waiting";
   let currentCallbackIndex = -1;
@@ -2135,8 +2172,8 @@ const createCallbackListNotifiedOnce = () => {
 
   const add = (callback) => {
     if (status !== "waiting") {
-      emitUnexpectedActionWarning({ action: "add", status });
-      return removeNoop;
+      emitUnexpectedActionWarning$1({ action: "add", status });
+      return removeNoop$1;
     }
 
     if (typeof callback !== "function") {
@@ -2148,8 +2185,8 @@ const createCallbackListNotifiedOnce = () => {
       return callbackCandidate === callback;
     });
     if (existingCallback) {
-      emitCallbackDuplicationWarning();
-      return removeNoop;
+      emitCallbackDuplicationWarning$1();
+      return removeNoop$1;
     }
 
     callbacks.push(callback);
@@ -2184,7 +2221,7 @@ const createCallbackListNotifiedOnce = () => {
 
   const notify = (param) => {
     if (status !== "waiting") {
-      emitUnexpectedActionWarning({ action: "call", status });
+      emitUnexpectedActionWarning$1({ action: "call", status });
       return [];
     }
     status = "looping";
@@ -2209,7 +2246,7 @@ const createCallbackListNotifiedOnce = () => {
   return callbackListOnce;
 };
 
-const emitUnexpectedActionWarning = ({ action, status }) => {
+const emitUnexpectedActionWarning$1 = ({ action, status }) => {
   if (typeof process.emitWarning === "function") {
     process.emitWarning(
       `"${action}" should not happen when callback list is ${status}`,
@@ -2225,7 +2262,7 @@ const emitUnexpectedActionWarning = ({ action, status }) => {
   }
 };
 
-const emitCallbackDuplicationWarning = () => {
+const emitCallbackDuplicationWarning$1 = () => {
   if (typeof process.emitWarning === "function") {
     process.emitWarning(`Trying to add a callback already in the list`, {
       CODE: "CALLBACK_DUPLICATION",
@@ -2236,13 +2273,13 @@ const emitCallbackDuplicationWarning = () => {
   }
 };
 
-const removeNoop = () => {};
+const removeNoop$1 = () => {};
 
 /*
  * See callback_race.md
  */
 
-const raceCallbacks = (raceDescription, winnerCallback) => {
+const raceCallbacks$1 = (raceDescription, winnerCallback) => {
   let cleanCallbacks = [];
   let status = "racing";
 
@@ -2287,13 +2324,13 @@ const raceCallbacks = (raceDescription, winnerCallback) => {
  */
 
 
-const Abort = {
+const Abort$1 = {
   isAbortError: (error) => {
     return error && error.name === "AbortError";
   },
 
   startOperation: () => {
-    return createOperation();
+    return createOperation$1();
   },
 
   throwIfAborted: (signal) => {
@@ -2306,7 +2343,7 @@ const Abort = {
   },
 };
 
-const createOperation = () => {
+const createOperation$1 = () => {
   const operationAbortController = new AbortController();
   // const abortOperation = (value) => abortController.abort(value)
   const operationSignal = operationAbortController.signal;
@@ -2316,8 +2353,8 @@ const createOperation = () => {
   // (a function doing 20 http call in parallel)
   // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
   // uses abortCallbackList to know when something is aborted
-  const abortCallbackList = createCallbackListNotifiedOnce();
-  const endCallbackList = createCallbackListNotifiedOnce();
+  const abortCallbackList = createCallbackListNotifiedOnce$1();
+  const endCallbackList = createCallbackListNotifiedOnce$1();
 
   let isAbortAfterEnd = false;
 
@@ -2333,7 +2370,7 @@ const createOperation = () => {
   };
 
   const throwIfAborted = () => {
-    Abort.throwIfAborted(operationSignal);
+    Abort$1.throwIfAborted(operationSignal);
   };
 
   // add a callback called on abort
@@ -2380,34 +2417,34 @@ const createOperation = () => {
 
   const addAbortSignal = (
     signal,
-    { onAbort = callbackNoop, onRemove = callbackNoop } = {},
+    { onAbort = callbackNoop$1, onRemove = callbackNoop$1 } = {},
   ) => {
     const applyAbortEffects = () => {
       const onAbortCallback = onAbort;
-      onAbort = callbackNoop;
+      onAbort = callbackNoop$1;
       onAbortCallback();
     };
     const applyRemoveEffects = () => {
       const onRemoveCallback = onRemove;
-      onRemove = callbackNoop;
-      onAbort = callbackNoop;
+      onRemove = callbackNoop$1;
+      onAbort = callbackNoop$1;
       onRemoveCallback();
     };
 
     if (operationSignal.aborted) {
       applyAbortEffects();
       applyRemoveEffects();
-      return callbackNoop;
+      return callbackNoop$1;
     }
 
     if (signal.aborted) {
       operationAbortController.abort();
       applyAbortEffects();
       applyRemoveEffects();
-      return callbackNoop;
+      return callbackNoop$1;
     }
 
-    const cancelRace = raceCallbacks(
+    const cancelRace = raceCallbacks$1(
       {
         operation_abort: (cb) => {
           return addAbortCallback(cb);
@@ -2416,7 +2453,7 @@ const createOperation = () => {
           return addEndCallback(cb);
         },
         child_abort: (cb) => {
-          return addEventListener(signal, "abort", cb);
+          return addEventListener$1(signal, "abort", cb);
         },
       },
       (winner) => {
@@ -2458,7 +2495,7 @@ const createOperation = () => {
     const abortSource = {
       cleaned: false,
       signal: null,
-      remove: callbackNoop,
+      remove: callbackNoop$1,
     };
     const abortSourceController = new AbortController();
     const abortSourceSignal = abortSourceController.signal;
@@ -2542,7 +2579,7 @@ const createOperation = () => {
   };
 
   const fork = () => {
-    const forkedOperation = createOperation();
+    const forkedOperation = createOperation$1();
     forkedOperation.addAbortSignal(operationSignal);
     return forkedOperation;
   };
@@ -2568,29 +2605,29 @@ const createOperation = () => {
   };
 };
 
-const callbackNoop = () => {};
+const callbackNoop$1 = () => {};
 
-const addEventListener = (target, eventName, cb) => {
+const addEventListener$1 = (target, eventName, cb) => {
   target.addEventListener(eventName, cb);
   return () => {
     target.removeEventListener(eventName, cb);
   };
 };
 
-const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
-  return raceCallbacks(
+const raceProcessTeardownEvents$1 = (processTeardownEvents, callback) => {
+  return raceCallbacks$1(
     {
-      ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
-      ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
-      ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
-      ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
-      ...(processTeardownEvents.exit ? EXIT_CALLBACK : {}),
+      ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK$1 : {}),
+      ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK$1 : {}),
+      ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK$1 : {}),
+      ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK$1 : {}),
+      ...(processTeardownEvents.exit ? EXIT_CALLBACK$1 : {}),
     },
     callback,
   );
 };
 
-const SIGHUP_CALLBACK = {
+const SIGHUP_CALLBACK$1 = {
   SIGHUP: (cb) => {
     process.on("SIGHUP", cb);
     return () => {
@@ -2599,7 +2636,7 @@ const SIGHUP_CALLBACK = {
   },
 };
 
-const SIGTERM_CALLBACK = {
+const SIGTERM_CALLBACK$1 = {
   SIGTERM: (cb) => {
     process.on("SIGTERM", cb);
     return () => {
@@ -2608,7 +2645,7 @@ const SIGTERM_CALLBACK = {
   },
 };
 
-const BEFORE_EXIT_CALLBACK = {
+const BEFORE_EXIT_CALLBACK$1 = {
   beforeExit: (cb) => {
     process.on("beforeExit", cb);
     return () => {
@@ -2617,7 +2654,7 @@ const BEFORE_EXIT_CALLBACK = {
   },
 };
 
-const EXIT_CALLBACK = {
+const EXIT_CALLBACK$1 = {
   exit: (cb) => {
     process.on("exit", cb);
     return () => {
@@ -2626,7 +2663,7 @@ const EXIT_CALLBACK = {
   },
 };
 
-const SIGINT_CALLBACK = {
+const SIGINT_CALLBACK$1 = {
   SIGINT: (cb) => {
     process.on("SIGINT", cb);
     return () => {
@@ -3283,7 +3320,7 @@ const readEntryStat = async (
   let sourceUrl = assertAndNormalizeFileUrl(source);
   if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
 
-  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const sourcePath = urlToFileSystemPath$1(sourceUrl);
 
   const handleNotFoundOption = nullIfNotFound
     ? {
@@ -3388,7 +3425,7 @@ const readEntryStatSync = (
   let sourceUrl = assertAndNormalizeFileUrl(source);
   if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
 
-  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const sourcePath = urlToFileSystemPath$1(sourceUrl);
 
   const handleNotFoundOption = nullIfNotFound
     ? {
@@ -3483,7 +3520,7 @@ const writeDirectory = async (
   { recursive = true, allowUseless = false } = {},
 ) => {
   const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationPath = urlToFileSystemPath$1(destinationUrl);
 
   const destinationStats = await readEntryStat(destinationUrl, {
     nullIfNotFound: true,
@@ -3514,7 +3551,7 @@ const writeDirectory = async (
   }
 };
 
-const mediaTypeInfos = {
+const mediaTypeInfos$1 = {
   "application/json": {
     extensions: ["json", "map"],
     isTextual: true,
@@ -3537,6 +3574,10 @@ const mediaTypeInfos = {
   },
   "application/x-gzip": {
     extensions: ["gz"],
+  },
+  "application/yaml": {
+    extensions: ["yml", "yaml"],
+    isTextual: true,
   },
   "application/wasm": {
     extensions: ["wasm"],
@@ -3632,10 +3673,10 @@ const mediaTypeInfos = {
   },
 };
 
-const CONTENT_TYPE = {
+const CONTENT_TYPE$1 = {
   parse: (string) => {
     const [mediaType, charset] = string.split(";");
-    return { mediaType: normalizeMediaType(mediaType), charset };
+    return { mediaType: normalizeMediaType$1(mediaType), charset };
   },
 
   stringify: ({ mediaType, charset }) => {
@@ -3647,7 +3688,7 @@ const CONTENT_TYPE = {
 
   asMediaType: (value) => {
     if (typeof value === "string") {
-      return CONTENT_TYPE.parse(value).mediaType;
+      return CONTENT_TYPE$1.parse(value).mediaType;
     }
     if (typeof value === "object") {
       return value.mediaType;
@@ -3656,7 +3697,7 @@ const CONTENT_TYPE = {
   },
 
   isJson: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaType = CONTENT_TYPE$1.asMediaType(value);
     return (
       mediaType === "application/json" ||
       /^application\/\w+\+json$/.test(mediaType)
@@ -3664,11 +3705,11 @@ const CONTENT_TYPE = {
   },
 
   isTextual: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaType = CONTENT_TYPE$1.asMediaType(value);
     if (mediaType.startsWith("text/")) {
       return true;
     }
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    const mediaTypeInfo = mediaTypeInfos$1[mediaType];
     if (mediaTypeInfo && mediaTypeInfo.isTextual) {
       return true;
     }
@@ -3679,12 +3720,28 @@ const CONTENT_TYPE = {
     return false;
   },
 
-  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
+  isBinary: (value) => !CONTENT_TYPE$1.isTextual(value),
 
   asFileExtension: (value) => {
-    const mediaType = CONTENT_TYPE.asMediaType(value);
-    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    const mediaType = CONTENT_TYPE$1.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos$1[mediaType];
     return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+
+  fromExtension: (extension) => {
+    if (extension[0] === ".") {
+      extension = extension.slice(1);
+    }
+    for (const mediaTypeCandidate of Object.keys(mediaTypeInfos$1)) {
+      const mediaTypeCandidateInfo = mediaTypeInfos$1[mediaTypeCandidate];
+      if (
+        mediaTypeCandidateInfo.extensions &&
+        mediaTypeCandidateInfo.extensions.includes(extension)
+      ) {
+        return mediaTypeCandidate;
+      }
+    }
+    return "application/octet-stream";
   },
 
   fromUrlExtension: (url) => {
@@ -3694,17 +3751,17 @@ const CONTENT_TYPE = {
       return "application/octet-stream";
     }
     const extension = extensionWithDot.slice(1);
-    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
-      const mediaTypeInfo = mediaTypeInfos[mediaType];
-      return (
-        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
-      );
-    });
-    return mediaTypeFound || "application/octet-stream";
+    return CONTENT_TYPE$1.fromExtension(extension);
+  },
+
+  toUrlExtension: (contentType) => {
+    const mediaType = CONTENT_TYPE$1.asMediaType(contentType);
+    const mediaTypeInfo = mediaTypeInfos$1[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
   },
 };
 
-const normalizeMediaType = (value) => {
+const normalizeMediaType$1 = (value) => {
   if (value === "application/javascript") {
     return "text/javascript";
   }
@@ -3730,7 +3787,7 @@ const removeEntrySync = (
     if (allowUseless) {
       return;
     }
-    throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+    throw new Error(`nothing to remove at ${urlToFileSystemPath$1(sourceUrl)}`);
   }
 
   // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
@@ -3756,7 +3813,7 @@ const removeEntrySync = (
 };
 
 const removeNonDirectory$1 = (sourceUrl) => {
-  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const sourcePath = urlToFileSystemPath$1(sourceUrl);
   const attempt = () => {
     unlinkSyncNaive(sourcePath);
   };
@@ -3813,7 +3870,7 @@ const removeDirectorySync$1 = (
   };
 
   const visitDirectory = (directoryUrl) => {
-    const directoryPath = urlToFileSystemPath(directoryUrl);
+    const directoryPath = urlToFileSystemPath$1(directoryUrl);
     const optionsFromRecursive = recursive
       ? {
           handleNotEmptyError: () => {
@@ -3924,7 +3981,7 @@ const writeDirectorySync = (
   { recursive = true, allowUseless = false, force } = {},
 ) => {
   const destinationUrl = assertAndNormalizeDirectoryUrl(destination);
-  const destinationPath = urlToFileSystemPath(destinationUrl);
+  const destinationPath = urlToFileSystemPath$1(destinationUrl);
 
   let destinationStats;
   try {
@@ -3959,7 +4016,7 @@ const writeDirectorySync = (
         destinationStats = null;
       } else {
         throw new Error(
-          `cannot write directory at ${destinationPath} because there is a file at ${urlToFileSystemPath(
+          `cannot write directory at ${destinationPath} because there is a file at ${urlToFileSystemPath$1(
             previousNonDirUrl,
           )}`,
         );
@@ -4039,7 +4096,7 @@ const removeEntry = async (
 ) => {
   const sourceUrl = assertAndNormalizeFileUrl(source);
 
-  const removeOperation = Abort.startOperation();
+  const removeOperation = Abort$1.startOperation();
   removeOperation.addAbortSignal(signal);
 
   try {
@@ -4052,7 +4109,7 @@ const removeEntry = async (
       if (allowUseless) {
         return;
       }
-      throw new Error(`nothing to remove at ${urlToFileSystemPath(sourceUrl)}`);
+      throw new Error(`nothing to remove at ${urlToFileSystemPath$1(sourceUrl)}`);
     }
 
     // https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_class_fs_stats
@@ -4086,7 +4143,7 @@ const removeEntry = async (
 };
 
 const removeNonDirectory = (sourceUrl, { maxRetries, retryDelay }) => {
-  const sourcePath = urlToFileSystemPath(sourceUrl);
+  const sourcePath = urlToFileSystemPath$1(sourceUrl);
 
   let retryCount = 0;
   const attempt = () => {
@@ -4136,7 +4193,7 @@ const removeDirectory = async (
   rootDirectoryUrl,
   { signal, maxRetries, retryDelay, recursive, onlyContent },
 ) => {
-  const removeDirectoryOperation = Abort.startOperation();
+  const removeDirectoryOperation = Abort$1.startOperation();
   removeDirectoryOperation.addAbortSignal(signal);
 
   const visit = async (sourceUrl) => {
@@ -4165,7 +4222,7 @@ const removeDirectory = async (
   };
 
   const visitDirectory = async (directoryUrl) => {
-    const directoryPath = urlToFileSystemPath(directoryUrl);
+    const directoryPath = urlToFileSystemPath$1(directoryUrl);
     const optionsFromRecursive = recursive
       ? {
           handleNotEmptyError: async () => {
@@ -4298,7 +4355,7 @@ const ensureEmptyDirectory = async (source) => {
   }
 
   const sourceType = statsToType(stats);
-  const sourcePath = urlToFileSystemPath(assertAndNormalizeFileUrl(source));
+  const sourcePath = urlToFileSystemPath$1(assertAndNormalizeFileUrl(source));
   throw new Error(
     `ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`,
   );
@@ -4486,7 +4543,7 @@ const registerDirectoryLifecycle = (
   const infoMap = new Map();
   const readEntryInfo = (url) => {
     try {
-      const relativeUrl = urlToRelativeUrl(url, source);
+      const relativeUrl = urlToRelativeUrl$1(url, source);
       const previousInfo = infoMap.get(relativeUrl);
       const stat = readEntryStatSync(new URL(url));
       const type = statsToType(stat);
@@ -4638,50 +4695,18 @@ const registerDirectoryLifecycle = (
     handleEntryUpdated(entryInfo);
   };
   const handleEntryFound = (entryInfo, { notify = true } = {}) => {
-    infoMap.set(entryInfo.relativeUrl, entryInfo);
-    if (entryInfo.type === "directory") {
-      const directoryUrl = `${entryInfo.url}/`;
-      let entryNameArray;
-      try {
-        const directoryUrlObject = new URL(directoryUrl);
-        entryNameArray = readdirSync(directoryUrlObject);
-      } catch (e) {
-        if (
-          e.code === "ENOENT" ||
-          e.code === "EACCES" ||
-          e.code === "EPERM" ||
-          e.code === "ENOTDIR"
-        ) {
-          return;
-        }
-        throw e;
-      }
-      for (const entryName of entryNameArray) {
-        const childEntryUrl = new URL(entryName, directoryUrl).href;
-        const childEntryInfo = readEntryInfo(childEntryUrl);
-        if (childEntryInfo.type !== null && childEntryInfo.patternValue) {
-          handleEntryFound(childEntryInfo, { notify });
-        }
-      }
-      // we must watch manually every directory we find
-      if (!fsWatchSupportsRecursive) {
+    const seenSet = new Set();
+    const applyEntryDiscoveredEffects = (entryInfo) => {
+      seenSet.add(entryInfo.url);
+      infoMap.set(entryInfo.relativeUrl, entryInfo);
+      if (entryInfo.type === "directory") {
+        const directoryUrl = entryInfo.url.endsWith("/")
+          ? entryInfo.url
+          : `${entryInfo.url}/`;
+        let entryNameArray;
         try {
-          const watcher = createWatcher(urlToFileSystemPath(entryInfo.url), {
-            persistent: keepProcessAlive,
-          });
-          tracker.registerCleanupCallback(() => {
-            watcher.close();
-          });
-          watcher.on("change", (eventType, filename) => {
-            handleDirectoryEvent({
-              directoryRelativeUrl: entryInfo.relativeUrl,
-              filename: filename
-                ? // replace back slashes with slashes
-                  filename.replace(/\\/g, "/")
-                : "",
-              eventType,
-            });
-          });
+          const directoryUrlObject = new URL(directoryUrl);
+          entryNameArray = readdirSync(directoryUrlObject);
         } catch (e) {
           if (
             e.code === "ENOENT" ||
@@ -4693,16 +4718,59 @@ const registerDirectoryLifecycle = (
           }
           throw e;
         }
+        for (const entryName of entryNameArray) {
+          const childEntryUrl = new URL(entryName, directoryUrl).href;
+          if (seenSet.has(childEntryUrl)) {
+            continue;
+          }
+          const childEntryInfo = readEntryInfo(childEntryUrl);
+          if (childEntryInfo.type !== null && childEntryInfo.patternValue) {
+            applyEntryDiscoveredEffects(childEntryInfo);
+          }
+        }
+        // we must watch manually every directory we find
+        if (!fsWatchSupportsRecursive) {
+          try {
+            const watcher = createWatcher(urlToFileSystemPath$1(entryInfo.url), {
+              persistent: keepProcessAlive,
+            });
+            tracker.registerCleanupCallback(() => {
+              watcher.close();
+            });
+            watcher.on("change", (eventType, filename) => {
+              handleDirectoryEvent({
+                directoryRelativeUrl: entryInfo.relativeUrl,
+                filename: filename
+                  ? // replace back slashes with slashes
+                    filename.replace(/\\/g, "/")
+                  : "",
+                eventType,
+              });
+            });
+          } catch (e) {
+            if (
+              e.code === "ENOENT" ||
+              e.code === "EACCES" ||
+              e.code === "EPERM" ||
+              e.code === "ENOTDIR"
+            ) {
+              return;
+            }
+            throw e;
+          }
+        }
       }
-    }
-    if (added && entryInfo.patternValue && notify) {
-      added({
-        relativeUrl: entryInfo.relativeUrl,
-        type: entryInfo.type,
-        patternValue: entryInfo.patternValue,
-        mtime: entryInfo.stat.mtimeMs,
-      });
-    }
+      if (added && entryInfo.patternValue && notify) {
+        added({
+          relativeUrl: entryInfo.relativeUrl,
+          type: entryInfo.type,
+          patternValue: entryInfo.patternValue,
+          mtime: entryInfo.stat.mtimeMs,
+        });
+      }
+    };
+    applyEntryDiscoveredEffects(entryInfo);
+    seenSet.clear();
   };
   const handleEntryLost = (entryInfo) => {
     infoMap.delete(entryInfo.relativeUrl);
@@ -4728,16 +4796,9 @@ const registerDirectoryLifecycle = (
     }
   };
 
-  const entries = readdirSync(new URL(sourceUrl));
-  for (const entry of entries) {
-    const entryUrl = new URL(entry, sourceUrl).href;
-    const entryInfo = readEntryInfo(entryUrl);
-    if (entryInfo.type !== null && entryInfo.patternValue) {
-      handleEntryFound(entryInfo, {
-        notify: notifyExistent,
-      });
-    }
-  }
+  handleEntryFound(readEntryInfo(sourceUrl), {
+    notify: notifyExistent,
+  });
   if (debug) {
     const relativeUrls = Array.from(infoMap.keys());
     if (relativeUrls.length === 0) {
@@ -4749,7 +4810,7 @@ ${relativeUrls.join("\n")}`,
       );
     }
   }
-  const watcher = createWatcher(urlToFileSystemPath(sourceUrl), {
+  const watcher = createWatcher(urlToFileSystemPath$1(sourceUrl), {
     recursive: recursive && fsWatchSupportsRecursive,
     persistent: keepProcessAlive,
   });
@@ -4842,6 +4903,1004 @@ const bufferToEtag$1 = (buffer) => {
   return `"${length.toString(16)}-${hashBase64StringSubset}"`;
 };
 
+const createCallbackListNotifiedOnce = () => {
+  let callbacks = [];
+  let status = "waiting";
+  let currentCallbackIndex = -1;
+
+  const callbackListOnce = {};
+
+  const add = (callback) => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({ action: "add", status });
+      return removeNoop;
+    }
+
+    if (typeof callback !== "function") {
+      throw new Error(`callback must be a function, got ${callback}`);
+    }
+
+    // don't register twice
+    const existingCallback = callbacks.find((callbackCandidate) => {
+      return callbackCandidate === callback;
+    });
+    if (existingCallback) {
+      emitCallbackDuplicationWarning();
+      return removeNoop;
+    }
+
+    callbacks.push(callback);
+    return () => {
+      if (status === "notified") {
+        // once called removing does nothing
+        // as the callbacks array is frozen to null
+        return;
+      }
+
+      const index = callbacks.indexOf(callback);
+      if (index === -1) {
+        return;
+      }
+
+      if (status === "looping") {
+        if (index <= currentCallbackIndex) {
+          // The callback was already called (or is the current callback)
+          // We don't want to mutate the callbacks array
+          // or it would alter the looping done in "call" and the next callback
+          // would be skipped
+          return;
+        }
+
+        // Callback is part of the next callback to call,
+        // we mutate the callbacks array to prevent this callback to be called
+      }
+
+      callbacks.splice(index, 1);
+    };
+  };
+
+  const notify = (param) => {
+    if (status !== "waiting") {
+      emitUnexpectedActionWarning({ action: "call", status });
+      return [];
+    }
+    status = "looping";
+    const values = callbacks.map((callback, index) => {
+      currentCallbackIndex = index;
+      return callback(param);
+    });
+    callbackListOnce.notified = true;
+    status = "notified";
+    // we reset callbacks to null after looping
+    // so that it's possible to remove during the loop
+    callbacks = null;
+    currentCallbackIndex = -1;
+
+    return values;
+  };
+
+  callbackListOnce.notified = false;
+  callbackListOnce.add = add;
+  callbackListOnce.notify = notify;
+
+  return callbackListOnce;
+};
+
+const emitUnexpectedActionWarning = ({ action, status }) => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(
+      `"${action}" should not happen when callback list is ${status}`,
+      {
+        CODE: "UNEXPECTED_ACTION_ON_CALLBACK_LIST",
+        detail: `Code is potentially executed when it should not`,
+      },
+    );
+  } else {
+    console.warn(
+      `"${action}" should not happen when callback list is ${status}`,
+    );
+  }
+};
+
+const emitCallbackDuplicationWarning = () => {
+  if (typeof process.emitWarning === "function") {
+    process.emitWarning(`Trying to add a callback already in the list`, {
+      CODE: "CALLBACK_DUPLICATION",
+      detail: `Code is potentially executed more than it should`,
+    });
+  } else {
+    console.warn(`Trying to add same callback twice`);
+  }
+};
+
+const removeNoop = () => {};
+
+/*
+ * See callback_race.md
+ */
+
+const raceCallbacks = (raceDescription, winnerCallback) => {
+  let cleanCallbacks = [];
+  let status = "racing";
+
+  const clean = () => {
+    cleanCallbacks.forEach((clean) => {
+      clean();
+    });
+    cleanCallbacks = null;
+  };
+
+  const cancel = () => {
+    if (status !== "racing") {
+      return;
+    }
+    status = "cancelled";
+    clean();
+  };
+
+  Object.keys(raceDescription).forEach((candidateName) => {
+    const register = raceDescription[candidateName];
+    const returnValue = register((data) => {
+      if (status !== "racing") {
+        return;
+      }
+      status = "done";
+      clean();
+      winnerCallback({
+        name: candidateName,
+        data,
+      });
+    });
+    if (typeof returnValue === "function") {
+      cleanCallbacks.push(returnValue);
+    }
+  });
+
+  return cancel;
+};
+
+/*
+ * https://github.com/whatwg/dom/issues/920
+ */
+
+
+const Abort = {
+  isAbortError: (error) => {
+    return error && error.name === "AbortError";
+  },
+
+  startOperation: () => {
+    return createOperation();
+  },
+
+  throwIfAborted: (signal) => {
+    if (signal.aborted) {
+      const error = new Error(`The operation was aborted`);
+      error.name = "AbortError";
+      error.type = "aborted";
+      throw error;
+    }
+  },
+};
+
+const createOperation = () => {
+  const operationAbortController = new AbortController();
+  // const abortOperation = (value) => abortController.abort(value)
+  const operationSignal = operationAbortController.signal;
+
+  // abortCallbackList is used to ignore the max listeners warning from Node.js
+  // this warning is useful but becomes problematic when it's expect
+  // (a function doing 20 http call in parallel)
+  // To be 100% sure we don't have memory leak, only Abortable.asyncCallback
+  // uses abortCallbackList to know when something is aborted
+  const abortCallbackList = createCallbackListNotifiedOnce();
+  const endCallbackList = createCallbackListNotifiedOnce();
+
+  let isAbortAfterEnd = false;
+
+  operationSignal.onabort = () => {
+    operationSignal.onabort = null;
+
+    const allAbortCallbacksPromise = Promise.all(abortCallbackList.notify());
+    if (!isAbortAfterEnd) {
+      addEndCallback(async () => {
+        await allAbortCallbacksPromise;
+      });
+    }
+  };
+
+  const throwIfAborted = () => {
+    Abort.throwIfAborted(operationSignal);
+  };
+
+  // add a callback called on abort
+  // differences with signal.addEventListener('abort')
+  // - operation.end awaits the return value of this callback
+  // - It won't increase the count of listeners for "abort" that would
+  //   trigger max listeners warning when count > 10
+  const addAbortCallback = (callback) => {
+    // It would be painful and not super redable to check if signal is aborted
+    // before deciding if it's an abort or end callback
+    // with pseudo-code below where we want to stop server either
+    // on abort or when ended because signal is aborted
+    // operation[operation.signal.aborted ? 'addAbortCallback': 'addEndCallback'](async () => {
+    //   await server.stop()
+    // })
+    if (operationSignal.aborted) {
+      return addEndCallback(callback);
+    }
+    return abortCallbackList.add(callback);
+  };
+
+  const addEndCallback = (callback) => {
+    return endCallbackList.add(callback);
+  };
+
+  const end = async ({ abortAfterEnd = false } = {}) => {
+    await Promise.all(endCallbackList.notify());
+
+    // "abortAfterEnd" can be handy to ensure "abort" callbacks
+    // added with { once: true } are removed
+    // It might also help garbage collection because
+    // runtime implementing AbortSignal (Node.js, browsers) can consider abortSignal
+    // as settled and clean up things
+    if (abortAfterEnd) {
+      // because of operationSignal.onabort = null
+      // + abortCallbackList.clear() this won't re-call
+      // callbacks
+      if (!operationSignal.aborted) {
+        isAbortAfterEnd = true;
+        operationAbortController.abort();
+      }
+    }
+  };
+
+  const addAbortSignal = (
+    signal,
+    { onAbort = callbackNoop, onRemove = callbackNoop } = {},
+  ) => {
+    const applyAbortEffects = () => {
+      const onAbortCallback = onAbort;
+      onAbort = callbackNoop;
+      onAbortCallback();
+    };
+    const applyRemoveEffects = () => {
+      const onRemoveCallback = onRemove;
+      onRemove = callbackNoop;
+      onAbort = callbackNoop;
+      onRemoveCallback();
+    };
+
+    if (operationSignal.aborted) {
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    if (signal.aborted) {
+      operationAbortController.abort();
+      applyAbortEffects();
+      applyRemoveEffects();
+      return callbackNoop;
+    }
+
+    const cancelRace = raceCallbacks(
+      {
+        operation_abort: (cb) => {
+          return addAbortCallback(cb);
+        },
+        operation_end: (cb) => {
+          return addEndCallback(cb);
+        },
+        child_abort: (cb) => {
+          return addEventListener(signal, "abort", cb);
+        },
+      },
+      (winner) => {
+        const raceEffects = {
+          // Both "operation_abort" and "operation_end"
+          // means we don't care anymore if the child aborts.
+          // So we can:
+          // - remove "abort" event listener on child (done by raceCallback)
+          // - remove abort callback on operation (done by raceCallback)
+          // - remove end callback on operation (done by raceCallback)
+          // - call any custom cancel function
+          operation_abort: () => {
+            applyAbortEffects();
+            applyRemoveEffects();
+          },
+          operation_end: () => {
+            // Exists to
+            // - remove abort callback on operation
+            // - remove "abort" event listener on child
+            // - call any custom cancel function
+            applyRemoveEffects();
+          },
+          child_abort: () => {
+            applyAbortEffects();
+            operationAbortController.abort();
+          },
+        };
+        raceEffects[winner.name](winner.value);
+      },
+    );
+
+    return () => {
+      cancelRace();
+      applyRemoveEffects();
+    };
+  };
+
+  const addAbortSource = (abortSourceCallback) => {
+    const abortSource = {
+      cleaned: false,
+      signal: null,
+      remove: callbackNoop,
+    };
+    const abortSourceController = new AbortController();
+    const abortSourceSignal = abortSourceController.signal;
+    abortSource.signal = abortSourceSignal;
+    if (operationSignal.aborted) {
+      return abortSource;
+    }
+    const returnValue = abortSourceCallback((value) => {
+      abortSourceController.abort(value);
+    });
+    const removeAbortSignal = addAbortSignal(abortSourceSignal, {
+      onRemove: () => {
+        if (typeof returnValue === "function") {
+          returnValue();
+        }
+        abortSource.cleaned = true;
+      },
+    });
+    abortSource.remove = removeAbortSignal;
+    return abortSource;
+  };
+
+  const timeout = (ms) => {
+    return addAbortSource((abort) => {
+      const timeoutId = setTimeout(abort, ms);
+      // an abort source return value is called when:
+      // - operation is aborted (by an other source)
+      // - operation ends
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    });
+  };
+
+  const wait = (ms) => {
+    return new Promise((resolve) => {
+      const timeoutId = setTimeout(() => {
+        removeAbortCallback();
+        resolve();
+      }, ms);
+      const removeAbortCallback = addAbortCallback(() => {
+        clearTimeout(timeoutId);
+      });
+    });
+  };
+
+  const withSignal = async (asyncCallback) => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      },
+    });
+    try {
+      const value = await asyncCallback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const withSignalSync = (callback) => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    const removeAbortSignal = addAbortSignal(signal, {
+      onAbort: () => {
+        abortController.abort();
+      },
+    });
+    try {
+      const value = callback(signal);
+      removeAbortSignal();
+      return value;
+    } catch (e) {
+      removeAbortSignal();
+      throw e;
+    }
+  };
+
+  const fork = () => {
+    const forkedOperation = createOperation();
+    forkedOperation.addAbortSignal(operationSignal);
+    return forkedOperation;
+  };
+
+  return {
+    // We could almost hide the operationSignal
+    // But it can be handy for 2 things:
+    // - know if operation is aborted (operation.signal.aborted)
+    // - forward the operation.signal directly (not using "withSignal" or "withSignalSync")
+    signal: operationSignal,
+
+    throwIfAborted,
+    addAbortCallback,
+    addAbortSignal,
+    addAbortSource,
+    fork,
+    timeout,
+    wait,
+    withSignal,
+    withSignalSync,
+    addEndCallback,
+    end,
+  };
+};
+
+const callbackNoop = () => {};
+
+const addEventListener = (target, eventName, cb) => {
+  target.addEventListener(eventName, cb);
+  return () => {
+    target.removeEventListener(eventName, cb);
+  };
+};
+
+const raceProcessTeardownEvents = (processTeardownEvents, callback) => {
+  return raceCallbacks(
+    {
+      ...(processTeardownEvents.SIGHUP ? SIGHUP_CALLBACK : {}),
+      ...(processTeardownEvents.SIGTERM ? SIGTERM_CALLBACK : {}),
+      ...(processTeardownEvents.SIGINT ? SIGINT_CALLBACK : {}),
+      ...(processTeardownEvents.beforeExit ? BEFORE_EXIT_CALLBACK : {}),
+      ...(processTeardownEvents.exit ? EXIT_CALLBACK : {}),
+    },
+    callback,
+  );
+};
+
+const SIGHUP_CALLBACK = {
+  SIGHUP: (cb) => {
+    process.on("SIGHUP", cb);
+    return () => {
+      process.removeListener("SIGHUP", cb);
+    };
+  },
+};
+
+const SIGTERM_CALLBACK = {
+  SIGTERM: (cb) => {
+    process.on("SIGTERM", cb);
+    return () => {
+      process.removeListener("SIGTERM", cb);
+    };
+  },
+};
+
+const BEFORE_EXIT_CALLBACK = {
+  beforeExit: (cb) => {
+    process.on("beforeExit", cb);
+    return () => {
+      process.removeListener("beforeExit", cb);
+    };
+  },
+};
+
+const EXIT_CALLBACK = {
+  exit: (cb) => {
+    process.on("exit", cb);
+    return () => {
+      process.removeListener("exit", cb);
+    };
+  },
+};
+
+const SIGINT_CALLBACK = {
+  SIGINT: (cb) => {
+    process.on("SIGINT", cb);
+    return () => {
+      process.removeListener("SIGINT", cb);
+    };
+  },
+};
+
+const createDetailedMessage$1 = (message, details = {}) => {
+  let string = `${message}`;
+
+  Object.keys(details).forEach((key) => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
+  });
+
+  return string;
+};
+
+// From: https://github.com/sindresorhus/has-flag/blob/main/index.js
+/// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
+function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
+	const prefix = flag.startsWith('-') ? '' : (flag.length === 1 ? '-' : '--');
+	const position = argv.indexOf(prefix + flag);
+	const terminatorPosition = argv.indexOf('--');
+	return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+}
+
+const {env} = process$1;
+
+let flagForceColor;
+if (
+	hasFlag('no-color')
+	|| hasFlag('no-colors')
+	|| hasFlag('color=false')
+	|| hasFlag('color=never')
+) {
+	flagForceColor = 0;
+} else if (
+	hasFlag('color')
+	|| hasFlag('colors')
+	|| hasFlag('color=true')
+	|| hasFlag('color=always')
+) {
+	flagForceColor = 1;
+}
+
+function envForceColor() {
+	if (!('FORCE_COLOR' in env)) {
+		return;
+	}
+
+	if (env.FORCE_COLOR === 'true') {
+		return 1;
+	}
+
+	if (env.FORCE_COLOR === 'false') {
+		return 0;
+	}
+
+	if (env.FORCE_COLOR.length === 0) {
+		return 1;
+	}
+
+	const level = Math.min(Number.parseInt(env.FORCE_COLOR, 10), 3);
+
+	if (![0, 1, 2, 3].includes(level)) {
+		return;
+	}
+
+	return level;
+}
+
+function translateLevel(level) {
+	if (level === 0) {
+		return false;
+	}
+
+	return {
+		level,
+		hasBasic: true,
+		has256: level >= 2,
+		has16m: level >= 3,
+	};
+}
+
+function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
+	const noFlagForceColor = envForceColor();
+	if (noFlagForceColor !== undefined) {
+		flagForceColor = noFlagForceColor;
+	}
+
+	const forceColor = sniffFlags ? flagForceColor : noFlagForceColor;
+
+	if (forceColor === 0) {
+		return 0;
+	}
+
+	if (sniffFlags) {
+		if (hasFlag('color=16m')
+			|| hasFlag('color=full')
+			|| hasFlag('color=truecolor')) {
+			return 3;
+		}
+
+		if (hasFlag('color=256')) {
+			return 2;
+		}
+	}
+
+	// Check for Azure DevOps pipelines.
+	// Has to be above the `!streamIsTTY` check.
+	if ('TF_BUILD' in env && 'AGENT_NAME' in env) {
+		return 1;
+	}
+
+	if (haveStream && !streamIsTTY && forceColor === undefined) {
+		return 0;
+	}
+
+	const min = forceColor || 0;
+
+	if (env.TERM === 'dumb') {
+		return min;
+	}
+
+	if (process$1.platform === 'win32') {
+		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
+		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
+		const osRelease = os.release().split('.');
+		if (
+			Number(osRelease[0]) >= 10
+			&& Number(osRelease[2]) >= 10_586
+		) {
+			return Number(osRelease[2]) >= 14_931 ? 3 : 2;
+		}
+
+		return 1;
+	}
+
+	if ('CI' in env) {
+		if (['GITHUB_ACTIONS', 'GITEA_ACTIONS', 'CIRCLECI'].some(key => key in env)) {
+			return 3;
+		}
+
+		if (['TRAVIS', 'APPVEYOR', 'GITLAB_CI', 'BUILDKITE', 'DRONE'].some(sign => sign in env) || env.CI_NAME === 'codeship') {
+			return 1;
+		}
+
+		return min;
+	}
+
+	if ('TEAMCITY_VERSION' in env) {
+		return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+	}
+
+	if (env.COLORTERM === 'truecolor') {
+		return 3;
+	}
+
+	if (env.TERM === 'xterm-kitty') {
+		return 3;
+	}
+
+	if ('TERM_PROGRAM' in env) {
+		const version = Number.parseInt((env.TERM_PROGRAM_VERSION || '').split('.')[0], 10);
+
+		switch (env.TERM_PROGRAM) {
+			case 'iTerm.app': {
+				return version >= 3 ? 3 : 2;
+			}
+
+			case 'Apple_Terminal': {
+				return 2;
+			}
+			// No default
+		}
+	}
+
+	if (/-256(color)?$/i.test(env.TERM)) {
+		return 2;
+	}
+
+	if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+		return 1;
+	}
+
+	if ('COLORTERM' in env) {
+		return 1;
+	}
+
+	return min;
+}
+
+function createSupportsColor(stream, options = {}) {
+	const level = _supportsColor(stream, {
+		streamIsTTY: stream && stream.isTTY,
+		...options,
+	});
+
+	return translateLevel(level);
+}
+
+({
+	stdout: createSupportsColor({isTTY: tty.isatty(1)}),
+	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
+});
+
+// https://github.com/Marak/colors.js/blob/master/lib/styles.js
+// https://stackoverflow.com/a/75985833/2634179
+const RESET = "\x1b[0m";
+
+const createAnsi = ({ supported }) => {
+  const ANSI = {
+    supported,
+
+    RED: "\x1b[31m",
+    GREEN: "\x1b[32m",
+    YELLOW: "\x1b[33m",
+    BLUE: "\x1b[34m",
+    MAGENTA: "\x1b[35m",
+    CYAN: "\x1b[36m",
+    GREY: "\x1b[90m",
+    color: (text, color) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!color) {
+        return text;
+      }
+      if (typeof text === "string" && text.trim() === "") {
+        // cannot set color of blank chars
+        return text;
+      }
+      return `${color}${text}${RESET}`;
+    },
+
+    BOLD: "\x1b[1m",
+    UNDERLINE: "\x1b[4m",
+    STRIKE: "\x1b[9m",
+    effect: (text, effect) => {
+      if (!ANSI.supported) {
+        return text;
+      }
+      if (!effect) {
+        return text;
+      }
+      // cannot add effect to empty string
+      if (text === "") {
+        return text;
+      }
+      return `${effect}${text}${RESET}`;
+    },
+  };
+
+  return ANSI;
+};
+
+const processSupportsBasicColor = createSupportsColor(process.stdout).hasBasic;
+
+const ANSI = createAnsi({
+  supported:
+    process.env.FORCE_COLOR === "1" ||
+    processSupportsBasicColor ||
+    // GitHub workflow does support ANSI but "supports-color" returns false
+    // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
+    process.env.GITHUB_WORKFLOW,
+});
+
+function isUnicodeSupported() {
+	const {env} = process$1;
+	const {TERM, TERM_PROGRAM} = env;
+
+	if (process$1.platform !== 'win32') {
+		return TERM !== 'linux'; // Linux console (kernel)
+	}
+
+	return Boolean(env.WT_SESSION) // Windows Terminal
+		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+		|| TERM_PROGRAM === 'Terminus-Sublime'
+		|| TERM_PROGRAM === 'vscode'
+		|| TERM === 'xterm-256color'
+		|| TERM === 'alacritty'
+		|| TERM === 'rxvt-unicode'
+		|| TERM === 'rxvt-unicode-256color'
+		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
+
+// see also https://github.com/sindresorhus/figures
+
+const createUnicode = ({ supported, ANSI }) => {
+  const UNICODE = {
+    supported,
+    get COMMAND_RAW() {
+      return UNICODE.supported ? `❯` : `>`;
+    },
+    get OK_RAW() {
+      return UNICODE.supported ? `✔` : `√`;
+    },
+    get FAILURE_RAW() {
+      return UNICODE.supported ? `✖` : `×`;
+    },
+    get DEBUG_RAW() {
+      return UNICODE.supported ? `◆` : `♦`;
+    },
+    get INFO_RAW() {
+      return UNICODE.supported ? `ℹ` : `i`;
+    },
+    get WARNING_RAW() {
+      return UNICODE.supported ? `⚠` : `‼`;
+    },
+    get CIRCLE_CROSS_RAW() {
+      return UNICODE.supported ? `ⓧ` : `(×)`;
+    },
+    get CIRCLE_DOTTED_RAW() {
+      return UNICODE.supported ? `◌` : `*`;
+    },
+    get COMMAND() {
+      return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
+    },
+    get OK() {
+      return ANSI.color(UNICODE.OK_RAW, ANSI.GREEN);
+    },
+    get FAILURE() {
+      return ANSI.color(UNICODE.FAILURE_RAW, ANSI.RED);
+    },
+    get DEBUG() {
+      return ANSI.color(UNICODE.DEBUG_RAW, ANSI.GREY);
+    },
+    get INFO() {
+      return ANSI.color(UNICODE.INFO_RAW, ANSI.BLUE);
+    },
+    get WARNING() {
+      return ANSI.color(UNICODE.WARNING_RAW, ANSI.YELLOW);
+    },
+    get CIRCLE_CROSS() {
+      return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
+    },
+    get ELLIPSIS() {
+      return UNICODE.supported ? `…` : `...`;
+    },
+  };
+  return UNICODE;
+};
+
+createUnicode({
+  supported: process.env.FORCE_UNICODE === "1" || isUnicodeSupported(),
+  ANSI,
+});
+
+const LOG_LEVEL_OFF = "off";
+
+const LOG_LEVEL_DEBUG = "debug";
+
+const LOG_LEVEL_INFO = "info";
+
+const LOG_LEVEL_WARN = "warn";
+
+const LOG_LEVEL_ERROR = "error";
+
+const createLogger = ({ logLevel = LOG_LEVEL_INFO } = {}) => {
+  if (logLevel === LOG_LEVEL_DEBUG) {
+    return {
+      level: "debug",
+      levels: { debug: true, info: true, warn: true, error: true },
+      debug,
+      info,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_INFO) {
+    return {
+      level: "info",
+      levels: { debug: false, info: true, warn: true, error: true },
+      debug: debugDisabled,
+      info,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_WARN) {
+    return {
+      level: "warn",
+      levels: { debug: false, info: false, warn: true, error: true },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_ERROR) {
+    return {
+      level: "error",
+      levels: { debug: false, info: false, warn: false, error: true },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error,
+    };
+  }
+  if (logLevel === LOG_LEVEL_OFF) {
+    return {
+      level: "off",
+      levels: { debug: false, info: false, warn: false, error: false },
+      debug: debugDisabled,
+      info: infoDisabled,
+      warn: warnDisabled,
+      error: errorDisabled,
+    };
+  }
+  throw new Error(`unexpected logLevel.
+--- logLevel ---
+${logLevel}
+--- allowed log levels ---
+${LOG_LEVEL_OFF}
+${LOG_LEVEL_ERROR}
+${LOG_LEVEL_WARN}
+${LOG_LEVEL_INFO}
+${LOG_LEVEL_DEBUG}`);
+};
+
+const debug = (...args) => console.debug(...args);
+
+const debugDisabled = () => {};
+
+const info = (...args) => console.info(...args);
+
+const infoDisabled = () => {};
+
+const warn = (...args) => console.warn(...args);
+
+const warnDisabled = () => {};
+
+const error = (...args) => console.error(...args);
+
+const errorDisabled = () => {};
+
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+
+globalThis.process?.versions?.node !== undefined;
+
+globalThis.process?.versions?.bun !== undefined;
+
+globalThis.Deno?.version?.deno !== undefined;
+
+globalThis.process?.versions?.electron !== undefined;
+
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+
+platform === 'macOS'
+	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
+	|| globalThis.process?.platform === 'darwin';
+
+platform === 'Windows'
+	|| globalThis.navigator?.platform === 'Win32'
+	|| globalThis.process?.platform === 'win32';
+
+platform === 'Linux'
+	|| globalThis.navigator?.platform?.startsWith('Linux') === true
+	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
+	|| globalThis.process?.platform === 'linux';
+
+platform === 'Android'
+	|| globalThis.navigator?.platform === 'Android'
+	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
+	|| globalThis.process?.platform === 'android';
+
+!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+!isBrowser && process$1.platform === 'win32';
+
+isBrowser ? () => {
+	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
+
 const memoize = (compute) => {
   let memoized = false;
   let memoizedValue;
@@ -4866,6 +5925,266 @@ const memoize = (compute) => {
 
   return fnWithMemoization;
 };
+
+const mediaTypeInfos = {
+  "application/json": {
+    extensions: ["json", "map"],
+    isTextual: true,
+  },
+  "application/importmap+json": {
+    extensions: ["importmap"],
+    isTextual: true,
+  },
+  "application/manifest+json": {
+    extensions: ["webmanifest"],
+    isTextual: true,
+  },
+  "application/octet-stream": {},
+  "application/pdf": {
+    extensions: ["pdf"],
+  },
+  "application/xml": {
+    extensions: ["xml"],
+    isTextual: true,
+  },
+  "application/x-gzip": {
+    extensions: ["gz"],
+  },
+  "application/yaml": {
+    extensions: ["yml", "yaml"],
+    isTextual: true,
+  },
+  "application/wasm": {
+    extensions: ["wasm"],
+  },
+  "application/zip": {
+    extensions: ["zip"],
+  },
+  "audio/basic": {
+    extensions: ["au", "snd"],
+  },
+  "audio/mpeg": {
+    extensions: ["mpga", "mp2", "mp2a", "mp3", "m2a", "m3a"],
+  },
+  "audio/midi": {
+    extensions: ["midi", "mid", "kar", "rmi"],
+  },
+  "audio/mp4": {
+    extensions: ["m4a", "mp4a"],
+  },
+  "audio/ogg": {
+    extensions: ["oga", "ogg", "spx"],
+  },
+  "audio/webm": {
+    extensions: ["weba"],
+  },
+  "audio/x-wav": {
+    extensions: ["wav"],
+  },
+  "font/ttf": {
+    extensions: ["ttf"],
+  },
+  "font/woff": {
+    extensions: ["woff"],
+  },
+  "font/woff2": {
+    extensions: ["woff2"],
+  },
+  "image/png": {
+    extensions: ["png"],
+  },
+  "image/gif": {
+    extensions: ["gif"],
+  },
+  "image/jpeg": {
+    extensions: ["jpg"],
+  },
+  "image/svg+xml": {
+    extensions: ["svg", "svgz"],
+    isTextual: true,
+  },
+  "text/plain": {
+    extensions: ["txt"],
+    isTextual: true,
+  },
+  "text/html": {
+    extensions: ["html"],
+    isTextual: true,
+  },
+  "text/css": {
+    extensions: ["css"],
+    isTextual: true,
+  },
+  "text/javascript": {
+    extensions: ["js", "cjs", "mjs", "ts", "jsx", "tsx"],
+    isTextual: true,
+  },
+  "text/markdown": {
+    extensions: ["md", "mdx"],
+    isTextual: true,
+  },
+  "text/x-sass": {
+    extensions: ["sass"],
+    isTextual: true,
+  },
+  "text/x-scss": {
+    extensions: ["scss"],
+    isTextual: true,
+  },
+  "text/cache-manifest": {
+    extensions: ["appcache"],
+  },
+  "video/mp4": {
+    extensions: ["mp4", "mp4v", "mpg4"],
+  },
+  "video/mpeg": {
+    extensions: ["mpeg", "mpg", "mpe", "m1v", "m2v"],
+  },
+  "video/ogg": {
+    extensions: ["ogv"],
+  },
+  "video/webm": {
+    extensions: ["webm"],
+  },
+};
+
+const CONTENT_TYPE = {
+  parse: (string) => {
+    const [mediaType, charset] = string.split(";");
+    return { mediaType: normalizeMediaType(mediaType), charset };
+  },
+
+  stringify: ({ mediaType, charset }) => {
+    if (charset) {
+      return `${mediaType};${charset}`;
+    }
+    return mediaType;
+  },
+
+  asMediaType: (value) => {
+    if (typeof value === "string") {
+      return CONTENT_TYPE.parse(value).mediaType;
+    }
+    if (typeof value === "object") {
+      return value.mediaType;
+    }
+    return null;
+  },
+
+  isJson: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    return (
+      mediaType === "application/json" ||
+      /^application\/\w+\+json$/.test(mediaType)
+    );
+  },
+
+  isTextual: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    if (mediaType.startsWith("text/")) {
+      return true;
+    }
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    if (mediaTypeInfo && mediaTypeInfo.isTextual) {
+      return true;
+    }
+    // catch things like application/manifest+json, application/importmap+json
+    if (/^application\/\w+\+json$/.test(mediaType)) {
+      return true;
+    }
+    return false;
+  },
+
+  isBinary: (value) => !CONTENT_TYPE.isTextual(value),
+
+  asFileExtension: (value) => {
+    const mediaType = CONTENT_TYPE.asMediaType(value);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+
+  fromExtension: (extension) => {
+    if (extension[0] === ".") {
+      extension = extension.slice(1);
+    }
+    for (const mediaTypeCandidate of Object.keys(mediaTypeInfos)) {
+      const mediaTypeCandidateInfo = mediaTypeInfos[mediaTypeCandidate];
+      if (
+        mediaTypeCandidateInfo.extensions &&
+        mediaTypeCandidateInfo.extensions.includes(extension)
+      ) {
+        return mediaTypeCandidate;
+      }
+    }
+    return "application/octet-stream";
+  },
+
+  fromUrlExtension: (url) => {
+    const { pathname } = new URL(url);
+    const extensionWithDot = extname(pathname);
+    if (!extensionWithDot || extensionWithDot === ".") {
+      return "application/octet-stream";
+    }
+    const extension = extensionWithDot.slice(1);
+    return CONTENT_TYPE.fromExtension(extension);
+  },
+
+  toUrlExtension: (contentType) => {
+    const mediaType = CONTENT_TYPE.asMediaType(contentType);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
+  },
+};
+
+const normalizeMediaType = (value) => {
+  if (value === "application/javascript") {
+    return "text/javascript";
+  }
+  return value;
+};
+
+// https://github.com/Marak/colors.js/blob/b63ef88e521b42920a9e908848de340b31e68c9d/lib/styles.js#L29
+
+const close = "\x1b[0m";
+const red = "\x1b[31m";
+const green = "\x1b[32m";
+const yellow = "\x1b[33m";
+// const blue = "\x1b[34m"
+const magenta = "\x1b[35m";
+const cyan = "\x1b[36m";
+// const white = "\x1b[37m"
+
+const websocketSuffixColorized = `{ upgrade: ${magenta}websocket${close} }`;
+
+const colorizeResponseStatus = (status) => {
+  const statusType = statusToType(status);
+  if (statusType === "information") return `${cyan}${status}${close}`;
+  if (statusType === "success") return `${green}${status}${close}`;
+  if (statusType === "redirection") return `${magenta}${status}${close}`;
+  if (statusType === "client_error") return `${yellow}${status}${close}`;
+  if (statusType === "server_error") return `${red}${status}${close}`;
+  return status;
+};
+
+// https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+const statusToType = (status) => {
+  if (statusIsInformation(status)) return "information";
+  if (statusIsSuccess(status)) return "success";
+  if (statusIsRedirection(status)) return "redirection";
+  if (statusIsClientError(status)) return "client_error";
+  if (statusIsServerError(status)) return "server_error";
+  return "unknown";
+};
+
+const statusIsInformation = (status) => status >= 100 && status < 200;
+
+const statusIsSuccess = (status) => status >= 200 && status < 300;
+
+const statusIsRedirection = (status) => status >= 300 && status < 400;
+
+const statusIsClientError = (status) => status >= 400 && status < 500;
+
+const statusIsServerError = (status) => status >= 500 && status < 600;
 
 const normalizeHeaderName = (headerName) => {
   headerName = String(headerName);
@@ -4902,6 +6221,152 @@ const headersFromObject = (headersObject) => {
   return headers;
 };
 
+/**
+
+ A multiple header is a header with multiple values like
+
+ "text/plain, application/json;q=0.1"
+
+ Each, means it's a new value (it's optionally followed by a space)
+
+ Each; mean it's a property followed by =
+ if "" is a string
+ if not it's likely a number
+ */
+
+const parseMultipleHeader = (
+  multipleHeaderString,
+  { validateName = () => true, validateProperty = () => true } = {},
+) => {
+  const values = multipleHeaderString.split(",");
+  const multipleHeader = {};
+  values.forEach((value) => {
+    const valueTrimmed = value.trim();
+    const valueParts = valueTrimmed.split(";");
+    const name = valueParts[0];
+    const nameValidation = validateName(name);
+    if (!nameValidation) {
+      return;
+    }
+    const afterName = valueParts.slice(1);
+    const properties = parseHeaderProperties(afterName, { validateProperty });
+    multipleHeader[name] = properties;
+  });
+  return multipleHeader;
+};
+
+const parseSingleHeaderWithAttributes = (
+  string,
+  { validateAttribute = () => true } = {},
+) => {
+  const props = {};
+  const attributes = string.split(";");
+  for (const attr of attributes) {
+    let [name, value] = attr.split("=");
+    name = name.trim();
+    value = value.trim();
+    if (validateAttribute({ name, value })) {
+      props[name] = value;
+    }
+  }
+  return props;
+};
+
+const parseHeaderProperties = (headerProperties, { validateProperty }) => {
+  const properties = {};
+  for (const propertySource of headerProperties) {
+    const [propertyName, propertyValueString] = propertySource
+      .trim()
+      .split("=");
+    const propertyValue = parseHeaderPropertyValue(propertyValueString);
+    const property = { name: propertyName, value: propertyValue };
+    const propertyValidation = validateProperty(property);
+    if (!propertyValidation) {
+      continue;
+    }
+    properties[propertyName] = propertyValue;
+  }
+  return properties;
+};
+
+const parseHeaderPropertyValue = (headerPropertyValueString) => {
+  const firstChar = headerPropertyValueString[0];
+  const lastChar =
+    headerPropertyValueString[headerPropertyValueString.length - 1];
+  if (firstChar === '"' && lastChar === '"') {
+    return headerPropertyValueString.slice(1, -1);
+  }
+  if (isNaN(headerPropertyValueString)) {
+    return headerPropertyValueString;
+  }
+  return parseFloat(headerPropertyValueString);
+};
+
+const stringifyMultipleHeader = (
+  multipleHeader,
+  { validateName = () => true, validateProperty = () => true } = {},
+) => {
+  return Object.keys(multipleHeader)
+    .filter((name) => {
+      const headerProperties = multipleHeader[name];
+      if (!headerProperties) {
+        return false;
+      }
+      if (typeof headerProperties !== "object") {
+        return false;
+      }
+      const nameValidation = validateName(name);
+      if (!nameValidation) {
+        return false;
+      }
+      return true;
+    })
+    .map((name) => {
+      const headerProperties = multipleHeader[name];
+      const headerPropertiesString = stringifyHeaderProperties(
+        headerProperties,
+        {
+          validateProperty,
+        },
+      );
+      if (headerPropertiesString.length) {
+        return `${name};${headerPropertiesString}`;
+      }
+      return name;
+    })
+    .join(", ");
+};
+
+const stringifyHeaderProperties = (headerProperties, { validateProperty }) => {
+  const headerPropertiesString = Object.keys(headerProperties)
+    .map((name) => {
+      const property = {
+        name,
+        value: headerProperties[name],
+      };
+      return property;
+    })
+    .filter((property) => {
+      const propertyValidation = validateProperty(property);
+      if (!propertyValidation) {
+        return false;
+      }
+      return true;
+    })
+    .map(stringifyHeaderProperty)
+    .join(";");
+  return headerPropertiesString;
+};
+
+const stringifyHeaderProperty = ({ name, value }) => {
+  if (typeof value === "string") {
+    return `${name}="${value}"`;
+  }
+  return `${name}=${value}`;
+};
+
+// https://wicg.github.io/observable/#core-infrastructure
+
 if ("observable" in Symbol === false) {
   Symbol.observable = Symbol.for("observable");
 }
@@ -4913,40 +6378,73 @@ const createObservable = (producer) => {
 
   const observable = {
     [Symbol.observable]: () => observable,
-    subscribe: ({
-      next = () => {},
-      error = (value) => {
-        throw value;
+    subscribe: (
+      {
+        next = () => {},
+        error = (value) => {
+          throw value;
+        },
+        complete = () => {},
       },
-      complete = () => {},
-    }) => {
+      { signal = new AbortController().signal } = {},
+    ) => {
       let cleanup = () => {};
       const subscription = {
-        closed: false,
+        active: true,
+        signal,
         unsubscribe: () => {
           subscription.closed = true;
           cleanup();
         },
       };
 
+      const teardownCallbackList = [];
+      const close = () => {
+        subscription.active = false;
+        let i = teardownCallbackList.length;
+        while (i--) {
+          teardownCallbackList[i]();
+        }
+        teardownCallbackList.length = 0;
+      };
+
+      signal.addEventListener("abort", () => {
+        close();
+      });
+
       const producerReturnValue = producer({
         next: (value) => {
-          if (subscription.closed) return;
+          if (!subscription.active) {
+            return;
+          }
           next(value);
         },
         error: (value) => {
-          if (subscription.closed) return;
+          if (!subscription.active) {
+            return;
+          }
           error(value);
+          close();
         },
         complete: () => {
-          if (subscription.closed) return;
+          if (!subscription.active) {
+            return;
+          }
           complete();
+          close();
+        },
+        addTeardown: (teardownCallback) => {
+          if (!subscription.active) {
+            teardownCallback();
+            return;
+          }
+          teardownCallbackList.push(teardownCallback);
         },
       });
       if (typeof producerReturnValue === "function") {
         cleanup = producerReturnValue;
       }
-      return subscription;
+      return undefined;
     },
   };
 
@@ -4965,78 +6463,59 @@ const isObservable = (value) => {
   return false;
 };
 
-const observableFromValue = (value) => {
-  if (isObservable(value)) {
-    return value;
-  }
-
-  return createObservable(({ next, complete }) => {
-    next(value);
-    const timer = setTimeout(() => {
-      complete();
-    });
-    return () => {
-      clearTimeout(timer);
-    };
-  });
-};
-
 // https://github.com/jamestalmage/stream-to-observable/blob/master/index.js
 
 const observableFromNodeStream = (
   nodeStream,
-  {
-    readableStreamLifetime = 120_000, // 2s
-  } = {},
+  { readableLifetime } = {},
 ) => {
-  const observable = createObservable(({ next, error, complete }) => {
-    if (nodeStream.isPaused()) {
-      nodeStream.resume();
-    } else if (nodeStream.complete) {
-      complete();
-      return null;
-    }
-    const cleanup = () => {
-      nodeStream.removeListener("data", next);
-      nodeStream.removeListener("error", error);
-      nodeStream.removeListener("end", complete);
-      nodeStream.removeListener("close", cleanup);
-      nodeStream.destroy();
-    };
-    // should we do nodeStream.resume() in case the stream was paused ?
-    nodeStream.once("error", error);
-    nodeStream.on("data", (data) => {
-      next(data);
-    });
-    nodeStream.once("close", () => {
-      cleanup();
-    });
-    nodeStream.once("end", () => {
-      complete();
-    });
-    return cleanup;
-  });
+  const observable = createObservable(
+    ({ next, error, complete, addTeardown }) => {
+      const errorEventCallback = (e) => {
+        error(e);
+      };
+      const dataEventCallback = (data) => {
+        next(data);
+      };
+      const closeEventCallback = () => {
+        complete();
+      };
+      const endEventCallback = () => {
+        complete();
+      };
+      nodeStream.once("error", errorEventCallback);
+      nodeStream.on("data", dataEventCallback);
+      nodeStream.once("end", endEventCallback);
+      nodeStream.once("close", closeEventCallback); // not sure it's required
+      addTeardown(() => {
+        nodeStream.removeListener("error", errorEventCallback);
+        nodeStream.removeListener("data", dataEventCallback);
+        nodeStream.removeListener("end", endEventCallback);
+        nodeStream.removeListener("close", closeEventCallback); // not sure it's required
+      });
+      if (nodeStream.isPaused()) {
+        nodeStream.resume();
+      } else if (nodeStream.complete) {
+        complete();
+      }
+    },
+  );
 
-  if (nodeStream instanceof Readable) {
-    // safe measure, ensure the readable stream gets
-    // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
+  if (readableLifetime && nodeStream instanceof Readable) {
     const timeout = setTimeout(() => {
       process.emitWarning(
-        `Readable stream not used after ${
-          readableStreamLifetime / 1000
-        } seconds. It will be destroyed to release resources`,
+        `Readable stream not used after ${readableLifetime / 1000} seconds.`,
         {
           CODE: "READABLE_STREAM_TIMEOUT",
           // url is for http client request
           detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`,
         },
       );
-      nodeStream.destroy();
-    }, readableStreamLifetime);
-    observable.timeout = timeout;
+    }, readableLifetime).unref();
     onceReadableStreamUsedOrClosed(nodeStream, () => {
       clearTimeout(timeout);
     });
+    observable.timeout = timeout;
   }
 
   return observable;
@@ -5054,8 +6533,29 @@ const onceReadableStreamUsedOrClosed = (readableStream, callback) => {
 
 const fromNodeRequest = (
   nodeRequest,
-  { serverOrigin, signal, requestBodyLifetime },
+  { serverOrigin, signal, requestBodyLifetime, logger, nagle },
 ) => {
+  const requestLogger = createRequestLogger(nodeRequest, (type, value) => {
+    const logFunction = logger[type];
+    logFunction(value);
+  });
+  nodeRequest.on("error", (error) => {
+    if (error.message === "aborted") {
+      requestLogger.debug(
+        createDetailedMessage$1(`request aborted by client`, {
+          "error message": error.message,
+        }),
+      );
+    } else {
+      // I'm not sure this can happen but it's here in case
+      requestLogger.error(
+        createDetailedMessage$1(`"error" event emitted on request`, {
+          "error stack": error.stack,
+        }),
+      );
+    }
+  });
+
   const handleRequestOperation = Abort.startOperation();
   if (signal) {
     handleRequestOperation.addAbortSignal(signal);
@@ -5068,8 +6568,15 @@ const fromNodeRequest = (
   });
 
   const headers = headersFromObject(nodeRequest.headers);
+  // pause the request body stream to let a chance for other parts of the code to subscribe to the stream
+  // Without this the request body readable stream
+  // might be closed when we'll try to attach "data" and "end" listeners to it
+  nodeRequest.pause();
+  if (!nagle) {
+    nodeRequest.connection.setNoDelay(true);
+  }
   const body = observableFromNodeStream(nodeRequest, {
-    readableStreamLifetime: requestBodyLifetime,
+    readableLifetime: requestBodyLifetime,
   });
 
   let requestOrigin;
@@ -5087,7 +6594,108 @@ const fromNodeRequest = (
     requestOrigin = serverOrigin;
   }
 
+  // check the following parsers if we want to support more request body content types
+  // https://github.com/node-formidable/formidable/tree/master/src/parsers
+  const buffer = async () => {
+    // here we don't really need to warn, one might want to read anything as binary
+    // const contentType = headers["content-type"];
+    // if (!CONTENT_TYPE.isBinary(contentType)) {
+    //   console.warn(
+    //     `buffer() called on a request with content-type: "${contentType}". A binary content-type was expected.`,
+    //   );
+    // }
+    const requestBodyBuffer = await readBody(body, { as: "buffer" });
+    return requestBodyBuffer;
+  };
+  // maybe we could use https://github.com/form-data/form-data
+  // for now we'll just return { fields, files } it's good enough to work with
+  const formData = async () => {
+    const contentType = headers["content-type"];
+    if (contentType !== "multipart/form-data") {
+      console.warn(
+        `formData() called on a request with content-type: "${contentType}". multipart/form-data was expected.`,
+      );
+    }
+    const { formidable } = await import("formidable");
+    const form = formidable({});
+    nodeRequest.resume(); // was paused in line #53
+    const [fields, files] = await form.parse(nodeRequest);
+    const requestBodyFormData = { fields, files };
+    return requestBodyFormData;
+  };
+  const text = async () => {
+    const contentType = headers["content-type"];
+    if (!CONTENT_TYPE.isTextual(contentType)) {
+      console.warn(
+        `text() called on a request with content-type "${contentType}". A textual content-type was expected.`,
+      );
+    }
+    const requestBodyString = await readBody(body, { as: "string" });
+    return requestBodyString;
+  };
+  const json = async () => {
+    const contentType = headers["content-type"];
+    if (!CONTENT_TYPE.isJson(contentType)) {
+      console.warn(
+        `json() called on a request with content-type "${contentType}". A json content-type was expected.`,
+      );
+    }
+    const requestBodyString = await readBody(body, { as: "string" });
+    const requestBodyJSON = JSON.parse(requestBodyString);
+    return requestBodyJSON;
+  };
+  const queryString = async () => {
+    const contentType = headers["content-type"];
+    if (contentType !== "application/x-www-form-urlencoded") {
+      console.warn(
+        `queryString() called on a request with content-type "${contentType}". application/x-www-form-urlencoded was expected.`,
+      );
+    }
+    const requestBodyString = await readBody(body, { as: "string" });
+    const requestBodyQueryStringParsed = parse(requestBodyString);
+    return requestBodyQueryStringParsed;
+  };
+
+  // request.ip          -> request ip as received by the server
+  // request.ipForwarded -> ip of the client before proxying, undefined when there is no proxy
+  // same applies on request.proto and request.host
+  let ip = nodeRequest.socket.remoteAddress;
+  let proto = requestOrigin.startsWith("http:") ? "http" : "https";
+  let host = headers["host"];
+  const forwarded = headers["forwarded"];
+  let hostForwarded;
+  let ipForwarded;
+  let protoForwarded;
+  if (forwarded) {
+    const forwardedParsed = parseSingleHeaderWithAttributes(forwarded);
+    ipForwarded = forwardedParsed.for;
+    protoForwarded = forwardedParsed.proto;
+    hostForwarded = forwardedParsed.host;
+  } else {
+    const forwardedFor = headers["x-forwarded-for"];
+    const forwardedProto = headers["x-forwarded-proto"];
+    const forwardedHost = headers["x-forwarded-host"];
+    if (forwardedFor) {
+      // format is <client-ip>, <proxy1>, <proxy2>
+      ipForwarded = forwardedFor.split(",")[0];
+    }
+    if (forwardedProto) {
+      protoForwarded = forwardedProto;
+    }
+    if (forwardedHost) {
+      hostForwarded = forwardedHost;
+    }
+  }
+
   return Object.freeze({
+    logger: requestLogger,
+    ip,
+    ipForwarded,
+    proto,
+    protoForwarded,
+    host,
+    hostForwarded,
+    params: {},
     signal: handleRequestOperation.signal,
     http2: Boolean(nodeRequest.stream),
     origin: requestOrigin,
@@ -5098,7 +6706,184 @@ const fromNodeRequest = (
     method: nodeRequest.method,
     headers,
     body,
-    __nodeRequest: nodeRequest,
+    buffer,
+    formData,
+    text,
+    json,
+    queryString,
+  });
+};
+
+const createRequestLogger = (nodeRequest, write) => {
+  // Handling request is asynchronous, we buffer logs for that request
+  // until we know what happens with that request
+  // It delays logs until we know of the request will be handled
+  // but it's mandatory to make logs readable.
+
+  const logArray = [];
+  const childArray = [];
+  const add = ({ type, value }) => {
+    logArray.push({ type, value });
+  };
+
+  const requestLogger = {
+    logArray,
+    childArray,
+    hasPushChild: false,
+    forPush: () => {
+      const childLogBuffer = createRequestLogger(nodeRequest, write);
+      childLogBuffer.isChild = true;
+      childArray.push(childLogBuffer);
+      requestLogger.hasPushChild = true;
+      return childLogBuffer;
+    },
+    debug: (value) => {
+      add({
+        type: "debug",
+        value,
+      });
+    },
+    info: (value) => {
+      add({
+        type: "info",
+        value,
+      });
+    },
+    warn: (value) => {
+      add({
+        type: "warn",
+        value,
+      });
+    },
+    error: (value) => {
+      add({
+        type: "error",
+        value,
+      });
+    },
+    onHeadersSent: ({ status, statusText }) => {
+      const statusType = statusToType(status);
+      let message = `${colorizeResponseStatus(status)}`;
+      if (statusText) {
+        message += ` ${statusText}`;
+      }
+      add({
+        type:
+          status === 404 && nodeRequest.path === "/favicon.ico"
+            ? "debug"
+            : {
+                information: "info",
+                success: "info",
+                redirection: "info",
+                client_error: "warn",
+                server_error: "error",
+              }[statusType] || "error",
+        value: message,
+      });
+    },
+    ended: false,
+    end: () => {
+      if (requestLogger.ended) {
+        return;
+      }
+      requestLogger.ended = true;
+      if (requestLogger.isChild) {
+        // keep buffering until root request write logs for everyone
+        return;
+      }
+      const prefixLines = (string, prefix) => {
+        return string.replace(/^(?!\s*$)/gm, prefix);
+      };
+      const writeLog = (
+        { type, value },
+        { someLogIsError, someLogIsWarn, depth },
+      ) => {
+        if (depth > 0) {
+          value = prefixLines(value, "  ".repeat(depth));
+        }
+        if (type === "info") {
+          if (someLogIsError) {
+            type = "error";
+          } else if (someLogIsWarn) {
+            type = "warn";
+          }
+        }
+        write(type, value);
+      };
+      const writeLogs = (loggerToWrite, depth) => {
+        let someLogIsError = false;
+        let someLogIsWarn = false;
+        for (const log of loggerToWrite.logArray) {
+          if (log.type === "error") {
+            someLogIsError = true;
+          }
+          if (log.type === "warn") {
+            someLogIsWarn = true;
+          }
+        }
+        const firstLog = loggerToWrite.logArray.shift();
+        const lastLog = loggerToWrite.logArray.pop();
+        const middleLogs = loggerToWrite.logArray;
+        if (!firstLog) {
+          debugger;
+        }
+        writeLog(firstLog, {
+          someLogIsError,
+          someLogIsWarn,
+          depth,
+        });
+        for (const middleLog of middleLogs) {
+          writeLog(middleLog, {
+            someLogIsError,
+            someLogIsWarn,
+            depth,
+          });
+        }
+        for (const childLoggerToWrite of loggerToWrite.childArray) {
+          writeLogs(childLoggerToWrite, depth + 1);
+        }
+        if (lastLog) {
+          writeLog(lastLog, {
+            someLogIsError,
+            someLogIsWarn,
+            depth: depth + 1,
+          });
+        }
+      };
+      writeLogs(requestLogger, 0);
+    },
+  };
+
+  return requestLogger;
+};
+
+const readBody = (body, { as }) => {
+  return new Promise((resolve, reject) => {
+    const bufferArray = [];
+    body.subscribe({
+      error: reject,
+      next: (buffer) => {
+        bufferArray.push(buffer);
+      },
+      complete: () => {
+        const bodyAsBuffer = Buffer.concat(bufferArray);
+        if (as === "buffer") {
+          resolve(bodyAsBuffer);
+          return;
+        }
+        if (as === "string") {
+          const bodyAsString = bodyAsBuffer.toString();
+          resolve(bodyAsString);
+          return;
+        }
+        if (as === "json") {
+          const bodyAsString = bodyAsBuffer.toString();
+          const bodyAsJSON = JSON.parse(bodyAsString);
+          resolve(bodyAsJSON);
+          return;
+        }
+      },
+    });
   });
 };
 
@@ -5122,7 +6907,6 @@ const applyRedirectionToRequest = (
     ...rest,
   };
 };
-
 const getPropertiesFromResource = ({ resource, baseUrl }) => {
   const urlObject = new URL(resource, baseUrl);
   let pathname = urlObject.pathname;
@@ -5134,7 +6918,6 @@ const getPropertiesFromResource = ({ resource, baseUrl }) => {
     resource,
   };
 };
-
 const getPropertiesFromPathname = ({ pathname, baseUrl }) => {
   return getPropertiesFromResource({
     resource: `${pathname}${new URL(baseUrl).search}`,
@@ -5142,9 +6925,13 @@ const getPropertiesFromPathname = ({ pathname, baseUrl }) => {
   });
 };
 
-const createPushRequest = (request, { signal, pathname, method }) => {
+const createPushRequest = (
+  request,
+  { signal, pathname, method, logger },
+) => {
   const pushRequest = Object.freeze({
     ...request,
+    logger,
     parent: request,
     signal,
     http2: true,
@@ -5175,40 +6962,12 @@ const getHeadersInheritedByPushRequest = (request) => {
   return headersInherited;
 };
 
-const normalizeBodyMethods = (body) => {
-  if (isObservable(body)) {
-    return {
-      asObservable: () => body,
-      destroy: () => {},
-    };
-  }
-
-  if (isFileHandle(body)) {
-    return {
-      asObservable: () => fileHandleToObservable(body),
-      destroy: () => {
-        body.close();
-      },
-    };
-  }
-
-  if (isNodeStream(body)) {
-    return {
-      asObservable: () => observableFromNodeStream(body),
-      destroy: () => {
-        body.destroy();
-      },
-    };
-  }
-
-  return {
-    asObservable: () => observableFromValue(body),
-    destroy: () => {},
-  };
-};
-
 const isFileHandle = (value) => {
   return value && value.constructor && value.constructor.name === "FileHandle";
+};
+
+const observableFromFileHandle = (fileHandle) => {
+  return observableFromNodeStream(fileHandleToReadableStream(fileHandle));
 };
 
 const fileHandleToReadableStream = (fileHandle) => {
@@ -5231,8 +6990,28 @@ const fileHandleToReadableStream = (fileHandle) => {
   return fileReadableStream;
 };
 
-const fileHandleToObservable = (fileHandle) => {
-  return observableFromNodeStream(fileHandleToReadableStream(fileHandle));
+const getObservableValueType = (value) => {
+  if (value && typeof value.then === "function") {
+    return "promise";
+  }
+
+  if (isObservable(value)) {
+    return "observable";
+  }
+
+  if (isFileHandle(value)) {
+    return "file_handle";
+  }
+
+  if (isNodeStream(value)) {
+    return "node_stream";
+  }
+
+  if (value instanceof ReadableStream) {
+    return "node_web_stream";
+  }
+
+  return "js_value";
 };
 
 const isNodeStream = (value) => {
@@ -5251,16 +7030,114 @@ const isNodeStream = (value) => {
   return false;
 };
 
+// https://nodejs.org/api/webstreams.html#readablestreamgetreaderoptions
+// https://nodejs.org/api/webstreams.html
+// we can read as text using TextDecoder, see https://developer.mozilla.org/fr/docs/Web/API/Fetch_API/Using_Fetch#traiter_un_fichier_texte_ligne_%C3%A0_ligne
+
+const observableFromNodeWebReadableStream = (nodeWebReadableStream) => {
+  const observable = createObservable(
+    ({ next, error, complete, addTeardown }) => {
+      const reader = nodeWebReadableStream.getReader();
+
+      const readNext = async () => {
+        try {
+          const { done, value } = await reader.read();
+          if (done) {
+            complete();
+            return;
+          }
+          next(value);
+          readNext();
+        } catch (e) {
+          error(e);
+        }
+      };
+      readNext();
+      addTeardown(() => {
+        reader.cancel();
+      });
+    },
+  );
+
+  return observable;
+};
+
+const observableFromPromise = (promise) => {
+  return createObservable(async ({ next, error, complete }) => {
+    try {
+      const value = await promise;
+      next(value);
+      complete();
+    } catch (e) {
+      error(e);
+    }
+  });
+};
+
+const observableFromValue = (value) => {
+  const observableValueType = getObservableValueType(value);
+  if (observableValueType === "observable") {
+    return value;
+  }
+  if (observableValueType === "promise") {
+    return observableFromPromise(value);
+  }
+  if (observableValueType === "file_handle") {
+    return observableFromFileHandle(value);
+  }
+  if (observableValueType === "node_stream") {
+    return observableFromNodeStream(value);
+  }
+  if (observableValueType === "node_web_stream") {
+    return observableFromNodeWebReadableStream(value);
+  }
+  return createObservable(({ next, complete, addTeardown }) => {
+    next(value);
+    const timer = setTimeout(() => {
+      complete();
+    });
+    addTeardown(() => {
+      clearTimeout(timer);
+    });
+  });
+};
+
 const writeNodeResponse = async (
   responseStream,
   { status, statusText, headers, body, bodyEncoding },
   { signal, ignoreBody, onAbort, onError, onHeadersSent, onEnd } = {},
 ) => {
-  body = await body;
-  const bodyMethods = normalizeBodyMethods(body);
+  const isNetSocket = responseStream instanceof Socket;
+  if (
+    body &&
+    body.isObservableBody &&
+    headers["connection"] === undefined &&
+    headers["content-length"] === undefined
+  ) {
+    headers["transfer-encoding"] = "chunked";
+  }
+  // if (body && headers["content-length"] === undefined) {
+  //   headers["transfer-encoding"] = "chunked";
+  // }
+
+  const bodyObservableType = getObservableValueType(body);
+  const destroyBody = () => {
+    if (bodyObservableType === "file_handle") {
+      body.close();
+      return;
+    }
+    if (bodyObservableType === "node_stream") {
+      body.destroy();
+      return;
+    }
+    if (bodyObservableType === "node_web_stream") {
+      body.cancel();
+      return;
+    }
+  };
 
   if (signal.aborted) {
-    bodyMethods.destroy();
+    destroyBody();
     responseStream.destroy();
     onAbort();
     return;
@@ -5281,43 +7158,50 @@ const writeNodeResponse = async (
 
   if (ignoreBody) {
     onEnd();
-    bodyMethods.destroy();
+    destroyBody();
     responseStream.end();
     return;
   }
 
-  if (bodyEncoding) {
+  if (bodyEncoding && !isNetSocket) {
     responseStream.setEncoding(bodyEncoding);
   }
 
   await new Promise((resolve) => {
-    const observable = bodyMethods.asObservable();
-    const subscription = observable.subscribe({
-      next: (data) => {
-        try {
-          responseStream.write(data);
-        } catch (e) {
-          // Something inside Node.js sometimes puts stream
-          // in a state where .write() throw despites nodeResponse.destroyed
-          // being undefined and "close" event not being emitted.
-          // I have tested if we are the one calling destroy
-          // (I have commented every .destroy() call)
-          // but issue still occurs
-          // For the record it's "hard" to reproduce but can be by running
-          // a lot of tests against a browser in the context of @jsenv/core testing
-          if (e.code === "ERR_HTTP2_INVALID_STREAM") {
-            return;
-          }
-          responseStream.emit("error", e);
-        }
-      },
-      error: (value) => {
-        responseStream.emit("error", value);
-      },
-      complete: () => {
-        responseStream.end();
-      },
+    const observable = observableFromValue(body);
+    const abortController = new AbortController();
+    signal.addEventListener("abort", () => {
+      abortController.abort();
     });
+    observable.subscribe(
+      {
+        next: (data) => {
+          try {
+            responseStream.write(data);
+          } catch (e) {
+            // Something inside Node.js sometimes puts stream
+            // in a state where .write() throw despites nodeResponse.destroyed
+            // being undefined and "close" event not being emitted.
+            // I have tested if we are the one calling destroy
+            // (I have commented every .destroy() call)
+            // but issue still occurs
+            // For the record it's "hard" to reproduce but can be by running
+            // a lot of tests against a browser in the context of @jsenv/core testing
+            if (e.code === "ERR_HTTP2_INVALID_STREAM") {
+              return;
+            }
+            responseStream.emit("error", e);
+          }
+        },
+        error: (value) => {
+          responseStream.emit("error", value);
+        },
+        complete: () => {
+          responseStream.end();
+        },
+      },
+      { signal: abortController.signal },
+    );
 
     raceCallbacks(
       {
@@ -5349,13 +7233,13 @@ const writeNodeResponse = async (
       (winner) => {
         const raceEffects = {
           abort: () => {
-            subscription.unsubscribe();
+            abortController.abort();
             responseStream.destroy();
             onAbort();
             resolve();
           },
           error: (error) => {
-            subscription.unsubscribe();
+            abortController.abort();
             responseStream.destroy();
             onError(error);
             resolve();
@@ -5366,7 +7250,7 @@ const writeNodeResponse = async (
             // it may happen in case of server sent event
             // where body is kept open to write to client
             // and the browser is reloaded or closed for instance
-            subscription.unsubscribe();
+            abortController.abort();
             responseStream.destroy();
             onAbort();
             resolve();
@@ -5386,6 +7270,7 @@ const writeHead = (
   responseStream,
   { status, statusText, headers, onHeadersSent },
 ) => {
+  const responseIsNetSocket = responseStream instanceof Socket;
   const responseIsHttp2ServerResponse =
     responseStream instanceof Http2ServerResponse;
   const responseIsServerHttp2Stream =
@@ -5416,6 +7301,16 @@ const writeHead = (
     responseIsHttp2ServerResponse
   ) {
     responseStream.writeHead(status, nodeHeaders);
+    onHeadersSent({ nodeHeaders, status, statusText });
+    return;
+  }
+  if (responseIsNetSocket) {
+    const headersString = Object.keys(nodeHeaders)
+      .map((h) => `${h}: ${nodeHeaders[h]}`)
+      .join("\r\n");
+    responseStream.write(
+      `HTTP/1.1 ${status} ${statusText}\r\n${headersString}\r\n\r\n`,
+    );
     onHeadersSent({ nodeHeaders, status, statusText });
     return;
   }
@@ -5456,47 +7351,6 @@ const mapping = {
   // "last-modified": "Last-Modified",
 };
 
-// https://github.com/Marak/colors.js/blob/b63ef88e521b42920a9e908848de340b31e68c9d/lib/styles.js#L29
-
-const close = "\x1b[0m";
-const red = "\x1b[31m";
-const green = "\x1b[32m";
-const yellow = "\x1b[33m";
-// const blue = "\x1b[34m"
-const magenta = "\x1b[35m";
-const cyan = "\x1b[36m";
-// const white = "\x1b[37m"
-
-const colorizeResponseStatus = (status) => {
-  const statusType = statusToType(status);
-  if (statusType === "information") return `${cyan}${status}${close}`;
-  if (statusType === "success") return `${green}${status}${close}`;
-  if (statusType === "redirection") return `${magenta}${status}${close}`;
-  if (statusType === "client_error") return `${yellow}${status}${close}`;
-  if (statusType === "server_error") return `${red}${status}${close}`;
-  return status;
-};
-
-// https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
-const statusToType = (status) => {
-  if (statusIsInformation(status)) return "information";
-  if (statusIsSuccess(status)) return "success";
-  if (statusIsRedirection(status)) return "redirection";
-  if (statusIsClientError(status)) return "client_error";
-  if (statusIsServerError(status)) return "server_error";
-  return "unknown";
-};
-
-const statusIsInformation = (status) => status >= 100 && status < 200;
-
-const statusIsSuccess = (status) => status >= 200 && status < 300;
-
-const statusIsRedirection = (status) => status >= 300 && status < 400;
-
-const statusIsClientError = (status) => status >= 400 && status < 500;
-
-const statusIsServerError = (status) => status >= 500 && status < 600;
-
 const composeTwoObjects = (
   firstObject,
   secondObject,
@@ -5522,7 +7376,7 @@ const applyCaseSensitiveComposition = (
 ) => {
   if (strict) {
     const composed = {};
-    Object.keys(keysComposition).forEach((key) => {
+    for (const key of Object.keys(keysComposition)) {
       composed[key] = composeValueAtKey({
         firstObject,
         secondObject,
@@ -5531,7 +7385,7 @@ const applyCaseSensitiveComposition = (
         firstKey: keyExistsIn(key, firstObject) ? key : null,
         secondKey: keyExistsIn(key, secondObject) ? key : null,
       });
-    });
+    }
     return composed;
   }
 
@@ -5637,37 +7491,61 @@ const keyExistsIn = (key, object) => {
 };
 
 const composeTwoHeaders = (firstHeaders, secondHeaders) => {
+  if (firstHeaders && typeof firstHeaders.entries === "function") {
+    firstHeaders = Object.fromEntries(firstHeaders.entries());
+  }
+  if (secondHeaders && typeof secondHeaders.entries === "function") {
+    secondHeaders = Object.fromEntries(secondHeaders.entries());
+  }
   return composeTwoObjects(firstHeaders, secondHeaders, {
     keysComposition: HEADER_NAMES_COMPOSITION,
     forceLowerCase: true,
   });
 };
 
-const composeHeaderValues = (value, nextValue) => {
-  const headerValues = value.split(", ");
-  nextValue.split(", ").forEach((value) => {
-    if (!headerValues.includes(value)) {
-      headerValues.push(value);
+const composeTwoHeaderValues = (name, leftValue, rightValue) => {
+  if (HEADER_NAMES_COMPOSITION[name]) {
+    return HEADER_NAMES_COMPOSITION[name](leftValue, rightValue);
+  }
+  return rightValue;
+};
+
+const composeTwoCommaSeparatedValues = (value, nextValue) => {
+  if (!value) {
+    return nextValue;
+  }
+  if (!nextValue) {
+    return value;
+  }
+  const currentValues = value
+    .split(", ")
+    .map((part) => part.trim().toLowerCase());
+  const nextValues = nextValue
+    .split(", ")
+    .map((part) => part.trim().toLowerCase());
+  for (const nextValue of nextValues) {
+    if (!currentValues.includes(nextValue)) {
+      currentValues.push(nextValue);
     }
-  });
-  return headerValues.join(", ");
+  }
+  return currentValues.join(", ");
 };
 
 const HEADER_NAMES_COMPOSITION = {
-  "accept": composeHeaderValues,
-  "accept-charset": composeHeaderValues,
-  "accept-language": composeHeaderValues,
-  "access-control-allow-headers": composeHeaderValues,
-  "access-control-allow-methods": composeHeaderValues,
-  "access-control-allow-origin": composeHeaderValues,
-  "accept-patch": composeHeaderValues,
-  "accept-post": composeHeaderValues,
-  "allow": composeHeaderValues,
+  "accept": composeTwoCommaSeparatedValues,
+  "accept-charset": composeTwoCommaSeparatedValues,
+  "accept-language": composeTwoCommaSeparatedValues,
+  "access-control-allow-headers": composeTwoCommaSeparatedValues,
+  "access-control-allow-methods": composeTwoCommaSeparatedValues,
+  "access-control-allow-origin": composeTwoCommaSeparatedValues,
+  "accept-patch": composeTwoCommaSeparatedValues,
+  "accept-post": composeTwoCommaSeparatedValues,
+  "allow": composeTwoCommaSeparatedValues,
   // https://www.w3.org/TR/server-timing/
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
-  "server-timing": composeHeaderValues,
+  "server-timing": composeTwoCommaSeparatedValues,
   // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
-  "vary": composeHeaderValues,
+  "vary": composeTwoCommaSeparatedValues,
 };
 
 const listen = async ({
@@ -5864,7 +7742,23 @@ const listenServerConnectionError = (
   };
 };
 
+const asResponseProperties = (value) => {
+  if (value && value instanceof Response) {
+    return {
+      status: value.status,
+      statusText: value.statusText,
+      headers: Object.fromEntries(value.headers),
+      body: value.body,
+      bodyEncoding: value.bodyEncoding,
+    };
+  }
+  return value;
+};
+
 const composeTwoResponses = (firstResponse, secondResponse) => {
+  firstResponse = asResponseProperties(firstResponse);
+  secondResponse = asResponseProperties(secondResponse);
+
   return composeTwoObjects(firstResponse, secondResponse, {
     keysComposition: RESPONSE_KEYS_COMPOSITION,
     strict: true,
@@ -5878,9 +7772,6 @@ const RESPONSE_KEYS_COMPOSITION = {
   headers: composeTwoHeaders,
   body: (prevBody, body) => body,
   bodyEncoding: (prevEncoding, encoding) => encoding,
-  timing: (prevTiming, timing) => {
-    return { ...prevTiming, ...timing };
-  },
 };
 
 /**
@@ -6208,133 +8099,1285 @@ const trackHttp1ServerPendingRequests = (nodeServer) => {
   return { stop };
 };
 
-/**
-
- A multiple header is a header with multiple values like
-
- "text/plain, application/json;q=0.1"
-
- Each, means it's a new value (it's optionally followed by a space)
-
- Each; mean it's a property followed by =
- if "" is a string
- if not it's likely a number
- */
-
-const parseMultipleHeader = (
-  multipleHeaderString,
-  { validateName = () => true, validateProperty = () => true } = {},
-) => {
-  const values = multipleHeaderString.split(",");
-  const multipleHeader = {};
-  values.forEach((value) => {
-    const valueTrimmed = value.trim();
-    const valueParts = valueTrimmed.split(";");
-    const name = valueParts[0];
-    const nameValidation = validateName(name);
-    if (!nameValidation) {
-      return;
-    }
-
-    const properties = parseHeaderProperties(valueParts.slice(1), {
-      validateProperty,
-    });
-    multipleHeader[name] = properties;
-  });
-  return multipleHeader;
+const pathnameToExtension$1 = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1 ? pathname : pathname.slice(slashLastIndex + 1);
+  if (filename.match(/@([0-9])+(\.[0-9]+)?(\.[0-9]+)?$/)) {
+    return "";
+  }
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return "";
+  }
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex);
+  return extension;
 };
 
-const parseHeaderProperties = (headerProperties, { validateProperty }) => {
-  const properties = headerProperties.reduce((previous, valuePart) => {
-    const [propertyName, propertyValueString] = valuePart.split("=");
-    const propertyValue = parseHeaderPropertyValue(propertyValueString);
-    const property = { name: propertyName, value: propertyValue };
-    const propertyValidation = validateProperty(property);
-    if (!propertyValidation) {
-      return previous;
+const resourceToPathname = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?");
+  if (searchSeparatorIndex > -1) {
+    return resource.slice(0, searchSeparatorIndex);
+  }
+  const hashIndex = resource.indexOf("#");
+  if (hashIndex > -1) {
+    return resource.slice(0, hashIndex);
+  }
+  return resource;
+};
+
+const resourceToExtension = (resource) => {
+  const pathname = resourceToPathname(resource);
+  return pathnameToExtension$1(pathname);
+};
+
+const getCommonPathname = (pathname, otherPathname) => {
+  if (pathname === otherPathname) {
+    return pathname;
+  }
+  let commonPart = "";
+  let commonPathname = "";
+  let i = 0;
+  const length = pathname.length;
+  const otherLength = otherPathname.length;
+  while (i < length) {
+    const char = pathname.charAt(i);
+    const otherChar = otherPathname.charAt(i);
+    i++;
+    if (char === otherChar) {
+      if (char === "/") {
+        commonPart += "/";
+        commonPathname += commonPart;
+        commonPart = "";
+      } else {
+        commonPart += char;
+      }
+    } else {
+      if (char === "/" && i - 1 === otherLength) {
+        commonPart += "/";
+        commonPathname += commonPart;
+      }
+      return commonPathname;
+    }
+  }
+  if (length === otherLength) {
+    commonPathname += commonPart;
+  } else if (otherPathname.charAt(i) === "/") {
+    commonPathname += commonPart;
+  }
+  return commonPathname;
+};
+
+const urlToRelativeUrl = (
+  url,
+  baseUrl,
+  { preferRelativeNotation } = {},
+) => {
+  const urlObject = new URL(url);
+  const baseUrlObject = new URL(baseUrl);
+
+  if (urlObject.protocol !== baseUrlObject.protocol) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+
+  if (
+    urlObject.username !== baseUrlObject.username ||
+    urlObject.password !== baseUrlObject.password ||
+    urlObject.host !== baseUrlObject.host
+  ) {
+    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
+    return afterUrlScheme;
+  }
+
+  const { pathname, hash, search } = urlObject;
+  if (pathname === "/") {
+    const baseUrlResourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
+    return baseUrlResourceWithoutLeadingSlash;
+  }
+
+  const basePathname = baseUrlObject.pathname;
+  const commonPathname = getCommonPathname(pathname, basePathname);
+  if (!commonPathname) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+  const specificPathname = pathname.slice(commonPathname.length);
+  const baseSpecificPathname = basePathname.slice(commonPathname.length);
+  if (baseSpecificPathname.includes("/")) {
+    const baseSpecificParentPathname =
+      pathnameToParentPathname$1(baseSpecificPathname);
+    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(
+      /.*?\//g,
+      "../",
+    );
+    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
+    return relativeUrl;
+  }
+
+  const relativeUrl = `${specificPathname}${search}${hash}`;
+  return preferRelativeNotation ? `./${relativeUrl}` : relativeUrl;
+};
+
+const pathnameToParentPathname$1 = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  if (slashLastIndex === -1) {
+    return "/";
+  }
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+const urlToFileSystemPath = (url) => {
+  const urlObject = new URL(url);
+  let { origin, pathname, hash } = urlObject;
+  if (urlObject.protocol === "file:") {
+    origin = "file://";
+  }
+  pathname = pathname
+    .split("/")
+    .map((part) => {
+      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
+    })
+    .join("/");
+  if (hash) {
+    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
+  }
+  const urlString = `${origin}${pathname}`;
+  const fileSystemPath = fileURLToPath(urlString);
+  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    return fileSystemPath.slice(0, -1);
+  }
+  return fileSystemPath;
+};
+
+const pickAcceptedContent = ({
+  availables,
+  accepteds,
+  getAcceptanceScore,
+}) => {
+  let highestScore = -1;
+  let availableWithHighestScore = null;
+  let availableIndex = 0;
+  while (availableIndex < availables.length) {
+    const available = availables[availableIndex];
+    availableIndex++;
+
+    let acceptedIndex = 0;
+    while (acceptedIndex < accepteds.length) {
+      const accepted = accepteds[acceptedIndex];
+      acceptedIndex++;
+
+      const score = getAcceptanceScore(accepted, available);
+      if (score > highestScore) {
+        availableWithHighestScore = available;
+        highestScore = score;
+      }
+    }
+  }
+  return availableWithHighestScore;
+};
+
+const pickContentEncoding = (request, availableEncodings) => {
+  const { headers = {} } = request;
+  const requestAcceptEncodingHeader = headers["accept-encoding"];
+  if (!requestAcceptEncodingHeader) {
+    return null;
+  }
+
+  const encodingsAccepted = parseAcceptEncodingHeader(
+    requestAcceptEncodingHeader,
+  );
+  return pickAcceptedContent({
+    accepteds: encodingsAccepted,
+    availables: availableEncodings,
+    getAcceptanceScore: getEncodingAcceptanceScore,
+  });
+};
+
+const parseAcceptEncodingHeader = (acceptEncodingHeaderString) => {
+  const acceptEncodingHeader = parseMultipleHeader(acceptEncodingHeaderString, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const encodingsAccepted = [];
+  Object.keys(acceptEncodingHeader).forEach((key) => {
+    const { q = 1 } = acceptEncodingHeader[key];
+    const value = key;
+    encodingsAccepted.push({
+      value,
+      quality: q,
+    });
+  });
+  encodingsAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return encodingsAccepted;
+};
+
+const getEncodingAcceptanceScore = ({ value, quality }, availableEncoding) => {
+  if (value === "*") {
+    return quality;
+  }
+
+  // normalize br to brotli
+  if (value === "br") value = "brotli";
+  if (availableEncoding === "br") availableEncoding = "brotli";
+
+  if (value === availableEncoding) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const pickContentLanguage = (request, availableLanguages) => {
+  const { headers = {} } = request;
+  const requestAcceptLanguageHeader = headers["accept-language"];
+  if (!requestAcceptLanguageHeader) {
+    return null;
+  }
+
+  const languagesAccepted = parseAcceptLanguageHeader(
+    requestAcceptLanguageHeader,
+  );
+  return pickAcceptedContent({
+    accepteds: languagesAccepted,
+    availables: availableLanguages,
+    getAcceptanceScore: getLanguageAcceptanceScore,
+  });
+};
+
+const parseAcceptLanguageHeader = (acceptLanguageHeaderString) => {
+  const acceptLanguageHeader = parseMultipleHeader(acceptLanguageHeaderString, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const languagesAccepted = [];
+  Object.keys(acceptLanguageHeader).forEach((key) => {
+    const { q = 1 } = acceptLanguageHeader[key];
+    const value = key;
+    languagesAccepted.push({
+      value,
+      quality: q,
+    });
+  });
+  languagesAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return languagesAccepted;
+};
+
+const getLanguageAcceptanceScore = ({ value, quality }, availableLanguage) => {
+  const [acceptedPrimary, acceptedVariant] = decomposeLanguage(value);
+  const [availablePrimary, availableVariant] =
+    decomposeLanguage(availableLanguage);
+
+  const primaryAccepted =
+    acceptedPrimary === "*" ||
+    acceptedPrimary.toLowerCase() === availablePrimary.toLowerCase();
+  const variantAccepted =
+    acceptedVariant === "*" ||
+    compareVariant(acceptedVariant, availableVariant);
+
+  if (primaryAccepted && variantAccepted) {
+    return quality + 1;
+  }
+  if (primaryAccepted) {
+    return quality;
+  }
+  return -1;
+};
+
+const decomposeLanguage = (fullType) => {
+  const [primary, variant] = fullType.split("-");
+  return [primary, variant];
+};
+
+const compareVariant = (left, right) => {
+  if (left === right) {
+    return true;
+  }
+  if (left && right && left.toLowerCase() === right.toLowerCase()) {
+    return true;
+  }
+  return false;
+};
+
+const pickContentType = (request, availableContentTypes) => {
+  const { headers = {} } = request;
+  const requestAcceptHeader = headers.accept;
+  if (!requestAcceptHeader) {
+    return null;
+  }
+
+  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
+  return pickAcceptedContent({
+    accepteds: contentTypesAccepted,
+    availables: availableContentTypes,
+    getAcceptanceScore: getContentTypeAcceptanceScore,
+  });
+};
+
+const parseAcceptHeader = (acceptHeader) => {
+  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const accepts = [];
+  Object.keys(acceptHeaderObject).forEach((key) => {
+    const { q = 1 } = acceptHeaderObject[key];
+    const value = key;
+    accepts.push({
+      value,
+      quality: q,
+    });
+  });
+  accepts.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return accepts;
+};
+
+const getContentTypeAcceptanceScore = (
+  { value, quality },
+  availableContentType,
+) => {
+  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
+  const [availableType, availableSubtype] =
+    decomposeContentType(availableContentType);
+
+  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
+  const subtypeAccepted =
+    acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
+
+  if (typeAccepted && subtypeAccepted) {
+    return quality;
+  }
+  return -1;
+};
+
+const decomposeContentType = (fullType) => {
+  const [type, subtype] = fullType.split("/");
+  return [type, subtype];
+};
+
+const pickContentVersion = (request, availableVersions) => {
+  const { headers = {} } = request;
+  const requestAcceptVersionHeader = headers["accept-version"];
+  if (!requestAcceptVersionHeader) {
+    return null;
+  }
+
+  const versionsAccepted = parseAcceptVersionHeader(requestAcceptVersionHeader);
+  return pickAcceptedContent({
+    accepteds: versionsAccepted,
+    availables: availableVersions,
+    getAcceptanceScore: getVersionAcceptanceScore,
+  });
+};
+
+const parseAcceptVersionHeader = (acceptVersionHeaderString) => {
+  const acceptVersionHeader = parseMultipleHeader(acceptVersionHeaderString, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const versionsAccepted = [];
+  for (const key of Object.keys(acceptVersionHeader)) {
+    const { q = 1 } = acceptVersionHeader[key];
+    const value = key;
+    versionsAccepted.push({
+      value,
+      quality: q,
+    });
+  }
+  versionsAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return versionsAccepted;
+};
+
+const getVersionAcceptanceScore = ({ value, quality }, availableVersion) => {
+  if (value === "*") {
+    return quality;
+  }
+
+  if (typeof availableVersion === "function") {
+    if (availableVersion(value)) {
+      return quality;
+    }
+    return -1;
+  }
+
+  if (typeof availableVersion === "number") {
+    availableVersion = String(availableVersion);
+  }
+
+  if (value === availableVersion) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const lookupPackageDirectory$1 = (currentUrl) => {
+  return findAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
+    const potentialPackageJsonFileUrl = `${ancestorDirectoryUrl}package.json`;
+    return existsSync(new URL(potentialPackageJsonFileUrl));
+  });
+};
+
+const routeInspectorUrl = `/.internal/route_inspector`;
+
+const HTTP_METHODS = [
+  "OPTIONS",
+  "HEAD",
+  "GET",
+  "POST",
+  "PATCH",
+  "PUT",
+  "DELETE",
+];
+
+const createRouter = (
+  routeDescriptionArray,
+  { optionsFallback } = {},
+) => {
+  const routeSet = new Set();
+
+  const constructAvailableEndpoints = () => {
+    // TODO: memoize
+    // TODO: construct only if the route is visible to that client
+    const availableEndpoints = [];
+    const createEndpoint = ({ method, resource }) => {
+      return {
+        method,
+        resource,
+        toString: () => {
+          return `${method} ${resource}`;
+        },
+      };
+    };
+
+    for (const route of routeSet) {
+      const endpointResource = route.resourcePattern.generateExample();
+      if (route.method === "*") {
+        for (const HTTP_METHOD of HTTP_METHODS) {
+          availableEndpoints.push(
+            createEndpoint({
+              method: HTTP_METHOD,
+              resource: endpointResource,
+            }),
+          );
+        }
+      } else {
+        availableEndpoints.push(
+          createEndpoint({
+            method: route.method,
+            resource: endpointResource,
+          }),
+        );
+      }
+    }
+    return availableEndpoints;
+  };
+  const createResourceOptions = () => {
+    const acceptedMediaTypeSet = new Set();
+    const postAcceptedMediaTypeSet = new Set();
+    const patchAcceptedMediaTypeSet = new Set();
+    const allowedMethodSet = new Set();
+    return {
+      onMethodAllowed: (route, method) => {
+        allowedMethodSet.add(method);
+        for (const acceptedMediaType of route.acceptedMediaTypes) {
+          acceptedMediaTypeSet.add(acceptedMediaType);
+          if (method === "POST") {
+            postAcceptedMediaTypeSet.add(acceptedMediaType);
+          }
+          if (method === "PATCH") {
+            patchAcceptedMediaTypeSet.add(acceptedMediaType);
+          }
+        }
+      },
+      asResponseHeaders: () => {
+        const headers = {};
+        if (acceptedMediaTypeSet.size) {
+          headers["accept"] = Array.from(acceptedMediaTypeSet).join(", ");
+        }
+        if (postAcceptedMediaTypeSet.size) {
+          headers["accept-post"] = Array.from(postAcceptedMediaTypeSet).join(
+            ", ",
+          );
+        }
+        if (patchAcceptedMediaTypeSet.size) {
+          headers["accept-patch"] = Array.from(patchAcceptedMediaTypeSet).join(
+            ", ",
+          );
+        }
+        if (allowedMethodSet.size) {
+          headers["allow"] = Array.from(allowedMethodSet).join(", ");
+        }
+        return headers;
+      },
+      toJSON: () => {
+        return {
+          acceptedMediaTypes: Array.from(acceptedMediaTypeSet),
+          postAcceptedMediaTypes: Array.from(postAcceptedMediaTypeSet),
+          patchAcceptedMediaTypes: Array.from(patchAcceptedMediaTypeSet),
+          allowedMethods: Array.from(allowedMethodSet),
+        };
+      },
+    };
+  };
+  const forEachMethodAllowed = (route, onMethodAllowed) => {
+    const supportedMethods =
+      route.method === "*" ? HTTP_METHODS : [route.method];
+    for (const supportedMethod of supportedMethods) {
+      onMethodAllowed(supportedMethod);
+    }
+  };
+  const inferResourceOPTIONS = (request) => {
+    const resourceOptions = createResourceOptions();
+    for (const route of routeSet) {
+      if (!route.matchResource(request.resource)) {
+        continue;
+      }
+      const accessControlRequestMethodHeader =
+        request.headers["access-control-request-method"];
+      if (accessControlRequestMethodHeader) {
+        if (route.matchMethod(accessControlRequestMethodHeader)) {
+          resourceOptions.onMethodAllowed(
+            route,
+            accessControlRequestMethodHeader,
+          );
+        }
+      } else {
+        forEachMethodAllowed(route, (methodAllowed) => {
+          resourceOptions.onMethodAllowed(route, methodAllowed);
+        });
+      }
+    }
+    return resourceOptions;
+  };
+  const inferServerOPTIONS = () => {
+    const serverOptions = createResourceOptions();
+    const resourceOptionsMap = new Map();
+
+    for (const route of routeSet) {
+      const routeResource = route.resource;
+      let resourceOptions = resourceOptionsMap.get(routeResource);
+      if (!resourceOptions) {
+        resourceOptions = createResourceOptions();
+        resourceOptionsMap.set(routeResource, resourceOptions);
+      }
+      forEachMethodAllowed(route, (method) => {
+        serverOptions.onMethodAllowed(route, method);
+        resourceOptions.onMethodAllowed(route, method);
+      });
     }
     return {
-      ...previous,
-      [property.name]: property.value,
+      server: serverOptions,
+      resourceOptionsMap,
     };
-  }, {});
-  return properties;
-};
+  };
 
-const parseHeaderPropertyValue = (headerPropertyValueString) => {
-  const firstChar = headerPropertyValueString[0];
-  const lastChar =
-    headerPropertyValueString[headerPropertyValueString.length - 1];
-  if (firstChar === '"' && lastChar === '"') {
-    return headerPropertyValueString.slice(1, -1);
+  const router = {};
+  for (const routeDescription of routeDescriptionArray) {
+    const route = createRoute(routeDescription);
+    routeSet.add(route);
   }
-  if (isNaN(headerPropertyValueString)) {
-    return headerPropertyValueString;
-  }
-  return parseFloat(headerPropertyValueString);
-};
 
-const stringifyMultipleHeader = (
-  multipleHeader,
-  { validateName = () => true, validateProperty = () => true } = {},
-) => {
-  return Object.keys(multipleHeader)
-    .filter((name) => {
-      const headerProperties = multipleHeader[name];
-      if (!headerProperties) {
-        return false;
+  const match = async (request, fetchSecondArg) => {
+    fetchSecondArg.router = router;
+    const wouldHaveMatched = {
+      // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
+      methodSet: new Set(),
+      requestMediaTypeSet: new Set(),
+      responseMediaTypeSet: new Set(),
+      responseLanguageSet: new Set(),
+      responseVersionSet: new Set(),
+      responseEncodingSet: new Set(),
+      upgrade: false,
+    };
+
+    let currentService;
+    let currentRoutingTiming;
+    const onRouteMatchStart = (route) => {
+      if (route.service === currentService) {
+        return;
       }
-      if (typeof headerProperties !== "object") {
-        return false;
-      }
-      const nameValidation = validateName(name);
-      if (!nameValidation) {
-        return false;
-      }
-      return true;
-    })
-    .map((name) => {
-      const headerProperties = multipleHeader[name];
-      const headerPropertiesString = stringifyHeaderProperties(
-        headerProperties,
-        {
-          validateProperty,
-        },
+      onRouteGroupEnd();
+      currentRoutingTiming = fetchSecondArg.timing(
+        route.service
+          ? `${route.service.name.replace("jsenv:", "")}.routing`
+          : "routing",
       );
-      if (headerPropertiesString.length) {
-        return `${name};${headerPropertiesString}`;
+      currentService = route.service;
+    };
+    const onRouteGroupEnd = () => {
+      if (currentRoutingTiming) {
+        currentRoutingTiming.end();
       }
-      return name;
-    })
-    .join(", ");
-};
+    };
+    const onRouteMatch = (route) => {
+      onRouteGroupEnd();
+    };
 
-const stringifyHeaderProperties = (headerProperties, { validateProperty }) => {
-  const headerPropertiesString = Object.keys(headerProperties)
-    .map((name) => {
-      const property = {
-        name,
-        value: headerProperties[name],
+    const checkResponseContentHeader = (route, responseHeaders, name) => {
+      const routePropertyName = {
+        type: "availableMediaTypes",
+        language: "availableLanguages",
+        version: "availableVersions",
+        encoding: "availableEncodings",
+      }[name];
+      const availableValues = route[routePropertyName];
+      if (availableValues.length === 0) {
+        return;
+      }
+      const responseHeaderName = {
+        type: "content-type",
+        language: "content-language",
+        version: "content-version",
+        encoding: "content-encoding",
+      }[name];
+      const responseHeaderValue = responseHeaders[responseHeaderName];
+      if (!responseHeaderValue) {
+        request.logger.warn(
+          `The response header ${responseHeaderName} is missing.
+It should be set to one of route.${routePropertyName}: ${availableValues.join(", ")}.`,
+        );
+        return;
+      }
+      if (!availableValues.includes(responseHeaderValue)) {
+        request.logger.warn(
+          `The value "${responseHeaderValue}" found in response header ${responseHeaderName} is strange.
+It should be should be one of route.${routePropertyName}: ${availableValues.join(", ")}.`,
+        );
+        return;
+      }
+    };
+    const onResponseHeaders = (request, route, responseHeaders) => {
+      checkResponseContentHeader(route, responseHeaders, "type");
+      checkResponseContentHeader(route, responseHeaders, "language");
+      checkResponseContentHeader(route, responseHeaders, "version");
+      checkResponseContentHeader(route, responseHeaders, "encoding");
+    };
+
+    for (const route of routeSet) {
+      onRouteMatchStart(route);
+      const resourceMatchResult = route.matchResource(request.resource);
+      if (!resourceMatchResult) {
+        continue;
+      }
+      if (!route.matchMethod(request.method)) {
+        if (!route.isFallback) {
+          wouldHaveMatched.methodSet.add(route.method);
+        }
+        continue;
+      }
+      if (
+        request.method === "POST" ||
+        request.method === "PATCH" ||
+        request.method === "PUT"
+      ) {
+        const { acceptedMediaTypes } = route;
+        if (
+          acceptedMediaTypes.length &&
+          !isRequestBodyMediaTypeSupported(request, { acceptedMediaTypes })
+        ) {
+          for (const acceptedMediaType of acceptedMediaTypes) {
+            wouldHaveMatched.requestMediaTypeSet.add(acceptedMediaType);
+          }
+          continue;
+        }
+      }
+      const headersMatchResult = route.matchHeaders(request.headers);
+      if (!headersMatchResult) {
+        continue;
+      }
+      if (route.isForWebSocket && request.headers["upgrade"] !== "websocket") {
+        wouldHaveMatched.upgrade = true;
+        continue;
+      }
+      // now we are "good", let's try to generate a response
+      const contentNegotiationResult = {};
+      {
+        // when content nego fails
+        // we will check the remaining accept headers to properly inform client of all the things are failing
+        // Example:
+        // client says "I want text in french"
+        // but server only provide json in english
+        // we want to tell client both text and french are not available
+        let hasFailed = false;
+        const { availableMediaTypes } = route;
+        if (availableMediaTypes.length) {
+          fetchSecondArg.injectResponseHeader("vary", "accept");
+          if (request.headers["accept"]) {
+            const mediaTypeNegotiated = pickContentType(
+              request,
+              availableMediaTypes,
+            );
+            if (!mediaTypeNegotiated) {
+              for (const availableMediaType of availableMediaTypes) {
+                wouldHaveMatched.responseMediaTypeSet.add(availableMediaType);
+              }
+              hasFailed = true;
+            }
+            contentNegotiationResult.mediaType = mediaTypeNegotiated;
+          } else {
+            contentNegotiationResult.mediaType = availableMediaTypes[0];
+          }
+        }
+        const { availableLanguages } = route;
+        if (availableLanguages.length) {
+          fetchSecondArg.injectResponseHeader("vary", "accept-language");
+          if (request.headers["accept-language"]) {
+            const languageNegotiated = pickContentLanguage(
+              request,
+              availableLanguages,
+            );
+            if (!languageNegotiated) {
+              for (const availableLanguage of availableLanguages) {
+                wouldHaveMatched.responseLanguageSet.add(availableLanguage);
+              }
+              hasFailed = true;
+            }
+            contentNegotiationResult.language = languageNegotiated;
+          } else {
+            contentNegotiationResult.language = availableLanguages[0];
+          }
+        }
+        const { availableVersions } = route;
+        if (availableVersions.length) {
+          fetchSecondArg.injectResponseHeader("vary", "accept-version");
+          if (request.headers["accept-version"]) {
+            const versionNegotiated = pickContentVersion(
+              request,
+              availableVersions,
+            );
+            if (!versionNegotiated) {
+              for (const availableVersion of availableVersions) {
+                wouldHaveMatched.responseVersionSet.add(availableVersion);
+              }
+              hasFailed = true;
+            }
+            contentNegotiationResult.version = versionNegotiated;
+          } else {
+            contentNegotiationResult.version = availableVersions[0];
+          }
+        }
+        const { availableEncodings } = route;
+        if (availableEncodings.length) {
+          fetchSecondArg.injectResponseHeader("vary", "accept-encoding");
+          if (request.headers["accept-encoding"]) {
+            const encodingNegotiated = pickContentEncoding(
+              request,
+              availableEncodings,
+            );
+            if (!encodingNegotiated) {
+              for (const availableEncoding of availableEncodings) {
+                wouldHaveMatched.responseEncodingSet.add(availableEncoding);
+              }
+              hasFailed = true;
+            }
+            contentNegotiationResult.encoding = encodingNegotiated;
+          } else {
+            contentNegotiationResult.encoding = availableEncodings[0];
+          }
+        }
+        if (hasFailed) {
+          continue;
+        }
+      }
+      const { named, stars = [] } = PATTERN.composeTwoMatchResults(
+        resourceMatchResult,
+        headersMatchResult,
+      );
+      Object.assign(request.params, named, stars);
+      fetchSecondArg.contentNegotiation = contentNegotiationResult;
+      let fetchReturnValue = route.fetch(request, fetchSecondArg);
+      if (
+        fetchReturnValue !== null &&
+        typeof fetchReturnValue === "object" &&
+        typeof fetchReturnValue.then === "function"
+      ) {
+        fetchReturnValue = await fetchReturnValue;
+      }
+      // route decided not to handle in the end
+      if (fetchReturnValue === null || fetchReturnValue === undefined) {
+        continue;
+      }
+      onRouteMatch();
+      if (fetchReturnValue instanceof Response) {
+        const headers = Object.fromEntries(fetchReturnValue.headers);
+        onResponseHeaders(request, route, headers);
+        return {
+          status: fetchReturnValue.status,
+          statusText: fetchReturnValue.statusText,
+          headers,
+          body: fetchReturnValue.body,
+        };
+      }
+      if (fetchReturnValue !== null && typeof fetchReturnValue === "object") {
+        const headers = fetchReturnValue.headers || {};
+        onResponseHeaders(request, route, headers);
+        return {
+          status: fetchReturnValue.status || 404,
+          statusText: fetchReturnValue.statusText,
+          statusMessage: fetchReturnValue.statusMessage,
+          headers,
+          body: fetchReturnValue.body,
+        };
+      }
+      throw new TypeError(
+        `response must be a Response, or an Object, received ${fetchReturnValue}`,
+      );
+    }
+    // nothing has matched fully
+    // if nothing matches at all we'll send 404
+    // but if url matched but METHOD was not supported we send 405
+    if (wouldHaveMatched.methodSet.size) {
+      return createMethodNotAllowedResponse(request, {
+        allowedMethods: [...wouldHaveMatched.methodSet],
+      });
+    }
+    if (wouldHaveMatched.requestMediaTypeSet.size) {
+      return createUnsupportedMediaTypeResponse(request, {
+        acceptedMediaTypes: [...wouldHaveMatched.requestMediaTypeSet],
+      });
+    }
+    if (
+      wouldHaveMatched.responseMediaTypeSet.size ||
+      wouldHaveMatched.responseLanguageSet.size ||
+      wouldHaveMatched.responseVersionSet.size ||
+      wouldHaveMatched.responseEncodingSet.size
+    ) {
+      return createNotAcceptableResponse(request, {
+        availableMediaTypes: [...wouldHaveMatched.responseMediaTypeSet],
+        availableLanguages: [...wouldHaveMatched.responseLanguageSet],
+        availableVersions: [...wouldHaveMatched.responseVersionSet],
+        availableEncodings: [...wouldHaveMatched.responseEncodingSet],
+      });
+    }
+    if (wouldHaveMatched.upgrade) {
+      return {
+        status: 426,
+        statusText: "Upgrade Required",
+        statusMessage: `The request requires the upgrade to a webSocket connection`,
       };
-      return property;
-    })
-    .filter((property) => {
-      const propertyValidation = validateProperty(property);
-      if (!propertyValidation) {
-        return false;
-      }
-      return true;
-    })
-    .map(stringifyHeaderProperty)
-    .join(";");
-  return headerPropertiesString;
+    }
+    constructAvailableEndpoints();
+    return createRouteNotFoundResponse(request);
+  };
+  const inspect = () => {
+    // I want all the info I can gather about the routes
+    const data = [];
+    for (const route of routeSet) {
+      data.push(route.toJSON());
+    }
+    return data;
+  };
+
+  if (optionsFallback) {
+    const optionRouteFallback = createRoute({
+      endpoint: "OPTIONS *",
+      description:
+        "Auto generate an OPTIONS response about a resource or the whole server.",
+      declarationSource: import.meta.url,
+      fetch: (request, helpers) => {
+        const isForAnyRoute = request.resource === "*";
+        if (isForAnyRoute) {
+          const serverOPTIONS = inferServerOPTIONS();
+          return createServerResourceOptionsResponse(request, serverOPTIONS);
+        }
+        const resourceOPTIONS = inferResourceOPTIONS(request);
+        return createResourceOptionsResponse(request, resourceOPTIONS);
+      },
+      isFallback: true,
+    });
+    routeSet.add(optionRouteFallback);
+  }
+
+  Object.assign(router, {
+    match,
+    inspect,
+  });
+  return router;
 };
 
-const stringifyHeaderProperty = ({ name, value }) => {
-  if (typeof value === "string") {
-    return `${name}="${value}"`;
+/**
+ * Adds a route to the router.
+ *
+ * @param {Object} params - Route configuration object
+ * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
+ * @param {Object} [params.headers] - Optional headers pattern to match
+ * @param {Array<string>} [params.availableMediaTypes=[]] - Content types this route can produce
+ * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
+ * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
+ * @param {Array<string>} [params.acceptedMediaTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
+ * @param {Function} params.fetch - Function to generate response for matching requests
+ * @throws {TypeError} If endpoint is not a string
+ * @returns {void}
+ */
+const createRoute = ({
+  endpoint,
+  description,
+  headers,
+  service,
+  availableMediaTypes = [],
+  availableLanguages = [],
+  availableVersions = [],
+  availableEncodings = [],
+  acceptedMediaTypes = [], // useful only for POST/PATCH/PUT
+  fetch: routeFetchMethod, // rename because there is global.fetch and we want to be explicit
+  clientCodeExample,
+  isFallback,
+  subroutes,
+  declarationSource,
+}) => {
+  if (!endpoint || typeof endpoint !== "string") {
+    throw new TypeError(`endpoint must be a string, received ${endpoint}`);
   }
-  return `${name}=${value}`;
+  const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
+  if (method !== "*" && !HTTP_METHODS.includes(method)) {
+    throw new TypeError(`"${method}" is not an HTTP method`);
+  }
+  if (resource[0] !== "/" && resource[0] !== "*") {
+    throw new TypeError(`resource must start with /, received ${resource}`);
+  }
+  if (typeof routeFetchMethod !== "function") {
+    throw new TypeError(
+      `fetch must be a function, received ${routeFetchMethod} on endpoint "${endpoint}"`,
+    );
+  }
+  const extension = resourceToExtension(resource);
+  const extensionWellKnownContentType = extension
+    ? CONTENT_TYPE.fromExtension(extension)
+    : null;
+  if (
+    availableMediaTypes.length === 0 &&
+    extensionWellKnownContentType &&
+    extensionWellKnownContentType !== "application/octet-stream" // this is the default extension
+  ) {
+    availableMediaTypes.push(extensionWellKnownContentType);
+  }
+  const resourcePattern = createResourcePattern(resource);
+  const headersPattern = headers ? createHeadersPattern(headers) : null;
+
+  const isForWebSocket =
+    (headers && headers["upgrade"] === "websocket") ||
+    extension === ".websocket";
+
+  const route = {
+    method,
+    resource,
+    description,
+    service,
+    availableMediaTypes,
+    availableLanguages,
+    availableVersions,
+    availableEncodings,
+    acceptedMediaTypes,
+    matchMethod:
+      method === "*" ? () => true : (requestMethod) => requestMethod === method,
+    matchResource:
+      resource === "*"
+        ? () => true
+        : (requestResource) => {
+            return resourcePattern.match(requestResource);
+          },
+    matchHeaders:
+      headers === undefined
+        ? () => true
+        : (requestHeaders) => {
+            return headersPattern.match(requestHeaders);
+          },
+    fetch: routeFetchMethod,
+    toString: () => {
+      return `${method} ${resource}`;
+    },
+    toJSON: () => {
+      const meta = {};
+
+      if (declarationSource) {
+        meta.declarationLink = {
+          url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(declarationSource)}")`,
+          text: declarationSource,
+        };
+
+        const packageDirectory = lookupPackageDirectory$1(declarationSource);
+        if (packageDirectory) {
+          const packageFileUrl = new URL("package.json", packageDirectory);
+          try {
+            const packageFileText = readFileSync(packageFileUrl, "utf8");
+            const packageJson = JSON.parse(packageFileText);
+            const packageName = packageJson.name;
+            if (packageJson.name) {
+              meta.packageName = packageName;
+              meta.ownerLink = {
+                url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(packageFileUrl)}")`,
+                text: packageName,
+              };
+              const declarationUrlRelativeToOwnerPackage = urlToRelativeUrl(
+                declarationSource,
+                packageFileUrl,
+              );
+              meta.declarationLink.text = `${packageName}/${declarationUrlRelativeToOwnerPackage}`;
+            }
+          } catch {}
+        }
+      }
+
+      return {
+        method,
+        resource,
+        description,
+        availableMediaTypes,
+        availableLanguages,
+        availableVersions,
+        availableEncodings,
+        acceptedMediaTypes,
+        isForWebSocket,
+        clientCodeExample:
+          typeof clientCodeExample === "function"
+            ? parseFunction(clientCodeExample).body
+            : typeof clientCodeExample === "string"
+              ? clientCodeExample
+              : undefined,
+        declarationSource,
+        meta,
+      };
+    },
+    resourcePattern,
+    isForWebSocket,
+    isFallback,
+    subroutes,
+  };
+  return route;
+};
+
+const isRequestBodyMediaTypeSupported = (request, { acceptedMediaTypes }) => {
+  const requestBodyContentType = request.headers["content-type"];
+  if (!requestBodyContentType) {
+    return false;
+  }
+  for (const acceptedMediaType of acceptedMediaTypes) {
+    if (requestBodyContentType.includes(acceptedMediaType)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+const createServerResourceOptionsResponse = (
+  request,
+  { server, resourceOptionsMap },
+) => {
+  const headers = server.asResponseHeaders();
+  const mediaTypeNegotiated = pickContentType(request, [
+    "application/json",
+    "text/plain",
+  ]);
+  if (mediaTypeNegotiated === "application/json") {
+    const perResource = {};
+    for (const [resource, resourceOptions] of resourceOptionsMap) {
+      perResource[resource] = resourceOptions.toJSON();
+    }
+    return Response.json(
+      {
+        server: server.toJSON(),
+        perResource,
+      },
+      { status: 200, headers },
+    );
+  }
+  // text/plain
+  return new Response(
+    `The list of endpoints available can be seen at ${routeInspectorUrl}`,
+    { status: 200, headers },
+  );
+};
+const createResourceOptionsResponse = (request, resourceOptions) => {
+  const headers = resourceOptions.asResponseHeaders();
+  return new Response(undefined, { status: 204, headers });
+};
+
+/**
+ * Creates a 406 Not Acceptable response when content negotiation fails
+ *
+ * @param {Object} request - The HTTP request object
+ * @param {Object} params - Content negotiation parameters
+ * @param {Array<string>} params.availableMediaTypes - Content types the server can produce
+ * @param {Array<string>} params.availableLanguages - Languages the server can respond with
+ * @param {Array<string>} params.availableEncodings - Encodings the server supports
+ * @returns {Response} A 406 Not Acceptable response
+ */
+const createNotAcceptableResponse = (
+  request,
+  {
+    availableMediaTypes,
+    availableLanguages,
+    availableVersions,
+    availableEncodings,
+  },
+) => {
+  const unsupported = [];
+  const headers = {};
+  const data = {};
+
+  if (availableMediaTypes.length) {
+    const requestAcceptHeader = request.headers["accept"];
+
+    // Use a non-standard but semantic header name
+    headers["available-media-types"] = availableMediaTypes.join(", ");
+
+    Object.assign(data, {
+      requestAcceptHeader,
+      availableMediaTypes,
+    });
+
+    unsupported.push({
+      type: "content-type",
+      message: `The server cannot produce a response in any of the media types accepted by the request: "${requestAcceptHeader}".
+Available media types: ${availableMediaTypes.join(", ")}.`,
+    });
+  }
+  if (availableLanguages.length) {
+    const requestAcceptLanguageHeader = request.headers["accept-language"];
+
+    // Use a non-standard but semantic header name
+    headers["available-languages"] = availableLanguages.join(", ");
+
+    Object.assign(data, {
+      requestAcceptLanguageHeader,
+      availableLanguages,
+    });
+
+    unsupported.push({
+      type: "language",
+      message: `The server cannot produce a response in any of the languages accepted by the request: "${requestAcceptLanguageHeader}".
+Available languages: ${availableLanguages.join(", ")}.`,
+    });
+  }
+  if (availableVersions.length) {
+    const requestAcceptVersionHeader = request.headers["accept-version"];
+
+    // Use a non-standard but semantic header name
+    headers["available-versions"] = availableVersions.join(", ");
+
+    Object.assign(data, {
+      requestAcceptVersionHeader,
+      availableLanguages,
+    });
+
+    unsupported.push({
+      type: "version",
+      message: `The server cannot produce a response in any of the versions accepted by the request: "${requestAcceptVersionHeader}".
+Available versions: ${availableVersions.join(", ")}.`,
+    });
+  }
+  if (availableEncodings.length) {
+    const requestAcceptEncodingHeader = request.headers["accept-encoding"];
+
+    // Use a non-standard but semantic header name
+    headers["available-encodings"] = availableEncodings.join(", ");
+
+    Object.assign(data, {
+      requestAcceptEncodingHeader,
+      availableEncodings,
+    });
+
+    unsupported.push({
+      type: "encoding",
+      message: `The server cannot encode the response in any of the encodings accepted by the request: "${requestAcceptEncodingHeader}".
+Available encodings: ${availableEncodings.join(", ")}.`,
+    });
+  }
+
+  // Special case for single negotiation failure
+  if (unsupported.length === 1) {
+    const [{ message }] = unsupported;
+    return {
+      status: 406,
+      statusText: "Not Acceptable",
+      statusMessage: message,
+      headers,
+    };
+  }
+  // Handle multiple negotiation failures
+  let message = `The server cannot produce a response in a format acceptable to the client:`;
+  for (const info of unsupported) {
+    message += `\n- ${info.type} ${info.message.text}`;
+  }
+  return {
+    status: 406,
+    statusText: "Not Acceptable",
+    statusMessage: message,
+    headers,
+  };
+};
+const createMethodNotAllowedResponse = (
+  request,
+  { allowedMethods = [] } = {},
+) => {
+  return {
+    status: 405,
+    statusText: "Method Not Allowed",
+    statusmessage: `The HTTP method "${request.method}" is not supported for this resource.
+Allowed methods: ${allowedMethods.join(", ")}`,
+    headers: {
+      allow: allowedMethods.join(", "),
+    },
+  };
+};
+const createUnsupportedMediaTypeResponse = (
+  request,
+  { acceptedMediaTypes },
+) => {
+  const requestContentType = request.headers["content-type"];
+  const methodSpecificHeader =
+    request.method === "POST"
+      ? "accept-post"
+      : request.method === "PATCH"
+        ? "accept-patch"
+        : "accept";
+  const headers = {
+    [methodSpecificHeader]: acceptedMediaTypes.join(", "),
+  };
+  const requestMethod = request.method;
+
+  return {
+    status: 415,
+    statusText: "Unsupported Media Type",
+    statusMessage: requestContentType
+      ? `The media type "${requestContentType}" specified in the Content-Type header is not supported for ${requestMethod} requests to this resource.
+    Supported media types: ${acceptedMediaTypes.join(", ")}`
+      : `The Content-Type header is missing. It must be declared for ${requestMethod} requests to this resource.`,
+    headers,
+  };
+};
+const createRouteNotFoundResponse = (request) => {
+  return {
+    status: 404,
+    statusText: "Not Found",
+    statusMessage: `The URL ${request.resource} does not exist on this server.
+The list of existing endpoints is available at ${routeInspectorUrl}.`,
+    headers: {},
+  };
 };
 
 // to predict order in chrome devtools we should put a,b,c,d,e or something
@@ -6408,246 +9451,18 @@ const letters = [
   "z",
 ];
 
-const timeStart = (name) => {
-  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
-  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
-  const startTimestamp = performance$1.now();
-  const timeEnd = () => {
-    const endTimestamp = performance$1.now();
-    const timing = {
-      [name]: endTimestamp - startTimestamp,
-    };
-    return timing;
-  };
-  return timeEnd;
-};
-
-const timeFunction = (name, fn) => {
-  const timeEnd = timeStart(name);
-  const returnValue = fn();
-  if (returnValue && typeof returnValue.then === "function") {
-    return returnValue.then((value) => {
-      return [timeEnd(), value];
-    });
-  }
-  return [timeEnd(), returnValue];
-};
-
-const pickRequestContentType = (request, acceptedContentTypeArray) => {
-  const requestBodyContentType = request.headers["content-type"];
-  if (!requestBodyContentType) {
-    return null;
-  }
-  for (const acceptedContentType of acceptedContentTypeArray) {
-    if (requestBodyContentType.includes(acceptedContentType)) {
-      return acceptedContentType;
-    }
-  }
-  return null;
-};
-
-const createUnsupportedMediaTypeResponse = (
-  request,
-  acceptedContentTypeArray = [],
-) => {
-  return {
-    status: 415,
-    [`accept-${request.method}`]: acceptedContentTypeArray.join(", "),
-  };
-};
-
-const getRequestBody = async (request, contentType) => {
-  // https://github.com/node-formidable/formidable/tree/master/src/parsers
-  if (contentType === "multipart/form-data") {
-    const { formidable } = await import("formidable");
-    const form = formidable({});
-    request.__nodeRequest.resume(); // was paused in start_server.js
-    const [fields, files] = await form.parse(request.__nodeRequest);
-    const requestBodyFormData = { fields, files };
-    return requestBodyFormData;
-  }
-  if (contentType === "application/x-www-form-urlencoded") {
-    const requestBodyBuffer = await readRequestBody(request);
-    const requestBodyString = String(requestBodyBuffer);
-    const requestBodyQueryStringParsed = parse(requestBodyString);
-    return requestBodyQueryStringParsed;
-  }
-  if (contentType === "application/json") {
-    const requestBodyBuffer = await readRequestBody(request);
-    const requestBodyString = String(requestBodyBuffer);
-    const requestBodyJSON = JSON.parse(requestBodyString);
-    return requestBodyJSON;
-  }
-  if (contentType === "text/plain") {
-    const requestBodyBuffer = await readRequestBody(request);
-    const requestBodyString = String(requestBodyBuffer);
-    return requestBodyString;
-  }
-  if (contentType === "application/octet-stream") {
-    const requestBodyBuffer = await readRequestBody(request);
-    return requestBodyBuffer;
-  }
-  throw new Error(`unknown content type ${contentType}`);
-};
-
-// exported for unit tests
-const readRequestBody = (request, { as }) => {
-  return new Promise((resolve, reject) => {
-    const bufferArray = [];
-    request.body.subscribe({
-      error: reject,
-      next: (buffer) => {
-        bufferArray.push(buffer);
-      },
-      complete: () => {
-        const bodyAsBuffer = Buffer.concat(bufferArray);
-        if (as === "buffer") {
-          resolve(bodyAsBuffer);
-          return;
-        }
-        if (as === "string") {
-          const bodyAsString = bodyAsBuffer.toString();
-          resolve(bodyAsString);
-          return;
-        }
-        if (as === "json") {
-          const bodyAsString = bodyAsBuffer.toString();
-          const bodyAsJSON = JSON.parse(bodyAsString);
-          resolve(bodyAsJSON);
-          return;
-        }
-      },
-    });
-  });
-};
-
-const jsenvServiceRouting = (description) => {
-  const routes = createRoutes(description);
-  for (const route of routes) {
-    if (
-      typeof route.handler === "object" &&
-      route.methodPattern !== "POST" &&
-      route.methodPattern !== "PATCH" &&
-      route.methodPattern !== "PUT"
-    ) {
-      throw new Error(
-        "route handler can be an object only when method is POST|PATCH|PUT",
-      );
-    }
-  }
-
-  return {
-    handleRequest: async (request) => {
-      for (const route of routes) {
-        const matchResult = route.match({
-          method: request.method,
-          resource: request.resource,
-        });
-        if (!matchResult) {
-          continue;
-        }
-        const response = await getResponseFromRoute(
-          route,
-          request,
-          matchResult,
-        );
-        if (response) {
-          return response;
-        }
-      }
-      return null;
-    },
-    injectResponseHeaders: (response, { request }) => {
-      if (request.method !== "OPTIONS") {
-        return null;
-      }
-      const METHODS = [
-        "OPTIONS",
-        "HEAD",
-        "GET",
-        "POST",
-        "PATCH",
-        "PUT",
-        "DELETE",
-      ];
-      const acceptedContentTypeSet = new Set();
-      const postAcceptedContentTypeSet = new Set();
-      const patchAcceptedContentTypeSet = new Set();
-      const allowedMethodSet = new Set();
-      for (const route of routes) {
-        for (const METHOD of METHODS) {
-          const matchResult = route.match({
-            method: METHOD,
-            resource: request.resource,
-          });
-          if (matchResult) {
-            allowedMethodSet.add(METHOD);
-            if (typeof route.handler === "object") {
-              for (const acceptedContentType of Object.keys(route.handler)) {
-                acceptedContentTypeSet.add(acceptedContentType);
-                if (METHOD === "POST") {
-                  postAcceptedContentTypeSet.add(acceptedContentType);
-                }
-                if (METHOD === "PATCH") {
-                  patchAcceptedContentTypeSet.add(acceptedContentType);
-                }
-              }
-            }
-          }
-        }
-      }
-      return {
-        "accept": Array.from(acceptedContentTypeSet).join(", "),
-        "accept-post": Array.from(postAcceptedContentTypeSet).join(", "),
-        "accept-patch": Array.from(patchAcceptedContentTypeSet).join(", "),
-        "allow": Array.from(allowedMethodSet).join(", "),
-      };
-    },
-  };
-};
-
-const getResponseFromRoute = async (route, request, matchResult) => {
-  const handler = route.handler;
-  if (typeof handler === "function") {
-    const response = await handler(request, matchResult);
-    return response;
-  }
-  if (typeof handler === "object") {
-    const acceptedRequestContentTypeArray = Object.keys(handler);
-    const acceptedContentType = pickRequestContentType(
-      request,
-      acceptedRequestContentTypeArray,
-    );
-    if (!acceptedContentType) {
-      return createUnsupportedMediaTypeResponse(
-        request,
-        acceptedRequestContentTypeArray,
-      );
-    }
-    request.body.read = async () => {
-      const requestBody = await getRequestBody(request, acceptedContentType);
-      return requestBody;
-    };
-    const response = await handler[acceptedContentType](request, matchResult);
-    return response;
-  }
-  return null;
-};
-
 const HOOK_NAMES$1 = [
   "serverListening",
   "redirectRequest",
-  "handleRequest",
-  "handleWebsocket",
+  "augmentRouteFetchSecondArg",
+  "routes",
   "handleError",
   "onResponsePush",
-  "injectResponseHeaders",
-  "responseReady",
+  "injectResponseProperties",
   "serverStopped",
 ];
 
 const createServiceController = (services) => {
-  const flatServices = flattenAndFilterServices(services);
   const hookSetMap = new Map();
 
   const addHook = (hook) => {
@@ -6673,19 +9488,7 @@ const createServiceController = (services) => {
       if (!hookValue) {
         continue;
       }
-      if (hookName === "handleRequest" && typeof hookValue === "object") {
-        const routing = jsenvServiceRouting(hookValue);
-        addHook({
-          service,
-          name: hookName,
-          value: routing.handleRequest,
-        });
-        addHook({
-          service,
-          name: "injectResponseHeaders",
-          value: routing.injectResponseHeaders,
-        });
-      } else {
+      if (hookName === "routes") ; else {
         addHook({
           service,
           name: hookName,
@@ -6694,8 +9497,9 @@ const createServiceController = (services) => {
       }
     }
   };
-  for (const flatService of flatServices) {
-    addService(flatService);
+
+  for (const service of services) {
+    addService(service);
   }
 
   let currentService = null;
@@ -6707,16 +9511,7 @@ const createServiceController = (services) => {
     }
     currentService = hook.service;
     currentHookName = hook.name;
-    let timeEnd;
-    if (context && context.timing) {
-      timeEnd = timeStart(
-        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
-      );
-    }
     let valueReturned = hookFn(info, context);
-    if (context && context.timing) {
-      Object.assign(context.timing, timeEnd());
-    }
     currentService = null;
     currentHookName = null;
     return valueReturned;
@@ -6728,16 +9523,7 @@ const createServiceController = (services) => {
     }
     currentService = hook.service;
     currentHookName = hook.name;
-    let timeEnd;
-    if (context && context.timing) {
-      timeEnd = timeStart(
-        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
-      );
-    }
     let valueReturned = await hookFn(info, context);
-    if (context && context.timing) {
-      Object.assign(context.timing, timeEnd());
-    }
     currentService = null;
     currentHookName = null;
     return valueReturned;
@@ -6801,7 +9587,7 @@ const createServiceController = (services) => {
   };
 
   return {
-    services: flatServices,
+    services,
 
     callHooks,
     callHooksUntil,
@@ -6843,6 +9629,691 @@ const flattenAndFilterServices = (services) => {
   };
   services.forEach((serviceEntry) => visitServiceEntry(serviceEntry));
   return flatServices;
+};
+
+/**
+ * The standard ways to create a Response
+ * - new Response(body, init)
+ * - Response.json(data, init)
+ * Here we need a way to tell: I want to handle websocket
+ * to align with the style of new Response and Response.json to make it look as follow:
+ * ```js
+ * import { WebSocketResponse } from "@jsenv/server"
+ * new WebSocketResponse((websocket) => {
+ *   // do stuff with the websocket
+ * })
+ * ```
+ *
+ * But we don't really need a class so we are just returning a regular object under the hood
+ */
+
+class WebSocketResponse {
+  constructor(
+    webSocketHandler,
+    {
+      status = 101,
+      statusText = status === 101 ? "Switching Protocols" : undefined,
+      headers,
+    } = {},
+  ) {
+    const webSocketResponse = {
+      status,
+      statusText,
+      headers,
+      body: {
+        websocket: webSocketHandler,
+      },
+    };
+    // eslint-disable-next-line no-constructor-return
+    return webSocketResponse;
+  }
+}
+
+const getWebSocketHandler = (responseProperties) => {
+  const responseBody = responseProperties.body;
+  if (!responseBody) {
+    return undefined;
+  }
+  const webSocketHandler = responseBody.websocket;
+  return webSocketHandler;
+};
+
+/**
+ * https://www.html5rocks.com/en/tutorials/eventsource/basics/
+ *
+ */
+
+
+/**
+ * Creates a Server-Sent Events controller that manages client connections and event distribution.
+ * Supports both SSE (EventSource) and WebSocket connections with automatic event history tracking.
+ *
+ * @class
+ * @param {Object} options - Configuration options for the SSE controller
+ * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
+ * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
+ * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
+ * @param {Number} [options.maxClientAllowed=100] - Maximum number of concurrent client connections allowed
+ * @param {Function} [options.computeEventId] - Function to generate event IDs, receives (event, lastEventId) and returns new ID
+ * @param {Boolean} [options.welcomeEventEnabled=false] - Whether to send a welcome event to new clients
+ * @param {Boolean} [options.welcomeEventPublic=false] - If true, welcome events are broadcast to all clients, not just the new one
+ * @param {String} [options.actionOnClientLimitReached='refuse'] - Action when client limit is reached ('refuse' or 'kick-oldest')
+ *
+ * @returns {Object} SSE controller with the following methods:
+ * @returns {Function} .sendEventToAllClients - Sends an event to all connected clients
+ * @returns {Function} .fetch - Handles HTTP requests and upgrades them to SSE/WebSocket connections
+ * @returns {Function} .getAllEventSince - Retrieves events since a specific ID
+ * @returns {Function} .getClientCount - Returns the number of connected clients
+ * @returns {Function} .close - Closes all connections and stops the controller
+ * @returns {Function} .open - Reopens the controller after closing
+ *
+ * @example
+ * import { ServerEvents } from "@jsenv/server";
+ *
+ * const serverEvents = new ServerEvents({
+ *   welcomeEventEnabled: true,
+ *   historyLength: 50
+ * });
+ *
+ * // Send events to all connected clients
+ * serverEvents.sendEventToAllClients({
+ *   type: "update",
+ *   data: JSON.stringify({ timestamp: Date.now() })
+ * });
+ *
+ * // Use in server route
+ * {
+ *   endpoint: "GET /events",
+ *   response: (request) => serverEvents.fetch(request)
+ * }
+ */
+class ServerEvents {
+  constructor(...args) {
+    // eslint-disable-next-line no-constructor-return
+    return createServerEvents(...args);
+  }
+}
+
+/**
+ * Creates a minimal Server-Sent Events controller that exposes only the fetch method
+ * to handle client connections, keeping other controller methods private.
+ *
+ * This is useful when you want to provide a minimal API surface and ensure
+ * the events can only be pushed through a given function.
+ *
+ * @class
+ * @param {Function} producer - Function called when first client connects
+ * @param {Object} [options] - Configuration options for the SSE controller
+ * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
+ * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
+ * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
+ * @param {Number} [options.maxClientAllowed=100] - Maximum number of concurrent client connections allowed
+ * @param {Function} [options.computeEventId] - Function to generate event IDs, receives (event, lastEventId) and returns new ID
+ * @param {Boolean} [options.welcomeEventEnabled=false] - Whether to send a welcome event to new clients
+ * @param {Boolean} [options.welcomeEventPublic=false] - If true, welcome events are broadcast to all clients, not just the new one
+ * @param {String} [options.actionOnClientLimitReached='refuse'] - Action when client limit is reached ('refuse' or 'kick-oldest')
+ *
+ * @returns {Object} An object with only the fetch method to handle client connections
+ *
+ * @example
+ * import { LazyServerEvents } from "@jsenv/server";
+ *
+ * // Events can only be sent through the producer function
+ * const events = new LazyServerEvents((api) => {
+ *   console.log("First client connected");
+ *
+ *   // Setup interval, database watchers, etc.
+ *   const interval = setInterval(() => {
+ *     api.sendEvent({
+ *       type: "tick",
+ *       data: new Date().toISOString()
+ *     });
+ *   }, 1000);
+ *
+ *   // Return cleanup function that runs when last client disconnects
+ *   return () => {
+ *     console.log("Last client disconnected");
+ *     clearInterval(interval);
+ *   };
+ * });
+ *
+ * // Use in server route
+ * {
+ *   endpoint: "GET /events",
+ *   response: (request) => events.fetch(request)
+ * }
+ */
+class LazyServerEvents {
+  constructor(producer, options = {}) {
+    const serverEvents = createServerEvents({
+      producer,
+      ...options,
+    });
+    // eslint-disable-next-line no-constructor-return
+    return {
+      fetch: serverEvents.fetch,
+    };
+  }
+}
+
+const createServerEvents = ({
+  producer,
+  logLevel,
+  // do not keep process alive because of event source, something else must keep it alive
+  keepProcessAlive = false,
+  keepaliveDuration = 30 * 1000,
+  retryDuration = 1 * 1000,
+  historyLength = 1 * 1000,
+  maxClientAllowed = 100, // max 100 clients accepted
+  computeEventId = (event, lastEventId) => lastEventId + 1,
+  welcomeEventEnabled = false,
+  welcomeEventPublic = false,
+  actionOnClientLimitReached = "refuse",
+} = {}) => {
+  const logger = createLogger({ logLevel });
+
+  const serverEventSource = {
+    closed: false,
+  };
+  const clientArray = [];
+  const eventHistory = createEventHistory(historyLength);
+  // what about previousEventId that keeps growing ?
+  // we could add some limit
+  // one limit could be that an event older than 24h is deleted
+  let previousEventId = 0;
+  let interval;
+  let producerReturnValue;
+
+  const addClient = (client) => {
+    if (clientArray.length === 0) {
+      if (typeof producer === "function") {
+        producerReturnValue = producer({
+          sendEvent: sendEventToAllClients,
+        });
+      }
+    }
+    clientArray.push(client);
+    logger.debug(
+      `A client has joined. Number of client: ${clientArray.length}`,
+    );
+    if (client.lastKnownId !== undefined) {
+      const previousEvents = getAllEventSince(client.lastKnownId);
+      const eventMissedCount = previousEvents.length;
+      if (eventMissedCount > 0) {
+        logger.info(
+          `send ${eventMissedCount} event missed by client since event with id "${client.lastKnownId}"`,
+        );
+        for (const previousEvent of previousEvents) {
+          client.sendEvent(previousEvent);
+        }
+      }
+    }
+    if (welcomeEventEnabled) {
+      const welcomeEvent = {
+        retry: retryDuration,
+        type: "welcome",
+        data: new Date().toLocaleTimeString(),
+      };
+      addEventToHistory(welcomeEvent);
+
+      // send to everyone
+      if (welcomeEventPublic) {
+        sendEventToAllClients(welcomeEvent, {
+          history: false,
+        });
+      }
+      // send only to this client
+      else {
+        client.sendEvent(welcomeEvent);
+      }
+    } else {
+      const firstEvent = {
+        retry: retryDuration,
+        type: "comment",
+        data: new Date().toLocaleTimeString(),
+      };
+      client.sendEvent(firstEvent);
+    }
+  };
+  const removeClient = (client) => {
+    const index = clientArray.indexOf(client);
+    if (index === -1) {
+      return;
+    }
+    clientArray.splice(index, 1);
+    logger.debug(`A client left. Number of client: ${clientArray.length}`);
+    if (clientArray.length === 0) {
+      if (typeof producerReturnValue === "function") {
+        producerReturnValue();
+        producerReturnValue = undefined;
+      }
+    }
+  };
+
+  const fetch = (request) => {
+    const isWebsocketUpgradeRequest =
+      request.headers["upgrade"] === "websocket";
+    const isEventSourceRequest = isWebsocketUpgradeRequest
+      ? false
+      : request.headers["accept"] &&
+        request.headers["accept"].includes("text/event-stream");
+    if (!isWebsocketUpgradeRequest && !isEventSourceRequest) {
+      return {
+        status: 400,
+        body: "Bad Request, this endpoint only accepts WebSocket or EventSource requests",
+      };
+    }
+
+    if (clientArray.length >= maxClientAllowed) {
+      if (actionOnClientLimitReached === "refuse") {
+        return {
+          status: 503,
+        };
+      }
+      // "kick-oldest"
+      const oldestClient = clientArray.shift();
+      oldestClient.close();
+    }
+
+    if (serverEventSource.closed) {
+      return {
+        status: 204,
+      };
+    }
+
+    const lastKnownId =
+      request.headers["last-event-id"] ||
+      request.searchParams.get("last-event-id");
+    if (isWebsocketUpgradeRequest) {
+      return new WebSocketResponse((websocket) => {
+        const webSocketClient = {
+          type: "websocket",
+          lastKnownId,
+          request,
+          websocket,
+          sendEvent: (event) => {
+            websocket.send(JSON.stringify(event));
+          },
+          close: () => {
+            websocket.close();
+          },
+        };
+        addClient(webSocketClient);
+        return () => {
+          removeClient(webSocketClient);
+        };
+      });
+    }
+    // event source request
+    return {
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-store",
+        "connection": "keep-alive",
+      },
+      body: createObservable(({ next, complete, addTeardown }) => {
+        const client = {
+          type: "event_source",
+          lastKnownId,
+          request,
+          sendEvent: (event) => {
+            next(stringifySourceEvent(event));
+          },
+          close: () => {
+            complete(); // will terminate the http connection as body ends
+          },
+        };
+        addClient(client);
+        addTeardown(() => {
+          removeClient(client);
+        });
+      }),
+    };
+  };
+
+  const addEventToHistory = (event) => {
+    if (typeof event.id === "undefined") {
+      event.id = computeEventId(event, previousEventId);
+    }
+    previousEventId = event.id;
+    eventHistory.add(event);
+  };
+
+  const sendEventToAllClients = (event, { history = true } = {}) => {
+    if (history) {
+      addEventToHistory(event);
+    }
+    logger.debug(`send "${event.type}" event to ${clientArray.size} client(s)`);
+    for (const client of clientArray) {
+      client.sendEvent(event);
+    }
+  };
+
+  const getAllEventSince = (id) => {
+    const events = eventHistory.since(id);
+    if (welcomeEventEnabled && !welcomeEventPublic) {
+      return events.filter((event) => event.type !== "welcome");
+    }
+    return events;
+  };
+
+  const keepAlive = () => {
+    // maybe that, when an event occurs, we can delay the keep alive event
+    logger.debug(
+      `send keep alive event, number of client listening this event source: ${clientArray.length}`,
+    );
+    sendEventToAllClients(
+      {
+        type: "comment",
+        data: new Date().toLocaleTimeString(),
+      },
+      { history: false },
+    );
+  };
+
+  const open = () => {
+    if (!serverEventSource.closed) {
+      return;
+    }
+    interval = setInterval(keepAlive, keepaliveDuration);
+    if (!keepProcessAlive) {
+      interval.unref();
+    }
+    serverEventSource.closed = false;
+  };
+
+  const close = () => {
+    if (serverEventSource.closed) {
+      return;
+    }
+    logger.debug(`closing, number of client : ${clientArray.length}`);
+    for (const client of clientArray) {
+      client.close();
+    }
+    clientArray.length = 0;
+    clearInterval(interval);
+    eventHistory.reset();
+    serverEventSource.closed = true;
+  };
+
+  Object.assign(serverEventSource, {
+    // main api:
+    // - ability to sendEvent to clients in the room
+    // - ability to join the room
+    // - ability to leave the room
+    sendEventToAllClients,
+    fetch,
+
+    // should rarely be necessary, get information about the room
+    getAllEventSince,
+    getClientCount: () => clientArray.length,
+
+    // should rarely be used
+    close,
+    open,
+  });
+  return serverEventSource;
+};
+
+// https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
+// https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
+// https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
+// http://html5doctor.com/server-sent-events/
+const stringifySourceEvent = ({ data, type = "message", id, retry }) => {
+  let string = "";
+
+  if (id !== undefined) {
+    string += `id:${id}\n`;
+  }
+
+  if (retry) {
+    string += `retry:${retry}\n`;
+  }
+
+  if (type !== "message") {
+    string += `event:${type}\n`;
+  }
+
+  string += `data:${data}\n\n`;
+
+  return string;
+};
+
+const createEventHistory = (limit) => {
+  const events = [];
+
+  const add = (data) => {
+    events.push(data);
+
+    if (events.length >= limit) {
+      events.shift();
+    }
+  };
+
+  const since = (id) => {
+    const index = events.findIndex((event) => String(event.id) === id);
+    return index === -1 ? [] : events.slice(index + 1);
+  };
+
+  const reset = () => {
+    events.length = 0;
+  };
+
+  return { add, since, reset };
+};
+
+const jsenvServiceAutoreloadOnRestart = () => {
+  const aliveServerEvents = new LazyServerEvents(() => {});
+
+  return {
+    name: "jsenv:autoreload_on_server_restart",
+
+    routes: [
+      {
+        endpoint: "GET /.internal/alive.websocket",
+        description:
+          "Client can connect to this websocket endpoint to detect when server connection is lost.",
+        declarationSource: import.meta.url,
+        /* eslint-disable no-undef */
+        clientCodeExample: () => {
+          const websocket = new WebSocket(
+            "ws://localhost/.internal/alive.websocket",
+          );
+          websocket.onclose = () => {
+            // server connection closed
+            window.location.reload();
+          };
+        },
+        fetch: aliveServerEvents.fetch,
+      },
+      {
+        endpoint: "GET /.internal/alive.eventsource",
+        description: `Client can connect to this eventsource endpoint to detect when server connection is lost.
+This endpoint exists mostly to demo eventsource as there is already the websocket endpoint.`,
+        declarationSource: import.meta.url,
+        /* eslint-disable no-undef */
+        clientCodeExample: async () => {
+          const eventSource = new EventSource("/.internal/alive.eventsource");
+          eventSource.onerror = () => {
+            // server connection closed
+            window.location.reload();
+          };
+        },
+        /* eslint-enable no-undef */
+        fetch: aliveServerEvents.fetch,
+      },
+    ],
+  };
+};
+
+const replacePlaceholdersInHtml = (html, replacers) => {
+  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
+};
+
+const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./html/4xx.html");
+
+const jsenvServiceDefaultBody4xx5xx = () => {
+  return {
+    name: "jsenv:default_body_4xx_5xx",
+
+    injectResponseProperties: (request, responseProperties) => {
+      if (responseProperties.body !== undefined) {
+        return null;
+      }
+      if (responseProperties.status >= 400 && responseProperties.status < 500) {
+        return generateBadStatusResponse(request, responseProperties);
+      }
+      if (responseProperties.status >= 500 && responseProperties.status < 600) {
+        return generateBadStatusResponse(request, responseProperties);
+      }
+      return null;
+    },
+  };
+};
+
+const generateBadStatusResponse = (
+  request,
+  { status, statusText, statusMessage },
+) => {
+  const contentTypeNegotiated = pickContentType(request, [
+    "text/html",
+    "text/plain",
+    "application/json",
+  ]);
+  if (contentTypeNegotiated === "text/html") {
+    const htmlTemplate = readFileSync(
+      new URL(clientErrorHtmlTemplateFileUrl),
+      "utf8",
+    );
+    if (statusMessage) {
+      statusMessage = statusMessage.replace(/https?:\/\/\S+/g, (url) => {
+        return `<a href="${url}">${url}</a>`;
+      });
+      statusMessage = statusMessage.replace(
+        /(^|\s)(\/\S+)/g,
+        (match, startOrSpace, resource) => {
+          let end = "";
+          if (resource[resource.length - 1] === ".") {
+            resource = resource.slice(0, -1);
+            end = ".";
+          }
+          return `${startOrSpace}<a href="${resource}">${resource}</a>${end}`;
+        },
+      );
+      statusMessage = statusMessage.replace(/\r\n|\r|\n/g, "<br />");
+    }
+
+    const html = replacePlaceholdersInHtml(htmlTemplate, {
+      status,
+      statusText,
+      statusMessage: statusMessage || "",
+    });
+    return new Response(html, {
+      headers: { "content-type": "text/html" },
+      status,
+      statusText,
+    });
+  }
+  if (contentTypeNegotiated === "text/plain") {
+    return new Response(statusMessage, {
+      status,
+      statusText,
+    });
+  }
+  return Response.json(
+    { statusMessage },
+    {
+      status,
+      statusText,
+    },
+  );
+};
+
+const jsenvServiceOpenFile = () => {
+  return {
+    name: "jsenv:open_file",
+    routes: [
+      {
+        endpoint: "GET /.internal/open_file/*",
+        description: "Can be used to open a given file in your editor.",
+        declarationSource: import.meta.url,
+        fetch: (request) => {
+          let file = decodeURIComponent(request.params[0]);
+          if (!file) {
+            return {
+              status: 400,
+              body: "Missing file in url",
+            };
+          }
+          const fileUrl = new URL(file);
+          const filePath = urlToFileSystemPath(fileUrl);
+          const require = createRequire(import.meta.url);
+          const launch = require("launch-editor");
+          launch(filePath, () => {
+            // ignore error for now
+          });
+          return {
+            status: 200,
+            headers: {
+              "cache-control": "no-store",
+            },
+          };
+        },
+      },
+    ],
+  };
+};
+
+const routeInspectorHtmlFileUrl = import.meta.resolve(
+  "./html/route_inspector.html",
+);
+
+const jsenvServiceRouteInspector = () => {
+  return {
+    name: "jsenv:route_inspector",
+    routes: [
+      {
+        endpoint: "GET /.internal/route_inspector",
+        description:
+          "Explore the routes available on this server using a web interface.",
+        availableMediaTypes: ["text/html"],
+        declarationSource: import.meta.url,
+        fetch: () => {
+          const inspectorHtml = readFileSync(
+            new URL(routeInspectorHtmlFileUrl),
+            "utf8",
+          );
+          return new Response(inspectorHtml, {
+            headers: { "content-type": "text/html" },
+          });
+        },
+      },
+      {
+        endpoint: "GET /.internal/routes.json",
+        availableMediaTypes: ["application/json"],
+        description: "Get the routes available on this server in JSON.",
+        declarationSource: import.meta.url,
+        fetch: (request, helpers) => {
+          const routeJSON = helpers.router.inspect(request, helpers);
+          return Response.json(routeJSON);
+        },
+      },
+    ],
+  };
 };
 
 const createReason = (reasonString) => {
@@ -6972,6 +10443,10 @@ const isIpV4 = (networkAddress) => {
 
 const isIpV6 = (networkAddress) => !isIpV4(networkAddress);
 
+const TIMING_NOOP = () => {
+  return { end: () => {} };
+};
+
 const startServer = async ({
   signal = new AbortController().signal,
   logLevel,
@@ -6998,12 +10473,13 @@ const startServer = async ({
   // auto close when requestToResponse throw an error
   stopOnInternalError = false,
   keepProcessAlive = true,
+  routes = [],
   services = [],
   nagle = true,
   serverTiming = false,
   requestWaitingMs = 0,
-  requestWaitingCallback = ({ request, warn, requestWaitingMs }) => {
-    warn(
+  requestWaitingCallback = ({ request, requestWaitingMs }) => {
+    request.logger.warn(
       createDetailedMessage$1(
         `still no response found for request after ${requestWaitingMs} ms`,
         {
@@ -7072,7 +10548,37 @@ const startServer = async ({
     }
   }
 
+  services = [
+    jsenvServiceOpenFile(),
+    jsenvServiceDefaultBody4xx5xx(),
+    jsenvServiceRouteInspector(),
+    ...(// after build internal client files are inlined, no need for this service anymore
+        []
+      ),
+    jsenvServiceAutoreloadOnRestart(),
+    ...flattenAndFilterServices(services),
+  ];
+
+  const allRouteArray = [];
+  for (const service of services) {
+    const serviceRoutes = service.routes;
+    if (serviceRoutes) {
+      for (const serviceRoute of serviceRoutes) {
+        serviceRoute.service = service;
+        allRouteArray.push(serviceRoute);
+      }
+    }
+  }
+  for (const route of routes) {
+    allRouteArray.push(route);
+  }
+
+  const router = createRouter(allRouteArray, {
+    optionsFallback: true,
+  });
+
   const server = {};
+
   const serviceController = createServiceController(services);
   const processTeardownEvents = {
     SIGHUP: stopOnExit,
@@ -7210,7 +10716,9 @@ const startServer = async ({
   // we can proceed to create a stop function to stop it gacefully
   // and add a request handler
   stopCallbackSet.add(({ reason }) => {
-    logger.info(`${serverName} stopping server (reason: ${reason})`);
+    if (reason !== STOP_REASON_PROCESS_BEFORE_EXIT) {
+      logger.info(`${serverName} stopping server (reason: ${reason})`);
+    }
   });
   stopCallbackSet.add(async () => {
     await stopListening(nodeServer);
@@ -7281,15 +10789,278 @@ const startServer = async ({
     });
   });
 
-  {
-    const requestCallback = async (nodeRequest, nodeResponse) => {
-      // pause the stream to let a chance to "requestToResponse"
-      // to call "requestRequestBody". Without this the request body readable stream
-      // might be closed when we'll try to attach "data" and "end" listeners to it
-      nodeRequest.pause();
-      if (!nagle) {
-        nodeRequest.connection.setNoDelay(true);
+  const applyRequestInternalRedirection = (request) => {
+    serviceController.callHooks(
+      "redirectRequest",
+      request,
+      {},
+      (newRequestProperties) => {
+        if (newRequestProperties) {
+          request = applyRedirectionToRequest(request, {
+            original: request.original || request,
+            previous: request,
+            ...newRequestProperties,
+          });
+        }
+      },
+    );
+    return request;
+  };
+
+  const prepareHandleRequestOperations = (nodeRequest, nodeResponse) => {
+    const receiveRequestOperation = Abort.startOperation();
+    receiveRequestOperation.addAbortSignal(stopAbortSignal);
+    const sendResponseOperation = Abort.startOperation();
+    sendResponseOperation.addAbortSignal(stopAbortSignal);
+    receiveRequestOperation.addAbortSource((abort) => {
+      const closeEventCallback = () => {
+        if (nodeRequest.complete) {
+          receiveRequestOperation.end();
+        } else {
+          nodeResponse.destroy();
+          abort();
+        }
+      };
+      nodeRequest.once("close", closeEventCallback);
+      return () => {
+        nodeRequest.removeListener("close", closeEventCallback);
+      };
+    });
+    sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
+    return [receiveRequestOperation, sendResponseOperation];
+  };
+  const getResponseProperties = async (request, { pushResponse }) => {
+    const timings = {};
+    const timing = serverTiming
+      ? (name) => {
+          const start = performance.now();
+          timings[name] = null;
+          return {
+            name,
+            end: () => {
+              const end = performance.now();
+              const duration = end - start;
+              timings[name] = duration;
+            },
+          };
+        }
+      : TIMING_NOOP;
+    const startRespondingTiming = timing("time to start responding");
+
+    request.logger.info(
+      request.headers["upgrade"] === "websocket"
+        ? `GET ${request.url} ${websocketSuffixColorized}`
+        : request.parent
+          ? `Push ${request.resource}`
+          : `${request.method} ${request.url}`,
+    );
+    let requestWaitingTimeout;
+    if (requestWaitingMs) {
+      requestWaitingTimeout = setTimeout(
+        () =>
+          requestWaitingCallback({
+            request,
+            requestWaitingMs,
+          }),
+        requestWaitingMs,
+      ).unref();
+    }
+
+    let headersToInject;
+    const finalizeResponseProperties = (responseProperties) => {
+      if (serverTiming) {
+        startRespondingTiming.end();
+        responseProperties.headers = composeTwoHeaders(
+          responseProperties.headers,
+          timingToServerTimingResponseHeaders(timings),
+        );
       }
+      if (requestWaitingMs) {
+        clearTimeout(requestWaitingTimeout);
+      }
+      if (
+        request.method !== "HEAD" &&
+        responseProperties.headers["content-length"] > 0 &&
+        !responseProperties.body
+      ) {
+        request.logger.warn(
+          `content-length response header found without body`,
+        );
+      }
+
+      if (headersToInject) {
+        responseProperties.headers = composeTwoHeaders(
+          responseProperties.headers,
+          headersToInject,
+        );
+      }
+      serviceController.callHooks(
+        "injectResponseProperties",
+        request,
+        responseProperties,
+        (returnValue) => {
+          if (!returnValue) {
+            return;
+          }
+          responseProperties = composeTwoResponses(
+            responseProperties,
+            returnValue,
+          );
+        },
+      );
+      // the node request readable stream is never closed because
+      // the response headers contains "connection: keep-alive"
+      // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
+      if (
+        responseProperties.headers.connection === "keep-alive" &&
+        request.body
+      ) {
+        clearTimeout(request.body.timeout);
+      }
+      return responseProperties;
+    };
+
+    let timeout;
+    try {
+      request = applyRequestInternalRedirection(request);
+      const timeoutResponsePropertiesPromise = new Promise((resolve) => {
+        timeout = setTimeout(() => {
+          resolve({
+            // the correct status code should be 500 because it's
+            // we don't really know what takes time
+            // in practice it's often because server is trying to reach an other server
+            // that is not responding so 504 is more correct
+            status: 504,
+            statusText: `server timeout after ${
+              responseTimeout / 1000
+            }s waiting to handle request`,
+          });
+        }, responseTimeout);
+      });
+      const routerResponsePropertiesPromise = (async () => {
+        const fetchSecondArg = {
+          timing,
+          pushResponse,
+          injectResponseHeader: (name, value) => {
+            if (!headersToInject) {
+              headersToInject = {};
+            }
+            headersToInject[name] = composeTwoHeaderValues(
+              name,
+              headersToInject[name],
+              value,
+            );
+          },
+        };
+        serviceController.callHooks(
+          "augmentRouteFetchSecondArg",
+          request,
+          fetchSecondArg,
+          (properties) => {
+            if (properties) {
+              Object.assign(fetchSecondArg, properties);
+            }
+          },
+        );
+        const routerResponseProperties = await router.match(
+          request,
+          fetchSecondArg,
+        );
+        return routerResponseProperties;
+      })();
+      const responseProperties = await Promise.race([
+        timeoutResponsePropertiesPromise,
+        routerResponsePropertiesPromise,
+      ]);
+      clearTimeout(timeout);
+      return finalizeResponseProperties(responseProperties);
+    } catch (e) {
+      clearTimeout(timeout);
+      if (e.name === "AbortError" && request.signal.aborted) {
+        // let it propagate to the caller that should catch this
+        throw e;
+      }
+      // internal error, create 500 response
+      if (
+        // stopOnInternalError stops server only if requestToResponse generated
+        // a non controlled error (internal error).
+        // if requestToResponse gracefully produced a 500 response (it did not throw)
+        // then we can assume we are still in control of what we are doing
+        stopOnInternalError
+      ) {
+        // il faudrais pouvoir stop que les autres response ?
+        stop(STOP_REASON_INTERNAL_ERROR);
+      }
+      const handleErrorReturnValue =
+        await serviceController.callAsyncHooksUntil("handleError", e, {
+          request,
+        });
+      if (!handleErrorReturnValue) {
+        throw e;
+      }
+      request.logger.error(
+        createDetailedMessage$1(`internal error while handling request`, {
+          "error stack": e.stack,
+        }),
+      );
+      const responseProperties = composeTwoResponses(
+        {
+          status: 500,
+          statusText: "Internal Server Error",
+          headers: {
+            // ensure error are not cached
+            "cache-control": "no-store",
+          },
+        },
+        handleErrorReturnValue,
+      );
+      return finalizeResponseProperties(responseProperties);
+    }
+  };
+  const sendResponse = async (
+    responseStream,
+    responseProperties,
+    { signal, request },
+  ) => {
+    // When "pushResponse" is called and the parent response has no body
+    // the parent response is immediatly ended. It means child responses (pushed streams)
+    // won't get a chance to be pushed.
+    // To let a chance to pushed streams we wait a little before sending the response
+    const ignoreBody = request.method === "HEAD";
+    const bodyIsEmpty = !responseProperties.body || ignoreBody;
+    if (bodyIsEmpty && request.logger.hasPushChild) {
+      await new Promise((resolve) => setTimeout(resolve));
+    }
+    await writeNodeResponse(responseStream, responseProperties, {
+      signal,
+      ignoreBody,
+      onAbort: () => {
+        request.logger.info(`response aborted`);
+        request.logger.end();
+      },
+      onError: (error) => {
+        request.logger.error(
+          createDetailedMessage$1(`An error occured while sending response`, {
+            "error stack": error.stack,
+          }),
+        );
+        request.logger.end();
+      },
+      onHeadersSent: ({ status, statusText }) => {
+        request.logger.onHeadersSent({
+          status,
+          statusText: responseProperties.statusMessage || statusText,
+        });
+        request.logger.end();
+      },
+      onEnd: () => {
+        request.logger.end();
+      },
+    });
+  };
+
+  {
+    const requestEventHandler = async (nodeRequest, nodeResponse) => {
       if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
         nodeResponse.writeHead(301, {
           location: `${serverOrigin}${nodeRequest.url}`,
@@ -7306,642 +11077,296 @@ const startServer = async ({
         return;
       }
 
-      const receiveRequestOperation = Abort.startOperation();
-      receiveRequestOperation.addAbortSignal(stopAbortSignal);
-      const sendResponseOperation = Abort.startOperation();
-      sendResponseOperation.addAbortSignal(stopAbortSignal);
-      receiveRequestOperation.addAbortSource((abort) => {
-        const closeEventCallback = () => {
-          if (nodeRequest.complete) {
-            receiveRequestOperation.end();
-          } else {
-            nodeResponse.destroy();
-            abort();
-          }
-        };
-        nodeRequest.once("close", closeEventCallback);
-        return () => {
-          nodeRequest.removeListener("close", closeEventCallback);
-        };
-      });
-      sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
-
+      const [receiveRequestOperation, sendResponseOperation] =
+        prepareHandleRequestOperations(nodeRequest, nodeResponse);
       const request = fromNodeRequest(nodeRequest, {
         signal: stopAbortSignal,
         serverOrigin,
+        requestBodyLifetime,
+        logger,
+        nagle,
       });
-
-      // Handling request is asynchronous, we buffer logs for that request
-      // until we know what happens with that request
-      // It delays logs until we know of the request will be handled
-      // but it's mandatory to make logs readable.
-      const rootRequestNode = {
-        logs: [],
-        children: [],
-      };
-      const addRequestLog = (node, { type, value }) => {
-        node.logs.push({ type, value });
-      };
-      const onRequestHandled = (node) => {
-        if (node !== rootRequestNode) {
-          // keep buffering until root request write logs for everyone
-          return;
-        }
-        const prefixLines = (string, prefix) => {
-          return string.replace(/^(?!\s*$)/gm, prefix);
-        };
-        const writeLog = (
-          { type, value },
-          { someLogIsError, someLogIsWarn, depth },
-        ) => {
-          if (depth > 0) {
-            value = prefixLines(value, "  ".repeat(depth));
-          }
-          if (type === "info") {
-            if (someLogIsError) {
-              type = "error";
-            } else if (someLogIsWarn) {
-              type = "warn";
-            }
-          }
-          logger[type](value);
-        };
-        const visitRequestNodeToLog = (requestNode, depth) => {
-          let someLogIsError = false;
-          let someLogIsWarn = false;
-          requestNode.logs.forEach((log) => {
-            if (log.type === "error") {
-              someLogIsError = true;
-            }
-            if (log.type === "warn") {
-              someLogIsWarn = true;
-            }
-          });
-
-          const firstLog = requestNode.logs.shift();
-          const lastLog = requestNode.logs.pop();
-          const middleLogs = requestNode.logs;
-
-          writeLog(firstLog, { someLogIsError, someLogIsWarn, depth });
-          middleLogs.forEach((log) => {
-            writeLog(log, { someLogIsError, someLogIsWarn, depth });
-          });
-          requestNode.children.forEach((child) => {
-            visitRequestNodeToLog(child, depth + 1);
-          });
-          if (lastLog) {
-            writeLog(lastLog, {
-              someLogIsError,
-              someLogIsWarn,
-              depth: depth + 1,
-            });
-          }
-        };
-        visitRequestNodeToLog(rootRequestNode, 0);
-      };
-      nodeRequest.on("error", (error) => {
-        if (error.message === "aborted") {
-          addRequestLog(rootRequestNode, {
-            type: "debug",
-            value: createDetailedMessage$1(`request aborted by client`, {
-              "error message": error.message,
-            }),
-          });
-        } else {
-          // I'm not sure this can happen but it's here in case
-          addRequestLog(rootRequestNode, {
-            type: "error",
-            value: createDetailedMessage$1(`"error" event emitted on request`, {
-              "error stack": error.stack,
-            }),
-          });
-        }
-      });
-
-      const pushResponse = async ({ path, method }, { requestNode }) => {
-        const http2Stream = nodeResponse.stream;
-
-        // being able to push a stream is nice to have
-        // so when it fails it's not critical
-        const onPushStreamError = (e) => {
-          addRequestLog(requestNode, {
-            type: "error",
-            value: createDetailedMessage$1(
-              `An error occured while pushing a stream to the response for ${request.resource}`,
-              {
-                "error stack": e.stack,
-              },
-            ),
-          });
-        };
-
-        // not aborted, let's try to push a stream into that response
-        // https://nodejs.org/docs/latest-v16.x/api/http2.html#http2streampushstreamheaders-options-callback
-        let pushStream;
-        try {
-          pushStream = await new Promise((resolve, reject) => {
-            http2Stream.pushStream(
-              {
-                ":path": path,
-                ...(method ? { ":method": method } : {}),
-              },
-              async (
-                error,
-                pushStream,
-                // headers
-              ) => {
-                if (error) {
-                  reject(error);
-                }
-                resolve(pushStream);
-              },
-            );
-          });
-        } catch (e) {
-          onPushStreamError(e);
-          return;
-        }
-
-        const abortController = new AbortController();
-        // It's possible to get NGHTTP2_REFUSED_STREAM errors here
-        // https://github.com/nodejs/node/issues/20824
-        const pushErrorCallback = (error) => {
-          onPushStreamError(error);
-          abortController.abort();
-        };
-        pushStream.on("error", pushErrorCallback);
-        sendResponseOperation.addEndCallback(() => {
-          pushStream.removeListener("error", onPushStreamError);
-        });
-
-        await sendResponseOperation.withSignal(async (signal) => {
-          const pushResponseOperation = Abort.startOperation();
-          pushResponseOperation.addAbortSignal(signal);
-          pushResponseOperation.addAbortSignal(abortController.signal);
-
-          const pushRequest = createPushRequest(request, {
-            signal: pushResponseOperation.signal,
-            pathname: path,
-            method,
-          });
-
-          try {
-            const responseProperties = await handleRequest(pushRequest, {
-              requestNode,
-            });
-            if (!abortController.signal.aborted) {
-              if (pushStream.destroyed) {
-                abortController.abort();
-              } else if (!http2Stream.pushAllowed) {
-                abortController.abort();
-              } else if (responseProperties.requestAborted) {
-              } else {
-                const responseLength =
-                  responseProperties.headers["content-length"] || 0;
-                const { effectiveRecvDataLength, remoteWindowSize } =
-                  http2Stream.session.state;
-                if (
-                  effectiveRecvDataLength + responseLength >
-                  remoteWindowSize
-                ) {
-                  addRequestLog(requestNode, {
-                    type: "debug",
-                    value: `Aborting stream to prevent exceeding remoteWindowSize`,
-                  });
-                  abortController.abort();
-                }
-              }
-            }
-            await sendResponse({
-              signal: pushResponseOperation.signal,
-              request: pushRequest,
-              requestNode,
-              responseStream: pushStream,
-              responseProperties,
-            });
-          } finally {
-            await pushResponseOperation.end();
-          }
-        });
-      };
-
-      const handleRequest = async (request, { requestNode }) => {
-        let requestReceivedMeasure;
-        if (serverTiming) {
-          requestReceivedMeasure = performance.now();
-        }
-        addRequestLog(requestNode, {
-          type: "info",
-          value: request.parent
-            ? `Push ${request.resource}`
-            : `${request.method} ${request.url}`,
-        });
-        const warn = (value) => {
-          addRequestLog(requestNode, {
-            type: "warn",
-            value,
-          });
-        };
-
-        let requestWaitingTimeout;
-        if (requestWaitingMs) {
-          requestWaitingTimeout = setTimeout(
-            () => requestWaitingCallback({ request, warn, requestWaitingMs }),
-            requestWaitingMs,
-          ).unref();
-        }
-
-        serviceController.callHooks(
-          "redirectRequest",
-          request,
-          { warn },
-          (newRequestProperties) => {
-            if (newRequestProperties) {
-              request = applyRedirectionToRequest(request, {
-                original: request.original || request,
-                previous: request,
-                ...newRequestProperties,
-              });
-            }
-          },
-        );
-
-        let handleRequestReturnValue;
-        let errorWhileHandlingRequest = null;
-        let handleRequestTimings = serverTiming ? {} : null;
-
-        let timeout;
-        const timeoutPromise = new Promise((resolve) => {
-          timeout = setTimeout(() => {
-            resolve({
-              // the correct status code should be 500 because it's
-              // we don't really know what takes time
-              // in practice it's often because server is trying to reach an other server
-              // that is not responding so 504 is more correct
-              status: 504,
-              statusText: `server timeout after ${
-                responseTimeout / 1000
-              }s waiting to handle request`,
-            });
-          }, responseTimeout);
-        });
-        const handleRequestPromise = serviceController.callAsyncHooksUntil(
-          "handleRequest",
-          request,
-          {
-            timing: handleRequestTimings,
-            warn,
-            pushResponse: async ({ path, method }) => {
-              if (typeof path !== "string" || path[0] !== "/") {
-                addRequestLog(requestNode, {
-                  type: "warn",
-                  value: `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
-                });
-                return;
-              }
-              if (!request.http2) {
-                addRequestLog(requestNode, {
-                  type: "warn",
-                  value: `response push ignored because request is not http2`,
-                });
-                return;
-              }
-              const canPushStream = testCanPushStream(nodeResponse.stream);
-              if (!canPushStream.can) {
-                addRequestLog(requestNode, {
-                  type: "debug",
-                  value: `response push ignored because ${canPushStream.reason}`,
-                });
-                return;
-              }
-
-              let preventedByService = null;
-              const prevent = () => {
-                preventedByService = serviceController.getCurrentService();
-              };
-              serviceController.callHooksUntil(
-                "onResponsePush",
-                { path, method },
-                {
-                  request,
-                  warn,
-                  prevent,
-                },
-                () => preventedByService,
-              );
-              if (preventedByService) {
-                addRequestLog(requestNode, {
-                  type: "debug",
-                  value: `response push prevented by "${preventedByService.name}" service`,
-                });
-                return;
-              }
-
-              const requestChildNode = { logs: [], children: [] };
-              requestNode.children.push(requestChildNode);
-              await pushResponse(
-                { path, method },
-                {
-                  requestNode: requestChildNode,
-                  parentHttp2Stream: nodeResponse.stream,
-                },
-              );
-            },
-          },
-        );
-        try {
-          handleRequestReturnValue = await Promise.race([
-            timeoutPromise,
-            handleRequestPromise,
-          ]);
-        } catch (e) {
-          errorWhileHandlingRequest = e;
-        }
-        clearTimeout(timeout);
-
-        let responseProperties;
-        if (errorWhileHandlingRequest) {
-          if (
-            errorWhileHandlingRequest.name === "AbortError" &&
-            request.signal.aborted
-          ) {
-            responseProperties = { requestAborted: true };
-          } else {
-            // internal error, create 500 response
-            if (
-              // stopOnInternalError stops server only if requestToResponse generated
-              // a non controlled error (internal error).
-              // if requestToResponse gracefully produced a 500 response (it did not throw)
-              // then we can assume we are still in control of what we are doing
-              stopOnInternalError
-            ) {
-              // il faudrais pouvoir stop que les autres response ?
-              stop(STOP_REASON_INTERNAL_ERROR);
-            }
-            const handleErrorReturnValue =
-              await serviceController.callAsyncHooksUntil(
-                "handleError",
-                errorWhileHandlingRequest,
-                {
-                  request,
-                  warn,
-                },
-              );
-            if (!handleErrorReturnValue) {
-              throw errorWhileHandlingRequest;
-            }
-            addRequestLog(requestNode, {
-              type: "error",
-              value: createDetailedMessage$1(
-                `internal error while handling request`,
-                {
-                  "error stack": errorWhileHandlingRequest.stack,
-                },
-              ),
-            });
-            responseProperties = composeTwoResponses(
-              {
-                status: 500,
-                statusText: "Internal Server Error",
-                headers: {
-                  // ensure error are not cached
-                  "cache-control": "no-store",
-                  "content-type": "text/plain",
-                },
-              },
-              handleErrorReturnValue,
-            );
-          }
-        } else {
-          const {
-            status = 501,
-            statusText,
-            statusMessage,
-            headers = {},
-            body,
-            ...rest
-          } = handleRequestReturnValue || {};
-          responseProperties = {
-            status,
-            statusText,
-            statusMessage,
-            headers,
-            body,
-            ...rest,
-          };
-        }
-
-        if (serverTiming) {
-          const responseReadyMeasure = performance.now();
-          const timeToStartResponding =
-            responseReadyMeasure - requestReceivedMeasure;
-          const serverTiming = {
-            ...handleRequestTimings,
-            ...responseProperties.timing,
-            "time to start responding": timeToStartResponding,
-          };
-          responseProperties.headers = composeTwoHeaders(
-            responseProperties.headers,
-            timingToServerTimingResponseHeaders(serverTiming),
-          );
-        }
-        if (requestWaitingMs) {
-          clearTimeout(requestWaitingTimeout);
-        }
-        if (
-          request.method !== "HEAD" &&
-          responseProperties.headers["content-length"] > 0 &&
-          !responseProperties.body
-        ) {
-          addRequestLog(requestNode, {
-            type: "warn",
-            value: `content-length header is ${responseProperties.headers["content-length"]} but body is empty`,
-          });
-        }
-        serviceController.callHooks(
-          "injectResponseHeaders",
-          responseProperties,
-          {
-            request,
-            warn,
-          },
-          (returnValue) => {
-            if (returnValue) {
-              responseProperties.headers = composeTwoHeaders(
-                responseProperties.headers,
-                returnValue,
-              );
-            }
-          },
-        );
-        serviceController.callHooks("responseReady", responseProperties, {
-          request,
-          warn,
-        });
-        return responseProperties;
-      };
-
-      const sendResponse = async ({
-        signal,
-        request,
-        requestNode,
-        responseStream,
-        responseProperties,
-      }) => {
-        // When "pushResponse" is called and the parent response has no body
-        // the parent response is immediatly ended. It means child responses (pushed streams)
-        // won't get a chance to be pushed.
-        // To let a chance to pushed streams we wait a little before sending the response
-        const ignoreBody = request.method === "HEAD";
-        const bodyIsEmpty = !responseProperties.body || ignoreBody;
-        if (bodyIsEmpty && requestNode.children.length > 0) {
-          await new Promise((resolve) => setTimeout(resolve));
-        }
-
-        await writeNodeResponse(responseStream, responseProperties, {
-          signal,
-          ignoreBody,
-          onAbort: () => {
-            addRequestLog(requestNode, {
-              type: "info",
-              value: `response aborted`,
-            });
-            onRequestHandled(requestNode);
-          },
-          onError: (error) => {
-            addRequestLog(requestNode, {
-              type: "error",
-              value: createDetailedMessage$1(
-                `An error occured while sending response`,
-                {
-                  "error stack": error.stack,
-                },
-              ),
-            });
-            onRequestHandled(requestNode);
-          },
-          onHeadersSent: ({ status, statusText }) => {
-            const statusType = statusToType(status);
-            addRequestLog(requestNode, {
-              type:
-                status === 404 && request.pathname === "/favicon.ico"
-                  ? "debug"
-                  : {
-                      information: "info",
-                      success: "info",
-                      redirection: "info",
-                      client_error: "warn",
-                      server_error: "error",
-                    }[statusType],
-              value: `${colorizeResponseStatus(status)} ${
-                responseProperties.statusMessage || statusText
-              }`,
-            });
-          },
-          onEnd: () => {
-            onRequestHandled(requestNode);
-          },
-        });
-      };
 
       try {
-        if (receiveRequestOperation.signal.aborted) {
-          return;
-        }
-        const responseProperties = await handleRequest(request, {
-          requestNode: rootRequestNode,
+        const responseProperties = await getResponseProperties(request, {
+          pushResponse: async ({ path, method }) => {
+            const pushRequestLogger = request.logger.forPush();
+            if (typeof path !== "string" || path[0] !== "/") {
+              pushRequestLogger.warn(
+                `response push ignored because path is invalid (must be a string starting with "/", found ${path})`,
+              );
+              return;
+            }
+            if (!request.http2) {
+              pushRequestLogger.warn(
+                `response push ignored because request is not http2`,
+              );
+              return;
+            }
+            const canPushStream = testCanPushStream(nodeResponse.stream);
+            if (!canPushStream.can) {
+              pushRequestLogger.debug(
+                `response push ignored because ${canPushStream.reason}`,
+              );
+              return;
+            }
+
+            let preventedByService = null;
+            const prevent = () => {
+              preventedByService = serviceController.getCurrentService();
+            };
+            serviceController.callHooksUntil(
+              "onResponsePush",
+              { path, method },
+              { request, prevent },
+              () => preventedByService,
+            );
+            if (preventedByService) {
+              pushRequestLogger.debug(
+                `response push prevented by "${preventedByService.name}" service`,
+              );
+              return;
+            }
+
+            const http2Stream = nodeResponse.stream;
+
+            // being able to push a stream is nice to have
+            // so when it fails it's not critical
+            const onPushStreamError = (e) => {
+              pushRequestLogger.error(
+                createDetailedMessage$1(
+                  `An error occured while pushing a stream to the response for ${request.resource}`,
+                  {
+                    "error stack": e.stack,
+                  },
+                ),
+              );
+            };
+
+            // not aborted, let's try to push a stream into that response
+            // https://nodejs.org/docs/latest-v16.x/api/http2.html#http2streampushstreamheaders-options-callback
+            let pushStream;
+            try {
+              pushStream = await new Promise((resolve, reject) => {
+                http2Stream.pushStream(
+                  {
+                    ":path": path,
+                    ...(method ? { ":method": method } : {}),
+                  },
+                  async (
+                    error,
+                    pushStream,
+                    // headers
+                  ) => {
+                    if (error) {
+                      reject(error);
+                    }
+                    resolve(pushStream);
+                  },
+                );
+              });
+            } catch (e) {
+              onPushStreamError(e);
+              return;
+            }
+
+            const abortController = new AbortController();
+            // It's possible to get NGHTTP2_REFUSED_STREAM errors here
+            // https://github.com/nodejs/node/issues/20824
+            const pushErrorCallback = (error) => {
+              onPushStreamError(error);
+              abortController.abort();
+            };
+            pushStream.on("error", pushErrorCallback);
+            sendResponseOperation.addEndCallback(() => {
+              pushStream.removeListener("error", onPushStreamError);
+            });
+
+            await sendResponseOperation.withSignal(async (signal) => {
+              const pushResponseOperation = Abort.startOperation();
+              pushResponseOperation.addAbortSignal(signal);
+              pushResponseOperation.addAbortSignal(abortController.signal);
+
+              const pushRequest = createPushRequest(request, {
+                signal: pushResponseOperation.signal,
+                pathname: path,
+                method,
+                logger: pushRequestLogger,
+              });
+
+              try {
+                const responseProperties = await getResponseProperties(
+                  pushRequest,
+                  {
+                    pushResponse: () => {
+                      pushRequest.logger.warn(
+                        `response push ignored because nested push is not supported`,
+                      );
+                    },
+                  },
+                );
+                if (!abortController.signal.aborted) {
+                  if (pushStream.destroyed) {
+                    abortController.abort();
+                  } else if (!http2Stream.pushAllowed) {
+                    abortController.abort();
+                  } else if (responseProperties.requestAborted) {
+                  } else {
+                    const responseLength =
+                      responseProperties.headers["content-length"] || 0;
+                    const { effectiveRecvDataLength, remoteWindowSize } =
+                      http2Stream.session.state;
+                    if (
+                      effectiveRecvDataLength + responseLength >
+                      remoteWindowSize
+                    ) {
+                      pushRequest.logger.debug(
+                        `Aborting stream to prevent exceeding remoteWindowSize`,
+                      );
+                      abortController.abort();
+                    }
+                  }
+                }
+                await sendResponse(pushStream, responseProperties, {
+                  signal: pushResponseOperation.signal,
+                  request: pushRequest,
+                });
+              } finally {
+                await pushResponseOperation.end();
+              }
+            });
+          },
         });
-        nodeRequest.resume();
+        const webSocketHandler = getWebSocketHandler(responseProperties);
+        if (webSocketHandler) {
+          throw new Error(
+            "unexpected websocketResponse received for request that does not want to be upgraded to websocket. A regular response was expected.",
+          );
+        }
         if (receiveRequestOperation.signal.aborted) {
           return;
         }
-
-        // the node request readable stream is never closed because
-        // the response headers contains "connection: keep-alive"
-        // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
-        if (responseProperties.headers.connection === "keep-alive") {
-          clearTimeout(request.body.timeout);
-        }
-
-        await sendResponse({
+        await sendResponse(nodeResponse, responseProperties, {
           signal: sendResponseOperation.signal,
           request,
-          requestNode: rootRequestNode,
-          responseStream: nodeResponse,
-          responseProperties,
         });
       } finally {
         await sendResponseOperation.end();
       }
     };
-    const removeRequestListener = listenRequest(nodeServer, requestCallback);
+    const removeRequestListener = listenRequest(
+      nodeServer,
+      requestEventHandler,
+    );
     // ensure we don't try to handle new requests while server is stopping
     stopCallbackSet.add(removeRequestListener);
   }
 
   {
     // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
-    const websocketHandlers = [];
-    serviceController.services.forEach((service) => {
-      const { handleWebsocket } = service;
-      if (handleWebsocket) {
-        websocketHandlers.push(handleWebsocket);
-      }
-    });
-    if (websocketHandlers.length > 0) {
-      const websocketClients = new Set();
+    const webSocketOrigin = https
+      ? `wss://${hostname}:${port}`
+      : `ws://${hostname}:${port}`;
+    server.webSocketOrigin = webSocketOrigin;
+    const webSocketSet = new Set();
+    let upgradeRequestToWebSocket;
+    const loadUpgradeRequestToWebSocket = async () => {
       const { WebSocketServer } = await import("./js/ws.js");
-      let websocketServer = new WebSocketServer({ noServer: true });
-      const websocketOrigin = https
-        ? `wss://${hostname}:${port}`
-        : `ws://${hostname}:${port}`;
-      server.websocketOrigin = websocketOrigin;
-      const upgradeCallback = (nodeRequest, socket, head) => {
-        websocketServer.handleUpgrade(
-          nodeRequest,
-          socket,
-          head,
-          async (websocket) => {
-            const websocketAbortController = new AbortController();
-            websocketClients.add(websocket);
-            websocket.signal = websocketAbortController.signal;
-            websocket.once("close", () => {
-              websocketClients.delete(websocket);
-              websocketAbortController.abort();
-            });
-            const request = fromNodeRequest(nodeRequest, {
-              signal: stopAbortSignal,
-              serverOrigin: websocketOrigin,
-              requestBodyLifetime,
-            });
-            serviceController.callAsyncHooksUntil(
-              "handleWebsocket",
-              websocket,
-              {
-                request,
-              },
-            );
-          },
-        );
-      };
-
-      // see server-polyglot.js, upgrade must be listened on https server when used
-      const facadeServer = nodeServer._tlsServer || nodeServer;
-      const removeUpgradeCallback = listenEvent(
-        facadeServer,
-        "upgrade",
-        upgradeCallback,
-      );
-      stopCallbackSet.add(removeUpgradeCallback);
+      let webSocketServer = new WebSocketServer({ noServer: true });
       stopCallbackSet.add(() => {
-        websocketClients.forEach((websocketClient) => {
-          websocketClient.close();
-        });
-        websocketClients.clear();
-        websocketServer.close();
-        websocketServer = null;
+        webSocketServer.close();
+        webSocketServer = null;
       });
-    }
+      upgradeRequestToWebSocket = async ({ nodeRequest, socket, head }) => {
+        const websocket = await new Promise((resolve) => {
+          webSocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
+        });
+        return websocket;
+      };
+    };
+    // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
+    const upgradeEventHandler = async (nodeRequest, socket, head) => {
+      let request = fromNodeRequest(nodeRequest, {
+        signal: stopAbortSignal,
+        serverOrigin,
+        requestBodyLifetime,
+        logger,
+        nagle,
+      });
+      const [receiveRequestOperation, sendResponseOperation] =
+        prepareHandleRequestOperations(nodeRequest, socket);
+      const responseProperties = await getResponseProperties(request, {
+        pushResponse: () => {
+          request.logger.warn(
+            `pushResponse ignored because it's not supported in websocket`,
+          );
+        },
+      });
+      if (receiveRequestOperation.signal.aborted) {
+        return;
+      }
+      if (responseProperties.status !== 101) {
+        await sendResponse(socket, responseProperties, {
+          signal: sendResponseOperation.signal,
+          request,
+        });
+        return;
+      }
+      const webSocketHandler = getWebSocketHandler(responseProperties);
+      if (!webSocketHandler) {
+        throw new Error(
+          "unexpected response received for request that wants to be upgraded to websocket. A webSocketResponse was expected.",
+        );
+      }
+      if (!upgradeRequestToWebSocket) {
+        await loadUpgradeRequestToWebSocket();
+      }
+      if (sendResponseOperation.signal.aborted) {
+        return;
+      }
+      const webSocket = await upgradeRequestToWebSocket({
+        nodeRequest,
+        socket,
+        head,
+      });
+      if (sendResponseOperation.signal.aborted) {
+        webSocket.destroy();
+        return;
+      }
+      const webSocketAbortController = new AbortController();
+      webSocketSet.add(webSocket);
+      webSocket.once("close", () => {
+        webSocketSet.delete(webSocket);
+        webSocketAbortController.abort();
+      });
+      request.logger.onHeadersSent({
+        status: 101,
+        statusText: "Switching Protocols",
+      });
+      request.logger.end();
+      let websocketHandlerReturnValue = await webSocketHandler(webSocket);
+      if (typeof websocketHandlerReturnValue === "function") {
+        webSocket.once("close", () => {
+          websocketHandlerReturnValue();
+          websocketHandlerReturnValue = undefined;
+        });
+      }
+      return;
+    };
+    // see server-polyglot.js, upgrade must be listened on https server when used
+    const facadeServer = nodeServer._tlsServer || nodeServer;
+    const removeUpgradeCallback = listenEvent(
+      facadeServer,
+      "upgrade",
+      upgradeEventHandler,
+    );
+    stopCallbackSet.add(removeUpgradeCallback);
+    stopCallbackSet.add(() => {
+      for (const websocket of webSocketSet) {
+        websocket.close();
+      }
+      webSocketSet.clear();
+    });
   }
 
   if (startLog) {
@@ -8031,104 +11456,135 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   exit: STOP_REASON_PROCESS_EXIT,
 };
 
-const pickAcceptedContent = ({
-  availables,
-  accepteds,
-  getAcceptanceScore,
-}) => {
-  let highestScore = -1;
-  let availableWithHighestScore = null;
-  let availableIndex = 0;
-  while (availableIndex < availables.length) {
-    const available = availables[availableIndex];
-    availableIndex++;
+const internalErrorHtmlFileUrl = import.meta.resolve("./html/500.html");
 
-    let acceptedIndex = 0;
-    while (acceptedIndex < accepteds.length) {
-      const accepted = accepteds[acceptedIndex];
-      acceptedIndex++;
-
-      const score = getAcceptanceScore(accepted, available);
-      if (score > highestScore) {
-        availableWithHighestScore = available;
-        highestScore = score;
+const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
+  return {
+    name: "jsenv:error_handler",
+    handleError: (serverInternalError, { request }) => {
+      const serverInternalErrorIsAPrimitive =
+        serverInternalError === null ||
+        (typeof serverInternalError !== "object" &&
+          typeof serverInternalError !== "function");
+      if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
+        return serverInternalError.asResponse();
       }
-    }
-  }
-  return availableWithHighestScore;
-};
+      const dataToSend = serverInternalErrorIsAPrimitive
+        ? {
+            code: "VALUE_THROWED",
+            value: serverInternalError,
+          }
+        : {
+            code: serverInternalError.code || "UNKNOWN_ERROR",
+            ...(sendErrorDetails
+              ? {
+                  stack: serverInternalError.stack,
+                  ...serverInternalError,
+                }
+              : {}),
+          };
 
-const pickContentEncoding = (request, availableEncodings) => {
-  const { headers = {} } = request;
-  const requestAcceptEncodingHeader = headers["accept-encoding"];
-  if (!requestAcceptEncodingHeader) {
-    return null;
-  }
+      const availableContentTypes = {
+        "text/html": () => {
+          const renderHtmlForErrorWithoutDetails = () => {
+            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
+          };
+          const renderHtmlForErrorWithDetails = () => {
+            if (serverInternalErrorIsAPrimitive) {
+              return `<pre>${JSON.stringify(
+                serverInternalError,
+                null,
+                "  ",
+              )}</pre>`;
+            }
+            return `<pre>${serverInternalError.stack}</pre>`;
+          };
 
-  const encodingsAccepted = parseAcceptEncodingHeader(
-    requestAcceptEncodingHeader,
-  );
-  return pickAcceptedContent({
-    accepteds: encodingsAccepted,
-    availables: availableEncodings,
-    getAcceptanceScore: getEncodingAcceptanceScore,
-  });
-};
+          const internalErrorHtmlTemplate = readFileSync(
+            new URL(internalErrorHtmlFileUrl),
+            "utf8",
+          );
+          const internalErrorHtml = replacePlaceholdersInHtml(
+            internalErrorHtmlTemplate,
+            {
+              errorMessage: serverInternalErrorIsAPrimitive
+                ? `Code inside server has thrown a literal.`
+                : `Code inside server has thrown an error.`,
+              errorDetailsContent: sendErrorDetails
+                ? renderHtmlForErrorWithDetails()
+                : renderHtmlForErrorWithoutDetails(),
+            },
+          );
 
-const parseAcceptEncodingHeader = (acceptEncodingHeaderString) => {
-  const acceptEncodingHeader = parseMultipleHeader(acceptEncodingHeaderString, {
-    validateProperty: ({ name }) => {
-      // read only q, anything else is ignored
-      return name === "q";
+          return {
+            headers: {
+              "content-type": "text/html",
+              "content-length": Buffer.byteLength(internalErrorHtml),
+            },
+            body: internalErrorHtml,
+          };
+        },
+        "text/plain": () => {
+          let internalErrorMessage = serverInternalErrorIsAPrimitive
+            ? `Code inside server has thrown a literal:`
+            : `Code inside server has thrown an error:`;
+          if (sendErrorDetails) {
+            if (serverInternalErrorIsAPrimitive) {
+              internalErrorMessage += `\n${JSON.stringify(
+                serverInternalError,
+                null,
+                "  ",
+              )}`;
+            } else {
+              internalErrorMessage += `\n${serverInternalError.stack}`;
+            }
+          } else {
+            internalErrorMessage += `\nDetails not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).`;
+          }
+
+          return {
+            headers: {
+              "content-type": "text/plain",
+              "content-length": Buffer.byteLength(internalErrorMessage),
+            },
+            body: internalErrorMessage,
+          };
+        },
+        "application/json": () => {
+          const body = JSON.stringify(dataToSend);
+          return {
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(body),
+            },
+            body,
+          };
+        },
+      };
+      const bestContentType = pickContentType(
+        request,
+        Object.keys(availableContentTypes),
+      );
+      return availableContentTypes[bestContentType || "application/json"]();
     },
-  });
-
-  const encodingsAccepted = [];
-  Object.keys(acceptEncodingHeader).forEach((key) => {
-    const { q = 1 } = acceptEncodingHeader[key];
-    const value = key;
-    encodingsAccepted.push({
-      value,
-      quality: q,
-    });
-  });
-  encodingsAccepted.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return encodingsAccepted;
+  };
 };
 
-const getEncodingAcceptanceScore = ({ value, quality }, availableEncoding) => {
-  if (value === "*") {
-    return quality;
-  }
-
-  // normalize br to brotli
-  if (value === "br") value = "brotli";
-  if (availableEncoding === "br") availableEncoding = "brotli";
-
-  if (value === availableEncoding) {
-    return quality;
-  }
-
-  return -1;
-};
-
-const convertFileSystemErrorToResponseProperties = (error) => {
+const convertFileSystemErrorToResponseProperties$1 = (error) => {
   // https://iojs.org/api/errors.html#errors_eacces_permission_denied
-  if (isErrorWithCode(error, "EACCES")) {
+  if (isErrorWithCode$1(error, "EACCES")) {
     return {
       status: 403,
       statusText: `EACCES: No permission to read file at ${error.path}`,
     };
   }
-  if (isErrorWithCode(error, "EPERM")) {
+  if (isErrorWithCode$1(error, "EPERM")) {
     return {
       status: 403,
       statusText: `EPERM: No permission to read file at ${error.path}`,
     };
   }
-  if (isErrorWithCode(error, "ENOENT")) {
+  if (isErrorWithCode$1(error, "ENOENT")) {
     return {
       status: 404,
       statusText: `ENOENT: File not found at ${error.path}`,
@@ -8136,7 +11592,7 @@ const convertFileSystemErrorToResponseProperties = (error) => {
   }
   // file access may be temporarily blocked
   // (by an antivirus scanning it because recently modified for instance)
-  if (isErrorWithCode(error, "EBUSY")) {
+  if (isErrorWithCode$1(error, "EBUSY")) {
     return {
       status: 503,
       statusText: `EBUSY: File is busy ${error.path}`,
@@ -8146,7 +11602,7 @@ const convertFileSystemErrorToResponseProperties = (error) => {
     };
   }
   // emfile means there is too many files currently opened
-  if (isErrorWithCode(error, "EMFILE")) {
+  if (isErrorWithCode$1(error, "EMFILE")) {
     return {
       status: 503,
       statusText: "EMFILE: too many file opened",
@@ -8155,7 +11611,7 @@ const convertFileSystemErrorToResponseProperties = (error) => {
       },
     };
   }
-  if (isErrorWithCode(error, "EISDIR")) {
+  if (isErrorWithCode$1(error, "EISDIR")) {
     return {
       status: 500,
       statusText: `EISDIR: Unexpected directory operation at ${error.path}`,
@@ -8164,7 +11620,7 @@ const convertFileSystemErrorToResponseProperties = (error) => {
   return null;
 };
 
-const isErrorWithCode = (error, code) => {
+const isErrorWithCode$1 = (error, code) => {
   return typeof error === "object" && error.code === code;
 };
 
@@ -8218,67 +11674,6 @@ const fileSystemPathToUrl = (value) => {
     throw new Error(`received an invalid value for fileSystemPath: ${value}`);
   }
   return String(pathToFileURL(value));
-};
-
-const pickContentType = (request, availableContentTypes) => {
-  const { headers = {} } = request;
-  const requestAcceptHeader = headers.accept;
-  if (!requestAcceptHeader) {
-    return null;
-  }
-
-  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
-  return pickAcceptedContent({
-    accepteds: contentTypesAccepted,
-    availables: availableContentTypes,
-    getAcceptanceScore: getContentTypeAcceptanceScore,
-  });
-};
-
-const parseAcceptHeader = (acceptHeader) => {
-  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
-    validateProperty: ({ name }) => {
-      // read only q, anything else is ignored
-      return name === "q";
-    },
-  });
-
-  const accepts = [];
-  Object.keys(acceptHeaderObject).forEach((key) => {
-    const { q = 1 } = acceptHeaderObject[key];
-    const value = key;
-    accepts.push({
-      value,
-      quality: q,
-    });
-  });
-  accepts.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return accepts;
-};
-
-const getContentTypeAcceptanceScore = (
-  { value, quality },
-  availableContentType,
-) => {
-  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
-  const [availableType, availableSubtype] =
-    decomposeContentType(availableContentType);
-
-  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
-  const subtypeAccepted =
-    acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
-
-  if (typeAccepted && subtypeAccepted) {
-    return quality;
-  }
-  return -1;
-};
-
-const decomposeContentType = (fullType) => {
-  const [type, subtype] = fullType.split("/");
-  return [type, subtype];
 };
 
 const serveDirectory = (
@@ -8359,11 +11754,10 @@ const serveDirectory = (
 
 
 const fetchFileSystem = async (
-  filesystemUrl,
+  request,
+  helpers,
+  directoryUrl,
   {
-    // signal,
-    method = "GET",
-    headers = {},
     etagEnabled = false,
     etagMemory = true,
     etagMemoryMaxSize = 1000,
@@ -8374,37 +11768,34 @@ const fetchFileSystem = async (
       ? "private,max-age=0,must-revalidate"
       : "no-store",
     canReadDirectory = false,
-    rootDirectoryUrl, //  = `${pathToFileURL(process.cwd())}/`,
     ENOENTFallback = () => {},
   } = {},
 ) => {
+  let directoryUrlString = asUrlString(directoryUrl);
+  if (!directoryUrlString) {
+    throw new TypeError(
+      `directoryUrl must be a string or an url, got ${directoryUrl}`,
+    );
+  }
+  if (!directoryUrlString.startsWith("file://")) {
+    throw new Error(
+      `directoryUrl must start with "file://", got ${directoryUrlString}`,
+    );
+  }
+  if (!directoryUrlString.endsWith("/")) {
+    directoryUrlString = `${directoryUrlString}/`;
+  }
+  let resource;
+  if ("0" in request.params) {
+    resource = request.params["0"];
+  } else {
+    resource = request.resource.slice(1);
+  }
+  const filesystemUrl = new URL(resource, directoryUrl);
   const urlString = asUrlString(filesystemUrl);
-  if (!urlString) {
-    return create500Response(
-      `fetchFileSystem first parameter must be a file url, got ${filesystemUrl}`,
-    );
-  }
-  if (!urlString.startsWith("file://")) {
-    return create500Response(
-      `fetchFileSystem url must use "file://" scheme, got ${filesystemUrl}`,
-    );
-  }
-  if (rootDirectoryUrl) {
-    let rootDirectoryUrlString = asUrlString(rootDirectoryUrl);
-    if (!rootDirectoryUrlString) {
-      return create500Response(
-        `rootDirectoryUrl must be a string or an url, got ${rootDirectoryUrl}`,
-      );
-    }
-    if (!rootDirectoryUrlString.endsWith("/")) {
-      rootDirectoryUrlString = `${rootDirectoryUrlString}/`;
-    }
-    if (!urlString.startsWith(rootDirectoryUrlString)) {
-      return create500Response(
-        `fetchFileSystem url must be inside root directory, got ${urlString}`,
-      );
-    }
-    rootDirectoryUrl = rootDirectoryUrlString;
+
+  if (typeof cacheControl === "function") {
+    cacheControl = cacheControl(request);
   }
 
   // here you might be tempted to add || cacheControl === 'no-cache'
@@ -8427,24 +11818,22 @@ const fetchFileSystem = async (
     mtimeEnabled = false;
   }
 
-  if (method !== "GET" && method !== "HEAD") {
-    return {
-      status: 501,
-    };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return null;
   }
 
   const serveFile = async (fileUrl) => {
     try {
-      const [readStatTiming, fileStat] = timeFunction(
-        "file service>read file stat",
-        () => statSync(new URL(fileUrl)),
-      );
+      const readStatTiming = helpers?.timing("file service>read file stat");
+      const fileStat = statSync(new URL(fileUrl));
+      readStatTiming?.end();
+
       if (fileStat.isDirectory()) {
         if (canReadDirectory) {
           return serveDirectory(fileUrl, {
-            headers,
+            headers: request.headers,
             canReadDirectory,
-            rootDirectoryUrl,
+            rootDirectoryUrl: directoryUrl,
           });
         }
         return {
@@ -8456,12 +11845,12 @@ const fetchFileSystem = async (
       if (!fileStat.isFile()) {
         return {
           status: 404,
-          timing: readStatTiming,
         };
       }
 
       const clientCacheResponse = await getClientCacheResponse({
-        headers,
+        headers: request.headers,
+        helpers,
         etagEnabled,
         etagMemory,
         etagMemoryMaxSize,
@@ -8475,7 +11864,6 @@ const fetchFileSystem = async (
       if (clientCacheResponse.status === 304) {
         return composeTwoResponses(
           {
-            timing: readStatTiming,
             headers: {
               ...(cacheControl ? { "cache-control": cacheControl } : {}),
             },
@@ -8487,7 +11875,7 @@ const fetchFileSystem = async (
       let response;
       if (compressionEnabled && fileStat.size >= compressionSizeThreshold) {
         const compressedResponse = await getCompressedResponse({
-          headers,
+          headers: request.headers,
           fileUrl,
         });
         if (compressedResponse) {
@@ -8503,7 +11891,6 @@ const fetchFileSystem = async (
 
       const intermediateResponse = composeTwoResponses(
         {
-          timing: readStatTiming,
           headers: {
             ...(cacheControl ? { "cache-control": cacheControl } : {}),
             // even if client cache is disabled, server can still
@@ -8530,7 +11917,7 @@ const fetchFileSystem = async (
             ...(cacheControl ? { "cache-control": cacheControl } : {}),
           },
         },
-        convertFileSystemErrorToResponseProperties(e) || {},
+        convertFileSystemErrorToResponseProperties$1(e) || {},
       );
     }
   };
@@ -8538,19 +11925,9 @@ const fetchFileSystem = async (
   return serveFile(`file://${new URL(urlString).pathname}`);
 };
 
-const create500Response = (message) => {
-  return {
-    status: 500,
-    headers: {
-      "content-type": "text/plain",
-      "content-length": Buffer.byteLength(message),
-    },
-    body: message,
-  };
-};
-
 const getClientCacheResponse = async ({
   headers,
+  helpers,
   etagEnabled,
   etagMemory,
   etagMemoryMaxSize,
@@ -8573,6 +11950,7 @@ const getClientCacheResponse = async ({
   if (etagEnabled) {
     return getEtagResponse({
       headers,
+      helpers,
       etagMemory,
       etagMemoryMaxSize,
       fileStat,
@@ -8592,21 +11970,20 @@ const getClientCacheResponse = async ({
 
 const getEtagResponse = async ({
   headers,
+  helpers,
   etagMemory,
   etagMemoryMaxSize,
   fileUrl,
   fileStat,
 }) => {
-  const [computeEtagTiming, fileContentEtag] = await timeFunction(
-    "file service>generate file etag",
-    () =>
-      computeEtag({
-        etagMemory,
-        etagMemoryMaxSize,
-        fileUrl,
-        fileStat,
-      }),
-  );
+  const etagTiming = helpers?.timing("file service>generate file etag");
+  const fileContentEtag = await computeEtag({
+    etagMemory,
+    etagMemoryMaxSize,
+    fileUrl,
+    fileStat,
+  });
+  etagTiming?.end();
 
   const requestHasIfNoneMatchHeader = "if-none-match" in headers;
   if (
@@ -8615,7 +11992,6 @@ const getEtagResponse = async ({
   ) {
     return {
       status: 304,
-      timing: computeEtagTiming,
     };
   }
 
@@ -8624,7 +12000,6 @@ const getEtagResponse = async ({
     headers: {
       etag: fileContentEtag,
     },
-    timing: computeEtagTiming,
   };
 };
 
@@ -8802,102 +12177,16 @@ const asUrlString = (value) => {
   return null;
 };
 
-const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
-  return {
-    name: "jsenv:error_handler",
-    handleError: (serverInternalError, { request }) => {
-      const serverInternalErrorIsAPrimitive =
-        serverInternalError === null ||
-        (typeof serverInternalError !== "object" &&
-          typeof serverInternalError !== "function");
-      if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
-        return serverInternalError.asResponse();
-      }
-      const dataToSend = serverInternalErrorIsAPrimitive
-        ? {
-            code: "VALUE_THROWED",
-            value: serverInternalError,
-          }
-        : {
-            code: serverInternalError.code || "UNKNOWN_ERROR",
-            ...(sendErrorDetails
-              ? {
-                  stack: serverInternalError.stack,
-                  ...serverInternalError,
-                }
-              : {}),
-          };
-
-      const availableContentTypes = {
-        "text/html": () => {
-          const renderHtmlForErrorWithoutDetails = () => {
-            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
-          };
-
-          const renderHtmlForErrorWithDetails = () => {
-            if (serverInternalErrorIsAPrimitive) {
-              return `<pre>${JSON.stringify(
-                serverInternalError,
-                null,
-                "  ",
-              )}</pre>`;
-            }
-            return `<pre>${serverInternalError.stack}</pre>`;
-          };
-
-          const body = `<!DOCTYPE html>
-<html>
-  <head>
-    <title>Internal server error</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <h1>Internal server error</h1>
-    <p>${
-      serverInternalErrorIsAPrimitive
-        ? `Code inside server has thrown a literal.`
-        : `Code inside server has thrown an error.`
-    }</p>
-    <details>
-      <summary>See internal error details</summary>
-      ${
-        sendErrorDetails
-          ? renderHtmlForErrorWithDetails()
-          : renderHtmlForErrorWithoutDetails()
-      }
-    </details>
-  </body>
-</html>`;
-
-          return {
-            headers: {
-              "content-type": "text/html",
-              "content-length": Buffer.byteLength(body),
-            },
-            body,
-          };
-        },
-        "application/json": () => {
-          const body = JSON.stringify(dataToSend);
-          return {
-            headers: {
-              "content-type": "application/json",
-              "content-length": Buffer.byteLength(body),
-            },
-            body,
-          };
-        },
-      };
-      const bestContentType = pickContentType(
-        request,
-        Object.keys(availableContentTypes),
-      );
-      return availableContentTypes[bestContentType || "application/json"]();
-    },
+const createFileSystemFetch = (directoryUrl, options) => {
+  return (request, helpers) => {
+    return fetchFileSystem(request, helpers, directoryUrl, options);
   };
 };
+
+/**
+ * @jsenv/server is already registering a route to handle OPTIONS request
+ * so here we just need to add the CORS headers to the response
+ */
 
 const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
 
@@ -8922,7 +12211,7 @@ const jsenvServiceCORS = ({
   accessControlMaxAge = 600,
   timingAllowOrigin = false,
 } = {}) => {
-  // TODO: we should check access control params to throw or warn if we find strange values
+  // TODO: we should check access control params and throw/warn if we find strange values
 
   const corsEnabled =
     accessControlAllowRequestOrigin || accessControlAllowedOrigins.length;
@@ -8933,21 +12222,7 @@ const jsenvServiceCORS = ({
 
   return {
     name: "jsenv:cors",
-
-    handleRequest: {
-      "OPTIONS *": () => {
-        // when request method is "OPTIONS" we must return a 200 without body
-        // So we bypass "requestToResponse" in that scenario using shortcircuitResponse
-        return {
-          status: 200,
-          headers: {
-            "content-length": 0,
-          },
-        };
-      },
-    },
-
-    injectResponseHeaders: (response, { request }) => {
+    injectResponseProperties: (request) => {
       const accessControlHeaders = generateAccessControlHeaders({
         request,
         accessControlAllowedOrigins,
@@ -8960,7 +12235,9 @@ const jsenvServiceCORS = ({
         accessControlMaxAge,
         timingAllowOrigin,
       });
-      return accessControlHeaders;
+      return {
+        headers: accessControlHeaders,
+      };
     },
   };
 };
@@ -9041,9 +12318,63 @@ const generateAccessControlHeaders = ({
   };
 };
 
+const convertFileSystemErrorToResponseProperties = (error) => {
+  // https://iojs.org/api/errors.html#errors_eacces_permission_denied
+  if (isErrorWithCode(error, "EACCES")) {
+    return {
+      status: 403,
+      statusText: `EACCES: No permission to read file at ${error.path}`,
+    };
+  }
+  if (isErrorWithCode(error, "EPERM")) {
+    return {
+      status: 403,
+      statusText: `EPERM: No permission to read file at ${error.path}`,
+    };
+  }
+  if (isErrorWithCode(error, "ENOENT")) {
+    return {
+      status: 404,
+      statusText: `ENOENT: File not found at ${error.path}`,
+    };
+  }
+  // file access may be temporarily blocked
+  // (by an antivirus scanning it because recently modified for instance)
+  if (isErrorWithCode(error, "EBUSY")) {
+    return {
+      status: 503,
+      statusText: `EBUSY: File is busy ${error.path}`,
+      headers: {
+        "retry-after": 0.01, // retry in 10ms
+      },
+    };
+  }
+  // emfile means there is too many files currently opened
+  if (isErrorWithCode(error, "EMFILE")) {
+    return {
+      status: 503,
+      statusText: "EMFILE: too many file opened",
+      headers: {
+        "retry-after": 0.1, // retry in 100ms
+      },
+    };
+  }
+  if (isErrorWithCode(error, "EISDIR")) {
+    return {
+      status: 500,
+      statusText: `EISDIR: Unexpected directory operation at ${error.path}`,
+    };
+  }
+  return null;
+};
+
+const isErrorWithCode = (error, code) => {
+  return typeof error === "object" && error.code === code;
+};
+
 const fileUrlConverter = {
   asFilePath: (fileUrl) => {
-    const filePath = urlToFileSystemPath(fileUrl);
+    const filePath = urlToFileSystemPath$1(fileUrl);
     const urlObject = new URL(fileUrl);
     const { searchParams } = urlObject;
     return `${filePath}${stringifyQuery(searchParams)}`;
@@ -9170,7 +12501,7 @@ const bundleJsModules = async (
     return resultRef.current.jsModuleBundleUrlInfos;
   } catch (e) {
     if (e.code === "MISSING_EXPORT") {
-      const detailedMessage = createDetailedMessage$1(e.message, {
+      const detailedMessage = createDetailedMessage$2(e.message, {
         frame: e.frame,
       });
       throw new Error(detailedMessage, { cause: e });
@@ -9503,7 +12834,7 @@ const bundleCss = async (cssUrlInfos) => {
         },
         resolve(specifier, from) {
           const fileUrlObject = new URL(specifier, pathToFileURL(from));
-          const filePath = urlToFileSystemPath(fileUrlObject);
+          const filePath = urlToFileSystemPath$1(fileUrlObject);
           return filePath;
         },
       },
@@ -9572,7 +12903,7 @@ const minifyCss = async (cssUrlInfo) => {
 
   const targets = runtimeCompatToTargets$1(cssUrlInfo.context.runtimeCompat);
   const { code, map } = transform({
-    filename: urlToFileSystemPath(cssUrlInfo.originalUrl),
+    filename: urlToFileSystemPath$1(cssUrlInfo.originalUrl),
     code: Buffer.from(cssUrlInfo.content),
     targets,
     minify: true,
@@ -11156,6 +14487,26 @@ const analyzeConstructableStyleSheetUsage = (urlInfo) => {
   if (urlInfo.url === newStylesheetClientFileUrl) {
     return null;
   }
+  const { runtimeCompat } = urlInfo.kitchen.context;
+  const runtimeNames = runtimeCompat ? Object.keys(runtimeCompat) : [];
+  let someRuntimeIsBrowser = false;
+  for (const runtimeName of runtimeNames) {
+    if (
+      runtimeName === "chrome" ||
+      runtimeName === "edge" ||
+      runtimeName === "firefox" ||
+      runtimeName === "opera" ||
+      runtimeName === "safari" ||
+      runtimeName === "samsung"
+    ) {
+      someRuntimeIsBrowser = true;
+      break;
+    }
+  }
+  if (!someRuntimeIsBrowser) {
+    // we are building only for nodejs, no need to analyze constructable stylesheet usage
+    return null;
+  }
   const node = visitJsAstUntil(urlInfo.contentAst, {
     NewExpression: (node) => {
       return isNewCssStyleSheetCall(node);
@@ -11418,7 +14769,7 @@ const applyCssTranspilation = async ({
   const { transform } = await import("lightningcss");
   const targets = runtimeCompatToTargets(runtimeCompat);
   const { code, map } = transform({
-    filename: urlToFileSystemPath(inputUrl),
+    filename: urlToFileSystemPath$1(inputUrl),
     code: Buffer.from(input),
     targets,
     minify: false,
@@ -11890,10 +15241,32 @@ const lookupPackageDirectory = (currentUrl) => {
   });
 };
 
+const getDirectoryWatchPatterns = (
+  directoryUrl,
+  watchedDirectoryUrl,
+  { sourceFilesConfig },
+) => {
+  const directoryUrlRelativeToWatchedDirectory = urlToRelativeUrl$1(
+    directoryUrl,
+    watchedDirectoryUrl,
+  );
+  const watchPatterns = {
+    [`${directoryUrlRelativeToWatchedDirectory}**/*`]: true, // by default watch everything inside the source directory
+    [`${directoryUrlRelativeToWatchedDirectory}**/.*`]: false, // file starting with a dot -> do not watch
+    [`${directoryUrlRelativeToWatchedDirectory}**/.*/`]: false, // directory starting with a dot -> do not watch
+    [`${directoryUrlRelativeToWatchedDirectory}**/node_modules/`]: false, // node_modules directory -> do not watch
+  };
+  for (const key of Object.keys(sourceFilesConfig)) {
+    watchPatterns[`${directoryUrlRelativeToWatchedDirectory}${key}`] =
+      sourceFilesConfig[key];
+  }
+  return watchPatterns;
+};
+
 const watchSourceFiles = (
   sourceDirectoryUrl,
   callback,
-  { sourceFileConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
+  { sourceFilesConfig = {}, keepProcessAlive, cooldownBetweenFileEvents },
 ) => {
   // Project should use a dedicated directory (usually "src/")
   // passed to the dev server via "sourceDirectoryUrl" param
@@ -11902,23 +15275,18 @@ const watchSourceFiles = (
   // In that case source directory might contain files matching "node_modules/*" or ".git/*"
   // And jsenv should not consider these as source files and watch them (to not hurt performances)
   const watchPatterns = {};
-  const addDirectoryToWatch = (directoryUrlRelativeToRoot) => {
-    Object.assign(watchPatterns, {
-      [`${directoryUrlRelativeToRoot}**/*`]: true, // by default watch everything inside the source directory
-      // line below is commented until @jsenv/url-meta fixes the fact that is matches
-      // any file with an extension
-      [`${directoryUrlRelativeToRoot}**/.*`]: false, // file starting with a dot -> do not watch
-      [`${directoryUrlRelativeToRoot}**/.*/`]: false, // directory starting with a dot -> do not watch
-      [`${directoryUrlRelativeToRoot}**/node_modules/`]: false, // node_modules directory -> do not watch
-    });
-    for (const key of Object.keys(sourceFileConfig)) {
-      watchPatterns[`${directoryUrlRelativeToRoot}${key}`] =
-        sourceFileConfig[key];
-    }
+  let watchedDirectoryUrl = "";
+  const addDirectoryToWatch = (directoryUrl) => {
+    Object.assign(
+      watchPatterns,
+      getDirectoryWatchPatterns(directoryUrl, watchedDirectoryUrl, {
+        sourceFilesConfig,
+      }),
+    );
   };
-  const watch = (rootDirectoryUrl) => {
+  const watch = () => {
     const stopWatchingSourceFiles = registerDirectoryLifecycle(
-      rootDirectoryUrl,
+      watchedDirectoryUrl,
       {
         watchPatterns,
         cooldownBetweenFileEvents,
@@ -11926,19 +15294,19 @@ const watchSourceFiles = (
         recursive: true,
         added: ({ relativeUrl }) => {
           callback({
-            url: new URL(relativeUrl, rootDirectoryUrl).href,
+            url: new URL(relativeUrl, watchedDirectoryUrl).href,
             event: "added",
           });
         },
         updated: ({ relativeUrl }) => {
           callback({
-            url: new URL(relativeUrl, rootDirectoryUrl).href,
+            url: new URL(relativeUrl, watchedDirectoryUrl).href,
             event: "modified",
           });
         },
         removed: ({ relativeUrl }) => {
           callback({
-            url: new URL(relativeUrl, rootDirectoryUrl).href,
+            url: new URL(relativeUrl, watchedDirectoryUrl).href,
             event: "removed",
           });
         },
@@ -11962,567 +15330,31 @@ const watchSourceFiles = (
     if (!workspaces || !Array.isArray(workspaces) || workspaces.length === 0) {
       break npm_workspaces;
     }
+    watchedDirectoryUrl = packageDirectoryUrl;
     for (const workspace of workspaces) {
       if (workspace.endsWith("*")) {
-        const workspaceRelativeUrl = urlToRelativeUrl(
-          new URL(workspace.slice(0, -1), packageDirectoryUrl),
+        const workspaceDirectoryUrl = new URL(
+          workspace.slice(0, -1),
           packageDirectoryUrl,
         );
-        addDirectoryToWatch(workspaceRelativeUrl);
+        addDirectoryToWatch(workspaceDirectoryUrl);
       } else {
-        const workspaceRelativeUrl = urlToRelativeUrl(
-          new URL(workspace, packageDirectoryUrl),
-          packageDirectoryUrl,
-        );
+        const workspaceRelativeUrl = new URL(workspace, packageDirectoryUrl);
         addDirectoryToWatch(workspaceRelativeUrl);
       }
     }
     // we are updating the root directory
     // we must make the patterns relative to source directory relative to the new root directory
-    const sourceRelativeToPackage = urlToRelativeUrl(
-      sourceDirectoryUrl,
-      packageDirectoryUrl,
-    );
-    addDirectoryToWatch(sourceRelativeToPackage);
-    return watch(packageDirectoryUrl);
+    addDirectoryToWatch(sourceDirectoryUrl);
+    return watch();
   }
 
-  addDirectoryToWatch("");
-  return watch(sourceDirectoryUrl);
+  watchedDirectoryUrl = sourceDirectoryUrl;
+  addDirectoryToWatch(sourceDirectoryUrl);
+  return watch();
 };
 
 const jsenvCoreDirectoryUrl = new URL("../", import.meta.url);
-
-const jsenvPluginHtmlSyntaxErrorFallback = () => {
-  const htmlSyntaxErrorFileUrl = new URL(
-    "./html/html_syntax_error.html",
-    import.meta.url,
-  );
-
-  return {
-    mustStayFirst: true,
-    name: "jsenv:html_syntax_error_fallback",
-    appliesDuring: "dev",
-    transformUrlContent: {
-      html: (urlInfo) => {
-        try {
-          parseHtml({
-            html: urlInfo.content,
-            url: urlInfo.url,
-          });
-          return null;
-        } catch (e) {
-          if (e.code !== "PARSE_ERROR") {
-            return null;
-          }
-          const line = e.line;
-          const column = e.column;
-          const htmlErrorContentFrame = generateContentFrame({
-            content: urlInfo.content,
-            line,
-            column,
-          });
-          urlInfo.kitchen.context.logger
-            .error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
-${e.reasonCode}
-${urlInfo.url}:${line}:${column}
-${htmlErrorContentFrame}`);
-          const html = generateHtmlForSyntaxError(e, {
-            htmlUrl: urlInfo.url,
-            rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
-            htmlErrorContentFrame,
-            htmlSyntaxErrorFileUrl,
-          });
-          return html;
-        }
-      },
-    },
-  };
-};
-
-const generateHtmlForSyntaxError = (
-  htmlSyntaxError,
-  { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame, htmlSyntaxErrorFileUrl },
-) => {
-  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
-  const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
-  const { line, column } = htmlSyntaxError;
-  if (htmlUrl.startsWith(jsenvCoreDirectoryUrl.href)) {
-    htmlUrl = urlToRelativeUrl(htmlUrl, jsenvCoreDirectoryUrl);
-    htmlUrl = `@jsenv/core/${htmlUrl}`;
-  }
-  const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
-  const replacers = {
-    fileRelativeUrl: htmlRelativeUrl,
-    reasonCode: htmlSyntaxError.reasonCode,
-    errorLinkHref: `javascript:window.fetch('/__open_in_editor__/${encodeURIComponent(
-      urlWithLineAndColumn,
-    )}')`,
-    errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
-    syntaxError: escapeHtml(htmlErrorContentFrame),
-  };
-  const html = replacePlaceholders$1(htmlForSyntaxError, replacers);
-  return html;
-};
-const escapeHtml = (string) => {
-  return string
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-};
-const replacePlaceholders$1 = (html, replacers) => {
-  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
-    const replacer = replacers[name];
-    if (replacer === undefined) {
-      return match;
-    }
-    if (typeof replacer === "function") {
-      return replacer();
-    }
-    return replacer;
-  });
-};
-
-const HOOK_NAMES = [
-  "init",
-  "serve", // is called only during dev/tests
-  "serveWebsocket",
-  "resolveReference",
-  "redirectReference",
-  "transformReferenceSearchParams",
-  "formatReference",
-  "fetchUrlContent",
-  "transformUrlContent",
-  "finalizeUrlContent",
-  "bundle", // is called only during build
-  "optimizeUrlContent", // is called only during build
-  "cooked",
-  "augmentResponse", // is called only during dev/tests
-  "destroy",
-  "effect",
-];
-
-const createPluginController = (
-  kitchenContext,
-  initialPuginsMeta = {},
-) => {
-  const pluginsMeta = initialPuginsMeta;
-
-  kitchenContext.getPluginMeta = (id) => {
-    const value = pluginsMeta[id];
-    return value;
-  };
-
-  const pluginCandidates = [];
-  const activeEffectSet = new Set();
-  const activePlugins = [];
-  // precompute a list of hooks per hookName because:
-  // 1. [MAJOR REASON] when debugging, there is less iteration (so much better)
-  // 2. [MINOR REASON] it should increase perf as there is less work to do
-  const hookSetMap = new Map();
-  const addPlugin = (plugin, options) => {
-    if (Array.isArray(plugin)) {
-      for (const value of plugin) {
-        addPlugin(value);
-      }
-      return;
-    }
-    if (plugin === null || typeof plugin !== "object") {
-      throw new TypeError(`plugin must be objects, got ${plugin}`);
-    }
-    if (!plugin.name) {
-      plugin.name = "anonymous";
-    }
-    if (!testAppliesDuring(plugin) || !initPlugin(plugin)) {
-      plugin.destroy?.();
-      return;
-    }
-    pluginCandidates.push(plugin);
-  };
-  const testAppliesDuring = (plugin) => {
-    const { appliesDuring } = plugin;
-    if (appliesDuring === undefined) {
-      // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
-      return true;
-    }
-    if (appliesDuring === "*") {
-      return true;
-    }
-    if (typeof appliesDuring === "string") {
-      if (appliesDuring !== "dev" && appliesDuring !== "build") {
-        throw new TypeError(
-          `"appliesDuring" must be "dev" or "build", got ${appliesDuring}`,
-        );
-      }
-      if (kitchenContext[appliesDuring]) {
-        return true;
-      }
-      return false;
-    }
-    if (typeof appliesDuring === "object") {
-      for (const key of Object.keys(appliesDuring)) {
-        if (!appliesDuring[key] && kitchenContext[key]) {
-          return false;
-        }
-        if (appliesDuring[key] && kitchenContext[key]) {
-          return true;
-        }
-      }
-      // throw new Error(`"appliesDuring" is empty`)
-      return false;
-    }
-    throw new TypeError(
-      `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
-    );
-  };
-  const initPlugin = (plugin) => {
-    const { init } = plugin;
-    if (!init) {
-      return true;
-    }
-    const initReturnValue = init(kitchenContext, { plugin });
-    if (initReturnValue === false) {
-      return false;
-    }
-    if (typeof initReturnValue === "function" && !plugin.destroy) {
-      plugin.destroy = initReturnValue;
-    }
-    return true;
-  };
-  const pushPlugin = (...args) => {
-    for (const arg of args) {
-      addPlugin(arg);
-    }
-    updateActivePlugins();
-  };
-  const updateActivePlugins = () => {
-    // construct activePlugins and hooks according
-    // to the one present in candidates and their effects
-    // 1. active plugins is an empty array
-    // 2. all active effects are cleaned-up
-    // 3. all effects are re-activated if still relevant
-    // 4. hooks are precomputed according to plugin order
-
-    // 1.
-    activePlugins.length = 0;
-    // 2.
-    for (const { cleanup } of activeEffectSet) {
-      cleanup();
-    }
-    activeEffectSet.clear();
-    for (const pluginCandidate of pluginCandidates) {
-      const effect = pluginCandidate.effect;
-      if (!effect) {
-        activePlugins.push(pluginCandidate);
-        continue;
-      }
-    }
-    // 3.
-    for (const pluginCandidate of pluginCandidates) {
-      const effect = pluginCandidate.effect;
-      if (!effect) {
-        continue;
-      }
-      const returnValue = effect({
-        kitchenContext,
-        otherPlugins: activePlugins,
-      });
-      if (!returnValue) {
-        continue;
-      }
-      activePlugins.push(pluginCandidate);
-      activeEffectSet.add({
-        plugin: pluginCandidate,
-        cleanup: typeof returnValue === "function" ? returnValue : () => {},
-      });
-    }
-    // 4.
-    activePlugins.sort((a, b) => {
-      return pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b);
-    });
-    hookSetMap.clear();
-    for (const activePlugin of activePlugins) {
-      for (const key of Object.keys(activePlugin)) {
-        if (key === "meta") {
-          const value = activePlugin[key];
-          if (typeof value !== "object" || value === null) {
-            console.warn(`plugin.meta must be an object, got ${value}`);
-            continue;
-          }
-          Object.assign(pluginsMeta, value);
-          // any extension/modification on plugin.meta
-          // won't be taken into account so we freeze object
-          // to throw in case it happen
-          Object.freeze(value);
-          continue;
-        }
-        if (
-          key === "name" ||
-          key === "appliesDuring" ||
-          key === "init" ||
-          key === "serverEvents" ||
-          key === "mustStayFirst" ||
-          key === "effect"
-        ) {
-          continue;
-        }
-        const isHook = HOOK_NAMES.includes(key);
-        if (!isHook) {
-          console.warn(
-            `Unexpected "${key}" property on "${activePlugin.name}" plugin`,
-          );
-          continue;
-        }
-        const hookName = key;
-        const hookValue = activePlugin[hookName];
-        if (hookValue) {
-          let hookSet = hookSetMap.get(hookName);
-          if (!hookSet) {
-            hookSet = new Set();
-            hookSetMap.set(hookName, hookSet);
-          }
-          const hook = {
-            plugin: activePlugin,
-            name: hookName,
-            value: hookValue,
-          };
-          // if (position === "start") {
-          //   let i = 0;
-          //   while (i < group.length) {
-          //     const before = group[i];
-          //     if (!before.plugin.mustStayFirst) {
-          //       break;
-          //     }
-          //     i++;
-          //   }
-          //   group.splice(i, 0, hook);
-          // } else {
-          hookSet.add(hook);
-        }
-      }
-    }
-  };
-
-  let lastPluginUsed = null;
-  let currentPlugin = null;
-  let currentHookName = null;
-  const callHook = (hook, info) => {
-    const hookFn = getHookFunction(hook, info);
-    if (!hookFn) {
-      return null;
-    }
-    let startTimestamp;
-    if (info.timing) {
-      startTimestamp = performance$1.now();
-    }
-    lastPluginUsed = hook.plugin;
-    currentPlugin = hook.plugin;
-    currentHookName = hook.name;
-    let valueReturned = hookFn(info);
-    if (info.timing) {
-      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
-        performance$1.now() - startTimestamp;
-    }
-    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
-    currentPlugin = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-  const callAsyncHook = async (hook, info) => {
-    const hookFn = getHookFunction(hook, info);
-    if (!hookFn) {
-      return null;
-    }
-
-    let startTimestamp;
-    if (info.timing) {
-      startTimestamp = performance$1.now();
-    }
-    lastPluginUsed = hook.plugin;
-    currentPlugin = hook.plugin;
-    currentHookName = hook.name;
-    let valueReturned = await hookFn(info);
-    if (info.timing) {
-      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
-        performance$1.now() - startTimestamp;
-    }
-    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
-    currentPlugin = null;
-    currentHookName = null;
-    return valueReturned;
-  };
-
-  const callHooks = (hookName, info, callback) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return;
-    }
-    const setHookParams = (firstArg = info) => {
-      info = firstArg;
-    };
-    for (const hook of hookSet) {
-      const returnValue = callHook(hook, info);
-      if (returnValue && callback) {
-        callback(returnValue, hook.plugin, setHookParams);
-      }
-    }
-  };
-  const callAsyncHooks = async (hookName, info, callback, options) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return;
-    }
-    for (const hook of hookSet) {
-      const returnValue = await callAsyncHook(hook, info);
-      if (returnValue && callback) {
-        await callback(returnValue, hook.plugin);
-      }
-    }
-  };
-
-  const callHooksUntil = (hookName, info) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return null;
-    }
-    for (const hook of hookSet) {
-      const returnValue = callHook(hook, info);
-      if (returnValue) {
-        return returnValue;
-      }
-    }
-    return null;
-  };
-  const callAsyncHooksUntil = async (hookName, info, options) => {
-    const hookSet = hookSetMap.get(hookName);
-    if (!hookSet) {
-      return null;
-    }
-    if (hookSet.size === 0) {
-      return null;
-    }
-    const iterator = hookSet.values()[Symbol.iterator]();
-    let result;
-    const visit = async () => {
-      const { done, value: hook } = iterator.next();
-      if (done) {
-        return;
-      }
-      const returnValue = await callAsyncHook(hook, info);
-      if (returnValue) {
-        result = returnValue;
-        return;
-      }
-      await visit();
-    };
-    await visit();
-    return result;
-  };
-
-  return {
-    pluginsMeta,
-    activePlugins,
-    pushPlugin,
-    getHookFunction,
-    callHook,
-    callAsyncHook,
-
-    callHooks,
-    callHooksUntil,
-    callAsyncHooks,
-    callAsyncHooksUntil,
-
-    getLastPluginUsed: () => lastPluginUsed,
-    getCurrentPlugin: () => currentPlugin,
-    getCurrentHookName: () => currentHookName,
-  };
-};
-
-const getHookFunction = (
-  hook,
-  // can be undefined, reference, or urlInfo
-  info = {},
-) => {
-  const hookValue = hook.value;
-  if (typeof hookValue === "object") {
-    const hookForType = hookValue[info.type] || hookValue["*"];
-    if (!hookForType) {
-      return null;
-    }
-    return hookForType;
-  }
-  return hookValue;
-};
-
-const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
-  // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
-  if (returnValue === null || returnValue === undefined) {
-    return returnValue;
-  }
-  for (const returnValueAssertion of returnValueAssertions) {
-    if (!returnValueAssertion.appliesTo.includes(hook.name)) {
-      continue;
-    }
-    const assertionResult = returnValueAssertion.assertion(returnValue, info, {
-      hook,
-    });
-    if (assertionResult !== undefined) {
-      // normalization
-      returnValue = assertionResult;
-      break;
-    }
-  }
-  return returnValue;
-};
-
-const returnValueAssertions = [
-  {
-    name: "url_assertion",
-    appliesTo: ["resolveReference", "redirectReference"],
-    assertion: (valueReturned, urlInfo, { hook }) => {
-      if (valueReturned instanceof URL) {
-        return valueReturned.href;
-      }
-      if (typeof valueReturned === "string") {
-        return undefined;
-      }
-      throw new Error(
-        `Unexpected value returned by "${hook.plugin.name}" plugin: it must be a string; got ${valueReturned}`,
-      );
-    },
-  },
-  {
-    name: "content_assertion",
-    appliesTo: [
-      "fetchUrlContent",
-      "transformUrlContent",
-      "finalizeUrlContent",
-      "optimizeUrlContent",
-    ],
-    assertion: (valueReturned, urlInfo, { hook }) => {
-      if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
-        return { content: valueReturned };
-      }
-      if (typeof valueReturned === "object") {
-        const { content, body } = valueReturned;
-        if (urlInfo.url.startsWith("ignore:")) {
-          return undefined;
-        }
-        if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
-          throw new Error(
-            `Unexpected "content" returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string or a buffer; got ${content}`,
-          );
-        }
-        return undefined;
-      }
-      throw new Error(
-        `Unexpected value returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string, a buffer or an object; got ${valueReturned}`,
-      );
-    },
-  },
-];
 
 const createResolveUrlError = ({
   pluginController,
@@ -12536,7 +15368,7 @@ const createResolveUrlError = ({
     ...details
   }) => {
     const resolveError = new Error(
-      createDetailedMessage$1(
+      createDetailedMessage$2(
         `Failed to resolve url reference
 ${reference.trace.message}
 ${reason}`,
@@ -12569,7 +15401,7 @@ ${reason}`,
     return bareSpecifierError;
   }
   if (error.code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-    error.message = createDetailedMessage$1(error.message, {
+    error.message = createDetailedMessage$2(error.message, {
       "reference trace": reference.trace.message,
     });
     return error;
@@ -12592,7 +15424,7 @@ const createFetchUrlContentError = ({
   }) => {
     const reference = urlInfo.firstReference;
     const fetchError = new Error(
-      createDetailedMessage$1(
+      createDetailedMessage$2(
         `Failed to fetch url content
 ${reference.trace.message}
 ${reason}`,
@@ -12710,7 +15542,7 @@ const createTransformUrlContentError = ({
       };
     }
     const transformError = new Error(
-      createDetailedMessage$1(
+      createDetailedMessage$2(
         `parse error on "${urlInfo.type}"
 ${trace.message}
 ${error.message}`,
@@ -12742,7 +15574,7 @@ ${error.message}`,
     const reference = urlInfo.firstReference;
     let trace = reference.trace;
     const transformError = new Error(
-      createDetailedMessage$1(
+      createDetailedMessage$2(
         `"transformUrlContent" error on "${urlInfo.type}"
 ${trace.message}
 ${reason}`,
@@ -12779,7 +15611,7 @@ const createFinalizeUrlContentError = ({
 }) => {
   const reference = urlInfo.firstReference;
   const finalizeError = new Error(
-    createDetailedMessage$1(
+    createDetailedMessage$2(
       `"finalizeUrlContent" error on "${urlInfo.type}"
 ${reference.trace.message}`,
       {
@@ -12987,12 +15819,14 @@ const assertFetchedContentCompliance = ({ urlInfo, content }) => {
   const { expectedContentType } = urlInfo.firstReference;
   if (expectedContentType && urlInfo.contentType !== expectedContentType) {
     throw new Error(
-      `content-type must be "${expectedContentType}", got "${urlInfo.contentType}`,
+      `content-type must be "${expectedContentType}", got "${urlInfo.contentType} on ${urlInfo.url}`,
     );
   }
   const { expectedType } = urlInfo.firstReference;
   if (expectedType && urlInfo.type !== expectedType) {
-    throw new Error(`type must be "${expectedType}", got "${urlInfo.type}"`);
+    throw new Error(
+      `type must be "${expectedType}", got "${urlInfo.type}" on ${urlInfo.url}`,
+    );
   }
   const { integrity } = urlInfo.firstReference;
   if (integrity) {
@@ -14311,14 +17145,14 @@ const createUrlGraph = ({
       const data = {};
       urlInfoMap.forEach((urlInfo) => {
         if (urlInfo.referenceToOthersSet.size) {
-          const relativeUrl = urlToRelativeUrl(urlInfo.url, rootDirectoryUrl);
+          const relativeUrl = urlToRelativeUrl$1(urlInfo.url, rootDirectoryUrl);
           const referencedUrlSet = new Set();
           for (const referenceToOther of urlInfo.referenceToOthersSet) {
             data[relativeUrl] = referencedUrlSet.add(referenceToOther.url);
           }
           data[relativeUrl] = Array.from(referencedUrlSet).map(
             (referencedUrl) =>
-              urlToRelativeUrl(referencedUrl, rootDirectoryUrl),
+              urlToRelativeUrl$1(referencedUrl, rootDirectoryUrl),
           );
         }
       });
@@ -14729,7 +17563,7 @@ const createUrlInfoTransformer = ({
         }
       : sourcemapsSources === "relative"
         ? (source, urlInfo) => {
-            const sourceRelative = urlToRelativeUrl(source, urlInfo.url);
+            const sourceRelative = urlToRelativeUrl$1(source, urlInfo.url);
             return sourceRelative || ".";
           }
         : null;
@@ -14986,7 +17820,7 @@ const createUrlInfoTransformer = ({
         baseName += `7${encodeFilePathComponent(key)}=${encodeFilePathComponent(value)}`;
       }
       const outFileUrl = setUrlBasename(generatedUrlObject, baseName);
-      let outFilePath = urlToFileSystemPath(outFileUrl);
+      let outFilePath = urlToFileSystemPath$1(outFileUrl);
       outFilePath = truncate(outFilePath, 2055); // for windows
       writeFileSync(outFilePath, urlInfo.content, { force: true });
     }
@@ -15072,7 +17906,7 @@ const createUrlInfoTransformer = ({
       if (shouldUpdateSourcemapComment(urlInfo, sourcemaps)) {
         let specifier;
         if (sourcemaps === "file" && sourcemapsComment === "relative") {
-          specifier = urlToRelativeUrl(
+          specifier = urlToRelativeUrl$1(
             sourcemapReference.generatedUrl,
             urlInfo.generatedUrl,
           );
@@ -15178,7 +18012,6 @@ const createKitchen = ({
   // during dev/test clientRuntimeCompat is a single runtime
   // during build clientRuntimeCompat is runtimeCompat
   clientRuntimeCompat = runtimeCompat,
-  plugins,
   supervisor,
   sourcemaps = dev ? "inline" : "none", // "programmatic" and "file" also allowed
   sourcemapsComment,
@@ -15187,9 +18020,9 @@ const createKitchen = ({
   sourcemapsSourcesContent,
   outDirectoryUrl,
   initialContext = {},
-  initialPluginsMeta = {},
 }) => {
-  const logger = createLogger({ logLevel });
+  const logger = createLogger$1({ logLevel });
+
   const kitchen = {
     context: {
       ...initialContext,
@@ -15210,11 +18043,16 @@ const createKitchen = ({
       outDirectoryUrl,
     },
     graph: null,
-    pluginController: null,
     urlInfoTransformer: null,
+    pluginController: null,
   };
   const kitchenContext = kitchen.context;
   kitchenContext.kitchen = kitchen;
+
+  let pluginController;
+  kitchen.setPluginController = (value) => {
+    pluginController = kitchen.pluginController = value;
+  };
 
   const graph = createUrlGraph({
     name,
@@ -15222,13 +18060,6 @@ const createKitchen = ({
     kitchen,
   });
   kitchen.graph = graph;
-
-  const pluginController = createPluginController(
-    kitchenContext,
-    initialPluginsMeta,
-  );
-  kitchen.pluginController = pluginController;
-  pluginController.pushPlugin(jsenvPluginHtmlSyntaxErrorFallback(), ...plugins);
 
   const urlInfoTransformer = createUrlInfoTransformer({
     logger,
@@ -15329,8 +18160,8 @@ const createKitchen = ({
           logger.debug(`url resolved by "${
             pluginController.getLastPluginUsed().name
           }"
-${ANSI.color(reference.specifier, ANSI.GREY)} ->
-${ANSI.color(reference.url, ANSI.YELLOW)}
+${ANSI$1.color(reference.specifier, ANSI$1.GREY)} ->
+${ANSI$1.color(reference.url, ANSI$1.YELLOW)}
 `);
         }
       }
@@ -15352,8 +18183,8 @@ ${ANSI.color(reference.url, ANSI.YELLOW)}
             if (reference.debug) {
               logger.debug(
                 `url redirected by "${plugin.name}"
-${ANSI.color(reference.url, ANSI.GREY)} ->
-${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
+${ANSI$1.color(reference.url, ANSI$1.GREY)} ->
+${ANSI$1.color(normalizedReturnValue, ANSI$1.YELLOW)}
 `,
               );
             }
@@ -15450,7 +18281,7 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         await pluginController.callAsyncHooksUntil("fetchUrlContent", urlInfo);
       if (!fetchUrlContentReturnValue) {
         logger.warn(
-          createDetailedMessage$1(
+          createDetailedMessage$2(
             `no plugin has handled url during "fetchUrlContent" hook -> url will be ignored`,
             {
               "url": urlInfo.url,
@@ -15474,12 +18305,16 @@ ${ANSI.color(normalizedReturnValue, ANSI.YELLOW)}
         headers = {},
         body,
         isEntryPoint,
+        filenameHint,
       } = fetchUrlContentReturnValue;
       if (content === undefined) {
         content = body;
       }
       if (contentType === undefined) {
         contentType = headers["content-type"] || "application/octet-stream";
+      }
+      if (filenameHint) {
+        urlInfo.filenameHint = filenameHint;
       }
       urlInfo.status = status;
       urlInfo.contentType = contentType;
@@ -15808,18 +18643,18 @@ const memoizeIsSupported = (runtimeCompat) => {
 
 const inferUrlInfoType = (urlInfo) => {
   const { type, typeHint } = urlInfo;
-  const { contentType } = urlInfo;
+  const mediaType = CONTENT_TYPE$1.asMediaType(urlInfo.contentType);
   const { expectedType } = urlInfo.firstReference;
   if (type === "sourcemap" || typeHint === "sourcemap") {
     return "sourcemap";
   }
-  if (contentType === "text/html") {
+  if (mediaType === "text/html") {
     return "html";
   }
-  if (contentType === "text/css") {
+  if (mediaType === "text/css") {
     return "css";
   }
-  if (contentType === "text/javascript") {
+  if (mediaType === "text/javascript") {
     if (expectedType === "js_classic") {
       return "js_classic";
     }
@@ -15828,19 +18663,19 @@ const inferUrlInfoType = (urlInfo) => {
     }
     return "js_module";
   }
-  if (contentType === "application/importmap+json") {
+  if (mediaType === "application/importmap+json") {
     return "importmap";
   }
-  if (contentType === "application/manifest+json") {
+  if (mediaType === "application/manifest+json") {
     return "webmanifest";
   }
-  if (contentType === "image/svg+xml") {
+  if (mediaType === "image/svg+xml") {
     return "svg";
   }
-  if (CONTENT_TYPE.isJson(contentType)) {
+  if (CONTENT_TYPE$1.isJson(mediaType)) {
     return "json";
   }
-  if (CONTENT_TYPE.isTextual(contentType)) {
+  if (CONTENT_TYPE$1.isTextual(mediaType)) {
     return "text";
   }
   return expectedType || "other";
@@ -16011,7 +18846,7 @@ const determineCategory = (urlInfo) => {
 const createRepartitionMessage = ({ html, css, js, json, other, total }) => {
   const addPart = (name, { count, size, percentage }) => {
     parts.push(
-      `${ANSI.color(`${name}:`, ANSI.GREY)} ${count} (${humanizeFileSize(
+      `${ANSI$1.color(`${name}:`, ANSI$1.GREY)} ${count} (${humanizeFileSize(
         size,
       )} / ${percentage} %)`,
     );
@@ -16366,6 +19201,529 @@ const jsenvPluginInlining = () => {
   return [jsenvPluginInliningAsDataUrl(), jsenvPluginInliningIntoHtml()];
 };
 
+const jsenvPluginHtmlSyntaxErrorFallback = () => {
+  const htmlSyntaxErrorFileUrl = new URL(
+    "./html/html_syntax_error.html",
+    import.meta.url,
+  );
+
+  return {
+    mustStayFirst: true,
+    name: "jsenv:html_syntax_error_fallback",
+    appliesDuring: "dev",
+    transformUrlContent: {
+      html: (urlInfo) => {
+        try {
+          parseHtml({
+            html: urlInfo.content,
+            url: urlInfo.url,
+          });
+          return null;
+        } catch (e) {
+          if (e.code !== "PARSE_ERROR") {
+            return null;
+          }
+          const line = e.line;
+          const column = e.column;
+          const htmlErrorContentFrame = generateContentFrame({
+            content: urlInfo.content,
+            line,
+            column,
+          });
+          urlInfo.kitchen.context.logger
+            .error(`Error while handling ${urlInfo.context.request ? urlInfo.context.request.url : urlInfo.url}:
+${e.reasonCode}
+${urlInfo.url}:${line}:${column}
+${htmlErrorContentFrame}`);
+          const html = generateHtmlForSyntaxError(e, {
+            htmlUrl: urlInfo.url,
+            rootDirectoryUrl: urlInfo.context.rootDirectoryUrl,
+            htmlErrorContentFrame,
+            htmlSyntaxErrorFileUrl,
+          });
+          return html;
+        }
+      },
+    },
+  };
+};
+
+const generateHtmlForSyntaxError = (
+  htmlSyntaxError,
+  { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame, htmlSyntaxErrorFileUrl },
+) => {
+  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
+  const htmlRelativeUrl = urlToRelativeUrl$1(htmlUrl, rootDirectoryUrl);
+  const { line, column } = htmlSyntaxError;
+  if (htmlUrl.startsWith(jsenvCoreDirectoryUrl.href)) {
+    htmlUrl = urlToRelativeUrl$1(htmlUrl, jsenvCoreDirectoryUrl);
+    htmlUrl = `@jsenv/core/${htmlUrl}`;
+  }
+  const urlWithLineAndColumn = `${htmlUrl}:${line}:${column}`;
+  const replacers = {
+    fileRelativeUrl: htmlRelativeUrl,
+    reasonCode: htmlSyntaxError.reasonCode,
+    errorLinkHref: `javascript:window.fetch('/.internal/open_file/${encodeURIComponent(
+      urlWithLineAndColumn,
+    )}')`,
+    errorLinkText: `${htmlRelativeUrl}:${line}:${column}`,
+    syntaxError: escapeHtml(htmlErrorContentFrame),
+  };
+  const html = replacePlaceholders$1(htmlForSyntaxError, replacers);
+  return html;
+};
+const escapeHtml = (string) => {
+  return string
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+const replacePlaceholders$1 = (html, replacers) => {
+  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
+};
+
+const createPluginStore = (plugins) => {
+  const allDevServerRoutes = [];
+  const pluginArray = [];
+  const addPlugin = (plugin) => {
+    if (Array.isArray(plugin)) {
+      for (const subplugin of plugin) {
+        addPlugin(subplugin);
+      }
+      return;
+    }
+    if (plugin === null || typeof plugin !== "object") {
+      throw new TypeError(`plugin must be objects, got ${plugin}`);
+    }
+    if (!plugin.name) {
+      plugin.name = "anonymous";
+    }
+    if (plugin.devServerRoutes) {
+      const devServerRoutes = plugin.devServerRoutes;
+      for (const devServerRoute of devServerRoutes) {
+        allDevServerRoutes.push(devServerRoute);
+      }
+    }
+    pluginArray.push(plugin);
+  };
+  addPlugin(jsenvPluginHtmlSyntaxErrorFallback());
+  for (const plugin of plugins) {
+    addPlugin(plugin);
+  }
+
+  return {
+    pluginArray,
+
+    allDevServerRoutes,
+  };
+};
+
+const createPluginController = (
+  pluginStore,
+  kitchen,
+  { initialPuginsMeta = {} } = {},
+) => {
+  const pluginsMeta = initialPuginsMeta;
+  kitchen.context.getPluginMeta = (id) => {
+    const value = pluginsMeta[id];
+    return value;
+  };
+
+  // precompute a list of hooks per hookName because:
+  // 1. [MAJOR REASON] when debugging, there is less iteration (so much better)
+  // 2. [MINOR REASON] it should increase perf as there is less work to do
+  const hookSetMap = new Map();
+  const pluginCandidates = pluginStore.pluginArray;
+  const activePluginArray = [];
+  const pluginWithEffectCandidateForActivationArray = [];
+  for (const pluginCandidate of pluginCandidates) {
+    if (!testAppliesDuring(pluginCandidate, kitchen)) {
+      pluginCandidate.destroy?.();
+      continue;
+    }
+    if (!initPlugin(pluginCandidate, kitchen)) {
+      pluginCandidate.destroy?.();
+      continue;
+    }
+    if (pluginCandidate.effect) {
+      pluginWithEffectCandidateForActivationArray.push(pluginCandidate);
+    } else {
+      activePluginArray.push(pluginCandidate);
+    }
+  }
+
+  const activeEffectSet = new Set();
+  for (const pluginWithEffectCandidateForActivation of pluginWithEffectCandidateForActivationArray) {
+    const returnValue = pluginWithEffectCandidateForActivation.effect({
+      kitchenContext: kitchen.context,
+      otherPlugins: activePluginArray,
+    });
+    if (!returnValue) {
+      continue;
+    }
+    activePluginArray.push(pluginWithEffectCandidateForActivation);
+    activeEffectSet.add({
+      plugin: pluginWithEffectCandidateForActivation,
+      cleanup: typeof returnValue === "function" ? returnValue : () => {},
+    });
+  }
+  activePluginArray.sort((a, b) => {
+    return pluginCandidates.indexOf(a) - pluginCandidates.indexOf(b);
+  });
+  for (const activePlugin of activePluginArray) {
+    for (const key of Object.keys(activePlugin)) {
+      if (key === "meta") {
+        const value = activePlugin[key];
+        if (typeof value !== "object" || value === null) {
+          console.warn(`plugin.meta must be an object, got ${value}`);
+          continue;
+        }
+        Object.assign(pluginsMeta, value);
+        // any extension/modification on plugin.meta
+        // won't be taken into account so we freeze object
+        // to throw in case it happen
+        Object.freeze(value);
+        continue;
+      }
+      if (
+        key === "name" ||
+        key === "appliesDuring" ||
+        key === "init" ||
+        key === "serverEvents" ||
+        key === "mustStayFirst" ||
+        key === "devServerRoutes" ||
+        key === "effect"
+      ) {
+        continue;
+      }
+      const isHook = HOOK_NAMES.includes(key);
+      if (!isHook) {
+        console.warn(
+          `Unexpected "${key}" property on "${activePlugin.name}" plugin`,
+        );
+        continue;
+      }
+      const hookName = key;
+      const hookValue = activePlugin[hookName];
+      if (hookValue) {
+        let hookSet = hookSetMap.get(hookName);
+        if (!hookSet) {
+          hookSet = new Set();
+          hookSetMap.set(hookName, hookSet);
+        }
+        const hook = {
+          plugin: activePlugin,
+          name: hookName,
+          value: hookValue,
+        };
+        // if (position === "start") {
+        //   let i = 0;
+        //   while (i < group.length) {
+        //     const before = group[i];
+        //     if (!before.plugin.mustStayFirst) {
+        //       break;
+        //     }
+        //     i++;
+        //   }
+        //   group.splice(i, 0, hook);
+        // } else {
+        hookSet.add(hook);
+      }
+    }
+  }
+
+  let lastPluginUsed = null;
+  let currentPlugin = null;
+  let currentHookName = null;
+  const callHook = (hook, info) => {
+    const hookFn = getHookFunction(hook, info);
+    if (!hookFn) {
+      return null;
+    }
+    let startTimestamp;
+    if (info.timing) {
+      startTimestamp = performance$1.now();
+    }
+    lastPluginUsed = hook.plugin;
+    currentPlugin = hook.plugin;
+    currentHookName = hook.name;
+    let valueReturned = hookFn(info);
+    if (info.timing) {
+      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
+        performance$1.now() - startTimestamp;
+    }
+    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
+    currentPlugin = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+  const callAsyncHook = async (hook, info) => {
+    const hookFn = getHookFunction(hook, info);
+    if (!hookFn) {
+      return null;
+    }
+
+    let startTimestamp;
+    if (info.timing) {
+      startTimestamp = performance$1.now();
+    }
+    lastPluginUsed = hook.plugin;
+    currentPlugin = hook.plugin;
+    currentHookName = hook.name;
+    let valueReturned = await hookFn(info);
+    if (info.timing) {
+      info.timing[`${hook.name}-${hook.plugin.name.replace("jsenv:", "")}`] =
+        performance$1.now() - startTimestamp;
+    }
+    valueReturned = assertAndNormalizeReturnValue(hook, valueReturned, info);
+    currentPlugin = null;
+    currentHookName = null;
+    return valueReturned;
+  };
+  const callHooks = (hookName, info, callback) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    const setHookParams = (firstArg = info) => {
+      info = firstArg;
+    };
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info);
+      if (returnValue && callback) {
+        callback(returnValue, hook.plugin, setHookParams);
+      }
+    }
+  };
+  const callAsyncHooks = async (hookName, info, callback, options) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return;
+    }
+    for (const hook of hookSet) {
+      const returnValue = await callAsyncHook(hook, info);
+      if (returnValue && callback) {
+        await callback(returnValue, hook.plugin);
+      }
+    }
+  };
+  const callHooksUntil = (hookName, info) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return null;
+    }
+    for (const hook of hookSet) {
+      const returnValue = callHook(hook, info);
+      if (returnValue) {
+        return returnValue;
+      }
+    }
+    return null;
+  };
+  const callAsyncHooksUntil = async (hookName, info, options) => {
+    const hookSet = hookSetMap.get(hookName);
+    if (!hookSet) {
+      return null;
+    }
+    if (hookSet.size === 0) {
+      return null;
+    }
+    const iterator = hookSet.values()[Symbol.iterator]();
+    let result;
+    const visit = async () => {
+      const { done, value: hook } = iterator.next();
+      if (done) {
+        return;
+      }
+      const returnValue = await callAsyncHook(hook, info);
+      if (returnValue) {
+        result = returnValue;
+        return;
+      }
+      await visit();
+    };
+    await visit();
+    return result;
+  };
+
+  return {
+    activePlugins: activePluginArray,
+
+    callHook,
+    callAsyncHook,
+    callHooks,
+    callHooksUntil,
+    callAsyncHooks,
+    callAsyncHooksUntil,
+
+    getLastPluginUsed: () => lastPluginUsed,
+    getCurrentPlugin: () => currentPlugin,
+    getCurrentHookName: () => currentHookName,
+  };
+};
+
+const HOOK_NAMES = [
+  "init",
+  "devServerRoutes", // is called only during dev/tests
+  "resolveReference",
+  "redirectReference",
+  "transformReferenceSearchParams",
+  "formatReference",
+  "fetchUrlContent",
+  "transformUrlContent",
+  "finalizeUrlContent",
+  "bundle", // is called only during build
+  "optimizeUrlContent", // is called only during build
+  "cooked",
+  "augmentResponse", // is called only during dev/tests
+  "destroy",
+  "effect",
+];
+
+const testAppliesDuring = (plugin, kitchen) => {
+  const { appliesDuring } = plugin;
+  if (appliesDuring === undefined) {
+    // console.debug(`"appliesDuring" is undefined on ${pluginEntry.name}`)
+    return true;
+  }
+  if (appliesDuring === "*") {
+    return true;
+  }
+  if (typeof appliesDuring === "string") {
+    if (appliesDuring !== "dev" && appliesDuring !== "build") {
+      throw new TypeError(
+        `"appliesDuring" must be "dev" or "build", got ${appliesDuring}`,
+      );
+    }
+    if (kitchen.context[appliesDuring]) {
+      return true;
+    }
+    return false;
+  }
+  if (typeof appliesDuring === "object") {
+    for (const key of Object.keys(appliesDuring)) {
+      if (!appliesDuring[key] && kitchen.context[key]) {
+        return false;
+      }
+      if (appliesDuring[key] && kitchen.context[key]) {
+        return true;
+      }
+    }
+    // throw new Error(`"appliesDuring" is empty`)
+    return false;
+  }
+  throw new TypeError(
+    `"appliesDuring" must be an object or a string, got ${appliesDuring}`,
+  );
+};
+const initPlugin = (plugin, kitchen) => {
+  const { init } = plugin;
+  if (!init) {
+    return true;
+  }
+  const initReturnValue = init(kitchen.context, { plugin });
+  if (initReturnValue === false) {
+    return false;
+  }
+  if (typeof initReturnValue === "function" && !plugin.destroy) {
+    plugin.destroy = initReturnValue;
+  }
+  return true;
+};
+const getHookFunction = (
+  hook,
+  // can be undefined, reference, or urlInfo
+  info = {},
+) => {
+  const hookValue = hook.value;
+  if (typeof hookValue === "object") {
+    const hookForType = hookValue[info.type] || hookValue["*"];
+    if (!hookForType) {
+      return null;
+    }
+    return hookForType;
+  }
+  return hookValue;
+};
+
+const assertAndNormalizeReturnValue = (hook, returnValue, info) => {
+  // all hooks are allowed to return null/undefined as a signal of "I don't do anything"
+  if (returnValue === null || returnValue === undefined) {
+    return returnValue;
+  }
+  for (const returnValueAssertion of returnValueAssertions) {
+    if (!returnValueAssertion.appliesTo.includes(hook.name)) {
+      continue;
+    }
+    const assertionResult = returnValueAssertion.assertion(returnValue, info, {
+      hook,
+    });
+    if (assertionResult !== undefined) {
+      // normalization
+      returnValue = assertionResult;
+      break;
+    }
+  }
+  return returnValue;
+};
+const returnValueAssertions = [
+  {
+    name: "url_assertion",
+    appliesTo: ["resolveReference", "redirectReference"],
+    assertion: (valueReturned, urlInfo, { hook }) => {
+      if (valueReturned instanceof URL) {
+        return valueReturned.href;
+      }
+      if (typeof valueReturned === "string") {
+        return undefined;
+      }
+      throw new Error(
+        `Unexpected value returned by "${hook.plugin.name}" plugin: it must be a string; got ${valueReturned}`,
+      );
+    },
+  },
+  {
+    name: "content_assertion",
+    appliesTo: [
+      "fetchUrlContent",
+      "transformUrlContent",
+      "finalizeUrlContent",
+      "optimizeUrlContent",
+    ],
+    assertion: (valueReturned, urlInfo, { hook }) => {
+      if (typeof valueReturned === "string" || Buffer.isBuffer(valueReturned)) {
+        return { content: valueReturned };
+      }
+      if (typeof valueReturned === "object") {
+        const { content, body } = valueReturned;
+        if (urlInfo.url.startsWith("ignore:")) {
+          return undefined;
+        }
+        if (typeof content !== "string" && !Buffer.isBuffer(content) && !body) {
+          throw new Error(
+            `Unexpected "content" returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string or a buffer; got ${content}`,
+          );
+        }
+        return undefined;
+      }
+      throw new Error(
+        `Unexpected value returned by "${hook.plugin.name}" ${hook.name} hook: it must be a string, a buffer or an object; got ${valueReturned}`,
+      );
+    },
+  },
+];
+
 /*
  * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
  */
@@ -16468,7 +19826,7 @@ const jsenvPluginDataUrlsAnalysis = () => {
 };
 
 const contentFromUrlData = ({ contentType, base64Flag, urlData }) => {
-  if (CONTENT_TYPE.isTextual(contentType)) {
+  if (CONTENT_TYPE$1.isTextual(contentType)) {
     if (base64Flag) {
       return base64ToString(urlData);
     }
@@ -16497,7 +19855,7 @@ const jsenvPluginDirectoryReferenceAnalysis = () => {
         const originalDirectoryReference = findOriginalDirectoryReference(
           urlInfo.firstReference,
         );
-        const directoryRelativeUrl = urlToRelativeUrl(
+        const directoryRelativeUrl = urlToRelativeUrl$1(
           urlInfo.url,
           urlInfo.context.rootDirectoryUrl,
         );
@@ -18067,7 +21425,7 @@ const jsenvPluginReferenceExpectedTypes = () => {
     else if (
       reference.type === "js_url" &&
       reference.expectedType === undefined &&
-      CONTENT_TYPE.fromUrlExtension(reference.url) === "text/javascript"
+      CONTENT_TYPE$1.fromUrlExtension(reference.url) === "text/javascript"
     ) {
       reference.expectedType = "js_module";
     }
@@ -19349,11 +22707,7 @@ const createNodeEsmResolver = ({
     }
     const { ownerUrlInfo } = reference;
     if (reference.specifierPathname[0] === "/") {
-      const url = new URL(
-        reference.specifier.slice(1),
-        ownerUrlInfo.context.rootDirectoryUrl,
-      );
-      return url;
+      return null; // let it to jsenv_web_resolution
     }
     let parentUrl;
     if (reference.baseUrl) {
@@ -19364,8 +22718,7 @@ const createNodeEsmResolver = ({
       parentUrl = ownerUrlInfo.url;
     }
     if (!parentUrl.startsWith("file:")) {
-      const url = new URL(reference.specifier, parentUrl);
-      return url;
+      return null; // let it to jsenv_web_resolution
     }
     const { url, type, packageDirectoryUrl } = applyNodeEsmResolution({
       conditions: packageConditions,
@@ -19551,8 +22904,12 @@ const jsenvPluginWebResolution = () => {
     resolveReference: (reference) => {
       const { ownerUrlInfo } = reference;
       if (reference.specifierPathname[0] === "/") {
+        const resource = reference.specifier;
+        if (ownerUrlInfo.originalUrl?.startsWith("http")) {
+          return new URL(resource, ownerUrlInfo.originalUrl);
+        }
         const url = new URL(
-          reference.specifier.slice(1),
+          resource.slice(1),
           ownerUrlInfo.context.rootDirectoryUrl,
         );
         return url;
@@ -19609,7 +22966,7 @@ const FILE_AND_SERVER_URLS_CONVERTER = {
       return "/";
     }
     if (urlIsInsideOf(fileUrl, serverRootDirectoryUrl)) {
-      const urlRelativeToServer = urlToRelativeUrl(
+      const urlRelativeToServer = urlToRelativeUrl$1(
         fileUrl,
         serverRootDirectoryUrl,
       );
@@ -19765,6 +23122,9 @@ const jsenvPluginDirectoryListing = ({
   urlMocks = false,
   autoreload = true,
   directoryContentMagicName,
+  rootDirectoryUrl,
+  mainFilePath,
+  sourceFilesConfig,
 }) => {
   return {
     name: "jsenv:directory_listing",
@@ -19782,16 +23142,24 @@ const jsenvPluginDirectoryListing = ({
         fsStat = readEntryStatSync(url, { nullIfNotFound: true });
         reference.fsStat = fsStat;
       }
-      const { request, requestedUrl } = reference.ownerUrlInfo.context;
+      const { request, requestedUrl, mainFilePath, rootDirectoryUrl } =
+        reference.ownerUrlInfo.context;
       if (!fsStat) {
-        if (
-          requestedUrl === url &&
-          request &&
-          request.headers["sec-fetch-dest"] === "document"
-        ) {
-          return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
+        if (!request || request.headers["sec-fetch-dest"] !== "document") {
+          return null;
         }
-        return null;
+        if (url !== requestedUrl) {
+          const mainFileUrl = new URL(mainFilePath, rootDirectoryUrl);
+          mainFileUrl.search = "";
+          mainFileUrl.hash = "";
+          const referenceUrl = new URL(url);
+          referenceUrl.search = "";
+          referenceUrl.hash = "";
+          if (mainFileUrl.href !== referenceUrl.href) {
+            return null;
+          }
+        }
+        return `${htmlFileUrlForDirectory}?url=${encodeURIComponent(url)}&enoent`;
       }
       const isDirectory = fsStat?.isDirectory();
       if (!isDirectory) {
@@ -19846,65 +23214,78 @@ const jsenvPluginDirectoryListing = ({
         );
       },
     },
-    serveWebsocket: ({ websocket, request, context }) => {
-      if (!autoreload) {
-        return false;
-      }
-      const secProtocol = request.headers["sec-websocket-protocol"];
-      if (secProtocol !== "watch-directory") {
-        return false;
-      }
-      const { rootDirectoryUrl, mainFilePath } = context;
-      const requestedUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
-        request.pathname,
-        rootDirectoryUrl,
-      );
-      const closestDirectoryUrl = getFirstExistingDirectoryUrl(requestedUrl);
-      const sendMessage = (message) => {
-        websocket.send(JSON.stringify(message));
-      };
-      const generateItems = () => {
-        const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
-          requestedUrl,
-          rootDirectoryUrl,
-        );
-        const items = getDirectoryContentItems({
-          serverRootDirectoryUrl: rootDirectoryUrl,
-          mainFilePath,
-          requestedUrl,
-          firstExistingDirectoryUrl,
-        });
-        return items;
-      };
+    devServerRoutes: [
+      {
+        endpoint:
+          "GET /.internal/directory_content.websocket?directory=:directory",
+        description: "Emit events when a directory content changes.",
+        declarationSource: import.meta.url,
+        fetch: (request) => {
+          if (!autoreload) {
+            return null;
+          }
+          return new WebSocketResponse((websocket) => {
+            const directoryRelativeUrl = request.params.directory;
+            const requestedUrl = FILE_AND_SERVER_URLS_CONVERTER.asFileUrl(
+              directoryRelativeUrl,
+              rootDirectoryUrl,
+            );
+            const closestDirectoryUrl =
+              getFirstExistingDirectoryUrl(requestedUrl);
+            const sendMessage = (message) => {
+              websocket.send(JSON.stringify(message));
+            };
+            const generateItems = () => {
+              const firstExistingDirectoryUrl = getFirstExistingDirectoryUrl(
+                requestedUrl,
+                rootDirectoryUrl,
+              );
+              const items = getDirectoryContentItems({
+                serverRootDirectoryUrl: rootDirectoryUrl,
+                mainFilePath,
+                requestedUrl,
+                firstExistingDirectoryUrl,
+              });
+              return items;
+            };
 
-      const unwatch = registerDirectoryLifecycle(closestDirectoryUrl, {
-        added: ({ relativeUrl }) => {
-          sendMessage({
-            type: "change",
-            reason: `${relativeUrl} added`,
-            items: generateItems(),
+            const unwatch = registerDirectoryLifecycle(closestDirectoryUrl, {
+              added: ({ relativeUrl }) => {
+                sendMessage({
+                  type: "change",
+                  reason: `${relativeUrl} added`,
+                  items: generateItems(),
+                });
+              },
+              updated: ({ relativeUrl }) => {
+                sendMessage({
+                  type: "change",
+                  reason: `${relativeUrl} updated`,
+                  items: generateItems(),
+                });
+              },
+              removed: ({ relativeUrl }) => {
+                sendMessage({
+                  type: "change",
+                  reason: `${relativeUrl} removed`,
+                  items: generateItems(),
+                });
+              },
+              watchPatterns: getDirectoryWatchPatterns(
+                closestDirectoryUrl,
+                closestDirectoryUrl,
+                {
+                  sourceFilesConfig,
+                },
+              ),
+            });
+            return () => {
+              unwatch();
+            };
           });
         },
-        updated: ({ relativeUrl }) => {
-          sendMessage({
-            type: "change",
-            reason: `${relativeUrl} updated`,
-            items: generateItems(),
-          });
-        },
-        removed: ({ relativeUrl }) => {
-          sendMessage({
-            type: "change",
-            reason: `${relativeUrl} removed`,
-            items: generateItems(),
-          });
-        },
-      });
-      websocket.signal.addEventListener("abort", () => {
-        unwatch();
-      });
-      return true;
-    },
+      },
+    ],
   };
 };
 
@@ -19973,12 +23354,12 @@ const generateDirectoryListingInjection = (
     );
   const websocketScheme = request.protocol === "https" ? "wss" : "ws";
   const { host } = new URL(request.url);
-  const websocketUrl = `${websocketScheme}://${host}${directoryUrlRelativeToServer}`;
+  const websocketUrl = `${websocketScheme}://${host}/.internal/directory_content.websocket?directory=${encodeURIComponent(directoryUrlRelativeToServer)}`;
 
   const navItems = [];
   {
     const lastItemUrl = firstExistingDirectoryUrl;
-    const lastItemRelativeUrl = urlToRelativeUrl(lastItemUrl, rootDirectoryUrl);
+    const lastItemRelativeUrl = urlToRelativeUrl$1(lastItemUrl, rootDirectoryUrl);
     const rootDirectoryUrlName = urlToFilename$1(rootDirectoryUrl);
     let parts;
     if (lastItemRelativeUrl) {
@@ -20007,7 +23388,7 @@ const generateDirectoryListingInjection = (
         navItemUrl,
         serverRootDirectoryUrl,
       );
-      let urlRelativeToDocument = urlToRelativeUrl(navItemUrl, requestedUrl);
+      let urlRelativeToDocument = urlToRelativeUrl$1(navItemUrl, requestedUrl);
       const isServerRootDirectory = navItemUrl === serverRootDirectoryUrl;
       if (isServerRootDirectory) {
         urlRelativeToServer = `/${directoryContentMagicName}`;
@@ -20029,14 +23410,14 @@ const generateDirectoryListingInjection = (
 
   let enoentDetails = null;
   if (enoent) {
-    const fileRelativeUrl = urlToRelativeUrl(
+    const fileRelativeUrl = urlToRelativeUrl$1(
       requestedUrl,
       serverRootDirectoryUrl,
     );
     let filePathExisting;
     let filePathNotFound;
     const existingIndex = String(firstExistingDirectoryUrl).length;
-    filePathExisting = urlToRelativeUrl(
+    filePathExisting = urlToRelativeUrl$1(
       firstExistingDirectoryUrl,
       serverRootDirectoryUrl,
     );
@@ -20096,7 +23477,7 @@ const getDirectoryContentItems = ({
   });
   const items = [];
   for (const fileUrl of fileUrls) {
-    const urlRelativeToCurrentDirectory = urlToRelativeUrl(
+    const urlRelativeToCurrentDirectory = urlToRelativeUrl$1(
       fileUrl,
       firstExistingDirectoryUrl,
     );
@@ -20259,6 +23640,9 @@ const jsenvPluginProtocolFile = ({
   magicDirectoryIndex,
   preserveSymlinks,
   directoryListing,
+  rootDirectoryUrl,
+  mainFilePath,
+  sourceFilesConfig,
 }) => {
   return [
     jsenvPluginFsRedirection({
@@ -20319,6 +23703,9 @@ const jsenvPluginProtocolFile = ({
           jsenvPluginDirectoryListing({
             ...directoryListing,
             directoryContentMagicName,
+            rootDirectoryUrl,
+            mainFilePath,
+            sourceFilesConfig,
           }),
         ]
       : []),
@@ -20360,9 +23747,9 @@ const jsenvPluginProtocolFile = ({
           fsStat = readEntryStatSync(urlInfo.url, { nullIfNotFound: true });
         }
         const serveFile = (url) => {
-          const contentType = CONTENT_TYPE.fromUrlExtension(url);
+          const contentType = CONTENT_TYPE$1.fromUrlExtension(url);
           const fileBuffer = readFileSync(new URL(url));
-          const content = CONTENT_TYPE.isTextual(contentType)
+          const content = CONTENT_TYPE$1.isTextual(contentType)
             ? String(fileBuffer)
             : fileBuffer;
           return {
@@ -20444,17 +23831,39 @@ const jsenvPluginProtocolHttp = ({ include }) => {
       const responseHeaders = response.headers;
       const responseContentType = responseHeaders.get("content-type");
       const contentType = responseContentType || "application/octet-stream";
-      const isTextual = CONTENT_TYPE.isTextual(contentType);
+      const isTextual = CONTENT_TYPE$1.isTextual(contentType);
       let content;
       if (isTextual) {
         content = await response.text();
       } else {
-        content = await response.buffer;
+        content = Buffer.from(await response.arrayBuffer());
       }
+      // When fetching content from http it's possible to request something like
+      // "https://esm.sh/preact@10.23.1
+      // and receive content-type "application/javascript"
+      // if we do nothing, after build there will be a "preact@10.23.1" file without ".js" extension
+      // and the build server will serve this as "application/octet-stream".
+      // We want to build files to be compatible with any server and keep build server logic simple.
+      // -> We auto-append the extension corresponding to the content-type
+      let filenameHint;
+      const extension = urlToExtension$1(originalUrl);
+      if (extension === "") {
+        const wellKnownExtensionForThisContentType =
+          CONTENT_TYPE$1.toUrlExtension(contentType);
+        if (wellKnownExtensionForThisContentType) {
+          const urlWithExtension = setUrlExtension(
+            originalUrl,
+            wellKnownExtensionForThisContentType,
+          );
+          filenameHint = urlToFilename$1(urlWithExtension);
+        }
+      }
+
       return {
         content,
         contentType,
         contentLength: responseHeaders.get("content-length") || undefined,
+        filenameHint,
       };
     },
   };
@@ -21211,7 +24620,7 @@ const jsenvPluginAutoreloadServer = ({
       reload: (serverEventInfo) => {
         const formatUrlForClient = (url) => {
           if (urlIsInsideOf(url, serverEventInfo.rootDirectoryUrl)) {
-            return urlToRelativeUrl(url, serverEventInfo.rootDirectoryUrl);
+            return urlToRelativeUrl$1(url, serverEventInfo.rootDirectoryUrl);
           }
           if (url.startsWith("file:")) {
             return `/@fs/${url.slice("file:///".length)}`;
@@ -21533,22 +24942,28 @@ const jsenvPluginAutoreloadServer = ({
         );
       },
     },
-    serve: (serveInfo) => {
-      if (serveInfo.request.pathname === "/__graph__") {
-        const graphJson = JSON.stringify(
-          serveInfo.kitchen.graph.toJSON(serveInfo.rootDirectoryUrl),
-        );
-        return {
-          status: 200,
-          headers: {
-            "content-type": "application/json",
-            "content-length": Buffer.byteLength(graphJson),
-          },
-          body: graphJson,
-        };
-      }
-      return null;
-    },
+    devServerRoutes: [
+      {
+        endpoint: "GET /.internal/graph.json",
+        description:
+          "Return a url graph of the project as a JSON file. This is useful to debug the project graph.",
+        availableMediaTypes: ["application/json"],
+        declarationSource: import.meta.url,
+        fetch: (request, { kitchen }) => {
+          const graphJson = JSON.stringify(
+            kitchen.graph.toJSON(kitchen.context.rootDirectoryUrl),
+          );
+          return {
+            status: 200,
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(graphJson),
+            },
+            body: graphJson,
+          };
+        },
+      },
+    ],
   };
 };
 
@@ -21758,7 +25173,9 @@ const jsenvPluginCleanHTML = () => {
 
 const getCorePlugins = ({
   rootDirectoryUrl,
+  mainFilePath,
   runtimeCompat,
+  sourceFilesConfig,
 
   referenceAnalysis = {},
   nodeEsmResolution = {},
@@ -21814,6 +25231,9 @@ const getCorePlugins = ({
       magicExtensions,
       magicDirectoryIndex,
       directoryListing,
+      rootDirectoryUrl,
+      mainFilePath,
+      sourceFilesConfig,
     }),
     {
       name: "jsenv:resolve_root_as_main",
@@ -21920,8 +25340,8 @@ const createBuildUrlsGenerator = ({
   const associateBuildUrl = (url, buildUrl) => {
     buildUrlCache.set(url, buildUrl);
     logger.debug(`associate a build url
-${ANSI.color(url, ANSI.GREY)} ->
-${ANSI.color(buildUrl, ANSI.MAGENTA)}
+${ANSI$1.color(url, ANSI$1.GREY)} ->
+${ANSI$1.color(buildUrl, ANSI$1.MAGENTA)}
       `);
   };
 
@@ -21940,7 +25360,7 @@ ${ANSI.color(buildUrl, ANSI.MAGENTA)}
       } else if (urlInfo.filenameHint) {
         directoryPath = urlInfo.filenameHint;
       } else {
-        directoryPath = urlToRelativeUrl(url, sourceDirectoryUrl);
+        directoryPath = urlToRelativeUrl$1(url, sourceDirectoryUrl);
       }
       const { search } = new URL(url);
       const buildUrl = `${buildDirectoryUrl}${directoryPath}${search}`;
@@ -22199,7 +25619,7 @@ const createBuildSpecifierManager = ({
               ? ownerUrlInfo.findParentIfInline()
               : ownerUrlInfo,
           );
-      const urlRelativeToParent = urlToRelativeUrl(buildUrl, parentBuildUrl);
+      const urlRelativeToParent = urlToRelativeUrl$1(buildUrl, parentBuildUrl);
       if (urlRelativeToParent[0] === ".") {
         buildSpecifier = urlRelativeToParent;
       } else {
@@ -22207,7 +25627,7 @@ const createBuildSpecifierManager = ({
         buildSpecifier = `./${urlRelativeToParent}`;
       }
     } else {
-      const urlRelativeToBuildDirectory = urlToRelativeUrl(
+      const urlRelativeToBuildDirectory = urlToRelativeUrl$1(
         buildUrl,
         buildDirectoryUrl,
       );
@@ -22434,7 +25854,7 @@ const createBuildSpecifierManager = ({
           contentType: firstReference.contentType,
         };
       }
-      throw new Error(createDetailedMessage$1(`${rawUrl} not found in graph`));
+      throw new Error(createDetailedMessage$2(`${rawUrl} not found in graph`));
     },
   };
 
@@ -22904,7 +26324,7 @@ const createBuildSpecifierManager = ({
           (source) => {
             const buildUrl = urlInfoToBuildUrlMap.get(urlInfo);
             if (buildUrl) {
-              return urlToRelativeUrl(source, buildUrl);
+              return urlToRelativeUrl$1(source, buildUrl);
             }
             return source;
           },
@@ -23117,7 +26537,7 @@ const createBuildSpecifierManager = ({
           const buildSpecifierVersioned = versioning
             ? buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier)
             : null;
-          const buildRelativeUrl = urlToRelativeUrl(
+          const buildRelativeUrl = urlToRelativeUrl$1(
             buildUrl,
             buildDirectoryUrl,
           );
@@ -23128,7 +26548,7 @@ const createBuildSpecifierManager = ({
               buildSpecifierVersioned,
               buildDirectoryUrl,
             });
-            const buildRelativeUrlVersioned = urlToRelativeUrl(
+            const buildRelativeUrlVersioned = urlToRelativeUrl$1(
               buildUrlVersioned,
               buildDirectoryUrl,
             );
@@ -23313,7 +26733,7 @@ const mayUsePlaceholder = (urlInfo) => {
   if (urlInfo.referenceToOthersSet.size === 0) {
     return false;
   }
-  if (!CONTENT_TYPE.isTextual(urlInfo.contentType)) {
+  if (!CONTENT_TYPE$1.isTextual(urlInfo.contentType)) {
     return false;
   }
   return true;
@@ -23413,7 +26833,7 @@ const jsenvPluginLineBreakNormalization = () => {
     name: "jsenv:line_break_normalizer",
     appliesDuring: "build",
     transformUrlContent: (urlInfo) => {
-      if (CONTENT_TYPE.isTextual(urlInfo.contentType)) {
+      if (CONTENT_TYPE$1.isTextual(urlInfo.contentType)) {
         return ensureUnixLineBreaks(urlInfo.content);
       }
       return null;
@@ -23634,11 +27054,11 @@ const build = async ({
     }
   }
 
-  const operation = Abort.startOperation();
+  const operation = Abort$1.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
     operation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
+      return raceProcessTeardownEvents$1(
         {
           SIGINT: true,
         },
@@ -23648,7 +27068,7 @@ const build = async ({
   }
 
   const runBuild = async ({ signal, logLevel }) => {
-    const logger = createLogger({ logLevel });
+    const logger = createLogger$1({ logLevel });
     const createBuildTask = (label) => {
       return createTaskLog(label, {
         disabled:
@@ -23657,7 +27077,7 @@ const build = async ({
       });
     };
 
-    const buildOperation = Abort.startOperation();
+    const buildOperation = Abort$1.startOperation();
     buildOperation.addAbortSignal(signal);
     const entryPointKeys = Object.keys(entryPoints);
     if (entryPointKeys.length === 1) {
@@ -23698,46 +27118,52 @@ build ${entryPointKeys.length} entry points`);
       build: true,
       runtimeCompat,
       initialContext: contextSharedDuringBuild,
-      plugins: [
-        ...plugins,
-        ...(bundling ? [jsenvPluginBundling(bundling)] : []),
-        ...(minification ? [jsenvPluginMinification(minification)] : []),
-        {
-          appliesDuring: "build",
-          fetchUrlContent: (urlInfo) => {
-            if (urlInfo.firstReference.original) {
-              rawRedirections.set(
-                urlInfo.firstReference.original.url,
-                urlInfo.firstReference.url,
-              );
-            }
-          },
-        },
-        ...getCorePlugins({
-          rootDirectoryUrl: sourceDirectoryUrl,
-          runtimeCompat,
-          referenceAnalysis,
-          nodeEsmResolution,
-          magicExtensions,
-          magicDirectoryIndex,
-          directoryReferenceEffect,
-          injections,
-          transpilation: {
-            babelHelpersAsImport: !explicitJsModuleConversion,
-            ...transpilation,
-            jsModuleFallback: false,
-          },
-          inlining: false,
-          http,
-          scenarioPlaceholders,
-        }),
-      ],
       sourcemaps,
       sourcemapsSourcesContent,
       outDirectoryUrl: outDirectoryUrl
         ? new URL("craft/", outDirectoryUrl)
         : undefined,
     });
+    const rawPluginStore = createPluginStore([
+      ...plugins,
+      ...(bundling ? [jsenvPluginBundling(bundling)] : []),
+      ...(minification ? [jsenvPluginMinification(minification)] : []),
+      {
+        appliesDuring: "build",
+        fetchUrlContent: (urlInfo) => {
+          if (urlInfo.firstReference.original) {
+            rawRedirections.set(
+              urlInfo.firstReference.original.url,
+              urlInfo.firstReference.url,
+            );
+          }
+        },
+      },
+      ...getCorePlugins({
+        rootDirectoryUrl: sourceDirectoryUrl,
+        runtimeCompat,
+        referenceAnalysis,
+        nodeEsmResolution,
+        magicExtensions,
+        magicDirectoryIndex,
+        directoryReferenceEffect,
+        injections,
+        transpilation: {
+          babelHelpersAsImport: !explicitJsModuleConversion,
+          ...transpilation,
+          jsModuleFallback: false,
+        },
+        inlining: false,
+        http,
+        scenarioPlaceholders,
+      }),
+    ]);
+    const rawPluginController = createPluginController(
+      rawPluginStore,
+      rawKitchen,
+    );
+    rawKitchen.setPluginController(rawPluginController);
+
     {
       const generateSourceGraph = createBuildTask("generate source graph");
       try {
@@ -23782,37 +27208,6 @@ build ${entryPointKeys.length} entry points`);
       build: true,
       runtimeCompat,
       initialContext: contextSharedDuringBuild,
-      initialPluginsMeta: rawKitchen.pluginController.pluginsMeta,
-      plugins: [
-        jsenvPluginReferenceAnalysis({
-          ...referenceAnalysis,
-          fetchInlineUrls: false,
-          // inlineContent: false,
-        }),
-        jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
-        ...(lineBreakNormalization
-          ? [jsenvPluginLineBreakNormalization()]
-          : []),
-        jsenvPluginJsModuleFallback({
-          remapImportSpecifier: (specifier, parentUrl) => {
-            return buildSpecifierManager.remapPlaceholder(specifier, parentUrl);
-          },
-        }),
-        jsenvPluginInlining(),
-        {
-          name: "jsenv:optimize",
-          appliesDuring: "build",
-          transformUrlContent: async (urlInfo) => {
-            await rawKitchen.pluginController.callAsyncHooks(
-              "optimizeUrlContent",
-              urlInfo,
-              (optimizeReturnValue) => {
-                urlInfo.mutateContent(optimizeReturnValue);
-              },
-            );
-          },
-        },
-      ],
       sourcemaps,
       sourcemapsComment: "relative",
       sourcemapsSourcesContent,
@@ -23820,7 +27215,6 @@ build ${entryPointKeys.length} entry points`);
         ? new URL("shape/", outDirectoryUrl)
         : undefined,
     });
-
     const buildSpecifierManager = createBuildSpecifierManager({
       rawKitchen,
       finalKitchen,
@@ -23841,9 +27235,43 @@ build ${entryPointKeys.length} entry points`);
         }) &&
         rawKitchen.context.isSupportedOnCurrentClients("importmap"),
     });
-    finalKitchen.pluginController.pushPlugin(
+    const finalPluginStore = createPluginStore([
+      jsenvPluginReferenceAnalysis({
+        ...referenceAnalysis,
+        fetchInlineUrls: false,
+        // inlineContent: false,
+      }),
+      jsenvPluginDirectoryReferenceEffect(directoryReferenceEffect),
+      ...(lineBreakNormalization ? [jsenvPluginLineBreakNormalization()] : []),
+      jsenvPluginJsModuleFallback({
+        remapImportSpecifier: (specifier, parentUrl) => {
+          return buildSpecifierManager.remapPlaceholder(specifier, parentUrl);
+        },
+      }),
+      jsenvPluginInlining(),
+      {
+        name: "jsenv:optimize",
+        appliesDuring: "build",
+        transformUrlContent: async (urlInfo) => {
+          await rawKitchen.pluginController.callAsyncHooks(
+            "optimizeUrlContent",
+            urlInfo,
+            (optimizeReturnValue) => {
+              urlInfo.mutateContent(optimizeReturnValue);
+            },
+          );
+        },
+      },
       buildSpecifierManager.jsenvPluginMoveToBuildDirectory,
+    ]);
+    const finalPluginController = createPluginController(
+      finalPluginStore,
+      finalKitchen,
+      {
+        initialPuginsMeta: rawKitchen.pluginController.pluginsMeta,
+      },
     );
+    finalKitchen.setPluginController(finalPluginController);
 
     const bundlers = {};
     {
@@ -24122,7 +27550,7 @@ build ${entryPointKeys.length} entry points`);
       resolveFirstBuild(result);
       watchFilesTask = createTaskLog("watch files");
     } catch (e) {
-      if (Abort.isAbortError(e)) {
+      if (Abort$1.isAbortError(e)) {
         buildTask.fail(`build aborted`);
       } else if (e.code === "PARSE_ERROR") {
         buildTask.fail();
@@ -24193,101 +27621,6 @@ const WEB_URL_CONVERTER = {
   },
 };
 
-const createServerEventsDispatcher = () => {
-  const clients = [];
-  const MAX_CLIENTS = 100;
-
-  const addClient = (client) => {
-    clients.push(client);
-    if (clients.length >= MAX_CLIENTS) {
-      const firstClient = clients.shift();
-      firstClient.close();
-    }
-    const removeClient = () => {
-      const index = clients.indexOf(client);
-      if (index > -1) {
-        clients.splice(index, 1);
-      }
-    };
-    client.onclose = () => {
-      removeClient();
-    };
-    return () => {
-      client.close();
-    };
-  };
-
-  return {
-    addWebsocket: (websocket, request) => {
-      const client = {
-        request,
-        getReadystate: () => {
-          return websocket.readyState;
-        },
-        sendEvent: (event) => {
-          websocket.send(JSON.stringify(event));
-        },
-        close: (reason) => {
-          const closePromise = new Promise((resolve, reject) => {
-            websocket.onclose = () => {
-              websocket.onclose = null;
-              websocket.onerror = null;
-              resolve();
-            };
-            websocket.onerror = (e) => {
-              websocket.onclose = null;
-              websocket.onerror = null;
-              reject(e);
-            };
-          });
-          websocket.close(reason);
-          return closePromise;
-        },
-        destroy: () => {
-          websocket.terminate();
-        },
-      };
-      client.sendEvent({ type: "welcome" });
-      websocket.onclose = () => {
-        client.onclose();
-      };
-      client.onclose = () => {};
-      return addClient(client);
-    },
-    // we could add "addEventSource" and let clients connect using
-    // new WebSocket or new EventSource
-    // in practice the new EventSource won't be used
-    // so "serverEventsDispatcher.addEventSource" is not implemented
-    // addEventSource: (request) => {},
-    dispatch: (event) => {
-      clients.forEach((client) => {
-        if (client.getReadystate() === 1) {
-          client.sendEvent(event);
-        }
-      });
-    },
-    dispatchToClientsMatching: (event, predicate) => {
-      clients.forEach((client) => {
-        if (client.getReadystate() === 1 && predicate(client)) {
-          client.sendEvent(event);
-        }
-      });
-    },
-    close: async (reason) => {
-      await Promise.all(
-        clients.map(async (client) => {
-          await client.close(reason);
-        }),
-      );
-    },
-    destroy: () => {
-      clients.forEach((client) => {
-        client.destroy();
-      });
-    },
-  };
-};
-
 /*
  * This plugin is very special because it is here
  * to provide "serverEvents" used by other plugins
@@ -24300,8 +27633,9 @@ const serverEventsClientFileUrl = new URL(
 ).href;
 
 const jsenvPluginServerEvents = ({ clientAutoreload }) => {
-  let serverEventsDispatcher;
-
+  let serverEvents = new ServerEvents({
+    actionOnClientLimitReached: "kick-oldest",
+  });
   const { clientServerEventsConfig } = clientAutoreload;
   const { logs = true } = clientServerEventsConfig;
 
@@ -24325,9 +27659,9 @@ const jsenvPluginServerEvents = ({ clientAutoreload }) => {
       if (serverEventNames.length === 0) {
         return false;
       }
-      serverEventsDispatcher = createServerEventsDispatcher();
+
       const onabort = () => {
-        serverEventsDispatcher.destroy();
+        serverEvents.close();
       };
       kitchenContext.signal.addEventListener("abort", onabort);
       for (const serverEventName of Object.keys(allServerEvents)) {
@@ -24336,14 +27670,14 @@ const jsenvPluginServerEvents = ({ clientAutoreload }) => {
           // serverEventsDispatcher variable is safe, we can disable esling warning
           // eslint-disable-next-line no-loop-func
           sendServerEvent: (data) => {
-            if (!serverEventsDispatcher) {
+            if (!serverEvents) {
               // this can happen if a plugin wants to send a server event but
               // server is closing or the plugin got destroyed but still wants to do things
               // if plugin code is correctly written it is never supposed to happen
               // because it means a plugin is still trying to do stuff after being destroyed
               return;
             }
-            serverEventsDispatcher.dispatch({
+            serverEvents.sendEventToAllClients({
               type: serverEventName,
               data,
             });
@@ -24354,16 +27688,9 @@ const jsenvPluginServerEvents = ({ clientAutoreload }) => {
       }
       return () => {
         kitchenContext.signal.removeEventListener("abort", onabort);
-        serverEventsDispatcher.destroy();
-        serverEventsDispatcher = undefined;
+        serverEvents.close();
+        serverEvents = undefined;
       };
-    },
-    serveWebsocket: async ({ websocket, request }) => {
-      if (request.headers["sec-websocket-protocol"] !== "jsenv") {
-        return false;
-      }
-      serverEventsDispatcher.addWebsocket(websocket, request);
-      return true;
     },
     transformUrlContent: {
       html: (urlInfo) => {
@@ -24384,6 +27711,14 @@ const jsenvPluginServerEvents = ({ clientAutoreload }) => {
         return stringifyHtmlAst(htmlAst);
       },
     },
+    devServerRoutes: [
+      {
+        endpoint: "GET /.internal/events.websocket",
+        description: `Jsenv dev server emit server events on this endpoint. When a file is saved the "reload" event is sent here.`,
+        fetch: serverEvents.fetch,
+        declarationSource: import.meta.url,
+      },
+    ],
   };
 };
 
@@ -24458,7 +27793,7 @@ const startDevServer = async ({
   keepProcessAlive = true,
   onStop = () => {},
 
-  sourceFilesConfig,
+  sourceFilesConfig = {},
   clientAutoreload = true,
 
   // runtimeCompat is the runtimeCompat for the build
@@ -24504,7 +27839,7 @@ const startDevServer = async ({
         `sourceMainFilePath must be a string, got ${sourceMainFilePath}`,
       );
     }
-    sourceMainFilePath = urlToRelativeUrl(
+    sourceMainFilePath = urlToRelativeUrl$1(
       new URL(sourceMainFilePath, sourceDirectoryUrl),
       sourceDirectoryUrl,
     );
@@ -24538,7 +27873,7 @@ const startDevServer = async ({
     }
   }
 
-  const logger = createLogger({ logLevel });
+  const logger = createLogger$1({ logLevel });
   const startDevServerTask = createTaskLog("start dev server", {
     disabled: !logger.levels.info,
   });
@@ -24556,29 +27891,25 @@ const startDevServer = async ({
   {
     finalServices.push({
       name: "jsenv:server_header",
-      handleRequest: {
-        "GET *": (request) => {
-          if (request.headers["x-server-inspect"]) {
-            return { status: 200 };
-          }
-          return null;
+      routes: [
+        {
+          endpoint: "GET /.internal/server.json",
+          description: "Get information about jsenv dev server",
+          availableMediaTypes: ["application/json"],
+          declarationSource: import.meta.url,
+          fetch: () =>
+            Response.json({
+              server: "jsenv_dev_server/1",
+              sourceDirectoryUrl,
+            }),
         },
-        "GET /__params__.json": () => {
-          const json = JSON.stringify({
-            sourceDirectoryUrl,
-          });
-          return {
-            status: 200,
-            headers: {
-              "content-type": "application/json",
-              "content-length": Buffer.byteLength(json),
-            },
-            body: json,
-          };
-        },
-      },
-      injectResponseHeaders: () => {
-        return { server: "jsenv_dev_server/1" };
+      ],
+      injectResponseProperties: () => {
+        return {
+          headers: {
+            server: "jsenv_dev_server/1",
+          },
+        };
       },
     });
   }
@@ -24626,6 +27957,29 @@ const startDevServer = async ({
     );
     serverStopCallbackSet.add(stopWatchingSourceFiles);
 
+    const devServerPluginStore = createPluginStore([
+      jsenvPluginServerEvents({ clientAutoreload }),
+      ...plugins,
+      ...getCorePlugins({
+        rootDirectoryUrl: sourceDirectoryUrl,
+        mainFilePath: sourceMainFilePath,
+        runtimeCompat,
+        sourceFilesConfig,
+
+        referenceAnalysis,
+        nodeEsmResolution,
+        magicExtensions,
+        magicDirectoryIndex,
+        directoryListing,
+        supervisor,
+        injections,
+        transpilation,
+
+        clientAutoreload,
+        cacheControl,
+        ribbon,
+      }),
+    ]);
     const getOrCreateKitchen = (request) => {
       const { runtimeName, runtimeVersion } = parseUserAgentHeader(
         request.headers["user-agent"] || "",
@@ -24662,27 +28016,6 @@ const startDevServer = async ({
         dev: true,
         runtimeCompat,
         clientRuntimeCompat,
-        plugins: [
-          jsenvPluginServerEvents({ clientAutoreload }),
-          ...plugins,
-          ...getCorePlugins({
-            rootDirectoryUrl: sourceDirectoryUrl,
-            runtimeCompat,
-
-            referenceAnalysis,
-            nodeEsmResolution,
-            magicExtensions,
-            magicDirectoryIndex,
-            directoryListing,
-            supervisor,
-            injections,
-            transpilation,
-
-            clientAutoreload,
-            cacheControl,
-            ribbon,
-          }),
-        ],
         supervisor,
         minification: false,
         sourcemaps,
@@ -24769,9 +28102,14 @@ const startDevServer = async ({
           );
         },
       );
+      const devServerPluginController = createPluginController(
+        devServerPluginStore,
+        kitchen,
+      );
+      kitchen.setPluginController(devServerPluginController);
 
       serverStopCallbackSet.add(() => {
-        kitchen.pluginController.callHooks("destroy", kitchen.context);
+        devServerPluginController.callHooks("destroy", kitchen.context);
       });
       kitchenCache.set(runtimeId, kitchen);
       onKitchenCreated(kitchen);
@@ -24779,226 +28117,210 @@ const startDevServer = async ({
     };
 
     finalServices.push({
-      name: "jsenv:omega_file_service",
-      handleRequest: {
-        "GET *": async (request) => {
-          const kitchen = getOrCreateKitchen(request);
-          const serveHookInfo = {
-            ...kitchen.context,
-            request,
-          };
-          const responseFromPlugin =
-            await kitchen.pluginController.callAsyncHooksUntil(
-              "serve",
-              serveHookInfo,
+      name: "jsenv:dev_server_routes",
+      augmentRouteFetchSecondArg: (request) => {
+        const kitchen = getOrCreateKitchen(request);
+        return { kitchen };
+      },
+      routes: [
+        ...devServerPluginStore.allDevServerRoutes,
+        {
+          endpoint: "GET *",
+          description: "Serve project files.",
+          declarationSource: import.meta.url,
+          fetch: async (request, { kitchen }) => {
+            const { rootDirectoryUrl, mainFilePath } = kitchen.context;
+            let requestResource = request.resource;
+            let requestedUrl;
+            if (requestResource.startsWith("/@fs/")) {
+              const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
+              requestedUrl = `file:///${fsRootRelativeUrl}`;
+            } else {
+              const requestedUrlObject = new URL(
+                requestResource === "/"
+                  ? mainFilePath
+                  : requestResource.slice(1),
+                rootDirectoryUrl,
+              );
+              requestedUrlObject.searchParams.delete("hot");
+              requestedUrl = requestedUrlObject.href;
+            }
+            const { referer } = request.headers;
+            const parentUrl = referer
+              ? WEB_URL_CONVERTER.asFileUrl(referer, {
+                  origin: request.origin,
+                  rootDirectoryUrl: sourceDirectoryUrl,
+                })
+              : sourceDirectoryUrl;
+            let reference = kitchen.graph.inferReference(
+              request.resource,
+              parentUrl,
             );
-          if (responseFromPlugin) {
-            return responseFromPlugin;
-          }
-          const { rootDirectoryUrl, mainFilePath } = kitchen.context;
-          let requestResource = request.resource;
-          let requestedUrl;
-          if (requestResource.startsWith("/@fs/")) {
-            const fsRootRelativeUrl = requestResource.slice("/@fs/".length);
-            requestedUrl = `file:///${fsRootRelativeUrl}`;
-          } else {
-            const requestedUrlObject = new URL(
-              requestResource === "/" ? mainFilePath : requestResource.slice(1),
-              rootDirectoryUrl,
-            );
-            requestedUrlObject.searchParams.delete("hot");
-            requestedUrl = requestedUrlObject.href;
-          }
-          const { referer } = request.headers;
-          const parentUrl = referer
-            ? WEB_URL_CONVERTER.asFileUrl(referer, {
-                origin: request.origin,
-                rootDirectoryUrl: sourceDirectoryUrl,
-              })
-            : sourceDirectoryUrl;
-          let reference = kitchen.graph.inferReference(
-            request.resource,
-            parentUrl,
-          );
-          if (reference) {
-            reference.urlInfo.context.request = request;
-            reference.urlInfo.context.requestedUrl = requestedUrl;
-          } else {
-            const rootUrlInfo = kitchen.graph.rootUrlInfo;
-            rootUrlInfo.context.request = request;
-            rootUrlInfo.context.requestedUrl = requestedUrl;
-            reference = rootUrlInfo.dependencies.createResolveAndFinalize({
-              trace: { message: parentUrl },
-              type: "http_request",
-              specifier: request.resource,
-            });
-            rootUrlInfo.context.request = null;
-            rootUrlInfo.context.requestedUrl = null;
-          }
-          const urlInfo = reference.urlInfo;
-          const ifNoneMatch = request.headers["if-none-match"];
-          const urlInfoTargetedByCache =
-            urlInfo.findParentIfInline() || urlInfo;
+            if (reference) {
+              reference.urlInfo.context.request = request;
+              reference.urlInfo.context.requestedUrl = requestedUrl;
+            } else {
+              const rootUrlInfo = kitchen.graph.rootUrlInfo;
+              rootUrlInfo.context.request = request;
+              rootUrlInfo.context.requestedUrl = requestedUrl;
+              reference = rootUrlInfo.dependencies.createResolveAndFinalize({
+                trace: { message: parentUrl },
+                type: "http_request",
+                specifier: request.resource,
+              });
+              rootUrlInfo.context.request = null;
+              rootUrlInfo.context.requestedUrl = null;
+            }
+            const urlInfo = reference.urlInfo;
+            const ifNoneMatch = request.headers["if-none-match"];
+            const urlInfoTargetedByCache =
+              urlInfo.findParentIfInline() || urlInfo;
 
-          try {
-            if (!urlInfo.error && ifNoneMatch) {
-              const [clientOriginalContentEtag, clientContentEtag] =
-                ifNoneMatch.split("_");
-              if (
-                urlInfoTargetedByCache.originalContentEtag ===
-                  clientOriginalContentEtag &&
-                urlInfoTargetedByCache.contentEtag === clientContentEtag &&
-                urlInfoTargetedByCache.isValid()
-              ) {
-                const headers = {
-                  "cache-control": `private,max-age=0,must-revalidate`,
-                };
-                Object.keys(urlInfo.headers).forEach((key) => {
-                  if (key !== "content-length") {
-                    headers[key] = urlInfo.headers[key];
-                  }
-                });
-                return {
-                  status: 304,
-                  headers,
-                };
-              }
-            }
-            await urlInfo.cook({ request, reference });
-            let { response } = urlInfo;
-            if (response) {
-              return response;
-            }
-            response = {
-              url: reference.url,
-              status: 200,
-              headers: {
-                // when we send eTag to the client the next request to the server
-                // will send etag in request headers.
-                // If they match jsenv bypass cooking and returns 304
-                // This must not happen when a plugin uses "no-store" or "no-cache" as it means
-                // plugin logic wants to happens for every request to this url
-                ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
-                  ? {
-                      "cache-control": "no-store", // for inline file we force no-store when parent is no-store
+            try {
+              if (!urlInfo.error && ifNoneMatch) {
+                const [clientOriginalContentEtag, clientContentEtag] =
+                  ifNoneMatch.split("_");
+                if (
+                  urlInfoTargetedByCache.originalContentEtag ===
+                    clientOriginalContentEtag &&
+                  urlInfoTargetedByCache.contentEtag === clientContentEtag &&
+                  urlInfoTargetedByCache.isValid()
+                ) {
+                  const headers = {
+                    "cache-control": `private,max-age=0,must-revalidate`,
+                  };
+                  Object.keys(urlInfo.headers).forEach((key) => {
+                    if (key !== "content-length") {
+                      headers[key] = urlInfo.headers[key];
                     }
-                  : {
-                      "cache-control": `private,max-age=0,must-revalidate`,
-                      // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
-                      "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
-                    }),
-                ...urlInfo.headers,
-                "content-type": urlInfo.contentType,
-                "content-length": urlInfo.contentLength,
-              },
-              body: urlInfo.content,
-              timing: urlInfo.timing,
-            };
-            const augmentResponseInfo = {
-              ...kitchen.context,
-              reference,
-              urlInfo,
-            };
-            kitchen.pluginController.callHooks(
-              "augmentResponse",
-              augmentResponseInfo,
-              (returnValue) => {
-                response = composeTwoResponses(response, returnValue);
-              },
-            );
-            return response;
-          } catch (error) {
-            const originalError = error ? error.cause || error : error;
-            if (originalError.asResponse) {
-              return originalError.asResponse();
-            }
-            const code = originalError.code;
-            if (code === "PARSE_ERROR") {
-              // when possible let browser re-throw the syntax error
-              // it's not possible to do that when url info content is not available
-              // (happens for js_module_fallback for instance)
-              if (urlInfo.content !== undefined) {
-                kitchen.context.logger
-                  .error(`Error while handling ${request.url}:
-${originalError.reasonCode || originalError.code}
-${error.trace?.message}`);
+                  });
+                  return {
+                    status: 304,
+                    headers,
+                  };
+                }
+              }
+              await urlInfo.cook({ request, reference });
+              let { response } = urlInfo;
+              if (response) {
+                return response;
+              }
+              response = {
+                url: reference.url,
+                status: 200,
+                headers: {
+                  // when we send eTag to the client the next request to the server
+                  // will send etag in request headers.
+                  // If they match jsenv bypass cooking and returns 304
+                  // This must not happen when a plugin uses "no-store" or "no-cache" as it means
+                  // plugin logic wants to happens for every request to this url
+                  ...(cacheIsDisabledInResponseHeader(urlInfoTargetedByCache)
+                    ? {
+                        "cache-control": "no-store", // for inline file we force no-store when parent is no-store
+                      }
+                    : {
+                        "cache-control": `private,max-age=0,must-revalidate`,
+                        // it's safe to use "_" separator because etag is encoded with base64 (see https://stackoverflow.com/a/13195197)
+                        "eTag": `${urlInfoTargetedByCache.originalContentEtag}_${urlInfoTargetedByCache.contentEtag}`,
+                      }),
+                  ...urlInfo.headers,
+                  "content-type": urlInfo.contentType,
+                  "content-length": urlInfo.contentLength,
+                },
+                body: urlInfo.content,
+                timing: urlInfo.timing, // TODO: use something else
+              };
+              const augmentResponseInfo = {
+                ...kitchen.context,
+                reference,
+                urlInfo,
+              };
+              kitchen.pluginController.callHooks(
+                "augmentResponse",
+                augmentResponseInfo,
+                (returnValue) => {
+                  response = composeTwoResponses(response, returnValue);
+                },
+              );
+              return response;
+            } catch (error) {
+              const originalError = error ? error.cause || error : error;
+              if (originalError.asResponse) {
+                return originalError.asResponse();
+              }
+              const code = originalError.code;
+              if (code === "PARSE_ERROR") {
+                // when possible let browser re-throw the syntax error
+                // it's not possible to do that when url info content is not available
+                // (happens for js_module_fallback for instance)
+                if (urlInfo.content !== undefined) {
+                  kitchen.context.logger
+                    .error(`Error while handling ${request.url}:
+  ${originalError.reasonCode || originalError.code}
+  ${error.trace?.message}`);
+                  return {
+                    url: reference.url,
+                    status: 200,
+                    // reason becomes the http response statusText, it must not contain invalid chars
+                    // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+                    statusText: error.reason,
+                    statusMessage: originalError.message,
+                    headers: {
+                      "content-type": urlInfo.contentType,
+                      "content-length": urlInfo.contentLength,
+                      "cache-control": "no-store",
+                    },
+                    body: urlInfo.content,
+                  };
+                }
                 return {
                   url: reference.url,
-                  status: 200,
-                  // reason becomes the http response statusText, it must not contain invalid chars
-                  // https://github.com/nodejs/node/blob/0c27ca4bc9782d658afeaebcec85ec7b28f1cc35/lib/_http_common.js#L221
+                  status: 500,
                   statusText: error.reason,
                   statusMessage: originalError.message,
                   headers: {
-                    "content-type": urlInfo.contentType,
-                    "content-length": urlInfo.contentLength,
                     "cache-control": "no-store",
                   },
                   body: urlInfo.content,
+                };
+              }
+              if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
+                return serveDirectory(reference.url, {
+                  headers: {
+                    accept: "text/html",
+                  },
+                  canReadDirectory: true,
+                  rootDirectoryUrl: sourceDirectoryUrl,
+                });
+              }
+              if (code === "NOT_ALLOWED") {
+                return {
+                  url: reference.url,
+                  status: 403,
+                  statusText: originalError.reason,
+                };
+              }
+              if (code === "NOT_FOUND") {
+                return {
+                  url: reference.url,
+                  status: 404,
+                  statusText: originalError.reason,
+                  statusMessage: originalError.message,
                 };
               }
               return {
                 url: reference.url,
                 status: 500,
                 statusText: error.reason,
-                statusMessage: originalError.message,
+                statusMessage: error.stack,
                 headers: {
                   "cache-control": "no-store",
                 },
-                body: urlInfo.content,
               };
             }
-            if (code === "DIRECTORY_REFERENCE_NOT_ALLOWED") {
-              return serveDirectory(reference.url, {
-                headers: {
-                  accept: "text/html",
-                },
-                canReadDirectory: true,
-                rootDirectoryUrl: sourceDirectoryUrl,
-              });
-            }
-            if (code === "NOT_ALLOWED") {
-              return {
-                url: reference.url,
-                status: 403,
-                statusText: originalError.reason,
-              };
-            }
-            if (code === "NOT_FOUND") {
-              return {
-                url: reference.url,
-                status: 404,
-                statusText: originalError.reason,
-                statusMessage: originalError.message,
-              };
-            }
-            return {
-              url: reference.url,
-              status: 500,
-              statusText: error.reason,
-              statusMessage: error.stack,
-              headers: {
-                "cache-control": "no-store",
-              },
-            };
-          }
+          },
         },
-      },
-      handleWebsocket: async (websocket, { request }) => {
-        // if (true || logLevel === "debug") {
-        //   console.log("handleWebsocket", websocket, request.headers);
-        // }
-        const kitchen = getOrCreateKitchen(request);
-        const serveWebsocketHookInfo = {
-          request,
-          websocket,
-          context: kitchen.context,
-        };
-        await kitchen.pluginController.callAsyncHooksUntil(
-          "serveWebsocket",
-          serveWebsocketHookInfo,
-        );
-      },
+      ],
     });
   }
   // jsenv error handler service
@@ -25175,12 +28497,12 @@ const startBuildServer = async ({
     }
   }
 
-  const logger = createLogger({ logLevel });
-  const operation = Abort.startOperation();
+  const logger = createLogger$1({ logLevel });
+  const operation = Abort$1.startOperation();
   operation.addAbortSignal(signal);
   if (handleSIGINT) {
     operation.addAbortSource((abort) => {
-      return raceProcessTeardownEvents(
+      return raceProcessTeardownEvents$1(
         {
           SIGINT: true,
         },
@@ -25218,13 +28540,10 @@ const startBuildServer = async ({
         timingAllowOrigin: true,
       }),
       ...services,
-      {
-        name: "jsenv:build_files_service",
-        handleRequest: createBuildFilesService({
-          buildDirectoryUrl,
-          buildMainFilePath,
-        }),
-      },
+      jsenvBuildFileService({
+        buildDirectoryUrl,
+        buildMainFilePath,
+      }),
       jsenvServiceErrorHandler({
         sendErrorDetails: true,
       }),
@@ -25248,37 +28567,46 @@ const startBuildServer = async ({
   };
 };
 
-const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
+const jsenvBuildFileService = ({ buildDirectoryUrl, buildMainFilePath }) => {
   return {
-    "GET *": (request) => {
-      const urlIsVersioned = new URL(request.url).searchParams.has("v");
-      if (buildMainFilePath && request.resource === "/") {
-        request = {
-          ...request,
-          resource: `/${buildMainFilePath}`,
-        };
-      }
-      const urlObject = new URL(request.resource.slice(1), buildDirectoryUrl);
-      return fetchFileSystem(urlObject, {
-        headers: request.headers,
-        cacheControl: urlIsVersioned
-          ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
-          : "private,max-age=0,must-revalidate",
-        etagEnabled: true,
-        compressionEnabled: true,
-        rootDirectoryUrl: buildDirectoryUrl,
-        canReadDirectory: true,
-        ENOENTFallback: () => {
-          if (
-            !urlToExtension$1(urlObject) &&
-            !urlToPathname$1(urlObject).endsWith("/")
-          ) {
-            return new URL(buildMainFilePath, buildDirectoryUrl);
+    name: "jsenv:build_files",
+    routes: [
+      {
+        endpoint: "GET *",
+        description: "Serve static files.",
+        fetch: (request, helpers) => {
+          const urlIsVersioned = new URL(request.url).searchParams.has("v");
+          if (buildMainFilePath && request.resource === "/") {
+            request = {
+              ...request,
+              resource: `/${buildMainFilePath}`,
+            };
           }
-          return null;
+          const urlObject = new URL(
+            request.resource.slice(1),
+            buildDirectoryUrl,
+          );
+          return createFileSystemFetch(buildDirectoryUrl, {
+            cacheControl: urlIsVersioned
+              ? `private,max-age=${SECONDS_IN_30_DAYS},immutable`
+              : "private,max-age=0,must-revalidate",
+            etagEnabled: true,
+            compressionEnabled: true,
+            rootDirectoryUrl: buildDirectoryUrl,
+            canReadDirectory: true,
+            ENOENTFallback: () => {
+              if (
+                !urlToExtension$1(urlObject) &&
+                !urlToPathname$1(urlObject).endsWith("/")
+              ) {
+                return new URL(buildMainFilePath, buildDirectoryUrl);
+              }
+              return null;
+            },
+          })(request, helpers);
         },
-      });
-    },
+      },
+    ],
   };
 };
 

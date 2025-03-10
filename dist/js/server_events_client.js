@@ -268,7 +268,7 @@ let createWebSocketConnection;
     websocketUrl,
     {
       logs,
-      protocols = ["jsenv"],
+      protocols = [],
       useEventsToManageConnection = true,
       retry = false,
       retryAfter = 1000,
@@ -436,7 +436,7 @@ const serverEventsInterface = {
   listenEvents: () => {},
   setup: ({ logs }) => {
     const websocketScheme = self.location.protocol === "https:" ? "wss" : "ws";
-    const websocketUrl = `${websocketScheme}://${self.location.host}${self.location.pathname}${self.location.search}`;
+    const websocketUrl = `${websocketScheme}://${self.location.host}/.internal/events.websocket`;
     const websocketConnection = createWebSocketConnection(websocketUrl, {
       logs,
       retry: true,
