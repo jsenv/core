@@ -5,11 +5,522 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Route inspector</title>
     
+    <script>
+      /**
+       * Example of how you'd use this:
+       * <code-block data-language="HTML" data-escaped="true">
+       *   <h1>Your HTML here. Any HTML should be escaped</h1>
+       * </code-block>
+       *
+       * https://github.com/TheWebTech/hs-code-block-web-component/tree/main
+       */
+      
+      (() => {
+        const css = /*css*/ `
+      *[aria-hidden="true"] {
+          display: none;
+      }
+      
+      .clipboard_container {
+        display: flex;
+        padding: 8px;
+        gap: 5px;
+        align-items: center;
+      }
+      
+      #copied_notif {
+          background: black;
+          color: white;
+          border-radius: 3px;
+          padding: 0.2em 0.5em;
+          font-size: 80%;
+      }
+      
+      button {
+          border: none;
+          background: none;
+          background-color: rgb(246, 248, 250);
+          border-color: rgb(209, 217, 224);
+          border-radius: 6px;
+          border-width: 1px;
+          border-style: solid;
+          cursor: pointer;
+          width: 32px;
+          height: 32px;
+      }
+      
+      button:hover {
+          background-color: rgb(239, 242, 245);
+      }
+      `;
+      
+        const html = /* html */ `<style>
+      ${css}
+      </style>
+      <div class="clipboard_container">
+        <div id="copied_notif" aria-hidden="true">Copied !</div>
+        <button id="copy_button">
+          <svg id="copy_icon" aria-hidden="true" viewBox="0 0 16 16" width="16" height="16">
+              <path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+          </svg>
+          <svg id="copied_icon" aria-hidden="true" viewBox="0 0 16 16" width="16" height="16">
+              <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
+          </svg>
+        </button>
+      </div>`;
+        class ClipboardCopy extends HTMLElement {
+          constructor() {
+            super();
+            const root = this.attachShadow({ mode: "open" });
+            root.innerHTML = html;
+          }
+      
+          connectedCallback() {
+            const valueToCopy = this.getAttribute("value");
+            const shadowRoot = this.shadowRoot;
+            const button = shadowRoot.querySelector("button");
+            const copyIcon = shadowRoot.querySelector("#copy_icon");
+            const copiedIcon = shadowRoot.querySelector("#copied_icon");
+            const copiedNotif = shadowRoot.querySelector("#copied_notif");
+            copyIcon.removeAttribute("aria-hidden");
+      
+            const copy = async () => {
+              await addToClipboard(valueToCopy);
+              copiedNotif.removeAttribute("aria-hidden");
+              copyIcon.setAttribute("aria-hidden", "true");
+              copiedIcon.setAttribute("aria-hidden", "false");
+              setTimeout(() => {
+                copiedNotif.setAttribute("aria-hidden", "true");
+                copyIcon.setAttribute("aria-hidden", "false");
+                copiedIcon.setAttribute("aria-hidden", "true");
+              }, 1500);
+            };
+      
+            button.onclick = () => {
+              copy();
+            };
+          }
+        }
+      
+        customElements.define("clipboard-copy", ClipboardCopy);
+      
+        const addToClipboard = async (text) => {
+          const type = "text/plain";
+          const clipboardItemData = {
+            [type]: text,
+          };
+          const clipboardItem = new ClipboardItem(clipboardItemData);
+          await window.navigator.clipboard.write([clipboardItem]);
+        };
+      })();
+      
+      (() => {
+        const css = /*css*/ `
+      /* :host {
+          display: block;
+      }
+      :host code[class*="language-"], :host pre[class*="language-"]{
+          margin-top: 0;
+      } */
+      #code_block {
+        position: relative;
+      }
+      
+      #pre {
+          padding: 16px;
+          font-size: 86%;
+          margin-top: 16px;
+          margin-bottom: 16px;
+          margin-left: 0;
+          margin-right: 0;
+          background: #333 ;
+      }
+      `;
+      
+        const html = /* html */ `<style>
+      ${css}
+      </style>
+      <div id="code_block">
+        <pre id="pre"><code></code></pre>
+        <div id="clipboard_copy_container" style="position: absolute; right: 0; top: 0">
+          <clipboard-copy></clipboard-copy>
+        </div>
+      </div>
+      `;
+      
+        let loadPromise;
+        const loadPrism = () => {
+          if (loadPromise) {
+            return loadPromise;
+          }
+          // https://prismjs.com/#basic-usage
+          const scriptLoadPromise = new Promise((resolve, reject) => {
+            window.Prism = window.Prism || {};
+            window.Prism.manual = true;
+            const script = document.createElement("script");
+            script.src = "https://cdn.jsdelivr.net/npm/prismjs";
+            script.onload = () => {
+              resolve(window.Prism);
+            };
+            script.onerror = (error) => {
+              reject(error);
+            };
+            document.head.appendChild(script);
+          });
+          const cssInjectionPromise = (async () => {
+            const prismCssUrl =
+              "https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css?inline";
+            const response = await window.fetch(prismCssUrl, {
+              method: "GET",
+            });
+            const cssText = await response.text();
+            const cssStylesheet = new CSSStyleSheet({ baseUrl: prismCssUrl });
+            cssStylesheet.replaceSync(cssText);
+            return cssStylesheet;
+          })();
+          loadPromise = Promise.all([scriptLoadPromise, cssInjectionPromise]);
+          return loadPromise;
+        };
+      
+        class CodeBlock extends HTMLElement {
+          constructor() {
+            super();
+            const root = this.attachShadow({ mode: "open" });
+            root.innerHTML = html;
+            loadPrism();
+          }
+      
+          async connectedCallback() {
+            const shadowRoot = this.shadowRoot;
+            const language = this.getAttribute("lang").toLowerCase();
+            const isEscaped = this.hasAttribute("data-escaped");
+            const addCopyButton = this.hasAttribute("data-copy-button");
+            let code = this.innerHTML.trimStart();
+            this.innerHTML = "";
+      
+            const codeNode = shadowRoot.querySelector("code");
+            codeNode.className = `language-${language}`;
+            codeNode.textContent = isEscaped ? unescapeHTML(code) : code;
+            if (addCopyButton) {
+              const clipboardCopy = shadowRoot.querySelector("clipboard-copy");
+              clipboardCopy.setAttribute(
+                "value",
+                isEscaped ? unescapeHTML(code) : code,
+              );
+            }
+            const [Prism, prismCssStyleSheet] = await loadPrism();
+            shadowRoot.adoptedStyleSheets.push(prismCssStyleSheet);
+            Prism.highlightAllUnder(shadowRoot);
+          }
+        }
+        customElements.define("code-block", CodeBlock);
+      
+        const escape = document.createElement("textarea");
+        function unescapeHTML(html) {
+          escape.innerHTML = html;
+          return escape.textContent;
+        }
+      })();
+    </script>
+    <script>
+      const css = /* css */ `
+      dialog {
+        opacity: 0;
+        transition: all 0.3s allow-discrete;
+      }
+      dialog::backdrop {
+         background-image: linear-gradient(
+          45deg,
+          magenta,
+          rebeccapurple,
+          dodgerblue,
+          green
+        );
+        opacity: 0;
+        transition: all 0.3s allow-discrete;
+      }
+      dialog:open {
+        opacity: 1;
+      }
+      dialog:open::backdrop {
+        opacity: 0.75;
+      }`;
+      
+      const html = /* html */ `<style>
+          ${css}
+      </style>
+      <dialog>
+          <p>Connection with server is lost</p>
+          <button autofocus name="reconnect">Retry</button>
+      </dialog>`;
+      
+      class JsenvAutoreloadOnServerRestart extends HTMLElement {
+        constructor({ url } = {}) {
+          super();
+          const root = this.attachShadow({ mode: "open" });
+          root.innerHTML = html;
+      
+          const dialog = root.querySelector("dialog");
+          const reconnectButton = dialog.querySelector('button[name="reconnect"]');
+      
+          (async () => {
+            const connect = () => {
+              const websocket = new WebSocket(url);
+              const connectedPromise = new Promise((resolve) => {
+                websocket.onerror = () => {
+                  resolve(null);
+                };
+                websocket.onopen = () => {
+                  resolve(websocket);
+                };
+              });
+              return connectedPromise;
+            };
+      
+            const initialWebSocket = await connect();
+            initialWebSocket.onclose = async () => {
+              console.info("connection to server lost, trying to reconnect");
+              const retry = async () => {
+                let attemptCount = 0;
+                let timeToWait = 100;
+                const tryToReconnect = async () => {
+                  const newWebsocket = await connect();
+                  if (newWebsocket) {
+                    dialog.close();
+                    console.info("reconnected to server, reloading the page...");
+                    window.location.reload(true);
+                    return;
+                  }
+                  attemptCount++;
+                  if (attemptCount === 10) {
+                    dialog.showModal();
+                    reconnectButton.onclick = async () => {
+                      reconnectButton.disabled = true;
+                      const previousContext = reconnectButton.textContent;
+                      reconnectButton.textContent = "Retrying...";
+                      await retry();
+                      reconnectButton.textContent = previousContext;
+                      reconnectButton.disabled = false;
+                    };
+                    return;
+                  }
+                  timeToWait += 100;
+                  await new Promise((resolve) => setTimeout(resolve, timeToWait));
+                  await tryToReconnect();
+                };
+                await tryToReconnect();
+              };
+              retry();
+            };
+          })();
+        }
+      }
+      if (!customElements.get("jsenv-autoreload-on-server-restart")) {
+        customElements.define(
+          "jsenv-autoreload-on-server-restart",
+          JsenvAutoreloadOnServerRestart,
+        );
+      }
+      
+      const jsenvAutoreloadOnServerRestartElement =
+        new JsenvAutoreloadOnServerRestart({
+          url: (() => {
+            const websocketScheme =
+              self.location.protocol === "https:" ? "wss" : "ws";
+            const websocketUrl = `${websocketScheme}://${self.location.host}/.internal/alive.websocket`;
+            return websocketUrl;
+          })(),
+        });
+      
+      // script is injected into document.body
+      if (document.body) {
+        document.currentScript.parentNode.replaceChild(
+          jsenvAutoreloadOnServerRestartElement,
+          document.currentScript,
+        );
+      }
+      // script injected outisde document.body (likely in head)
+      else {
+        document.currentScript.parentNode.removeChild(document.currentScript);
+        document.onreadystatechange = () => {
+          if (document.readyState === "interactive") {
+            document.body.appendChild(jsenvAutoreloadOnServerRestartElement);
+          }
+        };
+      }
+    </script>
   </head>
   <body>
-    <div id="app"></div>
+    <style>:root {
+  --background-color: #fff;
+  --text-color: #333;
+  --border-color: #e0e0e0;
+  --primary-color: #1976d2;
+  --secondary-color: #f5f5f5;
+  --success-color: #4caf50;
+  --warning-color: #ff9800;
+  --method-get-color: #61affe;
+  --method-post-color: #49cc90;
+  --method-put-color: #ff9800;
+  --method-delete-color: #f44336;
+  --method-patch-color: #9c27b0;
+  --method-options-color: #607d8b;
+  --method-head-color: #00bcd4;
+}
 
-    <style>.progress-container {
+:root[data-theme="light"] {
+  --background-color: #fff;
+  --text-color: #333;
+  --border-color: #e0e0e0;
+  --primary-color: #1976d2;
+  --secondary-color: #f5f5f5;
+}
+
+:root[data-theme="dark"] {
+  --background-color: #121212;
+  --text-color: #e0e0e0;
+  --border-color: #333;
+  --primary-color: #4f9eff;
+  --secondary-color: #1e1e1e;
+}
+
+:root[data-theme="dark"] a {
+  color: #1e90ff;
+}
+
+body {
+  color: var(--text-color);
+  background-color: var(--background-color);
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif;
+  line-height: 1.5;
+  transition: background-color .3s, color .3s;
+}
+
+.container {
+  flex-direction: row;
+  display: flex;
+}
+
+aside {
+  background: var(--background-color);
+  border-radius: 6px;
+  flex-shrink: 0;
+  width: 250px;
+  max-height: calc(100vh - 40px);
+  margin-right: 20px;
+  padding-top: 20px;
+  padding-left: 10px;
+  transition: width .3s, margin-left .3s;
+  overflow: hidden auto;
+}
+
+main {
+  flex-grow: 1;
+  flex-basis: 0;
+  min-width: 0;
+  padding-top: 10px;
+  padding-right: 20px;
+  transition: margin-left .3s;
+}
+
+.header_row {
+  align-items: center;
+  gap: 10px;
+  display: flex;
+}
+
+.note_button_open {
+  cursor: pointer;
+  color: var(--text-color);
+  opacity: .7;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  height: 24px;
+  padding: 0;
+  transition: background-color .2s;
+}
+
+.note_button_open:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
+  opacity: 1;
+}
+
+.note_title {
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: flex;
+}
+
+.note_button_close {
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  justify-content: center;
+  align-items: center;
+  padding: 5px;
+  display: flex;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+.note_button_close:hover {
+  background-color: var(--secondary-color);
+}
+
+.note_content {
+  background-color: var(--background-color);
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  padding: 20px;
+  transition: transform .3s;
+  position: relative;
+  transform: translateY(-20px);
+  box-shadow: 0 10px 25px #0003;
+}
+
+.theme-toggle {
+  align-items: center;
+  display: flex;
+}
+
+#theme-toggle-btn {
+  cursor: pointer;
+  background: none;
+  background-color: var(--secondary-color);
+  border: none;
+  border-radius: 50%;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  transition: background-color .2s;
+  display: flex;
+}
+
+#theme-toggle-btn:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
+}
+
+#theme-toggle-btn svg {
+  fill: var(--text-color);
+}
+
+.sun-icon, .moon-icon {
+  display: none;
+}
+
+:root[data-theme="dark"] .sun-icon, :root[data-theme="light"] .moon-icon {
+  display: block;
+}
+
+.progress-container {
   background-color: #1976d233;
   border-radius: 4px;
   width: 100%;
@@ -20,7 +531,7 @@
 }
 
 .progress-indeterminate .progress-bar-long, .progress-indeterminate .progress-bar-short {
-  background-color: #1976d2;
+  background-color: var(--primary-color);
   border-radius: 4px;
   height: 100%;
   animation-duration: 2.2s;
@@ -73,54 +584,508 @@
   }
 }
 
-.route-list {
-  margin-top: 20px;
-}
-
-.route-item {
+.auto_head_note {
+  color: var(--method-head-color);
   align-items: center;
-  margin-bottom: 8px;
+  margin-top: 10px;
+  font-size: 14px;
   display: flex;
 }
 
-.route-method {
-  min-width: 60px;
+.note {
+  border-left: 4px solid var(--warning-color);
+  background-color: #ff98001a;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  padding: 12px;
+}
+
+.info_pill {
+  background-color: #0000000d;
+  border-radius: 14px;
+  align-items: center;
+  margin-left: 10px;
+  padding: 4px 10px;
+  font-size: 13px;
+  display: inline-flex;
+}
+
+.route_container {
+  align-items: flex-start;
+  gap: 20px;
+  display: flex;
+}
+
+.filters_sidebar {
+  border: 1px solid var(--border-color);
+  background: var(--secondary-color);
+  border-radius: 6px;
+  flex-shrink: 0;
+  width: 250px;
+  overflow: hidden;
+}
+
+.sidebar_header {
+  border-bottom: 1px solid var(--border-color);
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  font-weight: 500;
+  display: flex;
+}
+
+.filters_content {
+  background: var(--background-color);
+  padding: 15px;
+}
+
+.filters_count {
+  background-color: var(--primary-color);
+  color: #fff;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: .8rem;
+  font-weight: normal;
+}
+
+@media (width <= 768px) {
+  .route_container {
+    flex-direction: column;
+  }
+
+  .filters_sidebar {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+}
+
+.route_list {
+  flex-grow: 1;
+  min-width: 0;
+  margin-top: 20px;
+}
+
+.route_details {
+  border: 1px solid #000;
+  border-color: var(--method-color);
+  background: color-mix(in srgb, var(--method-color), transparent 90%);
+  border-radius: 4px;
+  margin: 0 0 15px;
+  box-shadow: 0 0 3px #00000030;
+}
+
+.route_details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.route_details > summary::marker {
+  display: none;
+}
+
+.route_summary_container {
+  align-items: center;
+  padding: 5px;
+  display: flex;
+}
+
+.route_method {
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px #0000001a;
+  background: var(--method-color);
+  border-radius: 3px;
+  min-width: 80px;
+  padding: 6px 0;
+  font-family: sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.route_resource {
+  word-break: break-word;
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-left: 8px;
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.route_details[data-method="HEAD"] {
+  --method-color: var(--method-head-color);
+}
+
+.route_details[data-method="OPTIONS"] {
+  --method-color: var(--method-options-color);
+}
+
+.route_details[data-method="GET"] {
+  --method-color: var(--method-get-color);
+}
+
+.route_details[data-method="POST"] {
+  --method-color: var(--method-post-color);
+}
+
+.route_details[data-method="PUT"] {
+  --method-color: var(--method-put-color);
+}
+
+.route_details[data-method="PATCH"] {
+  --method-color: var(--method-patch-color);
+}
+
+.route_details[data-method="DELETE"] {
+  --method-color: var(--method-delete-color);
+}
+
+.route_owner_name {
+  color: #666;
+  text-align: center;
+  background-color: #ffefd2;
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+
+:root[data-theme="dark"] .route_owner_name {
+  color: #fff;
+  background-color: #603b0d;
+}
+
+.route_details_content {
+  border-top: 1px solid var(--method-color);
+  padding: 10px;
+}
+
+.route_description {
+  margin: 0;
+}
+
+.route_content_nego_title {
   font-weight: bold;
 }
 
-.route-resource {
-  margin-left: 8px;
+.filter_container {
+  border: 1px solid var(--border-color);
+  background: var(--secondary-color);
+  border-radius: 4px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.filter_container::marker {
+  display: none;
+}
+
+.filter_summary {
+  cursor: pointer;
+  user-select: none;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  display: flex;
+}
+
+.filter:open .arrow_down {
+  transform: rotate(180deg);
+}
+
+.filter_list {
+  background: var(--background-color);
+  border-top: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.filter_item {
+  margin: 15px;
+}
+
+.filter_badge {
+  background-color: var(--primary-color);
+  color: #fff;
+  border-radius: 12px;
+  margin-left: 10px;
+  padding: 2px 8px;
+  font-size: .8rem;
+}
+
+select {
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  min-width: 200px;
+  color: var(--text-color);
+  border-radius: 4px;
+  padding: 8px;
+  font-family: inherit;
+}
+
+select option {
+  padding: 8px;
+}
+
+select option:checked {
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+.filter_form {
+  user-select: none;
+  flex-flow: column wrap;
+  gap: 8px;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  display: flex;
+}
+
+.filter_form label {
+  cursor: pointer;
+  word-break: keep-all;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+label .filter_text {
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.filter_text[data-method] {
+  border-left: 5px solid var(--method-color);
+  padding-left: 4px;
+}
+
+.filter_text[data-method="all"] {
+  --method-color: transparent;
+  border-image-slice: 1;
+}
+
+.filter_text[data-method="HEAD"] {
+  --method-color: var(--method-head-color);
+}
+
+.filter_text[data-method="OPTIONS"] {
+  --method-color: var(--method-options-color);
+}
+
+.filter_text[data-method="GET"] {
+  --method-color: var(--method-get-color);
+}
+
+.filter_text[data-method="POST"] {
+  --method-color: var(--method-post-color);
+}
+
+.filter_text[data-method="PUT"] {
+  --method-color: var(--method-put-color);
+}
+
+.filter_text[data-method="PATCH"] {
+  --method-color: var(--method-patch-color);
+}
+
+.filter_text[data-method="DELETE"] {
+  --method-color: var(--method-delete-color);
+}
+
+.filter_count {
+  color: #666;
+  opacity: .8;
+  background-color: #eee;
+  border-radius: 12px;
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: .8rem;
+}
+
+.filter_actions {
+  gap: 10px;
+  display: flex;
+}
+
+.filter_button {
+  background-color: var(--secondary-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: .9rem;
+  transition: all .2s;
+}
+
+.filter_button:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
 }
 </style>
+    <div class="container">
+      <aside></aside>
+      <main>
+        <div class="header_row">
+          <h1 style="margin: 0">Route inspector</h1>
+          <button class="note_button_open" aria-label="Show information" title="About HTTP Methods">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </button>
+          <div style="flex: 1"></div>
+          <div class="theme-toggle">
+            <button id="theme-toggle-btn" aria-label="Toggle dark/light mode">
+              <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                <path d="M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM80-440q0 17 11.5 28.5T120-400h80q17 0 28.5-11.5T240-440q0-17-11.5-28.5T200-480h-80q-17 0-28.5 11.5T80-440Zm680 0q0 17 11.5 28.5T800-400h80q17 0 28.5-11.5T920-440q0-17-11.5-28.5T880-480h-80q-17 0-28.5 11.5T760-440ZM440-760q0 17 11.5 28.5T480-720q17 0 28.5-11.5T520-760v-80q0-17-11.5-28.5T480-880q-17 0-28.5 11.5T440-840v80Zm0 680q0 17 11.5 28.5T480-40q17 0 28.5-11.5T520-80v-80q0-17-11.5-28.5T480-200q-17 0-28.5 11.5T440-160v80ZM226-678l56 56q12 12 28.5 12t28.5-12q12-12 12-28.5T339-679l-56-56q-12-12-28.5-12T226-735q-12 12-12 28.5t12 28.5Zm452 452 56 56q12 12 28.5 12t28.5-12q12-12 12-28.5T791-227l-56-56q-12-12-28.5-12T678-283q-12 12-12 28.5t12 28.5ZM791-678q12 12 28.5 12t28.5-12q12-12 12-28.5T848-735l-56-56q-12-12-28.5-12T735-791q-12 12-12 28.5t12 28.5l56 56Zm-508 452q12 12 28.5 12t28.5-12q12-12 12-28.5T340-283l-56-56q-12-12-28.5-12T227-339q-12 12-12 28.5t12 28.5l56 56Z"></path>
+              </svg>
+              <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                <path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q8 0 17 .5t23 1.5q-36 32-56 79t-20 99q0 83 58.5 141.5T643-460q52 0 99-20t79-56q1 14 1.5 23t.5 17q0 150-105 255T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <dialog class="node_dialog">
+          <button class="note_button_close" aria-label="Close">
+            <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <div class="note_title">Explanation about this page</div>
+          <div class="note_text">
+            <p>This page displays all routes configured in your server.</p>
+            <p>
+              Every GET route also automatically supports HEAD requests without
+              additional configuration.
+            </p>
+          </div>
+        </dialog>
+        <script>
+          const noteDialog = document.querySelector(".node_dialog");
+          const noteButtonOpen = document.querySelector(".note_button_open");
+          const nodeButtonClose = document.querySelector(".note_button_close");
+
+          noteDialog.onclick = (e) => {
+            if (e.target === noteDialog) {
+              noteDialog.close();
+            }
+          };
+          nodeButtonClose.onclick = () => {
+            noteDialog.close();
+          };
+          noteButtonOpen.onclick = () => {
+            noteDialog.showModal();
+          };
+        </script>
+        <div id="app"></div>
+      </main>
+    </div>
+    <script>
+      // Theme toggling functionality
+      const toggleThemeButton = document.getElementById("theme-toggle-btn");
+
+      // Check for saved theme preference or use system preference
+      const savedTheme = localStorage.getItem("theme");
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+
+      // Apply theme based on saved preference or system preference
+      if (savedTheme === "dark" || (savedTheme === null && prefersDark)) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+
+      // Toggle theme when button is clicked
+      toggleThemeButton.addEventListener("click", () => {
+        if (document.documentElement.getAttribute("data-theme") === "dark") {
+          document.documentElement.setAttribute("data-theme", "light");
+          localStorage.setItem("theme", "light");
+        } else {
+          document.documentElement.setAttribute("data-theme", "dark");
+          localStorage.setItem("theme", "dark");
+        }
+      });
+    </script>
     <script type="module">
       // https://preactjs.com/guide/v10/no-build-workflows/
       import { render } from "https://esm.sh/preact@10.23.1";
       import { html } from "https://esm.sh/htm@3.1.1/preact?external=preact";
-      import { signal } from "https://esm.sh/@preact/signals@1.3.0?external=preact";
+      import { signal, computed } from "https://esm.sh/@preact/signals@1.3.0?external=preact";
+      import { useState, useRef, useCallback } from "https://esm.sh/preact@10.23.1/hooks";
 
       const routesLoadingSignal = signal(false);
-      const routeLoadingError = signal(null);
+      const routeLoadingErrorSignal = signal(null);
       const routesSignal = signal([]);
+      const NO_PACKAGE_NAME = "unknown";
+
+      const repartitionsSignal = computed(() => {
+        const routes = routesSignal.value;
+        const methodRepartition = {};
+        const packageRepartition = {};
+        for (const route of routes) {
+          const method = route.method;
+          if (!methodRepartition[method]) {
+            methodRepartition[method] = 0;
+          }
+          methodRepartition[method]++;
+
+          const packageName = route.meta.packageName || NO_PACKAGE_NAME;
+          if (!packageRepartition[packageName]) {
+            packageRepartition[packageName] = 0;
+          }
+          packageRepartition[packageName]++;
+        }
+        return {
+          methodRepartition,
+          packageRepartition,
+        };
+      });
+      const methodRepartitionSignal = computed(() => {
+        return repartitionsSignal.value.methodRepartition;
+      });
+      const packageRepartitionSignal = computed(() => {
+        return repartitionsSignal.value.packageRepartition;
+      });
+      const availableMethodNamesSignal = computed(() => {
+        return Object.keys(methodRepartitionSignal.value);
+      });
+      const availablePackageNamesSignal = computed(() => {
+        return Object.keys(packageRepartitionSignal.value);
+      });
 
       const loadRoutes = async () => {
-        // routesLoadingSignal.value = true;
-        // try {
-        //   const response = await fetch(window.location.href, {
-        //     headers: {
-        //       accept: "application/json",
-        //     },
-        //   });
-        //   const routes = await response.json();
-        //   routesLoadingSignal.value = false;
-        //   routesSignal.value = routes;
-        // } catch (e) {
-        //   routesLoadingSignal.value = false;
-        //   routeLoadingError.value = e;
-        //   throw e;
-        // }
+        routesLoadingSignal.value = true;
+        routeLoadingErrorSignal.value = null;
+        try {
+          const response = await fetch("/.internal/routes.json");
+          const routes = await response.json();
+          routesLoadingSignal.value = false;
+          routesSignal.value = routes;
+        } catch (e) {
+          routesLoadingSignal.value = false;
+          routeLoadingErrorSignal.value = e;
+          throw e;
+        }
       };
       loadRoutes();
 
+      const Sidebar = () => {
+        const routes = routesSignal.value;
+        if (routes.length === 0) {
+          return null;
+        }
+        return html` <${FiltersPanel} routes=${routes} /> `;
+      };
+
+      const App = () => {
+        return html` <${RouteList} /> `;
+      };
       const ProgressBar = ({ width = "100%", height = 6, loading }) => {
         if (!loading) {
           return null;
@@ -141,144 +1106,575 @@
           </div>
         `;
       };
-
-      const App = () => {
+      const RouteList = () => {
         const routes = routesSignal.value;
         const loading = routesLoadingSignal.value;
+        const routeLoadingError = routeLoadingErrorSignal.value;
 
-        return html`
-          <h1>Route inspector</h1>
-          ${loading ? html`<p>Loading...</p>` : null}
-          <${ProgressBar} width="150" loading=${loading} />
-          <${RouteList} routes=${routes} />
-        `;
-      };
-      const RouteList = ({ routes }) => {
-        return html`<div>
-          ${routes.map((route) => html`<${Route} ...${route} />`)}
+        if (loading) {
+          return html`<${ProgressBar} width="150" loading=${true} />`;
+        }
+
+        if (routeLoadingError) {
+          return html`<p>
+            Error loading routes: ${routeLoadingError.message}
+          </p>`;
+        }
+
+        if (!routes || routes.length === 0) {
+          return html`<p>No routes configured.</p>`;
+        }
+
+        return html`<div class="route_container">
+          <div class="route_list">
+            ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
+          </div>
         </div>`;
       };
-      const Route = ({ method, resource }) => {
-        return html`<div style="display: flex">
-          <span>${method}</span>
-          <p>${resource}</p>
+
+      const documentUrlSignal = signal(window.location.href);
+      window.addEventListener("popstate", async (popstateEvent) => {
+        documentUrlSignal.value = popstateEvent.target.location.href;
+      });
+      const goTo = (url, { replace } = {}) => {
+        if (replace) {
+          window.history.replaceState(null, null, url);
+          documentUrlSignal.value = url;
+        } else {
+          window.history.pushState(null, null, url);
+          documentUrlSignal.value = url;
+        }
+      };
+      goTo(window.location.href, { replace: true });
+
+      let useUrlStringParam;
+      url_string_param: {
+        useUrlStringParam = (name, { availableValues } = {}) => {
+          const urlStringParamSignal = signalForUrlParam(name, (url) => {
+            return new URL(url).searchParams.get(name);
+          });
+          const urlStringParam = urlStringParamSignal.value;
+          let value;
+          if (urlStringParam) {
+            value = urlStringParam;
+            if (availableValues && !availableValues.includes(value)) {
+              value = "";
+            }
+          } else {
+            value = "";
+          }
+
+          const set = useCallback(
+            (newValue) => {
+              const urlObject = new URL(documentUrlSignal.peek());
+              const { searchParams } = urlObject;
+              if (!newValue) {
+                searchParams.delete(name);
+                const urlWithoutStringParam = urlObject.href;
+                if (urlWithoutStringParam !== window.location.href) {
+                  goTo(urlWithoutStringParam);
+                }
+                return;
+              }
+              if (availableValues && !availableValues.includes(newValue)) {
+                return;
+              }
+              searchParams.set(name, newValue);
+              const urlWithStringParam = urlObject.href;
+              if (urlWithStringParam !== window.location.href) {
+                goTo(urlWithStringParam);
+              }
+              return;
+            },
+            [name],
+          );
+          return [value, set];
+        };
+
+        const urlParamSignalMap = new Map();
+        // can be called multiple times by hooks
+        const signalForUrlParam = (name, getter) => {
+          const existingSignal = urlParamSignalMap.get(name);
+          if (existingSignal) {
+            return existingSignal;
+          }
+          const signalForFirstCall = computed(() => {
+            const url = documentUrlSignal.value;
+            const valueInUrl = getter(url);
+            return valueInUrl;
+          });
+          urlParamSignalMap.set(name, signalForFirstCall);
+          return signalForFirstCall;
+        };
+      }
+
+      const useMethodUrlStringParam = () => {
+        const availableMethodNames = availableMethodNamesSignal.value;
+        return useUrlStringParam("method", {
+          availableValues: availableMethodNames,
+        });
+      };
+
+      const usePackageUrlStringParam = () => {
+        const availablePackageNames = availablePackageNamesSignal.value;
+        return useUrlStringParam("package", {
+          availableValues: availablePackageNames,
+        });
+      };
+
+      let FiltersPanel;
+      filters: {
+        FiltersPanel = ({ routes }) => {
+          return html`
+            <div class="filter_container">
+              <div class="filter_list">
+                <div class="filter_item">
+                  <${MethodFilter} routes=${routes} />
+                </div>
+                <div class="filter_item">
+                  <${PackageFilter} routes=${routes} />
+                </div>
+              </div>
+            </div>
+          `;
+        };
+        const MethodFilter = ({ routes }) => {
+          const availableMethodNames = availableMethodNamesSignal.value;
+          const availableMethodRepartition = methodRepartitionSignal.value;
+          const [selectedMethod, setSelectedMethod] = useMethodUrlStringParam();
+
+          // "all" border image is a combination of available method colors
+          const getMethodColor = (methodName) => {
+            const bodyStyle = window.getComputedStyle(document.body);
+            const methodColor = bodyStyle.getPropertyValue(
+              `--method-${methodName.toLowerCase()}-color`,
+            );
+            return methodColor;
+          };
+          const percentagePerColor = Math.floor(
+            100 / (availableMethodNames.length - 1),
+          );
+          const gradientSteps = [];
+          let progress = 0;
+          let index = 0;
+          for (const methodName of availableMethodNames) {
+            if (index === availableMethodNames.length - 1) {
+              progress = 100;
+            }
+            gradientSteps.push(`${getMethodColor(methodName)} ${progress}%`);
+            progress += percentagePerColor;
+            index++;
+          }
+          const gradient = `linear-gradient(to bottom, ${gradientSteps.join(", ")})`;
+
+          const options = [
+            {
+              value: "",
+              text: html`
+                <span
+                  class="filter_text"
+                  data-method="all"
+                  style=${{
+                    borderImageSource: gradient,
+                  }}
+                  >all</span
+                >
+                <span class="filter_count">${routes.length}</span>
+              `,
+              selected: !selectedMethod,
+            },
+            ...availableMethodNames.map((availableMethodName) => {
+              return {
+                value: availableMethodName,
+                text: html`
+                  <span class="filter_text" data-method="${availableMethodName}"
+                    >${availableMethodName}
+                  </span>
+                  <span class="filter_count">
+                    ${availableMethodRepartition[availableMethodName]}
+                  </span>
+                `,
+                selected: availableMethodName === selectedMethod,
+              };
+            }),
+          ];
+
+          return html`
+            <${FilterSelector}
+              label="Methods"
+              options=${options}
+              onChange=${(methodToSelect) => {
+                setSelectedMethod(methodToSelect);
+              }}
+            />
+          `;
+        };
+        const PackageFilter = ({ routes }) => {
+          const availablePackageNames = availablePackageNamesSignal.value;
+          const packageRepartition = packageRepartitionSignal.value;
+          const [selectedPackageName, setSelectedPackageName] =
+            usePackageUrlStringParam();
+
+          const options = [
+            {
+              value: "",
+              text: html`<span>all</span>
+                <span class="filter_count">${routes.length}</span>`,
+              selected: !selectedPackageName,
+            },
+            ...availablePackageNames.map((availablePackageName) => {
+              return {
+                value: availablePackageName,
+                text: html` <span
+                    class="filter_text"
+                    title="${availablePackageName}"
+                    >${availablePackageName}</span
+                  >
+                  <span class="filter_count"
+                    >${packageRepartition[availablePackageName]}</span
+                  >`,
+                selected: availablePackageName === selectedPackageName,
+              };
+            }),
+          ];
+          return html`
+            <${FilterSelector}
+              label="Packages"
+              options=${options}
+              onChange=${(packageNameToSelect) => {
+                setSelectedPackageName(packageNameToSelect);
+              }}
+            />
+          `;
+        };
+        const FilterSelector = ({
+          label,
+          multiple,
+          options,
+          onChange,
+          actions,
+        }) => {
+          const formRef = useRef();
+
+          return html`<details open class="filter">
+                <summary class="filter_summary">
+                  ${label}
+                  <${ArrowDown} />
+                </summary>
+                <form ref=${formRef} class="filter_form">
+                  ${options.map((option) => {
+                    return html`<label>
+                      <input
+                        type="${multiple ? "checkbox" : "radio"}"
+                        name="${label}"
+                        checked=${option.selected}
+                        value=${option.value}
+                        onChange=${multiple
+                          ? () => {
+                              const formNode = formRef.current;
+                              // even if we create a checkbox list the HTML spec
+                              // return a radio node list and we have to gather the checked values
+                              const radioNodeList = formNode.elements[label];
+                              const selectedValues = [];
+                              for (const checkboxNode of Array.from(
+                                radioNodeList,
+                              )) {
+                                if (checkboxNode.checked) {
+                                  selectedValues.push(checkboxNode.value);
+                                }
+                              }
+                              onChange(selectedValues);
+                            }
+                          : () => {
+                              const formNode = formRef.current;
+                              const radioNodeList = formNode.elements[label];
+                              const selectedValue = radioNodeList.value;
+                              onChange(selectedValue);
+                            }}
+                      />
+                      ${option.text}
+                    </label>`;
+                  })}
+                </form>
+                ${
+                  actions &&
+                  html` <div class="filter_actions">
+                    <button
+                      type="button"
+                      class="filter_button"
+                      onClick=${() => {
+                        onChange(options.map((option) => option.value));
+                      }}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      class="filter_button"
+                      onClick=${() => {
+                        onChange([]);
+                      }}
+                    >
+                      Clear All
+                    </button>
+                  </div>`
+                }
+              </div>`;
+        };
+      }
+
+      const RouteDetails = ({
+        meta,
+        method,
+        resource,
+        description,
+        availableMediaTypes,
+        availableLanguages,
+        availableVersions,
+        availableEncodings,
+        acceptedMediaTypes,
+        websocket,
+        clientCodeExample,
+        declarationSource,
+      }) => {
+        const [opened, setOpened] = useState(false);
+        const [selectedMethod] = useUrlStringParam("method");
+        const [selectedPackageName] = usePackageUrlStringParam();
+
+        if (selectedMethod && method !== selectedMethod) {
+          return null;
+        }
+        const packageName = meta.packageName || NO_PACKAGE_NAME;
+        if (selectedPackageName && packageName !== selectedPackageName) {
+          return null;
+        }
+
+        return html`<details
+          class="route_details"
+          onToggle=${(e) => {
+            setOpened(e.newState === "open");
+          }}
+          data-method=${method}
+        >
+          <summary>
+            <div class="route_summary_container">
+              <span class="route_method">${method}</span>
+              <p class="route_resource">${resource}</p>
+              <span style="flex:1"></span>
+              <${RouteBadge} meta=${meta} />
+              ${opened ? html`<${ArrowUp} />` : html`<${ArrowDown} />`}
+            </div>
+          </summary>
+          <${RouteDetailsContent}
+            method=${method}
+            resource=${resource}
+            description=${description}
+            availableMediaTypes=${availableMediaTypes}
+            availableLanguages=${availableLanguages}
+            availableVersions=${availableVersions}
+            availableEncodings=${availableEncodings}
+            acceptedMediaTypes=${acceptedMediaTypes}
+            websocket=${websocket}
+            clientCodeExample=${clientCodeExample}
+            declarationSource=${declarationSource}
+            meta=${meta}
+          />
+        </details>`;
+      };
+
+      const RouteBadge = ({ meta }) => {
+        if (!meta.packageName) {
+          return null;
+        }
+        let text = meta.packageName;
+        let title = `This endpoint is declared by ${meta.packageName}`;
+        return html`<span title=${title} class="route_owner_name"
+          >${text}</span
+        >`;
+      };
+
+      const RouteDetailsContent = ({
+        method,
+        resource,
+        description,
+        availableMediaTypes,
+        availableLanguages,
+        availableVersions,
+        availableEncodings,
+        acceptedMediaTypes,
+        websocket,
+        clientCodeExample,
+        declarationSource,
+        meta,
+      }) => {
+        return html`<div class="route_details_content">
+          <${RoutedeclarationSource}
+            meta=${meta}
+            declarationSource=${declarationSource}
+          />
+          <p style="margin-top: 0"><strong>Description:</strong></p>
+          <p class="route_description">
+            ${description || "No description available"}
+          </p>
+          ${availableMediaTypes.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="content-type"
+            title="Available media types"
+            availableValues=${availableMediaTypes}
+          />`}
+          ${availableLanguages.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="language"
+            title="Available languages"
+            availableValues=${availableLanguages}
+          />`}
+          ${availableVersions.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="version"
+            title="Available versions"
+            availableValues=${availableVersions}
+          />`}
+          ${availableEncodings.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="encoding"
+            title="Available encodings"
+            availableValues=${availableEncodings}
+          />`}
+          ${acceptedMediaTypes.length > 0 &&
+          html`<${RouteAcceptableContentSection}
+            acceptedMediaTypes=${acceptedMediaTypes}
+          />`}
+          <p style="margin-bottom:0; font-weight:bold">Example:</p>
+          <${RouteCodeExample}
+            method=${method}
+            resource=${resource}
+            availableMediaTypes=${availableMediaTypes}
+            websocket=${websocket}
+            clientCodeExample=${clientCodeExample}
+          />
+        </div>`;
+      };
+      const RoutedeclarationSource = ({ meta, declarationSource }) => {
+        if (!declarationSource) {
+          return null;
+        }
+        return html`<p style="margin-top: 0"><strong>Declaration:</strong></p>
+          <p>
+            <${RouteDeclarationText}
+              ownerLink=${meta.ownerLink}
+              declarationLink=${meta.declarationLink}
+            />
+          </p>`;
+      };
+      const RouteDeclarationText = ({ declarationLink }) => {
+        return html`This route is declared in${" "}
+          <a href="${declarationLink.url}">${declarationLink.text}</a>`;
+      };
+      const RouteContentNegotiationSection = ({
+        type,
+        title,
+        availableValues,
+      }) => {
+        return html`<div class="route_content_nego" data-nego-type="${type}">
+          <p class="route_content_nego_title">${title}:</p>
+          <ul>
+            ${availableValues.map(
+              (availableValue) => html`<li>${availableValue}</li>`,
+            )}
+          </ul>
+        </div>`;
+      };
+      const RouteAcceptableContentSection = ({ acceptedMediaTypes }) => {
+        return html`<div class="route_accepted_content_type">
+          <p><strong>Accepted content types:</strong></p>
+          <ul>
+            ${acceptedMediaTypes.map(
+              (acceptedMediaType) => html`<li>${acceptedMediaType}</li>`,
+            )}
+          </ul>
         </div>`;
       };
 
-      render(html`<${App} />`, document.getElementById("app"));
-    </script>
-    <script>
-      const css = /* css */ `
-      dialog {
-        opacity: 0;
-        transition: all 0.3s allow-discrete;
-      }
-      dialog::backdrop {
-         background-image: linear-gradient(
-          45deg,
-          magenta,
-          rebeccapurple,
-          dodgerblue,
-          green
-        );
-        opacity: 0;
-        transition: all 0.3s allow-discrete;
-      }
-      dialog:open {
-        opacity: 1;
-      }
-      dialog:open::backdrop {
-        opacity: 0.75;
-      }`;
-      
-      const html = /* html */ `<style>
-          ${css}
-      </style>
-      <dialog>
-          <p>Connection with server is lost</p>
-          <button autofocus name="reconnect">Retry</button>
-      </dialog>`;
-      
-      class JsenvAutoreloadOnServerRestart extends HTMLElement {
-        constructor({ url } = {}) {
-          super();
-          const root = this.attachShadow({ mode: "open" });
-          root.innerHTML = html;
-      
-          const dialog = root.querySelector("dialog");
-          const reconnectButton = dialog.querySelector('button[name="reconnect"]');
-      
-          (async () => {
-            const connect = () => {
-              const websocket = new WebSocket(url, ["jsenv_server"]);
-              const connectedPromise = new Promise((resolve) => {
+      const RouteCodeExample = ({
+        method,
+        resource,
+        availableMediaTypes,
+        websocket,
+        clientCodeExample,
+      }) => {
+        let jsSource;
+        if (clientCodeExample) {
+          jsSource = clientCodeExample;
+        } else if (websocket) {
+          const websocketScheme =
+            self.location.protocol === "https:" ? "wss" : "ws";
+          const websocketOrigin = `${websocketScheme}://${self.location.host}`;
+          jsSource = /*js */ `
+                const websocket = new WebSocket("${websocketOrigin}${resource}");
                 websocket.onerror = () => {
-                  resolve(null);
+                  console.error("Failed to connect to websocket endpoint");
                 };
                 websocket.onopen = () => {
-                  resolve(websocket);
+                  console.info("Connected to websocket endpoint")
                 };
-              });
-              return connectedPromise;
-            };
-      
-            const initialWebSocket = await connect();
-            initialWebSocket.onclose = async () => {
-              console.info("connection to server lost, trying to reconnect");
-              const retry = async () => {
-                let attemptCount = 0;
-                const tryToReconnect = async () => {
-                  const newWebsocket = await connect();
-                  if (newWebsocket) {
-                    dialog.close();
-                    console.info("reconnected to server, reloading the page...");
-                    window.location.reload(true);
-                    return;
-                  }
-                  attemptCount++;
-                  if (attemptCount === 5) {
-                    dialog.showModal();
-                    reconnectButton.onclick = async () => {
-                      reconnectButton.disabled = true;
-                      const previousContext = reconnectButton.textContent;
-                      reconnectButton.textContent = "Retrying...";
-                      await retry();
-                      reconnectButton.textContent = previousContext;
-                      reconnectButton.disabled = false;
-                    };
-                    return;
-                  }
-                  await new Promise((resolve) => setTimeout(resolve, 200));
-                  await tryToReconnect();
+                websocket.onmessage = (event) => {
+                  console.log("Received message", event.data);
                 };
-                await tryToReconnect();
-              };
-              retry();
-            };
-          })();
+                `;
+        } else {
+          let fetchLine;
+          if (method === "GET") {
+            fetchLine = `const response = await window.fetch("${resource}");`;
+          } else {
+            fetchLine = `const response = await window.fetch("${resource}", {
+        method: "${method}",
+      }`;
+          }
+          let readResponseLine;
+          if (availableMediaTypes.includes("application/json")) {
+            readResponseLine = `const json = await response.json();`;
+          } else {
+            readResponseLine = `const text = await response.text();`;
+          }
+
+          jsSource = /*js */ `
+      ${fetchLine}
+      ${readResponseLine}
+                `;
         }
-      }
-      if (!customElements.get("jsenv-autoreload-on-server-restart")) {
-        customElements.define(
-          "jsenv-autoreload-on-server-restart",
-          JsenvAutoreloadOnServerRestart,
-        );
-      }
-      
-      const jsenvAutoreloadOnServerRestartElement =
-        new JsenvAutoreloadOnServerRestart({
-          url: (() => {
-            const websocketScheme =
-              self.location.protocol === "https:" ? "wss" : "ws";
-            const websocketUrl = `${websocketScheme}://${self.location.host}${self.location.pathname}${self.location.search}`;
-            return websocketUrl;
-          })(),
-        });
-      
-      document.currentScript.parentNode.replaceChild(
-        jsenvAutoreloadOnServerRestartElement,
-        document.currentScript,
-      );
+
+        return html`<code-block lang="js" data-escaped data-copy-button
+          >${jsSource}</code-block
+        >`;
+      };
+
+      const ArrowDown = () => {
+        return html`<svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 -960 960 960"
+          width="24"
+          height="24"
+          fill="currentColor"
+          class="arrow_down"
+        >
+          <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
+        </svg>`;
+      };
+      const ArrowUp = () => {
+        return html`<svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 -960 960 960"
+          width="24"
+          height="24"
+          fill="currentColor"
+          class="arrow_up"
+        >
+          <path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" />
+        </svg>`;
+      };
+
+      render(html`<${Sidebar} />`, document.querySelector("aside"));
+      render(html`<${App} />`, document.querySelector("#app"));
     </script>
   </body>
 </html>

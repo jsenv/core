@@ -3,13 +3,13 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>405 Method Not Allowed</title>
+    <title>${status} ${statusText}</title>
     <style>body {
   color: #333;
   background-color: #f8f9fa;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
   margin: 0;
   font-family: Arial, sans-serif;
   display: flex;
@@ -30,12 +30,16 @@
 }
 
 .error_status_text {
+  word-break: break-word;
+  text-align: left;
   margin: 10px 0;
   font-size: 1.5rem;
 }
 
 .error_message {
   color: #555;
+  word-break: break-word;
+  text-align: left;
   font-size: 1rem;
 }
 
@@ -58,7 +62,7 @@
     <div class="error_container">
       <p class="error_status">${status}</p>
       <p class="error_status_text">${statusText}</p>
-      <p class="error_message">${message}</p>
+      <p class="error_message">${statusMessage}</p>
       <a href="/" jsenv-ignore="" class="home_link">Return to Home</a>
     </div>
     <script>
@@ -104,7 +108,7 @@
       
           (async () => {
             const connect = () => {
-              const websocket = new WebSocket(url, ["jsenv_server"]);
+              const websocket = new WebSocket(url);
               const connectedPromise = new Promise((resolve) => {
                 websocket.onerror = () => {
                   resolve(null);
@@ -121,6 +125,7 @@
               console.info("connection to server lost, trying to reconnect");
               const retry = async () => {
                 let attemptCount = 0;
+                let timeToWait = 100;
                 const tryToReconnect = async () => {
                   const newWebsocket = await connect();
                   if (newWebsocket) {
@@ -130,7 +135,7 @@
                     return;
                   }
                   attemptCount++;
-                  if (attemptCount === 5) {
+                  if (attemptCount === 10) {
                     dialog.showModal();
                     reconnectButton.onclick = async () => {
                       reconnectButton.disabled = true;
@@ -142,7 +147,8 @@
                     };
                     return;
                   }
-                  await new Promise((resolve) => setTimeout(resolve, 200));
+                  timeToWait += 100;
+                  await new Promise((resolve) => setTimeout(resolve, timeToWait));
                   await tryToReconnect();
                 };
                 await tryToReconnect();
@@ -164,15 +170,27 @@
           url: (() => {
             const websocketScheme =
               self.location.protocol === "https:" ? "wss" : "ws";
-            const websocketUrl = `${websocketScheme}://${self.location.host}${self.location.pathname}${self.location.search}`;
+            const websocketUrl = `${websocketScheme}://${self.location.host}/.internal/alive.websocket`;
             return websocketUrl;
           })(),
         });
       
-      document.currentScript.parentNode.replaceChild(
-        jsenvAutoreloadOnServerRestartElement,
-        document.currentScript,
-      );
+      // script is injected into document.body
+      if (document.body) {
+        document.currentScript.parentNode.replaceChild(
+          jsenvAutoreloadOnServerRestartElement,
+          document.currentScript,
+        );
+      }
+      // script injected outisde document.body (likely in head)
+      else {
+        document.currentScript.parentNode.removeChild(document.currentScript);
+        document.onreadystatechange = () => {
+          if (document.readyState === "interactive") {
+            document.body.appendChild(jsenvAutoreloadOnServerRestartElement);
+          }
+        };
+      }
     </script>
   </body>
 </html>

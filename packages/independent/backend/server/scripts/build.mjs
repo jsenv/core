@@ -22,7 +22,7 @@ await build({
     "file://**/node_modules/environment/": false,
   },
   runtimeCompat: {
-    node: "20.0",
+    node: "22.13.1",
   },
   directoryReferenceEffect: (reference) => {
     // jsenv server directory url

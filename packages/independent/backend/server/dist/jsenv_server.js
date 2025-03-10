@@ -3,21 +3,22 @@ import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import "string-width";
 import cluster from "node:cluster";
-import http from "node:http";
-import net, { createServer, isIP } from "node:net";
-import { createReadStream, readFileSync, readdirSync, lstatSync, statSync, readFile } from "node:fs";
-import { Readable, Stream, Writable } from "node:stream";
-import { ReadableStream } from "node:stream/web";
+import net, { Socket, createServer, isIP } from "node:net";
 import { extname } from "node:path";
-import { parse as parse$1 } from "node:querystring";
+import { parse } from "node:querystring";
+import { Readable, Stream, Writable } from "node:stream";
+import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
+import { createReadStream, existsSync, readFileSync, readdirSync, lstatSync, statSync, readFile } from "node:fs";
+import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
 import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
 import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
 import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
-import { performance as performance$1 } from "node:perf_hooks";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { findAncestorDirectoryUrl } from "@jsenv/filesystem";
+import { createRequire } from "node:module";
 import { lookup } from "node:dns";
 import { createHash } from "node:crypto";
-import { pathToFileURL } from "node:url";
 
 const createCallbackListNotifiedOnce = () => {
   let callbacks = [];
@@ -1042,365 +1043,6 @@ const memoize = (compute) => {
   return fnWithMemoization;
 };
 
-if ("observable" in Symbol === false) {
-  Symbol.observable = Symbol.for("observable");
-}
-
-const createObservable = (producer) => {
-  if (typeof producer !== "function") {
-    throw new TypeError(`producer must be a function, got ${producer}`);
-  }
-
-  const observable = {
-    [Symbol.observable]: () => observable,
-    subscribe: ({
-      next = () => {},
-      error = (value) => {
-        throw value;
-      },
-      complete = () => {},
-    }) => {
-      let cleanup = () => {};
-      const subscription = {
-        closed: false,
-        unsubscribe: () => {
-          subscription.closed = true;
-          cleanup();
-        },
-      };
-
-      const producerReturnValue = producer({
-        next: (value) => {
-          if (subscription.closed) return;
-          next(value);
-        },
-        error: (value) => {
-          if (subscription.closed) return;
-          error(value);
-        },
-        complete: () => {
-          if (subscription.closed) return;
-          complete();
-        },
-      });
-      if (typeof producerReturnValue === "function") {
-        cleanup = producerReturnValue;
-      }
-      return subscription;
-    },
-  };
-
-  return observable;
-};
-
-const isObservable = (value) => {
-  if (value === null || value === undefined) {
-    return false;
-  }
-
-  if (typeof value === "object" || typeof value === "function") {
-    return Symbol.observable in value;
-  }
-
-  return false;
-};
-
-const observableFromValue = (value) => {
-  if (isObservable(value)) {
-    return value;
-  }
-
-  return createObservable(({ next, complete }) => {
-    next(value);
-    const timer = setTimeout(() => {
-      complete();
-    });
-    return () => {
-      clearTimeout(timer);
-    };
-  });
-};
-
-const createCompositeProducer = ({ cleanup = () => {} } = {}) => {
-  const observables = new Set();
-  const observers = new Set();
-
-  const addObservable = (observable) => {
-    if (observables.has(observable)) {
-      return false;
-    }
-
-    observables.add(observable);
-    observers.forEach((observer) => {
-      observer.observe(observable);
-    });
-    return true;
-  };
-
-  const removeObservable = (observable) => {
-    if (!observables.has(observable)) {
-      return false;
-    }
-
-    observables.delete(observable);
-    observers.forEach((observer) => {
-      observer.unobserve(observable);
-    });
-    return true;
-  };
-
-  const producer = ({
-    next = () => {},
-    complete = () => {},
-    error = () => {},
-  }) => {
-    let completeCount = 0;
-
-    const checkComplete = () => {
-      if (completeCount === observables.size) {
-        complete();
-      }
-    };
-
-    const subscriptions = new Map();
-    const observe = (observable) => {
-      const subscription = observable.subscribe({
-        next: (value) => {
-          next(value);
-        },
-        error: (value) => {
-          error(value);
-        },
-        complete: () => {
-          subscriptions.delete(observable);
-          completeCount++;
-          checkComplete();
-        },
-      });
-      subscriptions.set(observable, subscription);
-    };
-    const unobserve = (observable) => {
-      const subscription = subscriptions.get(observable);
-      if (!subscription) {
-        return;
-      }
-
-      subscription.unsubscribe();
-      subscriptions.delete(observable);
-      checkComplete();
-    };
-    const observer = {
-      observe,
-      unobserve,
-    };
-    observers.add(observer);
-    observables.forEach((observable) => {
-      observe(observable);
-    });
-
-    return () => {
-      observers.delete(observer);
-      subscriptions.forEach((subscription) => {
-        subscription.unsubscribe();
-      });
-      subscriptions.clear();
-      cleanup();
-    };
-  };
-
-  producer.addObservable = addObservable;
-  producer.removeObservable = removeObservable;
-
-  return producer;
-};
-
-// https://github.com/jamestalmage/stream-to-observable/blob/master/index.js
-
-const observableFromNodeStream = (
-  nodeStream,
-  {
-    readableStreamLifetime = 120_000, // 2s
-  } = {},
-) => {
-  const observable = createObservable(({ next, error, complete }) => {
-    if (nodeStream.isPaused()) {
-      nodeStream.resume();
-    } else if (nodeStream.complete) {
-      complete();
-      return null;
-    }
-    const cleanup = () => {
-      nodeStream.removeListener("data", next);
-      nodeStream.removeListener("error", error);
-      nodeStream.removeListener("end", complete);
-      nodeStream.removeListener("close", cleanup);
-      nodeStream.destroy();
-    };
-    // should we do nodeStream.resume() in case the stream was paused ?
-    nodeStream.once("error", error);
-    nodeStream.on("data", (data) => {
-      next(data);
-    });
-    nodeStream.once("close", () => {
-      cleanup();
-    });
-    nodeStream.once("end", () => {
-      complete();
-    });
-    return cleanup;
-  });
-
-  if (nodeStream instanceof Readable) {
-    // safe measure, ensure the readable stream gets
-    // used in the next ${readableStreamLifetimeInSeconds} otherwise destroys it
-    const timeout = setTimeout(() => {
-      process.emitWarning(
-        `Readable stream not used after ${
-          readableStreamLifetime / 1000
-        } seconds. It will be destroyed to release resources`,
-        {
-          CODE: "READABLE_STREAM_TIMEOUT",
-          // url is for http client request
-          detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`,
-        },
-      );
-      nodeStream.destroy();
-    }, readableStreamLifetime);
-    observable.timeout = timeout;
-    onceReadableStreamUsedOrClosed(nodeStream, () => {
-      clearTimeout(timeout);
-    });
-  }
-
-  return observable;
-};
-
-const onceReadableStreamUsedOrClosed = (readableStream, callback) => {
-  const dataOrCloseCallback = () => {
-    readableStream.removeListener("data", dataOrCloseCallback);
-    readableStream.removeListener("close", dataOrCloseCallback);
-    callback();
-  };
-  readableStream.on("data", dataOrCloseCallback);
-  readableStream.once("close", dataOrCloseCallback);
-};
-
-// https://nodejs.org/api/webstreams.html#readablestreamgetreaderoptions
-// we can read as text using TextDecoder, see https://developer.mozilla.org/fr/docs/Web/API/Fetch_API/Using_Fetch#traiter_un_fichier_texte_ligne_%C3%A0_ligne
-
-const observableFromNodeWebReadableStream = (nodeWebReadableStream) => {
-  const observable = createObservable(({ next, error, complete }) => {
-    const reader = nodeWebReadableStream.getReader();
-
-    const readNext = async () => {
-      try {
-        const { done, value } = await reader.read();
-        if (done) {
-          complete();
-          return;
-        }
-        next(value);
-        readNext();
-      } catch (e) {
-        error(e);
-      }
-    };
-    readNext();
-    return () => {
-      reader.cancel();
-    };
-  });
-
-  return observable;
-};
-
-const normalizeBodyMethods = (body) => {
-  if (isObservable(body)) {
-    return {
-      asObservable: () => body,
-      destroy: () => {},
-    };
-  }
-
-  if (isFileHandle(body)) {
-    return {
-      asObservable: () => fileHandleToObservable(body),
-      destroy: () => {
-        body.close();
-      },
-    };
-  }
-
-  if (isNodeStream(body)) {
-    return {
-      asObservable: () => observableFromNodeStream(body),
-      destroy: () => {
-        body.destroy();
-      },
-    };
-  }
-
-  if (body instanceof ReadableStream) {
-    return {
-      asObservable: () => observableFromNodeWebReadableStream(body),
-      destroy: () => {
-        body.cancel();
-      },
-    };
-  }
-
-  // https://nodejs.org/api/webstreams.html
-
-  return {
-    asObservable: () => observableFromValue(body),
-    destroy: () => {},
-  };
-};
-
-const isFileHandle = (value) => {
-  return value && value.constructor && value.constructor.name === "FileHandle";
-};
-
-const fileHandleToReadableStream = (fileHandle) => {
-  const fileReadableStream =
-    typeof fileHandle.createReadStream === "function"
-      ? fileHandle.createReadStream()
-      : createReadStream(
-          "/toto", // is it ok to pass a fake path like this?
-          {
-            fd: fileHandle.fd,
-            emitClose: true,
-            // autoClose: true
-          },
-        );
-  // I suppose it's required only when doing fs.createReadStream()
-  // and not fileHandle.createReadStream()
-  // fileReadableStream.on("end", () => {
-  //   fileHandle.close()
-  // })
-  return fileReadableStream;
-};
-
-const fileHandleToObservable = (fileHandle) => {
-  return observableFromNodeStream(fileHandleToReadableStream(fileHandle));
-};
-
-const isNodeStream = (value) => {
-  if (value === undefined) {
-    return false;
-  }
-
-  if (
-    value instanceof Stream ||
-    value instanceof Writable ||
-    value instanceof Readable
-  ) {
-    return true;
-  }
-
-  return false;
-};
-
 const mediaTypeInfos = {
   "application/json": {
     extensions: ["json", "map"],
@@ -1424,6 +1066,10 @@ const mediaTypeInfos = {
   },
   "application/x-gzip": {
     extensions: ["gz"],
+  },
+  "application/yaml": {
+    extensions: ["yml", "yaml"],
+    isTextual: true,
   },
   "application/wasm": {
     extensions: ["wasm"],
@@ -1574,6 +1220,22 @@ const CONTENT_TYPE = {
     return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
   },
 
+  fromExtension: (extension) => {
+    if (extension[0] === ".") {
+      extension = extension.slice(1);
+    }
+    for (const mediaTypeCandidate of Object.keys(mediaTypeInfos)) {
+      const mediaTypeCandidateInfo = mediaTypeInfos[mediaTypeCandidate];
+      if (
+        mediaTypeCandidateInfo.extensions &&
+        mediaTypeCandidateInfo.extensions.includes(extension)
+      ) {
+        return mediaTypeCandidate;
+      }
+    }
+    return "application/octet-stream";
+  },
+
   fromUrlExtension: (url) => {
     const { pathname } = new URL(url);
     const extensionWithDot = extname(pathname);
@@ -1581,13 +1243,13 @@ const CONTENT_TYPE = {
       return "application/octet-stream";
     }
     const extension = extensionWithDot.slice(1);
-    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
-      const mediaTypeInfo = mediaTypeInfos[mediaType];
-      return (
-        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
-      );
-    });
-    return mediaTypeFound || "application/octet-stream";
+    return CONTENT_TYPE.fromExtension(extension);
+  },
+
+  toUrlExtension: (contentType) => {
+    const mediaType = CONTENT_TYPE.asMediaType(contentType);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
   },
 };
 
@@ -1609,7 +1271,7 @@ const magenta = "\x1b[35m";
 const cyan = "\x1b[36m";
 // const white = "\x1b[37m"
 
-const websocketSuffixColorized = `${magenta}[websocket]${close}`;
+const websocketSuffixColorized = `{ upgrade: ${magenta}websocket${close} }`;
 
 const colorizeResponseStatus = (status) => {
   const statusType = statusToType(status);
@@ -1820,12 +1482,179 @@ const stringifyHeaderProperty = ({ name, value }) => {
   return `${name}=${value}`;
 };
 
+// https://wicg.github.io/observable/#core-infrastructure
+
+if ("observable" in Symbol === false) {
+  Symbol.observable = Symbol.for("observable");
+}
+
+const createObservable = (producer) => {
+  if (typeof producer !== "function") {
+    throw new TypeError(`producer must be a function, got ${producer}`);
+  }
+
+  const observable = {
+    [Symbol.observable]: () => observable,
+    subscribe: (
+      {
+        next = () => {},
+        error = (value) => {
+          throw value;
+        },
+        complete = () => {},
+      },
+      { signal = new AbortController().signal } = {},
+    ) => {
+      let cleanup = () => {};
+      const subscription = {
+        active: true,
+        signal,
+        unsubscribe: () => {
+          subscription.closed = true;
+          cleanup();
+        },
+      };
+
+      const teardownCallbackList = [];
+      const close = () => {
+        subscription.active = false;
+        let i = teardownCallbackList.length;
+        while (i--) {
+          teardownCallbackList[i]();
+        }
+        teardownCallbackList.length = 0;
+      };
+
+      signal.addEventListener("abort", () => {
+        close();
+      });
+
+      const producerReturnValue = producer({
+        next: (value) => {
+          if (!subscription.active) {
+            return;
+          }
+          next(value);
+        },
+        error: (value) => {
+          if (!subscription.active) {
+            return;
+          }
+          error(value);
+          close();
+        },
+        complete: () => {
+          if (!subscription.active) {
+            return;
+          }
+          complete();
+          close();
+        },
+        addTeardown: (teardownCallback) => {
+          if (!subscription.active) {
+            teardownCallback();
+            return;
+          }
+          teardownCallbackList.push(teardownCallback);
+        },
+      });
+      if (typeof producerReturnValue === "function") {
+        cleanup = producerReturnValue;
+      }
+      return undefined;
+    },
+  };
+
+  return observable;
+};
+
+const isObservable = (value) => {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  if (typeof value === "object" || typeof value === "function") {
+    return Symbol.observable in value;
+  }
+
+  return false;
+};
+
+// https://github.com/jamestalmage/stream-to-observable/blob/master/index.js
+
+const observableFromNodeStream = (
+  nodeStream,
+  { readableLifetime } = {},
+) => {
+  const observable = createObservable(
+    ({ next, error, complete, addTeardown }) => {
+      const errorEventCallback = (e) => {
+        error(e);
+      };
+      const dataEventCallback = (data) => {
+        next(data);
+      };
+      const closeEventCallback = () => {
+        complete();
+      };
+      const endEventCallback = () => {
+        complete();
+      };
+      nodeStream.once("error", errorEventCallback);
+      nodeStream.on("data", dataEventCallback);
+      nodeStream.once("end", endEventCallback);
+      nodeStream.once("close", closeEventCallback); // not sure it's required
+      addTeardown(() => {
+        nodeStream.removeListener("error", errorEventCallback);
+        nodeStream.removeListener("data", dataEventCallback);
+        nodeStream.removeListener("end", endEventCallback);
+        nodeStream.removeListener("close", closeEventCallback); // not sure it's required
+      });
+      if (nodeStream.isPaused()) {
+        nodeStream.resume();
+      } else if (nodeStream.complete) {
+        complete();
+      }
+    },
+  );
+
+  if (readableLifetime && nodeStream instanceof Readable) {
+    const timeout = setTimeout(() => {
+      process.emitWarning(
+        `Readable stream not used after ${readableLifetime / 1000} seconds.`,
+        {
+          CODE: "READABLE_STREAM_TIMEOUT",
+          // url is for http client request
+          detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`,
+        },
+      );
+    }, readableLifetime).unref();
+    onceReadableStreamUsedOrClosed(nodeStream, () => {
+      clearTimeout(timeout);
+    });
+    observable.timeout = timeout;
+  }
+
+  return observable;
+};
+
+const onceReadableStreamUsedOrClosed = (readableStream, callback) => {
+  const dataOrCloseCallback = () => {
+    readableStream.removeListener("data", dataOrCloseCallback);
+    readableStream.removeListener("close", dataOrCloseCallback);
+    callback();
+  };
+  readableStream.on("data", dataOrCloseCallback);
+  readableStream.once("close", dataOrCloseCallback);
+};
+
 const fromNodeRequest = (
   nodeRequest,
-  { serverOrigin, signal, requestBodyLifetime, logger },
+  { serverOrigin, signal, requestBodyLifetime, logger, nagle },
 ) => {
   const requestLogger = createRequestLogger(nodeRequest, (type, value) => {
-    logger[type](value);
+    const logFunction = logger[type];
+    logFunction(value);
   });
   nodeRequest.on("error", (error) => {
     if (error.message === "aborted") {
@@ -1856,8 +1685,15 @@ const fromNodeRequest = (
   });
 
   const headers = headersFromObject(nodeRequest.headers);
+  // pause the request body stream to let a chance for other parts of the code to subscribe to the stream
+  // Without this the request body readable stream
+  // might be closed when we'll try to attach "data" and "end" listeners to it
+  nodeRequest.pause();
+  if (!nagle) {
+    nodeRequest.connection.setNoDelay(true);
+  }
   const body = observableFromNodeStream(nodeRequest, {
-    readableStreamLifetime: requestBodyLifetime,
+    readableLifetime: requestBodyLifetime,
   });
 
   let requestOrigin;
@@ -1899,7 +1735,7 @@ const fromNodeRequest = (
     }
     const { formidable } = await import("formidable");
     const form = formidable({});
-    nodeRequest.resume(); // was paused in start_server.js
+    nodeRequest.resume(); // was paused in line #53
     const [fields, files] = await form.parse(nodeRequest);
     const requestBodyFormData = { fields, files };
     return requestBodyFormData;
@@ -1933,7 +1769,7 @@ const fromNodeRequest = (
       );
     }
     const requestBodyString = await readBody(body, { as: "string" });
-    const requestBodyQueryStringParsed = parse$1(requestBodyString);
+    const requestBodyQueryStringParsed = parse(requestBodyString);
     return requestBodyQueryStringParsed;
   };
 
@@ -1976,6 +1812,7 @@ const fromNodeRequest = (
     protoForwarded,
     host,
     hostForwarded,
+    params: {},
     signal: handleRequestOperation.signal,
     http2: Boolean(nodeRequest.stream),
     origin: requestOrigin,
@@ -2011,7 +1848,7 @@ const createRequestLogger = (nodeRequest, write) => {
     childArray,
     hasPushChild: false,
     forPush: () => {
-      const childLogBuffer = requestLogger(nodeRequest, write);
+      const childLogBuffer = createRequestLogger(nodeRequest, write);
       childLogBuffer.isChild = true;
       childArray.push(childLogBuffer);
       requestLogger.hasPushChild = true;
@@ -2043,7 +1880,10 @@ const createRequestLogger = (nodeRequest, write) => {
     },
     onHeadersSent: ({ status, statusText }) => {
       const statusType = statusToType(status);
-      let message = `${colorizeResponseStatus(status)} ${statusText}`;
+      let message = `${colorizeResponseStatus(status)}`;
+      if (statusText) {
+        message += ` ${statusText}`;
+      }
       add({
         type:
           status === 404 && nodeRequest.path === "/favicon.ico"
@@ -2054,7 +1894,7 @@ const createRequestLogger = (nodeRequest, write) => {
                 redirection: "info",
                 client_error: "warn",
                 server_error: "error",
-              }[statusType],
+              }[statusType] || "error",
         value: message,
       });
     },
@@ -2239,16 +2079,182 @@ const getHeadersInheritedByPushRequest = (request) => {
   return headersInherited;
 };
 
+const isFileHandle = (value) => {
+  return value && value.constructor && value.constructor.name === "FileHandle";
+};
+
+const observableFromFileHandle = (fileHandle) => {
+  return observableFromNodeStream(fileHandleToReadableStream(fileHandle));
+};
+
+const fileHandleToReadableStream = (fileHandle) => {
+  const fileReadableStream =
+    typeof fileHandle.createReadStream === "function"
+      ? fileHandle.createReadStream()
+      : createReadStream(
+          "/toto", // is it ok to pass a fake path like this?
+          {
+            fd: fileHandle.fd,
+            emitClose: true,
+            // autoClose: true
+          },
+        );
+  // I suppose it's required only when doing fs.createReadStream()
+  // and not fileHandle.createReadStream()
+  // fileReadableStream.on("end", () => {
+  //   fileHandle.close()
+  // })
+  return fileReadableStream;
+};
+
+const getObservableValueType = (value) => {
+  if (value && typeof value.then === "function") {
+    return "promise";
+  }
+
+  if (isObservable(value)) {
+    return "observable";
+  }
+
+  if (isFileHandle(value)) {
+    return "file_handle";
+  }
+
+  if (isNodeStream(value)) {
+    return "node_stream";
+  }
+
+  if (value instanceof ReadableStream) {
+    return "node_web_stream";
+  }
+
+  return "js_value";
+};
+
+const isNodeStream = (value) => {
+  if (value === undefined) {
+    return false;
+  }
+
+  if (
+    value instanceof Stream ||
+    value instanceof Writable ||
+    value instanceof Readable
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
+// https://nodejs.org/api/webstreams.html#readablestreamgetreaderoptions
+// https://nodejs.org/api/webstreams.html
+// we can read as text using TextDecoder, see https://developer.mozilla.org/fr/docs/Web/API/Fetch_API/Using_Fetch#traiter_un_fichier_texte_ligne_%C3%A0_ligne
+
+const observableFromNodeWebReadableStream = (nodeWebReadableStream) => {
+  const observable = createObservable(
+    ({ next, error, complete, addTeardown }) => {
+      const reader = nodeWebReadableStream.getReader();
+
+      const readNext = async () => {
+        try {
+          const { done, value } = await reader.read();
+          if (done) {
+            complete();
+            return;
+          }
+          next(value);
+          readNext();
+        } catch (e) {
+          error(e);
+        }
+      };
+      readNext();
+      addTeardown(() => {
+        reader.cancel();
+      });
+    },
+  );
+
+  return observable;
+};
+
+const observableFromPromise = (promise) => {
+  return createObservable(async ({ next, error, complete }) => {
+    try {
+      const value = await promise;
+      next(value);
+      complete();
+    } catch (e) {
+      error(e);
+    }
+  });
+};
+
+const observableFromValue = (value) => {
+  const observableValueType = getObservableValueType(value);
+  if (observableValueType === "observable") {
+    return value;
+  }
+  if (observableValueType === "promise") {
+    return observableFromPromise(value);
+  }
+  if (observableValueType === "file_handle") {
+    return observableFromFileHandle(value);
+  }
+  if (observableValueType === "node_stream") {
+    return observableFromNodeStream(value);
+  }
+  if (observableValueType === "node_web_stream") {
+    return observableFromNodeWebReadableStream(value);
+  }
+  return createObservable(({ next, complete, addTeardown }) => {
+    next(value);
+    const timer = setTimeout(() => {
+      complete();
+    });
+    addTeardown(() => {
+      clearTimeout(timer);
+    });
+  });
+};
+
 const writeNodeResponse = async (
   responseStream,
   { status, statusText, headers, body, bodyEncoding },
   { signal, ignoreBody, onAbort, onError, onHeadersSent, onEnd } = {},
 ) => {
-  body = await body;
-  const bodyMethods = normalizeBodyMethods(body);
+  const isNetSocket = responseStream instanceof Socket;
+  if (
+    body &&
+    body.isObservableBody &&
+    headers["connection"] === undefined &&
+    headers["content-length"] === undefined
+  ) {
+    headers["transfer-encoding"] = "chunked";
+  }
+  // if (body && headers["content-length"] === undefined) {
+  //   headers["transfer-encoding"] = "chunked";
+  // }
+
+  const bodyObservableType = getObservableValueType(body);
+  const destroyBody = () => {
+    if (bodyObservableType === "file_handle") {
+      body.close();
+      return;
+    }
+    if (bodyObservableType === "node_stream") {
+      body.destroy();
+      return;
+    }
+    if (bodyObservableType === "node_web_stream") {
+      body.cancel();
+      return;
+    }
+  };
 
   if (signal.aborted) {
-    bodyMethods.destroy();
+    destroyBody();
     responseStream.destroy();
     onAbort();
     return;
@@ -2269,43 +2275,50 @@ const writeNodeResponse = async (
 
   if (ignoreBody) {
     onEnd();
-    bodyMethods.destroy();
+    destroyBody();
     responseStream.end();
     return;
   }
 
-  if (bodyEncoding) {
+  if (bodyEncoding && !isNetSocket) {
     responseStream.setEncoding(bodyEncoding);
   }
 
   await new Promise((resolve) => {
-    const observable = bodyMethods.asObservable();
-    const subscription = observable.subscribe({
-      next: (data) => {
-        try {
-          responseStream.write(data);
-        } catch (e) {
-          // Something inside Node.js sometimes puts stream
-          // in a state where .write() throw despites nodeResponse.destroyed
-          // being undefined and "close" event not being emitted.
-          // I have tested if we are the one calling destroy
-          // (I have commented every .destroy() call)
-          // but issue still occurs
-          // For the record it's "hard" to reproduce but can be by running
-          // a lot of tests against a browser in the context of @jsenv/core testing
-          if (e.code === "ERR_HTTP2_INVALID_STREAM") {
-            return;
-          }
-          responseStream.emit("error", e);
-        }
-      },
-      error: (value) => {
-        responseStream.emit("error", value);
-      },
-      complete: () => {
-        responseStream.end();
-      },
+    const observable = observableFromValue(body);
+    const abortController = new AbortController();
+    signal.addEventListener("abort", () => {
+      abortController.abort();
     });
+    observable.subscribe(
+      {
+        next: (data) => {
+          try {
+            responseStream.write(data);
+          } catch (e) {
+            // Something inside Node.js sometimes puts stream
+            // in a state where .write() throw despites nodeResponse.destroyed
+            // being undefined and "close" event not being emitted.
+            // I have tested if we are the one calling destroy
+            // (I have commented every .destroy() call)
+            // but issue still occurs
+            // For the record it's "hard" to reproduce but can be by running
+            // a lot of tests against a browser in the context of @jsenv/core testing
+            if (e.code === "ERR_HTTP2_INVALID_STREAM") {
+              return;
+            }
+            responseStream.emit("error", e);
+          }
+        },
+        error: (value) => {
+          responseStream.emit("error", value);
+        },
+        complete: () => {
+          responseStream.end();
+        },
+      },
+      { signal: abortController.signal },
+    );
 
     raceCallbacks(
       {
@@ -2337,13 +2350,13 @@ const writeNodeResponse = async (
       (winner) => {
         const raceEffects = {
           abort: () => {
-            subscription.unsubscribe();
+            abortController.abort();
             responseStream.destroy();
             onAbort();
             resolve();
           },
           error: (error) => {
-            subscription.unsubscribe();
+            abortController.abort();
             responseStream.destroy();
             onError(error);
             resolve();
@@ -2354,7 +2367,7 @@ const writeNodeResponse = async (
             // it may happen in case of server sent event
             // where body is kept open to write to client
             // and the browser is reloaded or closed for instance
-            subscription.unsubscribe();
+            abortController.abort();
             responseStream.destroy();
             onAbort();
             resolve();
@@ -2374,6 +2387,7 @@ const writeHead = (
   responseStream,
   { status, statusText, headers, onHeadersSent },
 ) => {
+  const responseIsNetSocket = responseStream instanceof Socket;
   const responseIsHttp2ServerResponse =
     responseStream instanceof Http2ServerResponse;
   const responseIsServerHttp2Stream =
@@ -2384,7 +2398,7 @@ const writeHead = (
       responseIsHttp2ServerResponse || responseIsServerHttp2Stream,
   });
   if (statusText === undefined) {
-    statusText = statusTextFromStatus$1(status);
+    statusText = statusTextFromStatus(status);
   } else {
     statusText = statusText.replace(/\n/g, "");
   }
@@ -2407,6 +2421,16 @@ const writeHead = (
     onHeadersSent({ nodeHeaders, status, statusText });
     return;
   }
+  if (responseIsNetSocket) {
+    const headersString = Object.keys(nodeHeaders)
+      .map((h) => `${h}: ${nodeHeaders[h]}`)
+      .join("\r\n");
+    responseStream.write(
+      `HTTP/1.1 ${status} ${statusText}\r\n${headersString}\r\n\r\n`,
+    );
+    onHeadersSent({ nodeHeaders, status, statusText });
+    return;
+  }
 
   try {
     responseStream.writeHead(status, statusText, nodeHeaders);
@@ -2424,7 +2448,7 @@ ${statusText}`);
   onHeadersSent({ nodeHeaders, status, statusText });
 };
 
-const statusTextFromStatus$1 = (status) =>
+const statusTextFromStatus = (status) =>
   http.STATUS_CODES[status] || "not specified";
 
 const headersToNodeHeaders = (headers, { ignoreConnectionHeader }) => {
@@ -2469,7 +2493,7 @@ const applyCaseSensitiveComposition = (
 ) => {
   if (strict) {
     const composed = {};
-    Object.keys(keysComposition).forEach((key) => {
+    for (const key of Object.keys(keysComposition)) {
       composed[key] = composeValueAtKey({
         firstObject,
         secondObject,
@@ -2478,7 +2502,7 @@ const applyCaseSensitiveComposition = (
         firstKey: keyExistsIn(key, firstObject) ? key : null,
         secondKey: keyExistsIn(key, secondObject) ? key : null,
       });
-    });
+    }
     return composed;
   }
 
@@ -2584,19 +2608,38 @@ const keyExistsIn = (key, object) => {
 };
 
 const composeTwoHeaders = (firstHeaders, secondHeaders) => {
+  if (firstHeaders && typeof firstHeaders.entries === "function") {
+    firstHeaders = Object.fromEntries(firstHeaders.entries());
+  }
+  if (secondHeaders && typeof secondHeaders.entries === "function") {
+    secondHeaders = Object.fromEntries(secondHeaders.entries());
+  }
   return composeTwoObjects(firstHeaders, secondHeaders, {
     keysComposition: HEADER_NAMES_COMPOSITION,
     forceLowerCase: true,
   });
 };
 
-const composeHeaderValues = (value, nextValue) => {
+const composeTwoHeaderValues = (name, leftValue, rightValue) => {
+  if (HEADER_NAMES_COMPOSITION[name]) {
+    return HEADER_NAMES_COMPOSITION[name](leftValue, rightValue);
+  }
+  return rightValue;
+};
+
+const composeTwoCommaSeparatedValues = (value, nextValue) => {
+  if (!value) {
+    return nextValue;
+  }
+  if (!nextValue) {
+    return value;
+  }
   const currentValues = value
     .split(", ")
-    .map((part) => part.trim().toLowercase());
+    .map((part) => part.trim().toLowerCase());
   const nextValues = nextValue
     .split(", ")
-    .map((part) => part.trim().toLowercase());
+    .map((part) => part.trim().toLowerCase());
   for (const nextValue of nextValues) {
     if (!currentValues.includes(nextValue)) {
       currentValues.push(nextValue);
@@ -2606,20 +2649,20 @@ const composeHeaderValues = (value, nextValue) => {
 };
 
 const HEADER_NAMES_COMPOSITION = {
-  "accept": composeHeaderValues,
-  "accept-charset": composeHeaderValues,
-  "accept-language": composeHeaderValues,
-  "access-control-allow-headers": composeHeaderValues,
-  "access-control-allow-methods": composeHeaderValues,
-  "access-control-allow-origin": composeHeaderValues,
-  "accept-patch": composeHeaderValues,
-  "accept-post": composeHeaderValues,
-  "allow": composeHeaderValues,
+  "accept": composeTwoCommaSeparatedValues,
+  "accept-charset": composeTwoCommaSeparatedValues,
+  "accept-language": composeTwoCommaSeparatedValues,
+  "access-control-allow-headers": composeTwoCommaSeparatedValues,
+  "access-control-allow-methods": composeTwoCommaSeparatedValues,
+  "access-control-allow-origin": composeTwoCommaSeparatedValues,
+  "accept-patch": composeTwoCommaSeparatedValues,
+  "accept-post": composeTwoCommaSeparatedValues,
+  "allow": composeTwoCommaSeparatedValues,
   // https://www.w3.org/TR/server-timing/
   // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing
-  "server-timing": composeHeaderValues,
+  "server-timing": composeTwoCommaSeparatedValues,
   // 'content-type', // https://github.com/ninenines/cowboy/issues/1230
-  "vary": composeHeaderValues,
+  "vary": composeTwoCommaSeparatedValues,
 };
 
 const listen = async ({
@@ -2816,7 +2859,23 @@ const listenServerConnectionError = (
   };
 };
 
+const asResponseProperties = (value) => {
+  if (value && value instanceof Response) {
+    return {
+      status: value.status,
+      statusText: value.statusText,
+      headers: Object.fromEntries(value.headers),
+      body: value.body,
+      bodyEncoding: value.bodyEncoding,
+    };
+  }
+  return value;
+};
+
 const composeTwoResponses = (firstResponse, secondResponse) => {
+  firstResponse = asResponseProperties(firstResponse);
+  secondResponse = asResponseProperties(secondResponse);
+
   return composeTwoObjects(firstResponse, secondResponse, {
     keysComposition: RESPONSE_KEYS_COMPOSITION,
     strict: true,
@@ -2830,9 +2889,6 @@ const RESPONSE_KEYS_COMPOSITION = {
   headers: composeTwoHeaders,
   body: (prevBody, body) => body,
   bodyEncoding: (prevEncoding, encoding) => encoding,
-  timing: (prevTiming, timing) => {
-    return { ...prevTiming, ...timing };
-  },
 };
 
 /**
@@ -3160,59 +3216,158 @@ const trackHttp1ServerPendingRequests = (nodeServer) => {
   return { stop };
 };
 
-const routeInspectorHtmlFileUrl = import.meta.resolve(
-  "./html/route_inspector.html",
-);
+const pathnameToExtension = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1 ? pathname : pathname.slice(slashLastIndex + 1);
+  if (filename.match(/@([0-9])+(\.[0-9]+)?(\.[0-9]+)?$/)) {
+    return "";
+  }
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return "";
+  }
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex);
+  return extension;
+};
 
-const jsenvServiceRouting = (router) => {
-  router.add({
-    endpoint: "GET /__inspect__/routes",
-    availableContentTypes: ["text/html"],
-    response: () => {
-      const inspectorHtml = readFileSync(
-        new URL(routeInspectorHtmlFileUrl),
-        "utf8",
-      );
-      return new Response(inspectorHtml, {
-        headers: { "content-type": "html" },
-      });
-    },
-  });
-  router.add({
-    endpoint: "GET /__inspect__/routes",
-    availableContentTypes: ["application/json"],
-    response: () => {
-      const routeJSON = router.inspect();
-      return Response.json(routeJSON);
-    },
-  });
-  const headersToInjectMap = new Map();
+const resourceToPathname = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?");
+  if (searchSeparatorIndex > -1) {
+    return resource.slice(0, searchSeparatorIndex);
+  }
+  const hashIndex = resource.indexOf("#");
+  if (hashIndex > -1) {
+    return resource.slice(0, hashIndex);
+  }
+  return resource;
+};
 
-  return {
-    name: "jsenv:routing",
-    handleRequest: async (request, { websocket }) => {
-      const response = await router.match(request, {
-        websocket,
-        injectResponseHeader: (name, value) => {
-          const headers = headersToInjectMap.get(request);
-          if (headers) {
-            headers[name] = value;
-          } else {
-            headersToInjectMap.set(request, { [name]: value });
-          }
-        },
-      });
-      request.signal.addEventListener("abort", () => {
-        headersToInjectMap.delete(request);
-      });
-      return response;
-    },
-    injectResponseHeaders: (response, { request }) => {
-      const headers = headersToInjectMap.get(request);
-      headersToInjectMap.delete(request);
-      return headers;
-    },
-  };
+const resourceToExtension = (resource) => {
+  const pathname = resourceToPathname(resource);
+  return pathnameToExtension(pathname);
+};
+
+const getCommonPathname = (pathname, otherPathname) => {
+  if (pathname === otherPathname) {
+    return pathname;
+  }
+  let commonPart = "";
+  let commonPathname = "";
+  let i = 0;
+  const length = pathname.length;
+  const otherLength = otherPathname.length;
+  while (i < length) {
+    const char = pathname.charAt(i);
+    const otherChar = otherPathname.charAt(i);
+    i++;
+    if (char === otherChar) {
+      if (char === "/") {
+        commonPart += "/";
+        commonPathname += commonPart;
+        commonPart = "";
+      } else {
+        commonPart += char;
+      }
+    } else {
+      if (char === "/" && i - 1 === otherLength) {
+        commonPart += "/";
+        commonPathname += commonPart;
+      }
+      return commonPathname;
+    }
+  }
+  if (length === otherLength) {
+    commonPathname += commonPart;
+  } else if (otherPathname.charAt(i) === "/") {
+    commonPathname += commonPart;
+  }
+  return commonPathname;
+};
+
+const urlToRelativeUrl = (
+  url,
+  baseUrl,
+  { preferRelativeNotation } = {},
+) => {
+  const urlObject = new URL(url);
+  const baseUrlObject = new URL(baseUrl);
+
+  if (urlObject.protocol !== baseUrlObject.protocol) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+
+  if (
+    urlObject.username !== baseUrlObject.username ||
+    urlObject.password !== baseUrlObject.password ||
+    urlObject.host !== baseUrlObject.host
+  ) {
+    const afterUrlScheme = String(url).slice(urlObject.protocol.length);
+    return afterUrlScheme;
+  }
+
+  const { pathname, hash, search } = urlObject;
+  if (pathname === "/") {
+    const baseUrlResourceWithoutLeadingSlash = baseUrlObject.pathname.slice(1);
+    return baseUrlResourceWithoutLeadingSlash;
+  }
+
+  const basePathname = baseUrlObject.pathname;
+  const commonPathname = getCommonPathname(pathname, basePathname);
+  if (!commonPathname) {
+    const urlAsString = String(url);
+    return urlAsString;
+  }
+  const specificPathname = pathname.slice(commonPathname.length);
+  const baseSpecificPathname = basePathname.slice(commonPathname.length);
+  if (baseSpecificPathname.includes("/")) {
+    const baseSpecificParentPathname =
+      pathnameToParentPathname(baseSpecificPathname);
+    const relativeDirectoriesNotation = baseSpecificParentPathname.replace(
+      /.*?\//g,
+      "../",
+    );
+    const relativeUrl = `${relativeDirectoriesNotation}${specificPathname}${search}${hash}`;
+    return relativeUrl;
+  }
+
+  const relativeUrl = `${specificPathname}${search}${hash}`;
+  return preferRelativeNotation ? `./${relativeUrl}` : relativeUrl;
+};
+
+const pathnameToParentPathname = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  if (slashLastIndex === -1) {
+    return "/";
+  }
+  return pathname.slice(0, slashLastIndex + 1);
+};
+
+const urlToFileSystemPath = (url) => {
+  const urlObject = new URL(url);
+  let { origin, pathname, hash } = urlObject;
+  if (urlObject.protocol === "file:") {
+    origin = "file://";
+  }
+  pathname = pathname
+    .split("/")
+    .map((part) => {
+      return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
+    })
+    .join("/");
+  if (hash) {
+    pathname += `%23${encodeURIComponent(hash.slice(1))}`;
+  }
+  const urlString = `${origin}${pathname}`;
+  const fileSystemPath = fileURLToPath(urlString);
+  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
+    // remove trailing / so that nodejs path becomes predictable otherwise it logs
+    // the trailing slash on linux but does not on windows
+    return fileSystemPath.slice(0, -1);
+  }
+  return fileSystemPath;
 };
 
 const pickAcceptedContent = ({
@@ -3435,21 +3590,75 @@ const decomposeContentType = (fullType) => {
   return [type, subtype];
 };
 
-const replacePlaceholdersInHtml = (html, replacers) => {
-  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
-    const replacer = replacers[name];
-    if (replacer === undefined) {
-      return match;
-    }
-    if (typeof replacer === "function") {
-      return replacer();
-    }
-    return replacer;
+const pickContentVersion = (request, availableVersions) => {
+  const { headers = {} } = request;
+  const requestAcceptVersionHeader = headers["accept-version"];
+  if (!requestAcceptVersionHeader) {
+    return null;
+  }
+
+  const versionsAccepted = parseAcceptVersionHeader(requestAcceptVersionHeader);
+  return pickAcceptedContent({
+    accepteds: versionsAccepted,
+    availables: availableVersions,
+    getAcceptanceScore: getVersionAcceptanceScore,
   });
 };
 
-const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./html/4xx.html");
-const endpointInspectorUrl = `/__inspect__/routes`;
+const parseAcceptVersionHeader = (acceptVersionHeaderString) => {
+  const acceptVersionHeader = parseMultipleHeader(acceptVersionHeaderString, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const versionsAccepted = [];
+  for (const key of Object.keys(acceptVersionHeader)) {
+    const { q = 1 } = acceptVersionHeader[key];
+    const value = key;
+    versionsAccepted.push({
+      value,
+      quality: q,
+    });
+  }
+  versionsAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return versionsAccepted;
+};
+
+const getVersionAcceptanceScore = ({ value, quality }, availableVersion) => {
+  if (value === "*") {
+    return quality;
+  }
+
+  if (typeof availableVersion === "function") {
+    if (availableVersion(value)) {
+      return quality;
+    }
+    return -1;
+  }
+
+  if (typeof availableVersion === "number") {
+    availableVersion = String(availableVersion);
+  }
+
+  if (value === availableVersion) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const lookupPackageDirectory = (currentUrl) => {
+  return findAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
+    const potentialPackageJsonFileUrl = `${ancestorDirectoryUrl}package.json`;
+    return existsSync(new URL(potentialPackageJsonFileUrl));
+  });
+};
+
+const routeInspectorUrl = `/.internal/route_inspector`;
 
 const HTTP_METHODS = [
   "OPTIONS",
@@ -3461,7 +3670,10 @@ const HTTP_METHODS = [
   "DELETE",
 ];
 
-const createRouter = () => {
+const createRouter = (
+  routeDescriptionArray,
+  { optionsFallback } = {},
+) => {
   const routeSet = new Set();
 
   const constructAvailableEndpoints = () => {
@@ -3500,39 +3712,38 @@ const createRouter = () => {
     }
     return availableEndpoints;
   };
-
   const createResourceOptions = () => {
-    const acceptedContentTypeSet = new Set();
-    const postAcceptedContentTypeSet = new Set();
-    const patchAcceptedContentTypeSet = new Set();
+    const acceptedMediaTypeSet = new Set();
+    const postAcceptedMediaTypeSet = new Set();
+    const patchAcceptedMediaTypeSet = new Set();
     const allowedMethodSet = new Set();
     return {
       onMethodAllowed: (route, method) => {
         allowedMethodSet.add(method);
-        for (const acceptedContentType of route.acceptedContentTypes) {
-          acceptedContentTypeSet.add(acceptedContentType);
+        for (const acceptedMediaType of route.acceptedMediaTypes) {
+          acceptedMediaTypeSet.add(acceptedMediaType);
           if (method === "POST") {
-            postAcceptedContentTypeSet.add(acceptedContentType);
+            postAcceptedMediaTypeSet.add(acceptedMediaType);
           }
           if (method === "PATCH") {
-            patchAcceptedContentTypeSet.add(acceptedContentType);
+            patchAcceptedMediaTypeSet.add(acceptedMediaType);
           }
         }
       },
       asResponseHeaders: () => {
         const headers = {};
-        if (acceptedContentTypeSet.size) {
-          headers["accept"] = Array.from(acceptedContentTypeSet).join(", ");
+        if (acceptedMediaTypeSet.size) {
+          headers["accept"] = Array.from(acceptedMediaTypeSet).join(", ");
         }
-        if (postAcceptedContentTypeSet.size) {
-          headers["accept-post"] = Array.from(postAcceptedContentTypeSet).join(
+        if (postAcceptedMediaTypeSet.size) {
+          headers["accept-post"] = Array.from(postAcceptedMediaTypeSet).join(
             ", ",
           );
         }
-        if (patchAcceptedContentTypeSet.size) {
-          headers["accept-patch"] = Array.from(
-            patchAcceptedContentTypeSet,
-          ).join(", ");
+        if (patchAcceptedMediaTypeSet.size) {
+          headers["accept-patch"] = Array.from(patchAcceptedMediaTypeSet).join(
+            ", ",
+          );
         }
         if (allowedMethodSet.size) {
           headers["allow"] = Array.from(allowedMethodSet).join(", ");
@@ -3541,9 +3752,9 @@ const createRouter = () => {
       },
       toJSON: () => {
         return {
-          acceptedContentTypes: Array.from(acceptedContentTypeSet),
-          postAcceptedContentTypes: Array.from(postAcceptedContentTypeSet),
-          patchAcceptedContentTypes: Array.from(patchAcceptedContentTypeSet),
+          acceptedMediaTypes: Array.from(acceptedMediaTypeSet),
+          postAcceptedMediaTypes: Array.from(postAcceptedMediaTypeSet),
+          patchAcceptedMediaTypes: Array.from(patchAcceptedMediaTypeSet),
           allowedMethods: Array.from(allowedMethodSet),
         };
       },
@@ -3562,9 +3773,20 @@ const createRouter = () => {
       if (!route.matchResource(request.resource)) {
         continue;
       }
-      forEachMethodAllowed(route, (methodAllowed) => {
-        resourceOptions.onMethodAllowed(route, methodAllowed);
-      });
+      const accessControlRequestMethodHeader =
+        request.headers["access-control-request-method"];
+      if (accessControlRequestMethodHeader) {
+        if (route.matchMethod(accessControlRequestMethodHeader)) {
+          resourceOptions.onMethodAllowed(
+            route,
+            accessControlRequestMethodHeader,
+          );
+        }
+      } else {
+        forEachMethodAllowed(route, (methodAllowed) => {
+          resourceOptions.onMethodAllowed(route, methodAllowed);
+        });
+      }
     }
     return resourceOptions;
   };
@@ -3590,113 +3812,98 @@ const createRouter = () => {
     };
   };
 
-  const router = {
-    hasSomeWebsocketRoute: false,
-  };
-
-  /**
-   * Adds a route to the router.
-   *
-   * @param {Object} params - Route configuration object
-   * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
-   * @param {Object} [params.headers] - Optional headers pattern to match
-   * @param {Array<string>} [params.availableContentTypes=[]] - Content types this route can produce
-   * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
-   * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
-   * @param {Array<string>} [params.acceptedContentTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
-   * @param {Function} params.response - Function to generate response for matching requests
-   * @throws {TypeError} If endpoint is not a string
-   * @returns {void}
-   */
-  const add = ({
-    endpoint,
-    headers,
-    availableContentTypes = [],
-    availableLanguages = [],
-    availableEncodings = [],
-    acceptedContentTypes = [], // useful only for POST/PATCH/PUT
-    response,
-    websocket,
-  }) => {
-    if (!endpoint || typeof endpoint !== "string") {
-      throw new TypeError(`endpoint must be a string, received ${endpoint}`);
-    }
-    const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
-    if (method !== "*" && !HTTP_METHODS.includes(method)) {
-      throw new TypeError(`Invalid HTTP method: ${method}`);
-    }
-    if (resource[0] !== "/" && resource[0] !== "*") {
-      throw new TypeError(`Resource must start with /, received ${resource}`);
-    }
-    if (websocket) {
-      router.hasSomeWebsocketRoute = true;
-    }
-    const resourcePattern = createResourcePattern(resource);
-    const headersPattern = headers ? createHeadersPattern(headers) : null;
-
-    const route = {
-      method,
-      resource,
-      availableContentTypes,
-      availableLanguages,
-      availableEncodings,
-      acceptedContentTypes,
-      matchMethod:
-        method === "*"
-          ? () => true
-          : (requestMethod) => requestMethod === method,
-      matchResource:
-        resource === "*"
-          ? () => true
-          : (requestResource) => {
-              return resourcePattern.match(requestResource);
-            },
-      matchHeaders:
-        headers === undefined
-          ? () => true
-          : (requestHeaders) => {
-              return headersPattern.match(requestHeaders);
-            },
-      response,
-      websocket,
-      toString: () => {
-        return `${method} ${resource}`;
-      },
-      toJSON: () => {
-        return {
-          method,
-          resource,
-          availableContentTypes,
-          availableLanguages,
-          availableEncodings,
-          acceptedContentTypes,
-        };
-      },
-      resourcePattern,
-    };
+  const router = {};
+  for (const routeDescription of routeDescriptionArray) {
+    const route = createRoute(routeDescription);
     routeSet.add(route);
-  };
-  const match = async (request, { injectResponseHeader } = {}) => {
-    const allowedMethods = [];
+  }
+
+  const match = async (request, fetchSecondArg) => {
+    fetchSecondArg.router = router;
+    const wouldHaveMatched = {
+      // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
+      methodSet: new Set(),
+      requestMediaTypeSet: new Set(),
+      responseMediaTypeSet: new Set(),
+      responseLanguageSet: new Set(),
+      responseVersionSet: new Set(),
+      responseEncodingSet: new Set(),
+      upgrade: false,
+    };
+
+    let currentService;
+    let currentRoutingTiming;
+    const onRouteMatchStart = (route) => {
+      if (route.service === currentService) {
+        return;
+      }
+      onRouteGroupEnd();
+      currentRoutingTiming = fetchSecondArg.timing(
+        route.service
+          ? `${route.service.name.replace("jsenv:", "")}.routing`
+          : "routing",
+      );
+      currentService = route.service;
+    };
+    const onRouteGroupEnd = () => {
+      if (currentRoutingTiming) {
+        currentRoutingTiming.end();
+      }
+    };
+    const onRouteMatch = (route) => {
+      onRouteGroupEnd();
+    };
+
+    const checkResponseContentHeader = (route, responseHeaders, name) => {
+      const routePropertyName = {
+        type: "availableMediaTypes",
+        language: "availableLanguages",
+        version: "availableVersions",
+        encoding: "availableEncodings",
+      }[name];
+      const availableValues = route[routePropertyName];
+      if (availableValues.length === 0) {
+        return;
+      }
+      const responseHeaderName = {
+        type: "content-type",
+        language: "content-language",
+        version: "content-version",
+        encoding: "content-encoding",
+      }[name];
+      const responseHeaderValue = responseHeaders[responseHeaderName];
+      if (!responseHeaderValue) {
+        request.logger.warn(
+          `The response header ${responseHeaderName} is missing.
+It should be set to one of route.${routePropertyName}: ${availableValues.join(", ")}.`,
+        );
+        return;
+      }
+      if (!availableValues.includes(responseHeaderValue)) {
+        request.logger.warn(
+          `The value "${responseHeaderValue}" found in response header ${responseHeaderName} is strange.
+It should be should be one of route.${routePropertyName}: ${availableValues.join(", ")}.`,
+        );
+        return;
+      }
+    };
+    const onResponseHeaders = (request, route, responseHeaders) => {
+      checkResponseContentHeader(route, responseHeaders, "type");
+      checkResponseContentHeader(route, responseHeaders, "language");
+      checkResponseContentHeader(route, responseHeaders, "version");
+      checkResponseContentHeader(route, responseHeaders, "encoding");
+    };
+
     for (const route of routeSet) {
-      if (route.websocket && request.headers["upgrade"] !== "websocket") {
-        continue;
-      }
-      if (request.headers["upgrade"] === "websocket" && !route.websocket) {
-        continue;
-      }
+      onRouteMatchStart(route);
       const resourceMatchResult = route.matchResource(request.resource);
       if (!resourceMatchResult) {
         continue;
       }
       if (!route.matchMethod(request.method)) {
-        // we can already collect the fact resource has matched
-        // in case nothing matches we can produce a response with Allow: GET, POST, PUT for example
-        allowedMethods.push(route.method);
-        continue;
-      }
-      const headersMatchResult = route.matchHeaders(request.headers);
-      if (!headersMatchResult) {
+        if (!route.isFallback) {
+          wouldHaveMatched.methodSet.add(route.method);
+        }
         continue;
       }
       if (
@@ -3704,94 +3911,191 @@ const createRouter = () => {
         request.method === "PATCH" ||
         request.method === "PUT"
       ) {
-        const { acceptedContentTypes } = route;
+        const { acceptedMediaTypes } = route;
         if (
-          acceptedContentTypes.length &&
-          !isRequestBodyContentTypeSupported(request, { acceptedContentTypes })
+          acceptedMediaTypes.length &&
+          !isRequestBodyMediaTypeSupported(request, { acceptedMediaTypes })
         ) {
-          return createUnsupportedMediaTypeResponse(request, {
-            acceptedContentTypes,
-          });
+          for (const acceptedMediaType of acceptedMediaTypes) {
+            wouldHaveMatched.requestMediaTypeSet.add(acceptedMediaType);
+          }
+          continue;
         }
       }
-
+      const headersMatchResult = route.matchHeaders(request.headers);
+      if (!headersMatchResult) {
+        continue;
+      }
+      if (route.isForWebSocket && request.headers["upgrade"] !== "websocket") {
+        wouldHaveMatched.upgrade = true;
+        continue;
+      }
       // now we are "good", let's try to generate a response
-      // now put negotiated stuff at the end
       const contentNegotiationResult = {};
       {
-        const { availableContentTypes } = route;
-        if (availableContentTypes.length) {
-          const contentTypeNegotiated = pickContentType(
-            request,
-            availableContentTypes,
-          );
-          contentNegotiationResult.contentType = contentTypeNegotiated;
+        // when content nego fails
+        // we will check the remaining accept headers to properly inform client of all the things are failing
+        // Example:
+        // client says "I want text in french"
+        // but server only provide json in english
+        // we want to tell client both text and french are not available
+        let hasFailed = false;
+        const { availableMediaTypes } = route;
+        if (availableMediaTypes.length) {
+          fetchSecondArg.injectResponseHeader("vary", "accept");
+          if (request.headers["accept"]) {
+            const mediaTypeNegotiated = pickContentType(
+              request,
+              availableMediaTypes,
+            );
+            if (!mediaTypeNegotiated) {
+              for (const availableMediaType of availableMediaTypes) {
+                wouldHaveMatched.responseMediaTypeSet.add(availableMediaType);
+              }
+              hasFailed = true;
+            }
+            contentNegotiationResult.mediaType = mediaTypeNegotiated;
+          } else {
+            contentNegotiationResult.mediaType = availableMediaTypes[0];
+          }
         }
         const { availableLanguages } = route;
         if (availableLanguages.length) {
-          const contentLanguageNegotiated = pickContentLanguage(
-            request,
-            availableContentTypes,
-          );
-          contentNegotiationResult.contentLanguage = contentLanguageNegotiated;
+          fetchSecondArg.injectResponseHeader("vary", "accept-language");
+          if (request.headers["accept-language"]) {
+            const languageNegotiated = pickContentLanguage(
+              request,
+              availableLanguages,
+            );
+            if (!languageNegotiated) {
+              for (const availableLanguage of availableLanguages) {
+                wouldHaveMatched.responseLanguageSet.add(availableLanguage);
+              }
+              hasFailed = true;
+            }
+            contentNegotiationResult.language = languageNegotiated;
+          } else {
+            contentNegotiationResult.language = availableLanguages[0];
+          }
+        }
+        const { availableVersions } = route;
+        if (availableVersions.length) {
+          fetchSecondArg.injectResponseHeader("vary", "accept-version");
+          if (request.headers["accept-version"]) {
+            const versionNegotiated = pickContentVersion(
+              request,
+              availableVersions,
+            );
+            if (!versionNegotiated) {
+              for (const availableVersion of availableVersions) {
+                wouldHaveMatched.responseVersionSet.add(availableVersion);
+              }
+              hasFailed = true;
+            }
+            contentNegotiationResult.version = versionNegotiated;
+          } else {
+            contentNegotiationResult.version = availableVersions[0];
+          }
         }
         const { availableEncodings } = route;
         if (availableEncodings.length) {
-          const contentEncodingNegotiated = pickContentEncoding(
-            request,
-            availableEncodings,
-          );
-          contentNegotiationResult.contentEncoding = contentEncodingNegotiated;
+          fetchSecondArg.injectResponseHeader("vary", "accept-encoding");
+          if (request.headers["accept-encoding"]) {
+            const encodingNegotiated = pickContentEncoding(
+              request,
+              availableEncodings,
+            );
+            if (!encodingNegotiated) {
+              for (const availableEncoding of availableEncodings) {
+                wouldHaveMatched.responseEncodingSet.add(availableEncoding);
+              }
+              hasFailed = true;
+            }
+            contentNegotiationResult.encoding = encodingNegotiated;
+          } else {
+            contentNegotiationResult.encoding = availableEncodings[0];
+          }
+        }
+        if (hasFailed) {
+          continue;
         }
       }
       const { named, stars = [] } = PATTERN.composeTwoMatchResults(
         resourceMatchResult,
         headersMatchResult,
       );
-      let responseReturnValue = route.response(
-        request,
-        {
-          ...named,
-          contentNegotiation: contentNegotiationResult,
-        },
-        ...stars,
-      );
+      Object.assign(request.params, named, stars);
+      fetchSecondArg.contentNegotiation = contentNegotiationResult;
+      let fetchReturnValue = route.fetch(request, fetchSecondArg);
       if (
-        responseReturnValue !== null &&
-        typeof responseReturnValue === "object" &&
-        typeof responseReturnValue.then === "function"
+        fetchReturnValue !== null &&
+        typeof fetchReturnValue === "object" &&
+        typeof fetchReturnValue.then === "function"
       ) {
-        responseReturnValue = await responseReturnValue;
+        fetchReturnValue = await fetchReturnValue;
       }
-      // he decided not to handle in the end
-      if (responseReturnValue === null || responseReturnValue === undefined) {
+      // route decided not to handle in the end
+      if (fetchReturnValue === null || fetchReturnValue === undefined) {
         continue;
       }
-      if (contentNegotiationResult.contentType) {
-        injectResponseHeader("vary", "accept");
+      onRouteMatch();
+      if (fetchReturnValue instanceof Response) {
+        const headers = Object.fromEntries(fetchReturnValue.headers);
+        onResponseHeaders(request, route, headers);
+        return {
+          status: fetchReturnValue.status,
+          statusText: fetchReturnValue.statusText,
+          headers,
+          body: fetchReturnValue.body,
+        };
       }
-      if (contentNegotiationResult.contentLanguage) {
-        injectResponseHeader("vary", "accept-language");
+      if (fetchReturnValue !== null && typeof fetchReturnValue === "object") {
+        const headers = fetchReturnValue.headers || {};
+        onResponseHeaders(request, route, headers);
+        return {
+          status: fetchReturnValue.status || 404,
+          statusText: fetchReturnValue.statusText,
+          statusMessage: fetchReturnValue.statusMessage,
+          headers,
+          body: fetchReturnValue.body,
+        };
       }
-      if (contentNegotiationResult.contentEncoding) {
-        injectResponseHeader("vary", "accept-encoding");
-      }
-      return responseReturnValue;
-    }
-    if (request.method === "OPTIONS") {
-      const isForAnyRoute = request.resource === "*";
-      if (isForAnyRoute) {
-        const serverOPTIONS = inferServerOPTIONS();
-        return createServerResourceOptionsResponse(request, serverOPTIONS);
-      }
-      const resourceOPTIONS = inferResourceOPTIONS(request);
-      return createResourceOptionsResponse(request, resourceOPTIONS);
+      throw new TypeError(
+        `response must be a Response, or an Object, received ${fetchReturnValue}`,
+      );
     }
     // nothing has matched fully
     // if nothing matches at all we'll send 404
     // but if url matched but METHOD was not supported we send 405
-    if (allowedMethods.length) {
-      return createMethodNotAllowedResponse(request, { allowedMethods });
+    if (wouldHaveMatched.methodSet.size) {
+      return createMethodNotAllowedResponse(request, {
+        allowedMethods: [...wouldHaveMatched.methodSet],
+      });
+    }
+    if (wouldHaveMatched.requestMediaTypeSet.size) {
+      return createUnsupportedMediaTypeResponse(request, {
+        acceptedMediaTypes: [...wouldHaveMatched.requestMediaTypeSet],
+      });
+    }
+    if (
+      wouldHaveMatched.responseMediaTypeSet.size ||
+      wouldHaveMatched.responseLanguageSet.size ||
+      wouldHaveMatched.responseVersionSet.size ||
+      wouldHaveMatched.responseEncodingSet.size
+    ) {
+      return createNotAcceptableResponse(request, {
+        availableMediaTypes: [...wouldHaveMatched.responseMediaTypeSet],
+        availableLanguages: [...wouldHaveMatched.responseLanguageSet],
+        availableVersions: [...wouldHaveMatched.responseVersionSet],
+        availableEncodings: [...wouldHaveMatched.responseEncodingSet],
+      });
+    }
+    if (wouldHaveMatched.upgrade) {
+      return {
+        status: 426,
+        statusText: "Upgrade Required",
+        statusMessage: `The request requires the upgrade to a webSocket connection`,
+      };
     }
     constructAvailableEndpoints();
     return createRouteNotFoundResponse(request);
@@ -3805,24 +4109,191 @@ const createRouter = () => {
     return data;
   };
 
+  if (optionsFallback) {
+    const optionRouteFallback = createRoute({
+      endpoint: "OPTIONS *",
+      description:
+        "Auto generate an OPTIONS response about a resource or the whole server.",
+      declarationSource: import.meta.url,
+      fetch: (request, helpers) => {
+        const isForAnyRoute = request.resource === "*";
+        if (isForAnyRoute) {
+          const serverOPTIONS = inferServerOPTIONS();
+          return createServerResourceOptionsResponse(request, serverOPTIONS);
+        }
+        const resourceOPTIONS = inferResourceOPTIONS(request);
+        return createResourceOptionsResponse(request, resourceOPTIONS);
+      },
+      isFallback: true,
+    });
+    routeSet.add(optionRouteFallback);
+  }
+
   Object.assign(router, {
-    add,
     match,
     inspect,
   });
   return router;
 };
 
-const isRequestBodyContentTypeSupported = (
-  request,
-  { acceptedContentTypes },
-) => {
+/**
+ * Adds a route to the router.
+ *
+ * @param {Object} params - Route configuration object
+ * @param {string} params.endpoint - String in format "METHOD /resource/path" (e.g. "GET /users/:id")
+ * @param {Object} [params.headers] - Optional headers pattern to match
+ * @param {Array<string>} [params.availableMediaTypes=[]] - Content types this route can produce
+ * @param {Array<string>} [params.availableLanguages=[]] - Languages this route can respond with
+ * @param {Array<string>} [params.availableEncodings=[]] - Encodings this route supports
+ * @param {Array<string>} [params.acceptedMediaTypes=[]] - Content types this route accepts (for POST/PATCH/PUT)
+ * @param {Function} params.fetch - Function to generate response for matching requests
+ * @throws {TypeError} If endpoint is not a string
+ * @returns {void}
+ */
+const createRoute = ({
+  endpoint,
+  description,
+  headers,
+  service,
+  availableMediaTypes = [],
+  availableLanguages = [],
+  availableVersions = [],
+  availableEncodings = [],
+  acceptedMediaTypes = [], // useful only for POST/PATCH/PUT
+  fetch: routeFetchMethod, // rename because there is global.fetch and we want to be explicit
+  clientCodeExample,
+  isFallback,
+  subroutes,
+  declarationSource,
+}) => {
+  if (!endpoint || typeof endpoint !== "string") {
+    throw new TypeError(`endpoint must be a string, received ${endpoint}`);
+  }
+  const [method, resource] = endpoint === "*" ? ["* *"] : endpoint.split(" ");
+  if (method !== "*" && !HTTP_METHODS.includes(method)) {
+    throw new TypeError(`"${method}" is not an HTTP method`);
+  }
+  if (resource[0] !== "/" && resource[0] !== "*") {
+    throw new TypeError(`resource must start with /, received ${resource}`);
+  }
+  if (typeof routeFetchMethod !== "function") {
+    throw new TypeError(
+      `fetch must be a function, received ${routeFetchMethod} on endpoint "${endpoint}"`,
+    );
+  }
+  const extension = resourceToExtension(resource);
+  const extensionWellKnownContentType = extension
+    ? CONTENT_TYPE.fromExtension(extension)
+    : null;
+  if (
+    availableMediaTypes.length === 0 &&
+    extensionWellKnownContentType &&
+    extensionWellKnownContentType !== "application/octet-stream" // this is the default extension
+  ) {
+    availableMediaTypes.push(extensionWellKnownContentType);
+  }
+  const resourcePattern = createResourcePattern(resource);
+  const headersPattern = headers ? createHeadersPattern(headers) : null;
+
+  const isForWebSocket =
+    (headers && headers["upgrade"] === "websocket") ||
+    extension === ".websocket";
+
+  const route = {
+    method,
+    resource,
+    description,
+    service,
+    availableMediaTypes,
+    availableLanguages,
+    availableVersions,
+    availableEncodings,
+    acceptedMediaTypes,
+    matchMethod:
+      method === "*" ? () => true : (requestMethod) => requestMethod === method,
+    matchResource:
+      resource === "*"
+        ? () => true
+        : (requestResource) => {
+            return resourcePattern.match(requestResource);
+          },
+    matchHeaders:
+      headers === undefined
+        ? () => true
+        : (requestHeaders) => {
+            return headersPattern.match(requestHeaders);
+          },
+    fetch: routeFetchMethod,
+    toString: () => {
+      return `${method} ${resource}`;
+    },
+    toJSON: () => {
+      const meta = {};
+
+      if (declarationSource) {
+        meta.declarationLink = {
+          url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(declarationSource)}")`,
+          text: declarationSource,
+        };
+
+        const packageDirectory = lookupPackageDirectory(declarationSource);
+        if (packageDirectory) {
+          const packageFileUrl = new URL("package.json", packageDirectory);
+          try {
+            const packageFileText = readFileSync(packageFileUrl, "utf8");
+            const packageJson = JSON.parse(packageFileText);
+            const packageName = packageJson.name;
+            if (packageJson.name) {
+              meta.packageName = packageName;
+              meta.ownerLink = {
+                url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(packageFileUrl)}")`,
+                text: packageName,
+              };
+              const declarationUrlRelativeToOwnerPackage = urlToRelativeUrl(
+                declarationSource,
+                packageFileUrl,
+              );
+              meta.declarationLink.text = `${packageName}/${declarationUrlRelativeToOwnerPackage}`;
+            }
+          } catch {}
+        }
+      }
+
+      return {
+        method,
+        resource,
+        description,
+        availableMediaTypes,
+        availableLanguages,
+        availableVersions,
+        availableEncodings,
+        acceptedMediaTypes,
+        isForWebSocket,
+        clientCodeExample:
+          typeof clientCodeExample === "function"
+            ? parseFunction(clientCodeExample).body
+            : typeof clientCodeExample === "string"
+              ? clientCodeExample
+              : undefined,
+        declarationSource,
+        meta,
+      };
+    },
+    resourcePattern,
+    isForWebSocket,
+    isFallback,
+    subroutes,
+  };
+  return route;
+};
+
+const isRequestBodyMediaTypeSupported = (request, { acceptedMediaTypes }) => {
   const requestBodyContentType = request.headers["content-type"];
   if (!requestBodyContentType) {
     return false;
   }
-  for (const acceptedContentType of acceptedContentTypes) {
-    if (requestBodyContentType.includes(acceptedContentType)) {
+  for (const acceptedMediaType of acceptedMediaTypes) {
+    if (requestBodyContentType.includes(acceptedMediaType)) {
       return true;
     }
   }
@@ -3834,11 +4305,11 @@ const createServerResourceOptionsResponse = (
   { server, resourceOptionsMap },
 ) => {
   const headers = server.asResponseHeaders();
-  const contentTypeNegotiated = pickContentType(request, [
+  const mediaTypeNegotiated = pickContentType(request, [
     "application/json",
     "text/plain",
   ]);
-  if (contentTypeNegotiated === "application/json") {
+  if (mediaTypeNegotiated === "application/json") {
     const perResource = {};
     for (const [resource, resourceOptions] of resourceOptionsMap) {
       perResource[resource] = resourceOptions.toJSON();
@@ -3853,7 +4324,7 @@ const createServerResourceOptionsResponse = (
   }
   // text/plain
   return new Response(
-    `The list of endpoints available can be seen at ${endpointInspectorUrl}`,
+    `The list of endpoints available can be seen at ${routeInspectorUrl}`,
     { status: 200, headers },
   );
 };
@@ -3861,100 +4332,169 @@ const createResourceOptionsResponse = (request, resourceOptions) => {
   const headers = resourceOptions.asResponseHeaders();
   return new Response(undefined, { status: 204, headers });
 };
+
+/**
+ * Creates a 406 Not Acceptable response when content negotiation fails
+ *
+ * @param {Object} request - The HTTP request object
+ * @param {Object} params - Content negotiation parameters
+ * @param {Array<string>} params.availableMediaTypes - Content types the server can produce
+ * @param {Array<string>} params.availableLanguages - Languages the server can respond with
+ * @param {Array<string>} params.availableEncodings - Encodings the server supports
+ * @returns {Response} A 406 Not Acceptable response
+ */
+const createNotAcceptableResponse = (
+  request,
+  {
+    availableMediaTypes,
+    availableLanguages,
+    availableVersions,
+    availableEncodings,
+  },
+) => {
+  const unsupported = [];
+  const headers = {};
+  const data = {};
+
+  if (availableMediaTypes.length) {
+    const requestAcceptHeader = request.headers["accept"];
+
+    // Use a non-standard but semantic header name
+    headers["available-media-types"] = availableMediaTypes.join(", ");
+
+    Object.assign(data, {
+      requestAcceptHeader,
+      availableMediaTypes,
+    });
+
+    unsupported.push({
+      type: "content-type",
+      message: `The server cannot produce a response in any of the media types accepted by the request: "${requestAcceptHeader}".
+Available media types: ${availableMediaTypes.join(", ")}.`,
+    });
+  }
+  if (availableLanguages.length) {
+    const requestAcceptLanguageHeader = request.headers["accept-language"];
+
+    // Use a non-standard but semantic header name
+    headers["available-languages"] = availableLanguages.join(", ");
+
+    Object.assign(data, {
+      requestAcceptLanguageHeader,
+      availableLanguages,
+    });
+
+    unsupported.push({
+      type: "language",
+      message: `The server cannot produce a response in any of the languages accepted by the request: "${requestAcceptLanguageHeader}".
+Available languages: ${availableLanguages.join(", ")}.`,
+    });
+  }
+  if (availableVersions.length) {
+    const requestAcceptVersionHeader = request.headers["accept-version"];
+
+    // Use a non-standard but semantic header name
+    headers["available-versions"] = availableVersions.join(", ");
+
+    Object.assign(data, {
+      requestAcceptVersionHeader,
+      availableLanguages,
+    });
+
+    unsupported.push({
+      type: "version",
+      message: `The server cannot produce a response in any of the versions accepted by the request: "${requestAcceptVersionHeader}".
+Available versions: ${availableVersions.join(", ")}.`,
+    });
+  }
+  if (availableEncodings.length) {
+    const requestAcceptEncodingHeader = request.headers["accept-encoding"];
+
+    // Use a non-standard but semantic header name
+    headers["available-encodings"] = availableEncodings.join(", ");
+
+    Object.assign(data, {
+      requestAcceptEncodingHeader,
+      availableEncodings,
+    });
+
+    unsupported.push({
+      type: "encoding",
+      message: `The server cannot encode the response in any of the encodings accepted by the request: "${requestAcceptEncodingHeader}".
+Available encodings: ${availableEncodings.join(", ")}.`,
+    });
+  }
+
+  // Special case for single negotiation failure
+  if (unsupported.length === 1) {
+    const [{ message }] = unsupported;
+    return {
+      status: 406,
+      statusText: "Not Acceptable",
+      statusMessage: message,
+      headers,
+    };
+  }
+  // Handle multiple negotiation failures
+  let message = `The server cannot produce a response in a format acceptable to the client:`;
+  for (const info of unsupported) {
+    message += `\n- ${info.type} ${info.message.text}`;
+  }
+  return {
+    status: 406,
+    statusText: "Not Acceptable",
+    statusMessage: message,
+    headers,
+  };
+};
 const createMethodNotAllowedResponse = (
   request,
   { allowedMethods = [] } = {},
 ) => {
-  return createClientErrorResponse(request, {
+  return {
     status: 405,
     statusText: "Method Not Allowed",
+    statusmessage: `The HTTP method "${request.method}" is not supported for this resource.
+Allowed methods: ${allowedMethods.join(", ")}`,
     headers: {
       allow: allowedMethods.join(", "),
     },
-    message: {
-      text: `The HTTP method ${request.method} is not supported for this resource.
-Allowed methods: ${allowedMethods.join(", ")}`,
-      html: `The HTTP method <strong>${request.method}</strong> is not supported for this resource.<br />
-Allowed methods: <strong>${allowedMethods.join(", ")}</strong>`,
-    },
-    data: {
-      requestMethod: request.method,
-      allowedMethods,
-    },
-  });
+  };
 };
 const createUnsupportedMediaTypeResponse = (
   request,
-  { acceptedContentTypes },
+  { acceptedMediaTypes },
 ) => {
-  const requestMediaType = request.headers["content-type"];
+  const requestContentType = request.headers["content-type"];
+  const methodSpecificHeader =
+    request.method === "POST"
+      ? "accept-post"
+      : request.method === "PATCH"
+        ? "accept-patch"
+        : "accept";
+  const headers = {
+    [methodSpecificHeader]: acceptedMediaTypes.join(", "),
+  };
+  const requestMethod = request.method;
 
-  return createClientErrorResponse(request, {
+  return {
     status: 415,
     statusText: "Unsupported Media Type",
-    headers: {
-      "supported-media": acceptedContentTypes.join(", "),
-    },
-    message: {
-      text: requestMediaType
-        ? `The media type "${requestMediaType}" is not supported for this resource.
-Supported media types: ${acceptedContentTypes.join(", ")}`
-        : `The media type was not specified in the request "content-type" header`,
-      html: requestMediaType
-        ? `The media type <strong>${requestMediaType}</strong> is not supported for this resource.<br />
-Supported media types: <strong>${acceptedContentTypes.join(", ")}</strong>`
-        : `The media type was not specified in the request "content-type" header`,
-    },
-    data: {
-      requestMediaType,
-      acceptedContentTypes,
-    },
-  });
+    statusMessage: requestContentType
+      ? `The media type "${requestContentType}" specified in the Content-Type header is not supported for ${requestMethod} requests to this resource.
+    Supported media types: ${acceptedMediaTypes.join(", ")}`
+      : `The Content-Type header is missing. It must be declared for ${requestMethod} requests to this resource.`,
+    headers,
+  };
 };
 const createRouteNotFoundResponse = (request) => {
-  return createClientErrorResponse(request, {
+  return {
     status: 404,
     statusText: "Not Found",
-    message: {
-      text: `The URL ${request.resource} does not exists on this server.
-The list of existing endpoints is available at ${endpointInspectorUrl}`,
-      html: `The URL <strong>${request.resource}</strong> does not exists on this server.<br />
-The list of existing endpoints is available at:
-<a href="${endpointInspectorUrl}">${endpointInspectorUrl}</a>`,
-    },
-  });
-};
-
-const createClientErrorResponse = (
-  request,
-  { status, statusText, headers, message, data },
-) => {
-  const contentTypeNegotiated = pickContentType(request, [
-    "application/json",
-    "text/html",
-    "text/plain",
-  ]);
-  if (contentTypeNegotiated === "text/html") {
-    const htmlTemplate = readFileSync(
-      new URL(clientErrorHtmlTemplateFileUrl),
-      "utf8",
-    );
-    const html = replacePlaceholdersInHtml(htmlTemplate, {
-      message: message.html,
-      status,
-      statusText,
-      ...data,
-    });
-    return new Response(html, {
-      status,
-      statusText,
-      headers: { ...headers, "content-type": "text/html" },
-    });
-  }
-  if (contentTypeNegotiated === "application/json") {
-    return Response.json({ data }, { status, statusText, headers });
-  }
-  return new Response(message.text, { status, statusText, headers });
+    statusMessage: `The URL ${request.resource} does not exist on this server.
+The list of existing endpoints is available at ${routeInspectorUrl}.`,
+    headers: {},
+  };
 };
 
 // to predict order in chrome devtools we should put a,b,c,d,e or something
@@ -4028,41 +4568,14 @@ const letters = [
   "z",
 ];
 
-const timeStart = (name) => {
-  // as specified in https://w3c.github.io/server-timing/#the-performanceservertiming-interface
-  // duration is a https://www.w3.org/TR/hr-time-2/#sec-domhighrestimestamp
-  const startTimestamp = performance$1.now();
-  const timeEnd = () => {
-    const endTimestamp = performance$1.now();
-    const timing = {
-      [name]: endTimestamp - startTimestamp,
-    };
-    return timing;
-  };
-  return timeEnd;
-};
-
-const timeFunction = (name, fn) => {
-  const timeEnd = timeStart(name);
-  const returnValue = fn();
-  if (returnValue && typeof returnValue.then === "function") {
-    return returnValue.then((value) => {
-      return [timeEnd(), value];
-    });
-  }
-  return [timeEnd(), returnValue];
-};
-
 const HOOK_NAMES = [
   "serverListening",
   "redirectRequest",
-  "handleRequest",
+  "augmentRouteFetchSecondArg",
   "routes",
-  "handleWebsocket",
   "handleError",
   "onResponsePush",
-  "injectResponseHeaders",
-  "responseReady",
+  "injectResponseProperties",
   "serverStopped",
 ];
 
@@ -4115,16 +4628,7 @@ const createServiceController = (services) => {
     }
     currentService = hook.service;
     currentHookName = hook.name;
-    let timeEnd;
-    if (context && context.timing) {
-      timeEnd = timeStart(
-        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
-      );
-    }
     let valueReturned = hookFn(info, context);
-    if (context && context.timing) {
-      Object.assign(context.timing, timeEnd());
-    }
     currentService = null;
     currentHookName = null;
     return valueReturned;
@@ -4136,16 +4640,7 @@ const createServiceController = (services) => {
     }
     currentService = hook.service;
     currentHookName = hook.name;
-    let timeEnd;
-    if (context && context.timing) {
-      timeEnd = timeStart(
-        `${currentService.name.replace("jsenv:", "")}.${currentHookName}`,
-      );
-    }
     let valueReturned = await hookFn(info, context);
-    if (context && context.timing) {
-      Object.assign(context.timing, timeEnd());
-    }
     currentService = null;
     currentHookName = null;
     return valueReturned;
@@ -4253,27 +4748,690 @@ const flattenAndFilterServices = (services) => {
   return flatServices;
 };
 
+/**
+ * The standard ways to create a Response
+ * - new Response(body, init)
+ * - Response.json(data, init)
+ * Here we need a way to tell: I want to handle websocket
+ * to align with the style of new Response and Response.json to make it look as follow:
+ * ```js
+ * import { WebSocketResponse } from "@jsenv/server"
+ * new WebSocketResponse((websocket) => {
+ *   // do stuff with the websocket
+ * })
+ * ```
+ *
+ * But we don't really need a class so we are just returning a regular object under the hood
+ */
+
+class WebSocketResponse {
+  constructor(
+    webSocketHandler,
+    {
+      status = 101,
+      statusText = status === 101 ? "Switching Protocols" : undefined,
+      headers,
+    } = {},
+  ) {
+    const webSocketResponse = {
+      status,
+      statusText,
+      headers,
+      body: {
+        websocket: webSocketHandler,
+      },
+    };
+    // eslint-disable-next-line no-constructor-return
+    return webSocketResponse;
+  }
+}
+
+const getWebSocketHandler = (responseProperties) => {
+  const responseBody = responseProperties.body;
+  if (!responseBody) {
+    return undefined;
+  }
+  const webSocketHandler = responseBody.websocket;
+  return webSocketHandler;
+};
+
+/**
+ * https://www.html5rocks.com/en/tutorials/eventsource/basics/
+ *
+ */
+
+
+/**
+ * Creates a Server-Sent Events controller that manages client connections and event distribution.
+ * Supports both SSE (EventSource) and WebSocket connections with automatic event history tracking.
+ *
+ * @class
+ * @param {Object} options - Configuration options for the SSE controller
+ * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
+ * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
+ * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
+ * @param {Number} [options.maxClientAllowed=100] - Maximum number of concurrent client connections allowed
+ * @param {Function} [options.computeEventId] - Function to generate event IDs, receives (event, lastEventId) and returns new ID
+ * @param {Boolean} [options.welcomeEventEnabled=false] - Whether to send a welcome event to new clients
+ * @param {Boolean} [options.welcomeEventPublic=false] - If true, welcome events are broadcast to all clients, not just the new one
+ * @param {String} [options.actionOnClientLimitReached='refuse'] - Action when client limit is reached ('refuse' or 'kick-oldest')
+ *
+ * @returns {Object} SSE controller with the following methods:
+ * @returns {Function} .sendEventToAllClients - Sends an event to all connected clients
+ * @returns {Function} .fetch - Handles HTTP requests and upgrades them to SSE/WebSocket connections
+ * @returns {Function} .getAllEventSince - Retrieves events since a specific ID
+ * @returns {Function} .getClientCount - Returns the number of connected clients
+ * @returns {Function} .close - Closes all connections and stops the controller
+ * @returns {Function} .open - Reopens the controller after closing
+ *
+ * @example
+ * import { ServerEvents } from "@jsenv/server";
+ *
+ * const serverEvents = new ServerEvents({
+ *   welcomeEventEnabled: true,
+ *   historyLength: 50
+ * });
+ *
+ * // Send events to all connected clients
+ * serverEvents.sendEventToAllClients({
+ *   type: "update",
+ *   data: JSON.stringify({ timestamp: Date.now() })
+ * });
+ *
+ * // Use in server route
+ * {
+ *   endpoint: "GET /events",
+ *   response: (request) => serverEvents.fetch(request)
+ * }
+ */
+class ServerEvents {
+  constructor(...args) {
+    // eslint-disable-next-line no-constructor-return
+    return createServerEvents(...args);
+  }
+}
+
+/**
+ * Creates a minimal Server-Sent Events controller that exposes only the fetch method
+ * to handle client connections, keeping other controller methods private.
+ *
+ * This is useful when you want to provide a minimal API surface and ensure
+ * the events can only be pushed through a given function.
+ *
+ * @class
+ * @param {Function} producer - Function called when first client connects
+ * @param {Object} [options] - Configuration options for the SSE controller
+ * @param {String} [options.logLevel] - Controls logging verbosity ('debug', 'info', 'warn', 'error', etc.)
+ * @param {Boolean} [options.keepProcessAlive=false] - If true, prevents Node.js from exiting while SSE connections are active
+ * @param {Number} [options.keepaliveDuration=30000] - Milliseconds between keepalive messages to prevent connection timeout
+ * @param {Number} [options.retryDuration=1000] - Suggested client reconnection delay in milliseconds
+ * @param {Number} [options.historyLength=1000] - Maximum number of events to keep in history for reconnecting clients
+ * @param {Number} [options.maxClientAllowed=100] - Maximum number of concurrent client connections allowed
+ * @param {Function} [options.computeEventId] - Function to generate event IDs, receives (event, lastEventId) and returns new ID
+ * @param {Boolean} [options.welcomeEventEnabled=false] - Whether to send a welcome event to new clients
+ * @param {Boolean} [options.welcomeEventPublic=false] - If true, welcome events are broadcast to all clients, not just the new one
+ * @param {String} [options.actionOnClientLimitReached='refuse'] - Action when client limit is reached ('refuse' or 'kick-oldest')
+ *
+ * @returns {Object} An object with only the fetch method to handle client connections
+ *
+ * @example
+ * import { LazyServerEvents } from "@jsenv/server";
+ *
+ * // Events can only be sent through the producer function
+ * const events = new LazyServerEvents((api) => {
+ *   console.log("First client connected");
+ *
+ *   // Setup interval, database watchers, etc.
+ *   const interval = setInterval(() => {
+ *     api.sendEvent({
+ *       type: "tick",
+ *       data: new Date().toISOString()
+ *     });
+ *   }, 1000);
+ *
+ *   // Return cleanup function that runs when last client disconnects
+ *   return () => {
+ *     console.log("Last client disconnected");
+ *     clearInterval(interval);
+ *   };
+ * });
+ *
+ * // Use in server route
+ * {
+ *   endpoint: "GET /events",
+ *   response: (request) => events.fetch(request)
+ * }
+ */
+class LazyServerEvents {
+  constructor(producer, options = {}) {
+    const serverEvents = createServerEvents({
+      producer,
+      ...options,
+    });
+    // eslint-disable-next-line no-constructor-return
+    return {
+      fetch: serverEvents.fetch,
+    };
+  }
+}
+
+const createServerEvents = ({
+  producer,
+  logLevel,
+  // do not keep process alive because of event source, something else must keep it alive
+  keepProcessAlive = false,
+  keepaliveDuration = 30 * 1000,
+  retryDuration = 1 * 1000,
+  historyLength = 1 * 1000,
+  maxClientAllowed = 100, // max 100 clients accepted
+  computeEventId = (event, lastEventId) => lastEventId + 1,
+  welcomeEventEnabled = false,
+  welcomeEventPublic = false,
+  actionOnClientLimitReached = "refuse",
+} = {}) => {
+  const logger = createLogger({ logLevel });
+
+  const serverEventSource = {
+    closed: false,
+  };
+  const clientArray = [];
+  const eventHistory = createEventHistory(historyLength);
+  // what about previousEventId that keeps growing ?
+  // we could add some limit
+  // one limit could be that an event older than 24h is deleted
+  let previousEventId = 0;
+  let interval;
+  let producerReturnValue;
+
+  const addClient = (client) => {
+    if (clientArray.length === 0) {
+      if (typeof producer === "function") {
+        producerReturnValue = producer({
+          sendEvent: sendEventToAllClients,
+        });
+      }
+    }
+    clientArray.push(client);
+    logger.debug(
+      `A client has joined. Number of client: ${clientArray.length}`,
+    );
+    if (client.lastKnownId !== undefined) {
+      const previousEvents = getAllEventSince(client.lastKnownId);
+      const eventMissedCount = previousEvents.length;
+      if (eventMissedCount > 0) {
+        logger.info(
+          `send ${eventMissedCount} event missed by client since event with id "${client.lastKnownId}"`,
+        );
+        for (const previousEvent of previousEvents) {
+          client.sendEvent(previousEvent);
+        }
+      }
+    }
+    if (welcomeEventEnabled) {
+      const welcomeEvent = {
+        retry: retryDuration,
+        type: "welcome",
+        data: new Date().toLocaleTimeString(),
+      };
+      addEventToHistory(welcomeEvent);
+
+      // send to everyone
+      if (welcomeEventPublic) {
+        sendEventToAllClients(welcomeEvent, {
+          history: false,
+        });
+      }
+      // send only to this client
+      else {
+        client.sendEvent(welcomeEvent);
+      }
+    } else {
+      const firstEvent = {
+        retry: retryDuration,
+        type: "comment",
+        data: new Date().toLocaleTimeString(),
+      };
+      client.sendEvent(firstEvent);
+    }
+  };
+  const removeClient = (client) => {
+    const index = clientArray.indexOf(client);
+    if (index === -1) {
+      return;
+    }
+    clientArray.splice(index, 1);
+    logger.debug(`A client left. Number of client: ${clientArray.length}`);
+    if (clientArray.length === 0) {
+      if (typeof producerReturnValue === "function") {
+        producerReturnValue();
+        producerReturnValue = undefined;
+      }
+    }
+  };
+
+  const fetch = (request) => {
+    const isWebsocketUpgradeRequest =
+      request.headers["upgrade"] === "websocket";
+    const isEventSourceRequest = isWebsocketUpgradeRequest
+      ? false
+      : request.headers["accept"] &&
+        request.headers["accept"].includes("text/event-stream");
+    if (!isWebsocketUpgradeRequest && !isEventSourceRequest) {
+      return {
+        status: 400,
+        body: "Bad Request, this endpoint only accepts WebSocket or EventSource requests",
+      };
+    }
+
+    if (clientArray.length >= maxClientAllowed) {
+      if (actionOnClientLimitReached === "refuse") {
+        return {
+          status: 503,
+        };
+      }
+      // "kick-oldest"
+      const oldestClient = clientArray.shift();
+      oldestClient.close();
+    }
+
+    if (serverEventSource.closed) {
+      return {
+        status: 204,
+      };
+    }
+
+    const lastKnownId =
+      request.headers["last-event-id"] ||
+      request.searchParams.get("last-event-id");
+    if (isWebsocketUpgradeRequest) {
+      return new WebSocketResponse((websocket) => {
+        const webSocketClient = {
+          type: "websocket",
+          lastKnownId,
+          request,
+          websocket,
+          sendEvent: (event) => {
+            websocket.send(JSON.stringify(event));
+          },
+          close: () => {
+            websocket.close();
+          },
+        };
+        addClient(webSocketClient);
+        return () => {
+          removeClient(webSocketClient);
+        };
+      });
+    }
+    // event source request
+    return {
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-store",
+        "connection": "keep-alive",
+      },
+      body: createObservable(({ next, complete, addTeardown }) => {
+        const client = {
+          type: "event_source",
+          lastKnownId,
+          request,
+          sendEvent: (event) => {
+            next(stringifySourceEvent(event));
+          },
+          close: () => {
+            complete(); // will terminate the http connection as body ends
+          },
+        };
+        addClient(client);
+        addTeardown(() => {
+          removeClient(client);
+        });
+      }),
+    };
+  };
+
+  const addEventToHistory = (event) => {
+    if (typeof event.id === "undefined") {
+      event.id = computeEventId(event, previousEventId);
+    }
+    previousEventId = event.id;
+    eventHistory.add(event);
+  };
+
+  const sendEventToAllClients = (event, { history = true } = {}) => {
+    if (history) {
+      addEventToHistory(event);
+    }
+    logger.debug(`send "${event.type}" event to ${clientArray.size} client(s)`);
+    for (const client of clientArray) {
+      client.sendEvent(event);
+    }
+  };
+
+  const getAllEventSince = (id) => {
+    const events = eventHistory.since(id);
+    if (welcomeEventEnabled && !welcomeEventPublic) {
+      return events.filter((event) => event.type !== "welcome");
+    }
+    return events;
+  };
+
+  const keepAlive = () => {
+    // maybe that, when an event occurs, we can delay the keep alive event
+    logger.debug(
+      `send keep alive event, number of client listening this event source: ${clientArray.length}`,
+    );
+    sendEventToAllClients(
+      {
+        type: "comment",
+        data: new Date().toLocaleTimeString(),
+      },
+      { history: false },
+    );
+  };
+
+  const open = () => {
+    if (!serverEventSource.closed) {
+      return;
+    }
+    interval = setInterval(keepAlive, keepaliveDuration);
+    if (!keepProcessAlive) {
+      interval.unref();
+    }
+    serverEventSource.closed = false;
+  };
+
+  const close = () => {
+    if (serverEventSource.closed) {
+      return;
+    }
+    logger.debug(`closing, number of client : ${clientArray.length}`);
+    for (const client of clientArray) {
+      client.close();
+    }
+    clientArray.length = 0;
+    clearInterval(interval);
+    eventHistory.reset();
+    serverEventSource.closed = true;
+  };
+
+  Object.assign(serverEventSource, {
+    // main api:
+    // - ability to sendEvent to clients in the room
+    // - ability to join the room
+    // - ability to leave the room
+    sendEventToAllClients,
+    fetch,
+
+    // should rarely be necessary, get information about the room
+    getAllEventSince,
+    getClientCount: () => clientArray.length,
+
+    // should rarely be used
+    close,
+    open,
+  });
+  return serverEventSource;
+};
+
+// https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
+// https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
+// https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
+// http://html5doctor.com/server-sent-events/
+const stringifySourceEvent = ({ data, type = "message", id, retry }) => {
+  let string = "";
+
+  if (id !== undefined) {
+    string += `id:${id}\n`;
+  }
+
+  if (retry) {
+    string += `retry:${retry}\n`;
+  }
+
+  if (type !== "message") {
+    string += `event:${type}\n`;
+  }
+
+  string += `data:${data}\n\n`;
+
+  return string;
+};
+
+const createEventHistory = (limit) => {
+  const events = [];
+
+  const add = (data) => {
+    events.push(data);
+
+    if (events.length >= limit) {
+      events.shift();
+    }
+  };
+
+  const since = (id) => {
+    const index = events.findIndex((event) => String(event.id) === id);
+    return index === -1 ? [] : events.slice(index + 1);
+  };
+
+  const reset = () => {
+    events.length = 0;
+  };
+
+  return { add, since, reset };
+};
+
 const jsenvServiceAutoreloadOnRestart = () => {
+  const aliveServerEvents = new LazyServerEvents(() => {});
+
   return {
     name: "jsenv:autoreload_on_server_restart",
 
     routes: [
       {
-        endpoint: "GET *",
-        headers: {
-          "upgrade": "websocket",
-          "sec-websocket-protocol": "jsenv_server",
+        endpoint: "GET /.internal/alive.websocket",
+        description:
+          "Client can connect to this websocket endpoint to detect when server connection is lost.",
+        declarationSource: import.meta.url,
+        /* eslint-disable no-undef */
+        clientCodeExample: () => {
+          const websocket = new WebSocket(
+            "ws://localhost/.internal/alive.websocket",
+          );
+          websocket.onclose = () => {
+            // server connection closed
+            window.location.reload();
+          };
         },
-        websocket: true,
-        response: () => {
-          return new Response("hello world");
+        fetch: aliveServerEvents.fetch,
+      },
+      {
+        endpoint: "GET /.internal/alive.eventsource",
+        description: `Client can connect to this eventsource endpoint to detect when server connection is lost.
+This endpoint exists mostly to demo eventsource as there is already the websocket endpoint.`,
+        declarationSource: import.meta.url,
+        /* eslint-disable no-undef */
+        clientCodeExample: async () => {
+          const eventSource = new EventSource("/.internal/alive.eventsource");
+          eventSource.onerror = () => {
+            // server connection closed
+            window.location.reload();
+          };
+        },
+        /* eslint-enable no-undef */
+        fetch: aliveServerEvents.fetch,
+      },
+    ],
+  };
+};
+
+const replacePlaceholdersInHtml = (html, replacers) => {
+  return html.replace(/\$\{(\w+)\}/g, (match, name) => {
+    const replacer = replacers[name];
+    if (replacer === undefined) {
+      return match;
+    }
+    if (typeof replacer === "function") {
+      return replacer();
+    }
+    return replacer;
+  });
+};
+
+const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./html/4xx.html");
+
+const jsenvServiceDefaultBody4xx5xx = () => {
+  return {
+    name: "jsenv:default_body_4xx_5xx",
+
+    injectResponseProperties: (request, responseProperties) => {
+      if (responseProperties.body !== undefined) {
+        return null;
+      }
+      if (responseProperties.status >= 400 && responseProperties.status < 500) {
+        return generateBadStatusResponse(request, responseProperties);
+      }
+      if (responseProperties.status >= 500 && responseProperties.status < 600) {
+        return generateBadStatusResponse(request, responseProperties);
+      }
+      return null;
+    },
+  };
+};
+
+const generateBadStatusResponse = (
+  request,
+  { status, statusText, statusMessage },
+) => {
+  const contentTypeNegotiated = pickContentType(request, [
+    "text/html",
+    "text/plain",
+    "application/json",
+  ]);
+  if (contentTypeNegotiated === "text/html") {
+    const htmlTemplate = readFileSync(
+      new URL(clientErrorHtmlTemplateFileUrl),
+      "utf8",
+    );
+    if (statusMessage) {
+      statusMessage = statusMessage.replace(/https?:\/\/\S+/g, (url) => {
+        return `<a href="${url}">${url}</a>`;
+      });
+      statusMessage = statusMessage.replace(
+        /(^|\s)(\/\S+)/g,
+        (match, startOrSpace, resource) => {
+          let end = "";
+          if (resource[resource.length - 1] === ".") {
+            resource = resource.slice(0, -1);
+            end = ".";
+          }
+          return `${startOrSpace}<a href="${resource}">${resource}</a>${end}`;
+        },
+      );
+      statusMessage = statusMessage.replace(/\r\n|\r|\n/g, "<br />");
+    }
+
+    const html = replacePlaceholdersInHtml(htmlTemplate, {
+      status,
+      statusText,
+      statusMessage: statusMessage || "",
+    });
+    return new Response(html, {
+      headers: { "content-type": "text/html" },
+      status,
+      statusText,
+    });
+  }
+  if (contentTypeNegotiated === "text/plain") {
+    return new Response(statusMessage, {
+      status,
+      statusText,
+    });
+  }
+  return Response.json(
+    { statusMessage },
+    {
+      status,
+      statusText,
+    },
+  );
+};
+
+const jsenvServiceOpenFile = () => {
+  return {
+    name: "jsenv:open_file",
+    routes: [
+      {
+        endpoint: "GET /.internal/open_file/*",
+        description: "Can be used to open a given file in your editor.",
+        declarationSource: import.meta.url,
+        fetch: (request) => {
+          let file = decodeURIComponent(request.params[0]);
+          if (!file) {
+            return {
+              status: 400,
+              body: "Missing file in url",
+            };
+          }
+          const fileUrl = new URL(file);
+          const filePath = urlToFileSystemPath(fileUrl);
+          const require = createRequire(import.meta.url);
+          const launch = require("launch-editor");
+          launch(filePath, () => {
+            // ignore error for now
+          });
+          return {
+            status: 200,
+            headers: {
+              "cache-control": "no-store",
+            },
+          };
         },
       },
     ],
   };
 };
 
-import.meta.resolve("../");
+const routeInspectorHtmlFileUrl = import.meta.resolve(
+  "./html/route_inspector.html",
+);
+
+const jsenvServiceRouteInspector = () => {
+  return {
+    name: "jsenv:route_inspector",
+    routes: [
+      {
+        endpoint: "GET /.internal/route_inspector",
+        description:
+          "Explore the routes available on this server using a web interface.",
+        availableMediaTypes: ["text/html"],
+        declarationSource: import.meta.url,
+        fetch: () => {
+          const inspectorHtml = readFileSync(
+            new URL(routeInspectorHtmlFileUrl),
+            "utf8",
+          );
+          return new Response(inspectorHtml, {
+            headers: { "content-type": "text/html" },
+          });
+        },
+      },
+      {
+        endpoint: "GET /.internal/routes.json",
+        availableMediaTypes: ["application/json"],
+        description: "Get the routes available on this server in JSON.",
+        declarationSource: import.meta.url,
+        fetch: (request, helpers) => {
+          const routeJSON = helpers.router.inspect(request, helpers);
+          return Response.json(routeJSON);
+        },
+      },
+    ],
+  };
+};
 
 const createReason = (reasonString) => {
   return {
@@ -4402,6 +5560,10 @@ const isIpV4 = (networkAddress) => {
 
 const isIpV6 = (networkAddress) => !isIpV4(networkAddress);
 
+const TIMING_NOOP = () => {
+  return { end: () => {} };
+};
+
 const startServer = async ({
   signal = new AbortController().signal,
   logLevel,
@@ -4433,8 +5595,8 @@ const startServer = async ({
   nagle = true,
   serverTiming = false,
   requestWaitingMs = 0,
-  requestWaitingCallback = ({ request, warn, requestWaitingMs }) => {
-    warn(
+  requestWaitingCallback = ({ request, requestWaitingMs }) => {
+    request.logger.warn(
       createDetailedMessage(
         `still no response found for request after ${requestWaitingMs} ms`,
         {
@@ -4503,27 +5665,36 @@ const startServer = async ({
     }
   }
 
-  const server = {};
-  const router = createRouter();
   services = [
-    jsenvServiceRouting(router),
+    jsenvServiceOpenFile(),
+    jsenvServiceDefaultBody4xx5xx(),
+    jsenvServiceRouteInspector(),
     ...(// after build internal client files are inlined, no need for this service anymore
         []
       ),
     jsenvServiceAutoreloadOnRestart(),
     ...flattenAndFilterServices(services),
   ];
-  for (const route of routes) {
-    router.add(route);
-  }
+
+  const allRouteArray = [];
   for (const service of services) {
     const serviceRoutes = service.routes;
     if (serviceRoutes) {
       for (const serviceRoute of serviceRoutes) {
-        router.add(serviceRoute);
+        serviceRoute.service = service;
+        allRouteArray.push(serviceRoute);
       }
     }
   }
+  for (const route of routes) {
+    allRouteArray.push(route);
+  }
+
+  const router = createRouter(allRouteArray, {
+    optionsFallback: true,
+  });
+
+  const server = {};
 
   const serviceController = createServiceController(services);
   const processTeardownEvents = {
@@ -4662,7 +5833,9 @@ const startServer = async ({
   // we can proceed to create a stop function to stop it gacefully
   // and add a request handler
   stopCallbackSet.add(({ reason }) => {
-    logger.info(`${serverName} stopping server (reason: ${reason})`);
+    if (reason !== STOP_REASON_PROCESS_BEFORE_EXIT) {
+      logger.info(`${serverName} stopping server (reason: ${reason})`);
+    }
   });
   stopCallbackSet.add(async () => {
     await stopListening(nodeServer);
@@ -4733,52 +5906,141 @@ const startServer = async ({
     });
   });
 
-  {
-    const getResponseProperties = async (request, { pushResponse }) => {
-      let requestReceivedMeasure;
-      if (serverTiming) {
-        requestReceivedMeasure = performance.now();
-      }
-      request.logger.info(
-        request.parent
+  const applyRequestInternalRedirection = (request) => {
+    serviceController.callHooks(
+      "redirectRequest",
+      request,
+      {},
+      (newRequestProperties) => {
+        if (newRequestProperties) {
+          request = applyRedirectionToRequest(request, {
+            original: request.original || request,
+            previous: request,
+            ...newRequestProperties,
+          });
+        }
+      },
+    );
+    return request;
+  };
+
+  const prepareHandleRequestOperations = (nodeRequest, nodeResponse) => {
+    const receiveRequestOperation = Abort.startOperation();
+    receiveRequestOperation.addAbortSignal(stopAbortSignal);
+    const sendResponseOperation = Abort.startOperation();
+    sendResponseOperation.addAbortSignal(stopAbortSignal);
+    receiveRequestOperation.addAbortSource((abort) => {
+      const closeEventCallback = () => {
+        if (nodeRequest.complete) {
+          receiveRequestOperation.end();
+        } else {
+          nodeResponse.destroy();
+          abort();
+        }
+      };
+      nodeRequest.once("close", closeEventCallback);
+      return () => {
+        nodeRequest.removeListener("close", closeEventCallback);
+      };
+    });
+    sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
+    return [receiveRequestOperation, sendResponseOperation];
+  };
+  const getResponseProperties = async (request, { pushResponse }) => {
+    const timings = {};
+    const timing = serverTiming
+      ? (name) => {
+          const start = performance.now();
+          timings[name] = null;
+          return {
+            name,
+            end: () => {
+              const end = performance.now();
+              const duration = end - start;
+              timings[name] = duration;
+            },
+          };
+        }
+      : TIMING_NOOP;
+    const startRespondingTiming = timing("time to start responding");
+
+    request.logger.info(
+      request.headers["upgrade"] === "websocket"
+        ? `GET ${request.url} ${websocketSuffixColorized}`
+        : request.parent
           ? `Push ${request.resource}`
-          : request.headers["upgrade"] === "websocket"
-            ? `${request.method} ${request.url} ${websocketSuffixColorized}`
-            : `${request.method} ${request.url}`,
-      );
-      let requestWaitingTimeout;
+          : `${request.method} ${request.url}`,
+    );
+    let requestWaitingTimeout;
+    if (requestWaitingMs) {
+      requestWaitingTimeout = setTimeout(
+        () =>
+          requestWaitingCallback({
+            request,
+            requestWaitingMs,
+          }),
+        requestWaitingMs,
+      ).unref();
+    }
+
+    let headersToInject;
+    const finalizeResponseProperties = (responseProperties) => {
+      if (serverTiming) {
+        startRespondingTiming.end();
+        responseProperties.headers = composeTwoHeaders(
+          responseProperties.headers,
+          timingToServerTimingResponseHeaders(timings),
+        );
+      }
       if (requestWaitingMs) {
-        requestWaitingTimeout = setTimeout(
-          () =>
-            requestWaitingCallback({
-              request,
-              requestWaitingMs,
-            }),
-          requestWaitingMs,
-        ).unref();
+        clearTimeout(requestWaitingTimeout);
+      }
+      if (
+        request.method !== "HEAD" &&
+        responseProperties.headers["content-length"] > 0 &&
+        !responseProperties.body
+      ) {
+        request.logger.warn(
+          `content-length response header found without body`,
+        );
       }
 
+      if (headersToInject) {
+        responseProperties.headers = composeTwoHeaders(
+          responseProperties.headers,
+          headersToInject,
+        );
+      }
       serviceController.callHooks(
-        "redirectRequest",
+        "injectResponseProperties",
         request,
-        {},
-        (newRequestProperties) => {
-          if (newRequestProperties) {
-            request = applyRedirectionToRequest(request, {
-              original: request.original || request,
-              previous: request,
-              ...newRequestProperties,
-            });
+        responseProperties,
+        (returnValue) => {
+          if (!returnValue) {
+            return;
           }
+          responseProperties = composeTwoResponses(
+            responseProperties,
+            returnValue,
+          );
         },
       );
+      // the node request readable stream is never closed because
+      // the response headers contains "connection: keep-alive"
+      // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
+      if (
+        responseProperties.headers.connection === "keep-alive" &&
+        request.body
+      ) {
+        clearTimeout(request.body.timeout);
+      }
+      return responseProperties;
+    };
 
-      let handleRequestReturnValue;
-      let errorWhileHandlingRequest = null;
-      let handleRequestTimings = serverTiming ? {} : null;
-
-      let timeout;
-      const timeoutPromise = new Promise((resolve) => {
+    let timeout;
+    try {
+      request = applyRequestInternalRedirection(request);
+      const timeoutResponsePropertiesPromise = new Promise((resolve) => {
         timeout = setTimeout(() => {
           resolve({
             // the correct status code should be 500 because it's
@@ -4792,160 +6054,129 @@ const startServer = async ({
           });
         }, responseTimeout);
       });
-      const handleRequestPromise = serviceController.callAsyncHooksUntil(
-        "handleRequest",
-        request,
-        {
-          timing: handleRequestTimings,
+      const routerResponsePropertiesPromise = (async () => {
+        const fetchSecondArg = {
+          timing,
           pushResponse,
-        },
-      );
-      try {
-        handleRequestReturnValue = await Promise.race([
-          timeoutPromise,
-          handleRequestPromise,
-        ]);
-      } catch (e) {
-        errorWhileHandlingRequest = e;
-      }
-      clearTimeout(timeout);
-
-      let responseProperties;
-      if (errorWhileHandlingRequest) {
-        if (
-          errorWhileHandlingRequest.name === "AbortError" &&
-          request.signal.aborted
-        ) {
-          responseProperties = { requestAborted: true };
-        } else {
-          // internal error, create 500 response
-          if (
-            // stopOnInternalError stops server only if requestToResponse generated
-            // a non controlled error (internal error).
-            // if requestToResponse gracefully produced a 500 response (it did not throw)
-            // then we can assume we are still in control of what we are doing
-            stopOnInternalError
-          ) {
-            // il faudrais pouvoir stop que les autres response ?
-            stop(STOP_REASON_INTERNAL_ERROR);
-          }
-          const handleErrorReturnValue =
-            await serviceController.callAsyncHooksUntil(
-              "handleError",
-              errorWhileHandlingRequest,
-              { request },
+          injectResponseHeader: (name, value) => {
+            if (!headersToInject) {
+              headersToInject = {};
+            }
+            headersToInject[name] = composeTwoHeaderValues(
+              name,
+              headersToInject[name],
+              value,
             );
-          if (!handleErrorReturnValue) {
-            throw errorWhileHandlingRequest;
-          }
-          request.logger.error(
-            createDetailedMessage(`internal error while handling request`, {
-              "error stack": errorWhileHandlingRequest.stack,
-            }),
-          );
-          responseProperties = composeTwoResponses(
-            {
-              status: 500,
-              statusText: "Internal Server Error",
-              headers: {
-                // ensure error are not cached
-                "cache-control": "no-store",
-                "content-type": "text/plain",
-              },
-            },
-            handleErrorReturnValue,
-          );
-        }
-      } else {
-        let status;
-        let statusText;
-        let statusMessage;
-        let headers;
-        let body;
-        if (handleRequestReturnValue instanceof Response) {
-          status = handleRequestReturnValue.status;
-          statusText = handleRequestReturnValue.statusText;
-          headers = {};
-          for (const [name, value] of handleRequestReturnValue.headers) {
-            headers[name] = value;
-          }
-          body = handleRequestReturnValue.body;
-        } else if (
-          handleRequestReturnValue !== null &&
-          typeof handleRequestReturnValue === "object"
-        ) {
-          status = handleRequestReturnValue.status;
-          statusText = handleRequestReturnValue.statusText;
-          statusMessage = handleRequestReturnValue.statusMessage;
-          headers = handleRequestReturnValue.headers;
-          body = handleRequestReturnValue.body;
-          if (status === undefined) {
-            status = 404;
-          }
-          if (headers === undefined) {
-            headers = {};
-          }
-        } else {
-          throw new TypeError(
-            `response must be a Response, or an Object, received ${handleRequestReturnValue}`,
-          );
-        }
-        responseProperties = {
-          status,
-          statusText,
-          statusMessage,
-          headers,
-          body,
+          },
         };
-      }
-
-      if (serverTiming) {
-        const responseReadyMeasure = performance.now();
-        const timeToStartResponding =
-          responseReadyMeasure - requestReceivedMeasure;
-        const serverTiming = {
-          ...handleRequestTimings,
-          ...responseProperties.timing,
-          "time to start responding": timeToStartResponding,
-        };
-        responseProperties.headers = composeTwoHeaders(
-          responseProperties.headers,
-          timingToServerTimingResponseHeaders(serverTiming),
-        );
-      }
-      if (requestWaitingMs) {
-        clearTimeout(requestWaitingTimeout);
-      }
-      if (
-        request.method !== "HEAD" &&
-        responseProperties.headers["content-length"] > 0 &&
-        !responseProperties.body
-      ) {
-        request.logger.warn(
-          `content-length header is ${responseProperties.headers["content-length"]} but body is empty`,
-        );
-      }
-      serviceController.callHooks(
-        "injectResponseHeaders",
-        responseProperties,
-        {
+        serviceController.callHooks(
+          "augmentRouteFetchSecondArg",
           request,
-        },
-        (returnValue) => {
-          if (returnValue) {
-            responseProperties.headers = composeTwoHeaders(
-              responseProperties.headers,
-              returnValue,
-            );
-          }
-        },
+          fetchSecondArg,
+          (properties) => {
+            if (properties) {
+              Object.assign(fetchSecondArg, properties);
+            }
+          },
+        );
+        const routerResponseProperties = await router.match(
+          request,
+          fetchSecondArg,
+        );
+        return routerResponseProperties;
+      })();
+      const responseProperties = await Promise.race([
+        timeoutResponsePropertiesPromise,
+        routerResponsePropertiesPromise,
+      ]);
+      clearTimeout(timeout);
+      return finalizeResponseProperties(responseProperties);
+    } catch (e) {
+      clearTimeout(timeout);
+      if (e.name === "AbortError" && request.signal.aborted) {
+        // let it propagate to the caller that should catch this
+        throw e;
+      }
+      // internal error, create 500 response
+      if (
+        // stopOnInternalError stops server only if requestToResponse generated
+        // a non controlled error (internal error).
+        // if requestToResponse gracefully produced a 500 response (it did not throw)
+        // then we can assume we are still in control of what we are doing
+        stopOnInternalError
+      ) {
+        // il faudrais pouvoir stop que les autres response ?
+        stop(STOP_REASON_INTERNAL_ERROR);
+      }
+      const handleErrorReturnValue =
+        await serviceController.callAsyncHooksUntil("handleError", e, {
+          request,
+        });
+      if (!handleErrorReturnValue) {
+        throw e;
+      }
+      request.logger.error(
+        createDetailedMessage(`internal error while handling request`, {
+          "error stack": e.stack,
+        }),
       );
-      serviceController.callHooks("responseReady", responseProperties, {
-        request,
-      });
-      return responseProperties;
-    };
+      const responseProperties = composeTwoResponses(
+        {
+          status: 500,
+          statusText: "Internal Server Error",
+          headers: {
+            // ensure error are not cached
+            "cache-control": "no-store",
+          },
+        },
+        handleErrorReturnValue,
+      );
+      return finalizeResponseProperties(responseProperties);
+    }
+  };
+  const sendResponse = async (
+    responseStream,
+    responseProperties,
+    { signal, request },
+  ) => {
+    // When "pushResponse" is called and the parent response has no body
+    // the parent response is immediatly ended. It means child responses (pushed streams)
+    // won't get a chance to be pushed.
+    // To let a chance to pushed streams we wait a little before sending the response
+    const ignoreBody = request.method === "HEAD";
+    const bodyIsEmpty = !responseProperties.body || ignoreBody;
+    if (bodyIsEmpty && request.logger.hasPushChild) {
+      await new Promise((resolve) => setTimeout(resolve));
+    }
+    await writeNodeResponse(responseStream, responseProperties, {
+      signal,
+      ignoreBody,
+      onAbort: () => {
+        request.logger.info(`response aborted`);
+        request.logger.end();
+      },
+      onError: (error) => {
+        request.logger.error(
+          createDetailedMessage(`An error occured while sending response`, {
+            "error stack": error.stack,
+          }),
+        );
+        request.logger.end();
+      },
+      onHeadersSent: ({ status, statusText }) => {
+        request.logger.onHeadersSent({
+          status,
+          statusText: responseProperties.statusMessage || statusText,
+        });
+        request.logger.end();
+      },
+      onEnd: () => {
+        request.logger.end();
+      },
+    });
+  };
 
+  {
     const requestEventHandler = async (nodeRequest, nodeResponse) => {
       if (redirectHttpToHttps && !nodeRequest.connection.encrypted) {
         nodeResponse.writeHead(301, {
@@ -4963,86 +6194,17 @@ const startServer = async ({
         return;
       }
 
-      const receiveRequestOperation = Abort.startOperation();
-      receiveRequestOperation.addAbortSignal(stopAbortSignal);
-      const sendResponseOperation = Abort.startOperation();
-      sendResponseOperation.addAbortSignal(stopAbortSignal);
-      receiveRequestOperation.addAbortSource((abort) => {
-        const closeEventCallback = () => {
-          if (nodeRequest.complete) {
-            receiveRequestOperation.end();
-          } else {
-            nodeResponse.destroy();
-            abort();
-          }
-        };
-        nodeRequest.once("close", closeEventCallback);
-        return () => {
-          nodeRequest.removeListener("close", closeEventCallback);
-        };
-      });
-      sendResponseOperation.addAbortSignal(receiveRequestOperation.signal);
-
+      const [receiveRequestOperation, sendResponseOperation] =
+        prepareHandleRequestOperations(nodeRequest, nodeResponse);
       const request = fromNodeRequest(nodeRequest, {
         signal: stopAbortSignal,
         serverOrigin,
         requestBodyLifetime,
         logger,
+        nagle,
       });
 
-      const sendResponse = async (
-        responseStream,
-        responseProperties,
-        { signal, request },
-      ) => {
-        // When "pushResponse" is called and the parent response has no body
-        // the parent response is immediatly ended. It means child responses (pushed streams)
-        // won't get a chance to be pushed.
-        // To let a chance to pushed streams we wait a little before sending the response
-        const ignoreBody = request.method === "HEAD";
-        const bodyIsEmpty = !responseProperties.body || ignoreBody;
-        if (bodyIsEmpty && request.logger.hasPushChild) {
-          await new Promise((resolve) => setTimeout(resolve));
-        }
-        await writeNodeResponse(responseStream, responseProperties, {
-          signal,
-          ignoreBody,
-          onAbort: () => {
-            request.logger.info(`response aborted`);
-            request.logger.end();
-          },
-          onError: (error) => {
-            request.logger.error(
-              createDetailedMessage(`An error occured while sending response`, {
-                "error stack": error.stack,
-              }),
-            );
-            request.logger.end();
-          },
-          onHeadersSent: ({ status, statusText }) => {
-            request.logger.onHeadersSent({
-              status,
-              statusText: responseProperties.statusMessage || statusText,
-            });
-            request.logger.end();
-          },
-          onEnd: () => {
-            request.logger.end();
-          },
-        });
-      };
-
       try {
-        if (receiveRequestOperation.signal.aborted) {
-          return;
-        }
-        // pause the stream to let a chance to "handleRequest" to read request body.
-        // Without this the request body readable stream
-        // might be closed when we'll try to attach "data" and "end" listeners to it
-        nodeRequest.pause();
-        if (!nagle) {
-          nodeRequest.connection.setNoDelay(true);
-        }
         const responseProperties = await getResponseProperties(request, {
           pushResponse: async ({ path, method }) => {
             const pushRequestLogger = request.logger.forPush();
@@ -5192,15 +6354,14 @@ const startServer = async ({
             });
           },
         });
-        nodeRequest.resume();
+        const webSocketHandler = getWebSocketHandler(responseProperties);
+        if (webSocketHandler) {
+          throw new Error(
+            "unexpected websocketResponse received for request that does not want to be upgraded to websocket. A regular response was expected.",
+          );
+        }
         if (receiveRequestOperation.signal.aborted) {
           return;
-        }
-        // the node request readable stream is never closed because
-        // the response headers contains "connection: keep-alive"
-        // In this scenario we want to disable READABLE_STREAM_TIMEOUT warning
-        if (responseProperties.headers.connection === "keep-alive") {
-          clearTimeout(request.body.timeout);
         }
         await sendResponse(nodeResponse, responseProperties, {
           signal: sendResponseOperation.signal,
@@ -5210,134 +6371,119 @@ const startServer = async ({
         await sendResponseOperation.end();
       }
     };
-
-    websocket: {
-      // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
-      if (!router.hasSomeWebsocketRoute) {
-        break websocket;
-      }
-      const websocketOrigin = https
-        ? `wss://${hostname}:${port}`
-        : `ws://${hostname}:${port}`;
-      server.websocketOrigin = websocketOrigin;
-      const websocketClientSet = new Set();
-      const { WebSocketServer } = await import("./js/ws.js");
-      let websocketServer = new WebSocketServer({ noServer: true });
-
-      const upgradeEventHandler = async (nodeRequest, socket, head) => {
-        const request = fromNodeRequest(nodeRequest, {
-          signal: stopAbortSignal,
-          serverOrigin,
-          requestBodyLifetime,
-          logger,
-        });
-        const responseProperties = await getResponseProperties(request, {});
-        // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
-        let {
-          status,
-          statusText = statusTextFromStatus(status),
-          headers,
-          body,
-        } = responseProperties;
-
-        if (status !== 200) {
-          body = await body;
-          headers = {
-            connection: "close",
-            ...headers,
-          };
-          if (body && headers["content-length"] === undefined) {
-            headers["transfer-encoding"] = "chunked";
-          }
-          const headersString = Object.keys(headers)
-            .map((h) => `${h}: ${headers[h]}`)
-            .join("\r\n");
-          socket.write(
-            `HTTP/1.1 ${status} ${statusText}\r\n${headersString.join("\r\n")}\r\n\r\n`,
-          );
-          request.logger.onHeadersSent({ status, statusText });
-          request.logger.end();
-          socket.once("finish", socket.destroy);
-          if (body) {
-            const bodyMethods = normalizeBodyMethods(body);
-            const observable = bodyMethods.asObservable();
-            observable.subscribe({
-              next: (data) => {
-                socket.write(data);
-              },
-              error: (value) => {
-                socket.emit("error", value);
-              },
-              complete: () => {
-                socket.end();
-              },
-            });
-          } else {
-            socket.end();
-          }
-          return;
-        }
-        const websocket = await new Promise((resolve) => {
-          websocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
-        });
-        request.logger.onHeadersSent({ status, statusText });
-        request.logger.end();
-        const websocketAbortController = new AbortController();
-        websocketClientSet.add(websocket);
-        websocket.once("close", () => {
-          websocketClientSet.delete(websocket);
-          websocketAbortController.abort();
-        });
-        body = await body;
-        if (!body) {
-          return;
-        }
-        const bodyMethods = normalizeBodyMethods(body);
-        const observable = bodyMethods.asObservable();
-        let subscription = observable.subscribe({
-          next: (data) => {
-            websocket.send(data);
-          },
-          error: (value) => {
-            websocket.emit("error", value);
-          },
-          complete: () => {
-            // we can explicitely say we are done sending data by putting
-            // connection: "close" on response headers
-            if (headers["connection"] === "close") {
-              websocket.terminate();
-            }
-          },
-        });
-        websocket.once("close", () => {
-          subscription.unsubscribe();
-        });
-      };
-
-      // see server-polyglot.js, upgrade must be listened on https server when used
-      const facadeServer = nodeServer._tlsServer || nodeServer;
-      const removeUpgradeCallback = listenEvent(
-        facadeServer,
-        "upgrade",
-        upgradeEventHandler,
-      );
-      stopCallbackSet.add(removeUpgradeCallback);
-      stopCallbackSet.add(() => {
-        for (const websocketClient of websocketClientSet) {
-          websocketClient.close();
-        }
-        websocketClientSet.clear();
-        websocketServer.close();
-        websocketServer = null;
-      });
-    }
-
     const removeRequestListener = listenRequest(
       nodeServer,
       requestEventHandler,
     );
     // ensure we don't try to handle new requests while server is stopping
     stopCallbackSet.add(removeRequestListener);
+  }
+
+  {
+    // https://github.com/websockets/ws/blob/master/doc/ws.md#class-websocket
+    const webSocketOrigin = https
+      ? `wss://${hostname}:${port}`
+      : `ws://${hostname}:${port}`;
+    server.webSocketOrigin = webSocketOrigin;
+    const webSocketSet = new Set();
+    let upgradeRequestToWebSocket;
+    const loadUpgradeRequestToWebSocket = async () => {
+      const { WebSocketServer } = await import("./js/ws.js");
+      let webSocketServer = new WebSocketServer({ noServer: true });
+      stopCallbackSet.add(() => {
+        webSocketServer.close();
+        webSocketServer = null;
+      });
+      upgradeRequestToWebSocket = async ({ nodeRequest, socket, head }) => {
+        const websocket = await new Promise((resolve) => {
+          webSocketServer.handleUpgrade(nodeRequest, socket, head, resolve);
+        });
+        return websocket;
+      };
+    };
+    // https://github.com/websockets/ws/blob/b92745a9d6760e6b4b2394bfac78cbcd258a8c8d/lib/websocket-server.js#L491
+    const upgradeEventHandler = async (nodeRequest, socket, head) => {
+      let request = fromNodeRequest(nodeRequest, {
+        signal: stopAbortSignal,
+        serverOrigin,
+        requestBodyLifetime,
+        logger,
+        nagle,
+      });
+      const [receiveRequestOperation, sendResponseOperation] =
+        prepareHandleRequestOperations(nodeRequest, socket);
+      const responseProperties = await getResponseProperties(request, {
+        pushResponse: () => {
+          request.logger.warn(
+            `pushResponse ignored because it's not supported in websocket`,
+          );
+        },
+      });
+      if (receiveRequestOperation.signal.aborted) {
+        return;
+      }
+      if (responseProperties.status !== 101) {
+        await sendResponse(socket, responseProperties, {
+          signal: sendResponseOperation.signal,
+          request,
+        });
+        return;
+      }
+      const webSocketHandler = getWebSocketHandler(responseProperties);
+      if (!webSocketHandler) {
+        throw new Error(
+          "unexpected response received for request that wants to be upgraded to websocket. A webSocketResponse was expected.",
+        );
+      }
+      if (!upgradeRequestToWebSocket) {
+        await loadUpgradeRequestToWebSocket();
+      }
+      if (sendResponseOperation.signal.aborted) {
+        return;
+      }
+      const webSocket = await upgradeRequestToWebSocket({
+        nodeRequest,
+        socket,
+        head,
+      });
+      if (sendResponseOperation.signal.aborted) {
+        webSocket.destroy();
+        return;
+      }
+      const webSocketAbortController = new AbortController();
+      webSocketSet.add(webSocket);
+      webSocket.once("close", () => {
+        webSocketSet.delete(webSocket);
+        webSocketAbortController.abort();
+      });
+      request.logger.onHeadersSent({
+        status: 101,
+        statusText: "Switching Protocols",
+      });
+      request.logger.end();
+      let websocketHandlerReturnValue = await webSocketHandler(webSocket);
+      if (typeof websocketHandlerReturnValue === "function") {
+        webSocket.once("close", () => {
+          websocketHandlerReturnValue();
+          websocketHandlerReturnValue = undefined;
+        });
+      }
+      return;
+    };
+    // see server-polyglot.js, upgrade must be listened on https server when used
+    const facadeServer = nodeServer._tlsServer || nodeServer;
+    const removeUpgradeCallback = listenEvent(
+      facadeServer,
+      "upgrade",
+      upgradeEventHandler,
+    );
+    stopCallbackSet.add(removeUpgradeCallback);
+    stopCallbackSet.add(() => {
+      for (const websocket of webSocketSet) {
+        websocket.close();
+      }
+      webSocketSet.clear();
+    });
   }
 
   if (startLog) {
@@ -5396,9 +6542,6 @@ const createNodeServer = async ({
   return createServer();
 };
 
-const statusTextFromStatus = (status) =>
-  http.STATUS_CODES[status] || "not specified";
-
 const testCanPushStream = (http2Stream) => {
   if (!http2Stream.pushAllowed) {
     return {
@@ -5430,385 +6573,117 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   exit: STOP_REASON_PROCESS_EXIT,
 };
 
-// ESM version of "path-to-regexp@6.2.1"
-// https://github.com/pillarjs/path-to-regexp/blob/master/package.json
+const internalErrorHtmlFileUrl = import.meta.resolve("./html/500.html");
 
-/**
- * Tokenize input string.
- */
-function lexer(str) {
-  var tokens = [];
-  var i = 0;
-  while (i < str.length) {
-    var char = str[i];
-    if (char === "*" || char === "+" || char === "?") {
-      tokens.push({ type: "MODIFIER", index: i, value: str[i++] });
-      continue;
-    }
-    if (char === "\\") {
-      tokens.push({ type: "ESCAPED_CHAR", index: i++, value: str[i++] });
-      continue;
-    }
-    if (char === "{") {
-      tokens.push({ type: "OPEN", index: i, value: str[i++] });
-      continue;
-    }
-    if (char === "}") {
-      tokens.push({ type: "CLOSE", index: i, value: str[i++] });
-      continue;
-    }
-    if (char === ":") {
-      var name = "";
-      let j = i + 1;
-      while (j < str.length) {
-        var code = str.charCodeAt(j);
-        if (
-          // `0-9`
-          (code >= 48 && code <= 57) ||
-          // `A-Z`
-          (code >= 65 && code <= 90) ||
-          // `a-z`
-          (code >= 97 && code <= 122) ||
-          // `_`
-          code === 95
-        ) {
-          name += str[j++];
-          continue;
-        }
-        break;
+const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
+  return {
+    name: "jsenv:error_handler",
+    handleError: (serverInternalError, { request }) => {
+      const serverInternalErrorIsAPrimitive =
+        serverInternalError === null ||
+        (typeof serverInternalError !== "object" &&
+          typeof serverInternalError !== "function");
+      if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
+        return serverInternalError.asResponse();
       }
-      if (!name) throw new TypeError("Missing parameter name at ".concat(i));
-      tokens.push({ type: "NAME", index: i, value: name });
-      i = j;
-      continue;
-    }
-    if (char === "(") {
-      var count = 1;
-      var pattern = "";
-      var j = i + 1;
-      if (str[j] === "?") {
-        throw new TypeError('Pattern cannot start with "?" at '.concat(j));
-      }
-      while (j < str.length) {
-        if (str[j] === "\\") {
-          pattern += str[j++] + str[j++];
-          continue;
-        }
-        if (str[j] === ")") {
-          count--;
-          if (count === 0) {
-            j++;
-            break;
+      const dataToSend = serverInternalErrorIsAPrimitive
+        ? {
+            code: "VALUE_THROWED",
+            value: serverInternalError,
           }
-        } else if (str[j] === "(") {
-          count++;
-          if (str[j + 1] !== "?") {
-            throw new TypeError(
-              "Capturing groups are not allowed at ".concat(j),
-            );
-          }
-        }
-        pattern += str[j++];
-      }
-      if (count) throw new TypeError("Unbalanced pattern at ".concat(i));
-      if (!pattern) throw new TypeError("Missing pattern at ".concat(i));
-      tokens.push({ type: "PATTERN", index: i, value: pattern });
-      i = j;
-      continue;
-    }
-    tokens.push({ type: "CHAR", index: i, value: str[i++] });
-  }
-  tokens.push({ type: "END", index: i, value: "" });
-  return tokens;
-}
-/**
- * Parse a string for the raw tokens.
- */
-function parse(str, { prefixes = "./", delimiter = "/#?" } = {}) {
-  var tokens = lexer(str);
+        : {
+            code: serverInternalError.code || "UNKNOWN_ERROR",
+            ...(sendErrorDetails
+              ? {
+                  stack: serverInternalError.stack,
+                  ...serverInternalError,
+                }
+              : {}),
+          };
 
-  var defaultPattern = "[^".concat(escapeString(delimiter), "]+?");
-  var result = [];
-  var key = 0;
-  var i = 0;
-  var path = "";
-  var tryConsume = function (type) {
-    if (i < tokens.length && tokens[i].type === type) return tokens[i++].value;
-    return undefined;
-  };
-  var mustConsume = function (type) {
-    var value = tryConsume(type);
-    if (value !== undefined) return value;
-    var _a = tokens[i];
-    var nextType = _a.type;
-    var index = _a.inde;
-    throw new TypeError(
-      "Unexpected "
-        .concat(nextType, " at ")
-        .concat(index, ", expect ")
-        .concat(type),
-    );
-  };
-  var consumeText = function () {
-    var result = "";
-    var value;
-    while ((value = tryConsume("CHAR") || tryConsume("ESCAPED_CHAR"))) {
-      result += value;
-    }
-    return result;
-  };
-  while (i < tokens.length) {
-    var char = tryConsume("CHAR");
-    var name = tryConsume("NAME");
-    var pattern = tryConsume("PATTERN");
-    if (name || pattern) {
-      let prefix = char || "";
-      if (prefixes.indexOf(prefix) === -1) {
-        path += prefix;
-        prefix = "";
-      }
-      if (path) {
-        result.push(path);
-        path = "";
-      }
-      result.push({
-        name: name || key++,
-        prefix,
-        suffix: "",
-        pattern: pattern || defaultPattern,
-        modifier: tryConsume("MODIFIER") || "",
-      });
-      continue;
-    }
-    var value = char || tryConsume("ESCAPED_CHAR");
-    if (value) {
-      path += value;
-      continue;
-    }
-    if (path) {
-      result.push(path);
-      path = "";
-    }
-    var open = tryConsume("OPEN");
-    if (open) {
-      var prefix = consumeText();
-      var name_1 = tryConsume("NAME") || "";
-      var pattern_1 = tryConsume("PATTERN") || "";
-      var suffix = consumeText();
-      mustConsume("CLOSE");
-      result.push({
-        name: name_1 || (pattern_1 ? key++ : ""),
-        pattern: name_1 && !pattern_1 ? defaultPattern : pattern_1,
-        prefix,
-        suffix,
-        modifier: tryConsume("MODIFIER") || "",
-      });
-      continue;
-    }
-    mustConsume("END");
-  }
-  return result;
-}
-/**
- * Create path match function from `path-to-regexp` spec.
- */
-function match(str, options) {
-  var keys = [];
-  var re = pathToRegexp(str, keys, options);
-  return regexpToFunction(re, keys, options);
-}
-/**
- * Create a path match function from `path-to-regexp` output.
- */
-function regexpToFunction(re, keys, { decode = (x) => x }) {
-  return function (pathname) {
-    var m = re.exec(pathname);
-    if (!m) return false;
-    var path = m[0];
-    var index = m.index;
-    var params = Object.create(null);
-    var _loop_1 = function (i) {
-      if (m[i] === undefined) return "continue";
-      var key = keys[i - 1];
-      if (key.modifier === "*" || key.modifier === "+") {
-        params[key.name] = m[i]
-          .split(key.prefix + key.suffix)
-          .map(function (value) {
-            return decode(value, key);
-          });
-      } else {
-        params[key.name] = decode(m[i], key);
-      }
-      return undefined;
-    };
-    for (var i = 1; i < m.length; i++) {
-      _loop_1(i);
-    }
-    return { path, index, params };
-  };
-}
-/**
- * Escape a regular expression string.
- */
-function escapeString(str) {
-  return str.replace(/([.+*?=^!:${}()[\]|/\\])/g, "\\$1");
-}
-/**
- * Pull out keys from a regexp.
- */
-function regexpToRegexp(path, keys) {
-  if (!keys) return path;
-  var groupsRegex = /\((?:\?<(.*?)>)?(?!\?)/g;
-  var index = 0;
-  var execResult = groupsRegex.exec(path.source);
-  while (execResult) {
-    keys.push({
-      // Use parenthesized substring match if available, index otherwise
-      name: execResult[1] || index++,
-      prefix: "",
-      suffix: "",
-      modifier: "",
-      pattern: "",
-    });
-    execResult = groupsRegex.exec(path.source);
-  }
-  return path;
-}
-/**
- * Transform an array into a regexp.
- */
-function arrayToRegexp(paths, keys, { sensitive }) {
-  var parts = paths.map(function (path) {
-    return pathToRegexp(path, keys, { sensitive }).source;
-  });
-  return new RegExp("(?:".concat(parts.join("|"), ")"), sensitive ? "" : "i");
-}
-/**
- * Create a path regexp from string input.
- */
-function stringToRegexp(path, keys, options) {
-  return tokensToRegexp(parse(path, options), keys, options);
-}
-/**
- * Expose a function for taking tokens and returning a RegExp.
- */
-function tokensToRegexp(
-  tokens,
-  keys,
-  {
-    sensitive,
-    strict = false,
-    start = true,
-    end = true,
-    encode = (x) => x,
-    delimiter = "/#?",
-    endsWith = "",
-  } = {},
-) {
-  var endsWithRe = "[".concat(escapeString(endsWith), "]|$");
-  var delimiterRe = "[".concat(escapeString(delimiter), "]");
-  var route = start ? "^" : "";
-  // Iterate over the tokens and create our regexp string.
-  for (var _i = 0, tokens_1 = tokens; _i < tokens_1.length; _i++) {
-    var token = tokens_1[_i];
-    if (typeof token === "string") {
-      route += escapeString(encode(token));
-    } else {
-      var prefix = escapeString(encode(token.prefix));
-      var suffix = escapeString(encode(token.suffix));
-      if (token.pattern) {
-        if (keys) keys.push(token);
-        if (prefix || suffix) {
-          if (token.modifier === "+" || token.modifier === "*") {
-            var mod = token.modifier === "*" ? "?" : "";
-            route += "(?:"
-              .concat(prefix, "((?:")
-              .concat(token.pattern, ")(?:")
-              .concat(suffix)
-              .concat(prefix, "(?:")
-              .concat(token.pattern, "))*)")
-              .concat(suffix, ")")
-              .concat(mod);
-          } else {
-            route += "(?:"
-              .concat(prefix, "(")
-              .concat(token.pattern, ")")
-              .concat(suffix, ")")
-              .concat(token.modifier);
-          }
-        } else if (token.modifier === "+" || token.modifier === "*") {
-          route += "((?:"
-            .concat(token.pattern, ")")
-            .concat(token.modifier, ")");
-        } else {
-          route += "(".concat(token.pattern, ")").concat(token.modifier);
-        }
-      } else {
-        route += "(?:"
-          .concat(prefix)
-          .concat(suffix, ")")
-          .concat(token.modifier);
-      }
-    }
-  }
-  if (end) {
-    if (!strict) route += "".concat(delimiterRe, "?");
-    route += endsWith ? "(?=".concat(endsWithRe, ")") : "$";
-  } else {
-    var endToken = tokens[tokens.length - 1];
-    var isEndDelimited =
-      typeof endToken === "string"
-        ? delimiterRe.indexOf(endToken[endToken.length - 1]) > -1
-        : endToken === undefined;
-    if (!strict) {
-      route += "(?:".concat(delimiterRe, "(?=").concat(endsWithRe, "))?");
-    }
-    if (!isEndDelimited) {
-      route += "(?=".concat(delimiterRe, "|").concat(endsWithRe, ")");
-    }
-  }
-  return new RegExp(route, sensitive ? "" : "i");
-}
-/**
- * Normalize the given path string, returning a regular expression.
- *
- * An empty array can be passed in for the keys, which will hold the
- * placeholder key descriptions. For example, using `/user/:id`, `keys` will
- * contain `[{ name: 'id', delimiter: '/', optional: false, repeat: false }]`.
- */
-function pathToRegexp(path, keys, options) {
-  if (path instanceof RegExp) return regexpToRegexp(path, keys);
-  if (Array.isArray(path)) return arrayToRegexp(path, keys, options);
-  return stringToRegexp(path, keys, options);
-}
+      const availableContentTypes = {
+        "text/html": () => {
+          const renderHtmlForErrorWithoutDetails = () => {
+            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
+          };
+          const renderHtmlForErrorWithDetails = () => {
+            if (serverInternalErrorIsAPrimitive) {
+              return `<pre>${JSON.stringify(
+                serverInternalError,
+                null,
+                "  ",
+              )}</pre>`;
+            }
+            return `<pre>${serverInternalError.stack}</pre>`;
+          };
 
-const setupRoutes = (routes) => {
-  const candidates = Object.keys(routes).map((pathPattern) => {
-    const applyPatternMatching = match(pathPattern, {
-      decode: decodeURIComponent,
-    });
-    return {
-      applyPatternMatching,
-      requestHandler: routes[pathPattern],
-    };
-  });
+          const internalErrorHtmlTemplate = readFileSync(
+            new URL(internalErrorHtmlFileUrl),
+            "utf8",
+          );
+          const internalErrorHtml = replacePlaceholdersInHtml(
+            internalErrorHtmlTemplate,
+            {
+              errorMessage: serverInternalErrorIsAPrimitive
+                ? `Code inside server has thrown a literal.`
+                : `Code inside server has thrown an error.`,
+              errorDetailsContent: sendErrorDetails
+                ? renderHtmlForErrorWithDetails()
+                : renderHtmlForErrorWithoutDetails(),
+            },
+          );
 
-  return (request, { pushResponse, redirectRequest }) => {
-    let result;
-    const found = candidates.find((candidate) => {
-      result = candidate.applyPatternMatching(request.pathname);
-      return Boolean(result);
-    });
-    if (found) {
-      return found.requestHandler(
-        {
-          ...request,
-          routeParams: result.params,
+          return {
+            headers: {
+              "content-type": "text/html",
+              "content-length": Buffer.byteLength(internalErrorHtml),
+            },
+            body: internalErrorHtml,
+          };
         },
-        { pushResponse, redirectRequest },
+        "text/plain": () => {
+          let internalErrorMessage = serverInternalErrorIsAPrimitive
+            ? `Code inside server has thrown a literal:`
+            : `Code inside server has thrown an error:`;
+          if (sendErrorDetails) {
+            if (serverInternalErrorIsAPrimitive) {
+              internalErrorMessage += `\n${JSON.stringify(
+                serverInternalError,
+                null,
+                "  ",
+              )}`;
+            } else {
+              internalErrorMessage += `\n${serverInternalError.stack}`;
+            }
+          } else {
+            internalErrorMessage += `\nDetails not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).`;
+          }
+
+          return {
+            headers: {
+              "content-type": "text/plain",
+              "content-length": Buffer.byteLength(internalErrorMessage),
+            },
+            body: internalErrorMessage,
+          };
+        },
+        "application/json": () => {
+          const body = JSON.stringify(dataToSend);
+          return {
+            headers: {
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(body),
+            },
+            body,
+          };
+        },
+      };
+      const bestContentType = pickContentType(
+        request,
+        Object.keys(availableContentTypes),
       );
-    }
-    return null;
+      return availableContentTypes[bestContentType || "application/json"]();
+    },
   };
 };
 
@@ -5996,11 +6871,10 @@ const serveDirectory = (
 
 
 const fetchFileSystem = async (
-  filesystemUrl,
+  request,
+  helpers,
+  directoryUrl,
   {
-    // signal,
-    method = "GET",
-    headers = {},
     etagEnabled = false,
     etagMemory = true,
     etagMemoryMaxSize = 1000,
@@ -6011,37 +6885,34 @@ const fetchFileSystem = async (
       ? "private,max-age=0,must-revalidate"
       : "no-store",
     canReadDirectory = false,
-    rootDirectoryUrl, //  = `${pathToFileURL(process.cwd())}/`,
     ENOENTFallback = () => {},
   } = {},
 ) => {
+  let directoryUrlString = asUrlString(directoryUrl);
+  if (!directoryUrlString) {
+    throw new TypeError(
+      `directoryUrl must be a string or an url, got ${directoryUrl}`,
+    );
+  }
+  if (!directoryUrlString.startsWith("file://")) {
+    throw new Error(
+      `directoryUrl must start with "file://", got ${directoryUrlString}`,
+    );
+  }
+  if (!directoryUrlString.endsWith("/")) {
+    directoryUrlString = `${directoryUrlString}/`;
+  }
+  let resource;
+  if ("0" in request.params) {
+    resource = request.params["0"];
+  } else {
+    resource = request.resource.slice(1);
+  }
+  const filesystemUrl = new URL(resource, directoryUrl);
   const urlString = asUrlString(filesystemUrl);
-  if (!urlString) {
-    return create500Response(
-      `fetchFileSystem first parameter must be a file url, got ${filesystemUrl}`,
-    );
-  }
-  if (!urlString.startsWith("file://")) {
-    return create500Response(
-      `fetchFileSystem url must use "file://" scheme, got ${filesystemUrl}`,
-    );
-  }
-  if (rootDirectoryUrl) {
-    let rootDirectoryUrlString = asUrlString(rootDirectoryUrl);
-    if (!rootDirectoryUrlString) {
-      return create500Response(
-        `rootDirectoryUrl must be a string or an url, got ${rootDirectoryUrl}`,
-      );
-    }
-    if (!rootDirectoryUrlString.endsWith("/")) {
-      rootDirectoryUrlString = `${rootDirectoryUrlString}/`;
-    }
-    if (!urlString.startsWith(rootDirectoryUrlString)) {
-      return create500Response(
-        `fetchFileSystem url must be inside root directory, got ${urlString}`,
-      );
-    }
-    rootDirectoryUrl = rootDirectoryUrlString;
+
+  if (typeof cacheControl === "function") {
+    cacheControl = cacheControl(request);
   }
 
   // here you might be tempted to add || cacheControl === 'no-cache'
@@ -6064,24 +6935,22 @@ const fetchFileSystem = async (
     mtimeEnabled = false;
   }
 
-  if (method !== "GET" && method !== "HEAD") {
-    return {
-      status: 501,
-    };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return null;
   }
 
   const serveFile = async (fileUrl) => {
     try {
-      const [readStatTiming, fileStat] = timeFunction(
-        "file service>read file stat",
-        () => statSync(new URL(fileUrl)),
-      );
+      const readStatTiming = helpers?.timing("file service>read file stat");
+      const fileStat = statSync(new URL(fileUrl));
+      readStatTiming?.end();
+
       if (fileStat.isDirectory()) {
         if (canReadDirectory) {
           return serveDirectory(fileUrl, {
-            headers,
+            headers: request.headers,
             canReadDirectory,
-            rootDirectoryUrl,
+            rootDirectoryUrl: directoryUrl,
           });
         }
         return {
@@ -6093,12 +6962,12 @@ const fetchFileSystem = async (
       if (!fileStat.isFile()) {
         return {
           status: 404,
-          timing: readStatTiming,
         };
       }
 
       const clientCacheResponse = await getClientCacheResponse({
-        headers,
+        headers: request.headers,
+        helpers,
         etagEnabled,
         etagMemory,
         etagMemoryMaxSize,
@@ -6112,7 +6981,6 @@ const fetchFileSystem = async (
       if (clientCacheResponse.status === 304) {
         return composeTwoResponses(
           {
-            timing: readStatTiming,
             headers: {
               ...(cacheControl ? { "cache-control": cacheControl } : {}),
             },
@@ -6124,7 +6992,7 @@ const fetchFileSystem = async (
       let response;
       if (compressionEnabled && fileStat.size >= compressionSizeThreshold) {
         const compressedResponse = await getCompressedResponse({
-          headers,
+          headers: request.headers,
           fileUrl,
         });
         if (compressedResponse) {
@@ -6140,7 +7008,6 @@ const fetchFileSystem = async (
 
       const intermediateResponse = composeTwoResponses(
         {
-          timing: readStatTiming,
           headers: {
             ...(cacheControl ? { "cache-control": cacheControl } : {}),
             // even if client cache is disabled, server can still
@@ -6175,19 +7042,9 @@ const fetchFileSystem = async (
   return serveFile(`file://${new URL(urlString).pathname}`);
 };
 
-const create500Response = (message) => {
-  return {
-    status: 500,
-    headers: {
-      "content-type": "text/plain",
-      "content-length": Buffer.byteLength(message),
-    },
-    body: message,
-  };
-};
-
 const getClientCacheResponse = async ({
   headers,
+  helpers,
   etagEnabled,
   etagMemory,
   etagMemoryMaxSize,
@@ -6210,6 +7067,7 @@ const getClientCacheResponse = async ({
   if (etagEnabled) {
     return getEtagResponse({
       headers,
+      helpers,
       etagMemory,
       etagMemoryMaxSize,
       fileStat,
@@ -6229,21 +7087,20 @@ const getClientCacheResponse = async ({
 
 const getEtagResponse = async ({
   headers,
+  helpers,
   etagMemory,
   etagMemoryMaxSize,
   fileUrl,
   fileStat,
 }) => {
-  const [computeEtagTiming, fileContentEtag] = await timeFunction(
-    "file service>generate file etag",
-    () =>
-      computeEtag({
-        etagMemory,
-        etagMemoryMaxSize,
-        fileUrl,
-        fileStat,
-      }),
-  );
+  const etagTiming = helpers?.timing("file service>generate file etag");
+  const fileContentEtag = await computeEtag({
+    etagMemory,
+    etagMemoryMaxSize,
+    fileUrl,
+    fileStat,
+  });
+  etagTiming?.end();
 
   const requestHasIfNoneMatchHeader = "if-none-match" in headers;
   if (
@@ -6252,7 +7109,6 @@ const getEtagResponse = async ({
   ) {
     return {
       status: 304,
-      timing: computeEtagTiming,
     };
   }
 
@@ -6261,7 +7117,6 @@ const getEtagResponse = async ({
     headers: {
       etag: fileContentEtag,
     },
-    timing: computeEtagTiming,
   };
 };
 
@@ -6439,102 +7294,52 @@ const asUrlString = (value) => {
   return null;
 };
 
-const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
-  return {
-    name: "jsenv:error_handler",
-    handleError: (serverInternalError, { request }) => {
-      const serverInternalErrorIsAPrimitive =
-        serverInternalError === null ||
-        (typeof serverInternalError !== "object" &&
-          typeof serverInternalError !== "function");
-      if (!serverInternalErrorIsAPrimitive && serverInternalError.asResponse) {
-        return serverInternalError.asResponse();
-      }
-      const dataToSend = serverInternalErrorIsAPrimitive
-        ? {
-            code: "VALUE_THROWED",
-            value: serverInternalError,
-          }
-        : {
-            code: serverInternalError.code || "UNKNOWN_ERROR",
-            ...(sendErrorDetails
-              ? {
-                  stack: serverInternalError.stack,
-                  ...serverInternalError,
-                }
-              : {}),
-          };
-
-      const availableContentTypes = {
-        "text/html": () => {
-          const renderHtmlForErrorWithoutDetails = () => {
-            return `<p>Details not available: to enable them use jsenvServiceErrorHandler({ sendErrorDetails: true }).</p>`;
-          };
-
-          const renderHtmlForErrorWithDetails = () => {
-            if (serverInternalErrorIsAPrimitive) {
-              return `<pre>${JSON.stringify(
-                serverInternalError,
-                null,
-                "  ",
-              )}</pre>`;
-            }
-            return `<pre>${serverInternalError.stack}</pre>`;
-          };
-
-          const body = `<!DOCTYPE html>
-<html>
-  <head>
-    <title>Internal server error</title>
-    <meta charset="utf-8" />
-    <link rel="icon" href="data:," />
-  </head>
-
-  <body>
-    <h1>Internal server error</h1>
-    <p>${
-      serverInternalErrorIsAPrimitive
-        ? `Code inside server has thrown a literal.`
-        : `Code inside server has thrown an error.`
-    }</p>
-    <details>
-      <summary>See internal error details</summary>
-      ${
-        sendErrorDetails
-          ? renderHtmlForErrorWithDetails()
-          : renderHtmlForErrorWithoutDetails()
-      }
-    </details>
-  </body>
-</html>`;
-
-          return {
-            headers: {
-              "content-type": "text/html",
-              "content-length": Buffer.byteLength(body),
-            },
-            body,
-          };
-        },
-        "application/json": () => {
-          const body = JSON.stringify(dataToSend);
-          return {
-            headers: {
-              "content-type": "application/json",
-              "content-length": Buffer.byteLength(body),
-            },
-            body,
-          };
-        },
-      };
-      const bestContentType = pickContentType(
-        request,
-        Object.keys(availableContentTypes),
-      );
-      return availableContentTypes[bestContentType || "application/json"]();
-    },
+const createFileSystemFetch = (directoryUrl, options) => {
+  return (request, helpers) => {
+    return fetchFileSystem(request, helpers, directoryUrl, options);
   };
 };
+
+class ProgressiveResponse {
+  constructor(responseBodyHandler, { status = 200, statusText, headers } = {}) {
+    const contentType = headers ? headers["content-type"] : "text/plain";
+    const progressiveResponse = {
+      status,
+      statusText,
+      headers,
+      body: createObservable(({ next, complete, addTeardown }) => {
+        // we must write something for fetch promise to resolve
+        // this is conform to HTTP spec where client expect body to starts writing
+        // before resolving response promise client side
+        if (CONTENT_TYPE.isTextual(contentType)) {
+          next("");
+        } else {
+          next(new Uint8Array());
+        }
+        const returnValue = responseBodyHandler({
+          write: (data) => {
+            next(data);
+          },
+          end: () => {
+            complete();
+          },
+        });
+        if (typeof returnValue === "function") {
+          addTeardown(() => {
+            returnValue();
+          });
+        }
+      }),
+    };
+    // eslint-disable-next-line no-constructor-return
+    return progressiveResponse;
+  }
+}
+
+/**
+ * @jsenv/server is already registering a route to handle OPTIONS request
+ * so here we just need to add the CORS headers to the response
+ */
 
 const jsenvAccessControlAllowedHeaders = ["x-requested-with"];
 
@@ -6570,7 +7375,7 @@ const jsenvServiceCORS = ({
 
   return {
     name: "jsenv:cors",
-    injectResponseHeaders: (response, { request }) => {
+    injectResponseProperties: (request) => {
       const accessControlHeaders = generateAccessControlHeaders({
         request,
         accessControlAllowedOrigins,
@@ -6583,7 +7388,9 @@ const jsenvServiceCORS = ({
         accessControlMaxAge,
         timingAllowOrigin,
       });
-      return accessControlHeaders;
+      return {
+        headers: accessControlHeaders,
+      };
     },
   };
 };
@@ -6664,313 +7471,6 @@ const generateAccessControlHeaders = ({
   };
 };
 
-// https://www.html5rocks.com/en/tutorials/eventsource/basics/
-const createSSERoom = ({
-  logLevel,
-  effect = () => {},
-  // do not keep process alive because of rooms, something else must keep it alive
-  keepProcessAlive = false,
-  keepaliveDuration = 30 * 1000,
-  retryDuration = 1 * 1000,
-  historyLength = 1 * 1000,
-  maxClientAllowed = 100, // max 100 clients accepted
-  computeEventId = (event, lastEventId) => lastEventId + 1,
-  welcomeEventEnabled = false,
-  welcomeEventPublic = false, // decides if welcome event are sent to other clients
-} = {}) => {
-  const logger = createLogger({ logLevel });
-
-  const room = {};
-  const clients = new Set();
-  const eventHistory = createEventHistory(historyLength);
-  // what about previousEventId that keeps growing ?
-  // we could add some limit
-  // one limit could be that an event older than 24h is deleted
-  let previousEventId = 0;
-  let opened = false;
-  let interval;
-  let cleanupEffect = CLEANUP_NOOP;
-
-  const join = (request) => {
-    // should we ensure a given request can join a room only once?
-
-    const lastKnownId =
-      request.headers["last-event-id"] ||
-      new URL(request.url).searchParams.get("last-event-id");
-
-    if (clients.size >= maxClientAllowed) {
-      return {
-        status: 503,
-      };
-    }
-
-    if (!opened) {
-      return {
-        status: 204,
-      };
-    }
-
-    const sseRoomObservable = createObservable(({ next, complete }) => {
-      const client = {
-        next,
-        complete,
-        request,
-      };
-      if (clients.size === 0) {
-        const effectReturnValue = effect();
-        if (typeof effectReturnValue === "function") {
-          cleanupEffect = effectReturnValue;
-        } else {
-          cleanupEffect = CLEANUP_NOOP;
-        }
-      }
-      clients.add(client);
-      logger.debug(
-        `A client has joined. Number of client in room: ${clients.size}`,
-      );
-
-      if (lastKnownId !== undefined) {
-        const previousEvents = getAllEventSince(lastKnownId);
-        const eventMissedCount = previousEvents.length;
-        if (eventMissedCount > 0) {
-          logger.info(
-            `send ${eventMissedCount} event missed by client since event with id "${lastKnownId}"`,
-          );
-          previousEvents.forEach((previousEvent) => {
-            next(stringifySourceEvent(previousEvent));
-          });
-        }
-      }
-
-      if (welcomeEventEnabled) {
-        const welcomeEvent = {
-          retry: retryDuration,
-          type: "welcome",
-          data: new Date().toLocaleTimeString(),
-        };
-        addEventToHistory(welcomeEvent);
-
-        // send to everyone
-        if (welcomeEventPublic) {
-          sendEventToAllClients(welcomeEvent, {
-            history: false,
-          });
-        }
-        // send only to this client
-        else {
-          next(stringifySourceEvent(welcomeEvent));
-        }
-      } else {
-        const firstEvent = {
-          retry: retryDuration,
-          type: "comment",
-          data: new Date().toLocaleTimeString(),
-        };
-        next(stringifySourceEvent(firstEvent));
-      }
-
-      return () => {
-        clients.delete(client);
-        if (clients.size === 0) {
-          cleanupEffect();
-          cleanupEffect = CLEANUP_NOOP;
-        }
-        logger.debug(
-          `A client left. Number of client in room: ${clients.size}`,
-        );
-      };
-    });
-
-    const requestSSEObservable = connectRequestAndRoom(
-      request,
-      room,
-      sseRoomObservable,
-    );
-
-    return {
-      status: 200,
-      headers: {
-        "content-type": "text/event-stream",
-        "cache-control": "no-store",
-        "connection": "keep-alive",
-      },
-      body: requestSSEObservable,
-    };
-  };
-
-  const leave = (request) => {
-    disconnectRequestFromRoom(request, room);
-  };
-
-  const addEventToHistory = (event) => {
-    if (typeof event.id === "undefined") {
-      event.id = computeEventId(event, previousEventId);
-    }
-    previousEventId = event.id;
-    eventHistory.add(event);
-  };
-
-  const sendEventToAllClients = (event, { history = true } = {}) => {
-    if (history) {
-      addEventToHistory(event);
-    }
-    logger.debug(
-      `send "${event.type}" event to ${clients.size} client in the room`,
-    );
-    const eventString = stringifySourceEvent(event);
-    clients.forEach((client) => {
-      client.next(eventString);
-    });
-  };
-
-  const getAllEventSince = (id) => {
-    const events = eventHistory.since(id);
-    if (welcomeEventEnabled && !welcomeEventPublic) {
-      return events.filter((event) => event.type !== "welcome");
-    }
-    return events;
-  };
-
-  const keepAlive = () => {
-    // maybe that, when an event occurs, we can delay the keep alive event
-    logger.debug(
-      `send keep alive event, number of client listening event source: ${clients.size}`,
-    );
-    sendEventToAllClients(
-      {
-        type: "comment",
-        data: new Date().toLocaleTimeString(),
-      },
-      { history: false },
-    );
-  };
-
-  const open = () => {
-    if (opened) return;
-    opened = true;
-    interval = setInterval(keepAlive, keepaliveDuration);
-    if (!keepProcessAlive) {
-      interval.unref();
-    }
-  };
-
-  const close = () => {
-    if (!opened) return;
-    logger.debug(`closing room, number of client in the room: ${clients.size}`);
-    clients.forEach((client) => client.complete());
-    clients.clear();
-    clearInterval(interval);
-    eventHistory.reset();
-    opened = false;
-  };
-
-  open();
-
-  Object.assign(room, {
-    // main api:
-    // - ability to sendEvent to clients in the room
-    // - ability to join the room
-    // - ability to leave the room
-    sendEventToAllClients,
-    join,
-    leave,
-
-    // should rarely be necessary, get information about the room
-    getAllEventSince,
-    getRoomClientCount: () => clients.size,
-
-    // should rarely be used
-    close,
-    open,
-  });
-  return room;
-};
-
-const CLEANUP_NOOP = () => {};
-
-const requestMap = new Map();
-
-const connectRequestAndRoom = (request, room, roomObservable) => {
-  let sseProducer;
-  let roomObservableMap;
-  const requestInfo = requestMap.get(request);
-  if (requestInfo) {
-    sseProducer = requestInfo.sseProducer;
-    roomObservableMap = requestInfo.roomObservableMap;
-  } else {
-    sseProducer = createCompositeProducer({
-      cleanup: () => {
-        requestMap.delete(request);
-      },
-    });
-    roomObservableMap = new Map();
-    requestMap.set(request, { sseProducer, roomObservableMap });
-  }
-
-  roomObservableMap.set(room, roomObservable);
-  sseProducer.addObservable(roomObservable);
-
-  return createObservable(sseProducer);
-};
-
-const disconnectRequestFromRoom = (request, room) => {
-  const requestInfo = requestMap.get(request);
-  if (!requestInfo) {
-    return;
-  }
-  const { sseProducer, roomObservableMap } = requestInfo;
-  const roomObservable = roomObservableMap.get(room);
-  roomObservableMap.delete(room);
-  sseProducer.removeObservable(roomObservable);
-};
-
-// https://github.com/dmail-old/project/commit/da7d2c88fc8273850812972885d030a22f9d7448
-// https://github.com/dmail-old/project/commit/98b3ae6748d461ac4bd9c48944a551b1128f4459
-// https://github.com/dmail-old/http-eventsource/blob/master/lib/event-source.js
-// http://html5doctor.com/server-sent-events/
-const stringifySourceEvent = ({ data, type = "message", id, retry }) => {
-  let string = "";
-
-  if (id !== undefined) {
-    string += `id:${id}\n`;
-  }
-
-  if (retry) {
-    string += `retry:${retry}\n`;
-  }
-
-  if (type !== "message") {
-    string += `event:${type}\n`;
-  }
-
-  string += `data:${data}\n\n`;
-
-  return string;
-};
-
-const createEventHistory = (limit) => {
-  const events = [];
-
-  const add = (data) => {
-    events.push(data);
-
-    if (events.length >= limit) {
-      events.shift();
-    }
-  };
-
-  const since = (id) => {
-    const index = events.findIndex((event) => String(event.id) === id);
-    return index === -1 ? [] : events.slice(index + 1);
-  };
-
-  const reset = () => {
-    events.length = 0;
-  };
-
-  return { add, since, reset };
-};
-
 const jsenvServiceResponseAcceptanceCheck = () => {
   return {
     name: "jsenv:response_acceptance_check",
@@ -7022,22 +7522,6 @@ ${responseContentEncodingHeader}
 --- request accept-encoding header ---
 ${requestAcceptEncodingHeader}`);
   }
-};
-
-const fromFetchResponse = (fetchResponse) => {
-  const responseHeaders = {};
-  const headersToIgnore = ["connection"];
-  fetchResponse.headers.forEach((value, name) => {
-    if (!headersToIgnore.includes(name)) {
-      responseHeaders[name] = value;
-    }
-  });
-  return {
-    status: fetchResponse.status,
-    statusText: fetchResponse.statusText,
-    headers: responseHeaders,
-    body: fetchResponse.body, // node-fetch assumed
-  };
 };
 
 /*
@@ -7632,4 +8116,650 @@ const replaceResource = (resourceBeforeAlias, newValue) => {
   return resource;
 };
 
-export { STOP_REASON_INTERNAL_ERROR, STOP_REASON_NOT_SPECIFIED, STOP_REASON_PROCESS_BEFORE_EXIT, STOP_REASON_PROCESS_EXIT, STOP_REASON_PROCESS_SIGHUP, STOP_REASON_PROCESS_SIGINT, STOP_REASON_PROCESS_SIGTERM, composeTwoResponses, createSSERoom, fetchFileSystem, findFreePort, fromFetchResponse, jsenvAccessControlAllowedHeaders, jsenvAccessControlAllowedMethods, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvServiceRequestAliases, jsenvServiceResponseAcceptanceCheck, pickContentEncoding, pickContentLanguage, pickContentType, serveDirectory, setupRoutes, startServer, timeFunction, timeStart };
+/**
+ * Copyright (c) 2014-present, Facebook, Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+var runtime = function (exports) {
+
+  var Op = Object.prototype;
+  var hasOwn = Op.hasOwnProperty;
+  var undefined$1; // More compressible than void 0.
+  var $Symbol = typeof Symbol === "function" ? Symbol : {};
+  var iteratorSymbol = $Symbol.iterator || "@@iterator";
+  var asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator";
+  var toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag";
+  function define(obj, key, value) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+    return obj[key];
+  }
+  try {
+    // IE 8 has a broken Object.defineProperty that only works on DOM objects.
+    define({}, "");
+  } catch (err) {
+    define = function (obj, key, value) {
+      return obj[key] = value;
+    };
+  }
+  function wrap(innerFn, outerFn, self, tryLocsList) {
+    // If outerFn provided and outerFn.prototype is a Generator, then outerFn.prototype instanceof Generator.
+    var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator;
+    var generator = Object.create(protoGenerator.prototype);
+    var context = new Context(tryLocsList || []);
+
+    // The ._invoke method unifies the implementations of the .next,
+    // .throw, and .return methods.
+    generator._invoke = makeInvokeMethod(innerFn, self, context);
+    return generator;
+  }
+  exports.wrap = wrap;
+
+  // Try/catch helper to minimize deoptimizations. Returns a completion
+  // record like context.tryEntries[i].completion. This interface could
+  // have been (and was previously) designed to take a closure to be
+  // invoked without arguments, but in all the cases we care about we
+  // already have an existing method we want to call, so there's no need
+  // to create a new function object. We can even get away with assuming
+  // the method takes exactly one argument, since that happens to be true
+  // in every case, so we don't have to touch the arguments object. The
+  // only additional allocation required is the completion record, which
+  // has a stable shape and so hopefully should be cheap to allocate.
+  function tryCatch(fn, obj, arg) {
+    try {
+      return {
+        type: "normal",
+        arg: fn.call(obj, arg)
+      };
+    } catch (err) {
+      return {
+        type: "throw",
+        arg: err
+      };
+    }
+  }
+  var GenStateSuspendedStart = "suspendedStart";
+  var GenStateSuspendedYield = "suspendedYield";
+  var GenStateExecuting = "executing";
+  var GenStateCompleted = "completed";
+
+  // Returning this object from the innerFn has the same effect as
+  // breaking out of the dispatch switch statement.
+  var ContinueSentinel = {};
+
+  // Dummy constructor functions that we use as the .constructor and
+  // .constructor.prototype properties for functions that return Generator
+  // objects. For full spec compliance, you may wish to configure your
+  // minifier not to mangle the names of these two functions.
+  function Generator() {}
+  function GeneratorFunction() {}
+  function GeneratorFunctionPrototype() {}
+
+  // This is a polyfill for %IteratorPrototype% for environments that
+  // don't natively support it.
+  var IteratorPrototype = {};
+  IteratorPrototype[iteratorSymbol] = function () {
+    return this;
+  };
+  var getProto = Object.getPrototypeOf;
+  var NativeIteratorPrototype = getProto && getProto(getProto(values([])));
+  if (NativeIteratorPrototype && NativeIteratorPrototype !== Op && hasOwn.call(NativeIteratorPrototype, iteratorSymbol)) {
+    // This environment has a native %IteratorPrototype%; use it instead
+    // of the polyfill.
+    IteratorPrototype = NativeIteratorPrototype;
+  }
+  var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(IteratorPrototype);
+  GeneratorFunction.prototype = Gp.constructor = GeneratorFunctionPrototype;
+  GeneratorFunctionPrototype.constructor = GeneratorFunction;
+  GeneratorFunction.displayName = define(GeneratorFunctionPrototype, toStringTagSymbol, "GeneratorFunction");
+
+  // Helper for defining the .next, .throw, and .return methods of the
+  // Iterator interface in terms of a single ._invoke method.
+  function defineIteratorMethods(prototype) {
+    ["next", "throw", "return"].forEach(function (method) {
+      define(prototype, method, function (arg) {
+        return this._invoke(method, arg);
+      });
+    });
+  }
+  exports.isGeneratorFunction = function (genFun) {
+    var ctor = typeof genFun === "function" && genFun.constructor;
+    return ctor ? ctor === GeneratorFunction ||
+    // For the native GeneratorFunction constructor, the best we can
+    // do is to check its .name property.
+    (ctor.displayName || ctor.name) === "GeneratorFunction" : false;
+  };
+  exports.mark = function (genFun) {
+    if (Object.setPrototypeOf) {
+      Object.setPrototypeOf(genFun, GeneratorFunctionPrototype);
+    } else {
+      genFun.__proto__ = GeneratorFunctionPrototype;
+      define(genFun, toStringTagSymbol, "GeneratorFunction");
+    }
+    genFun.prototype = Object.create(Gp);
+    return genFun;
+  };
+
+  // Within the body of any async function, `await x` is transformed to
+  // `yield regeneratorRuntime.awrap(x)`, so that the runtime can test
+  // `hasOwn.call(value, "__await")` to determine if the yielded value is
+  // meant to be awaited.
+  exports.awrap = function (arg) {
+    return {
+      __await: arg
+    };
+  };
+  function AsyncIterator(generator, PromiseImpl) {
+    function invoke(method, arg, resolve, reject) {
+      var record = tryCatch(generator[method], generator, arg);
+      if (record.type === "throw") {
+        reject(record.arg);
+      } else {
+        var result = record.arg;
+        var value = result.value;
+        if (value && typeof value === "object" && hasOwn.call(value, "__await")) {
+          return PromiseImpl.resolve(value.__await).then(function (value) {
+            invoke("next", value, resolve, reject);
+          }, function (err) {
+            invoke("throw", err, resolve, reject);
+          });
+        }
+        return PromiseImpl.resolve(value).then(function (unwrapped) {
+          // When a yielded Promise is resolved, its final value becomes
+          // the .value of the Promise<{value,done}> result for the
+          // current iteration.
+          result.value = unwrapped;
+          resolve(result);
+        }, function (error) {
+          // If a rejected Promise was yielded, throw the rejection back
+          // into the async generator function so it can be handled there.
+          return invoke("throw", error, resolve, reject);
+        });
+      }
+    }
+    var previousPromise;
+    function enqueue(method, arg) {
+      function callInvokeWithMethodAndArg() {
+        return new PromiseImpl(function (resolve, reject) {
+          invoke(method, arg, resolve, reject);
+        });
+      }
+      return previousPromise =
+      // If enqueue has been called before, then we want to wait until
+      // all previous Promises have been resolved before calling invoke,
+      // so that results are always delivered in the correct order. If
+      // enqueue has not been called before, then it is important to
+      // call invoke immediately, without waiting on a callback to fire,
+      // so that the async generator function has the opportunity to do
+      // any necessary setup in a predictable way. This predictability
+      // is why the Promise constructor synchronously invokes its
+      // executor callback, and why async functions synchronously
+      // execute code before the first await. Since we implement simple
+      // async functions in terms of async generators, it is especially
+      // important to get this right, even though it requires care.
+      previousPromise ? previousPromise.then(callInvokeWithMethodAndArg,
+      // Avoid propagating failures to Promises returned by later
+      // invocations of the iterator.
+      callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg();
+    }
+
+    // Define the unified helper method that is used to implement .next,
+    // .throw, and .return (see defineIteratorMethods).
+    this._invoke = enqueue;
+  }
+  defineIteratorMethods(AsyncIterator.prototype);
+  AsyncIterator.prototype[asyncIteratorSymbol] = function () {
+    return this;
+  };
+  exports.AsyncIterator = AsyncIterator;
+
+  // Note that simple async functions are implemented on top of
+  // AsyncIterator objects; they just return a Promise for the value of
+  // the final result produced by the iterator.
+  exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) {
+    if (PromiseImpl === undefined) PromiseImpl = Promise;
+    var iter = new AsyncIterator(wrap(innerFn, outerFn, self, tryLocsList), PromiseImpl);
+    return exports.isGeneratorFunction(outerFn) ? iter // If outerFn is a generator, return the full iterator.
+    : iter.next().then(function (result) {
+      return result.done ? result.value : iter.next();
+    });
+  };
+  function makeInvokeMethod(innerFn, self, context) {
+    var state = GenStateSuspendedStart;
+    return function invoke(method, arg) {
+      if (state === GenStateExecuting) {
+        throw new Error("Generator is already running");
+      }
+      if (state === GenStateCompleted) {
+        if (method === "throw") {
+          throw arg;
+        }
+
+        // Be forgiving, per 25.3.3.3.3 of the spec:
+        // https://people.mozilla.org/~jorendorff/es6-draft.html#sec-generatorresume
+        return doneResult();
+      }
+      context.method = method;
+      context.arg = arg;
+      while (true) {
+        var delegate = context.delegate;
+        if (delegate) {
+          var delegateResult = maybeInvokeDelegate(delegate, context);
+          if (delegateResult) {
+            if (delegateResult === ContinueSentinel) continue;
+            return delegateResult;
+          }
+        }
+        if (context.method === "next") {
+          // Setting context._sent for legacy support of Babel's
+          // function.sent implementation.
+          context.sent = context._sent = context.arg;
+        } else if (context.method === "throw") {
+          if (state === GenStateSuspendedStart) {
+            state = GenStateCompleted;
+            throw context.arg;
+          }
+          context.dispatchException(context.arg);
+        } else if (context.method === "return") {
+          context.abrupt("return", context.arg);
+        }
+        state = GenStateExecuting;
+        var record = tryCatch(innerFn, self, context);
+        if (record.type === "normal") {
+          // If an exception is thrown from innerFn, we leave state ===
+          // GenStateExecuting and loop back for another invocation.
+          state = context.done ? GenStateCompleted : GenStateSuspendedYield;
+          if (record.arg === ContinueSentinel) {
+            continue;
+          }
+          return {
+            value: record.arg,
+            done: context.done
+          };
+        } else if (record.type === "throw") {
+          state = GenStateCompleted;
+          // Dispatch the exception by looping back around to the
+          // context.dispatchException(context.arg) call above.
+          context.method = "throw";
+          context.arg = record.arg;
+        }
+      }
+    };
+  }
+
+  // Call delegate.iterator[context.method](context.arg) and handle the
+  // result, either by returning a { value, done } result from the
+  // delegate iterator, or by modifying context.method and context.arg,
+  // setting context.delegate to null, and returning the ContinueSentinel.
+  function maybeInvokeDelegate(delegate, context) {
+    var method = delegate.iterator[context.method];
+    if (method === undefined$1) {
+      // A .throw or .return when the delegate iterator has no .throw
+      // method always terminates the yield* loop.
+      context.delegate = null;
+      if (context.method === "throw") {
+        // Note: ["return"] must be used for ES3 parsing compatibility.
+        if (delegate.iterator["return"]) {
+          // If the delegate iterator has a return method, give it a
+          // chance to clean up.
+          context.method = "return";
+          context.arg = undefined$1;
+          maybeInvokeDelegate(delegate, context);
+          if (context.method === "throw") {
+            // If maybeInvokeDelegate(context) changed context.method from
+            // "return" to "throw", let that override the TypeError below.
+            return ContinueSentinel;
+          }
+        }
+        context.method = "throw";
+        context.arg = new TypeError("The iterator does not provide a 'throw' method");
+      }
+      return ContinueSentinel;
+    }
+    var record = tryCatch(method, delegate.iterator, context.arg);
+    if (record.type === "throw") {
+      context.method = "throw";
+      context.arg = record.arg;
+      context.delegate = null;
+      return ContinueSentinel;
+    }
+    var info = record.arg;
+    if (!info) {
+      context.method = "throw";
+      context.arg = new TypeError("iterator result is not an object");
+      context.delegate = null;
+      return ContinueSentinel;
+    }
+    if (info.done) {
+      // Assign the result of the finished delegate to the temporary
+      // variable specified by delegate.resultName (see delegateYield).
+      context[delegate.resultName] = info.value;
+
+      // Resume execution at the desired location (see delegateYield).
+      context.next = delegate.nextLoc;
+
+      // If context.method was "throw" but the delegate handled the
+      // exception, let the outer generator proceed normally. If
+      // context.method was "next", forget context.arg since it has been
+      // "consumed" by the delegate iterator. If context.method was
+      // "return", allow the original .return call to continue in the
+      // outer generator.
+      if (context.method !== "return") {
+        context.method = "next";
+        context.arg = undefined$1;
+      }
+    } else {
+      // Re-yield the result returned by the delegate method.
+      return info;
+    }
+
+    // The delegate iterator is finished, so forget it and continue with
+    // the outer generator.
+    context.delegate = null;
+    return ContinueSentinel;
+  }
+
+  // Define Generator.prototype.{next,throw,return} in terms of the
+  // unified ._invoke helper method.
+  defineIteratorMethods(Gp);
+  define(Gp, toStringTagSymbol, "Generator");
+
+  // A Generator should always return itself as the iterator object when the
+  // @@iterator function is called on it. Some browsers' implementations of the
+  // iterator prototype chain incorrectly implement this, causing the Generator
+  // object to not be returned from this call. This ensures that doesn't happen.
+  // See https://github.com/facebook/regenerator/issues/274 for more details.
+  Gp[iteratorSymbol] = function () {
+    return this;
+  };
+  Gp.toString = function () {
+    return "[object Generator]";
+  };
+  function pushTryEntry(locs) {
+    var entry = {
+      tryLoc: locs[0]
+    };
+    if (1 in locs) {
+      entry.catchLoc = locs[1];
+    }
+    if (2 in locs) {
+      entry.finallyLoc = locs[2];
+      entry.afterLoc = locs[3];
+    }
+    this.tryEntries.push(entry);
+  }
+  function resetTryEntry(entry) {
+    var record = entry.completion || {};
+    record.type = "normal";
+    delete record.arg;
+    entry.completion = record;
+  }
+  function Context(tryLocsList) {
+    // The root entry object (effectively a try statement without a catch
+    // or a finally block) gives us a place to store values thrown from
+    // locations where there is no enclosing try statement.
+    this.tryEntries = [{
+      tryLoc: "root"
+    }];
+    tryLocsList.forEach(pushTryEntry, this);
+    this.reset(true);
+  }
+  exports.keys = function (object) {
+    var keys = [];
+    for (var key in object) {
+      keys.push(key);
+    }
+    keys.reverse();
+
+    // Rather than returning an object with a next method, we keep
+    // things simple and return the next function itself.
+    return function next() {
+      while (keys.length) {
+        var key = keys.pop();
+        if (key in object) {
+          next.value = key;
+          next.done = false;
+          return next;
+        }
+      }
+
+      // To avoid creating an additional object, we just hang the .value
+      // and .done properties off the next function object itself. This
+      // also ensures that the minifier will not anonymize the function.
+      next.done = true;
+      return next;
+    };
+  };
+  function values(iterable) {
+    if (iterable) {
+      var iteratorMethod = iterable[iteratorSymbol];
+      if (iteratorMethod) {
+        return iteratorMethod.call(iterable);
+      }
+      if (typeof iterable.next === "function") {
+        return iterable;
+      }
+      if (!isNaN(iterable.length)) {
+        var i = -1,
+          next = function next() {
+            while (++i < iterable.length) {
+              if (hasOwn.call(iterable, i)) {
+                next.value = iterable[i];
+                next.done = false;
+                return next;
+              }
+            }
+            next.value = undefined$1;
+            next.done = true;
+            return next;
+          };
+        return next.next = next;
+      }
+    }
+
+    // Return an iterator with no values.
+    return {
+      next: doneResult
+    };
+  }
+  exports.values = values;
+  function doneResult() {
+    return {
+      value: undefined$1,
+      done: true
+    };
+  }
+  Context.prototype = {
+    constructor: Context,
+    reset: function (skipTempReset) {
+      this.prev = 0;
+      this.next = 0;
+      // Resetting context._sent for legacy support of Babel's
+      // function.sent implementation.
+      this.sent = this._sent = undefined$1;
+      this.done = false;
+      this.delegate = null;
+      this.method = "next";
+      this.arg = undefined$1;
+      this.tryEntries.forEach(resetTryEntry);
+      if (!skipTempReset) {
+        for (var name in this) {
+          // Not sure about the optimal order of these conditions:
+          if (name.charAt(0) === "t" && hasOwn.call(this, name) && !isNaN(+name.slice(1))) {
+            this[name] = undefined$1;
+          }
+        }
+      }
+    },
+    stop: function () {
+      this.done = true;
+      var rootEntry = this.tryEntries[0];
+      var rootRecord = rootEntry.completion;
+      if (rootRecord.type === "throw") {
+        throw rootRecord.arg;
+      }
+      return this.rval;
+    },
+    dispatchException: function (exception) {
+      if (this.done) {
+        throw exception;
+      }
+      var context = this;
+      function handle(loc, caught) {
+        record.type = "throw";
+        record.arg = exception;
+        context.next = loc;
+        if (caught) {
+          // If the dispatched exception was caught by a catch block,
+          // then let that catch block handle the exception normally.
+          context.method = "next";
+          context.arg = undefined$1;
+        }
+        return !!caught;
+      }
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        var record = entry.completion;
+        if (entry.tryLoc === "root") {
+          // Exception thrown outside of any try block that could handle
+          // it, so set the completion value of the entire function to
+          // throw the exception.
+          return handle("end");
+        }
+        if (entry.tryLoc <= this.prev) {
+          var hasCatch = hasOwn.call(entry, "catchLoc");
+          var hasFinally = hasOwn.call(entry, "finallyLoc");
+          if (hasCatch && hasFinally) {
+            if (this.prev < entry.catchLoc) {
+              return handle(entry.catchLoc, true);
+            } else if (this.prev < entry.finallyLoc) {
+              return handle(entry.finallyLoc);
+            }
+          } else if (hasCatch) {
+            if (this.prev < entry.catchLoc) {
+              return handle(entry.catchLoc, true);
+            }
+          } else if (hasFinally) {
+            if (this.prev < entry.finallyLoc) {
+              return handle(entry.finallyLoc);
+            }
+          } else {
+            throw new Error("try statement without catch or finally");
+          }
+        }
+      }
+    },
+    abrupt: function (type, arg) {
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        if (entry.tryLoc <= this.prev && hasOwn.call(entry, "finallyLoc") && this.prev < entry.finallyLoc) {
+          var finallyEntry = entry;
+          break;
+        }
+      }
+      if (finallyEntry && (type === "break" || type === "continue") && finallyEntry.tryLoc <= arg && arg <= finallyEntry.finallyLoc) {
+        // Ignore the finally entry if control is not jumping to a
+        // location outside the try/catch block.
+        finallyEntry = null;
+      }
+      var record = finallyEntry ? finallyEntry.completion : {};
+      record.type = type;
+      record.arg = arg;
+      if (finallyEntry) {
+        this.method = "next";
+        this.next = finallyEntry.finallyLoc;
+        return ContinueSentinel;
+      }
+      return this.complete(record);
+    },
+    complete: function (record, afterLoc) {
+      if (record.type === "throw") {
+        throw record.arg;
+      }
+      if (record.type === "break" || record.type === "continue") {
+        this.next = record.arg;
+      } else if (record.type === "return") {
+        this.rval = this.arg = record.arg;
+        this.method = "return";
+        this.next = "end";
+      } else if (record.type === "normal" && afterLoc) {
+        this.next = afterLoc;
+      }
+      return ContinueSentinel;
+    },
+    finish: function (finallyLoc) {
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        if (entry.finallyLoc === finallyLoc) {
+          this.complete(entry.completion, entry.afterLoc);
+          resetTryEntry(entry);
+          return ContinueSentinel;
+        }
+      }
+    },
+    "catch": function (tryLoc) {
+      for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+        var entry = this.tryEntries[i];
+        if (entry.tryLoc === tryLoc) {
+          var record = entry.completion;
+          if (record.type === "throw") {
+            var thrown = record.arg;
+            resetTryEntry(entry);
+          }
+          return thrown;
+        }
+      }
+
+      // The context.catch method must only be called with a location
+      // argument that corresponds to a known catch block.
+      throw new Error("illegal catch attempt");
+    },
+    delegateYield: function (iterable, resultName, nextLoc) {
+      this.delegate = {
+        iterator: values(iterable),
+        resultName: resultName,
+        nextLoc: nextLoc
+      };
+      if (this.method === "next") {
+        // Deliberately forget the last sent value so that we don't
+        // accidentally pass it on to the delegate.
+        this.arg = undefined$1;
+      }
+      return ContinueSentinel;
+    }
+  };
+
+  // Regardless of whether this script is executing as a CommonJS module
+  // or not, return the runtime object so that we can declare the variable
+  // regeneratorRuntime in the outer scope, which allows this module to be
+  // injected easily by `bin/regenerator --include-runtime script.js`.
+  return exports;
+}(
+// If this script is executing as a CommonJS module, use module.exports
+// as the regeneratorRuntime namespace. Otherwise create a new empty
+// object. Either way, the resulting object will be used to initialize
+// the regeneratorRuntime variable at the top of this file.
+typeof module === "object" ? module.exports : {});
+try {
+  regeneratorRuntime = runtime;
+} catch (accidentalStrictMode) {
+  // This module should not be running in strict mode, so the above
+  // assignment should always work unless something is misconfigured. Just
+  // in case runtime.js accidentally runs in strict mode, we can escape
+  // strict mode using a global Function call. This could conceivably fail
+  // if a Content Security Policy forbids using Function, but in that case
+  // the proper solution is to fix the accidental strict mode problem. If
+  // you've misconfigured your bundler to force strict mode and applied a
+  // CSP to forbid Function, and you're not willing to fix either of those
+  // problems, please detail your unique predicament in a GitHub issue.
+  Function("r", "regeneratorRuntime = r")(runtime);
+}
+
+export { LazyServerEvents, ProgressiveResponse, STOP_REASON_INTERNAL_ERROR, STOP_REASON_NOT_SPECIFIED, STOP_REASON_PROCESS_BEFORE_EXIT, STOP_REASON_PROCESS_EXIT, STOP_REASON_PROCESS_SIGHUP, STOP_REASON_PROCESS_SIGINT, STOP_REASON_PROCESS_SIGTERM, ServerEvents, WebSocketResponse, composeTwoResponses, createFileSystemFetch, fetchFileSystem, findFreePort, jsenvAccessControlAllowedHeaders, jsenvAccessControlAllowedMethods, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvServiceRequestAliases, jsenvServiceResponseAcceptanceCheck, pickContentEncoding, pickContentLanguage, pickContentType, serveDirectory, startServer };
