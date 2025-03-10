@@ -38,7 +38,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemFetch(projectDirectoryUrl),
+      fetch: createFileSystemFetch(projectDirectoryUrl),
     },
   ],
 });

@@ -22,7 +22,7 @@ export const startFileServer = ({
     routes: [
       {
         endpoint: "GET *",
-        response: createFileSystemFetch(rootDirectoryUrl, {
+        fetch: createFileSystemFetch(rootDirectoryUrl, {
           canReadDirectory: true,
           cacheControl: (request) =>
             canUseLongTermCache(request)

@@ -21,7 +21,7 @@ const server = await startServer({
       routes: [
         {
           endpoint: "GET *",
-          response: (request, helpers) => {
+          fetch: (request, helpers) => {
             resourceBeforeAlias = request.original
               ? request.original.resource
               : undefined;

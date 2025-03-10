@@ -1,18 +1,26 @@
-import { createFileSystemFetch, startServer } from "@jsenv/server";
+import {
+  createFileSystemFetch,
+  startServer,
+  WebSocketResponse,
+} from "@jsenv/server";
 
 await startServer({
   port: 3000,
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemFetch(import.meta.resolve("./")),
-      websocket: () => {
-        return {
-          opened: (websocket) => {
-            websocket.send("Hello world");
-          },
-        };
+      headers: {
+        upgrade: "websocket",
       },
+      websocket: () => {
+        return new WebSocketResponse((websocket) => {
+          websocket.send("Hello world");
+        });
+      },
+    },
+    {
+      endpoint: "GET *",
+      fetch: createFileSystemFetch(import.meta.resolve("./")),
     },
   ],
 });

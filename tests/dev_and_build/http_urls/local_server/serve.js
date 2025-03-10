@@ -22,7 +22,7 @@ export const localServer = await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemFetch(serverDirectoryUrl),
+      fetch: createFileSystemFetch(serverDirectoryUrl),
     },
   ],
 });

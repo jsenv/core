@@ -38,7 +38,7 @@ const startLocalServer = async () => {
     routes: [
       {
         endpoint: "GET *",
-        response: createFileSystemFetch(serverDirectoryUrl),
+        fetch: createFileSystemFetch(serverDirectoryUrl),
       },
     ],
   });

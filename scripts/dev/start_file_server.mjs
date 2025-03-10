@@ -9,7 +9,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemFetch(directoryUrl, {
+      fetch: createFileSystemFetch(directoryUrl, {
         canReadDirectory: true,
       }),
     },

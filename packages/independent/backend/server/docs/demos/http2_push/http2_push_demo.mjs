@@ -32,7 +32,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: (request, helpers) => {
+      fetch: (request, helpers) => {
         if (request.pathname === "/main.html") {
           helpers.pushResponse({ path: "/script.js" });
           helpers.pushResponse({ path: "/style.css" });

@@ -4,7 +4,7 @@ await startServer({
   routes: [
     {
       endpoint: "GET *",
-      response: createFileSystemFetch(import.meta.resolve("./")),
+      fetch: createFileSystemFetch(import.meta.resolve("./")),
     },
   ],
 });
