@@ -495,35 +495,43 @@
         align-items: center;
         gap: 5px;
         cursor: pointer;
+        width: 100%;
+        word-break: keep-all;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
-      .method_filter_option {
-        border-left: 5px solid transparent;
-        border-image-slice: 1;
+      label .filter_text {
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+      .filter_text[data-method] {
+        border-left: 5px solid var(--method-color);
         padding-left: 4px;
       }
-      .method_filter_option[data-method] {
-        border-image: none;
-        border-left: 5px solid var(--method-color);
+      .filter_text[data-method="all"] {
+        --method-color: transparent;
+        border-image-slice: 1;
       }
-      .method_filter_option[data-method="HEAD"] {
+      .filter_text[data-method="HEAD"] {
         --method-color: var(--method-head-color);
       }
-      .method_filter_option[data-method="OPTIONS"] {
+      .filter_text[data-method="OPTIONS"] {
         --method-color: var(--method-options-color);
       }
-      .method_filter_option[data-method="GET"] {
+      .filter_text[data-method="GET"] {
         --method-color: var(--method-get-color);
       }
-      .method_filter_option[data-method="POST"] {
+      .filter_text[data-method="POST"] {
         --method-color: var(--method-post-color);
       }
-      .method_filter_option[data-method="PUT"] {
+      .filter_text[data-method="PUT"] {
         --method-color: var(--method-put-color);
       }
-      .method_filter_option[data-method="PATCH"] {
+      .filter_text[data-method="PATCH"] {
         --method-color: var(--method-patch-color);
       }
-      .method_filter_option[data-method="DELETE"] {
+      .filter_text[data-method="DELETE"] {
         --method-color: var(--method-delete-color);
       }
 
@@ -947,7 +955,8 @@
               value: "",
               text: html`
                 <span
-                  class="method_filter_option"
+                  class="filter_text"
+                  data-method="all"
                   style=${{
                     borderImageSource: gradient,
                   }}
@@ -961,9 +970,7 @@
               return {
                 value: availableMethodName,
                 text: html`
-                  <span
-                    class="method_filter_option"
-                    data-method="${availableMethodName}"
+                  <span class="filter_text" data-method="${availableMethodName}"
                     >${availableMethodName}
                   </span>
                   <span class="filter_count">
@@ -1001,7 +1008,11 @@
             ...availablePackageNames.map((availablePackageName) => {
               return {
                 value: availablePackageName,
-                text: html` <span>${availablePackageName}</span>
+                text: html` <span
+                    class="filter_text"
+                    title="${availablePackageName}"
+                    >${availablePackageName}</span
+                  >
                   <span class="filter_count"
                     >${packageRepartition[availablePackageName]}</span
                   >`,
