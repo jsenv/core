@@ -1,5 +1,6 @@
 import { startServer } from "@jsenv/server";
 
-await startServer({
+export const server = await startServer({
+  logLevel: "warn",
   port: 6578,
 });
