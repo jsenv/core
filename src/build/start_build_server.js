@@ -165,7 +165,8 @@ export const startBuildServer = async ({
 const createBuildFilesService = ({ buildDirectoryUrl, buildMainFilePath }) => {
   return {
     endpoint: "GET *",
-    response: (request, helpers) => {
+    description: "Serve static files",
+    fetch: (request, helpers) => {
       const urlIsVersioned = new URL(request.url).searchParams.has("v");
       if (buildMainFilePath && request.resource === "/") {
         request = {
