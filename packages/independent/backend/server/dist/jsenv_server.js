@@ -10,15 +10,10 @@ import { Readable, Stream, Writable } from "node:stream";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
 import { createReadStream, existsSync, readFileSync, readdirSync, lstatSync, statSync, readFile } from "node:fs";
-import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
-import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
-import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
-import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { findAncestorDirectoryUrl } from "@jsenv/filesystem";
+import { pathToFileURL, fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { lookup } from "node:dns";
-import { createHash } from "node:crypto";
 
 const createCallbackListNotifiedOnce = () => {
   let callbacks = [];
@@ -3216,6 +3211,447 @@ const trackHttp1ServerPendingRequests = (nodeServer) => {
   return { stop };
 };
 
+// This file is used just for test and internal tests
+// so super-linear-backtracking is ok
+// and I don't know how to update the regexes to prevent this
+/* eslint-disable regexp/no-super-linear-backtracking */
+
+const parseFunction = (fn) => {
+  const string = fn.toString();
+  for (const candidate of CANDIDATES) {
+    const returnValue = candidate(string, fn);
+    if (returnValue) {
+      return returnValue;
+    }
+  }
+  return {
+    type: "unknwon",
+    name: "",
+    argsSource: "()",
+    body: removeRootIndentation(string),
+  };
+};
+
+const CANDIDATES = [
+  (fnString, fn) => {
+    const ARROW_FUNCTION_BODY_REGEX =
+      /^(?:async\s*)?(\([\s\S]*?\))\s*=>\s*\{([\s\S]*)\}$/;
+    const match = fnString.match(ARROW_FUNCTION_BODY_REGEX);
+    if (match) {
+      return {
+        type: "arrow",
+        name: fn.name,
+        argsSource: normalizeArgsSource(match[1]),
+        body: removeRootIndentation(match[2]),
+      };
+    }
+    return null;
+  },
+  (fnString, fn) => {
+    const ARROW_FUNCTION_SHORTHAND_BODY_REGEX =
+      /^(\([\s\S]*?\))\s*=>([\s\S]*)$/;
+    const match = fnString.match(ARROW_FUNCTION_SHORTHAND_BODY_REGEX);
+    if (match) {
+      return {
+        type: "arrow",
+        name: fn.name,
+        argsSource: normalizeArgsSource(match[1]),
+        body: removeRootIndentation(match[2]),
+      };
+    }
+    return null;
+  },
+  (fnString) => {
+    const FUNCTION_BODY_REGEX =
+      /^function\s*(\S*)\s*(\([\s\S]*?\))\s*\{([\s\S]*)\}$/;
+    const match = fnString.match(FUNCTION_BODY_REGEX);
+    if (match) {
+      return {
+        type: "classic",
+        name: match[1],
+        argsSource: normalizeArgsSource(match[2]),
+        body: removeRootIndentation(match[3]),
+      };
+    }
+    return null;
+  },
+  (fnString) => {
+    const GETTER_SETTER_FUNCTION_BODY_REGEX =
+      /^[gs]et\s*(\S*)\s*(\([\s\S]*?\))\s*\{([\s\S]*)\}$/;
+    const match = fnString.match(GETTER_SETTER_FUNCTION_BODY_REGEX);
+    if (match) {
+      return {
+        type: fnString.startsWith("get") ? "getter" : "setter",
+        name: match[1],
+        argsSource: normalizeArgsSource(match[2]),
+        body: removeRootIndentation(match[3]),
+      };
+    }
+    return null;
+  },
+];
+// function with default params not supported and fallback to "()"
+const normalizeArgsSource = (argsSource) => {
+  if (argsSource.indexOf("(", 1)) {
+    return "()";
+  }
+  return argsSource;
+};
+
+const removeRootIndentation = (text) => {
+  const lines = text.split(/\r?\n/);
+  let result = ``;
+  let i = 0;
+
+  let charsToRemove = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const isFirstLine = i === 0;
+    const isLastLine = i === lines.length - 1;
+    const isRootLine = lines[0] === "" ? i === 1 : isFirstLine;
+    i++;
+    if (isFirstLine && line === "") {
+      // remove first line when empty
+      continue;
+    }
+    let lineShortened = "";
+    let j = 0;
+    let searchIndentChar = true;
+    while (j < line.length) {
+      const char = line[j];
+      j++;
+      if (searchIndentChar && (char === " " || char === "\t")) {
+        if (isRootLine) {
+          charsToRemove++;
+          continue;
+        }
+        if (j <= charsToRemove) {
+          continue;
+        }
+      }
+      searchIndentChar = false;
+      lineShortened += char;
+    }
+    if (isLastLine && lineShortened === "") {
+      // remove last line when empty
+      continue;
+    }
+    result += isRootLine ? `${lineShortened}` : `\n${lineShortened}`;
+  }
+  return result;
+};
+
+const isEscaped = (i, string) => {
+  let backslashBeforeCount = 0;
+  while (i--) {
+    const previousChar = string[i];
+    if (previousChar === "\\") {
+      backslashBeforeCount++;
+    }
+    break;
+  }
+  const isEven = backslashBeforeCount % 2 === 0;
+  return !isEven;
+};
+
+const escapeChars = (string, replacements) => {
+  const charsToEscape = Object.keys(replacements);
+  let result = "";
+  let last = 0;
+  let i = 0;
+  while (i < string.length) {
+    const char = string[i];
+    i++;
+    if (charsToEscape.includes(char) && !isEscaped(i - 1, string)) {
+      if (last === i - 1) {
+        result += replacements[char];
+      } else {
+        result += `${string.slice(last, i - 1)}${replacements[char]}`;
+      }
+      last = i;
+    }
+  }
+  if (last !== string.length) {
+    result += string.slice(last);
+  }
+  return result;
+};
+
+// https://github.com/benjamingr/RegExp.escape/blob/master/polyfill.js
+
+const escapeRegexpSpecialChars = (string) => {
+  return escapeChars(String(string), {
+    "/": "\\/",
+    "^": "\\^",
+    "\\": "\\\\",
+    "[": "\\[",
+    "]": "\\]",
+    "(": "\\(",
+    ")": "\\)",
+    "{": "\\{",
+    "}": "\\}",
+    "?": "\\?",
+    "+": "\\+",
+    "*": "\\*",
+    ".": "\\.",
+    "|": "\\|",
+    "$": "\\$",
+  });
+};
+
+const createPattern = (
+  pattern,
+  {
+    namedGroupDelimiter,
+    prepareStringToGenerate = (stringToBuild) => stringToBuild,
+    finalizeGeneratedString = (generatedString) => generatedString,
+  } = {},
+) => {
+  if (pattern === "*") {
+    return {
+      regexp: /.*/,
+      match: () => true,
+      generate: (stringToGenerate) => stringToGenerate,
+      generateExample: (stringToGenerate) => stringToGenerate,
+    };
+  }
+
+  const parts = [];
+  const namedParams = [];
+  let starParamCount = 0;
+  let regexpSource = "";
+  let lastIndex = 0;
+  regexpSource += "^";
+  for (const match of pattern.matchAll(/:\w+|\*/g)) {
+    const string = match[0];
+    const index = match.index;
+    let before = pattern.slice(lastIndex, index);
+    parts.push({ type: "static", value: before });
+    regexpSource += escapeRegexpSpecialChars(before);
+    if (string === "*") {
+      starParamCount++;
+      regexpSource += `(?<star_${starParamCount - 1}>.+)`;
+      parts.push({ type: "star", value: starParamCount - 1 });
+    } else {
+      const paramName = string.slice(1);
+      namedParams.push(paramName);
+      regexpSource += namedGroupDelimiter
+        ? `(?<${paramName}>[^${escapeRegexpSpecialChars(namedGroupDelimiter)}]+)`
+        : `(?<${paramName}>.+)`;
+      parts.push({ type: "named", value: paramName });
+    }
+    lastIndex = index + string.length;
+  }
+  const after = pattern.slice(lastIndex);
+  parts.push({ type: "static", value: after });
+  regexpSource += escapeRegexpSpecialChars(after);
+  regexpSource += "$";
+
+  const regexp = new RegExp(regexpSource);
+
+  const generateWhenPatternIsStatic = () => {
+    return prepareStringToGenerate(pattern);
+  };
+  const generateWhenPatternUsesOnlyStarParams = (...values) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else {
+        generatedString += values[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+  const generateWhenPatternUsesOnlyNamedParams = (namedValues) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else {
+        generatedString += namedValues[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+  const generateWhenPatternUsesNamedAndStarParams = (
+    namedValues,
+    ...values
+  ) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else if (part.type === "named") {
+        generatedString += namedValues[part.value];
+      } else {
+        generatedString += values[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+
+  const isStatic = namedParams.length === 0 && starParamCount === 0;
+  const usesOnlyNamedParams = namedParams.length > 0 && starParamCount === 0;
+  const usesOnlyStarParams = namedParams.length === 0 && starParamCount > 0;
+  const usesNamedAndStarParams = namedParams.length > 0 && starParamCount > 0;
+
+  const generate = isStatic
+    ? generateWhenPatternIsStatic
+    : usesOnlyNamedParams
+      ? generateWhenPatternUsesOnlyNamedParams
+      : usesOnlyStarParams
+        ? generateWhenPatternUsesOnlyStarParams
+        : generateWhenPatternUsesNamedAndStarParams;
+
+  return {
+    regexp,
+    match: (value) => {
+      if (value === undefined) {
+        return null;
+      }
+      const match = String(value).match(regexp);
+      if (!match) {
+        return null;
+      }
+      const groups = match.groups;
+      if (groups && Object.keys(groups).length) {
+        const stars = [];
+        const named = {};
+        for (const key of Object.keys(groups)) {
+          if (key.startsWith("star_")) {
+            const index = parseInt(key.slice("star_".length));
+            stars[index] = groups[key];
+          } else {
+            named[key] = groups[key];
+          }
+        }
+        return {
+          named: Object.keys(named).length === 0 ? null : named,
+          stars: stars.length === 0 ? null : stars,
+        };
+      }
+      return { named: null, stars: null };
+    },
+    generate,
+    generateExample: () => {
+      if (usesNamedAndStarParams) {
+        return generate(
+          generateNamedParamsExample(namedParams),
+          ...generateStarParamsExample(starParamCount),
+        );
+      }
+      if (usesOnlyNamedParams) {
+        return generate(generateNamedParamsExample(namedParams));
+      }
+      if (usesOnlyStarParams) {
+        return generate(...generateStarParamsExample(starParamCount));
+      }
+      return generate();
+    },
+  };
+};
+
+const composeTwoMatchResults = (left, right) => {
+  if (!left || !right) {
+    return false;
+  }
+  let named;
+  const leftNamed = left.named;
+  const rightNamed = right.named;
+  if (leftNamed && rightNamed) {
+    named = { ...leftNamed, ...rightNamed };
+  } else if (leftNamed) {
+    named = leftNamed;
+  } else if (rightNamed) {
+    named = rightNamed;
+  }
+  let stars;
+  const leftStars = left.stars;
+  const rightStars = right.stars;
+  if (leftStars && rightStars) {
+    stars = [...leftStars, ...rightStars];
+  } else if (leftStars) {
+    stars = leftStars;
+  } else if (rightStars) {
+    stars = rightStars;
+  }
+  return { named, stars };
+};
+
+const PATTERN = {
+  create: createPattern,
+  composeTwoMatchResults,
+  createKeyValue: (object) => {
+    const patternMap = new Map();
+    const keys = Object.keys(object);
+    for (const key of keys) {
+      const value = object[key];
+      if (typeof value === "function") {
+        patternMap.set(key, {
+          match: (value) => {
+            return Boolean(value(value));
+          },
+          generate: () => {
+            return "?";
+          },
+        });
+      } else {
+        const valuePattern = PATTERN.create(value);
+        patternMap.set(key, valuePattern);
+      }
+    }
+    return {
+      match: (objectToMatch) => {
+        const namedValues = {};
+        for (const [key, pattern] of patternMap) {
+          const value = objectToMatch[key];
+          const matchResult = pattern.match(value);
+          if (!matchResult) {
+            return false;
+          }
+          const named = matchResult.named;
+          Object.assign(namedValues, named);
+        }
+        return namedValues;
+      },
+      generate: (values) => {
+        const generatedObject = {};
+        for (const [key, pattern] of patternMap) {
+          generatedObject[key] = pattern.generate(values);
+        }
+        return generatedObject;
+      },
+      generateExample: () => {
+        const generatedObject = {};
+        for (const [key, pattern] of patternMap) {
+          generatedObject[key] = pattern.generateExample();
+        }
+        return generatedObject;
+      },
+    };
+  },
+};
+
+const generateNamedParamsExample = (namedParams) => {
+  const namedParamValues = {};
+  for (const name of namedParams) {
+    namedParamValues[name] = name;
+  }
+  return namedParamValues;
+};
+const generateStarParamsExample = (starParamCount) => {
+  const starValues = [];
+  while (starValues.length < starParamCount) {
+    starValues.push(starValues.length);
+  }
+  return starValues;
+};
+
+const createHeadersPattern = (headers) => {
+  return PATTERN.createKeyValue(headers);
+};
+
 const pathnameToExtension = (pathname) => {
   const slashLastIndex = pathname.lastIndexOf("/");
   const filename =
@@ -3230,6 +3666,35 @@ const pathnameToExtension = (pathname) => {
   // if (dotLastIndex === pathname.length - 1) return ""
   const extension = filename.slice(dotLastIndex);
   return extension;
+};
+
+const resourceToParts = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?");
+  if (searchSeparatorIndex === -1) {
+    const hashSeparatorIndex = resource.indexOf("#");
+    if (hashSeparatorIndex === -1) {
+      return [resource, "", ""];
+    }
+    const beforeHashSeparator = resource.slice(0, hashSeparatorIndex);
+    const afterHashSeparator = resource.slice(hashSeparatorIndex + 1);
+    return [beforeHashSeparator, "", afterHashSeparator];
+  }
+  const beforeSearchSeparator = resource.slice(0, searchSeparatorIndex);
+  const afterSearchSeparator = resource.slice(searchSeparatorIndex + 1);
+  const hashSeparatorIndex = afterSearchSeparator.indexOf("#");
+  if (hashSeparatorIndex === -1) {
+    return [beforeSearchSeparator, afterSearchSeparator, ""];
+  }
+  const afterSearchSeparatorAndBeforeHashSeparator = afterSearchSeparator.slice(
+    0,
+    hashSeparatorIndex,
+  );
+  const afterHashSeparator = afterSearchSeparator.slice(hashSeparatorIndex + 1);
+  return [
+    beforeSearchSeparator,
+    afterSearchSeparatorAndBeforeHashSeparator,
+    afterHashSeparator,
+  ];
 };
 
 const resourceToPathname = (resource) => {
@@ -3247,6 +3712,35 @@ const resourceToPathname = (resource) => {
 const resourceToExtension = (resource) => {
   const pathname = resourceToPathname(resource);
   return pathnameToExtension(pathname);
+};
+
+const isFileSystemPath$1 = (value) => {
+  if (typeof value !== "string") {
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    );
+  }
+  if (value[0] === "/") {
+    return true;
+  }
+  return startsWithWindowsDriveLetter$1(value);
+};
+
+const startsWithWindowsDriveLetter$1 = (string) => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+
+  return true;
+};
+
+const fileSystemPathToUrl$1 = (value) => {
+  if (!isFileSystemPath$1(value)) {
+    throw new Error(`value must be a filesystem path, got ${value}`);
+  }
+  return String(pathToFileURL(value));
 };
 
 const getCommonPathname = (pathname, otherPathname) => {
@@ -3369,6 +3863,100 @@ const urlToFileSystemPath = (url) => {
   }
   return fileSystemPath;
 };
+
+const createResourcePattern = (pattern) => {
+  const [pathnamePatternString, searchPatternString, hashPatternString] =
+    resourceToParts(pattern);
+
+  const pathnamePattern = PATTERN.create(pathnamePatternString, {
+    namedGroupDelimiter: "/",
+  });
+  let searchPattern;
+  if (searchPatternString) {
+    const searchParams = Object.fromEntries(
+      new URLSearchParams(searchPatternString),
+    );
+    searchPattern = PATTERN.createKeyValue(searchParams);
+  }
+  let hashPattern;
+  if (hashPatternString) {
+    hashPattern = PATTERN.create(hashPatternString, {
+      namedGroupDelimiter: "&",
+    });
+  }
+
+  return {
+    match: (resource) => {
+      const [pathname, search, hash] = resourceToParts(resource);
+      let result = pathnamePattern.match(pathname);
+      if (!result) {
+        return null;
+      }
+
+      let searchResult;
+      let hashResult;
+      if (searchPattern) {
+        const searchParams = Object.fromEntries(new URLSearchParams(search));
+        searchResult = searchPattern.match(searchParams);
+        if (!searchResult) {
+          return null;
+        }
+        if (result.named) {
+          Object.assign(result.named, searchResult);
+        } else {
+          result.named = searchResult;
+        }
+      }
+      if (hashPattern) {
+        hashResult = hashPattern.match(hash);
+        if (!hashResult) {
+          return null;
+        }
+        result = PATTERN.composeTwoMatchResults(result, hashResult);
+      }
+      return result;
+    },
+    generate: (...args) => {
+      let resource = "";
+      resource += pathnamePattern.generate(...args);
+      if (searchPatternString) {
+        const generatedSearchParams = searchPattern.generate(args[0]);
+        const searchParams = new URLSearchParams();
+        for (const key of Object.keys(generatedSearchParams)) {
+          searchParams.set(key, generatedSearchParams[key]);
+        }
+        const search = searchParams.toString();
+        resource += `?${search}`;
+      }
+      if (hashPatternString) {
+        resource += `#${hashPattern.generate(args[0])}`;
+      }
+      return resource;
+    },
+    generateExample: () => {
+      let resourceExample = "";
+      resourceExample += pathnamePattern.generateExample();
+      if (searchPatternString) {
+        resourceExample += `?${searchPattern.generateExample()}`;
+      }
+      if (hashPatternString) {
+        resourceExample += `#${hashPattern.generateExample()}`;
+      }
+      return resourceExample;
+    },
+  };
+};
+
+// const resourceFromUrl = (url, baseUrl = "http://example.com") => {
+//   url = String(url);
+//   if (url[0] === "/") {
+//     url = url.slice(1);
+//   }
+//   // if (url[0] !== "/") url = `/${url}`;
+//   const urlObject = new URL(url, baseUrl);
+//   const resource = urlObject.href.slice(urlObject.origin.length);
+//   return resource;
+// };
 
 const pickAcceptedContent = ({
   availables,
@@ -3650,6 +4238,629 @@ const getVersionAcceptanceScore = ({ value, quality }, availableVersion) => {
 
   return -1;
 };
+
+process.platform === "win32";
+fileSystemPathToUrl$1(process.cwd());
+
+const getParentDirectoryUrl = (url) => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
+    }
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf(
+        "/",
+        slashLastIndex - 1,
+      );
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+
+const findAncestorDirectoryUrl = (url, callback) => {
+  url = String(url);
+  while (url !== "file:///") {
+    if (callback(url)) {
+      return url;
+    }
+    url = getParentDirectoryUrl(url);
+  }
+  return null;
+};
+
+/*
+ * Link to things doing pattern matching:
+ * https://git-scm.com/docs/gitignore
+ * https://github.com/kaelzhang/node-ignore
+ */
+
+/** @module jsenv_url_meta **/
+/**
+ * An object representing the result of applying a pattern to an url
+ * @typedef {Object} MatchResult
+ * @property {boolean} matched Indicates if url matched pattern
+ * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
+ * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
+ * @property {Array} matchGroups Array of strings captured during pattern matching
+ */
+
+/**
+ * Apply a pattern to an url
+ * @param {Object} applyPatternMatchingParams
+ * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
+ * @param {string} applyPatternMatchingParams.url a string representing an url
+ * @return {MatchResult}
+ */
+const applyPattern = ({ url, pattern }) => {
+  const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
+  const matchGroups = [];
+  let groupIndex = 0;
+  for (const group of groups) {
+    if (group.name) {
+      matchGroups[group.name] = group.string;
+    } else {
+      matchGroups[groupIndex] = group.string;
+      groupIndex++;
+    }
+  }
+  return {
+    matched,
+    patternIndex,
+    urlIndex: index,
+    matchGroups,
+  };
+};
+
+const applyMatching = (pattern, string) => {
+  const groups = [];
+  let patternIndex = 0;
+  let index = 0;
+  let remainingPattern = pattern;
+  let remainingString = string;
+  let restoreIndexes = true;
+
+  const consumePattern = (count) => {
+    const subpattern = remainingPattern.slice(0, count);
+    remainingPattern = remainingPattern.slice(count);
+    patternIndex += count;
+    return subpattern;
+  };
+  const consumeString = (count) => {
+    const substring = remainingString.slice(0, count);
+    remainingString = remainingString.slice(count);
+    index += count;
+    return substring;
+  };
+  const consumeRemainingString = () => {
+    return consumeString(remainingString.length);
+  };
+
+  let matched;
+  const iterate = () => {
+    const patternIndexBefore = patternIndex;
+    const indexBefore = index;
+    matched = matchOne();
+    if (matched === undefined) {
+      consumePattern(1);
+      consumeString(1);
+      iterate();
+      return;
+    }
+    if (matched === false && restoreIndexes) {
+      patternIndex = patternIndexBefore;
+      index = indexBefore;
+    }
+  };
+  const matchOne = () => {
+    // pattern consumed
+    if (remainingPattern === "") {
+      if (remainingString === "") {
+        return true; // string fully matched pattern
+      }
+      if (remainingString[0] === "?") {
+        // match search params
+        consumeRemainingString();
+
+        return true;
+      }
+      // if remainingString
+      return false; // fails because string longer than expect
+    }
+    // -- from this point pattern is not consumed --
+    // string consumed, pattern not consumed
+    if (remainingString === "") {
+      if (remainingPattern === "**") {
+        // trailing "**" is optional
+        consumePattern(2);
+        return true;
+      }
+      if (remainingPattern === "*") {
+        groups.push({ string: "" });
+      }
+      return false; // fail because string shorter than expect
+    }
+    // -- from this point pattern and string are not consumed --
+    // fast path trailing slash
+    if (remainingPattern === "/") {
+      if (remainingString[0] === "/") {
+        // trailing slash match remaining
+        consumePattern(1);
+        groups.push({ string: consumeRemainingString() });
+        return true;
+      }
+      return false;
+    }
+    // fast path trailing '**'
+    if (remainingPattern === "**") {
+      consumePattern(2);
+      consumeRemainingString();
+      return true;
+    }
+    if (remainingPattern.slice(0, 4) === "/**/") {
+      consumePattern(3); // consumes "/**/"
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: true,
+      });
+      groups.push(...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeRemainingString();
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+    // pattern leading **
+    if (remainingPattern.slice(0, 2) === "**") {
+      consumePattern(2); // consumes "**"
+      let skipAllowed = true;
+      if (remainingPattern[0] === "/") {
+        consumePattern(1); // consumes "/"
+        // when remainingPattern was preceeded by "**/"
+        // and remainingString have no "/"
+        // then skip is not allowed, a regular match will be performed
+        if (!remainingString.includes("/")) {
+          skipAllowed = false;
+        }
+      }
+      // pattern ending with "**" or "**/" match remaining string
+      if (remainingPattern === "") {
+        consumeRemainingString();
+        return true;
+      }
+      if (skipAllowed) {
+        const skipResult = skipUntilMatch({
+          pattern: remainingPattern,
+          string: remainingString,
+          canSkipSlash: true,
+        });
+        groups.push(...skipResult.groups);
+        consumePattern(skipResult.patternIndex);
+        consumeRemainingString();
+        restoreIndexes = false;
+        return skipResult.matched;
+      }
+    }
+    if (remainingPattern[0] === "*") {
+      consumePattern(1); // consumes "*"
+      if (remainingPattern === "") {
+        // matches everything except "/"
+        const slashIndex = remainingString.indexOf("/");
+        if (slashIndex === -1) {
+          groups.push({ string: consumeRemainingString() });
+          return true;
+        }
+        groups.push({ string: consumeString(slashIndex) });
+        return false;
+      }
+      // the next char must not the one expect by remainingPattern[0]
+      // because * is greedy and expect to skip at least one char
+      if (remainingPattern[0] === remainingString[0]) {
+        groups.push({ string: "" });
+        patternIndex = patternIndex - 1;
+        return false;
+      }
+      const skipResult = skipUntilMatch({
+        pattern: remainingPattern,
+        string: remainingString,
+        canSkipSlash: false,
+      });
+      groups.push(skipResult.group, ...skipResult.groups);
+      consumePattern(skipResult.patternIndex);
+      consumeString(skipResult.index);
+      restoreIndexes = false;
+      return skipResult.matched;
+    }
+    if (remainingPattern[0] !== remainingString[0]) {
+      return false;
+    }
+    return undefined;
+  };
+  iterate();
+
+  return {
+    matched,
+    patternIndex,
+    index,
+    groups,
+  };
+};
+
+const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
+  let index = 0;
+  let remainingString = string;
+  let longestAttemptRange = null;
+  let isLastAttempt = false;
+
+  const failure = () => {
+    return {
+      matched: false,
+      patternIndex: longestAttemptRange.patternIndex,
+      index: longestAttemptRange.index + longestAttemptRange.length,
+      groups: longestAttemptRange.groups,
+      group: {
+        string: string.slice(0, longestAttemptRange.index),
+      },
+    };
+  };
+
+  const tryToMatch = () => {
+    const matchAttempt = applyMatching(pattern, remainingString);
+    if (matchAttempt.matched) {
+      return {
+        matched: true,
+        patternIndex: matchAttempt.patternIndex,
+        index: index + matchAttempt.index,
+        groups: matchAttempt.groups,
+        group: {
+          string:
+            remainingString === ""
+              ? string
+              : string.slice(0, -remainingString.length),
+        },
+      };
+    }
+    const attemptIndex = matchAttempt.index;
+    const attemptRange = {
+      patternIndex: matchAttempt.patternIndex,
+      index,
+      length: attemptIndex,
+      groups: matchAttempt.groups,
+    };
+    if (
+      !longestAttemptRange ||
+      longestAttemptRange.length < attemptRange.length
+    ) {
+      longestAttemptRange = attemptRange;
+    }
+    if (isLastAttempt) {
+      return failure();
+    }
+    const nextIndex = attemptIndex + 1;
+    if (nextIndex >= remainingString.length) {
+      return failure();
+    }
+    if (remainingString[0] === "/") {
+      if (!canSkipSlash) {
+        return failure();
+      }
+      // when it's the last slash, the next attempt is the last
+      if (remainingString.indexOf("/", 1) === -1) {
+        isLastAttempt = true;
+      }
+    }
+    // search against the next unattempted string
+    index += nextIndex;
+    remainingString = remainingString.slice(nextIndex);
+    return tryToMatch();
+  };
+  return tryToMatch();
+};
+
+const applyPatternMatching = ({ url, pattern }) => {
+  assertUrlLike(pattern, "pattern");
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url, "url");
+  return applyPattern({ url, pattern });
+};
+
+const resolveAssociations = (associations, baseUrl) => {
+  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
+  assertUrlLike(baseUrl, "baseUrl");
+
+  const associationsResolved = {};
+  for (const key of Object.keys(associations)) {
+    const value = associations[key];
+    if (typeof value === "object" && value !== null) {
+      const valueMapResolved = {};
+      for (const pattern of Object.keys(value)) {
+        const valueAssociated = value[pattern];
+        let patternResolved;
+        try {
+          patternResolved = String(new URL(pattern, baseUrl));
+        } catch {
+          // it's not really an url, no need to perform url resolution nor encoding
+          patternResolved = pattern;
+        }
+
+        valueMapResolved[patternResolved] = valueAssociated;
+      }
+      associationsResolved[key] = valueMapResolved;
+    } else {
+      associationsResolved[key] = value;
+    }
+  }
+  return associationsResolved;
+};
+
+const asFlatAssociations = (associations) => {
+  if (!isPlainObject(associations)) {
+    throw new TypeError(
+      `associations must be a plain object, got ${associations}`,
+    );
+  }
+  const flatAssociations = {};
+  for (const associationName of Object.keys(associations)) {
+    const associationValue = associations[associationName];
+    if (!isPlainObject(associationValue)) {
+      continue;
+    }
+    for (const pattern of Object.keys(associationValue)) {
+      const patternValue = associationValue[pattern];
+      const previousValue = flatAssociations[pattern];
+      if (isPlainObject(previousValue)) {
+        flatAssociations[pattern] = {
+          ...previousValue,
+          [associationName]: patternValue,
+        };
+      } else {
+        flatAssociations[pattern] = {
+          [associationName]: patternValue,
+        };
+      }
+    }
+  }
+  return flatAssociations;
+};
+
+const applyAssociations = ({ url, associations }) => {
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url);
+  const flatAssociations = asFlatAssociations(associations);
+  let associatedValue = {};
+  for (const pattern of Object.keys(flatAssociations)) {
+    const { matched } = applyPatternMatching({
+      pattern,
+      url,
+    });
+    if (matched) {
+      const value = flatAssociations[pattern];
+      associatedValue = deepAssign(associatedValue, value);
+    }
+  }
+  return associatedValue;
+};
+
+const deepAssign = (firstValue, secondValue) => {
+  if (!isPlainObject(firstValue)) {
+    if (isPlainObject(secondValue)) {
+      return deepAssign({}, secondValue);
+    }
+    return secondValue;
+  }
+  if (!isPlainObject(secondValue)) {
+    return secondValue;
+  }
+  for (const key of Object.keys(secondValue)) {
+    const leftPopertyValue = firstValue[key];
+    const rightPropertyValue = secondValue[key];
+    firstValue[key] = deepAssign(leftPopertyValue, rightPropertyValue);
+  }
+  return firstValue;
+};
+
+const urlChildMayMatch = ({ url, associations, predicate }) => {
+  if (url && typeof url.href === "string") url = url.href;
+  assertUrlLike(url, "url");
+  // the function was meants to be used on url ending with '/'
+  if (!url.endsWith("/")) {
+    throw new Error(`url should end with /, got ${url}`);
+  }
+  if (typeof predicate !== "function") {
+    throw new TypeError(`predicate must be a function, got ${predicate}`);
+  }
+  const flatAssociations = asFlatAssociations(associations);
+  // for full match we must create an object to allow pattern to override previous ones
+  let fullMatchMeta = {};
+  let someFullMatch = false;
+  // for partial match, any meta satisfying predicate will be valid because
+  // we don't know for sure if pattern will still match for a file inside pathname
+  const partialMatchMetaArray = [];
+  for (const pattern of Object.keys(flatAssociations)) {
+    const value = flatAssociations[pattern];
+    const matchResult = applyPatternMatching({
+      pattern,
+      url,
+    });
+    if (matchResult.matched) {
+      someFullMatch = true;
+      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
+        fullMatchMeta = {
+          ...fullMatchMeta,
+          ...value,
+        };
+      } else {
+        fullMatchMeta = value;
+      }
+    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
+      partialMatchMetaArray.push(value);
+    }
+  }
+  if (someFullMatch) {
+    return Boolean(predicate(fullMatchMeta));
+  }
+  return partialMatchMetaArray.some((partialMatchMeta) =>
+    predicate(partialMatchMeta),
+  );
+};
+
+const applyAliases = ({ url, aliases }) => {
+  let aliasFullMatchResult;
+  const aliasMatchingKey = Object.keys(aliases).find((key) => {
+    const aliasMatchResult = applyPatternMatching({
+      pattern: key,
+      url,
+    });
+    if (aliasMatchResult.matched) {
+      aliasFullMatchResult = aliasMatchResult;
+      return true;
+    }
+    return false;
+  });
+  if (!aliasMatchingKey) {
+    return url;
+  }
+  const { matchGroups } = aliasFullMatchResult;
+  const alias = aliases[aliasMatchingKey];
+  const parts = alias.split("*");
+  let newUrl = "";
+  let index = 0;
+  for (const part of parts) {
+    newUrl += `${part}`;
+    if (index < parts.length - 1) {
+      newUrl += matchGroups[index];
+    }
+    index++;
+  }
+  return newUrl;
+};
+
+const matches = (url, patterns) => {
+  return Boolean(
+    applyAssociations({
+      url,
+      associations: {
+        yes: patterns,
+      },
+    }).yes,
+  );
+};
+
+// const assertSpecifierMetaMap = (value, checkComposition = true) => {
+//   if (!isPlainObject(value)) {
+//     throw new TypeError(
+//       `specifierMetaMap must be a plain object, got ${value}`,
+//     );
+//   }
+//   if (checkComposition) {
+//     const plainObject = value;
+//     Object.keys(plainObject).forEach((key) => {
+//       assertUrlLike(key, "specifierMetaMap key");
+//       const value = plainObject[key];
+//       if (value !== null && !isPlainObject(value)) {
+//         throw new TypeError(
+//           `specifierMetaMap value must be a plain object or null, got ${value} under key ${key}`,
+//         );
+//       }
+//     });
+//   }
+// };
+const assertUrlLike = (value, name = "url") => {
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be a url string, got ${value}`);
+  }
+  if (isWindowsPathnameSpecifier(value)) {
+    throw new TypeError(
+      `${name} must be a url but looks like a windows pathname, got ${value}`,
+    );
+  }
+  if (!hasScheme(value)) {
+    throw new TypeError(
+      `${name} must be a url and no scheme found, got ${value}`,
+    );
+  }
+};
+const isPlainObject = (value) => {
+  if (value === null) {
+    return false;
+  }
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+};
+const isWindowsPathnameSpecifier = (specifier) => {
+  const firstChar = specifier[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+  const secondChar = specifier[1];
+  if (secondChar !== ":") return false;
+  const thirdChar = specifier[2];
+  return thirdChar === "/" || thirdChar === "\\";
+};
+const hasScheme = (specifier) => /^[a-zA-Z]+:/.test(specifier);
+
+const createFilter = (patterns, url, map = (v) => v) => {
+  const associations = resolveAssociations(
+    {
+      yes: patterns,
+    },
+    url,
+  );
+  return (url) => {
+    const meta = applyAssociations({ url, associations });
+    return Boolean(map(meta.yes));
+  };
+};
+
+const URL_META = {
+  resolveAssociations,
+  applyAssociations,
+  applyAliases,
+  applyPatternMatching,
+  urlChildMayMatch,
+  matches,
+  createFilter,
+};
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+process.platform === "win32";
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+process.platform === "win32";
+
+process.platform === "win32";
+
+process.platform === "win32";
+
+process.platform === "win32";
+
+process.platform === "linux";
+
+process.platform === "darwin";
+process.platform === "linux";
+process.platform === "freebsd";
 
 const lookupPackageDirectory = (currentUrl) => {
   return findAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
@@ -7522,562 +8733,6 @@ ${responseContentEncodingHeader}
 --- request accept-encoding header ---
 ${requestAcceptEncodingHeader}`);
   }
-};
-
-/*
- * Link to things doing pattern matching:
- * https://git-scm.com/docs/gitignore
- * https://github.com/kaelzhang/node-ignore
- */
-
-/** @module jsenv_url_meta **/
-/**
- * An object representing the result of applying a pattern to an url
- * @typedef {Object} MatchResult
- * @property {boolean} matched Indicates if url matched pattern
- * @property {number} patternIndex Index where pattern stopped matching url, otherwise pattern.length
- * @property {number} urlIndex Index where url stopped matching pattern, otherwise url.length
- * @property {Array} matchGroups Array of strings captured during pattern matching
- */
-
-/**
- * Apply a pattern to an url
- * @param {Object} applyPatternMatchingParams
- * @param {string} applyPatternMatchingParams.pattern "*", "**" and trailing slash have special meaning
- * @param {string} applyPatternMatchingParams.url a string representing an url
- * @return {MatchResult}
- */
-const applyPattern = ({ url, pattern }) => {
-  const { matched, patternIndex, index, groups } = applyMatching(pattern, url);
-  const matchGroups = [];
-  let groupIndex = 0;
-  for (const group of groups) {
-    if (group.name) {
-      matchGroups[group.name] = group.string;
-    } else {
-      matchGroups[groupIndex] = group.string;
-      groupIndex++;
-    }
-  }
-  return {
-    matched,
-    patternIndex,
-    urlIndex: index,
-    matchGroups,
-  };
-};
-
-const applyMatching = (pattern, string) => {
-  const groups = [];
-  let patternIndex = 0;
-  let index = 0;
-  let remainingPattern = pattern;
-  let remainingString = string;
-  let restoreIndexes = true;
-
-  const consumePattern = (count) => {
-    const subpattern = remainingPattern.slice(0, count);
-    remainingPattern = remainingPattern.slice(count);
-    patternIndex += count;
-    return subpattern;
-  };
-  const consumeString = (count) => {
-    const substring = remainingString.slice(0, count);
-    remainingString = remainingString.slice(count);
-    index += count;
-    return substring;
-  };
-  const consumeRemainingString = () => {
-    return consumeString(remainingString.length);
-  };
-
-  let matched;
-  const iterate = () => {
-    const patternIndexBefore = patternIndex;
-    const indexBefore = index;
-    matched = matchOne();
-    if (matched === undefined) {
-      consumePattern(1);
-      consumeString(1);
-      iterate();
-      return;
-    }
-    if (matched === false && restoreIndexes) {
-      patternIndex = patternIndexBefore;
-      index = indexBefore;
-    }
-  };
-  const matchOne = () => {
-    // pattern consumed
-    if (remainingPattern === "") {
-      if (remainingString === "") {
-        return true; // string fully matched pattern
-      }
-      if (remainingString[0] === "?") {
-        // match search params
-        consumeRemainingString();
-
-        return true;
-      }
-      // if remainingString
-      return false; // fails because string longer than expect
-    }
-    // -- from this point pattern is not consumed --
-    // string consumed, pattern not consumed
-    if (remainingString === "") {
-      if (remainingPattern === "**") {
-        // trailing "**" is optional
-        consumePattern(2);
-        return true;
-      }
-      if (remainingPattern === "*") {
-        groups.push({ string: "" });
-      }
-      return false; // fail because string shorter than expect
-    }
-    // -- from this point pattern and string are not consumed --
-    // fast path trailing slash
-    if (remainingPattern === "/") {
-      if (remainingString[0] === "/") {
-        // trailing slash match remaining
-        consumePattern(1);
-        groups.push({ string: consumeRemainingString() });
-        return true;
-      }
-      return false;
-    }
-    // fast path trailing '**'
-    if (remainingPattern === "**") {
-      consumePattern(2);
-      consumeRemainingString();
-      return true;
-    }
-    if (remainingPattern.slice(0, 4) === "/**/") {
-      consumePattern(3); // consumes "/**/"
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: true,
-      });
-      groups.push(...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeRemainingString();
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-    // pattern leading **
-    if (remainingPattern.slice(0, 2) === "**") {
-      consumePattern(2); // consumes "**"
-      let skipAllowed = true;
-      if (remainingPattern[0] === "/") {
-        consumePattern(1); // consumes "/"
-        // when remainingPattern was preceeded by "**/"
-        // and remainingString have no "/"
-        // then skip is not allowed, a regular match will be performed
-        if (!remainingString.includes("/")) {
-          skipAllowed = false;
-        }
-      }
-      // pattern ending with "**" or "**/" match remaining string
-      if (remainingPattern === "") {
-        consumeRemainingString();
-        return true;
-      }
-      if (skipAllowed) {
-        const skipResult = skipUntilMatch({
-          pattern: remainingPattern,
-          string: remainingString,
-          canSkipSlash: true,
-        });
-        groups.push(...skipResult.groups);
-        consumePattern(skipResult.patternIndex);
-        consumeRemainingString();
-        restoreIndexes = false;
-        return skipResult.matched;
-      }
-    }
-    if (remainingPattern[0] === "*") {
-      consumePattern(1); // consumes "*"
-      if (remainingPattern === "") {
-        // matches everything except "/"
-        const slashIndex = remainingString.indexOf("/");
-        if (slashIndex === -1) {
-          groups.push({ string: consumeRemainingString() });
-          return true;
-        }
-        groups.push({ string: consumeString(slashIndex) });
-        return false;
-      }
-      // the next char must not the one expect by remainingPattern[0]
-      // because * is greedy and expect to skip at least one char
-      if (remainingPattern[0] === remainingString[0]) {
-        groups.push({ string: "" });
-        patternIndex = patternIndex - 1;
-        return false;
-      }
-      const skipResult = skipUntilMatch({
-        pattern: remainingPattern,
-        string: remainingString,
-        canSkipSlash: false,
-      });
-      groups.push(skipResult.group, ...skipResult.groups);
-      consumePattern(skipResult.patternIndex);
-      consumeString(skipResult.index);
-      restoreIndexes = false;
-      return skipResult.matched;
-    }
-    if (remainingPattern[0] !== remainingString[0]) {
-      return false;
-    }
-    return undefined;
-  };
-  iterate();
-
-  return {
-    matched,
-    patternIndex,
-    index,
-    groups,
-  };
-};
-
-const skipUntilMatch = ({ pattern, string, canSkipSlash }) => {
-  let index = 0;
-  let remainingString = string;
-  let longestAttemptRange = null;
-  let isLastAttempt = false;
-
-  const failure = () => {
-    return {
-      matched: false,
-      patternIndex: longestAttemptRange.patternIndex,
-      index: longestAttemptRange.index + longestAttemptRange.length,
-      groups: longestAttemptRange.groups,
-      group: {
-        string: string.slice(0, longestAttemptRange.index),
-      },
-    };
-  };
-
-  const tryToMatch = () => {
-    const matchAttempt = applyMatching(pattern, remainingString);
-    if (matchAttempt.matched) {
-      return {
-        matched: true,
-        patternIndex: matchAttempt.patternIndex,
-        index: index + matchAttempt.index,
-        groups: matchAttempt.groups,
-        group: {
-          string:
-            remainingString === ""
-              ? string
-              : string.slice(0, -remainingString.length),
-        },
-      };
-    }
-    const attemptIndex = matchAttempt.index;
-    const attemptRange = {
-      patternIndex: matchAttempt.patternIndex,
-      index,
-      length: attemptIndex,
-      groups: matchAttempt.groups,
-    };
-    if (
-      !longestAttemptRange ||
-      longestAttemptRange.length < attemptRange.length
-    ) {
-      longestAttemptRange = attemptRange;
-    }
-    if (isLastAttempt) {
-      return failure();
-    }
-    const nextIndex = attemptIndex + 1;
-    if (nextIndex >= remainingString.length) {
-      return failure();
-    }
-    if (remainingString[0] === "/") {
-      if (!canSkipSlash) {
-        return failure();
-      }
-      // when it's the last slash, the next attempt is the last
-      if (remainingString.indexOf("/", 1) === -1) {
-        isLastAttempt = true;
-      }
-    }
-    // search against the next unattempted string
-    index += nextIndex;
-    remainingString = remainingString.slice(nextIndex);
-    return tryToMatch();
-  };
-  return tryToMatch();
-};
-
-const applyPatternMatching = ({ url, pattern }) => {
-  assertUrlLike(pattern, "pattern");
-  if (url && typeof url.href === "string") url = url.href;
-  assertUrlLike(url, "url");
-  return applyPattern({ url, pattern });
-};
-
-const resolveAssociations = (associations, baseUrl) => {
-  if (baseUrl && typeof baseUrl.href === "string") baseUrl = baseUrl.href;
-  assertUrlLike(baseUrl, "baseUrl");
-
-  const associationsResolved = {};
-  for (const key of Object.keys(associations)) {
-    const value = associations[key];
-    if (typeof value === "object" && value !== null) {
-      const valueMapResolved = {};
-      for (const pattern of Object.keys(value)) {
-        const valueAssociated = value[pattern];
-        let patternResolved;
-        try {
-          patternResolved = String(new URL(pattern, baseUrl));
-        } catch {
-          // it's not really an url, no need to perform url resolution nor encoding
-          patternResolved = pattern;
-        }
-
-        valueMapResolved[patternResolved] = valueAssociated;
-      }
-      associationsResolved[key] = valueMapResolved;
-    } else {
-      associationsResolved[key] = value;
-    }
-  }
-  return associationsResolved;
-};
-
-const asFlatAssociations = (associations) => {
-  if (!isPlainObject(associations)) {
-    throw new TypeError(
-      `associations must be a plain object, got ${associations}`,
-    );
-  }
-  const flatAssociations = {};
-  for (const associationName of Object.keys(associations)) {
-    const associationValue = associations[associationName];
-    if (!isPlainObject(associationValue)) {
-      continue;
-    }
-    for (const pattern of Object.keys(associationValue)) {
-      const patternValue = associationValue[pattern];
-      const previousValue = flatAssociations[pattern];
-      if (isPlainObject(previousValue)) {
-        flatAssociations[pattern] = {
-          ...previousValue,
-          [associationName]: patternValue,
-        };
-      } else {
-        flatAssociations[pattern] = {
-          [associationName]: patternValue,
-        };
-      }
-    }
-  }
-  return flatAssociations;
-};
-
-const applyAssociations = ({ url, associations }) => {
-  if (url && typeof url.href === "string") url = url.href;
-  assertUrlLike(url);
-  const flatAssociations = asFlatAssociations(associations);
-  let associatedValue = {};
-  for (const pattern of Object.keys(flatAssociations)) {
-    const { matched } = applyPatternMatching({
-      pattern,
-      url,
-    });
-    if (matched) {
-      const value = flatAssociations[pattern];
-      associatedValue = deepAssign(associatedValue, value);
-    }
-  }
-  return associatedValue;
-};
-
-const deepAssign = (firstValue, secondValue) => {
-  if (!isPlainObject(firstValue)) {
-    if (isPlainObject(secondValue)) {
-      return deepAssign({}, secondValue);
-    }
-    return secondValue;
-  }
-  if (!isPlainObject(secondValue)) {
-    return secondValue;
-  }
-  for (const key of Object.keys(secondValue)) {
-    const leftPopertyValue = firstValue[key];
-    const rightPropertyValue = secondValue[key];
-    firstValue[key] = deepAssign(leftPopertyValue, rightPropertyValue);
-  }
-  return firstValue;
-};
-
-const urlChildMayMatch = ({ url, associations, predicate }) => {
-  if (url && typeof url.href === "string") url = url.href;
-  assertUrlLike(url, "url");
-  // the function was meants to be used on url ending with '/'
-  if (!url.endsWith("/")) {
-    throw new Error(`url should end with /, got ${url}`);
-  }
-  if (typeof predicate !== "function") {
-    throw new TypeError(`predicate must be a function, got ${predicate}`);
-  }
-  const flatAssociations = asFlatAssociations(associations);
-  // for full match we must create an object to allow pattern to override previous ones
-  let fullMatchMeta = {};
-  let someFullMatch = false;
-  // for partial match, any meta satisfying predicate will be valid because
-  // we don't know for sure if pattern will still match for a file inside pathname
-  const partialMatchMetaArray = [];
-  for (const pattern of Object.keys(flatAssociations)) {
-    const value = flatAssociations[pattern];
-    const matchResult = applyPatternMatching({
-      pattern,
-      url,
-    });
-    if (matchResult.matched) {
-      someFullMatch = true;
-      if (isPlainObject(fullMatchMeta) && isPlainObject(value)) {
-        fullMatchMeta = {
-          ...fullMatchMeta,
-          ...value,
-        };
-      } else {
-        fullMatchMeta = value;
-      }
-    } else if (someFullMatch === false && matchResult.urlIndex >= url.length) {
-      partialMatchMetaArray.push(value);
-    }
-  }
-  if (someFullMatch) {
-    return Boolean(predicate(fullMatchMeta));
-  }
-  return partialMatchMetaArray.some((partialMatchMeta) =>
-    predicate(partialMatchMeta),
-  );
-};
-
-const applyAliases = ({ url, aliases }) => {
-  let aliasFullMatchResult;
-  const aliasMatchingKey = Object.keys(aliases).find((key) => {
-    const aliasMatchResult = applyPatternMatching({
-      pattern: key,
-      url,
-    });
-    if (aliasMatchResult.matched) {
-      aliasFullMatchResult = aliasMatchResult;
-      return true;
-    }
-    return false;
-  });
-  if (!aliasMatchingKey) {
-    return url;
-  }
-  const { matchGroups } = aliasFullMatchResult;
-  const alias = aliases[aliasMatchingKey];
-  const parts = alias.split("*");
-  let newUrl = "";
-  let index = 0;
-  for (const part of parts) {
-    newUrl += `${part}`;
-    if (index < parts.length - 1) {
-      newUrl += matchGroups[index];
-    }
-    index++;
-  }
-  return newUrl;
-};
-
-const matches = (url, patterns) => {
-  return Boolean(
-    applyAssociations({
-      url,
-      associations: {
-        yes: patterns,
-      },
-    }).yes,
-  );
-};
-
-// const assertSpecifierMetaMap = (value, checkComposition = true) => {
-//   if (!isPlainObject(value)) {
-//     throw new TypeError(
-//       `specifierMetaMap must be a plain object, got ${value}`,
-//     );
-//   }
-//   if (checkComposition) {
-//     const plainObject = value;
-//     Object.keys(plainObject).forEach((key) => {
-//       assertUrlLike(key, "specifierMetaMap key");
-//       const value = plainObject[key];
-//       if (value !== null && !isPlainObject(value)) {
-//         throw new TypeError(
-//           `specifierMetaMap value must be a plain object or null, got ${value} under key ${key}`,
-//         );
-//       }
-//     });
-//   }
-// };
-const assertUrlLike = (value, name = "url") => {
-  if (typeof value !== "string") {
-    throw new TypeError(`${name} must be a url string, got ${value}`);
-  }
-  if (isWindowsPathnameSpecifier(value)) {
-    throw new TypeError(
-      `${name} must be a url but looks like a windows pathname, got ${value}`,
-    );
-  }
-  if (!hasScheme(value)) {
-    throw new TypeError(
-      `${name} must be a url and no scheme found, got ${value}`,
-    );
-  }
-};
-const isPlainObject = (value) => {
-  if (value === null) {
-    return false;
-  }
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return false;
-    }
-    return true;
-  }
-  return false;
-};
-const isWindowsPathnameSpecifier = (specifier) => {
-  const firstChar = specifier[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = specifier[1];
-  if (secondChar !== ":") return false;
-  const thirdChar = specifier[2];
-  return thirdChar === "/" || thirdChar === "\\";
-};
-const hasScheme = (specifier) => /^[a-zA-Z]+:/.test(specifier);
-
-const createFilter = (patterns, url, map = (v) => v) => {
-  const associations = resolveAssociations(
-    {
-      yes: patterns,
-    },
-    url,
-  );
-  return (url) => {
-    const meta = applyAssociations({ url, associations });
-    return Boolean(map(meta.yes));
-  };
-};
-
-const URL_META = {
-  resolveAssociations,
-  applyAssociations,
-  applyAliases,
-  applyPatternMatching,
-  urlChildMayMatch,
-  matches,
-  createFilter,
 };
 
 const jsenvServiceRequestAliases = (resourceAliases) => {

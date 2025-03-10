@@ -3,7 +3,7 @@ import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, unlinkSync, openSync, closeSync, readdirSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, watch, existsSync, readFile, createReadStream, realpathSync } from "node:fs";
+import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, unlinkSync, openSync, closeSync, readdirSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, watch, readFile, createReadStream, existsSync, realpathSync } from "node:fs";
 import { extname } from "node:path";
 import crypto, { createHash } from "node:crypto";
 import cluster from "node:cluster";
@@ -12,10 +12,6 @@ import { parse } from "node:querystring";
 import { Readable, Stream, Writable } from "node:stream";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
-import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
-import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
-import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
-import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
 import { createRequire } from "node:module";
 import { lookup } from "node:dns";
 import { parseJsUrls, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, removeHtmlNode, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
@@ -1694,7 +1690,7 @@ const ensurePathnameTrailingSlash = (url) => {
   });
 };
 
-const isFileSystemPath$1 = (value) => {
+const isFileSystemPath$2 = (value) => {
   if (typeof value !== "string") {
     throw new TypeError(
       `isFileSystemPath first arg must be a string, got ${value}`,
@@ -1703,10 +1699,10 @@ const isFileSystemPath$1 = (value) => {
   if (value[0] === "/") {
     return true;
   }
-  return startsWithWindowsDriveLetter$1(value);
+  return startsWithWindowsDriveLetter$2(value);
 };
 
-const startsWithWindowsDriveLetter$1 = (string) => {
+const startsWithWindowsDriveLetter$2 = (string) => {
   const firstChar = string[0];
   if (!/[a-zA-Z]/.test(firstChar)) return false;
 
@@ -1716,8 +1712,8 @@ const startsWithWindowsDriveLetter$1 = (string) => {
   return true;
 };
 
-const fileSystemPathToUrl$1 = (value) => {
-  if (!isFileSystemPath$1(value)) {
+const fileSystemPathToUrl$2 = (value) => {
+  if (!isFileSystemPath$2(value)) {
     throw new Error(`value must be a filesystem path, got ${value}`);
   }
   return String(pathToFileURL(value));
@@ -1734,8 +1730,8 @@ const getCallerPosition = () => {
   const fileName = callerCallsite.getFileName();
   return {
     url:
-      fileName && isFileSystemPath$1(fileName)
-        ? fileSystemPathToUrl$1(fileName)
+      fileName && isFileSystemPath$2(fileName)
+        ? fileSystemPathToUrl$2(fileName)
         : fileName,
     line: callerCallsite.getLineNumber(),
     column: callerCallsite.getColumnNumber(),
@@ -1907,8 +1903,8 @@ const validateDirectoryUrl = (value) => {
   if (value instanceof URL) {
     urlString = value.href;
   } else if (typeof value === "string") {
-    if (isFileSystemPath$1(value)) {
-      urlString = fileSystemPathToUrl$1(value);
+    if (isFileSystemPath$2(value)) {
+      urlString = fileSystemPathToUrl$2(value);
     } else {
       try {
         urlString = String(new URL(value));
@@ -1963,8 +1959,8 @@ const validateFileUrl = (value, baseUrl) => {
   if (value instanceof URL) {
     urlString = value.href;
   } else if (typeof value === "string") {
-    if (isFileSystemPath$1(value)) {
-      urlString = fileSystemPathToUrl$1(value);
+    if (isFileSystemPath$2(value)) {
+      urlString = fileSystemPathToUrl$2(value);
     } else {
       try {
         urlString = String(new URL(value, baseUrl));
@@ -2061,7 +2057,7 @@ const comparePathnames = (leftPathame, rightPathname) => {
 };
 
 const isWindows$3 = process.platform === "win32";
-const baseUrlFallback = fileSystemPathToUrl$1(process.cwd());
+const baseUrlFallback = fileSystemPathToUrl$2(process.cwd());
 
 /**
  * Some url might be resolved or remapped to url without the windows drive letter.
@@ -2127,7 +2123,7 @@ const extractDriveLetter = (resource) => {
   return null;
 };
 
-const getParentDirectoryUrl = (url) => {
+const getParentDirectoryUrl$1 = (url) => {
   if (url.startsWith("file://")) {
     // With node.js new URL('../', 'file:///C:/').href
     // returns "file:///C:/" instead of "file:///"
@@ -2152,13 +2148,13 @@ const getParentDirectoryUrl = (url) => {
   return new URL(url.endsWith("/") ? "../" : "./", url).href;
 };
 
-const findAncestorDirectoryUrl = (url, callback) => {
+const findAncestorDirectoryUrl$1 = (url, callback) => {
   url = String(url);
   while (url !== "file:///") {
     if (callback(url)) {
       return url;
     }
-    url = getParentDirectoryUrl(url);
+    url = getParentDirectoryUrl$1(url);
   }
   return null;
 };
@@ -3993,7 +3989,7 @@ const writeDirectorySync = (
     if (e.code === "ENOTDIR") {
       let previousNonDirUrl = destinationUrl;
       // we must try all parent directories as long as it fails with ENOTDIR
-      findAncestorDirectoryUrl(destinationUrl, (ancestorUrl) => {
+      findAncestorDirectoryUrl$1(destinationUrl, (ancestorUrl) => {
         try {
           statSync(new URL(ancestorUrl));
           return true;
@@ -8099,6 +8095,447 @@ const trackHttp1ServerPendingRequests = (nodeServer) => {
   return { stop };
 };
 
+// This file is used just for test and internal tests
+// so super-linear-backtracking is ok
+// and I don't know how to update the regexes to prevent this
+/* eslint-disable regexp/no-super-linear-backtracking */
+
+const parseFunction = (fn) => {
+  const string = fn.toString();
+  for (const candidate of CANDIDATES) {
+    const returnValue = candidate(string, fn);
+    if (returnValue) {
+      return returnValue;
+    }
+  }
+  return {
+    type: "unknwon",
+    name: "",
+    argsSource: "()",
+    body: removeRootIndentation(string),
+  };
+};
+
+const CANDIDATES = [
+  (fnString, fn) => {
+    const ARROW_FUNCTION_BODY_REGEX =
+      /^(?:async\s*)?(\([\s\S]*?\))\s*=>\s*\{([\s\S]*)\}$/;
+    const match = fnString.match(ARROW_FUNCTION_BODY_REGEX);
+    if (match) {
+      return {
+        type: "arrow",
+        name: fn.name,
+        argsSource: normalizeArgsSource(match[1]),
+        body: removeRootIndentation(match[2]),
+      };
+    }
+    return null;
+  },
+  (fnString, fn) => {
+    const ARROW_FUNCTION_SHORTHAND_BODY_REGEX =
+      /^(\([\s\S]*?\))\s*=>([\s\S]*)$/;
+    const match = fnString.match(ARROW_FUNCTION_SHORTHAND_BODY_REGEX);
+    if (match) {
+      return {
+        type: "arrow",
+        name: fn.name,
+        argsSource: normalizeArgsSource(match[1]),
+        body: removeRootIndentation(match[2]),
+      };
+    }
+    return null;
+  },
+  (fnString) => {
+    const FUNCTION_BODY_REGEX =
+      /^function\s*(\S*)\s*(\([\s\S]*?\))\s*\{([\s\S]*)\}$/;
+    const match = fnString.match(FUNCTION_BODY_REGEX);
+    if (match) {
+      return {
+        type: "classic",
+        name: match[1],
+        argsSource: normalizeArgsSource(match[2]),
+        body: removeRootIndentation(match[3]),
+      };
+    }
+    return null;
+  },
+  (fnString) => {
+    const GETTER_SETTER_FUNCTION_BODY_REGEX =
+      /^[gs]et\s*(\S*)\s*(\([\s\S]*?\))\s*\{([\s\S]*)\}$/;
+    const match = fnString.match(GETTER_SETTER_FUNCTION_BODY_REGEX);
+    if (match) {
+      return {
+        type: fnString.startsWith("get") ? "getter" : "setter",
+        name: match[1],
+        argsSource: normalizeArgsSource(match[2]),
+        body: removeRootIndentation(match[3]),
+      };
+    }
+    return null;
+  },
+];
+// function with default params not supported and fallback to "()"
+const normalizeArgsSource = (argsSource) => {
+  if (argsSource.indexOf("(", 1)) {
+    return "()";
+  }
+  return argsSource;
+};
+
+const removeRootIndentation = (text) => {
+  const lines = text.split(/\r?\n/);
+  let result = ``;
+  let i = 0;
+
+  let charsToRemove = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const isFirstLine = i === 0;
+    const isLastLine = i === lines.length - 1;
+    const isRootLine = lines[0] === "" ? i === 1 : isFirstLine;
+    i++;
+    if (isFirstLine && line === "") {
+      // remove first line when empty
+      continue;
+    }
+    let lineShortened = "";
+    let j = 0;
+    let searchIndentChar = true;
+    while (j < line.length) {
+      const char = line[j];
+      j++;
+      if (searchIndentChar && (char === " " || char === "\t")) {
+        if (isRootLine) {
+          charsToRemove++;
+          continue;
+        }
+        if (j <= charsToRemove) {
+          continue;
+        }
+      }
+      searchIndentChar = false;
+      lineShortened += char;
+    }
+    if (isLastLine && lineShortened === "") {
+      // remove last line when empty
+      continue;
+    }
+    result += isRootLine ? `${lineShortened}` : `\n${lineShortened}`;
+  }
+  return result;
+};
+
+const isEscaped$1 = (i, string) => {
+  let backslashBeforeCount = 0;
+  while (i--) {
+    const previousChar = string[i];
+    if (previousChar === "\\") {
+      backslashBeforeCount++;
+    }
+    break;
+  }
+  const isEven = backslashBeforeCount % 2 === 0;
+  return !isEven;
+};
+
+const escapeChars$1 = (string, replacements) => {
+  const charsToEscape = Object.keys(replacements);
+  let result = "";
+  let last = 0;
+  let i = 0;
+  while (i < string.length) {
+    const char = string[i];
+    i++;
+    if (charsToEscape.includes(char) && !isEscaped$1(i - 1, string)) {
+      if (last === i - 1) {
+        result += replacements[char];
+      } else {
+        result += `${string.slice(last, i - 1)}${replacements[char]}`;
+      }
+      last = i;
+    }
+  }
+  if (last !== string.length) {
+    result += string.slice(last);
+  }
+  return result;
+};
+
+// https://github.com/benjamingr/RegExp.escape/blob/master/polyfill.js
+
+const escapeRegexpSpecialChars$1 = (string) => {
+  return escapeChars$1(String(string), {
+    "/": "\\/",
+    "^": "\\^",
+    "\\": "\\\\",
+    "[": "\\[",
+    "]": "\\]",
+    "(": "\\(",
+    ")": "\\)",
+    "{": "\\{",
+    "}": "\\}",
+    "?": "\\?",
+    "+": "\\+",
+    "*": "\\*",
+    ".": "\\.",
+    "|": "\\|",
+    "$": "\\$",
+  });
+};
+
+const createPattern = (
+  pattern,
+  {
+    namedGroupDelimiter,
+    prepareStringToGenerate = (stringToBuild) => stringToBuild,
+    finalizeGeneratedString = (generatedString) => generatedString,
+  } = {},
+) => {
+  if (pattern === "*") {
+    return {
+      regexp: /.*/,
+      match: () => true,
+      generate: (stringToGenerate) => stringToGenerate,
+      generateExample: (stringToGenerate) => stringToGenerate,
+    };
+  }
+
+  const parts = [];
+  const namedParams = [];
+  let starParamCount = 0;
+  let regexpSource = "";
+  let lastIndex = 0;
+  regexpSource += "^";
+  for (const match of pattern.matchAll(/:\w+|\*/g)) {
+    const string = match[0];
+    const index = match.index;
+    let before = pattern.slice(lastIndex, index);
+    parts.push({ type: "static", value: before });
+    regexpSource += escapeRegexpSpecialChars$1(before);
+    if (string === "*") {
+      starParamCount++;
+      regexpSource += `(?<star_${starParamCount - 1}>.+)`;
+      parts.push({ type: "star", value: starParamCount - 1 });
+    } else {
+      const paramName = string.slice(1);
+      namedParams.push(paramName);
+      regexpSource += namedGroupDelimiter
+        ? `(?<${paramName}>[^${escapeRegexpSpecialChars$1(namedGroupDelimiter)}]+)`
+        : `(?<${paramName}>.+)`;
+      parts.push({ type: "named", value: paramName });
+    }
+    lastIndex = index + string.length;
+  }
+  const after = pattern.slice(lastIndex);
+  parts.push({ type: "static", value: after });
+  regexpSource += escapeRegexpSpecialChars$1(after);
+  regexpSource += "$";
+
+  const regexp = new RegExp(regexpSource);
+
+  const generateWhenPatternIsStatic = () => {
+    return prepareStringToGenerate(pattern);
+  };
+  const generateWhenPatternUsesOnlyStarParams = (...values) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else {
+        generatedString += values[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+  const generateWhenPatternUsesOnlyNamedParams = (namedValues) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else {
+        generatedString += namedValues[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+  const generateWhenPatternUsesNamedAndStarParams = (
+    namedValues,
+    ...values
+  ) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else if (part.type === "named") {
+        generatedString += namedValues[part.value];
+      } else {
+        generatedString += values[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+
+  const isStatic = namedParams.length === 0 && starParamCount === 0;
+  const usesOnlyNamedParams = namedParams.length > 0 && starParamCount === 0;
+  const usesOnlyStarParams = namedParams.length === 0 && starParamCount > 0;
+  const usesNamedAndStarParams = namedParams.length > 0 && starParamCount > 0;
+
+  const generate = isStatic
+    ? generateWhenPatternIsStatic
+    : usesOnlyNamedParams
+      ? generateWhenPatternUsesOnlyNamedParams
+      : usesOnlyStarParams
+        ? generateWhenPatternUsesOnlyStarParams
+        : generateWhenPatternUsesNamedAndStarParams;
+
+  return {
+    regexp,
+    match: (value) => {
+      if (value === undefined) {
+        return null;
+      }
+      const match = String(value).match(regexp);
+      if (!match) {
+        return null;
+      }
+      const groups = match.groups;
+      if (groups && Object.keys(groups).length) {
+        const stars = [];
+        const named = {};
+        for (const key of Object.keys(groups)) {
+          if (key.startsWith("star_")) {
+            const index = parseInt(key.slice("star_".length));
+            stars[index] = groups[key];
+          } else {
+            named[key] = groups[key];
+          }
+        }
+        return {
+          named: Object.keys(named).length === 0 ? null : named,
+          stars: stars.length === 0 ? null : stars,
+        };
+      }
+      return { named: null, stars: null };
+    },
+    generate,
+    generateExample: () => {
+      if (usesNamedAndStarParams) {
+        return generate(
+          generateNamedParamsExample(namedParams),
+          ...generateStarParamsExample(starParamCount),
+        );
+      }
+      if (usesOnlyNamedParams) {
+        return generate(generateNamedParamsExample(namedParams));
+      }
+      if (usesOnlyStarParams) {
+        return generate(...generateStarParamsExample(starParamCount));
+      }
+      return generate();
+    },
+  };
+};
+
+const composeTwoMatchResults = (left, right) => {
+  if (!left || !right) {
+    return false;
+  }
+  let named;
+  const leftNamed = left.named;
+  const rightNamed = right.named;
+  if (leftNamed && rightNamed) {
+    named = { ...leftNamed, ...rightNamed };
+  } else if (leftNamed) {
+    named = leftNamed;
+  } else if (rightNamed) {
+    named = rightNamed;
+  }
+  let stars;
+  const leftStars = left.stars;
+  const rightStars = right.stars;
+  if (leftStars && rightStars) {
+    stars = [...leftStars, ...rightStars];
+  } else if (leftStars) {
+    stars = leftStars;
+  } else if (rightStars) {
+    stars = rightStars;
+  }
+  return { named, stars };
+};
+
+const PATTERN = {
+  create: createPattern,
+  composeTwoMatchResults,
+  createKeyValue: (object) => {
+    const patternMap = new Map();
+    const keys = Object.keys(object);
+    for (const key of keys) {
+      const value = object[key];
+      if (typeof value === "function") {
+        patternMap.set(key, {
+          match: (value) => {
+            return Boolean(value(value));
+          },
+          generate: () => {
+            return "?";
+          },
+        });
+      } else {
+        const valuePattern = PATTERN.create(value);
+        patternMap.set(key, valuePattern);
+      }
+    }
+    return {
+      match: (objectToMatch) => {
+        const namedValues = {};
+        for (const [key, pattern] of patternMap) {
+          const value = objectToMatch[key];
+          const matchResult = pattern.match(value);
+          if (!matchResult) {
+            return false;
+          }
+          const named = matchResult.named;
+          Object.assign(namedValues, named);
+        }
+        return namedValues;
+      },
+      generate: (values) => {
+        const generatedObject = {};
+        for (const [key, pattern] of patternMap) {
+          generatedObject[key] = pattern.generate(values);
+        }
+        return generatedObject;
+      },
+      generateExample: () => {
+        const generatedObject = {};
+        for (const [key, pattern] of patternMap) {
+          generatedObject[key] = pattern.generateExample();
+        }
+        return generatedObject;
+      },
+    };
+  },
+};
+
+const generateNamedParamsExample = (namedParams) => {
+  const namedParamValues = {};
+  for (const name of namedParams) {
+    namedParamValues[name] = name;
+  }
+  return namedParamValues;
+};
+const generateStarParamsExample = (starParamCount) => {
+  const starValues = [];
+  while (starValues.length < starParamCount) {
+    starValues.push(starValues.length);
+  }
+  return starValues;
+};
+
+const createHeadersPattern = (headers) => {
+  return PATTERN.createKeyValue(headers);
+};
+
 const pathnameToExtension$1 = (pathname) => {
   const slashLastIndex = pathname.lastIndexOf("/");
   const filename =
@@ -8113,6 +8550,35 @@ const pathnameToExtension$1 = (pathname) => {
   // if (dotLastIndex === pathname.length - 1) return ""
   const extension = filename.slice(dotLastIndex);
   return extension;
+};
+
+const resourceToParts = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?");
+  if (searchSeparatorIndex === -1) {
+    const hashSeparatorIndex = resource.indexOf("#");
+    if (hashSeparatorIndex === -1) {
+      return [resource, "", ""];
+    }
+    const beforeHashSeparator = resource.slice(0, hashSeparatorIndex);
+    const afterHashSeparator = resource.slice(hashSeparatorIndex + 1);
+    return [beforeHashSeparator, "", afterHashSeparator];
+  }
+  const beforeSearchSeparator = resource.slice(0, searchSeparatorIndex);
+  const afterSearchSeparator = resource.slice(searchSeparatorIndex + 1);
+  const hashSeparatorIndex = afterSearchSeparator.indexOf("#");
+  if (hashSeparatorIndex === -1) {
+    return [beforeSearchSeparator, afterSearchSeparator, ""];
+  }
+  const afterSearchSeparatorAndBeforeHashSeparator = afterSearchSeparator.slice(
+    0,
+    hashSeparatorIndex,
+  );
+  const afterHashSeparator = afterSearchSeparator.slice(hashSeparatorIndex + 1);
+  return [
+    beforeSearchSeparator,
+    afterSearchSeparatorAndBeforeHashSeparator,
+    afterHashSeparator,
+  ];
 };
 
 const resourceToPathname = (resource) => {
@@ -8130,6 +8596,35 @@ const resourceToPathname = (resource) => {
 const resourceToExtension = (resource) => {
   const pathname = resourceToPathname(resource);
   return pathnameToExtension$1(pathname);
+};
+
+const isFileSystemPath$1 = (value) => {
+  if (typeof value !== "string") {
+    throw new TypeError(
+      `isFileSystemPath first arg must be a string, got ${value}`,
+    );
+  }
+  if (value[0] === "/") {
+    return true;
+  }
+  return startsWithWindowsDriveLetter$1(value);
+};
+
+const startsWithWindowsDriveLetter$1 = (string) => {
+  const firstChar = string[0];
+  if (!/[a-zA-Z]/.test(firstChar)) return false;
+
+  const secondChar = string[1];
+  if (secondChar !== ":") return false;
+
+  return true;
+};
+
+const fileSystemPathToUrl$1 = (value) => {
+  if (!isFileSystemPath$1(value)) {
+    throw new Error(`value must be a filesystem path, got ${value}`);
+  }
+  return String(pathToFileURL(value));
 };
 
 const getCommonPathname = (pathname, otherPathname) => {
@@ -8252,6 +8747,100 @@ const urlToFileSystemPath = (url) => {
   }
   return fileSystemPath;
 };
+
+const createResourcePattern = (pattern) => {
+  const [pathnamePatternString, searchPatternString, hashPatternString] =
+    resourceToParts(pattern);
+
+  const pathnamePattern = PATTERN.create(pathnamePatternString, {
+    namedGroupDelimiter: "/",
+  });
+  let searchPattern;
+  if (searchPatternString) {
+    const searchParams = Object.fromEntries(
+      new URLSearchParams(searchPatternString),
+    );
+    searchPattern = PATTERN.createKeyValue(searchParams);
+  }
+  let hashPattern;
+  if (hashPatternString) {
+    hashPattern = PATTERN.create(hashPatternString, {
+      namedGroupDelimiter: "&",
+    });
+  }
+
+  return {
+    match: (resource) => {
+      const [pathname, search, hash] = resourceToParts(resource);
+      let result = pathnamePattern.match(pathname);
+      if (!result) {
+        return null;
+      }
+
+      let searchResult;
+      let hashResult;
+      if (searchPattern) {
+        const searchParams = Object.fromEntries(new URLSearchParams(search));
+        searchResult = searchPattern.match(searchParams);
+        if (!searchResult) {
+          return null;
+        }
+        if (result.named) {
+          Object.assign(result.named, searchResult);
+        } else {
+          result.named = searchResult;
+        }
+      }
+      if (hashPattern) {
+        hashResult = hashPattern.match(hash);
+        if (!hashResult) {
+          return null;
+        }
+        result = PATTERN.composeTwoMatchResults(result, hashResult);
+      }
+      return result;
+    },
+    generate: (...args) => {
+      let resource = "";
+      resource += pathnamePattern.generate(...args);
+      if (searchPatternString) {
+        const generatedSearchParams = searchPattern.generate(args[0]);
+        const searchParams = new URLSearchParams();
+        for (const key of Object.keys(generatedSearchParams)) {
+          searchParams.set(key, generatedSearchParams[key]);
+        }
+        const search = searchParams.toString();
+        resource += `?${search}`;
+      }
+      if (hashPatternString) {
+        resource += `#${hashPattern.generate(args[0])}`;
+      }
+      return resource;
+    },
+    generateExample: () => {
+      let resourceExample = "";
+      resourceExample += pathnamePattern.generateExample();
+      if (searchPatternString) {
+        resourceExample += `?${searchPattern.generateExample()}`;
+      }
+      if (hashPatternString) {
+        resourceExample += `#${hashPattern.generateExample()}`;
+      }
+      return resourceExample;
+    },
+  };
+};
+
+// const resourceFromUrl = (url, baseUrl = "http://example.com") => {
+//   url = String(url);
+//   if (url[0] === "/") {
+//     url = url.slice(1);
+//   }
+//   // if (url[0] !== "/") url = `/${url}`;
+//   const urlObject = new URL(url, baseUrl);
+//   const resource = urlObject.href.slice(urlObject.origin.length);
+//   return resource;
+// };
 
 const pickAcceptedContent = ({
   availables,
@@ -8533,6 +9122,73 @@ const getVersionAcceptanceScore = ({ value, quality }, availableVersion) => {
 
   return -1;
 };
+
+process.platform === "win32";
+fileSystemPathToUrl$1(process.cwd());
+
+const getParentDirectoryUrl = (url) => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
+    }
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf(
+        "/",
+        slashLastIndex - 1,
+      );
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+
+const findAncestorDirectoryUrl = (url, callback) => {
+  url = String(url);
+  while (url !== "file:///") {
+    if (callback(url)) {
+      return url;
+    }
+    url = getParentDirectoryUrl(url);
+  }
+  return null;
+};
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+process.platform === "win32";
+
+/*
+ * - stats object documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
+ */
+
+
+process.platform === "win32";
+
+process.platform === "win32";
+
+process.platform === "win32";
+
+process.platform === "win32";
+
+process.platform === "linux";
+
+process.platform === "darwin";
+process.platform === "linux";
+process.platform === "freebsd";
 
 const lookupPackageDirectory$1 = (currentUrl) => {
   return findAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
@@ -12380,7 +13036,7 @@ const fileUrlConverter = {
     return `${filePath}${stringifyQuery(searchParams)}`;
   },
   asFileUrl: (filePath) => {
-    return decodeURIComponent(fileSystemPathToUrl$1(filePath)).replace(
+    return decodeURIComponent(fileSystemPathToUrl$2(filePath)).replace(
       /[=](?=&|$)/g,
       "",
     );
@@ -12733,7 +13389,7 @@ const rollupPluginJsenv = ({
         if (specifier[0] === "/") {
           urlObject = new URL(specifier.slice(1), rootDirectoryUrl);
         } else {
-          if (isFileSystemPath$1(importer)) {
+          if (isFileSystemPath$2(importer)) {
             importer = fileUrlConverter.asFileUrl(importer);
           }
           urlObject = new URL(specifier, importer);
@@ -12755,7 +13411,7 @@ const rollupPluginJsenv = ({
       return null;
     },
     resolveId: (specifier, importer = rootDirectoryUrl) => {
-      if (isFileSystemPath$1(importer)) {
+      if (isFileSystemPath$2(importer)) {
         importer = fileUrlConverter.asFileUrl(importer);
       }
       let url;
@@ -15235,7 +15891,7 @@ const jsenvPluginTranspilation = ({
 };
 
 const lookupPackageDirectory = (currentUrl) => {
-  return findAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
+  return findAncestorDirectoryUrl$1(currentUrl, (ancestorDirectoryUrl) => {
     const potentialPackageJsonFileUrl = `${ancestorDirectoryUrl}package.json`;
     return existsSync(new URL(potentialPackageJsonFileUrl));
   });
@@ -17572,7 +18228,7 @@ const createUrlInfoTransformer = ({
     let { sources } = sourcemap;
     if (sources) {
       sources = sources.map((source) => {
-        if (source && isFileSystemPath$1(source)) {
+        if (source && isFileSystemPath$2(source)) {
           return String(pathToFileURL(source));
         }
         return source;
