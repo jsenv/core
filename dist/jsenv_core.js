@@ -23552,7 +23552,7 @@ const applyBabelPlugins = async ({
   if (babelPlugins.length === 0) {
     return { code: input };
   }
-  const { transformAsync, transformFromAstAsync } = await import("@babel/core");
+  const { transformAsync, transformFromAstAsync } = await import("./js/index2.js");
   const sourceFileName = inputUrl.startsWith("file:")
     ? urlToFileSystemPath$1(inputUrl)
     : undefined;

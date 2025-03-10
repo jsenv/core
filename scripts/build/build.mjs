@@ -52,6 +52,7 @@ await build({
     "file://**/node_modules/terser/": false,
     "file://**/node_modules/@jridgewell/source-map/": false,
     "file://**/node_modules/rollup/": false,
+    "file://**/node_modules/@babel/core/": false,
     // "file://**/node_modules/@jridgewell/trace-mapping/": false,
     // "file://**/node_modules/@jridgewell/gen-mapping/": false,
   },
