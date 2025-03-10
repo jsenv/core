@@ -32,6 +32,9 @@ await build({
     "file://**/node_modules/ansi-escapes/": false,
     "file://**/node_modules/is-unicode-supported/": false,
     "file://**/node_modules/@jsenv/plugin-supervisor/": false,
+    "file://**/node_modules/@jsenv/runtime-compat/": false,
+    "file://**/node_modules/@jsenv/js-module-fallback/": false,
+    "file://**/node_modules/@babel/parser/": false,
     "file://**/node_modules/supports-color/": false,
     "file://**/node_modules/environment/": false,
     "file://**/node_modules/preact/": false,
@@ -54,6 +57,7 @@ await build({
     jsenvPluginCommonJs({
       include: {
         "file:///**/node_modules/ws/": true,
+        "file:///**/node_modules/@babel/parser/": true,
       },
     }),
     jsenvPluginPreact({}),
