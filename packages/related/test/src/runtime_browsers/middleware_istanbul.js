@@ -26,7 +26,7 @@ export const initIstanbulMiddleware = async (
       return;
     }
     const response = await route.fetch();
-    const originalBody = await new Response();
+    const originalBody = await response.text();
     try {
       const result = await applyBabelPlugins({
         babelPlugins: [babelPluginInstrument],

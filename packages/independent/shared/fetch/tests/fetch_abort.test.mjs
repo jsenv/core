@@ -90,7 +90,7 @@ const server = await startServer({
     setTimeout(() => {
       abortController.abort();
     });
-    await new Response();
+    await response.text();
     throw new Error("should throw");
   } catch (error) {
     const actual = {
@@ -119,7 +119,7 @@ const server = await startServer({
     ignoreHttpsError: true,
   });
   const response = await clientResponsePromise;
-  const actual = await new Response();
+  const actual = await response.text();
   const expect = "Hello";
   assert({ actual, expect });
   abortController.abort();
