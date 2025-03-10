@@ -1,7 +1,6 @@
 import process$1 from "node:process";
 import os, { networkInterfaces } from "node:os";
 import tty from "node:tty";
-import "string-width";
 import cluster from "node:cluster";
 import net, { Socket, createServer, isIP } from "node:net";
 import { extname } from "node:path";

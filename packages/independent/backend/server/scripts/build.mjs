@@ -23,6 +23,11 @@ await build({
     "file://**/node_modules/is-unicode-supported/": false,
     "file://**/node_modules/supports-color/": false,
     "file://**/node_modules/environment/": false,
+    "file://**/node_modules/string-width/": false,
+    "file://**/node_modules/strip-ansi/": false,
+    "file://**/node_modules/get-east-asian-width/": false,
+    "file://**/node_modules/emoji-regex/": false,
+    "file://**/node_modules/ansi-regex/": false,
     "file://**/node_modules/formidable/": false,
   },
   runtimeCompat: {
@@ -40,6 +45,7 @@ await build({
     jsenvPluginCommonJs({
       include: {
         "file:///**/node_modules/ws/": true,
+        "file:///**/node_modules/emoji-regex/": true,
       },
     }),
     {
