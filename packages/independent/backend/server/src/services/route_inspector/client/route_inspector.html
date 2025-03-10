@@ -497,14 +497,13 @@
         cursor: pointer;
       }
       .method_filter_option {
-        border-radius: 3px;
-        font-family: sans-serif;
-        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
-        padding: 6px;
+        border-left: 5px solid transparent;
+        border-image-slice: 1;
+        padding-left: 4px;
       }
       .method_filter_option[data-method] {
-        background: var(--method-color);
-        color: #fff;
+        border-image: none;
+        border-left: 5px solid var(--method-color);
       }
       .method_filter_option[data-method="HEAD"] {
         --method-color: var(--method-head-color);
@@ -918,11 +917,42 @@
           const availableMethodNames = availableMethodNamesSignal.value;
           const availableMethodRepartition = methodRepartitionSignal.value;
           const [selectedMethod, setSelectedMethod] = useMethodUrlStringParam();
+
+          // "all" border image is a combination of available method colors
+          const getMethodColor = (methodName) => {
+            const bodyStyle = window.getComputedStyle(document.body);
+            const methodColor = bodyStyle.getPropertyValue(
+              `--method-${methodName.toLowerCase()}-color`,
+            );
+            return methodColor;
+          };
+          const percentagePerColor = Math.floor(
+            100 / (availableMethodNames.length - 1),
+          );
+          const gradientSteps = [];
+          let progress = 0;
+          let index = 0;
+          for (const methodName of availableMethodNames) {
+            if (index === availableMethodNames.length - 1) {
+              progress = 100;
+            }
+            gradientSteps.push(`${getMethodColor(methodName)} ${progress}%`);
+            progress += percentagePerColor;
+            index++;
+          }
+          const gradient = `linear-gradient(to bottom, ${gradientSteps.join(", ")})`;
+
           const options = [
             {
               value: "",
               text: html`
-                <span class="method_filter_option">all</span>
+                <span
+                  class="method_filter_option"
+                  style=${{
+                    borderImageSource: gradient,
+                  }}
+                  >all</span
+                >
                 <span class="filter_count">${routes.length}</span>
               `,
               selected: !selectedMethod,
@@ -1077,7 +1107,7 @@
         acceptedMediaTypes,
         websocket,
         clientCodeExample,
-        declarationLocation,
+        declarationSource,
       }) => {
         const [opened, setOpened] = useState(false);
         const [selectedMethod] = useUrlStringParam("method");
@@ -1118,7 +1148,7 @@
             acceptedMediaTypes=${acceptedMediaTypes}
             websocket=${websocket}
             clientCodeExample=${clientCodeExample}
-            declarationLocation=${declarationLocation}
+            declarationSource=${declarationSource}
             meta=${meta}
           />
         </details>`;
@@ -1146,13 +1176,13 @@
         acceptedMediaTypes,
         websocket,
         clientCodeExample,
-        declarationLocation,
+        declarationSource,
         meta,
       }) => {
         return html`<div class="route_details_content">
-          <${RouteDeclarationLocation}
+          <${RoutedeclarationSource}
             meta=${meta}
-            declarationLocation=${declarationLocation}
+            declarationSource=${declarationSource}
           />
           <p style="margin-top: 0"><strong>Description:</strong></p>
           <p class="route_description">
@@ -1196,8 +1226,8 @@
           />
         </div>`;
       };
-      const RouteDeclarationLocation = ({ meta, declarationLocation }) => {
-        if (!declarationLocation) {
+      const RoutedeclarationSource = ({ meta, declarationSource }) => {
+        if (!declarationSource) {
           return null;
         }
         return html`<p style="margin-top: 0"><strong>Declaration:</strong></p>
