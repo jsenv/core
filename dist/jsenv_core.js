@@ -14,12 +14,10 @@ import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
 import { createRequire } from "node:module";
 import { lookup } from "node:dns";
-import { parseJsUrls, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, removeHtmlNode, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
-import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
+import { parseJsUrls, parseHtml, visitHtmlNodes, getHtmlNodeAttribute, analyzeScriptNode, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, injectJsenvScript, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, removeHtmlNode, getUrlForContentInsideJs, analyzeLinkNode, findHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
 import { performance as performance$1 } from "node:perf_hooks";
-import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 
 /*
  * data:[<mediatype>][;base64],<data>
@@ -13028,6 +13026,1712 @@ const isErrorWithCode = (error, code) => {
   return typeof error === "object" && error.code === code;
 };
 
+const comma = ','.charCodeAt(0);
+const semicolon = ';'.charCodeAt(0);
+const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const intToChar = new Uint8Array(64); // 64 possible chars.
+const charToInt = new Uint8Array(128); // z is 122 in ASCII
+for (let i = 0; i < chars.length; i++) {
+    const c = chars.charCodeAt(i);
+    intToChar[i] = c;
+    charToInt[c] = i;
+}
+function encodeInteger(builder, num, relative) {
+    let delta = num - relative;
+    delta = delta < 0 ? (-delta << 1) | 1 : delta << 1;
+    do {
+        let clamped = delta & 0b011111;
+        delta >>>= 5;
+        if (delta > 0)
+            clamped |= 0b100000;
+        builder.write(intToChar[clamped]);
+    } while (delta > 0);
+    return num;
+}
+
+const bufLength = 1024 * 16;
+// Provide a fallback for older environments.
+const td = typeof TextDecoder !== 'undefined'
+    ? /* #__PURE__ */ new TextDecoder()
+    : typeof Buffer !== 'undefined'
+        ? {
+            decode(buf) {
+                const out = Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength);
+                return out.toString();
+            },
+        }
+        : {
+            decode(buf) {
+                let out = '';
+                for (let i = 0; i < buf.length; i++) {
+                    out += String.fromCharCode(buf[i]);
+                }
+                return out;
+            },
+        };
+class StringWriter {
+    constructor() {
+        this.pos = 0;
+        this.out = '';
+        this.buffer = new Uint8Array(bufLength);
+    }
+    write(v) {
+        const { buffer } = this;
+        buffer[this.pos++] = v;
+        if (this.pos === bufLength) {
+            this.out += td.decode(buffer);
+            this.pos = 0;
+        }
+    }
+    flush() {
+        const { buffer, out, pos } = this;
+        return pos > 0 ? out + td.decode(buffer.subarray(0, pos)) : out;
+    }
+}
+function encode(decoded) {
+    const writer = new StringWriter();
+    let sourcesIndex = 0;
+    let sourceLine = 0;
+    let sourceColumn = 0;
+    let namesIndex = 0;
+    for (let i = 0; i < decoded.length; i++) {
+        const line = decoded[i];
+        if (i > 0)
+            writer.write(semicolon);
+        if (line.length === 0)
+            continue;
+        let genColumn = 0;
+        for (let j = 0; j < line.length; j++) {
+            const segment = line[j];
+            if (j > 0)
+                writer.write(comma);
+            genColumn = encodeInteger(writer, segment[0], genColumn);
+            if (segment.length === 1)
+                continue;
+            sourcesIndex = encodeInteger(writer, segment[1], sourcesIndex);
+            sourceLine = encodeInteger(writer, segment[2], sourceLine);
+            sourceColumn = encodeInteger(writer, segment[3], sourceColumn);
+            if (segment.length === 4)
+                continue;
+            namesIndex = encodeInteger(writer, segment[4], namesIndex);
+        }
+    }
+    return writer.flush();
+}
+
+class BitSet {
+	constructor(arg) {
+		this.bits = arg instanceof BitSet ? arg.bits.slice() : [];
+	}
+
+	add(n) {
+		this.bits[n >> 5] |= 1 << (n & 31);
+	}
+
+	has(n) {
+		return !!(this.bits[n >> 5] & (1 << (n & 31)));
+	}
+}
+
+class Chunk {
+	constructor(start, end, content) {
+		this.start = start;
+		this.end = end;
+		this.original = content;
+
+		this.intro = '';
+		this.outro = '';
+
+		this.content = content;
+		this.storeName = false;
+		this.edited = false;
+
+		{
+			this.previous = null;
+			this.next = null;
+		}
+	}
+
+	appendLeft(content) {
+		this.outro += content;
+	}
+
+	appendRight(content) {
+		this.intro = this.intro + content;
+	}
+
+	clone() {
+		const chunk = new Chunk(this.start, this.end, this.original);
+
+		chunk.intro = this.intro;
+		chunk.outro = this.outro;
+		chunk.content = this.content;
+		chunk.storeName = this.storeName;
+		chunk.edited = this.edited;
+
+		return chunk;
+	}
+
+	contains(index) {
+		return this.start < index && index < this.end;
+	}
+
+	eachNext(fn) {
+		let chunk = this;
+		while (chunk) {
+			fn(chunk);
+			chunk = chunk.next;
+		}
+	}
+
+	eachPrevious(fn) {
+		let chunk = this;
+		while (chunk) {
+			fn(chunk);
+			chunk = chunk.previous;
+		}
+	}
+
+	edit(content, storeName, contentOnly) {
+		this.content = content;
+		if (!contentOnly) {
+			this.intro = '';
+			this.outro = '';
+		}
+		this.storeName = storeName;
+
+		this.edited = true;
+
+		return this;
+	}
+
+	prependLeft(content) {
+		this.outro = content + this.outro;
+	}
+
+	prependRight(content) {
+		this.intro = content + this.intro;
+	}
+
+	reset() {
+		this.intro = '';
+		this.outro = '';
+		if (this.edited) {
+			this.content = this.original;
+			this.storeName = false;
+			this.edited = false;
+		}
+	}
+
+	split(index) {
+		const sliceIndex = index - this.start;
+
+		const originalBefore = this.original.slice(0, sliceIndex);
+		const originalAfter = this.original.slice(sliceIndex);
+
+		this.original = originalBefore;
+
+		const newChunk = new Chunk(index, this.end, originalAfter);
+		newChunk.outro = this.outro;
+		this.outro = '';
+
+		this.end = index;
+
+		if (this.edited) {
+			// after split we should save the edit content record into the correct chunk
+			// to make sure sourcemap correct
+			// For example:
+			// '  test'.trim()
+			//     split   -> '  ' + 'test'
+			//   ✔️ edit    -> '' + 'test'
+			//   ✖️ edit    -> 'test' + ''
+			// TODO is this block necessary?...
+			newChunk.edit('', false);
+			this.content = '';
+		} else {
+			this.content = originalBefore;
+		}
+
+		newChunk.next = this.next;
+		if (newChunk.next) newChunk.next.previous = newChunk;
+		newChunk.previous = this;
+		this.next = newChunk;
+
+		return newChunk;
+	}
+
+	toString() {
+		return this.intro + this.content + this.outro;
+	}
+
+	trimEnd(rx) {
+		this.outro = this.outro.replace(rx, '');
+		if (this.outro.length) return true;
+
+		const trimmed = this.content.replace(rx, '');
+
+		if (trimmed.length) {
+			if (trimmed !== this.content) {
+				this.split(this.start + trimmed.length).edit('', undefined, true);
+				if (this.edited) {
+					// save the change, if it has been edited
+					this.edit(trimmed, this.storeName, true);
+				}
+			}
+			return true;
+		} else {
+			this.edit('', undefined, true);
+
+			this.intro = this.intro.replace(rx, '');
+			if (this.intro.length) return true;
+		}
+	}
+
+	trimStart(rx) {
+		this.intro = this.intro.replace(rx, '');
+		if (this.intro.length) return true;
+
+		const trimmed = this.content.replace(rx, '');
+
+		if (trimmed.length) {
+			if (trimmed !== this.content) {
+				const newChunk = this.split(this.end - trimmed.length);
+				if (this.edited) {
+					// save the change, if it has been edited
+					newChunk.edit(trimmed, this.storeName, true);
+				}
+				this.edit('', undefined, true);
+			}
+			return true;
+		} else {
+			this.edit('', undefined, true);
+
+			this.outro = this.outro.replace(rx, '');
+			if (this.outro.length) return true;
+		}
+	}
+}
+
+function getBtoa() {
+	if (typeof globalThis !== 'undefined' && typeof globalThis.btoa === 'function') {
+		return (str) => globalThis.btoa(unescape(encodeURIComponent(str)));
+	} else if (typeof Buffer === 'function') {
+		return (str) => Buffer.from(str, 'utf-8').toString('base64');
+	} else {
+		return () => {
+			throw new Error('Unsupported environment: `window.btoa` or `Buffer` should be supported.');
+		};
+	}
+}
+
+const btoa = /*#__PURE__*/ getBtoa();
+
+class SourceMap {
+	constructor(properties) {
+		this.version = 3;
+		this.file = properties.file;
+		this.sources = properties.sources;
+		this.sourcesContent = properties.sourcesContent;
+		this.names = properties.names;
+		this.mappings = encode(properties.mappings);
+		if (typeof properties.x_google_ignoreList !== 'undefined') {
+			this.x_google_ignoreList = properties.x_google_ignoreList;
+		}
+		if (typeof properties.debugId !== 'undefined') {
+			this.debugId = properties.debugId;
+		}
+	}
+
+	toString() {
+		return JSON.stringify(this);
+	}
+
+	toUrl() {
+		return 'data:application/json;charset=utf-8;base64,' + btoa(this.toString());
+	}
+}
+
+function guessIndent(code) {
+	const lines = code.split('\n');
+
+	const tabbed = lines.filter((line) => /^\t+/.test(line));
+	const spaced = lines.filter((line) => /^ {2,}/.test(line));
+
+	if (tabbed.length === 0 && spaced.length === 0) {
+		return null;
+	}
+
+	// More lines tabbed than spaced? Assume tabs, and
+	// default to tabs in the case of a tie (or nothing
+	// to go on)
+	if (tabbed.length >= spaced.length) {
+		return '\t';
+	}
+
+	// Otherwise, we need to guess the multiple
+	const min = spaced.reduce((previous, current) => {
+		const numSpaces = /^ +/.exec(current)[0].length;
+		return Math.min(numSpaces, previous);
+	}, Infinity);
+
+	return new Array(min + 1).join(' ');
+}
+
+function getRelativePath(from, to) {
+	const fromParts = from.split(/[/\\]/);
+	const toParts = to.split(/[/\\]/);
+
+	fromParts.pop(); // get dirname
+
+	while (fromParts[0] === toParts[0]) {
+		fromParts.shift();
+		toParts.shift();
+	}
+
+	if (fromParts.length) {
+		let i = fromParts.length;
+		while (i--) fromParts[i] = '..';
+	}
+
+	return fromParts.concat(toParts).join('/');
+}
+
+const toString = Object.prototype.toString;
+
+function isObject(thing) {
+	return toString.call(thing) === '[object Object]';
+}
+
+function getLocator(source) {
+	const originalLines = source.split('\n');
+	const lineOffsets = [];
+
+	for (let i = 0, pos = 0; i < originalLines.length; i++) {
+		lineOffsets.push(pos);
+		pos += originalLines[i].length + 1;
+	}
+
+	return function locate(index) {
+		let i = 0;
+		let j = lineOffsets.length;
+		while (i < j) {
+			const m = (i + j) >> 1;
+			if (index < lineOffsets[m]) {
+				j = m;
+			} else {
+				i = m + 1;
+			}
+		}
+		const line = i - 1;
+		const column = index - lineOffsets[line];
+		return { line, column };
+	};
+}
+
+const wordRegex = /\w/;
+
+class Mappings {
+	constructor(hires) {
+		this.hires = hires;
+		this.generatedCodeLine = 0;
+		this.generatedCodeColumn = 0;
+		this.raw = [];
+		this.rawSegments = this.raw[this.generatedCodeLine] = [];
+		this.pending = null;
+	}
+
+	addEdit(sourceIndex, content, loc, nameIndex) {
+		if (content.length) {
+			const contentLengthMinusOne = content.length - 1;
+			let contentLineEnd = content.indexOf('\n', 0);
+			let previousContentLineEnd = -1;
+			// Loop through each line in the content and add a segment, but stop if the last line is empty,
+			// else code afterwards would fill one line too many
+			while (contentLineEnd >= 0 && contentLengthMinusOne > contentLineEnd) {
+				const segment = [this.generatedCodeColumn, sourceIndex, loc.line, loc.column];
+				if (nameIndex >= 0) {
+					segment.push(nameIndex);
+				}
+				this.rawSegments.push(segment);
+
+				this.generatedCodeLine += 1;
+				this.raw[this.generatedCodeLine] = this.rawSegments = [];
+				this.generatedCodeColumn = 0;
+
+				previousContentLineEnd = contentLineEnd;
+				contentLineEnd = content.indexOf('\n', contentLineEnd + 1);
+			}
+
+			const segment = [this.generatedCodeColumn, sourceIndex, loc.line, loc.column];
+			if (nameIndex >= 0) {
+				segment.push(nameIndex);
+			}
+			this.rawSegments.push(segment);
+
+			this.advance(content.slice(previousContentLineEnd + 1));
+		} else if (this.pending) {
+			this.rawSegments.push(this.pending);
+			this.advance(content);
+		}
+
+		this.pending = null;
+	}
+
+	addUneditedChunk(sourceIndex, chunk, original, loc, sourcemapLocations) {
+		let originalCharIndex = chunk.start;
+		let first = true;
+		// when iterating each char, check if it's in a word boundary
+		let charInHiresBoundary = false;
+
+		while (originalCharIndex < chunk.end) {
+			if (original[originalCharIndex] === '\n') {
+				loc.line += 1;
+				loc.column = 0;
+				this.generatedCodeLine += 1;
+				this.raw[this.generatedCodeLine] = this.rawSegments = [];
+				this.generatedCodeColumn = 0;
+				first = true;
+				charInHiresBoundary = false;
+			} else {
+				if (this.hires || first || sourcemapLocations.has(originalCharIndex)) {
+					const segment = [this.generatedCodeColumn, sourceIndex, loc.line, loc.column];
+
+					if (this.hires === 'boundary') {
+						// in hires "boundary", group segments per word boundary than per char
+						if (wordRegex.test(original[originalCharIndex])) {
+							// for first char in the boundary found, start the boundary by pushing a segment
+							if (!charInHiresBoundary) {
+								this.rawSegments.push(segment);
+								charInHiresBoundary = true;
+							}
+						} else {
+							// for non-word char, end the boundary by pushing a segment
+							this.rawSegments.push(segment);
+							charInHiresBoundary = false;
+						}
+					} else {
+						this.rawSegments.push(segment);
+					}
+				}
+
+				loc.column += 1;
+				this.generatedCodeColumn += 1;
+				first = false;
+			}
+
+			originalCharIndex += 1;
+		}
+
+		this.pending = null;
+	}
+
+	advance(str) {
+		if (!str) return;
+
+		const lines = str.split('\n');
+
+		if (lines.length > 1) {
+			for (let i = 0; i < lines.length - 1; i++) {
+				this.generatedCodeLine++;
+				this.raw[this.generatedCodeLine] = this.rawSegments = [];
+			}
+			this.generatedCodeColumn = 0;
+		}
+
+		this.generatedCodeColumn += lines[lines.length - 1].length;
+	}
+}
+
+const n = '\n';
+
+const warned = {
+	insertLeft: false,
+	insertRight: false,
+	storeName: false,
+};
+
+class MagicString {
+	constructor(string, options = {}) {
+		const chunk = new Chunk(0, string.length, string);
+
+		Object.defineProperties(this, {
+			original: { writable: true, value: string },
+			outro: { writable: true, value: '' },
+			intro: { writable: true, value: '' },
+			firstChunk: { writable: true, value: chunk },
+			lastChunk: { writable: true, value: chunk },
+			lastSearchedChunk: { writable: true, value: chunk },
+			byStart: { writable: true, value: {} },
+			byEnd: { writable: true, value: {} },
+			filename: { writable: true, value: options.filename },
+			indentExclusionRanges: { writable: true, value: options.indentExclusionRanges },
+			sourcemapLocations: { writable: true, value: new BitSet() },
+			storedNames: { writable: true, value: {} },
+			indentStr: { writable: true, value: undefined },
+			ignoreList: { writable: true, value: options.ignoreList },
+			offset: { writable: true, value: options.offset || 0 },
+		});
+
+		this.byStart[0] = chunk;
+		this.byEnd[string.length] = chunk;
+	}
+
+	addSourcemapLocation(char) {
+		this.sourcemapLocations.add(char);
+	}
+
+	append(content) {
+		if (typeof content !== 'string') throw new TypeError('outro content must be a string');
+
+		this.outro += content;
+		return this;
+	}
+
+	appendLeft(index, content) {
+		index = index + this.offset;
+
+		if (typeof content !== 'string') throw new TypeError('inserted content must be a string');
+
+		this._split(index);
+
+		const chunk = this.byEnd[index];
+
+		if (chunk) {
+			chunk.appendLeft(content);
+		} else {
+			this.intro += content;
+		}
+		return this;
+	}
+
+	appendRight(index, content) {
+		index = index + this.offset;
+
+		if (typeof content !== 'string') throw new TypeError('inserted content must be a string');
+
+		this._split(index);
+
+		const chunk = this.byStart[index];
+
+		if (chunk) {
+			chunk.appendRight(content);
+		} else {
+			this.outro += content;
+		}
+		return this;
+	}
+
+	clone() {
+		const cloned = new MagicString(this.original, { filename: this.filename, offset: this.offset });
+
+		let originalChunk = this.firstChunk;
+		let clonedChunk = (cloned.firstChunk = cloned.lastSearchedChunk = originalChunk.clone());
+
+		while (originalChunk) {
+			cloned.byStart[clonedChunk.start] = clonedChunk;
+			cloned.byEnd[clonedChunk.end] = clonedChunk;
+
+			const nextOriginalChunk = originalChunk.next;
+			const nextClonedChunk = nextOriginalChunk && nextOriginalChunk.clone();
+
+			if (nextClonedChunk) {
+				clonedChunk.next = nextClonedChunk;
+				nextClonedChunk.previous = clonedChunk;
+
+				clonedChunk = nextClonedChunk;
+			}
+
+			originalChunk = nextOriginalChunk;
+		}
+
+		cloned.lastChunk = clonedChunk;
+
+		if (this.indentExclusionRanges) {
+			cloned.indentExclusionRanges = this.indentExclusionRanges.slice();
+		}
+
+		cloned.sourcemapLocations = new BitSet(this.sourcemapLocations);
+
+		cloned.intro = this.intro;
+		cloned.outro = this.outro;
+
+		return cloned;
+	}
+
+	generateDecodedMap(options) {
+		options = options || {};
+
+		const sourceIndex = 0;
+		const names = Object.keys(this.storedNames);
+		const mappings = new Mappings(options.hires);
+
+		const locate = getLocator(this.original);
+
+		if (this.intro) {
+			mappings.advance(this.intro);
+		}
+
+		this.firstChunk.eachNext((chunk) => {
+			const loc = locate(chunk.start);
+
+			if (chunk.intro.length) mappings.advance(chunk.intro);
+
+			if (chunk.edited) {
+				mappings.addEdit(
+					sourceIndex,
+					chunk.content,
+					loc,
+					chunk.storeName ? names.indexOf(chunk.original) : -1,
+				);
+			} else {
+				mappings.addUneditedChunk(sourceIndex, chunk, this.original, loc, this.sourcemapLocations);
+			}
+
+			if (chunk.outro.length) mappings.advance(chunk.outro);
+		});
+
+		return {
+			file: options.file ? options.file.split(/[/\\]/).pop() : undefined,
+			sources: [
+				options.source ? getRelativePath(options.file || '', options.source) : options.file || '',
+			],
+			sourcesContent: options.includeContent ? [this.original] : undefined,
+			names,
+			mappings: mappings.raw,
+			x_google_ignoreList: this.ignoreList ? [sourceIndex] : undefined,
+		};
+	}
+
+	generateMap(options) {
+		return new SourceMap(this.generateDecodedMap(options));
+	}
+
+	_ensureindentStr() {
+		if (this.indentStr === undefined) {
+			this.indentStr = guessIndent(this.original);
+		}
+	}
+
+	_getRawIndentString() {
+		this._ensureindentStr();
+		return this.indentStr;
+	}
+
+	getIndentString() {
+		this._ensureindentStr();
+		return this.indentStr === null ? '\t' : this.indentStr;
+	}
+
+	indent(indentStr, options) {
+		const pattern = /^[^\r\n]/gm;
+
+		if (isObject(indentStr)) {
+			options = indentStr;
+			indentStr = undefined;
+		}
+
+		if (indentStr === undefined) {
+			this._ensureindentStr();
+			indentStr = this.indentStr || '\t';
+		}
+
+		if (indentStr === '') return this; // noop
+
+		options = options || {};
+
+		// Process exclusion ranges
+		const isExcluded = {};
+
+		if (options.exclude) {
+			const exclusions =
+				typeof options.exclude[0] === 'number' ? [options.exclude] : options.exclude;
+			exclusions.forEach((exclusion) => {
+				for (let i = exclusion[0]; i < exclusion[1]; i += 1) {
+					isExcluded[i] = true;
+				}
+			});
+		}
+
+		let shouldIndentNextCharacter = options.indentStart !== false;
+		const replacer = (match) => {
+			if (shouldIndentNextCharacter) return `${indentStr}${match}`;
+			shouldIndentNextCharacter = true;
+			return match;
+		};
+
+		this.intro = this.intro.replace(pattern, replacer);
+
+		let charIndex = 0;
+		let chunk = this.firstChunk;
+
+		while (chunk) {
+			const end = chunk.end;
+
+			if (chunk.edited) {
+				if (!isExcluded[charIndex]) {
+					chunk.content = chunk.content.replace(pattern, replacer);
+
+					if (chunk.content.length) {
+						shouldIndentNextCharacter = chunk.content[chunk.content.length - 1] === '\n';
+					}
+				}
+			} else {
+				charIndex = chunk.start;
+
+				while (charIndex < end) {
+					if (!isExcluded[charIndex]) {
+						const char = this.original[charIndex];
+
+						if (char === '\n') {
+							shouldIndentNextCharacter = true;
+						} else if (char !== '\r' && shouldIndentNextCharacter) {
+							shouldIndentNextCharacter = false;
+
+							if (charIndex === chunk.start) {
+								chunk.prependRight(indentStr);
+							} else {
+								this._splitChunk(chunk, charIndex);
+								chunk = chunk.next;
+								chunk.prependRight(indentStr);
+							}
+						}
+					}
+
+					charIndex += 1;
+				}
+			}
+
+			charIndex = chunk.end;
+			chunk = chunk.next;
+		}
+
+		this.outro = this.outro.replace(pattern, replacer);
+
+		return this;
+	}
+
+	insert() {
+		throw new Error(
+			'magicString.insert(...) is deprecated. Use prependRight(...) or appendLeft(...)',
+		);
+	}
+
+	insertLeft(index, content) {
+		if (!warned.insertLeft) {
+			console.warn(
+				'magicString.insertLeft(...) is deprecated. Use magicString.appendLeft(...) instead',
+			);
+			warned.insertLeft = true;
+		}
+
+		return this.appendLeft(index, content);
+	}
+
+	insertRight(index, content) {
+		if (!warned.insertRight) {
+			console.warn(
+				'magicString.insertRight(...) is deprecated. Use magicString.prependRight(...) instead',
+			);
+			warned.insertRight = true;
+		}
+
+		return this.prependRight(index, content);
+	}
+
+	move(start, end, index) {
+		start = start + this.offset;
+		end = end + this.offset;
+		index = index + this.offset;
+
+		if (index >= start && index <= end) throw new Error('Cannot move a selection inside itself');
+
+		this._split(start);
+		this._split(end);
+		this._split(index);
+
+		const first = this.byStart[start];
+		const last = this.byEnd[end];
+
+		const oldLeft = first.previous;
+		const oldRight = last.next;
+
+		const newRight = this.byStart[index];
+		if (!newRight && last === this.lastChunk) return this;
+		const newLeft = newRight ? newRight.previous : this.lastChunk;
+
+		if (oldLeft) oldLeft.next = oldRight;
+		if (oldRight) oldRight.previous = oldLeft;
+
+		if (newLeft) newLeft.next = first;
+		if (newRight) newRight.previous = last;
+
+		if (!first.previous) this.firstChunk = last.next;
+		if (!last.next) {
+			this.lastChunk = first.previous;
+			this.lastChunk.next = null;
+		}
+
+		first.previous = newLeft;
+		last.next = newRight || null;
+
+		if (!newLeft) this.firstChunk = first;
+		if (!newRight) this.lastChunk = last;
+		return this;
+	}
+
+	overwrite(start, end, content, options) {
+		options = options || {};
+		return this.update(start, end, content, { ...options, overwrite: !options.contentOnly });
+	}
+
+	update(start, end, content, options) {
+		start = start + this.offset;
+		end = end + this.offset;
+
+		if (typeof content !== 'string') throw new TypeError('replacement content must be a string');
+
+		if (this.original.length !== 0) {
+			while (start < 0) start += this.original.length;
+			while (end < 0) end += this.original.length;
+		}
+
+		if (end > this.original.length) throw new Error('end is out of bounds');
+		if (start === end)
+			throw new Error(
+				'Cannot overwrite a zero-length range – use appendLeft or prependRight instead',
+			);
+
+		this._split(start);
+		this._split(end);
+
+		if (options === true) {
+			if (!warned.storeName) {
+				console.warn(
+					'The final argument to magicString.overwrite(...) should be an options object. See https://github.com/rich-harris/magic-string',
+				);
+				warned.storeName = true;
+			}
+
+			options = { storeName: true };
+		}
+		const storeName = options !== undefined ? options.storeName : false;
+		const overwrite = options !== undefined ? options.overwrite : false;
+
+		if (storeName) {
+			const original = this.original.slice(start, end);
+			Object.defineProperty(this.storedNames, original, {
+				writable: true,
+				value: true,
+				enumerable: true,
+			});
+		}
+
+		const first = this.byStart[start];
+		const last = this.byEnd[end];
+
+		if (first) {
+			let chunk = first;
+			while (chunk !== last) {
+				if (chunk.next !== this.byStart[chunk.end]) {
+					throw new Error('Cannot overwrite across a split point');
+				}
+				chunk = chunk.next;
+				chunk.edit('', false);
+			}
+
+			first.edit(content, storeName, !overwrite);
+		} else {
+			// must be inserting at the end
+			const newChunk = new Chunk(start, end, '').edit(content, storeName);
+
+			// TODO last chunk in the array may not be the last chunk, if it's moved...
+			last.next = newChunk;
+			newChunk.previous = last;
+		}
+		return this;
+	}
+
+	prepend(content) {
+		if (typeof content !== 'string') throw new TypeError('outro content must be a string');
+
+		this.intro = content + this.intro;
+		return this;
+	}
+
+	prependLeft(index, content) {
+		index = index + this.offset;
+
+		if (typeof content !== 'string') throw new TypeError('inserted content must be a string');
+
+		this._split(index);
+
+		const chunk = this.byEnd[index];
+
+		if (chunk) {
+			chunk.prependLeft(content);
+		} else {
+			this.intro = content + this.intro;
+		}
+		return this;
+	}
+
+	prependRight(index, content) {
+		index = index + this.offset;
+
+		if (typeof content !== 'string') throw new TypeError('inserted content must be a string');
+
+		this._split(index);
+
+		const chunk = this.byStart[index];
+
+		if (chunk) {
+			chunk.prependRight(content);
+		} else {
+			this.outro = content + this.outro;
+		}
+		return this;
+	}
+
+	remove(start, end) {
+		start = start + this.offset;
+		end = end + this.offset;
+
+		if (this.original.length !== 0) {
+			while (start < 0) start += this.original.length;
+			while (end < 0) end += this.original.length;
+		}
+
+		if (start === end) return this;
+
+		if (start < 0 || end > this.original.length) throw new Error('Character is out of bounds');
+		if (start > end) throw new Error('end must be greater than start');
+
+		this._split(start);
+		this._split(end);
+
+		let chunk = this.byStart[start];
+
+		while (chunk) {
+			chunk.intro = '';
+			chunk.outro = '';
+			chunk.edit('');
+
+			chunk = end > chunk.end ? this.byStart[chunk.end] : null;
+		}
+		return this;
+	}
+
+	reset(start, end) {
+		start = start + this.offset;
+		end = end + this.offset;
+
+		if (this.original.length !== 0) {
+			while (start < 0) start += this.original.length;
+			while (end < 0) end += this.original.length;
+		}
+
+		if (start === end) return this;
+
+		if (start < 0 || end > this.original.length) throw new Error('Character is out of bounds');
+		if (start > end) throw new Error('end must be greater than start');
+
+		this._split(start);
+		this._split(end);
+
+		let chunk = this.byStart[start];
+
+		while (chunk) {
+			chunk.reset();
+
+			chunk = end > chunk.end ? this.byStart[chunk.end] : null;
+		}
+		return this;
+	}
+
+	lastChar() {
+		if (this.outro.length) return this.outro[this.outro.length - 1];
+		let chunk = this.lastChunk;
+		do {
+			if (chunk.outro.length) return chunk.outro[chunk.outro.length - 1];
+			if (chunk.content.length) return chunk.content[chunk.content.length - 1];
+			if (chunk.intro.length) return chunk.intro[chunk.intro.length - 1];
+		} while ((chunk = chunk.previous));
+		if (this.intro.length) return this.intro[this.intro.length - 1];
+		return '';
+	}
+
+	lastLine() {
+		let lineIndex = this.outro.lastIndexOf(n);
+		if (lineIndex !== -1) return this.outro.substr(lineIndex + 1);
+		let lineStr = this.outro;
+		let chunk = this.lastChunk;
+		do {
+			if (chunk.outro.length > 0) {
+				lineIndex = chunk.outro.lastIndexOf(n);
+				if (lineIndex !== -1) return chunk.outro.substr(lineIndex + 1) + lineStr;
+				lineStr = chunk.outro + lineStr;
+			}
+
+			if (chunk.content.length > 0) {
+				lineIndex = chunk.content.lastIndexOf(n);
+				if (lineIndex !== -1) return chunk.content.substr(lineIndex + 1) + lineStr;
+				lineStr = chunk.content + lineStr;
+			}
+
+			if (chunk.intro.length > 0) {
+				lineIndex = chunk.intro.lastIndexOf(n);
+				if (lineIndex !== -1) return chunk.intro.substr(lineIndex + 1) + lineStr;
+				lineStr = chunk.intro + lineStr;
+			}
+		} while ((chunk = chunk.previous));
+		lineIndex = this.intro.lastIndexOf(n);
+		if (lineIndex !== -1) return this.intro.substr(lineIndex + 1) + lineStr;
+		return this.intro + lineStr;
+	}
+
+	slice(start = 0, end = this.original.length - this.offset) {
+		start = start + this.offset;
+		end = end + this.offset;
+
+		if (this.original.length !== 0) {
+			while (start < 0) start += this.original.length;
+			while (end < 0) end += this.original.length;
+		}
+
+		let result = '';
+
+		// find start chunk
+		let chunk = this.firstChunk;
+		while (chunk && (chunk.start > start || chunk.end <= start)) {
+			// found end chunk before start
+			if (chunk.start < end && chunk.end >= end) {
+				return result;
+			}
+
+			chunk = chunk.next;
+		}
+
+		if (chunk && chunk.edited && chunk.start !== start)
+			throw new Error(`Cannot use replaced character ${start} as slice start anchor.`);
+
+		const startChunk = chunk;
+		while (chunk) {
+			if (chunk.intro && (startChunk !== chunk || chunk.start === start)) {
+				result += chunk.intro;
+			}
+
+			const containsEnd = chunk.start < end && chunk.end >= end;
+			if (containsEnd && chunk.edited && chunk.end !== end)
+				throw new Error(`Cannot use replaced character ${end} as slice end anchor.`);
+
+			const sliceStart = startChunk === chunk ? start - chunk.start : 0;
+			const sliceEnd = containsEnd ? chunk.content.length + end - chunk.end : chunk.content.length;
+
+			result += chunk.content.slice(sliceStart, sliceEnd);
+
+			if (chunk.outro && (!containsEnd || chunk.end === end)) {
+				result += chunk.outro;
+			}
+
+			if (containsEnd) {
+				break;
+			}
+
+			chunk = chunk.next;
+		}
+
+		return result;
+	}
+
+	// TODO deprecate this? not really very useful
+	snip(start, end) {
+		const clone = this.clone();
+		clone.remove(0, start);
+		clone.remove(end, clone.original.length);
+
+		return clone;
+	}
+
+	_split(index) {
+		if (this.byStart[index] || this.byEnd[index]) return;
+
+		let chunk = this.lastSearchedChunk;
+		const searchForward = index > chunk.end;
+
+		while (chunk) {
+			if (chunk.contains(index)) return this._splitChunk(chunk, index);
+
+			chunk = searchForward ? this.byStart[chunk.end] : this.byEnd[chunk.start];
+		}
+	}
+
+	_splitChunk(chunk, index) {
+		if (chunk.edited && chunk.content.length) {
+			// zero-length edited chunks are a special case (overlapping replacements)
+			const loc = getLocator(this.original)(index);
+			throw new Error(
+				`Cannot split a chunk that has already been edited (${loc.line}:${loc.column} – "${chunk.original}")`,
+			);
+		}
+
+		const newChunk = chunk.split(index);
+
+		this.byEnd[index] = chunk;
+		this.byStart[index] = newChunk;
+		this.byEnd[newChunk.end] = newChunk;
+
+		if (chunk === this.lastChunk) this.lastChunk = newChunk;
+
+		this.lastSearchedChunk = chunk;
+		return true;
+	}
+
+	toString() {
+		let str = this.intro;
+
+		let chunk = this.firstChunk;
+		while (chunk) {
+			str += chunk.toString();
+			chunk = chunk.next;
+		}
+
+		return str + this.outro;
+	}
+
+	isEmpty() {
+		let chunk = this.firstChunk;
+		do {
+			if (
+				(chunk.intro.length && chunk.intro.trim()) ||
+				(chunk.content.length && chunk.content.trim()) ||
+				(chunk.outro.length && chunk.outro.trim())
+			)
+				return false;
+		} while ((chunk = chunk.next));
+		return true;
+	}
+
+	length() {
+		let chunk = this.firstChunk;
+		let length = 0;
+		do {
+			length += chunk.intro.length + chunk.content.length + chunk.outro.length;
+		} while ((chunk = chunk.next));
+		return length;
+	}
+
+	trimLines() {
+		return this.trim('[\\r\\n]');
+	}
+
+	trim(charType) {
+		return this.trimStart(charType).trimEnd(charType);
+	}
+
+	trimEndAborted(charType) {
+		const rx = new RegExp((charType || '\\s') + '+$');
+
+		this.outro = this.outro.replace(rx, '');
+		if (this.outro.length) return true;
+
+		let chunk = this.lastChunk;
+
+		do {
+			const end = chunk.end;
+			const aborted = chunk.trimEnd(rx);
+
+			// if chunk was trimmed, we have a new lastChunk
+			if (chunk.end !== end) {
+				if (this.lastChunk === chunk) {
+					this.lastChunk = chunk.next;
+				}
+
+				this.byEnd[chunk.end] = chunk;
+				this.byStart[chunk.next.start] = chunk.next;
+				this.byEnd[chunk.next.end] = chunk.next;
+			}
+
+			if (aborted) return true;
+			chunk = chunk.previous;
+		} while (chunk);
+
+		return false;
+	}
+
+	trimEnd(charType) {
+		this.trimEndAborted(charType);
+		return this;
+	}
+	trimStartAborted(charType) {
+		const rx = new RegExp('^' + (charType || '\\s') + '+');
+
+		this.intro = this.intro.replace(rx, '');
+		if (this.intro.length) return true;
+
+		let chunk = this.firstChunk;
+
+		do {
+			const end = chunk.end;
+			const aborted = chunk.trimStart(rx);
+
+			if (chunk.end !== end) {
+				// special case...
+				if (chunk === this.lastChunk) this.lastChunk = chunk.next;
+
+				this.byEnd[chunk.end] = chunk;
+				this.byStart[chunk.next.start] = chunk.next;
+				this.byEnd[chunk.next.end] = chunk.next;
+			}
+
+			if (aborted) return true;
+			chunk = chunk.next;
+		} while (chunk);
+
+		return false;
+	}
+
+	trimStart(charType) {
+		this.trimStartAborted(charType);
+		return this;
+	}
+
+	hasChanged() {
+		return this.original !== this.toString();
+	}
+
+	_replaceRegexp(searchValue, replacement) {
+		function getReplacement(match, str) {
+			if (typeof replacement === 'string') {
+				return replacement.replace(/\$(\$|&|\d+)/g, (_, i) => {
+					// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace#specifying_a_string_as_a_parameter
+					if (i === '$') return '$';
+					if (i === '&') return match[0];
+					const num = +i;
+					if (num < match.length) return match[+i];
+					return `$${i}`;
+				});
+			} else {
+				return replacement(...match, match.index, str, match.groups);
+			}
+		}
+		function matchAll(re, str) {
+			let match;
+			const matches = [];
+			while ((match = re.exec(str))) {
+				matches.push(match);
+			}
+			return matches;
+		}
+		if (searchValue.global) {
+			const matches = matchAll(searchValue, this.original);
+			matches.forEach((match) => {
+				if (match.index != null) {
+					const replacement = getReplacement(match, this.original);
+					if (replacement !== match[0]) {
+						this.overwrite(match.index, match.index + match[0].length, replacement);
+					}
+				}
+			});
+		} else {
+			const match = this.original.match(searchValue);
+			if (match && match.index != null) {
+				const replacement = getReplacement(match, this.original);
+				if (replacement !== match[0]) {
+					this.overwrite(match.index, match.index + match[0].length, replacement);
+				}
+			}
+		}
+		return this;
+	}
+
+	_replaceString(string, replacement) {
+		const { original } = this;
+		const index = original.indexOf(string);
+
+		if (index !== -1) {
+			this.overwrite(index, index + string.length, replacement);
+		}
+
+		return this;
+	}
+
+	replace(searchValue, replacement) {
+		if (typeof searchValue === 'string') {
+			return this._replaceString(searchValue, replacement);
+		}
+
+		return this._replaceRegexp(searchValue, replacement);
+	}
+
+	_replaceAllString(string, replacement) {
+		const { original } = this;
+		const stringLength = string.length;
+		for (
+			let index = original.indexOf(string);
+			index !== -1;
+			index = original.indexOf(string, index + stringLength)
+		) {
+			const previous = original.slice(index, index + stringLength);
+			if (previous !== replacement) this.overwrite(index, index + stringLength, replacement);
+		}
+
+		return this;
+	}
+
+	replaceAll(searchValue, replacement) {
+		if (typeof searchValue === 'string') {
+			return this._replaceAllString(searchValue, replacement);
+		}
+
+		if (!searchValue.global) {
+			throw new TypeError(
+				'MagicString.prototype.replaceAll called with a non-global RegExp argument',
+			);
+		}
+
+		return this._replaceRegexp(searchValue, replacement);
+	}
+}
+
+const createMagicSource = (content) => {
+  if (content === undefined) {
+    throw new Error("content missing");
+  }
+  const magicString = new MagicString(content);
+  let touched = false;
+
+  return {
+    prepend: (string) => {
+      touched = true;
+      magicString.prepend(string);
+    },
+    append: (string) => {
+      touched = true;
+      magicString.append(string);
+    },
+    replace: ({ start, end, replacement }) => {
+      touched = true;
+      magicString.overwrite(start, end, replacement);
+    },
+    remove: ({ start, end }) => {
+      touched = true;
+      magicString.remove(start, end);
+    },
+    toContentAndSourcemap: ({ source } = {}) => {
+      if (!touched) {
+        return {
+          content,
+          sourcemap: null,
+        };
+      }
+      const code = magicString.toString();
+      const map = magicString.generateMap({
+        hires: true,
+        includeContent: true,
+        source,
+      });
+      return {
+        content: code,
+        sourcemap: map,
+      };
+    },
+  };
+};
+
+const require$1 = createRequire(import.meta.url);
+// consider using https://github.com/7rulnik/source-map-js
+
+const requireSourcemap = () => {
+  const namespace = require$1("source-map-js");
+  return namespace;
+};
+
+/*
+ * https://github.com/mozilla/source-map#sourcemapgenerator
+ */
+
+
+const { SourceMapConsumer, SourceMapGenerator } = requireSourcemap();
+
+const composeTwoSourcemaps = (firstSourcemap, secondSourcemap) => {
+  if (!firstSourcemap && !secondSourcemap) {
+    return null;
+  }
+  if (!firstSourcemap) {
+    return secondSourcemap;
+  }
+  if (!secondSourcemap) {
+    return firstSourcemap;
+  }
+  const sourcemapGenerator = new SourceMapGenerator();
+  const firstSourcemapConsumer = new SourceMapConsumer(firstSourcemap);
+  const secondSourcemapConsumer = new SourceMapConsumer(secondSourcemap);
+  const firstMappings = readMappings(firstSourcemapConsumer);
+  firstMappings.forEach((mapping) => {
+    sourcemapGenerator.addMapping(mapping);
+  });
+  const secondMappings = readMappings(secondSourcemapConsumer);
+  secondMappings.forEach((mapping) => {
+    sourcemapGenerator.addMapping(mapping);
+  });
+  const sourcemap = sourcemapGenerator.toJSON();
+  const sources = [];
+  const sourcesContent = [];
+  const firstSourcesContent = firstSourcemap.sourcesContent;
+  const secondSourcesContent = secondSourcemap.sourcesContent;
+  sourcemap.sources.forEach((source) => {
+    sources.push(source);
+    if (secondSourcesContent) {
+      const secondSourceIndex = secondSourcemap.sources.indexOf(source);
+      if (secondSourceIndex > -1) {
+        sourcesContent.push(secondSourcesContent[secondSourceIndex]);
+        return;
+      }
+    }
+    if (firstSourcesContent) {
+      const firstSourceIndex = firstSourcemap.sources.indexOf(source);
+      if (firstSourceIndex > -1) {
+        sourcesContent.push(firstSourcesContent[firstSourceIndex]);
+        return;
+      }
+    }
+    sourcesContent.push(null);
+  });
+  sourcemap.sources = sources;
+  sourcemap.sourcesContent = sourcesContent;
+  return sourcemap;
+};
+
+const readMappings = (consumer) => {
+  const mappings = [];
+  consumer.eachMapping(
+    ({
+      originalColumn,
+      originalLine,
+      generatedColumn,
+      generatedLine,
+      source,
+      name,
+    }) => {
+      mappings.push({
+        original:
+          typeof originalColumn === "number"
+            ? {
+                column: originalColumn,
+                line: originalLine,
+              }
+            : undefined,
+        generated: {
+          column: generatedColumn,
+          line: generatedLine,
+        },
+        source: typeof originalColumn === "number" ? source : undefined,
+        name,
+      });
+    },
+  );
+  return mappings;
+};
+
+// https://github.com/mozilla/source-map#sourcemapconsumerprototypeoriginalpositionforgeneratedposition
+const getOriginalPosition = ({ sourcemap, line, column, bias }) => {
+  const { SourceMapConsumer } = requireSourcemap();
+
+  const sourceMapConsumer = new SourceMapConsumer(sourcemap);
+  const originalPosition = sourceMapConsumer.originalPositionFor({
+    line,
+    column,
+    bias,
+  });
+  return originalPosition;
+};
+
+const sourcemapConverter = {
+  toFileUrls: (sourcemap) => {
+    return {
+      ...sourcemap,
+      sources: sourcemap.sources.map((source) => {
+        return isFileSystemPath$2(source) ? fileSystemPathToUrl$2(source) : source;
+      }),
+    };
+  },
+  toFilePaths: (sourcemap) => {
+    return {
+      ...sourcemap,
+      sources: sourcemap.sources.map((source) => {
+        return urlToFileSystemPath$1(source);
+      }),
+    };
+  },
+};
+
+const generateSourcemapFileUrl = (url) => {
+  const urlObject = new URL(url);
+  let { origin, pathname, search, hash } = urlObject;
+  // origin is "null" for "file://" urls with Node.js
+  if (origin === "null" && urlObject.href.startsWith("file:")) {
+    origin = "file://";
+  }
+  const sourcemapUrl = `${origin}${pathname}.map${search}${hash}`;
+  return sourcemapUrl;
+};
+
+const generateSourcemapDataUrl = (sourcemap) => {
+  const asBase64 = Buffer.from(JSON.stringify(sourcemap)).toString("base64");
+  return `data:application/json;charset=utf-8;base64,${asBase64}`;
+};
+
+const SOURCEMAP = {
+  enabledOnContentType: (contentType) => {
+    return ["text/javascript", "text/css"].includes(contentType);
+  },
+
+  readComment: ({ contentType, content }) => {
+    const read = {
+      "text/javascript": parseJavaScriptSourcemapComment,
+      "text/css": parseCssSourcemapComment,
+    }[contentType];
+    return read ? read(content) : null;
+  },
+
+  removeComment: ({ contentType, content }) => {
+    return SOURCEMAP.writeComment({ contentType, content, specifier: "" });
+  },
+
+  writeComment: ({ contentType, content, specifier }) => {
+    const write = {
+      "text/javascript": setJavaScriptSourceMappingUrl,
+      "text/css": setCssSourceMappingUrl,
+    }[contentType];
+    return write ? write(content, specifier) : content;
+  },
+};
+
+const parseJavaScriptSourcemapComment = (javaScriptSource) => {
+  let sourceMappingUrl;
+  replaceSourceMappingUrl(
+    javaScriptSource,
+    javascriptSourceMappingUrlCommentRegexp,
+    (value) => {
+      sourceMappingUrl = value;
+    },
+  );
+  if (!sourceMappingUrl) {
+    return null;
+  }
+  return {
+    type: "sourcemap_comment",
+    subtype: "js",
+    // we assume it's on last line
+    line: javaScriptSource.split(/\r?\n/).length,
+    // ${"//#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
+    column: `${"//#"} sourceMappingURL=`.length + 1,
+    specifier: sourceMappingUrl,
+  };
+};
+
+const setJavaScriptSourceMappingUrl = (
+  javaScriptSource,
+  sourceMappingFileUrl,
+) => {
+  let replaced;
+  const sourceAfterReplace = replaceSourceMappingUrl(
+    javaScriptSource,
+    javascriptSourceMappingUrlCommentRegexp,
+    () => {
+      replaced = true;
+      return sourceMappingFileUrl
+        ? writeJavaScriptSourceMappingURL(sourceMappingFileUrl)
+        : "";
+    },
+  );
+  if (replaced) {
+    return sourceAfterReplace;
+  }
+
+  return sourceMappingFileUrl
+    ? `${javaScriptSource}
+${writeJavaScriptSourceMappingURL(sourceMappingFileUrl)}
+`
+    : javaScriptSource;
+};
+
+const parseCssSourcemapComment = (cssSource) => {
+  let sourceMappingUrl;
+  replaceSourceMappingUrl(
+    cssSource,
+    cssSourceMappingUrlCommentRegExp,
+    (value) => {
+      sourceMappingUrl = value;
+    },
+  );
+  if (!sourceMappingUrl) {
+    return null;
+  }
+  return {
+    type: "sourcemap_comment",
+    subtype: "css",
+    // we assume it's on last line
+    line: cssSource.split(/\r?\n/).length - 1,
+    // ${"//*#"} is to avoid static analysis to think there is a sourceMappingUrl for this file
+    column: `${"//*#"} sourceMappingURL=`.length + 1,
+    specifier: sourceMappingUrl,
+  };
+};
+
+const setCssSourceMappingUrl = (cssSource, sourceMappingFileUrl) => {
+  let replaced;
+  const sourceAfterReplace = replaceSourceMappingUrl(
+    cssSource,
+    cssSourceMappingUrlCommentRegExp,
+    () => {
+      replaced = true;
+      return sourceMappingFileUrl
+        ? writeCssSourceMappingUrl(sourceMappingFileUrl)
+        : "";
+    },
+  );
+  if (replaced) {
+    return sourceAfterReplace;
+  }
+  return sourceMappingFileUrl
+    ? `${cssSource}
+${writeCssSourceMappingUrl(sourceMappingFileUrl)}
+`
+    : cssSource;
+};
+
+const javascriptSourceMappingUrlCommentRegexp =
+  /\/\/ ?# ?sourceMappingURL=([^\s'"]+)/g;
+const cssSourceMappingUrlCommentRegExp =
+  /\/\*# ?sourceMappingURL=([^\s'"]+) \*\//g;
+
+// ${"//#"} is to avoid a parser thinking there is a sourceMappingUrl for this file
+const writeJavaScriptSourceMappingURL = (value) => {
+  return `${"//#"} sourceMappingURL=${value}`;
+};
+const writeCssSourceMappingUrl = (value) => {
+  return `/*# sourceMappingURL=${value} */`;
+};
+
+const replaceSourceMappingUrl = (source, regexp, callback) => {
+  let lastSourceMappingUrl;
+  let matchSourceMappingUrl;
+  while ((matchSourceMappingUrl = regexp.exec(source))) {
+    lastSourceMappingUrl = matchSourceMappingUrl;
+  }
+  if (lastSourceMappingUrl) {
+    const index = lastSourceMappingUrl.index;
+    const before = source.slice(0, index);
+    const after = source.slice(index);
+    const mappedAfter = after.replace(regexp, (match, firstGroup) => {
+      return callback(firstGroup);
+    });
+    return `${before}${mappedAfter}`;
+  }
+  return source;
+};
+
 const fileUrlConverter = {
   asFilePath: (fileUrl) => {
     const filePath = urlToFileSystemPath$1(fileUrl);
@@ -20381,6 +22085,1884 @@ const returnValueAssertions = [
 ];
 
 /*
+ * ```js
+ * console.log(42)
+ * ```
+ * becomes
+ * ```js
+ * window.__supervisor__.jsClassicStart('main.html@L10-L13.js')
+ * try {
+ *   console.log(42)
+ *   window.__supervisor__.jsClassicEnd('main.html@L10-L13.js')
+ * } catch(e) {
+ *   window.__supervisor__.jsClassicError('main.html@L10-L13.js', e)
+ * }
+ * ```
+ *
+ * ```js
+ * import value from "./file.js"
+ * console.log(value)
+ * ```
+ * becomes
+ * ```js
+ * window.__supervisor__.jsModuleStart('main.html@L10-L13.js')
+ * try {
+ *   const value = await import("./file.js")
+ *   console.log(value)
+ *   window.__supervisor__.jsModuleEnd('main.html@L10-L13.js')
+ * } catch(e) {
+ *   window.__supervisor__.jsModuleError('main.html@L10-L13.js', e)
+ * }
+ * ```
+ *
+ * -> TO KEEP IN MIND:
+ * Static import can throw errors like
+ * The requested module '/js_module_export_not_found/foo.js' does not provide an export named 'answerr'
+ * While dynamic import will work just fine
+ * and create a variable named "undefined"
+ */
+
+
+const injectSupervisorIntoJs = async ({
+  content,
+  url,
+  type,
+  inlineSrc,
+  sourcemaps,
+}) => {
+  const babelPluginJsSupervisor =
+    type === "js_module"
+      ? babelPluginJsModuleSupervisor
+      : babelPluginJsClassicSupervisor;
+  const result = await applyBabelPlugins({
+    babelPlugins: [[babelPluginJsSupervisor, { inlineSrc }]],
+    input: content,
+    inputIsJsModule: type === "js_module",
+    inputUrl: url,
+  });
+  let code = result.code;
+  if (sourcemaps === "inline") {
+    const map = result.map;
+    const sourcemapDataUrl = generateSourcemapDataUrl(map);
+    code = SOURCEMAP.writeComment({
+      contentType: "text/javascript",
+      content: code,
+      specifier: sourcemapDataUrl,
+    });
+  }
+  code = `${code}
+//# sourceURL=${inlineSrc}`;
+  return code;
+};
+
+const babelPluginJsModuleSupervisor = (babel) => {
+  const t = babel.types;
+
+  return {
+    name: "js-module-supervisor",
+    visitor: {
+      Program: (programPath, state) => {
+        const { inlineSrc } = state.opts;
+        if (state.file.metadata.jsExecutionInstrumented) return;
+        state.file.metadata.jsExecutionInstrumented = true;
+
+        const urlNode = t.stringLiteral(inlineSrc);
+        const startCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsModuleStart",
+        });
+        const endCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsModuleEnd",
+        });
+        const errorCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsModuleError",
+          args: [t.identifier("e")],
+        });
+
+        const bodyPath = programPath.get("body");
+        const importNodes = [];
+        const topLevelNodes = [];
+        for (const topLevelNodePath of bodyPath) {
+          const topLevelNode = topLevelNodePath.node;
+          if (t.isImportDeclaration(topLevelNode)) {
+            importNodes.push(topLevelNode);
+          } else {
+            topLevelNodes.push(topLevelNode);
+          }
+        }
+
+        // replace all import nodes with dynamic imports
+        const dynamicImports = [];
+        importNodes.forEach((importNode) => {
+          const dynamicImportConversion = convertStaticImportIntoDynamicImport(
+            importNode,
+            t,
+          );
+          if (Array.isArray(dynamicImportConversion)) {
+            dynamicImports.push(...dynamicImportConversion);
+          } else {
+            dynamicImports.push(dynamicImportConversion);
+          }
+        });
+
+        const tryCatchNode = t.tryStatement(
+          t.blockStatement([...dynamicImports, ...topLevelNodes, endCallNode]),
+          t.catchClause(t.identifier("e"), t.blockStatement([errorCallNode])),
+        );
+        programPath.replaceWith(t.program([startCallNode, tryCatchNode]));
+      },
+    },
+  };
+};
+
+const convertStaticImportIntoDynamicImport = (staticImportNode, t) => {
+  const awaitExpression = t.awaitExpression(
+    t.callExpression(t.import(), [
+      t.stringLiteral(staticImportNode.source.value),
+    ]),
+  );
+
+  // import "./file.js" -> await import("./file.js")
+  if (staticImportNode.specifiers.length === 0) {
+    return t.expressionStatement(awaitExpression);
+  }
+  if (staticImportNode.specifiers.length === 1) {
+    const [firstSpecifier] = staticImportNode.specifiers;
+    if (firstSpecifier.type === "ImportNamespaceSpecifier") {
+      return t.variableDeclaration("const", [
+        t.variableDeclarator(
+          t.identifier(firstSpecifier.local.name),
+          awaitExpression,
+        ),
+      ]);
+    }
+  }
+  if (staticImportNode.specifiers.length === 2) {
+    const [first, second] = staticImportNode.specifiers;
+    if (
+      first.type === "ImportDefaultSpecifier" &&
+      second.type === "ImportNamespaceSpecifier"
+    ) {
+      const namespaceDeclaration = t.variableDeclaration("const", [
+        t.variableDeclarator(t.identifier(second.local.name), awaitExpression),
+      ]);
+      const defaultDeclaration = t.variableDeclaration("const", [
+        t.variableDeclarator(
+          t.identifier(first.local.name),
+          t.memberExpression(
+            t.identifier(second.local.name),
+            t.identifier("default"),
+          ),
+        ),
+      ]);
+      return [namespaceDeclaration, defaultDeclaration];
+    }
+  }
+
+  // import { name } from "./file.js" -> const { name } = await import("./file.js")
+  // import toto, { name } from "./file.js" -> const { name, default as toto } = await import("./file.js")
+  const objectPattern = t.objectPattern(
+    staticImportNode.specifiers.map((specifier) => {
+      if (specifier.type === "ImportDefaultSpecifier") {
+        return t.objectProperty(
+          t.identifier("default"),
+          t.identifier(specifier.local.name),
+          false, // computed
+          false, // shorthand
+        );
+      }
+      // if (specifier.type === "ImportNamespaceSpecifier") {
+      //   return t.restElement(t.identifier(specifier.local.name))
+      // }
+      const isRenamed = specifier.imported.name !== specifier.local.name;
+      if (isRenamed) {
+        return t.objectProperty(
+          t.identifier(specifier.imported.name),
+          t.identifier(specifier.local.name),
+          false, // computed
+          false, // shorthand
+        );
+      }
+      // shorthand must be true
+      return t.objectProperty(
+        t.identifier(specifier.local.name),
+        t.identifier(specifier.local.name),
+        false, // computed
+        true, // shorthand
+      );
+    }),
+  );
+  const variableDeclarator = t.variableDeclarator(
+    objectPattern,
+    awaitExpression,
+  );
+  const variableDeclaration = t.variableDeclaration("const", [
+    variableDeclarator,
+  ]);
+  return variableDeclaration;
+};
+
+const babelPluginJsClassicSupervisor = (babel) => {
+  const t = babel.types;
+
+  return {
+    name: "js-classic-supervisor",
+    visitor: {
+      Program: (programPath, state) => {
+        const { inlineSrc } = state.opts;
+        if (state.file.metadata.jsExecutionInstrumented) return;
+        state.file.metadata.jsExecutionInstrumented = true;
+
+        const urlNode = t.stringLiteral(inlineSrc);
+        const startCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsClassicStart",
+        });
+        const endCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsClassicEnd",
+        });
+        const errorCallNode = createSupervisionCall({
+          t,
+          urlNode,
+          methodName: "jsClassicError",
+          args: [t.identifier("e")],
+        });
+
+        const topLevelNodes = programPath.node.body;
+        const tryCatchNode = t.tryStatement(
+          t.blockStatement([...topLevelNodes, endCallNode]),
+          t.catchClause(t.identifier("e"), t.blockStatement([errorCallNode])),
+        );
+
+        programPath.replaceWith(t.program([startCallNode, tryCatchNode]));
+      },
+    },
+  };
+};
+
+const createSupervisionCall = ({ t, methodName, urlNode, args = [] }) => {
+  return t.expressionStatement(
+    t.callExpression(
+      t.memberExpression(
+        t.memberExpression(
+          t.identifier("window"),
+          t.identifier("__supervisor__"),
+        ),
+        t.identifier(methodName),
+      ),
+      [urlNode, ...args],
+    ),
+    [],
+    null,
+  );
+};
+
+/*
+ * Jsenv needs to track js execution in order to:
+ * 1. report errors
+ * 2. wait for all js execution inside an HTML page before killing the browser
+ *
+ * A naive approach would rely on "load" events on window but:
+ * scenario                                    | covered by window "load"
+ * ------------------------------------------- | -------------------------
+ * js referenced by <script src>               | yes
+ * js inlined into <script>                    | yes
+ * js referenced by <script type="module" src> | partially (not for import and top level await)
+ * js inlined into <script type="module">      | not at all
+ * Same for "error" event on window who is not enough
+ *
+ * <script src="file.js">
+ * becomes
+ * <script>
+ *   window.__supervisor__.superviseScript('file.js')
+ * </script>
+ *
+ * <script>
+ *    console.log(42)
+ * </script>
+ * becomes
+ * <script inlined-from-src="main.html@L10-C5.js">
+ *   window.__supervisor.__superviseScript("main.html@L10-C5.js")
+ * </script>
+ *
+ * <script type="module" src="module.js"></script>
+ * becomes
+ * <script type="module">
+ *   window.__supervisor__.superviseScriptTypeModule('module.js')
+ * </script>
+ *
+ * <script type="module">
+ *   console.log(42)
+ * </script>
+ * becomes
+ * <script type="module" inlined-from-src="main.html@L10-C5.js">
+ *   window.__supervisor__.superviseScriptTypeModule('main.html@L10-C5.js')
+ * </script>
+ *
+ * Why Inline scripts are converted to files dynamically?
+ * -> No changes required on js source code, it's only the HTML that is modified
+ *   - Also allow to catch syntax errors and export missing
+ */
+
+
+const supervisorFileUrl = new URL(
+  "./js/supervisor.js",
+  import.meta.url,
+).href;
+
+const injectSupervisorIntoHTML = async (
+  { content, url },
+  {
+    supervisorScriptSrc = supervisorFileUrl,
+    supervisorOptions,
+    webServer,
+    onInlineScript = () => {},
+    generateInlineScriptSrc = ({ inlineScriptUrl }) =>
+      urlToRelativeUrl$1(inlineScriptUrl, webServer.rootDirectoryUrl),
+    inlineAsRemote,
+    sourcemaps = "inline",
+  },
+) => {
+  const htmlAst = parseHtml({ html: content, url });
+  const mutations = [];
+  const actions = [];
+
+  const scriptInfos = [];
+  // 1. Find inline and remote scripts
+  {
+    const handleInlineScript = (scriptNode, { type, textContent }) => {
+      const { line, column, isOriginal } = getHtmlNodePosition(scriptNode, {
+        preferOriginal: true,
+      });
+      const inlineScriptUrl = getUrlForContentInsideHtml(
+        scriptNode,
+        { url },
+        null,
+      );
+      const inlineScriptSrc = generateInlineScriptSrc({
+        type,
+        textContent,
+        inlineScriptUrl,
+        isOriginal,
+        line,
+        column,
+      });
+      onInlineScript({
+        type,
+        textContent,
+        url: inlineScriptUrl,
+        isOriginal,
+        line,
+        column,
+        src: inlineScriptSrc,
+      });
+      if (inlineAsRemote) {
+        // prefere la version src
+        scriptInfos.push({
+          type,
+          src: inlineScriptSrc,
+        });
+        const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
+          type,
+          src: inlineScriptSrc,
+        });
+        mutations.push(() => {
+          setHtmlNodeText(scriptNode, remoteJsSupervised, {
+            indentation: "auto",
+          });
+          setHtmlNodeAttributes(scriptNode, {
+            "jsenv-cooked-by": "jsenv:supervisor",
+            "src": undefined,
+            "inlined-from-src": inlineScriptSrc,
+          });
+        });
+      } else {
+        scriptInfos.push({
+          type,
+          src: inlineScriptSrc,
+          isInline: true,
+        });
+        actions.push(async () => {
+          try {
+            const inlineJsSupervised = await injectSupervisorIntoJs({
+              webServer,
+              content: textContent,
+              url: inlineScriptUrl,
+              type,
+              inlineSrc: inlineScriptSrc,
+              sourcemaps,
+            });
+            mutations.push(() => {
+              setHtmlNodeText(scriptNode, inlineJsSupervised, {
+                indentation: "auto",
+              });
+              setHtmlNodeAttributes(scriptNode, {
+                "jsenv-cooked-by": "jsenv:supervisor",
+              });
+            });
+          } catch (e) {
+            if (e.code === "PARSE_ERROR") {
+              // mutations.push(() => {
+              //   setHtmlNodeAttributes(scriptNode, {
+              //     "jsenv-cooked-by": "jsenv:supervisor",
+              //   })
+              // })
+              // on touche a rien
+              return;
+            }
+            throw e;
+          }
+        });
+      }
+    };
+    const handleScriptWithSrc = (scriptNode, { type, src }) => {
+      scriptInfos.push({ type, src });
+      const remoteJsSupervised = generateCodeToSuperviseScriptWithSrc({
+        type,
+        src,
+      });
+      mutations.push(() => {
+        setHtmlNodeText(scriptNode, remoteJsSupervised, {
+          indentation: "auto",
+        });
+        setHtmlNodeAttributes(scriptNode, {
+          "jsenv-cooked-by": "jsenv:supervisor",
+          "src": undefined,
+          "inlined-from-src": src,
+        });
+      });
+    };
+    visitHtmlNodes(htmlAst, {
+      script: (scriptNode) => {
+        const { type } = analyzeScriptNode(scriptNode);
+        if (type !== "js_classic" && type !== "js_module") {
+          return;
+        }
+        if (getHtmlNodeAttribute(scriptNode, "jsenv-injected-by")) {
+          return;
+        }
+        const noSupervisor = getHtmlNodeAttribute(scriptNode, "no-supervisor");
+        if (noSupervisor !== undefined) {
+          return;
+        }
+
+        const scriptNodeText = getHtmlNodeText(scriptNode);
+        if (scriptNodeText) {
+          handleInlineScript(scriptNode, {
+            type,
+            textContent: scriptNodeText,
+          });
+          return;
+        }
+        const src = getHtmlNodeAttribute(scriptNode, "src");
+        if (src) {
+          const urlObject = new URL(src, "http://example.com/");
+          if (urlObject.searchParams.has("inline")) {
+            return;
+          }
+          handleScriptWithSrc(scriptNode, { type, src });
+          return;
+        }
+      },
+    });
+  }
+  // 2. Inject supervisor js file + setup call
+  {
+    injectJsenvScript(htmlAst, {
+      src: supervisorScriptSrc,
+      initCall: {
+        callee: "window.__supervisor__.setup",
+        params: {
+          ...supervisorOptions,
+          serverIsJsenvDevServer: webServer.isJsenvDevServer,
+          rootDirectoryUrl: webServer.rootDirectoryUrl,
+          scriptInfos,
+        },
+      },
+      pluginName: "jsenv:supervisor",
+    });
+  }
+  // 3. Perform actions (transforming inline script content) and html mutations
+  if (actions.length > 0) {
+    await Promise.all(actions.map((action) => action()));
+  }
+  mutations.forEach((mutation) => mutation());
+  const htmlModified = stringifyHtmlAst(htmlAst);
+  return {
+    content: htmlModified,
+  };
+};
+
+const generateCodeToSuperviseScriptWithSrc = ({ type, src }) => {
+  const srcEncoded = JSON.stringify(src);
+  if (type === "js_module") {
+    return `window.__supervisor__.superviseScriptTypeModule(${srcEncoded}, (url) => import(url));`;
+  }
+  return `window.__supervisor__.superviseScript(${srcEncoded});`;
+};
+
+// https://nodejs.org/api/packages.html#resolving-user-conditions
+const readCustomConditionsFromProcessArgs = () => {
+  const packageConditions = [];
+  for (const arg of process.execArgv) {
+    if (arg.includes("-C=")) {
+      const packageCondition = arg.slice(0, "-C=".length);
+      packageConditions.push(packageCondition);
+    }
+    if (arg.includes("--conditions=")) {
+      const packageCondition = arg.slice("--conditions=".length);
+      packageConditions.push(packageCondition);
+    }
+  }
+  return packageConditions;
+};
+
+const asDirectoryUrl = (url) => {
+  const { pathname } = new URL(url);
+  if (pathname.endsWith("/")) {
+    return url;
+  }
+  return new URL("./", url).href;
+};
+
+const getParentUrl = (url) => {
+  if (url.startsWith("file://")) {
+    // With node.js new URL('../', 'file:///C:/').href
+    // returns "file:///C:/" instead of "file:///"
+    const resource = url.slice("file://".length);
+    const slashLastIndex = resource.lastIndexOf("/");
+    if (slashLastIndex === -1) {
+      return url;
+    }
+    const lastCharIndex = resource.length - 1;
+    if (slashLastIndex === lastCharIndex) {
+      const slashBeforeLastIndex = resource.lastIndexOf(
+        "/",
+        slashLastIndex - 1,
+      );
+      if (slashBeforeLastIndex === -1) {
+        return url;
+      }
+      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
+    }
+
+    return `file://${resource.slice(0, slashLastIndex + 1)}`;
+  }
+  return new URL(url.endsWith("/") ? "../" : "./", url).href;
+};
+
+const isValidUrl = (url) => {
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const urlToFilename = (url) => {
+  const { pathname } = new URL(url);
+  const pathnameBeforeLastSlash = pathname.endsWith("/")
+    ? pathname.slice(0, -1)
+    : pathname;
+  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1
+      ? pathnameBeforeLastSlash
+      : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
+  return filename;
+};
+
+const urlToExtension = (url) => {
+  const filename = urlToFilename(url);
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) return "";
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex);
+  return extension;
+};
+
+const defaultLookupPackageScope = (url) => {
+  let scopeUrl = asDirectoryUrl(url);
+  while (scopeUrl !== "file:///") {
+    if (scopeUrl.endsWith("node_modules/")) {
+      return null;
+    }
+    const packageJsonUrlObject = new URL("package.json", scopeUrl);
+    if (existsSync(packageJsonUrlObject)) {
+      return scopeUrl;
+    }
+    scopeUrl = getParentUrl(scopeUrl);
+  }
+  return null;
+};
+
+const defaultReadPackageJson = (packageUrl) => {
+  const packageJsonUrl = new URL("package.json", packageUrl);
+  const buffer = readFileSync(packageJsonUrl);
+  const string = String(buffer);
+  try {
+    return JSON.parse(string);
+  } catch {
+    throw new Error(`Invalid package configuration`);
+  }
+};
+
+// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
+
+const createInvalidModuleSpecifierError = (
+  reason,
+  specifier,
+  { parentUrl },
+) => {
+  const error = new Error(
+    `Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(
+      parentUrl,
+    )}`,
+  );
+  error.code = "INVALID_MODULE_SPECIFIER";
+  return error;
+};
+
+const createInvalidPackageTargetError = (
+  reason,
+  target,
+  { parentUrl, packageDirectoryUrl, key, isImport },
+) => {
+  let message;
+  if (key === ".") {
+    message = `Invalid "exports" main target defined in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+  } else {
+    message = `Invalid "${
+      isImport ? "imports" : "exports"
+    }" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
+  }
+  const error = new Error(message);
+  error.code = "INVALID_PACKAGE_TARGET";
+  return error;
+};
+
+const createPackagePathNotExportedError = (
+  subpath,
+  { parentUrl, packageDirectoryUrl },
+) => {
+  let message;
+  if (subpath === ".") {
+    message = `No "exports" main defined in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}`;
+  } else {
+    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}`;
+  }
+  const error = new Error(message);
+  error.code = "PACKAGE_PATH_NOT_EXPORTED";
+  return error;
+};
+
+const createModuleNotFoundError = (specifier, { parentUrl }) => {
+  const error = new Error(
+    `Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`,
+  );
+  error.code = "MODULE_NOT_FOUND";
+  return error;
+};
+
+const createPackageImportNotDefinedError = (
+  specifier,
+  { parentUrl, packageDirectoryUrl },
+) => {
+  const error = new Error(
+    `Package import specifier "${specifier}" is not defined in ${fileURLToPath(
+      packageDirectoryUrl,
+    )}package.json imported from ${fileURLToPath(parentUrl)}`,
+  );
+  error.code = "PACKAGE_IMPORT_NOT_DEFINED";
+  return error;
+};
+
+const isSpecifierForNodeBuiltin = (specifier) => {
+  return (
+    specifier.startsWith("node:") ||
+    NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
+  );
+};
+
+const NODE_BUILTIN_MODULE_SPECIFIERS = [
+  "assert",
+  "assert/strict",
+  "async_hooks",
+  "buffer_ieee754",
+  "buffer",
+  "child_process",
+  "cluster",
+  "console",
+  "constants",
+  "crypto",
+  "_debugger",
+  "dgram",
+  "dns",
+  "domain",
+  "events",
+  "freelist",
+  "fs",
+  "fs/promises",
+  "_http_agent",
+  "_http_client",
+  "_http_common",
+  "_http_incoming",
+  "_http_outgoing",
+  "_http_server",
+  "http",
+  "http2",
+  "https",
+  "inspector",
+  "_linklist",
+  "module",
+  "net",
+  "node-inspect/lib/_inspect",
+  "node-inspect/lib/internal/inspect_client",
+  "node-inspect/lib/internal/inspect_repl",
+  "os",
+  "path",
+  "perf_hooks",
+  "process",
+  "punycode",
+  "querystring",
+  "readline",
+  "repl",
+  "smalloc",
+  "_stream_duplex",
+  "_stream_transform",
+  "_stream_wrap",
+  "_stream_passthrough",
+  "_stream_readable",
+  "_stream_writable",
+  "stream",
+  "stream/promises",
+  "string_decoder",
+  "sys",
+  "timers",
+  "_tls_common",
+  "_tls_legacy",
+  "_tls_wrap",
+  "tls",
+  "trace_events",
+  "tty",
+  "url",
+  "util",
+  "v8/tools/arguments",
+  "v8/tools/codemap",
+  "v8/tools/consarray",
+  "v8/tools/csvparser",
+  "v8/tools/logreader",
+  "v8/tools/profile_view",
+  "v8/tools/splaytree",
+  "v8",
+  "vm",
+  "worker_threads",
+  "zlib",
+  // global is special
+  "global",
+];
+
+/*
+ * https://nodejs.org/api/esm.html#resolver-algorithm-specification
+ * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
+ * deviations from the spec:
+ * - take into account "browser", "module" and "jsnext"
+ * - the check for isDirectory -> throw is delayed is descoped to the caller
+ * - the call to real path ->
+ *   delayed to the caller so that we can decide to
+ *   maintain symlink as facade url when it's outside project directory
+ *   or use the real path when inside
+ */
+
+const applyNodeEsmResolution = ({
+  specifier,
+  parentUrl,
+  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
+  lookupPackageScope = defaultLookupPackageScope,
+  readPackageJson = defaultReadPackageJson,
+  preservesSymlink = false,
+}) => {
+  const resolution = applyPackageSpecifierResolution(specifier, {
+    parentUrl: String(parentUrl),
+    conditions,
+    lookupPackageScope,
+    readPackageJson,
+    preservesSymlink,
+  });
+  const { url } = resolution;
+  if (url.startsWith("file:")) {
+    if (url.includes("%2F") || url.includes("%5C")) {
+      throw createInvalidModuleSpecifierError(
+        `must not include encoded "/" or "\\" characters`,
+        specifier,
+        {
+          parentUrl,
+        },
+      );
+    }
+    return resolution;
+  }
+  return resolution;
+};
+
+const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
+  const { parentUrl } = resolutionContext;
+  // relative specifier
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    if (specifier[0] !== "/") {
+      const browserFieldResolution = applyBrowserFieldResolution(
+        specifier,
+        resolutionContext,
+      );
+      if (browserFieldResolution) {
+        return browserFieldResolution;
+      }
+    }
+    return {
+      type: "relative_specifier",
+      url: new URL(specifier, parentUrl).href,
+    };
+  }
+  if (specifier[0] === "#") {
+    return applyPackageImportsResolution(specifier, resolutionContext);
+  }
+  try {
+    const urlObject = new URL(specifier);
+    if (specifier.startsWith("node:")) {
+      return {
+        type: "node_builtin_specifier",
+        url: specifier,
+      };
+    }
+    return {
+      type: "absolute_specifier",
+      url: urlObject.href,
+    };
+  } catch {
+    // bare specifier
+    const browserFieldResolution = applyBrowserFieldResolution(
+      specifier,
+      resolutionContext,
+    );
+    if (browserFieldResolution) {
+      return browserFieldResolution;
+    }
+    const packageResolution = applyPackageResolve(specifier, resolutionContext);
+    const search = new URL(specifier, "file:///").search;
+    if (search && !new URL(packageResolution.url).search) {
+      packageResolution.url = `${packageResolution.url}${search}`;
+    }
+    return packageResolution;
+  }
+};
+
+const applyBrowserFieldResolution = (specifier, resolutionContext) => {
+  const { parentUrl, conditions, lookupPackageScope, readPackageJson } =
+    resolutionContext;
+  const browserCondition = conditions.includes("browser");
+  if (!browserCondition) {
+    return null;
+  }
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (!packageDirectoryUrl) {
+    return null;
+  }
+  const packageJson = readPackageJson(packageDirectoryUrl);
+  if (!packageJson) {
+    return null;
+  }
+  const { browser } = packageJson;
+  if (!browser) {
+    return null;
+  }
+  if (typeof browser !== "object") {
+    return null;
+  }
+  let url;
+  if (specifier.startsWith(".")) {
+    const specifierUrl = new URL(specifier, parentUrl).href;
+    const specifierRelativeUrl = specifierUrl.slice(packageDirectoryUrl.length);
+    const secifierRelativeNotation = `./${specifierRelativeUrl}`;
+    const browserMapping = browser[secifierRelativeNotation];
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageDirectoryUrl).href;
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${specifierUrl.slice("file:///")}`;
+    }
+  } else {
+    const browserMapping = browser[specifier];
+    if (typeof browserMapping === "string") {
+      url = new URL(browserMapping, packageDirectoryUrl).href;
+    } else if (browserMapping === false) {
+      url = `file:///@ignore/${specifier}`;
+    }
+  }
+  if (url) {
+    return {
+      type: "field:browser",
+      packageDirectoryUrl,
+      packageJson,
+      url,
+    };
+  }
+  return null;
+};
+
+const applyPackageImportsResolution = (
+  internalSpecifier,
+  resolutionContext,
+) => {
+  const { parentUrl, lookupPackageScope, readPackageJson } = resolutionContext;
+  if (internalSpecifier === "#" || internalSpecifier.startsWith("#/")) {
+    throw createInvalidModuleSpecifierError(
+      "not a valid internal imports specifier name",
+      internalSpecifier,
+      resolutionContext,
+    );
+  }
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (packageDirectoryUrl !== null) {
+    const packageJson = readPackageJson(packageDirectoryUrl);
+    const { imports } = packageJson;
+    if (imports !== null && typeof imports === "object") {
+      const resolved = applyPackageImportsExportsResolution(internalSpecifier, {
+        ...resolutionContext,
+        packageDirectoryUrl,
+        packageJson,
+        isImport: true,
+      });
+      if (resolved) {
+        return resolved;
+      }
+    }
+  }
+  throw createPackageImportNotDefinedError(internalSpecifier, {
+    ...resolutionContext,
+    packageDirectoryUrl,
+  });
+};
+
+const applyPackageResolve = (packageSpecifier, resolutionContext) => {
+  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
+    resolutionContext;
+  if (packageSpecifier === "") {
+    throw new Error("invalid module specifier");
+  }
+  if (
+    conditions.includes("node") &&
+    isSpecifierForNodeBuiltin(packageSpecifier)
+  ) {
+    return {
+      type: "node_builtin_specifier",
+      url: `node:${packageSpecifier}`,
+    };
+  }
+  let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
+  if (
+    packageName[0] === "." ||
+    packageName.includes("\\") ||
+    packageName.includes("%")
+  ) {
+    throw createInvalidModuleSpecifierError(
+      `is not a valid package name`,
+      packageName,
+      resolutionContext,
+    );
+  }
+  if (packageSubpath.endsWith("/")) {
+    throw new Error("invalid module specifier");
+  }
+  const questionCharIndex = packageName.indexOf("?");
+  if (questionCharIndex > -1) {
+    packageName = packageName.slice(0, questionCharIndex);
+  }
+  const selfResolution = applyPackageSelfResolution(packageSubpath, {
+    ...resolutionContext,
+    packageName,
+  });
+  if (selfResolution) {
+    return selfResolution;
+  }
+  let currentUrl = parentUrl;
+  while (currentUrl !== "file:///") {
+    const packageDirectoryFacadeUrl = new URL(
+      `node_modules/${packageName}/`,
+      currentUrl,
+    ).href;
+    if (!existsSync(new URL(packageDirectoryFacadeUrl))) {
+      currentUrl = getParentUrl(currentUrl);
+      continue;
+    }
+    const packageDirectoryUrl = preservesSymlink
+      ? packageDirectoryFacadeUrl
+      : resolvePackageSymlink(packageDirectoryFacadeUrl);
+    const packageJson = readPackageJson(packageDirectoryUrl);
+    if (packageJson !== null) {
+      const { exports } = packageJson;
+      if (exports !== null && exports !== undefined) {
+        return applyPackageExportsResolution(packageSubpath, {
+          ...resolutionContext,
+          packageDirectoryUrl,
+          packageJson,
+          exports,
+        });
+      }
+    }
+    return applyLegacySubpathResolution(packageSubpath, {
+      ...resolutionContext,
+      packageDirectoryUrl,
+      packageJson,
+    });
+  }
+  throw createModuleNotFoundError(packageName, resolutionContext);
+};
+
+const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
+  const { parentUrl, packageName, lookupPackageScope, readPackageJson } =
+    resolutionContext;
+  const packageDirectoryUrl = lookupPackageScope(parentUrl);
+  if (!packageDirectoryUrl) {
+    return undefined;
+  }
+  const packageJson = readPackageJson(packageDirectoryUrl);
+  if (!packageJson) {
+    return undefined;
+  }
+  if (packageJson.name !== packageName) {
+    return undefined;
+  }
+  const { exports } = packageJson;
+  if (!exports) {
+    const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
+      ...resolutionContext,
+      packageDirectoryUrl,
+      packageJson,
+    });
+    if (subpathResolution && subpathResolution.type !== "subpath") {
+      return subpathResolution;
+    }
+    return undefined;
+  }
+  return applyPackageExportsResolution(packageSubpath, {
+    ...resolutionContext,
+    packageDirectoryUrl,
+    packageJson,
+  });
+};
+
+// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
+const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
+  if (packageSubpath === ".") {
+    const mainExport = applyMainExportResolution(resolutionContext);
+    if (!mainExport) {
+      throw createPackagePathNotExportedError(
+        packageSubpath,
+        resolutionContext,
+      );
+    }
+    const resolved = applyPackageTargetResolution(mainExport, {
+      ...resolutionContext,
+      key: ".",
+    });
+    if (resolved) {
+      return resolved;
+    }
+    throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
+  }
+  const packageExportsInfo = readExports(resolutionContext);
+  if (
+    packageExportsInfo.type === "object" &&
+    packageExportsInfo.allKeysAreRelative
+  ) {
+    const resolved = applyPackageImportsExportsResolution(packageSubpath, {
+      ...resolutionContext,
+      isImport: false,
+    });
+    if (resolved) {
+      return resolved;
+    }
+  }
+  throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
+};
+
+const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
+  const { packageJson, isImport } = resolutionContext;
+  const matchObject = isImport ? packageJson.imports : packageJson.exports;
+
+  if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
+    const target = matchObject[matchKey];
+    return applyPackageTargetResolution(target, {
+      ...resolutionContext,
+      key: matchKey,
+      isImport,
+    });
+  }
+  const expansionKeys = Object.keys(matchObject)
+    .filter((key) => key.split("*").length === 2)
+    .sort(comparePatternKeys);
+  for (const expansionKey of expansionKeys) {
+    const [patternBase, patternTrailer] = expansionKey.split("*");
+    if (matchKey === patternBase) continue;
+    if (!matchKey.startsWith(patternBase)) continue;
+    if (patternTrailer.length > 0) {
+      if (!matchKey.endsWith(patternTrailer)) continue;
+      if (matchKey.length < expansionKey.length) continue;
+    }
+    const target = matchObject[expansionKey];
+    const subpath = matchKey.slice(
+      patternBase.length,
+      matchKey.length - patternTrailer.length,
+    );
+    return applyPackageTargetResolution(target, {
+      ...resolutionContext,
+      key: matchKey,
+      subpath,
+      pattern: true,
+      isImport,
+    });
+  }
+  return null;
+};
+
+const applyPackageTargetResolution = (target, resolutionContext) => {
+  const {
+    conditions,
+    packageDirectoryUrl,
+    packageJson,
+    key,
+    subpath = "",
+    pattern = false,
+    isImport = false,
+  } = resolutionContext;
+
+  if (typeof target === "string") {
+    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
+      throw new Error("invalid module specifier");
+    }
+    if (target.startsWith("./")) {
+      const targetUrl = new URL(target, packageDirectoryUrl).href;
+      if (!targetUrl.startsWith(packageDirectoryUrl)) {
+        throw createInvalidPackageTargetError(
+          `target must be inside package`,
+          target,
+          resolutionContext,
+        );
+      }
+      return {
+        type: isImport ? "field:imports" : "field:exports",
+        packageDirectoryUrl,
+        packageJson,
+        url: pattern
+          ? targetUrl.replaceAll("*", subpath)
+          : new URL(subpath, targetUrl).href,
+      };
+    }
+    if (!isImport || target.startsWith("../") || isValidUrl(target)) {
+      throw createInvalidPackageTargetError(
+        `target must starst with "./"`,
+        target,
+        resolutionContext,
+      );
+    }
+    return applyPackageResolve(
+      pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
+      {
+        ...resolutionContext,
+        parentUrl: packageDirectoryUrl,
+      },
+    );
+  }
+  if (Array.isArray(target)) {
+    if (target.length === 0) {
+      return null;
+    }
+    let lastResult;
+    let i = 0;
+    while (i < target.length) {
+      const targetValue = target[i];
+      i++;
+      try {
+        const resolved = applyPackageTargetResolution(targetValue, {
+          ...resolutionContext,
+          key: `${key}[${i}]`,
+          subpath,
+          pattern,
+          isImport,
+        });
+        if (resolved) {
+          return resolved;
+        }
+        lastResult = resolved;
+      } catch (e) {
+        if (e.code === "INVALID_PACKAGE_TARGET") {
+          continue;
+        }
+        lastResult = e;
+      }
+    }
+    if (lastResult) {
+      throw lastResult;
+    }
+    return null;
+  }
+  if (target === null) {
+    return null;
+  }
+  if (typeof target === "object") {
+    const keys = Object.keys(target);
+    for (const key of keys) {
+      if (Number.isInteger(key)) {
+        throw new Error("Invalid package configuration");
+      }
+      if (key === "default" || conditions.includes(key)) {
+        const targetValue = target[key];
+        const resolved = applyPackageTargetResolution(targetValue, {
+          ...resolutionContext,
+          key,
+          subpath,
+          pattern,
+          isImport,
+        });
+        if (resolved) {
+          return resolved;
+        }
+      }
+    }
+    return null;
+  }
+  throw createInvalidPackageTargetError(
+    `target must be a string, array, object or null`,
+    target,
+    resolutionContext,
+  );
+};
+
+const readExports = ({ packageDirectoryUrl, packageJson }) => {
+  const packageExports = packageJson.exports;
+  if (Array.isArray(packageExports)) {
+    return {
+      type: "array",
+    };
+  }
+  if (packageExports === null) {
+    return {};
+  }
+  if (typeof packageExports === "object") {
+    const keys = Object.keys(packageExports);
+    const relativeKeys = [];
+    const conditionalKeys = [];
+    keys.forEach((availableKey) => {
+      if (availableKey.startsWith(".")) {
+        relativeKeys.push(availableKey);
+      } else {
+        conditionalKeys.push(availableKey);
+      }
+    });
+    const hasRelativeKey = relativeKeys.length > 0;
+    if (hasRelativeKey && conditionalKeys.length > 0) {
+      throw new Error(
+        `Invalid package configuration: cannot mix relative and conditional keys in package.exports
+--- unexpected keys ---
+${conditionalKeys.map((key) => `"${key}"`).join("\n")}
+--- package directory url ---
+${packageDirectoryUrl}`,
+      );
+    }
+    return {
+      type: "object",
+      hasRelativeKey,
+      allKeysAreRelative: relativeKeys.length === keys.length,
+    };
+  }
+  if (typeof packageExports === "string") {
+    return { type: "string" };
+  }
+  return {};
+};
+
+const parsePackageSpecifier = (packageSpecifier) => {
+  if (packageSpecifier[0] === "@") {
+    const firstSlashIndex = packageSpecifier.indexOf("/");
+    if (firstSlashIndex === -1) {
+      throw new Error("invalid module specifier");
+    }
+    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
+    if (secondSlashIndex === -1) {
+      return {
+        packageName: packageSpecifier,
+        packageSubpath: ".",
+        isScoped: true,
+      };
+    }
+    const packageName = packageSpecifier.slice(0, secondSlashIndex);
+    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
+    const packageSubpath = `./${afterSecondSlash}`;
+    return {
+      packageName,
+      packageSubpath,
+      isScoped: true,
+    };
+  }
+  const firstSlashIndex = packageSpecifier.indexOf("/");
+  if (firstSlashIndex === -1) {
+    return {
+      packageName: packageSpecifier,
+      packageSubpath: ".",
+    };
+  }
+  const packageName = packageSpecifier.slice(0, firstSlashIndex);
+  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
+  const packageSubpath = `./${afterFirstSlash}`;
+  return {
+    packageName,
+    packageSubpath,
+  };
+};
+
+const applyMainExportResolution = (resolutionContext) => {
+  const { packageJson } = resolutionContext;
+  const packageExportsInfo = readExports(resolutionContext);
+  if (
+    packageExportsInfo.type === "array" ||
+    packageExportsInfo.type === "string"
+  ) {
+    return packageJson.exports;
+  }
+  if (packageExportsInfo.type === "object") {
+    if (packageExportsInfo.hasRelativeKey) {
+      return packageJson.exports["."];
+    }
+    return packageJson.exports;
+  }
+  return undefined;
+};
+
+const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
+  const { packageDirectoryUrl, packageJson } = resolutionContext;
+
+  if (packageSubpath === ".") {
+    return applyLegacyMainResolution(packageSubpath, resolutionContext);
+  }
+  const browserFieldResolution = applyBrowserFieldResolution(
+    packageSubpath,
+    resolutionContext,
+  );
+  if (browserFieldResolution) {
+    return browserFieldResolution;
+  }
+  return {
+    type: "subpath",
+    packageDirectoryUrl,
+    packageJson,
+    url: new URL(packageSubpath, packageDirectoryUrl).href,
+  };
+};
+
+const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
+  const { conditions, packageDirectoryUrl, packageJson } = resolutionContext;
+  for (const condition of conditions) {
+    const conditionResolver = mainLegacyResolvers[condition];
+    if (!conditionResolver) {
+      continue;
+    }
+    const resolved = conditionResolver(resolutionContext);
+    if (resolved) {
+      return {
+        type: resolved.type,
+        packageDirectoryUrl,
+        packageJson,
+        url: new URL(resolved.path, packageDirectoryUrl).href,
+      };
+    }
+  }
+  return {
+    type: "field:main", // the absence of "main" field
+    packageDirectoryUrl,
+    packageJson,
+    url: new URL("index.js", packageDirectoryUrl).href,
+  };
+};
+const mainLegacyResolvers = {
+  import: ({ packageJson }) => {
+    if (typeof packageJson.module === "string") {
+      return { type: "field:module", path: packageJson.module };
+    }
+    if (typeof packageJson.jsnext === "string") {
+      return { type: "field:jsnext", path: packageJson.jsnext };
+    }
+    if (typeof packageJson.main === "string") {
+      return { type: "field:main", path: packageJson.main };
+    }
+    return null;
+  },
+  browser: ({ packageDirectoryUrl, packageJson }) => {
+    const browserMain = (() => {
+      if (typeof packageJson.browser === "string") {
+        return packageJson.browser;
+      }
+      if (
+        typeof packageJson.browser === "object" &&
+        packageJson.browser !== null
+      ) {
+        return packageJson.browser["."];
+      }
+      return "";
+    })();
+
+    if (!browserMain) {
+      if (typeof packageJson.module === "string") {
+        return {
+          type: "field:module",
+          path: packageJson.module,
+        };
+      }
+      return null;
+    }
+    if (
+      typeof packageJson.module !== "string" ||
+      packageJson.module === browserMain
+    ) {
+      return {
+        type: "field:browser",
+        path: browserMain,
+      };
+    }
+    const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
+    const content = readFileSync(browserMainUrlObject, "utf-8");
+    if (
+      (/typeof exports\s*==/.test(content) &&
+        /typeof module\s*==/.test(content)) ||
+      /module\.exports\s*=/.test(content)
+    ) {
+      return {
+        type: "field:module",
+        path: packageJson.module,
+      };
+    }
+    return {
+      type: "field:browser",
+      path: browserMain,
+    };
+  },
+  node: ({ packageJson }) => {
+    if (typeof packageJson.main === "string") {
+      return {
+        type: "field:main",
+        path: packageJson.main,
+      };
+    }
+    return null;
+  },
+};
+
+const comparePatternKeys = (keyA, keyB) => {
+  if (!keyA.endsWith("/") && !keyA.includes("*")) {
+    throw new Error("Invalid package configuration");
+  }
+  if (!keyB.endsWith("/") && !keyB.includes("*")) {
+    throw new Error("Invalid package configuration");
+  }
+  const aStarIndex = keyA.indexOf("*");
+  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
+  const bStarIndex = keyB.indexOf("*");
+  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
+  if (baseLengthA > baseLengthB) {
+    return -1;
+  }
+  if (baseLengthB > baseLengthA) {
+    return 1;
+  }
+  if (aStarIndex === -1) {
+    return 1;
+  }
+  if (bStarIndex === -1) {
+    return -1;
+  }
+  if (keyA.length > keyB.length) {
+    return -1;
+  }
+  if (keyB.length > keyA.length) {
+    return 1;
+  }
+  return 0;
+};
+
+const resolvePackageSymlink = (packageDirectoryUrl) => {
+  const packageDirectoryPath = realpathSync(new URL(packageDirectoryUrl));
+  const packageDirectoryResolvedUrl = pathToFileURL(packageDirectoryPath).href;
+  return `${packageDirectoryResolvedUrl}/`;
+};
+
+const applyFileSystemMagicResolution = (
+  fileUrl,
+  { fileStat, magicDirectoryIndex, magicExtensions },
+) => {
+  const result = {
+    stat: null,
+    url: fileUrl,
+    magicExtension: "",
+    magicDirectoryIndex: false,
+    lastENOENTError: null,
+  };
+
+  if (fileStat === undefined) {
+    try {
+      fileStat = readEntryStatSync(new URL(fileUrl));
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        result.lastENOENTError = e;
+        fileStat = null;
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  if (fileStat && fileStat.isFile()) {
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result;
+  }
+  if (fileStat && fileStat.isDirectory()) {
+    if (magicDirectoryIndex) {
+      const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
+      const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
+      const subResult = applyFileSystemMagicResolution(indexFileUrl, {
+        magicDirectoryIndex: false,
+        magicExtensions,
+      });
+      return {
+        ...result,
+        ...subResult,
+        magicDirectoryIndex: true,
+      };
+    }
+    result.stat = fileStat;
+    result.url = fileUrl;
+    return result;
+  }
+
+  if (magicExtensions && magicExtensions.length) {
+    const parentUrl = new URL("./", fileUrl).href;
+    const urlFilename = urlToFilename(fileUrl);
+    for (const extensionToTry of magicExtensions) {
+      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
+      let stat;
+      try {
+        stat = readEntryStatSync(new URL(urlCandidate));
+      } catch (e) {
+        if (e.code === "ENOENT") {
+          stat = null;
+        } else {
+          throw e;
+        }
+      }
+      if (stat) {
+        result.stat = stat;
+        result.url = `${fileUrl}${extensionToTry}`;
+        result.magicExtension = extensionToTry;
+        return result;
+      }
+    }
+  }
+  // magic extension not found
+  return result;
+};
+
+const getExtensionsToTry = (magicExtensions, importer) => {
+  if (!magicExtensions) {
+    return [];
+  }
+  const extensionsSet = new Set();
+  magicExtensions.forEach((magicExtension) => {
+    if (magicExtension === "inherit") {
+      const importerExtension = urlToExtension(importer);
+      extensionsSet.add(importerExtension);
+    } else {
+      extensionsSet.add(magicExtension);
+    }
+  });
+  return Array.from(extensionsSet.values());
+};
+
+/*
+ * This plugin provides a way for jsenv to supervisor js execution:
+ * - Know how many js are executed, when they are done, collect errors, etc...
+ */
+
+
+const jsenvPluginSupervisor = ({
+  logs = false,
+  measurePerf = false,
+  errorOverlay = true,
+  openInEditor = true,
+  errorBaseUrl,
+}) => {
+  const resolveUrlSite = (urlWithLineAndColumn) => {
+    const inlineUrlMatch = urlWithLineAndColumn.match(
+      /@L([0-9]+)C([0-9]+)-L([0-9]+)C([0-9]+)\.\w+(:([0-9]+):([0-9]+))?$/,
+    );
+    if (inlineUrlMatch) {
+      const htmlUrl = injectQueryParams(
+        urlWithLineAndColumn.slice(0, inlineUrlMatch.index),
+        { hot: undefined },
+      );
+      const tagLineStart = parseInt(inlineUrlMatch[1]);
+      const tagColumnStart = parseInt(inlineUrlMatch[2]);
+      // const tagLineEnd = parseInt(inlineUrlMatch[3]);
+      // const tagColumnEnd = parseInt(inlineUrlMatch[4]);
+      const inlineLine =
+        inlineUrlMatch[6] === undefined
+          ? undefined
+          : parseInt(inlineUrlMatch[6]);
+      const inlineColumn =
+        inlineUrlMatch[7] === undefined
+          ? undefined
+          : parseInt(inlineUrlMatch[7]);
+      return {
+        file: htmlUrl,
+        ownerLine: tagLineStart,
+        ownerColumn: tagColumnStart,
+        inlineLine,
+        inlineColumn,
+        line:
+          inlineLine === undefined ? tagLineStart : tagLineStart + inlineLine,
+        column: inlineColumn === undefined ? tagColumnStart : inlineColumn,
+      };
+    }
+    const match = urlWithLineAndColumn.match(/:([0-9]+):([0-9]+)$/);
+    if (!match) {
+      return null;
+    }
+    const file = injectQueryParams(urlWithLineAndColumn.slice(0, match.index), {
+      hot: undefined,
+    });
+    let line = parseInt(match[1]);
+    let column = parseInt(match[2]);
+    return {
+      file,
+      line,
+      column,
+    };
+  };
+
+  return {
+    name: "jsenv:supervisor",
+    appliesDuring: "dev",
+    devServerRoutes: [
+      {
+        endpoint: "GET /.internal/get_cause_trace/*",
+        description: "Return source code around the place an error was thrown.",
+        declarationSource: import.meta.url,
+        fetch: async (request, { kitchen }) => {
+          const urlWithLineAndColumn = decodeURIComponent(request.params[0]);
+          const result = resolveUrlSite(urlWithLineAndColumn);
+          if (!result) {
+            return {
+              status: 400,
+              body: "Missing line and column in url",
+            };
+          }
+          let { file, line, column } = result;
+          const urlInfo = kitchen.graph.getUrlInfo(file);
+          if (!urlInfo) {
+            return {
+              status: 204,
+              headers: {
+                "cache-control": "no-store",
+              },
+            };
+          }
+          if (!urlInfo.originalContent) {
+            await urlInfo.fetchContent();
+          }
+          const remap = request.searchParams.has("remap");
+          if (remap) {
+            const sourcemap = urlInfo.sourcemap;
+            if (sourcemap) {
+              const original = getOriginalPosition({
+                sourcemap,
+                url: file,
+                line,
+                column,
+              });
+              if (original.line !== null) {
+                line = original.line;
+                if (original.column !== null) {
+                  column = original.column;
+                }
+              }
+            }
+          }
+          const causeTrace = {
+            url: file,
+            line,
+            column,
+            codeFrame: generateContentFrame({
+              line,
+              column,
+              content: urlInfo.originalContent,
+            }),
+          };
+          const causeTraceJson = JSON.stringify(causeTrace, null, "  ");
+          return {
+            status: 200,
+            headers: {
+              "cache-control": "no-store",
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(causeTraceJson),
+            },
+            body: causeTraceJson,
+          };
+        },
+      },
+      {
+        endpoint: "GET /.internal/get_error_cause/*",
+        description:
+          "Return the error that occured when a file was served by jsenv dev server or null.",
+        declarationSource: import.meta.url,
+        fetch: (request, { kitchen }) => {
+          let file = decodeURIComponent(request.params[0]);
+          file = decodeURIComponent(file);
+          if (!file) {
+            return {
+              status: 400,
+              body: "Missing file in url",
+            };
+          }
+          const { url } = applyNodeEsmResolution({
+            conditions: [],
+            parentUrl: kitchen.context.rootDirectoryUrl,
+            specifier: file,
+          });
+          file = url;
+          const getErrorCauseInfo = () => {
+            const urlInfo = kitchen.graph.getUrlInfo(file);
+            if (!urlInfo) {
+              return null;
+            }
+            const { error } = urlInfo;
+            if (error) {
+              return error;
+            }
+            // search in direct dependencies (404 or 500)
+            for (const referenceToOther of urlInfo.referenceToOthersSet) {
+              const referencedUrlInfo = referenceToOther.urlInfo;
+              if (referencedUrlInfo.error) {
+                return referencedUrlInfo.error;
+              }
+            }
+            return null;
+          };
+          const causeInfo = getErrorCauseInfo();
+          const body = JSON.stringify(
+            causeInfo
+              ? {
+                  code: causeInfo.code,
+                  name: causeInfo.name,
+                  message: causeInfo.message,
+                  reason: causeInfo.reason,
+                  stack: errorBaseUrl
+                    ? `stack mocked for snapshot`
+                    : causeInfo.stack,
+                  trace: causeInfo.trace,
+                }
+              : null,
+            null,
+            "  ",
+          );
+          return {
+            status: 200,
+            headers: {
+              "cache-control": "no-store",
+              "content-type": "application/json",
+              "content-length": Buffer.byteLength(body),
+            },
+            body,
+          };
+        },
+      },
+    ],
+    transformUrlContent: {
+      html: (htmlUrlInfo) => {
+        const supervisorFileReference = htmlUrlInfo.dependencies.inject({
+          type: "script",
+          expectedType: "js_classic",
+          specifier: supervisorFileUrl,
+        });
+
+        return injectSupervisorIntoHTML(
+          {
+            content: htmlUrlInfo.content,
+            url: htmlUrlInfo.url,
+          },
+          {
+            supervisorScriptSrc: supervisorFileReference.generatedSpecifier,
+            supervisorOptions: {
+              errorBaseUrl,
+              logs,
+              measurePerf,
+              errorOverlay,
+              openInEditor,
+            },
+            webServer: {
+              rootDirectoryUrl: htmlUrlInfo.context.rootDirectoryUrl,
+              isJsenvDevServer: true,
+            },
+            inlineAsRemote: true,
+            generateInlineScriptSrc: ({
+              type,
+              textContent,
+              inlineScriptUrl,
+              isOriginal,
+              line,
+              column,
+            }) => {
+              const inlineScriptReference =
+                htmlUrlInfo.dependencies.foundInline({
+                  type: "script",
+                  subtype: "inline",
+                  expectedType: type,
+                  isOriginalPosition: isOriginal,
+                  specifierLine: line,
+                  specifierColumn: column,
+                  specifier: inlineScriptUrl,
+                  contentType: "text/javascript",
+                  content: textContent,
+                });
+              return inlineScriptReference.generatedSpecifier;
+            },
+            sourcemaps: htmlUrlInfo.kitchen.context.sourcemaps,
+          },
+        );
+      },
+    },
+  };
+};
+
+/*
  * https://github.com/parcel-bundler/parcel/blob/v2/packages/transformers/css/src/CSSTransformer.js
  */
 
@@ -22234,1104 +25816,6 @@ const jsenvPluginInlineContentFetcher = () => {
       };
     },
   };
-};
-
-// https://nodejs.org/api/packages.html#resolving-user-conditions
-const readCustomConditionsFromProcessArgs = () => {
-  const packageConditions = [];
-  for (const arg of process.execArgv) {
-    if (arg.includes("-C=")) {
-      const packageCondition = arg.slice(0, "-C=".length);
-      packageConditions.push(packageCondition);
-    }
-    if (arg.includes("--conditions=")) {
-      const packageCondition = arg.slice("--conditions=".length);
-      packageConditions.push(packageCondition);
-    }
-  }
-  return packageConditions;
-};
-
-const asDirectoryUrl = (url) => {
-  const { pathname } = new URL(url);
-  if (pathname.endsWith("/")) {
-    return url;
-  }
-  return new URL("./", url).href;
-};
-
-const getParentUrl = (url) => {
-  if (url.startsWith("file://")) {
-    // With node.js new URL('../', 'file:///C:/').href
-    // returns "file:///C:/" instead of "file:///"
-    const resource = url.slice("file://".length);
-    const slashLastIndex = resource.lastIndexOf("/");
-    if (slashLastIndex === -1) {
-      return url;
-    }
-    const lastCharIndex = resource.length - 1;
-    if (slashLastIndex === lastCharIndex) {
-      const slashBeforeLastIndex = resource.lastIndexOf(
-        "/",
-        slashLastIndex - 1,
-      );
-      if (slashBeforeLastIndex === -1) {
-        return url;
-      }
-      return `file://${resource.slice(0, slashBeforeLastIndex + 1)}`;
-    }
-
-    return `file://${resource.slice(0, slashLastIndex + 1)}`;
-  }
-  return new URL(url.endsWith("/") ? "../" : "./", url).href;
-};
-
-const isValidUrl = (url) => {
-  try {
-    // eslint-disable-next-line no-new
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const urlToFilename = (url) => {
-  const { pathname } = new URL(url);
-  const pathnameBeforeLastSlash = pathname.endsWith("/")
-    ? pathname.slice(0, -1)
-    : pathname;
-  const slashLastIndex = pathnameBeforeLastSlash.lastIndexOf("/");
-  const filename =
-    slashLastIndex === -1
-      ? pathnameBeforeLastSlash
-      : pathnameBeforeLastSlash.slice(slashLastIndex + 1);
-  return filename;
-};
-
-const urlToExtension = (url) => {
-  const filename = urlToFilename(url);
-  const dotLastIndex = filename.lastIndexOf(".");
-  if (dotLastIndex === -1) return "";
-  // if (dotLastIndex === pathname.length - 1) return ""
-  const extension = filename.slice(dotLastIndex);
-  return extension;
-};
-
-const defaultLookupPackageScope = (url) => {
-  let scopeUrl = asDirectoryUrl(url);
-  while (scopeUrl !== "file:///") {
-    if (scopeUrl.endsWith("node_modules/")) {
-      return null;
-    }
-    const packageJsonUrlObject = new URL("package.json", scopeUrl);
-    if (existsSync(packageJsonUrlObject)) {
-      return scopeUrl;
-    }
-    scopeUrl = getParentUrl(scopeUrl);
-  }
-  return null;
-};
-
-const defaultReadPackageJson = (packageUrl) => {
-  const packageJsonUrl = new URL("package.json", packageUrl);
-  const buffer = readFileSync(packageJsonUrl);
-  const string = String(buffer);
-  try {
-    return JSON.parse(string);
-  } catch {
-    throw new Error(`Invalid package configuration`);
-  }
-};
-
-// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/tools/node_modules/eslint/node_modules/%40babel/core/lib/vendor/import-meta-resolve.js#L2473
-
-const createInvalidModuleSpecifierError = (
-  reason,
-  specifier,
-  { parentUrl },
-) => {
-  const error = new Error(
-    `Invalid module "${specifier}" ${reason} imported from ${fileURLToPath(
-      parentUrl,
-    )}`,
-  );
-  error.code = "INVALID_MODULE_SPECIFIER";
-  return error;
-};
-
-const createInvalidPackageTargetError = (
-  reason,
-  target,
-  { parentUrl, packageDirectoryUrl, key, isImport },
-) => {
-  let message;
-  if (key === ".") {
-    message = `Invalid "exports" main target defined in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
-  } else {
-    message = `Invalid "${
-      isImport ? "imports" : "exports"
-    }" target ${JSON.stringify(target)} defined for "${key}" in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}; ${reason}`;
-  }
-  const error = new Error(message);
-  error.code = "INVALID_PACKAGE_TARGET";
-  return error;
-};
-
-const createPackagePathNotExportedError = (
-  subpath,
-  { parentUrl, packageDirectoryUrl },
-) => {
-  let message;
-  if (subpath === ".") {
-    message = `No "exports" main defined in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`;
-  } else {
-    message = `Package subpath "${subpath}" is not defined by "exports" in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`;
-  }
-  const error = new Error(message);
-  error.code = "PACKAGE_PATH_NOT_EXPORTED";
-  return error;
-};
-
-const createModuleNotFoundError = (specifier, { parentUrl }) => {
-  const error = new Error(
-    `Cannot find "${specifier}" imported from ${fileURLToPath(parentUrl)}`,
-  );
-  error.code = "MODULE_NOT_FOUND";
-  return error;
-};
-
-const createPackageImportNotDefinedError = (
-  specifier,
-  { parentUrl, packageDirectoryUrl },
-) => {
-  const error = new Error(
-    `Package import specifier "${specifier}" is not defined in ${fileURLToPath(
-      packageDirectoryUrl,
-    )}package.json imported from ${fileURLToPath(parentUrl)}`,
-  );
-  error.code = "PACKAGE_IMPORT_NOT_DEFINED";
-  return error;
-};
-
-const isSpecifierForNodeBuiltin = (specifier) => {
-  return (
-    specifier.startsWith("node:") ||
-    NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
-  );
-};
-
-const NODE_BUILTIN_MODULE_SPECIFIERS = [
-  "assert",
-  "assert/strict",
-  "async_hooks",
-  "buffer_ieee754",
-  "buffer",
-  "child_process",
-  "cluster",
-  "console",
-  "constants",
-  "crypto",
-  "_debugger",
-  "dgram",
-  "dns",
-  "domain",
-  "events",
-  "freelist",
-  "fs",
-  "fs/promises",
-  "_http_agent",
-  "_http_client",
-  "_http_common",
-  "_http_incoming",
-  "_http_outgoing",
-  "_http_server",
-  "http",
-  "http2",
-  "https",
-  "inspector",
-  "_linklist",
-  "module",
-  "net",
-  "node-inspect/lib/_inspect",
-  "node-inspect/lib/internal/inspect_client",
-  "node-inspect/lib/internal/inspect_repl",
-  "os",
-  "path",
-  "perf_hooks",
-  "process",
-  "punycode",
-  "querystring",
-  "readline",
-  "repl",
-  "smalloc",
-  "_stream_duplex",
-  "_stream_transform",
-  "_stream_wrap",
-  "_stream_passthrough",
-  "_stream_readable",
-  "_stream_writable",
-  "stream",
-  "stream/promises",
-  "string_decoder",
-  "sys",
-  "timers",
-  "_tls_common",
-  "_tls_legacy",
-  "_tls_wrap",
-  "tls",
-  "trace_events",
-  "tty",
-  "url",
-  "util",
-  "v8/tools/arguments",
-  "v8/tools/codemap",
-  "v8/tools/consarray",
-  "v8/tools/csvparser",
-  "v8/tools/logreader",
-  "v8/tools/profile_view",
-  "v8/tools/splaytree",
-  "v8",
-  "vm",
-  "worker_threads",
-  "zlib",
-  // global is special
-  "global",
-];
-
-/*
- * https://nodejs.org/api/esm.html#resolver-algorithm-specification
- * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
- * deviations from the spec:
- * - take into account "browser", "module" and "jsnext"
- * - the check for isDirectory -> throw is delayed is descoped to the caller
- * - the call to real path ->
- *   delayed to the caller so that we can decide to
- *   maintain symlink as facade url when it's outside project directory
- *   or use the real path when inside
- */
-
-const applyNodeEsmResolution = ({
-  specifier,
-  parentUrl,
-  conditions = [...readCustomConditionsFromProcessArgs(), "node", "import"],
-  lookupPackageScope = defaultLookupPackageScope,
-  readPackageJson = defaultReadPackageJson,
-  preservesSymlink = false,
-}) => {
-  const resolution = applyPackageSpecifierResolution(specifier, {
-    parentUrl: String(parentUrl),
-    conditions,
-    lookupPackageScope,
-    readPackageJson,
-    preservesSymlink,
-  });
-  const { url } = resolution;
-  if (url.startsWith("file:")) {
-    if (url.includes("%2F") || url.includes("%5C")) {
-      throw createInvalidModuleSpecifierError(
-        `must not include encoded "/" or "\\" characters`,
-        specifier,
-        {
-          parentUrl,
-        },
-      );
-    }
-    return resolution;
-  }
-  return resolution;
-};
-
-const applyPackageSpecifierResolution = (specifier, resolutionContext) => {
-  const { parentUrl } = resolutionContext;
-  // relative specifier
-  if (
-    specifier[0] === "/" ||
-    specifier.startsWith("./") ||
-    specifier.startsWith("../")
-  ) {
-    if (specifier[0] !== "/") {
-      const browserFieldResolution = applyBrowserFieldResolution(
-        specifier,
-        resolutionContext,
-      );
-      if (browserFieldResolution) {
-        return browserFieldResolution;
-      }
-    }
-    return {
-      type: "relative_specifier",
-      url: new URL(specifier, parentUrl).href,
-    };
-  }
-  if (specifier[0] === "#") {
-    return applyPackageImportsResolution(specifier, resolutionContext);
-  }
-  try {
-    const urlObject = new URL(specifier);
-    if (specifier.startsWith("node:")) {
-      return {
-        type: "node_builtin_specifier",
-        url: specifier,
-      };
-    }
-    return {
-      type: "absolute_specifier",
-      url: urlObject.href,
-    };
-  } catch {
-    // bare specifier
-    const browserFieldResolution = applyBrowserFieldResolution(
-      specifier,
-      resolutionContext,
-    );
-    if (browserFieldResolution) {
-      return browserFieldResolution;
-    }
-    const packageResolution = applyPackageResolve(specifier, resolutionContext);
-    const search = new URL(specifier, "file:///").search;
-    if (search && !new URL(packageResolution.url).search) {
-      packageResolution.url = `${packageResolution.url}${search}`;
-    }
-    return packageResolution;
-  }
-};
-
-const applyBrowserFieldResolution = (specifier, resolutionContext) => {
-  const { parentUrl, conditions, lookupPackageScope, readPackageJson } =
-    resolutionContext;
-  const browserCondition = conditions.includes("browser");
-  if (!browserCondition) {
-    return null;
-  }
-  const packageDirectoryUrl = lookupPackageScope(parentUrl);
-  if (!packageDirectoryUrl) {
-    return null;
-  }
-  const packageJson = readPackageJson(packageDirectoryUrl);
-  if (!packageJson) {
-    return null;
-  }
-  const { browser } = packageJson;
-  if (!browser) {
-    return null;
-  }
-  if (typeof browser !== "object") {
-    return null;
-  }
-  let url;
-  if (specifier.startsWith(".")) {
-    const specifierUrl = new URL(specifier, parentUrl).href;
-    const specifierRelativeUrl = specifierUrl.slice(packageDirectoryUrl.length);
-    const secifierRelativeNotation = `./${specifierRelativeUrl}`;
-    const browserMapping = browser[secifierRelativeNotation];
-    if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageDirectoryUrl).href;
-    } else if (browserMapping === false) {
-      url = `file:///@ignore/${specifierUrl.slice("file:///")}`;
-    }
-  } else {
-    const browserMapping = browser[specifier];
-    if (typeof browserMapping === "string") {
-      url = new URL(browserMapping, packageDirectoryUrl).href;
-    } else if (browserMapping === false) {
-      url = `file:///@ignore/${specifier}`;
-    }
-  }
-  if (url) {
-    return {
-      type: "field:browser",
-      packageDirectoryUrl,
-      packageJson,
-      url,
-    };
-  }
-  return null;
-};
-
-const applyPackageImportsResolution = (
-  internalSpecifier,
-  resolutionContext,
-) => {
-  const { parentUrl, lookupPackageScope, readPackageJson } = resolutionContext;
-  if (internalSpecifier === "#" || internalSpecifier.startsWith("#/")) {
-    throw createInvalidModuleSpecifierError(
-      "not a valid internal imports specifier name",
-      internalSpecifier,
-      resolutionContext,
-    );
-  }
-  const packageDirectoryUrl = lookupPackageScope(parentUrl);
-  if (packageDirectoryUrl !== null) {
-    const packageJson = readPackageJson(packageDirectoryUrl);
-    const { imports } = packageJson;
-    if (imports !== null && typeof imports === "object") {
-      const resolved = applyPackageImportsExportsResolution(internalSpecifier, {
-        ...resolutionContext,
-        packageDirectoryUrl,
-        packageJson,
-        isImport: true,
-      });
-      if (resolved) {
-        return resolved;
-      }
-    }
-  }
-  throw createPackageImportNotDefinedError(internalSpecifier, {
-    ...resolutionContext,
-    packageDirectoryUrl,
-  });
-};
-
-const applyPackageResolve = (packageSpecifier, resolutionContext) => {
-  const { parentUrl, conditions, readPackageJson, preservesSymlink } =
-    resolutionContext;
-  if (packageSpecifier === "") {
-    throw new Error("invalid module specifier");
-  }
-  if (
-    conditions.includes("node") &&
-    isSpecifierForNodeBuiltin(packageSpecifier)
-  ) {
-    return {
-      type: "node_builtin_specifier",
-      url: `node:${packageSpecifier}`,
-    };
-  }
-  let { packageName, packageSubpath } = parsePackageSpecifier(packageSpecifier);
-  if (
-    packageName[0] === "." ||
-    packageName.includes("\\") ||
-    packageName.includes("%")
-  ) {
-    throw createInvalidModuleSpecifierError(
-      `is not a valid package name`,
-      packageName,
-      resolutionContext,
-    );
-  }
-  if (packageSubpath.endsWith("/")) {
-    throw new Error("invalid module specifier");
-  }
-  const questionCharIndex = packageName.indexOf("?");
-  if (questionCharIndex > -1) {
-    packageName = packageName.slice(0, questionCharIndex);
-  }
-  const selfResolution = applyPackageSelfResolution(packageSubpath, {
-    ...resolutionContext,
-    packageName,
-  });
-  if (selfResolution) {
-    return selfResolution;
-  }
-  let currentUrl = parentUrl;
-  while (currentUrl !== "file:///") {
-    const packageDirectoryFacadeUrl = new URL(
-      `node_modules/${packageName}/`,
-      currentUrl,
-    ).href;
-    if (!existsSync(new URL(packageDirectoryFacadeUrl))) {
-      currentUrl = getParentUrl(currentUrl);
-      continue;
-    }
-    const packageDirectoryUrl = preservesSymlink
-      ? packageDirectoryFacadeUrl
-      : resolvePackageSymlink(packageDirectoryFacadeUrl);
-    const packageJson = readPackageJson(packageDirectoryUrl);
-    if (packageJson !== null) {
-      const { exports } = packageJson;
-      if (exports !== null && exports !== undefined) {
-        return applyPackageExportsResolution(packageSubpath, {
-          ...resolutionContext,
-          packageDirectoryUrl,
-          packageJson,
-          exports,
-        });
-      }
-    }
-    return applyLegacySubpathResolution(packageSubpath, {
-      ...resolutionContext,
-      packageDirectoryUrl,
-      packageJson,
-    });
-  }
-  throw createModuleNotFoundError(packageName, resolutionContext);
-};
-
-const applyPackageSelfResolution = (packageSubpath, resolutionContext) => {
-  const { parentUrl, packageName, lookupPackageScope, readPackageJson } =
-    resolutionContext;
-  const packageDirectoryUrl = lookupPackageScope(parentUrl);
-  if (!packageDirectoryUrl) {
-    return undefined;
-  }
-  const packageJson = readPackageJson(packageDirectoryUrl);
-  if (!packageJson) {
-    return undefined;
-  }
-  if (packageJson.name !== packageName) {
-    return undefined;
-  }
-  const { exports } = packageJson;
-  if (!exports) {
-    const subpathResolution = applyLegacySubpathResolution(packageSubpath, {
-      ...resolutionContext,
-      packageDirectoryUrl,
-      packageJson,
-    });
-    if (subpathResolution && subpathResolution.type !== "subpath") {
-      return subpathResolution;
-    }
-    return undefined;
-  }
-  return applyPackageExportsResolution(packageSubpath, {
-    ...resolutionContext,
-    packageDirectoryUrl,
-    packageJson,
-  });
-};
-
-// https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L642
-const applyPackageExportsResolution = (packageSubpath, resolutionContext) => {
-  if (packageSubpath === ".") {
-    const mainExport = applyMainExportResolution(resolutionContext);
-    if (!mainExport) {
-      throw createPackagePathNotExportedError(
-        packageSubpath,
-        resolutionContext,
-      );
-    }
-    const resolved = applyPackageTargetResolution(mainExport, {
-      ...resolutionContext,
-      key: ".",
-    });
-    if (resolved) {
-      return resolved;
-    }
-    throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
-  }
-  const packageExportsInfo = readExports(resolutionContext);
-  if (
-    packageExportsInfo.type === "object" &&
-    packageExportsInfo.allKeysAreRelative
-  ) {
-    const resolved = applyPackageImportsExportsResolution(packageSubpath, {
-      ...resolutionContext,
-      isImport: false,
-    });
-    if (resolved) {
-      return resolved;
-    }
-  }
-  throw createPackagePathNotExportedError(packageSubpath, resolutionContext);
-};
-
-const applyPackageImportsExportsResolution = (matchKey, resolutionContext) => {
-  const { packageJson, isImport } = resolutionContext;
-  const matchObject = isImport ? packageJson.imports : packageJson.exports;
-
-  if (!matchKey.includes("*") && matchObject.hasOwnProperty(matchKey)) {
-    const target = matchObject[matchKey];
-    return applyPackageTargetResolution(target, {
-      ...resolutionContext,
-      key: matchKey,
-      isImport,
-    });
-  }
-  const expansionKeys = Object.keys(matchObject)
-    .filter((key) => key.split("*").length === 2)
-    .sort(comparePatternKeys);
-  for (const expansionKey of expansionKeys) {
-    const [patternBase, patternTrailer] = expansionKey.split("*");
-    if (matchKey === patternBase) continue;
-    if (!matchKey.startsWith(patternBase)) continue;
-    if (patternTrailer.length > 0) {
-      if (!matchKey.endsWith(patternTrailer)) continue;
-      if (matchKey.length < expansionKey.length) continue;
-    }
-    const target = matchObject[expansionKey];
-    const subpath = matchKey.slice(
-      patternBase.length,
-      matchKey.length - patternTrailer.length,
-    );
-    return applyPackageTargetResolution(target, {
-      ...resolutionContext,
-      key: matchKey,
-      subpath,
-      pattern: true,
-      isImport,
-    });
-  }
-  return null;
-};
-
-const applyPackageTargetResolution = (target, resolutionContext) => {
-  const {
-    conditions,
-    packageDirectoryUrl,
-    packageJson,
-    key,
-    subpath = "",
-    pattern = false,
-    isImport = false,
-  } = resolutionContext;
-
-  if (typeof target === "string") {
-    if (pattern === false && subpath !== "" && !target.endsWith("/")) {
-      throw new Error("invalid module specifier");
-    }
-    if (target.startsWith("./")) {
-      const targetUrl = new URL(target, packageDirectoryUrl).href;
-      if (!targetUrl.startsWith(packageDirectoryUrl)) {
-        throw createInvalidPackageTargetError(
-          `target must be inside package`,
-          target,
-          resolutionContext,
-        );
-      }
-      return {
-        type: isImport ? "field:imports" : "field:exports",
-        packageDirectoryUrl,
-        packageJson,
-        url: pattern
-          ? targetUrl.replaceAll("*", subpath)
-          : new URL(subpath, targetUrl).href,
-      };
-    }
-    if (!isImport || target.startsWith("../") || isValidUrl(target)) {
-      throw createInvalidPackageTargetError(
-        `target must starst with "./"`,
-        target,
-        resolutionContext,
-      );
-    }
-    return applyPackageResolve(
-      pattern ? target.replaceAll("*", subpath) : `${target}${subpath}`,
-      {
-        ...resolutionContext,
-        parentUrl: packageDirectoryUrl,
-      },
-    );
-  }
-  if (Array.isArray(target)) {
-    if (target.length === 0) {
-      return null;
-    }
-    let lastResult;
-    let i = 0;
-    while (i < target.length) {
-      const targetValue = target[i];
-      i++;
-      try {
-        const resolved = applyPackageTargetResolution(targetValue, {
-          ...resolutionContext,
-          key: `${key}[${i}]`,
-          subpath,
-          pattern,
-          isImport,
-        });
-        if (resolved) {
-          return resolved;
-        }
-        lastResult = resolved;
-      } catch (e) {
-        if (e.code === "INVALID_PACKAGE_TARGET") {
-          continue;
-        }
-        lastResult = e;
-      }
-    }
-    if (lastResult) {
-      throw lastResult;
-    }
-    return null;
-  }
-  if (target === null) {
-    return null;
-  }
-  if (typeof target === "object") {
-    const keys = Object.keys(target);
-    for (const key of keys) {
-      if (Number.isInteger(key)) {
-        throw new Error("Invalid package configuration");
-      }
-      if (key === "default" || conditions.includes(key)) {
-        const targetValue = target[key];
-        const resolved = applyPackageTargetResolution(targetValue, {
-          ...resolutionContext,
-          key,
-          subpath,
-          pattern,
-          isImport,
-        });
-        if (resolved) {
-          return resolved;
-        }
-      }
-    }
-    return null;
-  }
-  throw createInvalidPackageTargetError(
-    `target must be a string, array, object or null`,
-    target,
-    resolutionContext,
-  );
-};
-
-const readExports = ({ packageDirectoryUrl, packageJson }) => {
-  const packageExports = packageJson.exports;
-  if (Array.isArray(packageExports)) {
-    return {
-      type: "array",
-    };
-  }
-  if (packageExports === null) {
-    return {};
-  }
-  if (typeof packageExports === "object") {
-    const keys = Object.keys(packageExports);
-    const relativeKeys = [];
-    const conditionalKeys = [];
-    keys.forEach((availableKey) => {
-      if (availableKey.startsWith(".")) {
-        relativeKeys.push(availableKey);
-      } else {
-        conditionalKeys.push(availableKey);
-      }
-    });
-    const hasRelativeKey = relativeKeys.length > 0;
-    if (hasRelativeKey && conditionalKeys.length > 0) {
-      throw new Error(
-        `Invalid package configuration: cannot mix relative and conditional keys in package.exports
---- unexpected keys ---
-${conditionalKeys.map((key) => `"${key}"`).join("\n")}
---- package directory url ---
-${packageDirectoryUrl}`,
-      );
-    }
-    return {
-      type: "object",
-      hasRelativeKey,
-      allKeysAreRelative: relativeKeys.length === keys.length,
-    };
-  }
-  if (typeof packageExports === "string") {
-    return { type: "string" };
-  }
-  return {};
-};
-
-const parsePackageSpecifier = (packageSpecifier) => {
-  if (packageSpecifier[0] === "@") {
-    const firstSlashIndex = packageSpecifier.indexOf("/");
-    if (firstSlashIndex === -1) {
-      throw new Error("invalid module specifier");
-    }
-    const secondSlashIndex = packageSpecifier.indexOf("/", firstSlashIndex + 1);
-    if (secondSlashIndex === -1) {
-      return {
-        packageName: packageSpecifier,
-        packageSubpath: ".",
-        isScoped: true,
-      };
-    }
-    const packageName = packageSpecifier.slice(0, secondSlashIndex);
-    const afterSecondSlash = packageSpecifier.slice(secondSlashIndex + 1);
-    const packageSubpath = `./${afterSecondSlash}`;
-    return {
-      packageName,
-      packageSubpath,
-      isScoped: true,
-    };
-  }
-  const firstSlashIndex = packageSpecifier.indexOf("/");
-  if (firstSlashIndex === -1) {
-    return {
-      packageName: packageSpecifier,
-      packageSubpath: ".",
-    };
-  }
-  const packageName = packageSpecifier.slice(0, firstSlashIndex);
-  const afterFirstSlash = packageSpecifier.slice(firstSlashIndex + 1);
-  const packageSubpath = `./${afterFirstSlash}`;
-  return {
-    packageName,
-    packageSubpath,
-  };
-};
-
-const applyMainExportResolution = (resolutionContext) => {
-  const { packageJson } = resolutionContext;
-  const packageExportsInfo = readExports(resolutionContext);
-  if (
-    packageExportsInfo.type === "array" ||
-    packageExportsInfo.type === "string"
-  ) {
-    return packageJson.exports;
-  }
-  if (packageExportsInfo.type === "object") {
-    if (packageExportsInfo.hasRelativeKey) {
-      return packageJson.exports["."];
-    }
-    return packageJson.exports;
-  }
-  return undefined;
-};
-
-const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
-  const { packageDirectoryUrl, packageJson } = resolutionContext;
-
-  if (packageSubpath === ".") {
-    return applyLegacyMainResolution(packageSubpath, resolutionContext);
-  }
-  const browserFieldResolution = applyBrowserFieldResolution(
-    packageSubpath,
-    resolutionContext,
-  );
-  if (browserFieldResolution) {
-    return browserFieldResolution;
-  }
-  return {
-    type: "subpath",
-    packageDirectoryUrl,
-    packageJson,
-    url: new URL(packageSubpath, packageDirectoryUrl).href,
-  };
-};
-
-const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
-  const { conditions, packageDirectoryUrl, packageJson } = resolutionContext;
-  for (const condition of conditions) {
-    const conditionResolver = mainLegacyResolvers[condition];
-    if (!conditionResolver) {
-      continue;
-    }
-    const resolved = conditionResolver(resolutionContext);
-    if (resolved) {
-      return {
-        type: resolved.type,
-        packageDirectoryUrl,
-        packageJson,
-        url: new URL(resolved.path, packageDirectoryUrl).href,
-      };
-    }
-  }
-  return {
-    type: "field:main", // the absence of "main" field
-    packageDirectoryUrl,
-    packageJson,
-    url: new URL("index.js", packageDirectoryUrl).href,
-  };
-};
-const mainLegacyResolvers = {
-  import: ({ packageJson }) => {
-    if (typeof packageJson.module === "string") {
-      return { type: "field:module", path: packageJson.module };
-    }
-    if (typeof packageJson.jsnext === "string") {
-      return { type: "field:jsnext", path: packageJson.jsnext };
-    }
-    if (typeof packageJson.main === "string") {
-      return { type: "field:main", path: packageJson.main };
-    }
-    return null;
-  },
-  browser: ({ packageDirectoryUrl, packageJson }) => {
-    const browserMain = (() => {
-      if (typeof packageJson.browser === "string") {
-        return packageJson.browser;
-      }
-      if (
-        typeof packageJson.browser === "object" &&
-        packageJson.browser !== null
-      ) {
-        return packageJson.browser["."];
-      }
-      return "";
-    })();
-
-    if (!browserMain) {
-      if (typeof packageJson.module === "string") {
-        return {
-          type: "field:module",
-          path: packageJson.module,
-        };
-      }
-      return null;
-    }
-    if (
-      typeof packageJson.module !== "string" ||
-      packageJson.module === browserMain
-    ) {
-      return {
-        type: "field:browser",
-        path: browserMain,
-      };
-    }
-    const browserMainUrlObject = new URL(browserMain, packageDirectoryUrl);
-    const content = readFileSync(browserMainUrlObject, "utf-8");
-    if (
-      (/typeof exports\s*==/.test(content) &&
-        /typeof module\s*==/.test(content)) ||
-      /module\.exports\s*=/.test(content)
-    ) {
-      return {
-        type: "field:module",
-        path: packageJson.module,
-      };
-    }
-    return {
-      type: "field:browser",
-      path: browserMain,
-    };
-  },
-  node: ({ packageJson }) => {
-    if (typeof packageJson.main === "string") {
-      return {
-        type: "field:main",
-        path: packageJson.main,
-      };
-    }
-    return null;
-  },
-};
-
-const comparePatternKeys = (keyA, keyB) => {
-  if (!keyA.endsWith("/") && !keyA.includes("*")) {
-    throw new Error("Invalid package configuration");
-  }
-  if (!keyB.endsWith("/") && !keyB.includes("*")) {
-    throw new Error("Invalid package configuration");
-  }
-  const aStarIndex = keyA.indexOf("*");
-  const baseLengthA = aStarIndex > -1 ? aStarIndex + 1 : keyA.length;
-  const bStarIndex = keyB.indexOf("*");
-  const baseLengthB = bStarIndex > -1 ? bStarIndex + 1 : keyB.length;
-  if (baseLengthA > baseLengthB) {
-    return -1;
-  }
-  if (baseLengthB > baseLengthA) {
-    return 1;
-  }
-  if (aStarIndex === -1) {
-    return 1;
-  }
-  if (bStarIndex === -1) {
-    return -1;
-  }
-  if (keyA.length > keyB.length) {
-    return -1;
-  }
-  if (keyB.length > keyA.length) {
-    return 1;
-  }
-  return 0;
-};
-
-const resolvePackageSymlink = (packageDirectoryUrl) => {
-  const packageDirectoryPath = realpathSync(new URL(packageDirectoryUrl));
-  const packageDirectoryResolvedUrl = pathToFileURL(packageDirectoryPath).href;
-  return `${packageDirectoryResolvedUrl}/`;
-};
-
-const applyFileSystemMagicResolution = (
-  fileUrl,
-  { fileStat, magicDirectoryIndex, magicExtensions },
-) => {
-  const result = {
-    stat: null,
-    url: fileUrl,
-    magicExtension: "",
-    magicDirectoryIndex: false,
-    lastENOENTError: null,
-  };
-
-  if (fileStat === undefined) {
-    try {
-      fileStat = readEntryStatSync(new URL(fileUrl));
-    } catch (e) {
-      if (e.code === "ENOENT") {
-        result.lastENOENTError = e;
-        fileStat = null;
-      } else {
-        throw e;
-      }
-    }
-  }
-
-  if (fileStat && fileStat.isFile()) {
-    result.stat = fileStat;
-    result.url = fileUrl;
-    return result;
-  }
-  if (fileStat && fileStat.isDirectory()) {
-    if (magicDirectoryIndex) {
-      const indexFileSuffix = fileUrl.endsWith("/") ? "index" : "/index";
-      const indexFileUrl = `${fileUrl}${indexFileSuffix}`;
-      const subResult = applyFileSystemMagicResolution(indexFileUrl, {
-        magicDirectoryIndex: false,
-        magicExtensions,
-      });
-      return {
-        ...result,
-        ...subResult,
-        magicDirectoryIndex: true,
-      };
-    }
-    result.stat = fileStat;
-    result.url = fileUrl;
-    return result;
-  }
-
-  if (magicExtensions && magicExtensions.length) {
-    const parentUrl = new URL("./", fileUrl).href;
-    const urlFilename = urlToFilename(fileUrl);
-    for (const extensionToTry of magicExtensions) {
-      const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
-      let stat;
-      try {
-        stat = readEntryStatSync(new URL(urlCandidate));
-      } catch (e) {
-        if (e.code === "ENOENT") {
-          stat = null;
-        } else {
-          throw e;
-        }
-      }
-      if (stat) {
-        result.stat = stat;
-        result.url = `${fileUrl}${extensionToTry}`;
-        result.magicExtension = extensionToTry;
-        return result;
-      }
-    }
-  }
-  // magic extension not found
-  return result;
-};
-
-const getExtensionsToTry = (magicExtensions, importer) => {
-  if (!magicExtensions) {
-    return [];
-  }
-  const extensionsSet = new Set();
-  magicExtensions.forEach((magicExtension) => {
-    if (magicExtension === "inherit") {
-      const importerExtension = urlToExtension(importer);
-      extensionsSet.add(importerExtension);
-    } else {
-      extensionsSet.add(magicExtension);
-    }
-  });
-  return Array.from(extensionsSet.values());
 };
 
 /*

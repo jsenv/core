@@ -22,13 +22,16 @@ await build({
     "file://**/node_modules/@jsenv/plugin-transpilation/": false,
     "file://**/node_modules/@jsenv/plugin-bundling/": false,
     "file://**/node_modules/@jsenv/plugin-minification/": false,
-    "file://**/node_modules/@jsenv/sourcemap/": true, // cannot inline "source-map"
+    "file://**/node_modules/@jsenv/sourcemap/": false, // cannot inline "source-map"
     "file://**/node_modules/@jsenv/url-meta/": false,
+    "file://**/node_modules/magic-string/": false,
+    "file://**/node_modules/@jridgewell/sourcemap-codec/": false,
     "file://**/node_modules/@jsenv/urls/": false,
     "file://**/node_modules/@jsenv/utils/": false,
     "file://**/node_modules/ws/": false,
     "file://**/node_modules/ansi-escapes/": false,
     "file://**/node_modules/is-unicode-supported/": false,
+    "file://**/node_modules/@jsenv/plugin-supervisor/": false,
     "file://**/node_modules/supports-color/": false,
     "file://**/node_modules/environment/": false,
     "file://**/node_modules/preact/": false,
