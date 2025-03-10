@@ -1,9 +1,9 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 
-export const clientControlledResourceService = () => {
+export const jsenvPluginControlledResource = () => {
   let resolve;
   return {
-    routes: [
+    devServerRoutes: [
       {
         endpoint: "GET /__delayed__.js",
         fetch: async () => {
@@ -40,9 +40,9 @@ export const clientControlledResourceService = () => {
 
 const jsonDirectoryUrl = new URL("./git_ignored/", import.meta.url);
 
-export const JSONFileManagerService = () => {
+export const jsenvPluginJSONFileManager = () => {
   return {
-    routes: [
+    devServerRoutes: [
       {
         endpoint: "GET /json_files",
         fetch: () => {

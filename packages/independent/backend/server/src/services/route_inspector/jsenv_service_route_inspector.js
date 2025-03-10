@@ -13,7 +13,7 @@ export const jsenvServiceRouteInspector = () => {
         description:
           "Explore the routes available on this server using a web interface.",
         availableMediaTypes: ["text/html"],
-        declarationLocation: import.meta.url,
+        declarationSource: import.meta.url,
         fetch: () => {
           const inspectorHtml = readFileSync(
             new URL(routeInspectorHtmlFileUrl),
@@ -28,7 +28,7 @@ export const jsenvServiceRouteInspector = () => {
         endpoint: "GET /.internal/routes.json",
         availableMediaTypes: ["application/json"],
         description: "Get the routes available on this server in JSON.",
-        declarationLocation: import.meta.url,
+        declarationSource: import.meta.url,
         fetch: (request, helpers) => {
           const routeJSON = helpers.router.inspect(request, helpers);
           return Response.json(routeJSON);

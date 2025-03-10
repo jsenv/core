@@ -8,7 +8,7 @@ export const jsenvServiceOpenFile = () => {
       {
         endpoint: "GET /.internal/open_file/*",
         description: "Can be used to open a given file in your editor.",
-        declarationLocation: import.meta.url,
+        declarationSource: import.meta.url,
         fetch: (request) => {
           let file = decodeURIComponent(request.params[0]);
           if (!file) {

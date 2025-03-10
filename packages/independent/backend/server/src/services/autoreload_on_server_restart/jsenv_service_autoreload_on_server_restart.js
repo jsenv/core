@@ -11,7 +11,7 @@ export const jsenvServiceAutoreloadOnRestart = () => {
         endpoint: "GET /.internal/alive.websocket",
         description:
           "Client can connect to this websocket endpoint to detect when server connection is lost.",
-        declarationLocation: import.meta.url,
+        declarationSource: import.meta.url,
         /* eslint-disable no-undef */
         clientCodeExample: () => {
           const websocket = new WebSocket(
@@ -28,7 +28,7 @@ export const jsenvServiceAutoreloadOnRestart = () => {
         endpoint: "GET /.internal/alive.eventsource",
         description: `Client can connect to this eventsource endpoint to detect when server connection is lost.
 This endpoint exists mostly to demo eventsource as there is already the websocket endpoint.`,
-        declarationLocation: import.meta.url,
+        declarationSource: import.meta.url,
         /* eslint-disable no-undef */
         clientCodeExample: async () => {
           const eventSource = new EventSource("/.internal/alive.eventsource");

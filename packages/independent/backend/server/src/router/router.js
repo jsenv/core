@@ -470,7 +470,7 @@ It should be should be one of route.${routePropertyName}: ${availableValues.join
       endpoint: "OPTIONS *",
       description:
         "Auto generate an OPTIONS response about a resource or the whole server.",
-      declarationLocation: import.meta.url,
+      declarationSource: import.meta.url,
       fetch: (request, helpers) => {
         const isForAnyRoute = request.resource === "*";
         if (isForAnyRoute) {
@@ -520,7 +520,7 @@ const createRoute = ({
   clientCodeExample,
   isFallback,
   subroutes,
-  declarationLocation,
+  declarationSource,
 }) => {
   if (!endpoint || typeof endpoint !== "string") {
     throw new TypeError(`endpoint must be a string, received ${endpoint}`);
@@ -586,13 +586,13 @@ const createRoute = ({
     toJSON: () => {
       const meta = {};
 
-      if (declarationLocation) {
+      if (declarationSource) {
         meta.declarationLink = {
-          url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(declarationLocation)}")`,
-          text: declarationLocation,
+          url: `javascript:window.fetch("/.internal/open_file/${encodeURIComponent(declarationSource)}")`,
+          text: declarationSource,
         };
 
-        const packageDirectory = lookupPackageDirectory(declarationLocation);
+        const packageDirectory = lookupPackageDirectory(declarationSource);
         if (packageDirectory) {
           const packageFileUrl = new URL("package.json", packageDirectory);
           try {
@@ -606,7 +606,7 @@ const createRoute = ({
                 text: packageName,
               };
               const declarationUrlRelativeToOwnerPackage = urlToRelativeUrl(
-                declarationLocation,
+                declarationSource,
                 packageFileUrl,
               );
               meta.declarationLink.text = `${packageName}/${declarationUrlRelativeToOwnerPackage}`;
@@ -631,7 +631,7 @@ const createRoute = ({
             : typeof clientCodeExample === "string"
               ? clientCodeExample
               : undefined,
-        declarationLocation,
+        declarationSource,
         meta,
       };
     },

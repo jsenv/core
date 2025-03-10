@@ -146,8 +146,8 @@ export const jsenvPluginDirectoryListing = ({
       {
         endpoint:
           "GET /.internal/directory_content.websocket?directory=:directory",
-        description:
-          "Emit events when a directory content changes. Used to update directory content when it is displayed in the browser by jsenv.",
+        description: "Emit events when a directory content changes.",
+        declarationSource: import.meta.url,
         fetch: (request) => {
           if (!autoreload) {
             return null;

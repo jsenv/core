@@ -12,7 +12,7 @@ export const jsenvServiceInternalClientFiles = () => {
         endpoint: "GET /@jsenv/server/*",
         description: "Serve @jsenv/server internal files.",
         availableMediaTypes: ["text/javascript"],
-        declarationLocation: import.meta.url,
+        declarationSource: import.meta.url,
         fetch: (request) => {
           const path = request.params[0];
           const jsenvServerClientFileUrl = new URL(

@@ -164,6 +164,7 @@ export const startDevServer = async ({
           endpoint: "GET /.internal/server.json",
           description: "Get information about jsenv dev server",
           availableMediaTypes: ["application/json"],
+          declarationSource: import.meta.url,
           fetch: () =>
             Response.json({
               server: "jsenv_dev_server/1",
@@ -394,6 +395,7 @@ export const startDevServer = async ({
         {
           endpoint: "GET *",
           description: "Serve project files.",
+          declarationSource: import.meta.url,
           fetch: async (request, { kitchen }) => {
             const { rootDirectoryUrl, mainFilePath } = kitchen.context;
             let requestResource = request.resource;

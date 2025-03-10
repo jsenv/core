@@ -95,6 +95,7 @@ export const jsenvPluginServerEvents = ({ clientAutoreload }) => {
         endpoint: "GET /.internal/events.websocket",
         description: `Jsenv dev server emit server events on this endpoint. When a file is saved the "reload" event is sent here.`,
         fetch: serverEvents.fetch,
+        declarationSource: import.meta.url,
       },
     ],
   };

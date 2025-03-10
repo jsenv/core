@@ -73,8 +73,8 @@ export const jsenvPluginSupervisor = ({
     devServerRoutes: [
       {
         endpoint: "GET /.internal/get_cause_trace/*",
-        description:
-          "Return source code around the place an error was thrown. Jsenv dev server use this to give more context to runtime errors.",
+        description: "Return source code around the place an error was thrown.",
+        declarationSource: import.meta.url,
         fetch: async (request, { kitchen }) => {
           const urlWithLineAndColumn = decodeURIComponent(request.params[0]);
           const result = resolveUrlSite(urlWithLineAndColumn);
@@ -140,7 +140,8 @@ export const jsenvPluginSupervisor = ({
       {
         endpoint: "GET /.internal/get_error_cause/*",
         description:
-          "Return any error associated to a given file. Jsenv dev server use this to give more context to runtime errors.",
+          "Return the error that occured when a file was served by jsenv dev server or null.",
+        declarationSource: import.meta.url,
         fetch: (request, { kitchen }) => {
           let file = decodeURIComponent(request.params[0]);
           file = decodeURIComponent(file);
