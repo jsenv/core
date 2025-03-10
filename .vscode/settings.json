@@ -13,6 +13,7 @@
   "html.validate.scripts": false,
   "[javascript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "npm.packageManager": "npm"
   // "debug.javascript.autoAttachFilter": "always"
 }
