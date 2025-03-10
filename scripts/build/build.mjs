@@ -51,6 +51,9 @@ await build({
     "file://**/node_modules/postcss/": false,
     "file://**/node_modules/terser/": false,
     "file://**/node_modules/@jridgewell/source-map/": false,
+    "file://**/node_modules/rollup/": false,
+    // "file://**/node_modules/@jridgewell/trace-mapping/": false,
+    // "file://**/node_modules/@jridgewell/gen-mapping/": false,
   },
   directoryReferenceEffect: (reference) => {
     // @jsenv/core root dir
@@ -73,6 +76,7 @@ await build({
         "file:///**/node_modules/@babel/parser/": true,
         "file:///**/node_modules/emoji-regex/": true,
         "file:///**/node_modules/postcss/": true,
+        "file:///**/node_modules/rollup/dist/native.js": true,
       },
     }),
     jsenvPluginPreact({}),

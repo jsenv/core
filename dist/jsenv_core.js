@@ -33653,7 +33653,7 @@ const applyRollupPlugins = async ({
   rollupOutput,
 }) => {
   if (!rollup) {
-    const rollupModule = await import("rollup");
+    const rollupModule = await import("./js/rollup.js").then(n => n.rollup);
     rollup = rollupModule.rollup;
   }
   const rollupReturnValue = await rollup({
@@ -59952,6 +59952,7 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "events",
   "freelist",
   "fs",
+  "fsevents",
   "fs/promises",
   "_http_agent",
   "_http_client",

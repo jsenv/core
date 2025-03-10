@@ -23,6 +23,7 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "events",
   "freelist",
   "fs",
+  "fsevents",
   "fs/promises",
   "_http_agent",
   "_http_client",

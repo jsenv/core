@@ -1,6 +1,6 @@
-import require$$1 from "path";
+import require$$0$1 from "path";
 import require$$3 from "url";
-import require$$0 from "fs";
+import require$$0$2 from "fs";
 
 function getDefaultExportFromCjs (x) {
 	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
@@ -5473,8 +5473,8 @@ function requirePreviousMap () {
 	if (hasRequiredPreviousMap) return previousMap;
 	hasRequiredPreviousMap = 1;
 
-	let { existsSync, readFileSync } = require$$0;
-	let { dirname, join } = require$$1;
+	let { existsSync, readFileSync } = require$$0$2;
+	let { dirname, join } = require$$0$1;
 	let { SourceMapConsumer, SourceMapGenerator } = requireSourceMap();
 
 	function fromBase64(str) {
@@ -5626,7 +5626,7 @@ function requireInput () {
 	hasRequiredInput = 1;
 
 	let { nanoid } = /*@__PURE__*/ requireNonSecure();
-	let { isAbsolute, resolve } = require$$1;
+	let { isAbsolute, resolve } = require$$0$1;
 	let { SourceMapConsumer, SourceMapGenerator } = requireSourceMap();
 	let { fileURLToPath, pathToFileURL } = require$$3;
 
@@ -6116,7 +6116,7 @@ function requireMapGenerator () {
 	if (hasRequiredMapGenerator) return mapGenerator;
 	hasRequiredMapGenerator = 1;
 
-	let { dirname, relative, resolve, sep } = require$$1;
+	let { dirname, relative, resolve, sep } = require$$0$1;
 	let { SourceMapConsumer, SourceMapGenerator } = requireSourceMap();
 	let { pathToFileURL } = require$$3;
 
