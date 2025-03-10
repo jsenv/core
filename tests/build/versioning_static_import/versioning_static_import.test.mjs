@@ -68,9 +68,14 @@ const test = async ({ name, ...rest }) => {
     services: [
       {
         name: "spy_request",
-        handleRequest: (request) => {
-          serverRequests.push(request);
-        },
+        routes: [
+          {
+            endpoint: "GET *",
+            fetch: (request) => {
+              serverRequests.push(request);
+            },
+          },
+        ],
       },
     ],
   });
