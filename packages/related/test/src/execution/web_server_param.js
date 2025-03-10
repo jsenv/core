@@ -45,6 +45,7 @@ export const assertAndNormalizeWebServer = async (
     },
   );
   if (
+    serverJsonResponse.status === 200 &&
     String(serverJsonResponse.headers["server"]).includes("jsenv_dev_server")
   ) {
     webServer.isJsenvDevServer = true;
