@@ -5,6 +5,26 @@ export const analyzeConstructableStyleSheetUsage = (urlInfo) => {
   if (urlInfo.url === newStylesheetClientFileUrl) {
     return null;
   }
+  const { runtimeCompat } = urlInfo.kitchen.context;
+  const runtimeNames = runtimeCompat ? Object.keys(runtimeCompat) : [];
+  let someRuntimeIsBrowser = false;
+  for (const runtimeName of runtimeNames) {
+    if (
+      runtimeName === "chrome" ||
+      runtimeName === "edge" ||
+      runtimeName === "firefox" ||
+      runtimeName === "opera" ||
+      runtimeName === "safari" ||
+      runtimeName === "samsung"
+    ) {
+      someRuntimeIsBrowser = true;
+      break;
+    }
+  }
+  if (!someRuntimeIsBrowser) {
+    // we are building only for nodejs, no need to analyze constructable stylesheet usage
+    return null;
+  }
   const node = visitJsAstUntil(urlInfo.contentAst, {
     NewExpression: (node) => {
       return isNewCssStyleSheetCall(node);
