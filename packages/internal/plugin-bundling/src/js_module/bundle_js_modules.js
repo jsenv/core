@@ -91,6 +91,12 @@ export const bundleJsModules = async (
             // ideally we should disable only for jsenv files
             return;
           }
+          if (
+            warning.code === "INVALID_ANNOTATION" &&
+            warning.loc.file.includes("/node_modules/")
+          ) {
+            return;
+          }
           logger.warn(String(warning));
         },
         ...rollupInput,

@@ -6,7 +6,7 @@ import require$$1$1 from "https";
 import require$$2 from "http";
 import require$$3 from "net";
 import require$$4 from "tls";
-import require$$7 from "url";
+import require$$3$1 from "url";
 
 function getDefaultExportFromCjs (x) {
 	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
@@ -4858,7 +4858,7 @@ function requireWebsocket () {
 	const net = require$$3;
 	const tls = require$$4;
 	const { randomBytes, createHash } = require$$1;
-	const { URL } = require$$7;
+	const { URL } = require$$3$1;
 
 	const PerMessageDeflate = requirePermessageDeflate();
 	const Receiver = requireReceiver();

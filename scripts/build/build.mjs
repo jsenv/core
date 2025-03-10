@@ -48,6 +48,9 @@ await build({
     "file://**/node_modules/acorn-walk/": false,
     "file://**/node_modules/parse5/": false,
     "file://**/node_modules/entities/": false,
+    "file://**/node_modules/postcss/": false,
+    "file://**/node_modules/terser/": false,
+    "file://**/node_modules/@jridgewell/source-map/": false,
   },
   directoryReferenceEffect: (reference) => {
     // @jsenv/core root dir
@@ -69,6 +72,7 @@ await build({
         "file:///**/node_modules/ws/": true,
         "file:///**/node_modules/@babel/parser/": true,
         "file:///**/node_modules/emoji-regex/": true,
+        "file:///**/node_modules/postcss/": true,
       },
     }),
     jsenvPluginPreact({}),

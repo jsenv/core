@@ -23164,7 +23164,7 @@ const applyPostCss = async ({
   map,
   content,
 }) => {
-  const { default: postcss } = await import("postcss");
+  const { default: postcss } = await import("./js/postcss.js");
 
   try {
     const cssFileUrl = urlToFileUrl(url);
@@ -33322,6 +33322,12 @@ const bundleJsModules = async (
             // ideally we should disable only for jsenv files
             return;
           }
+          if (
+            warning.code === "INVALID_ANNOTATION" &&
+            warning.loc.file.includes("/node_modules/")
+          ) {
+            return;
+          }
           logger.warn(String(warning));
         },
         ...rollupInput,
@@ -33812,7 +33818,7 @@ const minifyJs = async (jsUrlInfo, options) => {
   const sourcemap = jsUrlInfo.sourcemap;
   const isJsModule = jsUrlInfo.type === "js_module";
 
-  const { minify } = await import("terser");
+  const { minify } = await import("./js/main.js");
   const terserResult = await minify(
     {
       [url]: content,
