@@ -1,4 +1,4 @@
-import { parseResourcePattern } from "./resource_pattern.js";
+import { createResourcePattern } from "./resource_pattern.js";
 
 export const createRoutes = (description, create = createRoute) => {
   const routeArray = [];
@@ -52,7 +52,7 @@ export const createRoutes = (description, create = createRoute) => {
 };
 
 const createRoute = ({ methodPattern, resourcePattern, handler }) => {
-  const resourcePatternParsed = parseResourcePattern(resourcePattern);
+  const resourcePatternParsed = createResourcePattern(resourcePattern);
   const route = {
     methodPattern,
     resourcePattern,

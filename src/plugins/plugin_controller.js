@@ -110,6 +110,7 @@ export const createPluginController = (
         key === "init" ||
         key === "serverEvents" ||
         key === "mustStayFirst" ||
+        key === "devServerRoutes" ||
         key === "effect"
       ) {
         continue;
