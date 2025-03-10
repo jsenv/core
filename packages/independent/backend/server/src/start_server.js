@@ -656,7 +656,7 @@ export const startServer = async ({
       onHeadersSent: ({ status, statusText }) => {
         request.logger.onHeadersSent({
           status,
-          statusText: statusText || responseProperties.statusMessage,
+          statusText: responseProperties.statusMessage || statusText,
         });
         request.logger.end();
       },
