@@ -29,6 +29,9 @@ await build({
     "file://**/node_modules/emoji-regex/": false,
     "file://**/node_modules/ansi-regex/": false,
     "file://**/node_modules/formidable/": false,
+    "file://**/node_modules/hexoid/": false,
+    "file://**/node_modules/once/": false,
+    "file://**/node_modules/dezalgo/": false,
   },
   runtimeCompat: {
     node: "22.13.1",
@@ -46,6 +49,8 @@ await build({
       include: {
         "file:///**/node_modules/ws/": true,
         "file:///**/node_modules/emoji-regex/": true,
+        "file:///**/node_modules/once/": true,
+        "file:///**/node_modules/dezalgo/": true,
       },
     }),
     {
