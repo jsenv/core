@@ -1728,7 +1728,7 @@ const fromNodeRequest = (
         `formData() called on a request with content-type: "${contentType}". multipart/form-data was expected.`,
       );
     }
-    const { formidable } = await import("formidable");
+    const { formidable } = await import("./js/index.js");
     const form = formidable({});
     nodeRequest.resume(); // was paused in line #53
     const [fields, files] = await form.parse(nodeRequest);

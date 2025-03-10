@@ -12,7 +12,7 @@ await build({
     "file://**/node_modules/": true,
     // selectively unignore some node_modules
     "file://**/node_modules/@jsenv/abort/": false,
-    "file://**/node_modules/@jsenv/ast/": true, // cannot inline "parse5", "@babel/core" and "postcss"
+    "file://**/node_modules/@jsenv/ast/": false,
     "file://**/node_modules/@jsenv/filesystem/": false,
     "file://**/node_modules/@jsenv/importmap/": false,
     "file://**/node_modules/@jsenv/integrity/": false,
@@ -22,7 +22,7 @@ await build({
     "file://**/node_modules/@jsenv/plugin-transpilation/": false,
     "file://**/node_modules/@jsenv/plugin-bundling/": false,
     "file://**/node_modules/@jsenv/plugin-minification/": false,
-    "file://**/node_modules/@jsenv/sourcemap/": false, // cannot inline "source-map"
+    "file://**/node_modules/@jsenv/sourcemap/": false,
     "file://**/node_modules/@jsenv/url-meta/": false,
     "file://**/node_modules/magic-string/": false,
     "file://**/node_modules/@jridgewell/sourcemap-codec/": false,
@@ -36,8 +36,18 @@ await build({
     "file://**/node_modules/@jsenv/js-module-fallback/": false,
     "file://**/node_modules/@babel/parser/": false,
     "file://**/node_modules/supports-color/": false,
+    "file://**/node_modules/string-width/": false,
+    "file://**/node_modules/strip-ansi/": false,
+    "file://**/node_modules/get-east-asian-width/": false,
+    "file://**/node_modules/emoji-regex/": false,
+    "file://**/node_modules/ansi-regex/": false,
     "file://**/node_modules/environment/": false,
     "file://**/node_modules/preact/": false,
+    "file://**/node_modules/acorn/": false,
+    "file://**/node_modules/acorn-import-attributes/": false,
+    "file://**/node_modules/acorn-walk/": false,
+    "file://**/node_modules/parse5/": false,
+    "file://**/node_modules/entities/": false,
   },
   directoryReferenceEffect: (reference) => {
     // @jsenv/core root dir
@@ -58,6 +68,7 @@ await build({
       include: {
         "file:///**/node_modules/ws/": true,
         "file:///**/node_modules/@babel/parser/": true,
+        "file:///**/node_modules/emoji-regex/": true,
       },
     }),
     jsenvPluginPreact({}),

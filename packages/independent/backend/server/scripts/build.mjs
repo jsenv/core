@@ -23,6 +23,7 @@ await build({
     "file://**/node_modules/is-unicode-supported/": false,
     "file://**/node_modules/supports-color/": false,
     "file://**/node_modules/environment/": false,
+    "file://**/node_modules/formidable/": false,
   },
   runtimeCompat: {
     node: "22.13.1",
