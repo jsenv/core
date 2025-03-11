@@ -42,28 +42,28 @@ export const buildServer = await startBuildServer({
   routes: [
     {
       endpoint: "GET /update_animal_to_dog",
-      response: async () => {
+      fetch: async () => {
         await buildStory("dog");
         return { status: 200 };
       },
     },
     {
       endpoint: "GET /update_animal_to_horse",
-      response: async () => {
+      fetch: async () => {
         await buildStory("horse");
         return { status: 200 };
       },
     },
     {
       endpoint: "GET /update_animal_to_cat",
-      response: async () => {
+      fetch: async () => {
         await buildStory("cat");
         return { status: 200 };
       },
     },
     {
       endpoint: "GET /update_animal_to_bear",
-      response: async () => {
+      fetch: async () => {
         await buildStory("bear");
         return { status: 200 };
       },
