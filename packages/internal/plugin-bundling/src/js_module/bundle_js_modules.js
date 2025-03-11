@@ -13,7 +13,7 @@ export const bundleJsModules = async (
     include,
     chunks = {},
     strictExports = false,
-    preserveDynamicImport = true,
+    preserveDynamicImport = false,
     augmentDynamicImportUrlSearchParams = () => {},
     rollup,
     rollupInput = {},
@@ -84,7 +84,7 @@ export const bundleJsModules = async (
       }
     }
     const moduleInfo = manualChunksApi.getModuleInfo(id);
-    if (moduleInfo.isEntry) {
+    if (moduleInfo.isEntry || moduleInfo.dynamicImporters.length) {
       return null;
     }
     const url = fileUrlConverter.asFileUrl(id);
@@ -347,7 +347,7 @@ const rollupPluginJsenv = ({
                     return reference.specifier;
                   }
                   if (
-                    reference.subtype !== "js_import" ||
+                    reference.type !== "js_import" ||
                     reference.subtype === "import_meta_resolve"
                   ) {
                     // rollup generate specifiers only for static and dynamic imports

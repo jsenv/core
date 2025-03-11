@@ -140,7 +140,13 @@ const parseAndTransformJsReferences = async (
       isSideEffectImport: externalReferenceInfo.isSideEffectImport,
       astInfo: externalReferenceInfo.astInfo,
       isEntryPoint,
+      filenameHint:
+        externalReferenceInfo.subtype === "import_dynamic" &&
+        isBareSpecifier(externalReferenceInfo.specifier)
+          ? `${externalReferenceInfo.specifier}.js`
+          : undefined,
     });
+
     parallelActions.push(async () => {
       await reference.readGeneratedSpecifier();
       const replacement = reference.generatedSpecifier;
@@ -178,4 +184,21 @@ const parseAndTransformJsReferences = async (
   }
   const { content, sourcemap } = magicSource.toContentAndSourcemap();
   return { content, sourcemap };
+};
+
+const isBareSpecifier = (specifier) => {
+  if (
+    specifier[0] === "/" ||
+    specifier.startsWith("./") ||
+    specifier.startsWith("../")
+  ) {
+    return false;
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(specifier);
+    return false;
+  } catch {
+    return true;
+  }
 };
