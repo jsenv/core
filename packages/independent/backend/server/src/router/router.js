@@ -818,7 +818,7 @@ Available encodings: ${availableEncodings.join(", ")}.`,
   // Handle multiple negotiation failures
   let message = `The server cannot produce a response in a format acceptable to the client:`;
   for (const info of unsupported) {
-    message += `\n- ${info.type} ${info.message.text}`;
+    message += `\n- ${info.type} ${info.message}`;
   }
   return {
     status: 406,

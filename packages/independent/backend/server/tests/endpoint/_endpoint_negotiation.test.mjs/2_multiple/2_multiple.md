@@ -51,8 +51,10 @@ return {
 ```console
 GET http://127.0.0.1/users
   406 The server cannot produce a response in a format acceptable to the client:
-  - content-type undefined
-  - language undefined
+  - content-type The server cannot produce a response in any of the media types accepted by the request: "text/css".
+  Available media types: application/json, text/plain.
+  - language The server cannot produce a response in any of the languages accepted by the request: "de".
+  Available languages: fr, en.
 ```
 
 </details>
@@ -74,7 +76,7 @@ GET http://127.0.0.1/users
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "{\"statusMessage\":\"The server cannot produce a response in a format acceptable to the client:\\n- content-type undefined\\n- language undefined\"}"
+    "body": "{\"statusMessage\":\"The server cannot produce a response in a format acceptable to the client:\\n- content-type The server cannot produce a response in any of the media types accepted by the request: \\\"text/css\\\".\\nAvailable media types: application/json, text/plain.\\n- language The server cannot produce a response in any of the languages accepted by the request: \\\"de\\\".\\nAvailable languages: fr, en.\"}"
   },
   "GET users accepting text and language FR": {
     "status": 200,
