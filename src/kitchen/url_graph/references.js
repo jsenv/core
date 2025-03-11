@@ -756,5 +756,5 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
 
   referencedUrlInfo.entryUrlInfo = reference.isEntryPoint
     ? referencedUrlInfo
-    : referencedUrlInfo.entryUrlInfo;
+    : reference.ownerUrlInfo.entryUrlInfo;
 };
