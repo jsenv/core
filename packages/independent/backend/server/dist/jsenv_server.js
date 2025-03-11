@@ -523,24 +523,6 @@ const SIGINT_CALLBACK = {
   },
 };
 
-const createDetailedMessage = (message, details = {}) => {
-  let string = `${message}`;
-
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
-${
-  Array.isArray(value)
-    ? value.join(`
-`)
-    : value
-}`;
-  });
-
-  return string;
-};
-
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
 function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
@@ -730,6 +712,95 @@ function createSupportsColor(stream, options = {}) {
 	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
 });
 
+function isUnicodeSupported() {
+	const {env} = process$1;
+	const {TERM, TERM_PROGRAM} = env;
+
+	if (process$1.platform !== 'win32') {
+		return TERM !== 'linux'; // Linux console (kernel)
+	}
+
+	return Boolean(env.WT_SESSION) // Windows Terminal
+		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+		|| TERM_PROGRAM === 'Terminus-Sublime'
+		|| TERM_PROGRAM === 'vscode'
+		|| TERM === 'xterm-256color'
+		|| TERM === 'alacritty'
+		|| TERM === 'rxvt-unicode'
+		|| TERM === 'rxvt-unicode-256color'
+		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
+
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+
+globalThis.process?.versions?.node !== undefined;
+
+globalThis.process?.versions?.bun !== undefined;
+
+globalThis.Deno?.version?.deno !== undefined;
+
+globalThis.process?.versions?.electron !== undefined;
+
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+
+platform === 'macOS'
+	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
+	|| globalThis.process?.platform === 'darwin';
+
+platform === 'Windows'
+	|| globalThis.navigator?.platform === 'Win32'
+	|| globalThis.process?.platform === 'win32';
+
+platform === 'Linux'
+	|| globalThis.navigator?.platform?.startsWith('Linux') === true
+	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
+	|| globalThis.process?.platform === 'linux';
+
+platform === 'Android'
+	|| globalThis.navigator?.platform === 'Android'
+	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
+	|| globalThis.process?.platform === 'android';
+
+!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+!isBrowser && process$1.platform === 'win32';
+
+isBrowser ? () => {
+	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
+
+const createDetailedMessage = (message, details = {}) => {
+  let string = `${message}`;
+
+  Object.keys(details).forEach((key) => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
+  });
+
+  return string;
+};
+
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
@@ -790,26 +861,6 @@ const ANSI = createAnsi({
     // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
     process.env.GITHUB_WORKFLOW,
 });
-
-function isUnicodeSupported() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
 
 // see also https://github.com/sindresorhus/figures
 
@@ -960,57 +1011,6 @@ const warnDisabled = () => {};
 const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
-
-platform === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-!isBrowser && process$1.platform === 'win32';
-
-isBrowser ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
 
 const memoize = (compute) => {
   let memoized = false;
@@ -1614,14 +1614,15 @@ const observableFromNodeStream = (
 
   if (readableLifetime && nodeStream instanceof Readable) {
     const timeout = setTimeout(() => {
-      process.emitWarning(
-        `Readable stream not used after ${readableLifetime / 1000} seconds.`,
-        {
-          CODE: "READABLE_STREAM_TIMEOUT",
-          // url is for http client request
-          detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`,
-        },
-      );
+      // disabled for now
+      // process.emitWarning(
+      //   `Readable stream not used after ${readableLifetime / 1000} seconds.`,
+      //   {
+      //     CODE: "READABLE_STREAM_TIMEOUT",
+      //     // url is for http client request
+      //     detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`,
+      //   },
+      // );
     }, readableLifetime).unref();
     onceReadableStreamUsedOrClosed(nodeStream, () => {
       clearTimeout(timeout);
@@ -5081,7 +5082,7 @@ const createRouter = (
         version: "content-version",
         encoding: "content-encoding",
       }[name];
-      const responseHeaderValue = responseHeaders[responseHeaderName];
+      let responseHeaderValue = responseHeaders[responseHeaderName];
       if (!responseHeaderValue) {
         request.logger.warn(
           `The response header ${responseHeaderName} is missing.
@@ -5089,7 +5090,31 @@ It should be set to one of route.${routePropertyName}: ${availableValues.join(",
         );
         return;
       }
-      if (!availableValues.includes(responseHeaderValue)) {
+      if (responseHeaderName === "content-type") {
+        responseHeaderValue = CONTENT_TYPE.asMediaType(responseHeaderValue);
+      }
+      if (
+        responseHeaderName === "content-version" &&
+        isFinite(responseHeaderValue)
+      ) {
+        responseHeaderValue = parseFloat(responseHeaderValue);
+      }
+      let matchesAnAvailableValue = false;
+      for (const availableValue of availableValues) {
+        if (responseHeaderValue === availableValue) {
+          matchesAnAvailableValue = true;
+          break;
+        }
+        if (
+          typeof availableValue === "function" &&
+          availableValue(responseHeaderValue)
+        ) {
+          matchesAnAvailableValue = true;
+          break;
+        }
+      }
+
+      if (!matchesAnAvailableValue) {
         request.logger.warn(
           `The value "${responseHeaderValue}" found in response header ${responseHeaderName} is strange.
 It should be should be one of route.${routePropertyName}: ${availableValues.join(", ")}.`,
@@ -5648,7 +5673,7 @@ Available encodings: ${availableEncodings.join(", ")}.`,
   // Handle multiple negotiation failures
   let message = `The server cannot produce a response in a format acceptable to the client:`;
   for (const info of unsupported) {
-    message += `\n- ${info.type} ${info.message.text}`;
+    message += `\n- ${info.type} ${info.message}`;
   }
   return {
     status: 406,
@@ -6917,6 +6942,9 @@ const startServer = async ({
   ];
 
   const allRouteArray = [];
+  for (const route of routes) {
+    allRouteArray.push(route);
+  }
   for (const service of services) {
     const serviceRoutes = service.routes;
     if (serviceRoutes) {
@@ -6925,9 +6953,6 @@ const startServer = async ({
         allRouteArray.push(serviceRoute);
       }
     }
-  }
-  for (const route of routes) {
-    allRouteArray.push(route);
   }
 
   const router = createRouter(allRouteArray, {
@@ -7237,6 +7262,7 @@ const startServer = async ({
       }
       if (
         request.method !== "HEAD" &&
+        responseProperties.headers &&
         responseProperties.headers["content-length"] > 0 &&
         !responseProperties.body
       ) {
@@ -8110,6 +8136,12 @@ const serveDirectory = (
  */
 
 
+const createFileSystemFetch = (directoryUrl, options) => {
+  return (request, helpers) => {
+    return fetchFileSystem(request, helpers, directoryUrl, options);
+  };
+};
+
 const fetchFileSystem = async (
   request,
   helpers,
@@ -8143,7 +8175,7 @@ const fetchFileSystem = async (
     directoryUrlString = `${directoryUrlString}/`;
   }
   let resource;
-  if ("0" in request.params) {
+  if (request.params && "0" in request.params) {
     resource = request.params["0"];
   } else {
     resource = request.resource.slice(1);
@@ -8532,12 +8564,6 @@ const asUrlString = (value) => {
     }
   }
   return null;
-};
-
-const createFileSystemFetch = (directoryUrl, options) => {
-  return (request, helpers) => {
-    return fetchFileSystem(request, helpers, directoryUrl, options);
-  };
 };
 
 class ProgressiveResponse {

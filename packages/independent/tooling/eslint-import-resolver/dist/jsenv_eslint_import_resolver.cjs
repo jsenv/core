@@ -198,6 +198,77 @@ function createSupportsColor(stream, options = {}) {
 	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
 });
 
+function isUnicodeSupported() {
+	const {env} = process$1;
+	const {TERM, TERM_PROGRAM} = env;
+
+	if (process$1.platform !== 'win32') {
+		return TERM !== 'linux'; // Linux console (kernel)
+	}
+
+	return Boolean(env.WT_SESSION) // Windows Terminal
+		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+		|| TERM_PROGRAM === 'Terminus-Sublime'
+		|| TERM_PROGRAM === 'vscode'
+		|| TERM === 'xterm-256color'
+		|| TERM === 'alacritty'
+		|| TERM === 'rxvt-unicode'
+		|| TERM === 'rxvt-unicode-256color'
+		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
+
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+
+globalThis.process?.versions?.node !== undefined;
+
+globalThis.process?.versions?.bun !== undefined;
+
+globalThis.Deno?.version?.deno !== undefined;
+
+globalThis.process?.versions?.electron !== undefined;
+
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+
+platform === 'macOS'
+	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
+	|| globalThis.process?.platform === 'darwin';
+
+platform === 'Windows'
+	|| globalThis.navigator?.platform === 'Win32'
+	|| globalThis.process?.platform === 'win32';
+
+platform === 'Linux'
+	|| globalThis.navigator?.platform?.startsWith('Linux') === true
+	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
+	|| globalThis.process?.platform === 'linux';
+
+platform === 'Android'
+	|| globalThis.navigator?.platform === 'Android'
+	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
+	|| globalThis.process?.platform === 'android';
+
+!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+!isBrowser && process$1.platform === 'win32';
+
+isBrowser ? () => {
+	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
+
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
@@ -258,26 +329,6 @@ const ANSI = createAnsi({
     // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
     process.env.GITHUB_WORKFLOW,
 });
-
-function isUnicodeSupported() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
 
 // see also https://github.com/sindresorhus/figures
 
@@ -498,57 +549,6 @@ const fillLeft = (value, biggestValue, char = " ") => {
   padded += value;
   return padded;
 };
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
-
-platform === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-!isBrowser && process$1.platform === 'win32';
-
-isBrowser ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
 
 const pathnameToExtension$1 = (pathname) => {
   const slashLastIndex = pathname.lastIndexOf("/");

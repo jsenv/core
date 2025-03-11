@@ -67,24 +67,6 @@ const DATA_URL = {
   },
 };
 
-const createDetailedMessage$1 = (message, details = {}) => {
-  let string = `${message}`;
-
-  Object.keys(details).forEach((key) => {
-    const value = details[key];
-    string += `
---- ${key} ---
-${
-  Array.isArray(value)
-    ? value.join(`
-`)
-    : value
-}`;
-  });
-
-  return string;
-};
-
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
 function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process$1.argv) {
@@ -274,6 +256,125 @@ function createSupportsColor(stream, options = {}) {
 	stderr: createSupportsColor({isTTY: tty.isatty(2)}),
 });
 
+function isUnicodeSupported() {
+	const {env} = process$1;
+	const {TERM, TERM_PROGRAM} = env;
+
+	if (process$1.platform !== 'win32') {
+		return TERM !== 'linux'; // Linux console (kernel)
+	}
+
+	return Boolean(env.WT_SESSION) // Windows Terminal
+		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+		|| TERM_PROGRAM === 'Terminus-Sublime'
+		|| TERM_PROGRAM === 'vscode'
+		|| TERM === 'xterm-256color'
+		|| TERM === 'alacritty'
+		|| TERM === 'rxvt-unicode'
+		|| TERM === 'rxvt-unicode-256color'
+		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
+
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+
+globalThis.process?.versions?.node !== undefined;
+
+globalThis.process?.versions?.bun !== undefined;
+
+globalThis.Deno?.version?.deno !== undefined;
+
+globalThis.process?.versions?.electron !== undefined;
+
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+
+platform === 'macOS'
+	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
+	|| globalThis.process?.platform === 'darwin';
+
+platform === 'Windows'
+	|| globalThis.navigator?.platform === 'Win32'
+	|| globalThis.process?.platform === 'win32';
+
+platform === 'Linux'
+	|| globalThis.navigator?.platform?.startsWith('Linux') === true
+	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
+	|| globalThis.process?.platform === 'linux';
+
+platform === 'Android'
+	|| globalThis.navigator?.platform === 'Android'
+	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
+	|| globalThis.process?.platform === 'android';
+
+const ESC = '\u001B[';
+
+!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+const isWindows$4 = !isBrowser && process$1.platform === 'win32';
+
+isBrowser ? () => {
+	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
+
+const cursorUp = (count = 1) => ESC + count + 'A';
+
+const cursorLeft = ESC + 'G';
+
+const eraseLines = count => {
+	let clear = '';
+
+	for (let i = 0; i < count; i++) {
+		clear += eraseLine + (i < count - 1 ? cursorUp() : '');
+	}
+
+	if (count) {
+		clear += cursorLeft;
+	}
+
+	return clear;
+};
+const eraseLine = ESC + '2K';
+const eraseScreen = ESC + '2J';
+
+const clearTerminal = isWindows$4
+	? `${eraseScreen}${ESC}0f`
+	// 1. Erases the screen (Only done in case `2` is not supported)
+	// 2. Erases the whole screen including scrollback buffer
+	// 3. Moves cursor to the top-left position
+	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
+	:	`${eraseScreen}${ESC}3J${ESC}H`;
+
+const createDetailedMessage$1 = (message, details = {}) => {
+  let string = `${message}`;
+
+  Object.keys(details).forEach((key) => {
+    const value = details[key];
+    string += `
+--- ${key} ---
+${
+  Array.isArray(value)
+    ? value.join(`
+`)
+    : value
+}`;
+  });
+
+  return string;
+};
+
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
@@ -334,26 +435,6 @@ const ANSI = createAnsi({
     // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
     process.env.GITHUB_WORKFLOW,
 });
-
-function isUnicodeSupported() {
-	const {env} = process$1;
-	const {TERM, TERM_PROGRAM} = env;
-
-	if (process$1.platform !== 'win32') {
-		return TERM !== 'linux'; // Linux console (kernel)
-	}
-
-	return Boolean(env.WT_SESSION) // Windows Terminal
-		|| Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-		|| env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-		|| TERM_PROGRAM === 'Terminus-Sublime'
-		|| TERM_PROGRAM === 'vscode'
-		|| TERM === 'xterm-256color'
-		|| TERM === 'alacritty'
-		|| TERM === 'rxvt-unicode'
-		|| TERM === 'rxvt-unicode-256color'
-		|| env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
 
 // see also https://github.com/sindresorhus/figures
 
@@ -931,87 +1012,6 @@ const warnDisabled = () => {};
 const error = (...args) => console.error(...args);
 
 const errorDisabled = () => {};
-
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser = globalThis.window?.document !== undefined;
-
-globalThis.process?.versions?.node !== undefined;
-
-globalThis.process?.versions?.bun !== undefined;
-
-globalThis.Deno?.version?.deno !== undefined;
-
-globalThis.process?.versions?.electron !== undefined;
-
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
-
-platform === 'macOS'
-	|| globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-	|| globalThis.navigator?.userAgent?.includes(' Mac ') === true
-	|| globalThis.process?.platform === 'darwin';
-
-platform === 'Windows'
-	|| globalThis.navigator?.platform === 'Win32'
-	|| globalThis.process?.platform === 'win32';
-
-platform === 'Linux'
-	|| globalThis.navigator?.platform?.startsWith('Linux') === true
-	|| globalThis.navigator?.userAgent?.includes(' Linux ') === true
-	|| globalThis.process?.platform === 'linux';
-
-platform === 'Android'
-	|| globalThis.navigator?.platform === 'Android'
-	|| globalThis.navigator?.userAgent?.includes(' Android ') === true
-	|| globalThis.process?.platform === 'android';
-
-const ESC = '\u001B[';
-
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-const isWindows$4 = !isBrowser && process$1.platform === 'win32';
-
-isBrowser ? () => {
-	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
-const cursorUp = (count = 1) => ESC + count + 'A';
-
-const cursorLeft = ESC + 'G';
-
-const eraseLines = count => {
-	let clear = '';
-
-	for (let i = 0; i < count; i++) {
-		clear += eraseLine + (i < count - 1 ? cursorUp() : '');
-	}
-
-	if (count) {
-		clear += cursorLeft;
-	}
-
-	return clear;
-};
-const eraseLine = ESC + '2K';
-const eraseScreen = ESC + '2J';
-
-const clearTerminal = isWindows$4
-	? `${eraseScreen}${ESC}0f`
-	// 1. Erases the screen (Only done in case `2` is not supported)
-	// 2. Erases the whole screen including scrollback buffer
-	// 3. Moves cursor to the top-left position
-	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
-	:	`${eraseScreen}${ESC}3J${ESC}H`;
 
 /*
  * see also https://github.com/vadimdemedes/ink
@@ -19150,7 +19150,7 @@ const createBuildSpecifierManager = ({
             }
           },
         });
-        for (const [{ node }, referencedUrlInfo] of hintToInjectMap) {
+        for (const [referencedUrlInfo, { node }] of hintToInjectMap) {
           const buildGeneratedSpecifier =
             getBuildGeneratedSpecifier(referencedUrlInfo);
           const found = findHtmlNode(htmlAst, (htmlNode) => {
@@ -21188,6 +21188,7 @@ const startBuildServer = async ({
   buildDirectoryUrl,
   buildMainFilePath = "index.html",
   port = 9779,
+  routes,
   services = [],
   acceptAnyIp,
   hostname,
@@ -21272,6 +21273,7 @@ const startBuildServer = async ({
     port,
     serverTiming: true,
     requestWaitingMs: 60_000,
+    routes,
     services: [
       jsenvServiceCORS({
         accessControlAllowRequestOrigin: true,
