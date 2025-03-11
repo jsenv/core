@@ -15,7 +15,6 @@ const run = async () => {
     runtimeCompat: {
       node: "20",
     },
-    // bundling: false,
   });
 };
 
