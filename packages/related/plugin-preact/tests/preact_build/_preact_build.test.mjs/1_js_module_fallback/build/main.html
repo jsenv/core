@@ -8,7 +8,7 @@
       ;(function() {
         var __versionMappings__ = {
           "/js/main.nomodule.js": "/js/main.nomodule.js?v=d579ed12",
-          "/js/preact.module.nomodule.js": "/js/preact.module.nomodule.js?v=82697177",
+          "/js/preact.module.nomodule.js": "/js/preact.module.nomodule.js?v=4a4057a7",
           "/js/jsxRuntime.module.nomodule.js": "/js/jsxRuntime.module.nomodule.js?v=b43e34f4",
           "/js/app.nomodule.js": "/js/app.nomodule.js?v=489b9ec9"
         };
@@ -246,7 +246,7 @@
               if (!response.ok) {
                 throw Error("Failed to fetch module at ".concat(url));
               }
-              return _await(new Response(), function (source) {
+              return _await(response.text(), function (source) {
                 if (source.indexOf("//# sourceURL=") < 0) {
                   source += "\n//# sourceURL=".concat(url);
                 }

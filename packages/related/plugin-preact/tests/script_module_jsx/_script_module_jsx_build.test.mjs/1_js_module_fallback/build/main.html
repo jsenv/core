@@ -7,8 +7,8 @@
     <script>
       ;(function() {
         var __versionMappings__ = {
-          "/js/preact.module.nomodule.js": "/js/preact.module.nomodule.js?v=de5d8d48",
-          "/js/hooks.module.nomodule.js": "/js/hooks.module.nomodule.js?v=f6ece64a",
+          "/js/preact.module.nomodule.js": "/js/preact.module.nomodule.js?v=2b3fe30c",
+          "/js/hooks.module.nomodule.js": "/js/hooks.module.nomodule.js?v=4355f6dc",
           "/js/jsxRuntime.module.nomodule.js": "/js/jsxRuntime.module.nomodule.js?v=b43e34f4"
         };
         window.__v__ = function (specifier) {
@@ -209,7 +209,7 @@
             if (!response.ok) {
               throw Error(`Failed to fetch module at ${url}`);
             }
-            let source = await new Response();
+            let source = await response.text();
             if (source.indexOf("//# sourceURL=") < 0) {
               source += `\n//# sourceURL=${url}`;
             }

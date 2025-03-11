@@ -1,6 +1,7 @@
 import { createFileSystemFetch, startServer } from "@jsenv/server";
 
 export const server = await startServer({
+  logLevel: "error",
   routes: [
     {
       endpoint: "GET /public/*",

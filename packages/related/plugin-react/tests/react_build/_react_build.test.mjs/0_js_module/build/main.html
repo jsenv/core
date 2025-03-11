@@ -5,11 +5,26 @@
     <meta charset="utf-8">
     <link rel="icon" href="data:,">
     <script type="importmap">
-      {"imports":{"/js/react.js":"/js/react.js?v=ead3d083","/js/react-dom/client.js":"/js/react-dom/client.js?v=fbc0e783","/js/react/jsx-runtime.js":"/js/react/jsx-runtime.js?v=aa8a39b3"}}
+      {
+        "imports": {
+          "/js/react.js": "/js/react.js?v=ead3d083",
+          "/js/react-dom/client.js": "/js/react-dom/client.js?v=fbc0e783",
+          "/js/react/jsx-runtime.js": "/js/react/jsx-runtime.js?v=aa8a39b3"
+        }
+      }
     </script>
     <link rel="modulepreload" href="/js/app.js?v=7efba3a3">
     <script>
-      ;(function(){var m = {"/js/boot.js":"/js/boot.js?v=5c4dfe07","/js/app.js":"/js/app.js?v=7efba3a3","/js/root.js":"/js/root.js?v=5817b329"}; window.__v__ = function (s) { return m[s] || s }; })();
+      ;(function() {
+        var __versionMappings__ = {
+          "/js/boot.js": "/js/boot.js?v=5c4dfe07",
+          "/js/app.js": "/js/app.js?v=7efba3a3",
+          "/js/root.js": "/js/root.js?v=5817b329"
+        };
+        window.__v__ = function (specifier) {
+          return __versionMappings__[specifier] || specifier
+        };
+      })();
     </script>
   </head>
 

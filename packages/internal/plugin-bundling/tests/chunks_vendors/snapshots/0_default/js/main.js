@@ -1,4 +1,4 @@
-const answer = 42;
+import { answer } from "/js/vendors.js";
 
 console.log("a.js");
 

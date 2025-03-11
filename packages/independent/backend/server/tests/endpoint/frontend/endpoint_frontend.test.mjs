@@ -16,6 +16,7 @@ const clientDirectoryUrl = new URL("./client/", import.meta.url);
 const snapshotsDirectoryUrl = new URL("./snapshots/", import.meta.url);
 
 const frontendServer = await startServer({
+  logLevel: "warn",
   routes: [
     {
       endpoint: "GET *",
@@ -24,6 +25,7 @@ const frontendServer = await startServer({
   ],
 });
 const backendServer = await startServer({
+  logLevel: "warn",
   routes: [
     {
       endpoint: "GET /",

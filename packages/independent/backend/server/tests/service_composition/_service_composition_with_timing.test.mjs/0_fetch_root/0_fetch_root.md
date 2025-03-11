@@ -15,27 +15,27 @@ return actual;
   "timing": {
     "a": {
       "description": "time to start responding",
-      "duration": 1.2752909999999247
+      "duration": 0.5740409999998519
     },
     "b": {
       "description": "open_file.routing",
-      "duration": 0.14320900000075198
+      "duration": 0.07133299999986775
     },
     "c": {
       "description": "route_inspector.routing",
-      "duration": 0.030208999999558728
+      "duration": 0.01587500000005093
     },
     "d": {
       "description": "internal_client_files.routing",
-      "duration": 0.01920799999970768
+      "duration": 0.01008300000012241
     },
     "e": {
       "description": "autoreload_on_server_restart.routing",
-      "duration": 0.026667000000088592
+      "duration": 0.011999999999716238
     },
     "f": {
       "description": "service:no content.routing",
-      "duration": 0.07804200000009587
+      "duration": 0.03554100000019389
     }
   }
 }
