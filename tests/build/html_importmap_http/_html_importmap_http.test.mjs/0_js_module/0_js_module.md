@@ -1,17 +1,22 @@
-# [0_js_module_http_enabled](../../html_importmap_http.test.mjs#L32)
+# [0_js_module](../../html_importmap_http.test.mjs#L26)
 
 ```js
 run({
   runtimeCompat: { chrome: "89" },
-  http: true,
 })
 ```
 
-# 1/2 write 3 files into "./build/"
+# 1/3 console.warn
+
+```console
+Generated an empty chunk: "main".
+```
+
+# 2/3 write 2 files into "./build/"
 
 see [./build/](./build/)
 
-# 2/2 resolve
+# 3/3 resolve
 
 ```js
 undefined

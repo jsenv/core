@@ -7,7 +7,8 @@
       {
         "imports": {
           "preact": "https://esm.sh/preact@10.23.1",
-          "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
+          "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact",
+          "main": "./main.js"
         }
       }
     </script>
@@ -16,6 +17,7 @@
     <div id="app"></div>
     <script type="module">
       // https://preactjs.com/guide/v10/no-build-workflows/
+      import "main";
       import { render } from "preact";
       import { html } from "htm/preact";
 

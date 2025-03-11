@@ -764,27 +764,57 @@ export const createBuildSpecifierManager = ({
       const visitors = [];
       if (Object.keys(globalMappings).length > 0) {
         visitors.push((urlInfo) => {
-          if (urlInfo.isEntryPoint) {
-            actions.push(async () => {
-              await injectGlobalMappings(urlInfo, globalMappings);
-            });
-          }
-        });
-      }
-      if (Object.keys(importMappings).length > 0) {
-        visitors.push((urlInfo) => {
-          if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
-            actions.push(async () => {
-              await injectImportmapMappings(urlInfo, importMappings);
-            });
-          }
-        });
-      }
-      if (visitors.length) {
-        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
           if (urlInfo.isRoot) {
             return;
           }
+          if (!urlInfo.isEntryPoint) {
+            return;
+          }
+          actions.push(async () => {
+            await injectGlobalMappings(urlInfo, globalMappings);
+          });
+        });
+      }
+      sync_importmap: {
+        visitors.push((urlInfo) => {
+          if (urlInfo.isRoot) {
+            return;
+          }
+          if (!urlInfo.isEntryPoint) {
+            return;
+          }
+          if (urlInfo.type !== "html") {
+            return;
+          }
+
+          actions.push(async () => {
+            await injectImportmapMappings(urlInfo, (topLevelMappings) => {
+              if (!topLevelMappings) {
+                return importMappings;
+              }
+              const topLevelMappingsToKeep = {};
+              for (const topLevelMappingKey of Object.keys(topLevelMappings)) {
+                const topLevelMappingValue =
+                  topLevelMappings[topLevelMappingKey];
+                const urlInfo = finalKitchen.graph.getUrlInfo(
+                  `ignore:${topLevelMappingKey}`,
+                );
+                if (urlInfo) {
+                  topLevelMappingsToKeep[topLevelMappingKey] =
+                    topLevelMappingValue;
+                }
+              }
+              return {
+                ...topLevelMappingsToKeep,
+                ...importMappings,
+              };
+            });
+          });
+        });
+      }
+
+      if (visitors.length) {
+        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
           for (const visitor of visitors) {
             visitor(urlInfo);
           }

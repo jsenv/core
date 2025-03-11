@@ -3,22 +3,21 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script type="importmap">
-      {
-        "imports": {
-          "/js/preact@10.23.1.js": "/js/preact@10.23.1.js?v=a68c9886",
-          "/js/preact.js?external=preact": "/js/preact.js?external=preact&v=227a33af"
-        }
-      }
-    </script>
-    
+    <script type="importmap">{
+  "imports": {
+    "preact": "https://esm.sh/preact@10.23.1",
+    "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact",
+    "/js/main.js": "/js/main.js?v=a45ff46b"
+  }
+}</script>
   </head>
   <body>
     <div id="app"></div>
     <script type="module">
       // https://preactjs.com/guide/v10/no-build-workflows/
-      import { render } from "/js/preact@10.23.1.js";
-      import { html } from "/js/preact.js?external=preact";
+      import "/js/main.js";
+      import { render } from "preact";
+      import { html } from "htm/preact";
 
       const App = () => {
         return html`Hello world`;

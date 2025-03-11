@@ -2,8 +2,12 @@
 
 import {
   createHtmlNode,
+  findHtmlNode,
+  getHtmlNodeAttribute,
+  getHtmlNodeText,
   injectHtmlNodeAsEarlyAsPossible,
   parseHtml,
+  setHtmlNodeText,
   stringifyHtmlAst,
 } from "@jsenv/ast";
 
@@ -54,7 +58,7 @@ const generateClientCodeForMappings = (
 })();`;
 };
 
-export const injectImportmapMappings = (urlInfo, mappings) => {
+export const injectImportmapMappings = (urlInfo, getMappings) => {
   const htmlAst = parseHtml({
     html: urlInfo.content,
     url: urlInfo.url,
@@ -66,17 +70,38 @@ export const injectImportmapMappings = (urlInfo, mappings) => {
   const importmapMinification = Boolean(
     urlInfo.context.getPluginMeta("willMinifyJson"),
   );
-  injectHtmlNodeAsEarlyAsPossible(
-    htmlAst,
-    createHtmlNode({
-      tagName: "script",
-      type: "importmap",
-      children: importmapMinification
-        ? JSON.stringify({ imports: mappings })
-        : JSON.stringify({ imports: mappings }, null, "  "),
-    }),
-    "jsenv:versioning",
-  );
+  const importmapNode = findHtmlNode(htmlAst, (node) => {
+    return (
+      node.tagName === "script" &&
+      getHtmlNodeAttribute(node, "type") === "importmap"
+    );
+  });
+  const generateMappingText = (mappings) => {
+    if (importmapMinification) {
+      return JSON.stringify({ imports: mappings });
+    }
+    return JSON.stringify({ imports: mappings }, null, "  ");
+  };
+
+  if (importmapNode) {
+    // we want to remove some mappings, override others, add eventually add new
+    const currentMappings = JSON.parse(getHtmlNodeText(importmapNode));
+    setHtmlNodeText(
+      importmapNode,
+      generateMappingText(getMappings(currentMappings.imports)),
+      { indentation: "auto" },
+    );
+  } else {
+    injectHtmlNodeAsEarlyAsPossible(
+      htmlAst,
+      createHtmlNode({
+        tagName: "script",
+        type: "importmap",
+        children: generateMappingText(getMappings(null)),
+      }),
+      "jsenv:versioning",
+    );
+  }
   urlInfo.mutateContent({
     content: stringifyHtmlAst(htmlAst),
   });

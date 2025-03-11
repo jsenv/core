@@ -646,6 +646,7 @@ build ${entryPointKeys.length} entry points`);
           registerHtmlRefine,
         });
       }
+
       mutate_html: {
         GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
           if (!urlInfo.url.startsWith("file:")) {
