@@ -168,6 +168,7 @@ ${packageConditions.join(",")}`);
     const moduleSystem = determineModuleSystem(importer, {
       ambiguousExtensions,
     });
+    logger.debug(`-> module system is ${moduleSystem}`);
     if (moduleSystem === "commonjs") {
       const requireForImporter = createRequire(importer);
       let filesystemPath;
