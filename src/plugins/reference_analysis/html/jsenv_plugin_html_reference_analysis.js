@@ -436,7 +436,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
                       setHtmlNodeAttributes(scriptNode, {
                         "src": undefined,
                         "jsenv-inlined-by": "jsenv:html_reference_analysis",
-                        "inlined-from-src": src,
+                        "inlined-from-src": importmapReference.url,
                       });
                     });
                   });
