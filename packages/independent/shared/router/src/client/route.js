@@ -1,5 +1,5 @@
 import { batch, effect, signal } from "@preact/signals";
-import { parseResourcePattern } from "../shared/resource_pattern.js";
+import { createResourcePattern } from "../shared/resource_pattern.js";
 import { createRoutes } from "../shared/routes.js";
 import {
   endDocumentRouting,
@@ -45,7 +45,7 @@ const createAndRegisterRoute = ({
   handler,
 }) => {
   resourcePattern = resourceFromUrl(resourcePattern);
-  const resourcePatternParsed = parseResourcePattern(resourcePattern);
+  const resourcePatternParsed = createResourcePattern(resourcePattern);
   const route = {
     methodPattern,
     resourcePattern,

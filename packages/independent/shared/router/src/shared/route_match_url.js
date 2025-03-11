@@ -1,6 +1,6 @@
-import { parseResourcePattern } from "./resource_pattern.js";
+import { createResourcePattern } from "./resource_pattern.js";
 
 export const routeMatchUrl = (resourcePattern, url) => {
-  const { match } = parseResourcePattern(resourcePattern);
+  const { match } = createResourcePattern(resourcePattern);
   return match(url);
 };

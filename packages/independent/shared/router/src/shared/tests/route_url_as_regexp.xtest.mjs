@@ -1,8 +1,8 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { parseResourcePattern } from "../resource_pattern.js";
+import { createResourcePattern } from "../resource_pattern.js";
 
 const convertPatternIntoRegexp = (pattern) =>
-  parseResourcePattern(pattern).regexp;
+  createResourcePattern(pattern).regexp;
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_id_at_end", () => convertPatternIntoRegexp("/before/:id"));
