@@ -1,4 +1,4 @@
-# [2_multiple](../../endpoint_negotiation.test.mjs#L136)
+# [2_multiple](../../endpoint_negotiation.test.mjs#L140)
 
 ```js
 const routes = [
@@ -9,10 +9,13 @@ const routes = [
     fetch: (request, { contentNegotiation }) => {
       const message =
         contentNegotiation.language === "fr" ? "Bonjour" : "Hello";
+      const headers = {
+        "content-language": contentNegotiation.language,
+      };
       if (contentNegotiation.mediaType === "application/json") {
-        return Response.json({ message });
+        return Response.json({ message }, { headers });
       }
-      return new Response(message);
+      return new Response(message, { headers });
     },
   },
 ];
@@ -50,12 +53,6 @@ GET http://127.0.0.1/users
   406 The server cannot produce a response in a format acceptable to the client:
   - content-type undefined
   - language undefined
-GET http://127.0.0.1/users
-The value "text/plain;charset=UTF-8" found in response header content-type is strange.
-It should be should be one of route.availableMediaTypes: application/json, text/plain.
-The response header content-language is missing.
-It should be set to one of route.availableLanguages: fr, en.
-  200
 ```
 
 </details>
@@ -82,6 +79,7 @@ It should be set to one of route.availableLanguages: fr, en.
   "GET users accepting text and language FR": {
     "status": 200,
     "headers": {
+      "content-language": "fr",
       "content-type": "text/plain;charset=UTF-8",
       "vary": "accept, accept-language",
       "date": "<X>",

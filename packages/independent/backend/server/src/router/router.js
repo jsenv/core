@@ -224,7 +224,7 @@ export const createRouter = (
         version: "content-version",
         encoding: "content-encoding",
       }[name];
-      const responseHeaderValue = responseHeaders[responseHeaderName];
+      let responseHeaderValue = responseHeaders[responseHeaderName];
       if (!responseHeaderValue) {
         request.logger.warn(
           `The response header ${responseHeaderName} is missing.
@@ -232,7 +232,31 @@ It should be set to one of route.${routePropertyName}: ${availableValues.join(",
         );
         return;
       }
-      if (!availableValues.includes(responseHeaderValue)) {
+      if (responseHeaderName === "content-type") {
+        responseHeaderValue = CONTENT_TYPE.asMediaType(responseHeaderValue);
+      }
+      if (
+        responseHeaderName === "content-version" &&
+        isFinite(responseHeaderValue)
+      ) {
+        responseHeaderValue = parseFloat(responseHeaderValue);
+      }
+      let matchesAnAvailableValue = false;
+      for (const availableValue of availableValues) {
+        if (responseHeaderValue === availableValue) {
+          matchesAnAvailableValue = true;
+          break;
+        }
+        if (
+          typeof availableValue === "function" &&
+          availableValue(responseHeaderValue)
+        ) {
+          matchesAnAvailableValue = true;
+          break;
+        }
+      }
+
+      if (!matchesAnAvailableValue) {
         request.logger.warn(
           `The value "${responseHeaderValue}" found in response header ${responseHeaderName} is strange.
 It should be should be one of route.${routePropertyName}: ${availableValues.join(", ")}.`,

@@ -88,14 +88,18 @@ await snapshotTests(import.meta.url, ({ test }) => {
         endpoint: "GET /users",
         availableLanguages: ["fr"],
         fetch: () => {
-          return new Response("Bonjour");
+          return new Response("Bonjour", {
+            headers: { "content-language": "fr" },
+          });
         },
       },
       {
         endpoint: "GET /users",
         availableLanguages: ["en"],
         fetch: () => {
-          return new Response("Hello");
+          return new Response("Hello", {
+            headers: { "content-language": "en" },
+          });
         },
       },
     ];
@@ -142,10 +146,13 @@ await snapshotTests(import.meta.url, ({ test }) => {
         fetch: (request, { contentNegotiation }) => {
           const message =
             contentNegotiation.language === "fr" ? "Bonjour" : "Hello";
+          const headers = {
+            "content-language": contentNegotiation.language,
+          };
           if (contentNegotiation.mediaType === "application/json") {
-            return Response.json({ message });
+            return Response.json({ message }, { headers });
           }
-          return new Response(message);
+          return new Response(message, { headers });
         },
       },
     ];

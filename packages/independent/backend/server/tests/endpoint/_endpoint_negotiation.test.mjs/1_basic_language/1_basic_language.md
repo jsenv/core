@@ -6,14 +6,18 @@ const routes = [
     endpoint: "GET /users",
     availableLanguages: ["fr"],
     fetch: () => {
-      return new Response("Bonjour");
+      return new Response("Bonjour", {
+        headers: { "content-language": "fr" },
+      });
     },
   },
   {
     endpoint: "GET /users",
     availableLanguages: ["en"],
     fetch: () => {
-      return new Response("Hello");
+      return new Response("Hello", {
+        headers: { "content-language": "en" },
+      });
     },
   },
 ];
@@ -60,20 +64,8 @@ return {
 
 ```console
 GET http://127.0.0.1/users
-The response header content-language is missing.
-It should be set to one of route.availableLanguages: fr.
-  200
-GET http://127.0.0.1/users
   406 The server cannot produce a response in any of the languages accepted by the request: "de".
   Available languages: fr, en.
-GET http://127.0.0.1/users
-The response header content-language is missing.
-It should be set to one of route.availableLanguages: fr.
-  200
-GET http://127.0.0.1/users
-The response header content-language is missing.
-It should be set to one of route.availableLanguages: en.
-  200
 ```
 
 </details>
@@ -86,6 +78,7 @@ It should be set to one of route.availableLanguages: en.
   "GET users without accept-language header": {
     "status": 200,
     "headers": {
+      "content-language": "fr",
       "content-type": "text/plain;charset=UTF-8",
       "vary": "accept-language",
       "date": "<X>",
@@ -111,6 +104,7 @@ It should be set to one of route.availableLanguages: en.
   "GET users accepting FR language": {
     "status": 200,
     "headers": {
+      "content-language": "fr",
       "content-type": "text/plain;charset=UTF-8",
       "vary": "accept-language",
       "date": "<X>",
@@ -123,6 +117,7 @@ It should be set to one of route.availableLanguages: en.
   "GET users accepting EN language": {
     "status": 200,
     "headers": {
+      "content-language": "en",
       "content-type": "text/plain;charset=UTF-8",
       "vary": "accept-language",
       "date": "<X>",

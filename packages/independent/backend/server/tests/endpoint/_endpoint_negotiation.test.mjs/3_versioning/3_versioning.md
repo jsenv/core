@@ -1,4 +1,4 @@
-# [3_versioning](../../endpoint_negotiation.test.mjs#L174)
+# [3_versioning](../../endpoint_negotiation.test.mjs#L181)
 
 ```js
 const routes = [
@@ -84,43 +84,6 @@ return {
 };
 ```
 
-# 1/2 logs
-
-![img](log_group.svg)
-
-<details>
-  <summary>see without style</summary>
-
-```console
-GET http://127.0.0.1/users
-The value "3" found in response header content-version is strange.
-It should be should be one of route.availableVersions: (value) => parseInt(value) > 2.
-  200
-GET http://127.0.0.1/users
-The value "3" found in response header content-version is strange.
-It should be should be one of route.availableVersions: (value) => parseInt(value) > 2.
-  200
-GET http://127.0.0.1/users
-The value "1" found in response header content-version is strange.
-It should be should be one of route.availableVersions: 1.
-  200
-GET http://127.0.0.1/users
-The value "2" found in response header content-version is strange.
-It should be should be one of route.availableVersions: 2.
-  200
-GET http://127.0.0.1/users
-The value "3" found in response header content-version is strange.
-It should be should be one of route.availableVersions: (value) => parseInt(value) > 2.
-  200
-```
-
-</details>
-
-
-# 2/2 resolve
-  <details>
-  <summary>details</summary>
-
 ```js
 {
   "GET /users without setting accept-version": {
@@ -203,8 +166,6 @@ It should be should be one of route.availableVersions: (value) => parseInt(value
   }
 }
 ```
-
-</details>
 
 ---
 
