@@ -103,9 +103,7 @@ export const createKitchen = ({
 
   const isIgnoredByProtocol = (url) => {
     const { protocol } = new URL(url);
-    const protocolIsSupported = supportedProtocols.some(
-      (supportedProtocol) => protocol === supportedProtocol,
-    );
+    const protocolIsSupported = supportedProtocols.includes(protocol);
     return !protocolIsSupported;
   };
   let isIgnoredByParam = () => false;
@@ -148,6 +146,12 @@ export const createKitchen = ({
           ? isIgnored(reference.original.url)
           : isIgnored(referenceUrl)
       ) {
+        if (
+          referenceUrl.startsWith("node:") &&
+          !reference.specifier.startsWith("node:")
+        ) {
+          reference.specifier = `node:${reference.specifier}`;
+        }
         referenceUrl = `ignore:${referenceUrl}`;
       }
 
