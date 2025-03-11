@@ -17,6 +17,19 @@ export const jsenvPluginFsRedirection = ({
     name: "jsenv:fs_redirection",
     appliesDuring: "*",
     redirectReference: (reference) => {
+      if (reference.url === "file:///") {
+        return `ignore:file:///`;
+      }
+      if (reference.url === "file://") {
+        return `ignore:file://`;
+      }
+      // ignore all new URL second arg
+      if (reference.subtype === "new_url_second_arg") {
+        if (reference.original) {
+          return `ignore:${reference.original.specifier}`;
+        }
+        return `ignore:${reference.specifier}`;
+      }
       // http, https, data, about, ...
       if (!reference.url.startsWith("file:")) {
         return null;
@@ -27,13 +40,7 @@ export const jsenvPluginFsRedirection = ({
       if (reference.isInline) {
         return null;
       }
-      if (reference.url === "file:///" || reference.url === "file://") {
-        return `ignore:file:///`;
-      }
-      // ignore all new URL second arg
-      if (reference.subtype === "new_url_second_arg") {
-        return `ignore:${reference.url}`;
-      }
+
       if (
         reference.specifierPathname.endsWith(`/${directoryContentMagicName}`)
       ) {

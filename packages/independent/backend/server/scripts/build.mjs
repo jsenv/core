@@ -18,6 +18,7 @@ await build({
     return "error";
   },
   scenarioPlaceholders: false,
+  http: true,
   plugins: [
     jsenvPluginCommonJs({
       include: {

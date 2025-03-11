@@ -754,13 +754,7 @@
         Function("r", "regeneratorRuntime = r")(runtime);
       }
     </script>
-    <script type="importmap">{
-  "imports": {
-    "preact": "https://esm.sh/preact@10.23.1",
-    "@preact/signals": "https://esm.sh/@preact/signals@1.3.0?external=preact",
-    "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
-  }
-}</script>
+    
     <script>
       /**
        * Example of how you'd use this:
@@ -1770,10 +1764,10 @@ label .filter_text {
     </script>
     <script type="module">
       // https://preactjs.com/guide/v10/no-build-workflows/
-      import { render } from "preact";
-      import { html } from "htm/preact";
-      import { signal, computed } from "@preact/signals";
-      import { useState, useRef, useCallback } from "preact/hooks";
+      import { render } from "./js/preact@10.23.1.js";
+      import { html } from "./js/preact.js?external=preact";
+      import { signal, computed } from "./js/signals@1.3.0.js?external=preact";
+      import { useState, useRef, useCallback } from "./js/hooks.js";
 
       const routesLoadingSignal = signal(false);
       const routeLoadingErrorSignal = signal(null);
