@@ -23,11 +23,10 @@ await snapshotBuildTests(import.meta.url, ({ test }) => {
   // can use <script type="module">
   // disabled because for now it would fail as import map gets removed
   // and there is "preact" raw specifier in the html/preact package
-  test.ONLY("0_js_module", () =>
+  test("0_js_module", () =>
     run({
       runtimeCompat: { chrome: "89" },
-    }),
-  );
+    }));
 
   test("0_js_module_http_enabled", () =>
     run({
