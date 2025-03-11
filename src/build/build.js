@@ -625,27 +625,16 @@ build ${entryPointKeys.length} entry points`);
 
     refine: {
       finalKitchen.context.buildStep = "refine";
+
+      const htmlRefineSet = new Set();
+      const registerHtmlRefine = (htmlRefine) => {
+        htmlRefineSet.add(htmlRefine);
+      };
+
       replace_placeholders: {
         await buildSpecifierManager.replacePlaceholders();
       }
-      cleanup_jsenv_attributes_from_html: {
-        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-          if (!urlInfo.url.startsWith("file:")) {
-            return;
-          }
-          if (urlInfo.type === "html") {
-            const htmlAst = parseHtml({
-              html: urlInfo.content,
-              url: urlInfo.url,
-              storeOriginalPositions: false,
-            });
-            urlInfo.content = stringifyHtmlAst(htmlAst, {
-              cleanupJsenvAttributes: true,
-              cleanupPositionAttributes: true,
-            });
-          }
-        });
-      }
+
       /*
        * Update <link rel="preload"> and friends after build (once we know everything)
        * - Used to remove resource hint targeting an url that is no longer used:
@@ -653,14 +642,41 @@ build ${entryPointKeys.length} entry points`);
        *   - because of import assertions transpilation (file is inlined into JS)
        */
       resync_resource_hints: {
-        const resync = buildSpecifierManager.prepareResyncResourceHints();
-        if (resync) {
-          const resyncTask = createBuildTask("resync resource hints");
-          resync();
-          buildOperation.throwIfAborted();
-          resyncTask.done();
-        }
+        buildSpecifierManager.prepareResyncResourceHints({
+          registerHtmlRefine,
+        });
       }
+      mutate_html: {
+        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
+          if (!urlInfo.url.startsWith("file:")) {
+            return;
+          }
+          if (urlInfo.type !== "html") {
+            return;
+          }
+          const htmlAst = parseHtml({
+            html: urlInfo.content,
+            url: urlInfo.url,
+            storeOriginalPositions: false,
+          });
+          for (const htmlRefine of htmlRefineSet) {
+            const htmlMutationCallbackSet = new Set();
+            const registerHtmlMutation = (callback) => {
+              htmlMutationCallbackSet.add(callback);
+            };
+            htmlRefine(htmlAst, { registerHtmlMutation });
+            for (const htmlMutationCallback of htmlMutationCallbackSet) {
+              htmlMutationCallback();
+            }
+          }
+          // cleanup jsenv attributes from html as a last step
+          urlInfo.content = stringifyHtmlAst(htmlAst, {
+            cleanupJsenvAttributes: true,
+            cleanupPositionAttributes: true,
+          });
+        });
+      }
+
       inject_urls_in_service_workers: {
         const inject = buildSpecifierManager.prepareServiceWorkerUrlInjection();
         if (inject) {

@@ -28,9 +28,9 @@ import { GRAPH_VISITOR } from "../kitchen/url_graph/url_graph_visitor.js";
 import { isWebWorkerUrlInfo } from "../kitchen/web_workers.js";
 import { createBuildUrlsGenerator } from "./build_urls_generator.js";
 import {
-  injectVersionMappingsAsGlobal,
-  injectVersionMappingsAsImportmap,
-} from "./version_mappings_injection.js";
+  injectGlobalMappings,
+  injectImportmapMappings,
+} from "./mappings_injection.js";
 
 export const createBuildSpecifierManager = ({
   rawKitchen,
@@ -646,6 +646,9 @@ export const createBuildSpecifierManager = ({
     }
   };
 
+  const importMappings = {};
+  const globalMappings = {};
+
   const applyVersioningOnBuildSpecifier = (buildSpecifier, reference) => {
     if (!versioning) {
       return buildSpecifier;
@@ -671,10 +674,6 @@ export const createBuildSpecifierManager = ({
   };
   const finishVersioning = async () => {
     inject_global_registry_and_importmap: {
-      const actions = [];
-      const visitors = [];
-      const globalMappings = {};
-      const importmapMappings = {};
       for (const [reference, versioningInfo] of referenceVersioningInfoMap) {
         if (versioningInfo.type === "global") {
           const urlInfo = reference.urlInfo;
@@ -690,37 +689,7 @@ export const createBuildSpecifierManager = ({
           const buildSpecifier = buildUrlToBuildSpecifierMap.get(buildUrl);
           const buildSpecifierVersioned =
             buildSpecifierToBuildSpecifierVersionedMap.get(buildSpecifier);
-          importmapMappings[buildSpecifier] = buildSpecifierVersioned;
-        }
-      }
-      if (Object.keys(globalMappings).length > 0) {
-        visitors.push((urlInfo) => {
-          if (urlInfo.isEntryPoint) {
-            actions.push(async () => {
-              await injectVersionMappingsAsGlobal(urlInfo, globalMappings);
-            });
-          }
-        });
-      }
-      if (Object.keys(importmapMappings).length > 0) {
-        visitors.push((urlInfo) => {
-          if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
-            actions.push(async () => {
-              await injectVersionMappingsAsImportmap(
-                urlInfo,
-                importmapMappings,
-              );
-            });
-          }
-        });
-      }
-      if (visitors.length) {
-        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-          if (urlInfo.isRoot) return;
-          visitors.forEach((visitor) => visitor(urlInfo));
-        });
-        if (actions.length) {
-          await Promise.all(actions.map((action) => action()));
+          importMappings[buildSpecifier] = buildSpecifierVersioned;
         }
       }
     }
@@ -751,7 +720,6 @@ export const createBuildSpecifierManager = ({
       if (versioning) {
         prepareVersioning();
       }
-
       const urlInfoSet = new Set();
       GRAPH_VISITOR.forEachUrlInfoStronglyReferenced(
         finalKitchen.graph.rootUrlInfo,
@@ -788,10 +756,42 @@ export const createBuildSpecifierManager = ({
           }
         },
       );
-
       referenceInSeparateContextSet.clear();
       if (versioning) {
         await finishVersioning();
+      }
+      const actions = [];
+      const visitors = [];
+      if (Object.keys(globalMappings).length > 0) {
+        visitors.push((urlInfo) => {
+          if (urlInfo.isEntryPoint) {
+            actions.push(async () => {
+              await injectGlobalMappings(urlInfo, globalMappings);
+            });
+          }
+        });
+      }
+      if (Object.keys(importMappings).length > 0) {
+        visitors.push((urlInfo) => {
+          if (urlInfo.type === "html" && urlInfo.isEntryPoint) {
+            actions.push(async () => {
+              await injectImportmapMappings(urlInfo, importMappings);
+            });
+          }
+        });
+      }
+      if (visitors.length) {
+        GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
+          if (urlInfo.isRoot) {
+            return;
+          }
+          for (const visitor of visitors) {
+            visitor(urlInfo);
+          }
+        });
+        if (actions.length) {
+          await Promise.all(actions.map((action) => action()));
+        }
       }
 
       for (const urlInfo of urlInfoSet) {
@@ -809,19 +809,9 @@ export const createBuildSpecifierManager = ({
       urlInfoSet.clear();
     },
 
-    prepareResyncResourceHints: () => {
-      const actions = [];
-      GRAPH_VISITOR.forEach(finalKitchen.graph, (urlInfo) => {
-        if (urlInfo.type !== "html") {
-          return;
-        }
-        const htmlAst = parseHtml({
-          html: urlInfo.content,
-          url: urlInfo.url,
-          storeOriginalPositions: false,
-        });
-        const mutations = [];
-        const hintToInjectMap = new Map();
+    prepareResyncResourceHints: ({ registerHtmlRefine }) => {
+      const hintToInjectMap = new Map();
+      registerHtmlRefine((htmlAst, { registerHtmlMutation }) => {
         visitHtmlNodes(htmlAst, {
           link: (node) => {
             const href = getHtmlNodeAttribute(node, "href");
@@ -846,7 +836,7 @@ export const createBuildSpecifierManager = ({
               logger.warn(
                 `${UNICODE.WARNING} remove resource hint because cannot find "${href}" in the graph`,
               );
-              mutations.push(() => {
+              registerHtmlMutation(() => {
                 removeHtmlNode(node);
               });
               return;
@@ -857,7 +847,7 @@ export const createBuildSpecifierManager = ({
                 logger.warn(
                   `${UNICODE.WARNING} remove resource hint on "${href}" because it was bundled`,
                 );
-                mutations.push(() => {
+                registerHtmlMutation(() => {
                   removeHtmlNode(node);
                 });
                 return;
@@ -865,13 +855,13 @@ export const createBuildSpecifierManager = ({
               logger.warn(
                 `${UNICODE.WARNING} remove resource hint on "${href}" because it is not used anymore`,
               );
-              mutations.push(() => {
+              registerHtmlMutation(() => {
                 removeHtmlNode(node);
               });
               return;
             }
             const buildGeneratedSpecifier = getBuildGeneratedSpecifier(urlInfo);
-            mutations.push(() => {
+            registerHtmlMutation(() => {
               setHtmlNodeAttributes(node, {
                 href: buildGeneratedSpecifier,
                 ...(urlInfo.type === "js_classic"
@@ -890,43 +880,31 @@ export const createBuildSpecifierManager = ({
             }
           },
         });
-        hintToInjectMap.forEach(({ node }, urlInfo) => {
-          const buildGeneratedSpecifier = getBuildGeneratedSpecifier(urlInfo);
+        for (const [{ node }, referencedUrlInfo] of hintToInjectMap) {
+          const buildGeneratedSpecifier =
+            getBuildGeneratedSpecifier(referencedUrlInfo);
           const found = findHtmlNode(htmlAst, (htmlNode) => {
             return (
               htmlNode.nodeName === "link" &&
               getHtmlNodeAttribute(htmlNode, "href") === buildGeneratedSpecifier
             );
           });
-          if (!found) {
-            mutations.push(() => {
-              const nodeToInsert = createHtmlNode({
-                tagName: "link",
-                rel: getHtmlNodeAttribute(node, "rel"),
-                href: buildGeneratedSpecifier,
-                as: getHtmlNodeAttribute(node, "as"),
-                type: getHtmlNodeAttribute(node, "type"),
-                crossorigin: getHtmlNodeAttribute(node, "crossorigin"),
-              });
-              insertHtmlNodeAfter(nodeToInsert, node);
-            });
+          if (found) {
+            continue;
           }
-        });
-        if (mutations.length > 0) {
-          actions.push(() => {
-            mutations.forEach((mutation) => mutation());
-            urlInfo.mutateContent({
-              content: stringifyHtmlAst(htmlAst),
+          registerHtmlMutation(() => {
+            const nodeToInsert = createHtmlNode({
+              tagName: "link",
+              rel: getHtmlNodeAttribute(node, "rel"),
+              href: buildGeneratedSpecifier,
+              as: getHtmlNodeAttribute(node, "as"),
+              type: getHtmlNodeAttribute(node, "type"),
+              crossorigin: getHtmlNodeAttribute(node, "crossorigin"),
             });
+            insertHtmlNodeAfter(nodeToInsert, node);
           });
         }
       });
-      if (actions.length === 0) {
-        return null;
-      }
-      return () => {
-        actions.map((resourceHintAction) => resourceHintAction());
-      };
     },
 
     prepareServiceWorkerUrlInjection: () => {

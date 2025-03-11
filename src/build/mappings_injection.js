@@ -10,15 +10,12 @@ import {
 import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 import { prependContent } from "../kitchen/prepend_content.js";
 
-export const injectVersionMappingsAsGlobal = async (
-  urlInfo,
-  versionMappings,
-) => {
+export const injectGlobalMappings = async (urlInfo, mappings) => {
   if (urlInfo.type === "html") {
     const minification = Boolean(
       urlInfo.context.getPluginMeta("willMinifyJsClassic"),
     );
-    const content = generateClientCodeForVersionMappings(versionMappings, {
+    const content = generateClientCodeForMappings(mappings, {
       globalName: "window",
       minification,
     });
@@ -29,7 +26,7 @@ export const injectVersionMappingsAsGlobal = async (
     const minification = Boolean(
       urlInfo.context.getPluginMeta("willMinifyJsClassic"),
     );
-    const content = generateClientCodeForVersionMappings(versionMappings, {
+    const content = generateClientCodeForMappings(mappings, {
       globalName: isWebWorkerUrlInfo(urlInfo) ? "self" : "window",
       minification,
     });
@@ -38,7 +35,7 @@ export const injectVersionMappingsAsGlobal = async (
   }
 };
 
-const generateClientCodeForVersionMappings = (
+const generateClientCodeForMappings = (
   versionMappings,
   { globalName, minification },
 ) => {
@@ -57,7 +54,7 @@ const generateClientCodeForVersionMappings = (
 })();`;
 };
 
-export const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
+export const injectImportmapMappings = (urlInfo, mappings) => {
   const htmlAst = parseHtml({
     html: urlInfo.content,
     url: urlInfo.url,
@@ -75,8 +72,8 @@ export const injectVersionMappingsAsImportmap = (urlInfo, versionMappings) => {
       tagName: "script",
       type: "importmap",
       children: importmapMinification
-        ? JSON.stringify({ imports: versionMappings })
-        : JSON.stringify({ imports: versionMappings }, null, "  "),
+        ? JSON.stringify({ imports: mappings })
+        : JSON.stringify({ imports: mappings }, null, "  "),
     }),
     "jsenv:versioning",
   );

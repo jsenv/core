@@ -7,7 +7,6 @@ import {
   getUrlForContentInsideHtml,
   parseHtml,
   parseSrcSet,
-  removeHtmlNode,
   removeHtmlNodeText,
   setHtmlNodeAttributes,
   setHtmlNodeText,
@@ -63,22 +62,25 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
         // no importmap in this HTML file
         importmaps[htmlUrl] = null;
       }
-      globalImportmap = Object.keys(importmaps).reduce((previous, url) => {
+      let importmapFinal = null;
+      for (const url of Object.keys(importmaps)) {
         const importmap = importmaps[url];
-        if (!previous) {
-          return importmap;
-        }
         if (!importmap) {
-          return previous;
+          continue;
         }
-        return composeTwoImportMaps(previous, importmap);
-      }, null);
+        if (!importmapFinal) {
+          importmapFinal = importmap;
+          continue;
+        }
+        importmapFinal = composeTwoImportMaps(importmapFinal, importmap);
+      }
+      globalImportmap = importmapFinal;
 
       importmapLoadingCount--;
       if (importmapLoadingCount === 0) {
-        allImportmapLoadedCallbackSet.forEach((callback) => {
-          callback();
-        });
+        for (const allImportmapLoadedCallback of allImportmapLoadedCallbackSet) {
+          allImportmapLoadedCallback();
+        }
         allImportmapLoadedCallbackSet.clear();
       }
     };
@@ -103,6 +105,7 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
             },
           });
           if (fromMapping) {
+            reference.data.fromMapping = true;
             return result;
           }
           return null;
@@ -470,16 +473,6 @@ export const jsenvPluginHtmlReferenceAnalysis = ({
                       });
                     });
                   }
-                }
-                // once this plugin knows the importmap, it will use it
-                // to map imports. These import specifiers will be normalized
-                // by "formatReference" making the importmap presence useless.
-                // In dev/test we keep importmap into the HTML to see it even if useless
-                // Duing build we get rid of it
-                if (urlInfo.context.build) {
-                  mutations.push(() => {
-                    removeHtmlNode(scriptNode);
-                  });
                 }
                 return;
               }
