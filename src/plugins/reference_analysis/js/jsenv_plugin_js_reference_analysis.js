@@ -100,6 +100,14 @@ const parseAndTransformJsReferences = async (
       externalReferenceInfo.expectedType = "js_module";
     }
 
+    let filenameHint;
+    if (
+      externalReferenceInfo.subtype === "import_dynamic" &&
+      isBareSpecifier(externalReferenceInfo.specifier)
+    ) {
+      filenameHint = `${externalReferenceInfo.specifier}.js`;
+    }
+
     let isEntryPoint;
     if (
       isNodeJs &&
@@ -140,11 +148,7 @@ const parseAndTransformJsReferences = async (
       isSideEffectImport: externalReferenceInfo.isSideEffectImport,
       astInfo: externalReferenceInfo.astInfo,
       isEntryPoint,
-      filenameHint:
-        externalReferenceInfo.subtype === "import_dynamic" &&
-        isBareSpecifier(externalReferenceInfo.specifier)
-          ? `${externalReferenceInfo.specifier}.js`
-          : undefined,
+      filenameHint,
     });
 
     parallelActions.push(async () => {

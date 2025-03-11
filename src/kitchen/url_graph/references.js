@@ -274,6 +274,7 @@ const createReference = ({
   baseUrl,
   isOriginalPosition,
   isEntryPoint = false,
+  isDynamicEntryPoint = false,
   isResourceHint = false,
   // implicit references are not real references
   // they represent an abstract relationship
@@ -349,6 +350,7 @@ const createReference = ({
     isOriginalPosition,
     baseUrl,
     isEntryPoint,
+    isDynamicEntryPoint,
     isResourceHint,
     isImplicit,
     implicitReferenceSet: new Set(),
@@ -732,6 +734,9 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
 
   if (reference.isEntryPoint) {
     referencedUrlInfo.isEntryPoint = true;
+  }
+  if (reference.isDynamicEntryPoint) {
+    referencedUrlInfo.isDynamicEntryPoint = true;
   }
   Object.assign(referencedUrlInfo.data, reference.data);
   Object.assign(referencedUrlInfo.timing, reference.timing);

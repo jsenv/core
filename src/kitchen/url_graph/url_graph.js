@@ -205,6 +205,7 @@ const createUrlInfo = (url, context) => {
     url: null,
     originalUrl: undefined,
     isEntryPoint: false,
+    isDynamicEntryPoint: false,
     entryUrlInfo: null,
     originalContent: undefined,
     originalContentAst: undefined,

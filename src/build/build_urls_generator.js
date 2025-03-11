@@ -127,7 +127,7 @@ const determineDirectoryPath = ({
     });
     return parentDirectoryPath;
   }
-  if (urlInfo.isEntryPoint) {
+  if (urlInfo.isEntryPoint && !urlInfo.isDynamicEntryPoint) {
     return "";
   }
   if (urlInfo.type === "importmap") {
