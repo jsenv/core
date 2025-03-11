@@ -6491,7 +6491,7 @@ const replacePlaceholdersInHtml = (html, replacers) => {
   });
 };
 
-const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./4xx.html");
+const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./html/4xx.html");
 
 const jsenvServiceDefaultBody4xx5xx = () => {
   return {
@@ -6570,6 +6570,38 @@ const generateBadStatusResponse = (
   );
 };
 
+const jsenvServerRootDirectoryUrl = import.meta.resolve("../");
+
+const jsenvServiceInternalClientFiles = () => {
+  return {
+    name: "jsenv:internal_client_files",
+
+    routes: [
+      {
+        endpoint: "GET /@jsenv/server/*",
+        description: "Serve @jsenv/server internal files.",
+        availableMediaTypes: ["text/javascript"],
+        declarationSource: import.meta.url,
+        fetch: (request) => {
+          const path = request.params[0];
+          const jsenvServerClientFileUrl = new URL(
+            `./${path}`,
+            jsenvServerRootDirectoryUrl,
+          );
+          const fileContent = readFileSync(jsenvServerClientFileUrl, "utf8");
+          return new Response(fileContent, {
+            headers: {
+              "content-type": CONTENT_TYPE.fromUrlExtension(
+                jsenvServerClientFileUrl,
+              ),
+            },
+          });
+        },
+      },
+    ],
+  };
+};
+
 const jsenvServiceOpenFile = () => {
   return {
     name: "jsenv:open_file",
@@ -6606,7 +6638,7 @@ const jsenvServiceOpenFile = () => {
 };
 
 const routeInspectorHtmlFileUrl = import.meta.resolve(
-  "./route_inspector.html",
+  "./html/route_inspector.html",
 );
 
 const jsenvServiceRouteInspector = () => {
@@ -6879,9 +6911,7 @@ const startServer = async ({
     jsenvServiceOpenFile(),
     jsenvServiceDefaultBody4xx5xx(),
     jsenvServiceRouteInspector(),
-    ...(// after build internal client files are inlined, no need for this service anymore
-        []
-      ),
+    jsenvServiceInternalClientFiles(),
     jsenvServiceAutoreloadOnRestart(),
     ...flattenAndFilterServices(services),
   ];
@@ -7783,7 +7813,7 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   exit: STOP_REASON_PROCESS_EXIT,
 };
 
-const internalErrorHtmlFileUrl = import.meta.resolve("./500.html");
+const internalErrorHtmlFileUrl = import.meta.resolve("./html/500.html");
 
 const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {

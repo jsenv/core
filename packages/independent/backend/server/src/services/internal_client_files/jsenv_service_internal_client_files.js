@@ -1,9 +1,7 @@
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 import { readFileSync } from "node:fs";
 
-const jsenvServerRootDirectoryUrl = import.meta.build
-  ? ""
-  : import.meta.resolve("../../../");
+const jsenvServerRootDirectoryUrl = import.meta.resolve("../../../");
 
 export const jsenvServiceInternalClientFiles = () => {
   return {

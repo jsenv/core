@@ -158,10 +158,7 @@ export const startServer = async ({
     jsenvServiceOpenFile(),
     jsenvServiceDefaultBody4xx5xx(),
     jsenvServiceRouteInspector(),
-    ...(import.meta.build
-      ? // after build internal client files are inlined, no need for this service anymore
-        []
-      : [jsenvServiceInternalClientFiles()]),
+    jsenvServiceInternalClientFiles(),
     jsenvServiceAutoreloadOnRestart(),
     ...flattenAndFilterServices(services),
   ];
