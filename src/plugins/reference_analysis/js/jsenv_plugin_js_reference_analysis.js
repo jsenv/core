@@ -1,9 +1,11 @@
 import { getUrlForContentInsideJs, parseJsUrls } from "@jsenv/ast";
+import {
+  isWebWorkerEntryPointReference,
+  isWebWorkerUrlInfo,
+} from "@jsenv/core/src/kitchen/web_workers.js";
 import { createMagicSource } from "@jsenv/sourcemap";
 import { urlToExtension } from "@jsenv/urls";
 import { JS_QUOTES } from "@jsenv/utils/src/string/js_quotes.js";
-
-import { isWebWorkerUrlInfo } from "@jsenv/core/src/kitchen/web_workers.js";
 
 export const jsenvPluginJsReferenceAnalysis = ({ inlineContent }) => {
   return [
@@ -97,6 +99,24 @@ const parseAndTransformJsReferences = async (
     ) {
       externalReferenceInfo.expectedType = "js_module";
     }
+
+    let isEntryPoint;
+    if (
+      isNodeJs &&
+      (externalReferenceInfo.type === "js_url" ||
+        externalReferenceInfo.subtype === "import_meta_resolve")
+    ) {
+      isEntryPoint = true;
+    } else if (
+      isWebWorkerEntryPointReference({
+        subtype: externalReferenceInfo.subtype,
+        expectedSubtype: externalReferenceInfo.expectedSubtype,
+      })
+    ) {
+      isEntryPoint = true;
+    } else {
+      isEntryPoint = false;
+    }
     const reference = urlInfo.dependencies.found({
       type: externalReferenceInfo.type,
       subtype: externalReferenceInfo.subtype,
@@ -119,6 +139,7 @@ const parseAndTransformJsReferences = async (
       importAttributes: externalReferenceInfo.importAttributes,
       isSideEffectImport: externalReferenceInfo.isSideEffectImport,
       astInfo: externalReferenceInfo.astInfo,
+      isEntryPoint,
     });
     parallelActions.push(async () => {
       await reference.readGeneratedSpecifier();

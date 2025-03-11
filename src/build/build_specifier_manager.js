@@ -338,7 +338,7 @@ export const createBuildSpecifierManager = ({
 
   const versionMap = new Map();
 
-  const workerReferenceSet = new Set();
+  const referenceInSeparateContextSet = new Set();
   const referenceVersioningInfoMap = new Map();
   const _getReferenceVersioningInfo = (reference) => {
     if (!shouldApplyVersioningOnReference(reference)) {
@@ -395,7 +395,7 @@ export const createBuildSpecifierManager = ({
           },
         };
       }
-      if (canUseImportmap && !isInsideWorker(reference)) {
+      if (canUseImportmap && !isInsideSeparateContext(reference)) {
         return {
           type: "importmap",
           render: (buildSpecifier) => {
@@ -422,8 +422,8 @@ export const createBuildSpecifierManager = ({
     referenceVersioningInfoMap.set(reference, info);
     return info;
   };
-  const isInsideWorker = (reference) => {
-    if (workerReferenceSet.has(reference)) {
+  const isInsideSeparateContext = (reference) => {
+    if (referenceInSeparateContextSet.has(reference)) {
       return true;
     }
     const referenceOwnerUrllInfo = reference.ownerUrlInfo;
@@ -443,7 +443,7 @@ export const createBuildSpecifierManager = ({
       );
     }
     if (is) {
-      workerReferenceSet.add(reference);
+      referenceInSeparateContextSet.add(reference);
       return true;
     }
     return false;
@@ -789,7 +789,7 @@ export const createBuildSpecifierManager = ({
         },
       );
 
-      workerReferenceSet.clear();
+      referenceInSeparateContextSet.clear();
       if (versioning) {
         await finishVersioning();
       }

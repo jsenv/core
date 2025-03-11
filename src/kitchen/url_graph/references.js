@@ -9,7 +9,6 @@ import {
 } from "@jsenv/urls";
 
 import { prependContent } from "../prepend_content.js";
-import { isWebWorkerEntryPointReference } from "../web_workers.js";
 
 let referenceId = 0;
 
@@ -731,7 +730,7 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   referencedUrlInfo.originalUrl =
     referencedUrlInfo.originalUrl || (reference.original || reference).url;
 
-  if (reference.isEntryPoint || isWebWorkerEntryPointReference(reference)) {
+  if (reference.isEntryPoint) {
     referencedUrlInfo.isEntryPoint = true;
   }
   Object.assign(referencedUrlInfo.data, reference.data);
