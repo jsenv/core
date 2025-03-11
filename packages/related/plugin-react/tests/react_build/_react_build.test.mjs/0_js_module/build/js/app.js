@@ -1,0 +1,1 @@
+import e from"/js/react.js";import o from"/js/react-dom/client.js";import{jsx as r}from"/js/react/jsx-runtime.js";const{Root:t}=await import(__v__("/js/root.js"));o.createRoot(document.querySelector("#app")).render(r(e.StrictMode,{children:r(t,{onRender:()=>{window.resolveResultPromise({spanContent:document.querySelector("#app span").innerHTML})}})}));

@@ -1,0 +1,2435 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route inspector</title>
+    <script>
+      /**
+       * Copyright (c) 2014-present, Facebook, Inc.
+       *
+       * This source code is licensed under the MIT license found in the
+       * LICENSE file in the root directory of this source tree.
+       */
+      
+      var runtime = (function (exports) {
+      
+        var Op = Object.prototype;
+        var hasOwn = Op.hasOwnProperty;
+        var undefined$1; // More compressible than void 0.
+        var $Symbol = typeof Symbol === "function" ? Symbol : {};
+        var iteratorSymbol = $Symbol.iterator || "@@iterator";
+        var asyncIteratorSymbol = $Symbol.asyncIterator || "@@asyncIterator";
+        var toStringTagSymbol = $Symbol.toStringTag || "@@toStringTag";
+      
+        function define(obj, key, value) {
+          Object.defineProperty(obj, key, {
+            value: value,
+            enumerable: true,
+            configurable: true,
+            writable: true
+          });
+          return obj[key];
+        }
+        try {
+          // IE 8 has a broken Object.defineProperty that only works on DOM objects.
+          define({}, "");
+        } catch (err) {
+          define = function(obj, key, value) {
+            return obj[key] = value;
+          };
+        }
+      
+        function wrap(innerFn, outerFn, self, tryLocsList) {
+          // If outerFn provided and outerFn.prototype is a Generator, then outerFn.prototype instanceof Generator.
+          var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator;
+          var generator = Object.create(protoGenerator.prototype);
+          var context = new Context(tryLocsList || []);
+      
+          // The ._invoke method unifies the implementations of the .next,
+          // .throw, and .return methods.
+          generator._invoke = makeInvokeMethod(innerFn, self, context);
+      
+          return generator;
+        }
+        exports.wrap = wrap;
+      
+        // Try/catch helper to minimize deoptimizations. Returns a completion
+        // record like context.tryEntries[i].completion. This interface could
+        // have been (and was previously) designed to take a closure to be
+        // invoked without arguments, but in all the cases we care about we
+        // already have an existing method we want to call, so there's no need
+        // to create a new function object. We can even get away with assuming
+        // the method takes exactly one argument, since that happens to be true
+        // in every case, so we don't have to touch the arguments object. The
+        // only additional allocation required is the completion record, which
+        // has a stable shape and so hopefully should be cheap to allocate.
+        function tryCatch(fn, obj, arg) {
+          try {
+            return { type: "normal", arg: fn.call(obj, arg) };
+          } catch (err) {
+            return { type: "throw", arg: err };
+          }
+        }
+      
+        var GenStateSuspendedStart = "suspendedStart";
+        var GenStateSuspendedYield = "suspendedYield";
+        var GenStateExecuting = "executing";
+        var GenStateCompleted = "completed";
+      
+        // Returning this object from the innerFn has the same effect as
+        // breaking out of the dispatch switch statement.
+        var ContinueSentinel = {};
+      
+        // Dummy constructor functions that we use as the .constructor and
+        // .constructor.prototype properties for functions that return Generator
+        // objects. For full spec compliance, you may wish to configure your
+        // minifier not to mangle the names of these two functions.
+        function Generator() {}
+        function GeneratorFunction() {}
+        function GeneratorFunctionPrototype() {}
+      
+        // This is a polyfill for %IteratorPrototype% for environments that
+        // don't natively support it.
+        var IteratorPrototype = {};
+        IteratorPrototype[iteratorSymbol] = function () {
+          return this;
+        };
+      
+        var getProto = Object.getPrototypeOf;
+        var NativeIteratorPrototype = getProto && getProto(getProto(values([])));
+        if (NativeIteratorPrototype &&
+            NativeIteratorPrototype !== Op &&
+            hasOwn.call(NativeIteratorPrototype, iteratorSymbol)) {
+          // This environment has a native %IteratorPrototype%; use it instead
+          // of the polyfill.
+          IteratorPrototype = NativeIteratorPrototype;
+        }
+      
+        var Gp = GeneratorFunctionPrototype.prototype =
+          Generator.prototype = Object.create(IteratorPrototype);
+        GeneratorFunction.prototype = Gp.constructor = GeneratorFunctionPrototype;
+        GeneratorFunctionPrototype.constructor = GeneratorFunction;
+        GeneratorFunction.displayName = define(
+          GeneratorFunctionPrototype,
+          toStringTagSymbol,
+          "GeneratorFunction"
+        );
+      
+        // Helper for defining the .next, .throw, and .return methods of the
+        // Iterator interface in terms of a single ._invoke method.
+        function defineIteratorMethods(prototype) {
+          ["next", "throw", "return"].forEach(function(method) {
+            define(prototype, method, function(arg) {
+              return this._invoke(method, arg);
+            });
+          });
+        }
+      
+        exports.isGeneratorFunction = function(genFun) {
+          var ctor = typeof genFun === "function" && genFun.constructor;
+          return ctor
+            ? ctor === GeneratorFunction ||
+              // For the native GeneratorFunction constructor, the best we can
+              // do is to check its .name property.
+              (ctor.displayName || ctor.name) === "GeneratorFunction"
+            : false;
+        };
+      
+        exports.mark = function(genFun) {
+          if (Object.setPrototypeOf) {
+            Object.setPrototypeOf(genFun, GeneratorFunctionPrototype);
+          } else {
+            genFun.__proto__ = GeneratorFunctionPrototype;
+            define(genFun, toStringTagSymbol, "GeneratorFunction");
+          }
+          genFun.prototype = Object.create(Gp);
+          return genFun;
+        };
+      
+        // Within the body of any async function, `await x` is transformed to
+        // `yield regeneratorRuntime.awrap(x)`, so that the runtime can test
+        // `hasOwn.call(value, "__await")` to determine if the yielded value is
+        // meant to be awaited.
+        exports.awrap = function(arg) {
+          return { __await: arg };
+        };
+      
+        function AsyncIterator(generator, PromiseImpl) {
+          function invoke(method, arg, resolve, reject) {
+            var record = tryCatch(generator[method], generator, arg);
+            if (record.type === "throw") {
+              reject(record.arg);
+            } else {
+              var result = record.arg;
+              var value = result.value;
+              if (value &&
+                  typeof value === "object" &&
+                  hasOwn.call(value, "__await")) {
+                return PromiseImpl.resolve(value.__await).then(function(value) {
+                  invoke("next", value, resolve, reject);
+                }, function(err) {
+                  invoke("throw", err, resolve, reject);
+                });
+              }
+      
+              return PromiseImpl.resolve(value).then(function(unwrapped) {
+                // When a yielded Promise is resolved, its final value becomes
+                // the .value of the Promise<{value,done}> result for the
+                // current iteration.
+                result.value = unwrapped;
+                resolve(result);
+              }, function(error) {
+                // If a rejected Promise was yielded, throw the rejection back
+                // into the async generator function so it can be handled there.
+                return invoke("throw", error, resolve, reject);
+              });
+            }
+          }
+      
+          var previousPromise;
+      
+          function enqueue(method, arg) {
+            function callInvokeWithMethodAndArg() {
+              return new PromiseImpl(function(resolve, reject) {
+                invoke(method, arg, resolve, reject);
+              });
+            }
+      
+            return previousPromise =
+              // If enqueue has been called before, then we want to wait until
+              // all previous Promises have been resolved before calling invoke,
+              // so that results are always delivered in the correct order. If
+              // enqueue has not been called before, then it is important to
+              // call invoke immediately, without waiting on a callback to fire,
+              // so that the async generator function has the opportunity to do
+              // any necessary setup in a predictable way. This predictability
+              // is why the Promise constructor synchronously invokes its
+              // executor callback, and why async functions synchronously
+              // execute code before the first await. Since we implement simple
+              // async functions in terms of async generators, it is especially
+              // important to get this right, even though it requires care.
+              previousPromise ? previousPromise.then(
+                callInvokeWithMethodAndArg,
+                // Avoid propagating failures to Promises returned by later
+                // invocations of the iterator.
+                callInvokeWithMethodAndArg
+              ) : callInvokeWithMethodAndArg();
+          }
+      
+          // Define the unified helper method that is used to implement .next,
+          // .throw, and .return (see defineIteratorMethods).
+          this._invoke = enqueue;
+        }
+      
+        defineIteratorMethods(AsyncIterator.prototype);
+        AsyncIterator.prototype[asyncIteratorSymbol] = function () {
+          return this;
+        };
+        exports.AsyncIterator = AsyncIterator;
+      
+        // Note that simple async functions are implemented on top of
+        // AsyncIterator objects; they just return a Promise for the value of
+        // the final result produced by the iterator.
+        exports.async = function(innerFn, outerFn, self, tryLocsList, PromiseImpl) {
+          if (PromiseImpl === undefined) PromiseImpl = Promise;
+      
+          var iter = new AsyncIterator(
+            wrap(innerFn, outerFn, self, tryLocsList),
+            PromiseImpl
+          );
+      
+          return exports.isGeneratorFunction(outerFn)
+            ? iter // If outerFn is a generator, return the full iterator.
+            : iter.next().then(function(result) {
+                return result.done ? result.value : iter.next();
+              });
+        };
+      
+        function makeInvokeMethod(innerFn, self, context) {
+          var state = GenStateSuspendedStart;
+      
+          return function invoke(method, arg) {
+            if (state === GenStateExecuting) {
+              throw new Error("Generator is already running");
+            }
+      
+            if (state === GenStateCompleted) {
+              if (method === "throw") {
+                throw arg;
+              }
+      
+              // Be forgiving, per 25.3.3.3.3 of the spec:
+              // https://people.mozilla.org/~jorendorff/es6-draft.html#sec-generatorresume
+              return doneResult();
+            }
+      
+            context.method = method;
+            context.arg = arg;
+      
+            while (true) {
+              var delegate = context.delegate;
+              if (delegate) {
+                var delegateResult = maybeInvokeDelegate(delegate, context);
+                if (delegateResult) {
+                  if (delegateResult === ContinueSentinel) continue;
+                  return delegateResult;
+                }
+              }
+      
+              if (context.method === "next") {
+                // Setting context._sent for legacy support of Babel's
+                // function.sent implementation.
+                context.sent = context._sent = context.arg;
+      
+              } else if (context.method === "throw") {
+                if (state === GenStateSuspendedStart) {
+                  state = GenStateCompleted;
+                  throw context.arg;
+                }
+      
+                context.dispatchException(context.arg);
+      
+              } else if (context.method === "return") {
+                context.abrupt("return", context.arg);
+              }
+      
+              state = GenStateExecuting;
+      
+              var record = tryCatch(innerFn, self, context);
+              if (record.type === "normal") {
+                // If an exception is thrown from innerFn, we leave state ===
+                // GenStateExecuting and loop back for another invocation.
+                state = context.done
+                  ? GenStateCompleted
+                  : GenStateSuspendedYield;
+      
+                if (record.arg === ContinueSentinel) {
+                  continue;
+                }
+      
+                return {
+                  value: record.arg,
+                  done: context.done
+                };
+      
+              } else if (record.type === "throw") {
+                state = GenStateCompleted;
+                // Dispatch the exception by looping back around to the
+                // context.dispatchException(context.arg) call above.
+                context.method = "throw";
+                context.arg = record.arg;
+              }
+            }
+          };
+        }
+      
+        // Call delegate.iterator[context.method](context.arg) and handle the
+        // result, either by returning a { value, done } result from the
+        // delegate iterator, or by modifying context.method and context.arg,
+        // setting context.delegate to null, and returning the ContinueSentinel.
+        function maybeInvokeDelegate(delegate, context) {
+          var method = delegate.iterator[context.method];
+          if (method === undefined$1) {
+            // A .throw or .return when the delegate iterator has no .throw
+            // method always terminates the yield* loop.
+            context.delegate = null;
+      
+            if (context.method === "throw") {
+              // Note: ["return"] must be used for ES3 parsing compatibility.
+              if (delegate.iterator["return"]) {
+                // If the delegate iterator has a return method, give it a
+                // chance to clean up.
+                context.method = "return";
+                context.arg = undefined$1;
+                maybeInvokeDelegate(delegate, context);
+      
+                if (context.method === "throw") {
+                  // If maybeInvokeDelegate(context) changed context.method from
+                  // "return" to "throw", let that override the TypeError below.
+                  return ContinueSentinel;
+                }
+              }
+      
+              context.method = "throw";
+              context.arg = new TypeError(
+                "The iterator does not provide a 'throw' method");
+            }
+      
+            return ContinueSentinel;
+          }
+      
+          var record = tryCatch(method, delegate.iterator, context.arg);
+      
+          if (record.type === "throw") {
+            context.method = "throw";
+            context.arg = record.arg;
+            context.delegate = null;
+            return ContinueSentinel;
+          }
+      
+          var info = record.arg;
+      
+          if (! info) {
+            context.method = "throw";
+            context.arg = new TypeError("iterator result is not an object");
+            context.delegate = null;
+            return ContinueSentinel;
+          }
+      
+          if (info.done) {
+            // Assign the result of the finished delegate to the temporary
+            // variable specified by delegate.resultName (see delegateYield).
+            context[delegate.resultName] = info.value;
+      
+            // Resume execution at the desired location (see delegateYield).
+            context.next = delegate.nextLoc;
+      
+            // If context.method was "throw" but the delegate handled the
+            // exception, let the outer generator proceed normally. If
+            // context.method was "next", forget context.arg since it has been
+            // "consumed" by the delegate iterator. If context.method was
+            // "return", allow the original .return call to continue in the
+            // outer generator.
+            if (context.method !== "return") {
+              context.method = "next";
+              context.arg = undefined$1;
+            }
+      
+          } else {
+            // Re-yield the result returned by the delegate method.
+            return info;
+          }
+      
+          // The delegate iterator is finished, so forget it and continue with
+          // the outer generator.
+          context.delegate = null;
+          return ContinueSentinel;
+        }
+      
+        // Define Generator.prototype.{next,throw,return} in terms of the
+        // unified ._invoke helper method.
+        defineIteratorMethods(Gp);
+      
+        define(Gp, toStringTagSymbol, "Generator");
+      
+        // A Generator should always return itself as the iterator object when the
+        // @@iterator function is called on it. Some browsers' implementations of the
+        // iterator prototype chain incorrectly implement this, causing the Generator
+        // object to not be returned from this call. This ensures that doesn't happen.
+        // See https://github.com/facebook/regenerator/issues/274 for more details.
+        Gp[iteratorSymbol] = function() {
+          return this;
+        };
+      
+        Gp.toString = function() {
+          return "[object Generator]";
+        };
+      
+        function pushTryEntry(locs) {
+          var entry = { tryLoc: locs[0] };
+      
+          if (1 in locs) {
+            entry.catchLoc = locs[1];
+          }
+      
+          if (2 in locs) {
+            entry.finallyLoc = locs[2];
+            entry.afterLoc = locs[3];
+          }
+      
+          this.tryEntries.push(entry);
+        }
+      
+        function resetTryEntry(entry) {
+          var record = entry.completion || {};
+          record.type = "normal";
+          delete record.arg;
+          entry.completion = record;
+        }
+      
+        function Context(tryLocsList) {
+          // The root entry object (effectively a try statement without a catch
+          // or a finally block) gives us a place to store values thrown from
+          // locations where there is no enclosing try statement.
+          this.tryEntries = [{ tryLoc: "root" }];
+          tryLocsList.forEach(pushTryEntry, this);
+          this.reset(true);
+        }
+      
+        exports.keys = function(object) {
+          var keys = [];
+          for (var key in object) {
+            keys.push(key);
+          }
+          keys.reverse();
+      
+          // Rather than returning an object with a next method, we keep
+          // things simple and return the next function itself.
+          return function next() {
+            while (keys.length) {
+              var key = keys.pop();
+              if (key in object) {
+                next.value = key;
+                next.done = false;
+                return next;
+              }
+            }
+      
+            // To avoid creating an additional object, we just hang the .value
+            // and .done properties off the next function object itself. This
+            // also ensures that the minifier will not anonymize the function.
+            next.done = true;
+            return next;
+          };
+        };
+      
+        function values(iterable) {
+          if (iterable) {
+            var iteratorMethod = iterable[iteratorSymbol];
+            if (iteratorMethod) {
+              return iteratorMethod.call(iterable);
+            }
+      
+            if (typeof iterable.next === "function") {
+              return iterable;
+            }
+      
+            if (!isNaN(iterable.length)) {
+              var i = -1, next = function next() {
+                while (++i < iterable.length) {
+                  if (hasOwn.call(iterable, i)) {
+                    next.value = iterable[i];
+                    next.done = false;
+                    return next;
+                  }
+                }
+      
+                next.value = undefined$1;
+                next.done = true;
+      
+                return next;
+              };
+      
+              return next.next = next;
+            }
+          }
+      
+          // Return an iterator with no values.
+          return { next: doneResult };
+        }
+        exports.values = values;
+      
+        function doneResult() {
+          return { value: undefined$1, done: true };
+        }
+      
+        Context.prototype = {
+          constructor: Context,
+      
+          reset: function(skipTempReset) {
+            this.prev = 0;
+            this.next = 0;
+            // Resetting context._sent for legacy support of Babel's
+            // function.sent implementation.
+            this.sent = this._sent = undefined$1;
+            this.done = false;
+            this.delegate = null;
+      
+            this.method = "next";
+            this.arg = undefined$1;
+      
+            this.tryEntries.forEach(resetTryEntry);
+      
+            if (!skipTempReset) {
+              for (var name in this) {
+                // Not sure about the optimal order of these conditions:
+                if (name.charAt(0) === "t" &&
+                    hasOwn.call(this, name) &&
+                    !isNaN(+name.slice(1))) {
+                  this[name] = undefined$1;
+                }
+              }
+            }
+          },
+      
+          stop: function() {
+            this.done = true;
+      
+            var rootEntry = this.tryEntries[0];
+            var rootRecord = rootEntry.completion;
+            if (rootRecord.type === "throw") {
+              throw rootRecord.arg;
+            }
+      
+            return this.rval;
+          },
+      
+          dispatchException: function(exception) {
+            if (this.done) {
+              throw exception;
+            }
+      
+            var context = this;
+            function handle(loc, caught) {
+              record.type = "throw";
+              record.arg = exception;
+              context.next = loc;
+      
+              if (caught) {
+                // If the dispatched exception was caught by a catch block,
+                // then let that catch block handle the exception normally.
+                context.method = "next";
+                context.arg = undefined$1;
+              }
+      
+              return !! caught;
+            }
+      
+            for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+              var entry = this.tryEntries[i];
+              var record = entry.completion;
+      
+              if (entry.tryLoc === "root") {
+                // Exception thrown outside of any try block that could handle
+                // it, so set the completion value of the entire function to
+                // throw the exception.
+                return handle("end");
+              }
+      
+              if (entry.tryLoc <= this.prev) {
+                var hasCatch = hasOwn.call(entry, "catchLoc");
+                var hasFinally = hasOwn.call(entry, "finallyLoc");
+      
+                if (hasCatch && hasFinally) {
+                  if (this.prev < entry.catchLoc) {
+                    return handle(entry.catchLoc, true);
+                  } else if (this.prev < entry.finallyLoc) {
+                    return handle(entry.finallyLoc);
+                  }
+      
+                } else if (hasCatch) {
+                  if (this.prev < entry.catchLoc) {
+                    return handle(entry.catchLoc, true);
+                  }
+      
+                } else if (hasFinally) {
+                  if (this.prev < entry.finallyLoc) {
+                    return handle(entry.finallyLoc);
+                  }
+      
+                } else {
+                  throw new Error("try statement without catch or finally");
+                }
+              }
+            }
+          },
+      
+          abrupt: function(type, arg) {
+            for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+              var entry = this.tryEntries[i];
+              if (entry.tryLoc <= this.prev &&
+                  hasOwn.call(entry, "finallyLoc") &&
+                  this.prev < entry.finallyLoc) {
+                var finallyEntry = entry;
+                break;
+              }
+            }
+      
+            if (finallyEntry &&
+                (type === "break" ||
+                 type === "continue") &&
+                finallyEntry.tryLoc <= arg &&
+                arg <= finallyEntry.finallyLoc) {
+              // Ignore the finally entry if control is not jumping to a
+              // location outside the try/catch block.
+              finallyEntry = null;
+            }
+      
+            var record = finallyEntry ? finallyEntry.completion : {};
+            record.type = type;
+            record.arg = arg;
+      
+            if (finallyEntry) {
+              this.method = "next";
+              this.next = finallyEntry.finallyLoc;
+              return ContinueSentinel;
+            }
+      
+            return this.complete(record);
+          },
+      
+          complete: function(record, afterLoc) {
+            if (record.type === "throw") {
+              throw record.arg;
+            }
+      
+            if (record.type === "break" ||
+                record.type === "continue") {
+              this.next = record.arg;
+            } else if (record.type === "return") {
+              this.rval = this.arg = record.arg;
+              this.method = "return";
+              this.next = "end";
+            } else if (record.type === "normal" && afterLoc) {
+              this.next = afterLoc;
+            }
+      
+            return ContinueSentinel;
+          },
+      
+          finish: function(finallyLoc) {
+            for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+              var entry = this.tryEntries[i];
+              if (entry.finallyLoc === finallyLoc) {
+                this.complete(entry.completion, entry.afterLoc);
+                resetTryEntry(entry);
+                return ContinueSentinel;
+              }
+            }
+          },
+      
+          "catch": function(tryLoc) {
+            for (var i = this.tryEntries.length - 1; i >= 0; --i) {
+              var entry = this.tryEntries[i];
+              if (entry.tryLoc === tryLoc) {
+                var record = entry.completion;
+                if (record.type === "throw") {
+                  var thrown = record.arg;
+                  resetTryEntry(entry);
+                }
+                return thrown;
+              }
+            }
+      
+            // The context.catch method must only be called with a location
+            // argument that corresponds to a known catch block.
+            throw new Error("illegal catch attempt");
+          },
+      
+          delegateYield: function(iterable, resultName, nextLoc) {
+            this.delegate = {
+              iterator: values(iterable),
+              resultName: resultName,
+              nextLoc: nextLoc
+            };
+      
+            if (this.method === "next") {
+              // Deliberately forget the last sent value so that we don't
+              // accidentally pass it on to the delegate.
+              this.arg = undefined$1;
+            }
+      
+            return ContinueSentinel;
+          }
+        };
+      
+        // Regardless of whether this script is executing as a CommonJS module
+        // or not, return the runtime object so that we can declare the variable
+        // regeneratorRuntime in the outer scope, which allows this module to be
+        // injected easily by `bin/regenerator --include-runtime script.js`.
+        return exports;
+      
+      }(
+        // If this script is executing as a CommonJS module, use module.exports
+        // as the regeneratorRuntime namespace. Otherwise create a new empty
+        // object. Either way, the resulting object will be used to initialize
+        // the regeneratorRuntime variable at the top of this file.
+        typeof module === "object" ? module.exports : {}
+      ));
+      
+      try {
+        regeneratorRuntime = runtime;
+      } catch (accidentalStrictMode) {
+        // This module should not be running in strict mode, so the above
+        // assignment should always work unless something is misconfigured. Just
+        // in case runtime.js accidentally runs in strict mode, we can escape
+        // strict mode using a global Function call. This could conceivably fail
+        // if a Content Security Policy forbids using Function, but in that case
+        // the proper solution is to fix the accidental strict mode problem. If
+        // you've misconfigured your bundler to force strict mode and applied a
+        // CSP to forbid Function, and you're not willing to fix either of those
+        // problems, please detail your unique predicament in a GitHub issue.
+        Function("r", "regeneratorRuntime = r")(runtime);
+      }
+    </script>
+    <script type="importmap">{
+  "imports": {
+    "preact": "https://esm.sh/preact@10.23.1",
+    "@preact/signals": "https://esm.sh/@preact/signals@1.3.0?external=preact",
+    "htm/preact": "https://esm.sh/htm@3.1.1/preact?external=preact"
+  }
+}</script>
+    <script>
+      /**
+       * Example of how you'd use this:
+       * <code-block data-language="HTML" data-escaped="true">
+       *   <h1>Your HTML here. Any HTML should be escaped</h1>
+       * </code-block>
+       *
+       * https://github.com/TheWebTech/hs-code-block-web-component/tree/main
+       */
+      
+      (() => {
+        const css = /*css*/ `
+      *[aria-hidden="true"] {
+          display: none;
+      }
+      
+      .clipboard_container {
+        display: flex;
+        padding: 8px;
+        gap: 5px;
+        align-items: center;
+      }
+      
+      #copied_notif {
+          background: black;
+          color: white;
+          border-radius: 3px;
+          padding: 0.2em 0.5em;
+          font-size: 80%;
+      }
+      
+      button {
+          border: none;
+          background: none;
+          background-color: rgb(246, 248, 250);
+          border-color: rgb(209, 217, 224);
+          border-radius: 6px;
+          border-width: 1px;
+          border-style: solid;
+          cursor: pointer;
+          width: 32px;
+          height: 32px;
+      }
+      
+      button:hover {
+          background-color: rgb(239, 242, 245);
+      }
+      `;
+      
+        const html = /* html */ `<style>
+      ${css}
+      </style>
+      <div class="clipboard_container">
+        <div id="copied_notif" aria-hidden="true">Copied !</div>
+        <button id="copy_button">
+          <svg id="copy_icon" aria-hidden="true" viewBox="0 0 16 16" width="16" height="16">
+              <path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path>
+          </svg>
+          <svg id="copied_icon" aria-hidden="true" viewBox="0 0 16 16" width="16" height="16">
+              <path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path>
+          </svg>
+        </button>
+      </div>`;
+        class ClipboardCopy extends HTMLElement {
+          constructor() {
+            super();
+            const root = this.attachShadow({ mode: "open" });
+            root.innerHTML = html;
+          }
+      
+          connectedCallback() {
+            const valueToCopy = this.getAttribute("value");
+            const shadowRoot = this.shadowRoot;
+            const button = shadowRoot.querySelector("button");
+            const copyIcon = shadowRoot.querySelector("#copy_icon");
+            const copiedIcon = shadowRoot.querySelector("#copied_icon");
+            const copiedNotif = shadowRoot.querySelector("#copied_notif");
+            copyIcon.removeAttribute("aria-hidden");
+      
+            const copy = async () => {
+              await addToClipboard(valueToCopy);
+              copiedNotif.removeAttribute("aria-hidden");
+              copyIcon.setAttribute("aria-hidden", "true");
+              copiedIcon.setAttribute("aria-hidden", "false");
+              setTimeout(() => {
+                copiedNotif.setAttribute("aria-hidden", "true");
+                copyIcon.setAttribute("aria-hidden", "false");
+                copiedIcon.setAttribute("aria-hidden", "true");
+              }, 1500);
+            };
+      
+            button.onclick = () => {
+              copy();
+            };
+          }
+        }
+      
+        customElements.define("clipboard-copy", ClipboardCopy);
+      
+        const addToClipboard = async (text) => {
+          const type = "text/plain";
+          const clipboardItemData = {
+            [type]: text,
+          };
+          const clipboardItem = new ClipboardItem(clipboardItemData);
+          await window.navigator.clipboard.write([clipboardItem]);
+        };
+      })();
+      
+      (() => {
+        const css = /*css*/ `
+      /* :host {
+          display: block;
+      }
+      :host code[class*="language-"], :host pre[class*="language-"]{
+          margin-top: 0;
+      } */
+      #code_block {
+        position: relative;
+      }
+      
+      #pre {
+          padding: 16px;
+          font-size: 86%;
+          margin-top: 16px;
+          margin-bottom: 16px;
+          margin-left: 0;
+          margin-right: 0;
+          background: #333 ;
+      }
+      `;
+      
+        const html = /* html */ `<style>
+      ${css}
+      </style>
+      <div id="code_block">
+        <pre id="pre"><code></code></pre>
+        <div id="clipboard_copy_container" style="position: absolute; right: 0; top: 0">
+          <clipboard-copy></clipboard-copy>
+        </div>
+      </div>
+      `;
+      
+        let loadPromise;
+        const loadPrism = () => {
+          if (loadPromise) {
+            return loadPromise;
+          }
+          // https://prismjs.com/#basic-usage
+          const scriptLoadPromise = new Promise((resolve, reject) => {
+            window.Prism = window.Prism || {};
+            window.Prism.manual = true;
+            const script = document.createElement("script");
+            script.src = "https://cdn.jsdelivr.net/npm/prismjs";
+            script.onload = () => {
+              resolve(window.Prism);
+            };
+            script.onerror = (error) => {
+              reject(error);
+            };
+            document.head.appendChild(script);
+          });
+          const cssInjectionPromise = (async () => {
+            const prismCssUrl =
+              "https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css?inline";
+            const response = await window.fetch(prismCssUrl, {
+              method: "GET",
+            });
+            const cssText = await response.text();
+            const cssStylesheet = new CSSStyleSheet({ baseUrl: prismCssUrl });
+            cssStylesheet.replaceSync(cssText);
+            return cssStylesheet;
+          })();
+          loadPromise = Promise.all([scriptLoadPromise, cssInjectionPromise]);
+          return loadPromise;
+        };
+      
+        class CodeBlock extends HTMLElement {
+          constructor() {
+            super();
+            const root = this.attachShadow({ mode: "open" });
+            root.innerHTML = html;
+            loadPrism();
+          }
+      
+          async connectedCallback() {
+            const shadowRoot = this.shadowRoot;
+            const language = this.getAttribute("lang").toLowerCase();
+            const isEscaped = this.hasAttribute("data-escaped");
+            const addCopyButton = this.hasAttribute("data-copy-button");
+            let code = this.innerHTML.trimStart();
+            this.innerHTML = "";
+      
+            const codeNode = shadowRoot.querySelector("code");
+            codeNode.className = `language-${language}`;
+            codeNode.textContent = isEscaped ? unescapeHTML(code) : code;
+            if (addCopyButton) {
+              const clipboardCopy = shadowRoot.querySelector("clipboard-copy");
+              clipboardCopy.setAttribute(
+                "value",
+                isEscaped ? unescapeHTML(code) : code,
+              );
+            }
+            const [Prism, prismCssStyleSheet] = await loadPrism();
+            shadowRoot.adoptedStyleSheets.push(prismCssStyleSheet);
+            Prism.highlightAllUnder(shadowRoot);
+          }
+        }
+        customElements.define("code-block", CodeBlock);
+      
+        const escape = document.createElement("textarea");
+        function unescapeHTML(html) {
+          escape.innerHTML = html;
+          return escape.textContent;
+        }
+      })();
+    </script>
+    <script>
+      const css = /* css */ `
+      dialog {
+        opacity: 0;
+        transition: all 0.3s allow-discrete;
+      }
+      dialog::backdrop {
+         background-image: linear-gradient(
+          45deg,
+          magenta,
+          rebeccapurple,
+          dodgerblue,
+          green
+        );
+        opacity: 0;
+        transition: all 0.3s allow-discrete;
+      }
+      dialog:open {
+        opacity: 1;
+      }
+      dialog:open::backdrop {
+        opacity: 0.75;
+      }`;
+      
+      const html = /* html */ `<style>
+          ${css}
+      </style>
+      <dialog>
+          <p>Connection with server is lost</p>
+          <button autofocus name="reconnect">Retry</button>
+      </dialog>`;
+      
+      class JsenvAutoreloadOnServerRestart extends HTMLElement {
+        constructor({ url } = {}) {
+          super();
+          const root = this.attachShadow({ mode: "open" });
+          root.innerHTML = html;
+      
+          const dialog = root.querySelector("dialog");
+          const reconnectButton = dialog.querySelector('button[name="reconnect"]');
+      
+          (async () => {
+            const connect = () => {
+              const websocket = new WebSocket(url);
+              const connectedPromise = new Promise((resolve) => {
+                websocket.onerror = () => {
+                  resolve(null);
+                };
+                websocket.onopen = () => {
+                  resolve(websocket);
+                };
+              });
+              return connectedPromise;
+            };
+      
+            const initialWebSocket = await connect();
+            initialWebSocket.onclose = async () => {
+              console.info("connection to server lost, trying to reconnect");
+              const retry = async () => {
+                let attemptCount = 0;
+                let timeToWait = 100;
+                const tryToReconnect = async () => {
+                  const newWebsocket = await connect();
+                  if (newWebsocket) {
+                    dialog.close();
+                    console.info("reconnected to server, reloading the page...");
+                    window.location.reload(true);
+                    return;
+                  }
+                  attemptCount++;
+                  if (attemptCount === 10) {
+                    dialog.showModal();
+                    reconnectButton.onclick = async () => {
+                      reconnectButton.disabled = true;
+                      const previousContext = reconnectButton.textContent;
+                      reconnectButton.textContent = "Retrying...";
+                      await retry();
+                      reconnectButton.textContent = previousContext;
+                      reconnectButton.disabled = false;
+                    };
+                    return;
+                  }
+                  timeToWait += 100;
+                  await new Promise((resolve) => setTimeout(resolve, timeToWait));
+                  await tryToReconnect();
+                };
+                await tryToReconnect();
+              };
+              retry();
+            };
+          })();
+        }
+      }
+      if (!customElements.get("jsenv-autoreload-on-server-restart")) {
+        customElements.define(
+          "jsenv-autoreload-on-server-restart",
+          JsenvAutoreloadOnServerRestart,
+        );
+      }
+      
+      const jsenvAutoreloadOnServerRestartElement =
+        new JsenvAutoreloadOnServerRestart({
+          url: (() => {
+            const websocketScheme =
+              self.location.protocol === "https:" ? "wss" : "ws";
+            const websocketUrl = `${websocketScheme}://${self.location.host}/.internal/alive.websocket`;
+            return websocketUrl;
+          })(),
+        });
+      
+      // script is injected into document.body
+      if (document.body) {
+        document.currentScript.parentNode.replaceChild(
+          jsenvAutoreloadOnServerRestartElement,
+          document.currentScript,
+        );
+      }
+      // script injected outisde document.body (likely in head)
+      else {
+        document.currentScript.parentNode.removeChild(document.currentScript);
+        document.onreadystatechange = () => {
+          if (document.readyState === "interactive") {
+            document.body.appendChild(jsenvAutoreloadOnServerRestartElement);
+          }
+        };
+      }
+    </script>
+  </head>
+  <body>
+    <style>:root {
+  --background-color: #fff;
+  --text-color: #333;
+  --border-color: #e0e0e0;
+  --primary-color: #1976d2;
+  --secondary-color: #f5f5f5;
+  --success-color: #4caf50;
+  --warning-color: #ff9800;
+  --method-get-color: #61affe;
+  --method-post-color: #49cc90;
+  --method-put-color: #ff9800;
+  --method-delete-color: #f44336;
+  --method-patch-color: #9c27b0;
+  --method-options-color: #607d8b;
+  --method-head-color: #00bcd4;
+}
+
+:root[data-theme="light"] {
+  --background-color: #fff;
+  --text-color: #333;
+  --border-color: #e0e0e0;
+  --primary-color: #1976d2;
+  --secondary-color: #f5f5f5;
+}
+
+:root[data-theme="dark"] {
+  --background-color: #121212;
+  --text-color: #e0e0e0;
+  --border-color: #333;
+  --primary-color: #4f9eff;
+  --secondary-color: #1e1e1e;
+}
+
+:root[data-theme="dark"] a {
+  color: #1e90ff;
+}
+
+body {
+  color: var(--text-color);
+  background-color: var(--background-color);
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif;
+  line-height: 1.5;
+  transition: background-color .3s, color .3s;
+}
+
+.container {
+  flex-direction: row;
+  display: flex;
+}
+
+aside {
+  background: var(--background-color);
+  border-radius: 6px;
+  flex-shrink: 0;
+  width: 250px;
+  max-height: calc(100vh - 40px);
+  margin-right: 20px;
+  padding-top: 20px;
+  padding-left: 10px;
+  transition: width .3s, margin-left .3s;
+  overflow: hidden auto;
+}
+
+main {
+  flex-grow: 1;
+  flex-basis: 0;
+  min-width: 0;
+  padding-top: 10px;
+  padding-right: 20px;
+  transition: margin-left .3s;
+}
+
+.header_row {
+  align-items: center;
+  gap: 10px;
+  display: flex;
+}
+
+.note_button_open {
+  cursor: pointer;
+  color: var(--text-color);
+  opacity: .7;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  height: 24px;
+  padding: 0;
+  transition: background-color .2s;
+}
+
+.note_button_open:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
+  opacity: 1;
+}
+
+.note_title {
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  display: flex;
+}
+
+.note_button_close {
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 50%;
+  justify-content: center;
+  align-items: center;
+  padding: 5px;
+  display: flex;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+.note_button_close:hover {
+  background-color: var(--secondary-color);
+}
+
+.note_content {
+  background-color: var(--background-color);
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  padding: 20px;
+  transition: transform .3s;
+  position: relative;
+  transform: translateY(-20px);
+  box-shadow: 0 10px 25px #0003;
+}
+
+.theme-toggle {
+  align-items: center;
+  display: flex;
+}
+
+#theme-toggle-btn {
+  cursor: pointer;
+  background: none;
+  background-color: var(--secondary-color);
+  border: none;
+  border-radius: 50%;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  transition: background-color .2s;
+  display: flex;
+}
+
+#theme-toggle-btn:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
+}
+
+#theme-toggle-btn svg {
+  fill: var(--text-color);
+}
+
+.sun-icon, .moon-icon {
+  display: none;
+}
+
+:root[data-theme="dark"] .sun-icon, :root[data-theme="light"] .moon-icon {
+  display: block;
+}
+
+.progress-container {
+  background-color: #1976d233;
+  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  margin: 20px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-indeterminate .progress-bar-long, .progress-indeterminate .progress-bar-short {
+  background-color: var(--primary-color);
+  border-radius: 4px;
+  height: 100%;
+  animation-duration: 2.2s;
+  animation-iteration-count: infinite;
+  position: absolute;
+  top: 0;
+}
+
+.progress-indeterminate .progress-bar-long {
+  width: 75%;
+  animation-name: indeterminate-ltr;
+}
+
+.progress-indeterminate .progress-bar-short {
+  width: 20%;
+  animation-name: indeterminate-short-ltr;
+}
+
+@keyframes indeterminate-ltr {
+  0% {
+    left: -90%;
+    right: 100%;
+  }
+
+  60% {
+    left: -90%;
+    right: 100%;
+  }
+
+  100% {
+    left: 100%;
+    right: -35%;
+  }
+}
+
+@keyframes indeterminate-short-ltr {
+  0% {
+    left: -200%;
+    right: 100%;
+  }
+
+  60% {
+    left: 107%;
+    right: -8%;
+  }
+
+  100% {
+    left: 107%;
+    right: -8%;
+  }
+}
+
+.auto_head_note {
+  color: var(--method-head-color);
+  align-items: center;
+  margin-top: 10px;
+  font-size: 14px;
+  display: flex;
+}
+
+.note {
+  border-left: 4px solid var(--warning-color);
+  background-color: #ff98001a;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  padding: 12px;
+}
+
+.info_pill {
+  background-color: #0000000d;
+  border-radius: 14px;
+  align-items: center;
+  margin-left: 10px;
+  padding: 4px 10px;
+  font-size: 13px;
+  display: inline-flex;
+}
+
+.route_container {
+  align-items: flex-start;
+  gap: 20px;
+  display: flex;
+}
+
+.filters_sidebar {
+  border: 1px solid var(--border-color);
+  background: var(--secondary-color);
+  border-radius: 6px;
+  flex-shrink: 0;
+  width: 250px;
+  overflow: hidden;
+}
+
+.sidebar_header {
+  border-bottom: 1px solid var(--border-color);
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  font-weight: 500;
+  display: flex;
+}
+
+.filters_content {
+  background: var(--background-color);
+  padding: 15px;
+}
+
+.filters_count {
+  background-color: var(--primary-color);
+  color: #fff;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: .8rem;
+  font-weight: normal;
+}
+
+@media (width <= 768px) {
+  .route_container {
+    flex-direction: column;
+  }
+
+  .filters_sidebar {
+    width: 100%;
+    margin-bottom: 20px;
+  }
+}
+
+.route_list {
+  flex-grow: 1;
+  min-width: 0;
+  margin-top: 20px;
+}
+
+.route_details {
+  border: 1px solid #000;
+  border-color: var(--method-color);
+  background: color-mix(in srgb, var(--method-color), transparent 90%);
+  border-radius: 4px;
+  margin: 0 0 15px;
+  box-shadow: 0 0 3px #00000030;
+}
+
+.route_details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.route_details > summary::marker {
+  display: none;
+}
+
+.route_summary_container {
+  align-items: center;
+  padding: 5px;
+  display: flex;
+}
+
+.route_method {
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px #0000001a;
+  background: var(--method-color);
+  border-radius: 3px;
+  min-width: 80px;
+  padding: 6px 0;
+  font-family: sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.route_resource {
+  word-break: break-word;
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-left: 8px;
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.route_details[data-method="HEAD"] {
+  --method-color: var(--method-head-color);
+}
+
+.route_details[data-method="OPTIONS"] {
+  --method-color: var(--method-options-color);
+}
+
+.route_details[data-method="GET"] {
+  --method-color: var(--method-get-color);
+}
+
+.route_details[data-method="POST"] {
+  --method-color: var(--method-post-color);
+}
+
+.route_details[data-method="PUT"] {
+  --method-color: var(--method-put-color);
+}
+
+.route_details[data-method="PATCH"] {
+  --method-color: var(--method-patch-color);
+}
+
+.route_details[data-method="DELETE"] {
+  --method-color: var(--method-delete-color);
+}
+
+.route_owner_name {
+  color: #666;
+  text-align: center;
+  background-color: #ffefd2;
+  border-radius: 5px;
+  padding: 4px 8px;
+}
+
+:root[data-theme="dark"] .route_owner_name {
+  color: #fff;
+  background-color: #603b0d;
+}
+
+.route_details_content {
+  border-top: 1px solid var(--method-color);
+  padding: 10px;
+}
+
+.route_description {
+  margin: 0;
+}
+
+.route_content_nego_title {
+  font-weight: bold;
+}
+
+.filter_container {
+  border: 1px solid var(--border-color);
+  background: var(--secondary-color);
+  border-radius: 4px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.filter_container::marker {
+  display: none;
+}
+
+.filter_summary {
+  cursor: pointer;
+  user-select: none;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  display: flex;
+}
+
+.filter:open .arrow_down {
+  transform: rotate(180deg);
+}
+
+.filter_list {
+  background: var(--background-color);
+  border-top: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.filter_item {
+  margin: 15px;
+}
+
+.filter_badge {
+  background-color: var(--primary-color);
+  color: #fff;
+  border-radius: 12px;
+  margin-left: 10px;
+  padding: 2px 8px;
+  font-size: .8rem;
+}
+
+select {
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  min-width: 200px;
+  color: var(--text-color);
+  border-radius: 4px;
+  padding: 8px;
+  font-family: inherit;
+}
+
+select option {
+  padding: 8px;
+}
+
+select option:checked {
+  background-color: var(--primary-color);
+  color: #fff;
+}
+
+.filter_form {
+  user-select: none;
+  flex-flow: column wrap;
+  gap: 8px;
+  margin-top: 15px;
+  margin-bottom: 15px;
+  display: flex;
+}
+
+.filter_form label {
+  cursor: pointer;
+  word-break: keep-all;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+label .filter_text {
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.filter_text[data-method] {
+  border-left: 5px solid var(--method-color);
+  padding-left: 4px;
+}
+
+.filter_text[data-method="all"] {
+  --method-color: transparent;
+  border-image-slice: 1;
+}
+
+.filter_text[data-method="HEAD"] {
+  --method-color: var(--method-head-color);
+}
+
+.filter_text[data-method="OPTIONS"] {
+  --method-color: var(--method-options-color);
+}
+
+.filter_text[data-method="GET"] {
+  --method-color: var(--method-get-color);
+}
+
+.filter_text[data-method="POST"] {
+  --method-color: var(--method-post-color);
+}
+
+.filter_text[data-method="PUT"] {
+  --method-color: var(--method-put-color);
+}
+
+.filter_text[data-method="PATCH"] {
+  --method-color: var(--method-patch-color);
+}
+
+.filter_text[data-method="DELETE"] {
+  --method-color: var(--method-delete-color);
+}
+
+.filter_count {
+  color: #666;
+  opacity: .8;
+  background-color: #eee;
+  border-radius: 12px;
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: .8rem;
+}
+
+.filter_actions {
+  gap: 10px;
+  display: flex;
+}
+
+.filter_button {
+  background-color: var(--secondary-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: .9rem;
+  transition: all .2s;
+}
+
+.filter_button:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 15%, transparent);
+}
+</style>
+    <div class="container">
+      <aside></aside>
+      <main>
+        <div class="header_row">
+          <h1 style="margin: 0">Route inspector</h1>
+          <button class="note_button_open" aria-label="Show information" title="About HTTP Methods">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+          </button>
+          <div style="flex: 1"></div>
+          <div class="theme-toggle">
+            <button id="theme-toggle-btn" aria-label="Toggle dark/light mode">
+              <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                <path d="M480-360q50 0 85-35t35-85q0-50-35-85t-85-35q-50 0-85 35t-35 85q0 50 35 85t85 35Zm0 80q-83 0-141.5-58.5T280-480q0-83 58.5-141.5T480-680q83 0 141.5 58.5T680-480q0 83-58.5 141.5T480-280ZM80-440q0 17 11.5 28.5T120-400h80q17 0 28.5-11.5T240-440q0-17-11.5-28.5T200-480h-80q-17 0-28.5 11.5T80-440Zm680 0q0 17 11.5 28.5T800-400h80q17 0 28.5-11.5T920-440q0-17-11.5-28.5T880-480h-80q-17 0-28.5 11.5T760-440ZM440-760q0 17 11.5 28.5T480-720q17 0 28.5-11.5T520-760v-80q0-17-11.5-28.5T480-880q-17 0-28.5 11.5T440-840v80Zm0 680q0 17 11.5 28.5T480-40q17 0 28.5-11.5T520-80v-80q0-17-11.5-28.5T480-200q-17 0-28.5 11.5T440-160v80ZM226-678l56 56q12 12 28.5 12t28.5-12q12-12 12-28.5T339-679l-56-56q-12-12-28.5-12T226-735q-12 12-12 28.5t12 28.5Zm452 452 56 56q12 12 28.5 12t28.5-12q12-12 12-28.5T791-227l-56-56q-12-12-28.5-12T678-283q-12 12-12 28.5t12 28.5ZM791-678q12 12 28.5 12t28.5-12q12-12 12-28.5T848-735l-56-56q-12-12-28.5-12T735-791q-12 12-12 28.5t12 28.5l56 56Zm-508 452q12 12 28.5 12t28.5-12q12-12 12-28.5T340-283l-56-56q-12-12-28.5-12T227-339q-12 12-12 28.5t12 28.5l56 56Z"></path>
+              </svg>
+              <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                <path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q8 0 17 .5t23 1.5q-36 32-56 79t-20 99q0 83 58.5 141.5T643-460q52 0 99-20t79-56q1 14 1.5 23t.5 17q0 150-105 255T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <dialog class="node_dialog">
+          <button class="note_button_close" aria-label="Close">
+            <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <div class="note_title">Explanation about this page</div>
+          <div class="note_text">
+            <p>This page displays all routes configured in your server.</p>
+            <p>
+              Every GET route also automatically supports HEAD requests without
+              additional configuration.
+            </p>
+          </div>
+        </dialog>
+        <script>
+          const noteDialog = document.querySelector(".node_dialog");
+          const noteButtonOpen = document.querySelector(".note_button_open");
+          const nodeButtonClose = document.querySelector(".note_button_close");
+
+          noteDialog.onclick = (e) => {
+            if (e.target === noteDialog) {
+              noteDialog.close();
+            }
+          };
+          nodeButtonClose.onclick = () => {
+            noteDialog.close();
+          };
+          noteButtonOpen.onclick = () => {
+            noteDialog.showModal();
+          };
+        </script>
+        <div id="app"></div>
+      </main>
+    </div>
+    <script>
+      // Theme toggling functionality
+      const toggleThemeButton = document.getElementById("theme-toggle-btn");
+
+      // Check for saved theme preference or use system preference
+      const savedTheme = localStorage.getItem("theme");
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
+
+      // Apply theme based on saved preference or system preference
+      if (savedTheme === "dark" || (savedTheme === null && prefersDark)) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+
+      // Toggle theme when button is clicked
+      toggleThemeButton.addEventListener("click", () => {
+        if (document.documentElement.getAttribute("data-theme") === "dark") {
+          document.documentElement.setAttribute("data-theme", "light");
+          localStorage.setItem("theme", "light");
+        } else {
+          document.documentElement.setAttribute("data-theme", "dark");
+          localStorage.setItem("theme", "dark");
+        }
+      });
+    </script>
+    <script type="module">
+      // https://preactjs.com/guide/v10/no-build-workflows/
+      import { render } from "preact";
+      import { html } from "htm/preact";
+      import { signal, computed } from "@preact/signals";
+      import { useState, useRef, useCallback } from "preact/hooks";
+
+      const routesLoadingSignal = signal(false);
+      const routeLoadingErrorSignal = signal(null);
+      const routesSignal = signal([]);
+      const NO_PACKAGE_NAME = "unknown";
+
+      const repartitionsSignal = computed(() => {
+        const routes = routesSignal.value;
+        const methodRepartition = {};
+        const packageRepartition = {};
+        for (const route of routes) {
+          const method = route.method;
+          if (!methodRepartition[method]) {
+            methodRepartition[method] = 0;
+          }
+          methodRepartition[method]++;
+
+          const packageName = route.meta.packageName || NO_PACKAGE_NAME;
+          if (!packageRepartition[packageName]) {
+            packageRepartition[packageName] = 0;
+          }
+          packageRepartition[packageName]++;
+        }
+        return {
+          methodRepartition,
+          packageRepartition,
+        };
+      });
+      const methodRepartitionSignal = computed(() => {
+        return repartitionsSignal.value.methodRepartition;
+      });
+      const packageRepartitionSignal = computed(() => {
+        return repartitionsSignal.value.packageRepartition;
+      });
+      const availableMethodNamesSignal = computed(() => {
+        return Object.keys(methodRepartitionSignal.value);
+      });
+      const availablePackageNamesSignal = computed(() => {
+        return Object.keys(packageRepartitionSignal.value);
+      });
+
+      const loadRoutes = async () => {
+        routesLoadingSignal.value = true;
+        routeLoadingErrorSignal.value = null;
+        try {
+          const response = await fetch("/.internal/routes.json");
+          const routes = await response.json();
+          routesLoadingSignal.value = false;
+          routesSignal.value = routes;
+        } catch (e) {
+          routesLoadingSignal.value = false;
+          routeLoadingErrorSignal.value = e;
+          throw e;
+        }
+      };
+      loadRoutes();
+
+      const Sidebar = () => {
+        const routes = routesSignal.value;
+        if (routes.length === 0) {
+          return null;
+        }
+        return html` <${FiltersPanel} routes=${routes} /> `;
+      };
+
+      const App = () => {
+        return html` <${RouteList} /> `;
+      };
+      const ProgressBar = ({ width = "100%", height = 6, loading }) => {
+        if (!loading) {
+          return null;
+        }
+        return html`
+          <div
+            class="progress-bar"
+            style=${{
+              width: typeof Number(width) === "number" ? `${width}px` : width,
+              height:
+                typeof Number(height) === "number" ? `${height}px` : height,
+            }}
+          >
+            <div class="progress-container progress-indeterminate">
+              <div class="progress-bar-long"></div>
+              <div class="progress-bar-short"></div>
+            </div>
+          </div>
+        `;
+      };
+      const RouteList = () => {
+        const routes = routesSignal.value;
+        const loading = routesLoadingSignal.value;
+        const routeLoadingError = routeLoadingErrorSignal.value;
+
+        if (loading) {
+          return html`<${ProgressBar} width="150" loading=${true} />`;
+        }
+
+        if (routeLoadingError) {
+          return html`<p>
+            Error loading routes: ${routeLoadingError.message}
+          </p>`;
+        }
+
+        if (!routes || routes.length === 0) {
+          return html`<p>No routes configured.</p>`;
+        }
+
+        return html`<div class="route_container">
+          <div class="route_list">
+            ${routes.map((route) => html`<${RouteDetails} ...${route} />`)}
+          </div>
+        </div>`;
+      };
+
+      const documentUrlSignal = signal(window.location.href);
+      window.addEventListener("popstate", async (popstateEvent) => {
+        documentUrlSignal.value = popstateEvent.target.location.href;
+      });
+      const goTo = (url, { replace } = {}) => {
+        if (replace) {
+          window.history.replaceState(null, null, url);
+          documentUrlSignal.value = url;
+        } else {
+          window.history.pushState(null, null, url);
+          documentUrlSignal.value = url;
+        }
+      };
+      goTo(window.location.href, { replace: true });
+
+      let useUrlStringParam;
+      url_string_param: {
+        useUrlStringParam = (name, { availableValues } = {}) => {
+          const urlStringParamSignal = signalForUrlParam(name, (url) => {
+            return new URL(url).searchParams.get(name);
+          });
+          const urlStringParam = urlStringParamSignal.value;
+          let value;
+          if (urlStringParam) {
+            value = urlStringParam;
+            if (availableValues && !availableValues.includes(value)) {
+              value = "";
+            }
+          } else {
+            value = "";
+          }
+
+          const set = useCallback(
+            (newValue) => {
+              const urlObject = new URL(documentUrlSignal.peek());
+              const { searchParams } = urlObject;
+              if (!newValue) {
+                searchParams.delete(name);
+                const urlWithoutStringParam = urlObject.href;
+                if (urlWithoutStringParam !== window.location.href) {
+                  goTo(urlWithoutStringParam);
+                }
+                return;
+              }
+              if (availableValues && !availableValues.includes(newValue)) {
+                return;
+              }
+              searchParams.set(name, newValue);
+              const urlWithStringParam = urlObject.href;
+              if (urlWithStringParam !== window.location.href) {
+                goTo(urlWithStringParam);
+              }
+              return;
+            },
+            [name],
+          );
+          return [value, set];
+        };
+
+        const urlParamSignalMap = new Map();
+        // can be called multiple times by hooks
+        const signalForUrlParam = (name, getter) => {
+          const existingSignal = urlParamSignalMap.get(name);
+          if (existingSignal) {
+            return existingSignal;
+          }
+          const signalForFirstCall = computed(() => {
+            const url = documentUrlSignal.value;
+            const valueInUrl = getter(url);
+            return valueInUrl;
+          });
+          urlParamSignalMap.set(name, signalForFirstCall);
+          return signalForFirstCall;
+        };
+      }
+
+      const useMethodUrlStringParam = () => {
+        const availableMethodNames = availableMethodNamesSignal.value;
+        return useUrlStringParam("method", {
+          availableValues: availableMethodNames,
+        });
+      };
+
+      const usePackageUrlStringParam = () => {
+        const availablePackageNames = availablePackageNamesSignal.value;
+        return useUrlStringParam("package", {
+          availableValues: availablePackageNames,
+        });
+      };
+
+      let FiltersPanel;
+      filters: {
+        FiltersPanel = ({ routes }) => {
+          return html`
+            <div class="filter_container">
+              <div class="filter_list">
+                <div class="filter_item">
+                  <${MethodFilter} routes=${routes} />
+                </div>
+                <div class="filter_item">
+                  <${PackageFilter} routes=${routes} />
+                </div>
+              </div>
+            </div>
+          `;
+        };
+        const MethodFilter = ({ routes }) => {
+          const availableMethodNames = availableMethodNamesSignal.value;
+          const availableMethodRepartition = methodRepartitionSignal.value;
+          const [selectedMethod, setSelectedMethod] = useMethodUrlStringParam();
+
+          // "all" border image is a combination of available method colors
+          const getMethodColor = (methodName) => {
+            const bodyStyle = window.getComputedStyle(document.body);
+            const methodColor = bodyStyle.getPropertyValue(
+              `--method-${methodName.toLowerCase()}-color`,
+            );
+            return methodColor;
+          };
+          const percentagePerColor = Math.floor(
+            100 / (availableMethodNames.length - 1),
+          );
+          const gradientSteps = [];
+          let progress = 0;
+          let index = 0;
+          for (const methodName of availableMethodNames) {
+            if (index === availableMethodNames.length - 1) {
+              progress = 100;
+            }
+            gradientSteps.push(`${getMethodColor(methodName)} ${progress}%`);
+            progress += percentagePerColor;
+            index++;
+          }
+          const gradient = `linear-gradient(to bottom, ${gradientSteps.join(", ")})`;
+
+          const options = [
+            {
+              value: "",
+              text: html`
+                <span
+                  class="filter_text"
+                  data-method="all"
+                  style=${{
+                    borderImageSource: gradient,
+                  }}
+                  >all</span
+                >
+                <span class="filter_count">${routes.length}</span>
+              `,
+              selected: !selectedMethod,
+            },
+            ...availableMethodNames.map((availableMethodName) => {
+              return {
+                value: availableMethodName,
+                text: html`
+                  <span class="filter_text" data-method="${availableMethodName}"
+                    >${availableMethodName}
+                  </span>
+                  <span class="filter_count">
+                    ${availableMethodRepartition[availableMethodName]}
+                  </span>
+                `,
+                selected: availableMethodName === selectedMethod,
+              };
+            }),
+          ];
+
+          return html`
+            <${FilterSelector}
+              label="Methods"
+              options=${options}
+              onChange=${(methodToSelect) => {
+                setSelectedMethod(methodToSelect);
+              }}
+            />
+          `;
+        };
+        const PackageFilter = ({ routes }) => {
+          const availablePackageNames = availablePackageNamesSignal.value;
+          const packageRepartition = packageRepartitionSignal.value;
+          const [selectedPackageName, setSelectedPackageName] =
+            usePackageUrlStringParam();
+
+          const options = [
+            {
+              value: "",
+              text: html`<span>all</span>
+                <span class="filter_count">${routes.length}</span>`,
+              selected: !selectedPackageName,
+            },
+            ...availablePackageNames.map((availablePackageName) => {
+              return {
+                value: availablePackageName,
+                text: html` <span
+                    class="filter_text"
+                    title="${availablePackageName}"
+                    >${availablePackageName}</span
+                  >
+                  <span class="filter_count"
+                    >${packageRepartition[availablePackageName]}</span
+                  >`,
+                selected: availablePackageName === selectedPackageName,
+              };
+            }),
+          ];
+          return html`
+            <${FilterSelector}
+              label="Packages"
+              options=${options}
+              onChange=${(packageNameToSelect) => {
+                setSelectedPackageName(packageNameToSelect);
+              }}
+            />
+          `;
+        };
+        const FilterSelector = ({
+          label,
+          multiple,
+          options,
+          onChange,
+          actions,
+        }) => {
+          const formRef = useRef();
+
+          return html`<details open class="filter">
+                <summary class="filter_summary">
+                  ${label}
+                  <${ArrowDown} />
+                </summary>
+                <form ref=${formRef} class="filter_form">
+                  ${options.map((option) => {
+                    return html`<label>
+                      <input
+                        type="${multiple ? "checkbox" : "radio"}"
+                        name="${label}"
+                        checked=${option.selected}
+                        value=${option.value}
+                        onChange=${multiple
+                          ? () => {
+                              const formNode = formRef.current;
+                              // even if we create a checkbox list the HTML spec
+                              // return a radio node list and we have to gather the checked values
+                              const radioNodeList = formNode.elements[label];
+                              const selectedValues = [];
+                              for (const checkboxNode of Array.from(
+                                radioNodeList,
+                              )) {
+                                if (checkboxNode.checked) {
+                                  selectedValues.push(checkboxNode.value);
+                                }
+                              }
+                              onChange(selectedValues);
+                            }
+                          : () => {
+                              const formNode = formRef.current;
+                              const radioNodeList = formNode.elements[label];
+                              const selectedValue = radioNodeList.value;
+                              onChange(selectedValue);
+                            }}
+                      />
+                      ${option.text}
+                    </label>`;
+                  })}
+                </form>
+                ${
+                  actions &&
+                  html` <div class="filter_actions">
+                    <button
+                      type="button"
+                      class="filter_button"
+                      onClick=${() => {
+                        onChange(options.map((option) => option.value));
+                      }}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      class="filter_button"
+                      onClick=${() => {
+                        onChange([]);
+                      }}
+                    >
+                      Clear All
+                    </button>
+                  </div>`
+                }
+              </div>`;
+        };
+      }
+
+      const RouteDetails = ({
+        meta,
+        method,
+        resource,
+        description,
+        availableMediaTypes,
+        availableLanguages,
+        availableVersions,
+        availableEncodings,
+        acceptedMediaTypes,
+        websocket,
+        clientCodeExample,
+        declarationSource,
+      }) => {
+        const [opened, setOpened] = useState(false);
+        const [selectedMethod] = useUrlStringParam("method");
+        const [selectedPackageName] = usePackageUrlStringParam();
+
+        if (selectedMethod && method !== selectedMethod) {
+          return null;
+        }
+        const packageName = meta.packageName || NO_PACKAGE_NAME;
+        if (selectedPackageName && packageName !== selectedPackageName) {
+          return null;
+        }
+
+        return html`<details
+          class="route_details"
+          onToggle=${(e) => {
+            setOpened(e.newState === "open");
+          }}
+          data-method=${method}
+        >
+          <summary>
+            <div class="route_summary_container">
+              <span class="route_method">${method}</span>
+              <p class="route_resource">${resource}</p>
+              <span style="flex:1"></span>
+              <${RouteBadge} meta=${meta} />
+              ${opened ? html`<${ArrowUp} />` : html`<${ArrowDown} />`}
+            </div>
+          </summary>
+          <${RouteDetailsContent}
+            method=${method}
+            resource=${resource}
+            description=${description}
+            availableMediaTypes=${availableMediaTypes}
+            availableLanguages=${availableLanguages}
+            availableVersions=${availableVersions}
+            availableEncodings=${availableEncodings}
+            acceptedMediaTypes=${acceptedMediaTypes}
+            websocket=${websocket}
+            clientCodeExample=${clientCodeExample}
+            declarationSource=${declarationSource}
+            meta=${meta}
+          />
+        </details>`;
+      };
+
+      const RouteBadge = ({ meta }) => {
+        if (!meta.packageName) {
+          return null;
+        }
+        let text = meta.packageName;
+        let title = `This endpoint is declared by ${meta.packageName}`;
+        return html`<span title=${title} class="route_owner_name"
+          >${text}</span
+        >`;
+      };
+
+      const RouteDetailsContent = ({
+        method,
+        resource,
+        description,
+        availableMediaTypes,
+        availableLanguages,
+        availableVersions,
+        availableEncodings,
+        acceptedMediaTypes,
+        websocket,
+        clientCodeExample,
+        declarationSource,
+        meta,
+      }) => {
+        return html`<div class="route_details_content">
+          <${RoutedeclarationSource}
+            meta=${meta}
+            declarationSource=${declarationSource}
+          />
+          <p style="margin-top: 0"><strong>Description:</strong></p>
+          <p class="route_description">
+            ${description || "No description available"}
+          </p>
+          ${availableMediaTypes.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="content-type"
+            title="Available media types"
+            availableValues=${availableMediaTypes}
+          />`}
+          ${availableLanguages.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="language"
+            title="Available languages"
+            availableValues=${availableLanguages}
+          />`}
+          ${availableVersions.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="version"
+            title="Available versions"
+            availableValues=${availableVersions}
+          />`}
+          ${availableEncodings.length > 0 &&
+          html`<${RouteContentNegotiationSection}
+            type="encoding"
+            title="Available encodings"
+            availableValues=${availableEncodings}
+          />`}
+          ${acceptedMediaTypes.length > 0 &&
+          html`<${RouteAcceptableContentSection}
+            acceptedMediaTypes=${acceptedMediaTypes}
+          />`}
+          <p style="margin-bottom:0; font-weight:bold">Example:</p>
+          <${RouteCodeExample}
+            method=${method}
+            resource=${resource}
+            availableMediaTypes=${availableMediaTypes}
+            websocket=${websocket}
+            clientCodeExample=${clientCodeExample}
+          />
+        </div>`;
+      };
+      const RoutedeclarationSource = ({ meta, declarationSource }) => {
+        if (!declarationSource) {
+          return null;
+        }
+        return html`<p style="margin-top: 0"><strong>Declaration:</strong></p>
+          <p>
+            <${RouteDeclarationText}
+              ownerLink=${meta.ownerLink}
+              declarationLink=${meta.declarationLink}
+            />
+          </p>`;
+      };
+      const RouteDeclarationText = ({ declarationLink }) => {
+        return html`This route is declared in${" "}
+          <a href="${declarationLink.url}">${declarationLink.text}</a>`;
+      };
+      const RouteContentNegotiationSection = ({
+        type,
+        title,
+        availableValues,
+      }) => {
+        return html`<div class="route_content_nego" data-nego-type="${type}">
+          <p class="route_content_nego_title">${title}:</p>
+          <ul>
+            ${availableValues.map(
+              (availableValue) => html`<li>${availableValue}</li>`,
+            )}
+          </ul>
+        </div>`;
+      };
+      const RouteAcceptableContentSection = ({ acceptedMediaTypes }) => {
+        return html`<div class="route_accepted_content_type">
+          <p><strong>Accepted content types:</strong></p>
+          <ul>
+            ${acceptedMediaTypes.map(
+              (acceptedMediaType) => html`<li>${acceptedMediaType}</li>`,
+            )}
+          </ul>
+        </div>`;
+      };
+
+      const RouteCodeExample = ({
+        method,
+        resource,
+        availableMediaTypes,
+        websocket,
+        clientCodeExample,
+      }) => {
+        let jsSource;
+        if (clientCodeExample) {
+          jsSource = clientCodeExample;
+        } else if (websocket) {
+          const websocketScheme =
+            self.location.protocol === "https:" ? "wss" : "ws";
+          const websocketOrigin = `${websocketScheme}://${self.location.host}`;
+          jsSource = /*js */ `
+                const websocket = new WebSocket("${websocketOrigin}${resource}");
+                websocket.onerror = () => {
+                  console.error("Failed to connect to websocket endpoint");
+                };
+                websocket.onopen = () => {
+                  console.info("Connected to websocket endpoint")
+                };
+                websocket.onmessage = (event) => {
+                  console.log("Received message", event.data);
+                };
+                `;
+        } else {
+          let fetchLine;
+          if (method === "GET") {
+            fetchLine = `const response = await window.fetch("${resource}");`;
+          } else {
+            fetchLine = `const response = await window.fetch("${resource}", {
+        method: "${method}",
+      }`;
+          }
+          let readResponseLine;
+          if (availableMediaTypes.includes("application/json")) {
+            readResponseLine = `const json = await response.json();`;
+          } else {
+            readResponseLine = `const text = await response.text();`;
+          }
+
+          jsSource = /*js */ `
+      ${fetchLine}
+      ${readResponseLine}
+                `;
+        }
+
+        return html`<code-block lang="js" data-escaped data-copy-button
+          >${jsSource}</code-block
+        >`;
+      };
+
+      const ArrowDown = () => {
+        return html`<svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 -960 960 960"
+          width="24"
+          height="24"
+          fill="currentColor"
+          class="arrow_down"
+        >
+          <path d="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z" />
+        </svg>`;
+      };
+      const ArrowUp = () => {
+        return html`<svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 -960 960 960"
+          width="24"
+          height="24"
+          fill="currentColor"
+          class="arrow_up"
+        >
+          <path d="M480-528 296-344l-56-56 240-240 240 240-56 56-184-184Z" />
+        </svg>`;
+      };
+
+      render(html`<${Sidebar} />`, document.querySelector("aside"));
+      render(html`<${App} />`, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

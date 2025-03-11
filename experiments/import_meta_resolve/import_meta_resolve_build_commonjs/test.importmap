@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "bareA": "./bar",
+    "bareB": "/bar"
+  }
+}

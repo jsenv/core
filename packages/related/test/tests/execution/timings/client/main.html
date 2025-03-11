@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      console.log("foo");
+      await new Promise((resolve) => {
+        setTimeout(resolve, 2_000);
+      });
+    </script>
+  </body>
+</html>

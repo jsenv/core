@@ -1,0 +1,61 @@
+{
+  "name": "@jsenv/test",
+  "version": "3.6.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/related/test"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "development": "./src/main.js",
+        "default": "./dist/jsenv_test.js"
+      }
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/dist/",
+    "/src/"
+  ],
+  "scripts": {
+    "build": "node --conditions=development ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "optionalDependencies": {
+    "playwright": "1.x"
+  },
+  "dependencies": {
+    "@c88/v8-coverage": "0.1.1",
+    "@jsenv/abort": "4.3.1",
+    "@jsenv/ast": "6.6.0",
+    "@jsenv/exception": "1.1.5",
+    "@jsenv/filesystem": "4.14.0",
+    "@jsenv/github-check-run": "0.2.13",
+    "@jsenv/node-esm-resolution": "1.1.0",
+    "@jsenv/humanize": "1.3.0",
+    "@jsenv/plugin-supervisor": "1.6.7",
+    "@jsenv/sourcemap": "1.3.0",
+    "@jsenv/url-meta": "8.5.4",
+    "@jsenv/urls": "2.6.1",
+    "@jsenv/utils": "2.2.0",
+    "he": "1.2.0",
+    "istanbul-lib-coverage": "3.2.2",
+    "istanbul-lib-instrument": "6.0.3",
+    "istanbul-lib-report": "3.0.1",
+    "istanbul-reports": "3.1.7",
+    "pidtree": "0.6.0",
+    "strip-ansi": "7.1.0",
+    "supports-color": "10.0.0",
+    "v8-to-istanbul": "9.3.0"
+  }
+}

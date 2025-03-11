@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Route error demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      import { useState } from "preact/hooks";
+      import {
+        registerRoutes,
+        useRouteUrl,
+        // eslint-disable-next-line no-unused-vars
+        Route,
+      } from "@jsenv/router";
+      import { setBaseUrl } from "../route.js";
+
+      setBaseUrl(window.location.href);
+      const [
+        main,
+        load_throw_sync,
+        load_throw_after_300_ms,
+        throw_during_render,
+        throw_after_click,
+        throw_loaded_async,
+      ] = registerRoutes({
+        "GET /route_error_demo.html": null,
+        "GET ?route=load_throw_sync": async () => {
+          throw new Error("load_throw_sync");
+        },
+        "GET ?route=load_throw_after_300_ms": async () => {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 300);
+          });
+          throw new Error("load_throw_after_300");
+        },
+        "GET ?route=throw_during_render": null,
+        "GET ?route=throw_after_click": null,
+        "GET ?route=throw_loaded_async": null,
+      });
+
+      const Loading = () => {
+        return "loading...";
+      };
+      const RouteDisplay = ({ route }) => {
+        return <div>{route.name}</div>;
+      };
+      const ThrowDuringRender = () => {
+        throw new Error("throw during render");
+      };
+      const ThrowAfterClick = () => {
+        // For this one we don't want to catch the click error
+        // it's the component responsability now to react to error outside of the first render
+        const [clicked, clickedSetter] = useState(false);
+        if (clicked) {
+          throw new Error("after click");
+        }
+        return (
+          <button
+            onClick={() => {
+              clickedSetter(true);
+            }}
+          >
+            Click me
+          </button>
+        );
+      };
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const mainUrl = useRouteUrl(main);
+        const loadThrowSyncUrl = useRouteUrl(load_throw_sync);
+        const loadThrowAfter300MsUrl = useRouteUrl(load_throw_after_300_ms);
+        const throwDuringRenderUrl = useRouteUrl(throw_during_render);
+        const throwAfterClickUrl = useRouteUrl(throw_after_click);
+        const throwLoadedAsyncUrl = useRouteUrl(throw_loaded_async);
+
+        const links = [
+          {
+            url: mainUrl,
+            text: "root",
+          },
+          {
+            url: loadThrowSyncUrl,
+            text: "load throw sync",
+          },
+          {
+            url: loadThrowAfter300MsUrl,
+            text: "load throw after 300ms",
+          },
+          {
+            url: throwDuringRenderUrl,
+            text: "throw during render",
+          },
+          {
+            url: throwAfterClickUrl,
+            text: "throw after click",
+          },
+          {
+            url: throwLoadedAsyncUrl,
+            text: "throw loaded async",
+          },
+        ];
+
+        return (
+          <div>
+            <h1>Navigation</h1>
+            <nav style="display: flex; gap: 0px">
+              {links.map((link) => {
+                return (
+                  <div style="display: flex; flex-direction: column; width: 200px">
+                    <a
+                      href={link.url}
+                      style={{
+                        padding: "10px",
+                        border: "1px solid black",
+                      }}
+                    >
+                      {link.text}
+                    </a>
+                  </div>
+                );
+              })}
+            </nav>
+
+            <h1>Content</h1>
+            <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
+              <Route
+                route={load_throw_sync}
+                loading={Loading}
+                loaded={RouteDisplay}
+              />
+              <Route
+                route={load_throw_after_300_ms}
+                loading={Loading}
+                loaded={RouteDisplay}
+              />
+              <Route
+                route={throw_during_render}
+                loading={Loading}
+                loaded={ThrowDuringRender}
+              />
+              <Route
+                route={throw_after_click}
+                loading={Loading}
+                loaded={ThrowAfterClick}
+              />
+              <Route
+                route={throw_loaded_async}
+                loading={Loading}
+                loadedAsync={async () => {
+                  await new Promise((resolve) => setTimeout(resolve, 100));
+                  throw new Error("throw in loadedAsync after 100ms");
+                }}
+              />
+            </main>
+          </div>
+        );
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

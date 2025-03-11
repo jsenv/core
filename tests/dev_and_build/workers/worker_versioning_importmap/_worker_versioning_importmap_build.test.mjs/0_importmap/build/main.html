@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/ping.js": "/js/ping.js?v=1ecb6f99"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module" src="/js/main.js?v=f6f31357"></script>
+  </body>
+</html>

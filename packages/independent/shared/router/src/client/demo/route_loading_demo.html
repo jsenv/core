@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="data:," />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Route loading demo</title>
+  </head>
+  <body>
+    <div id="root" style="position: relative"></div>
+    <script type="module" jsenv-type="module/jsx">
+      import { render } from "preact";
+      // eslint-disable-next-line no-unused-vars
+      import { Suspense } from "preact/compat";
+      import { registerRoutes, useRouteUrl } from "@jsenv/router";
+      // eslint-disable-next-line no-unused-vars
+      import { Route } from "../route.jsx";
+
+      const { loading_one_second } = registerRoutes(
+        {
+          main: {
+            urlTemplate: "/",
+            load: async () => {},
+          },
+          loading_one_second: {
+            urlTemplate: "?route=loading_one_second",
+            load: async () => {
+              await new Promise((resolve) => {
+                setTimeout(resolve, 1000);
+              });
+              return "Hello world";
+            },
+          },
+        },
+        window.location.href,
+      );
+
+      // eslint-disable-next-line no-unused-vars
+      const App = () => {
+        const loadingOneSecondUrl = useRouteUrl(loading_one_second);
+
+        const links = [
+          {
+            url: "/packages/independent/shared/router/src/client/demo/route_error_demo.html",
+            text: "root",
+          },
+          {
+            url: loadingOneSecondUrl,
+            text: "loading one second",
+          },
+        ];
+
+        return (
+          <div>
+            <h1>Navigation</h1>
+            <nav style="display: flex; gap: 0px">
+              {links.map((link) => {
+                return (
+                  <div style="display: flex; flex-direction: column; width: 200px">
+                    <a
+                      href={link.url}
+                      style={{
+                        padding: "10px",
+                        border: "1px solid black",
+                      }}
+                    >
+                      {link.text}
+                    </a>
+                  </div>
+                );
+              })}
+            </nav>
+
+            <h1>Content</h1>
+            <main style="padding: 10px; border: 1px solid black; margin-top: 10px">
+              <Route
+                route={loading_one_second}
+                loading={Loading}
+                error={Error}
+                loaded={Loaded}
+              />
+            </main>
+          </div>
+        );
+      };
+
+      const Loading = () => {
+        return "Loading...";
+      };
+      const Error = () => {
+        return "Error";
+      };
+      const Loaded = ({ data }) => {
+        return `Loaded: ${data}`;
+      };
+
+      render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>

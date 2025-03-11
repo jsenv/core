@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    "paths": {
+      "@jsenv/core": [
+        "./main.js"
+      ],
+      "@jsenv/core/*": [
+        "./*"
+      ],
+    }
+  }
+}

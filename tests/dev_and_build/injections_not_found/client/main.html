@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script>
+      // eslint-disable-next-line no-undef
+      window.resolveResultPromise = __D__;
+    </script>
+  </body>
+</html>

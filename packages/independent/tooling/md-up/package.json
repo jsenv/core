@@ -1,0 +1,31 @@
+{
+  "name": "@jsenv/md-up",
+  "version": "0.1.6",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/tooling/md-up"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/md_up.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "dependencies": {
+    "anchor-markdown-header": "0.7.0",
+    "marked": "15.0.6",
+    "@jsenv/filesystem": "4.14.0",
+    "@jsenv/urls": "2.6.1",
+    "@jsenv/ast": "6.6.0"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "@jsenv/plugin-toolbar",
+  "version": "1.5.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/related/plugin-toolbar"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "development": "./src/jsenv_plugin_toolbar.js",
+        "default": "./dist/jsenv_plugin_toolbar.js"
+      }
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/dist/",
+    "/src/"
+  ],
+  "dependencies": {
+    "@jsenv/ast": "6.6.0"
+  },
+  "devDependencies": {
+    "@preact/signals": "2.0.1"
+  },
+  "scripts": {
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  }
+}

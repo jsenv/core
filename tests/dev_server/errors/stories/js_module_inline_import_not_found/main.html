@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <script type="module">
+      /* eslint-disable import-x/no-unresolved */
+      // above 1
+      // above 2
+      // above 3
+      /* before */ import "./not_found.js"; /* after */
+      // below 1
+      // below 2
+      // below 3
+      /* eslint-enable import-x/no-unresolved */
+
+      // eslint-disable-next-line no-undef
+      const v = __filename;
+      console.log(v);
+    </script>
+  </body>
+</html>

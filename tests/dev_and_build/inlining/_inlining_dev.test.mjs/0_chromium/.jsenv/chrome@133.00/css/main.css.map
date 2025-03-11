@@ -1,0 +1,11 @@
+{
+  "version": 3,
+  "sources": [
+    "base/client/css/main.css?inline"
+  ],
+  "sourcesContent": [
+    "body {\n  background: red;\n  background-image: url(\"../img/jsenv.png\");\n}\n"
+  ],
+  "names": [],
+  "mappings": "AAAA,CAAC,CAAC,CAAC,CAAC,CAAC;AACL,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC;AACjB,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,CAAC,cAAkB,CAAC;AAC3C;"
+}

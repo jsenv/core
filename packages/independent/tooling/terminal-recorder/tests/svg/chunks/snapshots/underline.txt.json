@@ -1,0 +1,84 @@
+[
+  {
+    "type": "text",
+    "value": "a[32m",
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 0
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "underlineOpen",
+      "ansi": "\u001b[4m",
+      "decorator": "underlineOpen"
+    },
+    "position": {
+      "x": 5,
+      "y": 0,
+      "n": 5,
+      "raw": 5
+    },
+    "style": {
+      "underline": true
+    }
+  },
+  {
+    "type": "text",
+    "value": "b",
+    "position": {
+      "x": 5,
+      "y": 0,
+      "n": 5,
+      "raw": 9
+    },
+    "style": {
+      "underline": true
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "reset",
+      "ansi": "\u001b[0m",
+      "decorator": "reset"
+    },
+    "position": {
+      "x": 6,
+      "y": 0,
+      "n": 6,
+      "raw": 10
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "reset",
+      "ansi": "\u001b[0m",
+      "decorator": "reset"
+    },
+    "position": {
+      "x": 6,
+      "y": 0,
+      "n": 6,
+      "raw": 14
+    },
+    "style": {}
+  },
+  {
+    "type": "text",
+    "value": "c",
+    "position": {
+      "x": 6,
+      "y": 0,
+      "n": 6,
+      "raw": 18
+    },
+    "style": {}
+  }
+]

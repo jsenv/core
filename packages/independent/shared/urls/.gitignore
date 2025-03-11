@@ -1,0 +1,4 @@
+/.jsenv/
+/.coverage/
+/node_modules/
+.DS_STORE

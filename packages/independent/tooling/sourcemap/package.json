@@ -1,0 +1,23 @@
+{
+  "name": "@jsenv/sourcemap",
+  "version": "1.3.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/tooling/sourcemap"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/main.js",
+    "./*": "./*"
+  },
+  "dependencies": {
+    "@jsenv/urls": "2.6.1",
+    "magic-string": "0.30.17",
+    "source-map-js": "1.2.1"
+  }
+}

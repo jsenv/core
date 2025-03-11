@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module" jsenv-debug>
+      import { answer } from "./file.js";
+
+      setTimeout(() => {
+        const url = import.meta.url;
+        window.resolveResultPromise({
+          answer,
+          url: url.replace(window.origin, "window.origin"),
+        });
+      }, 100);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head></head>
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module">
+      import { value } from "./b.js";
+
+      window.resolveResultPromise(value);
+    </script>
+  </body>
+</html>

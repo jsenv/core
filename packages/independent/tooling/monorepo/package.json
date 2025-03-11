@@ -1,0 +1,35 @@
+{
+  "name": "@jsenv/monorepo",
+  "version": "0.2.11",
+  "description": "Helpers to manage packages in a monorepo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/tooling/monorepo"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "dependencies": {
+    "@jsenv/urls": "2.6.1",
+    "@jsenv/filesystem": "4.14.0",
+    "@jsenv/package-publish": "1.11.20",
+    "@jsenv/humanize": "1.3.0",
+    "semver": "7.6.3"
+  }
+}

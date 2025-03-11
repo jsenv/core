@@ -1,0 +1,11 @@
+@import "./file.scss";
+
+$color: violet;
+
+body {
+  background: $color;
+
+  p {
+    background: yellow;
+  }
+}

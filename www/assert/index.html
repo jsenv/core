@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Web Assert</title>
+    <meta content="width=device-width" name="viewport" />
+    <link rel="stylesheet" href="assert_tool.css" />
+  </head>
+  <body>
+    <form>
+      <div class="columns">
+        <div class="column">
+          <label for="actual">Actual</label>
+          <textarea id="actual">{"test1": "val1"}</textarea>
+        </div>
+        <div class="column">
+          <label for="expect">Expected</label>
+          <textarea id="expect">{"test1": "val2"}</textarea>
+        </div>
+      </div>
+      <button type="submit">Submit</button>
+    </form>
+    <div class="columns">
+      <div class="column">
+        <div id="diffActual"></div>
+      </div>
+      <div class="column">
+        <div id="diffExpect"></div>
+      </div>
+    </div>
+    <script src="assert_tool.js" type="module"></script>
+  </body>
+</html>

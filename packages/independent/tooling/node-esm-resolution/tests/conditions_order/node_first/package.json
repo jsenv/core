@@ -1,0 +1,10 @@
+{
+  "name": "root",
+  "type": "module",
+  "imports": {
+    "#foo": {
+      "node": "./node.js",
+      "import": "./import.js"
+    }
+  }
+}

@@ -1,0 +1,47 @@
+[
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "red",
+      "ansi": "\u001b[31m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 0
+    },
+    "style": {
+      "foregroundColor": "red"
+    }
+  },
+  {
+    "type": "text",
+    "value": "_",
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 5
+    },
+    "style": {
+      "foregroundColor": "red"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "foregroundColorClose",
+      "ansi": "\u001b[39m",
+      "decorator": "foregroundColorClose"
+    },
+    "position": {
+      "x": 1,
+      "y": 0,
+      "n": 1,
+      "raw": 6
+    },
+    "style": {}
+  }
+]

@@ -1,0 +1,76 @@
+@import "./globals.css";
+@import "./document_execution_indicator/document_execution_indicator.css";
+@import "./server_indicator/server_indicator.css";
+@import "./toolbar_settings/toolbar_settings.css";
+@import "./toolbar_menu_overflow/toolbar_menu_overflow.css";
+@import "./tooltips/tooltips.css";
+
+.toolbar_control {
+  background: none;
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  width: 40px;
+  padding: 0;
+}
+
+.toolbar_control:hover {
+  cursor: pointer;
+}
+
+/* file and settings icons */
+#document_index_icon,
+.settings-icon {
+  width: 20px;
+}
+
+.toolbar_icon {
+  height: 40px;
+  fill: #cecece;
+  color: #cecece;
+}
+
+.toolbar_icon:hover {
+  fill: #909090 !important;
+}
+
+.toolbar_icon_wrapper {
+  height: 100%;
+  text-align: center;
+  width: 40px;
+  display: inline-block;
+}
+
+#file[data-active] {
+  background: rgba(31, 38, 44, 0.72);
+}
+
+#settings[data-active] button {
+  background: #030713;
+}
+
+#toolbar_close_button_icon {
+  width: 18px;
+}
+
+#toolbar a {
+  color: inherit;
+}
+
+#changes_indicator button {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  width: auto;
+}
+
+.changes_icon {
+  width: 32px;
+}
+
+.changes_text {
+  display: flex;
+  align-items: center;
+}

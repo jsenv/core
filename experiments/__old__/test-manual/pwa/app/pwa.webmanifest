@@ -1,0 +1,16 @@
+{
+  "name": "webmanifest name",
+  "short_name": "webmanifest short_name",
+  "description": "webmanifest description",
+  "icons": [
+    {
+      "src": "pwa.icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "display": "fullscreen",
+  "theme_color": "green",
+  "background_color": "orange"
+}

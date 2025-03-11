@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div style="display: flex">
+      <div id="terminal" width="300px"></div>
+      <canvas id="canvas"></canvas>
+    </div>
+    <script type="module">
+      import { initTerminal } from "./terminal_recorder.js";
+
+      const delayBetweenLines = 200;
+      const { startRecording } = initTerminal({
+        textInViewport: true,
+        gif: {
+          repeat: true,
+          msAddedAtTheEnd: 3_000,
+        },
+        // logs: true,
+        // video: true,
+      });
+      const { writeIntoTerminal, stopRecording } = await startRecording();
+
+      window.renderFromSource = async (sourceUrl) => {
+        document.querySelector("#text_in_viewport").innerHTML = "...";
+        document.querySelector("#video").src = "";
+        document.querySelector("#gif").src = "";
+
+        const sourceResponse = await fetch(sourceUrl);
+        const source = await sourceResponse.text();
+        let lines = source.split("\n");
+        // lines = lines.slice(0, 12);
+        for (const line of lines) {
+          writeIntoTerminal(`${line}\n`);
+          await new Promise((resolve) =>
+            setTimeout(resolve, delayBetweenLines),
+          );
+        }
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const terminalRecords = await stopRecording();
+        const textInViewport = terminalRecords.textInViewport;
+        const video = terminalRecords.video;
+        const gif = terminalRecords.gif;
+
+        const webmDataUrl = `data:video/webm;codecs=h264;base64,${window.btoa(
+          video,
+        )}`;
+        const gifDataUrl = `data:image/gif;base64,${window.btoa(gif)}`;
+
+        document.querySelector("#text_in_viewport").innerHTML = textInViewport;
+        document.querySelector("#video").src = webmDataUrl;
+        document.querySelector("#gif").src = gifDataUrl;
+      };
+    </script>
+    <form>
+      <select name="source">
+        <option value="./fixtures/hello_world_2_lines.txt">
+          ./fixtures/hello_world_2_lines.txt
+        </option>
+        <option value="./fixtures/source.txt">./fixtures/source.txt</option>
+      </select>
+      <button name="submit" type="submit">Go</button>
+    </form>
+    <script>
+      const form = document.querySelector("form");
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const source = form.elements.source.value;
+        const submit = form.elements.submit;
+        submit.disabled = true;
+        await window.renderFromSource(source);
+        submit.disabled = false;
+      };
+    </script>
+    <div id="records" style="display: flex">
+      <div style="flex-grow: 1">
+        <h3>Text in viewport</h3>
+        <pre id="text_in_viewport"></pre>
+      </div>
+      <div style="flex-grow: 1">
+        <h3>GIF</h3>
+        <img id="gif" src="data:," />
+      </div>
+      <div style="flex-grow: 1">
+        <h3>Video</h3>
+        <video id="video" src="data:," controls></video>
+      </div>
+    </div>
+  </body>
+</html>

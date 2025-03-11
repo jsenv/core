@@ -1,0 +1,146 @@
+[
+  {
+    "type": "text",
+    "value": "Your ",
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 0
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "red",
+      "ansi": "\u001b[31m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 5,
+      "y": 0,
+      "n": 5,
+      "raw": 5
+    },
+    "style": {
+      "foregroundColor": "red"
+    }
+  },
+  {
+    "type": "text",
+    "value": "wish",
+    "position": {
+      "x": 5,
+      "y": 0,
+      "n": 5,
+      "raw": 10
+    },
+    "style": {
+      "foregroundColor": "red"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "foregroundColorClose",
+      "ansi": "\u001b[39m",
+      "decorator": "foregroundColorClose"
+    },
+    "position": {
+      "x": 9,
+      "y": 0,
+      "n": 9,
+      "raw": 14
+    },
+    "style": {}
+  },
+  {
+    "type": "text",
+    "value": " is",
+    "position": {
+      "x": 9,
+      "y": 0,
+      "n": 9,
+      "raw": 19
+    },
+    "style": {}
+  },
+  {
+    "type": "newline",
+    "value": "\n",
+    "position": {
+      "x": 12,
+      "y": 0,
+      "n": 12,
+      "raw": 22
+    }
+  },
+  {
+    "type": "text",
+    "value": " ",
+    "position": {
+      "x": 0,
+      "y": 1,
+      "n": 13,
+      "raw": 23
+    },
+    "style": {}
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "bgYellow",
+      "ansi": "\u001b[43m",
+      "decorator": "backgroundColorOpen"
+    },
+    "position": {
+      "x": 1,
+      "y": 1,
+      "n": 14,
+      "raw": 24
+    },
+    "style": {
+      "backgroundColor": "bgYellow"
+    }
+  },
+  {
+    "type": "text",
+    "value": "my",
+    "position": {
+      "x": 1,
+      "y": 1,
+      "n": 14,
+      "raw": 29
+    },
+    "style": {
+      "backgroundColor": "bgYellow"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "backgroundColorClose",
+      "ansi": "\u001b[49m",
+      "decorator": "backgroundColorClose"
+    },
+    "position": {
+      "x": 3,
+      "y": 1,
+      "n": 16,
+      "raw": 31
+    },
+    "style": {}
+  },
+  {
+    "type": "text",
+    "value": " command.",
+    "position": {
+      "x": 3,
+      "y": 1,
+      "n": 16,
+      "raw": 36
+    },
+    "style": {}
+  }
+]

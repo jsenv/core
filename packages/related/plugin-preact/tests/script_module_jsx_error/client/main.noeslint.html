@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import { render } from "preact";
+      import { useEffect } from "preact/hooks";
+
+      const App = () => {
+        return <span>Hello world</span>;
+      };
+      render(<App />, document.querySelector("#app"));
+    </script>
+  </body>
+</html>

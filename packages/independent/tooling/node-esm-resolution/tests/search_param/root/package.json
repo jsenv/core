@@ -1,0 +1,7 @@
+{
+  "name": "whatever",
+  "private": true,
+  "dependencies": {
+    "foo.js": "*"
+  }
+}

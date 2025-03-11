@@ -1,0 +1,67 @@
+html,
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.columns {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+}
+
+.column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+textarea {
+  width: 100%;
+  height: 120px;
+  resize: vertical;
+  padding: 10px;
+  box-sizing: border-box;
+  background: #282c34;
+  color: #cccccc;
+  border: 0;
+  border-radius: 8px;
+  font-family:
+    SauceCodePro Nerd Font,
+    Source Code Pro,
+    Courier;
+  font-size: 14px;
+}
+
+label {
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-family:
+    Helvetica Neue,
+    Helvetica,
+    sans-serif;
+  padding: 0 0 5px 8px;
+  font-size: 18px;
+  color: #333333;
+}
+
+form {
+  margin: 0 0 10px 0;
+}
+
+button {
+  color: #ffffff;
+  cursor: pointer;
+  appearance: none;
+  padding: 8px 14px 8px 14px;
+  border: 0;
+  background: #ff5f57;
+  margin: 10px 0 0 8px;
+  border-radius: 5px;
+}

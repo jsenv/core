@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:,">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/preact.module.js": "/js/preact.module.js?v=16629613",
+          "/js/hooks.module.js": "/js/hooks.module.js?v=21805d2b",
+          "/js/jsxRuntime.module.js": "/js/jsxRuntime.module.js?v=ac0edf7e"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module" jsenv-type="module/jsx">import { render } from "/js/preact.module.js";
+import { useEffect } from "/js/hooks.module.js";
+
+// eslint-disable-next-line no-unused-vars
+import { jsx as _jsx } from "/js/jsxRuntime.module.js";
+const App = ({
+  onFirstRender
+}) => {
+  useEffect(() => {
+    onFirstRender();
+  }, []);
+  return _jsx("span", {
+    children: "Hello world"
+  });
+};
+render(_jsx(App, {
+  onFirstRender: () => {
+    window.resolveResultPromise(document.querySelector("span").innerHTML);
+  }
+}), document.querySelector("#app"));</script>
+  </body>
+</html>

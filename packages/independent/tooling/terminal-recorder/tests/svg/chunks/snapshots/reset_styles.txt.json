@@ -1,0 +1,102 @@
+[
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "red",
+      "ansi": "\u001b[31m",
+      "decorator": "foregroundColorOpen"
+    },
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 0
+    },
+    "style": {
+      "foregroundColor": "red"
+    }
+  },
+  {
+    "type": "text",
+    "value": "RED",
+    "position": {
+      "x": 0,
+      "y": 0,
+      "n": 0,
+      "raw": 5
+    },
+    "style": {
+      "foregroundColor": "red"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "foregroundColorClose",
+      "ansi": "\u001b[39m",
+      "decorator": "foregroundColorClose"
+    },
+    "position": {
+      "x": 3,
+      "y": 0,
+      "n": 3,
+      "raw": 8
+    },
+    "style": {}
+  },
+  {
+    "type": "newline",
+    "value": "\n",
+    "position": {
+      "x": 3,
+      "y": 0,
+      "n": 3,
+      "raw": 13
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "bgGreen",
+      "ansi": "\u001b[42m",
+      "decorator": "backgroundColorOpen"
+    },
+    "position": {
+      "x": 0,
+      "y": 1,
+      "n": 4,
+      "raw": 14
+    },
+    "style": {
+      "backgroundColor": "bgGreen"
+    }
+  },
+  {
+    "type": "text",
+    "value": "GREEN",
+    "position": {
+      "x": 0,
+      "y": 1,
+      "n": 4,
+      "raw": 19
+    },
+    "style": {
+      "backgroundColor": "bgGreen"
+    }
+  },
+  {
+    "type": "ansi",
+    "value": {
+      "tag": "backgroundColorClose",
+      "ansi": "\u001b[49m",
+      "decorator": "backgroundColorClose"
+    },
+    "position": {
+      "x": 5,
+      "y": 1,
+      "n": 9,
+      "raw": 24
+    },
+    "style": {}
+  }
+]

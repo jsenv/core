@@ -1,0 +1,27 @@
+name: performance_impact
+
+on: pull_request
+
+jobs:
+  perf_impact:
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+        node: [22.13.1]
+    runs-on: ${{ matrix.os }}
+    name: performance impact
+    steps:
+      - name: Setup git
+        uses: actions/checkout@v4
+      - name: Setup node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install node modules
+        run: npm install
+      - name: Install playwright
+        run: npx playwright install-deps
+      - name: Report performance impact
+        run: node --expose-gc ./.github/workflows/pr_impact_on_performances.mjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

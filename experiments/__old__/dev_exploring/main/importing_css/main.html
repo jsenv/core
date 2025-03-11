@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import sheet from "./src/style.css" assert { type: "css" }
+
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
+
+      // on firefox we have to wait a bit,
+      // it seems the styles are applied on next js event loop
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1)
+      })
+
+      export const bodyBackgroundColor = getComputedStyle(
+        document.body,
+      ).backgroundColor
+
+      console.log({ bodyBackgroundColor })
+
+      // let 500ms for the background image to load
+      await new Promise((resolve) => {
+        setTimeout(resolve, 500)
+      })
+
+      export const bodyBackgroundImage = getComputedStyle(
+        document.body,
+      ).backgroundImage
+
+      console.log({ bodyBackgroundImage })
+    </script>
+  </body>
+</html>

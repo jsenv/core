@@ -1,0 +1,52 @@
+{
+  "name": "@jsenv/assert",
+  "version": "4.4.3",
+  "description": "One assertion to test everything",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/tooling/assert"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "node": "./src/assert_node.js",
+      "browser": {
+        "development": "./src/assert_browser.js",
+        "default": "./dist/jsenv_assert_browser.js"
+      }
+    },
+    "./*": "./*"
+  },
+  "main": "./dist/jsenv_assert_browser.js",
+  "files": [
+    "/dist/",
+    "/src/"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "dev": "node ./scripts/start_dev_server.mjs",
+    "eslint": "npx eslint . --ext=.js,.mjs,.cjs,.html",
+    "build": "node ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@jsenv/humanize": "1.3.0",
+    "graphemer": "1.4.0",
+    "string-width": "7.2.0"
+  },
+  "devDependencies": {
+    "strip-ansi": "7.1.0"
+  }
+}

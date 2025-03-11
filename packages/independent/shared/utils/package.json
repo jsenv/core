@@ -1,0 +1,18 @@
+{
+  "name": "@jsenv/utils",
+  "version": "2.2.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/shared/utils"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    "./*": "./*"
+  },
+  "dependencies": {}
+}

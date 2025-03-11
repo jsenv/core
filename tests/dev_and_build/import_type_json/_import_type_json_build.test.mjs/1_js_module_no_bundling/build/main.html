@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/data.json.js": "/js/data.json.js?v=76d673c0"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module" src="/js/main.js?v=f110b69e"></script>
+  </body>
+</html>

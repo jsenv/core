@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf8" />
+    <link rel="icon" href="data:," />
+  </head>
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module">
+      import stylesheet from "./index.css" with { type: "css" };
+      import "./index.css" with { type: "css" };
+
+      window.resolveResultPromise({
+        stylesheetInstanceOf: stylesheet instanceof CSSStyleSheet,
+        bodyBackgroundColor: getComputedStyle(document.body).backgroundColor,
+      });
+    </script>
+  </body>
+</html>

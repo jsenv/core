@@ -1,0 +1,5 @@
+@import "./dir/dep.css";
+
+body {
+  color: blue;
+}

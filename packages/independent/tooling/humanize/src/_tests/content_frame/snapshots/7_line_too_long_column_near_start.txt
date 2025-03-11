@@ -1,0 +1,4 @@
+2 | const b = true;
+3 | const thisVari…
+       ^
+4 | const d = true;

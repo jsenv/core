@@ -1,0 +1,41 @@
+{
+  "name": "@jsenv/eslint-import-resolver",
+  "version": "8.3.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/tooling/eslint-import-resolver"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js",
+      "require": "./dist/jsenv_eslint_import_resolver.cjs"
+    },
+    "./*": "./*"
+  },
+  "main": "./dist/jsenv_eslint_import_resolver.cjs",
+  "files": [
+    "/dist/",
+    "/src/"
+  ],
+  "scripts": {
+    "build": "node  --experimental-import-meta-resolve ./scripts/build.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "rollup": "4.31.0",
+    "@jsenv/ast": "6.6.0",
+    "@jsenv/filesystem": "../filesystem/",
+    "@jsenv/importmap": "1.2.1",
+    "@jsenv/node-esm-resolution": "1.1.0"
+  }
+}

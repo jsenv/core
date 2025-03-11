@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf8">
+    <link rel="icon" href="data:,">
+  </head>
+  <body>
+    <jsenv-scripts>
+      <script src="/@fs@jsenv/core/src/plugins/server_events/client/server_events_client.js" jsenv-injected-by="jsenv:server_events"></script>
+      <script jsenv-injected-by="jsenv:server_events" content-indented="" jsenv-cooked-by="jsenv:html_inline_content_analysis">
+        window.__server_events__.setup({
+          "logs": true
+        });
+      </script>
+      <script src="/@fs@jsenv/core/packages/internal/plugin-supervisor/src/client/supervisor.js" jsenv-injected-by="jsenv:supervisor"></script>
+      <script jsenv-injected-by="jsenv:supervisor" content-indented="">
+        window.__supervisor__.setup({
+          "logs": false,
+          "measurePerf": false,
+          "errorOverlay": true,
+          "openInEditor": true,
+          "serverIsJsenvDevServer": true,
+          "rootDirectoryUrl": "base/client/",
+          "scriptInfos": [
+            {
+              "type": "js_classic",
+              "src": "/main.html@L9C5-L13C14.js"
+            },
+            {
+              "type": "js_classic",
+              "src": "/main.js?foo=bar"
+            }
+          ]
+        });
+      </script>
+      <script type="module" jsenv-injected-by="jsenv:autoreload_client" content-indented="">
+        import { initAutoreload } from "/@fs@jsenv/core/src/plugins/autoreload/client/autoreload.js";
+            
+        initAutoreload({
+          "mainFilePath": "/index.html"
+        });
+      </script>
+      <script type="module" jsenv-injected-by="jsenv:ribbon" content-indented="">
+        import { injectRibbon } from "/@fs@jsenv/core/src/plugins/ribbon/client/ribbon.js";
+            
+        injectRibbon({
+          "text": "DEV"
+        });
+      </script>
+    </jsenv-scripts>
+  
+  
+    <script jsenv-cooked-by="jsenv:supervisor" content-indented="" inlined-from-src="/main.html@L9C5-L13C14.js">
+      window.__supervisor__.superviseScript("/main.html@L9C5-L13C14.js");
+    </script>
+    <script content-indented="" jsenv-cooked-by="jsenv:supervisor" inlined-from-src="/main.js?foo=bar">
+      window.__supervisor__.superviseScript("/main.js?foo=bar");
+    </script>
+  </body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "imports": {
+    "#env": "./env.dev.js"
+  }
+}

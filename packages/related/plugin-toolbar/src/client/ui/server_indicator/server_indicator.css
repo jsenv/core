@@ -1,0 +1,73 @@
+#server_indicator button {
+  position: relative;
+}
+
+#server_indicator button svg {
+  width: 40px;
+  height: 40px;
+}
+
+#server_indicator .autoreload {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  margin: 4px;
+  left: 0;
+  top: 0;
+}
+.autoreload[data-variant="enabled"] {
+  color: green;
+}
+
+#server_indicator .icon {
+  width: 40px;
+  height: 40px;
+}
+
+.server_indicator_circle {
+  stroke: black;
+  stroke-width: 0;
+}
+.server_indicator_circle[data-variant="connecting"] {
+  fill: #cecece;
+  animation: wink 1.2s ease-out infinite;
+  transform-origin: center;
+}
+@keyframes wink {
+  0% {
+    opacity: 0;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.server_indicator_circle[data-variant="connected"] {
+  fill: green;
+}
+.server_indicator_circle[data-variant="closed"] {
+  fill: #cc0000;
+}
+
+.server_indicator_ring {
+  stroke: rgba(206, 206, 206, 0.46);
+  stroke-width: 4;
+  fill: transparent;
+  animation: pulse 1.2s ease-out infinite;
+  transform-origin: center;
+}
+@keyframes pulse {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}

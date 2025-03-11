@@ -1,0 +1,74 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "node",
+      "type": "node",
+      "request": "launch",
+      "program": "${file}",
+      // "runtimeVersion": "14.5.0",
+      "runtimeArgs": [
+        "--inspect",
+        "--experimental-json-modules",
+        "--experimental-import-meta-resolve",
+        "--trace-warnings",
+        "--conditions=development"
+        // "--preserve-symlinks",
+        // "--preserve-symlinks-main"
+      ],
+      "console": "integratedTerminal",
+      // "args": ["--coverage"],
+      "autoAttachChildProcesses": true,
+      "sourceMaps": true,
+      "smartStep": true,
+      "skipFiles": [
+        // force-array-multiline
+        // "node_modules/**",
+        "node_modules/@babel/template/**",
+        "node_modules/@jsenv/cancellation/**",
+        "node_modules/@rollup/**",
+        "node_modules/playwright/**",
+        "node_modules/playwright-chromium/**",
+        "node_modules/playwright-webkit/**",
+        "node_modules/playwright-firefox/**",
+        "node_modules/playwright-core/**",
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "name": "node watch",
+      "type": "node",
+      "request": "launch",
+      "program": "${file}",
+      // "runtimeVersion": "14.5.0",
+      "runtimeArgs": [
+        "--inspect",
+        "--experimental-json-modules",
+        "--experimental-import-meta-resolve",
+        "--trace-warnings",
+        "--conditions=development",
+        "--watch"
+        // "--preserve-symlinks",
+        // "--preserve-symlinks-main"
+      ],
+      "console": "integratedTerminal",
+      // "args": ["--coverage"],
+      "autoAttachChildProcesses": true,
+      "sourceMaps": true,
+      "smartStep": true,
+      "skipFiles": [
+        // force-array-multiline
+        // "node_modules/**",
+        "node_modules/@babel/template/**",
+        "node_modules/@jsenv/cancellation/**",
+        "node_modules/@rollup/**",
+        "node_modules/playwright/**",
+        "node_modules/playwright-chromium/**",
+        "node_modules/playwright-webkit/**",
+        "node_modules/playwright-firefox/**",
+        "node_modules/playwright-core/**",
+        "<node_internals>/**"
+      ]
+    }
+  ]
+}

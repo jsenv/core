@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Controllable client</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <div id="output" style="width: 100%"></div>
+    <script>
+      const output = document.querySelector("#output");
+
+      window.fetchResourceAndDisplayResultInDocument = async ({
+        resource,
+        method,
+        headers,
+      }) => {
+        const response = await window.fetch(resource, { method, headers });
+        const responseHeaders = Object.fromEntries(response.headers);
+        const responseContentType = responseHeaders["content-type"] || "";
+        delete responseHeaders.date;
+        delete responseHeaders["keep-alive"];
+
+        if (responseContentType.includes("text/html")) {
+          const html = await response.text();
+          output.innerHTML = `
+<h1>Response status</h1>
+<p>${response.status}</p>
+<h1>Response status text</h1>
+<p>${response.statusText}</p>
+<h1>Response headers</h1>
+<pre>${JSON.stringify(responseHeaders, null, "  ")}</pre>
+<h1>Response body (HTML):</h1>
+<div id="iframe_placeholder"></div>`;
+          const iframe = document.createElement("iframe");
+          iframe.style.width = "100%";
+          // iframe.style.border = "none";
+          output.replaceChild(
+            iframe,
+            output.querySelector("#iframe_placeholder"),
+          );
+          const iframeDoc = iframe.contentDocument;
+          iframeDoc.open();
+          iframeDoc.write(html);
+          iframeDoc.close();
+          await new Promise((resolve) => {
+            iframe.onload = () => {
+              iframe.style.height = `${iframeDoc.documentElement.scrollHeight}px`;
+              resolve();
+            };
+          });
+        } else if (responseContentType.includes("application/json")) {
+          const json = await response.json();
+          output.innerHTML = `
+<h1>Response status</h1>
+<p>${response.status}</p>
+<h1>Response status text</h1>
+<p>${response.statusText}</p>
+<h1>Response headers</h1>
+<pre>${JSON.stringify(responseHeaders, null, "  ")}</pre>
+<h1>Response body (JSON):</h1>
+<pre>${JSON.stringify(json, null, "  ")}</pre>`;
+        } else {
+          const text = await response.text();
+          output.innerHTML = `
+<h1>Response status</h1>
+<p>${response.status}</p>
+<h1>Response status text</h1>
+<p>${response.statusText}</p>
+<h1>Response headers</h1>
+<pre>${JSON.stringify(responseHeaders, null, "  ")}</pre>
+<h1>Response body (TEXT):</h1>
+<pre>${text}</pre>`;
+        }
+      };
+    </script>
+  </body>
+</html>

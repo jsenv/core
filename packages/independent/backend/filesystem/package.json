@@ -1,0 +1,37 @@
+{
+  "name": "@jsenv/filesystem",
+  "version": "4.14.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/backend/filesystem"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": {
+    "name": "dmail",
+    "email": "dmaillard06@gmail.com"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=19.1.0"
+  },
+  "bin": "./src/cli.mjs",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "files": [
+    "/src/"
+  ],
+  "dependencies": {
+    "@jsenv/urls": "2.6.1",
+    "@jsenv/url-meta": "8.5.4",
+    "@jsenv/abort": "4.3.1",
+    "@jsenv/utils": "2.2.0"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "jsenv-template-node-package",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/main.js"
+  },
+  "scripts": {
+    "eslint": "npx eslint .",
+    "test": "node ./scripts/test.mjs",
+    "test:coverage": "npm run test -- --coverage"
+  },
+  "devDependencies": {
+    "@jsenv/assert": "4.4.3",
+    "@jsenv/core": "40.0.0",
+    "@jsenv/eslint-config-relax": "1.4.0",
+    "@jsenv/test": "3.6.0",
+    "eslint": "9.19.0",
+    "prettier": "3.4.2"
+  }
+}

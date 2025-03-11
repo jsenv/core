@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/main.css.js?side_effect": "/js/main.css.js?side_effect=&v=b700243f"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module">
+      import "/js/main.css.js?side_effect" ;
+
+      window.resolveResultPromise(
+        getComputedStyle(document.body).backgroundColor,
+      );
+    </script>
+  </body>
+</html>
