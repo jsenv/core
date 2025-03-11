@@ -1727,7 +1727,7 @@ const fromNodeRequest = (
         `formData() called on a request with content-type: "${contentType}". multipart/form-data was expected.`,
       );
     }
-    const { formidable } = await import("./js/index.js");
+    const { formidable } = await import("./js/ws.js").then(n => n.index);
     const form = formidable({});
     nodeRequest.resume(); // was paused in line #53
     const [fields, files] = await form.parse(nodeRequest);
@@ -3340,317 +3340,6 @@ const removeRootIndentation = (text) => {
   return result;
 };
 
-const isEscaped = (i, string) => {
-  let backslashBeforeCount = 0;
-  while (i--) {
-    const previousChar = string[i];
-    if (previousChar === "\\") {
-      backslashBeforeCount++;
-    }
-    break;
-  }
-  const isEven = backslashBeforeCount % 2 === 0;
-  return !isEven;
-};
-
-const escapeChars = (string, replacements) => {
-  const charsToEscape = Object.keys(replacements);
-  let result = "";
-  let last = 0;
-  let i = 0;
-  while (i < string.length) {
-    const char = string[i];
-    i++;
-    if (charsToEscape.includes(char) && !isEscaped(i - 1, string)) {
-      if (last === i - 1) {
-        result += replacements[char];
-      } else {
-        result += `${string.slice(last, i - 1)}${replacements[char]}`;
-      }
-      last = i;
-    }
-  }
-  if (last !== string.length) {
-    result += string.slice(last);
-  }
-  return result;
-};
-
-// https://github.com/benjamingr/RegExp.escape/blob/master/polyfill.js
-
-const escapeRegexpSpecialChars = (string) => {
-  return escapeChars(String(string), {
-    "/": "\\/",
-    "^": "\\^",
-    "\\": "\\\\",
-    "[": "\\[",
-    "]": "\\]",
-    "(": "\\(",
-    ")": "\\)",
-    "{": "\\{",
-    "}": "\\}",
-    "?": "\\?",
-    "+": "\\+",
-    "*": "\\*",
-    ".": "\\.",
-    "|": "\\|",
-    "$": "\\$",
-  });
-};
-
-const createPattern = (
-  pattern,
-  {
-    namedGroupDelimiter,
-    prepareStringToGenerate = (stringToBuild) => stringToBuild,
-    finalizeGeneratedString = (generatedString) => generatedString,
-  } = {},
-) => {
-  if (pattern === "*") {
-    return {
-      regexp: /.*/,
-      match: () => true,
-      generate: (stringToGenerate) => stringToGenerate,
-      generateExample: (stringToGenerate) => stringToGenerate,
-    };
-  }
-
-  const parts = [];
-  const namedParams = [];
-  let starParamCount = 0;
-  let regexpSource = "";
-  let lastIndex = 0;
-  regexpSource += "^";
-  for (const match of pattern.matchAll(/:\w+|\*/g)) {
-    const string = match[0];
-    const index = match.index;
-    let before = pattern.slice(lastIndex, index);
-    parts.push({ type: "static", value: before });
-    regexpSource += escapeRegexpSpecialChars(before);
-    if (string === "*") {
-      starParamCount++;
-      regexpSource += `(?<star_${starParamCount - 1}>.+)`;
-      parts.push({ type: "star", value: starParamCount - 1 });
-    } else {
-      const paramName = string.slice(1);
-      namedParams.push(paramName);
-      regexpSource += namedGroupDelimiter
-        ? `(?<${paramName}>[^${escapeRegexpSpecialChars(namedGroupDelimiter)}]+)`
-        : `(?<${paramName}>.+)`;
-      parts.push({ type: "named", value: paramName });
-    }
-    lastIndex = index + string.length;
-  }
-  const after = pattern.slice(lastIndex);
-  parts.push({ type: "static", value: after });
-  regexpSource += escapeRegexpSpecialChars(after);
-  regexpSource += "$";
-
-  const regexp = new RegExp(regexpSource);
-
-  const generateWhenPatternIsStatic = () => {
-    return prepareStringToGenerate(pattern);
-  };
-  const generateWhenPatternUsesOnlyStarParams = (...values) => {
-    let generatedString = "";
-    for (const part of parts) {
-      if (part.type === "static") {
-        generatedString += part.value;
-      } else {
-        generatedString += values[part.value];
-      }
-    }
-    return finalizeGeneratedString(generatedString, pattern);
-  };
-  const generateWhenPatternUsesOnlyNamedParams = (namedValues) => {
-    let generatedString = "";
-    for (const part of parts) {
-      if (part.type === "static") {
-        generatedString += part.value;
-      } else {
-        generatedString += namedValues[part.value];
-      }
-    }
-    return finalizeGeneratedString(generatedString, pattern);
-  };
-  const generateWhenPatternUsesNamedAndStarParams = (
-    namedValues,
-    ...values
-  ) => {
-    let generatedString = "";
-    for (const part of parts) {
-      if (part.type === "static") {
-        generatedString += part.value;
-      } else if (part.type === "named") {
-        generatedString += namedValues[part.value];
-      } else {
-        generatedString += values[part.value];
-      }
-    }
-    return finalizeGeneratedString(generatedString, pattern);
-  };
-
-  const isStatic = namedParams.length === 0 && starParamCount === 0;
-  const usesOnlyNamedParams = namedParams.length > 0 && starParamCount === 0;
-  const usesOnlyStarParams = namedParams.length === 0 && starParamCount > 0;
-  const usesNamedAndStarParams = namedParams.length > 0 && starParamCount > 0;
-
-  const generate = isStatic
-    ? generateWhenPatternIsStatic
-    : usesOnlyNamedParams
-      ? generateWhenPatternUsesOnlyNamedParams
-      : usesOnlyStarParams
-        ? generateWhenPatternUsesOnlyStarParams
-        : generateWhenPatternUsesNamedAndStarParams;
-
-  return {
-    regexp,
-    match: (value) => {
-      if (value === undefined) {
-        return null;
-      }
-      const match = String(value).match(regexp);
-      if (!match) {
-        return null;
-      }
-      const groups = match.groups;
-      if (groups && Object.keys(groups).length) {
-        const stars = [];
-        const named = {};
-        for (const key of Object.keys(groups)) {
-          if (key.startsWith("star_")) {
-            const index = parseInt(key.slice("star_".length));
-            stars[index] = groups[key];
-          } else {
-            named[key] = groups[key];
-          }
-        }
-        return {
-          named: Object.keys(named).length === 0 ? null : named,
-          stars: stars.length === 0 ? null : stars,
-        };
-      }
-      return { named: null, stars: null };
-    },
-    generate,
-    generateExample: () => {
-      if (usesNamedAndStarParams) {
-        return generate(
-          generateNamedParamsExample(namedParams),
-          ...generateStarParamsExample(starParamCount),
-        );
-      }
-      if (usesOnlyNamedParams) {
-        return generate(generateNamedParamsExample(namedParams));
-      }
-      if (usesOnlyStarParams) {
-        return generate(...generateStarParamsExample(starParamCount));
-      }
-      return generate();
-    },
-  };
-};
-
-const composeTwoMatchResults = (left, right) => {
-  if (!left || !right) {
-    return false;
-  }
-  let named;
-  const leftNamed = left.named;
-  const rightNamed = right.named;
-  if (leftNamed && rightNamed) {
-    named = { ...leftNamed, ...rightNamed };
-  } else if (leftNamed) {
-    named = leftNamed;
-  } else if (rightNamed) {
-    named = rightNamed;
-  }
-  let stars;
-  const leftStars = left.stars;
-  const rightStars = right.stars;
-  if (leftStars && rightStars) {
-    stars = [...leftStars, ...rightStars];
-  } else if (leftStars) {
-    stars = leftStars;
-  } else if (rightStars) {
-    stars = rightStars;
-  }
-  return { named, stars };
-};
-
-const PATTERN = {
-  create: createPattern,
-  composeTwoMatchResults,
-  createKeyValue: (object) => {
-    const patternMap = new Map();
-    const keys = Object.keys(object);
-    for (const key of keys) {
-      const value = object[key];
-      if (typeof value === "function") {
-        patternMap.set(key, {
-          match: (value) => {
-            return Boolean(value(value));
-          },
-          generate: () => {
-            return "?";
-          },
-        });
-      } else {
-        const valuePattern = PATTERN.create(value);
-        patternMap.set(key, valuePattern);
-      }
-    }
-    return {
-      match: (objectToMatch) => {
-        const namedValues = {};
-        for (const [key, pattern] of patternMap) {
-          const value = objectToMatch[key];
-          const matchResult = pattern.match(value);
-          if (!matchResult) {
-            return false;
-          }
-          const named = matchResult.named;
-          Object.assign(namedValues, named);
-        }
-        return namedValues;
-      },
-      generate: (values) => {
-        const generatedObject = {};
-        for (const [key, pattern] of patternMap) {
-          generatedObject[key] = pattern.generate(values);
-        }
-        return generatedObject;
-      },
-      generateExample: () => {
-        const generatedObject = {};
-        for (const [key, pattern] of patternMap) {
-          generatedObject[key] = pattern.generateExample();
-        }
-        return generatedObject;
-      },
-    };
-  },
-};
-
-const generateNamedParamsExample = (namedParams) => {
-  const namedParamValues = {};
-  for (const name of namedParams) {
-    namedParamValues[name] = name;
-  }
-  return namedParamValues;
-};
-const generateStarParamsExample = (starParamCount) => {
-  const starValues = [];
-  while (starValues.length < starParamCount) {
-    starValues.push(starValues.length);
-  }
-  return starValues;
-};
-
-const createHeadersPattern = (headers) => {
-  return PATTERN.createKeyValue(headers);
-};
-
 const pathnameToExtension = (pathname) => {
   const slashLastIndex = pathname.lastIndexOf("/");
   const filename =
@@ -3863,381 +3552,6 @@ const urlToFileSystemPath = (url) => {
   return fileSystemPath;
 };
 
-const createResourcePattern = (pattern) => {
-  const [pathnamePatternString, searchPatternString, hashPatternString] =
-    resourceToParts(pattern);
-
-  const pathnamePattern = PATTERN.create(pathnamePatternString, {
-    namedGroupDelimiter: "/",
-  });
-  let searchPattern;
-  if (searchPatternString) {
-    const searchParams = Object.fromEntries(
-      new URLSearchParams(searchPatternString),
-    );
-    searchPattern = PATTERN.createKeyValue(searchParams);
-  }
-  let hashPattern;
-  if (hashPatternString) {
-    hashPattern = PATTERN.create(hashPatternString, {
-      namedGroupDelimiter: "&",
-    });
-  }
-
-  return {
-    match: (resource) => {
-      const [pathname, search, hash] = resourceToParts(resource);
-      let result = pathnamePattern.match(pathname);
-      if (!result) {
-        return null;
-      }
-
-      let searchResult;
-      let hashResult;
-      if (searchPattern) {
-        const searchParams = Object.fromEntries(new URLSearchParams(search));
-        searchResult = searchPattern.match(searchParams);
-        if (!searchResult) {
-          return null;
-        }
-        if (result.named) {
-          Object.assign(result.named, searchResult);
-        } else {
-          result.named = searchResult;
-        }
-      }
-      if (hashPattern) {
-        hashResult = hashPattern.match(hash);
-        if (!hashResult) {
-          return null;
-        }
-        result = PATTERN.composeTwoMatchResults(result, hashResult);
-      }
-      return result;
-    },
-    generate: (...args) => {
-      let resource = "";
-      resource += pathnamePattern.generate(...args);
-      if (searchPatternString) {
-        const generatedSearchParams = searchPattern.generate(args[0]);
-        const searchParams = new URLSearchParams();
-        for (const key of Object.keys(generatedSearchParams)) {
-          searchParams.set(key, generatedSearchParams[key]);
-        }
-        const search = searchParams.toString();
-        resource += `?${search}`;
-      }
-      if (hashPatternString) {
-        resource += `#${hashPattern.generate(args[0])}`;
-      }
-      return resource;
-    },
-    generateExample: () => {
-      let resourceExample = "";
-      resourceExample += pathnamePattern.generateExample();
-      if (searchPatternString) {
-        resourceExample += `?${searchPattern.generateExample()}`;
-      }
-      if (hashPatternString) {
-        resourceExample += `#${hashPattern.generateExample()}`;
-      }
-      return resourceExample;
-    },
-  };
-};
-
-// const resourceFromUrl = (url, baseUrl = "http://example.com") => {
-//   url = String(url);
-//   if (url[0] === "/") {
-//     url = url.slice(1);
-//   }
-//   // if (url[0] !== "/") url = `/${url}`;
-//   const urlObject = new URL(url, baseUrl);
-//   const resource = urlObject.href.slice(urlObject.origin.length);
-//   return resource;
-// };
-
-const pickAcceptedContent = ({
-  availables,
-  accepteds,
-  getAcceptanceScore,
-}) => {
-  let highestScore = -1;
-  let availableWithHighestScore = null;
-  let availableIndex = 0;
-  while (availableIndex < availables.length) {
-    const available = availables[availableIndex];
-    availableIndex++;
-
-    let acceptedIndex = 0;
-    while (acceptedIndex < accepteds.length) {
-      const accepted = accepteds[acceptedIndex];
-      acceptedIndex++;
-
-      const score = getAcceptanceScore(accepted, available);
-      if (score > highestScore) {
-        availableWithHighestScore = available;
-        highestScore = score;
-      }
-    }
-  }
-  return availableWithHighestScore;
-};
-
-const pickContentEncoding = (request, availableEncodings) => {
-  const { headers = {} } = request;
-  const requestAcceptEncodingHeader = headers["accept-encoding"];
-  if (!requestAcceptEncodingHeader) {
-    return null;
-  }
-
-  const encodingsAccepted = parseAcceptEncodingHeader(
-    requestAcceptEncodingHeader,
-  );
-  return pickAcceptedContent({
-    accepteds: encodingsAccepted,
-    availables: availableEncodings,
-    getAcceptanceScore: getEncodingAcceptanceScore,
-  });
-};
-
-const parseAcceptEncodingHeader = (acceptEncodingHeaderString) => {
-  const acceptEncodingHeader = parseMultipleHeader(acceptEncodingHeaderString, {
-    validateProperty: ({ name }) => {
-      // read only q, anything else is ignored
-      return name === "q";
-    },
-  });
-
-  const encodingsAccepted = [];
-  Object.keys(acceptEncodingHeader).forEach((key) => {
-    const { q = 1 } = acceptEncodingHeader[key];
-    const value = key;
-    encodingsAccepted.push({
-      value,
-      quality: q,
-    });
-  });
-  encodingsAccepted.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return encodingsAccepted;
-};
-
-const getEncodingAcceptanceScore = ({ value, quality }, availableEncoding) => {
-  if (value === "*") {
-    return quality;
-  }
-
-  // normalize br to brotli
-  if (value === "br") value = "brotli";
-  if (availableEncoding === "br") availableEncoding = "brotli";
-
-  if (value === availableEncoding) {
-    return quality;
-  }
-
-  return -1;
-};
-
-const pickContentLanguage = (request, availableLanguages) => {
-  const { headers = {} } = request;
-  const requestAcceptLanguageHeader = headers["accept-language"];
-  if (!requestAcceptLanguageHeader) {
-    return null;
-  }
-
-  const languagesAccepted = parseAcceptLanguageHeader(
-    requestAcceptLanguageHeader,
-  );
-  return pickAcceptedContent({
-    accepteds: languagesAccepted,
-    availables: availableLanguages,
-    getAcceptanceScore: getLanguageAcceptanceScore,
-  });
-};
-
-const parseAcceptLanguageHeader = (acceptLanguageHeaderString) => {
-  const acceptLanguageHeader = parseMultipleHeader(acceptLanguageHeaderString, {
-    validateProperty: ({ name }) => {
-      // read only q, anything else is ignored
-      return name === "q";
-    },
-  });
-
-  const languagesAccepted = [];
-  Object.keys(acceptLanguageHeader).forEach((key) => {
-    const { q = 1 } = acceptLanguageHeader[key];
-    const value = key;
-    languagesAccepted.push({
-      value,
-      quality: q,
-    });
-  });
-  languagesAccepted.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return languagesAccepted;
-};
-
-const getLanguageAcceptanceScore = ({ value, quality }, availableLanguage) => {
-  const [acceptedPrimary, acceptedVariant] = decomposeLanguage(value);
-  const [availablePrimary, availableVariant] =
-    decomposeLanguage(availableLanguage);
-
-  const primaryAccepted =
-    acceptedPrimary === "*" ||
-    acceptedPrimary.toLowerCase() === availablePrimary.toLowerCase();
-  const variantAccepted =
-    acceptedVariant === "*" ||
-    compareVariant(acceptedVariant, availableVariant);
-
-  if (primaryAccepted && variantAccepted) {
-    return quality + 1;
-  }
-  if (primaryAccepted) {
-    return quality;
-  }
-  return -1;
-};
-
-const decomposeLanguage = (fullType) => {
-  const [primary, variant] = fullType.split("-");
-  return [primary, variant];
-};
-
-const compareVariant = (left, right) => {
-  if (left === right) {
-    return true;
-  }
-  if (left && right && left.toLowerCase() === right.toLowerCase()) {
-    return true;
-  }
-  return false;
-};
-
-const pickContentType = (request, availableContentTypes) => {
-  const { headers = {} } = request;
-  const requestAcceptHeader = headers.accept;
-  if (!requestAcceptHeader) {
-    return null;
-  }
-
-  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
-  return pickAcceptedContent({
-    accepteds: contentTypesAccepted,
-    availables: availableContentTypes,
-    getAcceptanceScore: getContentTypeAcceptanceScore,
-  });
-};
-
-const parseAcceptHeader = (acceptHeader) => {
-  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
-    validateProperty: ({ name }) => {
-      // read only q, anything else is ignored
-      return name === "q";
-    },
-  });
-
-  const accepts = [];
-  Object.keys(acceptHeaderObject).forEach((key) => {
-    const { q = 1 } = acceptHeaderObject[key];
-    const value = key;
-    accepts.push({
-      value,
-      quality: q,
-    });
-  });
-  accepts.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return accepts;
-};
-
-const getContentTypeAcceptanceScore = (
-  { value, quality },
-  availableContentType,
-) => {
-  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
-  const [availableType, availableSubtype] =
-    decomposeContentType(availableContentType);
-
-  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
-  const subtypeAccepted =
-    acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
-
-  if (typeAccepted && subtypeAccepted) {
-    return quality;
-  }
-  return -1;
-};
-
-const decomposeContentType = (fullType) => {
-  const [type, subtype] = fullType.split("/");
-  return [type, subtype];
-};
-
-const pickContentVersion = (request, availableVersions) => {
-  const { headers = {} } = request;
-  const requestAcceptVersionHeader = headers["accept-version"];
-  if (!requestAcceptVersionHeader) {
-    return null;
-  }
-
-  const versionsAccepted = parseAcceptVersionHeader(requestAcceptVersionHeader);
-  return pickAcceptedContent({
-    accepteds: versionsAccepted,
-    availables: availableVersions,
-    getAcceptanceScore: getVersionAcceptanceScore,
-  });
-};
-
-const parseAcceptVersionHeader = (acceptVersionHeaderString) => {
-  const acceptVersionHeader = parseMultipleHeader(acceptVersionHeaderString, {
-    validateProperty: ({ name }) => {
-      // read only q, anything else is ignored
-      return name === "q";
-    },
-  });
-
-  const versionsAccepted = [];
-  for (const key of Object.keys(acceptVersionHeader)) {
-    const { q = 1 } = acceptVersionHeader[key];
-    const value = key;
-    versionsAccepted.push({
-      value,
-      quality: q,
-    });
-  }
-  versionsAccepted.sort((a, b) => {
-    return b.quality - a.quality;
-  });
-  return versionsAccepted;
-};
-
-const getVersionAcceptanceScore = ({ value, quality }, availableVersion) => {
-  if (value === "*") {
-    return quality;
-  }
-
-  if (typeof availableVersion === "function") {
-    if (availableVersion(value)) {
-      return quality;
-    }
-    return -1;
-  }
-
-  if (typeof availableVersion === "number") {
-    availableVersion = String(availableVersion);
-  }
-
-  if (value === availableVersion) {
-    return quality;
-  }
-
-  return -1;
-};
-
 process.platform === "win32";
 fileSystemPathToUrl$1(process.cwd());
 
@@ -4275,6 +3589,13 @@ const findAncestorDirectoryUrl = (url, callback) => {
     url = getParentDirectoryUrl(url);
   }
   return null;
+};
+
+const lookupPackageDirectory = (currentUrl) => {
+  return findAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
+    const potentialPackageJsonFileUrl = `${ancestorDirectoryUrl}package.json`;
+    return existsSync(new URL(potentialPackageJsonFileUrl));
+  });
 };
 
 /*
@@ -4861,11 +4182,690 @@ process.platform === "darwin";
 process.platform === "linux";
 process.platform === "freebsd";
 
-const lookupPackageDirectory = (currentUrl) => {
-  return findAncestorDirectoryUrl(currentUrl, (ancestorDirectoryUrl) => {
-    const potentialPackageJsonFileUrl = `${ancestorDirectoryUrl}package.json`;
-    return existsSync(new URL(potentialPackageJsonFileUrl));
+const isEscaped = (i, string) => {
+  let backslashBeforeCount = 0;
+  while (i--) {
+    const previousChar = string[i];
+    if (previousChar === "\\") {
+      backslashBeforeCount++;
+    }
+    break;
+  }
+  const isEven = backslashBeforeCount % 2 === 0;
+  return !isEven;
+};
+
+const escapeChars = (string, replacements) => {
+  const charsToEscape = Object.keys(replacements);
+  let result = "";
+  let last = 0;
+  let i = 0;
+  while (i < string.length) {
+    const char = string[i];
+    i++;
+    if (charsToEscape.includes(char) && !isEscaped(i - 1, string)) {
+      if (last === i - 1) {
+        result += replacements[char];
+      } else {
+        result += `${string.slice(last, i - 1)}${replacements[char]}`;
+      }
+      last = i;
+    }
+  }
+  if (last !== string.length) {
+    result += string.slice(last);
+  }
+  return result;
+};
+
+// https://github.com/benjamingr/RegExp.escape/blob/master/polyfill.js
+
+const escapeRegexpSpecialChars = (string) => {
+  return escapeChars(String(string), {
+    "/": "\\/",
+    "^": "\\^",
+    "\\": "\\\\",
+    "[": "\\[",
+    "]": "\\]",
+    "(": "\\(",
+    ")": "\\)",
+    "{": "\\{",
+    "}": "\\}",
+    "?": "\\?",
+    "+": "\\+",
+    "*": "\\*",
+    ".": "\\.",
+    "|": "\\|",
+    "$": "\\$",
   });
+};
+
+const createPattern = (
+  pattern,
+  {
+    namedGroupDelimiter,
+    prepareStringToGenerate = (stringToBuild) => stringToBuild,
+    finalizeGeneratedString = (generatedString) => generatedString,
+  } = {},
+) => {
+  if (pattern === "*") {
+    return {
+      regexp: /.*/,
+      match: () => true,
+      generate: (stringToGenerate) => stringToGenerate,
+      generateExample: (stringToGenerate) => stringToGenerate,
+    };
+  }
+
+  const parts = [];
+  const namedParams = [];
+  let starParamCount = 0;
+  let regexpSource = "";
+  let lastIndex = 0;
+  regexpSource += "^";
+  for (const match of pattern.matchAll(/:\w+|\*/g)) {
+    const string = match[0];
+    const index = match.index;
+    let before = pattern.slice(lastIndex, index);
+    parts.push({ type: "static", value: before });
+    regexpSource += escapeRegexpSpecialChars(before);
+    if (string === "*") {
+      starParamCount++;
+      regexpSource += `(?<star_${starParamCount - 1}>.+)`;
+      parts.push({ type: "star", value: starParamCount - 1 });
+    } else {
+      const paramName = string.slice(1);
+      namedParams.push(paramName);
+      regexpSource += namedGroupDelimiter
+        ? `(?<${paramName}>[^${escapeRegexpSpecialChars(namedGroupDelimiter)}]+)`
+        : `(?<${paramName}>.+)`;
+      parts.push({ type: "named", value: paramName });
+    }
+    lastIndex = index + string.length;
+  }
+  const after = pattern.slice(lastIndex);
+  parts.push({ type: "static", value: after });
+  regexpSource += escapeRegexpSpecialChars(after);
+  regexpSource += "$";
+
+  const regexp = new RegExp(regexpSource);
+
+  const generateWhenPatternIsStatic = () => {
+    return prepareStringToGenerate(pattern);
+  };
+  const generateWhenPatternUsesOnlyStarParams = (...values) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else {
+        generatedString += values[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+  const generateWhenPatternUsesOnlyNamedParams = (namedValues) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else {
+        generatedString += namedValues[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+  const generateWhenPatternUsesNamedAndStarParams = (
+    namedValues,
+    ...values
+  ) => {
+    let generatedString = "";
+    for (const part of parts) {
+      if (part.type === "static") {
+        generatedString += part.value;
+      } else if (part.type === "named") {
+        generatedString += namedValues[part.value];
+      } else {
+        generatedString += values[part.value];
+      }
+    }
+    return finalizeGeneratedString(generatedString, pattern);
+  };
+
+  const isStatic = namedParams.length === 0 && starParamCount === 0;
+  const usesOnlyNamedParams = namedParams.length > 0 && starParamCount === 0;
+  const usesOnlyStarParams = namedParams.length === 0 && starParamCount > 0;
+  const usesNamedAndStarParams = namedParams.length > 0 && starParamCount > 0;
+
+  const generate = isStatic
+    ? generateWhenPatternIsStatic
+    : usesOnlyNamedParams
+      ? generateWhenPatternUsesOnlyNamedParams
+      : usesOnlyStarParams
+        ? generateWhenPatternUsesOnlyStarParams
+        : generateWhenPatternUsesNamedAndStarParams;
+
+  return {
+    regexp,
+    match: (value) => {
+      if (value === undefined) {
+        return null;
+      }
+      const match = String(value).match(regexp);
+      if (!match) {
+        return null;
+      }
+      const groups = match.groups;
+      if (groups && Object.keys(groups).length) {
+        const stars = [];
+        const named = {};
+        for (const key of Object.keys(groups)) {
+          if (key.startsWith("star_")) {
+            const index = parseInt(key.slice("star_".length));
+            stars[index] = groups[key];
+          } else {
+            named[key] = groups[key];
+          }
+        }
+        return {
+          named: Object.keys(named).length === 0 ? null : named,
+          stars: stars.length === 0 ? null : stars,
+        };
+      }
+      return { named: null, stars: null };
+    },
+    generate,
+    generateExample: () => {
+      if (usesNamedAndStarParams) {
+        return generate(
+          generateNamedParamsExample(namedParams),
+          ...generateStarParamsExample(starParamCount),
+        );
+      }
+      if (usesOnlyNamedParams) {
+        return generate(generateNamedParamsExample(namedParams));
+      }
+      if (usesOnlyStarParams) {
+        return generate(...generateStarParamsExample(starParamCount));
+      }
+      return generate();
+    },
+  };
+};
+
+const composeTwoMatchResults = (left, right) => {
+  if (!left || !right) {
+    return false;
+  }
+  let named;
+  const leftNamed = left.named;
+  const rightNamed = right.named;
+  if (leftNamed && rightNamed) {
+    named = { ...leftNamed, ...rightNamed };
+  } else if (leftNamed) {
+    named = leftNamed;
+  } else if (rightNamed) {
+    named = rightNamed;
+  }
+  let stars;
+  const leftStars = left.stars;
+  const rightStars = right.stars;
+  if (leftStars && rightStars) {
+    stars = [...leftStars, ...rightStars];
+  } else if (leftStars) {
+    stars = leftStars;
+  } else if (rightStars) {
+    stars = rightStars;
+  }
+  return { named, stars };
+};
+
+const PATTERN = {
+  create: createPattern,
+  composeTwoMatchResults,
+  createKeyValue: (object) => {
+    const patternMap = new Map();
+    const keys = Object.keys(object);
+    for (const key of keys) {
+      const value = object[key];
+      if (typeof value === "function") {
+        patternMap.set(key, {
+          match: (value) => {
+            return Boolean(value(value));
+          },
+          generate: () => {
+            return "?";
+          },
+        });
+      } else {
+        const valuePattern = PATTERN.create(value);
+        patternMap.set(key, valuePattern);
+      }
+    }
+    return {
+      match: (objectToMatch) => {
+        const namedValues = {};
+        for (const [key, pattern] of patternMap) {
+          const value = objectToMatch[key];
+          const matchResult = pattern.match(value);
+          if (!matchResult) {
+            return false;
+          }
+          const named = matchResult.named;
+          Object.assign(namedValues, named);
+        }
+        return namedValues;
+      },
+      generate: (values) => {
+        const generatedObject = {};
+        for (const [key, pattern] of patternMap) {
+          generatedObject[key] = pattern.generate(values);
+        }
+        return generatedObject;
+      },
+      generateExample: () => {
+        const generatedObject = {};
+        for (const [key, pattern] of patternMap) {
+          generatedObject[key] = pattern.generateExample();
+        }
+        return generatedObject;
+      },
+    };
+  },
+};
+
+const generateNamedParamsExample = (namedParams) => {
+  const namedParamValues = {};
+  for (const name of namedParams) {
+    namedParamValues[name] = name;
+  }
+  return namedParamValues;
+};
+const generateStarParamsExample = (starParamCount) => {
+  const starValues = [];
+  while (starValues.length < starParamCount) {
+    starValues.push(starValues.length);
+  }
+  return starValues;
+};
+
+const createHeadersPattern = (headers) => {
+  return PATTERN.createKeyValue(headers);
+};
+
+const createResourcePattern = (pattern) => {
+  const [pathnamePatternString, searchPatternString, hashPatternString] =
+    resourceToParts(pattern);
+
+  const pathnamePattern = PATTERN.create(pathnamePatternString, {
+    namedGroupDelimiter: "/",
+  });
+  let searchPattern;
+  if (searchPatternString) {
+    const searchParams = Object.fromEntries(
+      new URLSearchParams(searchPatternString),
+    );
+    searchPattern = PATTERN.createKeyValue(searchParams);
+  }
+  let hashPattern;
+  if (hashPatternString) {
+    hashPattern = PATTERN.create(hashPatternString, {
+      namedGroupDelimiter: "&",
+    });
+  }
+
+  return {
+    match: (resource) => {
+      const [pathname, search, hash] = resourceToParts(resource);
+      let result = pathnamePattern.match(pathname);
+      if (!result) {
+        return null;
+      }
+
+      let searchResult;
+      let hashResult;
+      if (searchPattern) {
+        const searchParams = Object.fromEntries(new URLSearchParams(search));
+        searchResult = searchPattern.match(searchParams);
+        if (!searchResult) {
+          return null;
+        }
+        if (result.named) {
+          Object.assign(result.named, searchResult);
+        } else {
+          result.named = searchResult;
+        }
+      }
+      if (hashPattern) {
+        hashResult = hashPattern.match(hash);
+        if (!hashResult) {
+          return null;
+        }
+        result = PATTERN.composeTwoMatchResults(result, hashResult);
+      }
+      return result;
+    },
+    generate: (...args) => {
+      let resource = "";
+      resource += pathnamePattern.generate(...args);
+      if (searchPatternString) {
+        const generatedSearchParams = searchPattern.generate(args[0]);
+        const searchParams = new URLSearchParams();
+        for (const key of Object.keys(generatedSearchParams)) {
+          searchParams.set(key, generatedSearchParams[key]);
+        }
+        const search = searchParams.toString();
+        resource += `?${search}`;
+      }
+      if (hashPatternString) {
+        resource += `#${hashPattern.generate(args[0])}`;
+      }
+      return resource;
+    },
+    generateExample: () => {
+      let resourceExample = "";
+      resourceExample += pathnamePattern.generateExample();
+      if (searchPatternString) {
+        resourceExample += `?${searchPattern.generateExample()}`;
+      }
+      if (hashPatternString) {
+        resourceExample += `#${hashPattern.generateExample()}`;
+      }
+      return resourceExample;
+    },
+  };
+};
+
+// const resourceFromUrl = (url, baseUrl = "http://example.com") => {
+//   url = String(url);
+//   if (url[0] === "/") {
+//     url = url.slice(1);
+//   }
+//   // if (url[0] !== "/") url = `/${url}`;
+//   const urlObject = new URL(url, baseUrl);
+//   const resource = urlObject.href.slice(urlObject.origin.length);
+//   return resource;
+// };
+
+const pickAcceptedContent = ({
+  availables,
+  accepteds,
+  getAcceptanceScore,
+}) => {
+  let highestScore = -1;
+  let availableWithHighestScore = null;
+  let availableIndex = 0;
+  while (availableIndex < availables.length) {
+    const available = availables[availableIndex];
+    availableIndex++;
+
+    let acceptedIndex = 0;
+    while (acceptedIndex < accepteds.length) {
+      const accepted = accepteds[acceptedIndex];
+      acceptedIndex++;
+
+      const score = getAcceptanceScore(accepted, available);
+      if (score > highestScore) {
+        availableWithHighestScore = available;
+        highestScore = score;
+      }
+    }
+  }
+  return availableWithHighestScore;
+};
+
+const pickContentEncoding = (request, availableEncodings) => {
+  const { headers = {} } = request;
+  const requestAcceptEncodingHeader = headers["accept-encoding"];
+  if (!requestAcceptEncodingHeader) {
+    return null;
+  }
+
+  const encodingsAccepted = parseAcceptEncodingHeader(
+    requestAcceptEncodingHeader,
+  );
+  return pickAcceptedContent({
+    accepteds: encodingsAccepted,
+    availables: availableEncodings,
+    getAcceptanceScore: getEncodingAcceptanceScore,
+  });
+};
+
+const parseAcceptEncodingHeader = (acceptEncodingHeaderString) => {
+  const acceptEncodingHeader = parseMultipleHeader(acceptEncodingHeaderString, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const encodingsAccepted = [];
+  Object.keys(acceptEncodingHeader).forEach((key) => {
+    const { q = 1 } = acceptEncodingHeader[key];
+    const value = key;
+    encodingsAccepted.push({
+      value,
+      quality: q,
+    });
+  });
+  encodingsAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return encodingsAccepted;
+};
+
+const getEncodingAcceptanceScore = ({ value, quality }, availableEncoding) => {
+  if (value === "*") {
+    return quality;
+  }
+
+  // normalize br to brotli
+  if (value === "br") value = "brotli";
+  if (availableEncoding === "br") availableEncoding = "brotli";
+
+  if (value === availableEncoding) {
+    return quality;
+  }
+
+  return -1;
+};
+
+const pickContentLanguage = (request, availableLanguages) => {
+  const { headers = {} } = request;
+  const requestAcceptLanguageHeader = headers["accept-language"];
+  if (!requestAcceptLanguageHeader) {
+    return null;
+  }
+
+  const languagesAccepted = parseAcceptLanguageHeader(
+    requestAcceptLanguageHeader,
+  );
+  return pickAcceptedContent({
+    accepteds: languagesAccepted,
+    availables: availableLanguages,
+    getAcceptanceScore: getLanguageAcceptanceScore,
+  });
+};
+
+const parseAcceptLanguageHeader = (acceptLanguageHeaderString) => {
+  const acceptLanguageHeader = parseMultipleHeader(acceptLanguageHeaderString, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const languagesAccepted = [];
+  Object.keys(acceptLanguageHeader).forEach((key) => {
+    const { q = 1 } = acceptLanguageHeader[key];
+    const value = key;
+    languagesAccepted.push({
+      value,
+      quality: q,
+    });
+  });
+  languagesAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return languagesAccepted;
+};
+
+const getLanguageAcceptanceScore = ({ value, quality }, availableLanguage) => {
+  const [acceptedPrimary, acceptedVariant] = decomposeLanguage(value);
+  const [availablePrimary, availableVariant] =
+    decomposeLanguage(availableLanguage);
+
+  const primaryAccepted =
+    acceptedPrimary === "*" ||
+    acceptedPrimary.toLowerCase() === availablePrimary.toLowerCase();
+  const variantAccepted =
+    acceptedVariant === "*" ||
+    compareVariant(acceptedVariant, availableVariant);
+
+  if (primaryAccepted && variantAccepted) {
+    return quality + 1;
+  }
+  if (primaryAccepted) {
+    return quality;
+  }
+  return -1;
+};
+
+const decomposeLanguage = (fullType) => {
+  const [primary, variant] = fullType.split("-");
+  return [primary, variant];
+};
+
+const compareVariant = (left, right) => {
+  if (left === right) {
+    return true;
+  }
+  if (left && right && left.toLowerCase() === right.toLowerCase()) {
+    return true;
+  }
+  return false;
+};
+
+const pickContentType = (request, availableContentTypes) => {
+  const { headers = {} } = request;
+  const requestAcceptHeader = headers.accept;
+  if (!requestAcceptHeader) {
+    return null;
+  }
+
+  const contentTypesAccepted = parseAcceptHeader(requestAcceptHeader);
+  return pickAcceptedContent({
+    accepteds: contentTypesAccepted,
+    availables: availableContentTypes,
+    getAcceptanceScore: getContentTypeAcceptanceScore,
+  });
+};
+
+const parseAcceptHeader = (acceptHeader) => {
+  const acceptHeaderObject = parseMultipleHeader(acceptHeader, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const accepts = [];
+  Object.keys(acceptHeaderObject).forEach((key) => {
+    const { q = 1 } = acceptHeaderObject[key];
+    const value = key;
+    accepts.push({
+      value,
+      quality: q,
+    });
+  });
+  accepts.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return accepts;
+};
+
+const getContentTypeAcceptanceScore = (
+  { value, quality },
+  availableContentType,
+) => {
+  const [acceptedType, acceptedSubtype] = decomposeContentType(value);
+  const [availableType, availableSubtype] =
+    decomposeContentType(availableContentType);
+
+  const typeAccepted = acceptedType === "*" || acceptedType === availableType;
+  const subtypeAccepted =
+    acceptedSubtype === "*" || acceptedSubtype === availableSubtype;
+
+  if (typeAccepted && subtypeAccepted) {
+    return quality;
+  }
+  return -1;
+};
+
+const decomposeContentType = (fullType) => {
+  const [type, subtype] = fullType.split("/");
+  return [type, subtype];
+};
+
+const pickContentVersion = (request, availableVersions) => {
+  const { headers = {} } = request;
+  const requestAcceptVersionHeader = headers["accept-version"];
+  if (!requestAcceptVersionHeader) {
+    return null;
+  }
+
+  const versionsAccepted = parseAcceptVersionHeader(requestAcceptVersionHeader);
+  return pickAcceptedContent({
+    accepteds: versionsAccepted,
+    availables: availableVersions,
+    getAcceptanceScore: getVersionAcceptanceScore,
+  });
+};
+
+const parseAcceptVersionHeader = (acceptVersionHeaderString) => {
+  const acceptVersionHeader = parseMultipleHeader(acceptVersionHeaderString, {
+    validateProperty: ({ name }) => {
+      // read only q, anything else is ignored
+      return name === "q";
+    },
+  });
+
+  const versionsAccepted = [];
+  for (const key of Object.keys(acceptVersionHeader)) {
+    const { q = 1 } = acceptVersionHeader[key];
+    const value = key;
+    versionsAccepted.push({
+      value,
+      quality: q,
+    });
+  }
+  versionsAccepted.sort((a, b) => {
+    return b.quality - a.quality;
+  });
+  return versionsAccepted;
+};
+
+const getVersionAcceptanceScore = ({ value, quality }, availableVersion) => {
+  if (value === "*") {
+    return quality;
+  }
+
+  if (typeof availableVersion === "function") {
+    if (availableVersion(value)) {
+      return quality;
+    }
+    return -1;
+  }
+
+  if (typeof availableVersion === "number") {
+    availableVersion = String(availableVersion);
+  }
+
+  if (value === availableVersion) {
+    return quality;
+  }
+
+  return -1;
 };
 
 const routeInspectorUrl = `/.internal/route_inspector`;
@@ -6491,7 +6491,7 @@ const replacePlaceholdersInHtml = (html, replacers) => {
   });
 };
 
-const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./html/4xx.html");
+const clientErrorHtmlTemplateFileUrl = import.meta.resolve("./4xx.html");
 
 const jsenvServiceDefaultBody4xx5xx = () => {
   return {
@@ -6606,7 +6606,7 @@ const jsenvServiceOpenFile = () => {
 };
 
 const routeInspectorHtmlFileUrl = import.meta.resolve(
-  "./html/route_inspector.html",
+  "./route_inspector.html",
 );
 
 const jsenvServiceRouteInspector = () => {
@@ -7397,7 +7397,7 @@ const startServer = async ({
       }
       try {
         // eslint-disable-next-line no-new
-        new URL(nodeRequest.url, "http://example.com/");
+        new URL(nodeRequest.url, "http://example.com");
       } catch {
         nodeResponse.writeHead(400, "Request url is not supported");
         nodeResponse.end();
@@ -7598,7 +7598,7 @@ const startServer = async ({
     const webSocketSet = new Set();
     let upgradeRequestToWebSocket;
     const loadUpgradeRequestToWebSocket = async () => {
-      const { WebSocketServer } = await import("./js/ws.js");
+      const { WebSocketServer } = await import("./js/ws.js").then(n => n.wrapper);
       let webSocketServer = new WebSocketServer({ noServer: true });
       stopCallbackSet.add(() => {
         webSocketServer.close();
@@ -7783,7 +7783,7 @@ const PROCESS_TEARDOWN_EVENTS_MAP = {
   exit: STOP_REASON_PROCESS_EXIT,
 };
 
-const internalErrorHtmlFileUrl = import.meta.resolve("./html/500.html");
+const internalErrorHtmlFileUrl = import.meta.resolve("./500.html");
 
 const jsenvServiceErrorHandler = ({ sendErrorDetails = false } = {}) => {
   return {
