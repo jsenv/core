@@ -60,7 +60,8 @@ export const createPluginController = (
       pluginCandidate.destroy?.();
       continue;
     }
-    if (!initPlugin(pluginCandidate, kitchen)) {
+    const initPluginResult = initPlugin(pluginCandidate, kitchen);
+    if (!initPluginResult) {
       pluginCandidate.destroy?.();
       continue;
     }

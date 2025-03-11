@@ -1,3 +1,4 @@
+// for reference this is how Node.js detect module format https://github.com/nodejs/node/blob/a446e3bdc96b0f263fd363ce89b9c739b066240f/lib/internal/modules/esm/get_format.js#L1
 import { defaultLookupPackageScope } from "@jsenv/node-esm-resolution";
 import { URL_META } from "@jsenv/url-meta";
 import { injectQueryParams, urlToBasename, urlToExtension } from "@jsenv/urls";
@@ -11,7 +12,7 @@ export const jsenvPluginCommonJs = ({
   include,
   compileCacheDirectoryUrl,
   dev,
-}) => {
+} = {}) => {
   const markAsJsModuleProxy = (reference) => {
     reference.expectedType = "js_module";
     const onwerUrlExtension = urlToExtension(reference.ownerUrlInfo.url);
@@ -35,11 +36,12 @@ export const jsenvPluginCommonJs = ({
   };
 
   let associations;
+  let nodeRuntimeEnabled;
 
   return {
     name,
     appliesDuring: "*",
-    init: ({ rootDirectoryUrl }) => {
+    init: ({ rootDirectoryUrl, outDirectoryUrl, runtimeCompat }) => {
       associations = URL_META.resolveAssociations(
         {
           commonjs: {
@@ -49,6 +51,15 @@ export const jsenvPluginCommonJs = ({
         },
         rootDirectoryUrl,
       );
+      nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
+      if (compileCacheDirectoryUrl === undefined) {
+        if (outDirectoryUrl) {
+          compileCacheDirectoryUrl = new URL("./cjs_to_esm/", outDirectoryUrl)
+            .href;
+        } else {
+          compileCacheDirectoryUrl = compileCacheDirectoryUrlDefault;
+        }
+      }
     },
     redirectReference: (reference) => {
       if (reference.type === "sourcemap_comment") {
@@ -86,19 +97,6 @@ export const jsenvPluginCommonJs = ({
       // so we consider it as text
       commonJsUrlInfo.type = "text";
       await commonJsUrlInfo.cook();
-      const nodeRuntimeEnabled = Object.keys(
-        urlInfo.context.runtimeCompat,
-      ).includes("node");
-      if (compileCacheDirectoryUrl === undefined) {
-        if (urlInfo.context.outDirectoryUrl) {
-          compileCacheDirectoryUrl = new URL(
-            "./cjs_to_esm/",
-            urlInfo.context.outDirectoryUrl,
-          ).href;
-        } else {
-          compileCacheDirectoryUrl = compileCacheDirectoryUrlDefault;
-        }
-      }
       const { content, sourcemap, isValid } = await commonJsToJsModule({
         logLevel,
         compileCacheDirectoryUrl,

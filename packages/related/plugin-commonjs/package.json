@@ -29,7 +29,7 @@
     "@rollup/plugin-json": "6.1.0",
     "@rollup/plugin-node-resolve": "16.0.0",
     "@rollup/plugin-replace": "6.0.2",
-    "cjs-module-lexer": "1.4.1",
+    "cjs-module-lexer": "2.1.0",
     "is-valid-identifier": "2.0.2",
     "resolve": "1.22.10",
     "rollup": "4.31.0",
