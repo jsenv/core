@@ -136,7 +136,10 @@ const detectStaticExports = ({ logger, filePath, visited = new Set() }) => {
  * run safely sandbox untrusted code (no access no Node.js primitives, just JS).
  * If nothing was detected, return undefined.
  */
-const detectExportsUsingSandboxedRuntime = async ({ logger, filePath }) => {
+export const detectExportsUsingSandboxedRuntime = async ({
+  logger,
+  filePath,
+}) => {
   try {
     const workerThread = new Worker(
       new URL("./worker_runtime.mjs", import.meta.url),

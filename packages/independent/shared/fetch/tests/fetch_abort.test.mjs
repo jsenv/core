@@ -16,9 +16,10 @@ const server = await startServer({
   },
   keepProcessAlive: false,
   port: 8998,
-  services: [
+  routes: [
     {
-      handleRequest: async () => {
+      endpoint: "GET *",
+      fetch: async () => {
         const response = await serverResponsePromise;
         return response;
       },

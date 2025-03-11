@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
 import { fileURLToPath } from "node:url";
-
 import { detectExportsUsingSandboxedRuntime } from "../../src/rollup_plugin_commonjs_named_exports.js";
 
 const names = await detectExportsUsingSandboxedRuntime({

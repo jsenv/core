@@ -97,11 +97,10 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: ({ method }) => {
-          if (method !== "POST") return null;
-
+        endpoint: "POST *",
+        fetch: () => {
           return {
             status: 201,
             headers: {
@@ -147,9 +146,10 @@ const tempDirectoryUrl = new URL("./temp/", import.meta.url).href;
   const server = await startServer({
     logLevel: "warn",
     keepProcessAlive: false,
-    services: [
+    routes: [
       {
-        handleRequest: async () => {
+        endpoint: "GET *",
+        fetch: async () => {
           await new Promise((resolve) => {
             setTimeout(resolve, 2000).unref();
           });
