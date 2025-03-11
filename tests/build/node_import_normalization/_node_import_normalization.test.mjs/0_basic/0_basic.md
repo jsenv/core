@@ -1,4 +1,4 @@
-# [0_basic](../../node_import_normalzation.test.mjs#L17)
+# [0_basic](../../node_import_normalization.test.mjs#L17)
 
 ```js
 run()
