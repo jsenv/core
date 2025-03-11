@@ -7,6 +7,7 @@ import {
   getHtmlNodeText,
   injectHtmlNodeAsEarlyAsPossible,
   parseHtml,
+  removeHtmlNode,
   setHtmlNodeText,
   stringifyHtmlAst,
 } from "@jsenv/ast";
@@ -83,15 +84,35 @@ export const injectImportmapMappings = (urlInfo, getMappings) => {
     return JSON.stringify({ imports: mappings }, null, "  ");
   };
 
+  const mutate = (mutation) => {
+    mutation();
+    urlInfo.mutateContent({
+      content: stringifyHtmlAst(htmlAst),
+    });
+  };
+
   if (importmapNode) {
     // we want to remove some mappings, override others, add eventually add new
     const currentMappings = JSON.parse(getHtmlNodeText(importmapNode));
-    setHtmlNodeText(
-      importmapNode,
-      generateMappingText(getMappings(currentMappings.imports)),
-      { indentation: "auto" },
-    );
-  } else {
+    const mappings = getMappings(currentMappings.imports);
+    if (!mappings || Object.keys(mappings).length === 0) {
+      mutate(() => {
+        removeHtmlNode(importmapNode);
+      });
+      return;
+    }
+    mutate(() => {
+      setHtmlNodeText(importmapNode, generateMappingText(mappings), {
+        indentation: "auto",
+      });
+    });
+    return;
+  }
+  const mappings = getMappings(null);
+  if (!mappings || Object.keys(mappings).length === 0) {
+    return;
+  }
+  mutate(() => {
     injectHtmlNodeAsEarlyAsPossible(
       htmlAst,
       createHtmlNode({
@@ -101,10 +122,8 @@ export const injectImportmapMappings = (urlInfo, getMappings) => {
       }),
       "jsenv:versioning",
     );
-  }
-  urlInfo.mutateContent({
-    content: stringifyHtmlAst(htmlAst),
   });
+  return;
 };
 
 const stringifyParams = (params, prefix = "") => {

@@ -1079,7 +1079,8 @@ const findRawUrlInfoWhenInline = (reference, rawKitchen) => {
       if (
         inlineUrlSite.url === reference.ownerUrlInfo.url &&
         inlineUrlSite.line === reference.specifierLine &&
-        inlineUrlSite.column === reference.specifierColumn
+        inlineUrlSite.column === reference.specifierColumn &&
+        rawUrlInfoCandidate.contentType === reference.contentType
       ) {
         return true;
       }
