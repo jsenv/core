@@ -35,73 +35,76 @@ export const bundleJsModules = async (
     buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
   }
 
-  if (chunks.vendors) {
-    chunks.vendors = {
-      "file:///**/node_modules/": true,
-      ...chunks.vendors,
-    };
-  } else {
-    chunks.vendors = {
-      "file:///**/node_modules/": true,
-    };
-  }
-  const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
-  if (packageDirectoryUrl) {
-    try {
-      const packageFileContent = readFileSync(
-        new URL("package.json", packageDirectoryUrl),
-        "utf8",
-      );
-      const packageJSON = JSON.parse(packageFileContent);
-      const workspaces = packageJSON.workspaces;
-      if (workspaces) {
-        const workspacePatterns = {};
-        for (const workspace of workspaces) {
-          const workspacePattern = new URL(
-            workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
-            packageDirectoryUrl,
-          ).href;
-          workspacePatterns[workspacePattern] = true;
+  let manualChunks;
+  if (chunks) {
+    if (chunks.vendors) {
+      chunks.vendors = {
+        "file:///**/node_modules/": true,
+        ...chunks.vendors,
+      };
+    } else {
+      chunks.vendors = {
+        "file:///**/node_modules/": true,
+      };
+    }
+    const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
+    if (packageDirectoryUrl) {
+      try {
+        const packageFileContent = readFileSync(
+          new URL("package.json", packageDirectoryUrl),
+          "utf8",
+        );
+        const packageJSON = JSON.parse(packageFileContent);
+        const workspaces = packageJSON.workspaces;
+        if (workspaces) {
+          const workspacePatterns = {};
+          for (const workspace of workspaces) {
+            const workspacePattern = new URL(
+              workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
+              packageDirectoryUrl,
+            ).href;
+            workspacePatterns[workspacePattern] = true;
+          }
+          if (chunks.workspaces) {
+            chunks.workspaces = {
+              ...workspacePatterns,
+              ...chunks.workspaces,
+            };
+          } else {
+            chunks.workspaces = workspacePatterns;
+          }
         }
-        if (chunks.workspaces) {
-          chunks.workspaces = {
-            ...workspacePatterns,
-            ...chunks.workspaces,
-          };
-        } else {
-          chunks.workspaces = workspacePatterns;
-        }
-      }
-    } catch {}
-  }
+      } catch {}
+    }
 
-  const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
-  const manualChunks = (id, manualChunksApi) => {
-    if (rollupOutput.manualChunks) {
-      const manualChunkName = rollupOutput.manualChunks(id, manualChunksApi);
-      if (manualChunkName) {
-        return manualChunkName;
+    const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
+    manualChunks = (id, manualChunksApi) => {
+      if (rollupOutput.manualChunks) {
+        const manualChunkName = rollupOutput.manualChunks(id, manualChunksApi);
+        if (manualChunkName) {
+          return manualChunkName;
+        }
       }
-    }
-    const moduleInfo = manualChunksApi.getModuleInfo(id);
-    if (moduleInfo.isEntry || moduleInfo.dynamicImporters.length) {
-      return null;
-    }
-    const url = fileUrlConverter.asFileUrl(id);
-    const urlObject = new URL(url);
-    urlObject.search = "";
-    const urlWithoutSearch = urlObject.href;
-    const meta = URL_META.applyAssociations({
-      url: urlWithoutSearch,
-      associations,
-    });
-    for (const chunkNameCandidate of Object.keys(meta)) {
-      if (meta[chunkNameCandidate]) {
-        return chunkNameCandidate;
+      const moduleInfo = manualChunksApi.getModuleInfo(id);
+      if (moduleInfo.isEntry || moduleInfo.dynamicImporters.length) {
+        return null;
       }
-    }
-    return undefined;
-  };
+      const url = fileUrlConverter.asFileUrl(id);
+      const urlObject = new URL(url);
+      urlObject.search = "";
+      const urlWithoutSearch = urlObject.href;
+      const meta = URL_META.applyAssociations({
+        url: urlWithoutSearch,
+        associations,
+      });
+      for (const chunkNameCandidate of Object.keys(meta)) {
+        if (meta[chunkNameCandidate]) {
+          return chunkNameCandidate;
+        }
+      }
+      return undefined;
+    };
+  }
 
   const resultRef = { current: null };
   const willMinifyJsModule = Boolean(getPluginMeta("willMinifyJsModule"));

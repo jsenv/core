@@ -1,4 +1,4 @@
-import { parseSrcSet, stringifySrcSet } from "./html_src_set.js";
+import { parseSrcSet, stringifySrcSet } from "@jsenv/ast/src/html/html_src_set.js";
 import { urlHotMetas, dispatchBeforeFullReload, dispatchBeforePartialReload, dispatchAfterPartialReload, dispatchBeforePrune } from "./import_meta_hot.js";
 
 const initAutoreload = ({ mainFilePath }) => {
