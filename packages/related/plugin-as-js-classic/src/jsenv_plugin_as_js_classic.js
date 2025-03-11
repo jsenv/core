@@ -43,7 +43,7 @@ export const jsenvPluginAsJsClassic = () => {
         ignoreDynamicImport: true,
       });
       const bundleUrlInfos = await bundleJsModules([jsModuleUrlInfo], {
-        chunks: null,
+        chunks: undefined,
         buildDirectoryUrl: new URL("./", import.meta.url),
         preserveDynamicImport: true,
         augmentDynamicImportUrlSearchParams: () => {
