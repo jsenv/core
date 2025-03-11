@@ -484,6 +484,7 @@ export const startServer = async ({
       }
       if (
         request.method !== "HEAD" &&
+        responseProperties.headers &&
         responseProperties.headers["content-length"] > 0 &&
         !responseProperties.body
       ) {

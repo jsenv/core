@@ -40,14 +40,15 @@ export const observableFromNodeStream = (
 
   if (readableLifetime && nodeStream instanceof Readable) {
     const timeout = setTimeout(() => {
-      process.emitWarning(
-        `Readable stream not used after ${readableLifetime / 1000} seconds.`,
-        {
-          CODE: "READABLE_STREAM_TIMEOUT",
-          // url is for http client request
-          detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`,
-        },
-      );
+      // disabled for now
+      // process.emitWarning(
+      //   `Readable stream not used after ${readableLifetime / 1000} seconds.`,
+      //   {
+      //     CODE: "READABLE_STREAM_TIMEOUT",
+      //     // url is for http client request
+      //     detail: `path: ${nodeStream.path}, fd: ${nodeStream.fd}, url: ${nodeStream.url}`,
+      //   },
+      // );
     }, readableLifetime).unref();
     onceReadableStreamUsedOrClosed(nodeStream, () => {
       clearTimeout(timeout);

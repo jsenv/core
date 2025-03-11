@@ -1,113 +1,59 @@
-import { assert } from "@jsenv/assert";
-
 import { composeTwoResponses } from "@jsenv/server/src/internal/response_composition.js";
+import { snapshotTests } from "@jsenv/snapshot";
 
-{
-  const actual = composeTwoResponses(
-    {
-      headers: { foo: true },
-    },
-    {
-      headers: { foo: false },
-    },
-  );
-  const expect = {
-    status: undefined,
-    statusText: undefined,
-    statusMessage: undefined,
-    headers: {
-      foo: false,
-    },
-    body: undefined,
-    bodyEncoding: undefined,
-    timing: undefined,
-  };
-  assert({ actual, expect });
-}
+await snapshotTests(import.meta.url, ({ test }) => {
+  test("0_basic", () => {
+    return composeTwoResponses(
+      {
+        headers: { foo: true },
+      },
+      {
+        headers: { foo: false },
+      },
+    );
+  });
 
-{
-  const actual = composeTwoResponses(
-    {
-      headers: {
-        "access-control-allow-headers": "a, b",
+  test("1_with_headers", () => {
+    return composeTwoResponses(
+      {
+        headers: {
+          "access-control-allow-headers": "a, b",
+        },
       },
-    },
-    {
-      headers: {
-        "access-control-allow-headers": "c, a",
-        "content-type": "text/javascript",
+      {
+        headers: {
+          "access-control-allow-headers": "c, a",
+          "content-type": "text/javascript",
+        },
       },
-    },
-  );
-  const expect = {
-    status: undefined,
-    statusText: undefined,
-    statusMessage: undefined,
-    headers: {
-      "access-control-allow-headers": "a, b, c",
-      "content-type": "text/javascript",
-    },
-    body: undefined,
-    bodyEncoding: undefined,
-    timing: undefined,
-  };
-  assert({ actual, expect });
-}
+    );
+  });
 
-{
-  const response = composeTwoResponses(
-    {
-      headers: {
-        eTag: "toto",
+  test("2_etag_left_only", () => {
+    return composeTwoResponses(
+      {
+        headers: {
+          eTag: "toto",
+        },
       },
-    },
-    {
-      headers: {},
-    },
-  );
-  const actual = response.headers;
-  const expect = {
-    etag: "toto",
-  };
-  assert({ actual, expect });
-}
+      {
+        headers: {},
+      },
+    );
+  });
 
-{
-  const response = composeTwoResponses(
-    {
-      headers: {
-        etag: "foo",
+  test("2_etag_override", () => {
+    return composeTwoResponses(
+      {
+        headers: {
+          etag: "foo",
+        },
       },
-    },
-    {
-      headers: {
-        eTag: "bar",
+      {
+        headers: {
+          eTag: "bar",
+        },
       },
-    },
-  );
-  const actual = response.headers;
-  const expect = {
-    etag: "bar",
-  };
-  assert({ actual, expect });
-}
-
-{
-  const response = composeTwoResponses(
-    {
-      headers: {
-        eTag: "foo",
-      },
-    },
-    {
-      headers: {
-        etag: "bar",
-      },
-    },
-  );
-  const actual = response.headers;
-  const expect = {
-    etag: "bar",
-  };
-  assert({ actual, expect });
-}
+    );
+  });
+});
