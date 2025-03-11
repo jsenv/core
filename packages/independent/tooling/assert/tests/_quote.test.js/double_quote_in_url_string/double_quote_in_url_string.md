@@ -15,8 +15,8 @@ assert({
 ```console
 AssertionError: actual and expect are different
 
-actual: 'http://a.com"/'
-expect: 'http://b.com"/'
+actual: 'http://a.com"'
+expect: 'http://b.com"'
 ```
 
 </details>

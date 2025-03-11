@@ -29,8 +29,7 @@
         <text x="211.63" y="62.55" fill="#cd5555">c</text>
         <text x="220.03" y="62.55" fill="#cd5555">o</text>
         <text x="228.44" y="62.55" fill="#cd5555">m</text>
-        <text x="236.84" y="62.55" fill="#cd5555">/</text>
-        <text x="245.24" y="62.55" fill="#cd5555">"</text>
+        <text x="236.84" y="62.55" fill="#cd5555">"</text>
         <text x="10" y="81.55" fill="#7f7f7f">expect:</text>
         <text x="77.21" y="81.55" fill="#11bc79">'</text>
         <text x="85.61" y="81.55" fill="#11bc79">t</text>

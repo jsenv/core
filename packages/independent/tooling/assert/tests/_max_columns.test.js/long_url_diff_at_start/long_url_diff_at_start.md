@@ -17,7 +17,7 @@ assert({
 AssertionError: actual and expect are different
 
 actual: "http://example_that_is_quite_…"
-expect: "file://example_that_is_quite_…"
+expect: "file://example_that_is_quite_l"
 ```
 
 </details>
