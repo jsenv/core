@@ -36,6 +36,7 @@ export const startBuildServer = async ({
   buildDirectoryUrl,
   buildMainFilePath = "index.html",
   port = 9779,
+  routes,
   services = [],
   acceptAnyIp,
   hostname,
@@ -120,6 +121,7 @@ export const startBuildServer = async ({
     port,
     serverTiming: true,
     requestWaitingMs: 60_000,
+    routes,
     services: [
       jsenvServiceCORS({
         accessControlAllowRequestOrigin: true,

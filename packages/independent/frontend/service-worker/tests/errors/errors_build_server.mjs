@@ -42,28 +42,28 @@ export const buildServer = await startBuildServer({
   routes: [
     {
       endpoint: "GET /build_no_error",
-      response: async () => {
+      fetch: async () => {
         await buildStory("no_error");
         return { status: 200 };
       },
     },
     {
       endpoint: "GET /build_error_during_register",
-      response: async () => {
+      fetch: async () => {
         await buildStory("error_during_register");
         return { status: 200 };
       },
     },
     {
       endpoint: "GET /build_error_during_install",
-      response: async () => {
+      fetch: async () => {
         await buildStory("error_during_install");
         return { status: 200 };
       },
     },
     {
       endpoint: "GET /build_error_during_activate",
-      response: async () => {
+      fetch: async () => {
         await buildStory("error_during_activate");
         return { status: 200 };
       },
