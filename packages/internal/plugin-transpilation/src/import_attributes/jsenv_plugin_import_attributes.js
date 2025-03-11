@@ -123,6 +123,19 @@ export const jsenvPluginImportAttributes = ({
           return null;
         }
         await originalUrlInfo.cook();
+        if (
+          injectSearchParamForSideEffectImports &&
+          originalUrlInfo.searchParams.has("side_effect")
+        ) {
+          const urlInfoWithoutSideEffect =
+            originalUrlInfo.getWithoutSearchParam("side_effect");
+          if (urlInfoWithoutSideEffect) {
+            await urlInfoWithoutSideEffect.kitchen.urlInfoTransformer.setContent(
+              urlInfoWithoutSideEffect,
+              originalUrlInfo.content,
+            );
+          }
+        }
         return createUrlContent(originalUrlInfo);
       },
     };
