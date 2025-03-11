@@ -16,6 +16,7 @@ import {
 import { readFileSync } from "node:fs";
 
 export const createNodeEsmResolver = ({
+  build,
   runtimeCompat,
   packageConditions,
   preservesSymlink,
@@ -23,7 +24,7 @@ export const createNodeEsmResolver = ({
   const nodeRuntimeEnabled = Object.keys(runtimeCompat).includes("node");
   // https://nodejs.org/api/esm.html#resolver-algorithm-specification
   packageConditions = packageConditions || [
-    ...readCustomConditionsFromProcessArgs(),
+    ...(build ? [] : readCustomConditionsFromProcessArgs()),
     nodeRuntimeEnabled ? "node" : "browser",
     "import",
   ];

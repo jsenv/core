@@ -1,3 +1,3 @@
-const foo = 'FOO_DEV';
+const foo = 'FOO_BUILD';
 
 export { foo };

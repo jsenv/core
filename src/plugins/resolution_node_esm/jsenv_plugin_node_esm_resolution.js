@@ -3,43 +3,50 @@ import { createNodeEsmResolver } from "./node_esm_resolver.js";
 export const jsenvPluginNodeEsmResolution = (resolutionConfig = {}) => {
   let nodeEsmResolverDefault;
   const resolvers = {};
-  Object.keys(resolutionConfig).forEach((urlType) => {
-    const config = resolutionConfig[urlType];
-    if (config === true) {
-      resolvers[urlType] = (...args) => nodeEsmResolverDefault(...args);
-    } else if (config === false) {
-      resolvers[urlType] = () => null;
-    } else if (typeof config === "object") {
-      const { runtimeCompat, packageConditions, preservesSymlink, ...rest } =
-        config;
-      const unexpectedKeys = Object.keys(rest);
-      if (unexpectedKeys.length) {
-        throw new TypeError(
-          `${unexpectedKeys.join(
-            ",",
-          )}: there is no such configuration on "${urlType}"`,
-        );
-      }
-      resolvers[urlType] = createNodeEsmResolver({
-        runtimeCompat,
-        packageConditions,
-        preservesSymlink,
-      });
-    } else {
-      throw new TypeError(
-        `config must be true, false or an object, got ${config} on "${urlType}"`,
-      );
-    }
-  });
 
   return {
     name: "jsenv:node_esm_resolution",
     appliesDuring: "*",
-    init: ({ runtimeCompat }) => {
+    init: (kitchenContext) => {
       nodeEsmResolverDefault = createNodeEsmResolver({
-        runtimeCompat,
+        build: kitchenContext.build,
+        runtimeCompat: kitchenContext.runtimeCompat,
         preservesSymlink: true,
       });
+      Object.keys(resolutionConfig).forEach((urlType) => {
+        const config = resolutionConfig[urlType];
+        if (config === true) {
+          resolvers[urlType] = (...args) => nodeEsmResolverDefault(...args);
+        } else if (config === false) {
+          resolvers[urlType] = () => null;
+        } else if (typeof config === "object") {
+          const {
+            runtimeCompat,
+            packageConditions,
+            preservesSymlink,
+            ...rest
+          } = config;
+          const unexpectedKeys = Object.keys(rest);
+          if (unexpectedKeys.length) {
+            throw new TypeError(
+              `${unexpectedKeys.join(
+                ",",
+              )}: there is no such configuration on "${urlType}"`,
+            );
+          }
+          resolvers[urlType] = createNodeEsmResolver({
+            build: kitchenContext.build,
+            runtimeCompat,
+            packageConditions,
+            preservesSymlink,
+          });
+        } else {
+          throw new TypeError(
+            `config must be true, false or an object, got ${config} on "${urlType}"`,
+          );
+        }
+      });
+
       if (resolvers.js_module === undefined) {
         resolvers.js_module = nodeEsmResolverDefault;
       }
