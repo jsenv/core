@@ -1,3 +1,5 @@
+import "./workspaces.js";
+
 /* eslint-env browser,node */
 
 /*
@@ -16,8 +18,9 @@ globalObject.__InlineContent__ = function (content, { type = "text/plain" }) {
   this.type = type;
 };
 
-const inlineContent = new __InlineContent__("body {\n  background: green;\n}\n", { type: "text/css" });
+const inlineContent = new __InlineContent__("body {\n  background: green;\n}\n", {
+  type: "text/css"
+});
 const stylesheet = new CSSStyleSheet();
 stylesheet.replaceSync(inlineContent.text);
-
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
