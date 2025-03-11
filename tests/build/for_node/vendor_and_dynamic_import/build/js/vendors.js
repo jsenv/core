@@ -1,3 +1,5 @@
-const b = 'b';
+const c = 'c';
 
-export { b };
+const b = `b -> ${c}`;
+
+export { b, c };

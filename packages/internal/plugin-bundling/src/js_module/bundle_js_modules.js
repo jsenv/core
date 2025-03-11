@@ -95,8 +95,12 @@ export const bundleJsModules = async (
       url: urlWithoutSearch,
       associations,
     });
-    const chunkName = Object.keys(meta).find((key) => meta[key]);
-    return chunkName || null;
+    for (const chunkNameCandidate of Object.keys(meta)) {
+      if (meta[chunkNameCandidate]) {
+        return chunkNameCandidate;
+      }
+    }
+    return undefined;
   };
 
   const resultRef = { current: null };
@@ -405,31 +409,30 @@ const rollupPluginJsenv = ({
     },
     // https://rollupjs.org/guide/en/#resolvedynamicimport
     resolveDynamicImport: (specifier, importer) => {
-      if (preserveDynamicImport) {
-        let urlObject;
-        if (specifier[0] === "/") {
-          urlObject = new URL(specifier.slice(1), rootDirectoryUrl);
-        } else {
-          if (isFileSystemPath(importer)) {
-            importer = fileUrlConverter.asFileUrl(importer);
-          }
-          urlObject = new URL(specifier, importer);
-        }
-        const searchParamsToAdd =
-          augmentDynamicImportUrlSearchParams(urlObject);
-        if (searchParamsToAdd) {
-          Object.keys(searchParamsToAdd).forEach((key) => {
-            const value = searchParamsToAdd[key];
-            if (value === undefined) {
-              urlObject.searchParams.delete(key);
-            } else {
-              urlObject.searchParams.set(key, value);
-            }
-          });
-        }
-        return { external: true, id: urlObject.href };
+      if (!preserveDynamicImport) {
+        return null;
       }
-      return null;
+      let urlObject;
+      if (specifier[0] === "/") {
+        urlObject = new URL(specifier.slice(1), rootDirectoryUrl);
+      } else {
+        if (isFileSystemPath(importer)) {
+          importer = fileUrlConverter.asFileUrl(importer);
+        }
+        urlObject = new URL(specifier, importer);
+      }
+      const searchParamsToAdd = augmentDynamicImportUrlSearchParams(urlObject);
+      if (searchParamsToAdd) {
+        Object.keys(searchParamsToAdd).forEach((key) => {
+          const value = searchParamsToAdd[key];
+          if (value === undefined) {
+            urlObject.searchParams.delete(key);
+          } else {
+            urlObject.searchParams.set(key, value);
+          }
+        });
+      }
+      return { external: true, id: urlObject.href };
     },
     resolveId: (specifier, importer = rootDirectoryUrl) => {
       if (isFileSystemPath(importer)) {

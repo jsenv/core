@@ -131,18 +131,18 @@ export const createBuildSpecifierManager = ({
       },
       urlInfosToBundle,
     );
-    Object.keys(urlInfosBundled).forEach((url) => {
+    for (const url of Object.keys(urlInfosBundled)) {
       const urlInfoBundled = urlInfosBundled[url];
       if (urlInfoBundled.sourceUrls) {
-        urlInfoBundled.sourceUrls.forEach((sourceUrl) => {
+        for (const sourceUrl of urlInfoBundled.sourceUrls) {
           const sourceRawUrlInfo = rawKitchen.graph.getUrlInfo(sourceUrl);
           if (sourceRawUrlInfo) {
             sourceRawUrlInfo.data.bundled = true;
           }
-        });
+        }
       }
       bundleInfoMap.set(url, urlInfoBundled);
-    });
+    }
   };
 
   const jsenvPluginMoveToBuildDirectory = {
