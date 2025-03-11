@@ -1,8 +1,8 @@
-import { createSSERoom, startServer } from "@jsenv/server";
+import { ServerEvents, startServer } from "@jsenv/server";
 
-const room = createSSERoom();
+const serverEvents = new ServerEvents();
 setInterval(() => {
-  room.sendEventToAllClients({
+  serverEvents.sendEventToAllClients({
     type: "ping",
   });
 }, 1000);
@@ -10,11 +10,10 @@ setInterval(() => {
 startServer({
   logLevel: "warn",
   port: 3456,
-  requestToResponse: (request) => {
-    const { accept = "" } = request.headers;
-    if (!accept.includes("text/event-stream")) {
-      return null;
-    }
-    return room.join(request);
-  },
+  routes: [
+    {
+      endpoint: "GET *",
+      fetch: serverEvents.fetch,
+    },
+  ],
 });

@@ -40,7 +40,7 @@ export const remapStack = async ({
             }
             return null;
           }
-          text = await filenew Response();
+          text = await fileResponse.text();
         } catch (e) {
           onFailure(
             createDetailedMessage(`error while fetching stack trace file.`, {
@@ -82,7 +82,7 @@ export const remapStack = async ({
                     `unexpected response for sourcemap file.`,
                     {
                       ["response status"]: status,
-                      ["response text"]: await sourcemapnew Response(),
+                      ["response text"]: await sourcemapResponse.text(),
                       ["sourcemap url"]: sourcemapUrl,
                     },
                   ),
@@ -90,7 +90,7 @@ export const remapStack = async ({
               }
               return null;
             }
-            sourcemapString = await sourcemapnew Response();
+            sourcemapString = await sourcemapResponse.text();
           } catch (e) {
             onFailure(
               createDetailedMessage(`error while fetching sourcemap.`, {
@@ -151,7 +151,7 @@ export const remapStack = async ({
                   `unexpected response for sourcemap source.`,
                   {
                     ["response status"]: status,
-                    ["response text"]: await sourcenew Response(),
+                    ["response text"]: await sourceResponse.text(),
                     ["sourcemap source url"]: sourcemapSourceUrl,
                     ["sourcemap url"]: sourcemapUrl,
                   },
@@ -159,7 +159,7 @@ export const remapStack = async ({
                 return;
               }
 
-              const sourceString = await sourcenew Response();
+              const sourceString = await sourceResponse.text();
               sourcesContent[index] = sourceString;
             } catch (e) {
               if (firstSourceMapSourceFailure) return;
