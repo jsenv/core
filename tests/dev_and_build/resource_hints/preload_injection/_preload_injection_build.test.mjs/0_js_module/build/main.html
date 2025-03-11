@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <link rel="preload" href="/js/main.js?v=bc42e7f2" as="script" crossorigin="">
+    <link rel="preload" href="/js/vendors.js?v=85dde2f2" as="script" crossorigin="">
+    <script type="importmap">
+      {
+        "imports": {
+          "/js/vendors.js": "/js/vendors.js?v=85dde2f2"
+        }
+      }
+    </script>
+  </head>
+
+  <body>
+    <script>
+      window.resultPromise = new Promise((resolve) => {
+        window.resolveResultPromise = resolve;
+      });
+    </script>
+    <script type="module" src="/js/main.js?v=bc42e7f2"></script>
+  </body>
+</html>

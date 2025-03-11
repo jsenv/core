@@ -910,7 +910,7 @@ export const createBuildSpecifierManager = ({
             }
           },
         });
-        for (const [{ node }, referencedUrlInfo] of hintToInjectMap) {
+        for (const [referencedUrlInfo, { node }] of hintToInjectMap) {
           const buildGeneratedSpecifier =
             getBuildGeneratedSpecifier(referencedUrlInfo);
           const found = findHtmlNode(htmlAst, (htmlNode) => {
