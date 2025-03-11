@@ -4,6 +4,7 @@ import os from "node:os";
 import tty from "node:tty";
 import "string-width";
 import { pathToFileURL, fileURLToPath } from "node:url";
+import "./js/vendors.js";
 import { createRequire } from "node:module";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import "node:path";
@@ -156,6 +157,48 @@ function createSupportsColor(stream, options = {}) {
     isTTY: tty.isatty(2)
   })
 });
+function isUnicodeSupported() {
+  const {
+    env
+  } = process$1;
+  const {
+    TERM,
+    TERM_PROGRAM
+  } = env;
+  if (process$1.platform !== 'win32') {
+    return TERM !== 'linux'; // Linux console (kernel)
+  }
+  return Boolean(env.WT_SESSION) // Windows Terminal
+  || Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
+  || env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
+  || TERM_PROGRAM === 'Terminus-Sublime' || TERM_PROGRAM === 'vscode' || TERM === 'xterm-256color' || TERM === 'alacritty' || TERM === 'rxvt-unicode' || TERM === 'rxvt-unicode-256color' || env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
+}
+
+/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
+
+const isBrowser = globalThis.window?.document !== undefined;
+globalThis.process?.versions?.node !== undefined;
+globalThis.process?.versions?.bun !== undefined;
+globalThis.Deno?.version?.deno !== undefined;
+globalThis.process?.versions?.electron !== undefined;
+globalThis.navigator?.userAgent?.includes('jsdom') === true;
+typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
+typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
+typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
+typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
+
+// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
+const platform = globalThis.navigator?.userAgentData?.platform;
+platform === 'macOS' || globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
+|| globalThis.navigator?.userAgent?.includes(' Mac ') === true || globalThis.process?.platform === 'darwin';
+platform === 'Windows' || globalThis.navigator?.platform === 'Win32' || globalThis.process?.platform === 'win32';
+platform === 'Linux' || globalThis.navigator?.platform?.startsWith('Linux') === true || globalThis.navigator?.userAgent?.includes(' Linux ') === true || globalThis.process?.platform === 'linux';
+platform === 'Android' || globalThis.navigator?.platform === 'Android' || globalThis.navigator?.userAgent?.includes(' Android ') === true || globalThis.process?.platform === 'android';
+!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
+!isBrowser && process$1.platform === 'win32';
+isBrowser ? () => {
+  throw new Error('`process.cwd()` only works in Node.js, not the browser.');
+} : process$1.cwd;
 
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
@@ -211,22 +254,6 @@ const ANSI = createAnsi({
   // because stream.isTTY returns false, see https://github.com/actions/runner/issues/241
   process.env.GITHUB_WORKFLOW
 });
-function isUnicodeSupported() {
-  const {
-    env
-  } = process$1;
-  const {
-    TERM,
-    TERM_PROGRAM
-  } = env;
-  if (process$1.platform !== 'win32') {
-    return TERM !== 'linux'; // Linux console (kernel)
-  }
-  return Boolean(env.WT_SESSION) // Windows Terminal
-  || Boolean(env.TERMINUS_SUBLIME) // Terminus (<0.2.27)
-  || env.ConEmuTask === '{cmd::Cmder}' // ConEmu and cmder
-  || TERM_PROGRAM === 'Terminus-Sublime' || TERM_PROGRAM === 'vscode' || TERM === 'xterm-256color' || TERM === 'alacritty' || TERM === 'rxvt-unicode' || TERM === 'rxvt-unicode-256color' || env.TERMINAL_EMULATOR === 'JetBrains-JediTerm';
-}
 
 // see also https://github.com/sindresorhus/figures
 
@@ -439,32 +466,6 @@ const fillLeft = (value, biggestValue, char = " ") => {
   return padded;
 };
 
-/* globals WorkerGlobalScope, DedicatedWorkerGlobalScope, SharedWorkerGlobalScope, ServiceWorkerGlobalScope */
-
-const isBrowser = globalThis.window?.document !== undefined;
-globalThis.process?.versions?.node !== undefined;
-globalThis.process?.versions?.bun !== undefined;
-globalThis.Deno?.version?.deno !== undefined;
-globalThis.process?.versions?.electron !== undefined;
-globalThis.navigator?.userAgent?.includes('jsdom') === true;
-typeof WorkerGlobalScope !== 'undefined' && globalThis instanceof WorkerGlobalScope;
-typeof DedicatedWorkerGlobalScope !== 'undefined' && globalThis instanceof DedicatedWorkerGlobalScope;
-typeof SharedWorkerGlobalScope !== 'undefined' && globalThis instanceof SharedWorkerGlobalScope;
-typeof ServiceWorkerGlobalScope !== 'undefined' && globalThis instanceof ServiceWorkerGlobalScope;
-
-// Note: I'm intentionally not DRYing up the other variables to keep them "lazy".
-const platform = globalThis.navigator?.userAgentData?.platform;
-platform === 'macOS' || globalThis.navigator?.platform === 'MacIntel' // Even on Apple silicon Macs.
-|| globalThis.navigator?.userAgent?.includes(' Mac ') === true || globalThis.process?.platform === 'darwin';
-platform === 'Windows' || globalThis.navigator?.platform === 'Win32' || globalThis.process?.platform === 'win32';
-platform === 'Linux' || globalThis.navigator?.platform?.startsWith('Linux') === true || globalThis.navigator?.userAgent?.includes(' Linux ') === true || globalThis.process?.platform === 'linux';
-platform === 'Android' || globalThis.navigator?.platform === 'Android' || globalThis.navigator?.userAgent?.includes(' Android ') === true || globalThis.process?.platform === 'android';
-!isBrowser && process$1.env.TERM_PROGRAM === 'Apple_Terminal';
-!isBrowser && process$1.platform === 'win32';
-isBrowser ? () => {
-  throw new Error('`process.cwd()` only works in Node.js, not the browser.');
-} : process$1.cwd;
-
 // normalize url search params:
 // Using URLSearchParams to alter the url search params
 // can result into "file:///file.css?css_module"
@@ -604,41 +605,6 @@ const pathnameToParentPathname = pathname => {
   }
   return pathname.slice(0, slashLastIndex + 1);
 };
-
-const urlToFileSystemPath = url => {
-  const urlObject = new URL(url);
-  let {
-    origin,
-    pathname,
-    hash
-  } = urlObject;
-  if (urlObject.protocol === "file:") {
-    origin = "file://";
-  }
-  pathname = pathname.split("/").map(part => {
-    return part.replace(/%(?![0-9A-F][0-9A-F])/g, "%25");
-  }).join("/");
-  if (hash) {
-    pathname += "%23".concat(encodeURIComponent(hash.slice(1)));
-  }
-  const urlString = "".concat(origin).concat(pathname);
-  const fileSystemPath = fileURLToPath(urlString);
-  if (fileSystemPath[fileSystemPath.length - 1] === "/") {
-    // remove trailing / so that nodejs path becomes predictable otherwise it logs
-    // the trailing slash on linux but does not on windows
-    return fileSystemPath.slice(0, -1);
-  }
-  return fileSystemPath;
-};
-
-const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-const intToChar = new Uint8Array(64); // 64 possible chars.
-const charToInt = new Uint8Array(128); // z is 122 in ASCII
-for (let i = 0; i < chars.length; i++) {
-  const c = chars.charCodeAt(i);
-  intToChar[i] = c;
-  charToInt[c] = i;
-}
 
 const require = createRequire(import.meta.url);
 // consider using https://github.com/7rulnik/source-map-js
@@ -1227,7 +1193,7 @@ const injectSupervisorIntoHTML = async ({
         }
         const src = getHtmlNodeAttribute(scriptNode, "src");
         if (src) {
-          const urlObject = new URL(src, "http://example.com/");
+          const urlObject = new URL(src, "http://example.com");
           if (urlObject.searchParams.has("inline")) {
             return;
           }
@@ -1416,7 +1382,7 @@ const createPackageImportNotDefinedError = (specifier, {
 const isSpecifierForNodeBuiltin = specifier => {
   return specifier.startsWith("node:") || NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier);
 };
-const NODE_BUILTIN_MODULE_SPECIFIERS = ["assert", "assert/strict", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "stream/promises", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib",
+const NODE_BUILTIN_MODULE_SPECIFIERS = ["assert", "assert/strict", "async_hooks", "buffer_ieee754", "buffer", "child_process", "cluster", "console", "constants", "crypto", "_debugger", "dgram", "dns", "domain", "events", "freelist", "fs", "fsevents", "fs/promises", "_http_agent", "_http_client", "_http_common", "_http_incoming", "_http_outgoing", "_http_server", "http", "http2", "https", "inspector", "_linklist", "module", "net", "node-inspect/lib/_inspect", "node-inspect/lib/internal/inspect_client", "node-inspect/lib/internal/inspect_repl", "os", "path", "perf_hooks", "process", "punycode", "querystring", "readline", "repl", "smalloc", "_stream_duplex", "_stream_transform", "_stream_wrap", "_stream_passthrough", "_stream_readable", "_stream_writable", "stream", "stream/promises", "string_decoder", "sys", "timers", "_tls_common", "_tls_legacy", "_tls_wrap", "tls", "trace_events", "tty", "url", "util", "v8/tools/arguments", "v8/tools/codemap", "v8/tools/consarray", "v8/tools/csvparser", "v8/tools/logreader", "v8/tools/profile_view", "v8/tools/splaytree", "v8", "vm", "worker_threads", "zlib",
 // global is special
 "global"];
 
@@ -2195,13 +2161,14 @@ const jsenvPluginSupervisor = ({
   return {
     name: "jsenv:supervisor",
     appliesDuring: "dev",
-    serve: async serveInfo => {
-      if (serveInfo.request.pathname.startsWith("/__get_cause_trace__/")) {
-        const {
-          pathname,
-          searchParams
-        } = new URL(serveInfo.request.url);
-        const urlWithLineAndColumn = decodeURIComponent(pathname.slice("/__get_cause_trace__/".length));
+    devServerRoutes: [{
+      endpoint: "GET /.internal/get_cause_trace/*",
+      description: "Return source code around the place an error was thrown.",
+      declarationSource: import.meta.url,
+      fetch: async (request, {
+        kitchen
+      }) => {
+        const urlWithLineAndColumn = decodeURIComponent(request.params[0]);
         const result = resolveUrlSite(urlWithLineAndColumn);
         if (!result) {
           return {
@@ -2214,7 +2181,7 @@ const jsenvPluginSupervisor = ({
           line,
           column
         } = result;
-        const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
+        const urlInfo = kitchen.graph.getUrlInfo(file);
         if (!urlInfo) {
           return {
             status: 204,
@@ -2226,7 +2193,7 @@ const jsenvPluginSupervisor = ({
         if (!urlInfo.originalContent) {
           await urlInfo.fetchContent();
         }
-        const remap = searchParams.has("remap");
+        const remap = request.searchParams.has("remap");
         if (remap) {
           const sourcemap = urlInfo.sourcemap;
           if (sourcemap) {
@@ -2265,8 +2232,14 @@ const jsenvPluginSupervisor = ({
           body: causeTraceJson
         };
       }
-      if (serveInfo.request.pathname.startsWith("/__get_error_cause__/")) {
-        let file = serveInfo.request.pathname.slice("/__get_error_cause__/".length);
+    }, {
+      endpoint: "GET /.internal/get_error_cause/*",
+      description: "Return the error that occured when a file was served by jsenv dev server or null.",
+      declarationSource: import.meta.url,
+      fetch: (request, {
+        kitchen
+      }) => {
+        let file = decodeURIComponent(request.params[0]);
         file = decodeURIComponent(file);
         if (!file) {
           return {
@@ -2278,12 +2251,12 @@ const jsenvPluginSupervisor = ({
           url
         } = applyNodeEsmResolution({
           conditions: [],
-          parentUrl: serveInfo.rootDirectoryUrl,
+          parentUrl: kitchen.context.rootDirectoryUrl,
           specifier: file
         });
         file = url;
         const getErrorCauseInfo = () => {
-          const urlInfo = serveInfo.kitchen.graph.getUrlInfo(file);
+          const urlInfo = kitchen.graph.getUrlInfo(file);
           if (!urlInfo) {
             return null;
           }
@@ -2321,31 +2294,7 @@ const jsenvPluginSupervisor = ({
           body
         };
       }
-      if (serveInfo.request.pathname.startsWith("/__open_in_editor__/")) {
-        let file = serveInfo.request.pathname.slice("/__open_in_editor__/".length);
-        file = decodeURIComponent(file);
-        if (!file) {
-          return {
-            status: 400,
-            body: "Missing file in url"
-          };
-        }
-        const fileUrl = new URL(file, serveInfo.rootDirectoryUrl);
-        const filePath = urlToFileSystemPath(fileUrl);
-        const require = createRequire(import.meta.url);
-        const launch = require("launch-editor");
-        launch(filePath, () => {
-          // ignore error for now
-        });
-        return {
-          status: 200,
-          headers: {
-            "cache-control": "no-store"
-          }
-        };
-      }
-      return null;
-    },
+    }],
     transformUrlContent: {
       html: htmlUrlInfo => {
         const supervisorFileReference = htmlUrlInfo.dependencies.inject({

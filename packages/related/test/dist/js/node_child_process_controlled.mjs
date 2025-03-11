@@ -1,6 +1,6 @@
 import { createException } from "@jsenv/exception";
 import { memoryUsage } from "node:process";
-import { executeUsingDynamicImport } from "./js/execute_using_dynamic_import.js";
+import { executeUsingDynamicImport } from "./execute_using_dynamic_import.js";
 import "node:fs";
 import "node:perf_hooks";
 import "node:inspector";

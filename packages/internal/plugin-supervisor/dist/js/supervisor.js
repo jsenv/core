@@ -1013,7 +1013,7 @@ window.__supervisor__ = (() => {
               try {
                 if (exception.code === DYNAMIC_IMPORT_FETCH_ERROR || exception.reportedBy === "script_error_event") {
                   const errorCauseFile = exception.site.ownerSite ? exception.site.ownerSite.url : exception.site.url;
-                  const errorCauseAPIUrl = "/__get_error_cause__/".concat(encodeURIComponent(errorCauseFile));
+                  const errorCauseAPIUrl = "/.internal/get_error_cause/".concat(encodeURIComponent(errorCauseFile));
                   const response = await window.fetch(errorCauseAPIUrl);
                   if (response.status !== 200) {
                     return;
@@ -1032,7 +1032,7 @@ window.__supervisor__ = (() => {
                     line: exception.site.ownerSite.inlineLine,
                     column: exception.site.ownerSite.inlineColumn
                   }) : stringifyUrlSite(exception.site);
-                  const errorTraceAPIUrl = "/__get_cause_trace__/".concat(encodeURIComponent(errorTraceFile));
+                  const errorTraceAPIUrl = "/.internal/get_cause_trace/".concat(encodeURIComponent(errorTraceFile));
                   const urlToFetch = new URL(errorTraceAPIUrl, window.origin);
                   if (!exception.stackSourcemapped) {
                     urlToFetch.searchParams.set("remap", "");
@@ -1077,7 +1077,7 @@ window.__supervisor__ = (() => {
             }
             const urlWithLineAndColumn = stringifyUrlSite(urlSite);
             return {
-              href: urlSite.url.startsWith("file:") && openInEditor ? "javascript:window.fetch('/__open_in_editor__/".concat(encodeURIComponent(urlWithLineAndColumn), "')") : urlSite.url,
+              href: urlSite.url.startsWith("file:") && openInEditor ? "javascript:window.fetch('/.internal/open_file/".concat(encodeURIComponent(urlWithLineAndColumn), "')") : urlSite.url,
               text: urlWithLineAndColumn
             };
           }

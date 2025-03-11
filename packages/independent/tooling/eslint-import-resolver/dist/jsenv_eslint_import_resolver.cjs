@@ -550,6 +550,34 @@ isBrowser ? () => {
 	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
 } : process$1.cwd;
 
+const pathnameToExtension$1 = (pathname) => {
+  const slashLastIndex = pathname.lastIndexOf("/");
+  const filename =
+    slashLastIndex === -1 ? pathname : pathname.slice(slashLastIndex + 1);
+  if (filename.match(/@([0-9])+(\.[0-9]+)?(\.[0-9]+)?$/)) {
+    return "";
+  }
+  const dotLastIndex = filename.lastIndexOf(".");
+  if (dotLastIndex === -1) {
+    return "";
+  }
+  // if (dotLastIndex === pathname.length - 1) return ""
+  const extension = filename.slice(dotLastIndex);
+  return extension;
+};
+
+const resourceToPathname = (resource) => {
+  const searchSeparatorIndex = resource.indexOf("?");
+  if (searchSeparatorIndex > -1) {
+    return resource.slice(0, searchSeparatorIndex);
+  }
+  const hashIndex = resource.indexOf("#");
+  if (hashIndex > -1) {
+    return resource.slice(0, hashIndex);
+  }
+  return resource;
+};
+
 const urlToScheme$1 = (url) => {
   const urlString = String(url);
   const colonIndex = urlString.indexOf(":");
@@ -587,34 +615,9 @@ const urlToPathname$1 = (url) => {
   return pathname;
 };
 
-const resourceToPathname = (resource) => {
-  const searchSeparatorIndex = resource.indexOf("?");
-  if (searchSeparatorIndex > -1) {
-    return resource.slice(0, searchSeparatorIndex);
-  }
-  const hashIndex = resource.indexOf("#");
-  if (hashIndex > -1) {
-    return resource.slice(0, hashIndex);
-  }
-  return resource;
-};
-
 const urlToExtension$1 = (url) => {
   const pathname = urlToPathname$1(url);
   return pathnameToExtension$1(pathname);
-};
-
-const pathnameToExtension$1 = (pathname) => {
-  const slashLastIndex = pathname.lastIndexOf("/");
-  if (slashLastIndex !== -1) {
-    pathname = pathname.slice(slashLastIndex + 1);
-  }
-
-  const dotLastIndex = pathname.lastIndexOf(".");
-  if (dotLastIndex === -1) return "";
-  // if (dotLastIndex === pathname.length - 1) return ""
-  const extension = pathname.slice(dotLastIndex);
-  return extension;
 };
 
 const transformUrlPathname = (url, transformer) => {
@@ -807,7 +810,7 @@ const assertAndNormalizeFileUrl = (
   return value;
 };
 
-const isWindows = process.platform === "win32";
+const isWindows$1 = process.platform === "win32";
 const baseUrlFallback = fileSystemPathToUrl(process.cwd());
 
 /**
@@ -830,7 +833,7 @@ const ensureWindowsDriveLetter = (url, baseUrl) => {
     throw new Error(`absolute url expect but got ${url}`);
   }
 
-  if (!isWindows) {
+  if (!isWindows$1) {
     return url;
   }
 
@@ -874,6 +877,27 @@ const extractDriveLetter = (resource) => {
   return null;
 };
 
+const generateWindowsEPERMErrorMessage = (
+  error,
+  { operation, path },
+) => {
+  const pathLengthIsExceedingUsualLimit = String(path).length >= 256;
+  let message = "";
+
+  if (operation) {
+    message += `error while trying to fix windows EPERM after ${operation} on ${path}`;
+  }
+
+  if (pathLengthIsExceedingUsualLimit) {
+    message += "\n";
+    message += `Maybe because path length is exceeding the usual limit of 256 characters of windows OS?`;
+    message += "\n";
+  }
+  message += "\n";
+  message += error.stack;
+  return message;
+};
+
 /*
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
@@ -882,13 +906,107 @@ const extractDriveLetter = (resource) => {
 
 process.platform === "win32";
 
+const writeEntryPermissionsSync = (source, permissions) => {
+  const sourceUrl = assertAndNormalizeFileUrl(source);
+
+  let binaryFlags;
+  {
+    binaryFlags = permissions;
+  }
+
+  node_fs.chmodSync(new URL(sourceUrl), binaryFlags);
+};
+
 /*
  * - stats object documentation on Node.js
  *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
  */
 
 
-process.platform === "win32";
+const isWindows = process.platform === "win32";
+
+const readEntryStatSync = (
+  source,
+  { nullIfNotFound = false, followLink = true } = {},
+) => {
+  let sourceUrl = assertAndNormalizeFileUrl(source);
+  if (sourceUrl.endsWith("/")) sourceUrl = sourceUrl.slice(0, -1);
+
+  const sourcePath = urlToFileSystemPath(sourceUrl);
+
+  const handleNotFoundOption = nullIfNotFound
+    ? {
+        handleNotFoundError: () => null,
+      }
+    : {};
+
+  return statSyncNaive(sourcePath, {
+    followLink,
+    ...handleNotFoundOption,
+    ...(isWindows
+      ? {
+          // Windows can EPERM on stat
+          handlePermissionDeniedError: (error) => {
+            console.error(
+              `trying to fix windows EPERM after stats on ${sourcePath}`,
+            );
+
+            try {
+              // unfortunately it means we mutate the permissions
+              // without being able to restore them to the previous value
+              // (because reading current permission would also throw)
+              writeEntryPermissionsSync(sourceUrl, 0o666);
+              const stats = statSyncNaive(sourcePath, {
+                followLink,
+                ...handleNotFoundOption,
+                // could not fix the permission error, give up and throw original error
+                handlePermissionDeniedError: () => {
+                  console.error(`still got EPERM after stats on ${sourcePath}`);
+                  throw error;
+                },
+              });
+              return stats;
+            } catch (e) {
+              console.error(
+                generateWindowsEPERMErrorMessage(e, {
+                  operation: "stats",
+                  path: sourcePath,
+                }),
+              );
+              throw error;
+            }
+          },
+        }
+      : {}),
+  });
+};
+
+const statSyncNaive = (
+  sourcePath,
+  {
+    followLink,
+    handleNotFoundError = null,
+    handlePermissionDeniedError = null,
+  } = {},
+) => {
+  const nodeMethod = followLink ? node_fs.statSync : node_fs.lstatSync;
+
+  try {
+    const stats = nodeMethod(sourcePath);
+    return stats;
+  } catch (error) {
+    if (handleNotFoundError && error.code === "ENOENT") {
+      return handleNotFoundError(error);
+    }
+    if (
+      handlePermissionDeniedError &&
+      (error.code === "EPERM" || error.code === "EACCES")
+    ) {
+      return handlePermissionDeniedError(error);
+    }
+    throw error;
+  }
+};
 
 const mediaTypeInfos = {
   "application/json": {
@@ -913,6 +1031,10 @@ const mediaTypeInfos = {
   },
   "application/x-gzip": {
     extensions: ["gz"],
+  },
+  "application/yaml": {
+    extensions: ["yml", "yaml"],
+    isTextual: true,
   },
   "application/wasm": {
     extensions: ["wasm"],
@@ -1063,6 +1185,22 @@ const CONTENT_TYPE = {
     return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
   },
 
+  fromExtension: (extension) => {
+    if (extension[0] === ".") {
+      extension = extension.slice(1);
+    }
+    for (const mediaTypeCandidate of Object.keys(mediaTypeInfos)) {
+      const mediaTypeCandidateInfo = mediaTypeInfos[mediaTypeCandidate];
+      if (
+        mediaTypeCandidateInfo.extensions &&
+        mediaTypeCandidateInfo.extensions.includes(extension)
+      ) {
+        return mediaTypeCandidate;
+      }
+    }
+    return "application/octet-stream";
+  },
+
   fromUrlExtension: (url) => {
     const { pathname } = new URL(url);
     const extensionWithDot = node_path.extname(pathname);
@@ -1070,13 +1208,13 @@ const CONTENT_TYPE = {
       return "application/octet-stream";
     }
     const extension = extensionWithDot.slice(1);
-    const mediaTypeFound = Object.keys(mediaTypeInfos).find((mediaType) => {
-      const mediaTypeInfo = mediaTypeInfos[mediaType];
-      return (
-        mediaTypeInfo.extensions && mediaTypeInfo.extensions.includes(extension)
-      );
-    });
-    return mediaTypeFound || "application/octet-stream";
+    return CONTENT_TYPE.fromExtension(extension);
+  },
+
+  toUrlExtension: (contentType) => {
+    const mediaType = CONTENT_TYPE.asMediaType(contentType);
+    const mediaTypeInfo = mediaTypeInfos[mediaType];
+    return mediaTypeInfo ? `.${mediaTypeInfo.extensions[0]}` : "";
   },
 };
 
@@ -1183,7 +1321,7 @@ process.platform === "freebsd";
 // https://nodejs.org/api/packages.html#resolving-user-conditions
 const readCustomConditionsFromProcessArgs = () => {
   const packageConditions = [];
-  process.execArgv.forEach((arg) => {
+  for (const arg of process.execArgv) {
     if (arg.includes("-C=")) {
       const packageCondition = arg.slice(0, "-C=".length);
       packageConditions.push(packageCondition);
@@ -1192,7 +1330,7 @@ const readCustomConditionsFromProcessArgs = () => {
       const packageCondition = arg.slice("--conditions=".length);
       packageConditions.push(packageCondition);
     }
-  });
+  }
   return packageConditions;
 };
 
@@ -1391,6 +1529,7 @@ const NODE_BUILTIN_MODULE_SPECIFIERS = [
   "events",
   "freelist",
   "fs",
+  "fsevents",
   "fs/promises",
   "_http_agent",
   "_http_client",
@@ -2254,7 +2393,7 @@ const applyFileSystemMagicResolution = (
 
   if (fileStat === undefined) {
     try {
-      fileStat = node_fs.statSync(new URL(fileUrl));
+      fileStat = readEntryStatSync(new URL(fileUrl));
     } catch (e) {
       if (e.code === "ENOENT") {
         result.lastENOENTError = e;
@@ -2296,7 +2435,7 @@ const applyFileSystemMagicResolution = (
       const urlCandidate = `${parentUrl}${urlFilename}${extensionToTry}`;
       let stat;
       try {
-        stat = node_fs.statSync(new URL(urlCandidate));
+        stat = readEntryStatSync(new URL(urlCandidate));
       } catch (e) {
         if (e.code === "ENOENT") {
           stat = null;
@@ -11876,6 +12015,7 @@ ${packageConditions.join(",")}`);
     const moduleSystem = determineModuleSystem(importer, {
       ambiguousExtensions,
     });
+    logger.debug(`-> module system is ${moduleSystem}`);
     if (moduleSystem === "commonjs") {
       const requireForImporter = node_module.createRequire(importer);
       let filesystemPath;
