@@ -3,6 +3,13 @@ import { setUrlExtension, urlToExtension, urlToFilename } from "@jsenv/urls";
 import { CONTENT_TYPE } from "@jsenv/utils/src/content_type/content_type.js";
 
 export const jsenvPluginProtocolHttp = ({ include }) => {
+  const prependIgnore = (reference) => {
+    if (reference.original) {
+      return `ignore:${reference.original.specifier}`;
+    }
+    return `ignore:${reference.specifier}`;
+  };
+
   if (include === false) {
     return {
       name: "jsenv:protocol_http",
@@ -11,7 +18,7 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
         if (!reference.url.startsWith("http")) {
           return null;
         }
-        return `ignore:${reference.url}`;
+        return prependIgnore(reference);
       },
     };
   }
@@ -34,7 +41,7 @@ export const jsenvPluginProtocolHttp = ({ include }) => {
         return null;
       }
       if (!shouldInclude(reference.url)) {
-        return `ignore:${reference.url}`;
+        return prependIgnore(reference);
       }
       const outDirectoryUrl = reference.ownerUrlInfo.context.outDirectoryUrl;
       const urlObject = new URL(reference.url);
