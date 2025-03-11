@@ -60,7 +60,20 @@ return {
 
 ```console
 GET http://127.0.0.1/users
-  406 Not Acceptable
+The response header content-language is missing.
+It should be set to one of route.availableLanguages: fr.
+  200
+GET http://127.0.0.1/users
+  406 The server cannot produce a response in any of the languages accepted by the request: "de".
+  Available languages: fr, en.
+GET http://127.0.0.1/users
+The response header content-language is missing.
+It should be set to one of route.availableLanguages: fr.
+  200
+GET http://127.0.0.1/users
+The response header content-language is missing.
+It should be set to one of route.availableLanguages: en.
+  200
 ```
 
 </details>
@@ -86,14 +99,14 @@ GET http://127.0.0.1/users
     "status": 406,
     "headers": {
       "available-languages": "fr, en",
-      "content-type": "text/plain;charset=UTF-8",
       "vary": "accept-language",
+      "content-type": "application/json",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The server cannot produce a response in any of the languages accepted by the request: \"de\".\nAvailable languages: fr, en"
+    "body": "{\"statusMessage\":\"The server cannot produce a response in any of the languages accepted by the request: \\\"de\\\".\\nAvailable languages: fr, en.\"}"
   },
   "GET users accepting FR language": {
     "status": 200,

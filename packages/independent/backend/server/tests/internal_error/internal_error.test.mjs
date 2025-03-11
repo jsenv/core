@@ -8,7 +8,7 @@ const run = async (errorToThrow) => {
     routes: [
       {
         endpoint: "GET *",
-        response: () => {
+        fetch: () => {
           throw errorToThrow;
         },
       },

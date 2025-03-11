@@ -46,25 +46,25 @@ return {
     "status": 415,
     "headers": {
       "accept-patch": "text/plain",
-      "content-type": "text/plain;charset=UTF-8",
+      "content-type": "application/json",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The Content-Type header is missing. It must be declared for PATCH requests to this resource."
+    "body": "{\"statusMessage\":\"The Content-Type header is missing. It must be declared for PATCH requests to this resource.\"}"
   },
   "PATCH / with xml": {
     "status": 415,
     "headers": {
       "accept-patch": "text/plain",
-      "content-type": "text/plain;charset=UTF-8",
+      "content-type": "application/json",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The media type \"application/xml\" specified in the Content-Type header is not supported for PATCH requests to this resource.\nSupported media types: text/plain"
+    "body": "{\"statusMessage\":\"The media type \\\"application/xml\\\" specified in the Content-Type header is not supported for PATCH requests to this resource.\\n    Supported media types: text/plain\"}"
   },
   "PATCH / with text": {
     "status": 200,

@@ -47,7 +47,15 @@ return {
 
 ```console
 GET http://127.0.0.1/users
-  406 Not Acceptable
+  406 The server cannot produce a response in a format acceptable to the client:
+  - content-type undefined
+  - language undefined
+GET http://127.0.0.1/users
+The value "text/plain;charset=UTF-8" found in response header content-type is strange.
+It should be should be one of route.availableMediaTypes: application/json, text/plain.
+The response header content-language is missing.
+It should be set to one of route.availableLanguages: fr, en.
+  200
 ```
 
 </details>
@@ -60,16 +68,16 @@ GET http://127.0.0.1/users
   "GET users accepting css and language DE": {
     "status": 406,
     "headers": {
-      "available-languages": "fr, en",
       "available-media-types": "application/json, text/plain",
-      "content-type": "text/plain;charset=UTF-8",
+      "available-languages": "fr, en",
       "vary": "accept, accept-language",
+      "content-type": "application/json",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The server cannot produce a response in a format acceptable to the client:\n- content-type The server cannot produce a response in any of the media types accepted by the request: \"text/css\".\nAvailable media types: application/json, text/plain\n- language The server cannot produce a response in any of the languages accepted by the request: \"de\".\nAvailable languages: fr, en"
+    "body": "{\"statusMessage\":\"The server cannot produce a response in a format acceptable to the client:\\n- content-type undefined\\n- language undefined\"}"
   },
   "GET users accepting text and language FR": {
     "status": 200,

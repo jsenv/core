@@ -1,13 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 61.45" background-color="#282c34">
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 156.45" background-color="#282c34">
   <g id="background">
-    <rect x="1" y="1" width="638" height="59.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+    <rect x="1" y="1" width="638" height="154.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
   </g>
-  <foreignObject id="body" y="0" width="100%" height="71.45" overflow="hidden">
-    <svg width="238.44" height="61.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+  <foreignObject id="body" y="0" width="100%" height="166.45" overflow="hidden">
+    <svg width="902.14" height="156.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
       <g>
         <text x="10" y="24.55">GET http://127.0.0.1/users</text>
         <text x="26.8" y="43.55" fill="#DAA520">406</text>
-        <text x="60.41" y="43.55"> Not Acceptable</text>
+        <text x="60.41" y="43.55"> The server cannot produce a response in any of the media types accepted by the request: "text/css".</text>
+        <text x="26.8" y="62.55">  Available media types: application/json, text/plain.</text>
+        <text x="10" y="81.55">GET http://127.0.0.1/users</text>
+        <text x="10" y="100.55">The value "text/plain;charset=UTF-8" found in response header content-type is strange.</text>
+        <text x="10" y="119.55">It should be should be one of route.availableMediaTypes: application/json, text/plain.</text>
+        <text x="26.8" y="138.55" fill="#11bc79">200</text>
       </g>
     </svg>
   </foreignObject>

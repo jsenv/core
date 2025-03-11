@@ -64,7 +64,12 @@ return {
 
 ```console
 GET http://127.0.0.1/users
-  406 Not Acceptable
+  406 The server cannot produce a response in any of the media types accepted by the request: "text/css".
+  Available media types: application/json, text/plain.
+GET http://127.0.0.1/users
+The value "text/plain;charset=UTF-8" found in response header content-type is strange.
+It should be should be one of route.availableMediaTypes: application/json, text/plain.
+  200
 ```
 
 </details>
@@ -90,14 +95,14 @@ GET http://127.0.0.1/users
     "status": 406,
     "headers": {
       "available-media-types": "application/json, text/plain",
-      "content-type": "text/plain;charset=UTF-8",
       "vary": "accept",
+      "content-type": "application/json",
       "date": "<X>",
       "connection": "keep-alive",
       "keep-alive": "timeout=5",
       "transfer-encoding": "chunked"
     },
-    "body": "The server cannot produce a response in any of the media types accepted by the request: \"text/css\".\nAvailable media types: application/json, text/plain"
+    "body": "{\"statusMessage\":\"The server cannot produce a response in any of the media types accepted by the request: \\\"text/css\\\".\\nAvailable media types: application/json, text/plain.\"}"
   },
   "GET users accepting anything": {
     "status": 200,
