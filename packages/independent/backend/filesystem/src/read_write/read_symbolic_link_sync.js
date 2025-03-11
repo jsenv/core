@@ -5,7 +5,6 @@
 
 import { fileSystemPathToUrl, isFileSystemPath } from "@jsenv/urls";
 import { readlinkSync } from "node:fs";
-
 import { assertAndNormalizeFileUrl } from "../path_and_url/file_url_validation.js";
 
 export const readSymbolicLinkSync = (url) => {

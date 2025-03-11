@@ -2,7 +2,6 @@ import { createDetailedMessage } from "@jsenv/humanize";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
 import { isFileSystemPath } from "@jsenv/urls";
-
 import { fileUrlConverter } from "../file_url_converter.js";
 
 export const bundleJsModules = async (
@@ -10,7 +9,7 @@ export const bundleJsModules = async (
   {
     buildDirectoryUrl,
     include,
-    chunks = {},
+    chunks,
     strictExports = false,
     preserveDynamicImport = false,
     augmentDynamicImportUrlSearchParams = () => {},
@@ -34,8 +33,16 @@ export const bundleJsModules = async (
     buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
   }
 
+  if (chunks === undefined) {
+    chunks = {
+      vendors: {
+        "file:///**/node_modules/": true,
+      },
+    };
+  }
+
   let manualChunks;
-  if (Object.keys(chunks).length) {
+  if (chunks && Object.keys(chunks).length) {
     const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
     manualChunks = (id) => {
       if (rollupOutput.manualChunks) {

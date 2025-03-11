@@ -1,0 +1,1 @@
+export const workspacePackageB = "workspacePackageB";
