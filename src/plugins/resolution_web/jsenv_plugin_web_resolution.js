@@ -9,10 +9,7 @@ export const jsenvPluginWebResolution = () => {
         if (ownerUrlInfo.originalUrl?.startsWith("http")) {
           return new URL(resource, ownerUrlInfo.originalUrl);
         }
-        const url = new URL(
-          resource.slice(1),
-          ownerUrlInfo.context.rootDirectoryUrl,
-        );
+        const url = new URL(resource.slice(1), ownerUrlInfo.entryUrlInfo.url);
         return url;
       }
       // baseUrl happens second argument to new URL() is different from

@@ -753,4 +753,8 @@ const applyReferenceEffectsOnUrlInfo = (reference) => {
   if (reference.expectedSubtype) {
     referencedUrlInfo.subtypeHint = reference.expectedSubtype;
   }
+
+  referencedUrlInfo.entryUrlInfo = reference.isEntryPoint
+    ? referencedUrlInfo
+    : referencedUrlInfo.entryUrlInfo;
 };

@@ -204,6 +204,7 @@ const createUrlInfo = (url, context) => {
     url: null,
     originalUrl: undefined,
     isEntryPoint: false,
+    entryUrlInfo: null,
     originalContent: undefined,
     originalContentAst: undefined,
     content: undefined,
