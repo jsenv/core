@@ -6,7 +6,7 @@ await build({
   sourceDirectoryUrl: new URL("../../src/", import.meta.url),
   buildDirectoryUrl: new URL("../../dist/", import.meta.url),
   entryPoints: {
-    "./main.js": "jsenv_core.js",
+    "./build/build.js": "jsenv_core.js",
   },
   ignore: {
     "file://**/node_modules/": true,
@@ -18,7 +18,7 @@ await build({
     "file://**/node_modules/@jsenv/integrity/": false,
     "file://**/node_modules/@jsenv/humanize/": false,
     "file://**/node_modules/@jsenv/node-esm-resolution/": false,
-    "file://**/node_modules/@jsenv/server/": false,
+    // "file://**/node_modules/@jsenv/server/": false,
     "file://**/node_modules/@jsenv/plugin-transpilation/": false,
     "file://**/node_modules/@jsenv/plugin-bundling/": false,
     "file://**/node_modules/@jsenv/plugin-minification/": false,

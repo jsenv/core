@@ -109,12 +109,14 @@ const parseAndTransformJsReferences = async (
     }
 
     let isEntryPoint;
+    let isDynamicEntryPoint;
     if (
       isNodeJs &&
       (externalReferenceInfo.type === "js_url" ||
         externalReferenceInfo.subtype === "import_meta_resolve")
     ) {
       isEntryPoint = true;
+      isDynamicEntryPoint = true;
     } else if (
       isWebWorkerEntryPointReference({
         subtype: externalReferenceInfo.subtype,
@@ -148,6 +150,7 @@ const parseAndTransformJsReferences = async (
       isSideEffectImport: externalReferenceInfo.isSideEffectImport,
       astInfo: externalReferenceInfo.astInfo,
       isEntryPoint,
+      isDynamicEntryPoint,
       filenameHint,
     });
 

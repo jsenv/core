@@ -1,3 +1,3 @@
-const clientHtmlFileUrl = import.meta.resolve("./main.html");
+const clientHtmlFileUrl = import.meta.resolve("./html/main.html");
 
 console.log(clientHtmlFileUrl);
