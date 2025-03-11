@@ -16,15 +16,15 @@ base/client/main.html:15:40
 15 |       const directoryUrl = new URL("./src/", import.meta.url).href;
                                             ^
   at redirectReference (@jsenv/core/src/plugins/directory_reference_effect/jsenv_plugin_directory_reference_effect.js:56:23)
-  at callHook (@jsenv/core/src/plugins/plugin_controller.js:169:25)
-  at Object.callHooks (@jsenv/core/src/plugins/plugin_controller.js:211:27)
-  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:203:26)
-  at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:377:38)
-  at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:43:41)
-  at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:58:23)
-  at onExternalReference (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:100:44)
-  at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:149:7)
-  at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:22:18)
+  at callHook (@jsenv/core/src/plugins/plugin_controller.js:170:25)
+  at Object.callHooks (@jsenv/core/src/plugins/plugin_controller.js:212:27)
+  at Object.resolveReference (@jsenv/core/src/kitchen/kitchen.js:207:26)
+  at reference.resolve (@jsenv/core/src/kitchen/url_graph/references.js:376:38)
+  at createResolveAndFinalize (@jsenv/core/src/kitchen/url_graph/references.js:42:41)
+  at Object.found (@jsenv/core/src/kitchen/url_graph/references.js:57:23)
+  at onExternalReference (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:120:44)
+  at parseAndTransformJsReferences (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:176:7)
+  at js_module (@jsenv/core/src/plugins/reference_analysis/js/jsenv_plugin_js_reference_analysis.js:24:18)
 ```
 
 ---

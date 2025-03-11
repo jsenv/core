@@ -17,7 +17,11 @@ see [./.jsenv/firefox@134.00/](./.jsenv/firefox@134.00/)
 
 ```console
 GET http://127.0.0.1/favicon.ico
-  404 no entry on filesystem
+  404 Failed to fetch url content
+  base/client/main.html
+  no entry on filesystem
+  --- plugin name ---
+  "jsenv:file_url_fetching"
 ```
 
 </details>

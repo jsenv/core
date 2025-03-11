@@ -6,11 +6,17 @@ run({
 })
 ```
 
-# 1/2 write 3 files into "./node_build/"
+# 1/3 console.warn
+
+```console
+Generated an empty chunk: "foo".
+```
+
+# 2/3 write 3 files into "./node_build/"
 
 see [./node_build/](./node_build/)
 
-# 2/2 resolve
+# 3/3 resolve
 
 ```js
 {}

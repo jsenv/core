@@ -18,7 +18,7 @@ see [./build/](./build/)
   "absoluteUrl": "http://example.com/file.txt",
   "windowLocationRelativeUrl": "window.origin/other/file.txt?v=268b0aca",
   "windowOriginRelativeUrl": "window.origin/other/file.txt?v=268b0aca",
-  "absoluteBaseUrl": "http://jsenv.dev/other/file.txt?v=268b0aca"
+  "absoluteBaseUrl": "http://jsenv.dev/file.txt"
 }
 ```
 
