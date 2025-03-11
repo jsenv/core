@@ -19,6 +19,10 @@ export { comparePathnames } from "./path_and_url/compare_pathnames.js";
 export { ensureWindowsDriveLetter } from "./path_and_url/ensure_windows_drive_letter.js";
 export { getParentDirectoryUrl } from "./path_and_url/get_parent_directory_url.js";
 export { findAncestorDirectoryUrl } from "./path_and_url/find_ancestor_directory_url.js";
+// All other exports are agnostic and focused on the filesystem only
+// "lookupPackageDirectory" is an exception because it related to node module resolution
+// but it's very useful and it's not a problem to have it here (and useful to share this logic)
+export { lookupPackageDirectory } from "./path_and_url/lookup_package_directory.js";
 
 // list
 export { collectDirectoryMatchReport } from "./list/collect_directory_match_report.js";

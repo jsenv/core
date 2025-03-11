@@ -1,7 +1,9 @@
-import { registerDirectoryLifecycle } from "@jsenv/filesystem";
+import {
+  lookupPackageDirectory,
+  registerDirectoryLifecycle,
+} from "@jsenv/filesystem";
 import { urlToRelativeUrl } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
-import { lookupPackageDirectory } from "./lookup_package_directory.js";
 
 export const getDirectoryWatchPatterns = (
   directoryUrl,

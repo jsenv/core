@@ -21,6 +21,7 @@ import { parseHtml, stringifyHtmlAst } from "@jsenv/ast";
 import {
   assertAndNormalizeDirectoryUrl,
   ensureEmptyDirectory,
+  lookupPackageDirectory,
   writeFileSync,
 } from "@jsenv/filesystem";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
@@ -28,7 +29,6 @@ import { jsenvPluginBundling } from "@jsenv/plugin-bundling";
 import { jsenvPluginMinification } from "@jsenv/plugin-minification";
 import { jsenvPluginJsModuleFallback } from "@jsenv/plugin-transpilation";
 import { urlIsInsideOf } from "@jsenv/urls";
-import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";
 import { createKitchen } from "../kitchen/kitchen.js";

@@ -1,8 +1,5 @@
 import { nodePackageA, nodePackageB } from "./js/vendors.js";
-
-const workspacePackageA = "workspacePackageA";
-
-const workspacePackageB = "workspacePackageB";
+import { workspacePackageA, workspacePackageB } from "./js/workspaces.js";
 
 console.log(nodePackageA.toUpperCase());
 console.log(nodePackageB.toUpperCase());

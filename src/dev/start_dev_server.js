@@ -1,6 +1,7 @@
 import {
   assertAndNormalizeDirectoryUrl,
   bufferToEtag,
+  lookupPackageDirectory,
 } from "@jsenv/filesystem";
 import { createLogger, createTaskLog } from "@jsenv/humanize";
 import {
@@ -17,7 +18,6 @@ import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, readFileSync } from "node:fs";
 import { defaultRuntimeCompat } from "../build/build.js";
 import { createEventEmitter } from "../helpers/event_emitter.js";
-import { lookupPackageDirectory } from "../helpers/lookup_package_directory.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";
 import { jsenvCoreDirectoryUrl } from "../jsenv_core_directory_url.js";

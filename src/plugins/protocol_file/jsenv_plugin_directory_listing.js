@@ -24,6 +24,7 @@
 
 import {
   comparePathnames,
+  lookupPackageDirectory,
   readEntryStatSync,
   registerDirectoryLifecycle,
 } from "@jsenv/filesystem";
@@ -36,7 +37,6 @@ import {
   urlToRelativeUrl,
 } from "@jsenv/urls";
 import { existsSync, lstatSync, readdirSync } from "node:fs";
-import { lookupPackageDirectory } from "../../helpers/lookup_package_directory.js";
 import { getDirectoryWatchPatterns } from "../../helpers/watch_source_files.js";
 import { replacePlaceholders } from "../injections/jsenv_plugin_injections.js";
 import { FILE_AND_SERVER_URLS_CONVERTER } from "./file_and_server_urls_converter.js";

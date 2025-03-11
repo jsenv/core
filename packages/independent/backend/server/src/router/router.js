@@ -1,4 +1,5 @@
 import { parseFunction } from "@jsenv/assert/src/utils/function_parser.js";
+import { lookupPackageDirectory } from "@jsenv/filesystem";
 import { createHeadersPattern } from "@jsenv/router/src/shared/headers_pattern.js";
 import { PATTERN } from "@jsenv/router/src/shared/pattern.js";
 import { createResourcePattern } from "@jsenv/router/src/shared/resource_pattern.js";
@@ -9,7 +10,6 @@ import { pickContentEncoding } from "../content_negotiation/pick_content_encodin
 import { pickContentLanguage } from "../content_negotiation/pick_content_language.js";
 import { pickContentType } from "../content_negotiation/pick_content_type.js";
 import { pickContentVersion } from "../content_negotiation/pick_content_version.js";
-import { lookupPackageDirectory } from "../internal/lookup_package_directory.js";
 
 const routeInspectorUrl = `/.internal/route_inspector`;
 

@@ -1,7 +1,9 @@
+import { lookupPackageDirectory } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
 import { isFileSystemPath } from "@jsenv/urls";
+import { readFileSync } from "node:fs";
 import { fileUrlConverter } from "../file_url_converter.js";
 
 export const bundleJsModules = async (
@@ -9,7 +11,7 @@ export const bundleJsModules = async (
   {
     buildDirectoryUrl,
     include,
-    chunks,
+    chunks = {},
     strictExports = false,
     preserveDynamicImport = false,
     augmentDynamicImportUrlSearchParams = () => {},
@@ -33,36 +35,65 @@ export const bundleJsModules = async (
     buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
   }
 
-  if (chunks === undefined) {
-    chunks = {
-      vendors: {
-        "file:///**/node_modules/": true,
-      },
+  if (chunks.vendors) {
+    chunks.vendors = {
+      "file:///**/node_modules/": true,
+      ...chunks.vendors,
+    };
+  } else {
+    chunks.vendors = {
+      "file:///**/node_modules/": true,
     };
   }
-
-  let manualChunks;
-  if (chunks && Object.keys(chunks).length) {
-    const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
-    manualChunks = (id) => {
-      if (rollupOutput.manualChunks) {
-        const manualChunkName = rollupOutput.manualChunks(id);
-        if (manualChunkName) {
-          return manualChunkName;
+  const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
+  if (packageDirectoryUrl) {
+    try {
+      const packageFileContent = readFileSync(
+        new URL("package.json", packageDirectoryUrl),
+        "utf8",
+      );
+      const packageJSON = JSON.parse(packageFileContent);
+      const workspaces = packageJSON.workspaces;
+      if (workspaces) {
+        const workspacePatterns = {};
+        for (const workspace of workspaces) {
+          const workspacePattern = new URL(
+            workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
+            packageDirectoryUrl,
+          ).href;
+          workspacePatterns[workspacePattern] = true;
+        }
+        if (chunks.workspaces) {
+          chunks.workspaces = {
+            ...workspacePatterns,
+            ...chunks.workspaces,
+          };
+        } else {
+          chunks.workspaces = workspacePatterns;
         }
       }
-      const url = fileUrlConverter.asFileUrl(id);
-      const urlObject = new URL(url);
-      urlObject.search = "";
-      const urlWithoutSearch = urlObject.href;
-      const meta = URL_META.applyAssociations({
-        url: urlWithoutSearch,
-        associations,
-      });
-      const chunkName = Object.keys(meta).find((key) => meta[key]);
-      return chunkName || null;
-    };
+    } catch {}
   }
+
+  const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
+  const manualChunks = (id) => {
+    if (rollupOutput.manualChunks) {
+      const manualChunkName = rollupOutput.manualChunks(id);
+      if (manualChunkName) {
+        return manualChunkName;
+      }
+    }
+    const url = fileUrlConverter.asFileUrl(id);
+    const urlObject = new URL(url);
+    urlObject.search = "";
+    const urlWithoutSearch = urlObject.href;
+    const meta = URL_META.applyAssociations({
+      url: urlWithoutSearch,
+      associations,
+    });
+    const chunkName = Object.keys(meta).find((key) => meta[key]);
+    return chunkName || null;
+  };
 
   const resultRef = { current: null };
   const willMinifyJsModule = Boolean(getPluginMeta("willMinifyJsModule"));
