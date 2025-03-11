@@ -40,7 +40,7 @@ await generateInternalErrorHtmlFile("basic.html", {
   routes: [
     {
       endpoint: "GET *",
-      response: () => {
+      fetch: () => {
         const error = new Error("test");
         throw error;
       },
@@ -57,7 +57,7 @@ await generateInternalErrorHtmlFile("basic_with_details.html", {
   routes: [
     {
       endpoint: "GET *",
-      response: () => {
+      fetch: () => {
         const error = new Error("test");
         error.stack = deterministicStackTrace;
         throw error;
@@ -79,7 +79,7 @@ await generateInternalErrorHtmlFile("basic_with_code_and_details.html", {
   routes: [
     {
       endpoint: "GET *",
-      response: () => {
+      fetch: () => {
         const error = new Error("test");
         error.code = "TEST_CODE";
         error.stack = deterministicStackTrace;
@@ -94,7 +94,7 @@ await generateInternalErrorHtmlFile("literal.html", {
   routes: [
     {
       endpoint: "GET *",
-      response: () => {
+      fetch: () => {
         const error = "a string";
         throw error;
       },
@@ -107,7 +107,7 @@ await generateInternalErrorHtmlFile("literal_with_details.html", {
   routes: [
     {
       endpoint: "GET *",
-      response: () => {
+      fetch: () => {
         const error = "a string";
         throw error;
       },

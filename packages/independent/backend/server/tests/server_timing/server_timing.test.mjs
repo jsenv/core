@@ -37,10 +37,26 @@ const server = await startServer({
       duration: assert.between(0, 500),
     },
     b: {
-      description: "toto.routing",
+      description: "open_file.routing",
       duration: assert.between(0, 500),
     },
     c: {
+      description: "route_inspector.routing",
+      duration: assert.between(0, 500),
+    },
+    d: {
+      description: "internal_client_files.routing",
+      duration: assert.between(0, 500),
+    },
+    e: {
+      description: "autoreload_on_server_restart.routing",
+      duration: assert.between(0, 500),
+    },
+    f: {
+      description: "toto.routing",
+      duration: assert.between(0, 500),
+    },
+    g: {
       description: "waiting 50ms",
       duration: assert.between(30, 80),
     },
