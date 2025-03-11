@@ -5865,12 +5865,15 @@ const startServerUsingCommand = async (
   }
 };
 
-const startServerUsingModuleUrl = async (webServer, params) => {
+const startServerUsingModuleUrl = async (
+  webServer,
+  { ignoreProcessExecArgv, ...params },
+) => {
   if (!existsSync(new URL(webServer.moduleUrl))) {
     throw new Error(`"${webServer.moduleUrl}" does not lead to a file`);
   }
   let command = `node`;
-  if (process.execArgv.length > 0) {
+  if (!ignoreProcessExecArgv && process.execArgv.length > 0) {
     command += ` ${process.execArgv.join(" ")}`;
   }
   command += ` ${fileURLToPath(webServer.moduleUrl)}`;
@@ -5949,7 +5952,13 @@ const assertAndNormalizeWebServer = async (
 
 const ensureWebServerIsStarted = async (
   webServer,
-  { signal, teardownCallbackSet, logger, allocatedMs = 5_000 },
+  {
+    signal,
+    teardownCallbackSet,
+    logger,
+    allocatedMs = 5_000,
+    ignoreProcessExecArgv,
+  },
 ) => {
   const aServerIsListening = await pingServer(webServer.origin);
   if (aServerIsListening) {
@@ -5957,6 +5966,7 @@ const ensureWebServerIsStarted = async (
   }
   if (webServer.moduleUrl) {
     await startServerUsingModuleUrl(webServer, {
+      ignoreProcessExecArgv,
       signal,
       allocatedMs,
       teardownCallbackSet,
@@ -5966,6 +5976,7 @@ const ensureWebServerIsStarted = async (
   }
   if (webServer.command) {
     await startServerUsingCommand(webServer, {
+      ignoreProcessExecArgv,
       signal,
       allocatedMs,
       teardownCallbackSet,
