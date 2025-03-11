@@ -6,9 +6,9 @@ run({
 })
 ```
 
-# 1/2 write file "./build/main.html"
+# 1/2 write 2 files into "./build/"
 
-see [./build/main.html](./build/main.html)
+see [./build/](./build/)
 
 # 2/2 resolve
 

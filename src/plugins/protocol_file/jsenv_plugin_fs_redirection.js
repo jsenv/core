@@ -21,6 +21,9 @@ export const jsenvPluginFsRedirection = ({
       if (!reference.url.startsWith("file:")) {
         return null;
       }
+      if (reference.original && !reference.original.url.startsWith("file:")) {
+        return null;
+      }
       if (reference.isInline) {
         return null;
       }

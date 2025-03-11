@@ -232,13 +232,13 @@ const rollupPluginJsenv = ({
     async buildStart() {
       _rollupEmitFile = (...args) => this.emitFile(...args);
       let previousNonEntryPointModuleId;
-      jsModuleUrlInfos.forEach((jsModuleUrlInfo) => {
+      for (const jsModuleUrlInfo of jsModuleUrlInfos) {
         const id = jsModuleUrlInfo.url;
         if (jsModuleUrlInfo.isEntryPoint) {
           emitChunk({
             id,
           });
-          return;
+          continue;
         }
         let preserveSignature;
         if (strictExports) {
@@ -270,8 +270,10 @@ const rollupPluginJsenv = ({
             : null,
           preserveSignature,
         });
-        previousNonEntryPointModuleId = id;
-      });
+        if (jsModuleUrlInfo.originalUrl.startsWith("file:")) {
+          previousNonEntryPointModuleId = id;
+        }
+      }
     },
     async generateBundle(outputOptions, rollupResult) {
       _rollupEmitFile = (...args) => this.emitFile(...args);

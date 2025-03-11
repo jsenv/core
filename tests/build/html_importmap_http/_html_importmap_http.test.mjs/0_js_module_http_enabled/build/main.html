@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="importmap">{
   "imports": {
+    "/js/main.js": "/js/main.js?v=757d96a4",
     "/js/preact@10.23.1.js": "/js/preact@10.23.1.js?v=a68c9886",
     "/js/preact.js?external=preact": "/js/preact.js?external=preact&v=227a33af"
   }
@@ -14,6 +15,7 @@
     <div id="app"></div>
     <script type="module">
       // https://preactjs.com/guide/v10/no-build-workflows/
+      import "/js/main.js";
       import { render } from "/js/preact@10.23.1.js";
       import { html } from "/js/preact.js?external=preact";
 
