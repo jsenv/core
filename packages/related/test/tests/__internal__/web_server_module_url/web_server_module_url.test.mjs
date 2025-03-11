@@ -1,8 +1,7 @@
 import { assert } from "@jsenv/assert";
+import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_param.js";
 import { pingServer } from "@jsenv/test/src/helpers/ping_server.js";
 import { fileURLToPath } from "node:url";
-
-import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_param.js";
 
 // the module does not exists
 {
@@ -43,7 +42,10 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     throw new Error("should throw");
   } catch (e) {
     const actual = e.message;
-    const expect = `"node ${fileURLToPath(
+    const execArgv = process.execArgv.length
+      ? `${process.execArgv.join(" ")} `
+      : "";
+    const expect = `"node ${execArgv}${fileURLToPath(
       webServer.moduleUrl,
     )}" command did not start a server at http://localhost:9961 in less than 500ms`;
     assert({ actual, expect });
@@ -66,8 +68,11 @@ import { ensureWebServerIsStarted } from "@jsenv/test/src/execution/web_server_p
     throw new Error("should throw");
   } catch (e) {
     const actual = e;
+    const execArgv = process.execArgv.length
+      ? `${process.execArgv.join(" ")} `
+      : "";
     const expect = new Error(
-      `"node ${fileURLToPath(
+      `"node ${execArgv}${fileURLToPath(
         webServer.moduleUrl,
       )}" command did not start a server at http://localhost:9962 in less than 500ms`,
     );

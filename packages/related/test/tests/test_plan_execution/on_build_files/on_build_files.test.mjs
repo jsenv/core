@@ -9,6 +9,7 @@ import { chromium, executeTestPlan } from "@jsenv/test";
 
 const buildServer = await startBuildServer({
   logLevel: "warn",
+  serverLogLevel: "error",
   buildDirectoryUrl: new URL("./project/public/", import.meta.url),
   keepProcessAlive: false,
   port: 0,

@@ -68,7 +68,13 @@ export const assertAndNormalizeWebServer = async (
 
 export const ensureWebServerIsStarted = async (
   webServer,
-  { signal, teardownCallbackSet, logger, allocatedMs = 5_000 },
+  {
+    signal,
+    teardownCallbackSet,
+    logger,
+    allocatedMs = 5_000,
+    ignoreProcessExecArgv,
+  },
 ) => {
   const aServerIsListening = await pingServer(webServer.origin);
   if (aServerIsListening) {
@@ -76,6 +82,7 @@ export const ensureWebServerIsStarted = async (
   }
   if (webServer.moduleUrl) {
     await startServerUsingModuleUrl(webServer, {
+      ignoreProcessExecArgv,
       signal,
       allocatedMs,
       teardownCallbackSet,
@@ -85,6 +92,7 @@ export const ensureWebServerIsStarted = async (
   }
   if (webServer.command) {
     await startServerUsingCommand(webServer, {
+      ignoreProcessExecArgv,
       signal,
       allocatedMs,
       teardownCallbackSet,
