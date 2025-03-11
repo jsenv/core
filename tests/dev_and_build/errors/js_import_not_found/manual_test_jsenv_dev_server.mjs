@@ -1,4 +1,5 @@
 import { startDevServer } from "@jsenv/core";
+import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 await startDevServer({
   sourceDirectoryUrl: new URL("./client/", import.meta.url),
@@ -8,4 +9,5 @@ await startDevServer({
     },
   },
   port: 6578,
+  plugins: [jsenvPluginPreact()],
 });

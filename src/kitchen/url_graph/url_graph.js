@@ -129,6 +129,7 @@ export const createUrlGraph = ({
 
   const rootUrlInfo = createUrlInfo(rootDirectoryUrl, kitchen.context);
   rootUrlInfo.isRoot = true;
+  rootUrlInfo.entryUrlInfo = rootUrlInfo;
   addUrlInfo(rootUrlInfo);
 
   Object.assign(urlGraph, {
