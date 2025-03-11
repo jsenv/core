@@ -118,6 +118,9 @@ GRAPH_VISITOR.forEachUrlInfoStronglyReferenced = (
       if (referenceToOther.gotInlined()) {
         continue;
       }
+      if (referenceToOther.url.startsWith("ignore:")) {
+        continue;
+      }
       const referencedUrlInfo = referenceToOther.urlInfo;
       if (
         directoryUrlInfoSet &&
