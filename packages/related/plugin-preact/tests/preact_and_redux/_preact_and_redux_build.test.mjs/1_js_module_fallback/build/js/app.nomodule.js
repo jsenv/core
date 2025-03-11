@@ -1,13 +1,13 @@
-System.register([__v__("/js/main.nomodule.js")], function (_export, _context) {
+System.register([__v__("/js/vendors.nomodule.js")], function (_export, _context) {
   "use strict";
 
   var useSelector, useDispatch, y, u, increment, decrement, counterValueSelector, App;
   return {
-    setters: [function (_mainJsx) {
-      useSelector = _mainJsx.useSelector;
-      useDispatch = _mainJsx.useDispatch;
-      y = _mainJsx.y;
-      u = _mainJsx.u;
+    setters: [function (_vendorsJs) {
+      useSelector = _vendorsJs.useSelector;
+      useDispatch = _vendorsJs.useDispatch;
+      y = _vendorsJs.y;
+      u = _vendorsJs.u;
     }],
     execute: function () {
       increment = () => {

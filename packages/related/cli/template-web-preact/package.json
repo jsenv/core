@@ -15,7 +15,7 @@
     "playwright:install": "npx playwright install-deps && npx playwright install"
   },
   "dependencies": {
-    "preact": "10.25.4"
+    "preact": "10.26.4"
   },
   "devDependencies": {
     "@babel/plugin-syntax-import-attributes": "7.26.0",

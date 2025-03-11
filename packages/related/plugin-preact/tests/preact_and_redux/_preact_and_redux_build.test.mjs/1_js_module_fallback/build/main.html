@@ -7,8 +7,9 @@
     <script>
       ;(function() {
         var __versionMappings__ = {
-          "/js/main.nomodule.js": "/js/main.nomodule.js?v=5dd8de1c",
-          "/js/app.nomodule.js": "/js/app.nomodule.js?v=060474a8"
+          "/js/main.nomodule.js": "/js/main.nomodule.js?v=3dbdd52b",
+          "/js/vendors.nomodule.js": "/js/vendors.nomodule.js?v=375bc249",
+          "/js/app.nomodule.js": "/js/app.nomodule.js?v=d0726d6a"
         };
         window.__v__ = function (specifier) {
           return __versionMappings__[specifier] || specifier
@@ -192,7 +193,7 @@
             if (!response.ok) {
               throw Error(`Failed to fetch module at ${url}`);
             }
-            let source = await new Response();
+            let source = await response.text();
             if (source.indexOf("//# sourceURL=") < 0) {
               source += `\n//# sourceURL=${url}`;
             }
