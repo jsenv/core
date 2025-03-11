@@ -1,6 +1,6 @@
-import { assert } from "@jsenv/assert";
 import { startServer } from "@jsenv/server";
 import { parseServerTimingHeader } from "@jsenv/server/src/server_timing/timing_header.js";
+import { snapshotTests } from "@jsenv/snapshot";
 
 const server = await startServer({
   keepProcessAlive: false,
@@ -32,50 +32,28 @@ const server = await startServer({
   ],
 });
 
-{
-  const response = await fetch(server.origin);
-  const actual = {
-    status: response.status,
-    timing: parseServerTimingHeader(response.headers.get("server-timing")),
-  };
-  const expect = {
-    status: 204,
-    timing: {
-      a: {
-        description: "time to start responding",
-        duration: assert.any(Number),
-      },
-      b: {
-        description: "service:no content.routing",
-        duration: assert.any(Number),
-      },
-    },
-  };
-  assert({ actual, expect });
-}
+await snapshotTests(
+  import.meta.url,
+  ({ test }) => {
+    test("0_fetch_root", async () => {
+      const response = await fetch(server.origin);
+      const actual = {
+        status: response.status,
+        timing: parseServerTimingHeader(response.headers.get("server-timing")),
+      };
+      return actual;
+    });
 
-{
-  const response = await fetch(`${server.origin}/whatever`);
-  const actual = {
-    status: response.status,
-    timing: parseServerTimingHeader(response.headers.get("server-timing")),
-  };
-  const expect = {
-    status: 200,
-    timing: {
-      a: {
-        description: "time to start responding",
-        duration: assert.any(Number),
-      },
-      b: {
-        description: "service:no content.routing",
-        duration: assert.any(Number),
-      },
-      c: {
-        description: "service:ok.routing",
-        duration: assert.any(Number),
-      },
-    },
-  };
-  assert({ actual, expect });
-}
+    test("1_fetch_whatever", async () => {
+      const response = await fetch(`${server.origin}/whatever`);
+      const actual = {
+        status: response.status,
+        timing: parseServerTimingHeader(response.headers.get("server-timing")),
+      };
+      return actual;
+    });
+  },
+  {
+    throwWhenDiff: false,
+  },
+);
