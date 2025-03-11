@@ -55,7 +55,7 @@ export const fetchFileSystem = async (
     directoryUrlString = `${directoryUrlString}/`;
   }
   let resource;
-  if (request.paranms && "0" in request.params) {
+  if (request.params && "0" in request.params) {
     resource = request.params["0"];
   } else {
     resource = request.resource.slice(1);
