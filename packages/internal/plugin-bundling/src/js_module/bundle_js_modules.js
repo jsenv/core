@@ -13,7 +13,7 @@ export const bundleJsModules = async (
     include,
     chunks = {},
     strictExports = false,
-    preserveDynamicImport = false,
+    preserveDynamicImport = true,
     augmentDynamicImportUrlSearchParams = () => {},
     rollup,
     rollupInput = {},
@@ -76,12 +76,16 @@ export const bundleJsModules = async (
   }
 
   const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
-  const manualChunks = (id) => {
+  const manualChunks = (id, manualChunksApi) => {
     if (rollupOutput.manualChunks) {
-      const manualChunkName = rollupOutput.manualChunks(id);
+      const manualChunkName = rollupOutput.manualChunks(id, manualChunksApi);
       if (manualChunkName) {
         return manualChunkName;
       }
+    }
+    const moduleInfo = manualChunksApi.getModuleInfo(id);
+    if (moduleInfo.isEntry) {
+      return null;
     }
     const url = fileUrlConverter.asFileUrl(id);
     const urlObject = new URL(url);
@@ -335,16 +339,32 @@ const rollupPluginJsenv = ({
           remapReference:
             specifierToUrlMap.size > 0
               ? (reference) => {
-                  // rollup generate specifiers only for static and dynamic imports
-                  // other references (like new URL()) are ignored
-                  // there is no need to remap them back
                   if (
-                    reference.type === "js_import" &&
-                    reference.subtype !== "import_meta_resolve"
+                    preserveDynamicImport &&
+                    reference.subtype === "dynamic_import"
                   ) {
-                    return specifierToUrlMap.get(reference.specifier);
+                    // when dynamic import are preserved, no need to remap them
+                    return reference.specifier;
                   }
-                  return reference.specifier;
+                  if (
+                    reference.subtype !== "js_import" ||
+                    reference.subtype === "import_meta_resolve"
+                  ) {
+                    // rollup generate specifiers only for static and dynamic imports
+                    // other references (like new URL()) are ignored
+                    // there is no need to remap them back
+                    return reference.specifier;
+                  }
+                  const specifierBeforeRollup = specifierToUrlMap.get(
+                    reference.specifier,
+                  );
+                  if (!specifierBeforeRollup) {
+                    console.warn(
+                      `cannot remap "${reference.specifier}" back to specifier before rollup, this is unexpected.`,
+                    );
+                    return reference.specifier;
+                  }
+                  return specifierBeforeRollup;
                 }
               : undefined,
         };
