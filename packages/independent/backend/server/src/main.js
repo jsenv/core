@@ -20,8 +20,10 @@ export {
 export { jsenvServiceErrorHandler } from "./services/error_handler/jsenv_service_error_handler.js";
 
 // filesystem
-export { createFileSystemFetch } from "./filesystem/filesystem_response.js";
-export { fetchFileSystem } from "./filesystem/fetch_filesystem.js";
+export {
+  createFileSystemFetch,
+  fetchFileSystem,
+} from "./filesystem/fetch_filesystem.js";
 
 // webSocket
 export { WebSocketResponse } from "./web_socket_response.js";

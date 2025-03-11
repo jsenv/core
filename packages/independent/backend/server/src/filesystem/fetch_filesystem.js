@@ -16,6 +16,12 @@ import {
 import { composeTwoResponses } from "../internal/response_composition.js";
 import { serveDirectory } from "./serve_directory.js";
 
+export const createFileSystemFetch = (directoryUrl, options) => {
+  return (request, helpers) => {
+    return fetchFileSystem(request, helpers, directoryUrl, options);
+  };
+};
+
 export const fetchFileSystem = async (
   request,
   helpers,
@@ -49,7 +55,7 @@ export const fetchFileSystem = async (
     directoryUrlString = `${directoryUrlString}/`;
   }
   let resource;
-  if ("0" in request.params) {
+  if (request.paranms && "0" in request.params) {
     resource = request.params["0"];
   } else {
     resource = request.resource.slice(1);
