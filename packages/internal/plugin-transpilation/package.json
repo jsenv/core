@@ -19,7 +19,11 @@
   "files": [
     "/src/"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/babel/new_stylesheet/client/new_stylesheet.js",
+    "./src/babel_helper_directory/babel_helpers/",
+    "./src/regenerator_runtime/client/regenerator_runtime.js"
+  ],
   "dependencies": {
     "@babel/plugin-transform-json-strings": "7.25.9",
     "@babel/plugin-transform-numeric-separator": "7.25.9",
