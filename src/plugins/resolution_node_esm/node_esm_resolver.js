@@ -13,6 +13,7 @@ import {
   defaultReadPackageJson,
   readCustomConditionsFromProcessArgs,
 } from "@jsenv/node-esm-resolution";
+import { urlToBasename, urlToExtension } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 
 export const createNodeEsmResolver = ({
@@ -48,12 +49,27 @@ export const createNodeEsmResolver = ({
     if (!parentUrl.startsWith("file:")) {
       return null; // let it to jsenv_web_resolution
     }
-    const { url, type, packageDirectoryUrl } = applyNodeEsmResolution({
+    const { url, type, isMain, packageDirectoryUrl } = applyNodeEsmResolution({
       conditions: packageConditions,
       parentUrl,
       specifier: reference.specifier,
       preservesSymlink,
     });
+    // try to give a more meaningful filename after build
+    if (isMain && packageDirectoryUrl) {
+      const basename = urlToBasename(url);
+      if (basename === "main" || basename === "index") {
+        const parentBasename = urlToBasename(new URL("../../", url));
+        const dirname = urlToBasename(packageDirectoryUrl);
+        let filenameHint = "";
+        if (parentBasename[0] === "@") {
+          filenameHint += `${parentBasename}_`;
+        }
+        const extension = urlToExtension(url);
+        filenameHint += `${dirname}_${basename}${extension}`;
+        reference.filenameHint = filenameHint;
+      }
+    }
     if (ownerUrlInfo.context.build) {
       return url;
     }
