@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Test</title>
+    <meta charset="utf-8" />
+    <link rel="icon" href="data:," />
+  </head>
+
+  <body>
+    <script type="module">
+      import { assert } from "@jsenv/assert";
+      import { resolveImport, normalizeImportMap } from "@jsenv/importmap";
+
+      const importMap = normalizeImportMap(
+        {
+          scopes: {
+            "./dir/": {
+              "./file": "./dir/file.js",
+            },
+          },
+        },
+        "http://example.com",
+      );
+      const actual = resolveImport({
+        specifier: "./file",
+        importer: "http://example.com/dir/index.js",
+        importMap,
+      });
+      const expected = "http://example.com/dir/file";
+      assert({ actual, expected });
+
+      document.body.appendChild(document.createTextNode("passed"));
+    </script>
+  </body>
+</html>
