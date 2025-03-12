@@ -147,6 +147,12 @@ export const bundleJsModules = async (
           ) {
             return;
           }
+          if (
+            warning.code === "EMPTY_BUNDLE" &&
+            warning.names.join("") === "vendors"
+          ) {
+            return;
+          }
           logger.warn(String(warning));
         },
         ...rollupInput,
