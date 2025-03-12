@@ -7,3 +7,5 @@ export const build = async (...args) => {
   const namespace = await import("./build.js");
   return namespace.build(...args);
 };
+
+export { answer } from "./shared.js";

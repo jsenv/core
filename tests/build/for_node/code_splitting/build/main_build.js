@@ -1,3 +1,5 @@
+const answer = 42;
+
 const startDevServer = async (...args) => {
   const namespace = await import("./js/dev.js");
   return namespace.startDevServer(...args);
@@ -8,4 +10,4 @@ const build = async (...args) => {
   return namespace.build(...args);
 };
 
-export { build, startDevServer };
+export { answer, build, startDevServer };
