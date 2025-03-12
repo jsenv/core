@@ -15,6 +15,7 @@
     ".": "./src/main.js",
     "./*": "./*"
   },
+  "sideEffects": false,
   "dependencies": {
     "@jsenv/urls": "2.6.1",
     "magic-string": "0.30.17",
