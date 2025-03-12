@@ -461,7 +461,13 @@ const rollupPluginJsenv = ({
         return { id: url, external: true };
       }
       if (urlInfo.url.startsWith("ignore:")) {
-        return { id: url, external: true };
+        return {
+          id: url,
+          external: true,
+          moduleSideEffects: urlInfo.url.startsWith("ignored:node:")
+            ? false
+            : null,
+        };
       }
       const filePath = fileUrlConverter.asFilePath(url);
       return filePath;
