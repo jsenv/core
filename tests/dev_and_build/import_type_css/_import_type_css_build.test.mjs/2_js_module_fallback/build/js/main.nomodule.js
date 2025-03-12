@@ -19,12 +19,12 @@ function _await(value, then, direct) {
   }
   return then ? value.then(then) : value;
 }
-System.register([], function (_export, _context) {
+System.register([__v__("/js/workspaces.nomodule.js")], function (_export, _context) {
   "use strict";
 
   var globalObject, inlineContent, stylesheet, bodyBackgroundColor, bodyBackgroundImage;
   return {
-    setters: [],
+    setters: [function (_buildWorkspacesJs) {}],
     execute: async function () {
       /* eslint-env browser,node */
       /*

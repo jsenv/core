@@ -1,3 +1,5 @@
+import "./workspaces.js";
+
 /* eslint-env browser,node */
 
 /*
