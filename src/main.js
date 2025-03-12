@@ -1,8 +1,18 @@
 // dev
-export { startDevServer } from "./dev/start_dev_server.js";
+export const startDevServer = async (...args) => {
+  const namespace = await import("./dev/start_dev_server.js");
+  return namespace.startDevServer(...args);
+};
+
 // build
-export { build } from "./build/build.js";
-export { startBuildServer } from "./build/start_build_server.js";
+export const build = async (...args) => {
+  const namespace = await import("./build/build.js");
+  return namespace.build(...args);
+};
+export const startBuildServer = async (...args) => {
+  const namespace = await import("./build/start_build_server.js");
+  return namespace.startBuildServer(...args);
+};
 
 // others
 export { INJECTIONS } from "./plugins/injections/jsenv_plugin_injections.js";
