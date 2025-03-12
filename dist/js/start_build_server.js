@@ -1,10 +1,8 @@
 import { assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents } from "./register_file_lifecycle.js";
 import { createLogger, createTaskLog, urlToExtension, urlToPathname } from "./main.js";
-import "node:url";
 import { existsSync } from "node:fs";
-import "node:path";
-import "node:crypto";
 import { startServer, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvAccessControlAllowedHeaders, createFileSystemFetch } from "@jsenv/server";
+import "node:url";
 import "@jsenv/sourcemap";
 import "node:process";
 import "node:os";

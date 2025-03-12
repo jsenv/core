@@ -3,7 +3,6 @@ import process$1 from "node:process";
 import os from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
-import "node:url";
 
 /*
  * Link to things doing pattern matching:

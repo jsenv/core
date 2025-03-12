@@ -469,25 +469,23 @@ const rollupPluginJsenv = ({
       } else {
         url = new URL(specifier, importer).href;
       }
+      let moduleSideEffects =
+        url.startsWith("node:") || url.startsWith("ignore:node:")
+          ? false
+          : null;
       if (!url.startsWith("file:")) {
-        return { id: url, external: true };
+        return { id: url, external: true, moduleSideEffects };
       }
       if (!importCanBeBundled(url)) {
-        return { id: url, external: true };
+        return { id: url, external: true, moduleSideEffects };
       }
       const urlInfo = graph.getUrlInfo(url);
       if (!urlInfo) {
         // happen when excluded by referenceAnalysis.include
-        return { id: url, external: true };
+        return { id: url, external: true, moduleSideEffects };
       }
-      if (urlInfo.url.startsWith("ignore:")) {
-        return {
-          id: url,
-          external: true,
-          moduleSideEffects: urlInfo.url.startsWith("ignore:node:")
-            ? false
-            : null,
-        };
+      if (url.startsWith("ignore:")) {
+        return { id: url, external: true, moduleSideEffects };
       }
       const filePath = fileUrlConverter.asFilePath(url);
       return filePath;

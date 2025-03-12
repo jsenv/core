@@ -4,4 +4,3 @@ import "node:process";
 import "node:os";
 import "node:tty";
 import "string-width";
-import "node:url";

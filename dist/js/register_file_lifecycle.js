@@ -1,7 +1,6 @@
 import { ensurePathnameTrailingSlash, URL_META } from "./main.js";
-import { pathToFileURL, fileURLToPath } from "node:url";
 import { chmod, stat as stat$1, lstat, chmodSync, statSync, lstatSync, promises, constants, watch, openSync, closeSync, readdirSync } from "node:fs";
-import "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
 
 const isFileSystemPath = (value) => {
   if (typeof value !== "string") {

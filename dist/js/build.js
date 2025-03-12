@@ -1,14 +1,14 @@
 import { fileSystemPathToUrl, isFileSystemPath, urlToRelativeUrl, assertAndNormalizeDirectoryUrl, assertAndNormalizeFileUrl, readEntryStatSync, urlToFileSystemPath, generateWindowsEPERMErrorMessage, statsToType, Abort, readEntryStat, writeDirectory, registerDirectoryLifecycle, ensureWindowsDriveLetter, raceProcessTeardownEvents } from "./register_file_lifecycle.js";
 import { parseJsUrls, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil, injectHtmlNodeAsEarlyAsPossible, createHtmlNode, generateUrlForInlineContent, parseJsWithAcorn, getHtmlNodePosition, getUrlForContentInsideHtml, setHtmlNodeText, parseCssUrls, getHtmlNodeAttributePosition, parseSrcSet, removeHtmlNodeText, getUrlForContentInsideJs, analyzeLinkNode, injectJsenvScript, findHtmlNode, removeHtmlNode, insertHtmlNodeAfter } from "@jsenv/ast";
 import { generateContentFrame, ensurePathnameTrailingSlash, URL_META, createDetailedMessage as createDetailedMessage$1, injectQueryParams, urlToFilename as urlToFilename$1, setUrlFilename, urlToBasename, urlToExtension as urlToExtension$1, asSpecifierWithoutSearch, asUrlWithoutSearch, injectQueryParamsIntoSpecifier, urlToPathname as urlToPathname$1, setUrlBasename, createLogger, normalizeUrl, ANSI, distributePercentages, humanizeFileSize, replacePlaceholders as replacePlaceholders$1, setUrlExtension, INJECTIONS, jsenvPluginInjections, UNICODE, injectQueryParamIntoSpecifierWithoutEncoding, renderUrlOrRelativeUrlFilename, createTaskLog } from "./main.js";
-import { pathToFileURL, fileURLToPath } from "node:url";
 import { existsSync, readdir, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, statSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, realpathSync, lstatSync } from "node:fs";
-import { extname } from "node:path";
-import crypto, { createHash } from "node:crypto";
 import { sourcemapConverter, createMagicSource, composeTwoSourcemaps, generateSourcemapFileUrl, generateSourcemapDataUrl, SOURCEMAP } from "@jsenv/sourcemap";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
 import { RUNTIME_COMPAT } from "@jsenv/runtime-compat";
+import { extname } from "node:path";
+import crypto, { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { jsenvPluginSupervisor } from "@jsenv/plugin-supervisor";
 import { WebSocketResponse, pickContentType } from "@jsenv/server";
@@ -1600,25 +1600,23 @@ const rollupPluginJsenv = ({
       } else {
         url = new URL(specifier, importer).href;
       }
+      let moduleSideEffects =
+        url.startsWith("node:") || url.startsWith("ignore:node:")
+          ? false
+          : null;
       if (!url.startsWith("file:")) {
-        return { id: url, external: true };
+        return { id: url, external: true, moduleSideEffects };
       }
       if (!importCanBeBundled(url)) {
-        return { id: url, external: true };
+        return { id: url, external: true, moduleSideEffects };
       }
       const urlInfo = graph.getUrlInfo(url);
       if (!urlInfo) {
         // happen when excluded by referenceAnalysis.include
-        return { id: url, external: true };
+        return { id: url, external: true, moduleSideEffects };
       }
-      if (urlInfo.url.startsWith("ignore:")) {
-        return {
-          id: url,
-          external: true,
-          moduleSideEffects: urlInfo.url.startsWith("ignore:node:")
-            ? false
-            : null,
-        };
+      if (url.startsWith("ignore:")) {
+        return { id: url, external: true, moduleSideEffects };
       }
       const filePath = fileUrlConverter.asFilePath(url);
       return filePath;
