@@ -25,7 +25,9 @@
     "/dist/",
     "/src/"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/client/toolbar_injector.js"
+  ],
   "dependencies": {
     "@jsenv/ast": "6.6.0"
   },

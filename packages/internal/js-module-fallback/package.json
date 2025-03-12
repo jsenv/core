@@ -25,7 +25,9 @@
     "/src/",
     "/dist/"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/cient/s.js"
+  ],
   "dependencies": {
     "@babel/parser": "7.26.5",
     "@babel/plugin-transform-dynamic-import": "7.25.9",
