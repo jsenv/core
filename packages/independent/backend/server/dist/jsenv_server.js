@@ -9,10 +9,10 @@ import { Readable, Stream, Writable } from "node:stream";
 import http from "node:http";
 import { Http2ServerResponse } from "node:http2";
 import { createReadStream, existsSync, readFileSync, readdirSync, lstatSync, statSync, readFile } from "node:fs";
-import { pathToFileURL, fileURLToPath } from "node:url";
-import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { lookup } from "node:dns";
+import { createHash } from "node:crypto";
 
 const createCallbackListNotifiedOnce = () => {
   let callbacks = [];
@@ -1499,15 +1499,8 @@ const createObservable = (producer) => {
       },
       { signal = new AbortController().signal } = {},
     ) => {
-      let cleanup = () => {};
       const subscription = {
-        active: true,
-        signal,
-        unsubscribe: () => {
-          subscription.closed = true;
-          cleanup();
-        },
-      };
+        active: true};
 
       const teardownCallbackList = [];
       const close = () => {
@@ -1523,7 +1516,7 @@ const createObservable = (producer) => {
         close();
       });
 
-      const producerReturnValue = producer({
+      producer({
         next: (value) => {
           if (!subscription.active) {
             return;
@@ -1552,9 +1545,6 @@ const createObservable = (producer) => {
           teardownCallbackList.push(teardownCallback);
         },
       });
-      if (typeof producerReturnValue === "function") {
-        cleanup = producerReturnValue;
-      }
       return undefined;
     },
   };
@@ -1728,7 +1718,7 @@ const fromNodeRequest = (
         `formData() called on a request with content-type: "${contentType}". multipart/form-data was expected.`,
       );
     }
-    const { formidable } = await import("./js/formidable.js");
+    const { formidable } = await import("./js/formidable_index.js");
     const form = formidable({});
     nodeRequest.resume(); // was paused in line #53
     const [fields, files] = await form.parse(nodeRequest);
@@ -3403,35 +3393,6 @@ const resourceToExtension = (resource) => {
   return pathnameToExtension(pathname);
 };
 
-const isFileSystemPath$1 = (value) => {
-  if (typeof value !== "string") {
-    throw new TypeError(
-      `isFileSystemPath first arg must be a string, got ${value}`,
-    );
-  }
-  if (value[0] === "/") {
-    return true;
-  }
-  return startsWithWindowsDriveLetter$1(value);
-};
-
-const startsWithWindowsDriveLetter$1 = (string) => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-
-  return true;
-};
-
-const fileSystemPathToUrl$1 = (value) => {
-  if (!isFileSystemPath$1(value)) {
-    throw new Error(`value must be a filesystem path, got ${value}`);
-  }
-  return String(pathToFileURL(value));
-};
-
 const getCommonPathname = (pathname, otherPathname) => {
   if (pathname === otherPathname) {
     return pathname;
@@ -3552,9 +3513,6 @@ const urlToFileSystemPath = (url) => {
   }
   return fileSystemPath;
 };
-
-process.platform === "win32";
-fileSystemPathToUrl$1(process.cwd());
 
 const getParentDirectoryUrl = (url) => {
   if (url.startsWith("file://")) {
@@ -4154,34 +4112,6 @@ const URL_META = {
   matches,
   createFilter,
 };
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
-
-process.platform === "win32";
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
-
-process.platform === "win32";
-
-process.platform === "win32";
-
-process.platform === "win32";
-
-process.platform === "win32";
-
-process.platform === "linux";
-
-process.platform === "darwin";
-process.platform === "linux";
-process.platform === "freebsd";
 
 const isEscaped = (i, string) => {
   let backslashBeforeCount = 0;
