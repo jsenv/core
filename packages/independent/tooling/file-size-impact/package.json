@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/file-size-impact",
-  "version": "14.3.20",
+  "version": "14.3.21",
   "description": "Add files size impact into pull requests",
   "license": "MIT",
   "repository": {
@@ -34,9 +34,9 @@
   },
   "dependencies": {
     "@jsenv/dynamic-import-worker": "1.2.1",
-    "@jsenv/filesystem": "4.14.0",
-    "@jsenv/github-pull-request-impact": "1.8.20",
-    "@jsenv/urls": "2.6.1",
-    "@jsenv/humanize": "1.3.0"
+    "@jsenv/filesystem": "4.14.1",
+    "@jsenv/github-pull-request-impact": "1.8.21",
+    "@jsenv/urls": "2.6.2",
+    "@jsenv/humanize": "1.3.1"
   }
 }

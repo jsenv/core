@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/runtime-compat",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "TODO",
   "license": "MIT",
   "repository": {
@@ -21,6 +21,6 @@
   ],
   "sideEffects": false,
   "dependencies": {
-    "@jsenv/utils": "2.2.0"
+    "@jsenv/utils": "2.2.1"
   }
 }
