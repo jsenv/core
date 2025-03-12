@@ -15,6 +15,7 @@ see [./build/main.js](./build/main.js)
 ```js
 {
   "executionOrder": [
+    "index",
     "tag",
     "data",
     "main: Tag: Tag data Tag data"

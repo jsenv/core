@@ -4,11 +4,10 @@
 run()
 ```
 
-# 1/3 logs
+# 1/3 console.warn
 
 ```console
 Generated an empty chunk: "workspaces".
-Generated an empty chunk: "main".
 ```
 
 # 2/3 write 3 files into "./build/"
