@@ -1,6 +1,7 @@
 import { build } from "@jsenv/core/src/build/build.js";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
+import { fileSystemPathToUrl, urlIsInsideOf } from "@jsenv/urls";
 
 await build({
   sourceDirectoryUrl: new URL("../../src/", import.meta.url),
@@ -69,6 +70,21 @@ await build({
   bundling: {
     js_module: {
       chunks: null,
+      rollupInput: {
+        treeshake: {
+          moduleSideEffects: (id, external) => {
+            if (external) {
+              return null;
+            }
+            const url = fileSystemPathToUrl(id);
+            if (urlIsInsideOf(url, import.meta.resolve("../../packages/"))) {
+              return false;
+            }
+            // console.log("may have side effect", id);
+            return null;
+          },
+        },
+      },
     },
   },
   // for debug

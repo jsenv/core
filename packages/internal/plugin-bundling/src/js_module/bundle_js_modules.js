@@ -515,12 +515,20 @@ const applyRollupPlugins = async ({
   const rollupReturnValue = await rollup({
     ...rollupInput,
     treeshake: {
-      moduleSideEffects: (id) => {
+      ...rollupInput.treeshake,
+      moduleSideEffects: (id, external) => {
         if (id.startsWith("ignore:node:")) {
           return false;
         }
         if (isSpecifierForNodeBuiltin(id)) {
           return false;
+        }
+        const moduleSideEffects = rollupInput.treeshake?.moduleSideEffects;
+        if (moduleSideEffects) {
+          if (typeof moduleSideEffects === "function") {
+            return moduleSideEffects(id, external);
+          }
+          return moduleSideEffects;
         }
         return null;
       },
