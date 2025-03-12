@@ -181,6 +181,7 @@ export const bundleJsModules = async (
 const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
+  buildDirectoryUrl,
   graph,
   jsModuleUrlInfos,
   sourcemaps,
@@ -218,16 +219,18 @@ const rollupPluginJsenv = ({
   }
 
   const getOriginalUrl = (rollupFileInfo) => {
-    const { facadeModuleId } = rollupFileInfo;
-    if (facadeModuleId) {
-      return fileUrlConverter.asFileUrl(facadeModuleId);
+    if (rollupFileInfo.isEntry) {
+      const { facadeModuleId } = rollupFileInfo;
+      if (facadeModuleId) {
+        return fileUrlConverter.asFileUrl(facadeModuleId);
+      }
     }
     if (rollupFileInfo.isDynamicEntry) {
       const { moduleIds } = rollupFileInfo;
       const lastModuleId = moduleIds[moduleIds.length - 1];
       return fileUrlConverter.asFileUrl(lastModuleId);
     }
-    return new URL(rollupFileInfo.fileName, rootDirectoryUrl).href;
+    return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
   };
 
   return {
@@ -381,11 +384,19 @@ const rollupPluginJsenv = ({
 
       const jsModuleBundleUrlInfos = {};
       const fileNames = Object.keys(rollupResult);
+      const originalUrlSet = new Set();
       for (const fileName of fileNames) {
         const rollupFileInfo = rollupResult[fileName];
         // there is 3 types of file: "placeholder", "asset", "chunk"
         if (rollupFileInfo.type === "chunk") {
           const jsModuleInfo = createBundledFileInfo(rollupFileInfo);
+          const originalUrl = jsModuleInfo.originalUrl;
+          if (originalUrlSet.has(originalUrl)) {
+            throw new Error(
+              `duplicate bundle info, cannot override ${originalUrl}`,
+            );
+          }
+          originalUrlSet.add(originalUrl);
           jsModuleBundleUrlInfos[jsModuleInfo.originalUrl] = jsModuleInfo;
         }
       }
@@ -408,6 +419,15 @@ const rollupPluginJsenv = ({
           return `[name].js`;
         },
         chunkFileNames: (chunkInfo) => {
+          if (chunkInfo.isEntry) {
+            const originalFileUrl = getOriginalUrl(chunkInfo);
+            const jsModuleUrlInfo = jsModuleUrlInfos.find(
+              (candidate) => candidate.url === originalFileUrl,
+            );
+            if (jsModuleUrlInfo && jsModuleUrlInfo.filenameHint) {
+              return jsModuleUrlInfo.filenameHint;
+            }
+          }
           return `${chunkInfo.name}.js`;
         },
       });

@@ -64,6 +64,7 @@ export const analyzeExportNamedDeclaration = (node, { onUrl }) => {
   onUrl({
     type: "js_import",
     subtype: "export_named",
+    expectedType: "js_module",
     specifier: specifierNode.value,
     start: specifierNode.start,
     end: specifierNode.end,
@@ -77,6 +78,7 @@ export const analyzeExportAllDeclaration = (node, { onUrl }) => {
   onUrl({
     type: "js_import",
     subtype: "export_all",
+    expectedType: "js_module",
     specifier: specifierNode.value,
     start: specifierNode.start,
     end: specifierNode.end,
