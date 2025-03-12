@@ -1,8 +1,8 @@
 import { snapshotTests } from "@jsenv/snapshot";
-import { parseResourcePattern } from "../resource_pattern.js";
+import { createResourcePattern } from "../resource_pattern.js";
 
 const buildRouteUrl = (pattern, url, params) =>
-  parseResourcePattern(pattern).build(url, params);
+  createResourcePattern(pattern).build(url, params);
 
 await snapshotTests(import.meta.url, ({ test }) => {
   test("0_basic", () => {
