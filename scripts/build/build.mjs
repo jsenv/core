@@ -48,11 +48,18 @@ await build({
   },
   scenarioPlaceholders: false,
   plugins: [
+    {
+      redirectReference: (reference) => {
+        if (reference.url.endsWith("emoji-regex/index.js")) {
+          return reference.url.replace("index.js", "index.mjs");
+        }
+        return null;
+      },
+    },
     jsenvPluginCommonJs({
       include: {
         "file:///**/node_modules/ws/": true,
         "file:///**/node_modules/@babel/parser/": true,
-        "file:///**/node_modules/emoji-regex/": true,
         "file:///**/node_modules/postcss/": true,
         "file:///**/node_modules/rollup/dist/native.js": true,
       },

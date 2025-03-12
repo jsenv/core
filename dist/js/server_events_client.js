@@ -82,7 +82,6 @@ let createConnectionManager;
   const READY_STATES = {
     CONNECTING: "connecting",
     OPEN: "open",
-    CLOSING: "closing",
     CLOSED: "closed",
   };
 
