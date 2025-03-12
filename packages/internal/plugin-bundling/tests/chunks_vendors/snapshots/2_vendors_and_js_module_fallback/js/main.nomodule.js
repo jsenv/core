@@ -3,11 +3,10 @@ System.register([__v__("/js/vendors.nomodule.js")], function (_export, _context)
 
   var answer;
   return {
-    setters: [function (_vendorsJs) {
-      answer = _vendorsJs.answer;
+    setters: [function (_snapshots2_vendors_and_js_module_fallbackVendorsJs) {
+      answer = _snapshots2_vendors_and_js_module_fallbackVendorsJs.answer;
     }],
     execute: function () {
-      console.log("b.js");
       window.resolveResultPromise(answer);
     }
   };

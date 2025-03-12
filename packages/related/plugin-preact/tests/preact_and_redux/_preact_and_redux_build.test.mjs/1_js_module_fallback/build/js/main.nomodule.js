@@ -24,13 +24,13 @@ System.register([__v__("/js/vendors.nomodule.js")], function (_export, _context)
 
   var compose, createStore, combineReducers, E, u, Provider_default, counterReducer, composeEnhancers, initialState, store, App, resolveRenderPromise, renderPromise, spanContentAfterIncrement, spanContentAfterDecrement;
   return {
-    setters: [function (_vendorsJs) {
-      compose = _vendorsJs.compose;
-      createStore = _vendorsJs.createStore;
-      combineReducers = _vendorsJs.combineReducers;
-      E = _vendorsJs.E;
-      u = _vendorsJs.u;
-      Provider_default = _vendorsJs.Provider_default;
+    setters: [function (_buildVendorsJs) {
+      compose = _buildVendorsJs.compose;
+      createStore = _buildVendorsJs.createStore;
+      combineReducers = _buildVendorsJs.combineReducers;
+      E = _buildVendorsJs.E;
+      u = _buildVendorsJs.u;
+      Provider_default = _buildVendorsJs.Provider_default;
     }],
     execute: async function () {
       counterReducer = (state = {
