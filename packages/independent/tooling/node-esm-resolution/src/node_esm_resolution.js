@@ -154,6 +154,7 @@ const applyBrowserFieldResolution = (specifier, resolutionContext) => {
   if (url) {
     return {
       type: "field:browser",
+      isMain: true,
       packageDirectoryUrl,
       packageJson,
       url,
@@ -404,6 +405,7 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
       }
       return {
         type: isImport ? "field:imports" : "field:exports",
+        isMain: subpath === "" || subpath === ".",
         packageDirectoryUrl,
         packageJson,
         url: pattern
@@ -606,6 +608,7 @@ const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
   }
   return {
     type: "subpath",
+    isMain: packageSubpath === ".",
     packageDirectoryUrl,
     packageJson,
     url: new URL(packageSubpath, packageDirectoryUrl).href,
@@ -623,6 +626,7 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
     if (resolved) {
       return {
         type: resolved.type,
+        isMain: resolved.isMain,
         packageDirectoryUrl,
         packageJson,
         url: new URL(resolved.path, packageDirectoryUrl).href,
@@ -631,6 +635,7 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
   }
   return {
     type: "field:main", // the absence of "main" field
+    isMain: true,
     packageDirectoryUrl,
     packageJson,
     url: new URL("index.js", packageDirectoryUrl).href,
@@ -639,13 +644,13 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
 const mainLegacyResolvers = {
   import: ({ packageJson }) => {
     if (typeof packageJson.module === "string") {
-      return { type: "field:module", path: packageJson.module };
+      return { type: "field:module", isMain: true, path: packageJson.module };
     }
     if (typeof packageJson.jsnext === "string") {
-      return { type: "field:jsnext", path: packageJson.jsnext };
+      return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
     }
     if (typeof packageJson.main === "string") {
-      return { type: "field:main", path: packageJson.main };
+      return { type: "field:main", isMain: true, path: packageJson.main };
     }
     return null;
   },
@@ -667,6 +672,7 @@ const mainLegacyResolvers = {
       if (typeof packageJson.module === "string") {
         return {
           type: "field:module",
+          isMain: true,
           path: packageJson.module,
         };
       }
@@ -678,6 +684,7 @@ const mainLegacyResolvers = {
     ) {
       return {
         type: "field:browser",
+        isMain: true,
         path: browserMain,
       };
     }
@@ -690,11 +697,13 @@ const mainLegacyResolvers = {
     ) {
       return {
         type: "field:module",
+        isMain: true,
         path: packageJson.module,
       };
     }
     return {
       type: "field:browser",
+      isMain: true,
       path: browserMain,
     };
   },
@@ -702,6 +711,7 @@ const mainLegacyResolvers = {
     if (typeof packageJson.main === "string") {
       return {
         type: "field:main",
+        isMain: true,
         path: packageJson.main,
       };
     }
