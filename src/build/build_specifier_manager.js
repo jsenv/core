@@ -96,12 +96,7 @@ export const createBuildSpecifierManager = ({
               : ownerUrlInfo,
           );
       const urlRelativeToParent = urlToRelativeUrl(buildUrl, parentBuildUrl);
-      if (urlRelativeToParent === "") {
-        // TODO : understand what's going on and how to support this
-        throw new Error(
-          "A file is referencing itself, this is not supported at this stage of the build",
-        );
-      } else if (urlRelativeToParent[0] === ".") {
+      if (urlRelativeToParent[0] === ".") {
         buildSpecifier = urlRelativeToParent;
       } else {
         // ensure "./" on relative url (otherwise it could be a "bare specifier")

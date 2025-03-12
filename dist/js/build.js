@@ -2828,7 +2828,7 @@ const applyRollupPlugins = async ({
         if (id.startsWith("ignore:")) {
           return null;
         }
-        const url = fileSystemPathToUrl(id);
+        const url = id.startsWith("file:") ? id : fileSystemPathToUrl(id);
         const closestPackageJsonSideEffects =
           readClosestPackageJsonSideEffects(url);
         if (closestPackageJsonSideEffects !== undefined) {
