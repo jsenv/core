@@ -554,7 +554,6 @@ const createSignal = () => {
   };
 };
 const windowWidthMeasure = createMeasure({
-  name: "window-width",
   compute: () => window.innerWidth,
   register: onchange => {
     window.addEventListener("resize", onchange);

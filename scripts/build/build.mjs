@@ -1,4 +1,4 @@
-import { build } from "@jsenv/core";
+import { build } from "@jsenv/core/src/build/build.js";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
@@ -48,11 +48,18 @@ await build({
   },
   scenarioPlaceholders: false,
   plugins: [
+    {
+      redirectReference: (reference) => {
+        if (reference.url.endsWith("emoji-regex/index.js")) {
+          return reference.url.replace("index.js", "index.mjs");
+        }
+        return null;
+      },
+    },
     jsenvPluginCommonJs({
       include: {
         "file:///**/node_modules/ws/": true,
         "file:///**/node_modules/@babel/parser/": true,
-        "file:///**/node_modules/emoji-regex/": true,
         "file:///**/node_modules/postcss/": true,
         "file:///**/node_modules/rollup/dist/native.js": true,
       },

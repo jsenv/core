@@ -749,7 +749,8 @@ export const createBuildSpecifierManager = ({
               contentBeforeReplace,
               (placeholder) => {
                 const reference = placeholderToReferenceMap.get(placeholder);
-                return generateReplacement(reference);
+                const value = generateReplacement(reference);
+                return value;
               },
             );
             urlInfo.mutateContent({ content, sourcemap });

@@ -22,5 +22,6 @@
     "/dist/",
     "/src/",
     "/main.js"
-  ]
+  ],
+  "sideEffects": false
 }

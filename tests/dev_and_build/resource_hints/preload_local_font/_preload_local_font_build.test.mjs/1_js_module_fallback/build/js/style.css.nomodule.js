@@ -1,9 +1,9 @@
-System.register([__v__("/js/new_stylesheet.nomodule.js")], function (_export, _context) {
+System.register([__v__("/js/new_stylesheet.nomodule2.js")], function (_export, _context) {
   "use strict";
 
   var globalObject, inlineContent, stylesheet;
   return {
-    setters: [function (_packagesInternalPluginTranspilationSrcBabelNew_stylesheetClientNew_stylesheetJs) {}],
+    setters: [function (_buildNew_stylesheetJs) {}],
     execute: function () {
       /* eslint-env browser,node */
       /*

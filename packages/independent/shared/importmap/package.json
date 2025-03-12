@@ -1,0 +1,29 @@
+{
+  "name": "@jsenv/importmap",
+  "version": "1.2.2",
+  "description": "Helpers to implement importmaps.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jsenv/core",
+    "directory": "packages/independent/shared/importmap"
+  },
+  "engines": {
+    "node": ">=16.13.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./src/main.js"
+    },
+    "./*": "./*"
+  },
+  "main": "./src/main.js",
+  "files": [
+    "/src/"
+  ],
+  "sideEffects": false
+}

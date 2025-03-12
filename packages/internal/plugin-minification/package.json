@@ -20,6 +20,7 @@
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "html-minifier": "4.0.0",
     "lightningcss": "1.29.1",

@@ -3,8 +3,8 @@ System.register([__v__("/js/workspaces.nomodule.js")], function (_export, _conte
 
   var _slicedToArray;
   return {
-    setters: [function (_workspacesJs) {
-      _slicedToArray = _workspacesJs._slicedToArray;
+    setters: [function (_buildWorkspacesJs) {
+      _slicedToArray = _buildWorkspacesJs._slicedToArray;
     }],
     execute: function () {
       Promise.all([_context.import(__v__("/js/a.nomodule.js")), _context.import(__v__("/js/b.nomodule.js"))]).then(_ref => {

@@ -1,10 +1,10 @@
-import { b } from "b";
-
-export const doSomething = async () => {
+export const logA = async () => {
   const { a } = await import("a");
   console.log(a);
 };
 
-export const logB = () => {
+export const logB = async () => {
+  const { b } = await import("b");
+
   console.log(b);
 };

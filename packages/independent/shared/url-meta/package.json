@@ -21,9 +21,8 @@
     },
     "./*": "./*"
   },
-  "sideEffects": false,
   "files": [
     "/src/"
   ],
-  "dependencies": {}
+  "sideEffects": false
 }

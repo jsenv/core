@@ -218,7 +218,7 @@
       null,
       false,
     );
-    for (var next = undefined; (next = iter.nextNode()); ) {
+    for (var next = void 0; (next = iter.nextNode()); ) {
       callback(getShadowRoot(next));
     }
   }

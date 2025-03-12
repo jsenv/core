@@ -1,12 +1,12 @@
-import { b } from "./js/vendors.js";
-
-const doSomething = async () => {
+const logA = async () => {
   const { a } = await import("./js/a.js");
   console.log(a);
 };
 
-const logB = () => {
+const logB = async () => {
+  const { b } = await import("./js/b.js");
+
   console.log(b);
 };
 
-export { doSomething, logB };
+export { logA, logB };

@@ -29,6 +29,7 @@
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@jsenv/url-meta": "8.5.4",
     "errorstacks": "2.4.1"

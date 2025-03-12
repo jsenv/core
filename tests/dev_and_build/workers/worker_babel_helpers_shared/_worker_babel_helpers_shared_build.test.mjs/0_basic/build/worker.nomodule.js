@@ -1,6 +1,6 @@
 ;(function() {
   var __versionMappings__ = {
-    "/js/workspaces.nomodule.js": "/js/workspaces.nomodule.js?v=a1d95964"
+    "/js/workspaces.nomodule.js": "/js/workspaces.nomodule.js?v=43370847"
   };
   self.__v__ = function (specifier) {
     return __versionMappings__[specifier] || specifier
@@ -421,8 +421,8 @@ System.register([__v__("/js/workspaces.nomodule.js")], function (_export, _conte
 
   var _objectSpread2;
   return {
-    setters: [function (_workspacesJs) {
-      _objectSpread2 = _workspacesJs._objectSpread2;
+    setters: [function (_buildWorkspacesJs) {
+      _objectSpread2 = _buildWorkspacesJs._objectSpread2;
     }],
     execute: function () {
       console.log(_objectSpread2({}, {

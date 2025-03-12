@@ -3,9 +3,9 @@ System.register([__v__("/js/workspaces.nomodule.js")], function (_export, _conte
 
   var _slicedToArray, _objectSpread2, getResponse, _getResponse, _getResponse2, answer, a;
   return {
-    setters: [function (_workspacesJs) {
-      _slicedToArray = _workspacesJs._slicedToArray;
-      _objectSpread2 = _workspacesJs._objectSpread2;
+    setters: [function (_buildWorkspacesJs) {
+      _slicedToArray = _buildWorkspacesJs._slicedToArray;
+      _objectSpread2 = _buildWorkspacesJs._objectSpread2;
     }],
     execute: function () {
       getResponse = () => {

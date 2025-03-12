@@ -6,7 +6,6 @@ System.register([], function (_export, _context) {
     setters: [],
     execute: function () {
       _export("answer", answer = 42);
-      console.log("a.js");
     }
   };
 });

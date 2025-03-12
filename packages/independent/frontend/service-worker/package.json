@@ -28,5 +28,6 @@
   "main": "./src/jsenv_service_worker.js",
   "files": [
     "/src/"
-  ]
+  ],
+  "sideEffects": false
 }

@@ -1,19 +1,19 @@
+import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
 import process$1, { cpuUsage, memoryUsage } from "node:process";
-import os, { cpus, release, totalmem, availableParallelism, freemem } from "node:os";
+import os, { cpus, totalmem, release, availableParallelism, freemem } from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
-import { pathToFileURL, fileURLToPath } from "node:url";
-import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, unlinkSync, openSync, closeSync, readdirSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, existsSync } from "node:fs";
-import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
-import { dirname } from "node:path";
-import crypto from "node:crypto";
-import { readGitHubWorkflowEnv, startGithubCheckRun } from "@jsenv/github-check-run";
 import { applyNodeEsmResolution } from "@jsenv/node-esm-resolution";
+import { URL_META, filterV8Coverage } from "./js/v8_coverage.js";
+import { readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readFile as readFile$1, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, readFileSync, writeFileSync as writeFileSync$1, unlink, rmdir, existsSync } from "node:fs";
 import { takeCoverage } from "node:v8";
 import stripAnsi from "strip-ansi";
+import { pathToFileURL, fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import { applyBabelPlugins } from "@jsenv/ast";
 import { createException } from "@jsenv/exception";
+import crypto from "node:crypto";
+import { dirname } from "node:path";
 import { createServer } from "node:net";
 import { spawn, spawnSync, fork } from "node:child_process";
 import { SOURCEMAP, generateSourcemapDataUrl } from "@jsenv/sourcemap";
@@ -3165,10 +3165,6 @@ const removeDirectoryNaive = (
   });
 };
 
-process.platform === "win32";
-
-process.platform === "win32";
-
 const ensureEmptyDirectorySync = (source) => {
   const stat = readEntryStatSync(source, {
     nullIfNotFound: true,
@@ -3222,14 +3218,6 @@ const ensureEmptyDirectory = async (source) => {
     `ensureEmptyDirectory expect directory at ${sourcePath}, found ${sourceType} instead`,
   );
 };
-
-process.platform === "win32";
-
-process.platform === "linux";
-
-process.platform === "darwin";
-process.platform === "linux";
-process.platform === "freebsd";
 
 const normalizeFileByFileCoveragePaths = (
   fileByFileCoverage,
@@ -5976,7 +5964,6 @@ const ensureWebServerIsStarted = async (
   }
   if (webServer.command) {
     await startServerUsingCommand(webServer, {
-      ignoreProcessExecArgv,
       signal,
       allocatedMs,
       teardownCallbackSet,
@@ -7368,8 +7355,6 @@ const initJsSupervisorMiddleware = async (
     const url = request.url();
     if (url === fileServerUrl && urlToExtension(url) === ".html") {
       interceptHtmlToExecute({
-        url,
-        request,
         route,
       });
       return;
@@ -7377,14 +7362,13 @@ const initJsSupervisorMiddleware = async (
     if (inlineScriptContents.has(url)) {
       interceptInlineScript({
         url,
-        request,
         route,
       });
       return;
     }
     const fsServerUrl = new URL("/@fs/", webServer.origin);
     if (url.startsWith(fsServerUrl)) {
-      interceptFileSystemUrl({ url, request, route });
+      interceptFileSystemUrl({ url, route });
       return;
     }
     route.fallback();
@@ -9868,7 +9852,6 @@ const execute = async ({
     measureMemoryUsage,
     onMeasureMemoryAvailable,
     collectPerformance,
-    collectCoverage,
     coverageTempDirectoryUrl,
     runtime,
     runtimeParams,

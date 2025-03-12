@@ -269,6 +269,19 @@ isBrowser ? () => {
 	throw new Error('`process.cwd()` only works in Node.js, not the browser.');
 } : process$1.cwd;
 
+function ansiRegex({onlyFirst = false} = {}) {
+	// Valid string terminator sequences are BEL, ESC\, and 0x9c
+	const ST = '(?:\\u0007|\\u001B\\u005C|\\u009C)';
+	const pattern = [
+		`[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?${ST})`,
+		'(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))',
+	].join('|');
+
+	return new RegExp(pattern, onlyFirst ? undefined : 'g');
+}
+
+ansiRegex();
+
 // https://github.com/Marak/colors.js/blob/master/lib/styles.js
 // https://stackoverflow.com/a/75985833/2634179
 const RESET = "\x1b[0m";
@@ -884,7 +897,7 @@ const generateWindowsEPERMErrorMessage = (
   const pathLengthIsExceedingUsualLimit = String(path).length >= 256;
   let message = "";
 
-  if (operation) {
+  {
     message += `error while trying to fix windows EPERM after ${operation} on ${path}`;
   }
 
@@ -1007,6 +1020,9 @@ const statSyncNaive = (
     throw error;
   }
 };
+
+// https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_mkdir_path_options
+const { mkdir } = node_fs.promises;
 
 const mediaTypeInfos = {
   "application/json": {
@@ -1252,6 +1268,8 @@ const readFileSync = (value, { as } = {}) => {
   );
 };
 
+// https://nodejs.org/dist/latest-v13.x/docs/api/fs.html#fs_fspromises_symlink_target_path_type
+const { symlink } = node_fs.promises;
 process.platform === "win32";
 
 const getRealFileSystemUrlSync = (
@@ -1309,6 +1327,22 @@ const getRealFileSystemUrlSync = (
 };
 
 process.platform === "win32";
+
+/*
+ * - file modes documentation on Node.js
+ *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_file_modes
+ */
+
+
+const { stat } = node_fs.promises;
+
+const { access } = node_fs.promises;
+const {
+  // F_OK,
+  R_OK,
+  W_OK,
+  X_OK,
+} = node_fs.constants;
 
 process.platform === "win32";
 
@@ -1732,6 +1766,7 @@ const applyBrowserFieldResolution = (specifier, resolutionContext) => {
   if (url) {
     return {
       type: "field:browser",
+      isMain: true,
       packageDirectoryUrl,
       packageJson,
       url,
@@ -1982,6 +2017,7 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
       }
       return {
         type: isImport ? "field:imports" : "field:exports",
+        isMain: subpath === "" || subpath === ".",
         packageDirectoryUrl,
         packageJson,
         url: pattern
@@ -2184,6 +2220,7 @@ const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
   }
   return {
     type: "subpath",
+    isMain: packageSubpath === ".",
     packageDirectoryUrl,
     packageJson,
     url: new URL(packageSubpath, packageDirectoryUrl).href,
@@ -2201,6 +2238,7 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
     if (resolved) {
       return {
         type: resolved.type,
+        isMain: resolved.isMain,
         packageDirectoryUrl,
         packageJson,
         url: new URL(resolved.path, packageDirectoryUrl).href,
@@ -2209,6 +2247,7 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
   }
   return {
     type: "field:main", // the absence of "main" field
+    isMain: true,
     packageDirectoryUrl,
     packageJson,
     url: new URL("index.js", packageDirectoryUrl).href,
@@ -2217,13 +2256,13 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
 const mainLegacyResolvers = {
   import: ({ packageJson }) => {
     if (typeof packageJson.module === "string") {
-      return { type: "field:module", path: packageJson.module };
+      return { type: "field:module", isMain: true, path: packageJson.module };
     }
     if (typeof packageJson.jsnext === "string") {
-      return { type: "field:jsnext", path: packageJson.jsnext };
+      return { type: "field:jsnext", isMain: true, path: packageJson.jsnext };
     }
     if (typeof packageJson.main === "string") {
-      return { type: "field:main", path: packageJson.main };
+      return { type: "field:main", isMain: true, path: packageJson.main };
     }
     return null;
   },
@@ -2245,6 +2284,7 @@ const mainLegacyResolvers = {
       if (typeof packageJson.module === "string") {
         return {
           type: "field:module",
+          isMain: true,
           path: packageJson.module,
         };
       }
@@ -2256,6 +2296,7 @@ const mainLegacyResolvers = {
     ) {
       return {
         type: "field:browser",
+        isMain: true,
         path: browserMain,
       };
     }
@@ -2268,11 +2309,13 @@ const mainLegacyResolvers = {
     ) {
       return {
         type: "field:module",
+        isMain: true,
         path: packageJson.module,
       };
     }
     return {
       type: "field:browser",
+      isMain: true,
       path: browserMain,
     };
   },
@@ -2280,6 +2323,7 @@ const mainLegacyResolvers = {
     if (typeof packageJson.main === "string") {
       return {
         type: "field:main",
+        isMain: true,
         path: packageJson.main,
       };
     }
@@ -3015,7 +3059,7 @@ const decodeMap = new Map([
  */
 const fromCodePoint = 
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, node/no-unsupported-features/es-builtins
-(_a = String.fromCodePoint) !== null && _a !== undefined ? _a : function (codePoint) {
+(_a = String.fromCodePoint) !== null && _a !== void 0 ? _a : function (codePoint) {
     let output = "";
     if (codePoint > 0xffff) {
         codePoint -= 0x10000;
@@ -3035,7 +3079,7 @@ function replaceCodePoint(codePoint) {
     if ((codePoint >= 0xd800 && codePoint <= 0xdfff) || codePoint > 0x10ffff) {
         return 0xfffd;
     }
-    return (_a = decodeMap.get(codePoint)) !== null && _a !== undefined ? _a : codePoint;
+    return (_a = decodeMap.get(codePoint)) !== null && _a !== void 0 ? _a : codePoint;
 }
 
 var CharCodes;
@@ -3279,7 +3323,7 @@ class EntityDecoder {
         var _a;
         // Ensure we consumed at least one digit.
         if (this.consumed <= expectedLength) {
-            (_a = this.errors) === null || _a === undefined ? undefined : _a.absenceOfDigitsInNumericCharacterReference(this.consumed);
+            (_a = this.errors) === null || _a === void 0 ? void 0 : _a.absenceOfDigitsInNumericCharacterReference(this.consumed);
             return 0;
         }
         // Figure out if this is a legit end of the entity
@@ -3354,7 +3398,7 @@ class EntityDecoder {
         const { result, decodeTree } = this;
         const valueLength = (decodeTree[result] & BinTrieFlags.VALUE_LENGTH) >> 14;
         this.emitNamedEntityData(result, valueLength, this.consumed);
-        (_a = this.errors) === null || _a === undefined ? undefined : _a.missingSemicolonAfterCharacterReference();
+        (_a = this.errors) === null || _a === void 0 ? void 0 : _a.missingSemicolonAfterCharacterReference();
         return this.consumed;
     }
     /**
@@ -3403,7 +3447,7 @@ class EntityDecoder {
                 return this.emitNumericEntity(0, 3);
             }
             case EntityDecoderState.NumericStart: {
-                (_a = this.errors) === null || _a === undefined ? undefined : _a.absenceOfDigitsInNumericCharacterReference(this.consumed);
+                (_a = this.errors) === null || _a === void 0 ? void 0 : _a.absenceOfDigitsInNumericCharacterReference(this.consumed);
                 return 0;
             }
             case EntityDecoderState.EntityStart: {
@@ -3908,7 +3952,7 @@ const TAG_NAME_TO_ID = new Map([
 ]);
 function getTagID(tagName) {
     var _a;
-    return (_a = TAG_NAME_TO_ID.get(tagName)) !== null && _a !== undefined ? _a : TAG_ID.UNKNOWN;
+    return (_a = TAG_NAME_TO_ID.get(tagName)) !== null && _a !== void 0 ? _a : TAG_ID.UNKNOWN;
 }
 const $ = TAG_ID;
 const SPECIAL_ELEMENTS = {
@@ -4194,7 +4238,7 @@ class Tokenizer {
     //Errors
     _err(code, cpOffset = 0) {
         var _a, _b;
-        (_b = (_a = this.handler).onParseError) === null || _b === undefined ? undefined : _b.call(_a, this.preprocessor.getError(code, cpOffset));
+        (_b = (_a = this.handler).onParseError) === null || _b === void 0 ? void 0 : _b.call(_a, this.preprocessor.getError(code, cpOffset));
     }
     // NOTE: `offset` may never run across line boundaries.
     getCurrentLocation(offset) {
@@ -4237,7 +4281,7 @@ class Tokenizer {
             return;
         this._runParsingLoop();
         if (!this.paused) {
-            writeCallback === null || writeCallback === undefined ? undefined : writeCallback();
+            writeCallback === null || writeCallback === void 0 ? void 0 : writeCallback();
         }
     }
     write(chunk, isLastChunk, writeCallback) {
@@ -4245,7 +4289,7 @@ class Tokenizer {
         this.preprocessor.write(chunk, isLastChunk);
         this._runParsingLoop();
         if (!this.paused) {
-            writeCallback === null || writeCallback === undefined ? undefined : writeCallback();
+            writeCallback === null || writeCallback === void 0 ? void 0 : writeCallback();
         }
     }
     insertHtmlAtCurrentPos(chunk) {
@@ -4344,7 +4388,7 @@ class Tokenizer {
         if (getTokenAttr(token, this.currentAttr.name) === null) {
             token.attrs.push(this.currentAttr);
             if (token.location && this.currentLocation) {
-                const attrLocations = ((_a = (_b = token.location).attrs) !== null && _a !== undefined ? _a : (_b.attrs = Object.create(null)));
+                const attrLocations = ((_a = (_b = token.location).attrs) !== null && _a !== void 0 ? _a : (_b.attrs = Object.create(null)));
                 attrLocations[this.currentAttr.name] = this.currentLocation;
                 // Set end location
                 this._leaveAttrValue();
@@ -7757,11 +7801,11 @@ class Parser {
         if (this.onParseError) {
             this.options.sourceCodeLocationInfo = true;
         }
-        this.document = document !== null && document !== undefined ? document : this.treeAdapter.createDocument();
+        this.document = document !== null && document !== void 0 ? document : this.treeAdapter.createDocument();
         this.tokenizer = new Tokenizer(this.options, this);
         this.activeFormattingElements = new FormattingElementList(this.treeAdapter);
         this.fragmentContextID = fragmentContext ? getTagID(this.treeAdapter.getTagName(fragmentContext)) : TAG_ID.UNKNOWN;
-        this._setContextModes(fragmentContext !== null && fragmentContext !== undefined ? fragmentContext : this.document, this.fragmentContextID);
+        this._setContextModes(fragmentContext !== null && fragmentContext !== void 0 ? fragmentContext : this.document, this.fragmentContextID);
         this.openElements = new OpenElementStack(this.document, this.treeAdapter, this);
     }
     // API
@@ -7777,7 +7821,7 @@ class Parser {
         };
         //NOTE: use a <template> element as the fragment context if no context element was provided,
         //so we will parse in a "forgiving" manner
-        fragmentContext !== null && fragmentContext !== undefined ? fragmentContext : (fragmentContext = opts.treeAdapter.createElement(TAG_NAMES.TEMPLATE, NS.HTML, []));
+        fragmentContext !== null && fragmentContext !== void 0 ? fragmentContext : (fragmentContext = opts.treeAdapter.createElement(TAG_NAMES.TEMPLATE, NS.HTML, []));
         //NOTE: create a fake element which will be used as the `document` for fragment parsing.
         //This is important for jsdom, where a new `document` cannot be created. This led to
         //fragment parsing messing with the main `document`.
@@ -7804,7 +7848,7 @@ class Parser {
         var _a;
         if (!this.onParseError)
             return;
-        const loc = (_a = token.location) !== null && _a !== undefined ? _a : BASE_LOC;
+        const loc = (_a = token.location) !== null && _a !== void 0 ? _a : BASE_LOC;
         const err = {
             code,
             startLine: loc.startLine,
@@ -7820,7 +7864,7 @@ class Parser {
     /** @internal */
     onItemPush(node, tid, isTop) {
         var _a, _b;
-        (_b = (_a = this.treeAdapter).onItemPush) === null || _b === undefined ? undefined : _b.call(_a, node);
+        (_b = (_a = this.treeAdapter).onItemPush) === null || _b === void 0 ? void 0 : _b.call(_a, node);
         if (isTop && this.openElements.stackTop > 0)
             this._setContextModes(node, tid);
     }
@@ -7830,7 +7874,7 @@ class Parser {
         if (this.options.sourceCodeLocationInfo) {
             this._setEndLocation(node, this.currentToken);
         }
-        (_b = (_a = this.treeAdapter).onItemPop) === null || _b === undefined ? undefined : _b.call(_a, node, this.openElements.current);
+        (_b = (_a = this.treeAdapter).onItemPop) === null || _b === void 0 ? void 0 : _b.call(_a, node, this.openElements.current);
         if (isTop) {
             let current;
             let currentTagId;
@@ -9992,7 +10036,7 @@ function eofInBody(p, token) {
 function endTagInText(p, token) {
     var _a;
     if (token.tagID === TAG_ID.SCRIPT) {
-        (_a = p.scriptHandler) === null || _a === undefined ? undefined : _a.call(p, p.openElements.current);
+        (_a = p.scriptHandler) === null || _a === void 0 ? void 0 : _a.call(p, p.openElements.current);
     }
     p.openElements.pop();
     p.insertionMode = p.originalInsertionMode;
@@ -10720,7 +10764,7 @@ function endTagAfterBody(p, token) {
             p._setEndLocation(p.openElements.items[0], token);
             // Update the body element, if it doesn't have an end tag
             const bodyElement = p.openElements.items[1];
-            if (bodyElement && !((_a = p.treeAdapter.getNodeSourceCodeLocation(bodyElement)) === null || _a === undefined ? undefined : _a.endTag)) {
+            if (bodyElement && !((_a = p.treeAdapter.getNodeSourceCodeLocation(bodyElement)) === null || _a === void 0 ? void 0 : _a.endTag)) {
                 p._setEndLocation(bodyElement, token);
             }
         }
@@ -11557,7 +11601,6 @@ const normalizeMappings = (mappings, baseUrl) => {
     if (specifier.endsWith("/") && !addressUrl.endsWith("/")) {
       console.warn(
         formulateAddressUrlRequiresTrailingSlash({
-          addressUrl,
           address,
           specifier,
         }),

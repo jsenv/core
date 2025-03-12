@@ -24,7 +24,7 @@ System.register([__v__("/js/workspaces.nomodule.js")], function (_export, _conte
 
   var globalObject, inlineContent, stylesheet, bodyBackgroundColor, bodyBackgroundImage;
   return {
-    setters: [function (_workspacesJs) {}],
+    setters: [function (_buildWorkspacesJs) {}],
     execute: async function () {
       /* eslint-env browser,node */
       /*

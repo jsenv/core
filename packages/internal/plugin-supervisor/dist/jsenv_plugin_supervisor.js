@@ -3,12 +3,9 @@ import process$1 from "node:process";
 import os from "node:os";
 import tty from "node:tty";
 import "string-width";
-import { pathToFileURL, fileURLToPath } from "node:url";
-import "./js/vendors.js";
 import { createRequire } from "node:module";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import "node:path";
-import "node:crypto";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 // From: https://github.com/sindresorhus/has-flag/blob/main/index.js
 /// function hasFlag(flag, argv = globalThis.Deno?.args ?? process.argv) {
@@ -498,30 +495,6 @@ const injectQueryParams = (url, params) => {
   return normalizeUrl(urlWithParams);
 };
 
-const isFileSystemPath = value => {
-  if (typeof value !== "string") {
-    throw new TypeError("isFileSystemPath first arg must be a string, got ".concat(value));
-  }
-  if (value[0] === "/") {
-    return true;
-  }
-  return startsWithWindowsDriveLetter(value);
-};
-const startsWithWindowsDriveLetter = string => {
-  const firstChar = string[0];
-  if (!/[a-zA-Z]/.test(firstChar)) return false;
-  const secondChar = string[1];
-  if (secondChar !== ":") return false;
-  return true;
-};
-
-const fileSystemPathToUrl = value => {
-  if (!isFileSystemPath(value)) {
-    throw new Error("value must be a filesystem path, got ".concat(value));
-  }
-  return String(pathToFileURL(value));
-};
-
 const getCommonPathname = (pathname, otherPathname) => {
   if (pathname === otherPathname) {
     return pathname;
@@ -613,12 +586,6 @@ const requireSourcemap = () => {
   const namespace = require("source-map-js");
   return namespace;
 };
-
-/*
- * https://github.com/mozilla/source-map#sourcemapgenerator
- */
-
-requireSourcemap();
 
 // https://github.com/mozilla/source-map#sourcemapconsumerprototypeoriginalpositionforgeneratedposition
 const getOriginalPosition = ({
@@ -1521,6 +1488,7 @@ const applyBrowserFieldResolution = (specifier, resolutionContext) => {
   if (url) {
     return {
       type: "field:browser",
+      isMain: true,
       packageDirectoryUrl,
       packageJson,
       url
@@ -1750,6 +1718,7 @@ const applyPackageTargetResolution = (target, resolutionContext) => {
       }
       return {
         type: isImport ? "field:imports" : "field:exports",
+        isMain: subpath === "" || subpath === ".",
         packageDirectoryUrl,
         packageJson,
         url: pattern ? targetUrl.replaceAll("*", subpath) : new URL(subpath, targetUrl).href
@@ -1932,6 +1901,7 @@ const applyLegacySubpathResolution = (packageSubpath, resolutionContext) => {
   }
   return {
     type: "subpath",
+    isMain: packageSubpath === ".",
     packageDirectoryUrl,
     packageJson,
     url: new URL(packageSubpath, packageDirectoryUrl).href
@@ -1952,6 +1922,7 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
     if (resolved) {
       return {
         type: resolved.type,
+        isMain: resolved.isMain,
         packageDirectoryUrl,
         packageJson,
         url: new URL(resolved.path, packageDirectoryUrl).href
@@ -1961,6 +1932,7 @@ const applyLegacyMainResolution = (packageSubpath, resolutionContext) => {
   return {
     type: "field:main",
     // the absence of "main" field
+    isMain: true,
     packageDirectoryUrl,
     packageJson,
     url: new URL("index.js", packageDirectoryUrl).href
@@ -1973,18 +1945,21 @@ const mainLegacyResolvers = {
     if (typeof packageJson.module === "string") {
       return {
         type: "field:module",
+        isMain: true,
         path: packageJson.module
       };
     }
     if (typeof packageJson.jsnext === "string") {
       return {
         type: "field:jsnext",
+        isMain: true,
         path: packageJson.jsnext
       };
     }
     if (typeof packageJson.main === "string") {
       return {
         type: "field:main",
+        isMain: true,
         path: packageJson.main
       };
     }
@@ -2007,6 +1982,7 @@ const mainLegacyResolvers = {
       if (typeof packageJson.module === "string") {
         return {
           type: "field:module",
+          isMain: true,
           path: packageJson.module
         };
       }
@@ -2015,6 +1991,7 @@ const mainLegacyResolvers = {
     if (typeof packageJson.module !== "string" || packageJson.module === browserMain) {
       return {
         type: "field:browser",
+        isMain: true,
         path: browserMain
       };
     }
@@ -2023,11 +2000,13 @@ const mainLegacyResolvers = {
     if (/typeof exports\s*==/.test(content) && /typeof module\s*==/.test(content) || /module\.exports\s*=/.test(content)) {
       return {
         type: "field:module",
+        isMain: true,
         path: packageJson.module
       };
     }
     return {
       type: "field:browser",
+      isMain: true,
       path: browserMain
     };
   },
@@ -2037,6 +2016,7 @@ const mainLegacyResolvers = {
     if (typeof packageJson.main === "string") {
       return {
         type: "field:main",
+        isMain: true,
         path: packageJson.main
       };
     }
@@ -2079,35 +2059,6 @@ const resolvePackageSymlink = packageDirectoryUrl => {
   const packageDirectoryResolvedUrl = pathToFileURL(packageDirectoryPath).href;
   return "".concat(packageDirectoryResolvedUrl, "/");
 };
-
-process.platform === "win32";
-fileSystemPathToUrl(process.cwd());
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
-process.platform === "win32";
-
-/*
- * - stats object documentation on Node.js
- *   https://nodejs.org/docs/latest-v13.x/api/fs.html#fs_class_fs_stats
- */
-
-process.platform === "win32";
-
-process.platform === "win32";
-
-process.platform === "win32";
-
-process.platform === "win32";
-
-process.platform === "linux";
-
-process.platform === "darwin";
-process.platform === "linux";
-process.platform === "freebsd";
 
 /*
  * This plugin provides a way for jsenv to supervisor js execution:
@@ -2199,7 +2150,6 @@ const jsenvPluginSupervisor = ({
           if (sourcemap) {
             const original = getOriginalPosition({
               sourcemap,
-              url: file,
               line,
               column
             });

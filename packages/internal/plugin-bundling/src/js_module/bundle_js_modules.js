@@ -1,8 +1,9 @@
 import { lookupPackageDirectory } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
+import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
-import { isFileSystemPath } from "@jsenv/urls";
+import { fileSystemPathToUrl, isFileSystemPath } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 import { fileUrlConverter } from "../file_url_converter.js";
 
@@ -146,6 +147,12 @@ export const bundleJsModules = async (
           ) {
             return;
           }
+          if (
+            warning.code === "EMPTY_BUNDLE" &&
+            warning.names.join("") === "vendors"
+          ) {
+            return;
+          }
           logger.warn(String(warning));
         },
         ...rollupInput,
@@ -181,6 +188,7 @@ export const bundleJsModules = async (
 const rollupPluginJsenv = ({
   // logger,
   rootDirectoryUrl,
+  buildDirectoryUrl,
   graph,
   jsModuleUrlInfos,
   sourcemaps,
@@ -218,16 +226,18 @@ const rollupPluginJsenv = ({
   }
 
   const getOriginalUrl = (rollupFileInfo) => {
-    const { facadeModuleId } = rollupFileInfo;
-    if (facadeModuleId) {
-      return fileUrlConverter.asFileUrl(facadeModuleId);
+    if (rollupFileInfo.isEntry) {
+      const { facadeModuleId } = rollupFileInfo;
+      if (facadeModuleId) {
+        return fileUrlConverter.asFileUrl(facadeModuleId);
+      }
     }
     if (rollupFileInfo.isDynamicEntry) {
       const { moduleIds } = rollupFileInfo;
       const lastModuleId = moduleIds[moduleIds.length - 1];
       return fileUrlConverter.asFileUrl(lastModuleId);
     }
-    return new URL(rollupFileInfo.fileName, rootDirectoryUrl).href;
+    return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
   };
 
   return {
@@ -381,11 +391,19 @@ const rollupPluginJsenv = ({
 
       const jsModuleBundleUrlInfos = {};
       const fileNames = Object.keys(rollupResult);
+      const originalUrlSet = new Set();
       for (const fileName of fileNames) {
         const rollupFileInfo = rollupResult[fileName];
         // there is 3 types of file: "placeholder", "asset", "chunk"
         if (rollupFileInfo.type === "chunk") {
           const jsModuleInfo = createBundledFileInfo(rollupFileInfo);
+          const originalUrl = jsModuleInfo.originalUrl;
+          if (originalUrlSet.has(originalUrl)) {
+            throw new Error(
+              `duplicate bundle info, cannot override ${originalUrl}`,
+            );
+          }
+          originalUrlSet.add(originalUrl);
           jsModuleBundleUrlInfos[jsModuleInfo.originalUrl] = jsModuleInfo;
         }
       }
@@ -408,6 +426,15 @@ const rollupPluginJsenv = ({
           return `[name].js`;
         },
         chunkFileNames: (chunkInfo) => {
+          if (chunkInfo.isEntry) {
+            const originalFileUrl = getOriginalUrl(chunkInfo);
+            const jsModuleUrlInfo = jsModuleUrlInfos.find(
+              (candidate) => candidate.url === originalFileUrl,
+            );
+            if (jsModuleUrlInfo && jsModuleUrlInfo.filenameHint) {
+              return jsModuleUrlInfo.filenameHint;
+            }
+          }
           return `${chunkInfo.name}.js`;
         },
       });
@@ -460,7 +487,7 @@ const rollupPluginJsenv = ({
         // happen when excluded by referenceAnalysis.include
         return { id: url, external: true };
       }
-      if (urlInfo.url.startsWith("ignore:")) {
+      if (url.startsWith("ignore:")) {
         return { id: url, external: true };
       }
       const filePath = fileUrlConverter.asFilePath(url);
@@ -491,8 +518,83 @@ const applyRollupPlugins = async ({
     const rollupModule = await import("rollup");
     rollup = rollupModule.rollup;
   }
+
+  const packageSideEffectsCacheMap = new Map();
+  const readClosestPackageJsonSideEffects = (url) => {
+    const packageDirectoryUrl = lookupPackageDirectory(url);
+    if (!packageDirectoryUrl) {
+      return undefined;
+    }
+    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
+    if (fromCache) {
+      return fromCache.value;
+    }
+    try {
+      const packageFileContent = readFileSync(
+        new URL("./package.json", packageDirectoryUrl),
+        "utf8",
+      );
+      const packageJSON = JSON.parse(packageFileContent);
+      const value = packageJSON.sideEffects;
+      if (Array.isArray(value)) {
+        const sideEffectPatterns = {};
+        for (const v of value) {
+          sideEffectPatterns[v] = true;
+        }
+        const associations = URL_META.resolveAssociations(
+          { sideEffects: sideEffectPatterns },
+          packageDirectoryUrl,
+        );
+        const isMatching = (url) => {
+          const meta = URL_META.applyAssociations({ url, associations });
+          return meta.sideEffects || false;
+        };
+        packageSideEffectsCacheMap.set(packageDirectoryUrl, {
+          value: isMatching,
+        });
+      } else {
+        packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
+      }
+      return value;
+    } catch {
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
+      return undefined;
+    }
+  };
+
   const rollupReturnValue = await rollup({
     ...rollupInput,
+    treeshake: {
+      ...rollupInput.treeshake,
+      moduleSideEffects: (id, external) => {
+        if (id.startsWith("ignore:node:")) {
+          return false;
+        }
+        if (isSpecifierForNodeBuiltin(id)) {
+          return false;
+        }
+        if (id.startsWith("ignore:")) {
+          return null;
+        }
+        const url = id.startsWith("file:") ? id : fileSystemPathToUrl(id);
+        const closestPackageJsonSideEffects =
+          readClosestPackageJsonSideEffects(url);
+        if (closestPackageJsonSideEffects !== undefined) {
+          if (typeof closestPackageJsonSideEffects === "function") {
+            return closestPackageJsonSideEffects(url);
+          }
+          return closestPackageJsonSideEffects;
+        }
+        const moduleSideEffects = rollupInput.treeshake?.moduleSideEffects;
+        if (moduleSideEffects) {
+          if (typeof moduleSideEffects === "function") {
+            return moduleSideEffects(id, external);
+          }
+          return moduleSideEffects;
+        }
+        return null;
+      },
+    },
     plugins: rollupPlugins,
   });
   const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);

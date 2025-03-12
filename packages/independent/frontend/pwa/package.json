@@ -29,6 +29,7 @@
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@jsenv/sigi": "0.0.8"
   },

@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "file": "main.js",
+  "file": "jsenv_eslint_config.cjs",
   "sources": [
     "../src/internal/composeTwoObjects.js",
     "../src/composeEslintConfig.js",

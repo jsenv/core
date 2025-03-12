@@ -1,6 +1,6 @@
 {
   "name": "@jsenv/core",
-  "version": "40.0.0",
+  "version": "40.0.2",
   "description": "Tool to develop, test and build js projects",
   "license": "MIT",
   "author": {
@@ -47,6 +47,10 @@
     "./packages/related/*",
     "./packages/related/cli/*"
   ],
+  "sideEffects": [
+    "./src/kitchen/client/inline_content.js",
+    "./tests/"
+  ],
   "scripts": {
     "eslint": "npx eslint .",
     "test": "node --conditions=development ./scripts/test/test.mjs",
@@ -74,23 +78,23 @@
   "dependencies": {
     "@financial-times/polyfill-useragent-normaliser": "1.10.2",
     "@jsenv/abort": "4.3.1",
-    "@jsenv/ast": "6.6.0",
-    "@jsenv/filesystem": "4.14.0",
-    "@jsenv/humanize": "1.3.0",
-    "@jsenv/importmap": "1.2.1",
+    "@jsenv/ast": "6.6.1",
+    "@jsenv/filesystem": "4.14.1",
+    "@jsenv/humanize": "1.3.1",
+    "@jsenv/importmap": "1.2.2",
     "@jsenv/integrity": "0.0.2",
-    "@jsenv/js-module-fallback": "1.4.0",
+    "@jsenv/js-module-fallback": "1.4.1",
     "@jsenv/node-esm-resolution": "1.1.0",
-    "@jsenv/plugin-bundling": "2.8.0",
+    "@jsenv/plugin-bundling": "2.8.1",
     "@jsenv/plugin-minification": "1.6.0",
-    "@jsenv/plugin-supervisor": "1.6.7",
-    "@jsenv/plugin-transpilation": "1.5.0",
-    "@jsenv/runtime-compat": "1.3.3",
-    "@jsenv/server": "16.0.0",
-    "@jsenv/sourcemap": "1.3.0",
+    "@jsenv/plugin-supervisor": "1.6.8",
+    "@jsenv/plugin-transpilation": "1.5.1",
+    "@jsenv/runtime-compat": "1.3.4",
+    "@jsenv/server": "16.0.2",
+    "@jsenv/sourcemap": "1.3.1",
     "@jsenv/url-meta": "8.5.4",
-    "@jsenv/urls": "2.6.1",
-    "@jsenv/utils": "2.2.0",
+    "@jsenv/urls": "2.6.2",
+    "@jsenv/utils": "2.2.1",
     "string-width": "7.2.0"
   },
   "devDependencies": {

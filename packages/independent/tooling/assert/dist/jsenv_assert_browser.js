@@ -60,28 +60,28 @@ const createUnicode = ({
   const UNICODE = {
     supported,
     get COMMAND_RAW() {
-      return UNICODE.supported ? "\u276F" : ">";
+      return "\u276F" ;
     },
     get OK_RAW() {
-      return UNICODE.supported ? "\u2714" : "\u221A";
+      return "\u2714" ;
     },
     get FAILURE_RAW() {
-      return UNICODE.supported ? "\u2716" : "\xD7";
+      return "\u2716" ;
     },
     get DEBUG_RAW() {
-      return UNICODE.supported ? "\u25C6" : "\u2666";
+      return "\u25C6" ;
     },
     get INFO_RAW() {
       return UNICODE.supported ? "\u2139" : "i";
     },
     get WARNING_RAW() {
-      return UNICODE.supported ? "\u26A0" : "\u203C";
+      return "\u26A0" ;
     },
     get CIRCLE_CROSS_RAW() {
-      return UNICODE.supported ? "\u24E7" : "(\xD7)";
+      return "\u24E7" ;
     },
     get CIRCLE_DOTTED_RAW() {
-      return UNICODE.supported ? "\u25CC" : "*";
+      return "\u25CC" ;
     },
     get COMMAND() {
       return ANSI.color(UNICODE.COMMAND_RAW, ANSI.GREY); // ANSI_MAGENTA)
@@ -105,7 +105,7 @@ const createUnicode = ({
       return ANSI.color(UNICODE.CIRCLE_CROSS_RAW, ANSI.RED);
     },
     get ELLIPSIS() {
-      return UNICODE.supported ? "\u2026" : "...";
+      return "\u2026" ;
     }
   };
   return UNICODE;
@@ -3279,7 +3279,6 @@ let createRootNode;
     let nodeId = 1;
     const rootNode = createNode({
       context,
-      id: nodeId,
       group: "root",
       value,
       parent: null,
