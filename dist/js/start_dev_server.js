@@ -1,23 +1,23 @@
-import { ensureWindowsDriveLetter, assertAndNormalizeDirectoryUrl, urlToRelativeUrl } from "./register_file_lifecycle.js";
-import { createLogger, createTaskLog, URL_META } from "./main.js";
-import { moveUrl, urlIsInsideOf, lookupPackageDirectory, createEventEmitter, watchSourceFiles, createPluginStore, getCorePlugins, defaultRuntimeCompat, createKitchen, bufferToEtag, createPluginController } from "./build.js";
-import { existsSync, readFileSync } from "node:fs";
+import { assertAndNormalizeDirectoryUrl, createLogger, createTaskLog } from "./process_teardown_events.js";
 import { ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
+import { URL_META } from "./main.js";
+import { existsSync, readFileSync } from "node:fs";
+import { moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, urlToRelativeUrl, lookupPackageDirectory, createEventEmitter, watchSourceFiles, createPluginStore, getCorePlugins, defaultRuntimeCompat, createKitchen, bufferToEtag, createPluginController } from "./build.js";
 import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
 import { createRequire } from "node:module";
-import "node:url";
-import "@jsenv/sourcemap";
 import "node:process";
 import "node:os";
 import "node:tty";
 import "string-width";
-import "@jsenv/js-module-fallback";
+import "node:url";
+import "@jsenv/sourcemap";
 import "@jsenv/runtime-compat";
 import "node:path";
 import "node:crypto";
 import "node:perf_hooks";
 import "@jsenv/plugin-supervisor";
+import "@jsenv/js-module-fallback";
 
 const WEB_URL_CONVERTER = {
   asWebUrl: (fileUrl, webServer) => {
