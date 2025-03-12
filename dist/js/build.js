@@ -2782,7 +2782,25 @@ const applyRollupPlugins = async ({
       );
       const packageJSON = JSON.parse(packageFileContent);
       const value = packageJSON.sideEffects;
-      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
+      if (Array.isArray(value)) {
+        const sideEffectPatterns = {};
+        for (const v of value) {
+          sideEffectPatterns[v] = true;
+        }
+        const associations = URL_META.resolveAssociations(
+          { sideEffects: sideEffectPatterns },
+          packageDirectoryUrl,
+        );
+        const isMatching = (url) => {
+          const meta = URL_META.applyAssociations({ url, associations });
+          return meta.sideEffects || false;
+        };
+        packageSideEffectsCacheMap.set(packageDirectoryUrl, {
+          value: isMatching,
+        });
+      } else {
+        packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
+      }
       return value;
     } catch {
       packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
@@ -2808,6 +2826,9 @@ const applyRollupPlugins = async ({
         const closestPackageJsonSideEffects =
           readClosestPackageJsonSideEffects(url);
         if (closestPackageJsonSideEffects !== undefined) {
+          if (typeof closestPackageJsonSideEffects === "function") {
+            return closestPackageJsonSideEffects(url);
+          }
           return closestPackageJsonSideEffects;
         }
         const moduleSideEffects = rollupInput.treeshake?.moduleSideEffects;
