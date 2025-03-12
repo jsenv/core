@@ -1,13 +1,13 @@
-import { assertAndNormalizeDirectoryUrl, createLogger, Abort, raceProcessTeardownEvents, createTaskLog } from "./process_teardown_events.js";
-import { startServer, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvAccessControlAllowedHeaders, createFileSystemFetch } from "@jsenv/server";
+import { assertAndNormalizeDirectoryUrl, Abort, raceProcessTeardownEvents } from "./register_file_lifecycle.js";
+import { createLogger, createTaskLog, urlToExtension, urlToPathname } from "./main.js";
 import { existsSync } from "node:fs";
-import { urlToExtension, urlToPathname } from "./main.js";
+import { startServer, jsenvServiceCORS, jsenvServiceErrorHandler, jsenvAccessControlAllowedHeaders, createFileSystemFetch } from "@jsenv/server";
+import "node:url";
+import "@jsenv/sourcemap";
 import "node:process";
 import "node:os";
 import "node:tty";
 import "string-width";
-import "node:url";
-import "@jsenv/sourcemap";
 
 /*
  * startBuildServer is mean to interact with the build files;
