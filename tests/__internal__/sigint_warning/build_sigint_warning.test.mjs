@@ -1,6 +1,5 @@
 import { assert } from "@jsenv/assert";
-
-import { build } from "@jsenv/core";
+import { build } from "@jsenv/core/src/build/build.js"; // import build directly to avoid the dynamic improt
 
 const numberOfListenersAtStart = process.listeners("SIGINT").length;
 const countListeners = () => {

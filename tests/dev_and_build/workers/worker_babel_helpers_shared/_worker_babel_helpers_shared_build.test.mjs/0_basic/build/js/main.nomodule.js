@@ -24,8 +24,8 @@ System.register([__v__("/js/workspaces.nomodule.js")], function (_export, _conte
 
   var _objectSpread2, worker, workerResponse;
   return {
-    setters: [function (_workspacesJs) {
-      _objectSpread2 = _workspacesJs._objectSpread2;
+    setters: [function (_buildWorkspacesJs) {
+      _objectSpread2 = _buildWorkspacesJs._objectSpread2;
     }],
     execute: async function () {
       // this is causing an import to babel helper for object spread

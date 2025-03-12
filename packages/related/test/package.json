@@ -27,7 +27,10 @@
     "/dist/",
     "/src/"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./src/runtime_node/node_child_process_controlled.mjs",
+    "./src/runtime_node/node_worker_thread_controlled.mjs"
+  ],
   "scripts": {
     "build": "node --conditions=development ./scripts/build.mjs",
     "prepublishOnly": "npm run build"

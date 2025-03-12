@@ -4,11 +4,18 @@
 run()
 ```
 
-# 1/2 write 4 files into "./build/"
+# 1/3 logs
+
+```console
+Generated an empty chunk: "workspaces".
+Generated an empty chunk: "main".
+```
+
+# 2/3 write 3 files into "./build/"
 
 see [./build/](./build/)
 
-# 2/2 resolve
+# 3/3 resolve
 
 ```js
 undefined

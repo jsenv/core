@@ -48,7 +48,8 @@
     "./packages/related/cli/*"
   ],
   "sideEffects": [
-    "./src/kitchen/client/inline_content.js"
+    "./src/kitchen/client/inline_content.js",
+    "./tests/"
   ],
   "scripts": {
     "eslint": "npx eslint .",
