@@ -1,4 +1,4 @@
-import { build } from "@jsenv/core";
+import { build } from "@jsenv/core/src/build/build.js";
 import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
