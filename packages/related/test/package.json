@@ -27,6 +27,7 @@
     "/dist/",
     "/src/"
   ],
+  "sideEffects": false,
   "scripts": {
     "build": "node --conditions=development ./scripts/build.mjs",
     "prepublishOnly": "npm run build"

@@ -1,5 +1,6 @@
 import { lookupPackageDirectory } from "@jsenv/filesystem";
 import { createDetailedMessage } from "@jsenv/humanize";
+import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
 import { isFileSystemPath } from "@jsenv/urls";
@@ -469,23 +470,19 @@ const rollupPluginJsenv = ({
       } else {
         url = new URL(specifier, importer).href;
       }
-      let moduleSideEffects =
-        url.startsWith("node:") || url.startsWith("ignore:node:")
-          ? false
-          : null;
       if (!url.startsWith("file:")) {
-        return { id: url, external: true, moduleSideEffects };
+        return { id: url, external: true };
       }
       if (!importCanBeBundled(url)) {
-        return { id: url, external: true, moduleSideEffects };
+        return { id: url, external: true };
       }
       const urlInfo = graph.getUrlInfo(url);
       if (!urlInfo) {
         // happen when excluded by referenceAnalysis.include
-        return { id: url, external: true, moduleSideEffects };
+        return { id: url, external: true };
       }
       if (url.startsWith("ignore:")) {
-        return { id: url, external: true, moduleSideEffects };
+        return { id: url, external: true };
       }
       const filePath = fileUrlConverter.asFilePath(url);
       return filePath;
@@ -517,6 +514,17 @@ const applyRollupPlugins = async ({
   }
   const rollupReturnValue = await rollup({
     ...rollupInput,
+    treeshake: {
+      moduleSideEffects: (id) => {
+        if (id.startsWith("ignore:node:")) {
+          return false;
+        }
+        if (isSpecifierForNodeBuiltin(id)) {
+          return false;
+        }
+        return null;
+      },
+    },
     plugins: rollupPlugins,
   });
   const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);

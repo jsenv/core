@@ -27,5 +27,6 @@
   },
   "files": [
     "/src/"
-  ]
+  ],
+  "sideEffects": false
 }

@@ -33,6 +33,7 @@
     "/dist/",
     "/src/"
   ],
+  "sideEffects": false,
   "scripts": {
     "build": "node --experimental-import-meta-resolve ./scripts/build.mjs",
     "prepublishOnly": "npm run build"

@@ -20,6 +20,7 @@
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@jsenv/urls": "2.6.1",
     "@jsenv/js-module-fallback": "1.4.0",

@@ -29,6 +29,7 @@
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@jsenv/assert": "4.4.3",
     "@jsenv/ast": "6.6.0",

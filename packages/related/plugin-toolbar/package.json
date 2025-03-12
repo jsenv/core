@@ -25,6 +25,7 @@
     "/dist/",
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@jsenv/ast": "6.6.0"
   },

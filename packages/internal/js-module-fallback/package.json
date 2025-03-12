@@ -25,6 +25,7 @@
     "/src/",
     "/dist/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@babel/parser": "7.26.5",
     "@babel/plugin-transform-dynamic-import": "7.25.9",

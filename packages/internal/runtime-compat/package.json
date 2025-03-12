@@ -19,6 +19,7 @@
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@jsenv/utils": "2.2.0"
   }

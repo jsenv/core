@@ -31,6 +31,7 @@
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@jsenv/urls": "2.6.1",
     "@jsenv/server": "16.0.1",

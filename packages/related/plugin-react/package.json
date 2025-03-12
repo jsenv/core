@@ -20,6 +20,7 @@
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@babel/plugin-transform-react-jsx": "7.25.9",
     "@babel/plugin-transform-react-jsx-development": "7.25.9",

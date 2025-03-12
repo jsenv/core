@@ -19,6 +19,7 @@
   "files": [
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@babel/plugin-transform-json-strings": "7.25.9",
     "@babel/plugin-transform-numeric-separator": "7.25.9",

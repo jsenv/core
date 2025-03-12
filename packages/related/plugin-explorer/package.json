@@ -25,6 +25,7 @@
     "/dist/",
     "/src/"
   ],
+  "sideEffects": false,
   "dependencies": {
     "@jsenv/filesystem": "4.14.0"
   },

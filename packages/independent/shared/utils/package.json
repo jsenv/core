@@ -14,5 +14,5 @@
   "exports": {
     "./*": "./*"
   },
-  "dependencies": {}
+  "sideEffects": false
 }
