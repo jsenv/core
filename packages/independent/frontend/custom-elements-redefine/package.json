@@ -28,5 +28,6 @@
   "main": "./src/main.js",
   "files": [
     "/src/"
-  ]
+  ],
+  "sideEffects": false
 }
