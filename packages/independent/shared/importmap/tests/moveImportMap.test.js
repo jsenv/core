@@ -13,12 +13,12 @@ import { moveImportMap } from "@jsenv/importmap";
     "file:///project/test/dist/",
     "file:///project/test/",
   );
-  const expected = {
+  const expect = {
     imports: {
       "./dist/dir/foo.js": "./bar.js",
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // move down
@@ -33,12 +33,12 @@ import { moveImportMap } from "@jsenv/importmap";
     "file:///project/test/",
     "file:///project/test/dist/",
   );
-  const expected = {
+  const expect = {
     imports: {
       "./dir/foo.js": "../bar.js",
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // no move
@@ -53,8 +53,8 @@ import { moveImportMap } from "@jsenv/importmap";
     "file:///project/test/dist/",
     "file:///project/test/dist/",
   );
-  const expected = importMap;
-  assert({ actual, expected });
+  const expect = importMap;
+  assert({ actual, expect });
 }
 
 // with scopes
@@ -74,7 +74,7 @@ import { moveImportMap } from "@jsenv/importmap";
     "http://example.com/test/project.importmap",
     "http://example.com/project.importmap",
   );
-  const expected = {
+  const expect = {
     imports: {
       foo: "./test/bar.js",
     },
@@ -84,5 +84,5 @@ import { moveImportMap } from "@jsenv/importmap";
       },
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }

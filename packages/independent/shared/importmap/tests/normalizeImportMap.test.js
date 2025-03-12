@@ -19,7 +19,7 @@ const actual = normalizeImportMap(
   },
   "https://example.com/folder/file.js",
 );
-const expected = {
+const expect = {
   imports: {
     "http://domain.com/whatever.js": "https://example.com/folder/whatever.js",
     "https://example.com/index.js": "https://example.com/folder/main.js",
@@ -34,4 +34,4 @@ const expected = {
     },
   },
 };
-assert({ actual, expected });
+assert({ actual, expect });

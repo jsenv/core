@@ -26,8 +26,8 @@
         importer: "http://example.com/dir/index.js",
         importMap,
       });
-      const expected = "http://example.com/dir/file";
-      assert({ actual, expected });
+      const expect = "http://example.com/dir/file";
+      assert({ actual, expect });
 
       document.body.appendChild(document.createTextNode("passed"));
     </script>

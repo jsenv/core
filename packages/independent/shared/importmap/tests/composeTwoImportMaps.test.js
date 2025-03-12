@@ -18,14 +18,14 @@ import { composeTwoImportMaps, sortImportMap } from "@jsenv/importmap";
       },
     ),
   );
-  const expected = {
+  const expect = {
     imports: {
       foo: "foo-remap-2",
       a: "a-remap",
       b: "b-remap",
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 {
@@ -59,7 +59,7 @@ import { composeTwoImportMaps, sortImportMap } from "@jsenv/importmap";
       },
     ),
   );
-  const expected = {
+  const expect = {
     imports: {
       foo: "foo-remap-2",
       a: "a-remap",
@@ -75,7 +75,7 @@ import { composeTwoImportMaps, sortImportMap } from "@jsenv/importmap";
       "b": {},
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // resolve first top level import with second top level import
@@ -94,13 +94,13 @@ import { composeTwoImportMaps, sortImportMap } from "@jsenv/importmap";
       },
     ),
   );
-  const expected = {
+  const expect = {
     imports: {
       foo: "./b.js",
       a: "./b.js",
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
 
 // resolve in scopes too
@@ -123,7 +123,7 @@ import { composeTwoImportMaps, sortImportMap } from "@jsenv/importmap";
       },
     ),
   );
-  const expected = {
+  const expect = {
     scopes: {
       directory: {
         "./a.js": "./b.js",
@@ -131,5 +131,5 @@ import { composeTwoImportMaps, sortImportMap } from "@jsenv/importmap";
       },
     },
   };
-  assert({ actual, expected });
+  assert({ actual, expect });
 }
