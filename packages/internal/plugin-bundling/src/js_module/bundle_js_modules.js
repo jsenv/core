@@ -464,7 +464,7 @@ const rollupPluginJsenv = ({
         return {
           id: url,
           external: true,
-          moduleSideEffects: urlInfo.url.startsWith("ignored:node:")
+          moduleSideEffects: urlInfo.url.startsWith("ignore:node:")
             ? false
             : null,
         };
