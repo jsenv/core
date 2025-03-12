@@ -3,7 +3,7 @@ import { createDetailedMessage } from "@jsenv/humanize";
 import { isSpecifierForNodeBuiltin } from "@jsenv/node-esm-resolution/src/node_builtin_specifiers.js";
 import { sourcemapConverter } from "@jsenv/sourcemap";
 import { URL_META } from "@jsenv/url-meta";
-import { isFileSystemPath } from "@jsenv/urls";
+import { fileSystemPathToUrl, isFileSystemPath } from "@jsenv/urls";
 import { readFileSync } from "node:fs";
 import { fileUrlConverter } from "../file_url_converter.js";
 
@@ -512,6 +512,32 @@ const applyRollupPlugins = async ({
     const rollupModule = await import("rollup");
     rollup = rollupModule.rollup;
   }
+
+  const packageSideEffectsCacheMap = new Map();
+  const readClosestPackageJsonSideEffects = (url) => {
+    const packageDirectoryUrl = lookupPackageDirectory(url);
+    if (!packageDirectoryUrl) {
+      return undefined;
+    }
+    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
+    if (fromCache) {
+      return fromCache.value;
+    }
+    try {
+      const packageFileContent = readFileSync(
+        new URL("./package.json", packageDirectoryUrl),
+        "utf8",
+      );
+      const packageJSON = JSON.parse(packageFileContent);
+      const value = packageJSON.sideEffects;
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
+      return value;
+    } catch {
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
+      return undefined;
+    }
+  };
+
   const rollupReturnValue = await rollup({
     ...rollupInput,
     treeshake: {
@@ -522,6 +548,15 @@ const applyRollupPlugins = async ({
         }
         if (isSpecifierForNodeBuiltin(id)) {
           return false;
+        }
+        if (id.startsWith("ignore:")) {
+          return null;
+        }
+        const url = fileSystemPathToUrl(id);
+        const closestPackageJsonSideEffects =
+          readClosestPackageJsonSideEffects(url);
+        if (closestPackageJsonSideEffects !== undefined) {
+          return closestPackageJsonSideEffects;
         }
         const moduleSideEffects = rollupInput.treeshake?.moduleSideEffects;
         if (moduleSideEffects) {

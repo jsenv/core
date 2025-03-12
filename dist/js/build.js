@@ -2764,6 +2764,32 @@ const applyRollupPlugins = async ({
     const rollupModule = await import("rollup");
     rollup = rollupModule.rollup;
   }
+
+  const packageSideEffectsCacheMap = new Map();
+  const readClosestPackageJsonSideEffects = (url) => {
+    const packageDirectoryUrl = lookupPackageDirectory(url);
+    if (!packageDirectoryUrl) {
+      return undefined;
+    }
+    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
+    if (fromCache) {
+      return fromCache.value;
+    }
+    try {
+      const packageFileContent = readFileSync(
+        new URL("./package.json", packageDirectoryUrl),
+        "utf8",
+      );
+      const packageJSON = JSON.parse(packageFileContent);
+      const value = packageJSON.sideEffects;
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
+      return value;
+    } catch {
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
+      return undefined;
+    }
+  };
+
   const rollupReturnValue = await rollup({
     ...rollupInput,
     treeshake: {
@@ -2774,6 +2800,15 @@ const applyRollupPlugins = async ({
         }
         if (isSpecifierForNodeBuiltin(id)) {
           return false;
+        }
+        if (id.startsWith("ignore:")) {
+          return null;
+        }
+        const url = fileSystemPathToUrl(id);
+        const closestPackageJsonSideEffects =
+          readClosestPackageJsonSideEffects(url);
+        if (closestPackageJsonSideEffects !== undefined) {
+          return closestPackageJsonSideEffects;
         }
         const moduleSideEffects = rollupInput.treeshake?.moduleSideEffects;
         if (moduleSideEffects) {
