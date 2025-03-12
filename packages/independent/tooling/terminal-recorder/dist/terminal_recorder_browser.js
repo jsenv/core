@@ -106,7 +106,6 @@ const parseAnsi = (ansi) => {
     italic: false,
     underline: false,
     inverse: false,
-    hidden: false,
     strikethrough: false,
   };
   const decoratorEffects = {
@@ -601,10 +600,8 @@ const renderTerminalSvg = (
     size: fontSize,
     width: 8.4013671875,
     height: 14,
-    face: fontFace,
     family: fontFamily,
     lineHeight,
-    emHeightAscent: 10.5546875,
     emHeightDescent: 3.4453125,
   };
 

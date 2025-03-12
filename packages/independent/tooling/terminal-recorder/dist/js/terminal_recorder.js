@@ -1501,16 +1501,14 @@ const drawRectangle = (
   { x, y, width, height, radius, fill, stroke, strokeWidth },
 ) => {
   context.beginPath();
-  if (radius) {
+  {
     context.roundRect(x, y, width, height, [radius]);
-  } else {
-    context.rect(x, y, width, height);
   }
-  if (fill) {
+  {
     context.fillStyle = fill;
     context.fill();
   }
-  if (stroke) {
+  {
     context.strokeWidth = strokeWidth;
     context.strokeStyle = stroke;
     context.stroke();
