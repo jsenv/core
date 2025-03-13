@@ -149,8 +149,8 @@ export const bundleJsModules = async (
           }
           if (
             warning.code === "EMPTY_BUNDLE" &&
-            (warning.names.join("").endsWith("node_modules.js") ||
-              warning.names.join("").endsWith("packages.js"))
+            (warning.names.join("").endsWith("node_modules") ||
+              warning.names.join("").endsWith("packages"))
           ) {
             return;
           }

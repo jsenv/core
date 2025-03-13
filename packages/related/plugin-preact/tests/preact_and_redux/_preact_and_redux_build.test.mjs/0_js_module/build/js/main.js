@@ -1,4 +1,4 @@
-import { compose, createStore, combineReducers, E, u, Provider_default } from "/js/vendors.js";
+import { compose, createStore, combineReducers, E, u, Provider_default } from "/vendors.js";
 
 const counterReducer = (state = { value: 0 }, action) => {
   if (action.type === "INCREMENT") {

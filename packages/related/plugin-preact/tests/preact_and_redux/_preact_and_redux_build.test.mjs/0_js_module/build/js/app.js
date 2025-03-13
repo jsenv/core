@@ -1,4 +1,4 @@
-import { useSelector, useDispatch, y, u } from "/js/vendors.js";
+import { useSelector, useDispatch, y, u } from "/vendors.js";
 
 const increment = () => {
   return {

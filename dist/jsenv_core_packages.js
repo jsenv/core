@@ -5,7 +5,7 @@ import { parseJsUrls, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeA
 import { createMagicSource, composeTwoSourcemaps, sourcemapConverter } from "@jsenv/sourcemap";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
+import { convertJsModuleToJsClassic, systemJsClientFileUrlDefault } from "@jsenv/js-module-fallback";
 import process$1 from "node:process";
 import os from "node:os";
 import tty from "node:tty";
@@ -4447,6 +4447,7 @@ const clearDirectorySync = (
         visitDirectory(subDirectoryUrl);
         continue;
       }
+
       const meta = URL_META.applyAssociations({
         url: entryUrl,
         associations,
@@ -5171,6 +5172,10 @@ const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
  */
 
 
+const systemJsClientFileUrl = injectQueryParams(systemJsClientFileUrlDefault, {
+  as_js_classic: undefined,
+});
+
 const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
   const isReferencingJsModule = (reference) => {
     if (
@@ -5263,7 +5268,7 @@ const jsenvPluginJsModuleConversion = ({ remapImportSpecifier }) => {
         outputFormat = "system";
         urlInfo.type = "js_classic";
         urlInfo.dependencies.foundSideEffectFile({
-          sideEffectFileUrl: systemJsClientFileUrlDefault,
+          sideEffectFileUrl: systemJsClientFileUrl,
           expectedType: "js_classic",
           line: 0,
           column: 0,
