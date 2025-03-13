@@ -1,5 +1,5 @@
-import { IncomingForm } from "./vendors.js";
-export { DummyParser, PersistentFile as File, JSONParser, MultipartParser, OctetStreamParser, OctetStreamParser as OctetstreamParser, PersistentFile, QuerystringParser as QueryStringParser, QuerystringParser, VolatileFile, DEFAULT_OPTIONS as defaultOptions, plugin$3 as json, plugin$2 as multipart, plugin as octetstream, plugin$1 as querystring } from "./vendors.js";
+import { IncomingForm } from "./jsenv_server_node_modules.js";
+export { DummyParser, PersistentFile as File, JSONParser, MultipartParser, OctetStreamParser, OctetStreamParser as OctetstreamParser, PersistentFile, QuerystringParser as QueryStringParser, QuerystringParser, VolatileFile, DEFAULT_OPTIONS as defaultOptions, plugin$3 as json, plugin$2 as multipart, plugin as octetstream, plugin$1 as querystring } from "./jsenv_server_node_modules.js";
 import "node:os";
 import "node:path";
 import "node:fs/promises";
