@@ -10,21 +10,6 @@ export const jsenvPluginSubbuilds = (
   }
   return subBuildParamsArray.map((subBuildParams, index) => {
     const defaultChildBuildParams = {};
-    const subBuildDirectoryUrl = subBuildParams.buildDirectoryUrl;
-    if (subBuildDirectoryUrl) {
-      const subBuildRelativeUrl = urlToRelativeUrl(
-        subBuildDirectoryUrl,
-        parentBuildParams.buildDirectoryUrl,
-      );
-      const subbuildRuntimeCompat =
-        subBuildParams.runtimeCompat ||
-        defaultChildBuildParams.runtimeCompat ||
-        defaultRuntimeCompat;
-      const subbuildBase =
-        subBuildParams.base || getDefaultBase(subbuildRuntimeCompat);
-      defaultChildBuildParams.base = `${subbuildBase}${subBuildRelativeUrl}`;
-      onCustomBuildDirectory(subBuildRelativeUrl);
-    }
     const childBuildParams = {
       ...parentBuildParams,
       logs: {
@@ -34,6 +19,19 @@ export const jsenvPluginSubbuilds = (
       ...defaultChildBuildParams,
       ...subBuildParams,
     };
+    const subBuildDirectoryUrl = subBuildParams.buildDirectoryUrl;
+    if (subBuildDirectoryUrl) {
+      const subBuildRelativeUrl = urlToRelativeUrl(
+        subBuildDirectoryUrl,
+        parentBuildParams.buildDirectoryUrl,
+      );
+      const subbuildRuntimeCompat =
+        childBuildParams.runtimeCompat || defaultRuntimeCompat;
+      const subbuildBase =
+        subBuildParams.base || getDefaultBase(subbuildRuntimeCompat);
+      childBuildParams.base = `${subbuildBase}${subBuildRelativeUrl}`;
+      onCustomBuildDirectory(subBuildRelativeUrl);
+    }
     const buildPromise = buildStart(childBuildParams, index);
     const entryPointBuildUrlMap = new Map();
     const entryPointSourceUrlSet = new Set();

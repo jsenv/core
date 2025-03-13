@@ -16,7 +16,7 @@ import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/in
 import { URL_META } from "@jsenv/url-meta";
 import { urlIsInsideOf, urlToRelativeUrl } from "@jsenv/urls";
 import { existsSync, readFileSync } from "node:fs";
-import { defaultRuntimeCompat } from "../build/build.js";
+import { defaultRuntimeCompat } from "../build/build_params.js";
 import { createEventEmitter } from "../helpers/event_emitter.js";
 import { watchSourceFiles } from "../helpers/watch_source_files.js";
 import { WEB_URL_CONVERTER } from "../helpers/web_url_converter.js";

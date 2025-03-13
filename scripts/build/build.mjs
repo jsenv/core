@@ -3,11 +3,29 @@ import { jsenvPluginCommonJs } from "@jsenv/plugin-commonjs";
 import { jsenvPluginPreact } from "@jsenv/plugin-preact";
 
 await build({
-  sourceDirectoryUrl: new URL("../../src/", import.meta.url),
-  buildDirectoryUrl: new URL("../../dist/", import.meta.url),
+  sourceDirectoryUrl: import.meta.resolve("../../src/"),
+  buildDirectoryUrl: import.meta.resolve("../../dist/"),
   entryPoints: {
     "./main.js": "jsenv_core.js",
   },
+  subbuilds: [
+    {
+      buildDirectoryUrl: import.meta.resolve("../../dist/directory_listing/"),
+      entryPoints: {
+        "./plugins/protocol_file/client/directory_listing.html":
+          "directory_listing.html",
+      },
+      bundling: {
+        js_module: {
+          chunks: false,
+        },
+      },
+      plugins: [jsenvPluginPreact({})],
+      runtimeCompat: {
+        chrome: "80",
+      },
+    },
+  ],
   ignore: {
     "file://**/node_modules/": true,
     // selectively unignore some node_modules
@@ -35,7 +53,7 @@ await build({
   },
   directoryReferenceEffect: (reference) => {
     // @jsenv/core root dir
-    if (reference.url === new URL("../../", import.meta.url).href) {
+    if (reference.url === import.meta.resolve("../../")) {
       return "resolve";
     }
     if (reference.url.includes("/babel_helpers/")) {
@@ -64,8 +82,7 @@ await build({
         "file:///**/node_modules/rollup/dist/native.js": true,
       },
     }),
-    jsenvPluginPreact({}),
   ],
   // for debug
-  outDirectoryUrl: new URL("./.jsenv/", import.meta.url),
+  outDirectoryUrl: import.meta.resolve("./.jsenv/"),
 });

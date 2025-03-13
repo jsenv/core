@@ -1,15 +1,15 @@
 import { extname } from "node:path";
 import { readFileSync, existsSync, readdir, chmod, stat, lstat, chmodSync, statSync, lstatSync, promises, readdirSync, openSync, closeSync, unlinkSync, rmdirSync, mkdirSync, writeFileSync as writeFileSync$1, unlink, rmdir, watch, realpathSync } from "node:fs";
 import crypto, { createHash } from "node:crypto";
+import { parseJsUrls, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil } from "@jsenv/ast";
+import { createMagicSource, composeTwoSourcemaps, sourcemapConverter } from "@jsenv/sourcemap";
 import { pathToFileURL, fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
 import process$1 from "node:process";
 import os from "node:os";
 import tty from "node:tty";
 import stringWidth from "string-width";
-import { sourcemapConverter, createMagicSource, composeTwoSourcemaps } from "@jsenv/sourcemap";
-import { createRequire } from "node:module";
-import { parseJsUrls, parseHtml, visitHtmlNodes, analyzeScriptNode, getHtmlNodeAttribute, getHtmlNodeText, stringifyHtmlAst, setHtmlNodeAttributes, applyBabelPlugins, injectJsImport, visitJsAstUntil } from "@jsenv/ast";
-import { systemJsClientFileUrlDefault, convertJsModuleToJsClassic } from "@jsenv/js-module-fallback";
 
 /*
  * Link to things doing pattern matching:
@@ -4344,6 +4344,122 @@ const ensureEmptyDirectory = async (source) => {
   );
 };
 
+const clearDirectorySync = (
+  initialDirectoryUrl,
+  secondArg,
+  thirdArg,
+) => {
+  let removePatterns = {};
+  if (secondArg && typeof secondArg === "object") {
+    removePatterns = secondArg;
+  } else {
+    removePatterns = {};
+    let clearPatterns = secondArg || "**/*";
+    let keepPatterns = [];
+
+    if (typeof keepPatterns === "string") {
+      keepPatterns = [keepPatterns];
+    }
+    if (Array.isArray(keepPatterns)) {
+      for (const keepPattern of keepPatterns) {
+        Object.assign(removePatterns, {
+          [keepPattern]: false,
+        });
+      }
+    }
+    if (typeof clearPatterns === "string") {
+      clearPatterns = [clearPatterns];
+    }
+    if (Array.isArray(clearPatterns)) {
+      let someClearPatternHandleNodeModules = false;
+      for (const clearPattern of clearPatterns) {
+        Object.assign(removePatterns, {
+          [clearPatterns]: true,
+        });
+        if (
+          !someClearPatternHandleNodeModules &&
+          clearPattern.includes("node_modules")
+        ) {
+          someClearPatternHandleNodeModules = true;
+        }
+      }
+      Object.assign(removePatterns, {
+        "**/.*": false,
+        "**/.*/": false,
+      });
+      if (!someClearPatternHandleNodeModules) {
+        Object.assign(removePatterns, {
+          "**/node_modules/": false,
+        });
+      }
+    }
+  }
+
+  const associations = URL_META.resolveAssociations(
+    { remove: removePatterns },
+    initialDirectoryUrl,
+  );
+  const visitDirectory = (directoryUrl) => {
+    let entryNames;
+    try {
+      entryNames = readdirSync(new URL(directoryUrl));
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        return;
+      }
+      throw e;
+    }
+
+    for (const entryName of entryNames) {
+      const entryUrl = new URL(entryName, directoryUrl);
+      let entryStat;
+      try {
+        entryStat = readEntryStatSync(entryUrl);
+      } catch (e) {
+        if (e && e.code === "ENOENT") {
+          continue;
+        }
+        throw e;
+      }
+
+      if (entryStat.isDirectory()) {
+        const subDirectoryUrl = new URL(`${entryName}/`, directoryUrl);
+        const meta = URL_META.applyAssociations({
+          url: subDirectoryUrl,
+          associations,
+        });
+        if (meta.remove) {
+          removeEntrySync(subDirectoryUrl, {
+            recursive: true,
+            allowUseless: true,
+          });
+          continue;
+        }
+        if (
+          !URL_META.urlChildMayMatch({
+            url: subDirectoryUrl,
+            associations,
+            predicate: ({ remove }) => remove,
+          })
+        ) {
+          continue;
+        }
+        visitDirectory(subDirectoryUrl);
+        continue;
+      }
+      const meta = URL_META.applyAssociations({
+        url: entryUrl,
+        associations,
+      });
+      if (meta.remove) {
+        removeEntrySync(entryUrl, { allowUseless: true });
+        continue;
+      }
+    }
+  };
+  visitDirectory(initialDirectoryUrl);
+};
+
 const callOnceIdlePerFile = (callback, idleMs) => {
   const timeoutIdMap = new Map();
   return (fileEvent) => {
@@ -4882,942 +4998,122 @@ const bufferToEtag = (buffer) => {
   return `"${length.toString(16)}-${hashBase64StringSubset}"`;
 };
 
-const isSpecifierForNodeBuiltin = (specifier) => {
-  return (
-    specifier.startsWith("node:") ||
-    NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
-  );
+const isSupportedAlgorithm = (algo) => {
+  return SUPPORTED_ALGORITHMS.includes(algo);
 };
 
-const NODE_BUILTIN_MODULE_SPECIFIERS = [
-  "assert",
-  "assert/strict",
-  "async_hooks",
-  "buffer_ieee754",
-  "buffer",
-  "child_process",
-  "cluster",
-  "console",
-  "constants",
-  "crypto",
-  "_debugger",
-  "dgram",
-  "dns",
-  "domain",
-  "events",
-  "freelist",
-  "fs",
-  "fsevents",
-  "fs/promises",
-  "_http_agent",
-  "_http_client",
-  "_http_common",
-  "_http_incoming",
-  "_http_outgoing",
-  "_http_server",
-  "http",
-  "http2",
-  "https",
-  "inspector",
-  "_linklist",
-  "module",
-  "net",
-  "node-inspect/lib/_inspect",
-  "node-inspect/lib/internal/inspect_client",
-  "node-inspect/lib/internal/inspect_repl",
-  "os",
-  "path",
-  "perf_hooks",
-  "process",
-  "punycode",
-  "querystring",
-  "readline",
-  "repl",
-  "smalloc",
-  "_stream_duplex",
-  "_stream_transform",
-  "_stream_wrap",
-  "_stream_passthrough",
-  "_stream_readable",
-  "_stream_writable",
-  "stream",
-  "stream/promises",
-  "string_decoder",
-  "sys",
-  "timers",
-  "_tls_common",
-  "_tls_legacy",
-  "_tls_wrap",
-  "tls",
-  "trace_events",
-  "tty",
-  "url",
-  "util",
-  "v8/tools/arguments",
-  "v8/tools/codemap",
-  "v8/tools/consarray",
-  "v8/tools/csvparser",
-  "v8/tools/logreader",
-  "v8/tools/profile_view",
-  "v8/tools/splaytree",
-  "v8",
-  "vm",
-  "worker_threads",
-  "zlib",
-  // global is special
-  "global",
-];
-
-const fileUrlConverter = {
-  asFilePath: (fileUrl) => {
-    const filePath = urlToFileSystemPath(fileUrl);
-    const urlObject = new URL(fileUrl);
-    const { searchParams } = urlObject;
-    return `${filePath}${stringifyQuery(searchParams)}`;
-  },
-  asFileUrl: (filePath) => {
-    return decodeURIComponent(fileSystemPathToUrl(filePath)).replace(
-      /[=](?=&|$)/g,
-      "",
-    );
-  },
+// https://www.w3.org/TR/SRI/#priority
+const getPrioritizedHashFunction = (firstAlgo, secondAlgo) => {
+  const firstIndex = SUPPORTED_ALGORITHMS.indexOf(firstAlgo);
+  const secondIndex = SUPPORTED_ALGORITHMS.indexOf(secondAlgo);
+  if (firstIndex === secondIndex) {
+    return "";
+  }
+  if (firstIndex < secondIndex) {
+    return secondAlgo;
+  }
+  return firstAlgo;
 };
 
-const stringifyQuery = (searchParams) => {
-  const search = searchParams.toString();
-  return search ? `?${search}` : "";
+const applyAlgoToRepresentationData = (algo, data) => {
+  const base64Value = crypto.createHash(algo).update(data).digest("base64");
+  return base64Value;
 };
 
-const bundleJsModules = async (
-  jsModuleUrlInfos,
-  {
-    buildDirectoryUrl,
-    include,
-    chunks = {},
-    strictExports = false,
-    preserveDynamicImport = false,
-    augmentDynamicImportUrlSearchParams = () => {},
-    rollup,
-    rollupInput = {},
-    rollupOutput = {},
-    rollupPlugins = [],
-  },
+// keep this ordered by collision resistance as it is also used by "getPrioritizedHashFunction"
+const SUPPORTED_ALGORITHMS = ["sha256", "sha384", "sha512"];
+
+// see https://w3c.github.io/webappsec-subresource-integrity/#parse-metadata
+const parseIntegrity = (string) => {
+  const integrityMetadata = {};
+  string
+    .trim()
+    .split(/\s+/)
+    .forEach((token) => {
+      const { isValid, algo, base64Value, optionExpression } =
+        parseAsHashWithOptions(token);
+      if (!isValid) {
+        return;
+      }
+      if (!isSupportedAlgorithm(algo)) {
+        return;
+      }
+      const metadataList = integrityMetadata[algo];
+      const metadata = { base64Value, optionExpression };
+      integrityMetadata[algo] = metadataList
+        ? [...metadataList, metadata]
+        : [metadata];
+    });
+  return integrityMetadata;
+};
+
+// see https://w3c.github.io/webappsec-subresource-integrity/#the-integrity-attribute
+const parseAsHashWithOptions = (token) => {
+  const dashIndex = token.indexOf("-");
+  if (dashIndex === -1) {
+    return { isValid: false };
+  }
+  const beforeDash = token.slice(0, dashIndex);
+  const afterDash = token.slice(dashIndex + 1);
+  const questionIndex = afterDash.indexOf("?");
+  const algo = beforeDash;
+  if (questionIndex === -1) {
+    const base64Value = afterDash;
+    const isValid = BASE64_REGEX.test(afterDash);
+    return { isValid, algo, base64Value };
+  }
+  const base64Value = afterDash.slice(0, questionIndex);
+  const optionExpression = afterDash.slice(questionIndex + 1);
+  const isValid =
+    BASE64_REGEX.test(afterDash) && VCHAR_REGEX.test(optionExpression);
+  return { isValid, algo, base64Value, optionExpression };
+};
+
+const BASE64_REGEX = /^[A-Za-z0-9+/=]+$/;
+const VCHAR_REGEX = /^[\x21-\x7E]+$/;
+
+// https://www.w3.org/TR/SRI/#does-response-match-metadatalist
+const validateResponseIntegrity = (
+  { url, type, dataRepresentation },
+  integrity,
 ) => {
-  const {
-    signal,
-    logger,
-    rootDirectoryUrl,
-    runtimeCompat,
-    sourcemaps,
-    isSupportedOnCurrentClients,
-    getPluginMeta,
-  } = jsModuleUrlInfos[0].context;
-  const graph = jsModuleUrlInfos[0].graph;
-  if (buildDirectoryUrl === undefined) {
-    buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
+  if (!isResponseEligibleForIntegrityValidation({ type })) {
+    return false;
   }
-
-  let manualChunks;
-  if (chunks) {
-    let workspaces;
-    let packageName;
-    const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
-    if (packageDirectoryUrl) {
-      const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
-      if (packageJSON) {
-        packageName = packageJSON.name;
-        workspaces = packageJSON.workspaces;
-      }
-    }
-    let nodeModuleChunkName = "node_modules";
-    let packagesChunkName = "packages";
-
-    if (packageName) {
-      let packageNameAsFilename = packageName
-        .replaceAll("@", "")
-        .replaceAll("-", "_")
-        .replaceAll("/", "_");
-      nodeModuleChunkName = `${packageNameAsFilename}_node_modules`;
-      packagesChunkName = `${packageNameAsFilename}_packages`;
-    }
-    chunks[nodeModuleChunkName] = {
-      "file:///**/node_modules/": true,
-      ...chunks.vendors,
-    };
-    if (workspaces) {
-      const workspacePatterns = {};
-      for (const workspace of workspaces) {
-        const workspacePattern = new URL(
-          workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
-          packageDirectoryUrl,
-        ).href;
-        workspacePatterns[workspacePattern] = true;
-      }
-      chunks[packagesChunkName] = {
-        ...workspacePatterns,
-        ...chunks.workspaces,
-      };
-    }
-
-    const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
-    manualChunks = (id, manualChunksApi) => {
-      if (rollupOutput.manualChunks) {
-        const manualChunkName = rollupOutput.manualChunks(id, manualChunksApi);
-        if (manualChunkName) {
-          return manualChunkName;
-        }
-      }
-      const moduleInfo = manualChunksApi.getModuleInfo(id);
-      if (moduleInfo.isEntry || moduleInfo.dynamicImporters.length) {
-        return null;
-      }
-      const url = fileUrlConverter.asFileUrl(id);
-      const urlObject = new URL(url);
-      urlObject.search = "";
-      const urlWithoutSearch = urlObject.href;
-      const meta = URL_META.applyAssociations({
-        url: urlWithoutSearch,
-        associations,
-      });
-      for (const chunkNameCandidate of Object.keys(meta)) {
-        if (meta[chunkNameCandidate]) {
-          return chunkNameCandidate;
-        }
-      }
-      return undefined;
-    };
+  const integrityMetadata = parseIntegrity(integrity);
+  const algos = Object.keys(integrityMetadata);
+  if (algos.length === 0) {
+    return true;
   }
-
-  const resultRef = { current: null };
-  const willMinifyJsModule = Boolean(getPluginMeta("willMinifyJsModule"));
-  try {
-    await applyRollupPlugins({
-      rollup,
-      rollupPlugins: [
-        ...rollupPlugins,
-        rollupPluginJsenv({
-          signal,
-          logger,
-          rootDirectoryUrl,
-          buildDirectoryUrl,
-          graph,
-          jsModuleUrlInfos,
-
-          runtimeCompat,
-          sourcemaps,
-          include,
-          preserveDynamicImport,
-          augmentDynamicImportUrlSearchParams,
-          strictExports,
-          resultRef,
-        }),
-      ],
-      rollupInput: {
-        input: [],
-        onwarn: (warning) => {
-          if (warning.code === "CIRCULAR_DEPENDENCY") {
-            return;
-          }
-          if (warning.code === "EVAL") {
-            // ideally we should disable only for jsenv files
-            return;
-          }
-          if (
-            warning.code === "INVALID_ANNOTATION" &&
-            warning.loc.file.includes("/node_modules/")
-          ) {
-            return;
-          }
-          if (
-            warning.code === "EMPTY_BUNDLE" &&
-            warning.names.join("") === "vendors"
-          ) {
-            return;
-          }
-          logger.warn(String(warning));
-        },
-        ...rollupInput,
-      },
-      rollupOutput: {
-        compact: willMinifyJsModule,
-        minifyInternalExports: willMinifyJsModule,
-        generatedCode: {
-          arrowFunctions: isSupportedOnCurrentClients("arrow_function"),
-          constBindings: isSupportedOnCurrentClients("const_bindings"),
-          objectShorthand: isSupportedOnCurrentClients(
-            "object_properties_shorthand",
-          ),
-          reservedNamesAsProps: isSupportedOnCurrentClients("reserved_words"),
-          symbols: isSupportedOnCurrentClients("symbols"),
-        },
-        ...rollupOutput,
-        manualChunks,
-      },
-    });
-    return resultRef.current.jsModuleBundleUrlInfos;
-  } catch (e) {
-    if (e.code === "MISSING_EXPORT") {
-      const detailedMessage = createDetailedMessage$1(e.message, {
-        frame: e.frame,
-      });
-      throw new Error(detailedMessage, { cause: e });
-    }
-    throw e;
-  }
-};
-
-const rollupPluginJsenv = ({
-  // logger,
-  rootDirectoryUrl,
-  buildDirectoryUrl,
-  graph,
-  jsModuleUrlInfos,
-  sourcemaps,
-
-  include,
-  preserveDynamicImport,
-  augmentDynamicImportUrlSearchParams,
-  strictExports,
-
-  resultRef,
-}) => {
-  let _rollupEmitFile = () => {
-    throw new Error("not implemented");
-  };
-  const format = jsModuleUrlInfos.some((jsModuleUrlInfo) =>
-    jsModuleUrlInfo.filenameHint.endsWith(".cjs"),
-  )
-    ? "cjs"
-    : "esm";
-  const emitChunk = (chunk) => {
-    return _rollupEmitFile({
-      type: "chunk",
-      ...chunk,
-    });
-  };
-  let importCanBeBundled = () => true;
-  if (include) {
-    const associations = URL_META.resolveAssociations(
-      { bundle: include },
-      rootDirectoryUrl,
-    );
-    importCanBeBundled = (url) => {
-      return URL_META.applyAssociations({ url, associations }).bundle;
-    };
-  }
-
-  const getOriginalUrl = (rollupFileInfo) => {
-    if (rollupFileInfo.isEntry) {
-      const { facadeModuleId } = rollupFileInfo;
-      if (facadeModuleId) {
-        return fileUrlConverter.asFileUrl(facadeModuleId);
-      }
-    }
-    if (rollupFileInfo.isDynamicEntry) {
-      const { moduleIds } = rollupFileInfo;
-      const lastModuleId = moduleIds[moduleIds.length - 1];
-      return fileUrlConverter.asFileUrl(lastModuleId);
-    }
-    return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
-  };
-
-  return {
-    name: "jsenv",
-    async buildStart() {
-      _rollupEmitFile = (...args) => this.emitFile(...args);
-      let previousNonEntryPointModuleId;
-      for (const jsModuleUrlInfo of jsModuleUrlInfos) {
-        const id = jsModuleUrlInfo.url;
-        if (jsModuleUrlInfo.isEntryPoint) {
-          emitChunk({
-            id,
-          });
-          continue;
-        }
-        let preserveSignature;
-        if (strictExports) {
-          preserveSignature = "strict";
-        } else {
-          // When referenced only once we can enable allow-extension
-          // otherwise stick to strict exports to ensure all importers
-          // receive the correct exports
-          let firstStrongRef = null;
-          let hasMoreThanOneStrongRefFromOther = false;
-          for (const referenceFromOther of jsModuleUrlInfo.referenceFromOthersSet) {
-            if (referenceFromOther.isWeak) {
-              continue;
-            }
-            if (firstStrongRef) {
-              hasMoreThanOneStrongRefFromOther = true;
-              break;
-            }
-            firstStrongRef = referenceFromOther;
-          }
-          preserveSignature = hasMoreThanOneStrongRefFromOther
-            ? "strict"
-            : "allow-extension";
-        }
-        emitChunk({
-          id,
-          implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId
-            ? [previousNonEntryPointModuleId]
-            : null,
-          preserveSignature,
-        });
-        if (jsModuleUrlInfo.originalUrl.startsWith("file:")) {
-          previousNonEntryPointModuleId = id;
-        }
-      }
-    },
-    async generateBundle(outputOptions, rollupResult) {
-      _rollupEmitFile = (...args) => this.emitFile(...args);
-
-      const createBundledFileInfo = (rollupFileInfo) => {
-        const originalUrl = getOriginalUrl(rollupFileInfo);
-        const sourceUrls = Object.keys(rollupFileInfo.modules).map((id) =>
-          fileUrlConverter.asFileUrl(id),
-        );
-
-        const specifierToUrlMap = new Map();
-        const { imports, dynamicImports } = rollupFileInfo;
-        for (const importFileName of imports) {
-          if (!importFileName.startsWith("file:")) {
-            const importRollupFileInfo = rollupResult[importFileName];
-            if (!importRollupFileInfo) {
-              // happens for external import, like "ignore:" or anything marked as external
-              specifierToUrlMap.set(importFileName, importFileName);
-              continue;
-            }
-            const importUrl = getOriginalUrl(importRollupFileInfo);
-            const rollupSpecifier = `./${importRollupFileInfo.fileName}`;
-            specifierToUrlMap.set(rollupSpecifier, importUrl);
-          }
-        }
-        for (const dynamicImportFileName of dynamicImports) {
-          if (!dynamicImportFileName.startsWith("file:")) {
-            const dynamicImportRollupFileInfo =
-              rollupResult[dynamicImportFileName];
-            if (!dynamicImportRollupFileInfo) {
-              // happens for external import, like "ignore:" or anything marked as external
-              specifierToUrlMap.set(
-                dynamicImportFileName,
-                dynamicImportFileName,
-              );
-              continue;
-            }
-            const dynamicImportUrl = getOriginalUrl(
-              dynamicImportRollupFileInfo,
-            );
-            const rollupSpecifier = `./${dynamicImportRollupFileInfo.fileName}`;
-            specifierToUrlMap.set(rollupSpecifier, dynamicImportUrl);
-          }
-        }
-
-        const generatedToShareCode =
-          !rollupFileInfo.isEntry &&
-          !rollupFileInfo.isDynamicEntry &&
-          !rollupFileInfo.isImplicitEntry;
-
-        return {
-          originalUrl,
-          type: format === "esm" ? "js_module" : "common_js",
-          data: {
-            bundlerName: "rollup",
-            bundleRelativeUrl: rollupFileInfo.fileName,
-            usesImport:
-              rollupFileInfo.imports.length > 0 ||
-              rollupFileInfo.dynamicImports.length > 0,
-            isDynamicEntry: rollupFileInfo.isDynamicEntry,
-            generatedToShareCode,
-          },
-          sourceUrls,
-          contentType: "text/javascript",
-          content: rollupFileInfo.code,
-          sourcemap: rollupFileInfo.map,
-          // rollup is generating things like "./file.js"
-          // that must be converted back to urls for jsenv
-          remapReference:
-            specifierToUrlMap.size > 0
-              ? (reference) => {
-                  if (
-                    preserveDynamicImport &&
-                    reference.subtype === "dynamic_import"
-                  ) {
-                    // when dynamic import are preserved, no need to remap them
-                    return reference.specifier;
-                  }
-                  if (
-                    reference.type !== "js_import" ||
-                    reference.subtype === "import_meta_resolve"
-                  ) {
-                    // rollup generate specifiers only for static and dynamic imports
-                    // other references (like new URL()) are ignored
-                    // there is no need to remap them back
-                    return reference.specifier;
-                  }
-                  const specifierBeforeRollup = specifierToUrlMap.get(
-                    reference.specifier,
-                  );
-                  if (!specifierBeforeRollup) {
-                    console.warn(
-                      `cannot remap "${reference.specifier}" back to specifier before rollup, this is unexpected.`,
-                    );
-                    return reference.specifier;
-                  }
-                  return specifierBeforeRollup;
-                }
-              : undefined,
-        };
-      };
-
-      const jsModuleBundleUrlInfos = {};
-      const fileNames = Object.keys(rollupResult);
-      const originalUrlSet = new Set();
-      for (const fileName of fileNames) {
-        const rollupFileInfo = rollupResult[fileName];
-        // there is 3 types of file: "placeholder", "asset", "chunk"
-        if (rollupFileInfo.type === "chunk") {
-          const jsModuleInfo = createBundledFileInfo(rollupFileInfo);
-          const originalUrl = jsModuleInfo.originalUrl;
-          if (originalUrlSet.has(originalUrl)) {
-            throw new Error(
-              `duplicate bundle info, cannot override ${originalUrl}`,
-            );
-          }
-          originalUrlSet.add(originalUrl);
-          jsModuleBundleUrlInfos[jsModuleInfo.originalUrl] = jsModuleInfo;
-        }
-      }
-
-      resultRef.current = {
-        jsModuleBundleUrlInfos,
-      };
-    },
-    outputOptions: (outputOptions) => {
-      // const sourcemapFile = buildDirectoryUrl
-      Object.assign(outputOptions, {
-        format,
-        dir: fileUrlConverter.asFilePath(rootDirectoryUrl),
-        sourcemap: sourcemaps === "file" || sourcemaps === "inline",
-        // sourcemapFile,
-        sourcemapPathTransform: (relativePath) => {
-          return new URL(relativePath, rootDirectoryUrl).href;
-        },
-        entryFileNames: () => {
-          return `[name].js`;
-        },
-        chunkFileNames: (chunkInfo) => {
-          if (chunkInfo.isEntry) {
-            const originalFileUrl = getOriginalUrl(chunkInfo);
-            const jsModuleUrlInfo = jsModuleUrlInfos.find(
-              (candidate) => candidate.url === originalFileUrl,
-            );
-            if (jsModuleUrlInfo && jsModuleUrlInfo.filenameHint) {
-              return jsModuleUrlInfo.filenameHint;
-            }
-          }
-          return `${chunkInfo.name}.js`;
-        },
-      });
-    },
-    // https://rollupjs.org/guide/en/#resolvedynamicimport
-    resolveDynamicImport: (specifier, importer) => {
-      if (!preserveDynamicImport) {
-        return null;
-      }
-      let urlObject;
-      if (specifier[0] === "/") {
-        urlObject = new URL(specifier.slice(1), rootDirectoryUrl);
-      } else {
-        if (isFileSystemPath(importer)) {
-          importer = fileUrlConverter.asFileUrl(importer);
-        }
-        urlObject = new URL(specifier, importer);
-      }
-      const searchParamsToAdd = augmentDynamicImportUrlSearchParams(urlObject);
-      if (searchParamsToAdd) {
-        Object.keys(searchParamsToAdd).forEach((key) => {
-          const value = searchParamsToAdd[key];
-          if (value === undefined) {
-            urlObject.searchParams.delete(key);
-          } else {
-            urlObject.searchParams.set(key, value);
-          }
-        });
-      }
-      return { external: true, id: urlObject.href };
-    },
-    resolveId: (specifier, importer = rootDirectoryUrl) => {
-      if (isFileSystemPath(importer)) {
-        importer = fileUrlConverter.asFileUrl(importer);
-      }
-      let url;
-      if (specifier[0] === "/") {
-        url = new URL(specifier.slice(1), rootDirectoryUrl).href;
-      } else {
-        url = new URL(specifier, importer).href;
-      }
-      if (!url.startsWith("file:")) {
-        return { id: url, external: true };
-      }
-      if (!importCanBeBundled(url)) {
-        return { id: url, external: true };
-      }
-      const urlInfo = graph.getUrlInfo(url);
-      if (!urlInfo) {
-        // happen when excluded by referenceAnalysis.include
-        return { id: url, external: true };
-      }
-      if (url.startsWith("ignore:")) {
-        return { id: url, external: true };
-      }
-      const filePath = fileUrlConverter.asFilePath(url);
-      return filePath;
-    },
-    async load(rollupId) {
-      const fileUrl = fileUrlConverter.asFileUrl(rollupId);
-      const urlInfo = graph.getUrlInfo(fileUrl);
-      return {
-        code: urlInfo.content,
-        map:
-          (sourcemaps === "file" || sourcemaps === "inline") &&
-          urlInfo.sourcemap
-            ? sourcemapConverter.toFilePaths(urlInfo.sourcemap)
-            : null,
-      };
-    },
-  };
-};
-
-const applyRollupPlugins = async ({
-  rollup,
-  rollupPlugins,
-  rollupInput,
-  rollupOutput,
-}) => {
-  if (!rollup) {
-    const rollupModule = await import("rollup");
-    rollup = rollupModule.rollup;
-  }
-
-  const packageSideEffectsCacheMap = new Map();
-  const readClosestPackageJsonSideEffects = (url) => {
-    const packageDirectoryUrl = lookupPackageDirectory(url);
-    if (!packageDirectoryUrl) {
-      return undefined;
-    }
-    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
-    if (fromCache) {
-      return fromCache.value;
-    }
-    try {
-      const packageFileContent = readFileSync(
-        new URL("./package.json", packageDirectoryUrl),
-        "utf8",
-      );
-      const packageJSON = JSON.parse(packageFileContent);
-      const value = packageJSON.sideEffects;
-      if (Array.isArray(value)) {
-        const sideEffectPatterns = {};
-        for (const v of value) {
-          sideEffectPatterns[v] = true;
-        }
-        const associations = URL_META.resolveAssociations(
-          { sideEffects: sideEffectPatterns },
-          packageDirectoryUrl,
-        );
-        const isMatching = (url) => {
-          const meta = URL_META.applyAssociations({ url, associations });
-          return meta.sideEffects || false;
-        };
-        packageSideEffectsCacheMap.set(packageDirectoryUrl, {
-          value: isMatching,
-        });
-      } else {
-        packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
-      }
-      return value;
-    } catch {
-      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
-      return undefined;
-    }
-  };
-
-  const rollupReturnValue = await rollup({
-    ...rollupInput,
-    treeshake: {
-      ...rollupInput.treeshake,
-      moduleSideEffects: (id, external) => {
-        if (id.startsWith("ignore:node:")) {
-          return false;
-        }
-        if (isSpecifierForNodeBuiltin(id)) {
-          return false;
-        }
-        if (id.startsWith("ignore:")) {
-          return null;
-        }
-        const url = id.startsWith("file:") ? id : fileSystemPathToUrl(id);
-        const closestPackageJsonSideEffects =
-          readClosestPackageJsonSideEffects(url);
-        if (closestPackageJsonSideEffects !== undefined) {
-          if (typeof closestPackageJsonSideEffects === "function") {
-            return closestPackageJsonSideEffects(url);
-          }
-          return closestPackageJsonSideEffects;
-        }
-        const moduleSideEffects = rollupInput.treeshake?.moduleSideEffects;
-        if (moduleSideEffects) {
-          if (typeof moduleSideEffects === "function") {
-            return moduleSideEffects(id, external);
-          }
-          return moduleSideEffects;
-        }
-        return null;
-      },
-    },
-    plugins: rollupPlugins,
+  let strongestAlgo = algos[0];
+  algos.slice(1).forEach((algoCandidate) => {
+    strongestAlgo =
+      getPrioritizedHashFunction(strongestAlgo, algoCandidate) || strongestAlgo;
   });
-  const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);
-  return rollupOutputArray;
-};
-
-// Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
-const bundleCss = async (cssUrlInfos) => {
-  const bundledCssUrlInfos = {};
-  const { bundleAsync } = await import("lightningcss");
-  const targets = runtimeCompatToTargets$2(cssUrlInfos[0].context.runtimeCompat);
-  for (const cssUrlInfo of cssUrlInfos) {
-    const filename = fileUrlConverter.asFilePath(cssUrlInfo.originalUrl);
-    const { code, map } = await bundleAsync({
-      filename,
-      targets,
-      minify: false,
-      resolver: {
-        read: (specifier) => {
-          const fileUrlObject = fileUrlConverter.asFileUrl(specifier);
-          const fileUrl = String(fileUrlObject);
-          const urlInfo = cssUrlInfo.graph.getUrlInfo(fileUrl);
-          return urlInfo.content;
-        },
-        resolve(specifier, from) {
-          const fileUrlObject = new URL(specifier, pathToFileURL(from));
-          const filePath = urlToFileSystemPath(fileUrlObject);
-          return filePath;
-        },
-      },
-    });
-    bundledCssUrlInfos[cssUrlInfo.url] = {
-      data: {
-        bundlerName: "lightningcss",
-      },
-      contentType: "text/css",
-      content: String(code),
-      sourcemap: map,
-    };
-  }
-  return bundledCssUrlInfos;
-};
-
-const runtimeCompatToTargets$2 = (runtimeCompat) => {
-  const targets = {};
-  ["chrome", "firefox", "ie", "opera", "safari"].forEach((runtimeName) => {
-    const version = runtimeCompat[runtimeName];
-    if (version) {
-      targets[runtimeName] = versionToBits$2(version);
-    }
-  });
-  return targets;
-};
-
-const versionToBits$2 = (version) => {
-  const [major, minor = 0, patch = 0] = version
-    .split("-")[0]
-    .split(".")
-    .map((v) => parseInt(v, 10));
-  return (major << 16) | (minor << 8) | patch;
-};
-
-const jsenvPluginBundling = ({
-  css = {},
-  js_classic = {},
-  js_module = {},
-} = {}) => {
-  const bundle = {};
-
-  if (css) {
-    bundle.css = (cssUrlInfos) => {
-      return bundleCss(cssUrlInfos);
-    };
-  }
-  if (js_module) {
-    if (js_module === true) {
-      js_module = {};
-    }
-    bundle.js_module = (jsModuleUrlInfos) => {
-      return bundleJsModules(jsModuleUrlInfos, js_module);
-    };
-  }
-
-  return {
-    name: "jsenv:bundling",
-    appliesDuring: "build",
-    bundle,
-  };
-};
-
-const minifyCss = async (cssUrlInfo) => {
-  const { transform } = await import("lightningcss");
-
-  const targets = runtimeCompatToTargets$1(cssUrlInfo.context.runtimeCompat);
-  const { code, map } = transform({
-    filename: urlToFileSystemPath(cssUrlInfo.originalUrl),
-    code: Buffer.from(cssUrlInfo.content),
-    targets,
-    minify: true,
-  });
-  return {
-    content: String(code),
-    sourcemap: map,
-  };
-};
-
-const runtimeCompatToTargets$1 = (runtimeCompat) => {
-  const targets = {};
-  ["chrome", "firefox", "ie", "opera", "safari"].forEach((runtimeName) => {
-    const version = runtimeCompat[runtimeName];
-    if (version) {
-      targets[runtimeName] = versionToBits$1(version);
-    }
-  });
-  return targets;
-};
-
-const versionToBits$1 = (version) => {
-  const [major, minor = 0, patch = 0] = version
-    .split("-")[0]
-    .split(".")
-    .map((v) => parseInt(v, 10));
-  return (major << 16) | (minor << 8) | patch;
-};
-
-// https://github.com/kangax/html-minifier#options-quick-reference
-const minifyHtml = (htmlUrlInfo, options = {}) => {
-  const require = createRequire(import.meta.url);
-  const { minify } = require("html-minifier");
-
-  const {
-    // usually HTML will contain a few markup, it's better to keep white spaces
-    // and line breaks to favor readability. A few white spaces means very few
-    // octets that won't impact performances. Removing whitespaces however will certainly
-    // decrease HTML readability
-    collapseWhitespace = false,
-    // saving a fewline breaks won't hurt performances
-    // but will help a lot readability
-    preserveLineBreaks = true,
-    removeComments = true,
-    conservativeCollapse = false,
-  } = options;
-
-  const htmlMinified = minify(htmlUrlInfo.content, {
-    collapseWhitespace,
-    conservativeCollapse,
-    removeComments,
-    preserveLineBreaks,
-  });
-  return htmlMinified;
-};
-
-// https://github.com/terser-js/terser#minify-options
-
-const minifyJs = async (jsUrlInfo, options) => {
-  const url = jsUrlInfo.url;
-  const content = jsUrlInfo.content;
-  const sourcemap = jsUrlInfo.sourcemap;
-  const isJsModule = jsUrlInfo.type === "js_module";
-
-  const { minify } = await import("terser");
-  const terserResult = await minify(
-    {
-      [url]: content,
-    },
-    {
-      sourceMap: {
-        ...(sourcemap ? { content: JSON.stringify(sourcemap) } : {}),
-        asObject: true,
-        includeSources: true,
-      },
-      module: isJsModule,
-      // We need to preserve "new __InlineContent__()" calls to be able to recognize them
-      // after minification in order to version urls inside inline content text
-      keep_fnames: /__InlineContent__/,
-      ...options,
-    },
+  const metadataList = integrityMetadata[strongestAlgo];
+  const actualBase64Value = applyAlgoToRepresentationData(
+    strongestAlgo,
+    dataRepresentation,
   );
-  return {
-    content: terserResult.code,
-    sourcemap: terserResult.map,
-  };
-};
-
-const minifyJson = (jsonUrlInfo) => {
-  const { content } = jsonUrlInfo;
-  if (content.startsWith("{\n")) {
-    const jsonWithoutWhitespaces = JSON.stringify(JSON.parse(content));
-    return jsonWithoutWhitespaces;
+  const acceptedBase64Values = metadataList.map(
+    (metadata) => metadata.base64Value,
+  );
+  const someIsMatching = acceptedBase64Values.includes(actualBase64Value);
+  if (someIsMatching) {
+    return true;
   }
-  return null;
+  const error = new Error(
+    `Integrity validation failed for resource "${url}". The integrity found for this resource is "${strongestAlgo}-${actualBase64Value}"`,
+  );
+  error.code = "EINTEGRITY";
+  error.algorithm = strongestAlgo;
+  error.found = actualBase64Value;
+  throw error;
 };
 
-const jsenvPluginMinification = ({
-  html = {},
-  css = {},
-  js_classic = {},
-  js_module = {},
-  json = {},
-  svg = {},
-} = {}) => {
-  const htmlMinifier = html
-    ? (urlInfo) => minifyHtml(urlInfo, html === true ? {} : html)
-    : null;
-  const svgMinifier = svg
-    ? (urlInfo) => minifyHtml(urlInfo, svg === true ? {} : svg)
-    : null;
-  const cssMinifier = css
-    ? (urlInfo) => minifyCss(urlInfo)
-    : null;
-  const jsClassicMinifier = js_classic
-    ? (urlInfo) => minifyJs(urlInfo, js_classic === true ? {} : js_classic)
-    : null;
-  const jsModuleMinifier = js_module
-    ? (urlInfo) => minifyJs(urlInfo, js_module === true ? {} : js_module)
-    : null;
-  const jsonMinifier = json
-    ? (urlInfo) => minifyJson(urlInfo)
-    : null;
-
-  return {
-    name: "jsenv:minification",
-    appliesDuring: "build",
-    meta: {
-      willMinifyHtml: Boolean(html),
-      willMinifySvg: Boolean(svg),
-      willMinifyCss: Boolean(css),
-      willMinifyJsClassic: Boolean(js_classic),
-      willMinifyJsModule: Boolean(js_module),
-      willMinifyJson: Boolean(json),
-    },
-    optimizeUrlContent: {
-      html: htmlMinifier,
-      svg: svgMinifier,
-      css: cssMinifier,
-      js_classic: jsClassicMinifier,
-      js_module: jsModuleMinifier,
-      json: jsonMinifier,
-      importmap: jsonMinifier,
-      webmanifest: jsonMinifier,
-    },
-  };
+// https://www.w3.org/TR/SRI/#is-response-eligible-for-integrity-validation
+const isResponseEligibleForIntegrityValidation = (response) => {
+  return ["basic", "cors", "default"].includes(response.type);
 };
 
 const jsenvPluginImportMetaResolve = ({ needJsModuleFallback }) => {
@@ -6497,7 +5793,7 @@ const splitFileExtension = (filename) => {
  *
  */
 const babelHelperClientDirectoryUrl = new URL(
-  "../babel_helpers/",
+  "./babel_helpers/",
   import.meta.url,
 ).href;
 
@@ -7224,7 +6520,7 @@ const injectAstAfterImport = (programPath, ast) => {
 };
 
 const newStylesheetClientFileUrl = new URL(
-  "./new_stylesheet.js",
+  "./js/new_stylesheet.js",
   import.meta.url,
 ).href;
 
@@ -7382,7 +6678,7 @@ const getImportAttributes = (importNode) => {
 };
 
 const regeneratorRuntimeClientFileUrl = new URL(
-  "./regenerator_runtime.js",
+  "./js/regenerator_runtime.js",
   import.meta.url,
 ).href;
 
@@ -7532,7 +6828,7 @@ const applyCssTranspilation = async ({
 }) => {
   // https://lightningcss.dev/docs.html
   const { transform } = await import("lightningcss");
-  const targets = runtimeCompatToTargets(runtimeCompat);
+  const targets = runtimeCompatToTargets$2(runtimeCompat);
   const { code, map } = transform({
     filename: urlToFileSystemPath(inputUrl),
     code: Buffer.from(input),
@@ -7546,18 +6842,18 @@ const applyCssTranspilation = async ({
   return { content: String(code), sourcemap: map };
 };
 
-const runtimeCompatToTargets = (runtimeCompat) => {
+const runtimeCompatToTargets$2 = (runtimeCompat) => {
   const targets = {};
   ["chrome", "firefox", "ie", "opera", "safari"].forEach((runtimeName) => {
     const version = runtimeCompat[runtimeName];
     if (version) {
-      targets[runtimeName] = versionToBits(version);
+      targets[runtimeName] = versionToBits$2(version);
     }
   });
   return targets;
 };
 
-const versionToBits = (version) => {
+const versionToBits$2 = (version) => {
   const [major, minor = 0, patch = 0] = version
     .split("-")[0]
     .split(".")
@@ -8010,124 +7306,6 @@ const jsenvPluginTranspilation = ({
 
     ...(css ? [jsenvPluginCssTranspilation()] : []),
   ];
-};
-
-const isSupportedAlgorithm = (algo) => {
-  return SUPPORTED_ALGORITHMS.includes(algo);
-};
-
-// https://www.w3.org/TR/SRI/#priority
-const getPrioritizedHashFunction = (firstAlgo, secondAlgo) => {
-  const firstIndex = SUPPORTED_ALGORITHMS.indexOf(firstAlgo);
-  const secondIndex = SUPPORTED_ALGORITHMS.indexOf(secondAlgo);
-  if (firstIndex === secondIndex) {
-    return "";
-  }
-  if (firstIndex < secondIndex) {
-    return secondAlgo;
-  }
-  return firstAlgo;
-};
-
-const applyAlgoToRepresentationData = (algo, data) => {
-  const base64Value = crypto.createHash(algo).update(data).digest("base64");
-  return base64Value;
-};
-
-// keep this ordered by collision resistance as it is also used by "getPrioritizedHashFunction"
-const SUPPORTED_ALGORITHMS = ["sha256", "sha384", "sha512"];
-
-// see https://w3c.github.io/webappsec-subresource-integrity/#parse-metadata
-const parseIntegrity = (string) => {
-  const integrityMetadata = {};
-  string
-    .trim()
-    .split(/\s+/)
-    .forEach((token) => {
-      const { isValid, algo, base64Value, optionExpression } =
-        parseAsHashWithOptions(token);
-      if (!isValid) {
-        return;
-      }
-      if (!isSupportedAlgorithm(algo)) {
-        return;
-      }
-      const metadataList = integrityMetadata[algo];
-      const metadata = { base64Value, optionExpression };
-      integrityMetadata[algo] = metadataList
-        ? [...metadataList, metadata]
-        : [metadata];
-    });
-  return integrityMetadata;
-};
-
-// see https://w3c.github.io/webappsec-subresource-integrity/#the-integrity-attribute
-const parseAsHashWithOptions = (token) => {
-  const dashIndex = token.indexOf("-");
-  if (dashIndex === -1) {
-    return { isValid: false };
-  }
-  const beforeDash = token.slice(0, dashIndex);
-  const afterDash = token.slice(dashIndex + 1);
-  const questionIndex = afterDash.indexOf("?");
-  const algo = beforeDash;
-  if (questionIndex === -1) {
-    const base64Value = afterDash;
-    const isValid = BASE64_REGEX.test(afterDash);
-    return { isValid, algo, base64Value };
-  }
-  const base64Value = afterDash.slice(0, questionIndex);
-  const optionExpression = afterDash.slice(questionIndex + 1);
-  const isValid =
-    BASE64_REGEX.test(afterDash) && VCHAR_REGEX.test(optionExpression);
-  return { isValid, algo, base64Value, optionExpression };
-};
-
-const BASE64_REGEX = /^[A-Za-z0-9+/=]+$/;
-const VCHAR_REGEX = /^[\x21-\x7E]+$/;
-
-// https://www.w3.org/TR/SRI/#does-response-match-metadatalist
-const validateResponseIntegrity = (
-  { url, type, dataRepresentation },
-  integrity,
-) => {
-  if (!isResponseEligibleForIntegrityValidation({ type })) {
-    return false;
-  }
-  const integrityMetadata = parseIntegrity(integrity);
-  const algos = Object.keys(integrityMetadata);
-  if (algos.length === 0) {
-    return true;
-  }
-  let strongestAlgo = algos[0];
-  algos.slice(1).forEach((algoCandidate) => {
-    strongestAlgo =
-      getPrioritizedHashFunction(strongestAlgo, algoCandidate) || strongestAlgo;
-  });
-  const metadataList = integrityMetadata[strongestAlgo];
-  const actualBase64Value = applyAlgoToRepresentationData(
-    strongestAlgo,
-    dataRepresentation,
-  );
-  const acceptedBase64Values = metadataList.map(
-    (metadata) => metadata.base64Value,
-  );
-  const someIsMatching = acceptedBase64Values.includes(actualBase64Value);
-  if (someIsMatching) {
-    return true;
-  }
-  const error = new Error(
-    `Integrity validation failed for resource "${url}". The integrity found for this resource is "${strongestAlgo}-${actualBase64Value}"`,
-  );
-  error.code = "EINTEGRITY";
-  error.algorithm = strongestAlgo;
-  error.found = actualBase64Value;
-  throw error;
-};
-
-// https://www.w3.org/TR/SRI/#is-response-eligible-for-integrity-validation
-const isResponseEligibleForIntegrityValidation = (response) => {
-  return ["basic", "cors", "default"].includes(response.type);
 };
 
 // duplicated from @jsenv/log to avoid the dependency
@@ -9028,6 +8206,92 @@ const createPackageImportNotDefinedError = (
   return error;
 };
 
+const isSpecifierForNodeBuiltin = (specifier) => {
+  return (
+    specifier.startsWith("node:") ||
+    NODE_BUILTIN_MODULE_SPECIFIERS.includes(specifier)
+  );
+};
+
+const NODE_BUILTIN_MODULE_SPECIFIERS = [
+  "assert",
+  "assert/strict",
+  "async_hooks",
+  "buffer_ieee754",
+  "buffer",
+  "child_process",
+  "cluster",
+  "console",
+  "constants",
+  "crypto",
+  "_debugger",
+  "dgram",
+  "dns",
+  "domain",
+  "events",
+  "freelist",
+  "fs",
+  "fsevents",
+  "fs/promises",
+  "_http_agent",
+  "_http_client",
+  "_http_common",
+  "_http_incoming",
+  "_http_outgoing",
+  "_http_server",
+  "http",
+  "http2",
+  "https",
+  "inspector",
+  "_linklist",
+  "module",
+  "net",
+  "node-inspect/lib/_inspect",
+  "node-inspect/lib/internal/inspect_client",
+  "node-inspect/lib/internal/inspect_repl",
+  "os",
+  "path",
+  "perf_hooks",
+  "process",
+  "punycode",
+  "querystring",
+  "readline",
+  "repl",
+  "smalloc",
+  "_stream_duplex",
+  "_stream_transform",
+  "_stream_wrap",
+  "_stream_passthrough",
+  "_stream_readable",
+  "_stream_writable",
+  "stream",
+  "stream/promises",
+  "string_decoder",
+  "sys",
+  "timers",
+  "_tls_common",
+  "_tls_legacy",
+  "_tls_wrap",
+  "tls",
+  "trace_events",
+  "tty",
+  "url",
+  "util",
+  "v8/tools/arguments",
+  "v8/tools/codemap",
+  "v8/tools/consarray",
+  "v8/tools/csvparser",
+  "v8/tools/logreader",
+  "v8/tools/profile_view",
+  "v8/tools/splaytree",
+  "v8",
+  "vm",
+  "worker_threads",
+  "zlib",
+  // global is special
+  "global",
+];
+
 /*
  * https://nodejs.org/api/esm.html#resolver-algorithm-specification
  * https://github.com/nodejs/node/blob/0367b5c35ea0f98b323175a4aaa8e651af7a91e7/lib/internal/modules/esm/resolve.js#L1
@@ -9865,6 +9129,884 @@ const getExtensionsToTry = (magicExtensions, importer) => {
   return Array.from(extensionsSet.values());
 };
 
+const memoizeByFirstArgument = (compute) => {
+  const urlCache = new Map();
+
+  const fnWithMemoization = (url, ...args) => {
+    const valueFromCache = urlCache.get(url);
+    if (valueFromCache) {
+      return valueFromCache;
+    }
+    const value = compute(url, ...args);
+    urlCache.set(url, value);
+    return value;
+  };
+
+  fnWithMemoization.forget = () => {
+    urlCache.clear();
+  };
+
+  return fnWithMemoization;
+};
+
+const fileUrlConverter = {
+  asFilePath: (fileUrl) => {
+    const filePath = urlToFileSystemPath(fileUrl);
+    const urlObject = new URL(fileUrl);
+    const { searchParams } = urlObject;
+    return `${filePath}${stringifyQuery(searchParams)}`;
+  },
+  asFileUrl: (filePath) => {
+    return decodeURIComponent(fileSystemPathToUrl(filePath)).replace(
+      /[=](?=&|$)/g,
+      "",
+    );
+  },
+};
+
+const stringifyQuery = (searchParams) => {
+  const search = searchParams.toString();
+  return search ? `?${search}` : "";
+};
+
+const bundleJsModules = async (
+  jsModuleUrlInfos,
+  {
+    buildDirectoryUrl,
+    include,
+    chunks = {},
+    strictExports = false,
+    preserveDynamicImport = false,
+    augmentDynamicImportUrlSearchParams = () => {},
+    rollup,
+    rollupInput = {},
+    rollupOutput = {},
+    rollupPlugins = [],
+  },
+) => {
+  const {
+    signal,
+    logger,
+    rootDirectoryUrl,
+    runtimeCompat,
+    sourcemaps,
+    isSupportedOnCurrentClients,
+    getPluginMeta,
+  } = jsModuleUrlInfos[0].context;
+  const graph = jsModuleUrlInfos[0].graph;
+  if (buildDirectoryUrl === undefined) {
+    buildDirectoryUrl = jsModuleUrlInfos[0].context.buildDirectoryUrl;
+  }
+
+  let manualChunks;
+  if (chunks) {
+    let workspaces;
+    let packageName;
+    const packageDirectoryUrl = lookupPackageDirectory(rootDirectoryUrl);
+    if (packageDirectoryUrl) {
+      const packageJSON = readPackageAtOrNull(packageDirectoryUrl);
+      if (packageJSON) {
+        packageName = packageJSON.name;
+        workspaces = packageJSON.workspaces;
+      }
+    }
+    let nodeModuleChunkName = "node_modules";
+    let packagesChunkName = "packages";
+
+    if (packageName) {
+      let packageNameAsFilename = packageName
+        .replaceAll("@", "")
+        .replaceAll("-", "_")
+        .replaceAll("/", "_");
+      nodeModuleChunkName = `${packageNameAsFilename}_node_modules`;
+      packagesChunkName = `${packageNameAsFilename}_packages`;
+    }
+    chunks[nodeModuleChunkName] = {
+      "file:///**/node_modules/": true,
+      ...chunks.vendors,
+    };
+    if (workspaces) {
+      const workspacePatterns = {};
+      for (const workspace of workspaces) {
+        const workspacePattern = new URL(
+          workspace.endsWith("/*") ? workspace.slice(0, -1) : workspace,
+          packageDirectoryUrl,
+        ).href;
+        workspacePatterns[workspacePattern] = true;
+      }
+      chunks[packagesChunkName] = {
+        ...workspacePatterns,
+        ...chunks.workspaces,
+      };
+    }
+
+    const associations = URL_META.resolveAssociations(chunks, rootDirectoryUrl);
+    manualChunks = (id, manualChunksApi) => {
+      if (rollupOutput.manualChunks) {
+        const manualChunkName = rollupOutput.manualChunks(id, manualChunksApi);
+        if (manualChunkName) {
+          return manualChunkName;
+        }
+      }
+      const moduleInfo = manualChunksApi.getModuleInfo(id);
+      if (moduleInfo.isEntry || moduleInfo.dynamicImporters.length) {
+        return null;
+      }
+      const url = fileUrlConverter.asFileUrl(id);
+      const urlObject = new URL(url);
+      urlObject.search = "";
+      const urlWithoutSearch = urlObject.href;
+      const meta = URL_META.applyAssociations({
+        url: urlWithoutSearch,
+        associations,
+      });
+      for (const chunkNameCandidate of Object.keys(meta)) {
+        if (meta[chunkNameCandidate]) {
+          return chunkNameCandidate;
+        }
+      }
+      return undefined;
+    };
+  }
+
+  const resultRef = { current: null };
+  const willMinifyJsModule = Boolean(getPluginMeta("willMinifyJsModule"));
+  try {
+    await applyRollupPlugins({
+      rollup,
+      rollupPlugins: [
+        ...rollupPlugins,
+        rollupPluginJsenv({
+          signal,
+          logger,
+          rootDirectoryUrl,
+          buildDirectoryUrl,
+          graph,
+          jsModuleUrlInfos,
+
+          runtimeCompat,
+          sourcemaps,
+          include,
+          preserveDynamicImport,
+          augmentDynamicImportUrlSearchParams,
+          strictExports,
+          resultRef,
+        }),
+      ],
+      rollupInput: {
+        input: [],
+        onwarn: (warning) => {
+          if (warning.code === "CIRCULAR_DEPENDENCY") {
+            return;
+          }
+          if (warning.code === "EVAL") {
+            // ideally we should disable only for jsenv files
+            return;
+          }
+          if (
+            warning.code === "INVALID_ANNOTATION" &&
+            warning.loc.file.includes("/node_modules/")
+          ) {
+            return;
+          }
+          if (
+            warning.code === "EMPTY_BUNDLE" &&
+            warning.names.join("") === "vendors"
+          ) {
+            return;
+          }
+          logger.warn(String(warning));
+        },
+        ...rollupInput,
+      },
+      rollupOutput: {
+        compact: willMinifyJsModule,
+        minifyInternalExports: willMinifyJsModule,
+        generatedCode: {
+          arrowFunctions: isSupportedOnCurrentClients("arrow_function"),
+          constBindings: isSupportedOnCurrentClients("const_bindings"),
+          objectShorthand: isSupportedOnCurrentClients(
+            "object_properties_shorthand",
+          ),
+          reservedNamesAsProps: isSupportedOnCurrentClients("reserved_words"),
+          symbols: isSupportedOnCurrentClients("symbols"),
+        },
+        ...rollupOutput,
+        manualChunks,
+      },
+    });
+    return resultRef.current.jsModuleBundleUrlInfos;
+  } catch (e) {
+    if (e.code === "MISSING_EXPORT") {
+      const detailedMessage = createDetailedMessage$1(e.message, {
+        frame: e.frame,
+      });
+      throw new Error(detailedMessage, { cause: e });
+    }
+    throw e;
+  }
+};
+
+const rollupPluginJsenv = ({
+  // logger,
+  rootDirectoryUrl,
+  buildDirectoryUrl,
+  graph,
+  jsModuleUrlInfos,
+  sourcemaps,
+
+  include,
+  preserveDynamicImport,
+  augmentDynamicImportUrlSearchParams,
+  strictExports,
+
+  resultRef,
+}) => {
+  let _rollupEmitFile = () => {
+    throw new Error("not implemented");
+  };
+  const format = jsModuleUrlInfos.some((jsModuleUrlInfo) =>
+    jsModuleUrlInfo.filenameHint.endsWith(".cjs"),
+  )
+    ? "cjs"
+    : "esm";
+  const emitChunk = (chunk) => {
+    return _rollupEmitFile({
+      type: "chunk",
+      ...chunk,
+    });
+  };
+  let importCanBeBundled = () => true;
+  if (include) {
+    const associations = URL_META.resolveAssociations(
+      { bundle: include },
+      rootDirectoryUrl,
+    );
+    importCanBeBundled = (url) => {
+      return URL_META.applyAssociations({ url, associations }).bundle;
+    };
+  }
+
+  const getOriginalUrl = (rollupFileInfo) => {
+    if (
+      // - explicitely emitted by emitChunk
+      // - import.meta.resolve("")
+      rollupFileInfo.isEntry ||
+      // - new URL("", import.meta.url)
+      rollupFileInfo.isImplicitEntry
+    ) {
+      const { facadeModuleId } = rollupFileInfo;
+      if (facadeModuleId) {
+        return fileUrlConverter.asFileUrl(facadeModuleId);
+      }
+    }
+    if (rollupFileInfo.isDynamicEntry) {
+      const { moduleIds } = rollupFileInfo;
+      const lastModuleId = moduleIds[moduleIds.length - 1];
+      return fileUrlConverter.asFileUrl(lastModuleId);
+    }
+    return new URL(rollupFileInfo.fileName, buildDirectoryUrl).href;
+  };
+
+  return {
+    name: "jsenv",
+    async buildStart() {
+      _rollupEmitFile = (...args) => this.emitFile(...args);
+      let previousNonEntryPointModuleId;
+      for (const jsModuleUrlInfo of jsModuleUrlInfos) {
+        const id = jsModuleUrlInfo.url;
+        if (jsModuleUrlInfo.isEntryPoint) {
+          emitChunk({
+            id,
+          });
+          continue;
+        }
+        let preserveSignature;
+        if (strictExports) {
+          preserveSignature = "strict";
+        } else {
+          // When referenced only once we can enable allow-extension
+          // otherwise stick to strict exports to ensure all importers
+          // receive the correct exports
+          let firstStrongRef = null;
+          let hasMoreThanOneStrongRefFromOther = false;
+          for (const referenceFromOther of jsModuleUrlInfo.referenceFromOthersSet) {
+            if (referenceFromOther.isWeak) {
+              continue;
+            }
+            if (firstStrongRef) {
+              hasMoreThanOneStrongRefFromOther = true;
+              break;
+            }
+            firstStrongRef = referenceFromOther;
+          }
+          preserveSignature = hasMoreThanOneStrongRefFromOther
+            ? "strict"
+            : "allow-extension";
+        }
+        emitChunk({
+          id,
+          implicitlyLoadedAfterOneOf: previousNonEntryPointModuleId
+            ? [previousNonEntryPointModuleId]
+            : null,
+          preserveSignature,
+        });
+        if (jsModuleUrlInfo.originalUrl.startsWith("file:")) {
+          previousNonEntryPointModuleId = id;
+        }
+      }
+    },
+    async generateBundle(outputOptions, rollupResult) {
+      _rollupEmitFile = (...args) => this.emitFile(...args);
+
+      const createBundledFileInfo = (rollupFileInfo) => {
+        const originalUrl = getOriginalUrl(rollupFileInfo);
+        const sourceUrls = Object.keys(rollupFileInfo.modules).map((id) =>
+          fileUrlConverter.asFileUrl(id),
+        );
+
+        const specifierToUrlMap = new Map();
+        const { imports, dynamicImports } = rollupFileInfo;
+        for (const importFileName of imports) {
+          if (!importFileName.startsWith("file:")) {
+            const importRollupFileInfo = rollupResult[importFileName];
+            if (!importRollupFileInfo) {
+              // happens for external import, like "ignore:" or anything marked as external
+              specifierToUrlMap.set(importFileName, importFileName);
+              continue;
+            }
+            const importUrl = getOriginalUrl(importRollupFileInfo);
+            const rollupSpecifier = `./${importRollupFileInfo.fileName}`;
+            specifierToUrlMap.set(rollupSpecifier, importUrl);
+          }
+        }
+        for (const dynamicImportFileName of dynamicImports) {
+          if (!dynamicImportFileName.startsWith("file:")) {
+            const dynamicImportRollupFileInfo =
+              rollupResult[dynamicImportFileName];
+            if (!dynamicImportRollupFileInfo) {
+              // happens for external import, like "ignore:" or anything marked as external
+              specifierToUrlMap.set(
+                dynamicImportFileName,
+                dynamicImportFileName,
+              );
+              continue;
+            }
+            const dynamicImportUrl = getOriginalUrl(
+              dynamicImportRollupFileInfo,
+            );
+            const rollupSpecifier = `./${dynamicImportRollupFileInfo.fileName}`;
+            specifierToUrlMap.set(rollupSpecifier, dynamicImportUrl);
+          }
+        }
+
+        const generatedToShareCode =
+          !rollupFileInfo.isEntry &&
+          !rollupFileInfo.isDynamicEntry &&
+          !rollupFileInfo.isImplicitEntry;
+
+        return {
+          originalUrl,
+          type: format === "esm" ? "js_module" : "common_js",
+          data: {
+            bundlerName: "rollup",
+            bundleRelativeUrl: rollupFileInfo.fileName,
+            usesImport:
+              rollupFileInfo.imports.length > 0 ||
+              rollupFileInfo.dynamicImports.length > 0,
+            isDynamicEntry: rollupFileInfo.isDynamicEntry,
+            generatedToShareCode,
+          },
+          sourceUrls,
+          contentType: "text/javascript",
+          content: rollupFileInfo.code,
+          sourcemap: rollupFileInfo.map,
+          // rollup is generating things like "./file.js"
+          // that must be converted back to urls for jsenv
+          remapReference:
+            specifierToUrlMap.size > 0
+              ? (reference) => {
+                  if (
+                    preserveDynamicImport &&
+                    reference.subtype === "dynamic_import"
+                  ) {
+                    // when dynamic import are preserved, no need to remap them
+                    return reference.specifier;
+                  }
+                  if (
+                    reference.type !== "js_import" ||
+                    reference.subtype === "import_meta_resolve"
+                  ) {
+                    // rollup generate specifiers only for static and dynamic imports
+                    // other references (like new URL()) are ignored
+                    // there is no need to remap them back
+                    return reference.specifier;
+                  }
+                  const specifierBeforeRollup = specifierToUrlMap.get(
+                    reference.specifier,
+                  );
+                  if (!specifierBeforeRollup) {
+                    console.warn(
+                      `cannot remap "${reference.specifier}" back to specifier before rollup, this is unexpected.`,
+                    );
+                    return reference.specifier;
+                  }
+                  return specifierBeforeRollup;
+                }
+              : undefined,
+        };
+      };
+
+      const jsModuleBundleUrlInfos = {};
+      const fileNames = Object.keys(rollupResult);
+      const originalUrlSet = new Set();
+      for (const fileName of fileNames) {
+        const rollupFileInfo = rollupResult[fileName];
+        // there is 3 types of file: "placeholder", "asset", "chunk"
+        if (rollupFileInfo.type === "chunk") {
+          const jsModuleInfo = createBundledFileInfo(rollupFileInfo);
+          const originalUrl = jsModuleInfo.originalUrl;
+          if (originalUrlSet.has(originalUrl)) {
+            throw new Error(
+              `duplicate bundle info, cannot override ${originalUrl}`,
+            );
+          }
+          originalUrlSet.add(originalUrl);
+          jsModuleBundleUrlInfos[jsModuleInfo.originalUrl] = jsModuleInfo;
+        }
+      }
+
+      resultRef.current = {
+        jsModuleBundleUrlInfos,
+      };
+    },
+    outputOptions: (outputOptions) => {
+      // const sourcemapFile = buildDirectoryUrl
+      Object.assign(outputOptions, {
+        format,
+        dir: fileUrlConverter.asFilePath(rootDirectoryUrl),
+        sourcemap: sourcemaps === "file" || sourcemaps === "inline",
+        // sourcemapFile,
+        sourcemapPathTransform: (relativePath) => {
+          return new URL(relativePath, rootDirectoryUrl).href;
+        },
+        entryFileNames: () => {
+          return `[name].js`;
+        },
+        chunkFileNames: (chunkInfo) => {
+          if (chunkInfo.isEntry) {
+            const originalFileUrl = getOriginalUrl(chunkInfo);
+            const jsModuleUrlInfo = jsModuleUrlInfos.find(
+              (candidate) => candidate.url === originalFileUrl,
+            );
+            if (jsModuleUrlInfo && jsModuleUrlInfo.filenameHint) {
+              return jsModuleUrlInfo.filenameHint;
+            }
+          }
+          return `${chunkInfo.name}.js`;
+        },
+      });
+    },
+    // https://rollupjs.org/guide/en/#resolvedynamicimport
+    resolveDynamicImport: (specifier, importer) => {
+      if (!preserveDynamicImport) {
+        return null;
+      }
+      let urlObject;
+      if (specifier[0] === "/") {
+        urlObject = new URL(specifier.slice(1), rootDirectoryUrl);
+      } else {
+        if (isFileSystemPath(importer)) {
+          importer = fileUrlConverter.asFileUrl(importer);
+        }
+        urlObject = new URL(specifier, importer);
+      }
+      const searchParamsToAdd = augmentDynamicImportUrlSearchParams(urlObject);
+      if (searchParamsToAdd) {
+        Object.keys(searchParamsToAdd).forEach((key) => {
+          const value = searchParamsToAdd[key];
+          if (value === undefined) {
+            urlObject.searchParams.delete(key);
+          } else {
+            urlObject.searchParams.set(key, value);
+          }
+        });
+      }
+      return { external: true, id: urlObject.href };
+    },
+    resolveId: (specifier, importer = rootDirectoryUrl) => {
+      if (isFileSystemPath(importer)) {
+        importer = fileUrlConverter.asFileUrl(importer);
+      }
+      let url;
+      if (specifier[0] === "/") {
+        url = new URL(specifier.slice(1), rootDirectoryUrl).href;
+      } else {
+        url = new URL(specifier, importer).href;
+      }
+      if (!url.startsWith("file:")) {
+        return { id: url, external: true };
+      }
+      if (!importCanBeBundled(url)) {
+        return { id: url, external: true };
+      }
+      const urlInfo = graph.getUrlInfo(url);
+      if (!urlInfo) {
+        // happen when excluded by referenceAnalysis.include
+        return { id: url, external: true };
+      }
+      if (url.startsWith("ignore:")) {
+        return { id: url, external: true };
+      }
+      const filePath = fileUrlConverter.asFilePath(url);
+      return filePath;
+    },
+    async load(rollupId) {
+      const fileUrl = fileUrlConverter.asFileUrl(rollupId);
+      const urlInfo = graph.getUrlInfo(fileUrl);
+      return {
+        code: urlInfo.content,
+        map:
+          (sourcemaps === "file" || sourcemaps === "inline") &&
+          urlInfo.sourcemap
+            ? sourcemapConverter.toFilePaths(urlInfo.sourcemap)
+            : null,
+      };
+    },
+  };
+};
+
+const applyRollupPlugins = async ({
+  rollup,
+  rollupPlugins,
+  rollupInput,
+  rollupOutput,
+}) => {
+  if (!rollup) {
+    const rollupModule = await import("rollup");
+    rollup = rollupModule.rollup;
+  }
+
+  const packageSideEffectsCacheMap = new Map();
+  const readClosestPackageJsonSideEffects = (url) => {
+    const packageDirectoryUrl = lookupPackageDirectory(url);
+    if (!packageDirectoryUrl) {
+      return undefined;
+    }
+    const fromCache = packageSideEffectsCacheMap.get(packageDirectoryUrl);
+    if (fromCache) {
+      return fromCache.value;
+    }
+    try {
+      const packageFileContent = readFileSync(
+        new URL("./package.json", packageDirectoryUrl),
+        "utf8",
+      );
+      const packageJSON = JSON.parse(packageFileContent);
+      const value = packageJSON.sideEffects;
+      if (Array.isArray(value)) {
+        const sideEffectPatterns = {};
+        for (const v of value) {
+          sideEffectPatterns[v] = true;
+        }
+        const associations = URL_META.resolveAssociations(
+          { sideEffects: sideEffectPatterns },
+          packageDirectoryUrl,
+        );
+        const isMatching = (url) => {
+          const meta = URL_META.applyAssociations({ url, associations });
+          return meta.sideEffects || false;
+        };
+        packageSideEffectsCacheMap.set(packageDirectoryUrl, {
+          value: isMatching,
+        });
+      } else {
+        packageSideEffectsCacheMap.set(packageDirectoryUrl, { value });
+      }
+      return value;
+    } catch {
+      packageSideEffectsCacheMap.set(packageDirectoryUrl, { value: undefined });
+      return undefined;
+    }
+  };
+
+  const rollupReturnValue = await rollup({
+    ...rollupInput,
+    treeshake: {
+      ...rollupInput.treeshake,
+      moduleSideEffects: (id, external) => {
+        if (id.startsWith("ignore:node:")) {
+          return false;
+        }
+        if (isSpecifierForNodeBuiltin(id)) {
+          return false;
+        }
+        if (id.startsWith("ignore:")) {
+          return null;
+        }
+        const url = id.startsWith("file:") ? id : fileSystemPathToUrl(id);
+        const closestPackageJsonSideEffects =
+          readClosestPackageJsonSideEffects(url);
+        if (closestPackageJsonSideEffects !== undefined) {
+          if (typeof closestPackageJsonSideEffects === "function") {
+            return closestPackageJsonSideEffects(url);
+          }
+          return closestPackageJsonSideEffects;
+        }
+        const moduleSideEffects = rollupInput.treeshake?.moduleSideEffects;
+        if (moduleSideEffects) {
+          if (typeof moduleSideEffects === "function") {
+            return moduleSideEffects(id, external);
+          }
+          return moduleSideEffects;
+        }
+        return null;
+      },
+    },
+    plugins: rollupPlugins,
+  });
+  const rollupOutputArray = await rollupReturnValue.generate(rollupOutput);
+  return rollupOutputArray;
+};
+
+// Do not use until https://github.com/parcel-bundler/parcel-css/issues/181
+const bundleCss = async (cssUrlInfos) => {
+  const bundledCssUrlInfos = {};
+  const { bundleAsync } = await import("lightningcss");
+  const targets = runtimeCompatToTargets$1(cssUrlInfos[0].context.runtimeCompat);
+  for (const cssUrlInfo of cssUrlInfos) {
+    const filename = fileUrlConverter.asFilePath(cssUrlInfo.originalUrl);
+    const { code, map } = await bundleAsync({
+      filename,
+      targets,
+      minify: false,
+      resolver: {
+        read: (specifier) => {
+          const fileUrlObject = fileUrlConverter.asFileUrl(specifier);
+          const fileUrl = String(fileUrlObject);
+          const urlInfo = cssUrlInfo.graph.getUrlInfo(fileUrl);
+          return urlInfo.content;
+        },
+        resolve(specifier, from) {
+          const fileUrlObject = new URL(specifier, pathToFileURL(from));
+          const filePath = urlToFileSystemPath(fileUrlObject);
+          return filePath;
+        },
+      },
+    });
+    bundledCssUrlInfos[cssUrlInfo.url] = {
+      data: {
+        bundlerName: "lightningcss",
+      },
+      contentType: "text/css",
+      content: String(code),
+      sourcemap: map,
+    };
+  }
+  return bundledCssUrlInfos;
+};
+
+const runtimeCompatToTargets$1 = (runtimeCompat) => {
+  const targets = {};
+  ["chrome", "firefox", "ie", "opera", "safari"].forEach((runtimeName) => {
+    const version = runtimeCompat[runtimeName];
+    if (version) {
+      targets[runtimeName] = versionToBits$1(version);
+    }
+  });
+  return targets;
+};
+
+const versionToBits$1 = (version) => {
+  const [major, minor = 0, patch = 0] = version
+    .split("-")[0]
+    .split(".")
+    .map((v) => parseInt(v, 10));
+  return (major << 16) | (minor << 8) | patch;
+};
+
+const jsenvPluginBundling = ({
+  css = {},
+  js_classic = {},
+  js_module = {},
+} = {}) => {
+  const bundle = {};
+
+  if (css) {
+    bundle.css = (cssUrlInfos) => {
+      return bundleCss(cssUrlInfos);
+    };
+  }
+  if (js_module) {
+    if (js_module === true) {
+      js_module = {};
+    }
+    bundle.js_module = (jsModuleUrlInfos) => {
+      return bundleJsModules(jsModuleUrlInfos, js_module);
+    };
+  }
+
+  return {
+    name: "jsenv:bundling",
+    appliesDuring: "build",
+    bundle,
+  };
+};
+
+const minifyCss = async (cssUrlInfo) => {
+  const { transform } = await import("lightningcss");
+
+  const targets = runtimeCompatToTargets(cssUrlInfo.context.runtimeCompat);
+  const { code, map } = transform({
+    filename: urlToFileSystemPath(cssUrlInfo.originalUrl),
+    code: Buffer.from(cssUrlInfo.content),
+    targets,
+    minify: true,
+  });
+  return {
+    content: String(code),
+    sourcemap: map,
+  };
+};
+
+const runtimeCompatToTargets = (runtimeCompat) => {
+  const targets = {};
+  ["chrome", "firefox", "ie", "opera", "safari"].forEach((runtimeName) => {
+    const version = runtimeCompat[runtimeName];
+    if (version) {
+      targets[runtimeName] = versionToBits(version);
+    }
+  });
+  return targets;
+};
+
+const versionToBits = (version) => {
+  const [major, minor = 0, patch = 0] = version
+    .split("-")[0]
+    .split(".")
+    .map((v) => parseInt(v, 10));
+  return (major << 16) | (minor << 8) | patch;
+};
+
+// https://github.com/kangax/html-minifier#options-quick-reference
+const minifyHtml = (htmlUrlInfo, options = {}) => {
+  const require = createRequire(import.meta.url);
+  const { minify } = require("html-minifier");
+
+  const {
+    // usually HTML will contain a few markup, it's better to keep white spaces
+    // and line breaks to favor readability. A few white spaces means very few
+    // octets that won't impact performances. Removing whitespaces however will certainly
+    // decrease HTML readability
+    collapseWhitespace = false,
+    // saving a fewline breaks won't hurt performances
+    // but will help a lot readability
+    preserveLineBreaks = true,
+    removeComments = true,
+    conservativeCollapse = false,
+  } = options;
+
+  const htmlMinified = minify(htmlUrlInfo.content, {
+    collapseWhitespace,
+    conservativeCollapse,
+    removeComments,
+    preserveLineBreaks,
+  });
+  return htmlMinified;
+};
+
+// https://github.com/terser-js/terser#minify-options
+
+const minifyJs = async (jsUrlInfo, options) => {
+  const url = jsUrlInfo.url;
+  const content = jsUrlInfo.content;
+  const sourcemap = jsUrlInfo.sourcemap;
+  const isJsModule = jsUrlInfo.type === "js_module";
+
+  const { minify } = await import("terser");
+  const terserResult = await minify(
+    {
+      [url]: content,
+    },
+    {
+      sourceMap: {
+        ...(sourcemap ? { content: JSON.stringify(sourcemap) } : {}),
+        asObject: true,
+        includeSources: true,
+      },
+      module: isJsModule,
+      // We need to preserve "new __InlineContent__()" calls to be able to recognize them
+      // after minification in order to version urls inside inline content text
+      keep_fnames: /__InlineContent__/,
+      ...options,
+    },
+  );
+  return {
+    content: terserResult.code,
+    sourcemap: terserResult.map,
+  };
+};
+
+const minifyJson = (jsonUrlInfo) => {
+  const { content } = jsonUrlInfo;
+  if (content.startsWith("{\n")) {
+    const jsonWithoutWhitespaces = JSON.stringify(JSON.parse(content));
+    return jsonWithoutWhitespaces;
+  }
+  return null;
+};
+
+const jsenvPluginMinification = ({
+  html = {},
+  css = {},
+  js_classic = {},
+  js_module = {},
+  json = {},
+  svg = {},
+} = {}) => {
+  const htmlMinifier = html
+    ? (urlInfo) => minifyHtml(urlInfo, html === true ? {} : html)
+    : null;
+  const svgMinifier = svg
+    ? (urlInfo) => minifyHtml(urlInfo, svg === true ? {} : svg)
+    : null;
+  const cssMinifier = css
+    ? (urlInfo) => minifyCss(urlInfo)
+    : null;
+  const jsClassicMinifier = js_classic
+    ? (urlInfo) => minifyJs(urlInfo, js_classic === true ? {} : js_classic)
+    : null;
+  const jsModuleMinifier = js_module
+    ? (urlInfo) => minifyJs(urlInfo, js_module === true ? {} : js_module)
+    : null;
+  const jsonMinifier = json
+    ? (urlInfo) => minifyJson(urlInfo)
+    : null;
+
+  return {
+    name: "jsenv:minification",
+    appliesDuring: "build",
+    meta: {
+      willMinifyHtml: Boolean(html),
+      willMinifySvg: Boolean(svg),
+      willMinifyCss: Boolean(css),
+      willMinifyJsClassic: Boolean(js_classic),
+      willMinifyJsModule: Boolean(js_module),
+      willMinifyJson: Boolean(json),
+    },
+    optimizeUrlContent: {
+      html: htmlMinifier,
+      svg: svgMinifier,
+      css: cssMinifier,
+      js_classic: jsClassicMinifier,
+      js_module: jsModuleMinifier,
+      json: jsonMinifier,
+      importmap: jsonMinifier,
+      webmanifest: jsonMinifier,
+    },
+  };
+};
+
 const escapeChars = (string, replacements) => {
   const charsToEscape = Object.keys(replacements);
   let result = "";
@@ -9910,24 +10052,4 @@ const escapeRegexpSpecialChars = (string) => {
   });
 };
 
-const memoizeByFirstArgument = (compute) => {
-  const urlCache = new Map();
-
-  const fnWithMemoization = (url, ...args) => {
-    const valueFromCache = urlCache.get(url);
-    if (valueFromCache) {
-      return valueFromCache;
-    }
-    const value = compute(url, ...args);
-    urlCache.set(url, value);
-    return value;
-  };
-
-  fnWithMemoization.forget = () => {
-    urlCache.clear();
-  };
-
-  return fnWithMemoization;
-};
-
-export { ANSI, Abort, CONTENT_TYPE, DATA_URL, JS_QUOTES, UNICODE, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, comparePathnames, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, defaultLookupPackageScope, defaultReadPackageJson, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, escapeRegexpSpecialChars, generateContentFrame, getCallerPosition, getExtensionsToTry, humanizeFileSize, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier, isFileSystemPath, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation, lookupPackageDirectory, memoizeByFirstArgument, moveUrl, normalizeImportMap, normalizeUrl, raceProcessTeardownEvents, readCustomConditionsFromProcessArgs, readEntryStatSync, registerDirectoryLifecycle, renderUrlOrRelativeUrlFilename, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };
+export { ANSI, Abort, CONTENT_TYPE, DATA_URL, JS_QUOTES, UNICODE, URL_META, applyFileSystemMagicResolution, applyNodeEsmResolution, asSpecifierWithoutSearch, asUrlWithoutSearch, assertAndNormalizeDirectoryUrl, bufferToEtag, clearDirectorySync, comparePathnames, composeTwoImportMaps, createDetailedMessage$1 as createDetailedMessage, createLogger, createTaskLog, defaultLookupPackageScope, defaultReadPackageJson, distributePercentages, ensureEmptyDirectory, ensurePathnameTrailingSlash, ensureWindowsDriveLetter, escapeRegexpSpecialChars, generateContentFrame, getCallerPosition, getExtensionsToTry, humanizeFileSize, injectQueryParamIntoSpecifierWithoutEncoding, injectQueryParamsIntoSpecifier, isFileSystemPath, jsenvPluginBundling, jsenvPluginJsModuleFallback, jsenvPluginMinification, jsenvPluginTranspilation, lookupPackageDirectory, memoizeByFirstArgument, moveUrl, normalizeImportMap, normalizeUrl, raceProcessTeardownEvents, readCustomConditionsFromProcessArgs, readEntryStatSync, registerDirectoryLifecycle, renderUrlOrRelativeUrlFilename, resolveImport, setUrlBasename, setUrlExtension, setUrlFilename, stringifyUrlSite, urlIsInsideOf, urlToBasename, urlToExtension$1 as urlToExtension, urlToFileSystemPath, urlToFilename$1 as urlToFilename, urlToPathname$1 as urlToPathname, urlToRelativeUrl, validateResponseIntegrity, writeFileSync };

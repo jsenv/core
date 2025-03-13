@@ -1,23 +1,23 @@
-import { moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, urlToRelativeUrl, lookupPackageDirectory, createLogger, createTaskLog, URL_META, bufferToEtag } from "./jsenv_core_packages.js";
+import { moveUrl, urlIsInsideOf, ensureWindowsDriveLetter, memoizeByFirstArgument, assertAndNormalizeDirectoryUrl, urlToRelativeUrl, lookupPackageDirectory, createLogger, createTaskLog, URL_META, bufferToEtag } from "../jsenv_core_packages.js";
 import { ServerEvents, jsenvServiceCORS, jsenvAccessControlAllowedHeaders, composeTwoResponses, serveDirectory, jsenvServiceErrorHandler, startServer } from "@jsenv/server";
 import { convertFileSystemErrorToResponseProperties } from "@jsenv/server/src/internal/convertFileSystemErrorToResponseProperties.js";
 import { existsSync, readFileSync } from "node:fs";
-import { createEventEmitter, watchSourceFiles, createPluginStore, getCorePlugins, defaultRuntimeCompat, createKitchen, createPluginController } from "./build.js";
+import { createEventEmitter, watchSourceFiles, createPluginStore, getCorePlugins, defaultRuntimeCompat, createKitchen, createPluginController } from "../plugins.js";
 import { parseHtml, injectJsenvScript, stringifyHtmlAst } from "@jsenv/ast";
 import { createRequire } from "node:module";
 import "node:path";
 import "node:crypto";
+import "@jsenv/sourcemap";
 import "node:url";
+import "@jsenv/js-module-fallback";
 import "node:process";
 import "node:os";
 import "node:tty";
 import "string-width";
-import "@jsenv/sourcemap";
-import "@jsenv/js-module-fallback";
 import "@jsenv/runtime-compat";
 import "node:perf_hooks";
 import "@jsenv/plugin-supervisor";
-import "./main.js";
+import "../main.js";
 
 const WEB_URL_CONVERTER = {
   asWebUrl: (fileUrl, webServer) => {

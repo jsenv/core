@@ -100,17 +100,17 @@ return {
 
 // dev
 const startDevServer = async (...args) => {
-  const namespace = await import("./start_dev_server.js");
+  const namespace = await import("./js/start_dev_server.js");
   return namespace.startDevServer(...args);
 };
 
 // build
 const build = async (...args) => {
-  const namespace = await import("./build.js").then(n => n.build);
+  const namespace = await import("./js/build.js");
   return namespace.build(...args);
 };
 const startBuildServer = async (...args) => {
-  const namespace = await import("./start_build_server.js");
+  const namespace = await import("./js/start_build_server.js");
   return namespace.startBuildServer(...args);
 };
 
