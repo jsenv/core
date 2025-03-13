@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" font-family="SauceCodePro Nerd Font, Source Code Pro, Courier" font-size="14" width="100%" viewBox="0 0 640 422.45" background-color="#282c34">
+  <g id="background">
+    <rect x="1" y="1" width="638" height="420.45" fill="#282c34" stroke="rgba(255,255,255,0.35)" stroke-width="1" rx="8"></rect>
+  </g>
+  <foreignObject id="body" y="0" width="100%" height="432.45" overflow="hidden">
+    <svg width="1170.99" height="422.45" font-family="monospace" font-variant-east-asian="full-width" fill="#cccccc">
+      <g>
+        <text x="10" y="24.55">Error while handling http://127.0.0.1/main.html:</text>
+        <text x="10" y="43.55">invalid-first-character-of-tag-name</text>
+        <text x="10" y="62.55">base/client/main.html:5:12</text>
+        <text x="10" y="81.55">2 | &lt;html lang="en"&gt;</text>
+        <text x="10" y="100.55">3 |   &lt;body&gt;</text>
+        <text x="10" y="119.55">4 |     &lt;pre&gt;</text>
+        <text x="10" y="138.55">5 |       foo &lt;=&gt; baz;</text>
+        <text x="136.02" y="157.55">               ^</text>
+        <text x="10" y="176.55">GET http://127.0.0.1/main.html</text>
+        <text x="26.8" y="195.55" fill="#cd5555">500</text>
+        <text x="60.41" y="195.55"> Error: ENOENT: no such file or directory, open '@jsenv/core/src/plugins/html_syntax_error_fallback/client/html_syntax_error.html'</text>
+        <text x="60.41" y="214.55">      at METHOD_EXECUTION_STANDARD (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/hook_into_method.js:163:30)</text>
+        <text x="60.41" y="233.55">      at METHOD_EXECUTION_NODE_CALLBACK (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/hook_into_method.js:262:10)</text>
+        <text x="60.41" y="252.55">      at Object.proxy [as open] (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/hook_into_method.js:105:14)</text>
+        <text x="60.41" y="271.55">      at Object.openSync (node:fs:562:18)</text>
+        <text x="60.41" y="290.55">      at readFileSync (node:fs:446:35)</text>
+        <text x="60.41" y="309.55">      at generateHtmlForSyntaxError (@jsenv/core/src/plugins/html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js:57:37)</text>
+        <text x="60.41" y="328.55">      at html (@jsenv/core/src/plugins/html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js:40:24)</text>
+        <text x="60.41" y="347.55">      at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:193:31)</text>
+        <text x="60.41" y="366.55">      at Object.callAsyncHooks (@jsenv/core/src/plugins/plugin_controller.js:224:33)</text>
+        <text x="60.41" y="385.55">      at Object.transformUrlContent (@jsenv/core/src/kitchen/kitchen.js:418:30)</text>
+        <text x="10" y="404.55">chromium console.error &gt; Failed to load resource: the server responded with a status of 500 ("transformUrlContent" error on "html")</text>
+      </g>
+    </svg>
+  </foreignObject>
+</svg>

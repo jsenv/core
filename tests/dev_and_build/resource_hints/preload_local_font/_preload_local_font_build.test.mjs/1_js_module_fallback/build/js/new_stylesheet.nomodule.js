@@ -9,8 +9,6 @@ System.register([], function (_export, _context) {
       // to keep in sync with https://github.com/calebdwilliams/construct-style-sheets
       // copy pasted into jsenv codebase to inject this code with more ease
       (function () {
-        "use strict";
-
         if (typeof document === "undefined" || "adoptedStyleSheets" in document) {
           return;
         }

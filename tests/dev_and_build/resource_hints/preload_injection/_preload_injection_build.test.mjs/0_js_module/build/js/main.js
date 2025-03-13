@@ -1,3 +1,3 @@
-import "/js/vendors.js";
+import "/vendors.js";
 
 window.resolveResultPromise(42);

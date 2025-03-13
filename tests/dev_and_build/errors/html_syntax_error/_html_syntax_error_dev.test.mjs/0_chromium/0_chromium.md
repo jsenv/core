@@ -4,7 +4,12 @@
 run({ browserLauncher: chromium })
 ```
 
-# 1/3 console.error
+# 1/2 logs
+
+![img](log_group.svg)
+
+<details>
+  <summary>see without style</summary>
 
 ```console
 Error while handling http://127.0.0.1/main.html:
@@ -15,13 +20,25 @@ base/client/main.html:5:12
 4 |     <pre>
 5 |       foo <=> baz;
                ^
+GET http://127.0.0.1/main.html
+  500 Error: ENOENT: no such file or directory, open '@jsenv/core/src/plugins/html_syntax_error_fallback/client/html_syntax_error.html'
+      at METHOD_EXECUTION_STANDARD (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/hook_into_method.js:163:30)
+      at METHOD_EXECUTION_NODE_CALLBACK (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/hook_into_method.js:262:10)
+      at Object.proxy [as open] (@jsenv/core/packages/independent/tooling/snapshot/src/side_effects/hook_into_method.js:105:14)
+      at Object.openSync (node:fs:562:18)
+      at readFileSync (node:fs:446:35)
+      at generateHtmlForSyntaxError (@jsenv/core/src/plugins/html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js:57:37)
+      at html (@jsenv/core/src/plugins/html_syntax_error_fallback/jsenv_plugin_html_syntax_error_fallback.js:40:24)
+      at callAsyncHook (@jsenv/core/src/plugins/plugin_controller.js:193:31)
+      at Object.callAsyncHooks (@jsenv/core/src/plugins/plugin_controller.js:224:33)
+      at Object.transformUrlContent (@jsenv/core/src/kitchen/kitchen.js:418:30)
+chromium console.error > Failed to load resource: the server responded with a status of 500 ("transformUrlContent" error on "html")
 ```
 
-# 2/3 write file "./.jsenv/chrome@133.00/main.html"
+</details>
 
-see [./.jsenv/chrome@133.00/main.html](./.jsenv/chrome@133.00/main.html)
 
-# 3/3 resolve
+# 2/2 resolve
 
 ```js
 undefined
