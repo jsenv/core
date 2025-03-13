@@ -54,7 +54,9 @@ const generateHtmlForSyntaxError = (
   htmlSyntaxError,
   { htmlUrl, rootDirectoryUrl, htmlErrorContentFrame, htmlSyntaxErrorFileUrl },
 ) => {
-  const htmlForSyntaxError = String(readFileSync(htmlSyntaxErrorFileUrl));
+  const htmlForSyntaxError = String(
+    readFileSync(new URL(htmlSyntaxErrorFileUrl)),
+  );
   const htmlRelativeUrl = urlToRelativeUrl(htmlUrl, rootDirectoryUrl);
   const { line, column } = htmlSyntaxError;
   if (htmlUrl.startsWith(jsenvCoreDirectoryUrl.href)) {
